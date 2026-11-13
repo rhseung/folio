@@ -27,7 +27,9 @@ final class RequirementsModel {
     var listed: [UUID: [Course]] { GPACalculator.categoryCourses(courses: courses, catalog: catalog) }
 
     var subtitle: String {
-        let parts = [rule.admissionYear.map { String(localized: .requirementsAdmissionYear(String($0))) }] + rule.programs.map { $0.title(in: workspace.catalog) }
+        let parts =
+            [rule.admissionYear.map { String(localized: .requirementsAdmissionYear(String($0))) }]
+            + rule.programs.map { $0.title(in: workspace.catalog) }
         let line = parts.compactMap { $0 }.joined(separator: " · ")
         return line.isEmpty ? String(localized: .requirementsSubtitle) : line
     }
@@ -40,7 +42,9 @@ final class RequirementsModel {
 
     func suggestionsTitle(_ count: Int) -> String { String(localized: .requirementsSuggestionsTitle(count)) }
 
-    func suggestionSource(_ s: HandbookClassifier.Suggestion) -> String { String(localized: .requirementsSuggestionSource(s.code, String(s.year))) }
+    func suggestionSource(_ s: HandbookClassifier.Suggestion) -> String {
+        String(localized: .requirementsSuggestionSource(s.code, String(s.year)))
+    }
 
     func suggestionChange(_ s: HandbookClassifier.Suggestion) -> String {
         names(course(s.courseId)?.categoryIds ?? []) + " → " + names(s.categoryIds)
@@ -54,12 +58,15 @@ final class RequirementsModel {
     func categoryName(_ id: UUID) -> String { catalog.category(id)?.name ?? "" }
 
     func overSharedTitle(_ s: SharedCredits) -> String {
-        String(localized: .requirementsOverSharedTitle(categoryName(s.categoryId), (s.earned + s.inProgress).formatted(), s.cap.formatted()))
+        String(
+            localized: .requirementsOverSharedTitle(categoryName(s.categoryId), (s.earned + s.inProgress).formatted(), s.cap.formatted()))
     }
 
     func overSharedDetail(_ s: SharedCredits) -> String { String(localized: .requirementsOverSharedDetail(categoryName(s.categoryId))) }
 
-    func unallowedTitle(_ s: SharedCredits) -> String { String(localized: .requirementsUnallowedTitle(categoryName(s.categoryId), s.unallowed.count)) }
+    func unallowedTitle(_ s: SharedCredits) -> String {
+        String(localized: .requirementsUnallowedTitle(categoryName(s.categoryId), s.unallowed.count))
+    }
 
     func unallowedDetail(_ s: SharedCredits) -> String { String(localized: .requirementsUnallowedDetail(categoryName(s.categoryId))) }
 
@@ -67,8 +74,10 @@ final class RequirementsModel {
 
     /// `2026 봄학기 · 3학점 · 수강 중`; an unassigned course leaves out whether it is being taken.
     func courseDetail(_ course: Course, showsTaking: Bool = true) -> String {
-        [workspace.semester(of: course)?.title, GradesModel.credits(course.credits),
-         showsTaking && course.finalGrade == nil ? String(localized: .gradesEnrolled) : nil].compactMap { $0 }.joined(separator: " · ")
+        [
+            workspace.semester(of: course)?.title, GradesModel.credits(course.credits),
+            showsTaking && course.finalGrade == nil ? String(localized: .gradesEnrolled) : nil,
+        ].compactMap { $0 }.joined(separator: " · ")
     }
 
     // MARK: Figures
@@ -78,19 +87,29 @@ final class RequirementsModel {
         let gpa = GPACalculator.cumulative(semesters: workspace.transcript.semesters, courses: courses, catalog: catalog).gpa
         let unassigned = audit.unassigned.count
         return [
-            .init(title: String(localized: .requirementsGraduationCredits), value: "\(progress.counted.formatted()) / \(rule.totalCredits.formatted())",
-                  detail: [progress.inProgress > 0 ? String(localized: .requirementsTaking(progress.inProgress.formatted())) : nil,
-                           progress.earned > progress.counted ? String(localized: .requirementsOverCapExcluded((progress.earned - progress.counted).formatted())) : nil]
-                      .compactMap { $0 }.joined(separator: " · ").nilIfEmpty,
-                  tone: progress.counted >= rule.totalCredits ? .success : .plain),
-            .init(title: String(localized: .requirementsRemainingCredits), value: "\(max(0, rule.totalCredits - progress.counted - progress.inProgress).formatted())",
-                  detail: String(localized: .requirementsRemainingCreditsDetail)),
-            .init(title: String(localized: .requirementsGpa), value: GPACalculator.label(gpa), detail: String(localized: .requirementsMinGpa(String(format: "%.1f", rule.minGPA))),
-                  tone: (gpa ?? 0) >= rule.minGPA ? .plain : .danger, sensitive: true),
+            .init(
+                title: String(localized: .requirementsGraduationCredits),
+                value: "\(progress.counted.formatted()) / \(rule.totalCredits.formatted())",
+                detail: [
+                    progress.inProgress > 0 ? String(localized: .requirementsTaking(progress.inProgress.formatted())) : nil,
+                    progress.earned > progress.counted
+                        ? String(localized: .requirementsOverCapExcluded((progress.earned - progress.counted).formatted())) : nil,
+                ]
+                .compactMap { $0 }.joined(separator: " · ").nilIfEmpty,
+                tone: progress.counted >= rule.totalCredits ? .success : .plain),
+            .init(
+                title: String(localized: .requirementsRemainingCredits),
+                value: "\(max(0, rule.totalCredits - progress.counted - progress.inProgress).formatted())",
+                detail: String(localized: .requirementsRemainingCreditsDetail)),
+            .init(
+                title: String(localized: .requirementsGpa), value: GPACalculator.label(gpa),
+                detail: String(localized: .requirementsMinGpa(String(format: "%.1f", rule.minGPA))),
+                tone: (gpa ?? 0) >= rule.minGPA ? .plain : .danger, sensitive: true),
             // A detail on every item keeps the figures on one line across the strip.
-            .init(title: String(localized: .requirementsUnassigned), value: "\(unassigned)",
-                  detail: String(localized: unassigned == 0 ? .requirementsUnassignedNone : .requirementsUnassignedHint),
-                  tone: unassigned == 0 ? .plain : .warning),
+            .init(
+                title: String(localized: .requirementsUnassigned), value: "\(unassigned)",
+                detail: String(localized: unassigned == 0 ? .requirementsUnassignedNone : .requirementsUnassignedHint),
+                tone: unassigned == 0 ? .plain : .warning),
         ]
     }
 
@@ -182,9 +201,12 @@ final class RequirementsModel {
         let already = course.map { GPACalculator.blocksSharing($0, categoryIds: selection, catalog: catalog) } ?? true
         return Category.tree(catalog.categories).map {
             let id = $0.category.id
-            let blocked = !already && !selection.contains(id) && course.map { GPACalculator.blocksSharing($0, categoryIds: selection + [id], catalog: catalog) } == true
-            return PickOption(id: id, title: $0.category.name, detail: blocked ? String(localized: .requirementsCategoryBlocked) : $0.category.rule,
-                              section: $0.group, depth: $0.depth, disabled: blocked)
+            let blocked =
+                !already && !selection.contains(id)
+                && course.map { GPACalculator.blocksSharing($0, categoryIds: selection + [id], catalog: catalog) } == true
+            return PickOption(
+                id: id, title: $0.category.name, detail: blocked ? String(localized: .requirementsCategoryBlocked) : $0.category.rule,
+                section: $0.group, depth: $0.depth, disabled: blocked)
         }
     }
 }
@@ -207,19 +229,30 @@ final class RequirementEditModel {
     var parentOptions: [PickOption<UUID?>] {
         let others = workspace.requirementCatalog.categories.filter { $0.id != draft.id }.sorted { $0.name < $1.name }
         return [PickOption(id: UUID?.none, title: String(localized: .requirementsNone))]
-            + Category.tree(others).map { PickOption(id: Optional($0.category.id), title: $0.category.name, detail: $0.category.group, depth: $0.depth) }
+            + Category.tree(others).map {
+                PickOption(id: Optional($0.category.id), title: $0.category.name, detail: $0.category.group, depth: $0.depth)
+            }
     }
 
     var programOptions: [(UUID?, String)] {
         let programs = workspace.transcript.graduation.programs.map(\.codeId) + [draft.programId].compactMap { $0 }
-        return [(UUID?.none, String(localized: .requirementsProgramCommon))] + programs.uniqued().map { id in
-            (Optional(id), workspace.catalog.codes.first { $0.id == id }.map { "\($0.prefix) \($0.department)" } ?? String(localized: .requirementsUnknownCode))
-        }
+        return [(UUID?.none, String(localized: .requirementsProgramCommon))]
+            + programs.uniqued().map { id in
+                (
+                    Optional(id),
+                    workspace.catalog.codes.first { $0.id == id }.map { "\($0.prefix) \($0.department)" }
+                        ?? String(localized: .requirementsUnknownCode)
+                )
+            }
     }
 
     func confirm() {
         var catalog = workspace.catalog
-        if let i = catalog.categories.firstIndex(where: { $0.id == draft.id }) { catalog.categories[i] = draft } else { catalog.categories.append(draft) }
+        if let i = catalog.categories.firstIndex(where: { $0.id == draft.id }) {
+            catalog.categories[i] = draft
+        } else {
+            catalog.categories.append(draft)
+        }
         workspace.saveCatalog(catalog)
     }
 
@@ -250,9 +283,11 @@ final class ProfileModel {
         change(&r)
         guard r != rule else { return }
         let old = rule
-        workspace.run(GraduationSet(totalCredits: .changed(old.totalCredits, r.totalCredits), minGPA: .changed(old.minGPA, r.minGPA),
-                                    admissionYear: .changed(old.admissionYear, r.admissionYear), email: .changed(old.email, r.email),
-                                    programs: .changed(old.programs, r.programs)))
+        workspace.run(
+            GraduationSet(
+                totalCredits: .changed(old.totalCredits, r.totalCredits), minGPA: .changed(old.minGPA, r.minGPA),
+                admissionYear: .changed(old.admissionYear, r.admissionYear), email: .changed(old.email, r.email),
+                programs: .changed(old.programs, r.programs)))
     }
 
     /// The first program declared is the major; any after it starts as a double major.

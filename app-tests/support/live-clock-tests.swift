@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import Synchronization
 import Testing
+
 @testable import Folio
 
 @MainActor
@@ -26,7 +27,11 @@ struct LiveClockTests {
         #expect(workspace.liveNow == start)
 
         let redrawn = Mutex(false)
-        withObservationTracking { _ = workspace.liveNow } onChange: { redrawn.withLock { $0 = true } }
+        withObservationTracking {
+            _ = workspace.liveNow
+        } onChange: {
+            redrawn.withLock { $0 = true }
+        }
         workspace.clock.refresh(at: start.addingTimeInterval(60))
         #expect(redrawn.withLock { $0 })
         #expect(workspace.liveNow == start.addingTimeInterval(60))

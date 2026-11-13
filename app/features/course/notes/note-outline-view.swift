@@ -53,7 +53,9 @@ struct NoteOutlineList: View {
             .buttonStyle(.pointing(.plain))
             .help(row.title)
             if row.folds {
-                Button { withAnimation(Theme.Motion.standard) { model.toggle(row.index) } } label: {
+                Button {
+                    withAnimation(Theme.Motion.standard) { model.toggle(row.index) }
+                } label: {
                     Image(systemName: "chevron.right")
                         .font(Theme.Typeface.caption)
                         .rotationEffect(.degrees(row.open ? 90 : 0))

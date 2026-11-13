@@ -19,7 +19,12 @@ extension Workspace {
         // Files handed over from outside the sandbox stay readable only inside this scope.
         let scoped = files.map(\.url).filter { $0.startAccessingSecurityScopedResource() }
         defer { for url in scoped { url.stopAccessingSecurityScopedResource() } }
-        run(MaterialImport(course: id, items: files.map { ImportItem(file: $0.url.path(percentEncoded: false), folder: $0.folder, session: $0.session, sections: $0.sections) }))
+        run(
+            MaterialImport(
+                course: id,
+                items: files.map {
+                    ImportItem(file: $0.url.path(percentEncoded: false), folder: $0.folder, session: $0.session, sections: $0.sections)
+                }))
     }
 
     func importFiles(_ urls: [URL], into folder: String, session: UUID? = nil, course id: UUID) {

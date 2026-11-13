@@ -102,8 +102,9 @@ struct SessionLayoutSaver: View {
     }
 
     var body: some View {
-        let shape = Shape(links: panes.navigators.map(\.current.link), shares: panes.shares, focus: panes.focus,
-                          collapsed: panes.collapsed, modes: panes.noteModes)
+        let shape = Shape(
+            links: panes.navigators.map(\.current.link), shares: panes.shares, focus: panes.focus,
+            collapsed: panes.collapsed, modes: panes.noteModes)
         Color.clear
             .task(id: shape) {
                 // A moment after the last change: turning through a lecture's pages writes once, not every page.

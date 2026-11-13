@@ -1,22 +1,28 @@
 extension Fixture {
     static let legacyFiles: [(path: String, content: String?)] = [
         // An earlier cleanup moved `Exam Review` into `Exercises` whole; only the journal still says those files are self-made.
-        (".folio/moves.jsonl", #"""
+        (
+            ".folio/moves.jsonl",
+            #"""
             {"at":"2026-10-22T14:01:03.186Z","batch":"B0000000-0000-4000-8000-000000000001","device":"D0000000-0000-4000-8000-000000000001","from":"2026-3/GS2004 선형대수학/Exam Review/Proofs.pdf","id":"E0000000-0000-4000-8000-000000000001","op":"move","schemaVersion":1,"to":"2026-3/GS2004 선형대수학/Exercises/Proofs.pdf"}
             {"at":"2026-10-22T14:01:03.186Z","batch":"B0000000-0000-4000-8000-000000000001","device":"D0000000-0000-4000-8000-000000000001","from":"2026-3/GS2004 선형대수학/Exam Review/Proofs.tex","id":"E0000000-0000-4000-8000-000000000002","op":"move","schemaVersion":1,"to":"2026-3/GS2004 선형대수학/Exercises/Proofs.tex"}
             {"at":"2026-10-22T14:01:03.186Z","batch":"B0000000-0000-4000-8000-000000000001","device":"D0000000-0000-4000-8000-000000000001","from":"2026-3/GS2004 선형대수학/Exam Review","id":"E0000000-0000-4000-8000-000000000003","op":"removeFolder","schemaVersion":1}
 
-            """#),
+            """#
+        ),
         ("2026-1/MA2001 선형대수학/강의계획서.pdf", nil),
         ("2026-1/MA2001 선형대수학/강의자료/26_week5.pdf", nil),
         ("2026-1/MA2001 선형대수학/강의자료/week1.pdf", nil),
         ("2026-1/MA2001 선형대수학/노트/1주차 필기.pdf", nil),
-        ("2026-1/MA2001 선형대수학/노트/1주차.md", #"""
+        (
+            "2026-1/MA2001 선형대수학/노트/1주차.md",
+            #"""
             # 1주차
 
             벡터 공간의 정의
 
-            """#),
+            """#
+        ),
         ("2026-1/MA2001 선형대수학/숙제/HW1-5070류현승.pdf", nil),
         ("2026-1/MA2001 선형대수학/숙제/hw1.pdf", nil),
         ("2026-1/MA2001 선형대수학/족보/2024 중간.pdf", nil),

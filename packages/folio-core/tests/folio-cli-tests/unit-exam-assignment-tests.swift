@@ -1,9 +1,10 @@
-@testable import FolioCLI
 import FolioActions
 import FolioDomain
 import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioCLI
 
 struct UnitExamAssignmentTests {
     let h = Harness()
@@ -32,7 +33,9 @@ struct UnitExamAssignmentTests {
     }
 
     @Test func unitSet() throws {
-        try h.expectSame(["unit", "set", "EC4207/트리", "--title", "숲"], setup: [Self.addTree]) { _ in UnitSet(course: course, unit: Self.tree, title: "숲") }
+        try h.expectSame(["unit", "set", "EC4207/트리", "--title", "숲"], setup: [Self.addTree]) { _ in
+            UnitSet(course: course, unit: Self.tree, title: "숲")
+        }
     }
 
     @Test func unitMove() throws {
@@ -76,7 +79,8 @@ struct UnitExamAssignmentTests {
 
     @Test func examScopeTaught() throws {
         let setup = [Self.addSession, Self.addTree, ["unit", "link", "EC4207/트리", "10-28"], Self.addExam]
-        try h.expectSame(["exam", "scope", "EC4207/중간고사", "--taught"], setup: setup) { _ in ExamScopeTaught(course: course, exam: Self.exam) }
+        try h.expectSame(["exam", "scope", "EC4207/중간고사", "--taught"], setup: setup) { _ in ExamScopeTaught(course: course, exam: Self.exam)
+        }
         let gist = try Harness.fixtureCopy()
         for line in setup + [["exam", "scope", "EC4207/중간고사", "--taught"]] { #expect(h.cli(line, gist: gist).code == 0) }
         #expect(try h.file(GISTStore(url: gist)).exams[0].scopeUnitIds == [Self.tree])
@@ -122,7 +126,9 @@ struct UnitExamAssignmentTests {
     }
 
     @Test func assignmentRemove() throws {
-        try h.expectSame(["assignment", "rm", "EC4207/HW 3", "--yes"], setup: [Self.addHW]) { _ in AssignmentRemove(course: course, assignment: Self.hw) }
+        try h.expectSame(["assignment", "rm", "EC4207/HW 3", "--yes"], setup: [Self.addHW]) { _ in
+            AssignmentRemove(course: course, assignment: Self.hw)
+        }
     }
 
     @Test func removalsNeedConfirmationOffTerminal() throws {

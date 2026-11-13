@@ -27,8 +27,9 @@ struct CleanupTests {
         #expect(targets["\(ec)/Homeworks/HW3-5070류현승.pdf"] == "\(ec)/Assignments/HW03/HW3-5070류현승.pdf")
         #expect(targets["\(ec)/족보 (소순범)/2024 Midterm.pdf"] == "\(ec)/Inherited/소순범/2024 Midterm.pdf")
         #expect(move["\(ec)/Exam Review/Problems.tex"].map { ($0.to, $0.exam, $0.review) }! == ("\(ec)/Study/Problems.tex", "Midterm", nil))
-        #expect(move["\(ec)/Exams/Quiz3/Quiz3 대비 정리.pdf"].map { ($0.to, $0.exam, $0.review) }!
-            == ("\(ec)/Study/Quiz3 대비 정리.pdf", "Quiz3", .guessedOrigin))
+        #expect(
+            move["\(ec)/Exams/Quiz3/Quiz3 대비 정리.pdf"].map { ($0.to, $0.exam, $0.review) }!
+                == ("\(ec)/Study/Quiz3 대비 정리.pdf", "Quiz3", .guessedOrigin))
         #expect(targets["\(ec)/Notes/Exports/Matchings.pdf"] == "\(ec)/Study/Matchings.pdf")
         #expect(plan.removals == ["\(ec)/Exams/Quiz1"])
         #expect(move["\(chem)/Exams/Past/관훈 선배 리포트"].map { ($0.to, $0.kind) }! == ("\(chem)/Inherited/관훈 선배 리포트", nil))

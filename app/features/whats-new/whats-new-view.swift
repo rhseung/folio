@@ -16,7 +16,9 @@ struct WhatsNewView: View {
                 EmptyCard(symbol: "arrow.down.circle", title: String(localized: .whatsNewLoading))
             case .unavailable:
                 VStack(alignment: .leading, spacing: Theme.Space.m) {
-                    EmptyCard(symbol: "wifi.slash", title: String(localized: .whatsNewUnavailable), detail: String(localized: .whatsNewUnavailableDetail))
+                    EmptyCard(
+                        symbol: "wifi.slash", title: String(localized: .whatsNewUnavailable),
+                        detail: String(localized: .whatsNewUnavailableDetail))
                     Button(.whatsNewRetry) { Task { await model.retry() } }
                 }
             case .empty:
@@ -66,7 +68,9 @@ private struct ReleaseSection: View {
     var body: some View {
         let open = model.isOpen(release)
         VStack(alignment: .leading, spacing: Theme.Space.l) {
-            Button { withAnimation(.snappy) { model.toggle(release) } } label: {
+            Button {
+                withAnimation(.snappy) { model.toggle(release) }
+            } label: {
                 HStack(spacing: Theme.Space.s) {
                     Image(systemName: "chevron.right")
                         .font(Theme.Glyph.small)
@@ -99,7 +103,11 @@ struct PatchNoteList: View {
             if let maxHeight {
                 ScrollView {
                     VStack(spacing: 0) { rows }
-                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { rowsHeight = $0 }
+                        .onGeometryChange(for: CGFloat.self) {
+                            $0.size.height
+                        } action: {
+                            rowsHeight = $0
+                        }
                 }
                 .scrollBounceBehavior(.basedOnSize)
                 .overflowFade(.vertical)

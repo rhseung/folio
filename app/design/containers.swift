@@ -56,8 +56,10 @@ struct NoticeCard<Trailing: View, Rows: View>: View {
 extension NoticeCard {
     func words(detailIdeal: CGFloat?) -> some View {
         HStack(spacing: Theme.Space.m) {
-            Image(systemName: systemImage).foregroundStyle(informs ? Theme.Palette.info : Theme.Palette.warning).font(Theme.Typeface.bodyStrong)
-                .frame(width: Theme.Size.tile)
+            Image(systemName: systemImage).foregroundStyle(informs ? Theme.Palette.info : Theme.Palette.warning).font(
+                Theme.Typeface.bodyStrong
+            )
+            .frame(width: Theme.Size.tile)
             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                 Text(title).font(Theme.Typeface.bodyStrong).lineLimit(1)
                 if let detail {
@@ -111,7 +113,8 @@ struct FormRow<Control: View>: View {
                         if device { DeviceTag() }
                     }
                     if let detail {
-                        Text(detail).font(Theme.Typeface.caption).foregroundStyle(warns ? Theme.Palette.warning : Theme.Palette.textTertiary)
+                        Text(detail).font(Theme.Typeface.caption).foregroundStyle(
+                            warns ? Theme.Palette.warning : Theme.Palette.textTertiary)
                     }
                 }
             } control: {
@@ -146,7 +149,9 @@ struct DisclosureRow<Rows: View>: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Button { withAnimation(.snappy) { isOpen.toggle() } } label: {
+            Button {
+                withAnimation(.snappy) { isOpen.toggle() }
+            } label: {
                 CardRow(last: last && !isOpen) {
                     Text(label).lineLimit(1)
                     Spacer(minLength: Theme.Space.s)
@@ -293,7 +298,11 @@ struct SheetForm<Rows: View>: View {
                 // In the window's content area at most: past it the rows scroll between a fixed title and buttons.
                 let viewport = max(room - chrome, Self.leastRows)
                 ScrollView {
-                    form.onGeometryChange(for: CGFloat.self) { $0.size.height } action: { rowsHeight = $0 }
+                    form.onGeometryChange(for: CGFloat.self) {
+                        $0.size.height
+                    } action: {
+                        rowsHeight = $0
+                    }
                 }
                 .scrollBounceBehavior(.basedOnSize)
                 .overflowFade(.vertical)
@@ -303,10 +312,13 @@ struct SheetForm<Rows: View>: View {
             } else {
                 form
             }
-            if let note { Text(note).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).padding(.horizontal, Theme.Space.m) }
+            if let note {
+                Text(note).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).padding(.horizontal, Theme.Space.m)
+            }
             HStack {
                 if let deleteTitle, let onDelete {
-                    Button(deleteTitle, role: .destructive, action: onDelete).buttonStyle(.pointing(.bordered)).foregroundStyle(Theme.Palette.danger)
+                    Button(deleteTitle, role: .destructive, action: onDelete).buttonStyle(.pointing(.bordered)).foregroundStyle(
+                        Theme.Palette.danger)
                 }
                 Spacer()
                 if cancellable { Button(cancel ?? String(localized: .commonCancel)) { dismiss() }.keyboardShortcut(.cancelAction) }
@@ -317,7 +329,11 @@ struct SheetForm<Rows: View>: View {
         .onExitCommand(perform: cancellable ? nil : onConfirm)
         #endif
         .padding(Theme.Space.xl)
-        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { chrome = $0 - shown }
+        .onGeometryChange(for: CGFloat.self) {
+            $0.size.height
+        } action: {
+            chrome = $0 - shown
+        }
         .frame(width: width)
         .background(Theme.Palette.page)
         .font(Theme.Typeface.body)
@@ -357,7 +373,9 @@ struct EmptyCard: View {
                     .font(Theme.Glyph.check)
                     .foregroundStyle(tone == .plain ? Theme.Palette.textTertiary : tone.foreground)
                     .frame(width: Theme.Size.toolbarButton, height: Theme.Size.toolbarButton)
-                    .background(tone == .plain ? Theme.Palette.fill : tone.foreground.opacity(Theme.Opacity.tint), in: .rect(cornerRadius: Theme.Radius.control))
+                    .background(
+                        tone == .plain ? Theme.Palette.fill : tone.foreground.opacity(Theme.Opacity.tint),
+                        in: .rect(cornerRadius: Theme.Radius.control))
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                     Text(title).font(Theme.Typeface.bodyStrong).lineLimit(1)
                     if let detail { Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary) }

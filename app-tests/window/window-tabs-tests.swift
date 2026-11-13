@@ -2,6 +2,7 @@ import FolioActions
 import FolioDomain
 import Foundation
 import Testing
+
 @testable import Folio
 
 @MainActor
@@ -162,8 +163,9 @@ struct ToolbarRowTests {
         row.leadingX = 84
         // With the row's trailing inset, 360 from the search field's start to the window's edge.
         row.trailingWidth = 360 - TitleRowEdges.trailing
-        row.measures = ToolbarRow.Measures(front: TabFit.Front(trail: 256, chrome: 44), others: [120, 120, 32].map { TabFit.Other(single: $0, icon: 32) },
-                                           more: 60)
+        row.measures = ToolbarRow.Measures(
+            front: TabFit.Front(trail: 256, chrome: 44), others: [120, 120, 32].map { TabFit.Other(single: $0, icon: 32) },
+            more: 60)
         row.windowWidth = width
         return row
     }
@@ -175,7 +177,11 @@ struct ToolbarRowTests {
         let changes = Changes()
         // The names fit down to 1220, where the tabs have just the 596 they take.
         for width in stride(from: 1400, through: 1220, by: -4) {
-            withObservationTracking { _ = row.placement } onChange: { changes.count += 1 }
+            withObservationTracking {
+                _ = row.placement
+            } onChange: {
+                changes.count += 1
+            }
             row.windowWidth = CGFloat(width)
         }
         #expect(changes.count == 0)

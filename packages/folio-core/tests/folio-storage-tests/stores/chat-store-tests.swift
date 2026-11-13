@@ -12,7 +12,9 @@ struct ChatStoreTests {
 
         let device = UUID(), t0 = Date(timeIntervalSince1970: 1_800_000_000)
         var old = Chat(device: device, at: t0, title: "행렬식")
-        old.messages = [ChatMessage(role: .user, text: "질문", at: t0, context: ["과목 요약"]), ChatMessage(role: .assistant, text: "$x$", at: t0)]
+        old.messages = [
+            ChatMessage(role: .user, text: "질문", at: t0, context: ["과목 요약"]), ChatMessage(role: .assistant, text: "$x$", at: t0),
+        ]
         let new = Chat(device: device, at: t0.addingTimeInterval(60), title: "고유값")
         try store.save(StoredDocument(new: old))
         try store.save(StoredDocument(new: new))

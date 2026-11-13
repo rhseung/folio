@@ -49,7 +49,8 @@ public struct PanePreset: Hashable, Sendable, Identifiable {
 
     public static let inClass = PanePreset(id: "in-class", roles: [.lecture, .classNote], shares: [0.55, 0.45], focus: .classNote)
     /// The review note is written from the lecture and what was jotted in class (2026-11-11 사용자), not the quiz.
-    public static let review = PanePreset(id: "review", roles: [.lecture, .classNote, .reviewNote], shares: [0.4, 0.3, 0.3], focus: .reviewNote)
+    public static let review = PanePreset(
+        id: "review", roles: [.lecture, .classNote, .reviewNote], shares: [0.4, 0.3, 0.3], focus: .reviewNote)
     /// "개념 다지기" (lecture and quiz) and "문제 풀이" (problem sheet and canvas) are left out until the canvas exists
     /// and the quiz is in use (2026-11-11 사용자).
     public static let builtIn = [inClass, review]
@@ -64,10 +65,12 @@ public struct PanePreset: Hashable, Sendable, Identifiable {
 
     /// What each role is for a session: its lectures in order, its notes, the course's quiz.
     public static func links(session: Session, course: UUID) -> [Role: [AppLink]] {
-        [.lecture: session.materials.map { AppLink(.material, $0.materialId, anchor: $0.firstPage.map(AppLink.Anchor.page)) },
-         .classNote: session.roughNoteId.map { [AppLink(.note, $0)] } ?? [],
-         .reviewNote: session.reviewNoteId.map { [AppLink(.note, $0)] } ?? [],
-         .quiz: [.course(course, page: .quiz)]]
+        [
+            .lecture: session.materials.map { AppLink(.material, $0.materialId, anchor: $0.firstPage.map(AppLink.Anchor.page)) },
+            .classNote: session.roughNoteId.map { [AppLink(.note, $0)] } ?? [],
+            .reviewNote: session.reviewNoteId.map { [AppLink(.note, $0)] } ?? [],
+            .quiz: [.course(course, page: .quiz)],
+        ]
     }
 
     /// The preset filled with `links` for each role. A role in one slot takes all of its links there, sharing the
@@ -203,7 +206,9 @@ extension PanePreset: Codable {
         guard !slots.isEmpty, shares.count == slots.count, shares.allSatisfy({ $0 > 0 && $0.isFinite }) else {
             throw DecodingError.dataCorruptedError(forKey: .shares, in: c, debugDescription: "A share for each pane, each positive")
         }
-        self.init(id: try c.decode(String.self, forKey: .id), name: try c.decodeIfPresent(String.self, forKey: .name), slots: slots, shares: shares)
+        self.init(
+            id: try c.decode(String.self, forKey: .id), name: try c.decodeIfPresent(String.self, forKey: .name), slots: slots,
+            shares: shares)
     }
 
     public func encode(to encoder: Encoder) throws {

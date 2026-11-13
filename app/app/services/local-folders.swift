@@ -23,7 +23,9 @@ enum LocalFolders {
     /// window snapshots included) gets them in a temporary folder of its own: fixture course IDs are fixed, so with
     /// the real folder a fixture run's leftovers would stay there forever, and the next fixture run would recover a
     /// real lecture into a throwaway folder and delete it here.
-    static func url(_ name: String, perGIST: Bool = false, environment: [String: String] = ProcessInfo.processInfo.environment) throws -> URL {
+    static func url(_ name: String, perGIST: Bool = false, environment: [String: String] = ProcessInfo.processInfo.environment) throws
+        -> URL
+    {
         guard !isIsolated(environment) else { throw RealFolderInIsolatedRun(name: name) }
         if perGIST, let gist = environment[Workspace.environmentKey] {
             let digest = SHA256.hash(data: Data(gist.utf8)).prefix(8).map { String(format: "%02x", $0) }.joined()

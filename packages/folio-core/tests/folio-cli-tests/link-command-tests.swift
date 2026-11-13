@@ -1,9 +1,10 @@
-@testable import FolioCLI
 import FolioActions
 import FolioDomain
 import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioCLI
 
 /// `folio link` and `folio open` name their target the way every other command does and print its `folio://` link.
 struct LinkCommandTests {
@@ -46,8 +47,10 @@ struct LinkCommandTests {
         #expect(h.cli(["exam", "add", "EC4207", "중간고사"], gist: gist).code == 0)
         #expect(h.cli(["note", "add", "EC4207", "매칭 정리", "--kind", "topic"], gist: gist).code == 0)
         #expect(h.cli(["material", "track", "EC4207"], gist: gist).code == 0)
-        let refs: [(AppLink.Kind, String)] = [(.course, "EC4207"), (.exam, "EC4207/중간고사"), (.note, "EC4207/매칭 정리"),
-                                              (.material, "EC4207/05_Matchings.pdf"), (.grades, "")]
+        let refs: [(AppLink.Kind, String)] = [
+            (.course, "EC4207"), (.exam, "EC4207/중간고사"), (.note, "EC4207/매칭 정리"),
+            (.material, "EC4207/05_Matchings.pdf"), (.grades, ""),
+        ]
         for (kind, ref) in refs {
             let r = h.cli(["link", kind.rawValue] + (ref.isEmpty ? [] : [ref]), gist: gist)
             #expect(r.code == 0, "\(kind): \(r.err)")

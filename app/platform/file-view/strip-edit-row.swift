@@ -42,11 +42,15 @@ struct StripEditRow<Title: View, Extra: View>: View {
             }
             extra
             HStack(spacing: Theme.Space.tight) {
-                Button { withAnimation(Theme.Motion.quick) { cancel() } } label: {
+                Button {
+                    withAnimation(Theme.Motion.quick) { cancel() }
+                } label: {
                     Text(.commonCancel).frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.ghost)
-                Button { withAnimation(Theme.Motion.quick) { commit() } } label: {
+                Button {
+                    withAnimation(Theme.Motion.quick) { commit() }
+                } label: {
                     Text(confirm).frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.prominent)

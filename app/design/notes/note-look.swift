@@ -31,7 +31,8 @@ enum NoteLook {
     static let breakSpace: CGFloat = 32
 
     static func font(_ size: CGFloat, _ weight: PlatformFont.Weight = .regular, italic: Bool = false, mono: Bool = false) -> PlatformFont {
-        let base = mono ? PlatformFont.monospacedSystemFont(ofSize: size, weight: weight) : PlatformFont.systemFont(ofSize: size, weight: weight)
+        let base =
+            mono ? PlatformFont.monospacedSystemFont(ofSize: size, weight: weight) : PlatformFont.systemFont(ofSize: size, weight: weight)
         guard italic else { return base }
         #if os(macOS)
         return NSFontManager.shared.convert(base, toHaveTrait: .italicFontMask)

@@ -2,6 +2,7 @@ import FolioActions
 import FolioDomain
 import Foundation
 import Testing
+
 @testable import Folio
 
 /// Made-up grades only: the repository is public.
@@ -204,8 +205,10 @@ struct CourseGradesModelTests {
         let quiz = component("Quiz", 20, .dropLowest(1), expected: 4)
         var file = course.file
         file.components = [quiz]
-        file.scores = [ScoreEntry(device: device, at: .now, componentId: quiz.id, title: "1", score: 8, max: 10),
-                       ScoreEntry(device: device, at: .now, componentId: quiz.id, title: "2", score: 0, max: 10, excused: true)]
+        file.scores = [
+            ScoreEntry(device: device, at: .now, componentId: quiz.id, title: "1", score: 8, max: 10),
+            ScoreEntry(device: device, at: .now, componentId: quiz.id, title: "2", score: 0, max: 10, excused: true),
+        ]
         #expect(model.componentDetail(quiz, in: file) == "최저 1회 제외 · 1/4회")
     }
 
@@ -253,8 +256,9 @@ struct GradeEditingModelTests {
     @Test func aScoreNeedsNumbersAndSaysHowFarFromTheMean() throws {
         let workspace = try fixtureWorkspace()
         let course = try #require(workspace.courses.first)
-        let model = ScoreEntryModel(workspace: workspace, course: course,
-                                    entry: ScoreEntry(device: device, at: .now, componentId: UUID(), title: "", score: 0, max: 10))
+        let model = ScoreEntryModel(
+            workspace: workspace, course: course,
+            entry: ScoreEntry(device: device, at: .now, componentId: UUID(), title: "", score: 0, max: 10))
         #expect(model.isNew && model.score.isEmpty && !model.valid)
         #expect(model.sheetTitle == "점수 추가" && model.confirmTitle == "추가")
         model.score = "8"
@@ -270,8 +274,9 @@ struct GradeEditingModelTests {
     @Test func theCountMenuKeepsTheRule() throws {
         let workspace = try fixtureWorkspace()
         let course = try #require(workspace.courses.first)
-        let model = ComponentModel(workspace: workspace, course: course,
-                                   component: GradeComponent(device: device, at: .now, name: " ", weight: 10, aggregation: .dropLowest(1)))
+        let model = ComponentModel(
+            workspace: workspace, course: course,
+            component: GradeComponent(device: device, at: .now, name: " ", weight: 10, aggregation: .dropLowest(1)))
         #expect(model.invalid)
         model.countValue = 3
         #expect(model.aggregation == .dropLowest(3) && model.countLabel == "제외할 횟수")
@@ -285,8 +290,10 @@ struct GradeEditingModelTests {
     @Test func policyRejectsOutOfRangeShares() throws {
         let workspace = try fixtureWorkspace()
         var catalog = workspace.catalog
-        catalog.letterGrades = [LetterGrade(device: device, at: .now, symbol: "A0", points: 4, countsInGpa: true, countsInCredits: true),
-                                LetterGrade(device: device, at: .now, symbol: "F", points: 0, countsInGpa: true, countsInCredits: false)]
+        catalog.letterGrades = [
+            LetterGrade(device: device, at: .now, symbol: "A0", points: 4, countsInGpa: true, countsInCredits: true),
+            LetterGrade(device: device, at: .now, symbol: "F", points: 0, countsInGpa: true, countsInCredits: false),
+        ]
         workspace.saveCatalog(catalog)
         let course = try #require(workspace.courses.first)
         let model = PolicyModel(workspace: workspace, course: course)

@@ -1,6 +1,7 @@
 import FolioDomain
 import Foundation
 import Testing
+
 @testable import Folio
 
 struct ThemeTests {

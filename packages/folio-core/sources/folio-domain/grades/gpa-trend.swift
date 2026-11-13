@@ -25,8 +25,9 @@ extension GPACalculator {
             guard s.term != .credited else { return nil }
             let summary = semester(s, courses: courses, catalog: catalog)
             guard let gpa = summary.gpa else { return nil }
-            return GPATrendPoint(semester: s, gpa: gpa, credits: summary.effectiveCredits,
-                                 cumulative: cumulative(semesters: Array(semesters[...i]), courses: courses, catalog: catalog).gpa)
+            return GPATrendPoint(
+                semester: s, gpa: gpa, credits: summary.effectiveCredits,
+                cumulative: cumulative(semesters: Array(semesters[...i]), courses: courses, catalog: catalog).gpa)
         }
     }
 }

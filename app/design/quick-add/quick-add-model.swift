@@ -35,8 +35,9 @@ final class QuickAddModel {
     private var reader: QuickAdd.Reader { Self.reader(workspace, fixedCourse: fixedCourse, defaultCourse: defaultCourse) }
 
     private static func reader(_ workspace: Workspace, fixedCourse: UUID?, defaultCourse: UUID?) -> QuickAdd.Reader {
-        QuickAdd.Reader(courses: workspace.currentCourses.map(\.file.course), codes: workspace.catalog.codes, fixedCourse: fixedCourse,
-                        defaultCourse: defaultCourse, now: workspace.now, calendar: workspace.calendar)
+        QuickAdd.Reader(
+            courses: workspace.currentCourses.map(\.file.course), codes: workspace.catalog.codes, fixedCourse: fixedCourse,
+            defaultCourse: defaultCourse, now: workspace.now, calendar: workspace.calendar)
     }
 
     /// What will be saved. Only the line: a chip's pick is written into it, so the two never disagree.
@@ -153,7 +154,8 @@ final class QuickAddModel {
     @discardableResult
     func add(_ parsed: QuickAdd) -> Bool {
         guard let id = parsed.courseId, !parsed.title.isEmpty,
-              workspace.run(AssignmentAdd(course: id, title: parsed.title, due: parsed.due, repeats: parsed.repeats)) != nil else { return false }
+            workspace.run(AssignmentAdd(course: id, title: parsed.title, due: parsed.due, repeats: parsed.repeats)) != nil
+        else { return false }
         text = ""
         return true
     }

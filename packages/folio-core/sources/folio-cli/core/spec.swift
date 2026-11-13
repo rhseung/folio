@@ -36,7 +36,11 @@ extension Resolver {
         case "NoteWidget": try widget(ref, in: scoped())
         case "MoveBatch":
             // A batch has no name: `cleanup apply` and the moves print its id.
-            if let id = UUID(uuidString: ref) { id } else { throw CLIError(exit: .usage, message: String(localized: .resolveNotBatch(ref))) }
+            if let id = UUID(uuidString: ref) {
+                id
+            } else {
+                throw CLIError(exit: .usage, message: String(localized: .resolveNotBatch(ref)))
+            }
         default: throw CLIError(exit: .usage, message: String(localized: .resolveKindNoName(kind)))
         }
     }
@@ -44,17 +48,23 @@ extension Resolver {
     /// In `exam`, or in every exam of the course for `run --input`, which has no exam to look in.
     func planItem(_ ref: String, exam: UUID?, in c: CourseRef) throws -> ExamPlanItem {
         if let exam {
-            guard let e = c.file.exams.first(where: { $0.id == exam }) else { throw CLIError(exit: .notFound, message: String(localized: .resolveNotFound("시험", exam.uuidString))) }
+            guard let e = c.file.exams.first(where: { $0.id == exam }) else {
+                throw CLIError(exit: .notFound, message: String(localized: .resolveNotFound("시험", exam.uuidString)))
+            }
             return try planItem(ref, in: e, course: c)
         }
         let items = c.file.exams.flatMap { e in e.plan.map { (e, $0) } }
-        return try pick(ref, items, what: "공부 계획 항목", id: { $0.1.id }, names: { [$0.1.title] }, ref: { "\(c.code)/\($0.0.title) \($0.1.title)" }).1
+        return try pick(
+            ref, items, what: "공부 계획 항목", id: { $0.1.id }, names: { [$0.1.title] }, ref: { "\(c.code)/\($0.0.title) \($0.1.title)" }
+        ).1
     }
 
     /// In `unit`'s deck, or in every deck of the course.
     func card(_ ref: String, unit: UUID?, in c: CourseRef) throws -> QuizCard {
         let units = unit.map { id in c.file.units.filter { $0.id == id } } ?? c.file.units
-        guard unit == nil || !units.isEmpty else { throw CLIError(exit: .notFound, message: String(localized: .resolveNotFound("단원", unit!.uuidString))) }
+        guard unit == nil || !units.isEmpty else {
+            throw CLIError(exit: .notFound, message: String(localized: .resolveNotFound("단원", unit!.uuidString)))
+        }
         let cards = try units.flatMap { try c.store.loadQuiz(unit: $0.id).model.cards }
         return try pick(ref, cards, what: "카드", names: { [$0.prompt] }, ref: { $0.id.uuidString })
     }
@@ -142,8 +152,11 @@ extension StudentProgram: CLIText {
     init(cli text: String, _ r: Resolver, in course: CourseRef?) throws {
         let parts = text.split(separator: ":", maxSplits: 1).map(String.init)
         guard parts.count == 2, let kind = StudentProgram.Kind(rawValue: parts[0]) else {
-            throw CLIError(exit: .usage, message: String(localized: .requirementSetBadProgram(text)),
-                           hints: [String(localized: .requirementSetProgramKinds) + StudentProgram.Kind.allCases.map(\.rawValue).joined(separator: ", ")])
+            throw CLIError(
+                exit: .usage, message: String(localized: .requirementSetBadProgram(text)),
+                hints: [
+                    String(localized: .requirementSetProgramKinds) + StudentProgram.Kind.allCases.map(\.rawValue).joined(separator: ", ")
+                ])
         }
         self.init(codeId: try r.code(parts[1]).id, kind: kind)
     }
@@ -186,7 +199,8 @@ func perform<A: Action>(spec action: A, _ options: GlobalOptions, ctx: ActionCon
     // Rendered before running so the name of an item the action removes still shows; an item it makes has a name
     // only after.
     let before = spec.effect == .creates ? nil : spec.render(spec.done, action, ctx: ctx)
-    let result = try perform(action, options, ctx: ctx, done: before ?? spec.render(spec.done, action, ctx: ctx), confirm: confirm, read: read)
+    let result = try perform(
+        action, options, ctx: ctx, done: before ?? spec.render(spec.done, action, ctx: ctx), confirm: confirm, read: read)
     if spec.undoable, !options.json, let batch = result.made { say(String(localized: .performUndoHint(batch.uuidString)).styled(.dim)) }
     return result
 }
@@ -197,7 +211,9 @@ func readJSONFile<T: Decodable>(_ type: T.Type, _ path: String) throws -> T {
     if path == "-" {
         data = FileHandle.standardInput.readDataToEndOfFile()
     } else {
-        guard let read = try? Data(contentsOf: URL(filePath: absolute(path))) else { throw CLIError(exit: .usage, message: String(localized: .importUnreadable(path))) }
+        guard let read = try? Data(contentsOf: URL(filePath: absolute(path))) else {
+            throw CLIError(exit: .usage, message: String(localized: .importUnreadable(path)))
+        }
         data = read
     }
     do {

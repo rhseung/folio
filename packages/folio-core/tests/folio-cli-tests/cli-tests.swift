@@ -1,9 +1,10 @@
-@testable import FolioCLI
 import FolioActions
 import FolioDomain
 import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioCLI
 
 struct SessionCommandTests {
     let h = Harness()
@@ -17,18 +18,24 @@ struct SessionCommandTests {
     }
 
     @Test func addCancelled() throws {
-        try h.expectSame(Self.add + ["--kind", "cancelled"]) { _ in SessionAdd(id: Self.id, course: Harness.graphTheory, date: date, kind: .cancelled) }
+        try h.expectSame(Self.add + ["--kind", "cancelled"]) { _ in
+            SessionAdd(id: Self.id, course: Harness.graphTheory, date: date, kind: .cancelled)
+        }
     }
 
     /// The Korean the app shows reads as the English value.
     @Test func addMakeupInKorean() throws {
         for word in ["makeup", "보강"] {
-            try h.expectSame(Self.add + ["--kind", word]) { _ in SessionAdd(id: Self.id, course: Harness.graphTheory, date: date, kind: .makeup) }
+            try h.expectSame(Self.add + ["--kind", word]) { _ in
+                SessionAdd(id: Self.id, course: Harness.graphTheory, date: date, kind: .makeup)
+            }
         }
     }
 
     @Test func addAbsent() throws {
-        try h.expectSame(Self.add + ["--attendance", "absent"]) { _ in SessionAdd(id: Self.id, course: Harness.graphTheory, date: date, attendance: .absent) }
+        try h.expectSame(Self.add + ["--attendance", "absent"]) { _ in
+            SessionAdd(id: Self.id, course: Harness.graphTheory, date: date, attendance: .absent)
+        }
     }
 
     @Test func set() throws {
@@ -78,7 +85,9 @@ struct SessionCommandTests {
     }
 
     @Test func runTakesNamesLikeTheCommands() throws {
-        try h.expectSame(["run", "session", "set", "--input", #"{"course":"EC4207","session":"10-28","kind":"cancelled"}"#], setup: [Self.add]) { _ in
+        try h.expectSame(
+            ["run", "session", "set", "--input", #"{"course":"EC4207","session":"10-28","kind":"cancelled"}"#], setup: [Self.add]
+        ) { _ in
             SessionSet(course: Harness.graphTheory, session: Self.id, kind: .set(.cancelled))
         }
     }
@@ -116,7 +125,9 @@ struct SessionCommandTests {
 
 struct SchemaTests {
     @Test func everyActionHasAnInputShape() throws {
-        guard case .object(let root) = actionSchemas(), case .array(let actions)? = root["actions"] else { Issue.record("no actions"); return }
+        guard case .object(let root) = actionSchemas(), case .array(let actions)? = root["actions"] else {
+            Issue.record("no actions"); return
+        }
         #expect(actions.count == Actions.all.count)
         for case .object(let a) in actions {
             guard case .object(let input)? = a["input"], case .object(let props)? = input["properties"] else {
@@ -125,13 +136,15 @@ struct SchemaTests {
             }
 
             // Backing up takes nothing: the folder and retention come from settings.json. Moving takes every unfiled course.
-            #expect(!props.isEmpty || [.string("backup create"), .string("transcript move")].contains(a["command"]), "\(a["command"] ?? .null)")
+            #expect(
+                !props.isEmpty || [.string("backup create"), .string("transcript move")].contains(a["command"]), "\(a["command"] ?? .null)")
         }
     }
 
     @Test func enumCasesCarryTheirPayload() throws {
         guard case .object(let root) = actionSchemas(), case .object(let defs)? = root["$defs"],
-              case .object(let target)? = defs["UnitMove.Target"], case .array(let cases)? = target["oneOf"] else {
+            case .object(let target)? = defs["UnitMove.Target"], case .array(let cases)? = target["oneOf"]
+        else {
             Issue.record("no UnitMove.Target")
             return
         }
@@ -159,7 +172,9 @@ struct AgentTests {
     /// The repository copy is what agents working in the repo load; it must say what `folio skill` installs.
     @Test func repositorySkillMatchesTheBinary() throws {
         var dir = URL(filePath: #filePath).deletingLastPathComponent()
-        while !FileManager.default.fileExists(atPath: dir.appending(path: ".claude/skills/folio/SKILL.md").path) { dir.deleteLastPathComponent() }
+        while !FileManager.default.fileExists(atPath: dir.appending(path: ".claude/skills/folio/SKILL.md").path) {
+            dir.deleteLastPathComponent()
+        }
         let file = try String(contentsOf: dir.appending(path: ".claude/skills/folio/SKILL.md"), encoding: .utf8)
         #expect(file == Skill.file, "run: folio skill > .claude/skills/folio/SKILL.md")
     }
@@ -203,7 +218,8 @@ struct AgentTests {
     @Test func itemsFollowTheCourse() throws {
         let gist = try Harness.fixtureCopy()
         #expect(h.cli(["unit", "add", "EC4207", "매칭"], gist: gist).code == 0)
-        let units = h.cli(["---completion", "unit", "show", "--", "positional@0", "3", "7", "folio", "unit", "show", "EC4207/"], gist: gist)
+        let units = h.cli(
+            ["---completion", "unit", "show", "--", "positional@0", "3", "7", "folio", "unit", "show", "EC4207/"], gist: gist)
         #expect(units.out.split(separator: "\n").contains("EC4207/매칭"), "\(units.out) \(units.err)")
         let semesters = h.cli(["---completion", "search", "--", "--semester", "3", "0", "folio", "search", "--semester", ""], gist: gist)
         #expect(semesters.out.split(separator: "\n").contains("2026-3"), "\(semesters.out) \(semesters.err)")

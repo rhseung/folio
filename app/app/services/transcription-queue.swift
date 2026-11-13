@@ -13,8 +13,10 @@ final class TranscriptionQueue {
 
     /// `work` gets a way to report its progress; it throws `CancellationError` when cancelled. Asking again for a
     /// recording already queued does nothing.
-    func run(_ id: UUID, failed: @escaping @MainActor (any Error) -> Void,
-             _ work: @escaping @Sendable (@escaping @Sendable (TranscriptionPhase) -> Void) async throws -> Void) {
+    func run(
+        _ id: UUID, failed: @escaping @MainActor (any Error) -> Void,
+        _ work: @escaping @Sendable (@escaping @Sendable (TranscriptionPhase) -> Void) async throws -> Void
+    ) {
         guard jobs[id] == nil else { return }
         phases[id] = .waiting
         let before = last

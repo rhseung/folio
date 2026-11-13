@@ -43,9 +43,12 @@ public struct FieldSpec: Codable, Sendable, Equatable {
     public var parsed: String?
     public var parsedForm: String?
 
-    public init(name: String, help: String = "", role: Role = .option, type: String, ref: String? = nil, optional: Bool = false, many: Bool = false,
-                patch: Bool = false, defaultValue: String? = nil, cliName: String? = nil, file: String? = nil, filePerItem: Bool = false, folder: Bool = false,
-                parsed: String? = nil, parsedForm: String? = nil) {
+    public init(
+        name: String, help: String = "", role: Role = .option, type: String, ref: String? = nil, optional: Bool = false, many: Bool = false,
+        patch: Bool = false, defaultValue: String? = nil, cliName: String? = nil, file: String? = nil, filePerItem: Bool = false,
+        folder: Bool = false,
+        parsed: String? = nil, parsedForm: String? = nil
+    ) {
         (self.name, self.help, self.role, self.type, self.ref) = (name, help, role, type, ref)
         (self.optional, self.many, self.patch, self.defaultValue) = (optional, many, patch, defaultValue)
         (self.cliName, self.file, self.filePerItem, self.folder) = (cliName, file, filePerItem, folder)
@@ -75,9 +78,11 @@ public struct ActionSpec: Codable, Sendable, Equatable {
     public var undoable: Bool
     public var fields: [FieldSpec]
 
-    public init(command: String, summary: String, discussion: String = "", effect: Effect = .changes, confirm: String? = nil, done: String,
-                examples: [String] = [], phrases: [String] = [], generated: Bool = true, manualReason: String? = nil, undoable: Bool = false,
-                fields: [FieldSpec] = []) {
+    public init(
+        command: String, summary: String, discussion: String = "", effect: Effect = .changes, confirm: String? = nil, done: String,
+        examples: [String] = [], phrases: [String] = [], generated: Bool = true, manualReason: String? = nil, undoable: Bool = false,
+        fields: [FieldSpec] = []
+    ) {
         (self.command, self.summary, self.discussion, self.effect, self.confirm) = (command, summary, discussion, effect, confirm)
         (self.done, self.examples, self.phrases, self.generated, self.fields) = (done, examples, phrases, generated, fields)
         (self.manualReason, self.undoable) = (manualReason, undoable)
@@ -113,7 +118,8 @@ public struct ActionSpec: Codable, Sendable, Equatable {
         case .array(let items)?:
             // Objects have no name of their own, so a list of them is told by its count.
             let objects = items.contains { if case .object = $0 { true } else { false } }
-            return items.count > 3 || objects ? String(localized: .valueCount(items.count)) : items.map { text($0, ref: ref, ctx: ctx) }.joined(separator: ", ")
+            return items.count > 3 || objects
+                ? String(localized: .valueCount(items.count)) : items.map { text($0, ref: ref, ctx: ctx) }.joined(separator: ", ")
         case .object?: return ""
         }
     }
@@ -128,9 +134,12 @@ extension JSONValue {
 extension DecodingError {
     /// Where the input went wrong, as a dotted path, for people and agents fixing it.
     public var summary: String {
-        let path = { (c: DecodingError.Context) in c.codingPath.map { $0.intValue.map { "[\($0)]" } ?? $0.stringValue }.joined(separator: ".") }
+        let path = { (c: DecodingError.Context) in
+            c.codingPath.map { $0.intValue.map { "[\($0)]" } ?? $0.stringValue }.joined(separator: ".")
+        }
         return switch self {
-        case .keyNotFound(let key, let c): String(localized: .errorDecodeKeyNotFound(([path(c)] + [key.stringValue]).filter { !$0.isEmpty }.joined(separator: ".")))
+        case .keyNotFound(let key, let c):
+            String(localized: .errorDecodeKeyNotFound(([path(c)] + [key.stringValue]).filter { !$0.isEmpty }.joined(separator: ".")))
         case .typeMismatch(let t, let c): String(localized: .errorDecodeTypeMismatch(path(c), "\(t)"))
         case .valueNotFound(let t, let c): String(localized: .errorDecodeValueNotFound(path(c), "\(t)"))
         case .dataCorrupted(let c): "\(path(c)): \(c.debugDescription)"

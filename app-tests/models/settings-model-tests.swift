@@ -1,6 +1,7 @@
 import FolioDomain
 import Foundation
 import Testing
+
 @testable import Folio
 
 @MainActor
@@ -52,7 +53,9 @@ struct SettingsModelTests {
     @Test func aTabRememberedByItsFormerNameStillOpens() {
         let saved = UserDefaults.standard.string(forKey: SettingsTab.storageKey)
         defer { UserDefaults.standard.set(saved, forKey: SettingsTab.storageKey) }
-        for (stored, tab) in [("녹음", SettingsTab.classes), ("평어", .record), ("알림", .notifications), ("review", .review), ("없는 탭", .general)] {
+        for (stored, tab) in [
+            ("녹음", SettingsTab.classes), ("평어", .record), ("알림", .notifications), ("review", .review), ("없는 탭", .general),
+        ] {
             UserDefaults.standard.set(stored, forKey: SettingsTab.storageKey)
             #expect(SettingsTab.remembered == tab)
         }

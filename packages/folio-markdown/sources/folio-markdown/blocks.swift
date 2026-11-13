@@ -41,8 +41,12 @@ public struct CBTable: Codable, Equatable, Sendable {
             let cells = row.cells.enumerated().map { i, cell in
                 let isHeader = row.header == true || (table.headerColumn == true && i == 0)
                 let tag = isHeader ? "th" : "td"
-                let align = column < columns.count ? columns[column].align.flatMap { alignments.contains($0) ? " style=\"text-align:\($0)\"" : nil } ?? "" : ""
-                let span = (cell.colspan.map { $0 > 1 ? " colspan=\"\($0)\"" : "" } ?? "") + (cell.rowspan.map { $0 > 1 ? " rowspan=\"\($0)\"" : "" } ?? "")
+                let align =
+                    column < columns.count
+                    ? columns[column].align.flatMap { alignments.contains($0) ? " style=\"text-align:\($0)\"" : nil } ?? "" : ""
+                let span =
+                    (cell.colspan.map { $0 > 1 ? " colspan=\"\($0)\"" : "" } ?? "")
+                    + (cell.rowspan.map { $0 > 1 ? " rowspan=\"\($0)\"" : "" } ?? "")
                 column += cell.colspan ?? 1
                 return "<\(tag)\(span)\(align)>\(draw(cell.text))</\(tag)>"
             }.joined()

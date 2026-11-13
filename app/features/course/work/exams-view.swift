@@ -68,7 +68,8 @@ struct ExamsView: View {
                             if !exam.allowed.isEmpty { fact("doc.text", exam.allowed, empty: "") }
                         }
                         if !exam.memo.isEmpty {
-                            Text(exam.memo).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(2).textSelection(.enabled)
+                            Text(exam.memo).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(2)
+                                .textSelection(.enabled)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -86,11 +87,14 @@ struct ExamsView: View {
                         Text(.examsLinkedMaterials).font(Theme.Typeface.bodyStrong)
                     }
                     Spacer(minLength: 0)
-                    ToggleMenu(title: String(localized: .examsLinkMaterials), items: model.materialMenu(exam)) { id in model.toggle(material: id, in: exam) }
+                    ToggleMenu(title: String(localized: .examsLinkMaterials), items: model.materialMenu(exam)) { id in
+                        model.toggle(material: id, in: exam)
+                    }
                 }
                 ForEach(Array(linked.enumerated()), id: \.element.id) { i, m in
                     CardRow(last: i == linked.count - 1) {
-                        Image(systemName: m.isFolder ? "folder" : m.isPDF ? "doc.richtext" : "doc").foregroundStyle(Theme.Palette.textTertiary)
+                        Image(systemName: m.isFolder ? "folder" : m.isPDF ? "doc.richtext" : "doc").foregroundStyle(
+                            Theme.Palette.textTertiary)
                         Text((m.path as NSString).lastPathComponent).lineLimit(1).truncationMode(.middle).help(m.path)
                         Text((m.path as NSString).deletingLastPathComponent)
                             .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
@@ -138,17 +142,25 @@ struct ExamsView: View {
                     Text(model.scopeLine(exam, units: scope.units.count))
                         .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
                     Spacer(minLength: Theme.Space.m)
-                    Text(.examsOnTrack(scope.onTrack, scope.units.count)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).monospacedDigit()
+                    Text(.examsOnTrack(scope.onTrack, scope.units.count)).font(Theme.Typeface.caption).foregroundStyle(
+                        Theme.Palette.textSecondary
+                    ).monospacedDigit()
                         .help(Text(.examsOnTrackHelp))
                 }
                 Meter(value: Double(scope.onTrack) / Double(scope.units.count), height: 4)
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 300), spacing: Theme.Space.l, alignment: .leading)], alignment: .leading, spacing: 0) {
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 300), spacing: Theme.Space.l, alignment: .leading)], alignment: .leading,
+                    spacing: 0
+                ) {
                     ForEach(Array(scope.tops.enumerated()), id: \.element.unit.id) { i, top in
                         HStack(spacing: Theme.Space.s) {
                             Text("\(i + 1)").font(Theme.Typeface.label).monospacedDigit().foregroundStyle(accent.ink)
                                 .frame(width: 20, alignment: .trailing)
                             Text(top.unit.title).lineLimit(1)
-                            if top.children > 0 { Text("+\(top.children)").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit() }
+                            if top.children > 0 {
+                                Text("+\(top.children)").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+                                    .monospacedDigit()
+                            }
                             Spacer(minLength: 0)
                             ReviewDot(state: states[top.unit.id], today: today)
                         }
@@ -177,8 +189,8 @@ struct ExamsView: View {
 
     func summaryButton(_ exam: Exam) -> some View {
         Button(model.summaryTitle(exam)) { openSummary(exam) }
-        .buttonStyle(.pointing(.bordered))
-        .help(model.summaryHelp(exam))
+            .buttonStyle(.pointing(.bordered))
+            .help(model.summaryHelp(exam))
     }
 
     func openMaterial(_ m: FolioDomain.Material) {
@@ -238,8 +250,13 @@ struct ExamPlanCard: View {
                     CheckCircle(on: on) { model.toggle(item.id) }.help(Text(on ? .examsPlanUndo : .examsPlanCheck))
                     Text(model.dayLabel(items, at: i))
                         .font(Theme.Typeface.caption.weight(item.day == today ? .semibold : .regular)).monospacedDigit()
-                        .foregroundStyle(on ? Theme.Palette.textTertiary : item.day < today ? Theme.Palette.danger
-                                         : item.day == today ? Theme.Palette.text : Theme.Palette.textSecondary)
+                        .foregroundStyle(
+                            on
+                                ? Theme.Palette.textTertiary
+                                : item.day < today
+                                    ? Theme.Palette.danger
+                                    : item.day == today ? Theme.Palette.text : Theme.Palette.textSecondary
+                        )
                         .lineLimit(1)
                         .frame(width: ExamsView.dateColumn, alignment: .leading)
                     Text(item.title).lineLimit(1)
@@ -249,7 +266,9 @@ struct ExamPlanCard: View {
                         Text(target).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
                     }
                     Spacer(minLength: 0)
-                    Button { model.removePlanItem(item.id, of: exam) } label: {
+                    Button {
+                        model.removePlanItem(item.id, of: exam)
+                    } label: {
                         Image(systemName: "xmark").foregroundStyle(Theme.Palette.textTertiary)
                     }
                     .buttonStyle(.ghost)
@@ -292,7 +311,9 @@ struct ExamEditor: View {
         SheetForm(title: model.title, confirm: model.confirm, disabled: model.disabled, note: model.note, carded: false, width: 560) {
             Block(String(localized: .examsEditorExam)) {
                 Card {
-                    FormRow(label: String(localized: .examsEditorName), last: course.file.components.isEmpty) { InlineField(model.namePrompt, text: $model.draft.title) }
+                    FormRow(label: String(localized: .examsEditorName), last: course.file.components.isEmpty) {
+                        InlineField(model.namePrompt, text: $model.draft.title)
+                    }
                     if !course.file.components.isEmpty {
                         FormRow(label: String(localized: .examsEditorComponent), last: true) {
                             ChoiceMenu(selection: $model.draft.componentId, options: model.components)
@@ -302,7 +323,10 @@ struct ExamEditor: View {
             }
             Block(String(localized: .examsEditorWhenWhere)) {
                 Card {
-                    FormRow(label: String(localized: .examsEditorWhen), detail: model.endsBeforeStart ? String(localized: .examsEditorEndsBeforeStart) : nil) {
+                    FormRow(
+                        label: String(localized: .examsEditorWhen),
+                        detail: model.endsBeforeStart ? String(localized: .examsEditorEndsBeforeStart) : nil
+                    ) {
                         if model.draft.start == nil {
                             Button(.examsEditorSetDate) { model.setDefaultStart() }
                                 .buttonStyle(.ghost)
@@ -311,24 +335,35 @@ struct ExamEditor: View {
                             Text("–").foregroundStyle(Theme.Palette.textTertiary)
                             if let end = model.endMinute {
                                 TimeMenu(minute: Binding(get: { end }, set: model.setEnd))
-                                Button { model.setEnd(nil) } label: { Image(systemName: "xmark.circle.fill") }
-                                    .buttonStyle(.pointing(.plain)).foregroundStyle(Theme.Palette.textTertiary).help(Text(.examsEditorClearEnd))
+                                Button {
+                                    model.setEnd(nil)
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                }
+                                .buttonStyle(.pointing(.plain)).foregroundStyle(Theme.Palette.textTertiary).help(Text(.examsEditorClearEnd))
                             } else {
                                 Button(.examsEditorAddEnd) { model.addEnd() }.buttonStyle(.ghost)
                             }
                         }
                     }
-                    FormRow(label: String(localized: .examsEditorLocation)) { TextField(String(localized: .examsEditorLocationExample), text: $model.draft.location).pill(width: 140) }
-                    FormRow(label: String(localized: .examsEditorAllowed), last: true) { InlineField(String(localized: .examsEditorAllowedExample), text: $model.draft.allowed) }
+                    FormRow(label: String(localized: .examsEditorLocation)) {
+                        TextField(String(localized: .examsEditorLocationExample), text: $model.draft.location).pill(width: 140)
+                    }
+                    FormRow(label: String(localized: .examsEditorAllowed), last: true) {
+                        InlineField(String(localized: .examsEditorAllowedExample), text: $model.draft.allowed)
+                    }
                 }
             }
             Block(String(localized: .examsScope)) {
                 Card {
                     FormRow(label: String(localized: .examsEditorUnits)) {
-                        SearchMultiSelect(selection: $model.draft.scopeUnitIds, options: units.map { PickOption(id: $0.unit.id, title: $0.unit.title, depth: $0.depth) },
-                                          placeholder: String(localized: units.isEmpty ? .examsEditorNoUnits : .examsEditorPick),
-                                          subtree: { UnitTree.subtree(of: $0, in: course.file.units) })
-                            .disabled(units.isEmpty)
+                        SearchMultiSelect(
+                            selection: $model.draft.scopeUnitIds,
+                            options: units.map { PickOption(id: $0.unit.id, title: $0.unit.title, depth: $0.depth) },
+                            placeholder: String(localized: units.isEmpty ? .examsEditorNoUnits : .examsEditorPick),
+                            subtree: { UnitTree.subtree(of: $0, in: course.file.units) }
+                        )
+                        .disabled(units.isEmpty)
                     }
                     FormRow(label: String(localized: .examsEditorScopeText), last: true) {
                         InlineField(String(localized: .examsEditorScopeTextExample), text: $model.draft.scopeText)
@@ -353,9 +388,11 @@ private struct ReviewDot: View {
             guard let due = state.due else { return (Theme.Palette.textTertiary, String(localized: .examsReviewOngoing)) }
             let late = due.days(until: today)
             let note = state.writeNoteFirst ? String(localized: .examsReviewNoNote) + " · " : ""
-            return late > 0 ? (Theme.Palette.danger, note + String(localized: .examsReviewLate(late)))
-                : late == 0 ? (Theme.Palette.warning, note + String(localized: .examsReviewToday))
-                : (Theme.Palette.textTertiary, String(localized: .examsReviewNext(due.shortLabel)))
+            return late > 0
+                ? (Theme.Palette.danger, note + String(localized: .examsReviewLate(late)))
+                : late == 0
+                    ? (Theme.Palette.warning, note + String(localized: .examsReviewToday))
+                    : (Theme.Palette.textTertiary, String(localized: .examsReviewNext(due.shortLabel)))
         }()
         Group {
             if let color { Circle().fill(color) } else { Circle().strokeBorder(Theme.Palette.line, lineWidth: 1.5) }

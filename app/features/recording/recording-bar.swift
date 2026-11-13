@@ -18,13 +18,21 @@ struct RecordingBar: View {
         VStack(alignment: .leading, spacing: Theme.Space.s) {
             HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                    Button { if let id = model.course?.id { open(.course(id)) } } label: {
-                        Text(model.courseTitle).font(Theme.Typeface.bodyStrong).foregroundStyle(model.paused ? Theme.Palette.textSecondary : model.accent.ink).lineLimit(1)
+                    Button {
+                        if let id = model.course?.id { open(.course(id)) }
+                    } label: {
+                        Text(model.courseTitle).font(Theme.Typeface.bodyStrong).foregroundStyle(
+                            model.paused ? Theme.Palette.textSecondary : model.accent.ink
+                        ).lineLimit(1)
                     }
                     .help(Text(.recordingOpenCourse))
                     if let session = model.sessionName, let link = model.sessionLink {
-                        Button { open(link) } label: {
-                            Text(session).font(Theme.Typeface.caption).foregroundStyle(model.paused ? Theme.Palette.textTertiary : Theme.Palette.textSecondary).lineLimit(1)
+                        Button {
+                            open(link)
+                        } label: {
+                            Text(session).font(Theme.Typeface.caption).foregroundStyle(
+                                model.paused ? Theme.Palette.textTertiary : Theme.Palette.textSecondary
+                            ).lineLimit(1)
                         }
                         .help(Text(link.kind == .note ? .recordingOpenSession : .recordingOpenSessions))
                     }
@@ -41,7 +49,9 @@ struct RecordingBar: View {
             // sidebar's terms up and down under the pointer.
             Text(model.line)
                 .font(Theme.Typeface.caption)
-                .foregroundStyle(model.paused ? Theme.Palette.textTertiary : recorder.volatile.isEmpty ? Theme.Palette.text : Theme.Palette.textSecondary)
+                .foregroundStyle(
+                    model.paused ? Theme.Palette.textTertiary : recorder.volatile.isEmpty ? Theme.Palette.text : Theme.Palette.textSecondary
+                )
                 .lineLimit(2, reservesSpace: true)
                 .truncationMode(.head)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -50,7 +60,9 @@ struct RecordingBar: View {
                 LevelMeter(level: model.recording ? recorder.level : 0)
                 Spacer(minLength: 0)
                 // Filled with a count once marked: an outline that only bounced looked as if the click did nothing.
-                Button { recorder.bookmark() } label: {
+                Button {
+                    recorder.bookmark()
+                } label: {
                     HStack(spacing: Theme.Space.xxs) {
                         Image(systemName: recorder.bookmarks.isEmpty ? "bookmark" : "bookmark.fill")
                             .symbolEffect(.bounce, value: recorder.bookmarks.count)
@@ -63,25 +75,35 @@ struct RecordingBar: View {
                 }
                 .help(Text(.recordingBookmarkHelp(recorder.bookmarks.count)))
                 .disabled(model.settling)
-                Button { model.toggle() } label: {
+                Button {
+                    model.toggle()
+                } label: {
                     // Only a pause offers to resume; starting and stopping keep the pause glyph, switched off.
                     Image(systemName: model.paused ? "record.circle" : "pause.fill").contentTransition(.symbolEffect(.replace))
                 }
                 .help(Text(model.paused ? .recordingResume : .recordingPause))
                 .disabled(model.settling)
-                Button { Task { await model.stop() } } label: { Image(systemName: "stop.fill") }
+                Button {
+                    Task { await model.stop() }
+                } label: {
+                    Image(systemName: "stop.fill")
+                }
                 .help(Text(.recordingStop))
                 .disabled(model.settling)
-                Button { showingTranscript.toggle() } label: { Image(systemName: "text.quote") }
-                    .help(Text(showingTranscript ? .recordingCollapse : .recordingExpand))
-                    // Beside the sidebar, not inside it: the transcript wants a reading width the sidebar doesn't have.
-                    .popover(isPresented: $showingTranscript, arrowEdge: .trailing) {
-                        TranscriptFeed(model: model) { link in
-                            showingTranscript = false
-                            open(link)
-                        }
-                        .frame(width: Theme.Size.claudePanel, height: 320)
+                Button {
+                    showingTranscript.toggle()
+                } label: {
+                    Image(systemName: "text.quote")
+                }
+                .help(Text(showingTranscript ? .recordingCollapse : .recordingExpand))
+                // Beside the sidebar, not inside it: the transcript wants a reading width the sidebar doesn't have.
+                .popover(isPresented: $showingTranscript, arrowEdge: .trailing) {
+                    TranscriptFeed(model: model) { link in
+                        showingTranscript = false
+                        open(link)
                     }
+                    .frame(width: Theme.Size.claudePanel, height: 320)
+                }
             }
             .buttonStyle(.ghost)
             // One color for every button, the sidebar's own: blue buttons beside a red stop read as two kinds of control,
@@ -92,8 +114,9 @@ struct RecordingBar: View {
         // Paused, the card goes gray and its words fade, like a control switched off; the buttons keep their color, since
         // resume and stop are what the card is for then.
         .background {
-            RecordingFace(shape: RoundedRectangle(cornerRadius: Theme.Radius.floating), accent: model.paused ? CourseAccent.gray : model.accent,
-                          recording: model.recording, level: recorder.level)
+            RecordingFace(
+                shape: RoundedRectangle(cornerRadius: Theme.Radius.floating), accent: model.paused ? CourseAccent.gray : model.accent,
+                recording: model.recording, level: recorder.level)
         }
         .animation(.smooth, value: model.paused)
         .environment(\.onGlass, true)
@@ -124,8 +147,11 @@ struct RecordingFace<Outline: InsettableShape>: View {
                 // A circle around the origin, not a gradient filling the card: shrunk below the card's height, the
                 // card-sized fill showed its top edge as a line across the glow.
                 Circle()
-                    .fill(RadialGradient(colors: [accent.color.opacity(Theme.Opacity.voiceGlow), accent.color.opacity(0)],
-                                         center: .center, startRadius: 0, endRadius: reach))
+                    .fill(
+                        RadialGradient(
+                            colors: [accent.color.opacity(Theme.Opacity.voiceGlow), accent.color.opacity(0)],
+                            center: .center, startRadius: 0, endRadius: reach)
+                    )
                     .frame(width: reach * 2, height: reach * 2)
                     .position(origin(proxy.size))
                     // Scaled from the origin, not the radius changed: SwiftUI eases a scale between level samples,
@@ -163,12 +189,15 @@ private struct TranscriptFeed: View {
 
     /// One line above the captions, so the card itself stays as it is: what the captions were told, opened on a click.
     @ViewBuilder var context: some View {
-        Button { withAnimation(Theme.Motion.standard) { showingContext.toggle() } } label: {
+        Button {
+            withAnimation(Theme.Motion.standard) { showingContext.toggle() }
+        } label: {
             HStack(spacing: Theme.Space.s) {
                 Image(systemName: "doc.text").foregroundStyle(Theme.Palette.textTertiary)
                 Text(model.contextSummary).lineLimit(1).truncationMode(.middle).foregroundStyle(Theme.Palette.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Image(systemName: showingContext ? "chevron.up" : "chevron.down").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+                Image(systemName: showingContext ? "chevron.up" : "chevron.down").font(Theme.Typeface.caption).foregroundStyle(
+                    Theme.Palette.textTertiary)
             }
             .font(Theme.Typeface.caption)
             .padding(.horizontal, Theme.Space.l)

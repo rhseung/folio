@@ -23,7 +23,11 @@ public enum NoteImages {
         for m in body.matches(of: wiki) { found.append((m.range.lowerBound, .name(String(m.1).trimmingCharacters(in: .whitespaces)))) }
         var seen = Set<String>()
         return found.sorted { $0.0 < $1.0 }.map(\.1).filter { ref in
-            let file = switch ref { case .path(let p): p; case .name(let n): n }
+            let file =
+                switch ref {
+                case .path(let p): p
+                case .name(let n): n
+                }
             return extensions.contains((file as NSString).pathExtension.lowercased()) && seen.insert(file).inserted
         }
     }

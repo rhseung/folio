@@ -19,8 +19,9 @@ struct RecordingMenuSource: ItemMenuSource {
         case .open:
             .open(command) { openLink(AppLink(.recording, model.recording.id), course: model.courseId) }
         case .transcribe:
-            MenuRow(command, model.hasLines ? .recordingRetranscribe : .recordingTranscribe, "waveform.badge.magnifyingglass",
-                    disabled: !model.canTranscribe, .action(model.transcribe))
+            MenuRow(
+                command, model.hasLines ? .recordingRetranscribe : .recordingTranscribe, "waveform.badge.magnifyingglass",
+                disabled: !model.canTranscribe, .action(model.transcribe))
         case .share:
             .share(command, AppLink(.recording, model.recording.id), course: model.courseId)
         case .copyTranscript:

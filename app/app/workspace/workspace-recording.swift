@@ -10,16 +10,21 @@ extension Workspace {
         var started: UUID?
         do {
             // Names of recordings still being compressed are taken too, though their audio isn't in the folder yet.
-            let file = try course.store.newRecordingFile(named: course.file.recordingName(of: session, calendar: calendar), reserved: course.file.recordings.map(\.file))
+            let file = try course.store.newRecordingFile(
+                named: course.file.recordingName(of: session, calendar: calendar), reserved: course.file.recordings.map(\.file))
             let recording = Recording(device: device, at: .now, sessionId: session.id, file: file)
             started = recording.id
             // folio:not-an-action recording is not an action
             try pending.save(PendingRecording(courseId: course.id, recording: recording))
-            recorder.saveTranscript = { [store = course.store] recording, transcript in try? store.saveTranscript(transcript, of: recording) }
+            recorder.saveTranscript = { [store = course.store] recording, transcript in try? store.saveTranscript(transcript, of: recording)
+            }
             // folio:not-an-action recording is not an action
-            recorder.saveProgress = { [id = course.id] recording in try? pending.save(PendingRecording(courseId: id, recording: recording)) }
-            try await recorder.start(recording, at: pending.audioURL(of: recording.id), course: course.id,
-                                     title: "\(course.file.course.title) · \(course.file.title(of: session, calendar: calendar))", locale: captionLocale(of: course))
+            recorder.saveProgress = { [id = course.id] recording in try? pending.save(PendingRecording(courseId: id, recording: recording))
+            }
+            try await recorder.start(
+                recording, at: pending.audioURL(of: recording.id), course: course.id,
+                title: "\(course.file.course.title) · \(course.file.title(of: session, calendar: calendar))",
+                locale: captionLocale(of: course))
             // Listed from the start, so the session shows it is being recorded.
             editRecordings(course.id) { $0.append(recording) }
             await tellCaptions()
@@ -33,7 +38,8 @@ extension Workspace {
     /// download first, so this runs after recording has started, never before.
     func tellCaptions() async {
         guard let id = recorder.current, let course = recorder.courseId.flatMap(course), let snapshot = recorder.snapshot,
-              let session = course.file.sessions.first(where: { $0.id == snapshot.sessionId }) else { return }
+            let session = course.file.sessions.first(where: { $0.id == snapshot.sessionId })
+        else { return }
         let (store, file, telling) = (course.store, course.file, recorder.telling())
         let context = await Task.detached { store.transcriptionContext(file, session: session, recording: snapshot) }.value
         await recorder.use(context, hints: context.hints(course: file.course.title), for: id, telling: telling)
@@ -42,7 +48,8 @@ extension Workspace {
     /// Again only when the slides or units would now be others: reading the PDFs takes a while.
     func retellCaptionsIfChanged() {
         guard let course = recorder.courseId.flatMap(course), let snapshot = recorder.snapshot,
-              let session = course.file.sessions.first(where: { $0.id == snapshot.sessionId }) else { return }
+            let session = course.file.sessions.first(where: { $0.id == snapshot.sessionId })
+        else { return }
         let now = course.file.transcriptionContext(for: session, recording: snapshot)
         guard recorder.context.map({ $0.differs(from: now) }) ?? true else { return }
         Task { await tellCaptions() }
@@ -107,7 +114,9 @@ extension Workspace {
         let local = pendingRecordings
         var recording = pending.recording
         do {
-            recording.duration = try await Task.detached { try LectureRecorder.compress(local.audioURL(of: id), to: local.compressedURL(of: id)) }.value
+            recording.duration = try await Task.detached {
+                try LectureRecorder.compress(local.audioURL(of: id), to: local.compressedURL(of: id))
+            }.value
             let path = try course.store.installRecording(from: local.compressedURL(of: id), as: recording.file)
             if path != recording.file {
                 // shortcut: the transcript is copied under the new name and the old one is left; only two devices recording the same session collide.
@@ -138,7 +147,8 @@ extension Workspace {
     /// say the materials changed when nothing had.
     private func retellFinished(_ recording: Recording, in course: LoadedCourse) async {
         guard var transcript = course.store.transcript(of: recording),
-              let session = course.file.sessions.first(where: { $0.id == recording.sessionId }) else { return }
+            let session = course.file.sessions.first(where: { $0.id == recording.sessionId })
+        else { return }
         let (store, file) = (course.store, course.file)
         let context = await Task.detached { store.transcriptionContext(file, session: session, recording: recording) }.value
         guard transcript.context != context else { return }
@@ -163,15 +173,20 @@ extension Workspace {
         let session = file.sessions.first { $0.id == recording.sessionId }
         // The listed one has the pages the recording kept; the caller's copy may be from before it finished.
         let recording = file.recordings.first { $0.id == recording.id } ?? recording
-        let copy = URL.cachesDirectory.appending(path: "Folio/Transcribing/\(recording.id.uuidString).\((recording.file as NSString).pathExtension)")
-        transcriptions.run(recording.id, failed: { [weak self] error in
-            self?.error = String(localized: .recordingErrorTranscribeFailed(error.localizedDescription))
-        }) { report in
+        let copy = URL.cachesDirectory.appending(
+            path: "Folio/Transcribing/\(recording.id.uuidString).\((recording.file as NSString).pathExtension)")
+        transcriptions.run(
+            recording.id,
+            failed: { [weak self] error in
+                self?.error = String(localized: .recordingErrorTranscribeFailed(error.localizedDescription))
+            }
+        ) { report in
             // folio:not-an-action a copy in this device's caches, outside the GIST folder
             defer { try? FileManager.default.removeItem(at: copy) }
             try store.copyAudio(of: recording, to: copy)
             let context = session.map { store.transcriptionContext(file, session: $0, recording: recording) }
-            var transcript = try await engine.transcribe(copy, locale: locale, hints: context?.hints(course: file.course.title), mayDownload: mayDownload, report: report)
+            var transcript = try await engine.transcribe(
+                copy, locale: locale, hints: context?.hints(course: file.course.title), mayDownload: mayDownload, report: report)
             transcript.context = context
             // Deleted meanwhile: saving now would leave a transcript with no recording.
             try Task.checkCancellation()
@@ -190,7 +205,9 @@ extension Workspace {
     /// Recording is not an action, so its list is the one place the app writes course.json itself.
     private func editRecordings(_ course: UUID, _ change: (inout [Recording]) -> Void) {
         guard let gist else { return }
-        let ctx = ActionContext(gist: gist, device: device, calendar: calendar, courses: Dictionary(courses.map { ($0.id, $0.store) }, uniquingKeysWith: { a, _ in a }))
+        let ctx = ActionContext(
+            gist: gist, device: device, calendar: calendar,
+            courses: Dictionary(courses.map { ($0.id, $0.store) }, uniquingKeysWith: { a, _ in a }))
         perform { try ctx.edit(course) { change(&$0.recordings) } }
         show(ctx)
     }

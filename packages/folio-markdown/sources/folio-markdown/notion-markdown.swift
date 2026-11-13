@@ -170,7 +170,9 @@ public enum NotionMarkdown {
     }
 
     /// Wrapper tags with no Folio counterpart; their content stays.
-    static let dropped: Set<String> = ["<p>", "</p>", "<p />", "<p/>", "<columns>", "</columns>", "<column>", "</column>", "</pdf>", "</image>"]
+    static let dropped: Set<String> = [
+        "<p>", "</p>", "<p />", "<p/>", "<columns>", "</columns>", "<column>", "</column>", "</pdf>", "</image>",
+    ]
     static var droppedLine: Regex<Substring> { /<(?:table-of-contents|p|column|columns)\b[^>]*\/?>/ }
 
     static func cell(_ text: String) -> String {
@@ -194,8 +196,12 @@ public enum NotionMarkdown {
         s.replace(/<image\s+source="([^"]*)"[^>]*?(?:\/>|>(.*?)<\/image>|>)/) { m in
             images[String(m.1)].map { "![\(m.2.map(String.init) ?? "")](\($0))" } ?? ""
         }
-        s.replace(/<mention-page\s+url="([^"]*)"[^>]*?(?:\/>|>(.*?)<\/mention-page>)/) { m in mention(String(m.1), text: m.2.map(String.init), links: links) }
-        s.replace(/<mention\s+url="([^"]*)"[^>]*?(?:\/>|>(.*?)<\/mention>)/) { m in mention(String(m.1), text: m.2.map(String.init), links: links) }
+        s.replace(/<mention-page\s+url="([^"]*)"[^>]*?(?:\/>|>(.*?)<\/mention-page>)/) { m in
+            mention(String(m.1), text: m.2.map(String.init), links: links)
+        }
+        s.replace(/<mention\s+url="([^"]*)"[^>]*?(?:\/>|>(.*?)<\/mention>)/) { m in
+            mention(String(m.1), text: m.2.map(String.init), links: links)
+        }
         s.replace(/<pdf\s+source="([^"]*)"[^>]*?(?:\/>|>(.*?)<\/pdf>|>)/) { m in
             images[String(m.1)].map { "[\(($0 as NSString).lastPathComponent)](\($0))" } ?? ""
         }

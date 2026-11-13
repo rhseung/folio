@@ -21,8 +21,10 @@ struct TextFileView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
 
-    init(workspace: Workspace, course: LoadedCourse, material: UUID, requestedPage: Binding<Int?> = .constant(nil),
-         shownPage: Binding<Int?> = .constant(nil)) {
+    init(
+        workspace: Workspace, course: LoadedCourse, material: UUID, requestedPage: Binding<Int?> = .constant(nil),
+        shownPage: Binding<Int?> = .constant(nil)
+    ) {
         _model = State(initialValue: TextFileModel(workspace: workspace, course: course, material: material))
         _requestedPage = requestedPage
         _shownPage = shownPage
@@ -47,13 +49,22 @@ struct TextFileView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onGeometryChange(for: Bool.self) { $0.size.width >= NotePanes.sideBySide } action: { wide = $0 }
+        .onGeometryChange(for: Bool.self) {
+            $0.size.width >= NotePanes.sideBySide
+        } action: {
+            wide = $0
+        }
         .background(Theme.Palette.card)
         // A `.tex` note renames from its name as a markdown note does; saved first, since the file is about to move.
-        .crumb(model.name, level: 2, symbol: model.isTex ? "doc.text" : "chevron.left.forwardslash.chevron.right", rename: links.map { _ in {
-            model.saveIfDirty()
-            renaming = true
-        } })
+        .crumb(
+            model.name, level: 2, symbol: model.isTex ? "doc.text" : "chevron.left.forwardslash.chevron.right",
+            rename: links.map { _ in
+                {
+                    model.saveIfDirty()
+                    renaming = true
+                }
+            }
+        )
         .sheet(isPresented: $renaming) {
             if let links { NoteEditSheet(workspace: links.workspace, course: links.course, note: links.note, moves: moves) }
         }
@@ -88,7 +99,9 @@ struct TextFileView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in model.saveIfDirty() }
         #endif
         // Edits save on their own; ⌘S is kept only for the habit, with no button of its own.
-        .background { Button("") { model.saveNow(force: false) }.keyboardShortcut("s").opacity(0).allowsHitTesting(false).accessibilityHidden(true) }
+        .background {
+            Button("") { model.saveNow(force: false) }.keyboardShortcut("s").opacity(0).allowsHitTesting(false).accessibilityHidden(true)
+        }
         .alert(String(localized: .textFileConflict), isPresented: $model.conflict) {
             Button(.notesConflictOverwrite, role: .destructive) { model.saveNow(force: true) }
             Button(.notesConflictReload) { model.load() }
@@ -107,9 +120,11 @@ struct TextFileView: View {
     var source: some View {
         VStack(spacing: 0) {
             if model.unreadable {
-                ContentUnavailableView(String(localized: .fileViewCannotRead), systemImage: "doc.questionmark",
-                                       description: Text(.textFileUnreadable))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                ContentUnavailableView(
+                    String(localized: .fileViewCannotRead), systemImage: "doc.questionmark",
+                    description: Text(.textFileUnreadable)
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 SourceFileEditor(text: $model.text, language: model.format.highlightLanguage, reveal: $model.reveal)
             }
@@ -124,7 +139,7 @@ struct TextFileView: View {
             // `PDFKitView` keeps the view it was made with, so each build's controller needs a view of its own.
             PDFKitView(controller: controller).id(ObjectIdentifier(controller)).frame(maxWidth: .infinity)
                 #if os(macOS)
-                .help(Text(.textFilePdfHelp))
+            .help(Text(.textFilePdfHelp))
                 #endif
         } else if model.building {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -160,7 +175,7 @@ struct TextFileView: View {
             if model.isTex {
                 Button(.textFileBuild, systemImage: "hammer") { Task { await model.build() } }
                     #if os(macOS)
-                    .help(Text(.textFileBuildHelp))
+                .help(Text(.textFileBuildHelp))
                     #endif
                     .keyboardShortcut("b")
                     .disabled(!model.canBuild)
@@ -180,8 +195,9 @@ struct TextFileView: View {
                 PageMenuButton(inBar: true) { MaterialMenu(courseId: model.course.id, materialId: id, host: .own) }
             } else if let links {
                 PageMenuButton(inBar: true) {
-                    NoteMenu(courseId: links.course.id, note: links.note, host: .own, moves: moves, build: texBuild, canBuild: model.canBuild,
-                             save: model.saveIfDirty)
+                    NoteMenu(
+                        courseId: links.course.id, note: links.note, host: .own, moves: moves, build: texBuild, canBuild: model.canBuild,
+                        save: model.saveIfDirty)
                 }
             }
         }
@@ -200,7 +216,9 @@ struct TextFileView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(Array(model.shownIssues.enumerated()), id: \.offset) { _, issue in
-                        Button { model.jump(to: issue) } label: {
+                        Button {
+                            model.jump(to: issue)
+                        } label: {
                             HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
                                 Image(systemName: issue.severity == .error ? "xmark.octagon" : "exclamationmark.triangle")
                                     .foregroundStyle(issue.severity == .error ? Theme.Palette.danger : Theme.Palette.warning)

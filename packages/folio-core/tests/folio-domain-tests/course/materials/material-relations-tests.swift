@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import FolioDomain
 
 struct MaterialRelationsTests {
@@ -70,8 +71,12 @@ struct MaterialRelationsTests {
     @Test func aSplitLectureBelongsWithItsUnitsAndTheirSessions() {
         var file = course()
         let lecture = file.materials[0].id
-        file.split(lecture, into: [LectureCut(unit: chapter(file), firstPage: 1, lastPage: 4),
-                                   LectureCut(unit: section(file), firstPage: 5, lastPage: 12)], device: device, now: now)
+        file.split(
+            lecture,
+            into: [
+                LectureCut(unit: chapter(file), firstPage: 1, lastPage: 4),
+                LectureCut(unit: section(file), firstPage: 5, lastPage: 12),
+            ], device: device, now: now)
         #expect(file.materials[0].unitIds.isEmpty)
         #expect(file.routes(of: file.materials[0], to: .unit(section(file))) == [.pages])
         #expect(file.routes(of: file.materials[0], to: .unit(chapter(file))) == [.pages])

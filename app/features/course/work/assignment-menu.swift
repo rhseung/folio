@@ -32,11 +32,15 @@ struct AssignmentMenuSource: ItemMenuSource {
         case .open:
             .open(command) { openLink(link, course: courseId) }
         case .addFiles:
-            MenuRow(command, .menuAddFilesEllipsis, "doc.badge.plus", .action { sheets.addFiles(FileIntake(course: courseId, folder: folder)) })
+            MenuRow(
+                command, .menuAddFilesEllipsis, "doc.badge.plus", .action { sheets.addFiles(FileIntake(course: courseId, folder: folder)) })
         case .status(let current):
-            MenuRow(command, .assignmentsStatus, current.symbol, .submenu(AssignmentStatus.menuOrder.map { status in
-                MenuRow.Leaf(id: status, title: status.label, symbol: status.symbol, checked: status == current) { set(status) }
-            }))
+            MenuRow(
+                command, .assignmentsStatus, current.symbol,
+                .submenu(
+                    AssignmentStatus.menuOrder.map { status in
+                        MenuRow.Leaf(id: status, title: status.label, symbol: status.symbol, checked: status == current) { set(status) }
+                    }))
         case .edit:
             .edit(command) { sheets.present(.assignment(course: courseId, assignment: assignment.id)) }
         case .share:
@@ -73,9 +77,12 @@ struct AssignmentMenu: View {
         }
     }
 
-    @MainActor static func source(_ workspace: Workspace, _ courseId: UUID, _ id: UUID, host: MenuHost, openLink: OpenLinkAction,
-                                  sheets: ItemSheetsAction) -> AssignmentMenuSource? {
+    @MainActor static func source(
+        _ workspace: Workspace, _ courseId: UUID, _ id: UUID, host: MenuHost, openLink: OpenLinkAction,
+        sheets: ItemSheetsAction
+    ) -> AssignmentMenuSource? {
         guard let assignment = workspace.course(courseId)?.file.assignments.first(where: { $0.id == id }) else { return nil }
-        return AssignmentMenuSource(workspace: workspace, courseId: courseId, assignment: assignment, host: host, openLink: openLink, sheets: sheets)
+        return AssignmentMenuSource(
+            workspace: workspace, courseId: courseId, assignment: assignment, host: host, openLink: openLink, sheets: sheets)
     }
 }

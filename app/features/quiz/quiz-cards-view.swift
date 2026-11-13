@@ -11,8 +11,10 @@ struct QuizCardsView: View {
             if course.outline.isEmpty { EmptyLine(String(localized: .quizCardsNoUnits)) }
             ForEach(model.cardGroups(course)) { group in
                 if let root = group.root {
-                    Block(title: root.title, note: String(localized: .quizCardCount(group.count)), trailing: { addMenu(root) }) { Card { rows(group.entries) } }
-                        .contextMenu { addItems(root) }
+                    Block(title: root.title, note: String(localized: .quizCardCount(group.count)), trailing: { addMenu(root) }) {
+                        Card { rows(group.entries) }
+                    }
+                    .contextMenu { addItems(root) }
                 } else {
                     Card { rows(group.entries) }
                 }
@@ -62,10 +64,14 @@ struct QuizCardsView: View {
     }
 
     func addMenu(_ unit: FolioDomain.Unit) -> some View {
-        Menu { addItems(unit) } label: { Image(systemName: "plus") }
-            .menuStyle(.button).menuIndicator(.hidden).buttonStyle(.borderless).pointingHand().fixedSize()
-            .foregroundStyle(Theme.Palette.textSecondary)
-            .help(Text(.quizCardsAddHelp(unit.title)))
+        Menu {
+            addItems(unit)
+        } label: {
+            Image(systemName: "plus")
+        }
+        .menuStyle(.button).menuIndicator(.hidden).buttonStyle(.borderless).pointingHand().fixedSize()
+        .foregroundStyle(Theme.Palette.textSecondary)
+        .help(Text(.quizCardsAddHelp(unit.title)))
     }
 }
 
@@ -82,38 +88,53 @@ struct CardEditorSheet: View {
     }
 
     var body: some View {
-        SheetForm(title: model.title, confirm: String(localized: .commonSave), disabled: !model.draft.isValid, carded: false,
-                  deleteTitle: model.deleteTitle, onDelete: {
-            model.remove {
-                saved()
-                dismiss()
+        SheetForm(
+            title: model.title, confirm: String(localized: .commonSave), disabled: !model.draft.isValid, carded: false,
+            deleteTitle: model.deleteTitle,
+            onDelete: {
+                model.remove {
+                    saved()
+                    dismiss()
+                }
             }
-        }) {
+        ) {
             Card {
-                FormRow(label: String(localized: .quizUnit)) { SearchSelect(selection: $model.draft.unitId, options: model.unitOptions(units)) }
+                FormRow(label: String(localized: .quizUnit)) {
+                    SearchSelect(selection: $model.draft.unitId, options: model.unitOptions(units))
+                }
                 // "유형" is the category, as the solve filter and the statistics call it.
-                FormRow(label: String(localized: .quizCategory)) { ChoiceMenu(selection: $model.draft.category, options: CardCategory.allCases.map { ($0, $0.label) }) }
-                FormRow(label: String(localized: .quizCardType), last: true) { ChoiceMenu(selection: $model.draft.type, options: CardType.editable.map { ($0, $0.label) }) }
+                FormRow(label: String(localized: .quizCategory)) {
+                    ChoiceMenu(selection: $model.draft.category, options: CardCategory.allCases.map { ($0, $0.label) })
+                }
+                FormRow(label: String(localized: .quizCardType), last: true) {
+                    ChoiceMenu(selection: $model.draft.type, options: CardType.editable.map { ($0, $0.label) })
+                }
             }
             FormTextArea(label: String(localized: .quizCardPrompt), text: $model.draft.prompt)
             switch model.draft.type {
             case .choice:
-                FormTextArea(label: String(localized: .quizCardOptions), detail: String(localized: .quizCardOnePerLine), text: $model.draft.options)
+                FormTextArea(
+                    label: String(localized: .quizCardOptions), detail: String(localized: .quizCardOnePerLine), text: $model.draft.options)
                 Card {
                     FormRow(label: String(localized: .quizCardAnswer), last: true) {
-                        ChoiceMenu(selection: $model.draft.answer, options: [("", String(localized: .quizCardChoose))] + model.draft.optionList.map { ($0, $0) })
+                        ChoiceMenu(
+                            selection: $model.draft.answer,
+                            options: [("", String(localized: .quizCardChoose))] + model.draft.optionList.map { ($0, $0) })
                     }
                 }
             case .trueFalse:
                 Card {
                     FormRow(label: String(localized: .quizCardAnswer), last: true) {
-                        ChoiceMenu(selection: $model.draft.answer, options: [("", String(localized: .quizCardChoose))] + QuizCard.trueFalseOptions.map { ($0, $0) })
+                        ChoiceMenu(
+                            selection: $model.draft.answer,
+                            options: [("", String(localized: .quizCardChoose))] + QuizCard.trueFalseOptions.map { ($0, $0) })
                     }
                 }
             default:
                 FormTextArea(label: String(localized: .quizModelAnswer), text: $model.draft.answer)
             }
-            FormTextArea(label: String(localized: .quizCardRubric), detail: String(localized: .quizCardRubricDetail), text: $model.draft.rubric)
+            FormTextArea(
+                label: String(localized: .quizCardRubric), detail: String(localized: .quizCardRubricDetail), text: $model.draft.rubric)
         } onConfirm: {
             guard model.saveCard() else { return }
             saved()
@@ -144,17 +165,24 @@ struct GenerateCardsSheet: View {
                     ChoiceMenu(selection: $model.type, options: model.typeOptions)
                 }
                 if model.busy {
-                    CardRow(last: model.failure == nil) { ProgressView().controlSize(.small); Text(.quizGenerateBusy).foregroundStyle(Theme.Palette.textSecondary) }
+                    CardRow(last: model.failure == nil) {
+                        ProgressView().controlSize(.small); Text(.quizGenerateBusy).foregroundStyle(Theme.Palette.textSecondary)
+                    }
                 }
-                if let failure = model.failure { CardRow(last: true) { Text(failure).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.danger) } }
+                if let failure = model.failure {
+                    CardRow(last: true) { Text(failure).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.danger) }
+                }
             } else {
                 ScrollView {
                     VStack(spacing: 0) {
                         ForEach(Array(model.candidates.enumerated()), id: \.element.id) { i, card in
                             let on = model.kept.contains(card.id)
-                            Button { model.toggle(card) } label: {
+                            Button {
+                                model.toggle(card)
+                            } label: {
                                 CardRow(last: i == model.candidates.count - 1) {
-                                    Image(systemName: on ? "checkmark.circle.fill" : "circle").foregroundStyle(on ? accent.color : Theme.Palette.textTertiary)
+                                    Image(systemName: on ? "checkmark.circle.fill" : "circle").foregroundStyle(
+                                        on ? accent.color : Theme.Palette.textTertiary)
                                     VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                                         Text(markdown(card.prompt)).lineLimit(4)
                                         Text(.quizGenerateCandidate(card.type.label, card.category.label, card.answer)).lineLimit(2)

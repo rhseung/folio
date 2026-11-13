@@ -3,6 +3,7 @@ import FolioDomain
 import FolioFixtures
 import SwiftUI
 import Testing
+
 @testable import Folio
 
 /// The screen contract (#43): every screen draws its link in the width it is given, a full window, a pane or an
@@ -20,11 +21,17 @@ struct ScreenFitTests {
         let unit = try #require(course.file.units.first?.id ?? workspace.run(UnitAdd(course: course.id, title: "매칭"))?.made)
         let card = QuizCard(device: workspace.device, at: .now, unitId: unit, type: .free, category: .definition, prompt: "p", answer: "a")
         workspace.run(QuizCardSave(course: course.id, cards: [card]))
-        workspace.run(ProblemSetSave(course: course.id, set: ProblemSet(device: workspace.device, at: .now, title: "Exercise 1", problems: [.init(number: "1")])))
+        workspace.run(
+            ProblemSetSave(
+                course: course.id, set: ProblemSet(device: workspace.device, at: .now, title: "Exercise 1", problems: [.init(number: "1")]))
+        )
         if course.file.recordings.isEmpty {
             // Recording is the recorder's, not an action's, so its entry is written here.
-            let recording = Recording(device: workspace.device, at: .now, sessionId: course.file.sessions.first?.id, file: "Recordings/a.m4a")
-            try ActionContext(gist: try #require(workspace.gist), device: workspace.device).edit(course.id) { $0.recordings.append(recording) }
+            let recording = Recording(
+                device: workspace.device, at: .now, sessionId: course.file.sessions.first?.id, file: "Recordings/a.m4a")
+            try ActionContext(gist: try #require(workspace.gist), device: workspace.device).edit(course.id) {
+                $0.recordings.append(recording)
+            }
             workspace.reload()
         }
 
@@ -84,14 +91,17 @@ struct ScreenFitTests {
 
 /// The folded column's button and the column open over the page, drawn at the screen contract's widths (#43, #62).
 extension ScreenFitTests {
-    func draw(_ entry: Navigator.Entry, _ workspace: Workspace, width: CGFloat, collapsed: Set<ColumnKind> = []) async throws -> (width: CGFloat, labels: [String]) {
+    func draw(_ entry: Navigator.Entry, _ workspace: Workspace, width: CGFloat, collapsed: Set<ColumnKind> = []) async throws -> (
+        width: CGFloat, labels: [String]
+    ) {
         let seen = LabelBox()
         let screen = ScreenView(workspace: workspace, entry: entry)
             .environment(workspace)
             .environment(\.revealsOverflow, true)
             .environment(\.columnPrefs, ColumnPrefs(collapsed: collapsed))
             .onPreferenceChange(ColumnButtonLabels.self) { labels in MainActor.assumeIsolated { seen.labels = labels } }
-        let drawn = try #require(try await measureOffscreen([RenderJob(name: "column", view: AnyView(screen), width: width, height: nil, scheme: .light)]).first)
+        let drawn = try #require(
+            try await measureOffscreen([RenderJob(name: "column", view: AnyView(screen), width: width, height: nil, scheme: .light)]).first)
         return (drawn, seen.labels)
     }
 

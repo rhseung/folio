@@ -58,7 +58,9 @@ public struct Frontmatter: Equatable, Sendable {
     }
 
     public func list(_ key: String) -> [String] {
-        guard case .field(_, let raw, let block)? = lines.first(where: { if case .field(key, _, _) = $0 { true } else { false } }) else { return [] }
+        guard case .field(_, let raw, let block)? = lines.first(where: { if case .field(key, _, _) = $0 { true } else { false } }) else {
+            return []
+        }
         if raw.isEmpty {
             return block.map { $0.trimmingCharacters(in: .whitespaces) }.filter { $0.hasPrefix("-") }
                 .map { Self.unquote($0.dropFirst().trimmingCharacters(in: .whitespaces)) }.filter { !$0.isEmpty }

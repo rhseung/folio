@@ -247,7 +247,8 @@ struct PaneLayoutTests {
         let data = try JSONEncoder().encode(l)
         let back = try JSONDecoder().decode(PaneLayout.self, from: data)
         #expect(back.collapsed == [0] && back == l)
-        let json = #"{"panes":[{"link":"\#(lecture.string)","share":1,"pressed":0},{"link":"\#(note.string)","share":1,"pressed":1,"collapsed":true}],"focus":1}"#
+        let json =
+            #"{"panes":[{"link":"\#(lecture.string)","share":1,"pressed":0},{"link":"\#(note.string)","share":1,"pressed":1,"collapsed":true}],"focus":1}"#
         let old = try JSONDecoder().decode(PaneLayout.self, from: Data(json.utf8))
         // A focus folded by hand, which the app never writes, moves to the pane left open.
         #expect(old.focus == 0 && old.collapsed == [1])
@@ -418,8 +419,10 @@ struct PanePresetTests {
     @Test func savingKeepsTheClassesPagesAsRolesAndTheRestAsAddresses() throws {
         let s = Self.session(review: UUID())
         let textbook = AppLink(.material, UUID(), anchor: .page(30))
-        let at = try #require(PaneLayout(links: [AppLink(.note, s.reviewNoteId!), AppLink(.material, s.materials[0].materialId, anchor: .page(9)), textbook],
-                                         shares: [2, 1, 1]))
+        let at = try #require(
+            PaneLayout(
+                links: [AppLink(.note, s.reviewNoteId!), AppLink(.material, s.materials[0].materialId, anchor: .page(9)), textbook],
+                shares: [2, 1, 1]))
         let saved = PanePreset.saving(at, name: "정리", session: s, course: Self.course)
 
         #expect(saved.slots == [.role(.reviewNote), .role(.lecture), .link(textbook)])
@@ -544,7 +547,8 @@ struct PaneMemoryTests {
         memory.remember(.write, note: noteID, at: Date(timeIntervalSince1970: 0))
         #expect(memory.noteMode(note: noteID, session: session) == .write)
 
-        let json = #"{"panes":[{"link":"\#(lecture.string)","share":1,"pressed":0},{"link":"\#(note.string)","share":1,"pressed":1,"noteMode":"read"}],"focus":1}"#
+        let json =
+            #"{"panes":[{"link":"\#(lecture.string)","share":1,"pressed":0},{"link":"\#(note.string)","share":1,"pressed":1,"noteMode":"read"}],"focus":1}"#
         let layout = try JSONDecoder().decode(PaneLayout.self, from: Data(json.utf8))
         memory.remember(layout, session: session, at: Date(timeIntervalSince1970: 1))
         #expect(memory.noteMode(note: noteID, session: session) == .read)

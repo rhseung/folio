@@ -49,7 +49,8 @@ public struct AppLink: Hashable, Sendable {
             case .note: [.block, .heading]
             case .recording: [.time]
             case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals, .semester, .person, .course, .session,
-                 .unit, .assignment, .exam, .problemSet, .card: []
+                .unit, .assignment, .exam, .problemSet, .card:
+                []
             }
         }
 
@@ -58,7 +59,8 @@ public struct AppLink: Hashable, Sendable {
             switch self {
             case .course, .settings: true
             case .today, .grades, .requirements, .people, .codes, .whatsNew, .proposals, .semester, .person, .session, .unit, .note,
-                 .material, .assignment, .exam, .problemSet, .card, .recording: false
+                .material, .assignment, .exam, .problemSet, .card, .recording:
+                false
             }
         }
     }
@@ -231,7 +233,9 @@ public struct AppLink: Hashable, Sendable {
     static func anchor(_ fragment: String, of kind: Kind) -> Anchor? {
         guard !fragment.isEmpty else { return nil }
         if let m = fragment.wholeMatch(of: /page=(\d{1,6})/), let n = Int(m.1) { return .page(n) }
-        if kind.anchors.contains(.time), let m = fragment.wholeMatch(of: /t=(?:(\d{1,3}):)?(?:(\d{1,4}):)?(\d{1,6})/) { return time(m.1, m.2, m.3) }
+        if kind.anchors.contains(.time), let m = fragment.wholeMatch(of: /t=(?:(\d{1,3}):)?(?:(\d{1,4}):)?(\d{1,6})/) {
+            return time(m.1, m.2, m.3)
+        }
         if fragment.hasPrefix("^") { return .block(String(fragment.dropFirst())) }
         let heading = fragment.removingPercentEncoding ?? fragment
         return heading.isEmpty ? nil : .heading(heading)
@@ -239,7 +243,8 @@ public struct AppLink: Hashable, Sendable {
 
     /// `12:30`, `1:02:03`: how a player shows the moment, so the address reads like it.
     public static func clock(_ seconds: Int) -> String {
-        seconds >= 3600 ? String(format: "%d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60)
+        seconds >= 3600
+            ? String(format: "%d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60)
             : String(format: "%d:%02d", seconds / 60, seconds % 60)
     }
 
@@ -309,15 +314,16 @@ extension AppLink: CustomStringConvertible {
 
 extension AppLink {
     public init(_ item: SearchItem) {
-        let kind: Kind = switch item.kind {
-        case .note: .note
-        case .material: .material
-        case .assignment: .assignment
-        case .exam: .exam
-        case .session: .session
-        case .unit: .unit
-        case .quiz: .card
-        }
+        let kind: Kind =
+            switch item.kind {
+            case .note: .note
+            case .material: .material
+            case .assignment: .assignment
+            case .exam: .exam
+            case .session: .session
+            case .unit: .unit
+            case .quiz: .card
+            }
         self.init(kind, item.id)
     }
 

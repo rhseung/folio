@@ -50,15 +50,17 @@ struct RootView: View {
     init(request: WindowRequest? = nil) {
         self.request = request
         if let request, let histories = request.panes,
-           let panes = TabPanes(histories: histories, shares: request.shares, focus: request.focus ?? 0, columns: request.columns) {
+            let panes = TabPanes(histories: histories, shares: request.shares, focus: request.focus ?? 0, columns: request.columns)
+        {
             _tabs = State(initialValue: WindowTabs(panes))
             return
         }
-        let navigator = if let history = request?.history {
-            Navigator(history: history)
-        } else {
-            Navigator(request.map { Navigator.Entry(link: $0.link, course: $0.course) } ?? Navigator.Entry(link: .place(.today)))
-        }
+        let navigator =
+            if let history = request?.history {
+                Navigator(history: history)
+            } else {
+                Navigator(request.map { Navigator.Entry(link: $0.link, course: $0.course) } ?? Navigator.Entry(link: .place(.today)))
+            }
         _tabs = State(initialValue: WindowTabs(TabPanes(navigator, columns: ColumnMemory.shared.pane(request?.columns?.first))))
     }
 
@@ -69,7 +71,9 @@ struct RootView: View {
 
     /// The sidebar's rows pick a screen; choosing the one already shown keeps the page open inside it.
     var selectionBinding: Binding<Screen?> {
-        Binding { navigator.screen } set: { new in
+        Binding {
+            navigator.screen
+        } set: { new in
             if let new, new != navigator.screen, let link = new.link { open(link) }
         }
     }
@@ -90,7 +94,11 @@ struct RootView: View {
         switch placement {
         case .here:
             // Opening a class's note, not moving about in it.
-            if pane.current.link.withoutAnchor != entry.link.withoutAnchor, let tab = tabs.panes(holding: pane), restoresSession(entry, in: tab) { return }
+            if pane.current.link.withoutAnchor != entry.link.withoutAnchor, let tab = tabs.panes(holding: pane),
+                restoresSession(entry, in: tab)
+            {
+                return
+            }
             pane.go(entry)
         case .beside:
             (tabs.panes(holding: pane) ?? tabs.front)?.openBeside(entry, from: pane)
@@ -115,9 +123,12 @@ struct RootView: View {
     @discardableResult
     func restoresSession(_ entry: Navigator.Entry, in tab: TabPanes) -> Bool {
         guard tab.count == 1, let paneMemory, let file = entry.course.flatMap({ workspace.course($0) })?.file,
-              let session = file.session(holding: entry.link),
-              let saved = paneMemory.memory.restoring(entry.link, session: session) else { return false }
-        let entries = saved.panes.indices.map { i in i == saved.focus ? entry : workspace.entry(for: saved.panes[i].link, hint: entry.course) }
+            let session = file.session(holding: entry.link),
+            let saved = paneMemory.memory.restoring(entry.link, session: session)
+        else { return false }
+        let entries = saved.panes.indices.map { i in
+            i == saved.focus ? entry : workspace.entry(for: saved.panes[i].link, hint: entry.course)
+        }
         return tab.restore(saved, entries: entries)
     }
 
@@ -153,7 +164,8 @@ struct RootView: View {
     /// From the layout itself, so a class's layout remembered with its notes' modes and folds keeps them.
     func openTabHere(_ layout: PaneLayout, found: [(Int, Navigator.Entry)]) {
         if let kept = layout.keeping({ i in found.contains { $0.0 == i } }),
-           let panes = TabPanes(layout: kept, entries: found.map(\.1)) {
+            let panes = TabPanes(layout: kept, entries: found.map(\.1))
+        {
             tabs.open(panes, fromLink: true)
         }
     }
@@ -219,14 +231,22 @@ struct RootView: View {
                         .controlSize(.large)
                         .environment(\.showSettings) { showSettings($0) }
                         .environment(\.showInputGuide) { showInputGuide($0) }
-                        .background { Button(.commonSearch) { searching = true }.keyboardShortcut("k").opacity(0).accessibilityHidden(true) }
+                        .background {
+                            Button(.commonSearch) { searching = true }.keyboardShortcut("k").opacity(0).accessibilityHidden(true)
+                        }
                 }
                 .environment(\.openLink, openLink)
                 .environment(\.sheetRoom, contentHeight)
                 // The window less its toolbar (and an iPad's keyboard): a sheet taller than that ran off the window.
-                .onGeometryChange(for: CGFloat.self) { $0.size.height - $0.safeAreaInsets.top - $0.safeAreaInsets.bottom } action: { contentHeight = $0 }
-                .classStartPrompt(workspace, open: { open($0.link, in: $0.placement) }, openSplit: { openTab($0, course: $1) },
-                                  showing: { navigator.current }, bringForward: bringForward)
+                .onGeometryChange(for: CGFloat.self) {
+                    $0.size.height - $0.safeAreaInsets.top - $0.safeAreaInsets.bottom
+                } action: {
+                    contentHeight = $0
+                }
+                .classStartPrompt(
+                    workspace, open: { open($0.link, in: $0.placement) }, openSplit: { openTab($0, course: $1) },
+                    showing: { navigator.current }, bringForward: bringForward
+                )
                 .whatsNewPrompt(workspace) { open($0) }
                 #if os(iOS)
                 .onGeometryChange(for: CGFloat.self, of: \.size.width) { windowWidth = $0 }
@@ -250,7 +270,9 @@ struct RootView: View {
                 .itemSheets(workspace, openLink: openLink)
                 #if os(macOS)
                 // Closing the file on quit keeps the audio playable; the transcript so far is already on disk.
-                .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in workspace.recorder.stopNow() }
+                .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
+                    workspace.recorder.stopNow()
+                }
                 #endif
                 .focusedSceneValue(\.showSettings) { showSettings($0) }
                 .focusedSceneValue(\.showInputGuide) { showInputGuide($0) }
@@ -260,9 +282,12 @@ struct RootView: View {
                 .focusedSceneValue(\.columnCommand, tabs.trail(tabs.selected)?.column)
                 .focusedSceneValue(\.outlineCommand, tabs.trail(tabs.selected)?.outline)
                 .focusedSceneValue(\.frontPanes, tabs.front)
-                .focusedSceneValue(\.layoutChoices, tabs.front.map { panes in
-                    workspace.layoutChoices(for: panes, save: { namingLayout = panes }, manage: manageLayouts)
-                })
+                .focusedSceneValue(
+                    \.layoutChoices,
+                    tabs.front.map { panes in
+                        workspace.layoutChoices(for: panes, save: { namingLayout = panes }, manage: manageLayouts)
+                    }
+                )
                 .modifier(LayoutNaming(workspace: workspace, panes: $namingLayout))
                 .onAppear { MemoryPressure.start() }
                 .onReceive(MemoryPressure.publisher) { _ in tabs.dropBackground() }
@@ -295,11 +320,12 @@ struct RootView: View {
         // Also in a Release build made with RESIZE_PROBE: a debug build's SwiftUI timings say little about the app's.
         #if os(macOS) && (DEBUG || RESIZE_PROBE)
         .task {
-            await ResizeProbe.run(window: { host.window }, workspace: workspace,
-                                  openTab: { link, course in tabs.open(Navigator(Navigator.Entry(link: link, course: course))) },
-                                  front: { tabs.select(number: $0) },
-                                  openBeside: { link, course in tabs.front?.openBeside(Navigator.Entry(link: link, course: course)) },
-                                  frontPanes: { tabs.front })
+            await ResizeProbe.run(
+                window: { host.window }, workspace: workspace,
+                openTab: { link, course in tabs.open(Navigator(Navigator.Entry(link: link, course: course))) },
+                front: { tabs.select(number: $0) },
+                openBeside: { link, course in tabs.front?.openBeside(Navigator.Entry(link: link, course: course)) },
+                frontPanes: { tabs.front })
         }
         #endif
         #if DEBUG
@@ -313,39 +339,51 @@ struct RootView: View {
             if SnapshotDriver.directory != nil { workspace.gradesUnlocked = true }
             if SnapshotDriver.recording, let course = workspace.currentCourses.first, let session = course.file.sessions.first {
                 let recording = Recording(device: workspace.device, at: .now, sessionId: session.id, file: "")
-                workspace.recorder.stage(recording, course: course.id, title: "\(course.title) · \(course.file.title(of: session, calendar: workspace.calendar))",
-                                         paused: SnapshotDriver.recordingPaused, level: SnapshotDriver.recordingLevel)
+                workspace.recorder.stage(
+                    recording, course: course.id,
+                    title: "\(course.title) · \(course.file.title(of: session, calendar: workspace.calendar))",
+                    paused: SnapshotDriver.recordingPaused, level: SnapshotDriver.recordingLevel)
             }
             if LayoutSnapshots.mode != nil { return await LayoutSnapshots.run(tabs: tabs, workspace: workspace) }
             let ids = workspace.currentCourses.map(\.id)
             // The first lecture file some class names pages of, or with none, the first lecture file: its strip with no
             // progress yet.
-            if SnapshotDriver.strip != nil, let lecture = workspace.currentCourses.lazy.compactMap({ c in
-                c.file.lectureFiles.first { m in c.file.sessions.contains { $0.materials.contains { $0.materialId == m.id && $0.pages != nil } } }
-            }).first ?? workspace.currentCourses.lazy.compactMap({ $0.file.lectureFiles.first }).first {
+            if SnapshotDriver.strip != nil,
+                let lecture = workspace.currentCourses.lazy.compactMap({ c in
+                    c.file.lectureFiles.first { m in
+                        c.file.sessions.contains { $0.materials.contains { $0.materialId == m.id && $0.pages != nil } }
+                    }
+                }).first ?? workspace.currentCourses.lazy.compactMap({ $0.file.lectureFiles.first }).first
+            {
                 if let now = SnapshotDriver.stripNow { workspace.pinnedNow = now }
                 await SnapshotDriver.shared.runStrip(open: { open($0) }, lecture: AppLink(.material, lecture.id))
                 return
             }
             if SnapshotDriver.quickAdd, let course = workspace.currentCourses.first {
-                await SnapshotDriver.shared.runQuickAdd(open: { open($0) }, course: course.id, other: workspace.currentCourses.dropFirst().first?.id,
-                                                        named: String(course.title.split(separator: " ").first ?? ""))
+                await SnapshotDriver.shared.runQuickAdd(
+                    open: { open($0) }, course: course.id, other: workspace.currentCourses.dropFirst().first?.id,
+                    named: String(course.title.split(separator: " ").first ?? ""))
                 return
             }
             if SnapshotDriver.math, let note = workspace.currentCourses.lazy.compactMap({ $0.file.notes.first }).first {
                 await SnapshotDriver.shared.runMath(open: { open($0) }, note: AppLink(.note, note.id))
                 return
             }
-            if SnapshotDriver.split != nil, let lecture = workspace.currentCourses.lazy.compactMap({ c in
-                c.file.lectureFiles.first { c.file.isSplit($0.id) }
-            }).first {
-                await SnapshotDriver.shared.runSplit(open: { open($0) }, lecture: AppLink(.material, lecture.id)) { workspace.splitAsk = lecture.id }
+            if SnapshotDriver.split != nil,
+                let lecture = workspace.currentCourses.lazy.compactMap({ c in
+                    c.file.lectureFiles.first { c.file.isSplit($0.id) }
+                }).first
+            {
+                await SnapshotDriver.shared.runSplit(open: { open($0) }, lecture: AppLink(.material, lecture.id)) {
+                    workspace.splitAsk = lecture.id
+                }
                 return
             }
             if SnapshotDriver.tabs > 1 {
                 // Tabs of every kind behind the first, which the walk below then moves through.
                 let notes = workspace.currentCourses.compactMap { c in c.file.notes.first.map { AppLink(.note, $0.id) } }
-                let links: [AppLink] = [.place(.grades)] + notes + ids.map { AppLink.course($0) } + [.place(.people), .place(.settings), .place(.today)]
+                let links: [AppLink] =
+                    [.place(.grades)] + notes + ids.map { AppLink.course($0) } + [.place(.people), .place(.settings), .place(.today)]
                 for i in 1..<SnapshotDriver.tabs {
                     let link = links[(i - 1) % links.count]
                     tabs.open(Navigator(workspace.entry(for: link) ?? Navigator.Entry(link: .place(.today))))
@@ -355,7 +393,9 @@ struct RootView: View {
             if SnapshotDriver.panes > 1, let course = workspace.currentCourses.first {
                 // A lecture some class names pages of first: a placeholder PDF can't be read, and its pane drew no PDF bar.
                 let pdfs = course.file.materials.filter { $0.path.lowercased().hasSuffix(".pdf") }
-                let paged = pdfs.first { m in course.file.sessions.contains { $0.materials.contains { $0.materialId == m.id && $0.pages != nil } } }
+                let paged = pdfs.first { m in
+                    course.file.sessions.contains { $0.materials.contains { $0.materialId == m.id && $0.pages != nil } }
+                }
                 let lecture = (paged ?? pdfs.first).map { AppLink(.material, $0.id) }
                 let besides = [lecture, AppLink.course(course.id, page: .quiz)].compactMap { $0 }.prefix(SnapshotDriver.panes - 1)
                 for tab in tabs.ids.prefix(2) {
@@ -363,7 +403,8 @@ struct RootView: View {
                 }
             }
             if SnapshotDriver.coursePanes, workspace.currentCourses.count > 1, let tab = tabs.ids.first,
-               let entry = workspace.entry(for: .course(workspace.currentCourses[1].id)) {
+                let entry = workspace.entry(for: .course(workspace.currentCourses[1].id))
+            {
                 tabs.panes(tab)?.openBeside(entry)
                 tabs.panes(tab)?.press(0)
             }
@@ -371,11 +412,13 @@ struct RootView: View {
             let exam = workspace.currentCourses.first?.file.exams.min { ($0.start ?? .distantFuture) < ($1.start ?? .distantFuture) }
             // A replay opened at a moment, as a copied link or a tab let go of opens it.
             let replay = workspace.currentCourses.lazy.compactMap { $0.file.recordings.first }.first
-            let links = (exam.map { [("link-exam", AppLink(.exam, $0.id))] } ?? [])
+            let links =
+                (exam.map { [("link-exam", AppLink(.exam, $0.id))] } ?? [])
                 + (replay.map { [("link-recording", AppLink(.recording, $0.id, anchor: .time(1700)))] } ?? [])
                 + (workspace.catalog.people.first.map { [("link-person", AppLink(.person, $0.id))] } ?? [])
-            await SnapshotDriver.shared.run(select: { if let link = $0.link { open(link) } }, open: { open($0) }, courses: ids,
-                                            semester: workspace.currentSemester?.id, links: links)
+            await SnapshotDriver.shared.run(
+                select: { if let link = $0.link { open(link) } }, open: { open($0) }, courses: ids,
+                semester: workspace.currentSemester?.id, links: links)
         }
         #endif
         .environment(\.gradesLocked, !workspace.gradesUnlocked)
@@ -399,89 +442,129 @@ struct RootView: View {
         // Ticks for the class under way: its row's fill and minutes. Around the list, not inside the row, so the row's
         // background (where the fill is drawn) is rebuilt with it.
         LiveTime(workspace) { now in
-        // The places stay put and the terms scroll in the space under them, as the list of terms grows each term.
-        VStack(spacing: 0) {
-        #if os(iOS)
-        sidebarSearch
-        #endif
-        List(selection: listSelection) {
-            Label { Text(.rootNavToday) } icon: { sidebarIcon("house", .today) }.sidebarRow(.today, selectionBinding)
-            // Only once something waits: an empty inbox has nothing to open for.
-            let waiting = workspace.lmsInbox.proposals.count
-            if waiting > 0 || selection == .proposals {
-                Label {
-                    HStack {
-                        Text(.rootNavProposals).lineLimit(1)
-                        if waiting > 0 {
-                            Spacer(minLength: Theme.Space.xs)
-                            Text("\(waiting)").font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit()
-                                .foregroundStyle(Theme.Palette.chromeText).fixedSize()
-                        }
+            // The places stay put and the terms scroll in the space under them, as the list of terms grows each term.
+            VStack(spacing: 0) {
+                #if os(iOS)
+                sidebarSearch
+                #endif
+                List(selection: listSelection) {
+                    Label {
+                        Text(.rootNavToday)
+                    } icon: {
+                        sidebarIcon("house", .today)
+                    }.sidebarRow(.today, selectionBinding)
+                    // Only once something waits: an empty inbox has nothing to open for.
+                    let waiting = workspace.lmsInbox.proposals.count
+                    if waiting > 0 || selection == .proposals {
+                        Label {
+                            HStack {
+                                Text(.rootNavProposals).lineLimit(1)
+                                if waiting > 0 {
+                                    Spacer(minLength: Theme.Space.xs)
+                                    Text("\(waiting)").font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit()
+                                        .foregroundStyle(Theme.Palette.chromeText).fixedSize()
+                                }
+                            }
+                        } icon: {
+                            sidebarIcon("tray", .proposals)
+                        }.sidebarRow(.proposals, selectionBinding)
                     }
-                } icon: { sidebarIcon("tray", .proposals) }.sidebarRow(.proposals, selectionBinding)
-            }
-            Label { Text(.rootNavGrades) } icon: { sidebarIcon("chart.line.uptrend.xyaxis", .grades) }.sidebarRow(.grades, selectionBinding)
-            Label { Text(.rootNavRequirements) } icon: { sidebarIcon("flag", .requirements) }.sidebarRow(.requirements, selectionBinding)
-            Label { Text(.rootNavPeople) } icon: { sidebarIcon("person", .people) }.sidebarRow(.people, selectionBinding)
-            Label { Text(.rootNavCodes) } icon: { sidebarIcon("number", .codes) }.sidebarRow(.codes, selectionBinding)
-            Label { Text(.rootNavSettings) } icon: { sidebarIcon("gearshape", .settings) }.sidebarRow(.settings, selectionBinding)
-        }
-        .scrollDisabled(true)
-        .onScrollGeometryChange(for: CGFloat.self) { $0.contentSize.height } action: { _, height in
-            navHeight = height
-        }
-        #if os(iOS)
-        // The plain list there reports no content height until it scrolls: six rows, at least.
-        .frame(height: max(navHeight ?? 0, Theme.Size.sidebarRow * 6 + Theme.Space.s))
-        #else
-        .frame(height: navHeight)
-        #endif
-        .focusable(false)
-        List(selection: listSelection) {
-            // The current term starts open, since its courses are what's opened daily.
-            Section {
-                // Built once per tick for every course row's hint, not once per row.
-                let summary = TodaySummary.build(courses: workspace.currentCourses.map(\.file), now: now, settings: workspace.settings, calendar: workspace.calendar)
-                ForEach(sidebarSemesters, id: \.id) { semester in
-                    let courses = workspace.sidebarCourses(in: semester)
-                    let current = semester.id == workspace.currentSemester?.id
-                    let open = !courses.isEmpty && current != toggledTerms.contains(semester.id)
-                    semesterRow(semester, open: open, menu: semesterMenu(semester, current: current, hasCourses: !courses.isEmpty, open: open))
-                        .rowTools(add: current ? String(localized: .rootAddCourse) : nil, action: { addingCourse = true }, open: courses.isEmpty ? nil : openBinding(semester, current: current)) { over in
-                            if over { hoveredTerm = semester.id } else if hoveredTerm == semester.id { hoveredTerm = nil }
+                    Label {
+                        Text(.rootNavGrades)
+                    } icon: {
+                        sidebarIcon("chart.line.uptrend.xyaxis", .grades)
+                    }.sidebarRow(.grades, selectionBinding)
+                    Label {
+                        Text(.rootNavRequirements)
+                    } icon: {
+                        sidebarIcon("flag", .requirements)
+                    }.sidebarRow(.requirements, selectionBinding)
+                    Label {
+                        Text(.rootNavPeople)
+                    } icon: {
+                        sidebarIcon("person", .people)
+                    }.sidebarRow(.people, selectionBinding)
+                    Label {
+                        Text(.rootNavCodes)
+                    } icon: {
+                        sidebarIcon("number", .codes)
+                    }.sidebarRow(.codes, selectionBinding)
+                    Label {
+                        Text(.rootNavSettings)
+                    } icon: {
+                        sidebarIcon("gearshape", .settings)
+                    }.sidebarRow(.settings, selectionBinding)
+                }
+                .scrollDisabled(true)
+                .onScrollGeometryChange(for: CGFloat.self) {
+                    $0.contentSize.height
+                } action: { _, height in
+                    navHeight = height
+                }
+                #if os(iOS)
+                // The plain list there reports no content height until it scrolls: six rows, at least.
+                .frame(height: max(navHeight ?? 0, Theme.Size.sidebarRow * 6 + Theme.Space.s))
+                #else
+                .frame(height: navHeight)
+                #endif
+                .focusable(false)
+                List(selection: listSelection) {
+                    // The current term starts open, since its courses are what's opened daily.
+                    Section {
+                        // Built once per tick for every course row's hint, not once per row.
+                        let summary = TodaySummary.build(
+                            courses: workspace.currentCourses.map(\.file), now: now, settings: workspace.settings,
+                            calendar: workspace.calendar)
+                        ForEach(sidebarSemesters, id: \.id) { semester in
+                            let courses = workspace.sidebarCourses(in: semester)
+                            let current = semester.id == workspace.currentSemester?.id
+                            let open = !courses.isEmpty && current != toggledTerms.contains(semester.id)
+                            semesterRow(
+                                semester, open: open,
+                                menu: semesterMenu(semester, current: current, hasCourses: !courses.isEmpty, open: open)
+                            )
+                            .rowTools(
+                                add: current ? String(localized: .rootAddCourse) : nil, action: { addingCourse = true },
+                                open: courses.isEmpty ? nil : openBinding(semester, current: current)
+                            ) { over in
+                                if over { hoveredTerm = semester.id } else if hoveredTerm == semester.id { hoveredTerm = nil }
+                            }
+                            if open {
+                                ForEach(courses) {
+                                    courseRow(
+                                        $0, last: $0.id == courses.last?.id, now: now,
+                                        hint: current ? summary.hint(for: $0.id, now: now) : nil)
+                                }
+                                .onMove { workspace.moveSidebarCourses(in: semester, from: $0, to: $1) }
+                            }
                         }
-                    if open {
-                        ForEach(courses) { courseRow($0, last: $0.id == courses.last?.id, now: now, hint: current ? summary.hint(for: $0.id, now: now) : nil) }
-                            .onMove { workspace.moveSidebarCourses(in: semester, from: $0, to: $1) }
+                    } header: {
+                        // Colored, not the list's own header gray, which faded into the dark frame; inset to start where the
+                        // rows' icons do.
+                        Text(.rootSemesters).foregroundStyle(Theme.Palette.chromeText).frame(maxWidth: .infinity, alignment: .leading)
+                            .rowTools(add: String(localized: .rootAddSemester)) { addingSemester = true }
+                            .padding(.leading, Theme.Space.xs)
                     }
                 }
-            } header: {
-                // Colored, not the list's own header gray, which faded into the dark frame; inset to start where the
-                // rows' icons do.
-                Text(.rootSemesters).foregroundStyle(Theme.Palette.chromeText).frame(maxWidth: .infinity, alignment: .leading)
-                    .rowTools(add: String(localized: .rootAddSemester)) { addingSemester = true }
-                    .padding(.leading, Theme.Space.xs)
+                .overflowFade(.vertical)
+                .focusable(false)
+                if workspace.recorder.isActive {
+                    RecordingBar(workspace: workspace) { open($0) }
+                        .padding([.horizontal, .bottom], Theme.Space.m)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
             }
-        }
-        .overflowFade(.vertical)
-        .focusable(false)
-        if workspace.recorder.isActive {
-            RecordingBar(workspace: workspace) { open($0) }
-                .padding([.horizontal, .bottom], Theme.Space.m)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-        }
-        }
-        #if os(macOS)
-        .listStyle(.sidebar)
-        #else
-        // Out of a split view the iPad's sidebar style is grouped cards; plain rows lie flat on the frame as the Mac's.
-        .listStyle(.plain)
-        .listRowSeparator(.hidden)
-        // The Mac's sidebar at the chrome's scale: a plain list's default is the 17pt body and a 52pt row.
-        .font(Theme.Typeface.sidebar)
-        .environment(\.defaultMinListRowHeight, Theme.Size.sidebarRow)
-        #endif
-        .labelStyle(SidebarLabelStyle())
+            #if os(macOS)
+            .listStyle(.sidebar)
+            #else
+            // Out of a split view the iPad's sidebar style is grouped cards; plain rows lie flat on the frame as the Mac's.
+            .listStyle(.plain)
+            .listRowSeparator(.hidden)
+            // The Mac's sidebar at the chrome's scale: a plain list's default is the 17pt body and a 52pt row.
+            .font(Theme.Typeface.sidebar)
+            .environment(\.defaultMinListRowHeight, Theme.Size.sidebarRow)
+            #endif
+            .labelStyle(SidebarLabelStyle())
         }
         .sheet(isPresented: $addingSemester) {
             AddSemesterSheet(workspace: workspace) { id in
@@ -492,7 +575,9 @@ struct RootView: View {
         // Outside the List: a sheet on a Section is copied onto every row, and with each copy bound to the same flag,
         // dismissing one let the next present again.
         .sheet(isPresented: $addingCourse) {
-            if let current = workspace.currentSemester { AddCourseSheet(workspace: workspace, semester: current) { if let id = $0 { open(.course(id)) } } }
+            if let current = workspace.currentSemester {
+                AddCourseSheet(workspace: workspace, semester: current) { if let id = $0 { open(.course(id)) } }
+            }
         }
     }
 
@@ -502,21 +587,21 @@ struct RootView: View {
     @ViewBuilder func shell(@ViewBuilder content: () -> some View) -> some View {
         #if os(macOS)
         VStack(spacing: 0) {
-        titleRow
-        HStack(spacing: 0) {
-            if sidebarOpen {
-                sidebar
-                    .scrollContentBackground(.hidden)
-                    // Outside a split view the list takes focus and paints its selection in the system accent.
-                    .focusable(false)
-                    .frame(width: Theme.Size.sidebar)
-                    .transition(.move(edge: .leading).combined(with: .opacity))
+            titleRow
+            HStack(spacing: 0) {
+                if sidebarOpen {
+                    sidebar
+                        .scrollContentBackground(.hidden)
+                        // Outside a split view the list takes focus and paints its selection in the system accent.
+                        .focusable(false)
+                        .frame(width: Theme.Size.sidebar)
+                        .transition(.move(edge: .leading).combined(with: .opacity))
+                }
+                // Each pane draws its own panel (`PaneRow`), so a tab of several is panels side by side on the frame.
+                content()
+                    .padding([.trailing, .bottom], Theme.Size.panelInset)
+                    .padding(.leading, sidebarOpen ? 0 : Theme.Size.panelInset)
             }
-            // Each pane draws its own panel (`PaneRow`), so a tab of several is panels side by side on the frame.
-            content()
-                .padding([.trailing, .bottom], Theme.Size.panelInset)
-                .padding(.leading, sidebarOpen ? 0 : Theme.Size.panelInset)
-        }
         }
         // The row is the window's top: the hidden title bar's safe area would push it down under the window's buttons.
         .ignoresSafeArea(.container, edges: .top)
@@ -539,15 +624,16 @@ struct RootView: View {
             HStack(spacing: Self.historyGap) {
                 sidebarButton
                     #if DEBUG || RESIZE_PROBE
-                    .background { ResizeMarker(name: "sidebar") }
+                .background { ResizeMarker(name: "sidebar") }
                     #endif
                 HistoryButtons(navigator: navigator) { workspace.title(of: $0) }
                     #if DEBUG || RESIZE_PROBE
-                    .background { ResizeMarker(name: "back") }
+                .background { ResizeMarker(name: "back") }
                     #endif
             }
-            TabBar(tabs: tabs, workspace: workspace, crumbs: crumbs, toolbar: row, moveToWindow: moveToWindow,
-                   nameLayout: { namingLayout = $0 }, manageLayouts: manageLayouts)
+            TabBar(
+                tabs: tabs, workspace: workspace, crumbs: crumbs, toolbar: row, moveToWindow: moveToWindow,
+                nameLayout: { namingLayout = $0 }, manageLayouts: manageLayouts)
         } trailing: {
             HStack(spacing: Theme.Space.s) {
                 searchButton
@@ -574,7 +660,9 @@ struct RootView: View {
     #endif
 
     var searchButton: some View {
-        Button { searching = true } label: {
+        Button {
+            searching = true
+        } label: {
             // No Spacer inside: a toolbar item with one has no fixed width, and the row drops it.
             HStack(spacing: Theme.Space.s) {
                 Image(systemName: "magnifyingglass")
@@ -598,12 +686,18 @@ struct RootView: View {
             Button(.rootQuickAdd, systemImage: "plus") { quickAdding = true }
                 .help(Text(.rootQuickAddHelp))
                 .popover(isPresented: $quickAdding, arrowEdge: .bottom) {
-                    QuickAddField(workspace: workspace, defaultCourse: navigator.current.course, showsEmptyChips: true, focusOnAppear: true, floating: true).padding(Theme.Space.l).frame(width: 440)
+                    QuickAddField(
+                        workspace: workspace, defaultCourse: navigator.current.course, showsEmptyChips: true, focusOnAppear: true,
+                        floating: true
+                    ).padding(Theme.Space.l).frame(width: 440)
                         // A popover proposes the height it opened with; at its own height it grows as the line wraps.
                         .fixedSize(horizontal: false, vertical: true)
                 }
             timerButton
-            Button(workspace.gradesUnlocked ? .rootLockGrades : .commonUnlockGrades, systemImage: workspace.gradesUnlocked ? "lock.open" : "lock") {
+            Button(
+                workspace.gradesUnlocked ? .rootLockGrades : .commonUnlockGrades,
+                systemImage: workspace.gradesUnlocked ? "lock.open" : "lock"
+            ) {
                 if workspace.gradesUnlocked { workspace.lockGrades() } else { Task { await workspace.unlockGrades() } }
             }
             .help(Text(workspace.gradesUnlocked ? .rootHideGrades : .rootShowGrades))
@@ -659,9 +753,17 @@ struct RootView: View {
                 Label(.rootRecord, systemImage: "mic")
             }
             .disabled(ongoing == nil || workspace.recorder.isActive)
-            .help(workspace.recorder.isActive ? String(localized: .rootRecording)
-                  : ongoing.flatMap { o in workspace.course(o.courseId).map { String(localized: .rootRecordSession($0.title, $0.file.subject(of: o.session) ?? $0.file.day(of: o.session, calendar: workspace.calendar))) } }
-                  ?? String(localized: .rootRecordUnavailable))
+            .help(
+                workspace.recorder.isActive
+                    ? String(localized: .rootRecording)
+                    : ongoing.flatMap { o in
+                        workspace.course(o.courseId).map {
+                            String(
+                                localized: .rootRecordSession(
+                                    $0.title, $0.file.subject(of: o.session) ?? $0.file.day(of: o.session, calendar: workspace.calendar)))
+                        }
+                    }
+                        ?? String(localized: .rootRecordUnavailable))
         }
     }
 
@@ -731,14 +833,20 @@ struct RootView: View {
         // The course in class right now shows how far the class has gone, from any page: its row fills from the left
         // in its color and the minutes left sit at the end. No ring or dot, so the row keeps the shape of every other.
         let ongoing = workspace.ongoingClass(at: now).flatMap { $0.courseId == course.id ? $0 : nil }
-        let detail = (ongoing.map { String(localized: .rootInClass(course.file.subject(of: $0.session) ?? course.file.day(of: $0.session, calendar: workspace.calendar))) }
+        let detail =
+            (ongoing.map {
+                String(
+                    localized: .rootInClass(
+                        course.file.subject(of: $0.session) ?? course.file.day(of: $0.session, calendar: workspace.calendar)))
+            }
             ?? hint.map(hintHelp)).flatMap { $0.isEmpty ? nil : $0 }
         return Label {
             HStack {
                 Text(course.title).lineLimit(1)
                 if let ongoing {
                     Spacer(minLength: Theme.Space.xs)
-                    Text(.rootMinutesLeft(Int(ongoing.end.timeIntervalSince(now) / 60) + 1)).font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit()
+                    Text(.rootMinutesLeft(Int(ongoing.end.timeIntervalSince(now) / 60) + 1)).font(Theme.Typeface.caption.weight(.semibold))
+                        .monospacedDigit()
                         .foregroundStyle(accent.ink).fixedSize()
                 } else if let hint {
                     Spacer(minLength: Theme.Space.xs)
@@ -751,8 +859,10 @@ struct RootView: View {
         }
         .help(detail ?? "")
         .padding(.leading, SidebarGuide.indent)
-        .sidebarRow(.course(course.id), selectionBinding, fill: accent.tint, guide: last ? .lastCourse : .course, progress: ongoing?.fraction(at: now), note: detail,
-                    menu: AnyView(CourseMenu(courseId: course.id, host: .list)))
+        .sidebarRow(
+            .course(course.id), selectionBinding, fill: accent.tint, guide: last ? .lastCourse : .course,
+            progress: ongoing?.fraction(at: now), note: detail,
+            menu: AnyView(CourseMenu(courseId: course.id, host: .list)))
     }
 
     @ViewBuilder func courseHint(_ hint: TodaySummary.CourseHint) -> some View {
@@ -834,9 +944,9 @@ private struct RowTools: ViewModifier {
                     if let add {
                         tool("plus", font: Theme.Glyph.regular, help: add, action: action)
                             #if os(macOS)
-                            .opacity(hovering ? 1 : 0)
-                            // Hidden, it would still take clicks meant for the row under it.
-                            .allowsHitTesting(hovering)
+                        .opacity(hovering ? 1 : 0)
+                        // Hidden, it would still take clicks meant for the row under it.
+                        .allowsHitTesting(hovering)
                             #endif
                     }
                 }
@@ -847,7 +957,9 @@ private struct RowTools: ViewModifier {
                 // The term's folder opens and closes it, drawn open or closed to show which (and opening under the
                 // pointer); the title opens the page.
                 if let open {
-                    Button { open.wrappedValue.toggle() } label: {
+                    Button {
+                        open.wrappedValue.toggle()
+                    } label: {
                         // A finger gets the row's height around the folder; the title beside it still opens the page.
                         Color.clear.frame(width: Theme.Size.tile, height: Theme.Size.tile).contentShape(TouchTarget())
                     }
@@ -908,7 +1020,9 @@ private struct GuideSegment: Shape {
 }
 
 private extension View {
-    func rowTools(add: String? = nil, action: @escaping () -> Void = {}, open: Binding<Bool>? = nil, folderHover: @escaping (Bool) -> Void = { _ in }) -> some View {
+    func rowTools(
+        add: String? = nil, action: @escaping () -> Void = {}, open: Binding<Bool>? = nil, folderHover: @escaping (Bool) -> Void = { _ in }
+    ) -> some View {
         modifier(RowTools(add: add, action: action, open: open, folderHover: folderHover))
     }
 
@@ -928,40 +1042,43 @@ private extension View {
     /// spacing, so the segments join without overlapping (a see-through line darkens where segments overlap).
     /// `guideShown` fades the line rather than leaving it out: the Mac list doesn't redraw a row background whose views
     /// come and go, only one whose values change, and rebuilding the row instead made it jump as it opened.
-    @ViewBuilder func sidebarRow(_ destination: Screen, _ selection: Binding<Screen?>, fill: Color = Theme.Palette.sidebarSelection, guide: SidebarGuide? = nil, guideShown: Bool = true, progress: Double? = nil, note: String? = nil, menu: AnyView? = nil) -> some View {
+    @ViewBuilder func sidebarRow(
+        _ destination: Screen, _ selection: Binding<Screen?>, fill: Color = Theme.Palette.sidebarSelection, guide: SidebarGuide? = nil,
+        guideShown: Bool = true, progress: Double? = nil, note: String? = nil, menu: AnyView? = nil
+    ) -> some View {
         let line = guide.map { GuideSegment(guide: $0).stroke(Theme.Palette.chromeLine, lineWidth: 1).frame(width: SidebarGuide.reach + 1) }
         let chosen = selection.wrappedValue == destination
         // A tap, not a Button: a button keeps the press, so the list's own drag to reorder never starts.
         frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
-        .onTapGesture { selection.wrappedValue = destination }
-        .listRowBackground(
-            ZStack(alignment: .leading) {
-                let shape = RoundedRectangle(cornerRadius: Theme.Radius.control)
-                ZStack {
-                    shape.fill(chosen ? fill : .clear)
-                    // The part of the class gone by, laid in the same tint: over a chosen row it reads a step deeper.
-                    if let progress {
-                        Rectangle().fill(fill).scaleEffect(x: progress, anchor: .leading).clipShape(shape)
+            .onTapGesture { selection.wrappedValue = destination }
+            .listRowBackground(
+                ZStack(alignment: .leading) {
+                    let shape = RoundedRectangle(cornerRadius: Theme.Radius.control)
+                    ZStack {
+                        shape.fill(chosen ? fill : .clear)
+                        // The part of the class gone by, laid in the same tint: over a chosen row it reads a step deeper.
+                        if let progress {
+                            Rectangle().fill(fill).scaleEffect(x: progress, anchor: .leading).clipShape(shape)
+                        }
+                    }
+                    .padding(.horizontal, Theme.Space.s)
+                    // The Mac sidebar starts a row's content 16pt in from the background's edge (measured), so this is
+                    // the middle of the icon column.
+                    if let guide, let line {
+                        line.frame(maxHeight: guide == .stem ? Theme.Space.tight : .infinity)
+                            .frame(maxHeight: .infinity, alignment: .bottom)
+                            .padding(.leading, Theme.Space.l + Theme.Size.tile / 2)
+                            .opacity(guideShown ? 1 : 0)
                     }
                 }
-                .padding(.horizontal, Theme.Space.s)
-                // The Mac sidebar starts a row's content 16pt in from the background's edge (measured), so this is
-                // the middle of the icon column.
-                if let guide, let line {
-                    line.frame(maxHeight: guide == .stem ? Theme.Space.tight : .infinity)
-                        .frame(maxHeight: .infinity, alignment: .bottom)
-                        .padding(.leading, Theme.Space.l + Theme.Size.tile / 2)
-                        .opacity(guideShown ? 1 : 0)
-                }
-            }
-        )
-        #if os(iOS)
+            )
+            #if os(iOS)
         // The Mac's row insets, so the fill and the guide sit where they are measured there.
         .listRowInsets(EdgeInsets(top: 0, leading: Theme.Space.l, bottom: 0, trailing: Theme.Space.s))
         .listRowSeparator(.hidden)
-        #endif
-        .accessibilityAddTraits(chosen ? [.isButton, .isSelected] : .isButton)
-        .accessibilityAction { selection.wrappedValue = destination }
-        .contextMenu { rowMenu(destination, note: note, menu: menu) }
+            #endif
+            .accessibilityAddTraits(chosen ? [.isButton, .isSelected] : .isButton)
+            .accessibilityAction { selection.wrappedValue = destination }
+            .contextMenu { rowMenu(destination, note: note, menu: menu) }
     }
 }

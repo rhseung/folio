@@ -2,6 +2,7 @@ import FolioDomain
 import FolioFixtures
 import SwiftUI
 import Testing
+
 @testable import Folio
 
 /// Where a list column is (#62): docked where it fits and isn't hidden by hand, otherwise folded behind the button at
@@ -98,8 +99,10 @@ struct PaneColumnTests {
         #expect(panes.columns[1] === hidden && !panes.columns[0].isCollapsed(.people))
 
         // Out to a window of its own: what it had hidden goes with it, a pane without any starts from the last choice.
-        let window = try #require(TabPanes(histories: panes.navigators.map(\.history), shares: panes.shares, focus: 0,
-                                           columns: [[], hidden.names], memory: memory))
+        let window = try #require(
+            TabPanes(
+                histories: panes.navigators.map(\.history), shares: panes.shares, focus: 0,
+                columns: [[], hidden.names], memory: memory))
         #expect(!window.columns[0].isCollapsed(.people) && window.columns[1].isCollapsed(.people))
         #expect(memory.pane(nil).collapsed == memory.last && memory.pane(["gone", "people"]).collapsed == [.people])
     }

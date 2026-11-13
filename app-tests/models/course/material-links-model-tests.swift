@@ -2,6 +2,7 @@ import FolioActions
 import FolioDomain
 import Foundation
 import Testing
+
 @testable import Folio
 
 /// The units page, the materials list, review and the exam card read the same links (`CourseFile.routes(of:to:)`).
@@ -15,7 +16,8 @@ struct MaterialLinksModelTests {
         workspace = try fixtureWorkspace()
         workspace.run(MaterialTrack(course: graphTheory))
         unit = try #require(workspace.run(UnitAdd(course: graphTheory, title: "매칭"))?.made)
-        session = try #require(workspace.run(SessionAdd(course: graphTheory, date: Calendar.current.date(byAdding: .day, value: -1, to: .now)!))?.made)
+        session = try #require(
+            workspace.run(SessionAdd(course: graphTheory, date: Calendar.current.date(byAdding: .day, value: -1, to: .now)!))?.made)
         workspace.run(UnitLink(course: graphTheory, unit: unit, sessions: [session]))
     }
 

@@ -1,5 +1,6 @@
-@testable import FolioDomain
 import Testing
+
+@testable import FolioDomain
 
 struct CourseColorTests {
     @Test func namesPassThroughAndEmptyFallsBackByPosition() {
@@ -21,11 +22,11 @@ struct CourseColorTests {
     }
 
     @Test func savedHexReadsAsTheNearestPreset() {
-        #expect(CourseColor.token("#2F7FE0", position: 0) == "blue")    // the old blue preset
-        #expect(CourseColor.token("#1B2A6B", position: 0) == "blue")    // dark navy, not violet
-        #expect(CourseColor.token("#C4473A", position: 0) == "red")     // the old red preset
+        #expect(CourseColor.token("#2F7FE0", position: 0) == "blue")  // the old blue preset
+        #expect(CourseColor.token("#1B2A6B", position: 0) == "blue")  // dark navy, not violet
+        #expect(CourseColor.token("#C4473A", position: 0) == "red")  // the old red preset
         #expect(CourseColor.token("#FFD000", position: 0) == "orange")
-        #expect(CourseColor.token("#zzzzzz", position: 1) == "blue")    // not hex: falls back by position
+        #expect(CourseColor.token("#zzzzzz", position: 1) == "blue")  // not hex: falls back by position
     }
 
     @Test func savedGrayHexReadsAsGraphite() {
@@ -41,7 +42,7 @@ struct CourseColorTests {
     // A muted color must still read as its hue, not as the neutral.
     @Test func mutedColorsKeepTheirHue() {
         #expect(CourseColor.token("#8A8A3C", position: 0) == "olive")
-        #expect(CourseColor.token("#4F7A6A", position: 0) == "green")   // gray-green
+        #expect(CourseColor.token("#4F7A6A", position: 0) == "green")  // gray-green
         #expect(CourseColor.token("#5A6E9A", position: 0) != "graphite")  // slate blue
     }
 

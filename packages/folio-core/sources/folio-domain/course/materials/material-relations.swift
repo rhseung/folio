@@ -33,12 +33,16 @@ extension CourseFile {
     public func routes(of material: Material, to target: MaterialTarget) -> [MaterialRoute] {
         switch target {
         case .session(let id):
-            let direct = material.sessionIds.contains(id) || sessions.contains { $0.id == id && $0.materials.contains { $0.materialId == material.id } }
+            let direct =
+                material.sessionIds.contains(id)
+                || sessions.contains { $0.id == id && $0.materials.contains { $0.materialId == material.id } }
             let units = unitsCovering(session: id).filter { material.unitIds.contains($0) || holds(unit: $0, material.id) }
             return (direct ? [.direct] : []) + units.map(MaterialRoute.unit)
         case .unit(let id):
             let direct = material.unitIds.contains(id)
-            let via = sessions(inUnit: id).filter { s in s.materials.contains { $0.materialId == material.id } }.map { MaterialRoute.session($0.id) }
+            let via = sessions(inUnit: id).filter { s in s.materials.contains { $0.materialId == material.id } }.map {
+                MaterialRoute.session($0.id)
+            }
             return (direct ? [.direct] : []) + (holds(unit: id, material.id) ? [.pages] : []) + via
         case .exam(let id):
             guard let exam = exams.first(where: { $0.id == id }) else { return [] }
@@ -66,7 +70,8 @@ extension CourseFile {
     }
 
     func sessions(inUnit id: UUID) -> [Session] {
-        sessions.filter { s in s.unitIds.contains(id) || units.contains { $0.id == id && $0.sessionIds.contains(s.id) } }.sorted(by: Session.inOrder)
+        sessions.filter { s in s.unitIds.contains(id) || units.contains { $0.id == id && $0.sessionIds.contains(s.id) } }.sorted(
+            by: Session.inOrder)
     }
 
     /// The session's units, then their parents up to the top, each once.

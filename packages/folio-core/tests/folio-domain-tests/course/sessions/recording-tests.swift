@@ -31,7 +31,9 @@ struct RecordingTests {
     }
 
     @Test func lineAtTimeIsTheLastStartedLine() {
-        let t = LectureTranscript(locale: "ko_KR", lines: [.init(start: 0, end: 4, text: "a"), .init(start: 5, end: 9, text: "b"), .init(start: 12, end: 15, text: "c")])
+        let t = LectureTranscript(
+            locale: "ko_KR",
+            lines: [.init(start: 0, end: 4, text: "a"), .init(start: 5, end: 9, text: "b"), .init(start: 12, end: 15, text: "c")])
         #expect(t.lineIndex(at: -1) == nil)
         #expect(t.lineIndex(at: 0) == 0)
         #expect(t.lineIndex(at: 4.5) == 0)

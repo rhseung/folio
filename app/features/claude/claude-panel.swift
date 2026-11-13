@@ -25,8 +25,10 @@ struct ClaudePanel: View {
     let insertIntoNote: (String) -> Void
     let showNote: (UUID) -> Void
 
-    init(workspace: Workspace, course: LoadedCourse, openNote: UUID?, alsoOpen: [UUID] = [], panes: ContextItem? = nil, openUnit: UUID?,
-         incoming: Binding<ContextItem?> = .constant(nil), insertIntoNote: @escaping (String) -> Void, showNote: @escaping (UUID) -> Void) {
+    init(
+        workspace: Workspace, course: LoadedCourse, openNote: UUID?, alsoOpen: [UUID] = [], panes: ContextItem? = nil, openUnit: UUID?,
+        incoming: Binding<ContextItem?> = .constant(nil), insertIntoNote: @escaping (String) -> Void, showNote: @escaping (UUID) -> Void
+    ) {
         _model = State(initialValue: ClaudeModel(workspace: workspace))
         self.course = course
         self.openNote = openNote
@@ -60,12 +62,17 @@ struct ClaudePanel: View {
             model.add(item)
             incoming = nil
         }
-        .confirmationDialog(model.confirming?.question ?? "", isPresented: Binding(get: { model.confirming != nil }, set: { if !$0 { model.confirming = nil } }),
-                            titleVisibility: .visible, presenting: model.confirming) { pending in
+        .confirmationDialog(
+            model.confirming?.question ?? "",
+            isPresented: Binding(get: { model.confirming != nil }, set: { if !$0 { model.confirming = nil } }),
+            titleVisibility: .visible, presenting: model.confirming
+        ) { pending in
             Button(.claudeProposalApply, role: .destructive) { model.confirm(pending, course: course) }
         }
         .sheet(item: $model.cardDraft) { draft in
-            CardEditorSheet(workspace: model.workspace, course: course, draft: draft, units: course.file.units) { model.status = String(localized: .claudeStatusCardMade) }
+            CardEditorSheet(workspace: model.workspace, course: course, draft: draft, units: course.file.units) {
+                model.status = String(localized: .claudeStatusCardMade)
+            }
         }
     }
 
@@ -73,9 +80,13 @@ struct ClaudePanel: View {
         HStack(spacing: Theme.Space.s) {
             SearchSelect(selection: Binding(get: { model.chatID }, set: { model.select($0) }), options: model.chatOptions)
             Spacer()
-            Button { model.select(nil) } label: { Image(systemName: "square.and.pencil") }
-                .buttonStyle(.ghost)
-                .help(Text(.claudeNewChat))
+            Button {
+                model.select(nil)
+            } label: {
+                Image(systemName: "square.and.pencil")
+            }
+            .buttonStyle(.ghost)
+            .help(Text(.claudeNewChat))
         }
         .padding(Theme.Space.m)
     }
@@ -123,9 +134,13 @@ struct ClaudePanel: View {
             Text(dropped ? String(localized: .claudeContextDropped) : ContextBuilder.estimate(item).formatted())
                 .font(Theme.Typeface.caption).monospacedDigit()
                 .foregroundStyle(dropped ? Theme.Palette.warning : Theme.Palette.textTertiary)
-            Button { model.remove(item) } label: { Image(systemName: "xmark").font(Theme.Glyph.small.weight(.semibold)) }
-                .buttonStyle(.ghost)
-                .help(Text(.claudeContextRemove))
+            Button {
+                model.remove(item)
+            } label: {
+                Image(systemName: "xmark").font(Theme.Glyph.small.weight(.semibold))
+            }
+            .buttonStyle(.ghost)
+            .help(Text(.claudeContextRemove))
         }
         .padding(Theme.Inset.listRow)
         .surface(Theme.Palette.card, in: .rect(cornerRadius: Theme.Radius.control))
@@ -133,7 +148,9 @@ struct ClaudePanel: View {
     }
 
     var addMenu: some View {
-        SearchPicker(options: model.addOptions(course), pick: { model.addContext($0, course: course) }, prompt: String(localized: .claudeAddPrompt)) {
+        SearchPicker(
+            options: model.addOptions(course), pick: { model.addContext($0, course: course) }, prompt: String(localized: .claudeAddPrompt)
+        ) {
             Image(systemName: "plus").foregroundStyle(Theme.Palette.textSecondary)
         }
         .help(Text(.claudeAddHelp))
@@ -141,9 +158,13 @@ struct ClaudePanel: View {
 
     @ViewBuilder var conversation: some View {
         if let chat = model.chat, !chat.messages.isEmpty {
-            HTMLView(body: model.page(chat, cards: !course.file.units.isEmpty),
-                     openNote: { title in if let id = model.noteId(titled: title, course: course) { showNote(id) } },
-                     onAction: { model.handle($0, course: course, openNote: openNote, openUnit: openUnit, insertIntoNote: insertIntoNote, showNote: showNote) })
+            HTMLView(
+                body: model.page(chat, cards: !course.file.units.isEmpty),
+                openNote: { title in if let id = model.noteId(titled: title, course: course) { showNote(id) } },
+                onAction: {
+                    model.handle(
+                        $0, course: course, openNote: openNote, openUnit: openUnit, insertIntoNote: insertIntoNote, showNote: showNote)
+                })
         } else {
             VStack(spacing: Theme.Space.s) {
                 Image(systemName: model.hasKey ? "sparkle" : "key")

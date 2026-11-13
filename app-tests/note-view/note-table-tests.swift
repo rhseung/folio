@@ -2,6 +2,7 @@ import AppKit
 import FolioDomain
 import FolioMarkdown
 import Testing
+
 @testable import Folio
 
 /// The table commands in the edit view: their keys and the context menu, which change the source through
@@ -18,8 +19,9 @@ struct NoteTableTests {
     }
 
     static func key(_ code: UInt16, _ characters: String, _ flags: NSEvent.ModifierFlags, in window: NSWindow) -> NSEvent {
-        NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: flags, timestamp: 0, windowNumber: window.windowNumber, context: nil,
-                         characters: characters, charactersIgnoringModifiers: characters, isARepeat: false, keyCode: code)!
+        NSEvent.keyEvent(
+            with: .keyDown, location: .zero, modifierFlags: flags, timestamp: 0, windowNumber: window.windowNumber, context: nil,
+            characters: characters, charactersIgnoringModifiers: characters, isARepeat: false, keyCode: code)!
     }
 
     @Test func commandReturnAddsARowBelow() {
@@ -30,7 +32,9 @@ struct NoteTableTests {
 
     @Test func aMoveIntoTheEdgeIsTakenButChangesNothing() {
         let (view, window) = Self.editor(caretAfter: "| 1")
-        #expect(view.performKeyEquivalent(with: Self.key(123, String(Character(UnicodeScalar(NSLeftArrowFunctionKey)!)), [.command, .control], in: window)))
+        #expect(
+            view.performKeyEquivalent(
+                with: Self.key(123, String(Character(UnicodeScalar(NSLeftArrowFunctionKey)!)), [.command, .control], in: window)))
         #expect(view.string == Self.table)
     }
 

@@ -41,8 +41,10 @@ import UIKit
         // before PDFView is ready.
         let second = AppLink.course(course.id, page: .materials)
         #endif
-        let links: [AppLink] = [AppLink(.note, course.file.notes[0].id), second,
-                                .course(course.id, page: .quiz), .course(course.id, page: .units), .place(.today)]
+        let links: [AppLink] = [
+            AppLink(.note, course.file.notes[0].id), second,
+            .course(course.id, page: .quiz), .course(course.id, page: .units), .place(.today),
+        ]
         let entries = links.compactMap { workspace.entry(for: $0, hint: course.id) }
         guard entries.count == links.count else {
             note("a link without a screen")
@@ -53,8 +55,9 @@ import UIKit
             capture(folder.appending(path: "\(name).png"))
             let panes = tabs.front
             let fold = panes?.fold
-            note("\(name): focus \(panes?.layout.focus ?? -1), run \(fold.map { "\($0.run)" } ?? "-"), left \(fold?.left ?? []), right \(fold?.right ?? []), "
-                 + "strips \(fold.map { $0.strips.sorted() } ?? [])")
+            note(
+                "\(name): focus \(panes?.layout.focus ?? -1), run \(fold.map { "\($0.run)" } ?? "-"), left \(fold?.left ?? []), right \(fold?.right ?? []), "
+                    + "strips \(fold.map { $0.strips.sorted() } ?? [])")
         }
 
         tabs.open(Navigator(entries[0]))
@@ -100,17 +103,21 @@ import UIKit
     static func capture(_ url: URL) {
         let windows = NSApp.windows.filter(\.isVisible)
         guard let window = windows.first(where: { $0.sheetParent == nil && !$0.className.contains("Popover") }),
-              let view = window.contentView?.superview, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds),
-              let context = NSGraphicsContext(bitmapImageRep: rep) else { return }
+            let view = window.contentView?.superview, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds),
+            let context = NSGraphicsContext(bitmapImageRep: rep)
+        else { return }
         view.cacheDisplay(in: view.bounds, to: rep)
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = context
         for popover in windows where popover.className.contains("Popover") {
-            guard let content = popover.contentView, let drawn = content.bitmapImageRepForCachingDisplay(in: content.bounds) else { continue }
+            guard let content = popover.contentView, let drawn = content.bitmapImageRepForCachingDisplay(in: content.bounds) else {
+                continue
+            }
             content.cacheDisplay(in: content.bounds, to: drawn)
             let origin = content.convert(NSPoint.zero, to: nil)
-            let frame = NSRect(origin: NSPoint(x: popover.frame.minX + origin.x - window.frame.minX, y: popover.frame.minY + origin.y - window.frame.minY),
-                               size: content.bounds.size)
+            let frame = NSRect(
+                origin: NSPoint(x: popover.frame.minX + origin.x - window.frame.minX, y: popover.frame.minY + origin.y - window.frame.minY),
+                size: content.bounds.size)
             let backing = NSBezierPath(roundedRect: frame, xRadius: Theme.Radius.floating, yRadius: Theme.Radius.floating)
             window.effectiveAppearance.performAsCurrentDrawingAppearance {
                 let shadow = NSShadow()
@@ -134,9 +141,13 @@ import UIKit
     #else
     /// The key window with what it presents (a popover is in the same window), as the screen shows it.
     static func capture(_ url: URL) {
-        guard let window = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).flatMap(\.windows).first(where: \.isKeyWindow)
+        guard
+            let window = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).flatMap(\.windows).first(
+                where: \.isKeyWindow)
         else { return }
-        let image = UIGraphicsImageRenderer(bounds: window.bounds).image { _ in window.drawHierarchy(in: window.bounds, afterScreenUpdates: true) }
+        let image = UIGraphicsImageRenderer(bounds: window.bounds).image { _ in
+            window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
+        }
         // folio:not-an-action debug screenshots, outside the GIST folder
         try? image.pngData()?.write(to: url)
     }

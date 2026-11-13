@@ -63,10 +63,13 @@ enum CLI {
         }
         var stale = false
         if let data = app?.data(forKey: appBookmarkKey),
-           let url = try? URL(resolvingBookmarkData: data, options: .withoutUI, bookmarkDataIsStale: &stale) {
+            let url = try? URL(resolvingBookmarkData: data, options: .withoutUI, bookmarkDataIsStale: &stale)
+        {
             return GISTStore(url: url)
         }
-        throw CLIError(exit: .usage, message: String(localized: .gistUnknown), hints: [String(localized: .gistUnknownHintOption), String(localized: .gistUnknownHintEnv)])
+        throw CLIError(
+            exit: .usage, message: String(localized: .gistUnknown),
+            hints: [String(localized: .gistUnknownHintOption), String(localized: .gistUnknownHintEnv)])
     }
 
     /// Its own ID, apart from the Mac app's, so the two never append to the same log file.

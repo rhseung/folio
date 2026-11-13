@@ -1,7 +1,8 @@
-@testable import FolioStorage
 import FolioDomain
 import Foundation
 import Testing
+
+@testable import FolioStorage
 
 struct TranscriptMigrationTests {
     func write(_ json: String) throws -> URL {
@@ -10,7 +11,8 @@ struct TranscriptMigrationTests {
         return url
     }
 
-    let course = #"{"id":"C0000000-0000-4000-8000-0000000000AA","createdAt":"2026-02-20T09:00:00.000Z","updatedAt":"2026-02-20T09:00:00.000Z","updatedBy":"D0000000-0000-4000-8000-000000000001","title":"콜로퀴움","codes":[],"number":"9331","categoryIds":[],"instructorIds":[],"credits":1,"gradingMode":"pass_fail","schedule":[],"color":"","folderRoles":{},"memo":"","titleEn":""}"#
+    let course =
+        #"{"id":"C0000000-0000-4000-8000-0000000000AA","createdAt":"2026-02-20T09:00:00.000Z","updatedAt":"2026-02-20T09:00:00.000Z","updatedBy":"D0000000-0000-4000-8000-000000000001","title":"콜로퀴움","codes":[],"number":"9331","categoryIds":[],"instructorIds":[],"credits":1,"gradingMode":"pass_fail","schedule":[],"color":"","folderRoles":{},"memo":"","titleEn":""}"#
 
     /// v1's folderless courses wait under `unfiledCourses`, and keep what this version doesn't read.
     @Test func v1CoursesBecomeUnfiled() throws {

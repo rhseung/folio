@@ -4,6 +4,7 @@ import FolioMarkdown
 import FolioStorage
 import Foundation
 import Testing
+
 @testable import Folio
 
 /// 선형대수학 in the standard fixture: no exams, assignments or tracked files, one rough note.
@@ -29,8 +30,9 @@ struct ExamsModelTests {
         let (workspace, course) = try fixtureCourse()
         let now = Date.now
         for (days, title) in [(-20, "퀴즈 1"), (-10, "퀴즈 2"), (10, "퀴즈 3")] {
-            let editor = ExamEditorModel(workspace: workspace, course: course,
-                                         exam: Exam(device: workspace.device, at: now, title: "", start: now + Double(days) * 86_400))
+            let editor = ExamEditorModel(
+                workspace: workspace, course: course,
+                exam: Exam(device: workspace.device, at: now, title: "", start: now + Double(days) * 86_400))
             #expect(editor.isNew && editor.title == "시험 추가" && editor.confirm == "추가")
             #expect(editor.disabled && editor.note == nil)
             editor.draft.title = title + " "
@@ -52,8 +54,9 @@ struct ExamsModelTests {
     @Test func movingTheStartCarriesTheEnd() throws {
         let (workspace, course) = try fixtureCourse()
         let start = Date(timeIntervalSince1970: 1_790_000_000)
-        let editor = ExamEditorModel(workspace: workspace, course: course,
-                                     exam: Exam(device: workspace.device, at: start, title: "중간고사", start: start, end: start + 7200))
+        let editor = ExamEditorModel(
+            workspace: workspace, course: course,
+            exam: Exam(device: workspace.device, at: start, title: "중간고사", start: start, end: start + 7200))
         #expect(editor.note == "파일을 넣으면 시험 폴더 Exams/중간고사에 둡니다")
         editor.setStart(start + 86_400)
         #expect(editor.draft.end == start + 86_400 + 7200)
@@ -104,7 +107,9 @@ struct AssignmentsModelTests {
         workspace.run(ComponentAdd(course: linearAlgebra, name: "Lab 2", weight: 5, group: "Lab"))
         workspace.run(ScoreAdd(course: linearAlgebra, component: a, score: 8, max: 20))
         let id = try #require(workspace.run(AssignmentAdd(course: linearAlgebra, title: "Lab 1"))?.made)
-        let model = AssignmentSheetModel(workspace: workspace, course: course, assignment: try #require(workspace.course(linearAlgebra)?.file.assignments.first { $0.id == id }))
+        let model = AssignmentSheetModel(
+            workspace: workspace, course: course,
+            assignment: try #require(workspace.course(linearAlgebra)?.file.assignments.first { $0.id == id }))
         model.load()
         #expect(model.targetOptions.map(\.title) == ["없음", "Lab 전체", "Lab 1", "Lab 2"])
         model.pick(.group("Lab"))
@@ -120,8 +125,11 @@ struct AssignmentsModelTests {
     /// The sheet picks a preset or edits a rule by its parts, and says when the next one will be due.
     @Test func sheetEditsTheRepeatRule() throws {
         let (workspace, course) = try fixtureCourse()
-        let id = try #require(workspace.run(AssignmentAdd(course: linearAlgebra, title: "퀴즈", repeats: AssignmentRepeat(every: 3, .day)))?.made)
-        let model = AssignmentSheetModel(workspace: workspace, course: course, assignment: try #require(workspace.course(linearAlgebra)?.file.assignments.first { $0.id == id }))
+        let id = try #require(
+            workspace.run(AssignmentAdd(course: linearAlgebra, title: "퀴즈", repeats: AssignmentRepeat(every: 3, .day)))?.made)
+        let model = AssignmentSheetModel(
+            workspace: workspace, course: course,
+            assignment: try #require(workspace.course(linearAlgebra)?.file.assignments.first { $0.id == id }))
         model.load()
         // No preset is every three days, so its parts show.
         #expect(model.customRepeat && model.repeatLabel == "3일마다")
@@ -130,15 +138,21 @@ struct AssignmentsModelTests {
         #expect(!model.customRepeat && model.repeatLabel == "격주")
 
         model.hasDue = true
-        model.due = try #require(workspace.calendar.date(from: DateComponents(year: 2026, month: 11, day: 6, hour: 23, minute: 59)))  // Friday
-        #expect(model.repeatDetail == "제출로 바꾸면 다음 과제가 \(CourseFile.deadline(model.due.addingTimeInterval(14 * 86_400), calendar: workspace.calendar)) 마감으로 생깁니다")
+        // Friday
+        model.due = try #require(workspace.calendar.date(from: DateComponents(year: 2026, month: 11, day: 6, hour: 23, minute: 59)))
+        #expect(
+            model.repeatDetail
+                == "제출로 바꾸면 다음 과제가 \(CourseFile.deadline(model.due.addingTimeInterval(14 * 86_400), calendar: workspace.calendar)) 마감으로 생깁니다"
+        )
 
         model.customizeRepeat()
         #expect(model.customRepeat && model.customRule == .biweekly && model.dueWeekday == 5)
         model.customRule = AssignmentRepeat(every: 2, .week, weekdays: [1, 3])
         #expect(model.repeatLabel == "격주 월, 수")
         #expect(model.apply())
-        #expect(workspace.course(linearAlgebra)?.file.assignments.first { $0.id == id }?.repeats == AssignmentRepeat(every: 2, .week, weekdays: [1, 3]))
+        #expect(
+            workspace.course(linearAlgebra)?.file.assignments.first { $0.id == id }?.repeats
+                == AssignmentRepeat(every: 2, .week, weekdays: [1, 3]))
         model.pickRepeat(nil)
         #expect(model.repeatDetail == nil && model.repeatLabel == "반복 없음")
     }
@@ -159,7 +173,8 @@ struct ScoreSourceModelTests {
 
     func sheet(_ workspace: Workspace, _ assignment: UUID) throws -> AssignmentSheetModel {
         let course = try #require(workspace.course(linearAlgebra))
-        let model = AssignmentSheetModel(workspace: workspace, course: course, assignment: try #require(course.file.assignments.first { $0.id == assignment }))
+        let model = AssignmentSheetModel(
+            workspace: workspace, course: course, assignment: try #require(course.file.assignments.first { $0.id == assignment }))
         model.load()
         return model
     }
@@ -167,8 +182,9 @@ struct ScoreSourceModelTests {
     @Test func aScoreFromTheGradesPageGoesToItsAssignment() throws {
         let (workspace, homework, _, assignment, exam) = try setUp()
         let course = try #require(workspace.course(linearAlgebra))
-        let model = ScoreEntryModel(workspace: workspace, course: course,
-                                    entry: ScoreEntry(device: workspace.device, at: .now, componentId: homework, title: "", score: 0, max: 10))
+        let model = ScoreEntryModel(
+            workspace: workspace, course: course,
+            entry: ScoreEntry(device: workspace.device, at: .now, componentId: homework, title: "", score: 0, max: 10))
         let options = model.sourceOptions
         #expect(options.map(\.title) == ["없음", "HW 3", "쪽지시험"])
         #expect(options.map(\.section) == [nil, "과제", "시험"])
@@ -185,16 +201,19 @@ struct ScoreSourceModelTests {
         #expect(assignmentSheet.scores[homework] == "9")
 
         // A second score for HW 3 in 숙제 can't pick it.
-        let next = ScoreEntryModel(workspace: workspace, course: try #require(workspace.course(linearAlgebra)),
-                                   entry: ScoreEntry(device: workspace.device, at: .now, componentId: homework, title: "", score: 0, max: 10))
+        let next = ScoreEntryModel(
+            workspace: workspace, course: try #require(workspace.course(linearAlgebra)),
+            entry: ScoreEntry(device: workspace.device, at: .now, componentId: homework, title: "", score: 0, max: 10))
         #expect(next.sourceOptions.first { $0.id == .assignment(assignment) }?.disabled == true)
         #expect(next.sourceOptions.first { $0.id == .exam(exam) }?.disabled == false)
     }
 
     @Test func savingTheSheetKeepsWhatTheGradesPageChanged() throws {
         let (workspace, homework, lab, assignment, _) = try setUp()
-        workspace.run(AssignmentSave(course: linearAlgebra, assignment: assignment, title: .set("HW 3"), status: .set(.submitted), componentId: .set(homework),
-                                     scores: .set([.init(component: homework, score: 9, max: 10)])))
+        workspace.run(
+            AssignmentSave(
+                course: linearAlgebra, assignment: assignment, title: .set("HW 3"), status: .set(.submitted), componentId: .set(homework),
+                scores: .set([.init(component: homework, score: 9, max: 10)])))
         let entry = try #require(workspace.course(linearAlgebra)?.file.scores.first { $0.assignmentId == assignment })
 
         // On the grades page: renamed, and moved to 실험.
@@ -217,9 +236,10 @@ struct MaterialsModelTests {
     /// Each file opens on its own guess, and the destination shows the name it will get before anything is copied.
     @Test func importRowsOpenOnTheirGuessAndShowTheirNames() throws {
         let (workspace, course) = try fixtureCourse()
-        let model = ImportPlaceModel(workspace: workspace, course: course,
-                                     files: ["HW2.pdf", "01_Vectors.pdf", "Notes.pdf"].map { URL(filePath: "/tmp/\($0)") },
-                                     places: MaterialIntake.places(assignmentFolders: ["HW01", "HW02"]))
+        let model = ImportPlaceModel(
+            workspace: workspace, course: course,
+            files: ["HW2.pdf", "01_Vectors.pdf", "Notes.pdf"].map { URL(filePath: "/tmp/\($0)") },
+            places: MaterialIntake.places(assignmentFolders: ["HW01", "HW02"]))
         #expect(model.title == "파일 3개 넣기" && model.confirmTitle == "3개 넣기")
         #expect(model.rows.map(\.folder) == ["Assignments/HW02", "Lectures", "Lectures"])
         #expect(model.kindLabel(model.rows[0]) == "과제 HW02")
@@ -238,8 +258,9 @@ struct MaterialsModelTests {
     /// ⇧ widens from the last pick, ⌘ adds one, and a menu or number key on a selected row changes every selected row.
     @Test func severalSelectedRowsChangeTogether() throws {
         let (workspace, course) = try fixtureCourse()
-        let model = ImportPlaceModel(workspace: workspace, course: course, files: (1...4).map { URL(filePath: "/tmp/\($0).pdf") },
-                                     places: MaterialIntake.places(assignmentFolders: ["HW01", "HW02"]))
+        let model = ImportPlaceModel(
+            workspace: workspace, course: course, files: (1...4).map { URL(filePath: "/tmp/\($0).pdf") },
+            places: MaterialIntake.places(assignmentFolders: ["HW01", "HW02"]))
         model.click(1)
         model.click(2, extend: true)
         model.click(0, toggle: true)
@@ -266,8 +287,9 @@ struct MaterialsModelTests {
     /// the last one away ends the pick, so a tap picks one row again.
     @Test func aHoldStartsATouchPick() throws {
         let (workspace, course) = try fixtureCourse()
-        let model = ImportPlaceModel(workspace: workspace, course: course, files: (1...4).map { URL(filePath: "/tmp/\($0).pdf") },
-                                     places: MaterialIntake.places(assignmentFolders: ["HW01"]))
+        let model = ImportPlaceModel(
+            workspace: workspace, course: course, files: (1...4).map { URL(filePath: "/tmp/\($0).pdf") },
+            places: MaterialIntake.places(assignmentFolders: ["HW01"]))
         model.click(0)
         model.hold(2)
         #expect(model.picking)
@@ -289,7 +311,10 @@ struct MaterialsModelTests {
         // A makeup set up first, then the class before it: made out of date order on purpose.
         let makeup = UUID()
         for days in [-1, -2] {
-            workspace.run(SessionAdd(id: days == -1 ? makeup : UUID(), course: graphTheory, date: Calendar.current.date(byAdding: .day, value: days, to: .now)!))
+            workspace.run(
+                SessionAdd(
+                    id: days == -1 ? makeup : UUID(), course: graphTheory,
+                    date: Calendar.current.date(byAdding: .day, value: days, to: .now)!))
         }
         let unit = try #require(workspace.run(UnitAdd(course: graphTheory, title: "보강"))?.made)
         workspace.run(UnitLink(course: graphTheory, unit: unit, sessions: [makeup], linked: true))
@@ -313,7 +338,9 @@ struct MaterialsModelTests {
         #expect(model.subtitle.hasPrefix("파일 \(model.materials.count)개"))
         let lectures = try #require(model.sections().first { $0.role == .lecture })
         #expect(lectures.count == 3)
-        #expect(model.renameMessage(lectures.rows.compactMap { if case .file(let m, _, _) = $0 { m } else { nil } }[0]) == "확장자 .pdf는 그대로 둡니다. 바꾼 이름은 되돌릴 수 있게 기록합니다.")
+        #expect(
+            model.renameMessage(lectures.rows.compactMap { if case .file(let m, _, _) = $0 { m } else { nil } }[0])
+                == "확장자 .pdf는 그대로 둡니다. 바꾼 이름은 되돌릴 수 있게 기록합니다.")
     }
 
     /// The move menu asks with the action's own words; the rename alert already shows the new name, so it doesn't.
@@ -365,8 +392,9 @@ struct NotesModelTests {
         // Deleting is the note menu's, which asks the window first.
         var closed = false
         var asked: PendingAction?
-        let menu = NoteMenuSource(workspace: workspace, courseId: course.id, note: model.shown.first { $0.meta.id == id }!, host: .list,
-                                  removed: { closed = true }, openLink: OpenLinkAction(), sheets: ItemSheetsAction(confirm: { asked = $0 }))
+        let menu = NoteMenuSource(
+            workspace: workspace, courseId: course.id, note: model.shown.first { $0.meta.id == id }!, host: .list,
+            removed: { closed = true }, openLink: OpenLinkAction(), sheets: ItemSheetsAction(confirm: { asked = $0 }))
         let remove = try #require(menu.commands.map(menu.row).first { $0.group == .remove })
         if case .action(let action) = remove.kind { action() }
         #expect(!closed && model.parts.map(\.title) == ["수업 노트", "단원 노트"])
@@ -594,7 +622,8 @@ struct NotesModelTests {
     @Test func readViewEditsReplaceTheirOwnLines() throws {
         let (workspace, course) = try fixtureCourse()
         let notes = NotesModel(workspace: workspace, course: course)
-        let editor = NoteEditorModel(workspace: workspace, course: course, note: try #require(notes.note(workspace.noteId(titled: "03-03(화)", in: course))))
+        let editor = NoteEditorModel(
+            workspace: workspace, course: course, note: try #require(notes.note(workspace.noteId(titled: "03-03(화)", in: course))))
         editor.load()
         editor.body += "\n\n문단 하나\n둘째 줄\n"
         let parsed = ParsedNote(editor.body)
@@ -616,7 +645,8 @@ struct AssignmentSheetOpenTests {
     @Test func aFileOpensInTheMaterialsTabAndAsksAboutEdits() throws {
         let workspace = try fixtureWorkspace()
         workspace.run(MaterialTrack(course: graphTheory))
-        let assignment = try #require(workspace.course(graphTheory)?.file.assignments.first { AssignmentFiles.path(of: $0) == "Assignments/HW03" })
+        let assignment = try #require(
+            workspace.course(graphTheory)?.file.assignments.first { AssignmentFiles.path(of: $0) == "Assignments/HW03" })
         workspace.run(MaterialNew(course: graphTheory, folder: "Assignments/HW03", name: "hw3.tex"))
         let course = try #require(workspace.course(graphTheory))
         let sheet = AssignmentSheetModel(workspace: workspace, course: course, assignment: assignment)

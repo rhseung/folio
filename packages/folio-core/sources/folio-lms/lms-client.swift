@@ -19,7 +19,10 @@ public enum LMSCredentialStore {
 
     /// Reads and removes the item whether or not it syncs (see `save`).
     static var base: [String: Any] {
-        [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrSynchronizable as String: kSecAttrSynchronizableAny]
+        [
+            kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
+            kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
+        ]
     }
 
     public static func read() -> LMSCredentials? {
@@ -29,7 +32,8 @@ public enum LMSCredentialStore {
         q[kSecMatchLimit as String] = kSecMatchLimitOne
         var item: CFTypeRef?
         guard SecItemCopyMatching(q as CFDictionary, &item) == errSecSuccess, let found = item as? [String: Any],
-              let account = found[kSecAttrAccount as String] as? String, let data = found[kSecValueData as String] as? Data else { return nil }
+            let account = found[kSecAttrAccount as String] as? String, let data = found[kSecValueData as String] as? Data
+        else { return nil }
         return LMSCredentials(username: account, password: String(decoding: data, as: UTF8.self))
     }
 
@@ -161,9 +165,10 @@ public enum LMSSync {
     }
 
     public static func classroom(_ client: LMSClient, _ id: Int) async throws -> LMSSnapshot {
-        LMSSnapshot(at: .now,
-                    assignments: try LMSPages.assignments(await client.page("/mod/assign/index.php?id=\(id)"), classroom: id),
-                    files: try LMSPages.files(await client.page("/mod/ubfile/index.php?id=\(id)"), classroom: id),
-                    notices: try LMSPages.notices(await client.page("/mod/ubboard/my.php?mc=\(id)"), classroom: id))
+        LMSSnapshot(
+            at: .now,
+            assignments: try LMSPages.assignments(await client.page("/mod/assign/index.php?id=\(id)"), classroom: id),
+            files: try LMSPages.files(await client.page("/mod/ubfile/index.php?id=\(id)"), classroom: id),
+            notices: try LMSPages.notices(await client.page("/mod/ubboard/my.php?mc=\(id)"), classroom: id))
     }
 }

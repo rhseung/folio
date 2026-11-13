@@ -1,6 +1,7 @@
 import FolioFixtures
 import Foundation
 import Testing
+
 @testable import Folio
 
 /// Tests, previews and renders must never reach this Mac's real Application Support/Folio folders: recovery there
@@ -16,7 +17,9 @@ struct LocalFoldersTests {
     }
 
     @Test func aPreviewIsRefusedAndTheAppIsNot() throws {
-        #expect(throws: LocalFolders.RealFolderInIsolatedRun.self) { try LocalFolders.url("Recording", environment: ["XCODE_RUNNING_FOR_PREVIEWS": "1"]) }
+        #expect(throws: LocalFolders.RealFolderInIsolatedRun.self) {
+            try LocalFolders.url("Recording", environment: ["XCODE_RUNNING_FOR_PREVIEWS": "1"])
+        }
         let app = try LocalFolders.url("Recording", environment: [:])
         #expect(app.standardizedFileURL.path.hasPrefix(Self.real))
         // The app's own recordings stay out of tmp, which the system may empty before they reach their course.
@@ -33,7 +36,8 @@ struct LocalFoldersTests {
         // The Whisper model knows no courses; a fixture run shares it rather than downloading 630MB again.
         #expect(try LocalFolders.url("Whisper", environment: fixture).standardizedFileURL.path.hasPrefix(Self.real))
         #expect(throws: LocalFolders.RealFolderInIsolatedRun.self) {
-            try LocalFolders.url("Recording", perGIST: true, environment: fixture.merging(["XCODE_RUNNING_FOR_PREVIEWS": "1"]) { a, _ in a })
+            try LocalFolders.url(
+                "Recording", perGIST: true, environment: fixture.merging(["XCODE_RUNNING_FOR_PREVIEWS": "1"]) { a, _ in a })
         }
     }
 

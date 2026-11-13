@@ -27,10 +27,13 @@ struct CourseGradesView: View {
                 .sensitive(.block)
                 .contextMenu { Button(.courseGradesPolicyEdit) { editingPolicy = true } }
 
-            Block(title: String(localized: .courseGradesComponents), note: model.componentsNote(file), trailing: {
-                Button(.courseGradesAddComponent) { model.addComponent(file) }
-                    .buttonStyle(.ghost)
-            }) {
+            Block(
+                title: String(localized: .courseGradesComponents), note: model.componentsNote(file),
+                trailing: {
+                    Button(.courseGradesAddComponent) { model.addComponent(file) }
+                        .buttonStyle(.ghost)
+                }
+            ) {
                 let lines = model.lines(file)
                 Card {
                     if lines.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .courseGradesNoComponents)) } }
@@ -46,12 +49,17 @@ struct CourseGradesView: View {
                                     .padding(.trailing, Self.addWidth + Theme.Space.m)
                             }
                         case .component(let c, let indented):
-                            componentRow(c, score: result.components.first { $0.componentId == c.id }, all: components,
-                                         indented: indented, last: last)
+                            componentRow(
+                                c, score: result.components.first { $0.componentId == c.id }, all: components,
+                                indented: indented, last: last)
                         case .entry(let e, let indented):
-                            Button { model.editingEntry = e } label: { EntryRow(entry: e, indented: indented, last: last) }
-                                .buttonStyle(.pointing(.plain))
-                                .contextMenu { ItemMenu(source: ScoreMenuSource(model: model, entry: e)) }
+                            Button {
+                                model.editingEntry = e
+                            } label: {
+                                EntryRow(entry: e, indented: indented, last: last)
+                            }
+                            .buttonStyle(.pointing(.plain))
+                            .contextMenu { ItemMenu(source: ScoreMenuSource(model: model, entry: e)) }
                         }
                     }
                 }
@@ -65,7 +73,11 @@ struct CourseGradesView: View {
                 // Only what the components and the policy can't express belongs here; it never enters the calculation.
                 Block(String(localized: .courseGradesOtherRules), note: String(localized: .courseGradesOtherRulesNote)) {
                     Card {
-                        if let late { FormRow(label: String(localized: .courseGradesLateSubmission), last: file.policy.notes.isEmpty) { Text(late).foregroundStyle(Theme.Palette.textSecondary).multilineTextAlignment(.trailing) } }
+                        if let late {
+                            FormRow(label: String(localized: .courseGradesLateSubmission), last: file.policy.notes.isEmpty) {
+                                Text(late).foregroundStyle(Theme.Palette.textSecondary).multilineTextAlignment(.trailing)
+                            }
+                        }
                         if !file.policy.notes.isEmpty {
                             Text(file.policy.notes).lineSpacing(3).textSelection(.enabled)
                                 .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.m)
@@ -88,8 +100,10 @@ struct CourseGradesView: View {
     static let weightWidth: CGFloat = 56
     static let addWidth: CGFloat = 20
 
-    func componentRow(_ c: GradeComponent, score: GradeCalculator.ComponentResult?, all components: [GradeComponent],
-                      indented: Bool, last: Bool) -> some View {
+    func componentRow(
+        _ c: GradeComponent, score: GradeCalculator.ComponentResult?, all components: [GradeComponent],
+        indented: Bool, last: Bool
+    ) -> some View {
         let i = components.firstIndex { $0.id == c.id } ?? 0
         let ratio = score?.ratio
         let canAdd = model.canAdd(c)
@@ -119,7 +133,9 @@ struct CourseGradesView: View {
         // Not a Button: the add button inside would never get its clicks.
         .opens { model.editingComponent = c }
         .help(Text(.courseGradesEditComponentHelp(c.name)))
-        .contextMenu { ItemMenu(source: ComponentMenuSource(model: model, component: c, addsScore: canAdd, index: i, count: components.count)) }
+        .contextMenu {
+            ItemMenu(source: ComponentMenuSource(model: model, component: c, addsScore: canAdd, index: i, count: components.count))
+        }
     }
 
     func attendance(_ file: CourseFile) -> some View {
@@ -127,14 +143,20 @@ struct CourseGradesView: View {
         let next = model.nextText(a)
         return Block(String(localized: .courseGradesAttendance)) {
             Card {
-                FormRow(label: String(localized: .courseGradesAbsences), detail: a.detail, last: a.ratio == nil && a.cap == nil && next == nil) {
+                FormRow(
+                    label: String(localized: .courseGradesAbsences), detail: a.detail, last: a.ratio == nil && a.cap == nil && next == nil
+                ) {
                     Text(.courseGradesAbsenceCount(a.absences)).font(Theme.Typeface.bodyStrong).monospacedDigit()
                 }
                 if let ratio = a.ratio {
-                    FormRow(label: String(localized: .courseGradesMinAttendance), last: a.cap == nil && next == nil) { Text(ratio.percent).monospacedDigit() }
+                    FormRow(label: String(localized: .courseGradesMinAttendance), last: a.cap == nil && next == nil) {
+                        Text(ratio.percent).monospacedDigit()
+                    }
                 }
                 if let cap = a.cap {
-                    FormRow(label: String(localized: .courseGradesMaxGrade), last: next == nil) { Chip(model.symbol(cap.maxGrade), tone: .danger) }
+                    FormRow(label: String(localized: .courseGradesMaxGrade), last: next == nil) {
+                        Chip(model.symbol(cap.maxGrade), tone: .danger)
+                    }
                 }
                 if let next {
                     FormRow(label: String(localized: .courseGradesUntilNextCap), last: true) {
@@ -154,7 +176,8 @@ private struct EntryRow: View {
 
     var body: some View {
         CardRow(last: last) {
-            Text(entry.title.isEmpty ? String(localized: .courseGradesScore) : entry.title).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1)
+            Text(entry.title.isEmpty ? String(localized: .courseGradesScore) : entry.title).foregroundStyle(Theme.Palette.textSecondary)
+                .lineLimit(1)
                 .padding(.leading, Theme.Space.l + (indented ? Theme.Space.l : 0))
             if entry.excused { Chip(String(localized: .courseGradesExcused)) }
             Spacer(minLength: Theme.Space.s)
@@ -162,8 +185,10 @@ private struct EntryRow: View {
                 Text(entry.stdDev.flatMap { $0 > 0 ? ((entry.score - mean) / $0).sigmas : nil } ?? (entry.score - mean).points)
                     .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
             }
-            Text("\(Text(entry.score.formatted()).foregroundStyle(entry.excused ? Theme.Palette.textTertiary : Theme.Palette.text))\(Text(" / \(entry.max.formatted())").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary))")
-                .monospacedDigit()
+            Text(
+                "\(Text(entry.score.formatted()).foregroundStyle(entry.excused ? Theme.Palette.textTertiary : Theme.Palette.text))\(Text(" / \(entry.max.formatted())").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary))"
+            )
+            .monospacedDigit()
             Color.clear.frame(width: CourseGradesView.weightWidth + Theme.Space.m + CourseGradesView.addWidth, height: 0)
         }
         .contentShape(.rect)
@@ -219,7 +244,9 @@ struct ScorePanel: View {
                 let w = proxy.size.width
                 ZStack(alignment: .leading) {
                     Capsule().fill(Theme.Palette.fill)
-                    if let p = result.projected { Capsule().fill(accent.color.opacity(Theme.Opacity.projected)).frame(width: w * min(p, 100) / 100) }
+                    if let p = result.projected {
+                        Capsule().fill(accent.color.opacity(Theme.Opacity.projected)).frame(width: w * min(p, 100) / 100)
+                    }
                     Capsule().fill(accent.color).frame(width: w * min(result.secured, 100) / 100)
                     Theme.Palette.text.frame(width: 2, height: 20).offset(x: w * min(target, 100) / 100 - 1)
                 }
@@ -228,11 +255,18 @@ struct ScorePanel: View {
             // A legend with the bar's own marks, so each color says what it is; the scale ends sit under the bar's ends.
             HStack(spacing: Theme.Space.l) {
                 Text("0").foregroundStyle(Theme.Palette.textTertiary)
-                HStack(spacing: Theme.Space.tight) { Capsule().fill(accent.color).frame(width: 14, height: 6); Text(.courseGradesLegendSecured(result.secured.oneDecimal)) }
-                if let p = result.projected {
-                    HStack(spacing: Theme.Space.tight) { Capsule().fill(accent.color.opacity(Theme.Opacity.projected)).frame(width: 14, height: 6); Text(.courseGradesLegendProjected(p.oneDecimal)) }
+                HStack(spacing: Theme.Space.tight) {
+                    Capsule().fill(accent.color).frame(width: 14, height: 6); Text(.courseGradesLegendSecured(result.secured.oneDecimal))
                 }
-                HStack(spacing: Theme.Space.tight) { Theme.Palette.text.frame(width: 2, height: 12); Text(.courseGradesLegendTarget(target.formatted())) }
+                if let p = result.projected {
+                    HStack(spacing: Theme.Space.tight) {
+                        Capsule().fill(accent.color.opacity(Theme.Opacity.projected)).frame(width: 14, height: 6)
+                        Text(.courseGradesLegendProjected(p.oneDecimal))
+                    }
+                }
+                HStack(spacing: Theme.Space.tight) {
+                    Theme.Palette.text.frame(width: 2, height: 12); Text(.courseGradesLegendTarget(target.formatted()))
+                }
                 Spacer()
                 Text("100").foregroundStyle(Theme.Palette.textTertiary)
             }
@@ -280,30 +314,42 @@ struct StandingCurve: View {
                 ZStack(alignment: .topLeading) {
                     // Each side fades to clear toward the baseline; the A side is the stronger tint, so it reads as
                     // its own region without a hard block of color.
-                    area.fill(LinearGradient(colors: [accent.color.opacity(0.22), accent.color.opacity(0)], startPoint: .top, endPoint: .bottom))
-                        .mask(alignment: .leading) { Rectangle().frame(width: split) }
-                    area.fill(LinearGradient(colors: [accent.color.opacity(0.6), accent.color.opacity(0.02)], startPoint: .top, endPoint: .bottom))
-                        .mask(alignment: .trailing) { Rectangle().frame(width: max(w - split, 0)) }
+                    area.fill(
+                        LinearGradient(colors: [accent.color.opacity(0.22), accent.color.opacity(0)], startPoint: .top, endPoint: .bottom)
+                    )
+                    .mask(alignment: .leading) { Rectangle().frame(width: split) }
+                    area.fill(
+                        LinearGradient(
+                            colors: [accent.color.opacity(0.6), accent.color.opacity(0.02)], startPoint: .top, endPoint: .bottom)
+                    )
+                    .mask(alignment: .trailing) { Rectangle().frame(width: max(w - split, 0)) }
                     top.stroke(accent.color.opacity(0.45), lineWidth: 1.5)
                         .mask(alignment: .leading) { Rectangle().frame(width: split) }
                     top.stroke(accent.color, lineWidth: 1.5)
                         .mask(alignment: .trailing) { Rectangle().frame(width: max(w - split, 0)) }
-                    Path { p in p.move(to: CGPoint(x: x(cut), y: y(cut))); p.addLine(to: CGPoint(x: x(cut), y: h)) }
-                        .stroke(Theme.Palette.textTertiary, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                    Path { p in
+                        p.move(to: CGPoint(x: x(cut), y: y(cut))); p.addLine(to: CGPoint(x: x(cut), y: h))
+                    }
+                    .stroke(Theme.Palette.textTertiary, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
                     Rectangle().fill(Theme.Palette.line).frame(width: w, height: 1).offset(y: h - 1)
                     if let s {
                         let mx = x(s.z), my = y(s.z)
                         // The rule runs from the label row at the top, so the label never sits on the curve however far out the mark is.
-                        Path { p in p.move(to: CGPoint(x: mx, y: 18)); p.addLine(to: CGPoint(x: mx, y: h)) }
-                            .stroke(Theme.Palette.text.opacity(0.7), lineWidth: 1.5)
+                        Path { p in
+                            p.move(to: CGPoint(x: mx, y: 18)); p.addLine(to: CGPoint(x: mx, y: h))
+                        }
+                        .stroke(Theme.Palette.text.opacity(0.7), lineWidth: 1.5)
                         Circle().fill(Theme.Palette.text).frame(width: 10, height: 10)
                             .overlay(Circle().strokeBorder(Theme.Palette.card, lineWidth: 2))
                             .offset(x: mx - 5, y: my - 5)
                         // The label sits on the side with room, so a place near either end stays inside the card.
                         HStack(spacing: 0) {
                             if mx > w * 0.7 { Spacer(minLength: 0) } else { Color.clear.frame(width: max(mx - 8, 0), height: 0) }
-                            Text(String(localized: .courseGradesStandingMe(Int((s.above * 100).rounded()))) + (estimated ? String(localized: .courseGradesStandingEstimated) : ""))
-                                .font(Theme.Typeface.label).foregroundStyle(Theme.Palette.text).fixedSize()
+                            Text(
+                                String(localized: .courseGradesStandingMe(Int((s.above * 100).rounded())))
+                                    + (estimated ? String(localized: .courseGradesStandingEstimated) : "")
+                            )
+                            .font(Theme.Typeface.label).foregroundStyle(Theme.Palette.text).fixedSize()
                             if mx > w * 0.7 { Color.clear.frame(width: max(w - mx - 8, 0), height: 0) } else { Spacer(minLength: 0) }
                         }
                         .frame(width: w)
@@ -329,9 +375,12 @@ struct StandingCurve: View {
                 } else if let gap {
                     // Without any standard deviation the place can't be drawn, but the side of the mean can still settle it.
                     let inA = GradeCalculator.inTopGrade(meanGap: gap, topGradeRatio: share)
-                    Text(gap >= 0 ? .courseGradesStandingAboveMean : .courseGradesStandingBelowMean).foregroundStyle(Theme.Palette.textSecondary)
-                    Text(inA.map { $0 ? .courseGradesStandingInA : .courseGradesStandingOutA } ?? .courseGradesStandingUnknown).fontWeight(inA == nil ? .regular : .semibold)
-                        .foregroundStyle(inA == true ? accent.ink : inA == false ? Theme.Palette.warning : Theme.Palette.textTertiary)
+                    Text(gap >= 0 ? .courseGradesStandingAboveMean : .courseGradesStandingBelowMean).foregroundStyle(
+                        Theme.Palette.textSecondary)
+                    Text(inA.map { $0 ? .courseGradesStandingInA : .courseGradesStandingOutA } ?? .courseGradesStandingUnknown).fontWeight(
+                        inA == nil ? .regular : .semibold
+                    )
+                    .foregroundStyle(inA == true ? accent.ink : inA == false ? Theme.Palette.warning : Theme.Palette.textTertiary)
                 } else {
                     Text(.courseGradesStandingNoMean).foregroundStyle(Theme.Palette.textTertiary)
                 }
@@ -340,8 +389,15 @@ struct StandingCurve: View {
         }
         .help(Text(estimated ? .courseGradesStandingHelpEstimated : .courseGradesStandingHelp))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(s.map { String(localized: .courseGradesStandingAccessibility(Int(($0.above * 100).rounded()), String(localized: $0.inTopGrade ? .courseGradesStandingInA : .courseGradesStandingOutA))) }
-            ?? gap.map { String(localized: $0 >= 0 ? .courseGradesStandingAboveMean : .courseGradesStandingBelowMean) } ?? String(localized: .courseGradesStandingUnknownPlace))
+        .accessibilityLabel(
+            s.map {
+                String(
+                    localized: .courseGradesStandingAccessibility(
+                        Int(($0.above * 100).rounded()),
+                        String(localized: $0.inTopGrade ? .courseGradesStandingInA : .courseGradesStandingOutA)))
+            }
+                ?? gap.map { String(localized: $0 >= 0 ? .courseGradesStandingAboveMean : .courseGradesStandingBelowMean) }
+                ?? String(localized: .courseGradesStandingUnknownPlace))
     }
 }
 

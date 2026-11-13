@@ -16,8 +16,10 @@ enum TranscriptionEngine: String, CaseIterable, Identifiable {
 
     /// `locale` is a guess (the live captions' language) that only Apple's recognizer needs; Whisper listens for itself.
     /// Without `mayDownload` Whisper stands in only if its model is here: 630MB is downloaded when someone asked.
-    func transcribe(_ url: URL, locale: Locale, hints: TranscriptionHints?, mayDownload: Bool,
-                    report: @escaping @Sendable (TranscriptionPhase) -> Void) async throws -> LectureTranscript {
+    func transcribe(
+        _ url: URL, locale: Locale, hints: TranscriptionHints?, mayDownload: Bool,
+        report: @escaping @Sendable (TranscriptionPhase) -> Void
+    ) async throws -> LectureTranscript {
         switch self {
         case .apple:
             do {
@@ -55,11 +57,14 @@ enum TranscriptionError: LocalizedError {
 /// The same recognizer as the live captions, run over the whole file. Unlike a lecture that is starting, this can wait
 /// for the language model to download.
 enum AppleFileTranscriber {
-    static func transcribe(_ url: URL, locale: Locale, hints: TranscriptionHints?, report: @escaping @Sendable (TranscriptionPhase) -> Void) async throws -> LectureTranscript {
+    static func transcribe(_ url: URL, locale: Locale, hints: TranscriptionHints?, report: @escaping @Sendable (TranscriptionPhase) -> Void)
+        async throws -> LectureTranscript
+    {
         guard SpeechTranscriber.isAvailable, let supported = await SpeechTranscriber.supportedLocale(equivalentTo: locale) else {
             throw TranscriptionError.localeUnsupported
         }
-        let transcriber = SpeechTranscriber(locale: supported, transcriptionOptions: [], reportingOptions: [], attributeOptions: [.audioTimeRange])
+        let transcriber = SpeechTranscriber(
+            locale: supported, transcriptionOptions: [], reportingOptions: [], attributeOptions: [.audioTimeRange])
         if let request = try await SpeechAssets.request(for: transcriber, locale: supported) {
             let progress = request.progress
             let watch = Task {
@@ -93,8 +98,10 @@ enum AppleFileTranscriber {
         }
     }
 
-    private static func collect(_ transcriber: SpeechTranscriber, duration: TimeInterval,
-                                report: @Sendable (TranscriptionPhase) -> Void) async throws -> [LectureTranscript.Line] {
+    private static func collect(
+        _ transcriber: SpeechTranscriber, duration: TimeInterval,
+        report: @Sendable (TranscriptionPhase) -> Void
+    ) async throws -> [LectureTranscript.Line] {
         var lines: [LectureTranscript.Line] = []
         for try await result in transcriber.results where result.isFinal {
             let text = String(result.text.characters).trimmingCharacters(in: .whitespacesAndNewlines)

@@ -48,7 +48,8 @@ struct StatStrip: View {
                 VStack(alignment: .leading, spacing: Theme.Space.xs) {
                     Caption(item.title)
                     VStack(alignment: .leading, spacing: Theme.Space.xs) {
-                        Text(item.value).font(Theme.Typeface.figureSmall).foregroundStyle(item.tone.foreground).lineLimit(1).rolling(item.value)
+                        Text(item.value).font(Theme.Typeface.figureSmall).foregroundStyle(item.tone.foreground).lineLimit(1).rolling(
+                            item.value)
                         if let detail = item.detail {
                             Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1)
                         }
@@ -107,7 +108,9 @@ struct Chip: View {
         Text(text)
             .font(Theme.Typeface.caption.weight(tone == .plain && !solid ? .regular : .semibold))
             // On a solid chip the card color, not `onFill`: the dark tones are light, and white on them fell under 3:1.
-            .foregroundStyle(solid ? Theme.Palette.card : tone == .accent ? accent.ink : tone == .plain ? Theme.Palette.textSecondary : tone.foreground)
+            .foregroundStyle(
+                solid ? Theme.Palette.card : tone == .accent ? accent.ink : tone == .plain ? Theme.Palette.textSecondary : tone.foreground
+            )
             // A squeezed row wrapped the label a letter per line; the text beside the chip gives way instead.
             .lineLimit(1)
             .fixedSize()

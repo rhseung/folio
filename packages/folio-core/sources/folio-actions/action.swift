@@ -141,8 +141,10 @@ public final class ActionContext {
     private var settingsDoc: StoredDocument<Settings>?
 
     /// `courses` is the app's map of course folders; the CLI leaves it out and the folder is scanned when needed.
-    public init(gist: GISTStore, device: DeviceID, now: Date = .now, calendar: Calendar = .current, dryRun: Bool = false,
-                courses: [UUID: CourseStore]? = nil) {
+    public init(
+        gist: GISTStore, device: DeviceID, now: Date = .now, calendar: Calendar = .current, dryRun: Bool = false,
+        courses: [UUID: CourseStore]? = nil
+    ) {
         self.gist = gist
         self.device = device
         self.now = now
@@ -164,14 +166,17 @@ public final class ActionContext {
     // MARK: Reads
 
     public func store(_ course: UUID) throws -> CourseStore {
-        guard let store = try courseStores()[course] else { throw ActionError.notFound(String(localized: .errorNotFoundCourseId("\(course)"))) }
+        guard let store = try courseStores()[course] else {
+            throw ActionError.notFound(String(localized: .errorNotFoundCourseId("\(course)")))
+        }
         return store
     }
 
     private func courseStores() throws -> [UUID: CourseStore] {
         if let stores { return stores }
-        let found = Dictionary(try gist.courseStores().compactMap { s in (try? s.load()).map { ($0.model.course.id, s) } },
-                               uniquingKeysWith: { a, _ in a })
+        let found = Dictionary(
+            try gist.courseStores().compactMap { s in (try? s.load()).map { ($0.model.course.id, s) } },
+            uniquingKeysWith: { a, _ in a })
         stores = found
         return found
     }
@@ -192,7 +197,8 @@ public final class ActionContext {
     // Only a missing file starts empty; one that fails to read must not be replaced.
     private func transcriptDocument() throws -> StoredDocument<Transcript> {
         if let transcriptDoc { return transcriptDoc }
-        let doc = FileManager.default.fileExists(atPath: gist.transcriptURL.path) ? try gist.loadTranscript() : StoredDocument(new: Transcript())
+        let doc =
+            FileManager.default.fileExists(atPath: gist.transcriptURL.path) ? try gist.loadTranscript() : StoredDocument(new: Transcript())
         transcriptDoc = doc
         return doc
     }
@@ -356,7 +362,10 @@ public final class ActionContext {
 
     public func log<E: LogEvent>(_ event: E, course: UUID, at date: Date? = nil) throws {
         let store = try store(course)
-        changes.append(Change(.changed, relative(store.log.folder.appending(path: device.uuidString).appendingPathExtension(StandardLayout.logExtension)), item: E.type))
+        changes.append(
+            Change(
+                .changed, relative(store.log.folder.appending(path: device.uuidString).appendingPathExtension(StandardLayout.logExtension)),
+                item: E.type))
         loggedCourses.insert(course)
         if !dryRun { try store.log.append(event, device: device, at: date ?? now) }
     }
@@ -400,7 +409,9 @@ public final class ActionContext {
 /// Who edited and when are left out, since every edit stamps them.
 func diff<M: Encodable>(_ before: M, _ after: M, path: String) -> [Change] {
     func json(_ m: M) -> [String: JSONValue] {
-        guard let data = try? JSONEncoder().encode(m), case .object(let o)? = try? JSONDecoder().decode(JSONValue.self, from: data) else { return [:] }
+        guard let data = try? JSONEncoder().encode(m), case .object(let o)? = try? JSONDecoder().decode(JSONValue.self, from: data) else {
+            return [:]
+        }
         return o
     }
 
@@ -423,7 +434,9 @@ func diff<M: Encodable>(_ before: M, _ after: M, path: String) -> [Change] {
 
     /// Top-level fields of two versions of one object; anything else is one field named `name`.
     func fields(_ name: String, _ old: JSONValue?, _ new: JSONValue?) -> [Change.Field] {
-        guard case .object(let o)? = stripped(old), case .object(let n)? = stripped(new) else { return [Change.Field(name: name, before: old, after: new)] }
+        guard case .object(let o)? = stripped(old), case .object(let n)? = stripped(new) else {
+            return [Change.Field(name: name, before: old, after: new)]
+        }
         return Set(o.keys).union(n.keys).sorted().filter { o[$0] != n[$0] }.map { Change.Field(name: $0, before: o[$0], after: n[$0]) }
     }
 

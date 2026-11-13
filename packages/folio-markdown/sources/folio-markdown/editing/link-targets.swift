@@ -70,8 +70,10 @@ extension ParsedNote {
             // A formula or a fence closing there would no longer close with the ID after it.
             guard !last.hasSuffix("$$"), !last.hasSuffix("```"), !last.hasSuffix("~~~") else { return }
             let first = BlockID.strip(String(bodyLines[lines.lowerBound - 1])).text
-            let excerpt = first.replacing(#/^[ \t>]*(?:\[![A-Za-z-]+\][+-]?[ \t]*)?(?:(?:[-*+]|\d+[.)])[ \t]+(?:\[[ xX]\][ \t]+)?)?/#, with: "")
-                .trimmingCharacters(in: .whitespaces)
+            let excerpt = first.replacing(
+                #/^[ \t>]*(?:\[![A-Za-z-]+\][+-]?[ \t]*)?(?:(?:[-*+]|\d+[.)])[ \t]+(?:\[[ xX]\][ \t]+)?)?/#, with: ""
+            )
+            .trimmingCharacters(in: .whitespaces)
             let id = bodyLines[lines.upperBound - 1].firstMatch(of: BlockID.pattern).map { String($0.1) }
             guard !excerpt.isEmpty || id != nil else { return }
             out.append(LinkableBlock(line: lines.upperBound, excerpt: String(excerpt.prefix(80)), id: id))

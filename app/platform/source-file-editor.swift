@@ -42,7 +42,9 @@ struct SourceFileEditor {
             for token in NoteScripts.highlight(storage.string, language: language) {
                 guard let look = NoteLook.token(token.classes), NSMaxRange(token.range) <= storage.length else { continue }
                 storage.addAttribute(.foregroundColor, value: look.color, range: token.range)
-                if look.italic { storage.addAttribute(.font, value: NoteLook.font(NoteLook.codeSize, italic: true, mono: true), range: token.range) }
+                if look.italic {
+                    storage.addAttribute(.font, value: NoteLook.font(NoteLook.codeSize, italic: true, mono: true), range: token.range)
+                }
             }
         }
         storage.endEditing()
@@ -184,9 +186,10 @@ final class LineNumberGutter: NSRulerView {
         let center = NotificationCenter.default
         // A ruler isn't redrawn on its own when the text changes or the layout settles after a resize.
         for name in [NSText.didChangeNotification, NSView.frameDidChangeNotification] {
-            observers.append(center.addObserver(forName: name, object: textView, queue: .main) { [weak self] _ in
-                MainActor.assumeIsolated { self?.refresh() }
-            })
+            observers.append(
+                center.addObserver(forName: name, object: textView, queue: .main) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.refresh() }
+                })
         }
         refresh()
     }
@@ -214,12 +217,14 @@ final class LineNumberGutter: NSRulerView {
 
     override func drawHashMarksAndLabels(in rect: NSRect) {
         guard let textView, let layout = textView.textLayoutManager, let content = layout.textContentManager,
-              let viewport = layout.textViewportLayoutController.viewportRange else { return }
+            let viewport = layout.textViewportLayoutController.viewportRange
+        else { return }
         let string = textView.string as NSString
         let first = content.offset(from: content.documentRange.location, to: viewport.location)
         // The viewport starts at a paragraph, so every line before it ends with a newline inside this range.
         var line = 1
-        string.enumerateSubstrings(in: NSRange(location: 0, length: min(first, string.length)), options: [.byLines, .substringNotRequired]) { _, _, _, _ in line += 1 }
+        string.enumerateSubstrings(in: NSRange(location: 0, length: min(first, string.length)), options: [.byLines, .substringNotRequired])
+        { _, _, _, _ in line += 1 }
         let attributes: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NoteLook.text3]
         let origin = textView.textContainerOrigin
         let visible = textView.visibleRect
@@ -233,7 +238,9 @@ final class LineNumberGutter: NSRulerView {
             let label = String(line) as NSString
             let size = label.size(withAttributes: attributes)
             let top = convert(NSPoint(x: 0, y: frame.minY + origin.y), from: textView).y
-            label.draw(at: NSPoint(x: ruleThickness - Theme.Space.s - size.width, y: top + (rowHeight - size.height) / 2), withAttributes: attributes)
+            label.draw(
+                at: NSPoint(x: ruleThickness - Theme.Space.s - size.width, y: top + (rowHeight - size.height) / 2),
+                withAttributes: attributes)
             return true
         }
     }

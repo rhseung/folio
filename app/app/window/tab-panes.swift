@@ -47,8 +47,10 @@ final class TabPanes {
 
     /// A tab moved to a window of its own: its panes go on from where they were, back and forward included, and with
     /// the columns each had hidden (`WindowRequest.columns`; nil for panes opened anew). Nil without a history.
-    init?(histories: [LinkHistory<Navigator.Entry>], shares: [Double]?, focus: Int, columns: [[String]]? = nil,
-          memory: ColumnMemory = .shared) {
+    init?(
+        histories: [LinkHistory<Navigator.Entry>], shares: [Double]?, focus: Int, columns: [[String]]? = nil,
+        memory: ColumnMemory = .shared
+    ) {
         guard var layout = PaneLayout(links: histories.map(\.current.link), shares: shares) else { return nil }
         layout.press(min(max(focus, 0), histories.count - 1))
         self.layout = layout
@@ -90,7 +92,8 @@ final class TabPanes {
     @discardableResult
     func restore(_ saved: PaneLayout, entries: [Navigator.Entry?]) -> Bool {
         guard count == 1, entries.count == saved.panes.count, let entry = entries[saved.focus],
-              let kept = saved.keeping({ entries[$0] != nil }), kept.panes.count > 1 else { return false }
+            let kept = saved.keeping({ entries[$0] != nil }), kept.panes.count > 1
+        else { return false }
         let found = entries.compactMap { $0 }
         let at = kept.focus
         let navigator = navigators[0], id = ids[0], trail = trails[0], column = columns[0]
@@ -163,7 +166,9 @@ final class TabPanes {
 
     // Before the row is first measured every pane is in place, as a tab moved to a new window was drawn.
     private func refold() {
-        let new = width.map { layout.fold(room: $0, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: PaneRow.gap) } ?? layout.unfolded
+        let new =
+            width.map { layout.fold(room: $0, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: PaneRow.gap) }
+            ?? layout.unfolded
         if fold != new { fold = new }
     }
 

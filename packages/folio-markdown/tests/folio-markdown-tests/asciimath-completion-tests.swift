@@ -1,10 +1,12 @@
-@testable import FolioMarkdown
 import Foundation
 import Testing
 
+@testable import FolioMarkdown
+
 struct AsciiMathCompletionTests {
-    let catalog = CompletionCatalog(snippets: [Snippet(trigger: "sq", body: "sqrt($1)", inMath: true), Snippet(trigger: "mk", body: "$$1$", inMath: false)],
-                                    tex: false)
+    let catalog = CompletionCatalog(
+        snippets: [Snippet(trigger: "sq", body: "sqrt($1)", inMath: true), Snippet(trigger: "mk", body: "$$1$", inMath: false)],
+        tex: false)
 
     func query(_ s: String) -> CompletionQuery? {
         let m = Marked(s)

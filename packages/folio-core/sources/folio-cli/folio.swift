@@ -9,13 +9,31 @@ struct Folio: ParsableCommand {
         version: FolioVersion.marketing,
         groupedSubcommands: [
             CommandGroup(name: String(localized: .folioGroupToday), subcommands: [TodayCommand.self]),
-            CommandGroup(name: String(localized: .folioGroupClass), subcommands: [SessionCommand.self, UnitCommand.self, AttendanceCommand.self, RecordingCommand.self]),
-            CommandGroup(name: String(localized: .folioGroupExams), subcommands: [ExamCommand.self, AssignmentCommand.self, AddCommand.self]),
-            CommandGroup(name: String(localized: .folioGroupGrades), subcommands: [ScoreCommand.self, ComponentCommand.self, TranscriptCommand.self, RequirementCommand.self, GPACommand.self, UnlockCommand.self, LockCommand.self]),
-            CommandGroup(name: String(localized: .folioGroupStudy), subcommands: [ReviewCommand.self, QuizCommand.self, ProblemSetCommand.self]),
-            CommandGroup(name: String(localized: .folioGroupMaterials), subcommands: [MaterialCommand.self, NoteCommand.self, SearchCommand.self, LinkCommand.self, OpenCommand.self]),
-            CommandGroup(name: String(localized: .folioGroupSetup), subcommands: [SemesterCommand.self, CourseCommand.self, CatalogCommand.self, SettingsCommand.self, LMSCommand.self]),
-            CommandGroup(name: String(localized: .folioGroupTools), subcommands: [ImportCommand.self, CheckCommand.self, CleanupCommand.self, BackupCommand.self, ActionsCommand.self, RunCommand.self, MCPCommand.self, SkillCommand.self, CompletionCommand.self]),
+            CommandGroup(
+                name: String(localized: .folioGroupClass),
+                subcommands: [SessionCommand.self, UnitCommand.self, AttendanceCommand.self, RecordingCommand.self]),
+            CommandGroup(
+                name: String(localized: .folioGroupExams), subcommands: [ExamCommand.self, AssignmentCommand.self, AddCommand.self]),
+            CommandGroup(
+                name: String(localized: .folioGroupGrades),
+                subcommands: [
+                    ScoreCommand.self, ComponentCommand.self, TranscriptCommand.self, RequirementCommand.self, GPACommand.self,
+                    UnlockCommand.self, LockCommand.self,
+                ]),
+            CommandGroup(
+                name: String(localized: .folioGroupStudy), subcommands: [ReviewCommand.self, QuizCommand.self, ProblemSetCommand.self]),
+            CommandGroup(
+                name: String(localized: .folioGroupMaterials),
+                subcommands: [MaterialCommand.self, NoteCommand.self, SearchCommand.self, LinkCommand.self, OpenCommand.self]),
+            CommandGroup(
+                name: String(localized: .folioGroupSetup),
+                subcommands: [SemesterCommand.self, CourseCommand.self, CatalogCommand.self, SettingsCommand.self, LMSCommand.self]),
+            CommandGroup(
+                name: String(localized: .folioGroupTools),
+                subcommands: [
+                    ImportCommand.self, CheckCommand.self, CleanupCommand.self, BackupCommand.self, ActionsCommand.self, RunCommand.self,
+                    MCPCommand.self, SkillCommand.self, CompletionCommand.self,
+                ]),
         ]
     )
 
@@ -24,10 +42,14 @@ struct Folio: ParsableCommand {
 
     /// ArgumentParser's help labels are English and fixed; these sit at line starts or in parentheses, so columns stay aligned.
     static func korean(_ help: String) -> String {
-        [("OVERVIEW: ", ""), ("USAGE: ", String(localized: .helpLabelUsage)), ("ARGUMENTS:", String(localized: .helpLabelArguments)), ("OPTIONS:", String(localized: .helpLabelOptions)), (" SUBCOMMANDS:", ":"),
-         ("SUBCOMMANDS:", String(localized: .helpLabelSubcommands)), ("Show help information.", String(localized: .helpLabelShowHelp)), ("(values: ", String(localized: .helpLabelValues)), ("default: ", String(localized: .helpLabelDefault)),
-         ("See 'folio help <subcommand>' for detailed help.", String(localized: .helpLabelSeeSubcommand))]
-            .reduce(help) { $0.replacingOccurrences(of: $1.0, with: $1.1) }
+        [
+            ("OVERVIEW: ", ""), ("USAGE: ", String(localized: .helpLabelUsage)), ("ARGUMENTS:", String(localized: .helpLabelArguments)),
+            ("OPTIONS:", String(localized: .helpLabelOptions)), (" SUBCOMMANDS:", ":"),
+            ("SUBCOMMANDS:", String(localized: .helpLabelSubcommands)), ("Show help information.", String(localized: .helpLabelShowHelp)),
+            ("(values: ", String(localized: .helpLabelValues)), ("default: ", String(localized: .helpLabelDefault)),
+            ("See 'folio help <subcommand>' for detailed help.", String(localized: .helpLabelSeeSubcommand)),
+        ]
+        .reduce(help) { $0.replacingOccurrences(of: $1.0, with: $1.1) }
     }
 
     /// Only the start of a line changes, so columns still line up.
@@ -42,7 +64,9 @@ struct Folio: ParsableCommand {
                 guard let gap = s.firstMatch(of: /\s{2,}\S/) else { return (s, "") }
                 return (String(s[..<gap.range.lowerBound]), String(s[gap.range.lowerBound...]))
             }
-            if indent.isEmpty, body.hasSuffix(":") || body.hasPrefix(String(localized: .helpLabelUsage)), let colon = body.firstIndex(of: ":") {
+            if indent.isEmpty, body.hasSuffix(":") || body.hasPrefix(String(localized: .helpLabelUsage)),
+                let colon = body.firstIndex(of: ":")
+            {
                 return String(body[...colon]).styled(.bold) + String(body[body.index(after: colon)...])
             }
             if body.hasPrefix("folio ") {
@@ -75,7 +99,8 @@ struct Folio: ParsableCommand {
         // `folio help 과제 마감 바꾸기`: words that aren't a command name are a request to find one.
         let words = arguments.dropFirst().filter { !$0.hasPrefix("-") }
         if arguments.first == "help", let first = words.first, !first.hasPrefix("-"), Topic(first) == nil,
-           !commandNames.contains(first) {
+            !commandNames.contains(first)
+        {
             do {
                 try Finder.print(words.joined(separator: " "), json: json)
                 return Exit.success.rawValue
@@ -136,8 +161,9 @@ struct Folio: ParsableCommand {
             let near = subs.map { s in (s._commandName, Array(s._commandName).difference(from: Array(arg)).count) }
                 .filter { $0.1 <= 2 }.min { $0.1 < $1.1 }
             let here = path.joined(separator: " ")
-            return CLIError(exit: .usage, message: String(localized: .folioUnknownCommand(here, arg)),
-                            hints: near.map { [String(localized: .folioDidYouMean(here, $0.0))] } ?? ["\(here) --help"])
+            return CLIError(
+                exit: .usage, message: String(localized: .folioUnknownCommand(here, arg)),
+                hints: near.map { [String(localized: .folioDidYouMean(here, $0.0))] } ?? ["\(here) --help"])
         }
         return nil
     }

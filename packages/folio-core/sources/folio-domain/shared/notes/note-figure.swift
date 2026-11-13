@@ -75,7 +75,8 @@ public enum NoteFigure {
     }
 
     static func cssProblems(_ css: String) -> [Problem] {
-        var found = css.matches(of: /url\(\s*['"]?([^'")\s]*)/.ignoresCase()).map { String($0.1) }.filter { !inside($0) }.map(Problem.external)
+        var found = css.matches(of: /url\(\s*['"]?([^'")\s]*)/.ignoresCase()).map { String($0.1) }.filter { !inside($0) }.map(
+            Problem.external)
         found += css.matches(of: /@import\s+([^;]+)/.ignoresCase()).map { .external(String($0.1).trimmingCharacters(in: .whitespaces)) }
         return found
     }
@@ -95,7 +96,9 @@ private final class SVGReader: NSObject, XMLParserDelegate {
     var styles = ""
     private var inStyle = 0
 
-    func parser(_ parser: XMLParser, didStartElement name: String, namespaceURI: String?, qualifiedName: String?, attributes: [String: String]) {
+    func parser(
+        _ parser: XMLParser, didStartElement name: String, namespaceURI: String?, qualifiedName: String?, attributes: [String: String]
+    ) {
         if root == nil { root = name }
         elements.append((name, attributes))
         if NoteFigure.local(name) == "style" { inStyle += 1 }
@@ -142,7 +145,8 @@ public enum NoteWidget {
     }
 
     /// The policy doesn't cover peer connections, which could otherwise carry data out.
-    public static let noPeersScript = "for (const k of ['RTCPeerConnection', 'webkitRTCPeerConnection', 'RTCDataChannel']) { try { delete window[k]; window[k] = undefined } catch {} }"
+    public static let noPeersScript =
+        "for (const k of ['RTCPeerConnection', 'webkitRTCPeerConnection', 'RTCDataChannel']) { try { delete window[k]; window[k] = undefined } catch {} }"
 
     public enum Problem: Hashable, Sendable {
         case empty

@@ -54,17 +54,27 @@ struct MaterialMenuSource: ItemMenuSource {
         case .showInFinder:
             MenuRow(command, .commonShowInFinder, "folder", .action { if let url { revealInFinder(url) } })
         case .remove:
-            MenuRow(command, .materialsTrashEllipsis, "trash", role: .destructive, .action {
-                sheets.confirm(workspace.ask(MaterialTrash(course: courseId, material: material.id), button: .materialsTrash))
-            })
+            MenuRow(
+                command, .materialsTrashEllipsis, "trash", role: .destructive,
+                .action {
+                    sheets.confirm(workspace.ask(MaterialTrash(course: courseId, material: material.id), button: .materialsTrash))
+                })
         case .relink:
-            MenuRow(command, .materialsRelinkEllipsis, "doc.badge.arrow.up", .action {
-                if let relink { relink() } else { openLink(.course(courseId, page: .materials), course: courseId) }
-            })
+            MenuRow(
+                command, .materialsRelinkEllipsis, "doc.badge.arrow.up",
+                .action {
+                    if let relink { relink() } else { openLink(.course(courseId, page: .materials), course: courseId) }
+                })
         case .untrack:
-            MenuRow(command, .materialsUntrackEllipsis, "minus.circle", role: .destructive, .action {
-                if let untrack { untrack() } else { sheets.confirm(workspace.ask(MaterialUntrack(course: courseId, material: material.id))) }
-            })
+            MenuRow(
+                command, .materialsUntrackEllipsis, "minus.circle", role: .destructive,
+                .action {
+                    if let untrack {
+                        untrack()
+                    } else {
+                        sheets.confirm(workspace.ask(MaterialUntrack(course: courseId, material: material.id)))
+                    }
+                })
         }
     }
 
@@ -100,10 +110,12 @@ struct MaterialMenuSource: ItemMenuSource {
         let folders = (try? course.store.assignmentFolders()) ?? []
         let exams = course.file.exams.compactMap { MaterialIntake.folder(of: $0) }
         let here = (material.path as NSString).deletingLastPathComponent
-        let places = Array(([CourseFolder.lectures.rawValue] + MaterialIntake.places(assignmentFolders: folders) + exams).uniqued()).filter { $0 != here }
+        let places = Array(([CourseFolder.lectures.rawValue] + MaterialIntake.places(assignmentFolders: folders) + exams).uniqued()).filter
+        { $0 != here }
         return places.map { place in
             MenuRow.Leaf(id: place, title: place, symbol: "folder") {
-                let action = MaterialMove(course: courseId, material: material.id, to: "\(place)/\((material.path as NSString).lastPathComponent)")
+                let action = MaterialMove(
+                    course: courseId, material: material.id, to: "\(place)/\((material.path as NSString).lastPathComponent)")
                 sheets.confirm(workspace.ask(action) { [moves] ctx in moves?.keep(ctx) })
             }
         }
@@ -137,8 +149,10 @@ struct MaterialMenu: View {
 
     var body: some View {
         if let material = workspace.course(courseId)?.file.materials.first(where: { $0.id == materialId }) {
-            ItemMenu(source: MaterialMenuSource(workspace: workspace, courseId: courseId, material: material, host: host, moves: moves,
-                                                relink: relink, untrack: untrack, openLink: openLink, sheets: sheets))
+            ItemMenu(
+                source: MaterialMenuSource(
+                    workspace: workspace, courseId: courseId, material: material, host: host, moves: moves,
+                    relink: relink, untrack: untrack, openLink: openLink, sheets: sheets))
         }
     }
 }

@@ -1,9 +1,10 @@
-@testable import FolioCLI
 import FolioActions
 import FolioDomain
 import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioCLI
 
 struct RecordingTrimTests {
     let h = Harness()
@@ -26,7 +27,8 @@ struct RecordingTrimTests {
 
     @Test func trimMatchesTheAction() throws {
         try h.expectSame(["recording", "trim", "2026-1", "--yes"], prepare: { try record($0) }) { gist in
-            RecordingTrim(semester: try #require(try ActionContext(gist: gist, device: h.device).file(Self.linearAlgebra).course.semesterId))
+            RecordingTrim(
+                semester: try #require(try ActionContext(gist: gist, device: h.device).file(Self.linearAlgebra).course.semesterId))
         }
     }
 
@@ -126,8 +128,12 @@ struct SessionLinkViewedTests {
         #expect(h.cli(SessionCommandTests.add, gist: url).code == 0)
         let ctx = ActionContext(gist: GISTStore(url: url), device: h.device, now: h.now)
         let slides = try #require(try ctx.file(Harness.graphTheory).materials.first { $0.path == "Lectures/05_Matchings.pdf" }).id
-        let r = Recording(device: h.device, at: h.now, sessionId: SessionCommandTests.id, file: "Recordings/10-28(수).m4a", duration: 300,
-                          pages: [PageVisit(at: 0, materialId: slides, page: 4), PageVisit(at: 2, materialId: slides, page: 6), PageVisit(at: 100, materialId: slides, page: 9)])
+        let r = Recording(
+            device: h.device, at: h.now, sessionId: SessionCommandTests.id, file: "Recordings/10-28(수).m4a", duration: 300,
+            pages: [
+                PageVisit(at: 0, materialId: slides, page: 4), PageVisit(at: 2, materialId: slides, page: 6),
+                PageVisit(at: 100, materialId: slides, page: 9),
+            ])
         try ctx.edit(Harness.graphTheory) { $0.recordings = [r] }
     }
 

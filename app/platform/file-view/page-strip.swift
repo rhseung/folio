@@ -111,9 +111,11 @@ private struct PageStripItem: View {
         StripItemFrame(item: item) {
             row(item.lead)
             if let page = item.page {
-                StripPage(controller: controller, page: page, picked: item.mark == .picked, box: PageStrip.box(lecture: model.isLecture), ranging: model.pickingShown,
-                          press: { page, extend in extend ? model.extend(to: page) : model.press(page) },
-                          start: { model.start(at: $0) })
+                StripPage(
+                    controller: controller, page: page, picked: item.mark == .picked, box: PageStrip.box(lecture: model.isLecture),
+                    ranging: model.pickingShown,
+                    press: { page, extend in extend ? model.extend(to: page) : model.press(page) },
+                    start: { model.start(at: $0) })
             }
             row(item.trail)
         }
@@ -122,16 +124,18 @@ private struct PageStripItem: View {
     @ViewBuilder private func row(_ lead: StripItem.Lead?) -> some View {
         switch lead {
         case .header(let section, let open)?:
-            StripHeader(section: section, open: open, lit: model.fresh == section.id, help: Text(.fileViewProgressEditHelp),
-                        toggle: { model.toggle(section) }, edit: { model.edit(section) })
-                .contextMenu {
-                    Button(.commonEdit, systemImage: "pencil") { model.edit(section) }
-                    Divider()
-                    Button(.fileViewProgressRemove, systemImage: "link.badge.minus", role: .destructive) {
-                        withAnimation(Theme.Motion.quick) { model.remove(section) }
-                    }
-                    .disabled(!model.canRemove(section))
+            StripHeader(
+                section: section, open: open, lit: model.fresh == section.id, help: Text(.fileViewProgressEditHelp),
+                toggle: { model.toggle(section) }, edit: { model.edit(section) }
+            )
+            .contextMenu {
+                Button(.commonEdit, systemImage: "pencil") { model.edit(section) }
+                Divider()
+                Button(.fileViewProgressRemove, systemImage: "link.badge.minus", role: .destructive) {
+                    withAnimation(Theme.Motion.quick) { model.remove(section) }
                 }
+                .disabled(!model.canRemove(section))
+            }
         case .edit(let section)?: ProgressSaveRow(model: model, editing: section)
         case .draft?: ProgressSaveRow(model: model, editing: nil)
         case nil: EmptyView()

@@ -124,8 +124,11 @@ final class SnapshotDriver {
             window.center()
         }
 
-        var plan: [(String, Screen, CourseSection?)] = [("today", .today, nil), ("grades", .grades, nil), ("requirements", .requirements, nil), ("people", .people, nil), ("codes", .codes, nil),
-                                                         ("whats-new", .whatsNew, nil)]
+        var plan: [(String, Screen, CourseSection?)] = [
+            ("today", .today, nil), ("grades", .grades, nil), ("requirements", .requirements, nil), ("people", .people, nil),
+            ("codes", .codes, nil),
+            ("whats-new", .whatsNew, nil),
+        ]
         if let semester { plan.append(("semester", .semester(semester), nil)) }
         if let first = courses.first {
             plan += CourseSection.allCases.map { ("course-\($0)", .course(first), $0) }
@@ -166,7 +169,8 @@ final class SnapshotDriver {
             try? await Task.sleep(for: .seconds(1))
 
             section = .assignments
-            editAssignmentMemo = "제출 안내\nhttps://lms.example.ac.kr/course/view.php?id=104729&section=assignment-submission-guidelines-and-rubric-2026-fall\n"
+            editAssignmentMemo =
+                "제출 안내\nhttps://lms.example.ac.kr/course/view.php?id=104729&section=assignment-submission-guidelines-and-rubric-2026-fall\n"
                 + (1...14).map { "\($0). 문제 \($0)의 풀이 과정을 빠짐없이 적는다" }.joined(separator: "\n")
             try? await Task.sleep(for: .seconds(1.5))
             capture(to: directory.appending(path: "course-assignment-edit.png"))
@@ -180,7 +184,9 @@ final class SnapshotDriver {
                 openFile = ext
                 try? await Task.sleep(for: .seconds(2.5))
                 if materialsOpenFile { capture(to: directory.appending(path: "course-materials-\(ext).png")) }
-                if materialsOpenFile, Self.webStep == "course-materials-\(ext)" { await captureWebViews(to: directory, name: "course-materials-\(ext)") }
+                if materialsOpenFile, Self.webStep == "course-materials-\(ext)" {
+                    await captureWebViews(to: directory, name: "course-materials-\(ext)")
+                }
                 if materialsOpenFile, ext == "pdf" {
                     askPage = true
                     try? await Task.sleep(for: .seconds(2))
@@ -337,7 +343,9 @@ final class SnapshotDriver {
         quickAddText = nil
         open(.place(.today))
         try? await Task.sleep(for: .seconds(3))
-        for (name, text, pick) in [("empty", nil, nil), ("typed", "\(named) HW7 금", nil), ("picked", "\(named) HW7 금", other)] as [(String, String?, UUID?)] {
+        for (name, text, pick) in [("empty", nil, nil), ("typed", "\(named) HW7 금", nil), ("picked", "\(named) HW7 금", other)]
+            as [(String, String?, UUID?)]
+        {
             quickAddText = text
             quickAddPick = pick
             quickAddOpen = true
@@ -457,7 +465,8 @@ final class SnapshotDriver {
         guard let root = NSApp.windows.first(where: { $0.isVisible })?.contentView else { return }
         for (i, web) in webViews(in: root).enumerated() {
             guard let image = try? await web.takeSnapshot(configuration: nil), let tiff = image.tiffRepresentation,
-                  let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) else { continue }
+                let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:])
+            else { continue }
             // folio:not-an-action debug screenshots, outside the GIST folder
             try? png.write(to: directory.appending(path: "\(name)-web-\(i).png"))
         }
@@ -479,10 +488,13 @@ final class SnapshotDriver {
 
     // The whole of the tallest scroll view's content, past the window's bottom: Today's lower blocks.
     func captureScrolled(to url: URL) {
-        func scrollViews(in view: NSView) -> [NSScrollView] { ((view as? NSScrollView).map { [$0] } ?? []) + view.subviews.flatMap(scrollViews) }
+        func scrollViews(in view: NSView) -> [NSScrollView] {
+            ((view as? NSScrollView).map { [$0] } ?? []) + view.subviews.flatMap(scrollViews)
+        }
         guard let root = NSApp.windows.first(where: { $0.isVisible && $0.sheetParent == nil })?.contentView,
-              let document = scrollViews(in: root).compactMap(\.documentView).max(by: { $0.bounds.height < $1.bounds.height }),
-              let rep = document.bitmapImageRepForCachingDisplay(in: document.bounds) else { return }
+            let document = scrollViews(in: root).compactMap(\.documentView).max(by: { $0.bounds.height < $1.bounds.height }),
+            let rep = document.bitmapImageRepForCachingDisplay(in: document.bounds)
+        else { return }
         document.cacheDisplay(in: document.bounds, to: rep)
         // folio:not-an-action debug screenshots, outside the GIST folder
         try? rep.representation(using: .png, properties: [:])?.write(to: url)
@@ -494,18 +506,21 @@ final class SnapshotDriver {
         let window = NSApp.windows.first { $0.isVisible && $0.sheetParent == nil && !$0.isPopover }
         // The main window's frame view, so the window's buttons are in the picture too; a sheet is its content alone.
         guard let window, let view = window.attachedSheet?.contentView ?? window.contentView?.superview,
-              let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
+            let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds)
+        else { return }
         view.cacheDisplay(in: view.bounds, to: rep)
         if popovers, window.attachedSheet == nil, let context = NSGraphicsContext(bitmapImageRep: rep) {
             NSGraphicsContext.saveGraphicsState()
             NSGraphicsContext.current = context
             for popover in NSApp.windows where popover.isVisible && popover.isPopover {
                 guard let content = popover.contentView?.superview ?? popover.contentView,
-                      let drawn = content.bitmapImageRepForCachingDisplay(in: content.bounds) else { continue }
+                    let drawn = content.bitmapImageRepForCachingDisplay(in: content.bounds)
+                else { continue }
                 content.cacheDisplay(in: content.bounds, to: drawn)
                 let origin = NSPoint(x: popover.frame.minX - window.frame.minX, y: popover.frame.minY - window.frame.minY)
-                drawn.draw(in: NSRect(origin: origin, size: content.bounds.size), from: .zero, operation: .sourceOver, fraction: 1,
-                           respectFlipped: true, hints: nil)
+                drawn.draw(
+                    in: NSRect(origin: origin, size: content.bounds.size), from: .zero, operation: .sourceOver, fraction: 1,
+                    respectFlipped: true, hints: nil)
             }
             NSGraphicsContext.restoreGraphicsState()
         }

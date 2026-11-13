@@ -5,6 +5,7 @@ import FolioMarkdown
 import FolioStorage
 import Foundation
 import Testing
+
 @testable import Folio
 
 /// Link completion's candidates from the fixture folder, and what taking one writes (#31).
@@ -16,14 +17,14 @@ struct NoteLinkCompletionTests {
     let links: NoteLinkCompletion
 
     static let otherText = """
-    # 매칭
+        # 매칭
 
-    증가 경로가 없으면 최대다. ^max
+        증가 경로가 없으면 최대다. ^max
 
-    ## 쾨니그 정리
+        ## 쾨니그 정리
 
-    이분 그래프에서 최대 매칭과 최소 덮개는 크기가 같다.
-    """
+        이분 그래프에서 최대 매칭과 최소 덮개는 크기가 같다.
+        """
 
     init() throws {
         workspace = try fixtureWorkspace()

@@ -25,7 +25,11 @@ struct DayRibbonCard: View {
                 canvas(ribbon, width: width, now: model.workspace.liveNow)
                     .frame(maxWidth: .infinity, alignment: .topLeading)
                     .frame(height: Self.label * 2 + Self.track + Theme.Space.xs * 2, alignment: .top)
-                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+                    .onGeometryChange(for: CGFloat.self) {
+                        $0.size.width
+                    } action: {
+                        width = $0
+                    }
             }
         }
     }
@@ -88,7 +92,8 @@ struct DayRibbonCard: View {
             // The axis below already says 오전 or 오후; with it the time no longer fits an hour-wide block.
             // 보강 after the time, not a chip: a chip's inset doesn't fit an hour-wide block.
             HStack(spacing: Theme.Space.xxs) {
-                Text(item.start.formatted(.dateTime.hour(.defaultDigits(amPM: .omitted)).minute())).monospacedDigit().foregroundStyle(Theme.Palette.textSecondary)
+                Text(item.start.formatted(.dateTime.hour(.defaultDigits(amPM: .omitted)).minute())).monospacedDigit().foregroundStyle(
+                    Theme.Palette.textSecondary)
                 if item.isMakeup { Text(.sessionsMakeup).foregroundStyle(accent.ink) }
             }
             .font(Theme.Typeface.label.weight(.regular))
@@ -112,18 +117,40 @@ struct DayRibbonCard: View {
         .help(model.ribbonHelp(item))
         if let suggested = item.suggested {
             // Not made yet: what starting it needs sits in a popover, as on the class's own row elsewhere.
-            Button { opened = item.id } label: { label }
-                .buttonStyle(.pointing(.plain))
-                .popover(isPresented: Binding { opened == item.id } set: { if !$0 { opened = nil } }) {
-                    SuggestedSessionRow(item: suggested, showsCourse: true, openNote: openNote(item.courseId))
-                        .padding(Theme.Space.m)
-                        .frame(width: 420)
+            Button {
+                opened = item.id
+            } label: {
+                label
+            }
+            .buttonStyle(.pointing(.plain))
+            .popover(
+                isPresented: Binding {
+                    opened == item.id
+                } set: {
+                    if !$0 { opened = nil }
                 }
-                .contextMenu { SuggestedSessionItems(item: suggested, primary: true, openNote: openNote(item.courseId)) } preview: { preview(item) }
+            ) {
+                SuggestedSessionRow(item: suggested, showsCourse: true, openNote: openNote(item.courseId))
+                    .padding(Theme.Space.m)
+                    .frame(width: 420)
+            }
+            .contextMenu {
+                SuggestedSessionItems(item: suggested, primary: true, openNote: openNote(item.courseId))
+            } preview: {
+                preview(item)
+            }
         } else if let sessionId = item.sessionId {
-            Button { go(item.courseId, .sessions) } label: { label }
-                .buttonStyle(.pointing(.plain))
-                .contextMenu { SessionMenu(courseId: item.courseId, sessionId: sessionId, openNote: openNote(item.courseId)) } preview: { preview(item) }
+            Button {
+                go(item.courseId, .sessions)
+            } label: {
+                label
+            }
+            .buttonStyle(.pointing(.plain))
+            .contextMenu {
+                SessionMenu(courseId: item.courseId, sessionId: sessionId, openNote: openNote(item.courseId))
+            } preview: {
+                preview(item)
+            }
         }
     }
 
@@ -161,20 +188,28 @@ struct DayRibbonCard: View {
         if items.count > 1 {
             Menu {
                 ForEach(items, id: \.assignment.id) { item in
-                    Button { model.edit(item) } label: {
+                    Button {
+                        model.edit(item)
+                    } label: {
                         Text(item.assignment.title)
                         Text(model.title(item.courseId))
                     }
                 }
-            } label: { label }
+            } label: {
+                label
+            }
             .menuStyle(.button).menuIndicator(.hidden).buttonStyle(.borderless).pointingHand().fixedSize()
             .help(help)
             .accessibilityLabel(help)
         } else {
-            Button { if let first = items.first { model.edit(first) } } label: { label }
-                .buttonStyle(.pointing(.plain))
-                .help(help)
-                .accessibilityLabel(help)
+            Button {
+                if let first = items.first { model.edit(first) }
+            } label: {
+                label
+            }
+            .buttonStyle(.pointing(.plain))
+            .help(help)
+            .accessibilityLabel(help)
         }
     }
 
@@ -194,6 +229,8 @@ struct DayRibbonCard: View {
         .lineLimit(1)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.Palette.fill, in: .rect(cornerRadius: Theme.Radius.control))
-        .overlay(RoundedRectangle(cornerRadius: Theme.Radius.control).strokeBorder(Theme.Palette.lineStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 4])))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.control).strokeBorder(
+                Theme.Palette.lineStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 4])))
     }
 }

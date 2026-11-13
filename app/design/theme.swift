@@ -319,7 +319,7 @@ enum Theme {
         static let check = Font.system(size: 16)
         static let toolbar = Font.system(size: toolbarSize)
         /// `toolbar`'s point size, for measuring a toolbar symbol's ink (`TabBar.plusInk`).
-        static let toolbarSize: CGFloat = 15 // design: one-off. A type size, which the grid leaves out.
+        static let toolbarSize: CGFloat = 15  // design: one-off. A type size, which the grid leaves out.
         /// A `LineIcon`: every list and sidebar symbol at one size, so their strokes match.
         static let line = Font.system(size: lineSize)
         /// `line`'s point size, for icons drawn by hand to match its symbols (`FolderIcon`).
@@ -368,7 +368,8 @@ struct CourseAccent: Hashable {
     var read: Color { color.opacity(Theme.Opacity.onTint) }
 
     /// Where no course is in view (a paused recording, a proof callout). Not a course preset; `graphite` is.
-    static let gray = CourseAccent(light: 0x706C66, dark: 0x9A98A8, inkLight: 0x4A4741, inkDark: 0xC9C7D6, fillLight: 0x706C66, fillDark: 0x747287)
+    static let gray = CourseAccent(
+        light: 0x706C66, dark: 0x9A98A8, inkLight: 0x4A4741, inkDark: 0xC9C7D6, fillLight: 0x706C66, fillDark: 0x747287)
 
     /// The app icon's palette, plus olive and teal so a busy term still gets eight, and graphite for a course that should
     /// stay quiet. Light values must match `CourseColor.anchors`. Graphite takes the paper's warm gray, since a pure gray
@@ -382,7 +383,10 @@ struct CourseAccent: Hashable {
         ("olive", .init(light: 0x8A8A3C, dark: 0xC9C25A, inkLight: 0x5C5C22, inkDark: 0xE0DA8A, fillLight: 0x787834, fillDark: 0x7B7628)),
         ("teal", .init(light: 0x1D8FA8, dark: 0x4CC3D9, inkLight: 0x125F70, inkDark: 0x8ADCEA, fillLight: 0x1A7E94, fillDark: 0x1F7F91)),
         ("red", .init(light: 0xFF6B4A, dark: 0xFE8165, inkLight: 0xA92602, inkDark: 0xFEB19F, fillLight: 0xE02900, fillDark: 0xDF2A01)),
-        ("graphite", .init(light: 0x6E6B66, dark: 0xA8A49E, inkLight: 0x46433E, inkDark: 0xD2CEC8, fillLight: 0x6E6B66, fillDark: 0x79746C)),
+        (
+            "graphite",
+            .init(light: 0x6E6B66, dark: 0xA8A49E, inkLight: 0x46433E, inkDark: 0xD2CEC8, fillLight: 0x6E6B66, fillDark: 0x79746C)
+        ),
     ]
 
     /// Which preset an unset color falls back to is `CourseColor`'s, shared with the folio command.
@@ -410,13 +414,16 @@ extension Color {
     /// Hex values keep the tokens readable against the design file.
     init(light: UInt32, dark: UInt32, lightOpacity: CGFloat = 1, darkOpacity: CGFloat = 1) {
         #if os(macOS)
-        self.init(nsColor: NSColor(name: nil) { appearance in
-            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? NSColor(hex: dark, alpha: darkOpacity) : NSColor(hex: light, alpha: lightOpacity)
-        })
+        self.init(
+            nsColor: NSColor(name: nil) { appearance in
+                appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                    ? NSColor(hex: dark, alpha: darkOpacity) : NSColor(hex: light, alpha: lightOpacity)
+            })
         #else
-        self.init(uiColor: UIColor { traits in
-            traits.userInterfaceStyle == .dark ? UIColor(hex: dark, alpha: darkOpacity) : UIColor(hex: light, alpha: lightOpacity)
-        })
+        self.init(
+            uiColor: UIColor { traits in
+                traits.userInterfaceStyle == .dark ? UIColor(hex: dark, alpha: darkOpacity) : UIColor(hex: light, alpha: lightOpacity)
+            })
         #endif
     }
 }
@@ -424,13 +431,15 @@ extension Color {
 #if os(macOS)
 private extension NSColor {
     convenience init(hex: UInt32, alpha: CGFloat = 1) {
-        self.init(srgbRed: CGFloat(hex >> 16 & 0xFF) / 255, green: CGFloat(hex >> 8 & 0xFF) / 255, blue: CGFloat(hex & 0xFF) / 255, alpha: alpha)
+        self.init(
+            srgbRed: CGFloat(hex >> 16 & 0xFF) / 255, green: CGFloat(hex >> 8 & 0xFF) / 255, blue: CGFloat(hex & 0xFF) / 255, alpha: alpha)
     }
 }
 #else
 private extension UIColor {
     convenience init(hex: UInt32, alpha: CGFloat = 1) {
-        self.init(red: CGFloat(hex >> 16 & 0xFF) / 255, green: CGFloat(hex >> 8 & 0xFF) / 255, blue: CGFloat(hex & 0xFF) / 255, alpha: alpha)
+        self.init(
+            red: CGFloat(hex >> 16 & 0xFF) / 255, green: CGFloat(hex >> 8 & 0xFF) / 255, blue: CGFloat(hex & 0xFF) / 255, alpha: alpha)
     }
 }
 #endif

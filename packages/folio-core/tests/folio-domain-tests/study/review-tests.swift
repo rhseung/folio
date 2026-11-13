@@ -54,7 +54,7 @@ struct DayBoundaryTests {
     @Test func studyTimeMergesOverlapsAndUsesStudyDay() {
         let course = UUID()
         let sessions = [
-            StudySessionEvent(courseId: course, start: at(23, 1, 0), end: at(23, 2, 0), screen: "note"),   // Mac
+            StudySessionEvent(courseId: course, start: at(23, 1, 0), end: at(23, 2, 0), screen: "note"),  // Mac
             StudySessionEvent(courseId: course, start: at(23, 1, 30), end: at(23, 2, 30), screen: "ink"),  // iPad, overlaps
             StudySessionEvent(courseId: course, start: at(23, 10, 0), end: at(23, 10, 30), screen: "quiz"),
         ]
@@ -68,9 +68,12 @@ struct ReviewSchedulerTests {
     let unit = UUID()
     func d(_ s: String) -> LocalDate { LocalDate(s)! }
 
-    func state(_ reviews: [(String, ReviewResult)], wrong: [String] = [], exams: [String] = [], plan: Bool = false, note: Bool = false) -> ReviewState {
-        let input = UnitReviewInput(unitId: unit, startDay: d("2026-10-01"), needsReviewNote: note,
-                                    reviews: reviews.map { (d($0.0), $0.1) }, wrongCardDays: wrong.map(d), examDays: exams.map(d), inExamPlan: plan)
+    func state(_ reviews: [(String, ReviewResult)], wrong: [String] = [], exams: [String] = [], plan: Bool = false, note: Bool = false)
+        -> ReviewState
+    {
+        let input = UnitReviewInput(
+            unitId: unit, startDay: d("2026-10-01"), needsReviewNote: note,
+            reviews: reviews.map { (d($0.0), $0.1) }, wrongCardDays: wrong.map(d), examDays: exams.map(d), inExamPlan: plan)
         return ReviewScheduler.state(of: input, settings: settings, today: d("2026-10-22"))
     }
 
@@ -163,10 +166,10 @@ struct TodayTests {
         let now = at(23, 2, 0)  // 02:00 Friday → study day is Thursday the 22nd
         var file = CourseFile(course: Course(device: device, at: now, title: "그래프 이론"))
         file.exams = [Exam(device: device, at: now, title: "Midterm", start: at(27, 19))]
-        var late = Assignment(device: device, at: now, title: "HW5", due: at(23, 3, 0))     // still "today" in study time
+        var late = Assignment(device: device, at: now, title: "HW5", due: at(23, 3, 0))  // still "today" in study time
         late.status = .todo
         let nextWeek = Assignment(device: device, at: now, title: "HW6", due: at(28, 23, 59))
-        let gone = Assignment(device: device, at: now, title: "HW4", due: at(23, 1, 0))     // already passed
+        let gone = Assignment(device: device, at: now, title: "HW4", due: at(23, 1, 0))  // already passed
         let project = Assignment(device: device, at: now, title: "Project", due: at(31, 23, 59))  // past the week
         file.assignments = [late, nextWeek, gone, project]
         var written = Session(device: device, at: now, week: 7, date: at(20, 10))
@@ -188,7 +191,9 @@ struct TodayTests {
         #expect(t.missingReviewNotes.map(\.session.date) == [at(22, 10)])
         file.course.schedule = [ClassTime(weekday: 4, startMinute: 10 * 60, endMinute: 11 * 60 + 15)]
         #expect(TodaySummary.build(courses: [file], now: at(22, 11), settings: Settings(), calendar: calendar).missingReviewNotes.isEmpty)
-        #expect(TodaySummary.build(courses: [file], now: at(22, 11, 15), settings: Settings(), calendar: calendar).missingReviewNotes.count == 1)
+        #expect(
+            TodaySummary.build(courses: [file], now: at(22, 11, 15), settings: Settings(), calendar: calendar).missingReviewNotes.count == 1
+        )
     }
 
     @Test func aReviewNoteMadeButNotWrittenStillAsksToBeWritten() throws {
@@ -200,7 +205,10 @@ struct TodayTests {
         #expect(session.needsReviewNote(at: now))
 
         // Notes from before the flag, and imported ones, decode as written.
-        let written = try JSONEncoder().encode({ var s = session; s.reviewNoteUnfinished = false; return s }())
+        let written = try JSONEncoder().encode(
+            {
+                var s = session; s.reviewNoteUnfinished = false; return s
+            }())
         #expect(!String(decoding: written, as: UTF8.self).contains("reviewNoteDraft"))
         #expect(try !JSONDecoder().decode(Session.self, from: written).needsReviewNote(at: now))
 
@@ -224,7 +232,9 @@ struct TodayTests {
         #expect(hint() == nil)  // eight days out
         file.exams[0].start = at(30, 19)
         #expect(hint() == .exam(days: 7))
-        file.sessions = [Session(device: device, at: now, week: 7, date: at(23, 10)), Session(device: device, at: now, week: 7, date: at(23, 15))]
+        file.sessions = [
+            Session(device: device, at: now, week: 7, date: at(23, 10)), Session(device: device, at: now, week: 7, date: at(23, 15)),
+        ]
         #expect(hint() == .nextClass(at(23, 15)))  // the morning class is over
         #expect(hint(at(23, 16)) == .exam(days: 7))
 
@@ -382,11 +392,15 @@ struct DayRibbonTests {
         #expect(one.position(of: at(9)) == 0)
         #expect(one.position(of: at(11)) == 0.5)
 
-        let afternoon = DayRibbon(day: day, classes: [DateInterval(start: at(13), end: at(14, 15)), DateInterval(start: at(16), end: at(17, 15))], calendar: calendar)
+        let afternoon = DayRibbon(
+            day: day, classes: [DateInterval(start: at(13), end: at(14, 15)), DateInterval(start: at(16), end: at(17, 15))],
+            calendar: calendar)
         #expect((afternoon.startHour, afternoon.endHour) == (12, 19))
         #expect(afternoon.ticks == [12, 14, 16, 18])
 
-        let long = DayRibbon(day: day, classes: [DateInterval(start: at(0, 30), end: at(1, 45)), DateInterval(start: at(23), end: at(24, 15))], calendar: calendar)
+        let long = DayRibbon(
+            day: day, classes: [DateInterval(start: at(0, 30), end: at(1, 45)), DateInterval(start: at(23), end: at(24, 15))],
+            calendar: calendar)
         #expect((long.startHour, long.endHour) == (0, 26))
         #expect(long.ticks == [0, 3, 6, 9, 12, 15, 18, 21, 24])
 

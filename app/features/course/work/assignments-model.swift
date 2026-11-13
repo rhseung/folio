@@ -22,8 +22,10 @@ final class AssignmentsModel {
         let all = course.file.assignments
         let open = all.filter(\.status.isOpen)
         let undated = open.filter { $0.due == nil }.count
-        return ([String(localized: .assignmentsCount(all.count))] + (open.isEmpty ? [] : [String(localized: .assignmentsOpenCount(open.count))])
-                + (undated == 0 ? [] : [String(localized: .assignmentsUndatedCount(undated))])).joined(separator: " · ")
+        return
+            ([String(localized: .assignmentsCount(all.count))]
+            + (open.isEmpty ? [] : [String(localized: .assignmentsOpenCount(open.count))])
+            + (undated == 0 ? [] : [String(localized: .assignmentsUndatedCount(undated))])).joined(separator: " · ")
     }
 
     func groups(now: Date) -> [(group: AssignmentGroup, items: [Assignment])] {
@@ -52,27 +54,34 @@ final class AssignmentsModel {
     func row(_ a: Assignment) -> Row {
         let file = course.file
         let files = AssignmentFiles.materials(of: a, in: file.materials)
-        let submissions = files.filter { ($0.kind ?? AssignmentFiles.guessKind(fileName: ($0.path as NSString).lastPathComponent)) == .submission }.count
+        let submissions = files.filter {
+            ($0.kind ?? AssignmentFiles.guessKind(fileName: ($0.path as NSString).lastPathComponent)) == .submission
+        }.count
         let scores = file.scores.filter { $0.assignmentId == a.id }
-        return Row(files: files, problems: files.count - submissions, submissions: submissions,
-                   score: scores.isEmpty ? nil : "\(scores.map(\.score).reduce(0, +).formatted())/\(scores.map(\.max).reduce(0, +).formatted())",
-                   component: a.componentGroup ?? file.components.first { $0.id == a.componentId }?.name,
-                   suggestsSubmitted: AssignmentFiles.suggestsSubmitted(a, files: files))
+        return Row(
+            files: files, problems: files.count - submissions, submissions: submissions,
+            score: scores.isEmpty ? nil : "\(scores.map(\.score).reduce(0, +).formatted())/\(scores.map(\.max).reduce(0, +).formatted())",
+            component: a.componentGroup ?? file.components.first { $0.id == a.componentId }?.name,
+            suggestsSubmitted: AssignmentFiles.suggestsSubmitted(a, files: files))
     }
 
     func due(_ a: Assignment) -> (date: String, time: String?) {
         guard let due = a.due else { return (String(localized: .assignmentsNoDue), nil) }
         let c = workspace.calendar
-        return (due.formatted(.dateTime.month().day()), due.formatted(.dateTime.weekday()) + " " + TimeMenu.label(c.component(.hour, from: due) * 60 + c.component(.minute, from: due)))
+        return (
+            due.formatted(.dateTime.month().day()),
+            due.formatted(.dateTime.weekday()) + " " + TimeMenu.label(c.component(.hour, from: due) * 60 + c.component(.minute, from: due))
+        )
     }
 
     func dueChip(_ a: Assignment, now: Date) -> (text: String, tone: Tone)? {
         guard a.status.isOpen, let due = a.due else { return nil }
-        let tone: Tone = switch DueUrgency(due: due, now: now, settings: workspace.settings, calendar: workspace.calendar) {
-        case .urgent: .danger
-        case .soon: .warning
-        case .later: .plain
-        }
+        let tone: Tone =
+            switch DueUrgency(due: due, now: now, settings: workspace.settings, calendar: workspace.calendar) {
+            case .urgent: .danger
+            case .soon: .warning
+            case .later: .plain
+            }
         switch DueState(due: due, now: now, calendar: workspace.calendar) {
         case .none: return nil
         case .overdue(let d): return (String(localized: d == 0 ? .assignmentsJustOverdue : .assignmentsOverdueDays(d)), .danger)
@@ -129,7 +138,9 @@ final class AssignmentSheetModel {
     var sheetTitle: String { String(localized: .commonEditNamed(assignment.title)) }
 
     var invalid: Bool {
-        targetComponents.contains { c in !(scores[c.id] ?? "").isEmpty && (Double(scores[c.id] ?? "") == nil || (Double(maxes[c.id] ?? "") ?? 0) <= 0) }
+        targetComponents.contains { c in
+            !(scores[c.id] ?? "").isEmpty && (Double(scores[c.id] ?? "") == nil || (Double(maxes[c.id] ?? "") ?? 0) <= 0)
+        }
     }
 
     /// The files are found by the folder the title names, so a title naming another folder loses them here.
@@ -183,8 +194,10 @@ final class AssignmentSheetModel {
             guard let g = c.group else { options.append(PickOption(id: .component(c.id), title: c.name)); continue }
             guard seen.insert(g).inserted else { continue }
             let members = sortedComponents.filter { $0.group == g }
-            options.append(PickOption(id: .group(g), title: String(localized: .assignmentsWholeGroup(g)),
-                                      detail: String(localized: .assignmentsWholeGroupDetail(members.count))))
+            options.append(
+                PickOption(
+                    id: .group(g), title: String(localized: .assignmentsWholeGroup(g)),
+                    detail: String(localized: .assignmentsWholeGroupDetail(members.count))))
             options += members.map { PickOption(id: .component($0.id), title: $0.name, depth: 1) }
         }
         return options
@@ -211,7 +224,9 @@ final class AssignmentSheetModel {
             scores[s.componentId] = s.score.formatted()
             maxes[s.componentId] = s.max.formatted()
         }
-        target = assignment.componentGroup.map { .group($0) } ?? (assignment.componentId ?? own.first?.componentId).map { .component($0) } ?? .none
+        target =
+            assignment.componentGroup.map { .group($0) } ?? (assignment.componentId ?? own.first?.componentId).map { .component($0) }
+            ?? .none
         loaded = draft
     }
 
@@ -221,7 +236,9 @@ final class AssignmentSheetModel {
     }
 
     private var draft: Draft {
-        Draft(title: title, hasDue: hasDue, due: due, status: status, repeats: repeats, target: target, scores: scores, maxes: maxes, memo: memo)
+        Draft(
+            title: title, hasDue: hasDue, due: due, status: status, repeats: repeats, target: target, scores: scores, maxes: maxes,
+            memo: memo)
     }
 
     /// The fields as `load()` filled them; any difference is an edit that closing the sheet would lose.
@@ -272,14 +289,20 @@ final class AssignmentSheetModel {
 
     func importFiles(_ urls: [URL]) { workspace.importFiles(urls, into: folder, course: course.id) }
 
-    let kindOptions: [(MaterialKind, String)] = [(.problem, String(localized: .assignmentsProblem)),
-                                                 (.submission, String(localized: .assignmentsSubmission)),
-                                                 (.solution, String(localized: .assignmentsSolution))]
+    let kindOptions: [(MaterialKind, String)] = [
+        (.problem, String(localized: .assignmentsProblem)),
+        (.submission, String(localized: .assignmentsSubmission)),
+        (.solution, String(localized: .assignmentsSolution)),
+    ]
 
-    func kind(of m: FolioDomain.Material) -> MaterialKind { m.kind ?? AssignmentFiles.guessKind(fileName: (m.path as NSString).lastPathComponent) }
+    func kind(of m: FolioDomain.Material) -> MaterialKind {
+        m.kind ?? AssignmentFiles.guessKind(fileName: (m.path as NSString).lastPathComponent)
+    }
 
     // Saved at once like an added file, not on confirm: the file is already in the folder whatever the sheet does.
-    func setKind(_ m: FolioDomain.Material, _ kind: MaterialKind) { pending = workspace.ask(MaterialKindSet(course: course.id, kind: kind, materials: [m.id])) }
+    func setKind(_ m: FolioDomain.Material, _ kind: MaterialKind) {
+        pending = workspace.ask(MaterialKindSet(course: course.id, kind: kind, materials: [m.id]))
+    }
 
     func apply() -> Bool {
         let scored = targetComponents
@@ -291,9 +314,11 @@ final class AssignmentSheetModel {
         if case .component(let id) = target { componentId = id }
         if case .group(let g) = target { group = g }
         // Every field, as the sheet shows them all; the action drops the scores of a target the sheet moved away from.
-        return workspace.run(AssignmentSave(course: course.id, assignment: assignment.id, title: .set(title), due: .set(hasDue ? due : nil),
-                                            status: .set(status), repeats: .set(repeats), componentId: .set(componentId),
-                                            componentGroup: .set(group), memo: .set(memo), scores: .set(entered))) != nil
+        return workspace.run(
+            AssignmentSave(
+                course: course.id, assignment: assignment.id, title: .set(title), due: .set(hasDue ? due : nil),
+                status: .set(status), repeats: .set(repeats), componentId: .set(componentId),
+                componentGroup: .set(group), memo: .set(memo), scores: .set(entered))) != nil
     }
 
     func delete(then done: @escaping @MainActor () -> Void) {

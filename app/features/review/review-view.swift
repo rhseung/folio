@@ -12,9 +12,13 @@ struct ReviewOpener<Label: View>: View {
     @State private var open = false
 
     var body: some View {
-        Button { open = true } label: { label.contentShape(.rect) }
-            .buttonStyle(.pointing(.plain))
-            .sheet(isPresented: $open) { ReviewView(workspace: workspace, courses: [.init(courseId: courseId, unitId: unitId)] + then) }
+        Button {
+            open = true
+        } label: {
+            label.contentShape(.rect)
+        }
+        .buttonStyle(.pointing(.plain))
+        .sheet(isPresented: $open) { ReviewView(workspace: workspace, courses: [.init(courseId: courseId, unitId: unitId)] + then) }
     }
 }
 
@@ -25,7 +29,9 @@ struct ReviewView: View {
     @State private var model: ReviewModel
     @Environment(\.dismiss) private var dismiss
 
-    init(workspace: Workspace, courseId: UUID, unitId: UUID) { self.init(workspace: workspace, courses: [Item(courseId: courseId, unitId: unitId)]) }
+    init(workspace: Workspace, courseId: UUID, unitId: UUID) {
+        self.init(workspace: workspace, courses: [Item(courseId: courseId, unitId: unitId)])
+    }
     init(workspace: Workspace, courses: [Item]) { _model = State(initialValue: ReviewModel(workspace: workspace, items: courses)) }
 
     var body: some View {
@@ -40,9 +46,11 @@ struct ReviewView: View {
                         if let source = model.mainSource {
                             pane(source, course: course, closable: false)
                         } else {
-                            ContentUnavailableView(String(localized: .reviewNoNotes), systemImage: "doc.text",
-                                                   description: Text(.reviewNoNotesDetail))
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            ContentUnavailableView(
+                                String(localized: .reviewNoNotes), systemImage: "doc.text",
+                                description: Text(.reviewNoNotesDetail)
+                            )
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                         }
                         if let source = model.sideSource {
                             Theme.Palette.lineSoft.frame(width: 1)
@@ -102,7 +110,9 @@ struct ReviewView: View {
                     HStack(spacing: Theme.Space.s) {
                         ForEach(model.sources) { source in
                             let on = model.isShown(source)
-                            Button { model.pick(source) } label: {
+                            Button {
+                                model.pick(source)
+                            } label: {
                                 Label(source.title, systemImage: source.symbol)
                                     .font(Theme.Typeface.caption.weight(on ? .semibold : .regular))
                                     .foregroundStyle(on ? accent.ink : Theme.Palette.textSecondary)
@@ -127,10 +137,16 @@ struct ReviewView: View {
         VStack(spacing: 0) {
             if closable {
                 HStack(spacing: Theme.Space.s) {
-                    Label(source.title, systemImage: source.symbol).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1)
+                    Label(source.title, systemImage: source.symbol).font(Theme.Typeface.caption).foregroundStyle(
+                        Theme.Palette.textSecondary
+                    ).lineLimit(1)
                     Spacer(minLength: Theme.Space.s)
-                    Button { model.side = nil } label: { Image(systemName: "xmark") }
-                        .buttonStyle(.ghost).tint(Theme.Palette.textTertiary).help(Text(.commonClose))
+                    Button {
+                        model.side = nil
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .buttonStyle(.ghost).tint(Theme.Palette.textTertiary).help(Text(.commonClose))
                 }
                 .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.s)
                 Theme.Palette.lineSoft.frame(height: 1)
@@ -153,7 +169,9 @@ struct ReviewView: View {
                 .buttonStyle(.ghost)
                 .help(Text(.reviewSkipHelp))
             ForEach(ReviewModel.results, id: \.self) { result in
-                Button { finish(result) } label: {
+                Button {
+                    finish(result)
+                } label: {
                     VStack(spacing: Theme.Space.xxs) {
                         HStack(spacing: Theme.Space.tight) {
                             Text("\(result.shortcut)")
@@ -167,7 +185,9 @@ struct ReviewView: View {
                     }
                     .frame(minWidth: 96)
                     .padding(.vertical, Theme.Space.s)
-                    .background(result == .again ? Theme.Palette.dangerFill : Theme.Palette.fill, in: .rect(cornerRadius: Theme.Radius.control))
+                    .background(
+                        result == .again ? Theme.Palette.dangerFill : Theme.Palette.fill, in: .rect(cornerRadius: Theme.Radius.control)
+                    )
                     .contentShape(.rect)
                 }
                 .buttonStyle(.pointing(.plain))
@@ -211,7 +231,8 @@ private struct SourcePane: View {
                 if let note {
                     FileView(workspace: model.workspace, course: course, note: note)
                 } else {
-                    ContentUnavailableView(String(localized: .reviewSourceFailed), systemImage: "doc.questionmark", description: Text(source.title))
+                    ContentUnavailableView(
+                        String(localized: .reviewSourceFailed), systemImage: "doc.questionmark", description: Text(source.title))
                 }
             case .lecture(let id):
                 FileView(workspace: model.workspace, course: course, material: id, requestedPage: $page, remembersPage: false)

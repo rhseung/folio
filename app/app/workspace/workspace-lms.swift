@@ -18,7 +18,8 @@ extension Workspace {
     func lmsTime(_ date: Date) -> String {
         if calendar.isDate(date, inSameDayAs: now) { return date.formatted(date: .omitted, time: .shortened) }
         let sameYear = calendar.component(.year, from: date) == calendar.component(.year, from: now)
-        let day: Date.FormatStyle = sameYear ? .dateTime.month().day().weekday(.abbreviated) : .dateTime.year().month().day().weekday(.abbreviated)
+        let day: Date.FormatStyle =
+            sameYear ? .dateTime.month().day().weekday(.abbreviated) : .dateTime.year().month().day().weekday(.abbreviated)
         return date.formatted(day.hour().minute())
     }
 

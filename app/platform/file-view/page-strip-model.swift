@@ -76,7 +76,9 @@ final class PageStripModel {
     var sections: [Section] {
         guard isLecture, let file, let materialId else { return [] }
         return file.progressSections(of: materialId, pageCount: pageCount).compactMap { s in
-            file.sessions.first { $0.id == s.session }.map { Section(id: s.session, pages: s.pages, title: file.day(of: $0, calendar: workspace.calendar)) }
+            file.sessions.first { $0.id == s.session }.map {
+                Section(id: s.session, pages: s.pages, title: file.day(of: $0, calendar: workspace.calendar))
+            }
         }
     }
 
@@ -113,8 +115,9 @@ final class PageStripModel {
         if let editing, let selection, let i = shown.firstIndex(where: { $0.id == editing }) {
             shown[i] = Section(id: editing, pages: selection, title: shown[i].title)
         }
-        return Item.column(pageCount: pageCount, sections: shown, editing: editing, draft: editing == nil ? selection : nil,
-                           draftBelow: draftBelow, isOpen: { self.isOpen($0, among: all) })
+        return Item.column(
+            pageCount: pageCount, sections: shown, editing: editing, draft: editing == nil ? selection : nil,
+            draftBelow: draftBelow, isOpen: { self.isOpen($0, among: all) })
     }
 
     /// A new range's row stands at the end it was picked out to, so it is saved where ⇧ (or the next tap) ended it:
@@ -220,8 +223,9 @@ final class PageStripModel {
         let settings = workspace.settings, calendar = workspace.calendar
         let today = settings.studyDay(of: workspace.now, calendar: calendar)
         return file.sessionsForNewRange(of: materialId, now: workspace.now, settings: settings, calendar: calendar).map { s in
-            Choice(id: s.id, title: file.title(of: s, calendar: calendar), day: file.day(of: s, calendar: calendar),
-                   today: settings.studyDay(of: s.date, calendar: calendar) == today)
+            Choice(
+                id: s.id, title: file.title(of: s, calendar: calendar), day: file.day(of: s, calendar: calendar),
+                today: settings.studyDay(of: s.date, calendar: calendar) == today)
         }
     }
 
@@ -241,8 +245,9 @@ final class PageStripModel {
 
     var action: MaterialLinkSession? {
         guard let courseId, let materialId, let selection, let session = editing ?? chosen else { return nil }
-        return MaterialLinkSession(course: courseId, material: materialId, session: session,
-                                   firstPage: selection.lowerBound, lastPage: selection.upperBound)
+        return MaterialLinkSession(
+            course: courseId, material: materialId, session: session,
+            firstPage: selection.lowerBound, lastPage: selection.upperBound)
     }
 
     var refusal: String? { action.flatMap { workspace.refusal($0) } }

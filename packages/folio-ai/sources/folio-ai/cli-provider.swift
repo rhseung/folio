@@ -43,12 +43,15 @@ public struct CLIProvider: ClaudeProvider {
     }
 
     static func arguments(for request: MessagesRequest, systemFile: URL?, folio: FolioTools? = nil) throws -> [String] {
-        var args = ["-p", "--verbose", "--input-format", "stream-json", "--output-format", "stream-json",
-                    "--model", request.model, "--tools", "", "--setting-sources", "", "--strict-mcp-config",
-                    "--disable-slash-commands", "--no-session-persistence"]
+        var args = [
+            "-p", "--verbose", "--input-format", "stream-json", "--output-format", "stream-json",
+            "--model", request.model, "--tools", "", "--setting-sources", "", "--strict-mcp-config",
+            "--disable-slash-commands", "--no-session-persistence",
+        ]
         if let folio {
             let server: [String: Any] = ["command": folio.executable.path, "args": ["mcp", "--gist", folio.gist.path, "--propose"]]
-            let config = try JSONSerialization.data(withJSONObject: ["mcpServers": ["folio": server]], options: [.sortedKeys, .withoutEscapingSlashes])
+            let config = try JSONSerialization.data(
+                withJSONObject: ["mcpServers": ["folio": server]], options: [.sortedKeys, .withoutEscapingSlashes])
             // `--strict-mcp-config` above keeps the user's own servers out; only this one is allowed.
             args += ["--mcp-config", String(decoding: config, as: UTF8.self), "--allowedTools", "mcp__folio"]
         }
@@ -81,13 +84,15 @@ public struct CLIProvider: ClaudeProvider {
     static func response(from output: Data, request: MessagesRequest) throws -> MessagesResponse {
         let lines = String(decoding: output, as: UTF8.self).split(separator: "\n")
         guard let line = lines.last(where: { $0.contains(#""type":"result""#) }),
-              let result = try? JSONDecoder().decode(JSONValue.self, from: Data(line.utf8)) else {
+            let result = try? JSONDecoder().decode(JSONValue.self, from: Data(line.utf8))
+        else {
             throw ClaudeError.http(status: 0, body: String(lines.suffix(3).joined(separator: "\n")))
         }
         func string(_ v: JSONValue?) -> String? { if case .string(let s)? = v { s } else { nil } }
         func int(_ v: JSONValue?) -> Int { if case .number(let n)? = v { Int(n) } else { 0 } }
         if result["is_error"] == .bool(true) {
-            throw ClaudeError.http(status: int(result["api_error_status"]), body: string(result["result"]) ?? string(result["subtype"]) ?? "")
+            throw ClaudeError.http(
+                status: int(result["api_error_status"]), body: string(result["result"]) ?? string(result["subtype"]) ?? "")
         }
         let text: String
         if let structured = result["structured_output"], structured != .null {
@@ -103,9 +108,10 @@ public struct CLIProvider: ClaudeProvider {
         let found = proposals(lines)
         return MessagesResponse(
             id: string(result["session_id"]) ?? "cli", model: model, content: [.text(text)], stop_reason: stop,
-            usage: Usage(input_tokens: int(usage?["input_tokens"]), output_tokens: int(usage?["output_tokens"]),
-                         cache_creation_input_tokens: int(usage?["cache_creation_input_tokens"]),
-                         cache_read_input_tokens: int(usage?["cache_read_input_tokens"])),
+            usage: Usage(
+                input_tokens: int(usage?["input_tokens"]), output_tokens: int(usage?["output_tokens"]),
+                cache_creation_input_tokens: int(usage?["cache_creation_input_tokens"]),
+                cache_read_input_tokens: int(usage?["cache_read_input_tokens"])),
             proposals: found.isEmpty ? nil : found
         )
     }
@@ -114,10 +120,12 @@ public struct CLIProvider: ClaudeProvider {
     static func proposals(_ lines: [Substring]) -> [ActionProposal] {
         lines.flatMap { line -> [ActionProposal] in
             guard line.contains(ActionProposal.marker), let value = try? JSONDecoder().decode(JSONValue.self, from: Data(line.utf8)),
-                  value["type"] == .string("user"), case .array(let blocks)? = value["message"]?["content"] else { return [] }
+                value["type"] == .string("user"), case .array(let blocks)? = value["message"]?["content"]
+            else { return [] }
             return blocks.flatMap { block -> [ActionProposal] in
                 guard block["type"] == .string("tool_result") else { return [] }
-                let texts: [JSONValue] = if case .array(let a)? = block["content"] { a.compactMap { $0["text"] } } else { [block["content"] ?? .null] }
+                let texts: [JSONValue] =
+                    if case .array(let a)? = block["content"] { a.compactMap { $0["text"] } } else { [block["content"] ?? .null] }
                 return texts.compactMap { if case .string(let t) = $0 { ActionProposal(text: t) } else { nil } }
             }
         }
@@ -135,12 +143,15 @@ public struct CLIProvider: ClaudeProvider {
     /// `message_start`; a tool call opens its block with the tool's name before its input streams in.
     static func event(_ line: Data) -> StreamEvent? {
         guard let value = try? JSONDecoder().decode(JSONValue.self, from: line), value["type"] == .string("stream_event"),
-              let event = value["event"] else { return nil }
+            let event = value["event"]
+        else { return nil }
         switch event["type"] {
         case .string("message_start"):
             return .turn
         case .string("content_block_start"):
-            guard let block = event["content_block"], block["type"] == .string("tool_use"), case .string(let name)? = block["name"] else { return nil }
+            guard let block = event["content_block"], block["type"] == .string("tool_use"), case .string(let name)? = block["name"] else {
+                return nil
+            }
             return .tool(name)
         case .string("content_block_delta"):
             guard let delta = event["delta"] else { return nil }
@@ -165,7 +176,8 @@ public struct CLIProvider: ClaudeProvider {
             try system.write(to: systemFile!, atomically: true, encoding: .utf8)
         }
 
-        let args = try Self.arguments(for: request, systemFile: systemFile, folio: folio) + (onEvent == nil ? [] : ["--include-partial-messages"])
+        let args =
+            try Self.arguments(for: request, systemFile: systemFile, folio: folio) + (onEvent == nil ? [] : ["--include-partial-messages"])
         let (executable, cwd, errorFile) = (executable, workingDirectory, temp.appending(path: "stderr.txt"))
         let running = Running()
         // Detached because the read blocks its thread. A detached task doesn't inherit cancellation, so the handler
@@ -189,8 +201,10 @@ public struct CLIProvider: ClaudeProvider {
         }
     }
 
-    static func run(_ executable: URL, _ args: [String], input: Data, cwd: URL?, stderr: URL, running: Running = Running(),
-                    onLine: (Data) -> Void = { _ in }) throws -> (Data, Int32) {
+    static func run(
+        _ executable: URL, _ args: [String], input: Data, cwd: URL?, stderr: URL, running: Running = Running(),
+        onLine: (Data) -> Void = { _ in }
+    ) throws -> (Data, Int32) {
         let process = Process()
         process.executableURL = executable
         process.arguments = args

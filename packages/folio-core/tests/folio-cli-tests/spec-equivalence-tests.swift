@@ -1,9 +1,10 @@
-@testable import FolioCLI
 import FolioActions
 import FolioDomain
 import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioCLI
 
 /// Every example of an action declared with `@Action` runs three ways on the same prepared folder: as the command,
 /// as `run --input` with the input the command built, and as the decoded action itself. All three must leave the
@@ -16,7 +17,9 @@ struct SpecEquivalenceTests {
     static let outsideGIST: Set<String> = ["backup restore"]
 
     static let examples: [(String, String)] = Actions.all.filter { $0.spec.generated && !outsideGIST.contains($0.command) }
-        .flatMap { type in type.spec.examples.filter(HelpExampleTests.runnable).map { (type.command, $0.replacing(/\s{2,}\S.*$/, with: "")) } }
+        .flatMap { type in
+            type.spec.examples.filter(HelpExampleTests.runnable).map { (type.command, $0.replacing(/\s{2,}\S.*$/, with: "")) }
+        }
 
     // Preparing runs two dozen commands, and every example starts from the same prepared folder, so it is prepared
     // once and copied. The copy takes the backup folder along and points the settings at it: examples running side by

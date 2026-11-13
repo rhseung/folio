@@ -89,15 +89,21 @@ struct SearchPicker<ID: Hashable, Label: View>: View {
     /// The query, when it can be made: no option already has that title.
     var creatable: String? {
         let q = query.trimmingCharacters(in: .whitespaces)
-        guard create != nil, !q.isEmpty, !options.contains(where: { $0.title.caseInsensitiveCompare(q) == .orderedSame }) else { return nil }
+        guard create != nil, !q.isEmpty, !options.contains(where: { $0.title.caseInsensitiveCompare(q) == .orderedSame }) else {
+            return nil
+        }
         return q
     }
 
     var body: some View {
-        Button { open.toggle() } label: { label }
-            .buttonStyle(.pointing(.plain))
-            .fixedSize(horizontal: !flexible, vertical: true)
-            .popover(isPresented: $open, arrowEdge: .bottom) { panel }
+        Button {
+            open.toggle()
+        } label: {
+            label
+        }
+        .buttonStyle(.pointing(.plain))
+        .fixedSize(horizontal: !flexible, vertical: true)
+        .popover(isPresented: $open, arrowEdge: .bottom) { panel }
     }
 
     var panel: some View {
@@ -111,8 +117,12 @@ struct SearchPicker<ID: Hashable, Label: View>: View {
                     .onSubmit {
                         if let id = highlighted ?? rows.first?.id { choose(id) } else if let title = creatable { make(title) }
                     }
-                    .onKeyPress(.downArrow) { step(1, in: rows); return .handled }
-                    .onKeyPress(.upArrow) { step(-1, in: rows); return .handled }
+                    .onKeyPress(.downArrow) {
+                        step(1, in: rows); return .handled
+                    }
+                    .onKeyPress(.upArrow) {
+                        step(-1, in: rows); return .handled
+                    }
             }
             .padding(Theme.Space.m)
             Theme.Palette.line.frame(height: 1)
@@ -130,7 +140,8 @@ struct SearchPicker<ID: Hashable, Label: View>: View {
                         LazyVStack(alignment: .leading, spacing: 0) {
                             ForEach(Array(rows.enumerated()), id: \.element.id) { i, o in
                                 if let section = o.section, i == 0 || rows[i - 1].section != section {
-                                    Caption(section).padding(.horizontal, Theme.Space.m).padding(.top, Theme.Space.s).padding(.bottom, Theme.Space.xxs)
+                                    Caption(section).padding(.horizontal, Theme.Space.m).padding(.top, Theme.Space.s).padding(
+                                        .bottom, Theme.Space.xxs)
                                 }
                                 row(o).id(o.id)
                             }
@@ -154,13 +165,17 @@ struct SearchPicker<ID: Hashable, Label: View>: View {
     }
 
     func row(_ o: PickOption<ID>) -> some View {
-        Button { choose(o.id) } label: {
+        Button {
+            choose(o.id)
+        } label: {
             HStack(spacing: Theme.Space.s) {
                 Image(systemName: "checkmark").font(Theme.Glyph.regular)
                     .opacity(isSelected(o.id) ? 1 : 0)
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                     Text(o.title).lineLimit(1)
-                    if let detail = o.detail { Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1) }
+                    if let detail = o.detail {
+                        Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
+                    }
                 }
                 Spacer(minLength: 0)
             }
@@ -178,7 +193,9 @@ struct SearchPicker<ID: Hashable, Label: View>: View {
     }
 
     func createRow(_ title: String) -> some View {
-        Button { make(title) } label: {
+        Button {
+            make(title)
+        } label: {
             HStack(spacing: Theme.Space.s) {
                 Image(systemName: "plus").font(Theme.Glyph.regular)
                 Text(createTitle(title)).lineLimit(1)
@@ -239,18 +256,23 @@ struct SearchMultiSelect<Value: Hashable>: View {
     var subtree: ((Value) -> Set<Value>)?
 
     var body: some View {
-        SearchPicker(options: options, isSelected: { selection.contains($0) }, pick: { id in
-            let group = subtree?(id) ?? [id]
-            if selection.contains(id) {
-                selection.removeAll { group.contains($0) }
-            } else {
-                // Outline order, so the chip names the chapter rather than whichever section came first in the set.
-                selection += options.map(\.id).filter { group.contains($0) && !selection.contains($0) }
-            }
-        }, multiple: true) {
+        SearchPicker(
+            options: options, isSelected: { selection.contains($0) },
+            pick: { id in
+                let group = subtree?(id) ?? [id]
+                if selection.contains(id) {
+                    selection.removeAll { group.contains($0) }
+                } else {
+                    // Outline order, so the chip names the chapter rather than whichever section came first in the set.
+                    selection += options.map(\.id).filter { group.contains($0) && !selection.contains($0) }
+                }
+            }, multiple: true
+        ) {
             let titles = selection.compactMap { id in options.first { $0.id == id }?.title }
             // The count, then one title (cut off first when long): every title joined pushed a form row, and the sheet with it, past its width.
-            ChipLabel(summary ?? titles.first.map { titles.count > 1 ? String(localized: .designPickedMany(titles.count, $0)) : $0 } ?? placeholder)
+            ChipLabel(
+                summary ?? titles.first.map { titles.count > 1 ? String(localized: .designPickedMany(titles.count, $0)) : $0 }
+                    ?? placeholder)
         }
     }
 }
@@ -272,15 +294,21 @@ struct Segmented<Value: Hashable>: View {
             ForEach(options.indices, id: \.self) { i in
                 let (value, label) = options[i]
                 let chosen = selection == value
-                Button { selection = value } label: {
+                Button {
+                    selection = value
+                } label: {
                     Group {
                         if symbols.indices.contains(i) { LineIcon(symbol: symbols[i], filled: chosen) } else { Text(label).lineLimit(1) }
                     }
-                        .fontWeight(chosen ? .semibold : .regular)
-                        .foregroundStyle(inks.indices.contains(i) ? inks[i] ?? labelColor(chosen) : labelColor(chosen))
-                        .padding(Theme.Inset.toggle)
-                        .background(chosen ? (compact ? AnyShapeStyle(Theme.Palette.text.opacity(Theme.Opacity.tint)) : AnyShapeStyle(Theme.Palette.card)) : AnyShapeStyle(.clear), in: .capsule)
-                        .contentShape(.capsule)
+                    .fontWeight(chosen ? .semibold : .regular)
+                    .foregroundStyle(inks.indices.contains(i) ? inks[i] ?? labelColor(chosen) : labelColor(chosen))
+                    .padding(Theme.Inset.toggle)
+                    .background(
+                        chosen
+                            ? (compact ? AnyShapeStyle(Theme.Palette.text.opacity(Theme.Opacity.tint)) : AnyShapeStyle(Theme.Palette.card))
+                            : AnyShapeStyle(.clear), in: .capsule
+                    )
+                    .contentShape(.capsule)
                 }
                 .buttonStyle(.pointing(.plain))
                 .help(symbols.isEmpty ? "" : label)
@@ -290,7 +318,8 @@ struct Segmented<Value: Hashable>: View {
         }
         .padding(compact ? Theme.Space.xxs : Theme.Space.xs)
         .fixedSize()
-        .background(compact ? AnyShapeStyle(Theme.Palette.text.opacity(Theme.Opacity.wash)) : AnyShapeStyle(Theme.Palette.fill), in: .capsule)
+        .background(
+            compact ? AnyShapeStyle(Theme.Palette.text.opacity(Theme.Opacity.wash)) : AnyShapeStyle(Theme.Palette.fill), in: .capsule)
     }
 
     func labelColor(_ chosen: Bool) -> Color { chosen ? Theme.Palette.text : Theme.Palette.textSecondary }
@@ -347,7 +376,9 @@ struct PictureChoice<Value: Hashable, Picture: View>: View {
             ForEach(options.indices, id: \.self) { i in
                 let (value, label) = options[i]
                 let chosen = selection == value
-                Button { selection = value } label: {
+                Button {
+                    selection = value
+                } label: {
                     VStack(spacing: Theme.Space.xs) {
                         picture(value).frame(width: Self.picture.width, height: Self.picture.height)
                         Text(label).font(Theme.Typeface.caption).lineLimit(1)
@@ -356,8 +387,13 @@ struct PictureChoice<Value: Hashable, Picture: View>: View {
                     .foregroundStyle(chosen ? Theme.Palette.info : Theme.Palette.textSecondary)
                     .padding(.vertical, Theme.Space.tight)
                     .padding(.horizontal, Theme.Space.s)
-                    .background(chosen ? Theme.Palette.info.opacity(Theme.Opacity.tint) : .clear, in: .rect(cornerRadius: Theme.Radius.control))
-                    .overlay(RoundedRectangle(cornerRadius: Theme.Radius.control).strokeBorder(chosen ? Theme.Palette.info : Theme.Palette.lineSoft))
+                    .background(
+                        chosen ? Theme.Palette.info.opacity(Theme.Opacity.tint) : .clear, in: .rect(cornerRadius: Theme.Radius.control)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.Radius.control).strokeBorder(
+                            chosen ? Theme.Palette.info : Theme.Palette.lineSoft)
+                    )
                     .contentShape(.rect(cornerRadius: Theme.Radius.control))
                     .fixedSize()
                 }
@@ -379,9 +415,13 @@ struct TimeMenu: View {
 
     var body: some View {
         HStack(spacing: Theme.Space.xxs) {
-            TimePart(value: Binding(get: { minute / 60 }, set: { minute = $0 * 60 + minute % 60 }), values: Array(hours), label: Self.hourLabel) { dial = .hour }
+            TimePart(
+                value: Binding(get: { minute / 60 }, set: { minute = $0 * 60 + minute % 60 }), values: Array(hours), label: Self.hourLabel
+            ) { dial = .hour }
             Text(":").foregroundStyle(Theme.Palette.textTertiary)
-            TimePart(value: Binding(get: { minute % 60 }, set: { minute = minute / 60 * 60 + $0 }), values: Array(stride(from: 0, to: 60, by: 5))) { dial = .minute }
+            TimePart(
+                value: Binding(get: { minute % 60 }, set: { minute = minute / 60 * 60 + $0 }), values: Array(stride(from: 0, to: 60, by: 5))
+            ) { dial = .minute }
         }
         .monospacedDigit()
         .chip()
@@ -441,7 +481,7 @@ private struct TimePart: View {
             )
             .onTapGesture(perform: pick)
             #if os(macOS)
-            .pointerStyle(.columnResize)
+        .pointerStyle(.columnResize)
             #endif
             .help(Text(.designDragOrPickHelp))
             // Only while scrubbing: the chip stays live behind an open dial, and the dial gives its own.
@@ -496,8 +536,9 @@ private struct TimeDial: View {
                 // A toggle only when both halves hold an hour the menu allows; the day boundary (0–8) just names its
                 // half, or its 12 would read as noon.
                 if hours.contains(where: { $0 < 12 }), hours.contains(where: { $0 >= 12 }) {
-                    Segmented(selection: Binding(get: { hour >= 12 }, set: { pm in setHour(hour % 12 + (pm ? 12 : 0)) }),
-                              options: [(false, Calendar.current.amSymbol), (true, Calendar.current.pmSymbol)])
+                    Segmented(
+                        selection: Binding(get: { hour >= 12 }, set: { pm in setHour(hour % 12 + (pm ? 12 : 0)) }),
+                        options: [(false, Calendar.current.amSymbol), (true, Calendar.current.pmSymbol)])
                 } else {
                     Text(hour < 12 ? Calendar.current.amSymbol : Calendar.current.pmSymbol)
                         .font(Theme.Typeface.bodyStrong)
@@ -508,7 +549,9 @@ private struct TimeDial: View {
     }
 
     private func part(_ text: String, _ m: Mode) -> some View {
-        Button { withAnimation(.snappy) { mode = m } } label: {
+        Button {
+            withAnimation(.snappy) { mode = m }
+        } label: {
             Text(text).foregroundStyle(mode == m ? Theme.Palette.text : Theme.Palette.textTertiary)
         }
         .buttonStyle(.pointing(.plain))
@@ -550,9 +593,13 @@ private struct TimeDial: View {
                 Text(mark.label)
                     .font(mark.radius == Self.inner ? Theme.Typeface.caption : Theme.Typeface.body)
                     .monospacedDigit()
-                    .foregroundStyle(mark.value == selected ? Theme.Palette.onFill
-                                     : allowed ? (mark.radius == Self.inner ? Theme.Palette.textSecondary : Theme.Palette.text)
-                                     : Theme.Palette.textTertiary.opacity(0.5))
+                    .foregroundStyle(
+                        mark.value == selected
+                            ? Theme.Palette.onFill
+                            : allowed
+                                ? (mark.radius == Self.inner ? Theme.Palette.textSecondary : Theme.Palette.text)
+                                : Theme.Palette.textTertiary.opacity(0.5)
+                    )
                     .frame(width: Self.cell, height: Self.cell)
                     .position(Self.point(mark.angle, mark.radius, center))
                     .accessibilityLabel(mode == .hour ? TimeMenu.hourLabel(mark.value) : mark.label)
@@ -634,7 +681,9 @@ struct DateChip: View {
     @State private var open = false
 
     var body: some View {
-        Button { open = true } label: {
+        Button {
+            open = true
+        } label: {
             Text(date.formatted(showsTime ? .dateTime.month().day().weekday().hour().minute() : .dateTime.year().month().day().weekday()))
                 .monospacedDigit()
                 .chip()
@@ -659,10 +708,15 @@ struct DatePanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.m) {
-            MonthCalendar(date: Binding(get: { date }, set: { day in
-                date = workspace.calendar.date(byAdding: .minute, value: minuteOfDay, to: workspace.calendar.startOfDay(for: day)) ?? day
-                picked()
-            }))
+            MonthCalendar(
+                date: Binding(
+                    get: { date },
+                    set: { day in
+                        date =
+                            workspace.calendar.date(byAdding: .minute, value: minuteOfDay, to: workspace.calendar.startOfDay(for: day))
+                            ?? day
+                        picked()
+                    }))
             if showsTime {
                 Divider()
                 HStack(spacing: Theme.Space.s) {
@@ -716,11 +770,21 @@ struct MonthCalendar: View {
             HStack {
                 Text(shown.formatted(.dateTime.year().month(.wide))).font(Theme.Typeface.bodyStrong)
                 Spacer()
-                Button(.designToday) { month = nil; date = .now }
-                    .font(Theme.Typeface.caption)
-                    .foregroundStyle(Theme.Palette.textSecondary)
-                Button { month = calendar.date(byAdding: .month, value: -1, to: shown) } label: { Image(systemName: "chevron.left") }
-                Button { month = calendar.date(byAdding: .month, value: 1, to: shown) } label: { Image(systemName: "chevron.right") }
+                Button(.designToday) {
+                    month = nil; date = .now
+                }
+                .font(Theme.Typeface.caption)
+                .foregroundStyle(Theme.Palette.textSecondary)
+                Button {
+                    month = calendar.date(byAdding: .month, value: -1, to: shown)
+                } label: {
+                    Image(systemName: "chevron.left")
+                }
+                Button {
+                    month = calendar.date(byAdding: .month, value: 1, to: shown)
+                } label: {
+                    Image(systemName: "chevron.right")
+                }
             }
             .buttonStyle(.ghost)
             LazyVGrid(columns: columns, spacing: Theme.Space.xxs) {
@@ -733,11 +797,15 @@ struct MonthCalendar: View {
                 ForEach(days, id: \.self) { day in
                     let selected = calendar.isDate(day, inSameDayAs: date)
                     let inMonth = calendar.isDate(day, equalTo: shown, toGranularity: .month)
-                    Button { date = day } label: {
+                    Button {
+                        date = day
+                    } label: {
                         Text("\(calendar.component(.day, from: day))")
                             .font(calendar.isDateInToday(day) ? Theme.Typeface.bodyStrong : Theme.Typeface.body)
                             .monospacedDigit()
-                            .foregroundStyle(selected ? Theme.Palette.onFill : inMonth ? Theme.Palette.text : Theme.Palette.textTertiary.opacity(0.6))
+                            .foregroundStyle(
+                                selected ? Theme.Palette.onFill : inMonth ? Theme.Palette.text : Theme.Palette.textTertiary.opacity(0.6)
+                            )
                             .frame(width: 32, height: 32)
                             .background(selected ? accent.color : .clear, in: .circle)
                             .overlay { if calendar.isDateInToday(day) && !selected { Circle().strokeBorder(accent.color, lineWidth: 1.5) } }
@@ -773,7 +841,9 @@ struct ChipTabs<Value: Hashable>: View {
             ForEach(options.indices, id: \.self) { i in
                 let (value, title) = options[i]
                 let on = value == selection
-                Button { selection = value } label: {
+                Button {
+                    selection = value
+                } label: {
                     Text(title)
                         .lineLimit(1)
                         .font(Theme.Typeface.caption.weight(on ? .semibold : .regular))
@@ -798,8 +868,12 @@ struct SearchField: View {
             Image(systemName: "magnifyingglass").foregroundStyle(Theme.Palette.textTertiary)
             TextField(prompt, text: $text).textFieldStyle(.plain)
             if !text.isEmpty {
-                Button { text = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Theme.Palette.textTertiary) }
-                    .buttonStyle(.pointing(.plain))
+                Button {
+                    text = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(Theme.Palette.textTertiary)
+                }
+                .buttonStyle(.pointing(.plain))
             }
         }
         .chip()
@@ -828,12 +902,18 @@ struct GrowingTextEditor: View {
             // the width measured here: the box came out a line short.
             .scrollIndicators(height.scrolls ? .automatic : .never)
             .frame(height: height.points)
-            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+            .onGeometryChange(for: CGFloat.self) {
+                $0.size.width
+            } action: {
+                width = $0
+            }
     }
 
     /// Laid out by TextKit as the editor's text view lays it out. A hidden SwiftUI `Text` broke a long URL at other
     /// places than the editor did, a line short, and the last line scrolled out of a box that should have held it.
-    static func height(of text: String, size: CGFloat, width: CGFloat, lines: ClosedRange<Int>, room: CGFloat? = nil) -> (points: CGFloat, scrolls: Bool) {
+    static func height(of text: String, size: CGFloat, width: CGFloat, lines: ClosedRange<Int>, room: CGFloat? = nil) -> (
+        points: CGFloat, scrolls: Bool
+    ) {
         let font = PlatformFont.systemFont(ofSize: size)
         let layout = NSLayoutManager()
         #if os(macOS)
@@ -870,13 +950,15 @@ extension Binding {
     /// An array element that survives its removal: a removed row's controls still read their binding while they go away,
     /// and a plain `$array[i]` then reads past the end and crashes.
     func element<E: Identifiable>(id: E.ID, fallback: E) -> Binding<E> where Value == [E] {
-        Binding<E>(get: { wrappedValue.first { $0.id == id } ?? fallback },
-                   set: { new in if let j = wrappedValue.firstIndex(where: { $0.id == id }) { wrappedValue[j] = new } })
+        Binding<E>(
+            get: { wrappedValue.first { $0.id == id } ?? fallback },
+            set: { new in if let j = wrappedValue.firstIndex(where: { $0.id == id }) { wrappedValue[j] = new } })
     }
 
     func element<E>(at i: Int, fallback: E) -> Binding<E> where Value == [E] {
-        Binding<E>(get: { wrappedValue.indices.contains(i) ? wrappedValue[i] : fallback },
-                   set: { new in if wrappedValue.indices.contains(i) { wrappedValue[i] = new } })
+        Binding<E>(
+            get: { wrappedValue.indices.contains(i) ? wrappedValue[i] : fallback },
+            set: { new in if wrappedValue.indices.contains(i) { wrappedValue[i] = new } })
     }
 }
 

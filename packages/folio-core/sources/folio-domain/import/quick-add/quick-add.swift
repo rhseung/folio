@@ -62,8 +62,10 @@ public struct QuickAdd: Equatable, Sendable {
 
     /// - Parameter fixedCourse: set when adding from a course's own assignments, so the line need not name the course.
     /// - Parameter defaultCourse: the course the window shows; a course named in the line wins over it.
-    public static func parse(_ line: String, courses: [Course], codes: [CourseCode] = [], fixedCourse: UUID? = nil, defaultCourse: UUID? = nil,
-                             now: Date, calendar: Calendar) -> QuickAdd {
+    public static func parse(
+        _ line: String, courses: [Course], codes: [CourseCode] = [], fixedCourse: UUID? = nil, defaultCourse: UUID? = nil,
+        now: Date, calendar: Calendar
+    ) -> QuickAdd {
         var found = line.ranges(of: /\S+/).map { (String(line[$0]), $0) }
         var course = fixedCourse
         var courseSpan: Span?

@@ -53,7 +53,9 @@ final class SettingsModel {
     /// From the Info.plist, not FolioVersion: only the build knows its build number (the commit count).
     var version: String {
         let info = Bundle.main.infoDictionary ?? [:]
-        return String(localized: .settingsVersionBuild(info["CFBundleShortVersionString"] as? String ?? "?", info["CFBundleVersion"] as? String ?? "?"))
+        return String(
+            localized: .settingsVersionBuild(
+                info["CFBundleShortVersionString"] as? String ?? "?", info["CFBundleVersion"] as? String ?? "?"))
     }
 
     var folderPath: String {
@@ -108,11 +110,14 @@ final class SettingsModel {
         guard let c = referenceClass else { return nil }
         let start = ClassStart.recordingStart(c, settings: settings.classStart)
         let stop = ClassStart.recordingStop(c, settings: settings.classStart)
-        return String(localized: .settingsClassStartSpanTimes(Self.clock(start), stop.map(Self.clock) ?? String(localized: .settingsClassStartManualStop)))
+        return String(
+            localized: .settingsClassStartSpanTimes(
+                Self.clock(start), stop.map(Self.clock) ?? String(localized: .settingsClassStartManualStop)))
     }
 
     var referenceTitle: String {
-        referenceClass.flatMap { c in workspace.currentCourses.first { $0.id == c.courseId }?.title } ?? String(localized: .settingsPreviewClass)
+        referenceClass.flatMap { c in workspace.currentCourses.first { $0.id == c.courseId }?.title }
+            ?? String(localized: .settingsPreviewClass)
     }
 
     static func clock(_ date: Date) -> String { date.formatted(date: .omitted, time: .shortened) }
@@ -292,18 +297,19 @@ extension SettingsTab {
     }
 
     init(_ page: AppLink.SettingsPage) {
-        self = switch page {
-        case .general: .general
-        case .record: .record
-        case .classes: .classes
-        case .notes: .notes
-        case .review: .review
-        case .notifications: .notifications
-        case .claude: .claude
-        case .lms: .lms
-        case .backup: .backup
-        case .about: .about
-        }
+        self =
+            switch page {
+            case .general: .general
+            case .record: .record
+            case .classes: .classes
+            case .notes: .notes
+            case .review: .review
+            case .notifications: .notifications
+            case .claude: .claude
+            case .lms: .lms
+            case .backup: .backup
+            case .about: .about
+            }
     }
 
     var page: AppLink.SettingsPage {
@@ -322,7 +328,7 @@ extension SettingsTab {
     }
 
     /// Tabs were stored by their Korean names before #416; a tab picked then still opens, or the one that took it over.
-    static let formerNames: [String: SettingsTab] = [ // strings: data, read back from settings
+    static let formerNames: [String: SettingsTab] = [  // strings: data, read back from settings
         "내 정보": .record, "평어": .record, "녹음": .classes, "일반": .general, "알림": .notifications, "백업": .backup,
         "노트": .notes, "Claude": .claude, "앱 정보": .about,
     ]

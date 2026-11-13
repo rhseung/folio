@@ -125,7 +125,8 @@ final class TextFileModel {
         do {
             let expected = force ? nil : onDisk
             switch source {
-            case let .material(id): _ = try workspace.runThrowing(MaterialWrite(course: course.id, material: id, text: writing, expected: expected))
+            case let .material(id):
+                _ = try workspace.runThrowing(MaterialWrite(course: course.id, material: id, text: writing, expected: expected))
             case .note: _ = try workspace.runThrowing(NoteWrite(course: course.id, note: path, text: writing, expected: expected))
             }
             onDisk = writing
@@ -152,7 +153,9 @@ final class TextFileModel {
         let (now, calendar) = (workspace.now, workspace.calendar)
         let result: TexEngine.Build
         do {
-            result = try await Task.detached { try TexEngine.shared.compile(file, into: TexEngine.outputFolder(for: file), at: now, calendar: calendar) }.value
+            result = try await Task.detached {
+                try TexEngine.shared.compile(file, into: TexEngine.outputFolder(for: file), at: now, calendar: calendar)
+            }.value
         } catch {
             issues = [TexIssue(.error, message: error.localizedDescription)]
             return
@@ -168,8 +171,9 @@ final class TextFileModel {
     /// there. Only this file's lines: an `\input` file is not open here.
     func showSource(page: Int, at point: CGPoint) {
         guard isTex, let shown = pdfURL, let sync = TexEngine.syncTeX(for: fileURL, showing: shown),
-              let place = sync.place(page: page + 1, x: point.x, y: point.y),
-              URL(filePath: place.file).resolvingSymlinksInPath() == fileURL.resolvingSymlinksInPath() else { return }
+            let place = sync.place(page: page + 1, x: point.x, y: point.y),
+            URL(filePath: place.file).resolvingSymlinksInPath() == fileURL.resolvingSymlinksInPath()
+        else { return }
         reveal = place.line
     }
     #endif
@@ -183,7 +187,8 @@ final class TextFileModel {
         held = nil
         do {
             switch source {
-            case let .material(id): _ = try workspace.runThrowing(MaterialBuild(course: course.id, material: id, pdf: pdf.path, overwrite: overwrite))
+            case let .material(id):
+                _ = try workspace.runThrowing(MaterialBuild(course: course.id, material: id, pdf: pdf.path, overwrite: overwrite))
             case .note: _ = try workspace.runThrowing(NoteBuild(course: course.id, note: path, pdf: pdf.path, overwrite: overwrite))
             }
             pdfRevision += 1

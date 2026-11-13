@@ -2,6 +2,7 @@ import AppKit
 import FolioDomain
 import SwiftUI
 import Testing
+
 @testable import Folio
 
 /// A tab's panes in a window (#62): where the row runs out the pane pressed longest ago folds into a strip, a click
@@ -21,7 +22,9 @@ struct PaneRowTests {
         }
         .environment(workspace)
         host = NSHostingView(rootView: screens)
-        window = NSWindow(contentRect: CGRect(x: -20_000, y: -20_000, width: 1200, height: 800), styleMask: [.borderless], backing: .buffered, defer: false)
+        window = NSWindow(
+            contentRect: CGRect(x: -20_000, y: -20_000, width: 1200, height: 800), styleMask: [.borderless], backing: .buffered,
+            defer: false)
         window.contentView = host
     }
 
@@ -43,10 +46,14 @@ struct PaneRowTests {
 
     func click(_ probe: NSView) throws {
         let point = probe.convert(NSPoint(x: probe.bounds.midX, y: probe.bounds.midY), to: nil)
-        let down = try #require(NSEvent.mouseEvent(with: .leftMouseDown, location: point, modifierFlags: [], timestamp: 0,
-                                                   windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1))
-        let up = try #require(NSEvent.mouseEvent(with: .leftMouseUp, location: point, modifierFlags: [], timestamp: 0,
-                                                 windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 0))
+        let down = try #require(
+            NSEvent.mouseEvent(
+                with: .leftMouseDown, location: point, modifierFlags: [], timestamp: 0,
+                windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1))
+        let up = try #require(
+            NSEvent.mouseEvent(
+                with: .leftMouseUp, location: point, modifierFlags: [], timestamp: 0,
+                windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 0))
         // Queued first, so whatever the press starts to track ends.
         NSApp.postEvent(up, atStart: false)
         NSApp.sendEvent(down)
@@ -109,8 +116,10 @@ struct PaneRowTests {
         let at = NSPoint(x: left.x + PaneRow.gap + 2, y: left.y)
         for clicks in 1...2 {
             for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
-                let event = try #require(NSEvent.mouseEvent(with: type, location: at, modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber,
-                                                            context: nil, eventNumber: 0, clickCount: clicks, pressure: type == .leftMouseUp ? 0 : 1))
+                let event = try #require(
+                    NSEvent.mouseEvent(
+                        with: type, location: at, modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber,
+                        context: nil, eventNumber: 0, clickCount: clicks, pressure: type == .leftMouseUp ? 0 : 1))
                 if type == .leftMouseUp { NSApp.postEvent(event, atStart: false) } else { NSApp.sendEvent(event) }
             }
         }

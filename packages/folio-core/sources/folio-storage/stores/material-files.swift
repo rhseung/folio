@@ -61,7 +61,8 @@ extension CourseStore {
         let root = gist.standardizedFileURL.path
         let prefix = String(url.standardizedFileURL.path.dropFirst(root.count + 1)) + "/"
         let batch = try MoveJournal.apply([PlannedMove(from: prefix + m.path, to: prefix + newPath)], in: gist, device: device, now: now)
-        file.relinkMaterial(id, to: newPath, hash: m.hash, size: m.size, bookmark: try? fileURL(newPath).bookmarkData(), device: device, now: now)
+        file.relinkMaterial(
+            id, to: newPath, hash: m.hash, size: m.size, bookmark: try? fileURL(newPath).bookmarkData(), device: device, now: now)
         return batch
     }
 

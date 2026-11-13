@@ -6,7 +6,8 @@ struct SemesterRunningTests {
     let device = UUID()
 
     func term(_ start: String?, _ end: String?) -> Semester {
-        Semester(device: device, at: .now, year: 2027, term: .spring, start: start.flatMap { LocalDate($0) }, end: end.flatMap { LocalDate($0) })
+        Semester(
+            device: device, at: .now, year: 2027, term: .spring, start: start.flatMap { LocalDate($0) }, end: end.flatMap { LocalDate($0) })
     }
 
     @Test func runsFromTheFirstDayThroughTheLast() throws {

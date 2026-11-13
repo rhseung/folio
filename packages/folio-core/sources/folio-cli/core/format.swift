@@ -10,13 +10,14 @@ func courseHeader(_ c: CourseRef, catalog: Catalog?) {
 /// Near dates read relative (`오늘`, `내일`, `D-7`), far ones as `11월 30일 (월)`; time follows the system's 12/24 hour.
 func when(_ date: Date, now: Date, time: Bool = false, calendar: Calendar = .current) -> String {
     let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: now), to: calendar.startOfDay(for: date)).day ?? 0
-    let day = switch days {
-    case 0: String(localized: .whenToday)
-    case 1: String(localized: .whenTomorrow)
-    case -1: String(localized: .whenYesterday)
-    case 2...14: "D-\(days)"
-    default: date.formatted(.dateTime.month().day().weekday(.abbreviated).locale(Locale(identifier: "ko_KR")))
-    }
+    let day =
+        switch days {
+        case 0: String(localized: .whenToday)
+        case 1: String(localized: .whenTomorrow)
+        case -1: String(localized: .whenYesterday)
+        case 2...14: "D-\(days)"
+        default: date.formatted(.dateTime.month().day().weekday(.abbreviated).locale(Locale(identifier: "ko_KR")))
+        }
     // Exams and deadlines taken from all-day calendar events sit at midnight; "오전 12:00" there is noise, not a time.
     let text = time && date != calendar.startOfDay(for: date) ? "\(day) \(date.formatted(date: .omitted, time: .shortened))" : day
     return switch days {

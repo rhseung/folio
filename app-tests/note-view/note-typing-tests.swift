@@ -1,6 +1,7 @@
 import AppKit
 import FolioDomain
 import Testing
+
 @testable import Folio
 
 /// Random typing in the write view. After every key, what's shown must be what styling the same text from scratch gives,
@@ -57,15 +58,18 @@ struct NoteTypingTests {
             case 3: view.deleteBackward(nil); keys.append("⌫")
             case 4:
                 // Hangul as the input method types it: composed, recomposed, then committed.
-                view.setMarkedText("ㅎ", selectedRange: NSRange(location: 1, length: 0), replacementRange: NSRange(location: NSNotFound, length: 0))
-                view.setMarkedText("하", selectedRange: NSRange(location: 1, length: 0), replacementRange: NSRange(location: NSNotFound, length: 0))
+                view.setMarkedText(
+                    "ㅎ", selectedRange: NSRange(location: 1, length: 0), replacementRange: NSRange(location: NSNotFound, length: 0))
+                view.setMarkedText(
+                    "하", selectedRange: NSRange(location: 1, length: 0), replacementRange: NSRange(location: NSNotFound, length: 0))
                 let marked = view.markedRange()
                 let typed = try #require(view.textStorage).attributedSubstring(from: marked)
                 let fresh = NSTextStorage(string: view.string)
                 styler.style(fresh)
-                #expect((typed.attribute(.font, at: 0, effectiveRange: nil) as? NSFont)?.pointSize
+                #expect(
+                    (typed.attribute(.font, at: 0, effectiveRange: nil) as? NSFont)?.pointSize
                         == (fresh.attribute(.font, at: marked.location, effectiveRange: nil) as? NSFont)?.pointSize,
-                        "seed \(seed) composing after \(keys.joined()) in \(view.string.debugDescription)")
+                    "seed \(seed) composing after \(keys.joined()) in \(view.string.debugDescription)")
                 view.insertText("하", replacementRange: view.markedRange())
                 keys.append("하")
             default:
@@ -77,7 +81,8 @@ struct NoteTypingTests {
             styler.style(fresh)
             let shown = Self.look(try #require(view.textStorage)), expected = Self.look(fresh)
             guard let i = shown.indices.first(where: { shown[$0] != expected[$0] }) else { continue }
-            Issue.record("seed \(seed): after \(keys.joined()) char \(i) of \(view.string.debugDescription) is \(shown[i]), fresh \(expected[i])")
+            Issue.record(
+                "seed \(seed): after \(keys.joined()) char \(i) of \(view.string.debugDescription) is \(shown[i]), fresh \(expected[i])")
             return
         }
     }

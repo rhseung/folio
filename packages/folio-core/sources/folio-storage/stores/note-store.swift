@@ -72,11 +72,15 @@ extension CourseStore {
     /// A file without an entry (made outside Folio) has no id until it is adopted.
     public func notes(in file: CourseFile) -> [NoteFile] {
         let entries = Dictionary(file.notes.map { ($0.path, $0) }, uniquingKeysWith: { a, _ in a })
-        return noteURLs().map { NoteFile(url: $0, meta: entries[notePath(of: $0)].map(file.meta(of:)) ?? NoteMeta(id: nil)) }.sorted { $0.title < $1.title }
+        return noteURLs().map { NoteFile(url: $0, meta: entries[notePath(of: $0)].map(file.meta(of:)) ?? NoteMeta(id: nil)) }.sorted {
+            $0.title < $1.title
+        }
     }
 
     func noteURLs() -> [URL] {
-        guard let enumerator = FileManager.default.enumerator(at: notesURL, includingPropertiesForKeys: [.isDirectoryKey]) else { return [] }
+        guard let enumerator = FileManager.default.enumerator(at: notesURL, includingPropertiesForKeys: [.isDirectoryKey]) else {
+            return []
+        }
         var result: [URL] = []
         for case let url as URL in enumerator {
             if Self.nonNoteFolders.contains(url.lastPathComponent) {
@@ -121,9 +125,10 @@ extension CourseStore {
     public func newNoteURL(title: String, format: NoteFormat, avoiding taken: Set<String> = []) -> URL {
         let taken = Set(taken.map { $0.lowercased() })
         let isFree = { (name: String) in
-            !taken.contains(name.lowercased()) && NoteFormat.allCases.allSatisfy {
-                !FileManager.default.fileExists(atPath: self.notesURL.appending(path: "\(name).\($0.fileExtension)").path)
-            }
+            !taken.contains(name.lowercased())
+                && NoteFormat.allCases.allSatisfy {
+                    !FileManager.default.fileExists(atPath: self.notesURL.appending(path: "\(name).\($0.fileExtension)").path)
+                }
         }
         let base = Self.fileName(for: title)
         var name = base
@@ -160,8 +165,11 @@ extension CourseStore {
 
     /// Folders in Notes/ a note can be moved to, Notes-relative and sorted; Notes/ itself is "".
     public func noteFolders() -> [String] {
-        guard let enumerator = FileManager.default.enumerator(at: notesURL, includingPropertiesForKeys: [.isDirectoryKey],
-                                                              options: .skipsHiddenFiles) else { return [""] }
+        guard
+            let enumerator = FileManager.default.enumerator(
+                at: notesURL, includingPropertiesForKeys: [.isDirectoryKey],
+                options: .skipsHiddenFiles)
+        else { return [""] }
         var folders = [""]
         let root = notesURL.standardizedFileURL.pathComponents.count
         for case let url as URL in enumerator where (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
@@ -211,14 +219,19 @@ extension CourseStore {
 
     public func noteAssets() -> [URL] {
         let keys: [URLResourceKey] = [.contentModificationDateKey, .isRegularFileKey]
-        let files = (try? FileManager.default.contentsOfDirectory(at: noteAssetsURL, includingPropertiesForKeys: keys, options: .skipsHiddenFiles)) ?? []
-        func date(_ url: URL) -> Date { (try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast }
+        let files =
+            (try? FileManager.default.contentsOfDirectory(at: noteAssetsURL, includingPropertiesForKeys: keys, options: .skipsHiddenFiles))
+            ?? []
+        func date(_ url: URL) -> Date {
+            (try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+        }
         return files.filter { (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true }.sorted { date($0) > date($1) }
     }
 
     /// How `note` links an asset path returned by `addNoteAsset` (`assets/x.png`); notes can sit in subfolders of Notes/.
     public func link(to assetPath: String, from note: NoteFile) -> String {
-        let depth = note.url.deletingLastPathComponent().standardizedFileURL.pathComponents.count
+        let depth =
+            note.url.deletingLastPathComponent().standardizedFileURL.pathComponents.count
             - notesURL.standardizedFileURL.pathComponents.count
         return String(repeating: "../", count: max(depth, 0)) + assetPath
     }

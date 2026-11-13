@@ -54,8 +54,12 @@ struct LMSSettingsForm: View {
                         if model.lms.status == .needsLogin {
                             Button(.lmsReconnect) { model.connecting = true }.buttonStyle(.prominent)
                         } else {
-                            Button { Task { await model.sync() } } label: { Label(.lmsSyncNow, systemImage: "arrow.clockwise") }
-                                .disabled(model.lms.status == .syncing)
+                            Button {
+                                Task { await model.sync() }
+                            } label: {
+                                Label(.lmsSyncNow, systemImage: "arrow.clockwise")
+                            }
+                            .disabled(model.lms.status == .syncing)
                         }
                     }
                     FormRow(label: String(localized: .lmsLogin), detail: String(localized: .lmsKeychain), last: true) {
@@ -63,7 +67,11 @@ struct LMSSettingsForm: View {
                     }
                 } else {
                     FormRow(label: String(localized: .lmsAccount), detail: String(localized: .lmsNotConnected), last: true) {
-                        Button { model.connecting = true } label: { Label(.lmsConnectButton, systemImage: "link") }.buttonStyle(.prominent)
+                        Button {
+                            model.connecting = true
+                        } label: {
+                            Label(.lmsConnectButton, systemImage: "link")
+                        }.buttonStyle(.prominent)
                     }
                 }
             }
@@ -99,9 +107,11 @@ private struct LMSConnectSheet: View {
     }
 
     var body: some View {
-        SheetForm(title: String(localized: .lmsConnectTitle), confirm: String(localized: .lmsConnect),
-                  disabled: trying || username.trimmingCharacters(in: .whitespaces).isEmpty || password.isEmpty,
-                  note: failure ?? String(localized: .lmsConnectNote)) {
+        SheetForm(
+            title: String(localized: .lmsConnectTitle), confirm: String(localized: .lmsConnect),
+            disabled: trying || username.trimmingCharacters(in: .whitespaces).isEmpty || password.isEmpty,
+            note: failure ?? String(localized: .lmsConnectNote)
+        ) {
             FormRow(label: String(localized: .lmsStudentNumber)) {
                 TextField(String(localized: .lmsStudentNumber), text: $username).pill(width: 220).textContentType(.username)
             }
@@ -117,7 +127,8 @@ private struct LMSConnectSheet: View {
                     dismiss()
                     connected()
                 } catch {
-                    failure = LMSConnection.status(after: error) == .needsLogin ? String(localized: .lmsLoginRefused) : error.localizedDescription
+                    failure =
+                        LMSConnection.status(after: error) == .needsLogin ? String(localized: .lmsLoginRefused) : error.localizedDescription
                 }
             }
         }

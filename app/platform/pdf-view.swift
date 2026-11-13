@@ -117,9 +117,10 @@ private final class CommandClick {
         monitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak view] event in
             let taken = MainActor.assumeIsolated {
                 guard let view, event.modifierFlags.contains(.command), let window = view.window, event.window === window,
-                      let document = view.document,
-                      // The press must land on the PDF itself, not on a popover or sheet over it.
-                      window.contentView?.hitTest(event.locationInWindow)?.isDescendant(of: view) == true else { return false }
+                    let document = view.document,
+                    // The press must land on the PDF itself, not on a popover or sheet over it.
+                    window.contentView?.hitTest(event.locationInWindow)?.isDescendant(of: view) == true
+                else { return false }
                 let location = view.convert(event.locationInWindow, from: nil)
                 guard let page = view.page(for: location, nearest: true) else { return false }
                 let point = view.convert(location, to: page)
@@ -190,7 +191,9 @@ struct DarkPaper {
         matrix.setValue(CIVector(x: ink.x, y: ink.y, z: ink.z, w: 0), forKey: "inputBiasVector")
         // A saturated color flips past white (pure red to 1.4, 0.4, 0.4 before the paper and ink range); clamped, it stays a
         // light red.
-        return [CIFilter(name: "CILinearToSRGBToneCurve")!, matrix, CIFilter(name: "CIColorClamp")!, CIFilter(name: "CISRGBToneCurveToLinear")!]
+        return [
+            CIFilter(name: "CILinearToSRGBToneCurve")!, matrix, CIFilter(name: "CIColorClamp")!, CIFilter(name: "CISRGBToneCurveToLinear")!,
+        ]
     }
 }
 #endif

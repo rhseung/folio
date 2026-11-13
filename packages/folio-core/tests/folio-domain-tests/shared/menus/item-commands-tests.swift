@@ -104,7 +104,10 @@ struct ItemCommandsTests {
         let review = NoteMenuCommand.commands(host: .own, builtPDF: false, builds: false, review: .writing, finder: false)
         #expect(review.contains(.review(.writing)))
         // A class without a note yet: nothing for a note's menu to check.
-        #expect(!NoteMenuCommand.commands(host: .own, builtPDF: false, builds: false, review: .needed, finder: false).contains { $0.group == .state })
+        #expect(
+            !NoteMenuCommand.commands(host: .own, builtPDF: false, builds: false, review: .needed, finder: false).contains {
+                $0.group == .state
+            })
         let tex = NoteMenuCommand.commands(host: .own, builtPDF: true, builds: true, review: nil, finder: true)
         #expect(tex == [.openPDF, .build, .edit, .move, .share, .showInFinder, .remove])
     }
@@ -118,7 +121,8 @@ struct ItemCommandsTests {
     @Test func aFileAndAFolderByPlatformAndHost() {
         var f = course()
         #expect(f.commands(for: f.materials[1], host: .elsewhere, pdf: nil, mac: false) == [.edit, .move, .remove])
-        #expect(f.commands(for: f.materials[1], host: .elsewhere, pdf: nil, mac: true)
+        #expect(
+            f.commands(for: f.materials[1], host: .elsewhere, pdf: nil, mac: true)
                 == [.open, .openInEditor, .edit, .move, .showInFinder, .remove])
         let exam = f.exams[0].id
         #expect(!f.commands(for: f.materials[0], host: .exam(exam), pdf: nil, mac: false).contains(.unlink(.exam(exam))))
@@ -127,8 +131,12 @@ struct ItemCommandsTests {
     }
 
     @Test func aCourseMovesOnlyInTheSidebarAndHasNoDelete() {
-        #expect(CourseMenuCommand.commands(host: .list, recordable: false, order: (0, 3), finder: false) == [.open, .edit, .moveDown, .share])
-        #expect(CourseMenuCommand.commands(host: .own, recordable: true, order: (1, 3), finder: true) == [.record, .edit, .share, .showInFinder])
+        #expect(
+            CourseMenuCommand.commands(host: .list, recordable: false, order: (0, 3), finder: false) == [.open, .edit, .moveDown, .share])
+        #expect(
+            CourseMenuCommand.commands(host: .own, recordable: true, order: (1, 3), finder: true) == [
+                .record, .edit, .share, .showInFinder,
+            ])
     }
 
     @Test func aScoreCountsUnlessExcused() {

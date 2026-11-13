@@ -44,7 +44,8 @@ public struct ActionProposal: Codable, Hashable, Sendable {
 
     public init?(text: String) {
         guard text.hasPrefix(Self.marker),
-              let p = try? JSONDecoder().decode(Self.self, from: Data(text.dropFirst(Self.marker.count).utf8)) else { return nil }
+            let p = try? JSONDecoder().decode(Self.self, from: Data(text.dropFirst(Self.marker.count).utf8))
+        else { return nil }
         self = p
     }
 
@@ -113,7 +114,9 @@ extension Chat {
         for (m, message) in messages.enumerated() {
             let later = messages[(m + 1)...].flatMap { $0.proposals ?? [] }.compactMap { p in targets[p.command].map { (p, $0) } }
             for (i, p) in (message.proposals ?? []).enumerated() where p.applied != true {
-                if later.contains(where: { q, target in target.overrides(p, with: q) }) { superseded.insert(ProposalRef(message: message.id, index: i)) }
+                if later.contains(where: { q, target in target.overrides(p, with: q) }) {
+                    superseded.insert(ProposalRef(message: message.id, index: i))
+                }
             }
         }
         return superseded

@@ -1,6 +1,7 @@
-@testable import FolioMarkdown
 import Foundation
 import Testing
+
+@testable import FolioMarkdown
 
 /// Text with the selection marked: `|` for the caret, `«…»` for selected text.
 struct Marked {
@@ -183,8 +184,10 @@ struct ListEditingTests {
     }
 
     @Test func tabExpandsSnippets() {
-        let snippets = [Snippet(trigger: "mk", body: "$$1$", inMath: false), Snippet(trigger: "//", body: "\\frac{$1}{$2}", inMath: true),
-                        Snippet(trigger: "dm", body: "$$\n$1\n$$", inMath: false)]
+        let snippets = [
+            Snippet(trigger: "mk", body: "$$1$", inMath: false), Snippet(trigger: "//", body: "\\frac{$1}{$2}", inMath: true),
+            Snippet(trigger: "dm", body: "$$\n$1\n$$", inMath: false),
+        ]
         #expect(tab("값 mk|", snippets: snippets) == "값 $|$")
         #expect(tab("bookmk|", snippets: snippets) == "    bookmk|")
         #expect(tab("$a //|$", snippets: snippets) == "$a \\frac{|}{}$")
@@ -197,8 +200,10 @@ struct ListEditingTests {
 
 struct CompletionTests {
     let catalog = CompletionCatalog(
-        slash: [CompletionItem(id: "table", title: "표", keywords: ["table"], body: "| $1 |  |\n| --- | --- |", block: true),
-                CompletionItem(id: "math", title: "수식", keywords: ["math"], body: "$$1$")],
+        slash: [
+            CompletionItem(id: "table", title: "표", keywords: ["table"], body: "| $1 |  |\n| --- | --- |", block: true),
+            CompletionItem(id: "math", title: "수식", keywords: ["math"], body: "$$1$"),
+        ],
         languages: ["python", "swift"],
         snippets: [Snippet(trigger: "mk", body: "$$1$", inMath: false)])
 
@@ -212,7 +217,8 @@ struct CompletionTests {
     func accept(_ s: String, _ pick: (([CompletionItem]) -> CompletionItem?) = { $0.first }) -> String? {
         let m = Marked(s)
         guard let q = Completion.query(in: m.text, caret: m.selection.location, catalog: catalog),
-              let item = pick(Completion.items(for: q, catalog: catalog)) else { return nil }
+            let item = pick(Completion.items(for: q, catalog: catalog))
+        else { return nil }
         return Marked.show(m.text, Completion.edit(accepting: item, for: q, in: m.text))
     }
 

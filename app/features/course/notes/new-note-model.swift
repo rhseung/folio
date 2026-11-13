@@ -63,7 +63,9 @@ final class NewNoteModel {
         return [PickOption(id: nil, title: String(localized: .commonNone))] + exams.map { PickOption(id: $0.id, title: $0.title) }
     }
 
-    var unitOptions: [PickOption<UUID>] { UnitTree.outline(course.file.units).map { PickOption(id: $0.unit.id, title: $0.unit.title, depth: $0.depth) } }
+    var unitOptions: [PickOption<UUID>] {
+        UnitTree.outline(course.file.units).map { PickOption(id: $0.unit.id, title: $0.unit.title, depth: $0.depth) }
+    }
     func unitSubtree(_ id: UUID) -> Set<UUID> { UnitTree.subtree(of: id, in: course.file.units) }
 
     /// A session's note is named the way `session note` names it, until the user types a title of their own.
@@ -76,8 +78,9 @@ final class NewNoteModel {
 
     func add() -> UUID? {
         guard canAdd else { return nil }
-        let action = NoteAdd(course: course.id, title: trimmedTitle, kind: kind, format: format,
-                             session: link == .session ? sessionId : nil, exam: link == .exam ? examId : nil, units: link == .units ? unitIds : [])
+        let action = NoteAdd(
+            course: course.id, title: trimmedTitle, kind: kind, format: format,
+            session: link == .session ? sessionId : nil, exam: link == .exam ? examId : nil, units: link == .units ? unitIds : [])
         return workspace.run(action)?.made
     }
 }

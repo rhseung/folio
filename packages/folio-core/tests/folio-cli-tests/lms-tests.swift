@@ -1,9 +1,10 @@
-@testable import FolioCLI
 import FolioActions
 import FolioDomain
 import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioCLI
 
 struct LMSTests {
     let h = Harness()
@@ -55,8 +56,10 @@ struct LMSTests {
         let pdf = dir.appending(path: "07_Flows.pdf")
         try Data("%PDF-1.4".utf8).write(to: pdf)
         let due = ISO8601DateFormatter().date(from: "2026-11-20T14:55:00Z")!
-        let items = [LMSAcceptItem(key: "assignment:139950", title: "Homework Set #5", due: due),
-                     LMSAcceptItem(key: "file:139200", file: pdf.path), LMSAcceptItem(key: "notice:23464")]
+        let items = [
+            LMSAcceptItem(key: "assignment:139950", title: "Homework Set #5", due: due),
+            LMSAcceptItem(key: "file:139200", file: pdf.path), LMSAcceptItem(key: "notice:23464"),
+        ]
         let json = dir.appending(path: "items.json")
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
@@ -68,7 +71,10 @@ struct LMSTests {
         let file = try h.file(GISTStore(url: gist))
         #expect(file.assignments.contains { $0.lmsId == 139950 && $0.source == .lms })
         #expect(file.materials.contains { $0.path.hasPrefix("Lectures/") && $0.path.hasSuffix("07_Flows.pdf") })
-        #expect(try GISTStore(url: gist).loadSettings().model.lms.handled.map(\.description) == ["assignment:139950", "file:139200", "notice:23464"])
+        #expect(
+            try GISTStore(url: gist).loadSettings().model.lms.handled.map(\.description) == [
+                "assignment:139950", "file:139200", "notice:23464",
+            ])
         // A second run is refused before it writes anything.
         #expect(h.cli(["lms", "accept", "EC4207", "--items", json.path], gist: gist).code != 0)
     }

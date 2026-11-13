@@ -27,8 +27,10 @@ struct HTMLView {
     @MainActor func makeWebView(_ coordinator: Coordinator) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.defaultWebpagePreferences.allowsContentJavaScript = false
-        config.userContentController.addUserScript(WKUserScript(source: NoteStyle.reader, injectionTime: .atDocumentEnd,
-                                                                forMainFrameOnly: true, in: .defaultClient))
+        config.userContentController.addUserScript(
+            WKUserScript(
+                source: NoteStyle.reader, injectionTime: .atDocumentEnd,
+                forMainFrameOnly: true, in: .defaultClient))
         config.setURLSchemeHandler(coordinator.files, forURLScheme: LocalFileScheme.scheme)
         let view = WKWebView(frame: .zero, configuration: config)
         view.navigationDelegate = coordinator
@@ -94,11 +96,15 @@ struct HTMLView {
 #if os(macOS)
 extension HTMLView: NSViewRepresentable {
     func makeNSView(context: Context) -> WKWebView { makeWebView(context.coordinator) }
-    func updateNSView(_ view: WKWebView, context: Context) { update(view, context.coordinator, accent: context.environment.accent, openLink: context.environment.openLink) }
+    func updateNSView(_ view: WKWebView, context: Context) {
+        update(view, context.coordinator, accent: context.environment.accent, openLink: context.environment.openLink)
+    }
 }
 #else
 extension HTMLView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView { makeWebView(context.coordinator) }
-    func updateUIView(_ view: WKWebView, context: Context) { update(view, context.coordinator, accent: context.environment.accent, openLink: context.environment.openLink) }
+    func updateUIView(_ view: WKWebView, context: Context) {
+        update(view, context.coordinator, accent: context.environment.accent, openLink: context.environment.openLink)
+    }
 }
 #endif

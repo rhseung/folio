@@ -3,6 +3,7 @@ import FolioFixtures
 import FolioStorage
 import Foundation
 import Testing
+
 @testable import Folio
 
 @MainActor
@@ -16,7 +17,8 @@ struct FirstRunModelTests {
     /// A workspace with no folder open, as on a device's first launch.
     func bareWorkspace() -> Workspace {
         let workspace = Workspace()
-        workspace.pendingRecordings = PendingRecordings(url: URL.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory))
+        workspace.pendingRecordings = PendingRecordings(
+            url: URL.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory))
         return workspace
     }
 

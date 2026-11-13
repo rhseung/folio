@@ -19,7 +19,9 @@ public enum MathSymbols {
 
     /// The categories with something in them, and what is in each; with `matching`, only what the typed text finds,
     /// best first within each. A TeX command is found with its `\` typed or not.
-    public static func groups(tex: Bool, snippets: [Snippet], matching typed: String = "") -> [(category: MathCategory, items: [CompletionItem])] {
+    public static func groups(tex: Bool, snippets: [Snippet], matching typed: String = "") -> [(
+        category: MathCategory, items: [CompletionItem]
+    )] {
         let all = snippetItems(snippets, tex: tex) + (tex ? TeXCommands.all.map(\.item) : AsciiMathSymbols.items)
         let typed = typed.hasPrefix("\\") ? String(typed.dropFirst()) : typed
         return MathCategory.allCases.compactMap { category in
@@ -32,8 +34,9 @@ public enum MathSymbols {
     static func snippetItems(_ snippets: [Snippet], tex: Bool) -> [CompletionItem] {
         snippets.enumerated().filter { $0.element.inMath && !$0.element.trigger.isEmpty }.map { i, s in
             let text = s.expanded.text
-            return CompletionItem(id: "snippet.\(i).\(s.trigger)", title: s.trigger, detail: text, symbol: "text.insert", preview: sample(s.body),
-                                  previewAsciiMath: !tex, body: s.body, category: .snippets)
+            return CompletionItem(
+                id: "snippet.\(i).\(s.trigger)", title: s.trigger, detail: text, symbol: "text.insert", preview: sample(s.body),
+                previewAsciiMath: !tex, body: s.body, category: .snippets)
         }
     }
 

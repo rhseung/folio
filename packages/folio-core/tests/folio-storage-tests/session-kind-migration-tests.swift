@@ -1,8 +1,9 @@
 import FolioDomain
 import FolioFixtures
-@testable import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioStorage
 
 /// course.json v1 -> v3: sessions lose `kind` and `lab`, and then `index`; a lab becomes a unit the session links to.
 struct SessionKindMigrationTests {
@@ -39,11 +40,13 @@ struct SessionKindMigrationTests {
         ])
 
         // Lab04 already exists as a unit, so its sessions join it instead of making another.
-        raw["units"] = .array([.object([
-            "id": .string("0E000000-0000-4000-8000-000000000004"), "createdAt": .string("2026-09-01T00:00:00.000Z"),
-            "updatedAt": .string("2026-09-01T00:00:00.000Z"), "updatedBy": .string("D0000000-0000-4000-8000-000000000001"),
-            "title": .string("Lab04 Thin-layer chromatography"), "order": .number(0), "sessionIds": .array([]), "examIds": .array([]),
-        ])])
+        raw["units"] = .array([
+            .object([
+                "id": .string("0E000000-0000-4000-8000-000000000004"), "createdAt": .string("2026-09-01T00:00:00.000Z"),
+                "updatedAt": .string("2026-09-01T00:00:00.000Z"), "updatedBy": .string("D0000000-0000-4000-8000-000000000001"),
+                "title": .string("Lab04 Thin-layer chromatography"), "order": .number(0), "sessionIds": .array([]), "examIds": .array([]),
+            ])
+        ])
         try JSONFormat.encoder.encode(raw).write(to: url)
     }
 

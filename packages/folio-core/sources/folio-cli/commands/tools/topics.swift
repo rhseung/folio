@@ -20,18 +20,21 @@ enum Topic: String, CaseIterable {
     }
 
     var body: [String] {
-        let text = switch self {
-        case .refs: String(localized: .helpTopicRefsBody)
-        case .output: String(localized: .helpTopicOutputBody)
-        case .exit: String(localized: .helpTopicExitBody)
-        case .safety: String(localized: .helpTopicSafetyBody)
-        case .fzf: String(localized: .helpTopicFzfBody)
-        }
+        let text =
+            switch self {
+            case .refs: String(localized: .helpTopicRefsBody)
+            case .output: String(localized: .helpTopicOutputBody)
+            case .exit: String(localized: .helpTopicExitBody)
+            case .safety: String(localized: .helpTopicSafetyBody)
+            case .fzf: String(localized: .helpTopicFzfBody)
+            }
         return text.components(separatedBy: "\n")
     }
 
     static func overview() -> [String] {
-        [String(localized: .helpTopicsTitle).styled(.bold)] + allCases.map { "  \($0.rawValue.padded(to: 8)) \($0.title)" } + ["", String(localized: .helpTopicsUsage).styled(.dim)]
+        [String(localized: .helpTopicsTitle).styled(.bold)] + allCases.map { "  \($0.rawValue.padded(to: 8)) \($0.title)" } + [
+            "", String(localized: .helpTopicsUsage).styled(.dim),
+        ]
     }
 
     func print() {

@@ -5,14 +5,18 @@ import SwiftSyntaxMacros
 /// `@Action("exam rm", "시험 기록 지우기", effect: .removes, confirm: "...", done: "...")` on a struct of fields and a
 /// `run`: writes its init, coding, `spec` and `Action` conformance, so the declaration is all an action needs.
 public struct ActionMacro: MemberMacro, ExtensionMacro {
-    public static func expansion(of node: AttributeSyntax, attachedTo declaration: some DeclGroupSyntax, providingExtensionsOf type: some TypeSyntaxProtocol,
-                                 conformingTo protocols: [TypeSyntax], in context: some MacroExpansionContext) throws -> [ExtensionDeclSyntax] {
+    public static func expansion(
+        of node: AttributeSyntax, attachedTo declaration: some DeclGroupSyntax, providingExtensionsOf type: some TypeSyntaxProtocol,
+        conformingTo protocols: [TypeSyntax], in context: some MacroExpansionContext
+    ) throws -> [ExtensionDeclSyntax] {
         guard !protocols.isEmpty else { return [] }
         return [try ExtensionDeclSyntax("extension \(type.trimmed): FolioActions.Action {}")]
     }
 
-    public static func expansion(of node: AttributeSyntax, providingMembersOf declaration: some DeclGroupSyntax, conformingTo protocols: [TypeSyntax],
-                                 in context: some MacroExpansionContext) throws -> [DeclSyntax] {
+    public static func expansion(
+        of node: AttributeSyntax, providingMembersOf declaration: some DeclGroupSyntax, conformingTo protocols: [TypeSyntax],
+        in context: some MacroExpansionContext
+    ) throws -> [DeclSyntax] {
         guard declaration.is(StructDeclSyntax.self) else { throw MacroError("@Action은 struct에만 붙입니다") }
         let args = try Arguments(node)
         let fields = try declaration.memberBlock.members.compactMap { try Field($0.decl) }
@@ -33,7 +37,9 @@ public struct ActionMacro: MemberMacro, ExtensionMacro {
         let encodes = fields.map(\.encode).joined(separator: "\n")
         let specs = fields.map(\.spec).joined(separator: ",\n")
         return [
-            fields.isEmpty ? "public enum CodingKeys: String, CodingKey { case _none }" : "public enum CodingKeys: String, CodingKey { case \(raw: keys) }",
+            fields.isEmpty
+                ? "public enum CodingKeys: String, CodingKey { case _none }"
+                : "public enum CodingKeys: String, CodingKey { case \(raw: keys) }",
             "public init(\(raw: params)) {\n\(raw: assigns)\n}",
             "public init(from decoder: any Decoder) throws {\nlet c = try decoder.container(keyedBy: CodingKeys.self)\n\(raw: fields.isEmpty ? "_ = c" : decodes)\n}",
             "public func encode(to encoder: any Encoder) throws {\nvar c = encoder.container(keyedBy: CodingKeys.self)\n\(raw: fields.isEmpty ? "_ = c" : encodes)\n}",
@@ -89,7 +95,9 @@ private struct Arguments {
                 guard source != ".generated" else { break }
                 generated = "false"
                 // `.manual(reason: "...")`: the reason as written, so the spec carries the same literal.
-                if let call = arg.expression.as(FunctionCallExprSyntax.self), let reason = call.arguments.first(where: { $0.label?.text == "reason" }) {
+                if let call = arg.expression.as(FunctionCallExprSyntax.self),
+                    let reason = call.arguments.first(where: { $0.label?.text == "reason" })
+                {
                     manualReason = reason.expression.trimmedDescription
                 }
             case "undoable": undoable = source
@@ -121,8 +129,9 @@ private struct Field {
 
     init?(_ decl: DeclSyntax) throws {
         guard let v = decl.as(VariableDeclSyntax.self), !v.modifiers.contains(where: { $0.name.text == "static" }),
-              let binding = v.bindings.first, binding.accessorBlock == nil,
-              let name = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text else { return nil }
+            let binding = v.bindings.first, binding.accessorBlock == nil,
+            let name = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text
+        else { return nil }
         // A constant with a value isn't an input.
         if v.bindingSpecifier.text == "let", binding.initializer != nil { return nil }
         self.name = name
@@ -151,10 +160,15 @@ private struct Field {
                 filePerItem = args?.contains { $0.label?.text == "perItem" && $0.expression.trimmedDescription == "true" } ?? false
             case "Folder": folder = true
             case "Parsed":
-                let texts = attr.arguments?.as(LabeledExprListSyntax.self)?.map {
-                    $0.expression.as(StringLiteralExprSyntax.self)?.segments.compactMap { $0.as(StringSegmentSyntax.self)?.content.text }.joined()
-                } ?? []
-                guard texts.count == 2, let name = texts[0], let form = texts[1] else { throw MacroError("@Parsed(\"<값 이름>\", \"<쓰는 꼴>\")") }
+                let texts =
+                    attr.arguments?.as(LabeledExprListSyntax.self)?.map {
+                        $0.expression.as(StringLiteralExprSyntax.self)?.segments.compactMap {
+                            $0.as(StringSegmentSyntax.self)?.content.text
+                        }.joined()
+                    } ?? []
+                guard texts.count == 2, let name = texts[0], let form = texts[1] else {
+                    throw MacroError("@Parsed(\"<값 이름>\", \"<쓰는 꼴>\")")
+                }
                 (parsed, parsedForm) = (name, form)
             default: break
             }
@@ -203,7 +217,9 @@ private struct Field {
     var decode: String {
         if patch { return "try .decode(c, .\(name))" }
         let value = optional ? String(type.dropLast()) : type
-        if let d = isNew ? (defaultValue ?? "UUID()") : defaultValue { return "try c.decodeIfPresent(\(value).self, forKey: .\(name)) ?? \(d)" }
+        if let d = isNew ? (defaultValue ?? "UUID()") : defaultValue {
+            return "try c.decodeIfPresent(\(value).self, forKey: .\(name)) ?? \(d)"
+        }
         if optional { return "try c.decodeIfPresent(\(value).self, forKey: .\(name))" }
         return "try c.decode(\(type).self, forKey: .\(name))"
     }
@@ -214,14 +230,16 @@ private struct Field {
     }
 
     var spec: String {
-        let role = switch self.role {
-        case .argument: ".argument"
-        case .option: ".option"
-        case .off(let flag): ".off(\(quoted(flag)))"
-        case .new: ".new"
-        case .hidden: ".hidden"
-        }
-        return "FolioActions.FieldSpec(name: \(quoted(name)), help: \(quoted(help)), role: \(role), type: \(quoted(base)), ref: \(ref.map(quoted) ?? "nil"), "
+        let role =
+            switch self.role {
+            case .argument: ".argument"
+            case .option: ".option"
+            case .off(let flag): ".off(\(quoted(flag)))"
+            case .new: ".new"
+            case .hidden: ".hidden"
+            }
+        return
+            "FolioActions.FieldSpec(name: \(quoted(name)), help: \(quoted(help)), role: \(role), type: \(quoted(base)), ref: \(ref.map(quoted) ?? "nil"), "
             + "optional: \(optional), many: \(many), patch: \(patch), defaultValue: \(defaultValue.map(quoted) ?? "nil"), "
             + "cliName: \(cliName.map(quoted) ?? "nil"), file: \(file.map(quoted) ?? "nil"), filePerItem: \(filePerItem), folder: \(folder), "
             + "parsed: \(parsed.map(quoted) ?? "nil"), parsedForm: \(parsedForm.map(quoted) ?? "nil"))"

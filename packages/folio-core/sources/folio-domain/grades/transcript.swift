@@ -48,7 +48,9 @@ public struct GraduationRule: Codable, Sendable, Equatable {
     /// The account mail to professors is written from.
     public var email: String
 
-    public init(totalCredits: Double = 130, minGPA: Double = 2.0, admissionYear: Int? = nil, programs: [StudentProgram] = [], email: String = "") {
+    public init(
+        totalCredits: Double = 130, minGPA: Double = 2.0, admissionYear: Int? = nil, programs: [StudentProgram] = [], email: String = ""
+    ) {
         self.totalCredits = totalCredits
         self.minGPA = minGPA
         self.admissionYear = admissionYear

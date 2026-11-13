@@ -1,9 +1,10 @@
-@testable import FolioCLI
 import FolioActions
 import FolioDomain
 import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioCLI
 
 /// A lecture's sections on its units (#321): `unit pages` and `material split`.
 struct LectureSectionCommandTests {
@@ -30,27 +31,35 @@ struct LectureSectionCommandTests {
     }
 
     @Test func pagesSet() throws {
-        try h.expectSame(["unit", "pages", "set", "EC4207/König", "05_Matchings.pdf", "--first", "4", "--last", "9"],
-                         setup: [Self.track, Self.addKonig, Self.addPages]) { gist in
+        try h.expectSame(
+            ["unit", "pages", "set", "EC4207/König", "05_Matchings.pdf", "--first", "4", "--last", "9"],
+            setup: [Self.track, Self.addKonig, Self.addPages]
+        ) { gist in
             UnitPagesSet(course: course, unit: Self.konig, material: try material(gist), first: 4, last: 9)
         }
     }
 
     @Test func pagesRemove() throws {
-        try h.expectSame(["unit", "pages", "rm", "EC4207/König", "05_Matchings.pdf", "--yes"], setup: [Self.track, Self.addKonig, Self.addPages]) { gist in
+        try h.expectSame(
+            ["unit", "pages", "rm", "EC4207/König", "05_Matchings.pdf", "--yes"], setup: [Self.track, Self.addKonig, Self.addPages]
+        ) { gist in
             UnitPagesRemove(course: course, unit: Self.konig, material: try material(gist))
         }
     }
 
     @Test func split() throws {
-        try h.expectSame(["material", "split", "EC4207/05_Matchings.pdf", "1-4:매칭", "5-8:König", "9-13:매칭"],
-                         setup: [Self.track, Self.addKonig, Self.addPages]) { gist in
+        try h.expectSame(
+            ["material", "split", "EC4207/05_Matchings.pdf", "1-4:매칭", "5-8:König", "9-13:매칭"],
+            setup: [Self.track, Self.addKonig, Self.addPages]
+        ) { gist in
             let made = UUID()
-            return MaterialSplit(course: course, material: try material(gist), sections: [
-                LectureCut(unit: made, title: "매칭", firstPage: 1, lastPage: 4),
-                LectureCut(unit: Self.konig, firstPage: 5, lastPage: 8),
-                LectureCut(unit: made, title: "매칭", firstPage: 9, lastPage: 13),
-            ])
+            return MaterialSplit(
+                course: course, material: try material(gist),
+                sections: [
+                    LectureCut(unit: made, title: "매칭", firstPage: 1, lastPage: 4),
+                    LectureCut(unit: Self.konig, firstPage: 5, lastPage: 8),
+                    LectureCut(unit: made, title: "매칭", firstPage: 9, lastPage: 13),
+                ])
         }
         let gist = try Harness.fixtureCopy()
         for line in [Self.track, Self.addKonig] { _ = h.cli(line, gist: gist) }

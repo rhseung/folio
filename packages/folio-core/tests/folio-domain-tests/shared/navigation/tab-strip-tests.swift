@@ -155,7 +155,9 @@ struct TabFitTests {
 
     @Test func thenFoldsTheRestIntoTheMenu() {
         // Four icons need 460; one icon, the menu and 2 gaps 428.
-        #expect(layout(430, others: [100, 100, 100, 100]) == TabFit.Layout(iconsOnly: true, stacked: true, compactFront: true, shown: 1, hidden: 3))
+        #expect(
+            layout(430, others: [100, 100, 100, 100])
+                == TabFit.Layout(iconsOnly: true, stacked: true, compactFront: true, shown: 1, hidden: 3))
         // Not even one icon: the menu alone, and the tab in front folds its own trail.
         #expect(layout(200, others: [100, 100]) == TabFit.Layout(iconsOnly: true, stacked: true, compactFront: true, shown: 0, hidden: 2))
     }
@@ -197,7 +199,8 @@ struct TabFitTests {
     }.array(of: 0...12)
 
     @Test func aNarrowerRowNeverTakesAStepBack() async {
-        await propertyCheck(input: Self.others, Gen.int(in: 0...2000), Gen.int(in: 1...400), Gen.int(in: 60...400), Gen.int(in: 0...200)) { others, room, less, trail, extra in
+        await propertyCheck(input: Self.others, Gen.int(in: 0...2000), Gen.int(in: 1...400), Gen.int(in: 60...400), Gen.int(in: 0...200)) {
+            others, room, less, trail, extra in
             let front = TabFit.Front(trail: Double(trail), chrome: 40 + Double(extra), compactChrome: 40 + Double(extra / 2))
             let wide = TabFit.layout(room: Double(room), front: front, others: others, gap: 8, more: 80)
             let narrow = TabFit.layout(room: Double(room - less), front: front, others: others, gap: 8, more: 80)
@@ -262,7 +265,8 @@ struct TabFitTests {
     @Test func theStripNeverOutgrowsTheRow() async {
         // Wider than the row, the strip pushes the toolbar's search field and buttons into its overflow menu (#310).
         // It may only when not even the front tab's capsule and the menu fit.
-        await propertyCheck(input: Self.others, Gen.int(in: 0...2000), Gen.int(in: 20...600), Gen.int(in: 0...200)) { others, room, trail, extra in
+        await propertyCheck(input: Self.others, Gen.int(in: 0...2000), Gen.int(in: 20...600), Gen.int(in: 0...200)) {
+            others, room, trail, extra in
             let front = TabFit.Front(trail: Double(trail), chrome: 40 + Double(extra), compactChrome: 40)
             let r = Double(room)
             let fit = TabFit.layout(room: r, front: front, others: others, gap: 8, more: 80)
@@ -334,7 +338,10 @@ struct TabKeepTests {
         let left = ["a": now - 30, "b": now - 10, "c": now - 20, "p": now - 9_000]
         let kept = TabKeep.alive(selected: "d", alive: ["a", "b", "c", "d", "p"], left: left, now: now, policy: policy, playing: ["p"])
         #expect(kept == ["d", "b", "c", "p"])
-        #expect(TabKeep.alive(selected: "d", alive: ["a", "d", "p"], left: left, now: now, policy: policy, pressure: true, playing: ["p"]) == ["d", "p"])
+        #expect(
+            TabKeep.alive(selected: "d", alive: ["a", "d", "p"], left: left, now: now, policy: policy, pressure: true, playing: ["p"]) == [
+                "d", "p",
+            ])
         // Playing doesn't bring back a tab already dropped: its screen, and so its audio, is gone.
         #expect(TabKeep.alive(selected: "d", alive: ["d"], left: left, now: now, policy: policy, playing: ["p"]) == ["d"])
     }
@@ -344,13 +351,16 @@ struct TabKeepTests {
     }
 
     @Test func holdsItsBounds() async {
-        await propertyCheck(input: Gen.int(in: 0...9).array(of: 0...12), Gen.int(in: 0...12), Gen.int(in: 0...4), Gen.bool,
-                            Gen.int(in: 0...12).array(of: 0...3)) { ages, selected, limit, pressure, played in
+        await propertyCheck(
+            input: Gen.int(in: 0...9).array(of: 0...12), Gen.int(in: 0...12), Gen.int(in: 0...4), Gen.bool,
+            Gen.int(in: 0...12).array(of: 0...3)
+        ) { ages, selected, limit, pressure, played in
             let left = Dictionary(uniqueKeysWithValues: ages.enumerated().map { ($0.offset, now - Double($0.element) * 100) })
             let alive = Set(left.keys)
             let p = TabKeep.Policy(limit: limit, idle: 500)
             let playing = Set(played)
-            let kept = TabKeep.alive(selected: selected, alive: alive, left: left, now: now, policy: p, pressure: pressure, playing: playing)
+            let kept = TabKeep.alive(
+                selected: selected, alive: alive, left: left, now: now, policy: p, pressure: pressure, playing: playing)
 
             let held = playing.intersection(alive).union([selected])
             #expect(held.isSubset(of: kept))
@@ -360,7 +370,9 @@ struct TabKeepTests {
 
             // Nothing kept is older than something dropped that was within the time.
             let dropped = alive.subtracting(kept).filter { now.timeIntervalSince(left[$0]!) < 500 }
-            if !pressure, let oldestKept = kept.subtracting(held).map({ left[$0]! }).min(), let newestDropped = dropped.map({ left[$0]! }).max() {
+            if !pressure, let oldestKept = kept.subtracting(held).map({ left[$0]! }).min(),
+                let newestDropped = dropped.map({ left[$0]! }).max()
+            {
                 #expect(oldestKept >= newestDropped)
             }
         }

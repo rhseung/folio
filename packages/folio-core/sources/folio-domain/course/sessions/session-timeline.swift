@@ -37,7 +37,9 @@ public enum SessionTimeline {
 
     public static func items(_ file: CourseFile, planned: [Session] = [], classMinutes: Int, calendar: Calendar) -> [Item] {
         let plannedIds = Set(planned.map(\.id))
-        let weeks = Dictionary(grouping: file.sessions + planned, by: \.week).sorted { $0.key < $1.key }.map { $0.value.sorted(by: Session.inOrder) }
+        let weeks = Dictionary(grouping: file.sessions + planned, by: \.week).sorted { $0.key < $1.key }.map {
+            $0.value.sorted(by: Session.inOrder)
+        }
         let dated = file.exams.compactMap { e in e.start.map { (exam: e, date: $0) } }.sorted { $0.date < $1.date }
 
         // A cancelled class held nothing, so an exam in its slot stands on its own.
@@ -46,7 +48,9 @@ public enum SessionTimeline {
         let classes = (file.sessions + planned).filter { !$0.isCancelled }.sorted(by: Session.inOrder)
         for e in dated {
             let end = max(e.exam.end ?? e.date, e.date)
-            if let s = classes.first(where: { $0.date <= end && e.date < $0.expectedEnd(schedule: file.course.schedule, classMinutes: classMinutes, calendar: calendar) }) {
+            if let s = classes.first(where: {
+                $0.date <= end && e.date < $0.expectedEnd(schedule: file.course.schedule, classMinutes: classMinutes, calendar: calendar)
+            }) {
                 onClass[s.id, default: []].append(e.exam)
             } else {
                 free.append(e)
@@ -70,7 +74,9 @@ public enum SessionTimeline {
                 let exams = onClass[s.id] ?? []
                 return (s.date, plannedIds.contains(s.id) ? .planned(s, exams: exams) : .session(s, exams: exams))
             }
-            while let e = pending.first, calendar.startOfWeek(containing: e.date) == week { rows.append((e.date, exam(e))); pending.removeFirst() }
+            while let e = pending.first, calendar.startOfWeek(containing: e.date) == week {
+                rows.append((e.date, exam(e))); pending.removeFirst()
+            }
             // Index breaks ties so sessions keep Session.inOrder; `sort` alone isn't stable.
             rows = rows.enumerated().sorted { ($0.element.date, $0.offset) < ($1.element.date, $1.offset) }.map(\.element)
             items.append(.week(sessions, month: opens(rows[0].date) ? rows[0].date : nil))

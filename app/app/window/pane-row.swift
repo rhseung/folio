@@ -65,8 +65,9 @@ struct PaneRow: View {
         .onChange(of: dragging) { _, now in if !now { dropped() } }
         // Over the panes, not in each: one Claude for the tab, which sees them all (#62).
         .overlay(alignment: .bottomTrailing) {
-            WindowClaude(workspace: workspace, panes: panes, folded: folded, shown: $claude, incoming: $claudeAsk, inserts: inserts,
-                         openLink: openLink)
+            WindowClaude(
+                workspace: workspace, panes: panes, folded: folded, shown: $claude, incoming: $claudeAsk, inserts: inserts,
+                openLink: openLink)
         }
         #if DEBUG && os(macOS)
         .onChange(of: SnapshotDriver.shared.claudePanel, initial: true) { _, new in claude = new }
@@ -115,14 +116,19 @@ struct PaneRow: View {
             case .bundle(let held) where held.count == 1:
                 strip(i, byHand: false)
             case .bundle(let held):
-                PaneBundle(panes: panes, held: held.map { j in
-                    PaneBundle.Held(index: j, mark: workspace.paneMark(of: panes.navigators[j].current, trail: panes.trails[j]))
-                }, trailing: held.first.map { $0 > panes.focus } ?? false, newTab: newTab)
+                PaneBundle(
+                    panes: panes,
+                    held: held.map { j in
+                        PaneBundle.Held(index: j, mark: workspace.paneMark(of: panes.navigators[j].current, trail: panes.trails[j]))
+                    }, trailing: held.first.map { $0 > panes.focus } ?? false, newTab: newTab
+                )
                 .transition(.opacity)
             }
         }
-        .panePanel(ring: panes.count > 1 && i == panes.focus
-                   ? navigator.current.course.map { workspace.accent($0).color } ?? Theme.Palette.chromeSelected : nil)
+        .panePanel(
+            ring: panes.count > 1 && i == panes.focus
+                ? navigator.current.course.map { workspace.accent($0).color } ?? Theme.Palette.chromeSelected : nil
+        )
         // In a bundle, drawn by its strip: the screen stays alive, unseen, for when it is chosen.
         .opacity(look == .hidden ? 0 : 1)
         .accessibilityHidden(look == .hidden)
@@ -137,8 +143,10 @@ struct PaneRow: View {
 
     func strip(_ i: Int, byHand: Bool) -> some View {
         let navigator = panes.navigators[i]
-        return PaneStrip(mark: workspace.paneMark(of: navigator.current, trail: panes.trails[i]), page: navigator.current.link.anchor?.pageNumber,
-                         byHand: byHand) {
+        return PaneStrip(
+            mark: workspace.paneMark(of: navigator.current, trail: panes.trails[i]), page: navigator.current.link.anchor?.pageNumber,
+            byHand: byHand
+        ) {
             panes.press(i)
         }
         .contextMenu { PaneMenu(panes: panes, index: i, newTab: newTab) }
@@ -152,7 +160,7 @@ struct PaneRow: View {
         return PaneDivider(enabled: enabled, front: front, even: panes.even)
             .allowsHitTesting(shown)
             #if os(macOS) && (DEBUG || RESIZE_PROBE)
-            .background { if front && d == 0 { ResizeMarker(name: "divider") } }
+        .background { if front && d == 0 { ResizeMarker(name: "divider") } }
             #endif
             // The panes' own menus, for the two either side: nothing is laid over a pane to hold them. On the iPad a long
             // press is how the panes are evened: a double tap on so thin a target was hard to hit and to find.
@@ -168,16 +176,18 @@ struct PaneRow: View {
             // Past a click's wobble, so a double click that moves a point or two is still a double click, and by how
             // far it went rather than where it is, so the divider doesn't jump to the pointer from where it was caught in
             // its margin.
-            .gesture(DragGesture(minimumDistance: Self.wobble, coordinateSpace: .named(Self.space))
-                .updating($dragging) { _, dragging, _ in dragging = true }
-                .onChanged { drag in if enabled { dragged(d, by: drag.translation.width, folded: folded) } }
-                .onEnded { drag in
-                    if enabled { dragged(d, by: drag.translation.width, folded: folded) }
-                    dropped()
-                })
+            .gesture(
+                DragGesture(minimumDistance: Self.wobble, coordinateSpace: .named(Self.space))
+                    .updating($dragging) { _, dragging, _ in dragging = true }
+                    .onChanged { drag in if enabled { dragged(d, by: drag.translation.width, folded: folded) } }
+                    .onEnded { drag in
+                        if enabled { dragged(d, by: drag.translation.width, folded: folded) }
+                        dropped()
+                    }
+            )
             #if os(macOS) && (DEBUG || RESIZE_PROBE)
-            .onAppear { if front && d == 0 { PaneDragHook.shared.row = self } }
-            #endif
+        .onAppear { if front && d == 0 { PaneDragHook.shared.row = self } }
+        #endif
     }
 
     static let wobble: CGFloat = 4
@@ -187,7 +197,8 @@ struct PaneRow: View {
     /// it is dropped, so the drag lays out the stack and not the whole row with every screen's closures made anew.
     func dragged(_ d: Int, by translation: CGFloat, folded: Set<Int>) {
         if drag.from == nil {
-            let widths = panes.layout.widths(room: sizes.row, fold: panes.fold, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: Self.gap)
+            let widths = panes.layout.widths(
+                room: sizes.row, fold: panes.fold, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: Self.gap)
             guard widths.indices.contains(d + 1) else { return }
             drag.from = PaneDrag.Start(divider: d, layout: panes.layout, left: widths[d], pair: widths[d] + widths[d + 1])
         }
@@ -254,8 +265,10 @@ private struct LivePaneStack<Content: View>: View {
         let glide = live == nil ? panes.glide.flatMap { $0.from.panes.count == panes.count ? $0 : nil } : nil
         // Always in the timeline, paused but for a glide: put in only for one, the panes would be built anew.
         TimelineView(.animation(paused: glide == nil)) { context in
-            PaneStack(layout: live ?? panes.layout, shares: live?.shares ?? panes.shares, fold: fold,
-                      from: glide.map { ($0.from, $0.fold) }, progress: glide?.progress(at: context.date) ?? 1) { content }
+            PaneStack(
+                layout: live ?? panes.layout, shares: live?.shares ?? panes.shares, fold: fold,
+                from: glide.map { ($0.from, $0.fold) }, progress: glide?.progress(at: context.date) ?? 1
+            ) { content }
         }
     }
 }
@@ -273,7 +286,10 @@ private struct PaneStack: Layout {
 
     static func sizes(_ layout: PaneLayout, _ fold: PaneLayout.Fold, room: CGFloat) -> (widths: [Double], gaps: [Double]) {
         let drawn = fold.count == layout.panes.count ? fold : layout.unfolded
-        return (layout.widths(room: room, fold: drawn, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: PaneRow.gap), drawn.gaps(PaneRow.gap))
+        return (
+            layout.widths(room: room, fold: drawn, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: PaneRow.gap),
+            drawn.gaps(PaneRow.gap)
+        )
     }
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
@@ -282,9 +298,13 @@ private struct PaneStack: Layout {
 
     // The row's own edges. Left to the default, a parent's question about an edge (a ZStack's) placed every pane and
     // laid out its screen once more for the answer.
-    func explicitAlignment(of guide: HorizontalAlignment, in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGFloat? { nil }
+    func explicitAlignment(
+        of guide: HorizontalAlignment, in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
+    ) -> CGFloat? { nil }
 
-    func explicitAlignment(of guide: VerticalAlignment, in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGFloat? { nil }
+    func explicitAlignment(of guide: VerticalAlignment, in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ())
+        -> CGFloat?
+    { nil }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         var (widths, gaps) = Self.sizes(layout, fold, room: bounds.width)
@@ -322,7 +342,8 @@ private struct PaneScreenWidth: ViewModifier {
     var opening: CGFloat? {
         guard let glide = panes.glide, glide.fold.folded.contains(index) else { return nil }
         guard !panes.folded.contains(index) else { return nil }
-        let widths = panes.layout.widths(room: sizes.row, fold: panes.fold, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: PaneRow.gap)
+        let widths = panes.layout.widths(
+            room: sizes.row, fold: panes.fold, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: PaneRow.gap)
         return widths.indices.contains(index) ? widths[index] : nil
     }
 }
@@ -450,7 +471,9 @@ private struct PaneBundle: View {
     }
 
     var body: some View {
-        Button { listing = true } label: {
+        Button {
+            listing = true
+        } label: {
             VStack(spacing: Theme.Space.s) {
                 // Overlapping, as a stack of cards: each icon a step down the last.
                 VStack(spacing: -Theme.Space.s) {
@@ -665,8 +688,10 @@ struct PanePress: NSViewRepresentable {
         }
 
         private func check(_ event: NSEvent) {
-            guard active, let window, event.window === window, !isHiddenOrHasHiddenAncestor, clicks == 1 || (event.type == .leftMouseDown && event.clickCount == clicks),
-                  bounds.contains(convert(event.locationInWindow, from: nil)) else { return }
+            guard active, let window, event.window === window, !isHiddenOrHasHiddenAncestor,
+                clicks == 1 || (event.type == .leftMouseDown && event.clickCount == clicks),
+                bounds.contains(convert(event.locationInWindow, from: nil))
+            else { return }
             press()
         }
     }

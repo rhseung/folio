@@ -30,17 +30,23 @@ struct SearchPalette: View {
             HStack(spacing: Theme.Space.m) {
                 // In the results' icon column, so the query starts where the result titles do.
                 Image(systemName: "magnifyingglass")
-                    .font(.system(size: 18, weight: .medium)) // design: one-off, sized to the palette field
+                    .font(.system(size: 18, weight: .medium))  // design: one-off, sized to the palette field
                     .foregroundStyle(Theme.Palette.textTertiary)
                     .frame(width: Self.icon)
                 TextField(String(localized: .searchPrompt), text: $model.query)
                     .textFieldStyle(.plain)
-                    .font(.system(size: 20)) // design: one-off, the palette field reads larger than page text, as in Spotlight
+                    .font(.system(size: 20))  // design: one-off, the palette field reads larger than page text, as in Spotlight
                     .focused($focused)
                     .onSubmit { if flat.indices.contains(model.selected) { open(flat[model.selected]) } }
-                    .onKeyPress(.downArrow) { model.moveSelection(by: 1); return .handled }
-                    .onKeyPress(.upArrow) { model.moveSelection(by: -1); return .handled }
-                    .onKeyPress(.escape) { close(); return .handled }
+                    .onKeyPress(.downArrow) {
+                        model.moveSelection(by: 1); return .handled
+                    }
+                    .onKeyPress(.upArrow) {
+                        model.moveSelection(by: -1); return .handled
+                    }
+                    .onKeyPress(.escape) {
+                        close(); return .handled
+                    }
                 if model.index == nil {
                     ProgressView().controlSize(.small)
                 } else if let indexing = model.indexing {
@@ -79,7 +85,11 @@ struct SearchPalette: View {
                             }
                         }
                         .padding(Self.inset)
-                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { resultsHeight = $0 }
+                        .onGeometryChange(for: CGFloat.self) {
+                            $0.size.height
+                        } action: {
+                            resultsHeight = $0
+                        }
                     }
                     .overflowFade(.vertical)
                     // A ScrollView takes all the height it is offered; size it to its results so a short list stays short.
@@ -98,8 +108,12 @@ struct SearchPalette: View {
         .shadow(color: .black.opacity(0.25), radius: 32, y: 16)
         .onChange(of: model.query) { model.refresh() }
         // A click on a filter takes focus from the field, and with it the arrow keys and return.
-        .onChange(of: model.kind) { model.refresh(); focused = true }
-        .onChange(of: model.scope) { model.refresh(); focused = true }
+        .onChange(of: model.kind) {
+            model.refresh(); focused = true
+        }
+        .onChange(of: model.scope) {
+            model.refresh(); focused = true
+        }
         .task {
             focused = true
             #if DEBUG && os(macOS)
@@ -114,7 +128,9 @@ struct SearchPalette: View {
         HStack(spacing: Theme.Space.xs) {
             ForEach([nil] + SearchKind.allCases.map(Optional.some), id: \.self) { (k: SearchKind?) in
                 let chosen = model.kind == k
-                Button { model.kind = k } label: {
+                Button {
+                    model.kind = k
+                } label: {
                     HStack(spacing: Theme.Space.tight) {
                         if let k { Image(systemName: k.symbol).font(Theme.Glyph.regular) }
                         Text(k?.label ?? String(localized: .searchKindAll))
@@ -174,7 +190,9 @@ struct SearchPalette: View {
     func row(_ hit: SearchHit, selected: Bool) -> some View {
         let course = model.workspace.course(hit.item.courseId)
         let accent = model.workspace.accent(hit.item.courseId)
-        return Button { open(hit) } label: {
+        return Button {
+            open(hit)
+        } label: {
             HStack(spacing: Theme.Space.m) {
                 LineIcon(symbol: hit.item.kind.symbol).foregroundStyle(accent.ink)
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
@@ -190,10 +208,10 @@ struct SearchPalette: View {
                         CourseMark(icon: course.file.course.icon, color: accent.color, inline: true)
                         Text(course.title).lineLimit(1)
                     }
-                        .font(Theme.Typeface.caption)
-                        .foregroundStyle(Theme.Palette.textTertiary)
-                        .frame(maxWidth: 160, alignment: .trailing)
-                        .fixedSize(horizontal: false, vertical: true)
+                    .font(Theme.Typeface.caption)
+                    .foregroundStyle(Theme.Palette.textTertiary)
+                    .frame(maxWidth: 160, alignment: .trailing)
+                    .fixedSize(horizontal: false, vertical: true)
                 }
                 if selected { keycap("↩") }
             }
@@ -230,11 +248,22 @@ struct SearchPalette: View {
                 ShareMenu(link: AppLink(item), course: item.courseId)
             }
         }
-        .environment(\.openLink, OpenLinkAction { link, placement, course in
-            close()
-            openLink(link, in: placement, course: course)
-        })
-        .environment(\.itemSheets, ItemSheetsAction(present: { close(); sheets.present($0) }, confirm: { close(); sheets.confirm($0) }))
+        .environment(
+            \.openLink,
+            OpenLinkAction { link, placement, course in
+                close()
+                openLink(link, in: placement, course: course)
+            }
+        )
+        .environment(
+            \.itemSheets,
+            ItemSheetsAction(
+                present: {
+                    close(); sheets.present($0)
+                },
+                confirm: {
+                    close(); sheets.confirm($0)
+                }))
     }
 
     /// The query's words picked out in `match`, so a long snippet shows at once why it was found.
@@ -244,7 +273,8 @@ struct SearchPalette: View {
         for word in model.words {
             var from = result.startIndex
             while from < result.endIndex,
-                  let r = result[from...].range(of: word, options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive]) {
+                let r = result[from...].range(of: word, options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive])
+            {
                 result[r].foregroundColor = match
                 result[r].inlinePresentationIntent = .stronglyEmphasized
                 from = r.upperBound

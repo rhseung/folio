@@ -41,7 +41,8 @@ struct SessionMenuModel {
     /// One action, so an attendance the course refuses leaves no session made for it.
     @discardableResult
     func make(_ item: Workspace.SuggestedSession, kind: Session.Kind = .lecture, attendance: AttendanceState? = nil) -> Session? {
-        guard let id = workspace.run(SessionAdd(course: courseId, date: item.suggestion.date, kind: kind, attendance: attendance))?.made else { return nil }
+        guard let id = workspace.run(SessionAdd(course: courseId, date: item.suggestion.date, kind: kind, attendance: attendance))?.made
+        else { return nil }
         return session(id)
     }
 
@@ -61,7 +62,9 @@ struct SessionMenuModel {
 extension Session.Kind {
     /// The sheet offers the kinds in this order.
     static var options: [(Session.Kind, String)] {
-        [(.lecture, String(localized: .sessionsLecture)), (.cancelled, String(localized: .sessionsCancelled)),
-         (.makeup, String(localized: .sessionsMakeup))]
+        [
+            (.lecture, String(localized: .sessionsLecture)), (.cancelled, String(localized: .sessionsCancelled)),
+            (.makeup, String(localized: .sessionsMakeup)),
+        ]
     }
 }

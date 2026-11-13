@@ -1,14 +1,17 @@
-@testable import FolioMarkdown
 import Foundation
 import Testing
+
+@testable import FolioMarkdown
 
 /// `[[folio://…]]` and a bare `folio://…`: an address from "링크 복사" pasted into a note (#347).
 struct AddressLinkTests {
     let id = UUID(uuidString: "6F1D2C4E-8A3B-4F5E-9C1D-2B7A8E0F3D41")!
 
     func page(_ text: String, titles: [UUID: String] = [:], names: [String: String] = [:]) -> String {
-        let embeds = NoteEmbeds(key: "Host", labels: .init(missing: "MISSING", loop: "LOOP", tooDeep: "DEEP"),
-                                title: { titles[$0] }, hasNote: { _ in false }, name: { names[$0] }) { _ in nil }
+        let embeds = NoteEmbeds(
+            key: "Host", labels: .init(missing: "MISSING", loop: "LOOP", tooDeep: "DEEP"),
+            title: { titles[$0] }, hasNote: { _ in false }, name: { names[$0] }
+        ) { _ in nil }
         return HTMLRenderer.blocks(ParsedNote(text), embeds: embeds).map(\.html).joined()
     }
 
@@ -51,7 +54,10 @@ struct AddressLinkTests {
     /// Unnamed (another folder's file), it shows what is written, but it isn't a broken note link.
     @Test func anUnnamedAddressShowsItselfAndIsNotBroken() {
         let html = page("[[folio://material/\(id.uuidString)#page=2]]")
-        #expect(html.contains("<a class=\"wikilink\" href=\"folio://material/\(id.uuidString)#page=2\">folio://material/\(id.uuidString) › page=2</a>"), "\(html)")
+        #expect(
+            html.contains(
+                "<a class=\"wikilink\" href=\"folio://material/\(id.uuidString)#page=2\">folio://material/\(id.uuidString) › page=2</a>"),
+            "\(html)")
     }
 
     @Test func aNotesAddressShowsTheNotesTitle() {
@@ -92,6 +98,8 @@ struct AddressLinkTests {
         #expect(HTMLRenderer.render(markdown: "`\(exam)`") == "<p><code>\(exam)</code></p>\n")
         #expect(HTMLRenderer.render(markdown: "[\(exam)](\(exam))") == "<p><a href=\"\(exam)\">\(exam)</a></p>\n")
         #expect(HTMLRenderer.render(markdown: "[[\(exam)|중간]]") == "<p><a class=\"wikilink\" href=\"\(exam)\">중간</a></p>\n")
-        #expect(HTMLRenderer.render(markdown: "$\\text{\(exam)}$").contains("<span class=\"math\">") && !HTMLRenderer.render(markdown: "$\\text{\(exam)}$").contains("<a "))
+        #expect(
+            HTMLRenderer.render(markdown: "$\\text{\(exam)}$").contains("<span class=\"math\">")
+                && !HTMLRenderer.render(markdown: "$\\text{\(exam)}$").contains("<a "))
     }
 }

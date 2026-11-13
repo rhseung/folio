@@ -12,20 +12,27 @@ struct ProposalsView: View {
         Page(maxWidth: 760) {
             PageHeader(title: String(localized: .rootNavProposals), subtitle: model.subtitle)
             if model.inbox.isEmpty {
-                EmptyCard(symbol: "tray", tone: model.workspace.lms.isConnected ? .success : .plain,
-                          title: String(localized: .lmsProposalsEmpty), detail: model.emptyDetail)
+                EmptyCard(
+                    symbol: "tray", tone: model.workspace.lms.isConnected ? .success : .plain,
+                    title: String(localized: .lmsProposalsEmpty), detail: model.emptyDetail)
             }
             ForEach(model.sections) { section in
-                Block(title: section.classroom.title, note: model.count(section), trailing: {
-                    if !section.proposals.isEmpty { SectionActions(model: model, section: section) }
-                }) {
+                Block(
+                    title: section.classroom.title, note: model.count(section),
+                    trailing: {
+                        if !section.proposals.isEmpty { SectionActions(model: model, section: section) }
+                    }
+                ) {
                     Card {
                         ForEach(section.proposals) { p in
                             ProposalRow(model: model, proposal: p, last: model.isLast(p, in: section))
                         }
                         if !section.handled.isEmpty {
-                            DisclosureRow(label: String(localized: .lmsHidden(section.handled.count)), isOpen: Binding(
-                                get: { model.showsHandled(section) }, set: { _ in model.toggleHandled(section) }), last: true) {
+                            DisclosureRow(
+                                label: String(localized: .lmsHidden(section.handled.count)),
+                                isOpen: Binding(
+                                    get: { model.showsHandled(section) }, set: { _ in model.toggleHandled(section) }), last: true
+                            ) {
                                 ForEach(section.handled) { h in
                                     HandledRow(model: model, handled: h, last: h.id == section.handled.last?.id)
                                 }
@@ -70,7 +77,11 @@ private struct TargetCourseMenu<More: View>: View {
         Menu {
             Section(String(localized: .lmsAddTo)) {
                 ForEach(model.targets, id: \.id) { course in
-                    Button { pick(course.id) } label: { Text(course.title) }
+                    Button {
+                        pick(course.id)
+                    } label: {
+                        Text(course.title)
+                    }
                 }
             }
             more()
@@ -114,8 +125,12 @@ private struct ProposalRow: View {
             } control: {
                 HStack(spacing: Theme.Space.s) {
                     if model.showsOpen(proposal) {
-                        Button { openURL(proposal.url) } label: { Label(.lmsOpen, systemImage: "arrow.up.forward.app") }
-                            .buttonStyle(SoftButtonStyle(iconOnly: true)).help(String(localized: .lmsOpen))
+                        Button {
+                            openURL(proposal.url)
+                        } label: {
+                            Label(.lmsOpen, systemImage: "arrow.up.forward.app")
+                        }
+                        .buttonStyle(SoftButtonStyle(iconOnly: true)).help(String(localized: .lmsOpen))
                     }
                     Button(.lmsDismiss) { model.dismiss([proposal]) }.buttonStyle(SoftButtonStyle())
                     if model.canAdd(proposal) {
@@ -152,8 +167,12 @@ private struct HandledRow: View {
                 }
             } control: {
                 HStack(spacing: Theme.Space.s) {
-                    Button { openURL(handled.proposal.url) } label: { Label(.lmsOpen, systemImage: "arrow.up.forward.app") }
-                        .buttonStyle(SoftButtonStyle(iconOnly: true)).help(String(localized: .lmsOpen))
+                    Button {
+                        openURL(handled.proposal.url)
+                    } label: {
+                        Label(.lmsOpen, systemImage: "arrow.up.forward.app")
+                    }
+                    .buttonStyle(SoftButtonStyle(iconOnly: true)).help(String(localized: .lmsOpen))
                     if model.canProposeAgain(handled) {
                         Button(.lmsRestore) { model.proposeAgain(handled) }.buttonStyle(SoftButtonStyle())
                     }

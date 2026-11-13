@@ -48,8 +48,10 @@ import WebKit
     /// The frame for a top-level widget block, or nil for any other block. A widget in a table cell stays the inert
     /// placeholder `HTMLRenderer` makes: a cell is no place to run one.
     func frame(for html: String) -> String? {
-        guard let m = html.wholeMatch(of: /<div class="cb-widget" data-widget="([0-9A-Fa-f-]{36})"(?: style="height:(-?\d+)px")?><\/div>\n?/),
-              let id = UUID(uuidString: String(m.1)) else { return nil }
+        guard
+            let m = html.wholeMatch(of: /<div class="cb-widget" data-widget="([0-9A-Fa-f-]{36})"(?: style="height:(-?\d+)px")?><\/div>\n?/),
+            let id = UUID(uuidString: String(m.1))
+        else { return nil }
         // The same widget may be placed twice in a note, and each place runs on its own.
         let n = used[id, default: 0]
         used[id] = n + 1
@@ -70,9 +72,12 @@ import WebKit
         // Every character but letters and digits escaped: `+`, `&` and `=` left as they are would split the theme apart,
         // and the address goes into an attribute as it is.
         let encode = { (s: String) in s.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? "" }
-        url.percentEncodedQueryItems = [URLQueryItem(name: "k", value: encode(key)), URLQueryItem(name: "t", value: encode(Self.themeCSS(accent)))]
+        url.percentEncodedQueryItems = [
+            URLQueryItem(name: "k", value: encode(key)), URLQueryItem(name: "t", value: encode(Self.themeCSS(accent))),
+        ]
         let src = url.url?.absoluteString ?? ""
-        return "<iframe class=\"cb-widget\" sandbox=\"allow-scripts\" data-key=\"\(key)\" data-height=\"\(height)\" src=\"\(src)\"></iframe>\n"
+        return
+            "<iframe class=\"cb-widget\" sandbox=\"allow-scripts\" data-key=\"\(key)\" data-height=\"\(height)\" src=\"\(src)\"></iframe>\n"
     }
 
     fileprivate func report(_ key: String, page: Double, view: Double, frame: WKFrameInfo) {
@@ -92,7 +97,8 @@ import WebKit
         init(_ widgets: NoteWidgets) { self.widgets = widgets }
 
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
-            guard let body = message.body as? [String: Any], let key = body["k"] as? String, let page = body["h"] as? Double, let view = body["v"] as? Double
+            guard let body = message.body as? [String: Any], let key = body["k"] as? String, let page = body["h"] as? Double,
+                let view = body["v"] as? Double
             else { return }
             widgets?.report(key, page: page, view: view, frame: message.frameInfo)
         }
@@ -100,21 +106,21 @@ import WebKit
 
     /// The root element's own box, not `scrollHeight`, which is never less than the frame and so could only grow.
     private static let sizeScript = """
-    if (location.protocol === '\(WidgetFiles.scheme):') {
-      const html = document.documentElement, k = new URLSearchParams(location.search).get('k')
-      const report = () => webkit.messageHandlers.\(Reports.name).postMessage({ k, h: html.getBoundingClientRect().height, v: innerHeight })
-      new ResizeObserver(report).observe(html); addEventListener('resize', report); report()
-    }
-    """
+        if (location.protocol === '\(WidgetFiles.scheme):') {
+          const html = document.documentElement, k = new URLSearchParams(location.search).get('k')
+          const report = () => webkit.messageHandlers.\(Reports.name).postMessage({ k, h: html.getBoundingClientRect().height, v: innerHeight })
+          new ResizeObserver(report).observe(html); addEventListener('resize', report); report()
+        }
+        """
 
     /// The note's colors under the names note pages use, before the widget's own styles. In a block: a top-level name
     /// here would clash with the same name declared by the widget's own script.
     private static let themeScript = """
-    if (location.protocol === '\(WidgetFiles.scheme):') {
-      const t = new URLSearchParams(location.search).get('t')
-      if (t !== null) { const s = document.createElement('style'); s.id = 'folio-theme'; s.textContent = t; document.documentElement.prepend(s) }
-    }
-    """
+        if (location.protocol === '\(WidgetFiles.scheme):') {
+          const t = new URLSearchParams(location.search).get('t')
+          if (t !== null) { const s = document.createElement('style'); s.id = 'folio-theme'; s.textContent = t; document.documentElement.prepend(s) }
+        }
+        """
 
     /// A page that starts out like the note: `:where` keeps these below anything the widget sets itself.
     static func themeCSS(_ accent: CourseAccent) -> String {
@@ -204,12 +210,14 @@ struct WidgetSizer {
     func webView(_ webView: WKWebView, stop task: any WKURLSchemeTask) { running.remove(ObjectIdentifier(task as AnyObject)) }
 
     static func notice(_ file: URL?) -> Data {
-        let text = switch file {
-        case nil: String(localized: .notesWidgetNoCourse)
-        case let file? where LocalFile.exists(file): String(localized: .notesWidgetUnreadable(file.lastPathComponent))
-        case let file?: String(localized: .notesWidgetMissing(file.lastPathComponent))
-        }
-        let escaped = text
+        let text =
+            switch file {
+            case nil: String(localized: .notesWidgetNoCourse)
+            case let file? where LocalFile.exists(file): String(localized: .notesWidgetUnreadable(file.lastPathComponent))
+            case let file?: String(localized: .notesWidgetMissing(file.lastPathComponent))
+            }
+        let escaped =
+            text
             .replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;")
         return Data("<!doctype html><p style=\"color:var(--text-3);font-size:12px;padding:12px\">\(escaped)</p>".utf8)
     }

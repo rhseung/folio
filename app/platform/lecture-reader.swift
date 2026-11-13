@@ -45,10 +45,12 @@ struct LectureClaude {
     var ask: @MainActor (URL, [FolioDomain.Unit]) async -> ClaudeFinding
 
     @MainActor static func of(_ workspace: Workspace, course: LoadedCourse) -> LectureClaude {
-        LectureClaude(off: { workspace.claudeReady ? nil : String(localized: .lectureClaudeOff) }, ask: { url, units in
-            guard workspace.claudeReady else { return .failed(String(localized: .lectureClaudeOff)) }
-            return await LectureReader.askClaude(url, units: units, claude: workspace.claude(for: course))
-        })
+        LectureClaude(
+            off: { workspace.claudeReady ? nil : String(localized: .lectureClaudeOff) },
+            ask: { url, units in
+                guard workspace.claudeReady else { return .failed(String(localized: .lectureClaudeOff)) }
+                return await LectureReader.askClaude(url, units: units, claude: workspace.claude(for: course))
+            })
     }
 }
 
@@ -68,11 +70,15 @@ enum LectureReader {
     }
 
     /// `progress` gets pages read and the page count, on the main actor.
-    static func find(_ url: URL, units: [FolioDomain.Unit], claude: ClaudeClient?,
-                     progress: @escaping @MainActor (Int, Int) -> Void = { _, _ in }) async -> LectureFinding {
+    static func find(
+        _ url: URL, units: [FolioDomain.Unit], claude: ClaudeClient?,
+        progress: @escaping @MainActor (Int, Int) -> Void = { _, _ in }
+    ) async -> LectureFinding {
         let report: @Sendable (Int, Int) -> Void = { done, total in Task { @MainActor in progress(done, total) } }
         let everyPage = claude != nil
-        guard let read = await Task.detached(operation: { read(url, everyPage: everyPage, progress: report) }).value else { return .unreadable }
+        guard let read = await Task.detached(operation: { read(url, everyPage: everyPage, progress: report) }).value else {
+            return .unreadable
+        }
 
         if let claude {
             // A failed or empty answer is not passed on to the titles: their guess would then look like Claude's.
@@ -80,10 +86,14 @@ enum LectureReader {
             if case .found(let split) = finding { return .found(split, .claude) }
             return .failed(finding.message ?? "", pageCount: read.pageCount)
         }
-        if let found = LectureReading.sections(outline: read.outline, pageCount: read.pageCount), let split = LectureSplit(found, pageCount: read.pageCount) {
+        if let found = LectureReading.sections(outline: read.outline, pageCount: read.pageCount),
+            let split = LectureSplit(found, pageCount: read.pageCount)
+        {
             return .found(SectionMatch.match(split, units: units), .outline)
         }
-        if let found = LectureReading.sections(pages: read.pages, units: units.map(\.title)), let split = LectureSplit(found, pageCount: read.pageCount) {
+        if let found = LectureReading.sections(pages: read.pages, units: units.map(\.title)),
+            let split = LectureSplit(found, pageCount: read.pageCount)
+        {
             return .found(SectionMatch.match(split, units: units), .titles)
         }
         return .nothing(pageCount: read.pageCount)
@@ -91,7 +101,9 @@ enum LectureReader {
 
     /// Straight to Claude, whatever the outline and titles would say: the user asked for its reading.
     static func askClaude(_ url: URL, units: [FolioDomain.Unit], claude: ClaudeClient) async -> ClaudeFinding {
-        guard let read = await Task.detached(operation: { read(url, everyPage: true, progress: { _, _ in }) }).value else { return .unreadable }
+        guard let read = await Task.detached(operation: { read(url, everyPage: true, progress: { _, _ in }) }).value else {
+            return .unreadable
+        }
         return await ask(claude, read: read, url: url, units: units)
     }
 
@@ -102,7 +114,8 @@ enum LectureReader {
         let pictures = await Task.detached(operation: { Self.pictures(url, pages: pictured) }).value
         let pages = read.pages.indices.map { LecturePage(title: read.pages[$0].title, body: read.texts[$0], image: pictures[$0]) }
         do {
-            return try await claude.lectureSections(file: url.lastPathComponent, pages: pages, units: units).map(ClaudeFinding.found) ?? .nothing
+            return try await claude.lectureSections(file: url.lastPathComponent, pages: pages, units: units).map(ClaudeFinding.found)
+                ?? .nothing
         } catch {
             return .failed(ClaudeModel.message(for: error))
         }

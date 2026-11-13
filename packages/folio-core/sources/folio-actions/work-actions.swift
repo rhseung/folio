@@ -4,10 +4,13 @@ import Foundation
 
 // MARK: Exams
 
-@Action("exam add", "시험 추가. 시험 폴더(Exams/<제목>)는 첫 파일과 함께 생긴다", effect: .creates, done: "시험 '{title}'을(를) 추가했습니다",
-        examples: [#"folio exam add EC4207 중간고사 --start "2026-10-21 10:00" --end "2026-10-21 12:00" --location B101"#,
-                   "folio exam add EC4207 Quiz1 --start 2026-09-30 --dry-run"],
-        phrases: ["기말고사 추가", "중간고사 등록", "시험 추가", "중간고사 추가", "기말 등록", "퀴즈 일정"])
+@Action(
+    "exam add", "시험 추가. 시험 폴더(Exams/<제목>)는 첫 파일과 함께 생긴다", effect: .creates, done: "시험 '{title}'을(를) 추가했습니다",
+    examples: [
+        #"folio exam add EC4207 중간고사 --start "2026-10-21 10:00" --end "2026-10-21 12:00" --location B101"#,
+        "folio exam add EC4207 Quiz1 --start 2026-09-30 --dry-run",
+    ],
+    phrases: ["기말고사 추가", "중간고사 등록", "시험 추가", "중간고사 추가", "기말 등록", "퀴즈 일정"])
 public struct ExamAdd {
     @New var id: Exam.ID
     /// 과목
@@ -44,10 +47,13 @@ public struct ExamAdd {
     }
 }
 
-@Action("exam set", "시험의 제목, 일시, 장소, 성적 항목, 범위 바꾸기. 준 것만 바뀐다. 제목을 바꿔도 시험 폴더는 그대로다", done: "시험 '{exam}'을(를) 바꿨습니다",
-        examples: [#"folio exam set EC4207/중간고사 --start "2026-10-22 10:00" --end "2026-10-22 12:00""#,
-                   "folio exam set EC4207/Quiz1 --location B203", "folio exam set EC4207/Quiz1 --end none --component none --dry-run"],
-        phrases: ["시험 날짜 변경", "시험 시간", "시험 장소", "고사실"])
+@Action(
+    "exam set", "시험의 제목, 일시, 장소, 성적 항목, 범위 바꾸기. 준 것만 바뀐다. 제목을 바꿔도 시험 폴더는 그대로다", done: "시험 '{exam}'을(를) 바꿨습니다",
+    examples: [
+        #"folio exam set EC4207/중간고사 --start "2026-10-22 10:00" --end "2026-10-22 12:00""#,
+        "folio exam set EC4207/Quiz1 --location B203", "folio exam set EC4207/Quiz1 --end none --component none --dry-run",
+    ],
+    phrases: ["시험 날짜 변경", "시험 시간", "시험 장소", "고사실"])
 public struct ExamSet {
     @Arg var course: Course.ID
     /// 시험
@@ -89,9 +95,10 @@ public struct ExamSet {
     }
 }
 
-@Action("exam rm", "시험 기록 지우기. 시험 폴더와 파일은 남는다. 범위 단원과 점수의 연결도 풀린다", effect: .removes,
-        confirm: "시험 '{exam}'의 기록을 지웁니다. 폴더와 파일은 남습니다.", done: "시험 '{exam}'을(를) 지웠습니다",
-        examples: ["folio exam rm EC4207/Quiz1 --dry-run"], phrases: ["시험 삭제"])
+@Action(
+    "exam rm", "시험 기록 지우기. 시험 폴더와 파일은 남는다. 범위 단원과 점수의 연결도 풀린다", effect: .removes,
+    confirm: "시험 '{exam}'의 기록을 지웁니다. 폴더와 파일은 남습니다.", done: "시험 '{exam}'을(를) 지웠습니다",
+    examples: ["folio exam rm EC4207/Quiz1 --dry-run"], phrases: ["시험 삭제"])
 public struct ExamRemove {
     @Arg var course: Course.ID
     /// 시험
@@ -105,8 +112,9 @@ public struct ExamRemove {
     }
 }
 
-@Action("exam plan add", "공부 계획에 날짜별 할 일 추가", effect: .creates, done: "공부 계획에 '{title}'을(를) 넣었습니다",
-        examples: [#"folio exam plan add EC4207/중간고사 --day 2026-10-18 "트리 단원 복습""#], phrases: ["공부 계획", "시험 준비 계획", "날짜별 할 일"])
+@Action(
+    "exam plan add", "공부 계획에 날짜별 할 일 추가", effect: .creates, done: "공부 계획에 '{title}'을(를) 넣었습니다",
+    examples: [#"folio exam plan add EC4207/중간고사 --day 2026-10-18 "트리 단원 복습""#], phrases: ["공부 계획", "시험 준비 계획", "날짜별 할 일"])
 public struct ExamPlanAdd {
     @New var id: ExamPlanItem.ID
     @Arg var course: Course.ID
@@ -122,7 +130,9 @@ public struct ExamPlanAdd {
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
             try f.update(\.exams, exam) { e in
-                guard !e.plan.contains(where: { $0.id == id }) else { throw ActionError.rule(String(localized: .errorIdTakenPlanItem("\(id)"))) }
+                guard !e.plan.contains(where: { $0.id == id }) else {
+                    throw ActionError.rule(String(localized: .errorIdTakenPlanItem("\(id)")))
+                }
                 e.plan.append(ExamPlanItem(id: id, day: day, title: title, target: unit.map { ExamPlanTarget(kind: .unit, id: $0) }))
                 e.touch(by: ctx.device, at: ctx.now)
             }
@@ -131,8 +141,9 @@ public struct ExamPlanAdd {
     }
 }
 
-@Action("exam plan rm", "공부 계획 항목 지우기", effect: .removes, confirm: "공부 계획 항목 '{item}'을(를) 지웁니다.",
-        done: "공부 계획에서 '{item}'을(를) 지웠습니다", examples: [#"folio exam plan rm EC4207/중간고사 "트리 단원 복습" --dry-run"#])
+@Action(
+    "exam plan rm", "공부 계획 항목 지우기", effect: .removes, confirm: "공부 계획 항목 '{item}'을(를) 지웁니다.",
+    done: "공부 계획에서 '{item}'을(를) 지웠습니다", examples: [#"folio exam plan rm EC4207/중간고사 "트리 단원 복습" --dry-run"#])
 public struct ExamPlanRemove {
     @Arg var course: Course.ID
     /// 시험
@@ -143,7 +154,9 @@ public struct ExamPlanRemove {
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
             try f.update(\.exams, exam) { e in
-                guard e.plan.contains(where: { $0.id == item }) else { throw ActionError.notFound(String(localized: .errorNotFoundPlanItem)) }
+                guard e.plan.contains(where: { $0.id == item }) else {
+                    throw ActionError.notFound(String(localized: .errorNotFoundPlanItem))
+                }
                 e.plan.removeAll { $0.id == item }
                 e.touch(by: ctx.device, at: ctx.now)
             }
@@ -152,8 +165,9 @@ public struct ExamPlanRemove {
 }
 
 /// The latest line across every device's log wins.
-@Action("exam plan-check", "공부 계획 항목 끝내기, --undo면 되돌리기", effect: .logs, done: "공부 계획 항목 '{item}'을(를) 표시했습니다",
-        cli: .manual(reason: "항목을 <과목>/<시험> 안에서 찾지만 액션은 시험을 받지 않고, --undo면 완료 문구가 달라진다"))
+@Action(
+    "exam plan-check", "공부 계획 항목 끝내기, --undo면 되돌리기", effect: .logs, done: "공부 계획 항목 '{item}'을(를) 표시했습니다",
+    cli: .manual(reason: "항목을 <과목>/<시험> 안에서 찾지만 액션은 시험을 받지 않고, --undo면 완료 문구가 달라진다"))
 public struct ExamPlanCheck {
     @Arg var course: Course.ID
     @Arg var item: ExamPlanItem.ID
@@ -167,8 +181,9 @@ public struct ExamPlanCheck {
     }
 }
 
-@Action("exam summary", "시험 종합 정리 노트. 없으면 템플릿으로 만든다", effect: .creates, done: "시험 '{exam}'의 종합 정리 노트",
-        examples: ["folio exam summary EC4207/중간고사"], phrases: ["시험 정리 노트", "요약 노트", "족보 정리"])
+@Action(
+    "exam summary", "시험 종합 정리 노트. 없으면 템플릿으로 만든다", effect: .creates, done: "시험 '{exam}'의 종합 정리 노트",
+    examples: ["folio exam summary EC4207/중간고사"], phrases: ["시험 정리 노트", "요약 노트", "족보 정리"])
 public struct ExamSummary {
     @New var note: Note.ID
     @Arg var course: Course.ID
@@ -199,10 +214,14 @@ func repeatEnd(_ ctx: ActionContext, course: UUID) throws -> Date? {
         .flatMap { ctx.calendar.date(byAdding: .day, value: 1, to: $0) }?.addingTimeInterval(-1)
 }
 
-@Action("assignment add", "과제 추가. 제목이 HW3처럼 표준 이름이면 Assignments 폴더도 만든다", effect: .creates, done: "과제 '{title}'을(를) 추가했습니다",
-        examples: [#"folio assignment add EC4207 "HW 3" --due "2026-11-04 23:59""#, #"folio assignment add EC4207 "Weekly Quiz" --due 2026-11-02 --repeats weekly --dry-run"#,
-                   #"folio assignment add EC4207 "Lab 보고서" --due 2026-11-02 --repeats "격주 월수""#],
-        phrases: ["과제 추가", "숙제 생김", "새 과제"])
+@Action(
+    "assignment add", "과제 추가. 제목이 HW3처럼 표준 이름이면 Assignments 폴더도 만든다", effect: .creates, done: "과제 '{title}'을(를) 추가했습니다",
+    examples: [
+        #"folio assignment add EC4207 "HW 3" --due "2026-11-04 23:59""#,
+        #"folio assignment add EC4207 "Weekly Quiz" --due 2026-11-02 --repeats weekly --dry-run"#,
+        #"folio assignment add EC4207 "Lab 보고서" --due 2026-11-02 --repeats "격주 월수""#,
+    ],
+    phrases: ["과제 추가", "숙제 생김", "새 과제"])
 public struct AssignmentAdd {
     @New var id: Assignment.ID
     /// 과목
@@ -239,13 +258,19 @@ public struct AssignmentAdd {
     }
 }
 
-@Action("assignment set", "과제의 제목, 마감, 상태, 성적 항목, 메모 바꾸기. 준 것만 바뀐다", discussion: """
+@Action(
+    "assignment set", "과제의 제목, 마감, 상태, 성적 항목, 메모 바꾸기. 준 것만 바뀐다",
+    discussion: """
         성적 항목이나 묶음을 바꾸면 이전 항목에 매긴 점수는 지워진다. 점수를 주면 상태는 graded가 된다.
         값을 지우려면 none을 준다.
         """,
-        done: "과제 '{assignment}'을(를) 바꿨습니다", examples: [#"folio assignment set EC4207/HW3 --due "2026-11-06 23:59""#, #"folio assignment set EC4207/HW3 --component 과제 --memo "3번 질문함""#,
-                   "folio assignment set EC4207/HW3 --component 과제 --score 9/10", "folio assignment set EC4207/HW3 --due none --repeats weekly --dry-run"],
-        phrases: ["미뤄졌", "연기", "마감일", "마감 변경", "기한 연장", "과제 메모", "과제 이름"])
+    done: "과제 '{assignment}'을(를) 바꿨습니다",
+    examples: [
+        #"folio assignment set EC4207/HW3 --due "2026-11-06 23:59""#, #"folio assignment set EC4207/HW3 --component 과제 --memo "3번 질문함""#,
+        "folio assignment set EC4207/HW3 --component 과제 --score 9/10",
+        "folio assignment set EC4207/HW3 --due none --repeats weekly --dry-run",
+    ],
+    phrases: ["미뤄졌", "연기", "마감일", "마감 변경", "기한 연장", "과제 메모", "과제 이름"])
 public struct AssignmentSave {
     public struct Score: Codable, Sendable, Equatable {
         /// Nil for the one component the assignment counts toward.
@@ -289,7 +314,9 @@ public struct AssignmentSave {
             throw ActionError.input(String(localized: .errorAssignmentComponentOrGroup))
         }
         if title.value?.isEmpty == true { throw ActionError.rule(String(localized: .errorAssignmentTitleEmpty)) }
-        guard ((scores.value ?? []) + (score.value ?? [])).allSatisfy({ $0.max > 0 }) else { throw ActionError.rule(String(localized: .errorAssignmentMaxScore)) }
+        guard ((scores.value ?? []) + (score.value ?? [])).allSatisfy({ $0.max > 0 }) else {
+            throw ActionError.rule(String(localized: .errorAssignmentMaxScore))
+        }
 
         let end = try repeatEnd(ctx, course: course)
         try ctx.edit(course) { f in
@@ -319,10 +346,12 @@ public struct AssignmentSave {
             func resolved(_ list: [Score]) throws -> [(component: UUID, score: Double, max: Double)] {
                 try list.map { s in
                     guard let id = s.component ?? (target.count == 1 ? target[0] : nil) else {
-                        throw ActionError.input(String(localized: target.isEmpty ? .errorAssignmentNoComponent : .errorAssignmentGroupScoreFormat))
+                        throw ActionError.input(
+                            String(localized: target.isEmpty ? .errorAssignmentNoComponent : .errorAssignmentGroupScoreFormat))
                     }
                     guard target.contains(id) else {
-                        throw ActionError.rule(String(localized: .errorAssignmentNotCovered(f.components.first { $0.id == id }?.name ?? id.uuidString)))
+                        throw ActionError.rule(
+                            String(localized: .errorAssignmentNotCovered(f.components.first { $0.id == id }?.name ?? id.uuidString)))
                     }
                     return (id, s.score, s.max)
                 }
@@ -353,7 +382,8 @@ public struct AssignmentSave {
                     (f.scores[j].title, f.scores[j].score, f.scores[j].max) = (named, s.score, s.max)
                     f.scores[j].touch(by: ctx.device, at: ctx.now)
                 } else {
-                    var entry = ScoreEntry(device: ctx.device, at: ctx.now, componentId: s.component, title: entryTitle, score: s.score, max: s.max)
+                    var entry = ScoreEntry(
+                        device: ctx.device, at: ctx.now, componentId: s.component, title: entryTitle, score: s.score, max: s.max)
                     entry.assignmentId = assignment
                     f.scores.append(entry)
                 }
@@ -366,8 +396,9 @@ public struct AssignmentSave {
     }
 }
 
-@Action("assignment status", "과제 상태 바꾸기. 매주 과제를 내면 다음 과제가 생긴다", done: "과제 '{assignment}'의 상태를 {status}(으)로 바꿨습니다",
-        examples: ["folio assignment status EC4207/HW3 submitted"], phrases: ["제출", "냈어", "다 했어", "하는 중", "채점됨"])
+@Action(
+    "assignment status", "과제 상태 바꾸기. 매주 과제를 내면 다음 과제가 생긴다", done: "과제 '{assignment}'의 상태를 {status}(으)로 바꿨습니다",
+    examples: ["folio assignment status EC4207/HW3 submitted"], phrases: ["제출", "냈어", "다 했어", "하는 중", "채점됨"])
 public struct AssignmentStatusSet {
     /// 과목
     @Arg var course: Course.ID
@@ -386,9 +417,10 @@ public struct AssignmentStatusSet {
     }
 }
 
-@Action("assignment rm", "과제와 그 점수 지우기. 과제 폴더와 파일은 남는다", effect: .removes,
-        confirm: "과제 '{assignment}'과(와) 그 점수를 지웁니다. 폴더와 파일은 남습니다.", done: "과제 '{assignment}'을(를) 지웠습니다",
-        examples: ["folio assignment rm EC4207/HW3 --dry-run"], phrases: ["과제 삭제", "과제 지우기"])
+@Action(
+    "assignment rm", "과제와 그 점수 지우기. 과제 폴더와 파일은 남는다", effect: .removes,
+    confirm: "과제 '{assignment}'과(와) 그 점수를 지웁니다. 폴더와 파일은 남습니다.", done: "과제 '{assignment}'을(를) 지웠습니다",
+    examples: ["folio assignment rm EC4207/HW3 --dry-run"], phrases: ["과제 삭제", "과제 지우기"])
 public struct AssignmentRemove {
     /// 과목
     @Arg var course: Course.ID
@@ -405,10 +437,13 @@ public struct AssignmentRemove {
 
 // MARK: Grades
 
-@Action("score add", "점수 추가", effect: .creates, done: "점수 '{id}'을(를) 추가했습니다",
-        examples: ["folio score add EC4207 --component 과제 --title HW1 --score 9 --max 10",
-                   "folio score add EC4207 --component 중간고사 --score 72 --max 100 --mean 61.5 --std-dev 12 --date 2026-10-21 --dry-run"],
-        phrases: ["점수 입력", "점수 기록", "성적 나왔어", "몇 점 받았어", "평균 표준편차"])
+@Action(
+    "score add", "점수 추가", effect: .creates, done: "점수 '{id}'을(를) 추가했습니다",
+    examples: [
+        "folio score add EC4207 --component 과제 --title HW1 --score 9 --max 10",
+        "folio score add EC4207 --component 중간고사 --score 72 --max 100 --mean 61.5 --std-dev 12 --date 2026-10-21 --dry-run",
+    ],
+    phrases: ["점수 입력", "점수 기록", "성적 나왔어", "몇 점 받았어", "평균 표준편차"])
 public struct ScoreAdd {
     @New var id: ScoreEntry.ID
     /// 과목
@@ -435,8 +470,10 @@ public struct ScoreAdd {
     var excused = false
 
     public func run(_ ctx: ActionContext) throws {
-        var entry = ScoreEntry(id: id, device: ctx.device, at: ctx.now, componentId: component, title: title, score: score, max: max, mean: mean, stdDev: stdDev,
-                               excused: excused)
+        var entry = ScoreEntry(
+            id: id, device: ctx.device, at: ctx.now, componentId: component, title: title, score: score, max: max, mean: mean,
+            stdDev: stdDev,
+            excused: excused)
         (entry.date, entry.examId, entry.assignmentId) = (date, exam, assignment)
         let end = try repeatEnd(ctx, course: course)
         try ctx.edit(course) { f in
@@ -456,10 +493,13 @@ extension CourseFile {
     }
 }
 
-@Action("score set", "점수 고치기. 준 것만 바꾼다", done: "점수 '{score}'을(를) 고쳤습니다",
-        examples: ["folio score set EC4207/HW1 --value 10", "folio score set EC4207/HW1 --excused true",
-                   "folio score set EC4207/HW1 --date none --dry-run"],
-        phrases: ["잘못 넣", "틀리게 넣", "점수 고치기", "점수 수정", "점수 정정"])
+@Action(
+    "score set", "점수 고치기. 준 것만 바꾼다", done: "점수 '{score}'을(를) 고쳤습니다",
+    examples: [
+        "folio score set EC4207/HW1 --value 10", "folio score set EC4207/HW1 --excused true",
+        "folio score set EC4207/HW1 --date none --dry-run",
+    ],
+    phrases: ["잘못 넣", "틀리게 넣", "점수 고치기", "점수 수정", "점수 정정"])
 public struct ScoreSet {
     @Arg var course: Course.ID
     /// 점수 제목
@@ -508,8 +548,9 @@ public struct ScoreSet {
     }
 }
 
-@Action("score rm", "점수 지우기", effect: .removes, confirm: "점수 '{score}'을(를) 지웁니다.", done: "점수 '{score}'을(를) 지웠습니다",
-        examples: ["folio score rm EC4207/HW1 --dry-run"], phrases: ["점수 삭제"])
+@Action(
+    "score rm", "점수 지우기", effect: .removes, confirm: "점수 '{score}'을(를) 지웁니다.", done: "점수 '{score}'을(를) 지웠습니다",
+    examples: ["folio score rm EC4207/HW1 --dry-run"], phrases: ["점수 삭제"])
 public struct ScoreRemove {
     @Arg var course: Course.ID
     /// 점수 제목
@@ -520,10 +561,13 @@ public struct ScoreRemove {
     }
 }
 
-@Action("component add", "성적 항목 추가. 맨 뒤에 붙는다", done: "성적 항목 '{name}'을(를) 추가했습니다",
-        examples: ["folio component add EC4207 과제 --weight 30",
-                   "folio component add EC4207 퀴즈 --weight 20 --aggregation dropLowest:1 --expected-count 5 --dry-run"],
-        phrases: ["평가 항목 추가"])
+@Action(
+    "component add", "성적 항목 추가. 맨 뒤에 붙는다", done: "성적 항목 '{name}'을(를) 추가했습니다",
+    examples: [
+        "folio component add EC4207 과제 --weight 30",
+        "folio component add EC4207 퀴즈 --weight 20 --aggregation dropLowest:1 --expected-count 5 --dry-run",
+    ],
+    phrases: ["평가 항목 추가"])
 public struct ComponentAdd {
     @New var id: GradeComponent.ID
     /// 과목
@@ -541,10 +585,13 @@ public struct ComponentAdd {
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
-            guard !f.components.contains(where: { $0.id == id }) else { throw ActionError.rule(String(localized: .errorIdTakenComponent("\(id)"))) }
+            guard !f.components.contains(where: { $0.id == id }) else {
+                throw ActionError.rule(String(localized: .errorIdTakenComponent("\(id)")))
+            }
             let order = (f.components.map(\.order).max() ?? -1) + 1
-            var c = GradeComponent(id: id, device: ctx.device, at: ctx.now, name: name, weight: weight, order: order, aggregation: aggregation,
-                                   expectedCount: expectedCount)
+            var c = GradeComponent(
+                id: id, device: ctx.device, at: ctx.now, name: name, weight: weight, order: order, aggregation: aggregation,
+                expectedCount: expectedCount)
             c.group = group
             f.components.append(c.normalized)
         }
@@ -552,10 +599,13 @@ public struct ComponentAdd {
     }
 }
 
-@Action("component set", "성적 항목 고치기. 준 것만 바꾼다", done: "성적 항목 '{component}'을(를) 고쳤습니다",
-        examples: ["folio component set EC4207/과제 --weight 25", "folio component set EC4207/퀴즈 --aggregation bestOf:3",
-                   "folio component set EC4207/퀴즈 --group none --dry-run"],
-        phrases: ["비율 바꾸기", "반영 비율", "항목 이름"])
+@Action(
+    "component set", "성적 항목 고치기. 준 것만 바꾼다", done: "성적 항목 '{component}'을(를) 고쳤습니다",
+    examples: [
+        "folio component set EC4207/과제 --weight 25", "folio component set EC4207/퀴즈 --aggregation bestOf:3",
+        "folio component set EC4207/퀴즈 --group none --dry-run",
+    ],
+    phrases: ["비율 바꾸기", "반영 비율", "항목 이름"])
 public struct ComponentSet {
     @Arg var course: Course.ID
     /// 항목 이름
@@ -586,9 +636,10 @@ public struct ComponentSet {
     }
 }
 
-@Action("component rm", "성적 항목과 그 점수 지우기. 과제와 시험은 남고 연결만 풀린다", effect: .removes,
-        confirm: "성적 항목 '{component}'과(와) 그 점수를 지웁니다. 과제와 시험은 남습니다.", done: "성적 항목 '{component}'을(를) 지웠습니다",
-        examples: ["folio component rm EC4207/퀴즈 --dry-run"], phrases: ["평가 항목 삭제"])
+@Action(
+    "component rm", "성적 항목과 그 점수 지우기. 과제와 시험은 남고 연결만 풀린다", effect: .removes,
+    confirm: "성적 항목 '{component}'과(와) 그 점수를 지웁니다. 과제와 시험은 남습니다.", done: "성적 항목 '{component}'을(를) 지웠습니다",
+    examples: ["folio component rm EC4207/퀴즈 --dry-run"], phrases: ["평가 항목 삭제"])
 public struct ComponentRemove {
     @Arg var course: Course.ID
     /// 항목 이름
@@ -603,8 +654,9 @@ public struct ComponentRemove {
 }
 
 /// Swaps a component with its neighbor and renumbers all, since imported components may share one `order`.
-@Action("component move", "성적 항목을 한 칸 위나 아래로", done: "성적 항목 '{component}'을(를) 옮겼습니다",
-        cli: .manual(reason: "--up과 --down 플래그가 옮길 칸 수(by)가 된다"))
+@Action(
+    "component move", "성적 항목을 한 칸 위나 아래로", done: "성적 항목 '{component}'을(를) 옮겼습니다",
+    cli: .manual(reason: "--up과 --down 플래그가 옮길 칸 수(by)가 된다"))
 public struct ComponentMove {
     @Arg var course: Course.ID
     @Arg var component: GradeComponent.ID
@@ -628,11 +680,15 @@ public struct ComponentMove {
     }
 }
 
-@Action("component policy", "성적 규칙 바꾸기. 준 것만 바꾼다", discussion: "값을 지우려면 none을 준다. --cap과 --cutoff는 주면 기존 목록을 바꾸고, none이면 비운다.",
-        done: "성적 규칙을 바꿨습니다", examples: ["folio component policy EC4207 --min-attendance-ratio 0.75 --lates-per-absence 3",
-                   #"folio component policy EC4207 --notes "Quiz 최저 점수 1회 제외""#,
-                   "folio component policy EC4207 --cap 6:B0 --cap 9:F",
-                   "folio component policy EC4207 --cutoff A+:95 --cutoff A0:90 --top-grade-ratio none --dry-run"])
+@Action(
+    "component policy", "성적 규칙 바꾸기. 준 것만 바꾼다", discussion: "값을 지우려면 none을 준다. --cap과 --cutoff는 주면 기존 목록을 바꾸고, none이면 비운다.",
+    done: "성적 규칙을 바꿨습니다",
+    examples: [
+        "folio component policy EC4207 --min-attendance-ratio 0.75 --lates-per-absence 3",
+        #"folio component policy EC4207 --notes "Quiz 최저 점수 1회 제외""#,
+        "folio component policy EC4207 --cap 6:B0 --cap 9:F",
+        "folio component policy EC4207 --cutoff A+:95 --cutoff A0:90 --top-grade-ratio none --dry-run",
+    ])
 public struct PolicySet {
     /// 과목
     @Arg var course: Course.ID

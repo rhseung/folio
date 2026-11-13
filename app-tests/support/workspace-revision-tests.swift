@@ -2,6 +2,7 @@ import FolioActions
 import FolioDomain
 import Foundation
 import Testing
+
 @testable import Folio
 
 /// Note and card lists read files the course document doesn't hold, so they re-read when these revisions move. Each

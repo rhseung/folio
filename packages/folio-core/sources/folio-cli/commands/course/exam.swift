@@ -9,9 +9,11 @@ struct ExamCommand: ParsableCommand {
         subcommands: [List.self, Show.self] + GeneratedCommands.exam + [Scope.self, Plan.self, PlanCheck.self])
 
     struct List: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .examListAbstract), discussion: String(localized: .examListDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .examListAbstract), discussion: String(localized: .examListDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .examListHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String = ""
+        @Argument(help: ArgumentHelp(String(localized: .examListHelpCourse), valueName: "course"), completion: .custom(Complete.courses))
+        var course: String = ""
         @Flag(help: ArgumentHelp(String(localized: .commonHelpLines))) var lines = false
 
         func run() throws {
@@ -22,14 +24,25 @@ struct ExamCommand: ParsableCommand {
             func component(_ e: Exam) -> String { e.componentId.flatMap { id in file.components.first { $0.id == id }?.name } ?? "" }
             if g.json { return try printJSON(exams) }
             if lines {
-                for e in exams { line(["\(c.code)/\(e.title)", e.title, e.start.map { $0.formatted(date: .numeric, time: .shortened) } ?? "", component(e)]) }
+                for e in exams {
+                    line([
+                        "\(c.code)/\(e.title)", e.title, e.start.map { $0.formatted(date: .numeric, time: .shortened) } ?? "", component(e),
+                    ])
+                }
                 return
             }
             courseHeader(c, catalog: try? r.ctx.catalog())
-            var t = Table(header: [String(localized: .examListHeaderExam), String(localized: .examListHeaderTime), String(localized: .examListHeaderComponent), String(localized: .examListHeaderLocation), String(localized: .examListHeaderScope)], shrink: [3])
+            var t = Table(
+                header: [
+                    String(localized: .examListHeaderExam), String(localized: .examListHeaderTime),
+                    String(localized: .examListHeaderComponent), String(localized: .examListHeaderLocation),
+                    String(localized: .examListHeaderScope),
+                ], shrink: [3])
             for e in exams {
-                let cells = [e.title, e.start.map { when($0, now: r.ctx.now, time: true) } ?? "-", component(e).toned, e.location,
-                             e.scopeUnitIds.isEmpty ? "" : String(localized: .examListUnits(e.scopeUnitIds.count))]
+                let cells = [
+                    e.title, e.start.map { when($0, now: r.ctx.now, time: true) } ?? "-", component(e).toned, e.location,
+                    e.scopeUnitIds.isEmpty ? "" : String(localized: .examListUnits(e.scopeUnitIds.count)),
+                ]
                 t.rows.append((e.end ?? e.start).map { $0 < r.ctx.now } ?? false ? cells.map { $0.styled(.dim) } : cells)
             }
             t.print()
@@ -38,9 +51,11 @@ struct ExamCommand: ParsableCommand {
     }
 
     struct Show: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .examShowAbstract), discussion: String(localized: .examShowDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .examShowAbstract), discussion: String(localized: .examShowDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .examShowHelpExam), valueName: "exam"), completion: Complete.exams) var exam: String = ""
+        @Argument(help: ArgumentHelp(String(localized: .examShowHelpExam), valueName: "exam"), completion: Complete.exams) var exam:
+            String = ""
 
         func run() throws {
             let r = Resolver(try CLI.context(g))
@@ -50,9 +65,15 @@ struct ExamCommand: ParsableCommand {
             let f = c.file
             courseHeader(c, catalog: try? r.ctx.catalog())
             say(e.title.styled(.bold))
-            if let start = e.start { say(String(localized: .examShowTime(when(start, now: r.ctx.now, time: true))) + (e.end.map { " – \($0.formatted(date: .omitted, time: .shortened))" } ?? "")) }
+            if let start = e.start {
+                say(
+                    String(localized: .examShowTime(when(start, now: r.ctx.now, time: true)))
+                        + (e.end.map { " – \($0.formatted(date: .omitted, time: .shortened))" } ?? ""))
+            }
             if !e.location.isEmpty { say(String(localized: .examShowLocation(e.location))) }
-            if let comp = e.componentId.flatMap({ id in f.components.first { $0.id == id } }) { say(String(localized: .examShowComponent(comp.name))) }
+            if let comp = e.componentId.flatMap({ id in f.components.first { $0.id == id } }) {
+                say(String(localized: .examShowComponent(comp.name)))
+            }
             let units = UnitTree.outline(f.units).map(\.unit).filter { e.scopeUnitIds.contains($0.id) }
             if !units.isEmpty {
                 say(String(localized: .examShowScope))
@@ -66,10 +87,14 @@ struct ExamCommand: ParsableCommand {
     }
 
     struct Scope: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .examScopeAbstract), discussion: String(localized: .examScopeDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .examScopeAbstract), discussion: String(localized: .examScopeDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .commonHelpExam), valueName: "exam"), completion: Complete.exams) var exam: String = ""
-        @Option(name: .customLong("unit"), help: ArgumentHelp(String(localized: .examScopeHelpUnits), valueName: "unit"), completion: Complete.units) var units: [String] = []
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpExam), valueName: "exam"), completion: Complete.exams) var exam: String =
+            ""
+        @Option(
+            name: .customLong("unit"), help: ArgumentHelp(String(localized: .examScopeHelpUnits), valueName: "unit"),
+            completion: Complete.units) var units: [String] = []
         @Flag(help: ArgumentHelp(String(localized: .examScopeHelpOff))) var off = false
         @Flag(help: ArgumentHelp(String(localized: .examScopeHelpTaught))) var taught = false
 
@@ -86,18 +111,22 @@ struct ExamCommand: ParsableCommand {
                 return
             }
             let ids = try r.many(units, from: c.file.units.map(\.title), what: "단원").map { try r.unit($0, in: c).id }
-            try performAll(ids.map { ExamScope(course: c.id, exam: e.id, unit: $0, included: !off) }, g, ctx: ctx,
-                           done: off ? String(localized: .examScopeRemoved(ids.count)) : String(localized: .examScopeAdded(ids.count)))
+            try performAll(
+                ids.map { ExamScope(course: c.id, exam: e.id, unit: $0, included: !off) }, g, ctx: ctx,
+                done: off ? String(localized: .examScopeRemoved(ids.count)) : String(localized: .examScopeAdded(ids.count)))
         }
     }
 
     struct Plan: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .examPlanAbstract), subcommands: GeneratedCommands.examPlan)
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .examPlanAbstract), subcommands: GeneratedCommands.examPlan)
 
     }
 
     struct PlanCheck: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "plan-check", abstract: String(localized: .examPlanCheckAbstract), discussion: String(localized: .examPlanCheckDiscussion))
+        static let configuration = CommandConfiguration(
+            commandName: "plan-check", abstract: String(localized: .examPlanCheckAbstract),
+            discussion: String(localized: .examPlanCheckDiscussion))
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp(String(localized: .commonHelpExam), valueName: "exam"), completion: Complete.exams) var exam: String
         @Argument(help: ArgumentHelp(String(localized: .commonHelpItem), valueName: "item")) var item: String = ""
@@ -108,7 +137,9 @@ struct ExamCommand: ParsableCommand {
             let r = Resolver(ctx)
             let (c, name) = try r.split(exam)
             let i = try r.planItem(item, in: try r.exam(name, in: c), course: c)
-            try perform(ExamPlanCheck(course: c.id, item: i.id, done: !undo), g, ctx: ctx, done: undo ? String(localized: .examPlanCheckUndone(i.title)) : String(localized: .examPlanCheckDone(i.title)))
+            try perform(
+                ExamPlanCheck(course: c.id, item: i.id, done: !undo), g, ctx: ctx,
+                done: undo ? String(localized: .examPlanCheckUndone(i.title)) : String(localized: .examPlanCheckDone(i.title)))
         }
     }
 }

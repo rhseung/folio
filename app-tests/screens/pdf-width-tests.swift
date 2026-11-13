@@ -60,8 +60,9 @@ struct PDFWidthTests {
         let view = controller.view
         view.frame = .zero
         let host = NSView(frame: CGRect(x: 0, y: 0, width: 1000, height: 800))
-        let window = NSWindow(contentRect: CGRect(x: -20_000, y: -20_000, width: 1000, height: 800), styleMask: [.borderless],
-                              backing: .buffered, defer: false)
+        let window = NSWindow(
+            contentRect: CGRect(x: -20_000, y: -20_000, width: 1000, height: 800), styleMask: [.borderless],
+            backing: .buffered, defer: false)
         window.contentView = host
         host.addSubview(view)
         controller.restore()
@@ -74,7 +75,9 @@ struct PDFWidthTests {
 
     func topPage(of view: PDFView) -> Int? {
         guard let document = view.document,
-              let page = view.page(for: CGPoint(x: view.bounds.midX, y: view.isFlipped ? view.bounds.minY + 8 : view.bounds.maxY - 8), nearest: true) else { return nil }
+            let page = view.page(
+                for: CGPoint(x: view.bounds.midX, y: view.isFlipped ? view.bounds.minY + 8 : view.bounds.maxY - 8), nearest: true)
+        else { return nil }
         return document.index(for: page)
     }
 
@@ -85,8 +88,9 @@ struct PDFWidthTests {
         view.frame = CGRect(x: 0, y: 0, width: 640, height: height)
         let host = NSView(frame: CGRect(x: 0, y: 0, width: 1000, height: height))
         host.addSubview(view)
-        let window = NSWindow(contentRect: CGRect(x: -20_000, y: -20_000, width: 1000, height: height), styleMask: [.borderless],
-                              backing: .buffered, defer: false)
+        let window = NSWindow(
+            contentRect: CGRect(x: -20_000, y: -20_000, width: 1000, height: height), styleMask: [.borderless],
+            backing: .buffered, defer: false)
         window.contentView = host
         try await settle(view)
         controller.go(to: 4)

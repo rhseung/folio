@@ -6,8 +6,10 @@ public enum APIKeyStore {
     static let account = "api-key"
 
     static var query: [String: Any] {
-        [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: account,
-         kSecAttrSynchronizable as String: true]
+        [
+            kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: account,
+            kSecAttrSynchronizable as String: true,
+        ]
     }
 
     public static func read() -> String? {

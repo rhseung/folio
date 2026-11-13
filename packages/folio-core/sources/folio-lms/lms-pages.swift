@@ -25,7 +25,8 @@ public enum LMSPages {
     public static func assignments(_ html: String, classroom: Int) throws -> [LMSAssignment] {
         try rows(html).compactMap { cells in
             guard cells.count >= 4, let link = try cells[1].select("a[href]").first(),
-                  let id = query(try link.attr("href"), "id") else { return nil }
+                let id = query(try link.attr("href"), "id")
+            else { return nil }
             let due = try time(cells[2].text())
             // Moodle's own words: anything but these counts as not handed in.
             let submitted = try ["제출 완료", "Submitted for grading", "Submitted"].contains(cells[3].text())
@@ -56,8 +57,9 @@ public enum LMSPages {
             guard let id = query(href, "bwid"), let board = query(href, "id") else { return nil }
             try link.select("strong").remove()
             let author = try cells[2].text()
-            return LMSNotice(id: id, board: board, classroom: classroom, title: try link.text(), author: author.isEmpty ? nil : author,
-                             posted: try day(cells[3].text()))
+            return LMSNotice(
+                id: id, board: board, classroom: classroom, title: try link.text(), author: author.isEmpty ? nil : author,
+                posted: try day(cells[3].text()))
         }
     }
 

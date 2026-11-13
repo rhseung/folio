@@ -44,7 +44,9 @@ struct MarkdownEditor {
         }
     }
 
-    @MainActor func update(_ view: SourceTextView, _ coordinator: Coordinator, accent: CourseAccent, dark: Bool, openLink: OpenLinkAction = OpenLinkAction()) {
+    @MainActor func update(
+        _ view: SourceTextView, _ coordinator: Coordinator, accent: CourseAccent, dark: Bool, openLink: OpenLinkAction = OpenLinkAction()
+    ) {
         coordinator.parent = self
         coordinator.updating = true
         defer { coordinator.updating = false }
@@ -106,7 +108,8 @@ enum NoteOverscroll {
 /// link being written (whose target it then is), code or math.
 func pastedNoteLink(_ pasted: String?, into text: String, at caret: Int, name: (AppLink) -> String?) -> String? {
     guard let pasted = pasted?.trimmingCharacters(in: .whitespacesAndNewlines), let link = AppLink(string: pasted),
-          WikiLink.pastesAsLink(in: text as NSString, at: caret) else { return nil }
+        WikiLink.pastesAsLink(in: text as NSString, at: caret)
+    else { return nil }
     return link.noteLink(named: name(link))
 }
 
@@ -119,15 +122,17 @@ extension MarkdownEditor: NSViewRepresentable {
         context.coordinator.view = view
         let scroll = NoteScrollView(document: view)
         view.load(text)
-        update(view, context.coordinator, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
-               openLink: context.environment.openLink)
+        update(
+            view, context.coordinator, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
+            openLink: context.environment.openLink)
         return scroll
     }
 
     func updateNSView(_ scroll: NSScrollView, context: Context) {
         guard let view = scroll.documentView as? SourceTextView else { return }
-        update(view, context.coordinator, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
-               openLink: context.environment.openLink)
+        update(
+            view, context.coordinator, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
+            openLink: context.environment.openLink)
     }
 }
 
@@ -170,7 +175,9 @@ final class NoteScrollView: NSScrollView {
     // view's, under no part of the note; a click there went nowhere, so the note takes it and puts the caret at its end.
     override func hitTest(_ point: NSPoint) -> NSView? {
         let hit = super.hitTest(point)
-        guard let hit, let document = documentView, hit === self || hit === contentView || hit.isDescendant(of: document) else { return hit }
+        guard let hit, let document = documentView, hit === self || hit === contentView || hit.isDescendant(of: document) else {
+            return hit
+        }
         return document
     }
 }
@@ -259,7 +266,8 @@ class NoteTextView: NSTextView {
         guard let indicator = subview as? NSTextInsertionIndicator else { return }
         indicator.postsFrameChangedNotifications = true
         if let caretObserver { NotificationCenter.default.removeObserver(caretObserver) }
-        caretObserver = NotificationCenter.default.addObserver(forName: NSView.frameDidChangeNotification, object: indicator, queue: nil) { [weak self, weak indicator] _ in
+        caretObserver = NotificationCenter.default.addObserver(forName: NSView.frameDidChangeNotification, object: indicator, queue: nil) {
+            [weak self, weak indicator] _ in
             MainActor.assumeIsolated {
                 guard let self, let indicator, let storage = self.textStorage else { return }
                 let fitted = NoteLines.caret(indicator.frame, at: self.selectedRange().location, in: storage)
@@ -270,7 +278,8 @@ class NoteTextView: NSTextView {
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         if window?.firstResponder === self, event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
-           let key = Self.letters[event.keyCode], shortcut?(key) == true {
+            let key = Self.letters[event.keyCode], shortcut?(key) == true
+        {
             return true
         }
         return super.performKeyEquivalent(with: event)
@@ -306,11 +315,14 @@ class NoteTextView: NSTextView {
     /// block of `[[material:…#page=12]]`) is read from the line; and from the line rather than the attribute's run,
     /// since the brackets and an ID are styled apart from the name and the run under the pointer is only part of it.
     func wikiLink(at i: Int) -> (link: WikiLink, range: NSRange)? {
-        guard let storage = textStorage, i < storage.length, storage.attribute(.noteWiki, at: i, effectiveRange: nil) is String else { return nil }
+        guard let storage = textStorage, i < storage.length, storage.attribute(.noteWiki, at: i, effectiveRange: nil) is String else {
+            return nil
+        }
         let text = storage.string as NSString
         let line = text.paragraphRange(for: NSRange(location: i, length: 0))
         let written = text.substring(with: line)
-        guard let m = written.matches(of: WikiLink.pattern).first(where: { NSRange($0.range, in: written).contains(i - line.location) }) else { return nil }
+        guard let m = written.matches(of: WikiLink.pattern).first(where: { NSRange($0.range, in: written).contains(i - line.location) })
+        else { return nil }
         let r = NSRange(m.range, in: written)
         return (WikiLink(m), NSRange(location: line.location + r.location, length: r.length))
     }
@@ -333,20 +345,24 @@ class NoteTextView: NSTextView {
 
     var firstVisible: Int? {
         guard let manager = textLayoutManager,
-              let fragment = manager.textLayoutFragment(for: CGPoint(x: 0, y: max(0, visibleRect.minY - textContainerOrigin.y))) else { return nil }
+            let fragment = manager.textLayoutFragment(for: CGPoint(x: 0, y: max(0, visibleRect.minY - textContainerOrigin.y)))
+        else { return nil }
         return manager.offset(from: manager.documentRange.location, to: fragment.rangeInElement.location)
     }
 
     /// How far below the top of the screen the line holding `index` starts.
     func screenY(of index: Int) -> CGFloat? {
-        guard let length = textStorage?.length, length > 0, let top = textLayoutManager?.top(of: max(0, min(index, length - 1))) else { return nil }
+        guard let length = textStorage?.length, length > 0, let top = textLayoutManager?.top(of: max(0, min(index, length - 1))) else {
+            return nil
+        }
         return top + textContainerOrigin.y - visibleRect.minY
     }
 
     /// Scrolls so the line holding `index` starts `y` below the top of the screen.
     func place(_ index: Int, at y: CGFloat) {
         guard let scroll = enclosingScrollView, let length = textStorage?.length, length > 0,
-              let top = textLayoutManager?.top(of: max(0, min(index, length - 1))) else { return }
+            let top = textLayoutManager?.top(of: max(0, min(index, length - 1)))
+        else { return }
         let target = max(0, top + textContainerOrigin.y - y)
         let clip = scroll.contentView
         if frame.height < target + clip.bounds.height { setFrameSize(NSSize(width: frame.width, height: target + clip.bounds.height)) }
@@ -554,7 +570,9 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         textStorage?.replaceCharacters(in: range, with: insert)
         didChangeText()
         let shift = insert.utf16.count - range.length
-        if selection.location >= NSMaxRange(range) { setSelectedRange(NSRange(location: selection.location + shift, length: selection.length)) }
+        if selection.location >= NSMaxRange(range) {
+            setSelectedRange(NSRange(location: selection.location + shift, length: selection.length))
+        }
     }
 
     func insertAtCaret(_ text: String) {
@@ -600,7 +618,8 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         super.viewDidMoveToSuperview()
         if let observer { NotificationCenter.default.removeObserver(observer) }
         guard let clip = enclosingScrollView?.contentView else { return }
-        observer = NotificationCenter.default.addObserver(forName: NSView.boundsDidChangeNotification, object: clip, queue: .main) { [weak self] _ in
+        observer = NotificationCenter.default.addObserver(forName: NSView.boundsDidChangeNotification, object: clip, queue: .main) {
+            [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self else { return }
                 let top = self.topLine(lineStarts: self.lineStarts)
@@ -638,7 +657,8 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     override func insertText(_ text: Any, replacementRange: NSRange) {
         let typed = (text as? String) ?? (text as? NSAttributedString)?.string
         if !hasMarkedText(), let typed, replacementRange.location == NSNotFound || replacementRange == selectedRange(),
-           let edit = SourceEditing.typed(typed, in: string as NSString, selection: selectedRange()) {
+            let edit = SourceEditing.typed(typed, in: string as NSString, selection: selectedRange())
+        {
             apply(edit)
         } else {
             super.insertText(text, replacementRange: replacementRange)
@@ -713,10 +733,15 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         guard !hasMarkedText() else { return }
         let selection = selectedRange()
         if selection.length == 0, let query = Completion.query(in: string as NSString, caret: selection.location, catalog: catalog),
-           opening || completion.query.map({ Self.sameKind($0.kind, query.kind) }) == true {
+            opening || completion.query.map({ Self.sameKind($0.kind, query.kind) }) == true
+        {
             let items = Completion.items(for: query, catalog: catalog)
             // A link's candidates all come late, from the app.
-            if items.isEmpty, completion.more == nil || !CompletionMenu.late(query) { completion.hide() } else { completion.show(query, items) }
+            if items.isEmpty, completion.more == nil || !CompletionMenu.late(query) {
+                completion.hide()
+            } else {
+                completion.show(query, items)
+            }
         } else {
             completion.hide()
         }
@@ -763,12 +788,14 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
             menuHost?.isHidden = true
             return
         }
-        let host = menuHost ?? {
-            let host = NSHostingView(rootView: AnyView(EmptyView()))
-            scroll.addSubview(host)
-            menuHost = host
-            return host
-        }()
+        let host =
+            menuHost
+            ?? {
+                let host = NSHostingView(rootView: AnyView(EmptyView()))
+                scroll.addSubview(host)
+                menuHost = host
+                return host
+            }()
         if host.superview !== scroll { scroll.addSubview(host) }
         host.rootView = AnyView(CompletionMenuView(menu: completion) { [weak self] i in self?.acceptCompletion(i) }.courseAccent(accent))
         let size = CGSize(width: CompletionMenuView.width, height: CompletionMenuView.height(rows: completion.items.count))
@@ -792,7 +819,9 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     /// edge): falling through, ⌘ and an arrow would move the caret to the line's end instead.
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         if window?.firstResponder === self, !hasMarkedText(), let shortcut = TableCommands.shortcut(of: event),
-           let command = TableCommands.command(for: shortcut), let table = TableEditing.table(in: string as NSString, selection: selectedRange()) {
+            let command = TableCommands.command(for: shortcut),
+            let table = TableEditing.table(in: string as NSString, selection: selectedRange())
+        {
             if let edit = table.edit(command) { apply(edit) } else { NSSound.beep() }
             return true
         }
@@ -807,10 +836,11 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
             setSelectedRange(NSRange(location: i, length: 0))
         }
         guard let menu, let table = TableEditing.table(in: string as NSString, selection: selectedRange()) else { return menu }
-        menu.insertItem(TableCommands.menu(for: table) { [weak self] edit in
-            self?.apply(edit)
-            self?.window?.makeFirstResponder(self)
-        }, at: 0)
+        menu.insertItem(
+            TableCommands.menu(for: table) { [weak self] edit in
+                self?.apply(edit)
+                self?.window?.makeFirstResponder(self)
+            }, at: 0)
         menu.insertItem(.separator(), at: 1)
         return menu
     }
@@ -835,7 +865,9 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         var box = NSRange()
         guard let done = textStorage?.attribute(.noteTask, at: i, effectiveRange: &box) as? Bool, box.length == 3 else { return false }
         let selection = selectedRange()
-        apply(SourceEditing.Edit(range: NSRange(location: box.location + 1, length: 1), text: done ? " " : "x", caret: selection.location), reveal: false)
+        apply(
+            SourceEditing.Edit(range: NSRange(location: box.location + 1, length: 1), text: done ? " " : "x", caret: selection.location),
+            reveal: false)
         setSelectedRange(selection)
         return true
     }
@@ -845,7 +877,8 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         if let hoverArea { removeTrackingArea(hoverArea) }
-        let area = NSTrackingArea(rect: .zero, options: [.mouseMoved, .mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect], owner: self, userInfo: nil)
+        let area = NSTrackingArea(
+            rect: .zero, options: [.mouseMoved, .mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect], owner: self, userInfo: nil)
         addTrackingArea(area)
         hoverArea = area
     }
@@ -898,19 +931,22 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     /// beside the column, so the point must be on that character's own box.
     private func reference(at point: NSPoint) -> (link: WikiLink, range: NSRange)? {
         guard let window, let i = characterIndex(at: point), let found = wikiLink(at: i), found.link.blockID != nil else { return nil }
-        let box = convert(window.convertFromScreen(firstRect(forCharacterRange: NSRange(location: i, length: 1), actualRange: nil)), from: nil)
+        let box = convert(
+            window.convertFromScreen(firstRect(forCharacterRange: NSRange(location: i, length: 1), actualRange: nil)), from: nil)
         return box.insetBy(dx: -Theme.Space.xxs, dy: -Theme.Space.xxs).contains(point) ? found : nil
     }
 
     private func showCard(_ link: WikiLink, range: NSRange) {
         guard let cards, let styler, hovered == range, !hasMarkedText(), !completion.visible, let scroll = enclosingScrollView,
-              let content = HTMLRenderer.referenceCard(link, embeds: cards.embeds(revision: cardsRevision, text: string)) else { return }
+            let content = HTMLRenderer.referenceCard(link, embeds: cards.embeds(revision: cardsRevision, text: string))
+        else { return }
         let page = card ?? ReferenceCardPage()
         card = page
         if page.host.superview !== scroll { scroll.addSubview(page.host) }
         let width = min(columnWidth, scroll.bounds.width - 2 * Theme.Space.s)
         let tallest = (scroll.bounds.height / 2).rounded()
-        page.load(content, math: styler.syntax.rawValue, accent: accent, baseURL: baseURL, width: width, maxHeight: tallest) { [weak self] height in
+        page.load(content, math: styler.syntax.rawValue, accent: accent, baseURL: baseURL, width: width, maxHeight: tallest) {
+            [weak self] height in
             guard let self, self.hovered == range, !self.hasMarkedText(), !self.completion.visible else { return }
             self.placeCard(page, range: range, size: CGSize(width: width, height: min(height, tallest)))
         }
@@ -920,7 +956,10 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     /// text column, as the completion menu is placed.
     private func placeCard(_ page: ReferenceCardPage, range: NSRange, size: CGSize) {
         guard let scroll = enclosingScrollView, let window else { return }
-        let rect = { (i: Int) in scroll.convert(window.convertFromScreen(self.firstRect(forCharacterRange: NSRange(location: i, length: 1), actualRange: nil)), from: nil) }
+        let rect = { (i: Int) in
+            scroll.convert(
+                window.convertFromScreen(self.firstRect(forCharacterRange: NSRange(location: i, length: 1), actualRange: nil)), from: nil)
+        }
         let first = rect(range.location), last = rect(NSMaxRange(range) - 1)
         let x = max(Theme.Space.s, min(first.minX - Theme.Space.m, scroll.bounds.maxX - size.width - Theme.Space.s))
         let gap = Theme.Space.xs
@@ -960,25 +999,35 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     func updateHint() {
         let caret = selectedRange()
         guard window?.firstResponder === self, !hasMarkedText(), let window,
-              SourceEditing.offersBlocks(in: string as NSString, selection: caret) else {
+            SourceEditing.offersBlocks(in: string as NSString, selection: caret)
+        else {
             hint?.isHidden = true
             return
         }
-        let label = hint ?? {
-            let label = HintLabel(labelWithAttributedString: NSAttributedString(string: String(localized: .notesGuideHint), attributes: [
-                .font: NoteLook.font(NoteLook.body), .foregroundColor: NoteLook.text3,
-            ]))
-            label.setAccessibilityElement(false)
-            label.sizeToFit()
-            addSubview(label)
-            hint = label
-            return label
-        }()
+        let label =
+            hint
+            ?? {
+                let label = HintLabel(
+                    labelWithAttributedString: NSAttributedString(
+                        string: String(localized: .notesGuideHint),
+                        attributes: [
+                            .font: NoteLook.font(NoteLook.body), .foregroundColor: NoteLook.text3,
+                        ]))
+                label.setAccessibilityElement(false)
+                label.sizeToFit()
+                addSubview(label)
+                hint = label
+                return label
+            }()
         let size = label.fittingSize
-        var line = convert(window.convertFromScreen(firstRect(forCharacterRange: NSRange(location: caret.location, length: 0), actualRange: nil)), from: nil)
+        var line = convert(
+            window.convertFromScreen(firstRect(forCharacterRange: NSRange(location: caret.location, length: 0), actualRange: nil)),
+            from: nil)
         // An empty note has no line laid out yet: its first line starts at the column's corner.
         if line.height < 1 {
-            line = NSRect(x: textContainerOrigin.x + (textContainer?.lineFragmentPadding ?? 0), y: textContainerOrigin.y, width: 0, height: size.height)
+            line = NSRect(
+                x: textContainerOrigin.x + (textContainer?.lineFragmentPadding ?? 0), y: textContainerOrigin.y, width: 0,
+                height: size.height)
         }
         // On the line's baseline side, where the caret is drawn (`NoteLines.caret`); just past the caret.
         label.frame = NSRect(x: line.minX + Theme.Space.xs, y: line.maxY - size.height, width: size.width, height: size.height)
@@ -998,7 +1047,9 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
             // nothing to keep it for, and kept it covered the line the caret went to.
             if kept.scrolls, kept.hovered, found == nil || found?.image === kept.picture.image { return }
             // The same picture keeps its view, and where it's scrolled to follows the caret.
-            if let found, found.image === kept.picture.image, found.size == kept.picture.frame.size, let origin = bubbleOrigin(kept.frame.size, found.span) {
+            if let found, found.image === kept.picture.image, found.size == kept.picture.frame.size,
+                let origin = bubbleOrigin(kept.frame.size, found.span)
+            {
                 kept.setFrameOrigin(origin)
                 kept.reveal(found.at, line: found.line)
                 return
@@ -1014,8 +1065,9 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         // window's edge and its scroller.
         let room = columnWidth
         let scale = found.math ? 1 : min(1, room / max(1, found.size.width))
-        let view = PreviewBubble(image: found.image, size: CGSize(width: (found.size.width * scale).rounded(), height: (found.size.height * scale).rounded()),
-                                 width: room + 2 * PreviewBubble.pad)
+        let view = PreviewBubble(
+            image: found.image, size: CGSize(width: (found.size.width * scale).rounded(), height: (found.size.height * scale).rounded()),
+            width: room + 2 * PreviewBubble.pad)
         guard let origin = bubbleOrigin(view.frame.size, found.span) else { return }
         view.setFrameOrigin(origin)
         view.onLeave = { [weak self] in self?.updateBubble() }
@@ -1031,9 +1083,13 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         let text = storage.string as NSString
         var end = NSMaxRange(span)
         while end > span.location + 1, text.character(at: end - 1) == 0x0A { end -= 1 }
-        let line = { (i: Int) in self.convert(window.convertFromScreen(self.firstRect(forCharacterRange: NSRange(location: i, length: 1), actualRange: nil)), from: nil) }
+        let line = { (i: Int) in
+            self.convert(
+                window.convertFromScreen(self.firstRect(forCharacterRange: NSRange(location: i, length: 1), actualRange: nil)), from: nil)
+        }
         let first = line(span.location), last = line(end - 1)
-        let x = max(column.lowerBound - PreviewBubble.pad, min(first.minX - PreviewBubble.pad, column.upperBound + PreviewBubble.pad - size.width))
+        let x = max(
+            column.lowerBound - PreviewBubble.pad, min(first.minX - PreviewBubble.pad, column.upperBound + PreviewBubble.pad - size.width))
         let under = last.maxY + 4, over = first.minY - 4 - size.height
         // In whole points: the scroller's clip view aligns itself to the screen's pixels, and off them it shifted the
         // picture by the fraction.
@@ -1066,23 +1122,33 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         let all = NSRange(location: 0, length: storage.length)
         var span = NSRange()
         if caret > 0 {
-            if let tex = storage.attribute(.noteMath, at: caret - 1, longestEffectiveRange: &span, in: all) as? String, caret > span.location,
-               let picture = NoteMath.shared.picture(tex, syntax: styler.syntax, display: false, size: NoteLook.body, dark: styler.dark, trim: true,
-                                                     ready: redrawBubble) {
+            if let tex = storage.attribute(.noteMath, at: caret - 1, longestEffectiveRange: &span, in: all) as? String,
+                caret > span.location,
+                let picture = NoteMath.shared.picture(
+                    tex, syntax: styler.syntax, display: false, size: NoteLook.body, dark: styler.dark, trim: true,
+                    ready: redrawBubble)
+            {
                 return Rendering(image: picture.image, size: picture.size, span: span, math: true, at: at(span))
             }
-            if let source = storage.attribute(.noteImage, at: caret - 1, longestEffectiveRange: &span, in: all) as? String, caret > span.location,
-               let image = NoteImages.load(source, base: baseURL) {
+            if let source = storage.attribute(.noteImage, at: caret - 1, longestEffectiveRange: &span, in: all) as? String,
+                caret > span.location,
+                let image = NoteImages.load(source, base: baseURL)
+            {
                 // A preview, not the picture at its size: big enough to tell what it is, small enough to keep the note in view.
                 let natural = image.size
                 let scale = min(1, min(columnWidth, 480) / max(1, natural.width), 320 / max(1, natural.height))
-                return Rendering(image: image, size: CGSize(width: (natural.width * scale).rounded(), height: (natural.height * scale).rounded()),
-                                 span: span, math: false, at: 0)
+                return Rendering(
+                    image: image, size: CGSize(width: (natural.width * scale).rounded(), height: (natural.height * scale).rounded()),
+                    span: span, math: false, at: 0)
             }
         }
-        if let tex = storage.attribute(.noteMathBlock, at: min(caret, storage.length - 1), longestEffectiveRange: &span, in: all) as? String,
-           let picture = NoteMath.shared.picture(tex, syntax: storage.mathFence(at: span.location) ?? styler.syntax, display: true, size: NoteLook.body, dark: styler.dark, trim: true,
-                                                 ready: redrawBubble) {
+        if let tex = storage.attribute(.noteMathBlock, at: min(caret, storage.length - 1), longestEffectiveRange: &span, in: all)
+            as? String,
+            let picture = NoteMath.shared.picture(
+                tex, syntax: storage.mathFence(at: span.location) ?? styler.syntax, display: true, size: NoteLook.body, dark: styler.dark,
+                trim: true,
+                ready: redrawBubble)
+        {
             let place = Self.blockPlace(in: (storage.string as NSString).substring(with: span), at: caret - span.location)
             return Rendering(image: picture.image, size: picture.size, span: span, math: true, at: place.caret, line: place.line)
         }
@@ -1145,12 +1211,14 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         let at = characterIndexForInsertion(at: convert(info.draggingLocation, from: nil))
         let board = info.draggingPasteboard
         if !board.canReadObject(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]),
-           let promises = board.readObjects(forClasses: [NSFilePromiseReceiver.self]) as? [NSFilePromiseReceiver], !promises.isEmpty {
+            let promises = board.readObjects(forClasses: [NSFilePromiseReceiver.self]) as? [NSFilePromiseReceiver], !promises.isEmpty
+        {
             let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
             // folio:not-an-action a temporary folder for pasted files
             try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             for promise in promises {
-                promise.receivePromisedFiles(atDestination: folder, options: [:], operationQueue: Self.promiseQueue) { [weak self] url, error in
+                promise.receivePromisedFiles(atDestination: folder, options: [:], operationQueue: Self.promiseQueue) {
+                    [weak self] url, error in
                     guard error == nil, let data = try? Data(contentsOf: url) else { return }
                     let name = url.lastPathComponent
                     // folio:not-an-action a temporary folder for pasted files
@@ -1175,8 +1243,9 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
             return true
         }
         guard board.string(forType: .string) == nil, let image = (board.readObjects(forClasses: [NSImage.self]) as? [NSImage])?.first,
-              let tiff = image.tiffRepresentation, let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]),
-              let link = saveFile("Pasted \(Date.now.formatted(.iso8601.dateSeparator(.dash).timeSeparator(.omitted))).png", png) else { return false }
+            let tiff = image.tiffRepresentation, let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]),
+            let link = saveFile("Pasted \(Date.now.formatted(.iso8601.dateSeparator(.dash).timeSeparator(.omitted))).png", png)
+        else { return false }
         insertLinks([link], at: index)
         return true
     }
@@ -1184,8 +1253,10 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     private func insertLinks(_ links: [String], at index: Int) {
         let at = min(index, (string as NSString).length)
         let text = links.joined(separator: "\n")
-        let lead = at > 0 && (string as NSString).substring(with: NSRange(location: at - 1, length: 1)) != "\n" && text.hasPrefix("!") ? "\n" : ""
-        apply(SourceEditing.Edit(range: NSRange(location: at, length: 0), text: lead + text, caret: at + lead.utf16.count + text.utf16.count))
+        let lead =
+            at > 0 && (string as NSString).substring(with: NSRange(location: at - 1, length: 1)) != "\n" && text.hasPrefix("!") ? "\n" : ""
+        apply(
+            SourceEditing.Edit(range: NSRange(location: at, length: 0), text: lead + text, caret: at + lead.utf16.count + text.utf16.count))
         window?.makeFirstResponder(self)
     }
 }
@@ -1253,7 +1324,8 @@ final class PreviewBubble: NSView {
         }
 
         scroller.contentView.postsBoundsChangedNotifications = true
-        NotificationCenter.default.addObserver(self, selector: #selector(scrolled), name: NSView.boundsDidChangeNotification, object: scroller.contentView)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(scrolled), name: NSView.boundsDidChangeNotification, object: scroller.contentView)
         scrolled()
     }
 
@@ -1289,7 +1361,9 @@ final class PreviewBubble: NSView {
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         trackingAreas.forEach(removeTrackingArea)
-        addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect], owner: self, userInfo: nil))
+        addTrackingArea(
+            NSTrackingArea(
+                rect: .zero, options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect], owner: self, userInfo: nil))
     }
 
     // Moving within it counts too: shown under the pointer, it gets no `mouseEntered`.
@@ -1322,7 +1396,11 @@ final class BubbleScroller: NSScrollView {
         if abs(event.scrollingDeltaY) > abs(event.scrollingDeltaX) {
             // Straight to the note's scroll: up the responder chain it came back to the editor, which hands a wheel
             // over the bubble to this.
-            if let note = superview?.superview as? SourceTextView { note.scrollNote(with: event) } else { nextResponder?.scrollWheel(with: event) }
+            if let note = superview?.superview as? SourceTextView {
+                note.scrollNote(with: event)
+            } else {
+                nextResponder?.scrollWheel(with: event)
+            }
             return
         }
         // Scrolled without the pointer moving first, it's still the pointer's.
@@ -1372,14 +1450,16 @@ extension MarkdownEditor: UIViewRepresentable {
         view.onChange = { [weak coordinator = context.coordinator] in coordinator?.changed() }
         context.coordinator.view = view
         view.load(text)
-        update(view, context.coordinator, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
-               openLink: context.environment.openLink)
+        update(
+            view, context.coordinator, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
+            openLink: context.environment.openLink)
         return view
     }
 
     func updateUIView(_ view: SourceTextView, context: Context) {
-        update(view, context.coordinator, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
-               openLink: context.environment.openLink)
+        update(
+            view, context.coordinator, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
+            openLink: context.environment.openLink)
     }
 }
 
@@ -1429,7 +1509,9 @@ class NoteTextView: UITextView {
 
     override func layoutSubviews() {
         let inset = max(NoteLook.margin, (bounds.width - NoteLook.measure) / 2 + NoteLook.margin)
-        if textContainerInset.left != inset { textContainerInset = UIEdgeInsets(top: NoteLook.margin, left: inset, bottom: NoteLook.margin, right: inset) }
+        if textContainerInset.left != inset {
+            textContainerInset = UIEdgeInsets(top: NoteLook.margin, left: inset, bottom: NoteLook.margin, right: inset)
+        }
         let bottom = NoteOverscroll.bottom(bounds.height)
         if contentInset.bottom != bottom { contentInset.bottom = bottom }
         super.layoutSubviews()
@@ -1549,7 +1631,9 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
         textStorage.replaceCharacters(in: range, with: insert)
         restyle()
         let shift = insert.utf16.count - range.length
-        if selection.location >= NSMaxRange(range) { selectedRange = NSRange(location: selection.location + shift, length: selection.length) }
+        if selection.location >= NSMaxRange(range) {
+            selectedRange = NSRange(location: selection.location + shift, length: selection.length)
+        }
     }
 
     func insertAtCaret(_ text: String) {
@@ -1597,7 +1681,8 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
             return false
         }
         if text.isEmpty, range.length == 1, selectedRange.length == 0,
-           let edit = SourceEditing.deleteBackward(in: source, selection: NSRange(location: NSMaxRange(range), length: 0)) {
+            let edit = SourceEditing.deleteBackward(in: source, selection: NSRange(location: NSMaxRange(range), length: 0))
+        {
             apply(edit)
             return false
         }

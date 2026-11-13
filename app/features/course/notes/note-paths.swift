@@ -34,18 +34,22 @@ extension LoadedCourse {
 
 extension NoteLink {
     init(course: UUID, note: UUID, meta: NoteMeta) {
-        self.init(course: course, note: note, kind: meta.kind, session: meta.sessionId, exam: meta.examId, units: meta.unitIds, math: meta.math)
+        self.init(
+            course: course, note: note, kind: meta.kind, session: meta.sessionId, exam: meta.examId, units: meta.unitIds, math: meta.math)
     }
 }
 
 extension Workspace {
     /// Asks with the name the note will have there, ` 2` included, since that is what the user approves.
-    func askMove(_ note: NoteFile, into folder: String, course: LoadedCourse,
-                 then done: @escaping @MainActor (ActionContext) -> Void) -> PendingAction? {
+    func askMove(
+        _ note: NoteFile, into folder: String, course: LoadedCourse,
+        then done: @escaping @MainActor (ActionContext) -> Void
+    ) -> PendingAction? {
         let store = course.store
         let path = (folder.isEmpty ? "" : folder + "/") + note.url.lastPathComponent
         guard let source = store.coursePath(of: note.url), let url = store.movedNoteURL(note, to: path, in: course.file),
-              let target = store.notesPath(of: url) else { return nil }
+            let target = store.notesPath(of: url)
+        else { return nil }
         return ask(NoteMove(course: course.id, note: source, to: target), then: done)
     }
 

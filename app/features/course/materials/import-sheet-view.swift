@@ -25,15 +25,17 @@ struct ImportPlaceSheet: View {
         SheetForm(title: model.title, confirm: model.confirmTitle, note: model.hint, width: Self.width) {
             VStack(spacing: 0) {
                 ForEach(model.rows) { row in
-                    ImportRow(model: model, row: row, placement: placements[row.id], kinds: kinds, selected: model.selection.contains(row.id))
-                        .picks(picking: model.picking, touch: .toggle) {
-                            listFocused = true
-                            model.hold(row.id)
-                        } _: { press in
-                            listFocused = true
-                            model.press(row.id, press)
-                        }
-                        .pointingHand()
+                    ImportRow(
+                        model: model, row: row, placement: placements[row.id], kinds: kinds, selected: model.selection.contains(row.id)
+                    )
+                    .picks(picking: model.picking, touch: .toggle) {
+                        listFocused = true
+                        model.hold(row.id)
+                    } _: { press in
+                        listFocused = true
+                        model.press(row.id, press)
+                    }
+                    .pointingHand()
                     if model.sections(of: row) != nil { ImportSections(model: model, row: row) }
                     if row.id < model.rows.count - 1 { Theme.Palette.lineSoft.frame(height: 1).padding(.leading, Theme.Space.l) }
                 }
@@ -77,7 +79,9 @@ private struct ImportRow: View {
                 // The folder and the week Folio adds always show; only the file's own name gives way, in its middle,
                 // so the ` 2` and the extension stay too. Pressed, it shows the path whole and why the name changed:
                 // a tooltip alone never shows on a touch screen.
-                Button { showingPath = true } label: {
+                Button {
+                    showingPath = true
+                } label: {
                     HStack(spacing: 0) {
                         Text(destinationHead).fixedSize()
                         Text(destinationName).truncationMode(.middle)
@@ -157,7 +161,9 @@ private struct ImportRow: View {
                 if kind.perItem {
                     Section(kind.label) {
                         ForEach(kind.places, id: \.self) { place in
-                            choice((place as NSString).lastPathComponent, on: row.folder == place) { model.setFolder(place, for: model.targets(row)) }
+                            choice((place as NSString).lastPathComponent, on: row.folder == place) {
+                                model.setFolder(place, for: model.targets(row))
+                            }
                         }
                     }
                 } else {
@@ -179,7 +185,9 @@ private struct ImportRow: View {
             choice(String(localized: .materialsImportNoSession), on: row.session == nil) { model.setSession(nil, for: model.targets(row)) }
             Divider()
             ForEach(model.sessions) { s in
-                choice(model.sessionTitle(s), detail: model.sessionNote(s), on: row.session == s.id) { model.setSession(s.id, for: model.targets(row)) }
+                choice(model.sessionTitle(s), detail: model.sessionNote(s), on: row.session == s.id) {
+                    model.setSession(s.id, for: model.targets(row))
+                }
             }
         } label: {
             QuietMenuLabel(text: model.sessionLabel(row), guessed: model.sessionWhy(row) != nil, maxText: QuietMenuLabel.sessionText)
@@ -220,7 +228,9 @@ private struct ImportSections: View {
         let open = model.opened.contains(row.id)
         VStack(alignment: .leading, spacing: Theme.Space.s) {
             HStack(spacing: Theme.Space.s) {
-                Button { model.toggleOpen(row.id) } label: {
+                Button {
+                    model.toggleOpen(row.id)
+                } label: {
                     HStack(spacing: Theme.Space.tight) {
                         Image(systemName: "chevron.right").font(Theme.Glyph.small)
                             .rotationEffect(.degrees(open ? 90 : 0))
@@ -250,9 +260,11 @@ private struct ImportSections: View {
             }
             .font(Theme.Typeface.caption)
             if open, let split = model.edit(row.id) {
-                SectionEditor(split: Binding(get: { model.edit(row.id) ?? split }, set: { model.setSplit($0, of: row.id) }),
-                              units: model.course.file.units)
-                    .transition(.opacity)
+                SectionEditor(
+                    split: Binding(get: { model.edit(row.id) ?? split }, set: { model.setSplit($0, of: row.id) }),
+                    units: model.course.file.units
+                )
+                .transition(.opacity)
             }
         }
         .padding(EdgeInsets(top: 0, leading: Self.indent, bottom: Theme.Space.m, trailing: Theme.Space.m))

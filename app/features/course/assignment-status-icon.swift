@@ -53,7 +53,7 @@ struct AssignmentStatusIcon: View {
                 .frame(width: size, height: size)
             } else {
                 Image(systemName: status.symbol)
-                    .font(.system(size: size)) // design: one-off, the status symbol is the row's button
+                    .font(.system(size: size))  // design: one-off, the status symbol is the row's button
             }
         }
         .foregroundStyle(tint ?? (status == .todo ? Theme.Palette.textTertiary : status.tint))

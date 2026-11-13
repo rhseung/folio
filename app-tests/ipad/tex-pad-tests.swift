@@ -59,7 +59,8 @@ struct TexPadTests {
     }
 
     @Test func fontspecFindsTheIPadsFonts() async throws {
-        let text = "\\documentclass{article}\n\\usepackage{fontspec}\n\\setmainfont{Apple SD Gothic Neo}\n\\begin{document}\n한글 fontspec\n\\end{document}\n"
+        let text =
+            "\\documentclass{article}\n\\usepackage{fontspec}\n\\setmainfont{Apple SD Gothic Neo}\n\\begin{document}\n한글 fontspec\n\\end{document}\n"
         let build = try await Self.build(try Self.write(text))
         #expect(build.errors == [], "\(build.issues)")
         #expect(build.pdf != nil)

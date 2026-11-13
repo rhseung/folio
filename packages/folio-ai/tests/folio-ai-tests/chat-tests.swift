@@ -1,7 +1,8 @@
-@testable import FolioAI
 import FolioDomain
 import Foundation
 import Testing
+
+@testable import FolioAI
 
 struct ChatTests {
     let device = UUID(), now = Date(timeIntervalSince1970: 1_800_000_000)
@@ -18,7 +19,8 @@ struct ChatTests {
         #expect(items.map(\.id) == ["course:\(file.course.id)", "rules", "note:\(noteID)", "material:Lectures/03_eigen.pdf"])
         #expect(items[2].tier == .focus)
 
-        let fewer = ContextBuilder.chatItems(course: file, rules: "r", openNote: open, added: added, removed: ["material:Lectures/03_eigen.pdf"], now: now)
+        let fewer = ContextBuilder.chatItems(
+            course: file, rules: "r", openNote: open, added: added, removed: ["material:Lectures/03_eigen.pdf"], now: now)
         #expect(fewer.map(\.id).contains("material:Lectures/03_eigen.pdf") == false)
         #expect(ContextBuilder.chatItems(course: file, rules: "r", openNote: nil, added: [], removed: [], now: now).count == 2)
     }
@@ -28,18 +30,23 @@ struct ChatTests {
     @Test func thePanesComeFocusedFirstBeforeTheirNotes() throws {
         let file = CourseFile(course: Course(device: device, at: now, title: "그래프 이론"))
         let lecture = UUID(), note = UUID(), quiz = UUID()
-        let item = try #require(ContextBuilder.panes([
-            .init(address: "folio://material/\(lecture)", shows: "05_Matchings.pdf", focused: false),
-            .init(address: "folio://note/\(note)", shows: "11-05(목) Matchings", focused: true),
-            .init(address: "folio://course/\(quiz)/quiz", shows: nil, focused: false),
-        ]))
+        let item = try #require(
+            ContextBuilder.panes([
+                .init(address: "folio://material/\(lecture)", shows: "05_Matchings.pdf", focused: false),
+                .init(address: "folio://note/\(note)", shows: "11-05(목) Matchings", focused: true),
+                .init(address: "folio://course/\(quiz)/quiz", shows: nil, focused: false),
+            ]))
         let lines = item.text.split(separator: "\n").dropFirst().map(String.init)
-        #expect(lines == ["- [초점] 11-05(목) Matchings: folio://note/\(note)", "- 05_Matchings.pdf: folio://material/\(lecture)",
-                          "- (접힘) folio://course/\(quiz)/quiz"])
+        #expect(
+            lines == [
+                "- [초점] 11-05(목) Matchings: folio://note/\(note)", "- 05_Matchings.pdf: folio://material/\(lecture)",
+                "- (접힘) folio://course/\(quiz)/quiz",
+            ])
         let open = ContextBuilder.note(id: note, title: "11-05(목) Matchings", path: "Notes/a.md", body: "매칭", open: true)
         let other = ContextBuilder.note(id: UUID(), title: "10-29(목) 정리", path: "Notes/b.md", body: "정리", open: true)
-        let items = ContextBuilder.chatItems(course: file, rules: "r", panes: item, openNote: open, alsoOpen: [other, open], added: [],
-                                             removed: [], now: now)
+        let items = ContextBuilder.chatItems(
+            course: file, rules: "r", panes: item, openNote: open, alsoOpen: [other, open], added: [],
+            removed: [], now: now)
         #expect(items.map(\.id) == ["course:\(file.course.id)", "rules", "panes", open.id, other.id])
         // A lone pane is what its note already says.
         #expect(ContextBuilder.panes([.init(address: "folio://note/\(note)", shows: "노트", focused: true)]) == nil)
@@ -76,8 +83,11 @@ struct ChatTests {
         #expect(r.messages.map(\.role) == [.user, .assistant, .user])
         #expect(r.messages[0].content == [.text("첫 질문")])
         // The path and ID tell Claude which file is open, which the title alone left it to guess.
-        #expect(r.messages[2].content == [.text("<열린 노트: 3주차>\n경로: Notes/09-15(월) 고유값 정리.md\nID: \(noteID.uuidString)\n\n본문\n</열린 노트: 3주차>"),
-                                          .text("고유값이 뭐야?")])
+        #expect(
+            r.messages[2].content == [
+                .text("<열린 노트: 3주차>\n경로: Notes/09-15(월) 고유값 정리.md\nID: \(noteID.uuidString)\n\n본문\n</열린 노트: 3주차>"),
+                .text("고유값이 뭐야?"),
+            ])
         guard case .text(let instructions, _)? = r.system?.first else { Issue.record("no instructions"); return }
         #expect(instructions.contains("Put the whole answer in your final message"))
         guard case .text(let stable, let cache)? = r.system?.last else { Issue.record("no system"); return }
@@ -93,16 +103,21 @@ struct ChatTests {
             ActionProposal(command: "exam rm", input: .object(["exam": .string("e")]), failure: "시험 'e'을(를) 찾을 수 없습니다"),
         ]
         let fake = FakeProvider(responses: [FakeProvider.reply("답")])
-        let chat = Chat(device: device, at: now, messages: [
-            ChatMessage(role: .user, text: "써 줘", at: now),
-            ChatMessage(role: .assistant, text: "제안했어요", at: now, proposals: proposals),
-            ChatMessage(role: .user, text: "됐어?", at: now),
-        ])
+        let chat = Chat(
+            device: device, at: now,
+            messages: [
+                ChatMessage(role: .user, text: "써 줘", at: now),
+                ChatMessage(role: .assistant, text: "제안했어요", at: now, proposals: proposals),
+                ChatMessage(role: .user, text: "됐어?", at: now),
+            ])
         _ = try await ClaudeClient(provider: fake).reply(to: chat, context: ContextBuilder.build([], budgetTokens: 10))
         let r = try #require(await fake.requests.first)
         guard case .text(let sent, _)? = r.messages[1].content.first else { Issue.record("no answer text"); return }
         #expect(sent.hasPrefix("제안했어요\n\n[Changes proposed in this answer]\n"))
-        #expect(sent.contains("- note write {\"note\":\"Notes/a.md\",\"text\":\"\(String(repeating: "가", count: 80))… (500 characters)\"}: not applied; the user has not approved it"))
+        #expect(
+            sent.contains(
+                "- note write {\"note\":\"Notes/a.md\",\"text\":\"\(String(repeating: "가", count: 80))… (500 characters)\"}: not applied; the user has not approved it"
+            ))
         #expect(sent.contains("- note link {\"note\":\"n\"}: applied"))
         #expect(sent.contains("- exam rm {\"exam\":\"e\"}: the user applied it and it failed: 시험 'e'을(를) 찾을 수 없습니다"))
         #expect(!sent.contains(long))
@@ -111,19 +126,23 @@ struct ChatTests {
 
     /// A proposal a later answer replaced reads as such, so Claude doesn't ask the user to approve the older one.
     @Test func historySaysWhichProposalsWereSuperseded() async throws {
-        let first = ActionProposal(command: "note write", input: .object(["course": .string("c"), "note": .string("Notes/a.md"), "text": .string("1")]))
+        let first = ActionProposal(
+            command: "note write", input: .object(["course": .string("c"), "note": .string("Notes/a.md"), "text": .string("1")]))
         var second = first
         second.input["text"] = .string("2")
         let fake = FakeProvider(responses: [FakeProvider.reply("답")])
-        let chat = Chat(device: device, at: now, messages: [
-            ChatMessage(role: .user, text: "써 줘", at: now),
-            ChatMessage(role: .assistant, text: "하나", at: now, proposals: [first]),
-            ChatMessage(role: .user, text: "다시", at: now),
-            ChatMessage(role: .assistant, text: "둘", at: now, proposals: [second]),
-            ChatMessage(role: .user, text: "됐어?", at: now),
-        ])
-        _ = try await ClaudeClient(provider: fake).reply(to: chat, context: ContextBuilder.build([], budgetTokens: 10),
-                                                         targets: ["note write": ProposalTarget(arguments: ["course", "note"], effect: .replaces(covers: []))])
+        let chat = Chat(
+            device: device, at: now,
+            messages: [
+                ChatMessage(role: .user, text: "써 줘", at: now),
+                ChatMessage(role: .assistant, text: "하나", at: now, proposals: [first]),
+                ChatMessage(role: .user, text: "다시", at: now),
+                ChatMessage(role: .assistant, text: "둘", at: now, proposals: [second]),
+                ChatMessage(role: .user, text: "됐어?", at: now),
+            ])
+        _ = try await ClaudeClient(provider: fake).reply(
+            to: chat, context: ContextBuilder.build([], budgetTokens: 10),
+            targets: ["note write": ProposalTarget(arguments: ["course", "note"], effect: .replaces(covers: []))])
         let r = try #require(await fake.requests.first)
         func sent(_ i: Int) -> String { if case .text(let t, _)? = r.messages[i].content.first { t } else { "" } }
         #expect(sent(1).hasSuffix(": not applied; superseded by a later proposal"))
@@ -133,7 +152,8 @@ struct ChatTests {
     @Test func replyNeedsAQuestion() async {
         let chat = Chat(device: device, at: now, messages: [ChatMessage(role: .assistant, text: "a", at: now)])
         await #expect(throws: ClaudeError.self) {
-            try await ClaudeClient(provider: FakeProvider(responses: [])).reply(to: chat, context: ContextBuilder.build([], budgetTokens: 10))
+            try await ClaudeClient(provider: FakeProvider(responses: [])).reply(
+                to: chat, context: ContextBuilder.build([], budgetTokens: 10))
         }
     }
 
@@ -142,8 +162,9 @@ struct ChatTests {
         calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
         let oct = calendar.date(from: DateComponents(year: 2026, month: 10, day: 31, hour: 23))!
         let nov = calendar.date(from: DateComponents(year: 2026, month: 11, day: 1, hour: 1))!
-        let opus = APIUsageEvent(task: .chat, model: "claude-opus-5-5",
-                                 usage: Usage(input_tokens: 1_000, output_tokens: 500, cache_creation_input_tokens: 2_000, cache_read_input_tokens: 10_000))
+        let opus = APIUsageEvent(
+            task: .chat, model: "claude-opus-5-5",
+            usage: Usage(input_tokens: 1_000, output_tokens: 500, cache_creation_input_tokens: 2_000, cache_read_input_tokens: 10_000))
         let unknown = APIUsageEvent(task: .chat, model: "claude-unknown", usage: Usage(input_tokens: 7, output_tokens: 3))
         let months = APIUsageEvent.monthly([(oct, opus), (oct, opus), (nov, unknown)], calendar: calendar)
         #expect(months.map(\.month) == [11, 10])

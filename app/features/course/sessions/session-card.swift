@@ -29,10 +29,12 @@ struct SessionCard: View {
 
         VStack(alignment: .leading, spacing: Theme.Space.m) {
             HStack(spacing: Theme.Space.l) {
-                ClassCard.Tile(month: model.month(session.date), day: model.day(session.date),
-                               ink: live ? accent.ink : Theme.Palette.text, monthInk: live ? accent.ink : Theme.Palette.textTertiary,
-                               fill: live ? accent.tint : Theme.Palette.page)
-                    .opacity(fade)
+                ClassCard.Tile(
+                    month: model.month(session.date), day: model.day(session.date),
+                    ink: live ? accent.ink : Theme.Palette.text, monthInk: live ? accent.ink : Theme.Palette.textTertiary,
+                    fill: live ? accent.tint : Theme.Palette.page
+                )
+                .opacity(fade)
                 // The pills under the lines where both don't fit: beside them on an iPhone, the units picker broke a
                 // letter a line and the row ran out of its card. The lines' ideal is pinned, so a long title in a full
                 // window truncates as before rather than folding the row.
@@ -64,7 +66,8 @@ struct SessionCard: View {
             .clipShape(.rect(cornerRadius: ClassCard.radius))
         }
         .overlay {
-            RoundedRectangle(cornerRadius: ClassCard.radius).strokeBorder(live ? accent.color.opacity(Theme.Opacity.liveEdge) : Theme.Palette.line, lineWidth: 1)
+            RoundedRectangle(cornerRadius: ClassCard.radius).strokeBorder(
+                live ? accent.color.opacity(Theme.Opacity.liveEdge) : Theme.Palette.line, lineWidth: 1)
         }
         .contentShape(.rect)
         .contextMenu { menuItems }
@@ -85,8 +88,11 @@ struct SessionCard: View {
                 let gaps = model.leftGaps(session, in: file, now: now)
                 if !gaps.isEmpty {
                     // What is missing opens on a press too, not only in the tooltip, which touch never shows.
-                    Button { showsGaps = true } label: {
-                        Circle().fill(Theme.Palette.warning).frame(width: Theme.Size.dot, height: Theme.Size.dot).contentShape(TouchTarget())
+                    Button {
+                        showsGaps = true
+                    } label: {
+                        Circle().fill(Theme.Palette.warning).frame(width: Theme.Size.dot, height: Theme.Size.dot).contentShape(
+                            TouchTarget())
                     }
                     .buttonStyle(.pointing(.plain))
                     .help(Text(.wrapUpLeftHelp(model.gapsLine(gaps))))
@@ -99,7 +105,9 @@ struct SessionCard: View {
                 if model.link(of: session, in: file) != nil && !cancelled {
                     Image(systemName: "video").help(Text(.sessionsOnline))
                 }
-                if !cancelled { SessionUnitsButton(course: course, session: session, compact: model.hasSubject(session, in: file), separated: true) }
+                if !cancelled {
+                    SessionUnitsButton(course: course, session: session, compact: model.hasSubject(session, in: file), separated: true)
+                }
             }
             .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
         }
@@ -145,16 +153,24 @@ struct SessionCard: View {
                 ClassCard.Tag(title: String(localized: .sessionsRecording), symbol: "waveform", tone: .danger)
                     .symbolEffect(.variableColor.iterative, isActive: recorder.state == .recording)
             } else if let last = recordings.last {
-                ClassCard.Pill(title: model.recordingsLabel(recordings.count), symbol: "waveform", help: String(localized: .sessionsRecordingPlayHelp)) { play(last) }
+                ClassCard.Pill(
+                    title: model.recordingsLabel(recordings.count), symbol: "waveform", help: String(localized: .sessionsRecordingPlayHelp)
+                ) { play(last) }
             }
             switch model.review(of: session, in: file, now: now) {
             case .done(let id):
-                ClassCard.Pill(title: String(localized: .sessionsReviewDone), tone: .success, help: String(localized: .sessionsOpenReviewNote)) { openNote(id) }
+                ClassCard.Pill(
+                    title: String(localized: .sessionsReviewDone), tone: .success, help: String(localized: .sessionsOpenReviewNote)
+                ) { openNote(id) }
             case .writing(let id):
-                ClassCard.Pill(title: String(localized: .sessionsReviewWriting), tone: .warning, help: String(localized: .sessionsSlotReviewDraftHelp)) { openNote(id) }
+                ClassCard.Pill(
+                    title: String(localized: .sessionsReviewWriting), tone: .warning, help: String(localized: .sessionsSlotReviewDraftHelp)
+                ) { openNote(id) }
             // Not owed until the class ends: under way, the card's own buttons start the notes.
             case .missing where !live:
-                ClassCard.Pill(title: String(localized: .sessionsReviewMissing), tone: .danger, help: String(localized: .sessionsSlotReviewMakeHelp)) { open(.review) }
+                ClassCard.Pill(
+                    title: String(localized: .sessionsReviewMissing), tone: .danger, help: String(localized: .sessionsSlotReviewMakeHelp)
+                ) { open(.review) }
             case .missing, nil:
                 EmptyView()
             }
@@ -179,8 +195,10 @@ struct SessionCard: View {
             ItemButton(source: menuSource, command: .record).buttonStyle(.pointing(.bordered))
                 .help(Text(.sessionsRecordHelp))
         }
-        Button(String(localized: session.roughNoteId == nil ? .sessionsRoughNote : .sessionsOpenRoughNote), systemImage: "doc.text") { open(.rough) }
-            .buttonStyle(.pointing(.bordered))
+        Button(String(localized: session.roughNoteId == nil ? .sessionsRoughNote : .sessionsOpenRoughNote), systemImage: "doc.text") {
+            open(.rough)
+        }
+        .buttonStyle(.pointing(.bordered))
     }
 
     /// On its own screen: no "열기", which is where the menu already is.
@@ -189,8 +207,9 @@ struct SessionCard: View {
     }
 
     var menuSource: SessionMenuSource {
-        SessionMenuSource(workspace: model.workspace, courseId: course.id, session: session, host: .own, now: now, openNote: openNote,
-                          openLink: openLink, openURL: openURL, sheets: sheets)
+        SessionMenuSource(
+            workspace: model.workspace, courseId: course.id, session: session, host: .own, now: now, openNote: openNote,
+            openLink: openLink, openURL: openURL, sheets: sheets)
     }
 
     func open(_ kind: NoteKind) {

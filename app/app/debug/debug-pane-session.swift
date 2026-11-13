@@ -30,14 +30,18 @@ import SwiftUI
         }
         let classes = workspace.currentCourses.lazy.compactMap { course -> (LoadedCourse, UUID, FolioDomain.Material)? in
             let notes = Set(course.file.notes.map(\.id))
-            guard let note = course.file.sessions.lazy.flatMap({ [$0.roughNoteId, $0.reviewNoteId].compactMap { $0 } }).first(where: notes.contains),
-                  let lecture = course.file.lectureFiles.first(where: { $0.path.hasSuffix("05_Matchings.pdf") }) else { return nil }
+            guard
+                let note = course.file.sessions.lazy.flatMap({ [$0.roughNoteId, $0.reviewNoteId].compactMap { $0 } }).first(
+                    where: notes.contains),
+                let lecture = course.file.lectureFiles.first(where: { $0.path.hasSuffix("05_Matchings.pdf") })
+            else { return nil }
             return (course, note, lecture)
         }
         guard case let (course, noteID, lecture)? = classes.first,
-              let noteEntry = workspace.entry(for: AppLink(.note, noteID), hint: course.id),
-              let lectureEntry = workspace.entry(for: AppLink(.material, lecture.id, anchor: .page(6)), hint: course.id),
-              let quizEntry = workspace.entry(for: .course(course.id, page: .quiz)) else {
+            let noteEntry = workspace.entry(for: AppLink(.note, noteID), hint: course.id),
+            let lectureEntry = workspace.entry(for: AppLink(.material, lecture.id, anchor: .page(6)), hint: course.id),
+            let quizEntry = workspace.entry(for: .course(course.id, page: .quiz))
+        else {
             note("no class with a note and a paged lecture")
             NSApp.terminate(nil)
             return

@@ -19,8 +19,9 @@ public enum TeXCommands {
 
         var item: CompletionItem {
             let body = "\\" + name + (0..<arguments).map { "{$\($0 + 1)}" }.joined()
-            return CompletionItem(id: "tex.\(name)", title: "\\" + name, preview: Self.noPreview.contains(name) ? nil : sample, body: body,
-                                  category: category)
+            return CompletionItem(
+                id: "tex.\(name)", title: "\\" + name, preview: Self.noPreview.contains(name) ? nil : sample, body: body,
+                category: category)
         }
 
         private static let fills: [String: [String]] = [
@@ -35,18 +36,33 @@ public enum TeXCommands {
     private static let table: [(String, Int, MathCategory)] = {
         let groups: [(String, Int, MathCategory)] = [
             // Structures first: what a formula is usually built around.
-            ("frac dfrac tfrac binom", 2, .operators), ("sqrt", 1, .operators), ("sum prod int iint iiint oint lim limsup liminf", 0, .operators),
-            ("left right", 0, .fonts), ("text mathbb mathcal mathrm mathbf mathit mathsf mathtt mathfrak boldsymbol bm operatorname", 1, .fonts),
+            ("frac dfrac tfrac binom", 2, .operators), ("sqrt", 1, .operators),
+            ("sum prod int iint iiint oint lim limsup liminf", 0, .operators),
+            ("left right", 0, .fonts),
+            ("text mathbb mathcal mathrm mathbf mathit mathsf mathtt mathfrak boldsymbol bm operatorname", 1, .fonts),
             ("hat widehat tilde widetilde bar overline underline vec overrightarrow dot ddot overbrace underbrace cancel boxed", 1, .fonts),
-            ("overset underset stackrel textcolor", 2, .fonts), ("textbf textit", 1, .fonts), ("pmod", 1, .functions), ("phantom", 1, .fonts),
-            ("alpha beta gamma delta epsilon varepsilon zeta eta theta vartheta iota kappa lambda mu nu xi pi varpi rho varrho sigma varsigma tau upsilon phi varphi chi psi omega", 0, .greek),
+            ("overset underset stackrel textcolor", 2, .fonts), ("textbf textit", 1, .fonts), ("pmod", 1, .functions),
+            ("phantom", 1, .fonts),
+            (
+                "alpha beta gamma delta epsilon varepsilon zeta eta theta vartheta iota kappa lambda mu nu xi pi varpi rho varrho sigma varsigma tau upsilon phi varphi chi psi omega",
+                0, .greek
+            ),
             ("Gamma Delta Theta Lambda Xi Pi Sigma Upsilon Phi Psi Omega", 0, .greek),
             ("times div cdot pm mp ast star circ bullet oplus otimes odot cup cap setminus wedge vee", 0, .operators),
-            ("le leq ge geq neq ne approx equiv sim simeq cong propto ll gg subset subseteq supset supseteq subsetneq in notin ni mid nmid parallel perp", 0, .relations),
-            ("to rightarrow leftarrow Rightarrow Leftarrow leftrightarrow Leftrightarrow iff implies impliedby mapsto longrightarrow longleftarrow longmapsto uparrow downarrow", 0, .arrows),
+            (
+                "le leq ge geq neq ne approx equiv sim simeq cong propto ll gg subset subseteq supset supseteq subsetneq in notin ni mid nmid parallel perp",
+                0, .relations
+            ),
+            (
+                "to rightarrow leftarrow Rightarrow Leftarrow leftrightarrow Leftrightarrow iff implies impliedby mapsto longrightarrow longleftarrow longmapsto uparrow downarrow",
+                0, .arrows
+            ),
             ("coprod bigcup bigcap bigoplus bigotimes bigvee bigwedge", 0, .operators), ("sup inf max min", 0, .functions),
             ("det gcd log ln lg exp sin cos tan sec csc cot arcsin arccos arctan sinh cosh tanh deg dim ker hom Pr arg", 0, .functions),
-            ("infty partial nabla forall exists nexists emptyset varnothing neg lnot ldots cdots vdots ddots dots quad qquad prime angle triangle square Box aleph hbar ell Re Im wp top bot", 0, .symbols),
+            (
+                "infty partial nabla forall exists nexists emptyset varnothing neg lnot ldots cdots vdots ddots dots quad qquad prime angle triangle square Box aleph hbar ell Re Im wp top bot",
+                0, .symbols
+            ),
             ("not", 0, .relations), ("bmod", 0, .functions),
             ("langle rangle lfloor rfloor lceil rceil lvert rvert lVert rVert vert Vert", 0, .fonts), ("backslash checkmark", 0, .symbols),
         ]

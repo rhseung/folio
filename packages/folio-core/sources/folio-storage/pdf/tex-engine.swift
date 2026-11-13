@@ -42,7 +42,8 @@ public struct TexEngine: Sendable {
             issues = TexLog.issues(run.output)
         }
         if !run.made, !Self.hasErrors(issues) {
-            issues.insert(TexIssue(.error, message: run.output.split(whereSeparator: \.isNewline).last.map(String.init) ?? "Tectonic"), at: 0)
+            issues.insert(
+                TexIssue(.error, message: run.output.split(whereSeparator: \.isNewline).last.map(String.init) ?? "Tectonic"), at: 0)
         }
 
         // Past an error Tectonic still writes a PDF, but with the broken parts left out; placed beside the source it
@@ -51,7 +52,9 @@ public struct TexEngine: Sendable {
     }
 
     private var hasCache: Bool {
-        ["bundles", "formats"].allSatisfy { !((try? FileManager.default.contentsOfDirectory(atPath: cache.appending(path: $0).path)) ?? []).isEmpty }
+        ["bundles", "formats"].allSatisfy {
+            !((try? FileManager.default.contentsOfDirectory(atPath: cache.appending(path: $0).path)) ?? []).isEmpty
+        }
     }
 
     private static func hasErrors(_ issues: [TexIssue]) -> Bool { issues.contains { $0.severity == .error } }
@@ -94,7 +97,8 @@ public struct TexEngine: Sendable {
     public static func syncTeX(for source: URL, showing shown: URL) -> SyncTeX? {
         let built = outputFolder(for: source).appending(path: source.deletingPathExtension().lastPathComponent + ".pdf")
         guard let ours = try? Data(contentsOf: built), let theirs = try? Data(contentsOf: shown), ours == theirs,
-              let packed = try? Data(contentsOf: synctex(for: source)), let data = try? Gzip.inflate(packed) else { return nil }
+            let packed = try? Data(contentsOf: synctex(for: source)), let data = try? Gzip.inflate(packed)
+        else { return nil }
         return SyncTeX(text: String(decoding: data, as: UTF8.self))
     }
 

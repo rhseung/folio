@@ -21,7 +21,9 @@ struct ReviewNoteSessionsTests {
 
     func file(_ sessions: [Session], notes: [(UUID, NoteKind)] = []) -> CourseFile {
         var file = CourseFile(course: Course(device: device, at: start, title: "컴퓨터네트워킹"), sessions: sessions)
-        file.notes = notes.map { NoteEntry(id: $0.0, device: device, at: start, path: "Notes/\($0.0).md", meta: NoteMeta(id: $0.0, kind: $0.1)) }
+        file.notes = notes.map {
+            NoteEntry(id: $0.0, device: device, at: start, path: "Notes/\($0.0).md", meta: NoteMeta(id: $0.0, kind: $0.1))
+        }
         return file
     }
 
@@ -34,12 +36,16 @@ struct ReviewNoteSessionsTests {
         f.linkNote(note, to: s[0].id, as: .review)
         #expect(f.sessions.map(\.reviewNoteId) == [note, nil, note, nil])
         #expect(f.sessions(pointingAt: note).map(\.id) == [s[0].id, s[2].id])
-        #expect(f.sessionSpan(of: note, calendar: calendar) == "\(f.day(of: s[0], calendar: calendar)) – \(f.day(of: s[2], calendar: calendar))")
+        #expect(
+            f.sessionSpan(of: note, calendar: calendar) == "\(f.day(of: s[0], calendar: calendar)) – \(f.day(of: s[2], calendar: calendar))"
+        )
         #expect(f.meta(of: f.notes[0]).sessionIds == [s[0].id, s[2].id] && f.meta(of: f.notes[0]).sessionId == s[0].id)
         #expect(violations(f).isDisjoint(with: ["NoteEntry.session", "Session.noteKind"]))
 
         f.unlinkNote(note, from: s[0].id)
-        #expect(f.sessions(pointingAt: note).map(\.id) == [s[2].id] && f.sessionSpan(of: note, calendar: calendar) == f.day(of: s[2], calendar: calendar))
+        #expect(
+            f.sessions(pointingAt: note).map(\.id) == [s[2].id]
+                && f.sessionSpan(of: note, calendar: calendar) == f.day(of: s[2], calendar: calendar))
         f.linkNote(note, to: s[3].id, as: .review)
         f.forgetNote(note)
         #expect(f.sessions(pointingAt: note).isEmpty && f.sessionSpan(of: note, calendar: calendar) == nil)

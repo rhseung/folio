@@ -10,7 +10,9 @@ extension Course {
             NonEmpty(\.title, String(localized: .courseTitleEmpty)),
             Check("Course.credits", String(localized: .ruleCourseCredits)) { c, _ in c.credits >= 0 },
             Check("Course.schedule", String(localized: .ruleCourseSchedule)) { c, _ in
-                c.schedule.allSatisfy { (1...7).contains($0.weekday) && $0.startMinute >= 0 && $0.endMinute <= 24 * 60 && $0.endMinute > $0.startMinute }
+                c.schedule.allSatisfy {
+                    (1...7).contains($0.weekday) && $0.startMinute >= 0 && $0.endMinute <= 24 * 60 && $0.endMinute > $0.startMinute
+                }
             },
             Check("Course.scheduleLink", String(localized: .ruleCourseScheduleLink)) { c, _ in
                 c.schedule.allSatisfy { $0.link.map { OnlineLink.url($0) != nil } ?? true }
@@ -163,17 +165,25 @@ extension CourseFile: Document {
                 c.aggregation != .single || f.scores.count(where: { $0.componentId == c.id }) <= 1
             }
         }
-        Items(\.scores, noun: String(localized: .modelNounScoreEntry), name: { s, f in
-            s.title.isEmpty ? (f.components.first { $0.id == s.componentId }?.name ?? s.id.uuidString) : s.title
-        }) {
+        Items(
+            \.scores, noun: String(localized: .modelNounScoreEntry),
+            name: { s, f in
+                s.title.isEmpty ? (f.components.first { $0.id == s.componentId }?.name ?? s.id.uuidString) : s.title
+            }
+        ) {
             Check("ScoreEntry.max", String(localized: .ruleScoreEntryMax)) { s, _ in s.max > 0 }
             Ref(\.componentId, to: GradeComponent.self, onDelete: .cascade)
             Ref(\.examId, to: Exam.self, onDelete: .nullify)
             Ref(\.assignmentId, to: Assignment.self, onDelete: .cascade)
             Check("ScoreEntry.source", String(localized: .ruleScoreEntrySource)) { s, _ in s.assignmentId == nil || s.examId == nil }
-            Check("ScoreEntry.unique", String(localized: .ruleScoreEntryUnique)) { s, f in !f.hasScore(s.source, in: s.componentId, other: s.id) }
+            Check("ScoreEntry.unique", String(localized: .ruleScoreEntryUnique)) { s, f in
+                !f.hasScore(s.source, in: s.componentId, other: s.id)
+            }
         }
-        Items(\.attendance, noun: String(localized: .modelNounAttendance), name: { a, f in f.sessions.first { $0.id == a.sessionId }.map { f.title(of: $0, calendar: .current) } ?? a.id.uuidString }) {
+        Items(
+            \.attendance, noun: String(localized: .modelNounAttendance),
+            name: { a, f in f.sessions.first { $0.id == a.sessionId }.map { f.title(of: $0, calendar: .current) } ?? a.id.uuidString }
+        ) {
             Ref(\.sessionId, to: Session.self, onDelete: .restrict)
             Check("Attendance.cancelled", String(localized: .ruleAttendanceCancelled)) { a, f in
                 f.sessions.first { $0.id == a.sessionId }?.isCancelled != true
@@ -209,9 +219,13 @@ extension CourseFile: Document {
         Rule("Session.progressOverlap") { f, _ in
             f.progressOverlaps().map { o in
                 let file = f.materials.first { $0.id == o.material }.map { URL(fileURLWithPath: $0.path).lastPathComponent } ?? ""
-                return (o.later.session.id, String(localized: .ruleSessionProgressOverlap(
-                    file, f.day(of: o.earlier.session, calendar: .current), Session.pagesLabel(o.earlier.pages),
-                    f.day(of: o.later.session, calendar: .current), Session.pagesLabel(o.later.pages))))
+                return (
+                    o.later.session.id,
+                    String(
+                        localized: .ruleSessionProgressOverlap(
+                            file, f.day(of: o.earlier.session, calendar: .current), Session.pagesLabel(o.earlier.pages),
+                            f.day(of: o.later.session, calendar: .current), Session.pagesLabel(o.later.pages)))
+                )
             }
         }
         Pair(\.exams, \.scopeUnitIds, \.units, \.examIds)
@@ -223,8 +237,12 @@ extension CourseFile: Document {
         Rule("GradePolicy.minAttendanceRatio", String(localized: .ruleGradePolicyMinAttendanceRatio)) { f, _ in
             f.policy.minAttendanceRatio.map { $0 > 0 && $0 <= 1 } ?? true
         }
-        Rule("GradePolicy.latesPerAbsence", String(localized: .ruleGradePolicyLatesPerAbsence)) { f, _ in (f.policy.latesPerAbsence ?? 1) >= 1 }
-        Rule("GradePolicy.attendanceCap", String(localized: .ruleGradePolicyAttendanceCap)) { f, _ in f.policy.attendanceCap.allSatisfy { $0.absences >= 1 } }
+        Rule("GradePolicy.latesPerAbsence", String(localized: .ruleGradePolicyLatesPerAbsence)) { f, _ in
+            (f.policy.latesPerAbsence ?? 1) >= 1
+        }
+        Rule("GradePolicy.attendanceCap", String(localized: .ruleGradePolicyAttendanceCap)) { f, _ in
+            f.policy.attendanceCap.allSatisfy { $0.absences >= 1 }
+        }
         Rule("GradePolicy.grades") { f, w in
             guard let cat = w.catalog else { return [] }
             let ids = f.policy.attendanceCap.map(\.maxGrade) + f.policy.cutoffs.map(\.grade)
@@ -272,13 +290,14 @@ extension Transcript: Document {
 
 extension Semester {
     public var name: String {
-        let term = switch term {
-        case .spring: String(localized: .semesterTermSpring)
-        case .summer: String(localized: .semesterTermSummer)
-        case .fall: String(localized: .semesterTermFall)
-        case .winter: String(localized: .semesterTermWinter)
-        case .credited: String(localized: .semesterTermCredited)
-        }
+        let term =
+            switch term {
+            case .spring: String(localized: .semesterTermSpring)
+            case .summer: String(localized: .semesterTermSummer)
+            case .fall: String(localized: .semesterTermFall)
+            case .winter: String(localized: .semesterTermWinter)
+            case .credited: String(localized: .semesterTermCredited)
+            }
         return "\(year) \(term)"
     }
 
@@ -287,7 +306,9 @@ extension Semester {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC")!
         calendar.firstWeekday = 2
-        func date(_ d: LocalDate?) -> Date? { d.flatMap { calendar.date(from: DateComponents(year: $0.year, month: $0.month, day: $0.day)) } }
+        func date(_ d: LocalDate?) -> Date? {
+            d.flatMap { calendar.date(from: DateComponents(year: $0.year, month: $0.month, day: $0.day)) }
+        }
         guard let a = date(start), let b = date(end) else { return nil }
         return SessionPlanner.week(of: b, anchor: a, calendar: calendar)
     }
@@ -295,13 +316,19 @@ extension Semester {
 
 extension Catalog: Document {
     public static let model = Model<Catalog>(place: String(localized: .modelPlaceCatalog)) {
-        Items(\.codes, noun: String(localized: .modelNounCourseCode), name: \.prefix) { NonEmpty(\.prefix, String(localized: .ruleCourseCodePrefixEmpty)) }
+        Items(\.codes, noun: String(localized: .modelNounCourseCode), name: \.prefix) {
+            NonEmpty(\.prefix, String(localized: .ruleCourseCodePrefixEmpty))
+        }
         Items(\.categories, noun: String(localized: .modelNounCategory), name: \.name) {
             NonEmpty(\.name, String(localized: .ruleCategoryNameEmpty))
             Ref(\.parentId, to: Category.self, as: String(localized: .modelLabelParentCategory), onDelete: .nullify)
         }
-        Items(\.letterGrades, noun: String(localized: .modelNounLetterGrade), name: \.symbol) { NonEmpty(\.symbol, String(localized: .ruleLetterGradeSymbolEmpty)) }
-        Items(\.people, noun: String(localized: .modelNounPerson), name: \.name) { NonEmpty(\.name, String(localized: .rulePersonNameEmpty)) }
+        Items(\.letterGrades, noun: String(localized: .modelNounLetterGrade), name: \.symbol) {
+            NonEmpty(\.symbol, String(localized: .ruleLetterGradeSymbolEmpty))
+        }
+        Items(\.people, noun: String(localized: .modelNounPerson), name: \.name) {
+            NonEmpty(\.name, String(localized: .rulePersonNameEmpty))
+        }
     }
 }
 
@@ -309,7 +336,9 @@ extension Settings: Document {
     public static let model = Model<Settings>(place: String(localized: .modelPlaceSettings)) {
         Rule("Settings.dayBoundary", String(localized: .ruleSettingsDayBoundary)) { s, _ in (0...(8 * 60)).contains(s.dayBoundaryMinutes) }
         Rule("Settings.classMinutes", String(localized: .ruleSettingsClassMinutes)) { s, _ in (10...300).contains(s.classMinutes) }
-        Rule("Settings.dailyLimit", String(localized: .ruleSettingsDailyLimit)) { s, _ in s.review.dailyLimit.map { (1...50).contains($0) } ?? true }
+        Rule("Settings.dailyLimit", String(localized: .ruleSettingsDailyLimit)) { s, _ in
+            s.review.dailyLimit.map { (1...50).contains($0) } ?? true
+        }
         Rule("Settings.intervals", String(localized: .ruleSettingsIntervals)) { s, _ in
             !s.review.intervals.isEmpty && s.review.intervals.allSatisfy { (1...365).contains($0) }
         }

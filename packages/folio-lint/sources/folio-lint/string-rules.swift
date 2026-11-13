@@ -3,8 +3,10 @@ import SwiftSyntax
 extension Rules {
     // AGENTS.md "문자열 키": screen copy lives in the string catalog as a key.
     static var uiString: Rule {
-        Rule(name: "ui-string",
-             advice: "put screen copy in app/resources/Localizable.xcstrings as a key; mark data strings `// strings: data, <why>`") { code in
+        Rule(
+            name: "ui-string",
+            advice: "put screen copy in app/resources/Localizable.xcstrings as a key; mark data strings `// strings: data, <why>`"
+        ) { code in
             var hits: [Hit] = []
             for file in code.files(under: "app") where !isDebugFile(file.path) {
                 let marks = file.dataMarks()
@@ -23,11 +25,14 @@ extension Rules {
 
     // AGENTS.md "단일 출처": folder and file names come from standard-layout.swift alone.
     static var layoutName: Rule {
-        Rule(name: "layout-name",
-             advice: "folder and file names come from FolioDomain's standard-layout.swift (Term, SemesterFolder, CourseFolder)") { code in
+        Rule(
+            name: "layout-name",
+            advice: "folder and file names come from FolioDomain's standard-layout.swift (Term, SemesterFolder, CourseFolder)"
+        ) { code in
             var hits: [Hit] = []
-            for file in code.files(under: "app", "packages/folio-core/sources", "packages/folio-markdown/sources",
-                                   "packages/folio-ai/sources")
+            for file in code.files(
+                under: "app", "packages/folio-core/sources", "packages/folio-markdown/sources",
+                "packages/folio-ai/sources")
             where !file.path.hasSuffix("/standard-layout.swift") && !file.path.contains("/folio-fixtures/") {
                 for literal in file.nodes(StringLiteralExprSyntax.self) where layoutNames.contains(literal.plainText) {
                     hits.append(Hit("layout-name", file, file.line(of: literal), "\"\(literal.plainText)\""))
@@ -56,8 +61,9 @@ extension Rules {
 
     static func isScreenCopy(_ literal: StringLiteralExprSyntax) -> Bool {
         guard let argument = literal.parent?.as(LabeledExprSyntax.self),
-              let arguments = argument.parent?.as(LabeledExprListSyntax.self), arguments.first?.id == argument.id,
-              let call = arguments.parent?.as(FunctionCallExprSyntax.self) else { return false }
+            let arguments = argument.parent?.as(LabeledExprListSyntax.self), arguments.first?.id == argument.id,
+            let call = arguments.parent?.as(FunctionCallExprSyntax.self)
+        else { return false }
         let label = argument.label?.text
         if let reference = call.calledExpression.as(DeclReferenceExprSyntax.self) {
             let name = reference.baseName.text

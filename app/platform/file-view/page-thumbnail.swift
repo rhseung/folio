@@ -22,7 +22,10 @@ struct PageThumbnail: View {
             }
             .frame(width: size.width, height: size.height)
             .clipShape(.rect(cornerRadius: Theme.Radius.small))
-            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.small).strokeBorder(picked ? accent.color : Theme.Palette.lineSoft, lineWidth: picked ? 2 : 1))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radius.small).strokeBorder(
+                    picked ? accent.color : Theme.Palette.lineSoft, lineWidth: picked ? 2 : 1)
+            )
             // Every page in a slot as tall as the box, so a column of wide slides doesn't shift as their images come in.
             .frame(height: box.height)
             Text("\(page)").font(picked || current ? Theme.Typeface.label : Theme.Typeface.label.weight(.regular)).monospacedDigit()

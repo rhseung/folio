@@ -22,11 +22,14 @@ struct StudyTimeBlock: View {
                         totals(chart).frame(width: 200, alignment: .leading)
                         Chart {
                             ForEach(chart.segments) { s in
-                                BarMark(x: .value(String(localized: .todayStudyAxisDay), s.day), yStart: .value(String(localized: .todayStudyAxisStart), s.start),
-                                        yEnd: .value(String(localized: .todayStudyAxisEnd), s.end), width: .ratio(0.5))
-                                    .foregroundStyle(by: .value(String(localized: .todayStudyAxisCourse), s.title))
-                                    .cornerRadius(Theme.Radius.small)
-                                    .opacity(hovered == nil || hovered == s.day ? 1 : 0.35)
+                                BarMark(
+                                    x: .value(String(localized: .todayStudyAxisDay), s.day),
+                                    yStart: .value(String(localized: .todayStudyAxisStart), s.start),
+                                    yEnd: .value(String(localized: .todayStudyAxisEnd), s.end), width: .ratio(0.5)
+                                )
+                                .foregroundStyle(by: .value(String(localized: .todayStudyAxisCourse), s.title))
+                                .cornerRadius(Theme.Radius.small)
+                                .opacity(hovered == nil || hovered == s.day ? 1 : 0.35)
                             }
                             if let hovered, let tip = model.tooltip(hovered, in: chart) {
                                 RuleMark(x: .value(String(localized: .todayStudyAxisDay), hovered))
@@ -39,7 +42,9 @@ struct StudyTimeBlock: View {
                         }
                         .chartXScale(domain: chart.days.map { StudyTimeModel.label($0, today: chart.today) })
                         .chartXSelection(value: $hovered)
-                        .chartForegroundStyleScale(domain: chart.courses.map(\.title), range: chart.courses.map { model.workspace.accent($0.id).color })
+                        .chartForegroundStyleScale(
+                            domain: chart.courses.map(\.title), range: chart.courses.map { model.workspace.accent($0.id).color }
+                        )
                         .chartXAxis {
                             AxisMarks { value in
                                 AxisValueLabel {
@@ -80,18 +85,22 @@ struct StudyTimeBlock: View {
             Figure(StudyTimeModel.todayLabel, StudyTimeModel.duration(chart.perDay[chart.today] ?? 0))
             HStack(spacing: Theme.Space.xl) {
                 Figure(String(localized: .todayStudyFortnight), StudyTimeModel.duration(chart.total), font: Theme.Typeface.figureSmall)
-                Figure(String(localized: .todayStudyDays), String(localized: .todayStudyDayCount(chart.perDay.values.filter { $0 > 0 }.count)), font: Theme.Typeface.figureSmall)
+                Figure(
+                    String(localized: .todayStudyDays), String(localized: .todayStudyDayCount(chart.perDay.values.filter { $0 > 0 }.count)),
+                    font: Theme.Typeface.figureSmall)
             }
             // A grid, so the time column is as wide as its longest entry ("1시간 35분") on every row: each row's own
             // width would give the bars tracks of different lengths, and a wrapped time read as two entries (#402).
             Grid(alignment: .leading, horizontalSpacing: Theme.Space.s, verticalSpacing: Theme.Space.s) {
                 ForEach(courses, id: \.course.id) { entry in
                     GridRow {
-                        Text(entry.course.title).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1).frame(width: 88, alignment: .leading)
+                        Text(entry.course.title).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1).frame(
+                            width: 88, alignment: .leading)
                         Capsule().fill(Theme.Palette.fill)
                             .overlay(alignment: .leading) {
                                 GeometryReader { proxy in
-                                    Capsule().fill(model.workspace.accent(entry.course.id).color).frame(width: proxy.size.width * entry.seconds / top)
+                                    Capsule().fill(model.workspace.accent(entry.course.id).color).frame(
+                                        width: proxy.size.width * entry.seconds / top)
                                 }
                             }
                             .frame(height: Theme.Space.tight)

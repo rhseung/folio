@@ -37,8 +37,11 @@ public enum StudyTime {
     /// `40분`, `2시간`, `1시간 20분`.
     public static func label(_ seconds: TimeInterval) -> String {
         let minutes = Int(seconds / 60)
-        return minutes < 60 ? String(localized: .studyTimeMinutes(minutes)) : minutes % 60 == 0 ? String(localized: .studyTimeHours(minutes / 60))
-            : String(localized: .studyTimeHoursMinutes(minutes / 60, minutes % 60))
+        return minutes < 60
+            ? String(localized: .studyTimeMinutes(minutes))
+            : minutes % 60 == 0
+                ? String(localized: .studyTimeHours(minutes / 60))
+                : String(localized: .studyTimeHoursMinutes(minutes / 60, minutes % 60))
     }
 }
 
@@ -81,7 +84,9 @@ public struct TodaySummary: Sendable {
     /// How many days ahead exams are listed.
     public static let examHorizon = 30
 
-    public static func build(courses: [CourseFile], now: Date, settings: Settings, calendar: Calendar, examHorizonDays: Int = examHorizon) -> TodaySummary {
+    public static func build(courses: [CourseFile], now: Date, settings: Settings, calendar: Calendar, examHorizonDays: Int = examHorizon)
+        -> TodaySummary
+    {
         let today = settings.studyDay(of: now, calendar: calendar)
         // The study day runs from the boundary to the next boundary, in real time.
         let dayStart = calendar.date(byAdding: .minute, value: settings.dayBoundaryMinutes, to: today.date(in: calendar)!)!
@@ -137,7 +142,9 @@ extension TodaySummary {
     /// `examWithinDays`. The class under way isn't one: its row already shows the time left.
     public func hint(for courseId: UUID, now: Date, examWithinDays: Int = 7) -> CourseHint? {
         if let due = deadlines.first(where: { $0.courseId == courseId && $0.isToday }) { return .dueToday(due.assignment) }
-        if let next = classesToday.first(where: { $0.courseId == courseId && $0.session.date > now }) { return .nextClass(next.session.date) }
+        if let next = classesToday.first(where: { $0.courseId == courseId && $0.session.date > now }) {
+            return .nextClass(next.session.date)
+        }
         if let exam = exams.first(where: { $0.courseId == courseId && $0.dDay <= examWithinDays }) { return .exam(days: exam.dDay) }
         return nil
     }

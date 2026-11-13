@@ -48,7 +48,8 @@ public enum PatchNotes {
             let bare = trimmed.first == "v" || trimmed.first == "V" ? trimmed.dropFirst() : Substring(trimmed)
             let parts = bare.split(separator: ".", omittingEmptySubsequences: false)
             guard parts.count == 3, parts.allSatisfy({ !$0.isEmpty && $0.allSatisfy(\.isASCII) }),
-                  let a = Int(parts[0]), let b = Int(parts[1]), let c = Int(parts[2]), a >= 0, b >= 0, c >= 0 else { return nil }
+                let a = Int(parts[0]), let b = Int(parts[1]), let c = Int(parts[2]), a >= 0, b >= 0, c >= 0
+            else { return nil }
             self.init(a, b, c)
         }
 

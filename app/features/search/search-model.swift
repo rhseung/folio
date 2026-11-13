@@ -62,7 +62,9 @@ final class SearchModel {
         return [PickOption(id: .all, title: String(localized: .searchScopeAll))]
             + semesters.map { PickOption(id: .semester($0.id), title: $0.title, section: String(localized: .searchScopeSemesters)) }
             + semesters.flatMap { s in
-                workspace.courses(in: s).map { PickOption(id: .course($0.id), title: $0.title, detail: s.title, section: String(localized: .searchScopeCourses)) }
+                workspace.courses(in: s).map {
+                    PickOption(id: .course($0.id), title: $0.title, detail: s.title, section: String(localized: .searchScopeCourses))
+                }
             }
     }
 
@@ -97,11 +99,12 @@ final class SearchModel {
     func refresh(keepSelection: Bool = false) {
         if !keepSelection { selected = 0 }
         guard let index else { return }
-        let courses: Set<UUID>? = switch scope {
-        case .all: nil
-        case .course(let id): [id]
-        case .semester(let id): Set(workspace.courses.filter { $0.file.course.semesterId == id }.map(\.id))
-        }
+        let courses: Set<UUID>? =
+            switch scope {
+            case .all: nil
+            case .course(let id): [id]
+            case .semester(let id): Set(workspace.courses.filter { $0.file.course.semesterId == id }.map(\.id))
+            }
         let (query, kinds, limit) = (query, kind.map { Set([$0]) }, kind == nil ? 60 : 200)
 
         searching?.cancel()

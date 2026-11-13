@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import Folio
 
 /// Points across the whole panel, as it opens and scrolled, each clicked: every one must reach the note, or what the
@@ -37,7 +38,8 @@ struct NoteClickGridTests {
                 case .other(let what): "(\(Int(p.x)), \(Int(p.y))) \(what)"
                 }
             }
-            #expect(missed.isEmpty, "\(shot.name) \(place): \(missed.count) of \(points.count) points missed the note, as \(missed.prefix(6))")
+            #expect(
+                missed.isEmpty, "\(shot.name) \(place): \(missed.count) of \(points.count) points missed the note, as \(missed.prefix(6))")
         }
     }
 
@@ -78,7 +80,9 @@ struct NoteClickGridTests {
                         continue
                     }
                     if p.y > end {
-                        if caret.location != length { wrong.append("\(at) past the end, below \(Int(end)), put the caret at \(caret.location) of \(length)") }
+                        if caret.location != length {
+                            wrong.append("\(at) past the end, below \(Int(end)), put the caret at \(caret.location) of \(length)")
+                        }
                     } else {
                         let off = p.y < caret.rect.minY ? caret.rect.minY - p.y : max(0, p.y - caret.rect.maxY)
                         if off > Self.reach { wrong.append("\(at) put the caret \(Int(off)) points away, at \(Int(caret.rect.minY))") }

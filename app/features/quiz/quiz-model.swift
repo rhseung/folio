@@ -78,14 +78,16 @@ final class QuizModel {
 
     func cardsSubtitle(_ course: LoadedCourse) -> String {
         let open = cards.filter(isOpen).count
-        return ([String(localized: .quizCardsCardCount(cards.count)), String(localized: .quizCardsUnitCount(course.outline.count))]
+        return
+            ([String(localized: .quizCardsCardCount(cards.count)), String(localized: .quizCardsUnitCount(course.outline.count))]
             + (open > 0 ? [String(localized: .quizCardsWrongCount(open))] : [])).joined(separator: " · ")
     }
 
     func cardGroups(_ course: LoadedCourse) -> [CardGroup] {
         let byUnit = Dictionary(grouping: cards, by: \.unitId)
         return UnitsView.groups(course.outline).enumerated().map { i, group in
-            let entries = (group.root.map { byUnit[$0.id] ?? [] } ?? []).map { Entry.card($0, depth: 0) }
+            let entries =
+                (group.root.map { byUnit[$0.id] ?? [] } ?? []).map { Entry.card($0, depth: 0) }
                 + group.rows.flatMap { row in
                     [Entry.unit(row.unit, depth: row.depth, cards: byUnit[row.unit.id]?.count ?? 0)]
                         + (byUnit[row.unit.id] ?? []).map { .card($0, depth: row.depth + 1) }
@@ -118,12 +120,13 @@ final class QuizModel {
     func stats(_ course: LoadedCourse) -> Stats {
         let today = workspace.today
         let history = { (card: QuizCard) in self.history(of: card.id) }
-        return Stats(units: course.outline.map(\.unit),
-                     total: QuizStats.total(cards, history: history),
-                     byUnit: QuizStats.tally(cards, keys: { [$0.unitId] }, history: history),
-                     byCategory: QuizStats.tally(cards, keys: { [$0.category] }, history: history),
-                     due: cards.filter { WrongFlow.isDue(history($0), today: today) },
-                     solvedToday: attempts.filter { $0.day == today }.count + problemAttempts.filter { $0.day == today }.count)
+        return Stats(
+            units: course.outline.map(\.unit),
+            total: QuizStats.total(cards, history: history),
+            byUnit: QuizStats.tally(cards, keys: { [$0.unitId] }, history: history),
+            byCategory: QuizStats.tally(cards, keys: { [$0.category] }, history: history),
+            due: cards.filter { WrongFlow.isDue(history($0), today: today) },
+            solvedToday: attempts.filter { $0.day == today }.count + problemAttempts.filter { $0.day == today }.count)
     }
 
     func dueDetail(_ card: QuizCard, units: [FolioDomain.Unit]) -> String {
@@ -144,8 +147,9 @@ final class QuizModel {
     }
 
     func solveWrong(of unit: UUID, units: [FolioDomain.Unit]) -> SolveRequest {
-        SolveRequest(scope: QuizScope(unitIds: [unit], onlyWrong: true),
-                     label: String(localized: .quizStatsWrongOf(units.first { $0.id == unit }?.title ?? "")))
+        SolveRequest(
+            scope: QuizScope(unitIds: [unit], onlyWrong: true),
+            label: String(localized: .quizStatsWrongOf(units.first { $0.id == unit }?.title ?? "")))
     }
 
     /// The last fourteen study days, oldest first, with the attempts on each (problems included).
@@ -162,8 +166,11 @@ final class QuizModel {
         let sets = course.file.problemSets
         guard !sets.isEmpty else { return String(localized: .quizProblemsSubtitleEmpty) }
         let total = problemTotal(sets)
-        return ([String(localized: .quizProblemsSetCount(sets.count)), String(localized: .quizProblemsProblemCount(total.items)),
-                 String(localized: .quizProblemsAttemptedCount(total.attempted))]
+        return
+            ([
+                String(localized: .quizProblemsSetCount(sets.count)), String(localized: .quizProblemsProblemCount(total.items)),
+                String(localized: .quizProblemsAttemptedCount(total.attempted)),
+            ]
             + (total.open > 0 ? [String(localized: .quizProblemsOpenCount(total.open))] : [])).joined(separator: " · ")
     }
 
@@ -178,8 +185,11 @@ final class QuizModel {
 
     func summary(_ set: ProblemSet) -> String {
         let t = QuizStats.total(set.problems) { self.history(set: set.id, number: $0.number) }
-        return ([String(localized: .quizProblemsItems(t.items)), String(localized: .quizProblemsCorrectCount(t.correct)),
-                 String(localized: .quizProblemsWrongCount(t.open)), String(localized: .quizResolvedCount(t.resolved))]
+        return
+            ([
+                String(localized: .quizProblemsItems(t.items)), String(localized: .quizProblemsCorrectCount(t.correct)),
+                String(localized: .quizProblemsWrongCount(t.open)), String(localized: .quizResolvedCount(t.resolved)),
+            ]
             + (t.items > t.attempted ? [String(localized: .quizProblemsUnsolvedCount(t.items - t.attempted))] : []))
             .joined(separator: " · ")
     }
@@ -202,6 +212,7 @@ final class QuizModel {
     }
 
     func toggle(_ unit: UUID, set: UUID, problem: ProblemSet.Problem, in course: LoadedCourse) {
-        workspace.run(ProblemLinkUnit(course: course.id, set: set, number: problem.number, unit: unit, linked: !problem.unitIds.contains(unit)))
+        workspace.run(
+            ProblemLinkUnit(course: course.id, set: set, number: problem.number, unit: unit, linked: !problem.unitIds.contains(unit)))
     }
 }

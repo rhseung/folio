@@ -98,8 +98,9 @@ struct GradeSteps: View {
 
     func color(_ i: Int) -> Color {
         let t = stops.count > 1 ? Double(i) / Double(stops.count - 1) : 1
-        return t < 0.5 ? Theme.Palette.danger.mix(with: Theme.Palette.warning, by: t * 2)
-                       : Theme.Palette.warning.mix(with: Theme.Palette.success, by: (t - 0.5) * 2)
+        return t < 0.5
+            ? Theme.Palette.danger.mix(with: Theme.Palette.warning, by: t * 2)
+            : Theme.Palette.warning.mix(with: Theme.Palette.success, by: (t - 0.5) * 2)
     }
 }
 
@@ -109,7 +110,8 @@ extension GradeSteps {
     init(selection: Binding<UUID?>, grades: [(id: UUID, symbol: String, scored: Bool)]) {
         let scored = grades.filter(\.scored)
         let track = scored.isEmpty ? grades : scored
-        self.init(selection: selection, stops: track.reversed().map { Stop(id: $0.id, symbol: $0.symbol) },
-                  extras: scored.isEmpty ? [] : grades.filter { !$0.scored }.map { Stop(id: $0.id, symbol: $0.symbol) })
+        self.init(
+            selection: selection, stops: track.reversed().map { Stop(id: $0.id, symbol: $0.symbol) },
+            extras: scored.isEmpty ? [] : grades.filter { !$0.scored }.map { Stop(id: $0.id, symbol: $0.symbol) })
     }
 }

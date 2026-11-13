@@ -1,6 +1,7 @@
-@testable import FolioDomain
 import Foundation
 import Testing
+
+@testable import FolioDomain
 
 /// Cases taken from names in the real GIST folder.
 struct CleanupKeywordTests {
@@ -44,13 +45,17 @@ struct CleanupKeywordTests {
     }
 
     @Test func lectureNumberingSharesPrefixAcrossFormats() {
-        let course = FolderTree(name: "EC2204 컴퓨터 구조", content: .folder([
-            FolderTree(name: "강의자료", content: .folder([
-                FolderTree(name: "lecture1-Bool.pdf", content: .file(size: 1)),
-                FolderTree(name: "lecture1-Bool.pptx", content: .file(size: 1)),
-                FolderTree(name: "lecture1-Review.pdf", content: .file(size: 1)),
-            ])),
-        ]))
+        let course = FolderTree(
+            name: "EC2204 컴퓨터 구조",
+            content: .folder([
+                FolderTree(
+                    name: "강의자료",
+                    content: .folder([
+                        FolderTree(name: "lecture1-Bool.pdf", content: .file(size: 1)),
+                        FolderTree(name: "lecture1-Bool.pptx", content: .file(size: 1)),
+                        FolderTree(name: "lecture1-Review.pdf", content: .file(size: 1)),
+                    ]))
+            ]))
         var planner = CoursePlanner(course: course)
         let targets = Set(planner.plan().map(\.to))
 
@@ -58,15 +63,21 @@ struct CleanupKeywordTests {
     }
 
     @Test func collisionsGetSuffixes() {
-        let course = FolderTree(name: "GS1201 일반화학", content: .folder([
-            FolderTree(name: "족보", content: .folder([
-                FolderTree(name: "2023_final.pdf", content: .file(size: 1)),
-                FolderTree(name: "Final-2023.pdf", content: .file(size: 1)),
-            ])),
-        ]))
-        let other = FolderTree(name: "Exams", content: .folder([
-            FolderTree(name: "Past", content: .folder([FolderTree(name: "2023_final.pdf", content: .file(size: 1))])),
-        ]))
+        let course = FolderTree(
+            name: "GS1201 일반화학",
+            content: .folder([
+                FolderTree(
+                    name: "족보",
+                    content: .folder([
+                        FolderTree(name: "2023_final.pdf", content: .file(size: 1)),
+                        FolderTree(name: "Final-2023.pdf", content: .file(size: 1)),
+                    ]))
+            ]))
+        let other = FolderTree(
+            name: "Exams",
+            content: .folder([
+                FolderTree(name: "Past", content: .folder([FolderTree(name: "2023_final.pdf", content: .file(size: 1))]))
+            ]))
         var planner = CoursePlanner(course: FolderTree(name: course.name, content: .folder(course.children + [other])))
         let moves = planner.plan()
 
@@ -76,15 +87,21 @@ struct CleanupKeywordTests {
 
     /// Past exams keep their names in `Inherited`; a source folder moves whole and only loose files are marked.
     @Test func pastExamsGoToInherited() {
-        let course = FolderTree(name: "GS1211 일반화학실험", content: .folder([
-            FolderTree(name: "Exams", content: .folder([
-                FolderTree(name: "Past", content: .folder([
-                    FolderTree(name: "관훈 선배 리포트", content: .folder([FolderTree(name: "Lab1.pdf", content: .file(size: 1))])),
-                    FolderTree(name: "mid-sol.pdf", content: .file(size: 1)),
-                ])),
-            ])),
-            FolderTree(name: "족보 (소순범)", content: .folder([FolderTree(name: "2024 중간.pdf", content: .file(size: 1))])),
-        ]))
+        let course = FolderTree(
+            name: "GS1211 일반화학실험",
+            content: .folder([
+                FolderTree(
+                    name: "Exams",
+                    content: .folder([
+                        FolderTree(
+                            name: "Past",
+                            content: .folder([
+                                FolderTree(name: "관훈 선배 리포트", content: .folder([FolderTree(name: "Lab1.pdf", content: .file(size: 1))])),
+                                FolderTree(name: "mid-sol.pdf", content: .file(size: 1)),
+                            ]))
+                    ])),
+                FolderTree(name: "족보 (소순범)", content: .folder([FolderTree(name: "2024 중간.pdf", content: .file(size: 1))])),
+            ]))
         var planner = CoursePlanner(course: course)
         let moves = Dictionary(uniqueKeysWithValues: planner.plan().map { ($0.from, $0) })
 
@@ -97,9 +114,11 @@ struct CleanupKeywordTests {
     /// only as a suggestion. An `Exercises` with no such history is the professor's and stays.
     @Test func selfMadeFilesLeaveExercises() {
         let file = { (name: String) in FolderTree(name: name, content: .file(size: 1)) }
-        let mixed = FolderTree(name: "GS2004 선형대수학", content: .folder([
-            FolderTree(name: "Exercises", content: .folder([file("Proofs.pdf"), file("Proofs.tex"), file("exercise 1.png")])),
-        ]))
+        let mixed = FolderTree(
+            name: "GS2004 선형대수학",
+            content: .folder([
+                FolderTree(name: "Exercises", content: .folder([file("Proofs.pdf"), file("Proofs.tex"), file("exercise 1.png")]))
+            ]))
         var planner = CoursePlanner(course: mixed, selfMade: ["Exercises/Proofs.pdf", "Exercises/Proofs.tex"])
         let moves = Dictionary(uniqueKeysWithValues: planner.plan().map { ($0.from, $0) })
         #expect(moves["Exercises/Proofs.pdf"].map { ($0.to, $0.exam, $0.review) }! == ("Study/Proofs.pdf", "Midterm", nil))
@@ -113,10 +132,12 @@ struct CleanupKeywordTests {
     /// or no link at all when the course has no such exam.
     @Test func examLinksNameExamsThatExist() {
         let file = { (name: String) in FolderTree(name: name, content: .file(size: 1)) }
-        let course = FolderTree(name: "GS2004 선형대수학", content: .folder([
-            FolderTree(name: "Exercises", content: .folder([file("Proofs.pdf"), file("Final Mock.pdf")])),
-            file("Guideline.pdf"),
-        ]))
+        let course = FolderTree(
+            name: "GS2004 선형대수학",
+            content: .folder([
+                FolderTree(name: "Exercises", content: .folder([file("Proofs.pdf"), file("Final Mock.pdf")])),
+                file("Guideline.pdf"),
+            ]))
         let selfMade: Set<String> = ["Exercises/Proofs.pdf", "Exercises/Final Mock.pdf"]
         var midterm = Exam(device: UUID(), at: .now, title: "중간고사")
         midterm.folder = "중간고사"
@@ -143,13 +164,17 @@ struct CleanupKeywordTests {
 
     /// An exam names its folder from its title, so a folder under Exams stays; only a loose file goes to an exam.
     @Test func examFoldersNamedByTitleStay() {
-        let course = FolderTree(name: "EC4207 그래프 이론", content: .folder([
-            FolderTree(name: "Exams", content: .folder([
-                FolderTree(name: "기말고사", content: .folder([FolderTree(name: "Guideline.pdf", content: .file(size: 1))])),
-                FolderTree(name: "Quiz 3", content: .folder([])),
-                FolderTree(name: "Seating.pdf", content: .file(size: 1)),
-            ])),
-        ]))
+        let course = FolderTree(
+            name: "EC4207 그래프 이론",
+            content: .folder([
+                FolderTree(
+                    name: "Exams",
+                    content: .folder([
+                        FolderTree(name: "기말고사", content: .folder([FolderTree(name: "Guideline.pdf", content: .file(size: 1))])),
+                        FolderTree(name: "Quiz 3", content: .folder([])),
+                        FolderTree(name: "Seating.pdf", content: .file(size: 1)),
+                    ]))
+            ]))
         var planner = CoursePlanner(course: course)
 
         #expect(planner.plan().map(\.from) == ["Exams/Seating.pdf"])
@@ -158,13 +183,20 @@ struct CleanupKeywordTests {
 
     /// An exam folder keeps the exam's record; a summary made for it goes to Study, linked, as a suggestion.
     @Test func selfMadeFilesLeaveExamFolders() {
-        let course = FolderTree(name: "EC4207 그래프 이론", content: .folder([
-            FolderTree(name: "Exams", content: .folder([
-                FolderTree(name: "Quiz3", content: .folder([
-                    FolderTree(name: "Quiz3 대비 정리.pdf", content: .file(size: 1)), FolderTree(name: "Guideline.pdf", content: .file(size: 1)),
-                ])),
-            ])),
-        ]))
+        let course = FolderTree(
+            name: "EC4207 그래프 이론",
+            content: .folder([
+                FolderTree(
+                    name: "Exams",
+                    content: .folder([
+                        FolderTree(
+                            name: "Quiz3",
+                            content: .folder([
+                                FolderTree(name: "Quiz3 대비 정리.pdf", content: .file(size: 1)),
+                                FolderTree(name: "Guideline.pdf", content: .file(size: 1)),
+                            ]))
+                    ]))
+            ]))
         var planner = CoursePlanner(course: course)
         let moves = planner.plan()
 
@@ -181,24 +213,33 @@ struct CleanupKeywordTests {
             "Quantitative analysis of aspirin using UV-Vis", "Freezing point depression",
         ]
         let file = { (name: String) in FolderTree(name: name, content: .file(size: 1)) }
-        let course = FolderTree(name: "GS1211 일반화학실험", content: .folder([
-            FolderTree(name: "Manuals", content: .folder([
-                file("accuracy and precision.pdf"), file("Molecular modeling (VSEPR).pdf"),
-                file("Recrystallization and melting point determination.pdf"), file("Unrelated.pdf"),
-            ])),
-            FolderTree(name: "Reports", content: .folder([
-                file("2_20255070_류현승_3분반_Accuracy and precision.pdf"), file("3_20255070_류현승_3분반_VSEPR.docx"),
-                file("Analysis of synthetic aspirin.pdf"),
-            ])),
-        ]))
+        let course = FolderTree(
+            name: "GS1211 일반화학실험",
+            content: .folder([
+                FolderTree(
+                    name: "Manuals",
+                    content: .folder([
+                        file("accuracy and precision.pdf"), file("Molecular modeling (VSEPR).pdf"),
+                        file("Recrystallization and melting point determination.pdf"), file("Unrelated.pdf"),
+                    ])),
+                FolderTree(
+                    name: "Reports",
+                    content: .folder([
+                        file("2_20255070_류현승_3분반_Accuracy and precision.pdf"), file("3_20255070_류현승_3분반_VSEPR.docx"),
+                        file("Analysis of synthetic aspirin.pdf"),
+                    ])),
+            ]))
 
         // Weekly from week 3, so experiment n's session is in week n + 2.
-        var planner = CoursePlanner(course: course, labs: Dictionary(uniqueKeysWithValues: labs.enumerated().map { ($1, $0 + 1) }),
-                                    labWeeks: Dictionary(uniqueKeysWithValues: labs.indices.map { ($0 + 1, $0 + 3) }))
+        var planner = CoursePlanner(
+            course: course, labs: Dictionary(uniqueKeysWithValues: labs.enumerated().map { ($1, $0 + 1) }),
+            labWeeks: Dictionary(uniqueKeysWithValues: labs.indices.map { ($0 + 1, $0 + 3) }))
         let to = Dictionary(uniqueKeysWithValues: planner.plan().map { ($0.from, $0.to) })
 
         #expect(to["Manuals/accuracy and precision.pdf"] == "Lectures/03_accuracy and precision.pdf")
-        #expect(to["Manuals/Recrystallization and melting point determination.pdf"] == "Lectures/05_Recrystallization and melting point determination.pdf")
+        #expect(
+            to["Manuals/Recrystallization and melting point determination.pdf"]
+                == "Lectures/05_Recrystallization and melting point determination.pdf")
         #expect(to["Manuals/Molecular modeling (VSEPR).pdf"] == "Lectures/06_Molecular modeling (VSEPR).pdf")
         #expect(to["Reports/2_20255070_류현승_3분반_Accuracy and precision.pdf"]?.hasPrefix("Assignments/Lab01/") == true)
         #expect(to["Reports/3_20255070_류현승_3분반_VSEPR.docx"]?.hasPrefix("Assignments/Lab04/") == true)
@@ -208,8 +249,10 @@ struct CleanupKeywordTests {
 
     /// The two parts of one experiment share its number, so either part's name finds it.
     @Test func partsOfAnExperimentShareTheNumber() {
-        let labs = ["Accuracy & Precision": 1, "Separation of benzoic acid and acetanilide (extraction)": 2,
-                    "Purification of benzoic acid and acetanilide (recrystallization, mp)": 2, "Molecular modeling 1 (VSEPR)": 3]
+        let labs = [
+            "Accuracy & Precision": 1, "Separation of benzoic acid and acetanilide (extraction)": 2,
+            "Purification of benzoic acid and acetanilide (recrystallization, mp)": 2, "Molecular modeling 1 (VSEPR)": 3,
+        ]
         #expect(Keywords.labNumber(of: "Recrystallization and melting point determination.pdf", labs: labs) == 2)
         #expect(Keywords.labNumber(of: "benzoic acid acetanilide.pdf", labs: labs) == 2)
         #expect(Keywords.labNumber(of: "3_20255070_류현승_3분반_VSEPR.pdf", labs: labs) == 3)

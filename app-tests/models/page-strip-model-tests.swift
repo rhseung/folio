@@ -3,6 +3,7 @@ import FolioDomain
 import FolioStorage
 import Foundation
 import Testing
+
 @testable import Folio
 
 /// Graph theory's matchings slides with two classes a week apart and one still to come.
@@ -33,24 +34,28 @@ struct PageStripModelTests {
         PageStripModel(workspace: workspace, course: graphTheory, material: material ?? slides.id, pageCount: 24, defaults: defaults)
     }
     func link(_ session: UUID, _ pages: ClosedRange<Int>) {
-        workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: session, firstPage: pages.lowerBound, lastPage: pages.upperBound))
+        workspace.run(
+            MaterialLinkSession(
+                course: graphTheory, material: slides.id, session: session, firstPage: pages.lowerBound, lastPage: pages.upperBound))
     }
     /// What the column shows, top to bottom: `h` a header (`H` open), `e` the edit row, `d` the draft row, then the
     /// page, `|` for a page on its section's tint and `*` for one picked, then ` /d` and its range for a draft row
     /// under the page.
     func column(_ model: PageStripModel) -> [String] {
         model.items.map { item in
-            let lead: String = switch item.lead {
-            case .header(let s, let open)?: (open ? "H" : "h") + s.label
-            case .edit(let s)?: "e" + s.label
-            case .draft(let pages)?: "d" + Session.pagesLabel(pages)
-            case nil: ""
-            }
-            let mark = switch item.mark {
-            case .plain: ""
-            case .tinted: "|"
-            case .picked: "*"
-            }
+            let lead: String =
+                switch item.lead {
+                case .header(let s, let open)?: (open ? "H" : "h") + s.label
+                case .edit(let s)?: "e" + s.label
+                case .draft(let pages)?: "d" + Session.pagesLabel(pages)
+                case nil: ""
+                }
+            let mark =
+                switch item.mark {
+                case .plain: ""
+                case .tinted: "|"
+                case .picked: "*"
+                }
             let trail: String = if case .draft(let pages)? = item.trail { " /d" + Session.pagesLabel(pages) } else { "" }
             return lead + (item.page.map { " \($0)\(mark)" } ?? "") + trail
         }
@@ -299,7 +304,8 @@ struct PageStripModelTests {
     /// The rule behind the stop: a save that would share a page is refused, naming the other class's pages.
     @Test func anOverlappingSaveIsRefused() {
         link(earlier, 1...7)
-        let refusal = workspace.refusal(MaterialLinkSession(course: graphTheory, material: slides.id, session: session, firstPage: 5, lastPage: 9))
+        let refusal = workspace.refusal(
+            MaterialLinkSession(course: graphTheory, material: slides.id, session: session, firstPage: 5, lastPage: 9))
         #expect(refusal?.contains("1–7쪽") == true)
     }
 

@@ -63,7 +63,8 @@ enum CoordinatedFile {
         let coordinator = NSFileCoordinator()
         var error: NSError?
         var result: Result<Void, any Error>?
-        coordinator.coordinate(writingItemAt: source, options: .forMoving, writingItemAt: target, options: .forReplacing, error: &error) { from, to in
+        coordinator.coordinate(writingItemAt: source, options: .forMoving, writingItemAt: target, options: .forReplacing, error: &error) {
+            from, to in
             result = Result {
                 try FileManager.default.moveItem(at: from, to: to)
                 coordinator.item(at: from, didMoveTo: to)
@@ -77,7 +78,8 @@ enum CoordinatedFile {
         try StagedFolder.guardWrite(target)
         var error: NSError?
         var result: Result<Void, any Error>?
-        NSFileCoordinator().coordinate(readingItemAt: source, options: [], writingItemAt: target, options: .forReplacing, error: &error) { from, to in
+        NSFileCoordinator().coordinate(readingItemAt: source, options: [], writingItemAt: target, options: .forReplacing, error: &error) {
+            from, to in
             result = Result { try FileManager.default.copyItem(at: from, to: to) }
         }
         try finish(result, error)

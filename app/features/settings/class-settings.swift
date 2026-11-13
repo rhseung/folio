@@ -19,8 +19,11 @@ struct ClassSettings: View {
                             Spacer(minLength: Theme.Space.s)
                             Menu {
                                 ForEach(ClassStartSettings.Item.allCases, id: \.self) { item in
-                                    Toggle(item.label, isOn: Binding(get: { model.follows(item, course: course.id) },
-                                                                     set: { model.setFollows($0, item, course: course.id) }))
+                                    Toggle(
+                                        item.label,
+                                        isOn: Binding(
+                                            get: { model.follows(item, course: course.id) },
+                                            set: { model.setFollows($0, item, course: course.id) }))
                                 }
                             } label: {
                                 ChipLabel(model.exceptionLabel(course.id))
@@ -36,8 +39,10 @@ struct ClassSettings: View {
         Block(String(localized: .settingsClassTime)) {
             Card {
                 FormRow(label: String(localized: .settingsClassMinutes), last: true) {
-                    ScrubField(value: Binding(get: { Double(model.settings.classMinutes) }, set: { model.settings.classMinutes = Int($0.rounded()) }),
-                               range: 10...300, step: 5, width: 80)
+                    ScrubField(
+                        value: Binding(
+                            get: { Double(model.settings.classMinutes) }, set: { model.settings.classMinutes = Int($0.rounded()) }),
+                        range: 10...300, step: 5, width: 80)
                     Text(.settingsUnitMinutes).foregroundStyle(Theme.Palette.textSecondary)
                 }
             }
@@ -61,45 +66,63 @@ private struct ClassStartCard: View {
                 .padding(.bottom, Theme.Space.s)
             Theme.Palette.lineSoft.frame(height: 1).padding(.leading, Theme.Space.l)
             FormRow(label: String(localized: .settingsClassStartItems), last: !any) {
-                ToggleChips(selection: $model.classStartItems, options: ClassStartSettings.Item.allCases.map { .init(value: $0, label: $0.label, symbol: $0.symbol) })
+                ToggleChips(
+                    selection: $model.classStartItems,
+                    options: ClassStartSettings.Item.allCases.map { .init(value: $0, label: $0.label, symbol: $0.symbol) })
             }
             if model.isOn(.recording) {
                 FormRow(label: String(localized: .settingsClassStartRecordingMode)) {
-                    Segmented(selection: $model.settings.classStart.recording, options: [
-                        (.start, String(localized: .settingsClassStartNow)), (.ask, String(localized: .settingsClassStartAsk)),
-                    ])
+                    Segmented(
+                        selection: $model.settings.classStart.recording,
+                        options: [
+                            (.start, String(localized: .settingsClassStartNow)), (.ask, String(localized: .settingsClassStartAsk)),
+                        ])
                 }
             }
             if model.opensPages {
                 FormRow(label: String(localized: .settingsClassStartOpenIn)) {
-                    PictureChoice(selection: $model.settings.classStart.openIn, options: [
-                        (.splitTab, String(localized: .settingsClassStartOpenInSplit)), (.currentTab, String(localized: .settingsClassStartOpenInCurrent)),
-                    ]) { LayoutSketch(openIn: $0) }
+                    PictureChoice(
+                        selection: $model.settings.classStart.openIn,
+                        options: [
+                            (.splitTab, String(localized: .settingsClassStartOpenInSplit)),
+                            (.currentTab, String(localized: .settingsClassStartOpenInCurrent)),
+                        ]
+                    ) { LayoutSketch(openIn: $0) }
                 }
             }
             if any {
                 FormRow(label: String(localized: .settingsClassStartScreen)) {
-                    ChoiceMenu(selection: $model.settings.classStart.screen, options: [
-                        (.notify, String(localized: .settingsClassStartNotify)), (.front, String(localized: .settingsClassStartFront)),
-                    ])
+                    ChoiceMenu(
+                        selection: $model.settings.classStart.screen,
+                        options: [
+                            (.notify, String(localized: .settingsClassStartNotify)), (.front, String(localized: .settingsClassStartFront)),
+                        ])
                 }
                 DisclosureRow(label: String(localized: .settingsDetails), isOpen: $details, last: true) {
                     let rows = detailRows
                     if model.isOn(.recording) { RecordingSpanRow(model: model, last: rows.last == .span) }
                     if model.isOn(.roughNote) {
                         FormRow(label: String(localized: .settingsClassStartNoNote), last: rows.last == .note) {
-                            ChoiceMenu(selection: $model.settings.classStart.roughNote, options: [
-                                (.create, String(localized: .settingsClassStartCreate)), (.openExisting, String(localized: .settingsClassStartSkip)),
-                            ])
+                            ChoiceMenu(
+                                selection: $model.settings.classStart.roughNote,
+                                options: [
+                                    (.create, String(localized: .settingsClassStartCreate)),
+                                    (.openExisting, String(localized: .settingsClassStartSkip)),
+                                ])
                         }
                     }
                     if model.isOn(.lecture) {
                         FormRow(label: String(localized: .settingsClassStartLectureCount)) {
-                            ChoiceMenu(selection: $model.settings.classStart.allLectures, options: [
-                                (false, String(localized: .settingsClassStartFirstLecture)), (true, String(localized: .settingsClassStartAllLectures)),
-                            ])
+                            ChoiceMenu(
+                                selection: $model.settings.classStart.allLectures,
+                                options: [
+                                    (false, String(localized: .settingsClassStartFirstLecture)),
+                                    (true, String(localized: .settingsClassStartAllLectures)),
+                                ])
                         }
-                        FormRow(label: String(localized: .settingsClassStartResume), last: true) { Switch(isOn: $model.settings.classStart.resumesLecture) }
+                        FormRow(label: String(localized: .settingsClassStartResume), last: true) {
+                            Switch(isOn: $model.settings.classStart.resumesLecture)
+                        }
                     }
                 }
             }
@@ -109,7 +132,9 @@ private struct ClassStartCard: View {
     enum DetailRow { case span, note, lecture }
 
     var detailRows: [DetailRow] {
-        [model.isOn(.recording) ? .span : nil, model.isOn(.roughNote) ? .note : nil, model.isOn(.lecture) ? .lecture : nil].compactMap { $0 }
+        [model.isOn(.recording) ? .span : nil, model.isOn(.roughNote) ? .note : nil, model.isOn(.lecture) ? .lecture : nil].compactMap {
+            $0
+        }
     }
 }
 
@@ -150,9 +175,11 @@ private struct RecordingSpanRow: View {
     }
 
     func minutes(_ value: Binding<Int>) -> some View {
-        ScrubField(value: Binding(get: { Double(value.wrappedValue) }, set: { value.wrappedValue = Int($0.rounded()) }),
-                   range: -60...60, step: 1, width: 64, magnitude: true)
-            .foregroundStyle(Theme.Palette.text)
+        ScrubField(
+            value: Binding(get: { Double(value.wrappedValue) }, set: { value.wrappedValue = Int($0.rounded()) }),
+            range: -60...60, step: 1, width: 64, magnitude: true
+        )
+        .foregroundStyle(Theme.Palette.text)
     }
 }
 
@@ -210,15 +237,17 @@ private struct ClassStartPicture: View {
             .frame(maxWidth: .infinity)
             .background(Theme.Palette.column, in: .rect(cornerRadius: Theme.Radius.control))
             .overlay(alignment: .topTrailing) { if notifies { banner.padding(Theme.Space.s) } }
-            .font(.system(size: 10)) // design: one-off, the type of a window drawn small
+            .font(.system(size: 10))  // design: one-off, the type of a window drawn small
             .accessibilityHidden(true)
     }
 
     var window: some View {
         VStack(spacing: Theme.Space.xs) {
             HStack(spacing: Theme.Space.xs) {
-                HStack(spacing: Theme.Space.xxs) { ForEach(0..<3, id: \.self) { _ in Circle().fill(Theme.Palette.line).frame(width: 6, height: 6) } }
-                    .padding(.trailing, Theme.Space.xs)
+                HStack(spacing: Theme.Space.xxs) {
+                    ForEach(0..<3, id: \.self) { _ in Circle().fill(Theme.Palette.line).frame(width: 6, height: 6) }
+                }
+                .padding(.trailing, Theme.Space.xs)
                 tab(String(localized: .settingsPreviewToday), chosen: !newTab)
                 if newTab { tab(title, chosen: true, focused: true).layoutPriority(-1) }
                 Spacer(minLength: 0)
@@ -235,7 +264,9 @@ private struct ClassStartPicture: View {
                 }
             }
             .frame(height: 112)
-            .overlay(alignment: .bottom) { if items.contains(.recording), settings.recording == .ask { askCard.padding(.bottom, Theme.Space.s) } }
+            .overlay(alignment: .bottom) {
+                if items.contains(.recording), settings.recording == .ask { askCard.padding(.bottom, Theme.Space.s) }
+            }
         }
         .padding(.horizontal, Theme.Space.tight)
         .padding(.bottom, Theme.Space.tight)
@@ -326,8 +357,10 @@ private struct ClassStartPicture: View {
             Image(systemName: "bell").foregroundStyle(Theme.Palette.info)
             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                 Text(title).fontWeight(.semibold)
-                Text(items.contains(.recording) && settings.recording == .start ? .settingsPreviewStartedRecording : .settingsPreviewStarted)
-                    .foregroundStyle(Theme.Palette.textSecondary)
+                Text(
+                    items.contains(.recording) && settings.recording == .start ? .settingsPreviewStartedRecording : .settingsPreviewStarted
+                )
+                .foregroundStyle(Theme.Palette.textSecondary)
             }
             .lineLimit(1)
         }
@@ -347,13 +380,21 @@ private struct TranscriptionSettings: View {
         Block(String(localized: .settingsTranscription)) {
             Card {
                 FormRow(label: String(localized: .settingsTranscriptionEngine), device: true) {
-                    ChoiceMenu(selection: $engine, options: [(.whisper, String(localized: .settingsTranscriptionWhisper)),
-                                                             (.apple, String(localized: .settingsTranscriptionApple))])
+                    ChoiceMenu(
+                        selection: $engine,
+                        options: [
+                            (.whisper, String(localized: .settingsTranscriptionWhisper)),
+                            (.apple, String(localized: .settingsTranscriptionApple)),
+                        ])
                 }
-                FormRow(label: String(localized: .settingsWhisperModel), detail: String(localized: .settingsWhisperModelDetail), device: true, last: true) {
+                FormRow(
+                    label: String(localized: .settingsWhisperModel), detail: String(localized: .settingsWhisperModelDetail), device: true,
+                    last: true
+                ) {
                     if let fraction = whisper.downloading {
                         ProgressView(value: fraction).progressViewStyle(.linear).frame(width: 96)
-                        Text(.settingsWhisperDownloading(Int(fraction * 100))).monospacedDigit().foregroundStyle(Theme.Palette.textSecondary)
+                        Text(.settingsWhisperDownloading(Int(fraction * 100))).monospacedDigit().foregroundStyle(
+                            Theme.Palette.textSecondary)
                     } else if whisper.ready {
                         Text(.settingsWhisperReady).foregroundStyle(Theme.Palette.textSecondary)
                         Button(.settingsWhisperDelete, role: .destructive) { whisper.delete() }.buttonStyle(.ghost)

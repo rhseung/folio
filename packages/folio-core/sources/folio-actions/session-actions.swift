@@ -3,15 +3,20 @@ import FolioStorage
 import Foundation
 
 func index<E: Identifiable>(_ id: E.ID, in items: [E], _ what: LocalizedStringResource) throws -> Int {
-    guard let i = items.firstIndex(where: { $0.id == id }) else { throw ActionError.notFound(String(localized: .errorNotFoundItem(String(localized: what)))) }
+    guard let i = items.firstIndex(where: { $0.id == id }) else {
+        throw ActionError.notFound(String(localized: .errorNotFoundItem(String(localized: what))))
+    }
     return i
 }
 
-@Action("session add", "회차 추가. 주차는 학기 시작일에서 정한다", effect: .creates, done: "회차를 추가했습니다",
-        examples: [#"folio session add EC4207 --date "2026-10-28 10:30""#, "folio session add EC4207 --date 2026-10-30 --kind cancelled --dry-run",
-                   #"folio session add EC4207 --date "2026-11-04 21:00" --end "2026-11-04 22:15" --kind makeup --link https://zoom.us/j/123 --dry-run"#,
-                   #"folio session add EC4207 --date "2026-11-11 10:30" --attendance absent --dry-run"#],
-        phrases: ["보충", "보충수업", "잡혔", "수업 추가", "보강", "추가 수업", "회차 만들기", "줌 수업", "온라인 수업", "비대면 수업"])
+@Action(
+    "session add", "회차 추가. 주차는 학기 시작일에서 정한다", effect: .creates, done: "회차를 추가했습니다",
+    examples: [
+        #"folio session add EC4207 --date "2026-10-28 10:30""#, "folio session add EC4207 --date 2026-10-30 --kind cancelled --dry-run",
+        #"folio session add EC4207 --date "2026-11-04 21:00" --end "2026-11-04 22:15" --kind makeup --link https://zoom.us/j/123 --dry-run"#,
+        #"folio session add EC4207 --date "2026-11-11 10:30" --attendance absent --dry-run"#,
+    ],
+    phrases: ["보충", "보충수업", "잡혔", "수업 추가", "보강", "추가 수업", "회차 만들기", "줌 수업", "온라인 수업", "비대면 수업"])
 public struct SessionAdd {
     @New var id: Session.ID
     /// 과목
@@ -32,10 +37,13 @@ public struct SessionAdd {
     public func run(_ ctx: ActionContext) throws {
         let start = try ctx.semester(of: ctx.file(course).course)?.start
         try ctx.edit(course) { f in
-            guard !f.sessions.contains(where: { $0.id == id }) else { throw ActionError.rule(String(localized: .errorIdTakenSession("\(id)"))) }
+            guard !f.sessions.contains(where: { $0.id == id }) else {
+                throw ActionError.rule(String(localized: .errorIdTakenSession("\(id)")))
+            }
             for unit in units { _ = try index(unit, in: f.units, .valueUnit) }
-            var s = SessionPlanner.session(at: date, sessions: f.sessions, termStart: start, calendar: ctx.calendar,
-                                           device: ctx.device, now: ctx.now)
+            var s = SessionPlanner.session(
+                at: date, sessions: f.sessions, termStart: start, calendar: ctx.calendar,
+                device: ctx.device, now: ctx.now)
             s.id = id
             s.kind = kind
             s.link = OnlineLink.stored(link)
@@ -53,10 +61,11 @@ public struct SessionAdd {
 
 /// Only sessions nothing points at: a note, recording or other link left pointing at nothing is worse than a stray
 /// session. An unreadable note folder might point at any of them, so none goes then.
-@Action("session rm", "아무것도 연결되지 않은 회차 지우기",
-        discussion: "노트, 녹음, 출석, 자료, 단원이 연결된 회차는 지우지 않는다(종료 코드 4). 수업이 없던 날이면 session set --kind cancelled로 휴강 표시한다.",
-        effect: .removes, confirm: "회차 {sessions}을(를) 지웁니다.",
-        done: "회차 {sessions}을(를) 지웠습니다", examples: ["folio session rm EC4207/10-30 --dry-run"])
+@Action(
+    "session rm", "아무것도 연결되지 않은 회차 지우기",
+    discussion: "노트, 녹음, 출석, 자료, 단원이 연결된 회차는 지우지 않는다(종료 코드 4). 수업이 없던 날이면 session set --kind cancelled로 휴강 표시한다.",
+    effect: .removes, confirm: "회차 {sessions}을(를) 지웁니다.",
+    done: "회차 {sessions}을(를) 지웠습니다", examples: ["folio session rm EC4207/10-30 --dry-run"])
 public struct SessionRemove {
     @Arg var course: Course.ID
     /// 회차
@@ -76,14 +85,19 @@ public struct SessionRemove {
     }
 }
 
-@Action("session set", "회차의 일시, 온라인 링크, 종류(강의, 휴강, 보강), 복습 여부, 복습 노트 상태 바꾸기. 준 것만 바뀐다",
-        done: "회차 '{session}'을(를) 바꿨습니다",
-        examples: ["folio session set EC4207/10-26 --kind cancelled", "folio session set EC4207/10-28 --kind makeup --dry-run",
-                   "folio session set EC4207/10-26 --review-unfinished false --dry-run",
-                   #"folio session set EC4207/10-26 --link https://zoom.us/j/123 --dry-run"#,
-                   #"folio session set EC4207/10-26 --date "2026-10-29 19:00" --end "2026-10-29 20:15" --dry-run"#],
-        phrases: ["수업 없", "수업 안 함", "휴강", "수업 취소", "보강으로", "보강 표시", "이 수업 복습 끄기", "복습 노트 다 씀",
-                  "줌 링크", "수업 링크", "수업 시간 변경", "보강 시간"])
+@Action(
+    "session set", "회차의 일시, 온라인 링크, 종류(강의, 휴강, 보강), 복습 여부, 복습 노트 상태 바꾸기. 준 것만 바뀐다",
+    done: "회차 '{session}'을(를) 바꿨습니다",
+    examples: [
+        "folio session set EC4207/10-26 --kind cancelled", "folio session set EC4207/10-28 --kind makeup --dry-run",
+        "folio session set EC4207/10-26 --review-unfinished false --dry-run",
+        #"folio session set EC4207/10-26 --link https://zoom.us/j/123 --dry-run"#,
+        #"folio session set EC4207/10-26 --date "2026-10-29 19:00" --end "2026-10-29 20:15" --dry-run"#,
+    ],
+    phrases: [
+        "수업 없", "수업 안 함", "휴강", "수업 취소", "보강으로", "보강 표시", "이 수업 복습 끄기", "복습 노트 다 씀",
+        "줌 링크", "수업 링크", "수업 시간 변경", "보강 시간",
+    ])
 public struct SessionSet {
     @Arg var course: Course.ID
     /// 회차
@@ -105,8 +119,10 @@ public struct SessionSet {
         let start = try date.value == nil ? nil : ctx.semester(of: ctx.file(course).course)?.start
         try ctx.edit(course) { f in
             _ = try index(session, in: f.sessions, .valueSession)
-            try f.set(session: session, date: date, end: end, link: link, kind: kind, skipsReview: skipsReview, reviewUnfinished: reviewUnfinished,
-                      termStart: start, calendar: ctx.calendar)
+            try f.set(
+                session: session, date: date, end: end, link: link, kind: kind, skipsReview: skipsReview,
+                reviewUnfinished: reviewUnfinished,
+                termStart: start, calendar: ctx.calendar)
         }
     }
 }
@@ -114,8 +130,10 @@ public struct SessionSet {
 extension CourseFile {
     /// When and how a class meets and its review flags, written the same by `session set` (the menu's review check) and
     /// `session wrap-up` (the class's sheet), so the two can't drift apart.
-    mutating func set(session id: UUID, date: Patch<Date>, end: Patch<Date?>, link: Patch<String?>, kind: Patch<Session.Kind>,
-                      skipsReview: Patch<Bool>, reviewUnfinished: Patch<Bool>, termStart: LocalDate?, calendar: Calendar) throws {
+    mutating func set(
+        session id: UUID, date: Patch<Date>, end: Patch<Date?>, link: Patch<String?>, kind: Patch<Session.Kind>,
+        skipsReview: Patch<Bool>, reviewUnfinished: Patch<Bool>, termStart: LocalDate?, calendar: Calendar
+    ) throws {
         if let date = date.value { reschedule(id, to: date, termStart: termStart, calendar: calendar) }
         let schedule = course.schedule
         try update(\.sessions, id) { s in
@@ -135,8 +153,9 @@ extension CourseFile {
 }
 
 /// A new review note starts unfinished: making it is not writing it.
-@Action("session note", "회차의 러프 노트와 복습 노트. 없으면 템플릿으로 만든다", effect: .creates, done: "회차 '{session}'의 노트",
-        examples: ["folio session note EC4207/10-26 review"], phrases: ["수업 노트", "강의 필기", "러프 노트", "복습 노트 열기"])
+@Action(
+    "session note", "회차의 러프 노트와 복습 노트. 없으면 템플릿으로 만든다", effect: .creates, done: "회차 '{session}'의 노트",
+    examples: ["folio session note EC4207/10-26 review"], phrases: ["수업 노트", "강의 필기", "러프 노트", "복습 노트 열기"])
 public struct SessionNote {
     /// The new note's id; unused when the note already exists.
     @New var id: Note.ID
@@ -173,9 +192,10 @@ public struct SessionNote {
 }
 
 /// Present is the default, so it is stored as no entry.
-@Action("attendance set", "회차의 출결 정하기. 출석이 기본값이다", done: "회차 '{session}'의 출결을 {state}(으)로 정했습니다",
-        examples: ["folio attendance set EC4207/10-26 absent"],
-        phrases: ["빠졌", "못 갔", "안 갔", "결석", "지각", "공결", "출석 체크", "수업 빠짐", "못 갔어"])
+@Action(
+    "attendance set", "회차의 출결 정하기. 출석이 기본값이다", done: "회차 '{session}'의 출결을 {state}(으)로 정했습니다",
+    examples: ["folio attendance set EC4207/10-26 absent"],
+    phrases: ["빠졌", "못 갔", "안 갔", "결석", "지각", "공결", "출석 체크", "수업 빠짐", "못 갔어"])
 public struct AttendanceSet {
     @Arg var course: Course.ID
     /// 회차
@@ -194,9 +214,10 @@ public struct AttendanceSet {
 
 // MARK: Units
 
-@Action("unit add", "단원 추가. 형제 단원 맨 뒤에 놓인다", effect: .creates, done: "단원 '{title}'을(를) 추가했습니다",
-        examples: ["folio unit add EC4207 트리", #"folio unit add EC4207 "스패닝 트리" --parent 트리 --dry-run"#],
-        phrases: ["단원 추가", "챕터 추가", "새 단원"])
+@Action(
+    "unit add", "단원 추가. 형제 단원 맨 뒤에 놓인다", effect: .creates, done: "단원 '{title}'을(를) 추가했습니다",
+    examples: ["folio unit add EC4207 트리", #"folio unit add EC4207 "스패닝 트리" --parent 트리 --dry-run"#],
+    phrases: ["단원 추가", "챕터 추가", "새 단원"])
 public struct UnitAdd {
     @New var id: FolioDomain.Unit.ID
     /// 과목
@@ -210,15 +231,19 @@ public struct UnitAdd {
         let name = title.trimmingCharacters(in: .whitespaces)
         try ctx.edit(course) { f in
             guard !f.units.contains(where: { $0.id == id }) else { throw ActionError.rule(String(localized: .errorIdTakenUnit("\(id)"))) }
-            f.units.append(FolioDomain.Unit(id: id, device: ctx.device, at: ctx.now, title: name, order: UnitTree.nextOrder(under: parent, in: f.units), parentId: parent))
+            f.units.append(
+                FolioDomain.Unit(
+                    id: id, device: ctx.device, at: ctx.now, title: name, order: UnitTree.nextOrder(under: parent, in: f.units),
+                    parentId: parent))
         }
         ctx.made(id)
     }
 }
 
-@Action("unit rm", "단원 지우기. 하위 단원은 한 단계 올라간다. 회차, 시험 범위, 자료, 노트, 문제의 연결은 풀리고, 노트와 퀴즈 파일은 남는다", effect: .removes,
-        confirm: "단원 '{unit}'을(를) 지우고 회차, 시험 범위, 자료, 노트, 문제의 연결을 풉니다.", done: "단원 '{unit}'을(를) 지웠습니다",
-        examples: ["folio unit rm EC4207/트리 --dry-run"], phrases: ["단원 삭제"])
+@Action(
+    "unit rm", "단원 지우기. 하위 단원은 한 단계 올라간다. 회차, 시험 범위, 자료, 노트, 문제의 연결은 풀리고, 노트와 퀴즈 파일은 남는다", effect: .removes,
+    confirm: "단원 '{unit}'을(를) 지우고 회차, 시험 범위, 자료, 노트, 문제의 연결을 풉니다.", done: "단원 '{unit}'을(를) 지웠습니다",
+    examples: ["folio unit rm EC4207/트리 --dry-run"], phrases: ["단원 삭제"])
 public struct UnitRemove {
     @Arg var course: Course.ID
     /// 단원
@@ -232,8 +257,9 @@ public struct UnitRemove {
     }
 }
 
-@Action("unit set", "단원 제목 바꾸기", done: "단원 '{unit}'의 제목을 바꿨습니다",
-        examples: [#"folio unit set EC4207/트리 --title "트리와 숲""#], phrases: ["단원 제목", "단원 이름 바꾸기", "챕터 이름"])
+@Action(
+    "unit set", "단원 제목 바꾸기", done: "단원 '{unit}'의 제목을 바꿨습니다",
+    examples: [#"folio unit set EC4207/트리 --title "트리와 숲""#], phrases: ["단원 제목", "단원 이름 바꾸기", "챕터 이름"])
 public struct UnitSet {
     @Arg var course: Course.ID
     /// 단원
@@ -254,8 +280,9 @@ public struct UnitSet {
 }
 
 /// Moves a unit among its siblings (`by` -1 up, 1 down) or under another parent (nil for the top level).
-@Action("unit move", "단원을 형제 사이에서 옮기거나 다른 단원 아래로 옮기기", done: "단원 '{unit}'을(를) 옮겼습니다",
-        cli: .manual(reason: "--up, --down, --parent, --top 중 하나가 옮길 곳(Target) 하나가 된다"))
+@Action(
+    "unit move", "단원을 형제 사이에서 옮기거나 다른 단원 아래로 옮기기", done: "단원 '{unit}'을(를) 옮겼습니다",
+    cli: .manual(reason: "--up, --down, --parent, --top 중 하나가 옮길 곳(Target) 하나가 된다"))
 public struct UnitMove {
     public enum Target: Codable, Sendable, Equatable {
         case by(Int), parent(UUID?)
@@ -280,9 +307,10 @@ public struct UnitMove {
 }
 
 /// Keeps `Unit.sessionIds` and `Session.unitIds` in step.
-@Action("unit link", "단원에 회차 연결하기, --off면 풀기", done: "단원 '{unit}'의 회차 연결을 바꿨습니다",
-        examples: ["folio unit link EC4207/트리 10-26 10-28", "folio unit link EC4207/트리 10-28 --off --dry-run"],
-        phrases: ["단원과 수업 연결", "이 수업에서 배운 단원"])
+@Action(
+    "unit link", "단원에 회차 연결하기, --off면 풀기", done: "단원 '{unit}'의 회차 연결을 바꿨습니다",
+    examples: ["folio unit link EC4207/트리 10-26 10-28", "folio unit link EC4207/트리 10-28 --off --dry-run"],
+    phrases: ["단원과 수업 연결", "이 수업에서 배운 단원"])
 public struct UnitLink {
     @Arg var course: Course.ID
     /// 단원
@@ -310,10 +338,11 @@ func checkPages(_ first: Int, _ last: Int) throws {
     guard first >= 1, first <= last else { throw ActionError.rule(String(localized: .errorUnitPagesRange(first, last))) }
 }
 
-@Action("unit pages add", "단원에 렉처 파일의 쪽 구간 더하기. 한 단원이 여러 파일에, 한 파일이 여러 단원에 걸칠 수 있다",
-        done: "단원 '{unit}'에 {material}의 쪽 구간을 더했습니다",
-        examples: ["folio unit pages add EC4207/매칭 05_Matchings.pdf --first 1 --last 4"],
-        phrases: ["렉처 목차", "단원 쪽 구간", "이 단원은 몇 쪽부터"])
+@Action(
+    "unit pages add", "단원에 렉처 파일의 쪽 구간 더하기. 한 단원이 여러 파일에, 한 파일이 여러 단원에 걸칠 수 있다",
+    done: "단원 '{unit}'에 {material}의 쪽 구간을 더했습니다",
+    examples: ["folio unit pages add EC4207/매칭 05_Matchings.pdf --first 1 --last 4"],
+    phrases: ["렉처 목차", "단원 쪽 구간", "이 단원은 몇 쪽부터"])
 public struct UnitPagesAdd {
     @Arg var course: Course.ID
     /// 단원
@@ -337,10 +366,11 @@ public struct UnitPagesAdd {
     }
 }
 
-@Action("unit pages set", "단원의 렉처 쪽 구간 고치기. 그 파일에서 단원이 가진 구간을 이 구간 하나로 바꾼다",
-        done: "단원 '{unit}'의 {material} 쪽 구간을 고쳤습니다",
-        examples: ["folio unit pages set EC4207/매칭 05_Matchings.pdf --first 1 --last 6"],
-        phrases: ["단원 쪽 구간 고치기", "목차 경계 옮기기"])
+@Action(
+    "unit pages set", "단원의 렉처 쪽 구간 고치기. 그 파일에서 단원이 가진 구간을 이 구간 하나로 바꾼다",
+    done: "단원 '{unit}'의 {material} 쪽 구간을 고쳤습니다",
+    examples: ["folio unit pages set EC4207/매칭 05_Matchings.pdf --first 1 --last 6"],
+    phrases: ["단원 쪽 구간 고치기", "목차 경계 옮기기"])
 public struct UnitPagesSet {
     @Arg var course: Course.ID
     /// 단원
@@ -357,7 +387,10 @@ public struct UnitPagesSet {
         try ctx.edit(course) { f in
             _ = try index(material, in: f.materials, .valueMaterial)
             try f.update(\.units, unit) { u in
-                let next = u.lecturePages.filter { $0.materialId != material } + [UnitPages(materialId: material, firstPage: first, lastPage: last)]
+                let next =
+                    u.lecturePages.filter { $0.materialId != material } + [
+                        UnitPages(materialId: material, firstPage: first, lastPage: last)
+                    ]
                 guard next != u.lecturePages else { return }
                 u.lecturePages = next
                 u.touch(by: ctx.device, at: ctx.now)
@@ -366,9 +399,10 @@ public struct UnitPagesSet {
     }
 }
 
-@Action("unit pages rm", "단원에서 렉처 파일의 쪽 구간 빼기. 파일과 단원은 그대로 둔다", effect: .removes,
-        confirm: "단원 '{unit}'에서 {material}의 쪽 구간을 뺍니다.", done: "단원 '{unit}'에서 {material}의 쪽 구간을 뺐습니다",
-        examples: ["folio unit pages rm EC4207/매칭 05_Matchings.pdf --dry-run"], phrases: ["단원 쪽 구간 지우기"])
+@Action(
+    "unit pages rm", "단원에서 렉처 파일의 쪽 구간 빼기. 파일과 단원은 그대로 둔다", effect: .removes,
+    confirm: "단원 '{unit}'에서 {material}의 쪽 구간을 뺍니다.", done: "단원 '{unit}'에서 {material}의 쪽 구간을 뺐습니다",
+    examples: ["folio unit pages rm EC4207/매칭 05_Matchings.pdf --dry-run"], phrases: ["단원 쪽 구간 지우기"])
 public struct UnitPagesRemove {
     @Arg var course: Course.ID
     /// 단원
@@ -402,10 +436,11 @@ func checkCuts(_ cuts: [LectureCut], in f: CourseFile) throws {
 
 /// The whole split of one lecture file at once, as the split screen and the add sheet approve it: every unit's
 /// pages of the file become these, and units named only by a title are made.
-@Action("material split", "렉처 파일을 단원 구간으로 나누기. 그 파일의 단원 구간을 모두 이 목록으로 바꾸고, 없는 단원은 만든다",
-        done: "{material}을(를) 단원 구간으로 나눴습니다",
-        examples: [#"folio material split EC4207/05_Matchings.pdf 1-4:매칭 5-8:König 9-13:"Hall의 결혼 정리""#],
-        phrases: ["단원으로 나누기", "렉처 목차 나누기", "렉처를 단원별로"], cli: .manual(reason: "<쪽>:<단원> 인자를 구간으로 읽고, 없는 단원 이름은 새 단원으로 만든다"))
+@Action(
+    "material split", "렉처 파일을 단원 구간으로 나누기. 그 파일의 단원 구간을 모두 이 목록으로 바꾸고, 없는 단원은 만든다",
+    done: "{material}을(를) 단원 구간으로 나눴습니다",
+    examples: [#"folio material split EC4207/05_Matchings.pdf 1-4:매칭 5-8:König 9-13:"Hall의 결혼 정리""#],
+    phrases: ["단원으로 나누기", "렉처 목차 나누기", "렉처를 단원별로"], cli: .manual(reason: "<쪽>:<단원> 인자를 구간으로 읽고, 없는 단원 이름은 새 단원으로 만든다"))
 public struct MaterialSplit {
     @Arg var course: Course.ID
     @Arg var material: Material.ID
@@ -421,8 +456,9 @@ public struct MaterialSplit {
 }
 
 /// The units under the unit go in or out with it.
-@Action("exam scope", "시험 범위에 단원 넣기, --off면 빼기", done: "시험 '{exam}'의 범위를 바꿨습니다",
-        cli: .manual(reason: "--unit마다 액션을 한 번씩 같은 맥락에서 돌려 결과를 하나로 보이고, --taught면 exam scope --taught를 돌린다"))
+@Action(
+    "exam scope", "시험 범위에 단원 넣기, --off면 빼기", done: "시험 '{exam}'의 범위를 바꿨습니다",
+    cli: .manual(reason: "--unit마다 액션을 한 번씩 같은 맥락에서 돌려 결과를 하나로 보이고, --taught면 exam scope --taught를 돌린다"))
 public struct ExamScope {
     @Arg var course: Course.ID
     @Arg var exam: Exam.ID
@@ -442,11 +478,14 @@ public struct ExamScope {
 
 /// What one class went through, every lecture file at once, as the end-of-class prompt saves it: one action, so a
 /// range the rules refuse leaves the other files unwritten too. Files left out keep their links.
-@Action("session progress", "수업의 렉처 진도 기록하기. 자료마다 이번 수업이 다룬 쪽을 회차에 연결한다",
-        discussion: "자료마다 <자료>:<시작>-<끝>으로 쓴다. 한 쪽이면 <자료>:<쪽>. 적지 않은 자료의 연결은 그대로 둔다.",
-        done: "회차 '{session}'의 진도를 기록했습니다",
-        examples: ["folio session progress EC4207/10-26 05_Matchings.pdf:3-12", "folio session progress EC4207/10-26 05_Matchings.pdf:18-24 --dry-run"],
-        phrases: ["렉처 진도", "수업 진도", "어디까지 나갔", "진도 기록"])
+@Action(
+    "session progress", "수업의 렉처 진도 기록하기. 자료마다 이번 수업이 다룬 쪽을 회차에 연결한다",
+    discussion: "자료마다 <자료>:<시작>-<끝>으로 쓴다. 한 쪽이면 <자료>:<쪽>. 적지 않은 자료의 연결은 그대로 둔다.",
+    done: "회차 '{session}'의 진도를 기록했습니다",
+    examples: [
+        "folio session progress EC4207/10-26 05_Matchings.pdf:3-12", "folio session progress EC4207/10-26 05_Matchings.pdf:18-24 --dry-run",
+    ],
+    phrases: ["렉처 진도", "수업 진도", "어디까지 나갔", "진도 기록"])
 public struct SessionProgress {
     /// 과목
     @Arg var course: Course.ID
@@ -469,12 +508,16 @@ public struct SessionProgress {
 /// Everything a class's sheet saves, in one action so a part the rules refuse leaves the rest unwritten too: what the
 /// class covered (progress, units), how it was attended and reviewed, and when and how it meets. Once the class is
 /// over or recorded, saving marks it wrapped up, which is what stops it being asked about: what was left empty stays so on purpose.
-@Action("session wrap-up", "회차 편집과 수업 정리: 렉처 진도, 단원, 출결, 복습, 일시, 종류, 온라인 링크를 한 번에 적는다. 끝난 수업이면 정리했다고 표시한다",
-        discussion: "렉처 파일은 <자료>:<시작>-<끝>으로 쓴다. 주지 않은 것은 그대로 둔다. 끝났거나 녹음을 마친 수업(휴강 아님)이면 정리했다고 표시해 오늘 화면의 수업 정리에서 뺀다.",
-        done: "회차 '{session}'을(를) 저장했습니다",
-        examples: ["folio session wrap-up EC4207/10-26 05_Matchings.pdf:7-11 --unit 매칭", "folio session wrap-up EC4207/10-26 --attendance late --dry-run",
-                   "folio session wrap-up EC4207/10-26 --review-unfinished false --kind makeup --dry-run"],
-        phrases: ["수업 정리", "수업 끝", "오늘 수업 정리", "수업 마무리", "회차 편집"])
+@Action(
+    "session wrap-up", "회차 편집과 수업 정리: 렉처 진도, 단원, 출결, 복습, 일시, 종류, 온라인 링크를 한 번에 적는다. 끝난 수업이면 정리했다고 표시한다",
+    discussion: "렉처 파일은 <자료>:<시작>-<끝>으로 쓴다. 주지 않은 것은 그대로 둔다. 끝났거나 녹음을 마친 수업(휴강 아님)이면 정리했다고 표시해 오늘 화면의 수업 정리에서 뺀다.",
+    done: "회차 '{session}'을(를) 저장했습니다",
+    examples: [
+        "folio session wrap-up EC4207/10-26 05_Matchings.pdf:7-11 --unit 매칭",
+        "folio session wrap-up EC4207/10-26 --attendance late --dry-run",
+        "folio session wrap-up EC4207/10-26 --review-unfinished false --kind makeup --dry-run",
+    ],
+    phrases: ["수업 정리", "수업 끝", "오늘 수업 정리", "수업 마무리", "회차 편집"])
 public struct SessionWrapUp {
     /// 과목
     @Arg var course: Course.ID
@@ -508,8 +551,10 @@ public struct SessionWrapUp {
         let classMinutes = try ctx.settings().classMinutes
         try ctx.edit(course) { f in
             _ = try index(session, in: f.sessions, .valueSession)
-            try f.set(session: session, date: date, end: end, link: link, kind: kind, skipsReview: skipsReview, reviewUnfinished: reviewUnfinished,
-                      termStart: start, calendar: ctx.calendar)
+            try f.set(
+                session: session, date: date, end: end, link: link, kind: kind, skipsReview: skipsReview,
+                reviewUnfinished: reviewUnfinished,
+                termStart: start, calendar: ctx.calendar)
 
             let i = try index(session, in: f.sessions, .valueSession)
             // Before the ranges: a file both given and unlinked ends up linked with the pages given.
@@ -537,17 +582,20 @@ public struct SessionWrapUp {
             let s = f.sessions[i]
             // Again after the attendance above: a class that didn't happen has none to count.
             if s.isCancelled { f.attendance.removeAll { $0.sessionId == session } }
-            if f.savingWrapsUp(s, recorded: recorded, at: ctx.now, classMinutes: classMinutes, calendar: ctx.calendar) { f.sessions[i].isWrappedUp = true }
+            if f.savingWrapsUp(s, recorded: recorded, at: ctx.now, classMinutes: classMinutes, calendar: ctx.calendar) {
+                f.sessions[i].isWrappedUp = true
+            }
         }
     }
 }
 
 /// Only files the session has no link to are linked: a range the user set stays, and a lecture that returned to an
 /// earlier file would otherwise shrink its range to what this class saw.
-@Action("session link-viewed", "녹음 중 본 강의 페이지를 회차에 연결하기. 연결이 없는 자료만 더하고 있는 연결은 그대로 둔다",
-        discussion: "앱 안의 PDF 보기에서 20초 이상 머문 페이지의 처음부터 끝까지가 범위다. 녹음이 끝나면 앱이 부른다.",
-        done: "회차 '{session}'에 녹음 중 본 페이지를 연결했습니다",
-        examples: ["folio session link-viewed EC4207/10-26 --dry-run"], phrases: ["녹음 중 본 페이지", "본 페이지 연결", "수업 중 본 슬라이드"])
+@Action(
+    "session link-viewed", "녹음 중 본 강의 페이지를 회차에 연결하기. 연결이 없는 자료만 더하고 있는 연결은 그대로 둔다",
+    discussion: "앱 안의 PDF 보기에서 20초 이상 머문 페이지의 처음부터 끝까지가 범위다. 녹음이 끝나면 앱이 부른다.",
+    done: "회차 '{session}'에 녹음 중 본 페이지를 연결했습니다",
+    examples: ["folio session link-viewed EC4207/10-26 --dry-run"], phrases: ["녹음 중 본 페이지", "본 페이지 연결", "수업 중 본 슬라이드"])
 public struct SessionLinkViewed {
     @Arg var course: Course.ID
     /// 회차

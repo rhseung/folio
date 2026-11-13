@@ -4,13 +4,15 @@ import FolioStorage
 import Foundation
 import SwiftUI
 import Testing
+
 @testable import Folio
 
 @MainActor
 struct SessionMenuModelTests {
     /// A class the timetable holds weeks ahead of the semester's start, not saved yet.
     func planned(_ workspace: Workspace) throws -> Workspace.SuggestedSession {
-        workspace.run(CourseSet(course: graphTheory, [.schedule([ClassTime(weekday: 2, startMinute: 10 * 60 + 30, endMinute: 11 * 60 + 45)])]))
+        workspace.run(
+            CourseSet(course: graphTheory, [.schedule([ClassTime(weekday: 2, startMinute: 10 * 60 + 30, endMinute: 11 * 60 + 45)])]))
         let course = try #require(workspace.course(graphTheory))
         let semester = try #require(workspace.semester(of: course.file.course))
         let now = try #require(semester.start?.date(in: workspace.calendar)).addingTimeInterval(7 * 86_400)
@@ -41,10 +43,13 @@ struct SessionMenuModelTests {
 
     // MARK: A saved class's menu (#403)
 
-    func source(_ workspace: Workspace, _ id: UUID, host: MenuHost = .elsewhere, sheets: ItemSheetsAction = ItemSheetsAction()) throws -> SessionMenuSource {
+    func source(_ workspace: Workspace, _ id: UUID, host: MenuHost = .elsewhere, sheets: ItemSheetsAction = ItemSheetsAction()) throws
+        -> SessionMenuSource
+    {
         let session = try #require(try file(workspace).sessions.first { $0.id == id })
-        return SessionMenuSource(workspace: workspace, courseId: graphTheory, session: session, host: host, now: workspace.now, openNote: { _ in },
-                                 openLink: OpenLinkAction(), openURL: OpenURLAction { _ in .handled }, sheets: sheets)
+        return SessionMenuSource(
+            workspace: workspace, courseId: graphTheory, session: session, host: host, now: workspace.now, openNote: { _ in },
+            openLink: OpenLinkAction(), openURL: OpenURLAction { _ in .handled }, sheets: sheets)
     }
 
     func perform(_ row: MenuRow) {

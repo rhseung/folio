@@ -157,7 +157,8 @@ struct WindowWidth: NSViewRepresentable {
             guard let window else { return }
             // No queue: run while the window posts it, inside the frame change and before the window lays out. On a
             // queue it would wait for the next turn.
-            observer = NotificationCenter.default.addObserver(forName: NSWindow.didResizeNotification, object: window, queue: nil) { [weak self] _ in
+            observer = NotificationCenter.default.addObserver(forName: NSWindow.didResizeNotification, object: window, queue: nil) {
+                [weak self] _ in
                 MainActor.assumeIsolated {
                     guard let self, let window = self.window else { return }
                     self.changed(window.frame.width)
@@ -250,9 +251,11 @@ struct SwipeNavigation: NSViewRepresentable {
                 return true
             }
             guard event.phase == .began, NSEvent.isSwipeTrackingFromScrollEventsEnabled,
-                  abs(event.scrollingDeltaX) > abs(event.scrollingDeltaY), !scrollsSideways(event) else { return false }
+                abs(event.scrollingDeltaX) > abs(event.scrollingDeltaY), !scrollsSideways(event)
+            else { return false }
             var done = false
-            event.trackSwipeEvent(options: [.lockDirection, .clampGestureAmount], dampenAmountThresholdMin: -1, max: 1) { [weak self] amount, phase, complete, _ in
+            event.trackSwipeEvent(options: [.lockDirection, .clampGestureAmount], dampenAmountThresholdMin: -1, max: 1) {
+                [weak self] amount, phase, complete, _ in
                 guard !done, phase == .ended, abs(amount) >= 1 else { return }
                 done = true
                 MainActor.assumeIsolated {
@@ -264,7 +267,8 @@ struct SwipeNavigation: NSViewRepresentable {
 
         private func scrollsSideways(_ event: NSEvent) -> Bool {
             guard let content = window?.contentView,
-                  var view = content.hitTest(content.convert(event.locationInWindow, from: nil)) else { return false }
+                var view = content.hitTest(content.convert(event.locationInWindow, from: nil))
+            else { return false }
             var ancestor: NSView? = view
             while let a = ancestor {
                 if a is WKWebView { return true }

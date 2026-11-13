@@ -27,9 +27,11 @@ struct PeopleView: View {
                         .background(Theme.Palette.page)
                 }
             }
-            .confirmationDialog(String(localized: .peopleRemoveConfirm(model.removing?.name ?? "")),
-                                isPresented: Binding(get: { model.removing != nil }, set: { if !$0 { model.removing = nil } }),
-                                presenting: model.removing) { person in
+            .confirmationDialog(
+                String(localized: .peopleRemoveConfirm(model.removing?.name ?? "")),
+                isPresented: Binding(get: { model.removing != nil }, set: { if !$0 { model.removing = nil } }),
+                presenting: model.removing
+            ) { person in
                 Button(.commonDelete, role: .destructive) { model.remove(person, from: &catalog) }
             } message: { person in
                 Text(model.removalMessage(person))
@@ -52,23 +54,32 @@ struct PeopleView: View {
             HStack {
                 SearchField(prompt: String(localized: .peopleSearch), text: $model.query)
                 // Shows the new person's page, which the window's link doesn't name until it is saved.
-                ColumnPick { model.add(to: &catalog.wrappedValue) } label: { Label(.commonAdd, systemImage: "plus") }
-                    .buttonStyle(.ghostIcon)
-                    .help(Text(.peopleAdd))
+                ColumnPick {
+                    model.add(to: &catalog.wrappedValue)
+                } label: {
+                    Label(.commonAdd, systemImage: "plus")
+                }
+                .buttonStyle(.ghostIcon)
+                .help(Text(.peopleAdd))
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                     ForEach(groups, id: \.role) { role, people in
                         Caption(String(localized: .peopleGroup(role.label, people.count)))
-                            .padding(.horizontal, Theme.Space.s).padding(.top, role == groups.first?.role ? 0 : Theme.Space.m).padding(.bottom, Theme.Space.xs)
+                            .padding(.horizontal, Theme.Space.s).padding(.top, role == groups.first?.role ? 0 : Theme.Space.m).padding(
+                                .bottom, Theme.Space.xs)
                         ForEach(people) { p in
                             let chosen = shown == p.id
-                            ColumnPick { openLink(AppLink(.person, p.id)) } label: {
+                            ColumnPick {
+                                openLink(AppLink(.person, p.id))
+                            } label: {
                                 HStack(spacing: Theme.Space.s + 2) {
                                     Avatar(name: p.name, id: p.id)
                                     Text(model.name(p)).fontWeight(chosen ? .semibold : .regular).lineLimit(1)
                                     Spacer()
-                                    if let n = taughtCount[p.id] { Text(.peopleCourseCount(n)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary) }
+                                    if let n = taughtCount[p.id] {
+                                        Text(.peopleCourseCount(n)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+                                    }
                                 }
                                 .padding(Theme.Inset.listRow)
                                 .background(chosen ? Theme.Palette.fill : .clear, in: .rect(cornerRadius: Theme.Radius.control))
@@ -76,8 +87,10 @@ struct PeopleView: View {
                             }
                             .buttonStyle(.pointing(.plain))
                             .contextMenu {
-                                ItemMenu(source: PersonMenuSource(person: p, host: .list, mail: model.workspace.mailURL(to: p.email),
-                                                                  remove: { model.removing = p }, openLink: openLink, openURL: openURL))
+                                ItemMenu(
+                                    source: PersonMenuSource(
+                                        person: p, host: .list, mail: model.workspace.mailURL(to: p.email),
+                                        remove: { model.removing = p }, openLink: openLink, openURL: openURL))
                             }
                         }
                     }
@@ -110,12 +123,16 @@ struct PeopleView: View {
             }
             Block(String(localized: .peopleContact)) {
                 Card {
-                    FormRow(label: String(localized: .peopleFieldName)) { InlineField(String(localized: .peopleFieldName), text: person.name) }
+                    FormRow(label: String(localized: .peopleFieldName)) {
+                        InlineField(String(localized: .peopleFieldName), text: person.name)
+                    }
                     FormRow(label: String(localized: .peopleFieldRole)) {
                         ChoiceMenu(selection: person.role, options: PersonRole.allCases.map { ($0, $0.label) })
                     }
                     FormRow(label: String(localized: .peopleFieldEmail)) { InlineField("name@gist.ac.kr", text: person.email) }
-                    FormRow(label: String(localized: .peopleFieldOffice)) { InlineField(String(localized: .peopleFieldOfficeExample), text: person.office) }
+                    FormRow(label: String(localized: .peopleFieldOffice)) {
+                        InlineField(String(localized: .peopleFieldOfficeExample), text: person.office)
+                    }
                     FormRow(label: String(localized: .peopleFieldOfficeHours), last: true) {
                         InlineField(String(localized: .peopleFieldOfficeHoursExample), text: person.officeHours)
                     }

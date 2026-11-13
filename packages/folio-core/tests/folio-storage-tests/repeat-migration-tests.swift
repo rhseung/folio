@@ -1,7 +1,8 @@
 import FolioDomain
-@testable import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioStorage
 
 /// course.json v6 -> v7: the one repeat `"weekly"` becomes a rule of interval, unit and weekdays.
 struct RepeatMigrationTests {
@@ -10,7 +11,9 @@ struct RepeatMigrationTests {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
         var file = CourseFile(course: Course(device: UUID(), at: .now, title: "로봇공학"))
-        file.assignments = [Assignment(device: UUID(), at: .now, title: "Weekly Quiz", due: .now), Assignment(device: UUID(), at: .now, title: "HW1")]
+        file.assignments = [
+            Assignment(device: UUID(), at: .now, title: "Weekly Quiz", due: .now), Assignment(device: UUID(), at: .now, title: "HW1"),
+        ]
         var raw = try JSONFormat.decoder.decode(JSONValue.self, from: JSONFormat.encoder.encode(file))
         raw["schemaVersion"] = .number(6)
         guard case .array(var assignments)? = raw["assignments"] else { Issue.record("no assignments"); return }
@@ -32,7 +35,9 @@ struct RepeatMigrationTests {
     }
 
     @Test func aRuleAlreadySpelledOutIsLeftAlone() throws {
-        let rule: JSONValue = .object(["every": .number(2), "unit": .string("week"), "weekdays": .array([.number(1), .number(3)]), "until": .string("x")])
+        let rule: JSONValue = .object([
+            "every": .number(2), "unit": .string("week"), "weekdays": .array([.number(1), .number(3)]), "until": .string("x"),
+        ])
         var raw: JSONValue = .object(["assignments": .array([.object(["repeats": rule])])])
         try CourseFile.spellOutRepeats(&raw)
         #expect(raw == .object(["assignments": .array([.object(["repeats": rule])])]))

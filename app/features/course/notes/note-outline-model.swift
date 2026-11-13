@@ -41,7 +41,8 @@ final class NoteOutlineModel {
         let opened = openIndices
         let marked = outline.marked(current, open: opened)
         return outline.shown(open: opened).map { i in
-            Row(index: i, title: outline.entries[i].title, indent: outline.indent(i), folds: outline.folds(i), open: opened.contains(i),
+            Row(
+                index: i, title: outline.entries[i].title, indent: outline.indent(i), folds: outline.folds(i), open: opened.contains(i),
                 marked: i == marked)
         }
     }

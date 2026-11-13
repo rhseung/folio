@@ -35,7 +35,7 @@ description = "Tag origin/main as v<version> and push the tag, which drafts its 
 run = "scripts/version.sh tag"
 
 [tasks.test]
-description = "Run package tests, folio-lint (code, design and Application Support rules) and SwiftLint"
+description = "Run package tests, folio-lint (code, design and Application Support rules), SwiftLint and the swift-format check"
 depends = ["tectonic"]
 # fixtures and expectations are in Korean time, and Apple's date detector reads phrases like 내일 7시 in the
 # machine's zone, not the test calendar's; a UTC machine (CI) would fail them.
@@ -54,6 +54,7 @@ run = [
   "swift test -c release --skip-build --package-path packages/folio-lint",
   "swift run -q -c release --skip-build --package-path packages/folio-lint folio-lint",
   "swiftlint lint --quiet --strict --baseline .swiftlint-baseline.json",
+  "scripts/swift-format.sh lint",
 ]
 
 [tasks.check-code]
@@ -74,8 +75,21 @@ description = "Rewrite .swiftlint-baseline.json from what SwiftLint finds now: o
 run = "swiftlint lint --quiet --write-baseline .swiftlint-baseline.json > /dev/null || true"
 
 [tasks.lint]
-description = "Run folio-lint and SwiftLint"
-depends = ["check-code", "swiftlint"]
+description = "Run folio-lint, SwiftLint and the swift-format check"
+depends = ["check-code", "swiftlint", "format-check"]
+
+# The swift-format in Xcode's toolchain (DEVELOPER_DIR above), so it needs no install. .swift-format turns off the
+# rules that would undo how Folio writes code: several statements or declarations on one line (`{ a(); b() }`,
+# `let x = 1, y = 2`, `case a, b`), `private extension`, `case let (a?, b?)`, `return x += 1`, `.forEach`, more than one
+# trailing closure, and uppercase DSL functions (folio-domain's model.swift). Doc comments aren't required or checked,
+# as Folio writes few.
+[tasks.format]
+description = "Format the Swift sources in place with swift-format (.swift-format)"
+run = "scripts/swift-format.sh format"
+
+[tasks.format-check]
+description = "Fail on Swift sources swift-format (.swift-format) would change: mise run format fixes them"
+run = "scripts/swift-format.sh lint"
 
 [tasks.analyze]
 description = "Run SwiftLint's analyzer rules (unused imports and declarations) on a clean Mac build's compiler log"
@@ -93,7 +107,7 @@ depends = ["generate"]
 run = "periphery scan --quiet"
 
 [tasks.hooks]
-description = "Install the git hooks in lefthook.yml (SwiftLint and folio-lint before each commit)"
+description = "Install the git hooks in lefthook.yml (swift-format, SwiftLint and folio-lint before each commit)"
 run = "lefthook install"
 
 [tasks.gen-cli]

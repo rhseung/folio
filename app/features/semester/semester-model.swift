@@ -73,7 +73,9 @@ final class SemesterModel {
     func refreshAudio() async {
         // The calendar date, as `RecordingTrim` uses, not the study day: past midnight but before the day boundary the
         // card would otherwise stay hidden while the action already allows the trim.
-        guard let s = semester, s.isOver(on: LocalDate(workspace.now, in: workspace.calendar), among: workspace.transcript.semesters) else { audio = nil; return }
+        guard let s = semester, s.isOver(on: LocalDate(workspace.now, in: workspace.calendar), among: workspace.transcript.semesters) else {
+            audio = nil; return
+        }
         let courses = courses(in: s)
         let shelf = courses.map { ($0.store, $0.file.recordings.filter(\.hasAudio)) }
 
@@ -82,7 +84,10 @@ final class SemesterModel {
         let tallies = await Task.detached {
             shelf.map { store, withAudio in
                 let trimmable = RecordingRetention.trimmable(withAudio) { store.transcript(of: $0)?.lines.isEmpty == false }
-                return (count: trimmable.count, kept: withAudio.count - trimmable.count, bytes: trimmable.map { store.audioSize(of: $0) }.reduce(0, +))
+                return (
+                    count: trimmable.count, kept: withAudio.count - trimmable.count,
+                    bytes: trimmable.map { store.audioSize(of: $0) }.reduce(0, +)
+                )
             }
         }.value
 
@@ -117,10 +122,14 @@ final class SemesterModel {
     func subtitle(_ s: Semester) -> String {
         guard s.term != .credited else { return String(localized: .semesterCredited) }
         let calendar = workspace.calendar
-        guard let start = s.start?.date(in: calendar), let end = s.end?.date(in: calendar) else { return String(localized: .semesterPeriodNone) }
+        guard let start = s.start?.date(in: calendar), let end = s.end?.date(in: calendar) else {
+            return String(localized: .semesterPeriodNone)
+        }
         let format = Date.FormatStyle.dateTime.month().day()
         let range = "\(start.formatted(format)) – \(end.formatted(format))"
-        return isCurrent(s) ? String(localized: .semesterPeriodWeek(range, SessionPlanner.week(of: workspace.now, anchor: start, calendar: calendar))) : range
+        return isCurrent(s)
+            ? String(localized: .semesterPeriodWeek(range, SessionPlanner.week(of: workspace.now, anchor: start, calendar: calendar)))
+            : range
     }
 
     func stats(_ s: Semester) -> [StatStrip.Item] {
@@ -130,11 +139,15 @@ final class SemesterModel {
         return [
             .init(title: String(localized: .semesterStatCourses), value: String(localized: .semesterStatCourseCount(courses.count))),
             .init(title: String(localized: .semesterCreditsLabel), value: credits.formatted()),
-            .init(title: String(localized: .semesterStatGraded), value: String(localized: .semesterCredits(summary.totalCredits.formatted())),
-                  detail: String(localized: .semesterStatGradedDetail)),
-            .init(title: String(localized: .semesterStatGpa), value: GPACalculator.label(summary.gpa),
-                  detail: summary.gpa == nil ? String(localized: .semesterStatGpaOngoing) : String(localized: .semesterStatGpaEffective(summary.effectiveCredits.formatted())),
-                  sensitive: true),
+            .init(
+                title: String(localized: .semesterStatGraded), value: String(localized: .semesterCredits(summary.totalCredits.formatted())),
+                detail: String(localized: .semesterStatGradedDetail)),
+            .init(
+                title: String(localized: .semesterStatGpa), value: GPACalculator.label(summary.gpa),
+                detail: summary.gpa == nil
+                    ? String(localized: .semesterStatGpaOngoing)
+                    : String(localized: .semesterStatGpaEffective(summary.effectiveCredits.formatted())),
+                sensitive: true),
         ]
     }
 
@@ -144,7 +157,9 @@ final class SemesterModel {
 
     /// Every dated exam of the term, soonest first.
     func exams(of courses: [LoadedCourse]) -> [ExamItem] {
-        courses.flatMap { c in c.file.exams.compactMap { e in e.start.map { ExamItem(course: c, exam: e, start: $0) } } }.sorted { $0.start < $1.start }
+        courses.flatMap { c in c.file.exams.compactMap { e in e.start.map { ExamItem(course: c, exam: e, start: $0) } } }.sorted {
+            $0.start < $1.start
+        }
     }
 
     func examTitle(_ exam: Exam) -> String { exam.title }
@@ -161,16 +176,23 @@ final class SemesterModel {
     func weekOptions(_ s: Semester, fallback: Int?) -> [(Int?, String)] {
         let calendar = workspace.calendar
         let anchor = s.start?.date(in: calendar)
-        let count = anchor.flatMap { a in s.end?.date(in: calendar).map { SessionPlanner.week(of: $0, anchor: a, calendar: calendar) } } ?? 20
+        let count =
+            anchor.flatMap { a in s.end?.date(in: calendar).map { SessionPlanner.week(of: $0, anchor: a, calendar: calendar) } } ?? 20
         let weeks = (1...max(count, fallback ?? 1)).map { w -> (Int?, String) in
             let monday = anchor.flatMap { calendar.date(byAdding: .day, value: (w - 1) * 7, to: calendar.startOfWeek(containing: $0)) }
-            return (w, monday.map { String(localized: .semesterWeekFrom(w, $0.formatted(.dateTime.month().day()))) } ?? String(localized: .semesterWeek(w)))
+            return (
+                w,
+                monday.map { String(localized: .semesterWeekFrom(w, $0.formatted(.dateTime.month().day()))) }
+                    ?? String(localized: .semesterWeek(w))
+            )
         }
         return (fallback == nil ? [(nil, String(localized: .semesterWeekNone))] : []) + weeks
     }
 
     func setWeek(_ s: Semester, _ key: WritableKeyPath<Semester, Int?>, to week: Int?) {
-        workspace.run(key == \Semester.midtermWeek ? SemesterSet(semester: s.id, midtermWeek: .set(week)) : SemesterSet(semester: s.id, finalWeek: .set(week)))
+        workspace.run(
+            key == \Semester.midtermWeek
+                ? SemesterSet(semester: s.id, midtermWeek: .set(week)) : SemesterSet(semester: s.id, finalWeek: .set(week)))
     }
 
     func date(_ s: Semester, _ key: WritableKeyPath<Semester, LocalDate?>) -> Date {

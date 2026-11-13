@@ -3,6 +3,7 @@ import FolioDomain
 import Foundation
 import SwiftUI
 import Testing
+
 @testable import Folio
 
 @MainActor
@@ -67,14 +68,17 @@ struct SessionsModelTests {
     /// A 휴강 weeks ahead: the class shows on the timeline before it is a session, and marking it saves one.
     @Test func plannedClassesRunToTheTermsEndAndCancellingOneSavesIt() throws {
         let workspace = try fixtureWorkspace()
-        workspace.run(CourseSet(course: graphTheory, [.schedule([ClassTime(weekday: 2, startMinute: 10 * 60 + 30, endMinute: 11 * 60 + 45)])]))
+        workspace.run(
+            CourseSet(course: graphTheory, [.schedule([ClassTime(weekday: 2, startMinute: 10 * 60 + 30, endMinute: 11 * 60 + 45)])]))
         let model = SessionsModel(workspace: workspace, courseId: graphTheory)
         let course = try #require(workspace.course(graphTheory))
         let semester = try #require(workspace.semester(of: course.file.course))
         let end = try #require(semester.end?.date(in: workspace.calendar))
         // Mid-term, on the semester's own dates rather than the clock, so the plan has weeks left to show.
         let now = try #require(semester.start?.date(in: workspace.calendar)).addingTimeInterval(7 * 7 * 86_400)
-        func planned() throws -> [Workspace.SuggestedSession] { model.weeks(try #require(workspace.course(graphTheory)).file, now: now).flatMap(\.rows).compactMap(\.planned) }
+        func planned() throws -> [Workspace.SuggestedSession] {
+            model.weeks(try #require(workspace.course(graphTheory)).file, now: now).flatMap(\.rows).compactMap(\.planned)
+        }
 
         let plan = try planned()
         #expect(plan.count >= 2 && plan.allSatisfy { $0.suggestion.date > now && $0.suggestion.date <= end })
@@ -126,9 +130,10 @@ struct SessionsModelTests {
 
         var asked: PendingAction?
         func remove(_ s: Session) {
-            let source = SessionMenuSource(workspace: workspace, courseId: graphTheory, session: s, host: .own, now: workspace.now, openNote: { _ in },
-                                           openLink: OpenLinkAction(), openURL: OpenURLAction { _ in .handled },
-                                           sheets: ItemSheetsAction(confirm: { asked = $0 }))
+            let source = SessionMenuSource(
+                workspace: workspace, courseId: graphTheory, session: s, host: .own, now: workspace.now, openNote: { _ in },
+                openLink: OpenLinkAction(), openURL: OpenURLAction { _ in .handled },
+                sheets: ItemSheetsAction(confirm: { asked = $0 }))
             if case .action(let action) = source.row(.remove).kind { action() }
         }
 
@@ -146,10 +151,12 @@ struct SessionsModelTests {
     @Test func joinFallsBackToTheWebLinkFromABackgroundQueue() async {
         let web = URL(string: "https://zoom.us/j/1")!
         let opened = await withCheckedContinuation { (done: CheckedContinuation<URL, Never>) in
-            let fallback = JoinOnlineButton.fallback(to: web, with: OpenURLAction { url in
-                done.resume(returning: url)
-                return .handled
-            })
+            let fallback = JoinOnlineButton.fallback(
+                to: web,
+                with: OpenURLAction { url in
+                    done.resume(returning: url)
+                    return .handled
+                })
             DispatchQueue.global().async { fallback(false) }
         }
         #expect(opened == web)

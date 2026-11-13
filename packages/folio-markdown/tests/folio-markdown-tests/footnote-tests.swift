@@ -1,6 +1,7 @@
-@testable import FolioMarkdown
 import Foundation
 import Testing
+
+@testable import FolioMarkdown
 
 struct FootnoteTests {
     func html(_ md: String) -> String { HTMLRenderer.render(markdown: md) }
@@ -10,13 +11,15 @@ struct FootnoteTests {
         #expect(out.contains("둘째<sup class=\"footnote-ref\"><a href=\"#fn-1\" id=\"fnref-1\">1</a></sup>"))
         #expect(out.contains("첫째<sup class=\"footnote-ref\"><a href=\"#fn-2\" id=\"fnref-2\">2</a></sup>"))
         #expect(out.contains("다시<sup class=\"footnote-ref\"><a href=\"#fn-1\" id=\"fnref-1-2\">1</a></sup>"))
-        #expect(out.hasSuffix("""
-        <section class="footnotes"><ol>
-        <li id="fn-1"><p>비 <em>강조</em> <a class="footnote-back" href="#fnref-1">↩\u{FE0E}</a> <a class="footnote-back" href="#fnref-1-2">↩\u{FE0E}<sup>2</sup></a></p></li>
-        <li id="fn-2"><p>에이 <a class="footnote-back" href="#fnref-2">↩\u{FE0E}</a></p></li>
-        </ol></section>
+        #expect(
+            out.hasSuffix(
+                """
+                <section class="footnotes"><ol>
+                <li id="fn-1"><p>비 <em>강조</em> <a class="footnote-back" href="#fnref-1">↩\u{FE0E}</a> <a class="footnote-back" href="#fnref-1-2">↩\u{FE0E}<sup>2</sup></a></p></li>
+                <li id="fn-2"><p>에이 <a class="footnote-back" href="#fnref-2">↩\u{FE0E}</a></p></li>
+                </ol></section>
 
-        """))
+                """))
         // The definitions are drawn only in the list; the paragraph after them stays.
         #expect(!out.contains("[^"))
         #expect(out.contains("<p>끝 문단</p>"))
@@ -49,7 +52,8 @@ struct FootnoteTests {
     }
 
     @Test func referencesInTablesAndCbTablesNumberOnFromTheNote() {
-        let md = "앞[^a]\n\n| x |\n| --- |\n| 칸[^b] |\n\n```cb-table\n{\"rows\":[{\"cells\":[{\"text\":\"셀[^c]\"}]}]}\n```\n\n[^a]: A\n[^b]: B\n[^c]: C"
+        let md =
+            "앞[^a]\n\n| x |\n| --- |\n| 칸[^b] |\n\n```cb-table\n{\"rows\":[{\"cells\":[{\"text\":\"셀[^c]\"}]}]}\n```\n\n[^a]: A\n[^b]: B\n[^c]: C"
         let out = html(md)
         #expect(out.contains("칸<sup class=\"footnote-ref\"><a href=\"#fn-2\""))
         #expect(out.contains("셀<sup class=\"footnote-ref\"><a href=\"#fn-3\""))
@@ -89,7 +93,10 @@ struct FootnoteTests {
         let text = "[^1]: a\n```\n[^2]: b\n```\n   [^3]: c\n    [^4]: code"
         let masked = Footnotes.mask(text)
         #expect((masked as NSString).length == (text as NSString).length)
-        #expect(masked.split(separator: "\n").map { $0.first == Footnotes.marker || $0.dropFirst(3).first == Footnotes.marker } == [true, false, false, false, true, false])
+        #expect(
+            masked.split(separator: "\n").map { $0.first == Footnotes.marker || $0.dropFirst(3).first == Footnotes.marker } == [
+                true, false, false, false, true, false,
+            ])
     }
 
     @Test func marksFindDefinitionsAndReferencesForTheEditor() {

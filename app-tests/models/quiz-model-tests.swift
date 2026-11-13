@@ -2,6 +2,7 @@ import FolioActions
 import FolioDomain
 import Foundation
 import Testing
+
 @testable import Folio
 
 /// The fixture course gets two units and three cards; the first card is answered wrong today.
@@ -20,9 +21,11 @@ struct QuizFixture {
         workspace.run(UnitAdd(id: units[0], course: courseId, title: "그래프"))
         workspace.run(UnitAdd(id: units[1], course: courseId, title: "트리"))
         let d = workspace.device
-        cards = [QuizCard(device: d, at: .now, unitId: units[0], type: .free, category: .definition, prompt: "p1", answer: "a1"),
-                 QuizCard(device: d, at: .now, unitId: units[0], type: .free, category: .theorem, prompt: "p2", answer: "a2"),
-                 QuizCard(device: d, at: .now, unitId: units[1], type: .free, category: .definition, prompt: "p3", answer: "a3")]
+        cards = [
+            QuizCard(device: d, at: .now, unitId: units[0], type: .free, category: .definition, prompt: "p1", answer: "a1"),
+            QuizCard(device: d, at: .now, unitId: units[0], type: .free, category: .theorem, prompt: "p2", answer: "a2"),
+            QuizCard(device: d, at: .now, unitId: units[1], type: .free, category: .definition, prompt: "p3", answer: "a3"),
+        ]
         workspace.run(QuizCardSave(course: courseId, cards: cards))
         workspace.run(QuizRecord(course: courseId, attempt: QuizAttemptEvent(cardId: cards[0].id, verdict: .wrong, grader: .self)))
         model = QuizModel(workspace: workspace)
@@ -88,7 +91,8 @@ struct QuizModelTests {
     @Test func removingACardReloadsTheList() throws {
         let f = try QuizFixture()
         var asked: PendingAction?
-        let menu = CardMenuSource(workspace: f.workspace, courseId: f.courseId, card: f.cards[2], sheets: ItemSheetsAction(confirm: { asked = $0 }))
+        let menu = CardMenuSource(
+            workspace: f.workspace, courseId: f.courseId, card: f.cards[2], sheets: ItemSheetsAction(confirm: { asked = $0 }))
         let remove = try #require(menu.commands.map(menu.row).first { $0.group == .remove })
         if case .action(let action) = remove.kind { action() }
         #expect(f.model.cards.count == 3)

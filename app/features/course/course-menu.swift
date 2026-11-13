@@ -37,9 +37,11 @@ struct CourseMenuSource: ItemMenuSource {
         case .open:
             .open(command) { openLink(.course(courseId), course: courseId) }
         case .record:
-            MenuRow(command, .sessionsRecord, "record.circle", disabled: workspace.recorder.isActive, .action {
-                if let ongoing { workspace.record(ongoing.id, in: courseId) }
-            })
+            MenuRow(
+                command, .sessionsRecord, "record.circle", disabled: workspace.recorder.isActive,
+                .action {
+                    if let ongoing { workspace.record(ongoing.id, in: courseId) }
+                })
         case .edit:
             .edit(command) { sheets.present(.course(courseId)) }
         case .moveUp:
@@ -109,6 +111,8 @@ struct SemesterMenu: View {
     var fold: (@MainActor () -> Void)?
 
     var body: some View {
-        ItemMenu(source: SemesterMenuSource(semesterId: semesterId, host: host, addCourse: addCourse, folded: folded, fold: fold, openLink: openLink))
+        ItemMenu(
+            source: SemesterMenuSource(
+                semesterId: semesterId, host: host, addCourse: addCourse, folded: folded, fold: fold, openLink: openLink))
     }
 }

@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import Testing
+
 @testable import Folio
 
 /// The shared pieces that hold one line keep it at any width: too long for the room, their text is cut, not broken over
@@ -13,7 +14,8 @@ struct SingleLineTests {
     /// The height a piece takes in a narrow column, with a short and a long name: the same if the long one stayed on one line.
     static func heights(width: CGFloat = 160, _ make: (String) -> some View) -> (short: CGFloat, long: CGFloat) {
         func height(_ text: String) -> CGFloat {
-            NSHostingController(rootView: make(text).font(Theme.Typeface.body)).sizeThatFits(in: CGSize(width: width, height: 10_000)).height
+            NSHostingController(rootView: make(text).font(Theme.Typeface.body)).sizeThatFits(in: CGSize(width: width, height: 10_000))
+                .height
         }
         return (height(short), height(long))
     }
@@ -44,7 +46,13 @@ struct SingleLineTests {
     }
 
     @Test func pageBar() {
-        let h = Self.heights { name in PageBar { Text(name); Text("21 / 31") } trailing: { Text(name) } }
+        let h = Self.heights { name in
+            PageBar {
+                Text(name); Text("21 / 31")
+            } trailing: {
+                Text(name)
+            }
+        }
         #expect(h.long == h.short)
     }
 
@@ -66,7 +74,12 @@ struct SingleLineTests {
         // A text label never reaches the ghost label style, so the button style has to limit it too.
         let ghost = Self.heights { Button($0) {}.buttonStyle(.ghost) }
         #expect(ghost.long == ghost.short)
-        let ghostLabel = Self.heights { name in Button {} label: { Label(name, systemImage: "plus") }.buttonStyle(.ghost) }
+        let ghostLabel = Self.heights { name in
+            Button {
+            } label: {
+                Label(name, systemImage: "plus")
+            }.buttonStyle(.ghost)
+        }
         #expect(ghostLabel.long == ghostLabel.short)
     }
 }

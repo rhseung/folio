@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import Folio
 
 /// The note views' layout, read off what they draw: blocks stay in the text column, a note just opened is drawn down
@@ -19,14 +20,18 @@ struct NoteLayoutTests {
     static func outside(_ shot: Pixels) -> (left: Int, right: Int) {
         let column = Self.column(shot)
         let height = CGFloat(shot.height)
-        return (shot.ink(in: CGRect(x: 0, y: 0, width: column.lowerBound - 1, height: height)),
-                shot.ink(in: CGRect(x: column.upperBound + 1, y: 0, width: CGFloat(shot.width) - column.upperBound - 1, height: height)))
+        return (
+            shot.ink(in: CGRect(x: 0, y: 0, width: column.lowerBound - 1, height: height)),
+            shot.ink(in: CGRect(x: column.upperBound + 1, y: 0, width: CGFloat(shot.width) - column.upperBound - 1, height: height))
+        )
     }
 
     /// Whether each row of the column has ink in it, top down.
     static func inkedRows(_ shot: Pixels) -> [Bool] {
         let column = Self.column(shot)
-        return (0..<shot.height).map { shot.ink(in: CGRect(x: column.lowerBound, y: CGFloat($0), width: column.upperBound - column.lowerBound, height: 1)) > 0 }
+        return (0..<shot.height).map {
+            shot.ink(in: CGRect(x: column.lowerBound, y: CGFloat($0), width: column.upperBound - column.lowerBound, height: 1)) > 0
+        }
     }
 
     /// The tallest run of rows with no ink, from the top down to `end`: where it starts and how tall it is.

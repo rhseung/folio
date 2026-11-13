@@ -35,9 +35,10 @@ public enum MaterialIntake {
             let free = freeName(named, taken: had)
             held[item.folder] = had.union([free])
             let base = { (name: String) in (name as NSString).deletingPathExtension }
-            return Placement(folder: item.folder, name: free,
-                             prefix: named == item.source ? nil : String(named.dropLast(item.source.count)),
-                             suffix: free == named ? nil : String(base(free).dropFirst(base(named).count)))
+            return Placement(
+                folder: item.folder, name: free,
+                prefix: named == item.source ? nil : String(named.dropLast(item.source.count)),
+                suffix: free == named ? nil : String(base(free).dropFirst(base(named).count)))
         }
     }
 

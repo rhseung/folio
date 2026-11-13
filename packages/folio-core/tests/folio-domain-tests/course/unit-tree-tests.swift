@@ -64,7 +64,8 @@ struct UnitTreeTests {
         var exam = Exam(device: device, at: now, title: "중간고사")
         session.unitIds = [removed.id]
         exam.scopeUnitIds = [removed.id, parent.id]
-        var file = CourseFile(course: Course(device: device, at: now, title: "T"), units: [parent, removed, child], sessions: [session], exams: [exam])
+        var file = CourseFile(
+            course: Course(device: device, at: now, title: "T"), units: [parent, removed, child], sessions: [session], exams: [exam])
         try file.remove(Unit.self, removed.id)
 
         #expect(titles(file.units) == ["P", "-K"])
@@ -116,12 +117,18 @@ struct NoteUnitTests {
         session.roughNoteId = rough
         var exam = Exam(device: device, at: now, title: "Midterm", start: now)
         exam.scopeUnitIds = [UUID(), later.id]
-        var file = CourseFile(course: Course(device: device, at: now, title: ""), units: [later, first, bySession], sessions: [session], exams: [exam])
+        var file = CourseFile(
+            course: Course(device: device, at: now, title: ""), units: [later, first, bySession], sessions: [session], exams: [exam])
         let topic = UUID(), examNote = UUID(), free = UUID()
-        file.notes = [NoteEntry(id: topic, device: device, at: now, path: "Notes/t.md", meta: NoteMeta(id: topic, kind: .unit, unitIds: [UUID(), first.id])),
-                      NoteEntry(id: examNote, device: device, at: now, path: "Notes/e.md", meta: NoteMeta(id: examNote, kind: .examSummary, examId: exam.id)),
-                      NoteEntry(id: free, device: device, at: now, path: "Notes/f.md", meta: NoteMeta(id: free)),
-                      NoteEntry(id: rough, device: device, at: now, path: "Notes/r.md", meta: NoteMeta(id: rough, kind: .rough))]
+        file.notes = [
+            NoteEntry(
+                id: topic, device: device, at: now, path: "Notes/t.md", meta: NoteMeta(id: topic, kind: .unit, unitIds: [UUID(), first.id])),
+            NoteEntry(
+                id: examNote, device: device, at: now, path: "Notes/e.md", meta: NoteMeta(id: examNote, kind: .examSummary, examId: exam.id)
+            ),
+            NoteEntry(id: free, device: device, at: now, path: "Notes/f.md", meta: NoteMeta(id: free)),
+            NoteEntry(id: rough, device: device, at: now, path: "Notes/r.md", meta: NoteMeta(id: rough, kind: .rough)),
+        ]
 
         #expect(file.unit(ofNote: topic) == first.id)
         #expect(file.unit(ofNote: rough) == bySession.id)

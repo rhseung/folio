@@ -8,38 +8,39 @@ struct PatchNotesTests {
     typealias Item = PatchNotes.Item
 
     static let body = """
-    노트 옆 칸에 목차를 둡니다(#387).
+        노트 옆 칸에 목차를 둡니다(#387).
 
-    ## 패치 노트
-    - feat: 노트 옆 칸의 제목 목차
-    - feat: 수업 시작 자동 실행 (folio://settings/recording)
-    * change : 빠른 추가 칩이 처음부터 흐리게 보임 (folio://today)
-    - fix: 수식 말풍선 위와 오른쪽 여백
-    - fix: 회차 노트의 링크 (folio://note/6F9619FF-8B86-D011-B42D-00C04FC964FF)
-    - feature: 커밋 규칙에 없는 종류는 항목이 아님
-    - 새 기능: 번역한 종류도 항목이 아님
-    - fix:
-    #415 관련 메모는 제목이 아니다
-    ### fix
-    - fix: 소제목 뒤의 항목
+        ## 패치 노트
+        - feat: 노트 옆 칸의 제목 목차
+        - feat: 수업 시작 자동 실행 (folio://settings/recording)
+        * change : 빠른 추가 칩이 처음부터 흐리게 보임 (folio://today)
+        - fix: 수식 말풍선 위와 오른쪽 여백
+        - fix: 회차 노트의 링크 (folio://note/6F9619FF-8B86-D011-B42D-00C04FC964FF)
+        - feature: 커밋 규칙에 없는 종류는 항목이 아님
+        - 새 기능: 번역한 종류도 항목이 아님
+        - fix:
+        #415 관련 메모는 제목이 아니다
+        ### fix
+        - fix: 소제목 뒤의 항목
 
-    ## 확인
-    - feat: 다른 절의 줄은 항목이 아님
+        ## 확인
+        - feat: 다른 절의 줄은 항목이 아님
 
-    https://claude.ai/code/session
-    """
+        https://claude.ai/code/session
+        """
 
     @Test func readsTheSectionOfABody() {
-        #expect(PatchNotes.items(in: Self.body) == [
-            Item(kind: .feat, text: "노트 옆 칸의 제목 목차"),
-            Item(kind: .feat, text: "수업 시작 자동 실행", link: .settings(.classes)),
-            Item(kind: .change, text: "빠른 추가 칩이 처음부터 흐리게 보임", link: .place(.today)),
-            Item(kind: .fix, text: "수식 말풍선 위와 오른쪽 여백"),
-            // A note is somebody's own: the link goes, the sentence stays.
-            Item(kind: .fix, text: "회차 노트의 링크"),
-            // A release groups its lines under `### fix`; the section goes on past it.
-            Item(kind: .fix, text: "소제목 뒤의 항목"),
-        ])
+        #expect(
+            PatchNotes.items(in: Self.body) == [
+                Item(kind: .feat, text: "노트 옆 칸의 제목 목차"),
+                Item(kind: .feat, text: "수업 시작 자동 실행", link: .settings(.classes)),
+                Item(kind: .change, text: "빠른 추가 칩이 처음부터 흐리게 보임", link: .place(.today)),
+                Item(kind: .fix, text: "수식 말풍선 위와 오른쪽 여백"),
+                // A note is somebody's own: the link goes, the sentence stays.
+                Item(kind: .fix, text: "회차 노트의 링크"),
+                // A release groups its lines under `### fix`; the section goes on past it.
+                Item(kind: .fix, text: "소제목 뒤의 항목"),
+            ])
     }
 
     @Test func aBodyWithoutTheSectionHasNoItems() {
@@ -66,16 +67,16 @@ struct PatchNotesTests {
 
     @Test func readsGitHubsReleases() throws {
         let json = """
-        [
-          {"tag_name": "v0.3.0", "draft": true, "prerelease": false, "published_at": null, "body": "## 패치 노트\\n- feat: 초안"},
-          {"tag_name": "v0.2.1", "draft": false, "prerelease": false, "published_at": "2026-11-08T03:00:00Z",
-           "body": "## 패치 노트\\n<!-- folio-patch-notes 1 -->\\n\\n### fix\\n- fix: 칸 닫기\\n\\n## 머지된 PR\\n- fix: x (#369)"},
-          {"tag_name": "v0.2.0", "draft": false, "prerelease": false, "published_at": "2026-11-07T03:00:00Z",
-           "body": "## 패치 노트\\r\\n- feat: 창 탭\\r\\n"},
-          {"tag_name": "v0.2.0-rc1", "draft": false, "prerelease": true, "published_at": "2026-11-06T03:00:00Z", "body": ""},
-          {"tag_name": "test", "draft": false, "prerelease": false, "published_at": "2026-11-05T03:00:00Z", "body": null}
-        ]
-        """
+            [
+              {"tag_name": "v0.3.0", "draft": true, "prerelease": false, "published_at": null, "body": "## 패치 노트\\n- feat: 초안"},
+              {"tag_name": "v0.2.1", "draft": false, "prerelease": false, "published_at": "2026-11-08T03:00:00Z",
+               "body": "## 패치 노트\\n<!-- folio-patch-notes 1 -->\\n\\n### fix\\n- fix: 칸 닫기\\n\\n## 머지된 PR\\n- fix: x (#369)"},
+              {"tag_name": "v0.2.0", "draft": false, "prerelease": false, "published_at": "2026-11-07T03:00:00Z",
+               "body": "## 패치 노트\\r\\n- feat: 창 탭\\r\\n"},
+              {"tag_name": "v0.2.0-rc1", "draft": false, "prerelease": true, "published_at": "2026-11-06T03:00:00Z", "body": ""},
+              {"tag_name": "test", "draft": false, "prerelease": false, "published_at": "2026-11-05T03:00:00Z", "body": null}
+            ]
+            """
 
         let releases = try PatchNotes.releases(fromGitHub: Data(json.utf8))
         #expect(releases.map(\.version) == [V(0, 2, 1), V(0, 2, 0)])
@@ -162,9 +163,11 @@ struct PatchNotesTests {
     static let kind = Gen.element(of: PatchNotes.Kind.allCases).map { $0! }
     /// Hangul, Latin, digits and punctuation, brackets included, on one line.
     static let text = Gen.oneOf(Gen.character(in: "가"..."힣"), Gen.character(in: " "..."~")).string(of: 0...24)
-    static let places: [AppLink?] = [nil] + AppLink.Kind.allCases.filter(\.isPlace).flatMap { kind -> [AppLink] in
-        kind == .settings ? [.settings(nil)] + AppLink.SettingsPage.allCases.map { .settings($0) } : [.place(kind)]
-    }
+    static let places: [AppLink?] =
+        [nil]
+        + AppLink.Kind.allCases.filter(\.isPlace).flatMap { kind -> [AppLink] in
+            kind == .settings ? [.settings(nil)] + AppLink.SettingsPage.allCases.map { .settings($0) } : [.place(kind)]
+        }
     static let link = Gen.element(of: Self.places).map { $0 ?? nil }
     static let version = zip(Gen.int(in: 0...2), Gen.int(in: 0...3), Gen.int(in: 0...3)).map { V($0, $1, $2) }
     static let releases = zip(Self.version, Self.kind.array(of: 0...5)).array(of: 0...8).map { rows -> [PatchNotes.Release] in

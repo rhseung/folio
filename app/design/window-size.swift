@@ -3,8 +3,9 @@ import CoreGraphics
 /// `visible` is the screen less the menu bar and Dock.
 enum WindowSize {
     static func opening(in visible: CGSize) -> CGSize {
-        CGSize(width: side(ideal: Theme.Size.windowIdeal.width, least: Theme.Size.windowMin.width, room: visible.width),
-               height: side(ideal: Theme.Size.windowIdeal.height, least: Theme.Size.windowMin.height, room: visible.height))
+        CGSize(
+            width: side(ideal: Theme.Size.windowIdeal.width, least: Theme.Size.windowMin.width, room: visible.width),
+            height: side(ideal: Theme.Size.windowIdeal.height, least: Theme.Size.windowMin.height, room: visible.height))
     }
 
     // Down to the 4pt grid, then never under the minimum, even on a screen smaller than it: the content's own minimum

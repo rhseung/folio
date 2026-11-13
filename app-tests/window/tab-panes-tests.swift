@@ -1,6 +1,7 @@
 import FolioDomain
 import Foundation
 import Testing
+
 @testable import Folio
 
 /// A tab's panes (#62): each keeps its own history, the tab's place follows the focused one, and "옆 칸에 열기" opens
@@ -84,7 +85,9 @@ struct TabPanesTests {
             _ = panes.ids
             _ = panes.navigators
             _ = panes.trails
-        } onChange: { changes.count += 1 }
+        } onChange: {
+            changes.count += 1
+        }
         panes.resize(divider: 0, to: 0.3)
         panes.press(1)
         #expect(changes.count == 0)
@@ -101,7 +104,9 @@ struct TabPanesTests {
         withObservationTracking {
             _ = panes.focus
             _ = panes.ids
-        } onChange: { changes.count += 1 }
+        } onChange: {
+            changes.count += 1
+        }
         panes.even()
         #expect(panes.shares.allSatisfy { abs($0 - 1.0 / 3) < 1e-9 })
         #expect(changes.count == 0 && panes.focus == 2)
@@ -318,6 +323,8 @@ struct TabPanesTests {
         #expect(PaneMemoryStore.forThisRun(environment: other).memory.layout(session: session) == nil)
         #expect(UserDefaults.standard.data(forKey: PaneMemoryStore.key) == before)
         let fixtures = try #require(UserDefaults(suiteName: "folio-fixtures"))
-        for key in fixtures.dictionaryRepresentation().keys where key.hasPrefix(PaneMemoryStore.key + ".") { fixtures.removeObject(forKey: key) }
+        for key in fixtures.dictionaryRepresentation().keys where key.hasPrefix(PaneMemoryStore.key + ".") {
+            fixtures.removeObject(forKey: key)
+        }
     }
 }

@@ -14,11 +14,15 @@ struct EditCourseSheet: View {
 
     var body: some View {
         let course = model.course
-        SheetForm(title: String(localized: .courseEdit), confirm: String(localized: .commonSave), disabled: !model.canSave,
-                  note: model.note, carded: false, width: 600) {
+        SheetForm(
+            title: String(localized: .courseEdit), confirm: String(localized: .commonSave), disabled: !model.canSave,
+            note: model.note, carded: false, width: 600
+        ) {
             Block(String(localized: .courseEditCourse)) {
                 Card {
-                    FormRow(label: String(localized: .courseEditName)) { InlineField(String(localized: .courseEditNameExample), text: $model.title) }
+                    FormRow(label: String(localized: .courseEditName)) {
+                        InlineField(String(localized: .courseEditNameExample), text: $model.title)
+                    }
                     // Prefix and number side by side, as the course reads: GS2004-02.
                     FormRow(label: String(localized: .courseEditCode), detail: model.codeDetail) {
                         CodesMenu(codes: $model.codes)
@@ -45,9 +49,13 @@ struct EditCourseSheet: View {
                         CategoryMenu(selection: $model.categories, course: model.draft)
                     }
                     if model.showsSharing {
-                        FormRow(label: String(localized: .courseEditSharing), detail: String(localized: .courseEditSharingDetail)) { Switch(isOn: $model.sharingApproved) }
+                        FormRow(label: String(localized: .courseEditSharing), detail: String(localized: .courseEditSharingDetail)) {
+                            Switch(isOn: $model.sharingApproved)
+                        }
                     }
-                    FormRow(label: String(localized: .courseEditReviews), detail: String(localized: .courseEditReviewsDetail)) { Switch(isOn: $model.reviews) }
+                    FormRow(label: String(localized: .courseEditReviews), detail: String(localized: .courseEditReviewsDetail)) {
+                        Switch(isOn: $model.reviews)
+                    }
                     FormRow(label: String(localized: .courseEditIcon), detail: String(localized: .courseEditIconDetail)) {
                         CourseIconPicker(icon: $model.icon, color: model.workspace.accent(course.id, token: model.color).color)
                     }
@@ -86,7 +94,9 @@ struct CourseColorSwatches: View {
             ForEach(CourseAccent.presets, id: \.name) { preset in
                 let on = preset.name == chosen
                 let name = Self.names[preset.name].map { String(localized: $0) } ?? preset.name
-                Button { token = preset.name } label: {
+                Button {
+                    token = preset.name
+                } label: {
                     Circle().fill(preset.accent.color)
                         .frame(width: Theme.Size.tile, height: Theme.Size.tile)
                         .padding(Theme.Space.xxs)
@@ -107,17 +117,23 @@ struct ClassTimesBlock: View {
     @Binding var schedule: [ClassTime]
 
     var body: some View {
-        Block(title: String(localized: .classTimesTitle), note: String(localized: .classTimesNote), trailing: {
-            Button(.classTimesAdd, systemImage: "plus") { schedule.append(ClassTime(weekday: 1, startMinute: 10 * 60 + 30, endMinute: 11 * 60 + 45)) }
+        Block(
+            title: String(localized: .classTimesTitle), note: String(localized: .classTimesNote),
+            trailing: {
+                Button(.classTimesAdd, systemImage: "plus") {
+                    schedule.append(ClassTime(weekday: 1, startMinute: 10 * 60 + 30, endMinute: 11 * 60 + 45))
+                }
                 .buttonStyle(.ghost)
-        }) {
+            }
+        ) {
             Card {
                 if schedule.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .classTimesEmpty)) } }
                 ForEach(schedule.indices, id: \.self) { i in
                     let slot = schedule[i]
                     CardRow(last: i == schedule.count - 1) {
-                        ChoiceMenu(selection: $schedule.element(at: i, fallback: slot).weekday,
-                                   options: (1...7).map { ($0, String(localized: .classTimesWeekday(ClassTime.weekdayNames[$0 - 1]))) })
+                        ChoiceMenu(
+                            selection: $schedule.element(at: i, fallback: slot).weekday,
+                            options: (1...7).map { ($0, String(localized: .classTimesWeekday(ClassTime.weekdayNames[$0 - 1]))) })
                         TimeMenu(minute: $schedule.element(at: i, fallback: slot).startMinute)
                         Text("–").foregroundStyle(Theme.Palette.textTertiary)
                         TimeMenu(minute: $schedule.element(at: i, fallback: slot).endMinute)
@@ -148,8 +164,10 @@ struct ClassLinkButton: View {
             .popover(isPresented: $open, arrowEdge: .bottom) {
                 VStack(alignment: .leading, spacing: Theme.Space.s) {
                     Text(.classTimesLink).font(Theme.Typeface.bodyStrong)
-                    TextField(String(localized: .classTimesLinkPrompt), text: Binding(get: { link ?? "" }, set: { link = OnlineLink.stored($0) }))
-                        .pill(width: 288)
+                    TextField(
+                        String(localized: .classTimesLinkPrompt), text: Binding(get: { link ?? "" }, set: { link = OnlineLink.stored($0) })
+                    )
+                    .pill(width: 288)
                     Text(.classTimesLinkHelp).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                 }
                 .padding(Theme.Space.l)
@@ -169,8 +187,10 @@ struct ClassTimesSheet: View {
 
     var body: some View {
         // The course as the heading: the block below already says 수업 시간, and twice in a row read as a mistake.
-        SheetForm(title: model.course.title, confirm: String(localized: .commonSave), disabled: model.timesNote != nil,
-                  note: model.timesNote, carded: false, width: 600) {
+        SheetForm(
+            title: model.course.title, confirm: String(localized: .commonSave), disabled: model.timesNote != nil,
+            note: model.timesNote, carded: false, width: 600
+        ) {
             ClassTimesBlock(schedule: $model.schedule)
         } onConfirm: {
             model.confirmSchedule()
@@ -198,7 +218,8 @@ struct CodesMenu: View {
 
     var body: some View {
         let all = workspace.catalog.codes.sorted { ($0.prefix, $0.program) < ($1.prefix, $1.program) }
-        SearchMultiSelect(selection: $codes, options: all.map { PickOption(id: $0.id, title: "\($0.prefix) · \($0.department)", detail: $0.program) },
-                          summary: codes.isEmpty ? nil : codes.compactMap { id in all.first { $0.id == id }?.prefix }.joined(separator: " · "))
+        SearchMultiSelect(
+            selection: $codes, options: all.map { PickOption(id: $0.id, title: "\($0.prefix) · \($0.department)", detail: $0.program) },
+            summary: codes.isEmpty ? nil : codes.compactMap { id in all.first { $0.id == id }?.prefix }.joined(separator: " · "))
     }
 }

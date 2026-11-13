@@ -1,9 +1,10 @@
-@testable import FolioCLI
 import FolioActions
 import FolioDomain
 import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioCLI
 
 struct WriteCommandTests {
     let h = Harness()
@@ -15,15 +16,21 @@ struct WriteCommandTests {
     // MARK: Set options
 
     @Test func policyCapsCutoffsAndClearing() throws {
-        try h.expectSame(["component", "policy", "EC4207", "--cap", "6:A+", "--cutoff", "A+:95", "--lates-per-absence", "none"],
-                         setup: [["catalog", "set", "--file", try grades.catalogFile()], ["component", "policy", "EC4207", "--lates-per-absence", "3"]]) { _ in
-            PolicySet(course: gt, latesPerAbsence: .set(nil), attendanceCap: .set([AttendanceCap(absences: 6, maxGrade: G.grade)]),
-                      cutoffs: .set([GradeCutoff(grade: G.grade, minScore: 95)]))
+        try h.expectSame(
+            ["component", "policy", "EC4207", "--cap", "6:A+", "--cutoff", "A+:95", "--lates-per-absence", "none"],
+            setup: [
+                ["catalog", "set", "--file", try grades.catalogFile()], ["component", "policy", "EC4207", "--lates-per-absence", "3"],
+            ]
+        ) { _ in
+            PolicySet(
+                course: gt, latesPerAbsence: .set(nil), attendanceCap: .set([AttendanceCap(absences: 6, maxGrade: G.grade)]),
+                cutoffs: .set([GradeCutoff(grade: G.grade, minScore: 95)]))
         }
     }
 
     @Test func requirementPrograms() throws {
-        try h.expectSame(["requirement", "set", "--program", "major:EC"], setup: [["catalog", "set", "--file", try grades.catalogFile()]]) { _ in
+        try h.expectSame(["requirement", "set", "--program", "major:EC"], setup: [["catalog", "set", "--file", try grades.catalogFile()]]) {
+            _ in
             GraduationSet(programs: .set([StudentProgram(codeId: G.code, kind: .major)]))
         }
         let gist = try Harness.fixtureCopy()
@@ -31,7 +38,9 @@ struct WriteCommandTests {
     }
 
     @Test func semesterClearsAWeek() throws {
-        try h.expectSame(["semester", "set", "2026-3", "--midterm-week", "none"], setup: [["semester", "set", "2026-3", "--midterm-week", "8"]]) { _ in
+        try h.expectSame(
+            ["semester", "set", "2026-3", "--midterm-week", "none"], setup: [["semester", "set", "2026-3", "--midterm-week", "8"]]
+        ) { _ in
             SemesterSet(semester: G.fall, midtermWeek: .set(nil))
         }
     }
@@ -67,8 +76,10 @@ struct WriteCommandTests {
 
     @Test func policyFieldKeepsTheOthers() throws {
         let gist = try Harness.fixtureCopy()
-        for line in [["catalog", "set", "--file", try grades.catalogFile()], ["component", "policy", "EC4207", "--cap", "6:A+", "--notes", "원문"],
-                     ["component", "policy", "EC4207", "--lates-per-absence", "3"]] {
+        for line in [
+            ["catalog", "set", "--file", try grades.catalogFile()], ["component", "policy", "EC4207", "--cap", "6:A+", "--notes", "원문"],
+            ["component", "policy", "EC4207", "--lates-per-absence", "3"],
+        ] {
             #expect(h.cli(line, gist: gist).code == 0, "\(line)")
         }
         let p = try ActionContext(gist: GISTStore(url: gist), device: h.device).file(gt).policy
@@ -86,37 +97,53 @@ struct WriteCommandTests {
     }
 
     @Test func assignmentScoreAndClearedDue() throws {
-        try h.expectSame(["assignment", "set", "EC4207/HW 3", "--component", "과제", "--score", "9/10", "--due", "none"],
-                         setup: [G.addComponent, U.addHW]) { _ in
-            AssignmentSave(course: gt, assignment: U.hw, due: .set(nil), componentId: .set(G.component), score: .set([.init(component: nil, score: 9, max: 10)]))
+        try h.expectSame(
+            ["assignment", "set", "EC4207/HW 3", "--component", "과제", "--score", "9/10", "--due", "none"],
+            setup: [G.addComponent, U.addHW]
+        ) { _ in
+            AssignmentSave(
+                course: gt, assignment: U.hw, due: .set(nil), componentId: .set(G.component),
+                score: .set([.init(component: nil, score: 9, max: 10)]))
         }
     }
 
     @Test func assignmentGroupScoresEachComponent() throws {
         let lab = ["component", "add", "EC4207", "재료", "--weight", "10", "--group", "실험", "--id", G.component.uuidString]
         let report = ["component", "add", "EC4207", "고찰", "--weight", "10", "--group", "실험", "--id", G.quiz.uuidString]
-        try h.expectSame(["assignment", "set", "EC4207/HW 3", "--group", "실험", "--score", "재료:8/10", "--repeats", "weekly"],
-                         setup: [lab, report, U.addHW]) { _ in
-            AssignmentSave(course: gt, assignment: U.hw, repeats: .set(.weekly), componentGroup: .set("실험"),
-                           score: .set([.init(component: G.component, score: 8, max: 10)]))
+        try h.expectSame(
+            ["assignment", "set", "EC4207/HW 3", "--group", "실험", "--score", "재료:8/10", "--repeats", "weekly"],
+            setup: [lab, report, U.addHW]
+        ) { _ in
+            AssignmentSave(
+                course: gt, assignment: U.hw, repeats: .set(.weekly), componentGroup: .set("실험"),
+                score: .set([.init(component: G.component, score: 8, max: 10)]))
         }
         let gist = try Harness.fixtureCopy()
         for line in [lab, report, U.addHW] { _ = h.cli(line, gist: gist) }
 
         // One component's score leaves the other's: an agent setting 재료 must not wipe 고찰.
-        for line in [["assignment", "set", "EC4207/HW 3", "--group", "실험", "--score", "재료:8/10", "--score", "고찰:7/10"],
-                     ["assignment", "set", "EC4207/HW 3", "--score", "재료:9/10"]] {
+        for line in [
+            ["assignment", "set", "EC4207/HW 3", "--group", "실험", "--score", "재료:8/10", "--score", "고찰:7/10"],
+            ["assignment", "set", "EC4207/HW 3", "--score", "재료:9/10"],
+        ] {
             #expect(h.cli(line, gist: gist).code == 0, "\(line)")
         }
         func scores() throws -> [UUID: Double] {
-            Dictionary(uniqueKeysWithValues: try ActionContext(gist: GISTStore(url: gist), device: h.device).file(gt).scores
-                .filter { $0.assignmentId == U.hw }.map { ($0.componentId, $0.score) })
+            Dictionary(
+                uniqueKeysWithValues: try ActionContext(gist: GISTStore(url: gist), device: h.device).file(gt).scores
+                    .filter { $0.assignmentId == U.hw }.map { ($0.componentId, $0.score) })
         }
         #expect(try scores() == [G.component: 9, G.quiz: 7])
 
         // The JSON input's whole list replaces them all.
-        #expect(h.cli(["run", "assignment", "set", "--input", #"{"course":"EC4207","assignment":"HW 3","scores":[{"component":"\#(G.quiz)","score":6,"max":10}]}"#],
-                      gist: gist).code == 0)
+        #expect(
+            h.cli(
+                [
+                    "run", "assignment", "set", "--input",
+                    #"{"course":"EC4207","assignment":"HW 3","scores":[{"component":"\#(G.quiz)","score":6,"max":10}]}"#,
+                ],
+                gist: gist
+            ).code == 0)
         #expect(try scores() == [G.quiz: 6])
         #expect(h.cli(["assignment", "set", "EC4207/HW 3", "--score", "none"], gist: gist).code == 0)
         #expect(try scores().isEmpty)
@@ -157,7 +184,8 @@ struct WriteCommandTests {
 
         let note = gist.appending(path: "2026-3/EC4207 그래프 이론/Notes/09-08(화) 매칭.md")
         let before = try String(contentsOf: note, encoding: .utf8)
-        let stale = h.cli(["note", "write", "EC4207/09-08", "--file", file.path, "--expect", String(repeating: "0", count: 64)], gist: gist)
+        let stale = h.cli(
+            ["note", "write", "EC4207/09-08", "--file", file.path, "--expect", String(repeating: "0", count: 64)], gist: gist)
         #expect(stale.code == 6)
         #expect(try String(contentsOf: note, encoding: .utf8) == before)
 
@@ -180,7 +208,10 @@ struct WriteCommandTests {
 
     @Test func severalActionsListEachChangeOnce() throws {
         let gist = try Harness.fixtureCopy()
-        for line in [U.addTree, ["session", "add", "EC4207", "--date", "2026-10-26 10:30"], ["session", "add", "EC4207", "--date", "2026-10-28 10:30"]] {
+        for line in [
+            U.addTree, ["session", "add", "EC4207", "--date", "2026-10-26 10:30"],
+            ["session", "add", "EC4207", "--date", "2026-10-28 10:30"],
+        ] {
             _ = h.cli(line, gist: gist)
         }
         let r = h.cli(["unit", "link", "EC4207/트리", "10-26", "10-28", "--json"], gist: gist)
@@ -191,8 +222,10 @@ struct WriteCommandTests {
     }
 
     @Test func coalescedKeepsFirstBeforeAndLastAfter() {
-        let a = FolioActions.Change(.changed, "c.json", item: "units/1", fields: [.init(name: "title", before: .string("A"), after: .string("B"))])
-        let b = FolioActions.Change(.changed, "c.json", item: "units/1", fields: [.init(name: "title", before: .string("B"), after: .string("C"))])
+        let a = FolioActions.Change(
+            .changed, "c.json", item: "units/1", fields: [.init(name: "title", before: .string("A"), after: .string("B"))])
+        let b = FolioActions.Change(
+            .changed, "c.json", item: "units/1", fields: [.init(name: "title", before: .string("B"), after: .string("C"))])
         let added = FolioActions.Change(.added, "c.json", item: "units/2")
         let merged = [a, added, b, FolioActions.Change(.changed, "c.json", item: "units/2")].coalesced()
         #expect(merged.count == 2)

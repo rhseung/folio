@@ -48,7 +48,8 @@ public struct BackupStore: Sendable {
         var probe = folder.standardizedFileURL
         while !FileManager.default.fileExists(atPath: probe.path), probe.pathComponents.count > 1 { probe.deleteLastPathComponent() }
         guard let a = try? gist.url.resourceValues(forKeys: [.volumeIdentifierKey]).volumeIdentifier,
-              let b = try? probe.resourceValues(forKeys: [.volumeIdentifierKey]).volumeIdentifier else { return false }
+            let b = try? probe.resourceValues(forKeys: [.volumeIdentifierKey]).volumeIdentifier
+        else { return false }
         return a.isEqual(b)
     }
 
@@ -133,7 +134,8 @@ public struct BackupStore: Sendable {
         try copyIfPresent(gist.url.appending(path: StandardLayout.metadataFolder), to: root.appending(path: StandardLayout.metadataFolder))
         for course in try gist.courseStores() {
             for sub in [CourseFolder.notes, .ink, .metadata] {
-                try copyIfPresent(course.url.appending(path: sub.rawValue), to: root.appending(path: relative(course)).appending(path: sub.rawValue))
+                try copyIfPresent(
+                    course.url.appending(path: sub.rawValue), to: root.appending(path: relative(course)).appending(path: sub.rawValue))
             }
         }
         try Self.ditto(["-c", "-k", "--sequesterRsrc", "--keepParent", root.path, archive.path])

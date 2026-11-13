@@ -167,8 +167,10 @@ public enum ClassStart {
 
     /// The course's classes near `now`: its sessions with a known end, and the timetable's classes from the day
     /// before to `days - 2` days after that no session stands for (`SessionPlanner.planned`).
-    static func classes(of course: Course, settings: Settings, around now: Date, days: Int = 3, calendar: Calendar,
-                        onlyOn: Bool = true) -> [StartingClass] {
+    static func classes(
+        of course: Course, settings: Settings, around now: Date, days: Int = 3, calendar: Calendar,
+        onlyOn: Bool = true
+    ) -> [StartingClass] {
         let file = course.file
         let id = file.course.id
         guard !onlyOn || settings.classStart.isOn(for: id) else { return [] }
@@ -178,10 +180,12 @@ public enum ClassStart {
         }
 
         // From the day before, so a class that began before midnight is still found after it.
-        let planned = SessionPlanner.planned(schedule: file.course.schedule, sessions: file.sessions, from: course.term?.start, to: course.term?.end,
-                                             examWeeks: course.term?.examWeeks ?? [], days: days,
-                                             now: now.addingTimeInterval(-86_400), calendar: calendar)
-            .map { StartingClass(courseId: id, sessionId: nil, start: $0.date, end: $0.end) }
+        let planned = SessionPlanner.planned(
+            schedule: file.course.schedule, sessions: file.sessions, from: course.term?.start, to: course.term?.end,
+            examWeeks: course.term?.examWeeks ?? [], days: days,
+            now: now.addingTimeInterval(-86_400), calendar: calendar
+        )
+        .map { StartingClass(courseId: id, sessionId: nil, start: $0.date, end: $0.end) }
         return sessions + planned
     }
 

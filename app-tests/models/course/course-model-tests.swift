@@ -2,6 +2,7 @@ import FolioActions
 import FolioDomain
 import Foundation
 import Testing
+
 @testable import Folio
 
 @MainActor
@@ -56,8 +57,10 @@ struct CourseModelTests {
     /// marks. Units, notes and files open on a page of their own instead.
     @Test func anItemLinkOpensItsPageAtTheItem() throws {
         let model = CourseModel(workspace: try fixtureWorkspace(), courseId: graphTheory)
-        let pages: [(AppLink.Kind, CourseSection)] = [(.session, .sessions), (.assignment, .assignments), (.exam, .exams),
-                                                      (.card, .quizCards), (.problemSet, .quizProblems)]
+        let pages: [(AppLink.Kind, CourseSection)] = [
+            (.session, .sessions), (.assignment, .assignments), (.exam, .exams),
+            (.card, .quizCards), (.problemSet, .quizProblems),
+        ]
         for (kind, section) in pages {
             let id = UUID()
             model.follow(Navigator.Entry(link: AppLink(kind, id), course: graphTheory))

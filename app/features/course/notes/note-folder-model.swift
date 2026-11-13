@@ -47,7 +47,9 @@ final class NoteFolderModel {
         let path = CourseFolder.notes.rawValue + "/" + target
         // A folder already there (in any case: the volume ignores it) takes the note as it is.
         let exists = course.store.noteFolders().contains { $0.caseInsensitiveCompare(folder) == .orderedSame }
-        return exists ? String(localized: .notesFolderInto(path)) : String(localized: .notesFolderMakes(path, CourseFolder.notes.rawValue + "/" + folder))
+        return exists
+            ? String(localized: .notesFolderInto(path))
+            : String(localized: .notesFolderMakes(path, CourseFolder.notes.rawValue + "/" + folder))
     }
 
     func move() -> Bool {

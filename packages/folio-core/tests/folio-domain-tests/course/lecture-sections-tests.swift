@@ -20,7 +20,8 @@ struct LectureSectionsTests {
     }
 
     func pages(_ f: inout CourseFile, _ unit: Int, _ material: Int, _ range: ClosedRange<Int>) {
-        f.units[unit].lecturePages.append(UnitPages(materialId: f.materials[material].id, firstPage: range.lowerBound, lastPage: range.upperBound))
+        f.units[unit].lecturePages.append(
+            UnitPages(materialId: f.materials[material].id, firstPage: range.lowerBound, lastPage: range.upperBound))
     }
 
     // MARK: Zones
@@ -33,16 +34,18 @@ struct LectureSectionsTests {
 
         // One unit across two files: its pages in the other file don't show here.
         pages(&f, 2, 1, 1...3)
-        #expect(f.lectureZones(of: m, pageCount: 16) == [
-            LectureZone(firstPage: 1, lastPage: 4, units: []),
-            LectureZone(firstPage: 5, lastPage: 8, units: [f.units[1].id]),
-            LectureZone(firstPage: 9, lastPage: 13, units: [f.units[2].id]),
-            LectureZone(firstPage: 14, lastPage: 16, units: []),
-        ])
+        #expect(
+            f.lectureZones(of: m, pageCount: 16) == [
+                LectureZone(firstPage: 1, lastPage: 4, units: []),
+                LectureZone(firstPage: 5, lastPage: 8, units: [f.units[1].id]),
+                LectureZone(firstPage: 9, lastPage: 13, units: [f.units[2].id]),
+                LectureZone(firstPage: 14, lastPage: 16, units: []),
+            ])
 
         // Without the count the file ends where the last unit does.
         #expect(f.lectureZones(of: m, pageCount: nil).last == LectureZone(firstPage: 9, lastPage: 13, units: [f.units[2].id]))
-        #expect(f.lectureZones(of: f.materials[1].id, pageCount: 10).first == LectureZone(firstPage: 1, lastPage: 3, units: [f.units[2].id]))
+        #expect(
+            f.lectureZones(of: f.materials[1].id, pageCount: 10).first == LectureZone(firstPage: 1, lastPage: 3, units: [f.units[2].id]))
         #expect(f.isSplit(m) && f.isSplit(f.materials[1].id))
     }
 
@@ -56,11 +59,12 @@ struct LectureSectionsTests {
         var f = course()
         pages(&f, 2, 0, 3...6)
         pages(&f, 1, 0, 1...4)
-        #expect(f.lectureZones(of: f.materials[0].id, pageCount: 6) == [
-            LectureZone(firstPage: 1, lastPage: 2, units: [f.units[1].id]),
-            LectureZone(firstPage: 3, lastPage: 4, units: [f.units[1].id, f.units[2].id]),
-            LectureZone(firstPage: 5, lastPage: 6, units: [f.units[2].id]),
-        ])
+        #expect(
+            f.lectureZones(of: f.materials[0].id, pageCount: 6) == [
+                LectureZone(firstPage: 1, lastPage: 2, units: [f.units[1].id]),
+                LectureZone(firstPage: 3, lastPage: 4, units: [f.units[1].id, f.units[2].id]),
+                LectureZone(firstPage: 5, lastPage: 6, units: [f.units[2].id]),
+            ])
     }
 
     @Test func aRangeReadsAsTheFirstAndLastUnitItReaches() {
@@ -79,9 +83,11 @@ struct LectureSectionsTests {
         var f = course()
         pages(&f, 1, 1, 1...4)
         var session = Session(device: device, at: now, week: 9, date: now)
-        session.materials = [SessionMaterial(materialId: f.materials[0].id, firstPage: 1, lastPage: 5),
-                             SessionMaterial(materialId: f.materials[1].id),
-                             SessionMaterial(materialId: f.materials[1].id, firstPage: 2, lastPage: 6)]
+        session.materials = [
+            SessionMaterial(materialId: f.materials[0].id, firstPage: 1, lastPage: 5),
+            SessionMaterial(materialId: f.materials[1].id),
+            SessionMaterial(materialId: f.materials[1].id, firstPage: 2, lastPage: 6),
+        ]
 
         // The first file has no units' pages, and the second's first link has no range.
         #expect(f.splitProgress(of: session)?.material == f.materials[1].id)
@@ -133,7 +139,8 @@ struct LectureSectionsTests {
             }
             for zone in zones {
                 for page in zone.pages {
-                    let holding = f.units.filter { u in u.lecturePages.contains { $0.materialId == m && $0.pages.contains(page) } }.map(\.id)
+                    let holding = f.units.filter { u in u.lecturePages.contains { $0.materialId == m && $0.pages.contains(page) } }.map(
+                        \.id)
                     #expect(Set(zone.units) == Set(holding))
                 }
             }
@@ -148,12 +155,14 @@ struct LectureSectionsTests {
         pages(&f, 0, 0, 1...24)
         pages(&f, 0, 1, 1...5)
         let new = UUID()
-        f.split(m, into: [
-            LectureCut(unit: f.units[1].id, firstPage: 1, lastPage: 8),
-            LectureCut(unit: new, title: "Berge", parent: f.units[0].id, firstPage: 9, lastPage: 12),
-            LectureCut(unit: new, title: "Berge", firstPage: 20, lastPage: 24),
-            LectureCut(unit: UUID(), firstPage: 13, lastPage: 19),
-        ], device: device, now: now)
+        f.split(
+            m,
+            into: [
+                LectureCut(unit: f.units[1].id, firstPage: 1, lastPage: 8),
+                LectureCut(unit: new, title: "Berge", parent: f.units[0].id, firstPage: 9, lastPage: 12),
+                LectureCut(unit: new, title: "Berge", firstPage: 20, lastPage: 24),
+                LectureCut(unit: UUID(), firstPage: 13, lastPage: 19),
+            ], device: device, now: now)
 
         // The other file's pages stay.
         #expect(f.units[0].lecturePages == [UnitPages(materialId: f.materials[1].id, firstPage: 1, lastPage: 5)])
@@ -167,21 +176,27 @@ struct LectureSectionsTests {
     }
 
     @Test func aFoundSplitIsTidiedIntoTheFile() throws {
-        let s = try #require(LectureSplit([
-            .init(title: "Hall", firstPage: 9, lastPage: 9),
-            .init(title: "König", firstPage: 5, lastPage: 5),
-            .init(title: "Intro", firstPage: 2, lastPage: 2),
-            .init(title: "Twice", firstPage: 9, lastPage: 9),
-            .init(title: "Past the end", firstPage: 40, lastPage: 40),
-        ], pageCount: 24))
+        let s = try #require(
+            LectureSplit(
+                [
+                    .init(title: "Hall", firstPage: 9, lastPage: 9),
+                    .init(title: "König", firstPage: 5, lastPage: 5),
+                    .init(title: "Intro", firstPage: 2, lastPage: 2),
+                    .init(title: "Twice", firstPage: 9, lastPage: 9),
+                    .init(title: "Past the end", firstPage: 40, lastPage: 40),
+                ], pageCount: 24))
         #expect(s.sections.map(\.title) == ["Intro", "König", "Hall", "Twice"])
         #expect(s.sections.map(\.pages) == [1...4, 5...8, 9...9, 10...24])
         #expect(LectureSplit([.init(title: "x", firstPage: 30, lastPage: 30)], pageCount: 24) == nil)
     }
 
     @Test func boundariesMoveWithinTheirNeighbors() throws {
-        var s = try #require(LectureSplit([.init(title: "A", firstPage: 1, lastPage: 1), .init(title: "B", firstPage: 5, lastPage: 5),
-                                           .init(title: "C", firstPage: 9, lastPage: 9)], pageCount: 12))
+        var s = try #require(
+            LectureSplit(
+                [
+                    .init(title: "A", firstPage: 1, lastPage: 1), .init(title: "B", firstPage: 5, lastPage: 5),
+                    .init(title: "C", firstPage: 9, lastPage: 9),
+                ], pageCount: 12))
         #expect(s.moveBoundary(after: 0, to: 6) == 6)
         #expect(s.sections.map(\.pages) == [1...6, 7...8, 9...12])
         // Each side keeps a page.
@@ -204,8 +219,12 @@ struct LectureSectionsTests {
     /// The thumbnails' ⇧-click on a section being changed: at or after its start moves its end, before it its start,
     /// and a neighbor keeps a page.
     @Test func aPickedPageMovesTheNearEdge() throws {
-        var s = try #require(LectureSplit([.init(title: "A", firstPage: 1, lastPage: 1), .init(title: "B", firstPage: 5, lastPage: 5),
-                                           .init(title: "C", firstPage: 9, lastPage: 9)], pageCount: 12))
+        var s = try #require(
+            LectureSplit(
+                [
+                    .init(title: "A", firstPage: 1, lastPage: 1), .init(title: "B", firstPage: 5, lastPage: 5),
+                    .init(title: "C", firstPage: 9, lastPage: 9),
+                ], pageCount: 12))
         #expect(s.moveEdge(of: 1, to: 10) == 1)
         #expect(s.sections.map(\.pages) == [1...4, 5...10, 11...12])
         s.moveEdge(of: 1, to: 2)
@@ -227,8 +246,12 @@ struct LectureSectionsTests {
     /// A range picked across the thumbnails becomes one section.
     @Test func aPickedRangeBecomesASection() throws {
         let a = UUID(), b = UUID()
-        var s = try #require(LectureSplit([.init(title: "A", firstPage: 1, lastPage: 1), .init(title: "B", firstPage: 5, lastPage: 5),
-                                           .init(title: "C", firstPage: 9, lastPage: 9)], pageCount: 12))
+        var s = try #require(
+            LectureSplit(
+                [
+                    .init(title: "A", firstPage: 1, lastPage: 1), .init(title: "B", firstPage: 5, lastPage: 5),
+                    .init(title: "C", firstPage: 9, lastPage: 9),
+                ], pageCount: 12))
         s.setUnit(a, of: 0)
         s.setUnit(b, of: 1)
 
@@ -256,8 +279,12 @@ struct LectureSectionsTests {
 
     @Test func cutsJoinTouchingSectionsOfOneUnitAndSkipTheUnclaimed() throws {
         let unit = UUID()
-        var s = try #require(LectureSplit([.init(title: "A", firstPage: 1, lastPage: 1), .init(title: "B", firstPage: 4, lastPage: 4),
-                                           .init(title: "C", firstPage: 7, lastPage: 7), .init(title: "", firstPage: 9, lastPage: 9)], pageCount: 10))
+        var s = try #require(
+            LectureSplit(
+                [
+                    .init(title: "A", firstPage: 1, lastPage: 1), .init(title: "B", firstPage: 4, lastPage: 4),
+                    .init(title: "C", firstPage: 7, lastPage: 7), .init(title: "", firstPage: 9, lastPage: 9),
+                ], pageCount: 10))
         s.setUnit(unit, of: 0)
         s.setUnit(unit, of: 1)
         s.makeNew(2)
@@ -269,7 +296,10 @@ struct LectureSectionsTests {
 
         // A new unit without a name can't be made.
         s.makeNew(3)
-        #expect(s.cuts == [LectureCut(unit: unit, firstPage: 1, lastPage: 6), LectureCut(unit: made!, title: "Hall", firstPage: 7, lastPage: 8)])
+        #expect(
+            s.cuts == [
+                LectureCut(unit: unit, firstPage: 1, lastPage: 6), LectureCut(unit: made!, title: "Hall", firstPage: 7, lastPage: 8),
+            ])
         #expect(s.claimed == 3)
     }
 
@@ -325,9 +355,11 @@ struct LectureSectionsTests {
 
     @Test func slideTitlesSplitAtUnitNamesAndDividers() {
         func page(_ t: String?, _ words: Int = 40) -> LectureReading.Page { .init(title: t, words: words) }
-        let pages = [page("Matchings"), page("Matchings (cont.)"), page("Definitions"), page("Examples"),
-                     page("König's theorem", 3), page("Proof"), page("Proof (2)"), page("Exercise"),
-                     page("Hall"), page("Proof"), page("Corollaries"), page(nil)]
+        let pages = [
+            page("Matchings"), page("Matchings (cont.)"), page("Definitions"), page("Examples"),
+            page("König's theorem", 3), page("Proof"), page("Proof (2)"), page("Exercise"),
+            page("Hall"), page("Proof"), page("Corollaries"), page(nil),
+        ]
         let found = LectureReading.sections(pages: pages, units: ["Hall의 결혼 정리", "Hall"])
         #expect(found?.map(\.title) == ["Matchings", "König's theorem", "Hall"])
         #expect(found?.map(\.firstPage) == [1, 5, 9])
@@ -355,8 +387,12 @@ struct LectureSectionsTests {
 
     @Test func aFoundSplitTakesUnitsByNameOrProposesNewOnes() throws {
         let f = course()
-        let found = try #require(LectureSplit([.init(title: "Matching", firstPage: 1, lastPage: 1), .init(title: "König", firstPage: 5, lastPage: 5),
-                                               .init(title: "Berge", firstPage: 14, lastPage: 14)], pageCount: 24))
+        let found = try #require(
+            LectureSplit(
+                [
+                    .init(title: "Matching", firstPage: 1, lastPage: 1), .init(title: "König", firstPage: 5, lastPage: 5),
+                    .init(title: "Berge", firstPage: 14, lastPage: 14),
+                ], pageCount: 24))
         let s = SectionMatch.match(found, units: f.units)
         #expect(s.sections[1].unit == f.units[1].id && s.sections[1].match == .name)
         #expect(s.sections[2].isNew && s.sections[2].unit != nil)

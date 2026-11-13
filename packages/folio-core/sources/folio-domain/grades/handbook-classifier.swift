@@ -31,12 +31,14 @@ public enum HandbookClassifier {
         let years = Dictionary(semesters.map { ($0.id, $0.year) }, uniquingKeysWith: { a, _ in a })
         return courses.compactMap { course in
             guard let year = course.semesterId.flatMap({ years[$0] }),
-                  let handbook = catalog.handbooks.first(where: { $0.year == year }) else { return nil }
+                let handbook = catalog.handbooks.first(where: { $0.year == year })
+            else { return nil }
             let number = course.number.split(separator: "-").first.map(String.init) ?? ""  // the handbook lists 2734, not section 2734-01
             let codes = course.codes.compactMap { id in catalog.codes.first { $0.id == id }?.prefix }.map { $0 + number }
             guard let code = codes.first(where: { handbook.areas[$0] != nil }),
-                  let target = catalog.categories.first(where: { $0.name == handbook.areas[code] }),
-                  !course.categoryIds.contains(target.id) else { return nil }
+                let target = catalog.categories.first(where: { $0.name == handbook.areas[code] }),
+                !course.categoryIds.contains(target.id)
+            else { return nil }
             let managed = Set(handbook.areas.values)
             let kept = course.categoryIds.filter { id in catalog.category(id).map { !managed.contains($0.name) } ?? true }
             let ids = kept + [target.id]

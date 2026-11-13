@@ -6,6 +6,7 @@ import FolioStorage
 import Foundation
 import Testing
 import WebKit
+
 @testable import Folio
 
 /// A note preview's page in a window that's never shown, with the note it shows, written back on a tick as the note
@@ -20,11 +21,15 @@ import WebKit
     /// Stands for the workspace's `notesRevision`, which another note's change bumps.
     var revision = 0
 
-    init(_ text: String, baseURL: URL? = nil, editable: Bool = false, height: CGFloat = 600, embeds: NoteEmbedSource? = nil,
-         math: MathSyntax = .latex) {
+    init(
+        _ text: String, baseURL: URL? = nil, editable: Bool = false, height: CGFloat = 600, embeds: NoteEmbedSource? = nil,
+        math: MathSyntax = .latex
+    ) {
         page = NotePreviewPage.take()
         page.embeds = embeds
-        window = NSWindow(contentRect: CGRect(x: -20_000, y: -20_000, width: 900, height: height), styleMask: [.borderless], backing: .buffered, defer: false)
+        window = NSWindow(
+            contentRect: CGRect(x: -20_000, y: -20_000, width: 900, height: height), styleMask: [.borderless], backing: .buffered,
+            defer: false)
         window.appearance = NSAppearance(named: .aqua)
         page.view.frame = window.contentView!.bounds
         page.view.autoresizingMask = [.width, .height]
@@ -199,7 +204,8 @@ struct NotePreviewTests {
         defer { rig.close() }
         await rig.settle()
         #expect(try await rig.number("return document.documentElement.scrollWidth - document.documentElement.clientWidth") == 0)
-        let right = try #require(try await rig.number("return Math.max(...[...document.body.children].map(n => n.getBoundingClientRect().right))"))
+        let right = try #require(
+            try await rig.number("return Math.max(...[...document.body.children].map(n => n.getBoundingClientRect().right))"))
         let column = (900 - NoteLook.measure) / 2 + NoteLook.measure - NoteLook.margin
         #expect(right <= column + 1, "\(right) past \(column)")
     }
@@ -228,10 +234,14 @@ struct NotePreviewTests {
     /// beside what it drew, which is what the edit view's bubble draws too (`NoteMath`).
     @Test func asciiMathBarsPairInOrder() async throws {
         let cases: [(String, String)] = [
-            (#"|(bigcup_(i in I) A_i) cap (bigcup_(i in J) B_i)| >= |I| + |J| - m"#,
-             #"\left \lvert \left ( \bigcup_{i \in I} A_{i} \right ) \cap \left ( \bigcup_{i \in J} B_{i} \right ) \right \rvert \ge \left \lvert I \right \rvert + \left \lvert J \right \rvert - m"#),
-            (#"|det(A)| = |lambda_1| |lambda_2|"#,
-             #"\left \lvert \det{\left ( A \right )} \right \rvert = \left \lvert \lambda_{1} \right \rvert \left \lvert \lambda_{2} \right \rvert"#),
+            (
+                #"|(bigcup_(i in I) A_i) cap (bigcup_(i in J) B_i)| >= |I| + |J| - m"#,
+                #"\left \lvert \left ( \bigcup_{i \in I} A_{i} \right ) \cap \left ( \bigcup_{i \in J} B_{i} \right ) \right \rvert \ge \left \lvert I \right \rvert + \left \lvert J \right \rvert - m"#
+            ),
+            (
+                #"|det(A)| = |lambda_1| |lambda_2|"#,
+                #"\left \lvert \det{\left ( A \right )} \right \rvert = \left \lvert \lambda_{1} \right \rvert \left \lvert \lambda_{2} \right \rvert"#
+            ),
             (#"min{|F|: G}"#, #"\min \left \lbrace \left \lvert F \right \rvert : G \right \rbrace"#),
             (#"||x|| + |y|"#, #"\left \lvert \left \lvert x \right \rvert \right \rvert + \left \lvert y \right \rvert"#),
             // As before: a norm, explicit bars, a lone bar and AsciiMath's tokens with a bar in them.
@@ -245,7 +255,9 @@ struct NotePreviewTests {
         let rig = PreviewRig(cases.map { "$\($0.0)$" }.joined(separator: "\n\n"), math: .asciimath)
         defer { rig.close() }
         await rig.settle()
-        let read = try await rig.js("return [...document.querySelectorAll('.math')].map(m => m.querySelector('annotation')?.textContent ?? '')") as? [String]
+        let read =
+            try await rig.js("return [...document.querySelectorAll('.math')].map(m => m.querySelector('annotation')?.textContent ?? '')")
+            as? [String]
         #expect(read == cases.map(\.1))
     }
 
@@ -253,7 +265,8 @@ struct NotePreviewTests {
     @Test func picturesComeFromTheNotesFolder() async throws {
         let folder = FileManager.default.temporaryDirectory.appending(path: "preview-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: folder.appending(path: "assets"), withIntermediateDirectories: true)
-        try FileManager.default.copyItem(at: NoteRender.fixtures.appending(path: "assets/sample.png"), to: folder.appending(path: "assets/sample.png"))
+        try FileManager.default.copyItem(
+            at: NoteRender.fixtures.appending(path: "assets/sample.png"), to: folder.appending(path: "assets/sample.png"))
         let rig = PreviewRig("![](assets/sample.png)\n\n![](https://example.com/x.png)", baseURL: folder)
         defer { rig.close() }
         await rig.settle()
@@ -270,10 +283,13 @@ struct NotePreviewTests {
         let folder = FileManager.default.temporaryDirectory.appending(path: "preview-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: folder.appending(path: "assets"), withIntermediateDirectories: true)
         for name in ["wide-proof.svg", "sample.png"] {
-            try FileManager.default.copyItem(at: NoteRender.fixtures.appending(path: "assets/\(name)"), to: folder.appending(path: "assets/\(name)"))
+            try FileManager.default.copyItem(
+                at: NoteRender.fixtures.appending(path: "assets/\(name)"), to: folder.appending(path: "assets/\(name)"))
         }
         let exam = UUID()
-        let rig = PreviewRig("![](assets/wide-proof.svg)\n\n```mermaid\ngraph LR\nA-->B\n```\n\n[![](assets/sample.png)](folio://exam/\(exam))", baseURL: folder)
+        let rig = PreviewRig(
+            "![](assets/wide-proof.svg)\n\n```mermaid\ngraph LR\nA-->B\n```\n\n[![](assets/sample.png)](folio://exam/\(exam))",
+            baseURL: folder)
         defer { rig.close() }
         var opened: [AppLink] = []
         rig.page.openLink = OpenLinkAction { link, _, _ in opened.append(link) }
@@ -297,7 +313,8 @@ struct NotePreviewTests {
         _ = try await rig.js(key, ["key": "0", "command": true])
         #expect(try await rig.number(sheet) == fitted)
         // Pressed twice: its own size, and back.
-        let tap = "const el = document.querySelector('.figure-sheet > *'), r = el.getBoundingClientRect();"
+        let tap =
+            "const el = document.querySelector('.figure-sheet > *'), r = el.getBoundingClientRect();"
             + "for (const type of ['pointerdown', 'pointerup']) el.dispatchEvent(new PointerEvent(type, {pointerId: 1, isPrimary: true,"
             + " clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, bubbles: true}))"
         _ = try await rig.js(tap)
@@ -307,7 +324,8 @@ struct NotePreviewTests {
         _ = try await rig.js(tap)
         #expect(try await rig.number(sheet) == fitted)
         // A touch pinch from the fitted picture keeps its zoom when the fingers lift, apart as they are.
-        let pinch = "const el = document.querySelector('.figure-sheet > *'), r = el.getBoundingClientRect(), y = r.top + r.height / 2, x = r.left + r.width / 2;"
+        let pinch =
+            "const el = document.querySelector('.figure-sheet > *'), r = el.getBoundingClientRect(), y = r.top + r.height / 2, x = r.left + r.width / 2;"
             + "const send = (type, id, at) => el.dispatchEvent(new PointerEvent(type, {pointerId: id, pointerType: 'touch', clientX: at, clientY: y, bubbles: true}));"
             + "send('pointerdown', 1, x - 40); send('pointerdown', 2, x + 40); send('pointermove', 2, x + 240); send('pointerup', 1, x - 40); send('pointerup', 2, x + 240)"
         _ = try await rig.js(pinch)
@@ -326,7 +344,8 @@ struct NotePreviewTests {
         #expect(try await rig.js(open) as? Bool == false)
 
         _ = try await rig.js("document.images[0].click()")
-        let beside = "const v = document.querySelector('.figure-viewer');"
+        let beside =
+            "const v = document.querySelector('.figure-viewer');"
             + "for (const type of ['pointerdown', 'pointerup']) v.dispatchEvent(new PointerEvent(type, {pointerId: 1, isPrimary: true, clientX: 4, clientY: 300, bubbles: true}))"
         _ = try await rig.js(beside)
         #expect(try await rig.js(open) as? Bool == false)
@@ -362,7 +381,10 @@ struct NotePreviewTests {
         var opened: [AppLink] = []
         rig.page.openLink = OpenLinkAction { link, _, _ in opened.append(link) }
         await rig.settle()
-        #expect(try await rig.js("return document.querySelector('a.wikilink.missing') == null && document.querySelectorAll('a[href^=\"folio://\"]').length == 2") as? Bool == true)
+        #expect(
+            try await rig.js(
+                "return document.querySelector('a.wikilink.missing') == null && document.querySelectorAll('a[href^=\"folio://\"]').length == 2"
+            ) as? Bool == true)
         _ = try await rig.js("document.querySelector('a.wikilink').click()")
         for _ in 0..<40 where opened.isEmpty { try? await Task.sleep(for: .milliseconds(50)) }
         _ = try await rig.js("document.querySelectorAll('a')[1].click()")
@@ -423,7 +445,9 @@ struct NotePreviewTests {
         let rig = PreviewRig("Claim[^src].\n\n\(filler)\n\n[^src]: Where it comes from")
         defer { rig.close() }
         await rig.settle()
-        #expect(try await rig.js("return document.querySelector('section.footnotes li')?.textContent") as? String == "Where it comes from ↩\u{FE0E}")
+        #expect(
+            try await rig.js("return document.querySelector('section.footnotes li')?.textContent") as? String
+                == "Where it comes from ↩\u{FE0E}")
         func top(_ id: String) async throws -> Double {
             try #require(try await rig.js("return document.getElementById(id).getBoundingClientRect().top", ["id": id]) as? Double)
         }
@@ -470,7 +494,8 @@ struct NoteEmbedPreviewTests {
         #expect((try await rig.js(embed) as? String)?.contains("그래프는") == true)
         #expect(try await rig.js("return document.querySelectorAll('div.embed .katex').length") as? Int == 1)
         #expect(try await rig.js("return document.body.textContent.includes('빠짐')") as? Bool == false)
-        #expect(try await rig.js("return document.querySelector('div.embed-empty .embed-note')?.textContent") as? String
+        #expect(
+            try await rig.js("return document.querySelector('div.embed-empty .embed-note')?.textContent") as? String
                 == String(localized: .notesEmbedMissing))
 
         try store.write(NoteFile(url: other, meta: NoteMeta(id: nil)), text: "# 정의\n\n바뀐 내용")
@@ -495,7 +520,9 @@ struct NoteEmbedPreviewTests {
         await rig.settle()
         #expect(try await rig.js("return document.querySelector('a.wikilink:not(.missing)')?.textContent") as? String == "다른 과목 노트")
         #expect(try await rig.js("return document.querySelector('a.wikilink.missing')?.textContent") as? String == "옛 노트")
-        #expect((try await rig.js("return document.querySelector('div.embed .embed-body')?.textContent ?? ''") as? String)?.contains("정의할 것") == true)
+        #expect(
+            (try await rig.js("return document.querySelector('div.embed .embed-body')?.textContent ?? ''") as? String)?.contains("정의할 것")
+                == true)
     }
 
     /// A title no note of the course has is drawn broken, until a note takes it.
@@ -524,7 +551,8 @@ struct NoteEmbedPreviewTests {
         await rig.settle()
         _ = try await rig.js("document.querySelector('a.wikilink').dispatchEvent(new MouseEvent('mouseover', {bubbles: true}))")
         try await Task.sleep(for: .milliseconds(600))
-        #expect((try await rig.js("return document.querySelector('.ref-popover')?.textContent ?? ''") as? String)?.hasPrefix("증명할 것") == true)
+        #expect(
+            (try await rig.js("return document.querySelector('.ref-popover')?.textContent ?? ''") as? String)?.hasPrefix("증명할 것") == true)
         #expect(try await rig.js("return document.querySelector('.ref-popover').textContent.includes('아래')") as? Bool == false)
         #expect(try await rig.js("return document.querySelectorAll('.ref-popover .katex').length") as? Int == 1)
         _ = try await rig.js("document.querySelector('p').dispatchEvent(new MouseEvent('mouseover', {bubbles: true}))")

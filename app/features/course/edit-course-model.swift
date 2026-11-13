@@ -52,8 +52,12 @@ final class EditCourseModel {
     /// Nil while the credits field is empty: there is no number to save yet.
     private var update: CourseSet? {
         credits.map {
-            CourseSet(course: course.id, [.credits($0), .gradingMode(mode), .instructors(people), .categories(categories),
-                                          .color(color), .icon(icon), .schedule(schedule), .reviews(reviews), .sharingApproved(sharingApproved)])
+            CourseSet(
+                course: course.id,
+                [
+                    .credits($0), .gradingMode(mode), .instructors(people), .categories(categories),
+                    .color(color), .icon(icon), .schedule(schedule), .reviews(reviews), .sharingApproved(sharingApproved),
+                ])
         }
     }
 
@@ -101,8 +105,12 @@ final class EditCourseModel {
         guard let update else { return false }
         let c = course.file.course
         if title != c.title || codes != c.codes || number != c.number {
-            guard workspace.run(CourseRename(course: course.id, title: .changed(c.title, title), codes: .changed(c.codes, codes),
-                                             number: .changed(c.number, number))) != nil else { return false }
+            guard
+                workspace.run(
+                    CourseRename(
+                        course: course.id, title: .changed(c.title, title), codes: .changed(c.codes, codes),
+                        number: .changed(c.number, number))) != nil
+            else { return false }
         }
         workspace.run(update)
         return true

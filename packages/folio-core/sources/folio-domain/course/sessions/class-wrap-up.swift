@@ -51,7 +51,8 @@ extension CourseFile {
     public func classesToWrapUp(at now: Date, classMinutes: Int, calendar: Calendar) -> [Session] {
         sessions.filter { s in
             guard !s.isCancelled, !s.isWrappedUp,
-                  s.expectedEnd(schedule: course.schedule, classMinutes: classMinutes, calendar: calendar) <= now else { return false }
+                s.expectedEnd(schedule: course.schedule, classMinutes: classMinutes, calendar: calendar) <= now
+            else { return false }
             if let next = nextClassStart(after: s, calendar: calendar), next <= now { return false }
             return !wrapUpGaps(of: s).isEmpty
         }

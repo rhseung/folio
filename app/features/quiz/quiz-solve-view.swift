@@ -28,7 +28,9 @@ struct QuizSolveView: View {
         #if DEBUG && os(macOS)
         // After the cards load: started from onAppear, the snapshot showed an empty deck while the pane counted cards.
         .onChange(of: model.quiz.cards.count, initial: true) { _, n in
-            if SnapshotDriver.directory != nil, !model.started, n > 0 { model.order = .wrongFirst; model.start(label: String(localized: .quizSolvePickedScope), course: course) }
+            if SnapshotDriver.directory != nil, !model.started, n > 0 {
+                model.order = .wrongFirst; model.start(label: String(localized: .quizSolvePickedScope), course: course)
+            }
         }
         #endif
         .onChange(of: model.quiz.request?.id, initial: true) { _, _ in
@@ -47,14 +49,20 @@ struct QuizSolveView: View {
                 VStack(alignment: .leading, spacing: Theme.Space.s) {
                     Caption(String(localized: .quizSolveShortcuts))
                     VStack(spacing: Theme.Space.xxs) {
-                        shortcut(String(localized: .quizOnlyWrong), detail: String(localized: .quizCardCount(pane.wrong)), disabled: pane.wrong == 0) {
+                        shortcut(
+                            String(localized: .quizOnlyWrong), detail: String(localized: .quizCardCount(pane.wrong)),
+                            disabled: pane.wrong == 0
+                        ) {
                             model.solveOnlyWrong(course)
                         }
                         shortcut(String(localized: .quizSolveExamScope), detail: model.examDetail(pane), disabled: pane.examCards == 0) {
                             model.solveExam(pane, course: course)
                         }
-                        shortcut(String(localized: .quizSolveReviewUnits), detail: String(localized: .quizSolveReviewDetail(pane.reviewUnits.count, pane.reviewCards)),
-                                 disabled: pane.reviewCards == 0) {
+                        shortcut(
+                            String(localized: .quizSolveReviewUnits),
+                            detail: String(localized: .quizSolveReviewDetail(pane.reviewUnits.count, pane.reviewCards)),
+                            disabled: pane.reviewCards == 0
+                        ) {
                             model.solveReview(pane, course: course)
                         }
                     }
@@ -65,8 +73,10 @@ struct QuizSolveView: View {
                         Caption(String(localized: .quizUnit))
                         Spacer()
                         if !pane.withCards.isEmpty {
-                            Button(model.allSelected(pane) ? .quizSolveDeselectAll : .quizSolveSelectAll) { model.toggleAll(pane, course: course) }
-                                .buttonStyle(.ghost).font(Theme.Typeface.caption)
+                            Button(model.allSelected(pane) ? .quizSolveDeselectAll : .quizSolveSelectAll) {
+                                model.toggleAll(pane, course: course)
+                            }
+                            .buttonStyle(.ghost).font(Theme.Typeface.caption)
                         }
                     }
                     ForEach(Array(pane.groups.enumerated()), id: \.offset) { _, group in
@@ -95,7 +105,10 @@ struct QuizSolveView: View {
                 }
 
                 VStack(spacing: Theme.Space.s) {
-                    HStack { Text(.quizSolveOrder); Spacer(); ChoiceMenu(selection: $model.order, options: QuizOrder.allCases.map { ($0, $0.label) }) }
+                    HStack {
+                        Text(.quizSolveOrder); Spacer()
+                        ChoiceMenu(selection: $model.order, options: QuizOrder.allCases.map { ($0, $0.label) })
+                    }
                     HStack {
                         Text(.quizSolveGrading)
                         Spacer()
@@ -112,7 +125,9 @@ struct QuizSolveView: View {
             VStack(alignment: .leading, spacing: Theme.Space.s) {
                 Text(model.footer(pane))
                     .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(2)
-                ColumnPick { model.start(label: String(localized: .quizSolvePickedScope), course: course) } label: {
+                ColumnPick {
+                    model.start(label: String(localized: .quizSolvePickedScope), course: course)
+                } label: {
                     Text(model.started ? .quizSolveRestart : .quizSolveStart)
                 }
                 .buttonStyle(.prominent)
@@ -144,10 +159,13 @@ struct QuizSolveView: View {
 
     func unitRow(_ unit: FolioDomain.Unit, tally: WrongTally) -> some View {
         let on = model.scope.unitIds.contains(unit.id)
-        return Button { model.toggle(unit.id) } label: {
+        return Button {
+            model.toggle(unit.id)
+        } label: {
             VStack(alignment: .leading, spacing: Theme.Space.xs) {
                 HStack(spacing: Theme.Space.s) {
-                    Image(systemName: on ? "checkmark.circle.fill" : "circle").foregroundStyle(on ? accent.color : Theme.Palette.textTertiary)
+                    Image(systemName: on ? "checkmark.circle.fill" : "circle").foregroundStyle(
+                        on ? accent.color : Theme.Palette.textTertiary)
                     Text(unit.title).lineLimit(1)
                     Spacer(minLength: 0)
                 }
@@ -252,13 +270,16 @@ struct QuizSolveView: View {
                 } else {
                     VStack(alignment: .leading, spacing: Theme.Space.s) {
                         Caption(String(localized: .quizSolveMyAnswer))
-                        GrowingTextEditor(text: $model.answer, size: 14, lines: 5...12) // design: one-off, a step under the 15pt prompt
+                        GrowingTextEditor(text: $model.answer, size: 14, lines: 5...12)  // design: one-off, a step under the 15pt prompt
                             .padding(Theme.Space.s)
                             .background(Theme.Palette.fill.opacity(0.6), in: .rect(cornerRadius: Theme.Radius.control))
                             .disabled(model.pending != nil || model.busy)
                         if model.pending == nil && !model.revealed {
                             HStack {
-                                if model.busy { ProgressView().controlSize(.small); Text(.quizSolveGradingBusy).foregroundStyle(Theme.Palette.textSecondary) }
+                                if model.busy {
+                                    ProgressView().controlSize(.small)
+                                    Text(.quizSolveGradingBusy).foregroundStyle(Theme.Palette.textSecondary)
+                                }
                                 Spacer()
                                 if model.grading == .claude {
                                     Button(.quizSolveGradeMine) { model.revealed = true }.buttonStyle(.ghost)
@@ -274,7 +295,11 @@ struct QuizSolveView: View {
                             }
                         }
                         if let failure = model.failure {
-                            if model.missingKey { MissingKeyNotice() } else { Text(failure).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.danger) }
+                            if model.missingKey {
+                                MissingKeyNotice()
+                            } else {
+                                Text(failure).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.danger)
+                            }
                         }
                     }
                 }
@@ -289,15 +314,21 @@ struct QuizSolveView: View {
             ForEach(card.options, id: \.self) { option in
                 let chosen = model.pending?.answer == option
                 let tone: Tone? = model.pending == nil ? nil : option == card.answer ? .success : chosen ? .danger : nil
-                Button { model.choose(option, on: card) } label: {
+                Button {
+                    model.choose(option, on: card)
+                } label: {
                     HStack {
                         Text(option)
                         Spacer()
                         if let tone { Image(systemName: tone == .success ? "checkmark" : "xmark").foregroundStyle(tone.foreground) }
                     }
                     .padding(.horizontal, Theme.Space.m).padding(.vertical, Theme.Space.s)
-                    .background(tone == .success ? Theme.Palette.success.opacity(Theme.Opacity.tint) : tone == .danger ? Theme.Palette.dangerFill : Theme.Palette.fill.opacity(0.6),
-                                in: .rect(cornerRadius: Theme.Radius.control))
+                    .background(
+                        tone == .success
+                            ? Theme.Palette.success.opacity(Theme.Opacity.tint)
+                            : tone == .danger ? Theme.Palette.dangerFill : Theme.Palette.fill.opacity(0.6),
+                        in: .rect(cornerRadius: Theme.Radius.control)
+                    )
                     .contentShape(.rect)
                 }
                 .buttonStyle(.pointing(.plain))
@@ -334,7 +365,9 @@ struct QuizSolveView: View {
                         Label(String(localized: .quizSolveMissing(item)), systemImage: "xmark.circle").foregroundStyle(Theme.Palette.danger)
                     }
                 }
-                if let feedback = p.feedback, !feedback.isEmpty { Text(feedback).foregroundStyle(Theme.Palette.textSecondary).lineSpacing(2) }
+                if let feedback = p.feedback, !feedback.isEmpty {
+                    Text(feedback).foregroundStyle(Theme.Palette.textSecondary).lineSpacing(2)
+                }
             }
             if !card.gradesInstantly { modelAnswer(card) }
             verdictButtons(selected: p.verdict, note: String(localized: .quizSolveOverrideNote)) { model.pending?.verdict = $0 }
@@ -360,12 +393,18 @@ struct QuizSolveView: View {
     func verdictButtons(selected: Verdict?, note: String, pick: @escaping (Verdict) -> Void) -> some View {
         HStack(spacing: Theme.Space.s) {
             ForEach([Verdict.correct, .partial, .wrong], id: \.self) { v in
-                Button { pick(v) } label: {
+                Button {
+                    pick(v)
+                } label: {
                     Text(v.label)
                         .font(Theme.Typeface.bodyStrong)
                         .foregroundStyle(selected == v ? Theme.Palette.onFill : v.tone.foreground)
                         .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.s)
-                        .background(selected == v ? v.tone.foreground : v.tone == .success ? Theme.Palette.success.opacity(Theme.Opacity.tint) : v.tone.fill, in: .capsule)
+                        .background(
+                            selected == v
+                                ? v.tone.foreground : v.tone == .success ? Theme.Palette.success.opacity(Theme.Opacity.tint) : v.tone.fill,
+                            in: .capsule
+                        )
                         .contentShape(.capsule)
                 }
                 .buttonStyle(.pointing(.plain))
@@ -385,7 +424,8 @@ struct QuizSolveView: View {
                 historyRow(a.event.verdict, overridden: a.event.overridden, detail: model.historyDetail(a))
             }
             if let pending = model.pending {
-                historyRow(pending.verdict, overridden: pending.verdict != pending.original, detail: String(localized: .quizSolvePendingDetail))
+                historyRow(
+                    pending.verdict, overridden: pending.verdict != pending.original, detail: String(localized: .quizSolvePendingDetail))
             }
             status(model.quiz.history(of: card.id))
         }
@@ -429,7 +469,9 @@ struct FlowChips<Item: Hashable>: View {
         WrapLayout(spacing: Theme.Space.tight) {
             ForEach(items, id: \.self) { item in
                 let on = selected.contains(item)
-                Button { toggle(item) } label: {
+                Button {
+                    toggle(item)
+                } label: {
                     Text(label(item))
                         .font(Theme.Typeface.caption.weight(on ? .semibold : .regular))
                         .foregroundStyle(on ? accent.ink : Theme.Palette.textSecondary)

@@ -3,6 +3,7 @@ import FolioDomain
 import FolioStorage
 import Foundation
 import Testing
+
 @testable import Folio
 
 /// Two classes of graph theory a week apart, with the matchings slides tracked.
@@ -28,8 +29,9 @@ struct LectureProgressModelTests {
 
     @Test func stoppingARecordingAsksFromTheLastClassToTheLastPageSeen() throws {
         workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: earlier, firstPage: 1, lastPage: 6))
-        let recording = Recording(device: workspace.device, at: .now, sessionId: session, file: "Recordings/a.m4a", duration: 600,
-                                  pages: [PageVisit(at: 0, materialId: slides.id, page: 6), PageVisit(at: 100, materialId: slides.id, page: 11)])
+        let recording = Recording(
+            device: workspace.device, at: .now, sessionId: session, file: "Recordings/a.m4a", duration: 600,
+            pages: [PageVisit(at: 0, materialId: slides.id, page: 6), PageVisit(at: 100, materialId: slides.id, page: 11)])
         workspace.askWrapUp(after: recording, course: graphTheory)
         let ask = try #require(workspace.wrapUpAsk)
         #expect(ask.session == session && ask.viewed == [SessionMaterial(materialId: slides.id, firstPage: 6, lastPage: 11)])
@@ -49,7 +51,8 @@ struct LectureProgressModelTests {
     /// A recording without a class has nothing to wrap up. A course without lecture files still has units and a
     /// note to ask about; a class wrapped up with nothing missing isn't asked again.
     @Test func aRecordingAsksUnlessItsClassHasNothingLeft() throws {
-        workspace.askWrapUp(after: Recording(device: workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a"), course: graphTheory)
+        workspace.askWrapUp(
+            after: Recording(device: workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a"), course: graphTheory)
         #expect(workspace.wrapUpAsk == nil)
         // Linear algebra's files aren't tracked in the fixture, so it has no lecture files yet.
         let linearAlgebra = UUID(uuidString: "C0000000-0000-4000-8000-000000000001")!
@@ -89,8 +92,9 @@ struct LectureProgressModelTests {
     /// opening it again from the class's menu fills the same pages from the recording, not the recording's first.
     @Test func aPromptDismissedAndOpenedAgainStartsAfterTheLastClass() throws {
         workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: earlier, firstPage: 1, lastPage: 6))
-        let recording = Recording(device: workspace.device, at: .now, sessionId: session, file: "Recordings/a.m4a", duration: 600,
-                                  pages: [PageVisit(at: 0, materialId: slides.id, page: 6), PageVisit(at: 100, materialId: slides.id, page: 11)])
+        let recording = Recording(
+            device: workspace.device, at: .now, sessionId: session, file: "Recordings/a.m4a", duration: 600,
+            pages: [PageVisit(at: 0, materialId: slides.id, page: 6), PageVisit(at: 100, materialId: slides.id, page: 11)])
         let ctx = ActionContext(gist: try #require(workspace.gist), device: workspace.device, now: workspace.now)
         try ctx.edit(graphTheory) { $0.recordings = [recording] }
         workspace.reload()
@@ -143,13 +147,18 @@ struct LectureProgressModelTests {
 
     @Test func aLineShowsThePageWhereItTurns() throws {
         let store = workspace.course(graphTheory)!.store
-        let recording = Recording(device: workspace.device, at: .now, sessionId: session, file: "Recordings/a.m4a", duration: 300,
-                                  pages: [PageVisit(at: 0, materialId: slides.id, page: 4), PageVisit(at: 60, materialId: slides.id, page: 6)])
+        let recording = Recording(
+            device: workspace.device, at: .now, sessionId: session, file: "Recordings/a.m4a", duration: 300,
+            pages: [PageVisit(at: 0, materialId: slides.id, page: 4), PageVisit(at: 60, materialId: slides.id, page: 6)])
         try FileManager.default.createDirectory(at: store.recordingsURL, withIntermediateDirectories: true)
         try Data("audio".utf8).write(to: store.fileURL(recording.file))
-        try store.saveTranscript(LectureTranscript(locale: "ko-KR", lines: [
-            .init(start: 0, end: 20, text: "매칭"), .init(start: 20, end: 60, text: "증가 경로"), .init(start: 61, end: 80, text: "홀의 정리"),
-        ]), of: recording)
+        try store.saveTranscript(
+            LectureTranscript(
+                locale: "ko-KR",
+                lines: [
+                    .init(start: 0, end: 20, text: "매칭"), .init(start: 20, end: 60, text: "증가 경로"),
+                    .init(start: 61, end: 80, text: "홀의 정리"),
+                ]), of: recording)
 
         let ctx = ActionContext(gist: try #require(workspace.gist), device: workspace.device, now: workspace.now)
         try ctx.edit(graphTheory) { $0.recordings = [recording] }

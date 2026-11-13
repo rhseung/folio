@@ -1,6 +1,7 @@
-@testable import FolioMarkdown
 import Foundation
 import Testing
+
+@testable import FolioMarkdown
 
 /// `[[note:<ID>…|이름]]`: a note named by its ID, found by the app however its file is named now.
 struct NoteIDLinkTests {
@@ -9,8 +10,10 @@ struct NoteIDLinkTests {
 
     /// Notes by ID, with their titles, as the app finds them in its courses.
     func page(_ text: String, _ notes: [UUID: (title: String, text: String)]) -> String {
-        let embeds = NoteEmbeds(key: "Host", labels: .init(missing: "MISSING", loop: "LOOP", tooDeep: "DEEP"),
-                                title: { notes[$0]?.title }) { link in
+        let embeds = NoteEmbeds(
+            key: "Host", labels: .init(missing: "MISSING", loop: "LOOP", tooDeep: "DEEP"),
+            title: { notes[$0]?.title }
+        ) { link in
             link.noteID.flatMap { id in notes[id].map { NoteEmbeds.Note(key: id.uuidString, text: $0.text) } }
         }
         return HTMLRenderer.blocks(ParsedNote(text), embeds: embeds).map(\.html).joined()
@@ -18,7 +21,8 @@ struct NoteIDLinkTests {
 
     @Test func aLinkReadsItsIDHeadingBlockAndName() {
         let link = WikiLink.all(in: "[[note:\(matching.uuidString)#^c1|매칭]]")[0]
-        #expect(link.noteID == matching && link.blockID == "c1" && link.alias == "매칭" && link.href == "folio://note/\(matching.uuidString)#^c1")
+        #expect(
+            link.noteID == matching && link.blockID == "c1" && link.alias == "매칭" && link.href == "folio://note/\(matching.uuidString)#^c1")
         #expect(WikiLink.all(in: "[[note:\(matching.uuidString)#정의]]")[0].href == "folio://note/\(matching.uuidString)#정의")
         #expect(WikiLink.all(in: "[[매칭]]")[0].noteID == nil)
         #expect(WikiLink.all(in: "[[material:\(matching.uuidString)]]")[0].noteID == nil)
@@ -45,7 +49,9 @@ struct NoteIDLinkTests {
 
     @Test func anEmbedByIDDrawsThePartUnderTheTitle() {
         let html = page("![[note:\(matching.uuidString)#정의]]", [matching: ("매칭", "## 정의\n\n짝짓기 ^c1\n\n## 다음\n\n빠짐")])
-        #expect(html.contains("<div class=\"embed\"><a class=\"embed-title\" href=\"folio://note/\(matching.uuidString)#정의\">매칭 › 정의</a>"), "\(html)")
+        #expect(
+            html.contains("<div class=\"embed\"><a class=\"embed-title\" href=\"folio://note/\(matching.uuidString)#정의\">매칭 › 정의</a>"),
+            "\(html)")
         #expect(html.contains("짝짓기") && !html.contains("빠짐"))
         #expect(page("![[note:\(gone.uuidString)]]", [:]).contains("MISSING"))
     }
@@ -71,9 +77,13 @@ struct NoteIDLinkTests {
 
     @Test func aRenameFollowsLinksStillShowingTheOldTitle() {
         let id = matching.uuidString, other = gone.uuidString
-        let text = "[[note:\(id)|10주차-2]], [[note:\(id)#정의|10주차-2]], ![[note:\(id)#^c1|10주차-2]], [[note:\(id)|내 이름]], [[note:\(id)]], [[note:\(other)|10주차-2]], [[10주차-2]]"
+        let text =
+            "[[note:\(id)|10주차-2]], [[note:\(id)#정의|10주차-2]], ![[note:\(id)#^c1|10주차-2]], [[note:\(id)|내 이름]], [[note:\(id)]], [[note:\(other)|10주차-2]], [[10주차-2]]"
         let out = WikiLink.retitled(text, note: matching, from: "10주차-2", to: "11-05(목) 매칭")
-        #expect(out == "[[note:\(id)|11-05(목) 매칭]], [[note:\(id)#정의|11-05(목) 매칭]], ![[note:\(id)#^c1|11-05(목) 매칭]], [[note:\(id)|내 이름]], [[note:\(id)]], [[note:\(other)|10주차-2]], [[10주차-2]]")
+        #expect(
+            out
+                == "[[note:\(id)|11-05(목) 매칭]], [[note:\(id)#정의|11-05(목) 매칭]], ![[note:\(id)#^c1|11-05(목) 매칭]], [[note:\(id)|내 이름]], [[note:\(id)]], [[note:\(other)|10주차-2]], [[10주차-2]]"
+        )
         #expect(WikiLink.retitled(out, note: matching, from: "11-05(목) 매칭", to: "10주차-2") == text)
     }
 }
@@ -82,8 +92,10 @@ struct NoteIDLinkTests {
 struct MissingTitleLinkTests {
     /// The titles the course's notes have, as the app finds a link's note to open it.
     func page(_ text: String, titles: Set<String>) -> String {
-        let embeds = NoteEmbeds(key: "Host", labels: .init(missing: "MISSING", loop: "LOOP", tooDeep: "DEEP"),
-                                hasNote: { titles.contains($0) }) { link in
+        let embeds = NoteEmbeds(
+            key: "Host", labels: .init(missing: "MISSING", loop: "LOOP", tooDeep: "DEEP"),
+            hasNote: { titles.contains($0) }
+        ) { link in
             titles.contains(link.target) ? NoteEmbeds.Note(key: link.target, text: "본문 ^c1") : nil
         }
         return HTMLRenderer.blocks(ParsedNote(text), embeds: embeds).map(\.html).joined()
@@ -92,8 +104,11 @@ struct MissingTitleLinkTests {
     @Test func aTitleNoNoteHasIsBroken() {
         let html = page("[[매칭]] [[매칭 정리|정리]] [[없는 노트#정의]] [[R&D]]", titles: ["매칭", "R&D"])
         #expect(html.contains("<a class=\"wikilink\" href=\"folio://note/%EB%A7%A4%EC%B9%AD\">매칭</a>"), "\(html)")
-        #expect(html.contains("<a class=\"wikilink missing\" href=\"folio://note/%EB%A7%A4%EC%B9%AD%20%EC%A0%95%EB%A6%AC\">정리</a>"), "\(html)")
-        #expect(html.contains("<a class=\"wikilink missing\" href=\"folio://note/%EC%97%86%EB%8A%94%20%EB%85%B8%ED%8A%B8#정의\">없는 노트 › 정의</a>"), "\(html)")
+        #expect(
+            html.contains("<a class=\"wikilink missing\" href=\"folio://note/%EB%A7%A4%EC%B9%AD%20%EC%A0%95%EB%A6%AC\">정리</a>"), "\(html)")
+        #expect(
+            html.contains("<a class=\"wikilink missing\" href=\"folio://note/%EC%97%86%EB%8A%94%20%EB%85%B8%ED%8A%B8#정의\">없는 노트 › 정의</a>"),
+            "\(html)")
         // The title is looked for as written, not as the page escapes it.
         #expect(html.contains(">R&amp;D</a>") && !html.contains("missing\" href=\"folio://note/R"), "\(html)")
     }

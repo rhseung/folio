@@ -25,7 +25,9 @@ struct InfoBlocks: View {
                     ForEach(Array(people.enumerated()), id: \.element.id) { i, p in
                         CardRow(last: i == people.count - 1) {
                             // The name and its details open the person; the address beside them still writes mail.
-                            Button { openLink(AppLink(.person, p.id)) } label: {
+                            Button {
+                                openLink(AppLink(.person, p.id))
+                            } label: {
                                 HStack {
                                     VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                                         Text(p.name)
@@ -33,7 +35,8 @@ struct InfoBlocks: View {
                                             Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                                         }
                                     }
-                                    Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(Theme.Palette.textTertiary)
+                                    Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(
+                                        Theme.Palette.textTertiary)
                                     Spacer(minLength: Theme.Space.m)
                                 }
                                 .contentShape(.rect)
@@ -68,14 +71,18 @@ struct InfoBlocks: View {
             }
             Block(String(localized: .courseInfoFolder)) {
                 Card {
-                    FormRow(label: course.store.url.lastPathComponent, detail: course.store.url.deletingLastPathComponent().path, last: true) {
+                    FormRow(
+                        label: course.store.url.lastPathComponent, detail: course.store.url.deletingLastPathComponent().path, last: true
+                    ) {
                         #if os(macOS)
                         Button(.commonShowInFinder) { NSWorkspace.shared.activateFileViewerSelecting([course.store.url]) }
                         #endif
                     }
                     #if os(macOS)
                     .contextMenu {
-                        Button(.commonShowInFinder, systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([course.store.url]) }
+                        Button(.commonShowInFinder, systemImage: "folder") {
+                            NSWorkspace.shared.activateFileViewerSelecting([course.store.url])
+                        }
                     }
                     #endif
                 }

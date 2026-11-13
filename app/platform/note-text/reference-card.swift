@@ -21,8 +21,10 @@ import WebKit
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .nonPersistent()
         config.defaultWebpagePreferences.allowsContentJavaScript = false
-        config.userContentController.addUserScript(WKUserScript(source: NoteStyle.reader, injectionTime: .atDocumentEnd,
-                                                                forMainFrameOnly: true, in: .defaultClient))
+        config.userContentController.addUserScript(
+            WKUserScript(
+                source: NoteStyle.reader, injectionTime: .atDocumentEnd,
+                forMainFrameOnly: true, in: .defaultClient))
         config.setURLSchemeHandler(files, forURLScheme: LocalFileScheme.scheme)
         host = ReferenceCardHost(web: WKWebView(frame: .zero, configuration: config))
         super.init()
@@ -32,15 +34,18 @@ import WebKit
 
     /// Lays the card out `width` wide, off screen, and calls `done` with its height once its math is typeset. A block
     /// taller than `maxHeight` fades out at the bottom.
-    func load(_ card: HTMLRenderer.ReferenceCard, math: String, accent: CourseAccent, baseURL: URL?, width: CGFloat, maxHeight: CGFloat,
-              done: @escaping (CGFloat) -> Void) {
+    func load(
+        _ card: HTMLRenderer.ReferenceCard, math: String, accent: CourseAccent, baseURL: URL?, width: CGFloat, maxHeight: CGFloat,
+        done: @escaping (CGFloat) -> Void
+    ) {
         hide()
         loaded = done
         tallest = maxHeight
         // Barely high while it loads, so the page's height is its content's, not the view's.
         host.resize(CGSize(width: width, height: Theme.Space.xxs))
         files.root = LocalFileScheme.root(for: baseURL)
-        let page = "<!doctype html><html><head><meta charset=utf-8><style>\(NoteStyle.variables(accent: accent))\(NoteStyle.css)\(Self.css)</style></head>"
+        let page =
+            "<!doctype html><html><head><meta charset=utf-8><style>\(NoteStyle.variables(accent: accent))\(NoteStyle.css)\(Self.css)</style></head>"
             + "<body class=\"note\" data-math=\"\(card.math ?? math)\">\(card.html)</body></html>"
         loading = web.loadHTMLString(page, baseURL: LocalFileScheme.base(for: baseURL))
     }
@@ -58,7 +63,8 @@ import WebKit
         let tallest = tallest
         Task {
             // The card takes no scroll, unlike the preview's, so a cut block says there is more by fading out.
-            let measure = "const h = Math.ceil(document.body.getBoundingClientRect().height); "
+            let measure =
+                "const h = Math.ceil(document.body.getBoundingClientRect().height); "
                 + "document.documentElement.classList.toggle('cut', h > tallest); return h"
             let height = try? await web.callAsyncJavaScript(measure, arguments: ["tallest": Double(tallest)], contentWorld: .defaultClient)
             guard let height = (height as? NSNumber)?.doubleValue, height > 0 else { return }
@@ -67,7 +73,8 @@ import WebKit
     }
 
     // The note page's own padding is for a column; the card has the preview card's (`.ref-popover` in note.css).
-    private static let css = "html{overflow:hidden}body.note{margin:0;padding:\(Int(Theme.Space.m))px \(Int(Theme.Space.l))px;max-width:none}"
+    private static let css =
+        "html{overflow:hidden}body.note{margin:0;padding:\(Int(Theme.Space.m))px \(Int(Theme.Space.l))px;max-width:none}"
         + "body.note>:first-child{margin-top:0}body.note>:last-child{margin-bottom:0}"
         + "html.cut{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - \(Int(Theme.Space.xl))px),transparent)}"
 }

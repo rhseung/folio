@@ -111,12 +111,13 @@ public enum MaterialTracking {
 
         for entry in unclaimed.values.sorted(by: { $0.path < $1.path }) {
             let role = role(for: entry.path, overrides: folderRoles)
-            result.append(Material(
-                device: device, at: now,
-                path: entry.path, isFolder: entry.isFolder, bookmark: io.makeBookmark(entry.path),
-                hash: entry.isFolder ? nil : try hashes[entry.path] ?? io.hash(entry.path), size: entry.size,
-                role: role, status: role == nil ? .unclassified : .classified
-            ))
+            result.append(
+                Material(
+                    device: device, at: now,
+                    path: entry.path, isFolder: entry.isFolder, bookmark: io.makeBookmark(entry.path),
+                    hash: entry.isFolder ? nil : try hashes[entry.path] ?? io.hash(entry.path), size: entry.size,
+                    role: role, status: role == nil ? .unclassified : .classified
+                ))
         }
 
         linkTexSources(&result)

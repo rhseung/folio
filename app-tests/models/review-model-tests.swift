@@ -2,6 +2,7 @@ import FolioActions
 import FolioDomain
 import Foundation
 import Testing
+
 @testable import Folio
 
 @MainActor
@@ -43,7 +44,8 @@ struct ReviewModelTests {
         let workspace = try fixtureWorkspace()
         let a = try #require(workspace.run(UnitAdd(course: graphTheory, title: "매칭"))?.made)
         let b = try #require(workspace.run(UnitAdd(course: graphTheory, title: "채색"))?.made)
-        let model = ReviewModel(workspace: workspace, items: [.init(courseId: graphTheory, unitId: a), .init(courseId: graphTheory, unitId: b)])
+        let model = ReviewModel(
+            workspace: workspace, items: [.init(courseId: graphTheory, unitId: a), .init(courseId: graphTheory, unitId: b)])
         #expect(model.counter == "1 / 2" && !model.isLast)
         model.record(.good)
         model.advance()

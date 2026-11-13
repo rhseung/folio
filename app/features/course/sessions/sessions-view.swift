@@ -25,7 +25,10 @@ struct SessionsView: View {
                 VStack(alignment: .leading, spacing: Theme.Space.s) {
                     Text(.sessionsTitle).font(Theme.Typeface.pageTitle)
                     (Text(model.subtitle(file)).foregroundStyle(Theme.Palette.textTertiary)
-                     + (model.nextExam(file).map { Text(" · ").foregroundStyle(Theme.Palette.textTertiary) + Text($0).fontWeight(.semibold).foregroundStyle(Theme.Palette.danger) } ?? Text("")))
+                        + (model.nextExam(file).map {
+                            Text(" · ").foregroundStyle(Theme.Palette.textTertiary)
+                                + Text($0).fontWeight(.semibold).foregroundStyle(Theme.Palette.danger)
+                        } ?? Text("")))
                 }
                 Spacer()
                 Button(.sessionsAdd, systemImage: "plus") { adding = true }.buttonStyle(.ghost)
@@ -54,10 +57,12 @@ struct SessionsView: View {
         .sheet(isPresented: $editingTimes) { ClassTimesSheet(workspace: model.workspace, course: course) }
         .sheet(isPresented: $adding) { SessionSheet(workspace: model.workspace, request: SessionSheetRequest(course: course.id)) }
         .sheet(item: $model.wrapUpRun) { run in
-            SessionSheet(workspace: model.workspace, request: SessionSheetRequest(course: course.id, session: run.current, asked: true),
-                         step: model.step(of: run), saved: model.wrappedUpOne)
-                // A new sheet model for each class: the one before's answers must not carry over.
-                .id(run.current)
+            SessionSheet(
+                workspace: model.workspace, request: SessionSheetRequest(course: course.id, session: run.current, asked: true),
+                step: model.step(of: run), saved: model.wrappedUpOne
+            )
+            // A new sheet model for each class: the one before's answers must not carry over.
+            .id(run.current)
         }
         .task(id: file.sessions) { model.loadUntouched(course) }
         .confirming($model.pending)
@@ -127,9 +132,11 @@ struct SessionsView: View {
 
     func leftUnwrappedCard(_ left: [Session], file: CourseFile) -> some View {
         let shown = Array(left.prefix(4))
-        return NoticeCard(title: String(localized: .wrapUpLeftTitle(left.count)),
-                          detail: String(localized: .wrapUpLeftDetail),
-                          systemImage: "checklist") {
+        return NoticeCard(
+            title: String(localized: .wrapUpLeftTitle(left.count)),
+            detail: String(localized: .wrapUpLeftDetail),
+            systemImage: "checklist"
+        ) {
             Button(.wrapUpLeftGo) { model.startWrapUps(file) }.buttonStyle(.pointing(.bordered))
         } rows: {
             ForEach(Array(shown.enumerated()), id: \.element.id) { i, s in
@@ -149,9 +156,11 @@ struct SessionsView: View {
     /// Left over from when whole terms were made ahead; deleted only once the user agrees.
     var untouchedCard: some View {
         let shown = model.untouchedShown
-        return NoticeCard(title: String(localized: .sessionsUntouchedTitle(model.untouched.count)),
-                          detail: String(localized: .sessionsUntouchedDetail),
-                          systemImage: "calendar.badge.minus") {
+        return NoticeCard(
+            title: String(localized: .sessionsUntouchedTitle(model.untouched.count)),
+            detail: String(localized: .sessionsUntouchedDetail),
+            systemImage: "calendar.badge.minus"
+        ) {
             Button(.sessionsRemoveEllipsis) { model.removeUntouched() }.buttonStyle(.pointing(.bordered))
         } rows: {
             ForEach(Array(shown.enumerated()), id: \.element.id) { i, s in

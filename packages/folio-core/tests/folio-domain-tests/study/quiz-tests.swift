@@ -13,15 +13,19 @@ struct QuizTests {
         #expect(resolved == .resolved(on: d("2026-10-03"), recheckDue: d("2026-10-10")))
 
         // Wrong again at the recheck: back to open.
-        #expect(WrongFlow.status([(d("2026-10-01"), .wrong), (d("2026-10-03"), .correct), (d("2026-10-10"), .wrong)]) == .open(since: d("2026-10-10")))
+        #expect(
+            WrongFlow.status([(d("2026-10-01"), .wrong), (d("2026-10-03"), .correct), (d("2026-10-10"), .wrong)])
+                == .open(since: d("2026-10-10")))
 
         // Correct at the recheck: done, no further recheck.
-        #expect(WrongFlow.status([(d("2026-10-01"), .wrong), (d("2026-10-03"), .correct), (d("2026-10-11"), .correct)])
-            == .resolved(on: d("2026-10-03"), recheckDue: nil))
+        #expect(
+            WrongFlow.status([(d("2026-10-01"), .wrong), (d("2026-10-03"), .correct), (d("2026-10-11"), .correct)])
+                == .resolved(on: d("2026-10-03"), recheckDue: nil))
 
         // A correct answer before the recheck day doesn't count as the recheck.
-        #expect(WrongFlow.status([(d("2026-10-01"), .wrong), (d("2026-10-03"), .correct), (d("2026-10-05"), .correct)])
-            == .resolved(on: d("2026-10-03"), recheckDue: d("2026-10-10")))
+        #expect(
+            WrongFlow.status([(d("2026-10-01"), .wrong), (d("2026-10-03"), .correct), (d("2026-10-05"), .correct)])
+                == .resolved(on: d("2026-10-03"), recheckDue: d("2026-10-10")))
     }
 
     @Test func picksOpenAndRecheckDueFirstThenStale() {
@@ -32,7 +36,8 @@ struct QuizTests {
             stale: [(d("2026-09-01"), .correct)],
             fresh: [(d("2026-10-21"), .correct)],
         ]
-        let picked = WrongFlow.pickForReview(cards: [fresh, stale, open, recheck, never], attempts: attempts, today: d("2026-10-22"), count: 4)
+        let picked = WrongFlow.pickForReview(
+            cards: [fresh, stale, open, recheck, never], attempts: attempts, today: d("2026-10-22"), count: 4)
 
         #expect(Array(picked.prefix(2)) == [open, recheck])
         #expect(picked[2] == never && picked[3] == stale)
@@ -60,7 +65,9 @@ struct QuizTests {
         var rng = SystemRandomNumberGenerator()
         let today = d("2026-10-22")
         func ids(_ scope: QuizScope, _ order: QuizOrder) -> [UUID] {
-            QuizDeck.build(cards: [a, b, c, x, e], units: [u1, u2, u3], scope: scope, order: order, history: history, today: today, using: &rng).map(\.id)
+            QuizDeck.build(
+                cards: [a, b, c, x, e], units: [u1, u2, u3], scope: scope, order: order, history: history, today: today, using: &rng
+            ).map(\.id)
         }
         #expect(ids(QuizScope(unitIds: [u1, u2]), .unitOrder) == [b.id, c.id, a.id, e.id])
         #expect(ids(QuizScope(unitIds: [u1, u2]), .wrongFirst) == [c.id, e.id, b.id, a.id])

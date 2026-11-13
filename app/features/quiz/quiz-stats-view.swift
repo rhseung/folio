@@ -15,17 +15,23 @@ struct QuizStatsView: View {
             StatStrip(items: [
                 .init(title: String(localized: .quizStatsAccuracy), value: stats.total.accuracyText),
                 .init(title: String(localized: .quizStatsAttempted), value: "\(stats.total.attempted) / \(stats.total.items)"),
-                .init(title: String(localized: .quizStatsOpen), value: String(localized: .quizCardCount(stats.total.open)), tone: stats.total.open > 0 ? .danger : .plain),
+                .init(
+                    title: String(localized: .quizStatsOpen), value: String(localized: .quizCardCount(stats.total.open)),
+                    tone: stats.total.open > 0 ? .danger : .plain),
                 .init(title: String(localized: .quizStatsResolved), value: String(localized: .quizCardCount(stats.total.resolved))),
                 .init(title: String(localized: .quizStatsSolvedToday), value: "\(stats.solvedToday)"),
             ])
 
-            Block(title: String(localized: .quizStatsWrongList), note: stats.due.isEmpty ? nil : String(localized: .quizCardCount(stats.due.count)), trailing: {
-                if !stats.due.isEmpty {
-                    Button(.quizStatsSolveAllWrong) { solve(model.solveAllWrong(stats.units)) }
-                        .buttonStyle(.ghost)
+            Block(
+                title: String(localized: .quizStatsWrongList),
+                note: stats.due.isEmpty ? nil : String(localized: .quizCardCount(stats.due.count)),
+                trailing: {
+                    if !stats.due.isEmpty {
+                        Button(.quizStatsSolveAllWrong) { solve(model.solveAllWrong(stats.units)) }
+                            .buttonStyle(.ghost)
+                    }
                 }
-            }) {
+            ) {
                 Card {
                     if stats.due.isEmpty { CardRow(last: true) { EmptyLine(model.dueEmpty) } }
                     ForEach(Array(stats.due.enumerated()), id: \.element.id) { i, card in
@@ -42,7 +48,9 @@ struct QuizStatsView: View {
                             Button(.quizStatsSolveUnitWrong) { solve(model.solveWrong(of: card.unitId, units: stats.units)) }
                                 .buttonStyle(.ghost)
                         }
-                        .contextMenu { CardMenu(courseId: course.id, card: card) { solve(model.solveWrong(of: card.unitId, units: stats.units)) } }
+                        .contextMenu {
+                            CardMenu(courseId: course.id, card: card) { solve(model.solveWrong(of: card.unitId, units: stats.units)) }
+                        }
                     }
                 }
             }
@@ -52,7 +60,8 @@ struct QuizStatsView: View {
                 Card {
                     if shown.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .quizStatsNoUnits)) } }
                     ForEach(Array(shown.enumerated()), id: \.element.id) { i, unit in
-                        TallyRow(title: unit.title, tally: stats.byUnit[unit.id]!, items: { .quizCardCount($0) }, last: i == shown.count - 1)
+                        TallyRow(
+                            title: unit.title, tally: stats.byUnit[unit.id]!, items: { .quizCardCount($0) }, last: i == shown.count - 1)
                     }
                 }
             }
@@ -62,7 +71,8 @@ struct QuizStatsView: View {
                     let categories = stats.categories
                     Card {
                         ForEach(Array(categories.enumerated()), id: \.element) { i, c in
-                            TallyRow(title: c.label, tally: stats.byCategory[c]!, items: { .quizCardCount($0) }, last: i == categories.count - 1)
+                            TallyRow(
+                                title: c.label, tally: stats.byCategory[c]!, items: { .quizCardCount($0) }, last: i == categories.count - 1)
                         }
                     }
                 }
@@ -89,7 +99,8 @@ struct TallyRow: View {
             Text(items(tally.items)).foregroundStyle(Theme.Palette.textTertiary).frame(width: 52, alignment: .trailing)
             Meter(value: tally.accuracy ?? 0).frame(width: 96)
             Text(tally.accuracyText).frame(width: 40, alignment: .trailing)
-            Text(.quizOpenCount(tally.open)).foregroundStyle(tally.open > 0 ? Theme.Palette.danger : Theme.Palette.textTertiary).frame(width: 60, alignment: .trailing)
+            Text(.quizOpenCount(tally.open)).foregroundStyle(tally.open > 0 ? Theme.Palette.danger : Theme.Palette.textTertiary).frame(
+                width: 60, alignment: .trailing)
             Text(.quizResolvedCount(tally.resolved)).foregroundStyle(Theme.Palette.textTertiary).frame(width: 60, alignment: .trailing)
         }
         .font(Theme.Typeface.body.monospacedDigit())

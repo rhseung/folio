@@ -2,6 +2,7 @@ import FolioActions
 import FolioDomain
 import Foundation
 import Testing
+
 @testable import Folio
 
 @MainActor
@@ -84,7 +85,8 @@ struct TodayModelTests {
         // Six fit; a seventh folds behind the button until it is pressed.
         #expect(model.shownDeadlines(rows).more == 0)
         workspace.run(AssignmentAdd(course: graphTheory, title: "G", due: at(41, 9)))
-        let seven = model.deadlineRows(model.summary(now: now).deadlines.filter { "ABCDEFG".contains($0.assignment.title) }, studyDay: summary.studyDay)
+        let seven = model.deadlineRows(
+            model.summary(now: now).deadlines.filter { "ABCDEFG".contains($0.assignment.title) }, studyDay: summary.studyDay)
         let (shown, more) = model.shownDeadlines(seven)
         #expect(more == 1)
         #expect(shown.map(\.item.assignment.title) == ["A", "B", "C", "D", "E", "F"])
@@ -139,7 +141,9 @@ struct TodayModelTests {
     @Test func aCourseWithOnlyClassTimesShowsOnToday() throws {
         let workspace = try fixtureWorkspace()
         let c = workspace.calendar
-        func at(_ hour: Int, _ minute: Int = 0) -> Date { c.date(from: DateComponents(year: 2026, month: 10, day: 29, hour: hour, minute: minute))! }
+        func at(_ hour: Int, _ minute: Int = 0) -> Date {
+            c.date(from: DateComponents(year: 2026, month: 10, day: 29, hour: hour, minute: minute))!
+        }
         workspace.pinnedNow = at(20)  // a Thursday in the fall term, past its midterm week
         let id = UUID()
         let code = addCode("GS", to: workspace)

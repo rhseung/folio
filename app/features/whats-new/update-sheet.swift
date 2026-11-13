@@ -1,5 +1,6 @@
 import FolioDomain
 import SwiftUI
+
 #if os(macOS)
 import AppKit
 #endif
@@ -83,12 +84,14 @@ struct WhatsNewPrompt: ViewModifier {
             }
             .onChange(of: workspace.releaseNotes.ask) { take() }
             #if os(macOS)
-            // A window opened at launch is active only after the first check, which then had no window to take it.
-            .onChange(of: active) { take() }
+        // A window opened at launch is active only after the first check, which then had no window to take it.
+        .onChange(of: active) { take() }
             #endif
             // However it closes (확인, 모두 보기, a row's 열기, Esc, a swipe on the iPad), the update is seen.
-            .sheet(isPresented: Binding(get: { showing != nil }, set: { if !$0 { showing = nil } }),
-                   onDismiss: { workspace.releaseNotes.markSeen() }) {
+            .sheet(
+                isPresented: Binding(get: { showing != nil }, set: { if !$0 { showing = nil } }),
+                onDismiss: { workspace.releaseNotes.markSeen() }
+            ) {
                 if let showing { UpdateSheet(summary: showing, calendar: workspace.calendar, open: open) }
             }
     }

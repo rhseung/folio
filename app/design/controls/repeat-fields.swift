@@ -32,10 +32,14 @@ struct RepeatRuleRows: View {
 
     var body: some View {
         FormRow(label: String(localized: .repeatPickerInterval), last: last && rule.unit != .week) {
-            ScrubField(value: Binding(get: { Double(rule.every) }, set: { set(every: Int($0.rounded())) }), range: 1...30, step: 1, width: 72)
-            Segmented(selection: Binding(get: { rule.unit }, set: { set(unit: $0) }),
-                      options: [(.day, String(localized: .repeatPickerDays)), (.week, String(localized: .repeatPickerWeeks)),
-                                (.month, String(localized: .repeatPickerMonths))])
+            ScrubField(
+                value: Binding(get: { Double(rule.every) }, set: { set(every: Int($0.rounded())) }), range: 1...30, step: 1, width: 72)
+            Segmented(
+                selection: Binding(get: { rule.unit }, set: { set(unit: $0) }),
+                options: [
+                    (.day, String(localized: .repeatPickerDays)), (.week, String(localized: .repeatPickerWeeks)),
+                    (.month, String(localized: .repeatPickerMonths)),
+                ])
         }
         if rule.unit == .week {
             FormRow(label: String(localized: .repeatPickerWeekdays), last: last) {

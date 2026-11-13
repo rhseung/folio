@@ -99,8 +99,10 @@ public struct LMSSnapshot: Codable, Hashable, Sendable {
     public var files: [LMSFile]
     public var notices: [LMSNotice]
 
-    public init(at: Date, classrooms: [LMSClassroom] = [], assignments: [LMSAssignment] = [], files: [LMSFile] = [],
-                notices: [LMSNotice] = []) {
+    public init(
+        at: Date, classrooms: [LMSClassroom] = [], assignments: [LMSAssignment] = [], files: [LMSFile] = [],
+        notices: [LMSNotice] = []
+    ) {
         self.at = at
         self.classrooms = classrooms
         self.assignments = assignments
@@ -316,15 +318,25 @@ public struct LMSInbox: Sendable, Equatable {
             }
         }
         for f in snapshot.files {
-            if handledKeys.contains(f.key) { done[f.classroom, default: []].append((.file(f), nil, true)) } else { open[f.classroom, default: []].append(.file(f)) }
+            if handledKeys.contains(f.key) {
+                done[f.classroom, default: []].append((.file(f), nil, true))
+            } else {
+                open[f.classroom, default: []].append(.file(f))
+            }
         }
         for n in snapshot.notices {
-            if handledKeys.contains(n.key) { done[n.classroom, default: []].append((.notice(n), nil, true)) } else { open[n.classroom, default: []].append(.notice(n)) }
+            if handledKeys.contains(n.key) {
+                done[n.classroom, default: []].append((.notice(n), nil, true))
+            } else {
+                open[n.classroom, default: []].append(.notice(n))
+            }
         }
         let sections = snapshot.classrooms.compactMap { room -> Section? in
             guard known.contains(room.id) else { return nil }
             let proposals = (open[room.id] ?? []).map { LMSProposal(item: $0, classroom: room) }
-            let handled = (done[room.id] ?? []).map { Handled(proposal: LMSProposal(item: $0.item, classroom: room), course: $0.course, proposable: $0.proposable) }
+            let handled = (done[room.id] ?? []).map {
+                Handled(proposal: LMSProposal(item: $0.item, classroom: room), course: $0.course, proposable: $0.proposable)
+            }
             return proposals.isEmpty && handled.isEmpty ? nil : Section(classroom: room, proposals: proposals, handled: handled)
         }
         return LMSInbox(sections: sections.filter { !$0.proposals.isEmpty } + sections.filter { $0.proposals.isEmpty })

@@ -141,17 +141,23 @@ public enum NotionImporter {
         var warnings: [String] = []
 
         let catalog = Catalog(
-            codes: export.codes.map { CourseCode(id: $0.id, device: device, at: now, prefix: $0.prefix, department: $0.department, program: $0.program) },
+            codes: export.codes.map {
+                CourseCode(id: $0.id, device: device, at: now, prefix: $0.prefix, department: $0.department, program: $0.program)
+            },
             categories: export.categories.map {
-                Category(id: $0.id, device: device, at: now, name: $0.name, group: $0.group, isMajor: $0.group == majorGroup,
-                         parentId: $0.parentId, minCredits: $0.minCredits, maxCredits: $0.maxCredits)
+                Category(
+                    id: $0.id, device: device, at: now, name: $0.name, group: $0.group, isMajor: $0.group == majorGroup,
+                    parentId: $0.parentId, minCredits: $0.minCredits, maxCredits: $0.maxCredits)
             },
             letterGrades: export.grades.map {
-                LetterGrade(id: $0.id, device: device, at: now, symbol: $0.symbol, points: $0.points,
-                            countsInGpa: $0.points != nil, countsInCredits: $0.countsInCredits)
+                LetterGrade(
+                    id: $0.id, device: device, at: now, symbol: $0.symbol, points: $0.points,
+                    countsInGpa: $0.points != nil, countsInCredits: $0.countsInCredits)
             },
             people: export.people.map {
-                Person(id: $0.id, device: device, at: now, name: $0.name, email: $0.email ?? "", role: $0.role ?? .professor, memo: $0.memo ?? "")
+                Person(
+                    id: $0.id, device: device, at: now, name: $0.name, email: $0.email ?? "", role: $0.role ?? .professor,
+                    memo: $0.memo ?? "")
             }
         )
 
@@ -164,8 +170,10 @@ public enum NotionImporter {
                 let hours = export.courses.filter { $0.semesterId == row.id }.reduce(0) { $0 + $1.credits }
                 // Credited terms take the earliest regular year so ordering stays sensible. Notion has no source for it;
                 // the row's title keeps its courses together until the user names one.
-                semesters.append(Semester(id: row.id, device: device, at: now, year: regularYears.min() ?? 0, term: .credited, creditedHours: hours,
-                                          source: row.title))
+                semesters.append(
+                    Semester(
+                        id: row.id, device: device, at: now, year: regularYears.min() ?? 0, term: .credited, creditedHours: hours,
+                        source: row.title))
             } else {
                 warnings.append(String(localized: .importNotionUnknownTerm(row.title)))
             }
@@ -188,8 +196,10 @@ public enum NotionImporter {
             course.finalGrade = row.gradeId
             course.absoluteScore = row.absoluteScore
 
-            guard let folder = courseFolder(for: row, in: semester, prefixes: prefixes, gist: gist)
-                    ?? newCourseFolder(for: row, in: semester, prefixes: prefixes) else {
+            guard
+                let folder = courseFolder(for: row, in: semester, prefixes: prefixes, gist: gist)
+                    ?? newCourseFolder(for: row, in: semester, prefixes: prefixes)
+            else {
                 warnings.append(String(localized: .importNotionNoFolderName(row.title)))
                 continue
             }
@@ -197,12 +207,17 @@ public enum NotionImporter {
             var file = CourseFile(course: course)
             for (name, exam) in [(StandardLayout.midtermFolder, row.midterm), (StandardLayout.finalFolder, row.final)] {
                 guard let exam else { continue }
-                file.exams.append(Exam(device: device, at: now, title: name, start: exam.start, end: exam.end, location: exam.location ?? "", folder: name))
+                file.exams.append(
+                    Exam(
+                        device: device, at: now, title: name, start: exam.start, end: exam.end, location: exam.location ?? "", folder: name)
+                )
             }
 
             for (order, c) in (row.components ?? []).enumerated() {
-                file.components.append(GradeComponent(id: c.id, device: device, at: now, name: c.name, weight: c.weight, order: order,
-                                                      aggregation: c.aggregation ?? .sum, expectedCount: c.expectedCount))
+                file.components.append(
+                    GradeComponent(
+                        id: c.id, device: device, at: now, name: c.name, weight: c.weight, order: order,
+                        aggregation: c.aggregation ?? .sum, expectedCount: c.expectedCount))
                 file.scores += (c.entries ?? []).map {
                     ScoreEntry(id: $0.id, device: device, at: now, componentId: c.id, title: $0.title, score: $0.score, max: $0.max)
                 }
@@ -217,7 +232,8 @@ public enum NotionImporter {
                         warnings.append(String(localized: .importNotionCapGradeMissing(row.title, cap.grade)))
                     }
                 }
-                file.policy = GradePolicy(attendanceCap: caps, minAttendanceRatio: p.minAttendanceRatio, latePolicy: p.latePolicy, notes: p.notes ?? "")
+                file.policy = GradePolicy(
+                    attendanceCap: caps, minAttendanceRatio: p.minAttendanceRatio, latePolicy: p.latePolicy, notes: p.notes ?? "")
             }
             courseFiles[folder] = file
         }
@@ -231,12 +247,14 @@ public enum NotionImporter {
     /// A folder for a course nothing on disk matches yet: every course has one, even with no files to put in it.
     static func newCourseFolder(for row: NotionExport.CourseRow, in semester: Semester, prefixes: [UUID: String]) -> String? {
         guard let parent = semester.coursesFolder, let prefix = row.codeIds.first.flatMap({ prefixes[$0] }),
-              let name = StandardLayout.courseFolderName(prefix: prefix, number: row.number, title: row.title) else { return nil }
+            let name = StandardLayout.courseFolderName(prefix: prefix, number: row.number, title: row.title)
+        else { return nil }
         return "\(parent)/\(name)"
     }
 
     /// `<semester folder>/<code><number> ...`, trying every cross-listed code.
-    static func courseFolder(for row: NotionExport.CourseRow, in semester: Semester, prefixes: [UUID: String], gist: FolderTree) -> String? {
+    static func courseFolder(for row: NotionExport.CourseRow, in semester: Semester, prefixes: [UUID: String], gist: FolderTree) -> String?
+    {
         guard let folder = semester.folder, let node = gist[child: folder.name] else { return nil }
         let number = row.number.split(separator: "-").first.map(String.init) ?? row.number
         let codes = row.codeIds.compactMap { prefixes[$0] }.map { "\($0)\(number) " }

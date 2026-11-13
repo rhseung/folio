@@ -45,7 +45,9 @@ struct MCPServer {
         self.gist = gist
         self.propose = propose
         stage = propose ? ProposalStage() : nil
-        let all = Self.writeTools(propose: propose) + Self.readTools().map { Self.builds[$0.command] == nil ? $0 : Self.writing($0, propose: propose) }
+        let all =
+            Self.writeTools(propose: propose)
+            + Self.readTools().map { Self.builds[$0.command] == nil ? $0 : Self.writing($0, propose: propose) }
         catalog = all
         tools = (propose ? all.filter { Self.inPanel($0.command) } : all) + Self.generalTools(propose: propose)
     }
@@ -59,7 +61,11 @@ struct MCPServer {
         var t = tool
         t.write = true
         t.spec["annotations"] = ["readOnlyHint": .bool(false), "destructiveHint": .bool(false), "openWorldHint": .bool(false)]
-        if !propose { t.spec["inputSchema"]?["properties"]?["dryRun"] = ["type": "boolean", "description": .string(String(localized: .mcpDryRunHelp))] }
+        if !propose {
+            t.spec["inputSchema"]?["properties"]?["dryRun"] = [
+                "type": "boolean", "description": .string(String(localized: .mcpDryRunHelp)),
+            ]
+        }
         return t
     }
 
@@ -106,7 +112,9 @@ struct MCPServer {
             }
             result = call(tool, params["arguments"] ?? [:])
         default:
-            return Self.encode(["jsonrpc": "2.0", "id": id, "error": ["code": .number(-32601), "message": .string("unknown method: \(method)")]])
+            return Self.encode([
+                "jsonrpc": "2.0", "id": id, "error": ["code": .number(-32601), "message": .string("unknown method: \(method)")],
+            ])
         }
         return Self.encode(["jsonrpc": "2.0", "id": id, "result": result])
     }
@@ -138,10 +146,17 @@ struct MCPServer {
             let run = Self.execute(argv, staging: folder.map { Staging(folder: $0, writes: false) })
             guard run.code == 0 else { return Self.result(run.err + run.out, failed: true) }
             var text = Self.compact(run.out, marking: stage)
-            guard folder != nil, stage.staged > 0 else { return Self.result([text], failed: false, compacted: true, pictures: run.pictures) }
+            guard folder != nil, stage.staged > 0 else {
+                return Self.result([text], failed: false, compacted: true, pictures: run.pictures)
+            }
             let pictures = Self.images(&text)
-            return ["content": .array([["type": "text", "text": .string(String(localized: .mcpStagedRead(stage.staged)))],
-                                       ["type": "text", "text": .string(text)]] + pictures + Self.labeled(run.pictures)), "isError": .bool(false)]
+            return [
+                "content": .array(
+                    [
+                        ["type": "text", "text": .string(String(localized: .mcpStagedRead(stage.staged)))],
+                        ["type": "text", "text": .string(text)],
+                    ] + pictures + Self.labeled(run.pictures)), "isError": .bool(false),
+            ]
         }
 
         let real = try? CLI.gist(path: gist).url
@@ -160,7 +175,9 @@ struct MCPServer {
         // In the result too: the app replaces the system prompt, so the server's instructions may never reach Claude.
         content.insert(["type": "text", "text": .string(String(localized: .mcpInstructionsPropose))], at: 0)
         // What the panel shows an approve button for: the action with every name already resolved to its UUID.
-        content.append(["type": "text", "text": .string(ActionProposal(command: command, input: input, after: after.isEmpty ? nil : after).text)])
+        content.append([
+            "type": "text", "text": .string(ActionProposal(command: command, input: input, after: after.isEmpty ? nil : after).text),
+        ])
         return ["content": .array(content), "isError": .bool(false)]
     }
 
@@ -176,36 +193,45 @@ struct MCPServer {
         let out = Output()
         let built = Output()
         let pictures = Pictures()
-        let code = Pictures.$current.withValue(pictures) { CLI.$staging.withValue(staging) {
-            Built.$record.withValue({ command, input in built.add(command, input) }) {
-                Sink.$current.withValue(Sink(out: { out.add("out", .string($0)) }, err: { out.add("err", .string($0)) })) {
-                    // Held to the copy even for a dry run, which should write nothing anywhere.
-                    if let staging { return staging.folder.run { Folio.run(argv) } }
-                    return Folio.run(argv)
+        let code = Pictures.$current.withValue(pictures) {
+            CLI.$staging.withValue(staging) {
+                Built.$record.withValue({ command, input in built.add(command, input) }) {
+                    Sink.$current.withValue(Sink(out: { out.add("out", .string($0)) }, err: { out.add("err", .string($0)) })) {
+                        // Held to the copy even for a dry run, which should write nothing anywhere.
+                        if let staging { return staging.folder.run { Folio.run(argv) } }
+                        return Folio.run(argv)
+                    }
                 }
             }
-        } }
+        }
         return Run(code: code, out: out.lines("out"), err: out.lines("err"), built: built.items, pictures: code == 0 ? pictures.items : [])
     }
 
     static func result(_ lines: [String], failed: Bool, compacted: Bool = false, pictures read: [Pictures.Picture] = []) -> JSONValue {
         var text = lines.joined(separator: "\n")
         let pictures = failed ? [] : images(&text)
-        return ["content": .array([["type": "text", "text": .string(compacted ? text : compact(text))]] + pictures + labeled(read)), "isError": .bool(failed)]
+        return [
+            "content": .array([["type": "text", "text": .string(compacted ? text : compact(text))]] + pictures + labeled(read)),
+            "isError": .bool(failed),
+        ]
     }
 
     /// Each picture a read command handed over (`Pictures`), after a line naming it: image blocks carry no name, and
     /// the text lists them by these labels.
     static func labeled(_ pictures: [Pictures.Picture]) -> [JSONValue] {
         pictures.flatMap { p -> [JSONValue] in
-            [["type": "text", "text": .string(p.label)], ["type": "image", "data": .string(p.data.base64EncodedString()), "mimeType": .string(p.mimeType)]]
+            [
+                ["type": "text", "text": .string(p.label)],
+                ["type": "image", "data": .string(p.data.base64EncodedString()), "mimeType": .string(p.mimeType)],
+            ]
         }
     }
 
     static func compact(_ lines: [String], marking stage: ProposalStage) -> String {
         let text = lines.joined(separator: "\n")
         guard let first = text.first(where: { !$0.isWhitespace }), first == "{" || first == "[",
-              let value = try? JSONDecoder().decode(JSONValue.self, from: Data(text.utf8)) else { return text }
+            let value = try? JSONDecoder().decode(JSONValue.self, from: Data(text.utf8))
+        else { return text }
         return string(pruned(stage.marked(value)))
     }
 
@@ -272,7 +298,9 @@ struct MCPServer {
             return one
         }.prefix(limit)
         guard !found.isEmpty else { return Self.failure(String(localized: .finderNoMatch(query))) }
-        return ["content": .array([["type": "text", "text": .string(Self.string(Self.pruned(.array(Array(found)))))]]), "isError": .bool(false)]
+        return [
+            "content": .array([["type": "text", "text": .string(Self.string(Self.pruned(.array(Array(found)))))]]), "isError": .bool(false),
+        ]
     }
 
     /// Runs one catalog entry as its own tool would, so writes are dry runs and proposals under `--propose`, and the
@@ -293,16 +321,18 @@ struct MCPServer {
     /// of the text, where they would be read as tens of thousands of characters.
     static func images(_ text: inout String) -> [JSONValue] {
         guard text.contains("\"png\""), let value = try? JSONDecoder().decode(JSONValue.self, from: Data(text.utf8)),
-              case .array(let items)? = value["images"] else { return [] }
+            case .array(let items)? = value["images"]
+        else { return [] }
         var found: [JSONValue] = []
         var rest = value
-        rest["images"] = .array(items.map { item in
-            guard case .string(let png)? = item["png"] else { return item }
-            found.append(["type": "image", "data": .string(png), "mimeType": "image/png"])
-            var described = item
-            described["png"] = nil
-            return described
-        })
+        rest["images"] = .array(
+            items.map { item in
+                guard case .string(let png)? = item["png"] else { return item }
+                found.append(["type": "image", "data": .string(png), "mimeType": "image/png"])
+                var described = item
+                described["png"] = nil
+                return described
+            })
         text = string(rest)
         return found
     }
@@ -318,7 +348,8 @@ struct MCPServer {
     }
 
     static func writeTools(propose: Bool) -> [Tool] {
-        guard case .object(let all) = actionSchemas(), case .array(let actions)? = all["actions"], case .object(let defs)? = all["$defs"] else { return [] }
+        guard case .object(let all) = actionSchemas(), case .array(let actions)? = all["actions"], case .object(let defs)? = all["$defs"]
+        else { return [] }
         return actions.compactMap { a -> Tool? in
             guard case .string(let command)? = a["command"], var input = a["input"] else { return nil }
             if !propose { input["properties"]?["dryRun"] = ["type": "boolean", "description": .string(String(localized: .mcpDryRunHelp))] }
@@ -412,7 +443,9 @@ struct MCPServer {
         let args = (c.arguments ?? []).filter { a in
             a.shouldDisplay && !(a.preferredName.map { globalOptions.contains($0.name) } ?? false)
         }
-        func key(_ a: Help.Argument) -> String { a.kind == "positional" ? (a.valueName ?? "value") : a.preferredName?.name ?? a.valueName ?? "value" }
+        func key(_ a: Help.Argument) -> String {
+            a.kind == "positional" ? (a.valueName ?? "value") : a.preferredName?.name ?? a.valueName ?? "value"
+        }
         var properties: [String: JSONValue] = [:]
         var required: [JSONValue] = []
         for a in args where properties[key(a)] == nil {
@@ -461,7 +494,8 @@ struct MCPServer {
     /// pretty-printed `session list`. Text that isn't a JSON object or array, such as an error, stays as it is.
     static func compact(_ text: String) -> String {
         guard let first = text.first(where: { !$0.isWhitespace }), first == "{" || first == "[",
-              let value = try? JSONDecoder().decode(JSONValue.self, from: Data(text.utf8)) else { return text }
+            let value = try? JSONDecoder().decode(JSONValue.self, from: Data(text.utf8))
+        else { return text }
         return string(pruned(value))
     }
 
@@ -469,14 +503,15 @@ struct MCPServer {
     static func pruned(_ v: JSONValue) -> JSONValue {
         switch v {
         case .object(let o):
-            return .object(o.compactMapValues { member in
-                switch pruned(member) {
-                case .null: nil
-                case .array(let a) where a.isEmpty: nil
-                case .object(let o) where o.isEmpty: nil
-                case let p: p
-                }
-            })
+            return .object(
+                o.compactMapValues { member in
+                    switch pruned(member) {
+                    case .null: nil
+                    case .array(let a) where a.isEmpty: nil
+                    case .object(let o) where o.isEmpty: nil
+                    case let p: p
+                    }
+                })
         case .array(let a): return .array(a.map(pruned))
         default: return v
         }

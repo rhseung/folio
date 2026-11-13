@@ -23,8 +23,9 @@ private struct AppServices: ViewModifier {
     }
 
     var inputs: PlanInputs {
-        PlanInputs(settings: workspace.settings.notifications, edits: workspace.courses.map(\.file.course.updatedAt),
-                   reviews: workspace.reviewEvents.values.map(\.count).reduce(0, +), semester: workspace.currentSemester?.id)
+        PlanInputs(
+            settings: workspace.settings.notifications, edits: workspace.courses.map(\.file.course.updatedAt),
+            reviews: workspace.reviewEvents.values.map(\.count).reduce(0, +), semester: workspace.currentSemester?.id)
     }
 
     func body(content: Content) -> some View {
@@ -45,16 +46,16 @@ private struct AppServices: ViewModifier {
                 }
             }
             #if os(macOS)
-            .task(id: workspace.gist?.url) {
-                while !Task.isCancelled {
-                    await workspace.backUpIfDue()
-                    try? await Task.sleep(for: .seconds(3600))
-                }
+        .task(id: workspace.gist?.url) {
+            while !Task.isCancelled {
+                await workspace.backUpIfDue()
+                try? await Task.sleep(for: .seconds(3600))
             }
+        }
             #endif
             #if DEBUG && os(macOS)
-            .onAppear { SnapshotDriver.shared.extraCaptures = { await FormSnapshots.capture(workspace, into: $0) } }
-            .snapshotKey()
-            #endif
+        .onAppear { SnapshotDriver.shared.extraCaptures = { await FormSnapshots.capture(workspace, into: $0) } }
+        .snapshotKey()
+        #endif
     }
 }

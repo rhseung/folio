@@ -7,6 +7,7 @@ import Foundation
 import PDFKit
 import SwiftUI
 import Testing
+
 @testable import Folio
 
 /// Every app link a note or a file can hold (#347): each `AppLink` kind with each anchor and page it takes, written
@@ -52,7 +53,7 @@ struct AppLinkCoverageTests {
     static func cell(_ form: Form, _ surface: Surface) -> Cell {
         switch (form, surface) {
         case (.objectWiki, .preview), (.objectWiki, .editor), (.addressWiki, .preview), (.addressWiki, .editor),
-             (.bare, .preview), (.bare, .editor), (.markdown, .preview), (.markdown, .editor):
+            (.bare, .preview), (.bare, .editor), (.markdown, .preview), (.markdown, .editor):
             .covered
         case (.texHref, .preview), (.texHref, .editor):
             .notApplicable("A note is markdown: a .tex shows as the PDF it builds (texPDF) and its source (textEditor)")
@@ -91,51 +92,55 @@ struct AppLinkCoverageTests {
         let fixture = try Fixtures(workspace)
         var out: [Sample] = []
         for kind in AppLink.Kind.allCases {
-            let place: Screen? = switch kind {
-            case .today: .today
-            case .grades: .grades
-            case .requirements: .requirements
-            case .people: .people
-            case .codes: .codes
-            case .settings: .settings
-            case .whatsNew: .whatsNew
-            case .proposals: .proposals
-            case .semester, .course, .session, .unit, .note, .material, .assignment, .exam, .card, .problemSet, .person, .recording: nil
-            }
+            let place: Screen? =
+                switch kind {
+                case .today: .today
+                case .grades: .grades
+                case .requirements: .requirements
+                case .people: .people
+                case .codes: .codes
+                case .settings: .settings
+                case .whatsNew: .whatsNew
+                case .proposals: .proposals
+                case .semester, .course, .session, .unit, .note, .material, .assignment, .exam, .card, .problemSet, .person, .recording: nil
+                }
             if let place {
                 out.append(Sample(link: .place(kind), screen: place))
                 continue
             }
-            let id: UUID = switch kind {
-            case .semester: fixture.semester
-            case .course: course
-            case .session: fixture.session
-            case .unit: fixture.unit
-            case .note: fixture.note
-            case .material: fixture.material
-            case .assignment: fixture.assignment
-            case .exam: fixture.exam
-            case .card: fixture.card
-            case .problemSet: fixture.problemSet
-            case .person: fixture.person
-            case .recording: fixture.recording
-            case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals: preconditionFailure()
-            }
-            let screen: Screen = switch kind.home {
-            case .app: preconditionFailure()
-            case .transcript: .semester(id)
-            case .catalog: .people
-            case .course, .quiz: .course(course)
-            }
+            let id: UUID =
+                switch kind {
+                case .semester: fixture.semester
+                case .course: course
+                case .session: fixture.session
+                case .unit: fixture.unit
+                case .note: fixture.note
+                case .material: fixture.material
+                case .assignment: fixture.assignment
+                case .exam: fixture.exam
+                case .card: fixture.card
+                case .problemSet: fixture.problemSet
+                case .person: fixture.person
+                case .recording: fixture.recording
+                case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals: preconditionFailure()
+                }
+            let screen: Screen =
+                switch kind.home {
+                case .app: preconditionFailure()
+                case .transcript: .semester(id)
+                case .catalog: .people
+                case .course, .quiz: .course(course)
+                }
             let base = AppLink(kind, id)
             out.append(Sample(link: base, screen: screen))
             for anchor in kind.anchors.sorted(by: { "\($0)" < "\($1)" }) {
-                let value: AppLink.Anchor = switch anchor {
-                case .page: .page(2)
-                case .block: .block("c1")
-                case .heading: .heading("정의 모음")
-                case .time: .time(750)
-                }
+                let value: AppLink.Anchor =
+                    switch anchor {
+                    case .page: .page(2)
+                    case .block: .block("c1")
+                    case .heading: .heading("정의 모음")
+                    case .time: .time(750)
+                    }
                 out.append(Sample(link: base.with(value), screen: screen))
             }
         }
@@ -164,7 +169,8 @@ struct AppLinkCoverageTests {
             material = try #require(workspace.course(course)?.file.materials.first).id
             assignment = try #require(workspace.run(AssignmentAdd(course: course, title: "HW03"))?.made)
             exam = try #require(workspace.run(ExamAdd(course: course, title: "중간고사"))?.made)
-            let quiz = QuizCard(device: workspace.device, at: .now, unitId: unit, type: .free, category: .definition, prompt: "p", answer: "a")
+            let quiz = QuizCard(
+                device: workspace.device, at: .now, unitId: unit, type: .free, category: .definition, prompt: "p", answer: "a")
             workspace.run(QuizCardSave(course: course, cards: [quiz]))
             card = quiz.id
             let set = ProblemSet(device: workspace.device, at: .now, title: "Exercise 1", problems: [.init(number: "1")])
@@ -207,20 +213,22 @@ struct AppLinkCoverageTests {
             guard link.page == nil, link.settingsPage == nil else {
                 return .failure(Unwritable("A course's page has no <kind>:<ID> form; it goes between brackets as its address"))
             }
-            let fragment: String? = switch link.anchor {
-            case .page(let n): "page=\(n)"
-            case .block(let b): "^" + b
-            case .heading(let h): h
-            case .time(let t): "t=" + AppLink.clock(t)
-            case nil: nil
-            }
+            let fragment: String? =
+                switch link.anchor {
+                case .page(let n): "page=\(n)"
+                case .block(let b): "^" + b
+                case .heading(let h): h
+                case .time(let t): "t=" + AppLink.clock(t)
+                case nil: nil
+                }
             return .success(around(WikiLink.written(link.kind.rawValue, id, fragment: fragment, alias: named ? alias : nil)))
         case .addressWiki:
             return .success(around(WikiLink.written(address: address, alias: named ? alias : nil)))
         case .bare:
             return .success(around(address))
         case .markdown:
-            return .success(Written(text: "앞 [\(alias)](\(address)) 뒤", at: "앞 [".utf16.count + 1, address: "앞 [\(alias)](".utf16.count + 3))
+            return .success(
+                Written(text: "앞 [\(alias)](\(address)) 뒤", at: "앞 [".utf16.count + 1, address: "앞 [\(alias)](".utf16.count + 3))
         case .texHref:
             return .success(Written(text: "See \\href{\(address)}{link}.\n", at: "See \\href{".utf16.count + 3))
         case .textFile:
@@ -257,14 +265,18 @@ struct AppLinkCoverageTests {
             (editor, editorWindow) = NoteSourceTests.editor("")
             final class Box { var text = "" }
             let box = Box()
-            let source = SourceFileEditor(text: Binding(get: { box.text }, set: { box.text = $0 }), language: "latex", reveal: .constant(nil))
+            let source = SourceFileEditor(
+                text: Binding(get: { box.text }, set: { box.text = $0 }), language: "latex", reveal: .constant(nil))
             let scroll = source.makeView(source.makeCoordinator())
             text = try #require(scroll.documentView as? SourceFileTextView)
-            textWindow = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 600, height: 400), styleMask: [.borderless], backing: .buffered, defer: false)
+            textWindow = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 600, height: 400), styleMask: [.borderless], backing: .buffered, defer: false)
             scroll.frame = textWindow.contentView!.bounds
             textWindow.contentView!.addSubview(scroll)
-            click = try #require(NSEvent.mouseEvent(with: .leftMouseDown, location: .zero, modifierFlags: .command, timestamp: 0,
-                                                    windowNumber: 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 1))
+            click = try #require(
+                NSEvent.mouseEvent(
+                    with: .leftMouseDown, location: .zero, modifierFlags: .command, timestamp: 0,
+                    windowNumber: 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 1))
             let open = OpenLinkAction { [unowned self] link, _, _ in opened = link }
             editor.linkOpener = open
             text.linkOpener = open
@@ -304,7 +316,8 @@ struct AppLinkCoverageTests {
             var urls: [URL] = []
             let tex = folder.appending(path: "links.tex")
             let body = sources.map { "\\noindent \($0)\\par" }.joined(separator: "\n")
-            try "\\documentclass{article}\n\\usepackage{hyperref}\n\\begin{document}\n\(body)\n\\end{document}\n".write(to: tex, atomically: true, encoding: .utf8)
+            try "\\documentclass{article}\n\\usepackage{hyperref}\n\\begin{document}\n\(body)\n\\end{document}\n".write(
+                to: tex, atomically: true, encoding: .utf8)
             let build = try TexEngine.shared.compile(tex, into: folder, at: .now, calendar: .current)
             let pdf = try #require(build.pdf.flatMap(PDFDocument.init(url:)), "\(build.issues)")
 
@@ -389,7 +402,9 @@ struct AppLinkCoverageTests {
                         check(shown.opened, sample, cell, workspace, &broken)
                         if Self.showsName(surface) {
                             let want = Self.expectedName(sample.link, written: form, named: named, in: workspace)
-                            if shown.name != want || want == nil { broken.append("\(cell) shows \(shown.name ?? "nothing"), not \(want ?? "nothing")") }
+                            if shown.name != want || want == nil {
+                                broken.append("\(cell) shows \(shown.name ?? "nothing"), not \(want ?? "nothing")")
+                            }
                         }
                     }
                     if surface == .texPDF {

@@ -8,18 +8,21 @@ struct GradePlanningTests {
 
     let catalog: Catalog = {
         func grade(_ symbol: String, _ points: Double?, credits: Bool = true, graduation: Bool? = nil) -> LetterGrade {
-            var g = LetterGrade(device: UUID(), at: Date(timeIntervalSince1970: 0), symbol: symbol, points: points,
-                                countsInGpa: points != nil, countsInCredits: credits)
+            var g = LetterGrade(
+                device: UUID(), at: Date(timeIntervalSince1970: 0), symbol: symbol, points: points,
+                countsInGpa: points != nil, countsInCredits: credits)
             g.countsTowardGraduation = graduation
             return g
         }
         let major = Category(device: UUID(), at: Date(timeIntervalSince1970: 0), name: "전공", isMajor: true, minCredits: 36)
         let required = Category(device: UUID(), at: Date(timeIntervalSince1970: 0), name: "전공필수", parentId: major.id, minCredits: 18)
         let science = Category(device: UUID(), at: Date(timeIntervalSince1970: 0), name: "기초과학")
-        return Catalog(categories: [major, required, science], letterGrades: [
-            grade("A+", 4.5), grade("A0", 4), grade("B0", 3), grade("F", 0, credits: false), grade("S", nil),
-            grade("W", nil, graduation: false),  // W counts toward total credits but earns none
-        ])
+        return Catalog(
+            categories: [major, required, science],
+            letterGrades: [
+                grade("A+", 4.5), grade("A0", 4), grade("B0", 3), grade("F", 0, credits: false), grade("S", nil),
+                grade("W", nil, graduation: false),  // W counts toward total credits but earns none
+            ])
     }()
 
     func grade(_ symbol: String) -> UUID { catalog.letterGrades.first { $0.symbol == symbol }!.id }
@@ -176,7 +179,8 @@ struct LetterGradeModeTests {
     let common = Category(device: d, at: t, name: "기초과학")
     let catalog = Catalog(codes: [ec, ai], categories: [major, required, double, common], letterGrades: [a])
     func course(_ categories: [FolioDomain.Category], graded: Bool = true, credits: Double = 3) -> Course {
-        var c = Course(device: d, at: t, semesterId: nil, title: "", codes: [ec.id, ai.id], categoryIds: categories.map(\.id), credits: credits)
+        var c = Course(
+            device: d, at: t, semesterId: nil, title: "", codes: [ec.id, ai.id], categoryIds: categories.map(\.id), credits: credits)
         if graded { c.finalGrade = a.id }
         return c
     }
@@ -199,7 +203,8 @@ struct LetterGradeModeTests {
 
     var minor = double
     minor.maxSharedCredits = 0
-    let asMinor = GPACalculator.categoryCredits(courses: Array(courses[0..<2]), catalog: Catalog(codes: [ec, ai], categories: [major, required, minor], letterGrades: [a]))
+    let asMinor = GPACalculator.categoryCredits(
+        courses: Array(courses[0..<2]), catalog: Catalog(codes: [ec, ai], categories: [major, required, minor], letterGrades: [a]))
     #expect(asMinor[minor.id]?.earned == 0 && asMinor[major.id]?.earned == 6)
 }
 
@@ -207,7 +212,8 @@ struct LetterGradeModeTests {
     let (d, t) = (UUID(), Date(timeIntervalSince1970: 0))
     let a = LetterGrade(device: d, at: t, symbol: "A0", points: 4, countsInGpa: true, countsInCredits: true)
     // A second AI code, as another handbook year adds: matching is by prefix, not id.
-    let ec = CourseCode(device: d, at: t, prefix: "EC"), ai = CourseCode(device: d, at: t, prefix: "AI"), ai2 = CourseCode(device: d, at: t, prefix: "AI")
+    let ec = CourseCode(device: d, at: t, prefix: "EC"), ai = CourseCode(device: d, at: t, prefix: "AI"),
+        ai2 = CourseCode(device: d, at: t, prefix: "AI")
     var major = Category(device: d, at: t, name: "전공학점", isMajor: true)
     major.programId = ec.id
     var double = Category(device: d, at: t, name: "AI 복수전공")
@@ -215,7 +221,8 @@ struct LetterGradeModeTests {
     double.maxSharedCredits = 9
     let catalog = Catalog(codes: [ec, ai, ai2], categories: [major, double], letterGrades: [a])
     func course(_ codes: [CourseCode], approved: Bool? = nil) -> Course {
-        var c = Course(device: d, at: t, semesterId: nil, title: "", codes: codes.map(\.id), categoryIds: [major.id, double.id], credits: 3)
+        var c = Course(
+            device: d, at: t, semesterId: nil, title: "", codes: codes.map(\.id), categoryIds: [major.id, double.id], credits: 3)
         c.finalGrade = a.id
         c.sharingApproved = approved
         return c

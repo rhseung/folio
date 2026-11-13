@@ -1,6 +1,7 @@
-@testable import Folio
 import Foundation
 import Testing
+
+@testable import Folio
 
 @MainActor
 struct NoteOutlineModelTests {

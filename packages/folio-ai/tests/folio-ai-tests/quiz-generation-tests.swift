@@ -5,7 +5,8 @@ import Testing
 
 struct QuizGenerationTests {
     @Test func makesCardsFromNotesThroughContextBuilder() async throws {
-        let reply = #"{"cards":[{"type":"proof","category":"theorem","prompt":"König 정리를 증명하시오.","options":[],"answer":"...","rubric":["Hall 조건"]},{"type":"choice","category":"definition","prompt":"매칭이란?","options":["A","B","C","D"],"answer":"B","rubric":[]},{"type":"choice","category":"concept","prompt":"잘못된 카드","options":["A","B"],"answer":"Z","rubric":[]},{"type":"true_false","category":"concept","prompt":"트리는 연결 그래프다.","options":[],"answer":"참","rubric":[]}]}"#
+        let reply =
+            #"{"cards":[{"type":"proof","category":"theorem","prompt":"König 정리를 증명하시오.","options":[],"answer":"...","rubric":["Hall 조건"]},{"type":"choice","category":"definition","prompt":"매칭이란?","options":["A","B","C","D"],"answer":"B","rubric":[]},{"type":"choice","category":"concept","prompt":"잘못된 카드","options":["A","B"],"answer":"Z","rubric":[]},{"type":"true_false","category":"concept","prompt":"트리는 연결 그래프다.","options":[],"answer":"참","rubric":[]}]}"#
         let fake = FakeProvider(responses: [FakeProvider.reply(reply)])
         let context = [
             ContextItem(id: "note", title: "노트 8주차-1", tier: .focus, text: "> [!theorem] König"),
@@ -31,9 +32,13 @@ struct QuizGenerationTests {
     }
 
     @Test func gradingResultBecomesTheAttemptEvent() async throws {
-        let fake = FakeProvider(responses: [FakeProvider.reply(#"{"verdict":"wrong","missing":["쉬운 방향"],"feedback":"방향을 하나 빠뜨렸습니다.","lines":[]}"#)])
-        let result = try await ClaudeClient(provider: fake).grade(question: "Q", modelAnswer: "A", rubric: ["쉬운 방향"], answer: "x", rules: "")
-        let event = QuizAttemptEvent(cardId: UUID(), answer: "x", verdict: Verdict(rawValue: result.verdict.rawValue)!, grader: .ai, missing: result.missing)
+        let fake = FakeProvider(responses: [
+            FakeProvider.reply(#"{"verdict":"wrong","missing":["쉬운 방향"],"feedback":"방향을 하나 빠뜨렸습니다.","lines":[]}"#)
+        ])
+        let result = try await ClaudeClient(provider: fake).grade(
+            question: "Q", modelAnswer: "A", rubric: ["쉬운 방향"], answer: "x", rules: "")
+        let event = QuizAttemptEvent(
+            cardId: UUID(), answer: "x", verdict: Verdict(rawValue: result.verdict.rawValue)!, grader: .ai, missing: result.missing)
         #expect(event.verdict == .wrong && event.missing == ["쉬운 방향"])
         guard case .text(let text, _)? = await fake.requests.first?.messages.first?.content.last else { Issue.record("text"); return }
         #expect(text.contains("<rubric>\n- 쉬운 방향\n</rubric>"))
@@ -41,7 +46,8 @@ struct QuizGenerationTests {
 
     @Test func draftSchemaIsStrict() {
         guard case .object(let props)? = QuizCardDrafts.schema["properties"],
-              case .object(let item)? = props["cards"]?["items"] else { Issue.record("shape"); return }
+            case .object(let item)? = props["cards"]?["items"]
+        else { Issue.record("shape"); return }
         #expect(QuizCardDrafts.schema["additionalProperties"] == .bool(false))
         #expect(item["additionalProperties"] == .bool(false))
     }

@@ -47,8 +47,10 @@ public struct QuizCard: Entity {
     public var noteBlockId: String?
     public var noteBlockHash: String?
 
-    public init(id: UUID = UUID(), device: DeviceID, at date: Date, unitId: UUID, type: CardType, category: CardCategory,
-                prompt: String, options: [String] = [], answer: String, rubric: [String] = [], source: CardSource = .manual) {
+    public init(
+        id: UUID = UUID(), device: DeviceID, at date: Date, unitId: UUID, type: CardType, category: CardCategory,
+        prompt: String, options: [String] = [], answer: String, rubric: [String] = [], source: CardSource = .manual
+    ) {
         self.id = id
         self.createdAt = date
         self.updatedAt = date
@@ -82,7 +84,10 @@ public struct QuizAttemptEvent: LogEvent, Equatable {
 
     public enum Grader: String, Codable, Sendable, CaseIterable { case ai, `self` }
 
-    public init(cardId: UUID, answer: String? = nil, inkId: UUID? = nil, verdict: Verdict, grader: Grader, missing: [String] = [], overridden: Bool = false, hintUsed: Bool = false) {
+    public init(
+        cardId: UUID, answer: String? = nil, inkId: UUID? = nil, verdict: Verdict, grader: Grader, missing: [String] = [],
+        overridden: Bool = false, hintUsed: Bool = false
+    ) {
         self.cardId = cardId
         self.answer = answer
         self.inkId = inkId
@@ -190,10 +195,14 @@ public enum WrongFlow {
     }
 
     /// Up to `count` cards for a review: open wrong cards first (oldest first), then the longest unattempted.
-    public static func pickForReview(cards: [UUID], attempts: [UUID: [(day: LocalDate, verdict: Verdict)]], today: LocalDate, count: Int) -> [UUID] {
+    public static func pickForReview(cards: [UUID], attempts: [UUID: [(day: LocalDate, verdict: Verdict)]], today: LocalDate, count: Int)
+        -> [UUID]
+    {
         func lastDay(_ id: UUID) -> LocalDate? { attempts[id]?.last?.day }
         let due = cards.filter { isDue(attempts[$0] ?? [], today: today) }
-        let rest = cards.filter { !due.contains($0) }.sorted { (lastDay($0) ?? .init(year: 1, month: 1, day: 1)!) < (lastDay($1) ?? .init(year: 1, month: 1, day: 1)!) }
+        let rest = cards.filter { !due.contains($0) }.sorted {
+            (lastDay($0) ?? .init(year: 1, month: 1, day: 1)!) < (lastDay($1) ?? .init(year: 1, month: 1, day: 1)!)
+        }
         return Array((due + rest).prefix(count))
     }
 

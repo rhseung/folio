@@ -2,6 +2,7 @@ import FolioActions
 import FolioDomain
 import Foundation
 import Testing
+
 @testable import Folio
 
 @MainActor
@@ -39,8 +40,15 @@ struct SessionSheetInfoTests {
     @Test func aClassMovedToAnotherSlotEndsWithThatSlotAndOffTheTimetableKeepsItsLength() throws {
         let workspace = try fixtureWorkspace()
         let calendar = workspace.calendar
-        workspace.run(CourseSet(course: graphTheory, [.schedule([ClassTime(weekday: 1, startMinute: 13 * 60, endMinute: 14 * 60 + 15),
-                                                                ClassTime(weekday: 3, startMinute: 13 * 60, endMinute: 15 * 60)])]))
+        workspace.run(
+            CourseSet(
+                course: graphTheory,
+                [
+                    .schedule([
+                        ClassTime(weekday: 1, startMinute: 13 * 60, endMinute: 14 * 60 + 15),
+                        ClassTime(weekday: 3, startMinute: 13 * 60, endMinute: 15 * 60),
+                    ])
+                ]))
         let monday = calendar.date(byAdding: .hour, value: 13, to: calendar.startOfWeek(containing: workspace.now))!
         let wednesday = monday.addingTimeInterval(2 * 86_400)
 
@@ -65,8 +73,11 @@ struct SessionSheetInfoTests {
         #expect(try moved(to: evening).end == evening.addingTimeInterval(75 * 60))
 
         // A makeup with an end of its own, moved onto Wednesday's slot: what the form showed is what's saved.
-        let makeupId = try #require(workspace.run(SessionAdd(course: graphTheory, date: monday.addingTimeInterval(8 * 3600),
-                                                             end: monday.addingTimeInterval(8 * 3600 + 75 * 60)))?.made)
+        let makeupId = try #require(
+            workspace.run(
+                SessionAdd(
+                    course: graphTheory, date: monday.addingTimeInterval(8 * 3600),
+                    end: monday.addingTimeInterval(8 * 3600 + 75 * 60)))?.made)
         let makeup = try #require(try file(workspace).sessions.first { $0.id == makeupId })
         let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: makeup.id)
         model.setStart(wednesday)
@@ -109,7 +120,8 @@ struct SessionSheetInfoTests {
         let workspace = try fixtureWorkspace()
         let calendar = workspace.calendar
         workspace.run(CourseSet(course: graphTheory, [.schedule([ClassTime(weekday: 1, startMinute: 13 * 60, endMinute: 14 * 60 + 15)])]))
-        let monday = calendar.date(byAdding: .day, value: 7, to: calendar.date(byAdding: .hour, value: 13, to: calendar.startOfWeek(containing: workspace.now))!)!
+        let monday = calendar.date(
+            byAdding: .day, value: 7, to: calendar.date(byAdding: .hour, value: 13, to: calendar.startOfWeek(containing: workspace.now))!)!
         let evening = monday.addingTimeInterval(8 * 3600)
 
         let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: nil)

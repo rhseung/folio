@@ -74,8 +74,10 @@ private struct ToolbarButton: View {
             .frame(minWidth: Theme.Size.toolbarButton, minHeight: Theme.Size.toolbarButton)
             .background {
                 // Inset so the hover stays inside a toolbar group's capsule, which is the buttons' own height.
-                Capsule().fill(Theme.Palette.text).opacity(configuration.isPressed ? Theme.Opacity.pressed : hovering && isEnabled ? Theme.Opacity.hover : 0)
-                    .padding(Theme.Space.xxs)
+                Capsule().fill(Theme.Palette.text).opacity(
+                    configuration.isPressed ? Theme.Opacity.pressed : hovering && isEnabled ? Theme.Opacity.hover : 0
+                )
+                .padding(Theme.Space.xxs)
             }
             .contentShape(.capsule)
             .opacity(isEnabled ? 1 : Theme.Opacity.disabled)

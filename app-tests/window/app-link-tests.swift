@@ -3,6 +3,7 @@ import FolioDomain
 import FolioMarkdown
 import Foundation
 import Testing
+
 @testable import Folio
 
 /// One window's history: every way of moving goes through `go`, and the same item at another page is one step.
@@ -108,7 +109,8 @@ struct WorkspaceLinkTests {
         let recording = Recording(device: workspace.device, at: .now, sessionId: session, file: "Recordings/a.m4a")
         try ActionContext(gist: try #require(workspace.gist), device: workspace.device).edit(graphTheory) { $0.recordings = [recording] }
         workspace.reload()
-        let day = try #require(workspace.course(graphTheory)?.file).day(of: try #require(workspace.course(graphTheory)?.file.sessions.first { $0.id == session }), calendar: workspace.calendar)
+        let day = try #require(workspace.course(graphTheory)?.file).day(
+            of: try #require(workspace.course(graphTheory)?.file.sessions.first { $0.id == session }), calendar: workspace.calendar)
         let replay = Navigator.Entry(link: AppLink(.recording, recording.id, anchor: .time(90)), course: graphTheory)
         #expect(workspace.title(of: replay).hasSuffix("· " + String(localized: .recordingPageNamed(day))))
         #expect(workspace.entry(for: AppLink(.recording, recording.id))?.course == graphTheory)
@@ -143,11 +145,16 @@ struct WorkspaceLinkTests {
         let named = { (link: AppLink) -> String? in link.kind == .material ? "05_Matchings.pdf" : nil }
         let page = AppLink(.material, id, anchor: .page(2))
         #expect(pastedNoteLink(page.string, into: "앞 ", at: 2, name: named) == "[[material:\(id.uuidString)#page=2|05_Matchings.pdf]]")
-        #expect(pastedNoteLink(" \(AppLink(.note, id, anchor: .block("c1")).string)\n", into: "", at: 0, name: named) == "[[note:\(id.uuidString)#^c1]]")
-        #expect(pastedNoteLink(AppLink(.recording, id, anchor: .time(750)).string, into: "", at: 0, name: named) == "[[recording:\(id.uuidString)#t=12:30]]")
+        #expect(
+            pastedNoteLink(" \(AppLink(.note, id, anchor: .block("c1")).string)\n", into: "", at: 0, name: named)
+                == "[[note:\(id.uuidString)#^c1]]")
+        #expect(
+            pastedNoteLink(AppLink(.recording, id, anchor: .time(750)).string, into: "", at: 0, name: named)
+                == "[[recording:\(id.uuidString)#t=12:30]]")
         // No `<kind>:<ID>` form: the address goes between the brackets.
-        #expect(pastedNoteLink(AppLink.course(id, page: .units).string, into: "", at: 0, name: { _ in "그래프 이론 · 단원" })
-            == "[[folio://course/\(id.uuidString)/units|그래프 이론 · 단원]]")
+        #expect(
+            pastedNoteLink(AppLink.course(id, page: .units).string, into: "", at: 0, name: { _ in "그래프 이론 · 단원" })
+                == "[[folio://course/\(id.uuidString)/units|그래프 이론 · 단원]]")
         #expect(pastedNoteLink(AppLink.settings(.claude).string, into: "", at: 0, name: { _ in nil }) == "[[folio://settings/claude]]")
         // A heading `|` or `#` would cut short stays escaped in the address.
         let odd = AppLink(.note, id, anchor: .heading("A|B"))

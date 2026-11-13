@@ -54,7 +54,8 @@ final class CodesModel {
         guard editing == id else { return }
         editing = nil
         if let code = catalog.codes.first(where: { $0.id == id }), users[id] == nil,
-           code.prefix.trimmingCharacters(in: .whitespaces).isEmpty, code.department.trimmingCharacters(in: .whitespaces).isEmpty {
+            code.prefix.trimmingCharacters(in: .whitespaces).isEmpty, code.department.trimmingCharacters(in: .whitespaces).isEmpty
+        {
             catalog.codes.removeAll { $0.id == id }
         }
     }

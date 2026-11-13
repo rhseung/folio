@@ -88,8 +88,10 @@ public enum NotionNotesImporter {
 
     /// Adds sessions, note links, grade components and scores from `dump` to `file` without touching what is there.
     /// Notes whose ID is in `existingNotes` are skipped; the caller writes the returned note plans.
-    public static func merge(_ dump: NotionCourseDump, into file: CourseFile, existingNotes: Set<UUID>,
-                             calendar: Calendar, device: DeviceID, now: Date) -> NotionMergeResult {
+    public static func merge(
+        _ dump: NotionCourseDump, into file: CourseFile, existingNotes: Set<UUID>,
+        calendar: Calendar, device: DeviceID, now: Date
+    ) -> NotionMergeResult {
         var file = file
         var result = NotionMergeResult(file: file, notes: [], sessionsAdded: 0, componentsAdded: 0, scoresAdded: 0, warnings: [])
 
@@ -112,8 +114,15 @@ public enum NotionNotesImporter {
                 let index: Int
                 if let existing = file.sessions.firstIndex(where: { $0.roughNoteId == row.id || $0.reviewNoteId == row.id })
                     ?? named[key].flatMap({ id in file.sessions.firstIndex { $0.id == id } })
-                    ?? day.flatMap({ d in file.sessions.firstIndex { !claimed.contains($0.id) && $0.week == s.week && calendar.isDate($0.date, inSameDayAs: d) } })
-                    ?? file.sessions.firstIndex(where: { !claimed.contains($0.id) && ordinal(of: $0, in: file.sessions) == (s.week, s.index) }) {
+                    ?? day.flatMap({ d in
+                        file.sessions.firstIndex {
+                            !claimed.contains($0.id) && $0.week == s.week && calendar.isDate($0.date, inSameDayAs: d)
+                        }
+                    })
+                    ?? file.sessions.firstIndex(where: {
+                        !claimed.contains($0.id) && ordinal(of: $0, in: file.sessions) == (s.week, s.index)
+                    })
+                {
                     index = existing
                 } else {
                     file.sessions.append(Session(device: device, at: now, week: s.week, date: day ?? now))
@@ -129,7 +138,10 @@ public enum NotionNotesImporter {
                     let taken = s.note(of: kind).map { $0 != row.id } ?? false
                     if taken {
                         let name = file.title(of: s, calendar: calendar)
-                        result.warnings.append(String(localized: review ? .importNotesSessionHasReview(row.title, name) : .importNotesSessionHasRough(row.title, name)))
+                        result.warnings.append(
+                            String(
+                                localized: review
+                                    ? .importNotesSessionHasReview(row.title, name) : .importNotesSessionHasRough(row.title, name)))
                     } else {
                         if review { file.sessions[index].reviewNoteId = row.id } else { file.sessions[index].roughNoteId = row.id }
                         sessionId = s.id
@@ -139,7 +151,9 @@ public enum NotionNotesImporter {
             }
 
             if !existingNotes.contains(row.id) {
-                result.notes.append(NotionNotePlan(id: row.id, title: row.title, meta: NoteMeta(id: row.id, kind: kind, sessionId: sessionId), sourceFile: source))
+                result.notes.append(
+                    NotionNotePlan(
+                        id: row.id, title: row.title, meta: NoteMeta(id: row.id, kind: kind, sessionId: sessionId), sourceFile: source))
             }
         }
 
@@ -165,12 +179,16 @@ public enum NotionNotesImporter {
 
     /// Top-level rows are components; every leaf under one becomes a score of that component.
     /// A top-level row with its own score and no children is scored under its own name.
-    static func mergeScores(_ rows: [NotionCourseDump.ScoreRow], into file: inout CourseFile, result: inout NotionMergeResult, device: DeviceID, now: Date) {
+    static func mergeScores(
+        _ rows: [NotionCourseDump.ScoreRow], into file: inout CourseFile, result: inout NotionMergeResult, device: DeviceID, now: Date
+    ) {
         let ids = Set(rows.map(\.id))
         let parent = Dictionary(keepingFirst: rows.compactMap { r in r.parentId.flatMap { ids.contains($0) ? (r.id, $0) : nil } })
         let hasChildren = Set(parent.values)
         func existing(_ row: NotionCourseDump.ScoreRow) -> UUID? {
-            file.components.first { $0.id == row.id || $0.name.caseInsensitiveCompare(row.name.trimmingCharacters(in: .whitespaces)) == .orderedSame }?.id
+            file.components.first {
+                $0.id == row.id || $0.name.caseInsensitiveCompare(row.name.trimmingCharacters(in: .whitespaces)) == .orderedSame
+            }?.id
         }
         func ancestors(_ id: UUID) -> [UUID] {
             var chain = [id]
@@ -190,8 +208,10 @@ public enum NotionNotesImporter {
 
         for row in rows where parent[row.id] == nil && componentFor[row.id] == nil && !covered.contains(row.id) {
             let order = (file.components.map(\.order).max() ?? -1) + 1
-            file.components.append(GradeComponent(id: row.id, device: device, at: now, name: row.name.trimmingCharacters(in: .whitespaces),
-                                                  weight: row.weight ?? 0, order: order))
+            file.components.append(
+                GradeComponent(
+                    id: row.id, device: device, at: now, name: row.name.trimmingCharacters(in: .whitespaces),
+                    weight: row.weight ?? 0, order: order))
             componentFor[row.id] = row.id
             result.componentsAdded += 1
         }
@@ -216,7 +236,8 @@ public enum NotionNotesImporter {
             let title = row.name.trimmingCharacters(in: .whitespaces)
             let duplicate = file.scores.contains { $0.id == row.id || ($0.componentId == componentId && $0.title == title) }
             if duplicate { continue }
-            file.scores.append(ScoreEntry(id: row.id, device: device, at: now, componentId: componentId, title: title, score: score, max: max))
+            file.scores.append(
+                ScoreEntry(id: row.id, device: device, at: now, componentId: componentId, title: title, score: score, max: max))
             result.scoresAdded += 1
         }
     }

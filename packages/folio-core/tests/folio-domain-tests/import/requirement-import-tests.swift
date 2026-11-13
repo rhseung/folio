@@ -1,13 +1,16 @@
-@testable import FolioDomain
 import Foundation
 import Testing
+
+@testable import FolioDomain
 
 struct RequirementImportTests {
     let device = UUID()
     let now = Date(timeIntervalSince1970: 0)
 
     func row(_ name: String, parent: String? = nil, min: Double? = nil, count: Int? = nil, from: String? = nil) -> RequirementSpec {
-        RequirementSpec(name: name, group: "g", isMajor: false, parent: parent, minCredits: min, maxCredits: nil, minCount: count, rule: nil, renamedFrom: from)
+        RequirementSpec(
+            name: name, group: "g", isMajor: false, parent: parent, minCredits: min, maxCredits: nil, minCount: count, rule: nil,
+            renamedFrom: from)
     }
 
     /// Courses point at category IDs, so updating 콜로퀴움 or renaming 초과선택 must keep the ID.
@@ -15,12 +18,13 @@ struct RequirementImportTests {
         let colloquium = Category(device: device, at: now, name: "콜로퀴움", group: "g", minCredits: 4)
         let extra = Category(device: device, at: now, name: "초과선택", group: "g")
         let other = Category(device: device, at: now, name: "타 전공", group: "g", parentId: extra.id)
-        let r = RequirementImporter.merge([
-            row("타 전공", parent: "자유선택"),  // parent comes later in the file
-            row("콜로퀴움", count: 2),
-            row("자유선택", min: 1, from: "초과선택"),
-            row("전공학점", min: 36),
-        ], into: [colloquium, extra, other, Category(device: device, at: now, name: "예체능")], device: device, now: now)
+        let r = RequirementImporter.merge(
+            [
+                row("타 전공", parent: "자유선택"),  // parent comes later in the file
+                row("콜로퀴움", count: 2),
+                row("자유선택", min: 1, from: "초과선택"),
+                row("전공학점", min: 36),
+            ], into: [colloquium, extra, other, Category(device: device, at: now, name: "예체능")], device: device, now: now)
 
         let byName = Dictionary(uniqueKeysWithValues: r.categories.map { ($0.name, $0) })
         #expect(byName["콜로퀴움"]?.id == colloquium.id)
@@ -31,8 +35,9 @@ struct RequirementImportTests {
         #expect(r.untouched == ["예체능"])
         #expect(Set(r.changed) == ["콜로퀴움", "자유선택"])
 
-        let again = RequirementImporter.merge([row("타 전공", parent: "자유선택"), row("콜로퀴움", count: 2), row("자유선택", min: 1, from: "초과선택"), row("전공학점", min: 36)],
-                                              into: r.categories, device: device, now: now)
+        let again = RequirementImporter.merge(
+            [row("타 전공", parent: "자유선택"), row("콜로퀴움", count: 2), row("자유선택", min: 1, from: "초과선택"), row("전공학점", min: 36)],
+            into: r.categories, device: device, now: now)
         #expect(again.added.isEmpty && again.changed.isEmpty)
     }
 
@@ -41,13 +46,16 @@ struct RequirementImportTests {
         let ec = CourseCode(device: device, at: now, prefix: "EC", department: "전기전자컴퓨터공학과", program: "학사과정", source: "")
         let ecGrad = CourseCode(device: device, at: now, prefix: "EC", department: "전기전자컴퓨터공학과", program: "대학원과정", source: "")
         let ai = CourseCode(device: device, at: now, prefix: "AI", department: "AI융합학과", program: "학사과정", source: "")
-        let file = try JSONDecoder().decode(RequirementFile.self, from: Data("""
-            {"admissionYear": 2025, "programs": [{"code": "EC", "kind": "major"}],
-             "categories": [{"name": "교양", "group": "g", "isMajor": false},
-                            {"name": "전공학점", "group": "전공", "isMajor": true, "program": "EC"},
-                            {"name": "AI 복수전공", "group": "복수전공", "isMajor": false, "program": "AI"},
-                            {"name": "AI 선택", "group": "복수전공", "isMajor": false, "parent": "AI 복수전공"}]}
-            """.utf8))
+        let file = try JSONDecoder().decode(
+            RequirementFile.self,
+            from: Data(
+                """
+                {"admissionYear": 2025, "programs": [{"code": "EC", "kind": "major"}],
+                 "categories": [{"name": "교양", "group": "g", "isMajor": false},
+                                {"name": "전공학점", "group": "전공", "isMajor": true, "program": "EC"},
+                                {"name": "AI 복수전공", "group": "복수전공", "isMajor": false, "program": "AI"},
+                                {"name": "AI 선택", "group": "복수전공", "isMajor": false, "parent": "AI 복수전공"}]}
+                """.utf8))
         #expect(file.admissionYear == 2025 && file.programs?.first?.kind == .major)
         let r = RequirementImporter.merge(file.categories, into: [], codes: [ecGrad, ec, ai], device: device, now: now)
         #expect(r.categories.first { $0.name == "전공학점" }?.programId == ec.id)  // the undergraduate code, not the graduate twin
@@ -73,9 +81,11 @@ struct HandbookClassifierTests {
         let hus = Category(device: device, at: now, name: "HUS", parentId: humanities.id)
         let ppe = Category(device: device, at: now, name: "PPE", parentId: humanities.id)
         let science = Category(device: device, at: now, name: "기초과학")
-        let catalog = Catalog(codes: [hs, pp], categories: [humanities, hus, ppe, science], handbooks: [
-            Handbook(year: 2026, source: "", areas: ["HS2734": "PPE", "HS1001": "HUS", "GS2001": "인문사회"]),
-        ])
+        let catalog = Catalog(
+            codes: [hs, pp], categories: [humanities, hus, ppe, science],
+            handbooks: [
+                Handbook(year: 2026, source: "", areas: ["HS2734": "PPE", "HS1001": "HUS", "GS2001": "인문사회"])
+            ])
         let spring = Semester(device: device, at: now, year: 2026, term: .spring)
         let older = Semester(device: device, at: now, year: 2025, term: .fall)
         func course(_ codes: [CourseCode], _ number: String, in semester: Semester, _ categories: [FolioDomain.Category] = []) -> Course {

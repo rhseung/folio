@@ -21,11 +21,15 @@ struct InputGuideSheet: View {
                 HStack(spacing: Theme.Space.m) {
                     Text(.notesGuideTitle).font(Theme.Typeface.columnTitle)
                     Spacer(minLength: Theme.Space.s)
-                    Button { dismiss() } label: { Image(systemName: "xmark") }
-                        .buttonStyle(.ghostIcon)
-                        .help(Text(.commonClose))
-                        .accessibilityLabel(Text(.commonClose))
-                        .keyboardShortcut(.cancelAction)
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .buttonStyle(.ghostIcon)
+                    .help(Text(.commonClose))
+                    .accessibilityLabel(Text(.commonClose))
+                    .keyboardShortcut(.cancelAction)
                 }
                 SearchField(prompt: String(localized: .notesGuideSearch), text: $model.search)
                 ChipTabs(selection: $model.section, options: model.tabs)

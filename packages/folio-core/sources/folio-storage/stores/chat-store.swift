@@ -45,7 +45,9 @@ extension CourseStore {
     /// Files outside the course or that don't decode are left out.
     public func contextImages(of note: NoteFile, body: String, limit: Int = 20) -> [(name: String, data: Data)] {
         NoteImages.references(in: body).compactMap { ref -> (String, Data)? in
-            guard let file = imageURL(ref, of: note), let data = try? CoordinatedFile.read(file), let jpeg = Self.contextJPEG(data) else { return nil }
+            guard let file = imageURL(ref, of: note), let data = try? CoordinatedFile.read(file), let jpeg = Self.contextJPEG(data) else {
+                return nil
+            }
             return (file.lastPathComponent, jpeg)
         }
         .prefix(limit).map { $0 }
@@ -53,11 +55,14 @@ extension CourseStore {
 
     static func contextJPEG(_ data: Data, maxEdge: Int = ReadingLimit.imageEdge) -> Data? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil),
-              let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
-                  kCGImageSourceCreateThumbnailFromImageAlways: true,
-                  kCGImageSourceCreateThumbnailWithTransform: true,
-                  kCGImageSourceThumbnailMaxPixelSize: maxEdge,
-              ] as CFDictionary) else { return nil }
+            let image = CGImageSourceCreateThumbnailAtIndex(
+                source, 0,
+                [
+                    kCGImageSourceCreateThumbnailFromImageAlways: true,
+                    kCGImageSourceCreateThumbnailWithTransform: true,
+                    kCGImageSourceThumbnailMaxPixelSize: maxEdge,
+                ] as CFDictionary)
+        else { return nil }
         let out = NSMutableData()
         guard let dest = CGImageDestinationCreateWithData(out, UTType.jpeg.identifier as CFString, 1, nil) else { return nil }
         CGImageDestinationAddImage(dest, image, [kCGImageDestinationLossyCompressionQuality: 0.8] as CFDictionary)

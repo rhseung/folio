@@ -46,20 +46,24 @@ enum Finder {
     /// A test checks every command has some, so a new command can't be left unfindable. Measured against the
     /// synonym table alone in FinderEvaluation.
     static let phrases: [String: [String]] = written.merging(
-        Actions.all.map { ($0.spec.command, $0.spec.phrases) }.filter { !$0.1.isEmpty }, uniquingKeysWith: { a, b in a + b.filter { !a.contains($0) } })
+        Actions.all.map { ($0.spec.command, $0.spec.phrases) }.filter { !$0.1.isEmpty },
+        uniquingKeysWith: { a, b in a + b.filter { !a.contains($0) } })
 
     /// Commands not yet declared with `@Action` keep theirs here; declared ones give `phrases:`.
     private static let written: [String: [String]] = [
         "today": ["오늘 할 일", "오늘 일정", "지금 뭐 해야", "하루 요약"],
         "add": ["빠른 추가", "한 줄로 추가", "금요일까지 과제", "말로 과제 추가"],
         "session list": ["수업 목록", "강의 목록", "회차 보기", "몇 주차"], "session show": ["수업 하나 보기", "회차 자세히"],
-        "session rm": ["수업 지우기", "회차 삭제"], "unit list": ["단원 목록", "챕터 목록", "진도"], "unit show": ["단원 보기"], "unit move": ["단원 순서", "단원 옮기기", "하위 단원으로"],
+        "session rm": ["수업 지우기", "회차 삭제"], "unit list": ["단원 목록", "챕터 목록", "진도"], "unit show": ["단원 보기"],
+        "unit move": ["단원 순서", "단원 옮기기", "하위 단원으로"],
         "exam list": ["시험 목록", "시험 언제"], "exam show": ["몇 시", "어디서", "시험 장소 보기", "시험 범위 보기", "시험 정보", "시험 시간과 장소"],
         "exam scope": ["시험 범위", "범위 넣기", "출제 범위"],
         "exam plan rm": ["공부 계획 삭제"],
-        "exam plan-check": ["계획 끝냈", "계획 다 했", "계획 완료", "공부 다 함", "계획 체크"], "assignment list": ["과제 목록", "숙제 뭐 남았지", "할 일 목록"], "assignment show": ["과제 자세히", "과제 마감 언제", "과제 점수"],
+        "exam plan-check": ["계획 끝냈", "계획 다 했", "계획 완료", "공부 다 함", "계획 체크"], "assignment list": ["과제 목록", "숙제 뭐 남았지", "할 일 목록"],
+        "assignment show": ["과제 자세히", "과제 마감 언제", "과제 점수"],
         "score list": ["점수 보기", "받은 점수"],
-        "component list": ["성적 비율 보기", "평가 항목"], "component move": ["항목 순서"], "component policy": ["최저 점수 빼기", "하나 빼", "최저 점수 제외", "결석 감점", "성적 규칙", "드롭"],
+        "component list": ["성적 비율 보기", "평가 항목"], "component move": ["항목 순서"],
+        "component policy": ["최저 점수 빼기", "하나 빼", "최저 점수 제외", "결석 감점", "성적 규칙", "드롭"],
         "transcript list": ["전체 성적표", "모든 성적"], "transcript show": ["이번 학기 성적", "학기 성적표"],
         "requirement show": ["졸업 요건", "졸업까지 남은 학점", "이수 현황"],
         "requirement check": ["분류 확인", "졸업 요건 점검"], "gpa": ["평점", "학점 평균", "누적 학점"],
@@ -72,7 +76,8 @@ enum Finder {
         "note list": ["노트 목록"], "note show": ["노트 보기", "노트 읽기"], "note images": ["노트 그림", "손필기 사진", "노트 사진", "필기 사진 보기"],
         "note format": ["노트 형식", "노트 문법", "콜아웃 쓰는 법", "다크 모드 색"], "note figure list": ["그림 목록", "SVG 목록"],
         "note figure show": ["그림 원문", "SVG 보기"], "note figure render": ["그림 그려 보기", "SVG 미리 보기", "다크 모드로 보기"],
-        "note widget list": ["위젯 목록"], "note widget show": ["위젯 원문", "위젯 HTML 보기"], "note widget render": ["위젯 그려 보기", "위젯 미리 보기", "위젯 오류"],
+        "note widget list": ["위젯 목록"], "note widget show": ["위젯 원문", "위젯 HTML 보기"],
+        "note widget render": ["위젯 그려 보기", "위젯 미리 보기", "위젯 오류"],
         "search": ["어디", "찾아", "찾기", "어디 있지", "검색", "내용 찾기"],
         "link": ["링크 만들기", "링크 복사", "앱 링크", "folio 링크", "주소"], "open": ["앱에서 열기", "앱으로 열기", "화면 열기"],
         "semester list": ["학기 목록"], "semester show": ["이번 학기 정보", "개강일"],
@@ -122,13 +127,18 @@ enum Finder {
                 try db.execute(sql: "CREATE VIRTUAL TABLE c USING fts5(path, abstract, phrases, body, tokenize='unicode61')")
                 for e in entries {
                     let path = e.path.joined(separator: " ")
-                    try db.execute(sql: "INSERT INTO c VALUES (?, ?, ?, ?)", arguments: [
-                        path, e.abstract, (phrases[path] ?? []).joined(separator: " · "), e.help + "\n" + e.examples.joined(separator: "\n"),
-                    ])
+                    try db.execute(
+                        sql: "INSERT INTO c VALUES (?, ?, ?, ?)",
+                        arguments: [
+                            path, e.abstract, (phrases[path] ?? []).joined(separator: " · "),
+                            e.help + "\n" + e.examples.joined(separator: "\n"),
+                        ])
                 }
                 // Ties go to the earlier command, so the same request always gives the same list.
-                return try Row.fetchAll(db, sql: "SELECT rowid, bm25(c, 10.0, 5.0, 8.0, 1.0) AS s FROM c WHERE c MATCH ? ORDER BY s, rowid LIMIT ?",
-                                        arguments: [query, limit]).map { ($0["rowid"] as Int, $0["s"] as Double) }
+                return try Row.fetchAll(
+                    db, sql: "SELECT rowid, bm25(c, 10.0, 5.0, 8.0, 1.0) AS s FROM c WHERE c MATCH ? ORDER BY s, rowid LIMIT ?",
+                    arguments: [query, limit]
+                ).map { ($0["rowid"] as Int, $0["s"] as Double) }
             }
         } catch {
             return []
@@ -138,12 +148,15 @@ enum Finder {
             var options: [String] = []
             for line in e.help.split(separator: "\n") where line.trimmingCharacters(in: .whitespaces).hasPrefix("-") {
                 let l = line.lowercased()
-                guard words.contains(where: { $0.count >= 2 && l.contains($0) }) || terms.contains(where: { l.contains("--\($0)") }) else { continue }
+                guard words.contains(where: { $0.count >= 2 && l.contains($0) }) || terms.contains(where: { l.contains("--\($0)") }) else {
+                    continue
+                }
                 let option = line.trimmingCharacters(in: .whitespaces).replacing(/\s{2,}/, with: "  ")
                 if !options.contains(option) { options.append(option) }
             }
-            return Match(command: (["folio"] + e.path).joined(separator: " "), abstract: e.abstract, options: Array(options.prefix(3)),
-                         examples: Array(e.examples.prefix(2)), score: (-s * 100).rounded() / 100)
+            return Match(
+                command: (["folio"] + e.path).joined(separator: " "), abstract: e.abstract, options: Array(options.prefix(3)),
+                examples: Array(e.examples.prefix(2)), score: (-s * 100).rounded() / 100)
         }
     }
 

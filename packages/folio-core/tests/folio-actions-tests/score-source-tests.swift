@@ -29,11 +29,15 @@ struct ScoreSourceTests {
 
     /// As the sheet saves: every field.
     func save(title: String = "HW 3", status: AssignmentStatus = .submitted, component: UUID?, scores: [AssignmentSave.Score]) throws {
-        try run(AssignmentSave(course: course, assignment: assignment, title: .set(title), due: .set(nil), status: .set(status), repeats: .set(nil),
-                               componentId: .set(component), componentGroup: .set(nil), memo: .set(""), scores: .set(scores)))
+        try run(
+            AssignmentSave(
+                course: course, assignment: assignment, title: .set(title), due: .set(nil), status: .set(status), repeats: .set(nil),
+                componentId: .set(component), componentGroup: .set(nil), memo: .set(""), scores: .set(scores)))
     }
 
-    func score(in component: UUID) throws -> ScoreEntry? { try file().scores.first { $0.assignmentId == assignment && $0.componentId == component } }
+    func score(in component: UUID) throws -> ScoreEntry? {
+        try file().scores.first { $0.assignmentId == assignment && $0.componentId == component }
+    }
 
     @Test func aScoreAddedOnTheGradesPageGradesItsAssignment() throws {
         try run(AssignmentStatusSet(course: course, assignment: assignment, status: .submitted))
@@ -64,7 +68,9 @@ struct ScoreSourceTests {
 
     @Test func anAssignmentHasOneScorePerComponent() throws {
         try run(ScoreAdd(course: course, component: homework, score: 9, max: 10, assignment: assignment))
-        #expect(throws: ActionError.self) { try run(ScoreAdd(course: course, component: homework, score: 8, max: 10, assignment: assignment)) }
+        #expect(throws: ActionError.self) {
+            try run(ScoreAdd(course: course, component: homework, score: 8, max: 10, assignment: assignment))
+        }
         try run(ScoreAdd(course: course, component: lab, score: 8, max: 10, assignment: assignment))
         #expect(try file().scores.count { $0.assignmentId == assignment } == 2)
     }
@@ -97,8 +103,10 @@ struct ScoreSourceTests {
     }
 
     @Test func changingOneFieldKeepsTheRest() throws {
-        try run(AssignmentSave(course: course, assignment: assignment, due: .set(now), componentId: .set(homework), memo: .set("3번 질문함"),
-                               scores: .set([.init(component: nil, score: 9, max: 10)])))
+        try run(
+            AssignmentSave(
+                course: course, assignment: assignment, due: .set(now), componentId: .set(homework), memo: .set("3번 질문함"),
+                scores: .set([.init(component: nil, score: 9, max: 10)])))
         try run(AssignmentSave(course: course, assignment: assignment, title: .set("HW 3 (보충)")))
         let a = try #require(try file().assignments.first { $0.id == assignment })
         #expect(a.title == "HW 3 (보충)" && a.due == now && a.componentId == homework && a.memo == "3번 질문함" && a.status == .graded)
@@ -109,7 +117,10 @@ struct ScoreSourceTests {
     }
 
     @Test func aScoreWithoutItsComponentNeedsOneTarget() throws {
-        try run(AssignmentSave(course: course, assignment: assignment, componentId: .set(homework), scores: .set([.init(component: nil, score: 9, max: 10)])))
+        try run(
+            AssignmentSave(
+                course: course, assignment: assignment, componentId: .set(homework),
+                scores: .set([.init(component: nil, score: 9, max: 10)])))
         #expect(try score(in: homework)?.score == 9)
 
         // A score for a component the assignment doesn't count toward is refused, not dropped.
@@ -133,7 +144,9 @@ struct ScoreSourceTests {
         let f = try file()
         let sources = f.scoreSources(for: homework)
         #expect(sources.first == .assignment(assignment))
-        #expect(sources.firstIndex(of: .exam(exam)).map { i in sources[i...].allSatisfy { if case .exam = $0 { true } else { false } } } == true)
+        #expect(
+            sources.firstIndex(of: .exam(exam)).map { i in sources[i...].allSatisfy { if case .exam = $0 { true } else { false } } } == true
+        )
         #expect(f.counts(.exam(exam), toward: homework) && !f.counts(.exam(exam), toward: lab))
     }
 }

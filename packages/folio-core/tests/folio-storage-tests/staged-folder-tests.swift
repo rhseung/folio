@@ -1,6 +1,7 @@
-@testable import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioStorage
 
 /// #90: the panel's proposals run for real in a staged copy, which must never write the original.
 struct StagedFolderTests {
@@ -79,10 +80,14 @@ struct StagedFolderTests {
             try copy.run { try CoordinatedFile.write(Data("x".utf8), to: source.appending(path: "2026-3/EC4207/note.md")) }
         }
         #expect(throws: StorageError.self) {
-            try copy.run { try CoordinatedFile.write(Data("x".utf8), to: copy.url.appending(path: "2026-3/EC4207/Assignments/Code/.git/HEAD")) }
+            try copy.run {
+                try CoordinatedFile.write(Data("x".utf8), to: copy.url.appending(path: "2026-3/EC4207/Assignments/Code/.git/HEAD"))
+            }
         }
         #expect(throws: StorageError.self) {
-            try copy.run { try CoordinatedFile.write(Data("x".utf8), to: copy.url.appending(path: "2026-3/EC4207/Assignments/Code/.git/new/file")) }
+            try copy.run {
+                try CoordinatedFile.write(Data("x".utf8), to: copy.url.appending(path: "2026-3/EC4207/Assignments/Code/.git/new/file"))
+            }
         }
         #expect(try text(source.appending(path: "2026-3/EC4207/note.md")) == "note")
         #expect(try text(source.appending(path: "2026-3/EC4207/Assignments/Code/.git/HEAD")) == "ref")

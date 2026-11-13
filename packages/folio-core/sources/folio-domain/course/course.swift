@@ -16,9 +16,13 @@ public struct CourseFile: Codable, Sendable, Equatable {
     public var recordings: [Recording]
     public var notes: [NoteEntry]
 
-    public init(course: Course, materials: [Material] = [], units: [Unit] = [], sessions: [Session] = [], exams: [Exam] = [], assignments: [Assignment] = [],
-                components: [GradeComponent] = [], scores: [ScoreEntry] = [], policy: GradePolicy = .init(), attendance: [Attendance] = [], problemSets: [ProblemSet] = [],
-                recordings: [Recording] = [], notes: [NoteEntry] = []) {
+    public init(
+        course: Course, materials: [Material] = [], units: [Unit] = [], sessions: [Session] = [], exams: [Exam] = [],
+        assignments: [Assignment] = [],
+        components: [GradeComponent] = [], scores: [ScoreEntry] = [], policy: GradePolicy = .init(), attendance: [Attendance] = [],
+        problemSets: [ProblemSet] = [],
+        recordings: [Recording] = [], notes: [NoteEntry] = []
+    ) {
         self.course = course
         self.materials = materials
         self.units = units
@@ -64,8 +68,10 @@ public struct ClassTime: Codable, Sendable, Hashable {
     /// ISO 8601 weekday: 1 = Monday ... 7 = Sunday.
     public var weekday: Int
     /// Indexed by `weekday - 1`.
-    public static let weekdayNames = [LocalizedStringResource.weekdayMon, .weekdayTue, .weekdayWed, .weekdayThu, .weekdayFri, .weekdaySat, .weekdaySun]
-        .map { String(localized: $0) }
+    public static let weekdayNames = [
+        LocalizedStringResource.weekdayMon, .weekdayTue, .weekdayWed, .weekdayThu, .weekdayFri, .weekdaySat, .weekdaySun,
+    ]
+    .map { String(localized: $0) }
     public var startMinute: Int
     public var endMinute: Int
     public var room: String

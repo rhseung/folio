@@ -58,8 +58,10 @@ public enum CalendarImporter {
 
     /// Adds a session for each meeting with none that day, preferring one at the meeting's time; existing sessions keep
     /// their week and only gain a missing time or lab unit. Re-running adds nothing.
-    public static func merge(_ meetings: [CalendarMeeting], into file: CourseFile, semesterStart: LocalDate,
-                             calendar: Calendar, device: DeviceID, now: Date) -> Result {
+    public static func merge(
+        _ meetings: [CalendarMeeting], into file: CourseFile, semesterStart: LocalDate,
+        calendar: Calendar, device: DeviceID, now: Date
+    ) -> Result {
         var file = file
         var added: [Session] = []
         var filled: [Session] = []
@@ -71,7 +73,9 @@ public enum CalendarImporter {
         // A session stands for one meeting only, so a lecture and a recitation on the same day stay two.
         var matched: Set<UUID> = []
         for m in meetings.sorted(by: { $0.start < $1.start }) {
-            let sameDay = file.sessions.indices.filter { !matched.contains(file.sessions[$0].id) && calendar.isDate(file.sessions[$0].date, inSameDayAs: m.start) }
+            let sameDay = file.sessions.indices.filter {
+                !matched.contains(file.sessions[$0].id) && calendar.isDate(file.sessions[$0].date, inSameDayAs: m.start)
+            }
             if let i = sameDay.first(where: { file.sessions[$0].date == m.start }) ?? sameDay.first {
                 let before = file.sessions[i]
                 matched.insert(before.id)
@@ -119,7 +123,8 @@ public enum CalendarImporter {
     static func weeklySlots(_ meetings: [CalendarMeeting], calendar: Calendar) -> [ClassTime] {
         let slots = meetings.map { m -> ClassTime in
             let minute = { (d: Date) in calendar.component(.hour, from: d) * 60 + calendar.component(.minute, from: d) }
-            return ClassTime(weekday: calendar.isoWeekday(of: m.start), startMinute: minute(m.start), endMinute: minute(m.end), room: m.room)
+            return ClassTime(
+                weekday: calendar.isoWeekday(of: m.start), startMinute: minute(m.start), endMinute: minute(m.end), room: m.room)
         }
         let counts = Dictionary(slots.map { ($0, 1) }, uniquingKeysWith: +)
         return counts.filter { $0.value >= 3 }.keys.sorted { ($0.weekday, $0.startMinute) < ($1.weekday, $1.startMinute) }
@@ -128,11 +133,14 @@ public enum CalendarImporter {
     /// Session -> review note pairs where a session's meeting title (`titles`) is a note's title and neither is linked
     /// yet. Only a free or review note is taken: a unit note's units or a rough note's kind would be lost by becoming a
     /// review note. Each note goes to one session, the first by order, since two sessions with one title can't share a note.
-    public static func noteLinks(sessions: [Session], titles: [UUID: String], notes: [(id: UUID, title: String, meta: NoteMeta)]) -> [(session: UUID, note: UUID)] {
+    public static func noteLinks(sessions: [Session], titles: [UUID: String], notes: [(id: UUID, title: String, meta: NoteMeta)]) -> [(
+        session: UUID, note: UUID
+    )] {
         var free = notes.filter { $0.meta.sessionId == nil && ($0.meta.kind == .free || $0.meta.kind == .review) }
         return sessions.sorted(by: Session.inOrder).compactMap { s in
             guard let title = titles[s.id], !title.isEmpty, s.reviewNoteId == nil,
-                  let i = free.firstIndex(where: { $0.title == title }) else { return nil }
+                let i = free.firstIndex(where: { $0.title == title })
+            else { return nil }
             return (s.id, free.remove(at: i).id)
         }
     }
@@ -147,7 +155,9 @@ public enum CalendarImporter {
 
     /// An exam of the same title that has no time yet or is on the same day gains the calendar's time, room and memo
     /// where they are empty; otherwise a new exam is added. Re-running adds nothing.
-    public static func mergeExams(_ exams: [CalendarExam], into file: CourseFile, calendar: Calendar, device: DeviceID, now: Date) -> ExamResult {
+    public static func mergeExams(_ exams: [CalendarExam], into file: CourseFile, calendar: Calendar, device: DeviceID, now: Date)
+        -> ExamResult
+    {
         var file = file
         var added: [Exam] = [], filled: [Exam] = []
         var conflicts: [(exam: Exam, calendar: CalendarExam)] = []
@@ -168,8 +178,9 @@ public enum CalendarImporter {
                 // A title names one exam, so the same title on another day is the calendar and the file disagreeing.
                 conflicts.append((file.exams[i], e))
             } else {
-                var x = Exam(device: device, at: now, title: e.title, start: e.start, end: e.end, location: e.location,
-                             folder: MaterialIntake.examFolder(title: e.title, among: file.exams))
+                var x = Exam(
+                    device: device, at: now, title: e.title, start: e.start, end: e.end, location: e.location,
+                    folder: MaterialIntake.examFolder(title: e.title, among: file.exams))
                 x.memo = e.memo
                 file.exams.append(x)
                 added.append(x)

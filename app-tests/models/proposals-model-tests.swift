@@ -3,6 +3,7 @@ import FolioDomain
 import FolioLMS
 import Foundation
 import Testing
+
 @testable import Folio
 
 @MainActor
@@ -12,16 +13,18 @@ struct ProposalsModelTests {
     /// The fixture's clock is the real one, so deadlines are set from now.
     func workspace(_ items: (Date) -> LMSSnapshot) throws -> Workspace {
         let workspace = try fixtureWorkspace()
-        workspace.lms = LMSConnection(source: FixedLMS(snapshot: items(workspace.now)),
-                                      logins: MemoryLogins(LMSCredentials(username: "20260000", password: "x")))
+        workspace.lms = LMSConnection(
+            source: FixedLMS(snapshot: items(workspace.now)),
+            logins: MemoryLogins(LMSCredentials(username: "20260000", password: "x")))
         return workspace
     }
 
     static func snapshot(_ now: Date) -> LMSSnapshot {
-        LMSSnapshot(at: now, classrooms: [LMSClassroom(id: 1, title: "그래프 이론[01]"), LMSClassroom(id: 2, title: "소방 안전 교육")],
-                    assignments: [LMSAssignment(id: 100, classroom: 1, title: "Homework Set #5", due: now.addingTimeInterval(86_400))],
-                    files: [LMSFile(id: 200, classroom: 1, title: "Flows", week: "7주차")],
-                    notices: [LMSNotice(id: 300, board: 9, classroom: 2, title: "교육 일정 안내")])
+        LMSSnapshot(
+            at: now, classrooms: [LMSClassroom(id: 1, title: "그래프 이론[01]"), LMSClassroom(id: 2, title: "소방 안전 교육")],
+            assignments: [LMSAssignment(id: 100, classroom: 1, title: "Homework Set #5", due: now.addingTimeInterval(86_400))],
+            files: [LMSFile(id: 200, classroom: 1, title: "Flows", week: "7주차")],
+            notices: [LMSNotice(id: 300, board: 9, classroom: 2, title: "교육 일정 안내")])
     }
 
     @Test func firstSyncMarksWhatClassroomsHoldAndProposesOpenAssignments() async throws {

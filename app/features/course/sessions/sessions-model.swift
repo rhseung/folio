@@ -25,16 +25,18 @@ final class SessionsModel {
         guard !file.sessions.isEmpty else { return String(localized: .sessionsEmpty) }
         let missing = file.missingReviewNotes(at: now)
         let remaining = file.remainingClasses(after: now, planned: plan(now: now).map(\.draft))
-        return ([String(localized: .sessionsCount(file.sessions.count))]
-                + (remaining > 0 ? [String(localized: .sessionsRemaining(remaining))] : [])
-                + (missing > 0 ? [String(localized: .sessionsMissingNotes(missing))] : [])).joined(separator: " · ")
+        return
+            ([String(localized: .sessionsCount(file.sessions.count))]
+            + (remaining > 0 ? [String(localized: .sessionsRemaining(remaining))] : [])
+            + (missing > 0 ? [String(localized: .sessionsMissingNotes(missing))] : [])).joined(separator: " · ")
     }
 
     /// `다음 시험 Quiz2 D-9`, in red after the subtitle: the one thing on the page with a deadline.
     func nextExam(_ file: CourseFile, now: Date? = nil) -> String? {
         let now = now ?? workspace.now
         guard let exam = file.exams.filter({ ($0.start ?? .distantPast) > now }).min(by: { $0.start! < $1.start! }),
-              let days = examDays(exam, now: now) else { return nil }
+            let days = examDays(exam, now: now)
+        else { return nil }
         return String(localized: .sessionsNextExam(exam.title, days == 0 ? "D-day" : "D-\(days)"))
     }
 
@@ -71,11 +73,15 @@ final class SessionsModel {
         var weeks: [Week] = []
         func open(_ number: Int, _ date: Date) {
             let start = calendar.startOfWeek(containing: date)
-            weeks.append(Week(number: number, start: start, range: range(from: start), thisWeek: start == thisWeek,
-                              examWeek: semester?.examWeeks.contains(number) ?? false, rows: []))
+            weeks.append(
+                Week(
+                    number: number, start: start, range: range(from: start), thisWeek: start == thisWeek,
+                    examWeek: semester?.examWeeks.contains(number) ?? false, rows: []))
         }
 
-        for item in SessionTimeline.items(file, planned: plan.map(\.draft), classMinutes: workspace.settings.classMinutes, calendar: calendar) {
+        for item in SessionTimeline.items(
+            file, planned: plan.map(\.draft), classMinutes: workspace.settings.classMinutes, calendar: calendar)
+        {
             switch item {
             case .week(let sessions, _):
                 open(sessions[0].week, sessions[0].date)
@@ -135,7 +141,8 @@ final class SessionsModel {
 
     /// A planned class's second line: no session yet, so where it meets stands in for what it covered.
     func plannedLine(_ item: Workspace.SuggestedSession) -> String {
-        ([dayLine(item.suggestion.date, end: item.suggestion.end)] + (item.suggestion.room.isEmpty ? [] : [item.suggestion.room])).joined(separator: " · ")
+        ([dayLine(item.suggestion.date, end: item.suggestion.end)] + (item.suggestion.room.isEmpty ? [] : [item.suggestion.room])).joined(
+            separator: " · ")
     }
 
     func examTime(_ exam: Exam) -> String? {
@@ -238,8 +245,9 @@ final class SessionsModel {
 
     func timing(of session: Session, in file: CourseFile, now: Date) -> CardTiming {
         let end = session.expectedEnd(schedule: file.course.schedule, classMinutes: workspace.settings.classMinutes, calendar: calendar)
-        return CardTiming(expectedEnd: end, live: isOngoing(session, end: end, now: now), progress: progress(session, end: end, now: now),
-                          offersStart: offersJoin(session, in: file, now: now))
+        return CardTiming(
+            expectedEnd: end, live: isOngoing(session, end: end, now: now), progress: progress(session, end: end, now: now),
+            offersStart: offersJoin(session, in: file, now: now))
     }
 
     func isOngoing(_ session: Session, end: Date?, now: Date) -> Bool {
@@ -323,8 +331,11 @@ struct SessionUnits {
 
     // The label truncates on a narrow row, so the tooltip carries every title.
     var help: String {
-        missing ? String(localized: .sessionsUnitsMissingHelp) : shown.isEmpty ? String(localized: .sessionsUnitsHelp)
-            : shown.map(\.title).joined(separator: "\n")
+        missing
+            ? String(localized: .sessionsUnitsMissingHelp)
+            : shown.isEmpty
+                ? String(localized: .sessionsUnitsHelp)
+                : shown.map(\.title).joined(separator: "\n")
     }
 
     // Read only where a row draws the strip, not for every card.

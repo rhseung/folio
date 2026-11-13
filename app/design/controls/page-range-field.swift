@@ -113,7 +113,7 @@ struct PageRangeField: View {
     /// Narrower than this, a name would be a letter and an ellipsis; the tile goes without.
     private static let minLabel: CGFloat = 24
     /// Within this much of a zone's edge, a dragged end settles on it.
-    private static let snap: CGFloat = 0.75 // design: one-off, a fraction of a page, not a distance on screen
+    private static let snap: CGFloat = 0.75  // design: one-off, a fraction of a page, not a distance on screen
 
     private var zoned: Bool { !sections.isEmpty }
     /// The edges between zones, as page counts before them: where the ends settle and the firm haptic is.
@@ -139,22 +139,22 @@ struct PageRangeField: View {
 
     var body: some View {
         GeometryReader { proxy in track(width: proxy.size.width) }
-        .frame(height: fieldHeight)
-        .frame(minWidth: compact ? 200 : 240)
-        .onAppear { if numbersShown { pillsUp = true } }
-        .onChange(of: focused) { was, now in
-            if let pinned, was == pinned, now != pinned { self.pinned = nil }
-        }
-        .onChange(of: wantsPills) { _, want in
-            if want { pillsUp = true; return }
-            Task {
-                try? await Task.sleep(for: .milliseconds(300))
-                if !wantsPills { pillsUp = false }
+            .frame(height: fieldHeight)
+            .frame(minWidth: compact ? 200 : 240)
+            .onAppear { if numbersShown { pillsUp = true } }
+            .onChange(of: focused) { was, now in
+                if let pinned, was == pinned, now != pinned { self.pinned = nil }
             }
-        }
-        .sensoryFeedback(.selection, trigger: ticks)
-        // Firmer where the drag stops giving or starts pushing: the file's first or last page, or the other end.
-        .sensoryFeedback(.alignment, trigger: bumps)
+            .onChange(of: wantsPills) { _, want in
+                if want { pillsUp = true; return }
+                Task {
+                    try? await Task.sleep(for: .milliseconds(300))
+                    if !wantsPills { pillsUp = false }
+                }
+            }
+            .sensoryFeedback(.selection, trigger: ticks)
+            // Firmer where the drag stops giving or starts pushing: the file's first or last page, or the other end.
+            .sensoryFeedback(.alignment, trigger: bumps)
     }
 
     // MARK: Geometry
@@ -224,7 +224,7 @@ struct PageRangeField: View {
                     }
                 }
                 #if os(macOS)
-                .pointerStyle(hovered != nil || grab != nil ? .columnResize : nil)
+            .pointerStyle(hovered != nil || grab != nil ? .columnResize : nil)
                 #endif
                 .accessibilityHidden(true)
             if let seen { seenLine(seen, width: w) }
@@ -250,12 +250,15 @@ struct PageRangeField: View {
     private func rail(_ context: GraphicsContext, width w: CGFloat) {
         if zoned { return zones(context, width: w) }
         let n = extent, u = unit(w), top = barY - Self.bar / 2
-        context.fill(Capsule().path(in: CGRect(x: Self.inset, y: top, width: w - 2 * Self.inset, height: Self.bar)),
-                     with: .color(Theme.Palette.fill))
+        context.fill(
+            Capsule().path(in: CGRect(x: Self.inset, y: top, width: w - 2 * Self.inset, height: Self.bar)),
+            with: .color(Theme.Palette.fill))
         // A 1pt gap on each side, so two classes that meet still read as two.
         for t in taught where t.pages.lowerBound <= n {
             let upper = min(t.pages.upperBound, n)
-            let rect = CGRect(x: x(t.pages.lowerBound - 1, w) + 1, y: top, width: max(CGFloat(upper - t.pages.lowerBound + 1) * u - 2, 1), height: Self.bar)
+            let rect = CGRect(
+                x: x(t.pages.lowerBound - 1, w) + 1, y: top, width: max(CGFloat(upper - t.pages.lowerBound + 1) * u - 2, 1),
+                height: Self.bar)
             context.fill(Capsule().path(in: rect), with: .color(Theme.Palette.text.opacity(Theme.Opacity.projected)))
         }
         let strong = Set(sections.flatMap { [$0.pages.lowerBound - 1, $0.pages.upperBound] })
@@ -264,8 +267,9 @@ struct PageRangeField: View {
         for i in 1..<n where everyPage || i % 5 == 0 || strong.contains(i) {
             let major = i % 5 == 0 || strong.contains(i)
             let h = major ? Self.bar : Self.bar / 2
-            context.fill(Path(CGRect(x: x(i, w) - 0.5, y: barY - h / 2, width: 1, height: h)),
-                         with: .color(Theme.Palette.text.opacity(major ? Theme.Opacity.toneEdge : Theme.Opacity.hover)))
+            context.fill(
+                Path(CGRect(x: x(i, w) - 0.5, y: barY - h / 2, width: 1, height: h)),
+                with: .color(Theme.Palette.text.opacity(major ? Theme.Opacity.toneEdge : Theme.Opacity.hover)))
         }
     }
 
@@ -274,8 +278,10 @@ struct PageRangeField: View {
         let n = extent, top = barY - Self.zone / 2
         var tiles: [Path] = []
         for (i, s) in sections.enumerated() where s.pages.lowerBound <= n {
-            let lo = x(s.pages.lowerBound - 1, w) + (i == 0 ? 0 : 2), hi = x(min(s.pages.upperBound, n), w) - (i == sections.count - 1 ? 0 : 2)
-            tiles.append(Path(roundedRect: CGRect(x: lo, y: top, width: max(hi - lo, 1), height: Self.zone), cornerRadius: Theme.Radius.tile))
+            let lo = x(s.pages.lowerBound - 1, w) + (i == 0 ? 0 : 2),
+                hi = x(min(s.pages.upperBound, n), w) - (i == sections.count - 1 ? 0 : 2)
+            tiles.append(
+                Path(roundedRect: CGRect(x: lo, y: top, width: max(hi - lo, 1), height: Self.zone), cornerRadius: Theme.Radius.tile))
         }
         // Until the count is read the bar runs past the last zone, so an end can still be dragged on: those pages are
         // a zone no unit takes.
@@ -290,8 +296,9 @@ struct PageRangeField: View {
             inside.clip(to: tile)
             for t in taught where t.pages.lowerBound <= n {
                 let lo = x(t.pages.lowerBound - 1, w), hi = x(min(t.pages.upperBound, n), w)
-                inside.fill(Path(CGRect(x: lo, y: top, width: max(hi - lo, 1), height: Self.zone)),
-                            with: .color(Theme.Palette.text.opacity(Theme.Opacity.hover)))
+                inside.fill(
+                    Path(CGRect(x: lo, y: top, width: max(hi - lo, 1), height: Self.zone)),
+                    with: .color(Theme.Palette.text.opacity(Theme.Opacity.hover)))
             }
         }
     }
@@ -325,11 +332,15 @@ struct PageRangeField: View {
             let cut = (h - clear)...(h + clear)
             free = free.flatMap { stretch -> [ClosedRange<CGFloat>] in
                 guard stretch.overlaps(cut) else { return [stretch] }
-                return [stretch.lowerBound...max(stretch.lowerBound, cut.lowerBound), min(stretch.upperBound, cut.upperBound)...stretch.upperBound]
+                return [
+                    stretch.lowerBound...max(stretch.lowerBound, cut.lowerBound),
+                    min(stretch.upperBound, cut.upperBound)...stretch.upperBound,
+                ]
             }
         }
         guard let best = free.max(by: { $0.upperBound - $0.lowerBound < $1.upperBound - $1.lowerBound }),
-              best.upperBound - best.lowerBound >= Self.minLabel else { return nil }
+            best.upperBound - best.lowerBound >= Self.minLabel
+        else { return nil }
         return ((best.lowerBound + best.upperBound) / 2, best.upperBound - best.lowerBound)
     }
 
@@ -473,7 +484,9 @@ struct PageRangeField: View {
                 .frame(width: 32)
                 .focused($typingFocused)
                 .onSubmit { commitTyped() }
-                .onKeyPress(.escape) { typing = nil; typed = nil; return .handled }
+                .onKeyPress(.escape) {
+                    typing = nil; typed = nil; return .handled
+                }
                 .onChange(of: typingFocused) { _, now in if !now { commitTyped() } }
                 .onAppear { typingFocused = true }
         } else {
@@ -495,8 +508,13 @@ struct PageRangeField: View {
         let label = taught.first { $0.pages.contains(p) }?.label
         let zone = sections.first { $0.pages.contains(p) && !$0.title.isEmpty }?.title
         return Group {
-            if let zone { Text(.designPageRangeTipSection(p, zone)) }
-            else if let label { Text(.designPageRangeTipTaught(p, label)) } else { Text(.designPageRangeLength(p)) }
+            if let zone {
+                Text(.designPageRangeTipSection(p, zone))
+            } else if let label {
+                Text(.designPageRangeTipTaught(p, label))
+            } else {
+                Text(.designPageRangeLength(p))
+            }
         }
         .font(Theme.Typeface.caption)
         .padding(.horizontal, Theme.Space.s)
@@ -529,12 +547,12 @@ struct PageRangeField: View {
             .frame(width: reach, height: bottom - top)
             .contentShape(.rect)
         return Button(action: take) { line }
-        .buttonStyle(.pointing(.plain))
-        .help(Text(.designPageRangeSeenHelp))
-        // The tooltip's meaning, for a finger: a long press names the line before it is taken.
-        .contextMenu { seenMenu(seen, take: take) }
-        .accessibilityLabel(Text(.designPageRangeSeenShort(seen.lowerBound, seen.upperBound)))
-        .position(x: (lo + hi) / 2, y: (top + bottom) / 2)
+            .buttonStyle(.pointing(.plain))
+            .help(Text(.designPageRangeSeenHelp))
+            // The tooltip's meaning, for a finger: a long press names the line before it is taken.
+            .contextMenu { seenMenu(seen, take: take) }
+            .accessibilityLabel(Text(.designPageRangeSeenShort(seen.lowerBound, seen.upperBound)))
+            .position(x: (lo + hi) / 2, y: (top + bottom) / 2)
     }
 
     private func dotted(from x0: CGFloat, to x1: CGFloat, y: CGFloat, applied: Bool) -> some View {
@@ -574,7 +592,9 @@ struct PageRangeField: View {
                     let p = end == .first ? Int(settled.rounded()) + 1 : Int(settled.rounded())
                     // The only handle on the bar opens the range toward the pointer, as a tap there would: it is the
                     // one thing in sight to grab, and moving it instead left the missing end unset.
-                    let next = from.lone == end ? from.tapping(page(at: g.location.x, w), pages: pages, besides: taken)
+                    let next =
+                        from.lone == end
+                        ? from.tapping(page(at: g.location.x, w), pages: pages, besides: taken)
                         : from.moving(end, to: min(max(p, 1), extent), pages: pages, besides: taken)
                     change(to: next, end: end)
                     // Past the file's first or last page the handle gives a little, less the further it goes.
@@ -592,7 +612,9 @@ struct PageRangeField: View {
             }
             .onEnded { _ in
                 if let tip = pressTip {
-                    if moved { pressTip = nil } else {
+                    if moved {
+                        pressTip = nil
+                    } else {
                         Task {
                             try? await Task.sleep(for: .seconds(1.5))
                             if pressTip == tip, grab == nil { pressTip = nil }
@@ -616,7 +638,9 @@ struct PageRangeField: View {
         #if os(macOS)
         if NSEvent.modifierFlags.contains(.option) { return e }
         #endif
-        guard let near = zoneEdges.min(by: { abs(CGFloat($0) - e) < abs(CGFloat($1) - e) }), abs(CGFloat(near) - e) <= Self.snap else { return e }
+        guard let near = zoneEdges.min(by: { abs(CGFloat($0) - e) < abs(CGFloat($1) - e) }), abs(CGFloat(near) - e) <= Self.snap else {
+            return e
+        }
         return CGFloat(near)
     }
 
@@ -663,7 +687,10 @@ struct PageRangeField: View {
             if pushed { pushes[other, default: 0] += 1 }
             let edgeOf = { (r: PageRange) in r[end].map { end == .first ? $0 - 1 : $0 } }
             let onZoneEdge = zoned && edgeOf(next).map(zoneEdges.contains) == true && edgeOf(was) != edgeOf(next)
-            firm = pushed || onZoneEdge || (next.touches(end, pages: pages, besides: taken) && !was.touches(end, pages: pages, besides: taken) && next[end] != next[other])
+            firm =
+                pushed || onZoneEdge
+                || (next.touches(end, pages: pages, besides: taken) && !was.touches(end, pages: pages, besides: taken)
+                    && next[end] != next[other])
         } else {
             firm = next.first == 1 || (pages != nil && next.last == pages)
         }
@@ -682,12 +709,20 @@ struct PageRangeField: View {
 
     private func nudge(_ end: PageRange.End, by step: Int) {
         guard let value = range[end] else { return }
-        let next = range.lone == end ? range.tapping(value + step, pages: pages, besides: taken) : range.moving(end, to: value + step, pages: pages, besides: taken)
+        let next =
+            range.lone == end
+            ? range.tapping(value + step, pages: pages, besides: taken) : range.moving(end, to: value + step, pages: pages, besides: taken)
         guard next != range else {
             // At the file's edge: the handle leans out and springs back.
             bumps += 1
-            withAnimation(.easeOut(duration: 0.08)) { rubber = step > 0 ? 4 : -4; grab = .end(end, from: range) }
-            withAnimation(Self.spring.delay(0.08)) { rubber = 0 } completion: { grab = nil }
+            withAnimation(.easeOut(duration: 0.08)) {
+                rubber = step > 0 ? 4 : -4; grab = .end(end, from: range)
+            }
+            withAnimation(Self.spring.delay(0.08)) {
+                rubber = 0
+            } completion: {
+                grab = nil
+            }
             return
         }
         feel(from: range, to: next, end: end)

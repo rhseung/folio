@@ -21,7 +21,8 @@ extension Workspace {
         let shown = UserDefaults.standard.string(forKey: Self.pathKey) ?? ""
         var stale = false
         guard let data = UserDefaults.standard.data(forKey: Self.bookmarkKey),
-              let url = try? URL(resolvingBookmarkData: data, bookmarkDataIsStale: &stale) else {
+            let url = try? URL(resolvingBookmarkData: data, bookmarkDataIsStale: &stale)
+        else {
             folderTrouble = .missing(path: shown)
             return
         }

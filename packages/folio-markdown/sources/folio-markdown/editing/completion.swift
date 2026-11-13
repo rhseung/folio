@@ -98,9 +98,11 @@ public struct CompletionItem: Equatable, Sendable, Identifiable {
     /// Where a formula's symbol is found when the whole list is browsed.
     public var category: MathCategory?
 
-    public init(id: String, title: String, detail: String? = nil, symbol: String? = nil, preview: String? = nil,
-                previewAsciiMath: Bool = false, keywords: [String] = [], body: String, block: Bool = false,
-                caret: Int? = nil, continues: Bool = false, category: MathCategory? = nil) {
+    public init(
+        id: String, title: String, detail: String? = nil, symbol: String? = nil, preview: String? = nil,
+        previewAsciiMath: Bool = false, keywords: [String] = [], body: String, block: Bool = false,
+        caret: Int? = nil, continues: Bool = false, category: MathCategory? = nil
+    ) {
         self.id = id
         self.title = title
         self.detail = detail
@@ -127,7 +129,9 @@ public struct CompletionCatalog: Sendable {
     /// The math snippets of the syntax the note doesn't use, for a math fence written in that one.
     public var otherMath: [Snippet]
 
-    public init(slash: [CompletionItem] = [], languages: [String] = [], snippets: [Snippet] = [], tex: Bool = true, otherMath: [Snippet] = []) {
+    public init(
+        slash: [CompletionItem] = [], languages: [String] = [], snippets: [Snippet] = [], tex: Bool = true, otherMath: [Snippet] = []
+    ) {
         self.slash = slash
         self.languages = languages
         self.snippets = snippets
@@ -176,7 +180,9 @@ public enum Completion {
             if let m = prefix.wholeMatch(of: #/[ \t]*(?:>[ \t]?)+\[!([A-Za-z-]*)/#) {
                 return make(.callout, m.1, extra: next == 0x5D ? 1 : 0)
             }
-            if rest.trimmingCharacters(in: .whitespaces).isEmpty, let m = prefix.wholeMatch(of: #/ {0,3}(?:`{3,}|~{3,})([A-Za-z0-9+#._-]*)/#) {
+            if rest.trimmingCharacters(in: .whitespaces).isEmpty,
+                let m = prefix.wholeMatch(of: #/ {0,3}(?:`{3,}|~{3,})([A-Za-z0-9+#._-]*)/#)
+            {
                 return make(.codeLanguage, m.1)
             }
             if let m = prefix.firstMatch(of: #/(?:^|[ \t])(\/[\p{L}\p{N}-]*)$/#) {
@@ -194,7 +200,8 @@ public enum Completion {
                 }
                 // Two letters or more: one letter is a variable, and offering on it would cover every formula.
                 if let m = prefix.firstMatch(of: #/(?:^|[^A-Za-z\\])([A-Za-z]{2,})$/#), caret - m.1.utf16.count >= content.location,
-                   !asciiMath(String(m.1), catalog: catalog).isEmpty {
+                    !asciiMath(String(m.1), catalog: catalog).isEmpty
+                {
                     return make(.asciiMath, m.1)
                 }
                 if let (snippet, range) = Snippet.match(catalog.snippets, in: text, caret: caret, place: place) {
@@ -231,7 +238,8 @@ public enum Completion {
             if query.text.isEmpty { return MathSymbols.items(tex: catalog.tex, snippets: catalog.snippets) }
             return filter(catalog.tex ? TeXCommands.all.map(\.item) : AsciiMathSymbols.items, query.text, prefixOnly: true)
         case .texEnvironment:
-            return filter(TeXCommands.environments.map { CompletionItem(id: "env.\($0)", title: $0, body: $0) }, query.text, prefixOnly: true)
+            return filter(
+                TeXCommands.environments.map { CompletionItem(id: "env.\($0)", title: $0, body: $0) }, query.text, prefixOnly: true)
         case .snippet:
             return snippets(catalog, trigger: query.text, inMath: query.place.isMath)
         case .asciiMath:
@@ -262,7 +270,9 @@ public enum Completion {
         let alias = tail.flatMap { t in t.firstIndex(of: "|").map { String(t[t.index(after: $0)...].dropLast(2)) } }
         let range = NSRange(location: start, length: caret - start + (tail?.utf16.count ?? 0))
         func make(_ part: LinkQuery.Part, target: String, typed: Substring) -> CompletionQuery {
-            CompletionQuery(kind: .link(LinkQuery(part: part, embed: embed, target: target, alias: alias)), text: String(typed), range: range, place: place)
+            CompletionQuery(
+                kind: .link(LinkQuery(part: part, embed: embed, target: target, alias: alias)), text: String(typed), range: range,
+                place: place)
         }
 
         guard let hash = inner.firstIndex(of: "#") else { return make(.target, target: "", typed: inner) }
@@ -311,7 +321,8 @@ public enum Completion {
         case .codeLanguage:
             if fenceNeedsClosing(text, at: range.location) {
                 let line = text.lineRange(for: NSRange(location: range.location, length: 0))
-                let fence = text.substring(with: NSRange(location: line.location, length: range.location - line.location)).trimmingCharacters(in: .whitespaces)
+                let fence = text.substring(with: NSRange(location: line.location, length: range.location - line.location))
+                    .trimmingCharacters(in: .whitespaces)
                 body = item.body + "\n$0\n" + fence
             }
         case .texEnvironment:
@@ -322,7 +333,8 @@ public enum Completion {
             let before = text.substring(with: NSRange(location: line.location, length: range.location - line.location))
             if item.block, !before.trimmingCharacters(in: .whitespaces).isEmpty {
                 // The space before `/` would trail the line the block leaves.
-                let trailing = before.utf16.count - before.replacingOccurrences(of: "[ \\t]+$", with: "", options: .regularExpression).utf16.count
+                let trailing =
+                    before.utf16.count - before.replacingOccurrences(of: "[ \\t]+$", with: "", options: .regularExpression).utf16.count
                 range = NSRange(location: range.location - trailing, length: range.length + trailing)
                 body = "\n" + body
             }

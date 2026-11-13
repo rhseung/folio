@@ -2,6 +2,7 @@ import FolioDomain
 import JavaScriptCore
 import Observation
 import WebKit
+
 #if os(macOS)
 import AppKit
 #else
@@ -17,7 +18,8 @@ import UIKit
         return context.objectForKeyedSubscript("folioNative")
     }()
 
-    static let languages: [String] = helpers?.objectForKeyedSubscript("languages").call(withArguments: [])?.toArray()?.compactMap { $0 as? String } ?? []
+    static let languages: [String] =
+        helpers?.objectForKeyedSubscript("languages").call(withArguments: [])?.toArray()?.compactMap { $0 as? String } ?? []
 
     /// Token spans in UTF-16 offsets of `code`, with the highlighter's classes.
     static func highlight(_ code: String, language: String) -> [(range: NSRange, classes: String)] {
@@ -114,8 +116,10 @@ import UIKit
     /// `trim` cuts the picture to its ink, for the bubble, which pads it evenly. Untrimmed it keeps KaTeX's boxes, the
     /// line box and strut: the palette and the completion menu center a symbol in its cell, and only the boxes keep
     /// `\ldots` under `\cdots`, `.` under `\cdot` and `,` under `'`.
-    func picture(_ source: String, syntax: MathSyntax, display: Bool, size: CGFloat, dark: Bool, trim: Bool = false,
-                 ready: (() -> Void)? = nil) -> Picture? {
+    func picture(
+        _ source: String, syntax: MathSyntax, display: Bool, size: CGFloat, dark: Bool, trim: Bool = false,
+        ready: (() -> Void)? = nil
+    ) -> Picture? {
         _ = drawn
         let formula = source.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !formula.isEmpty else { return nil }
@@ -147,8 +151,9 @@ import UIKit
         let job = queue.removeFirst(), turn = UUID(), started = ContinuousClock.now
         current = turn
         Task {
-            let result = await page.draw(job.source, syntax: job.syntax, display: job.display, size: job.size, dark: job.dark,
-                                         room: job.trim ? room : nil)
+            let result = await page.draw(
+                job.source, syntax: job.syntax, display: job.display, size: job.size, dark: job.dark,
+                room: job.trim ? room : nil)
             guard current == turn else { return }
             // Only what KaTeX can't read is given up on; a page that ended or a snapshot that failed is asked again.
             switch result {
@@ -193,8 +198,10 @@ import UIKit
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .nonPersistent()
         config.defaultWebpagePreferences.allowsContentJavaScript = false
-        config.userContentController.addUserScript(WKUserScript(source: NoteStyle.reader, injectionTime: .atDocumentEnd,
-                                                                forMainFrameOnly: true, in: .defaultClient))
+        config.userContentController.addUserScript(
+            WKUserScript(
+                source: NoteStyle.reader, injectionTime: .atDocumentEnd,
+                forMainFrameOnly: true, in: .defaultClient))
         web = WKWebView(frame: CGRect(origin: .zero, size: Self.canvas), configuration: config)
         frame = MathFrame(frame: CGRect(x: 0, y: 0, width: 1, height: 1))
         super.init()
@@ -223,7 +230,8 @@ import UIKit
     }
 
     private func load() {
-        let page = "<!doctype html><html><head><meta charset=utf-8><style>\(NoteStyle.variables(accent: .gray))\(NoteStyle.css)\(Self.css)</style></head>"
+        let page =
+            "<!doctype html><html><head><meta charset=utf-8><style>\(NoteStyle.variables(accent: .gray))\(NoteStyle.css)\(Self.css)</style></head>"
             + "<body class=\"note\"></body></html>"
         loading = web.loadHTMLString(page, baseURL: nil)
     }
@@ -233,7 +241,8 @@ import UIKit
 
     // The page is as wide as its formula, with room around it for the snapshot's (`NoteMath.room`): a snapshot past the
     // page's edge is cut there, and an ink running into it would be too.
-    private static let css = "html,body{background:transparent!important}body.note{margin:0;padding:4em;max-width:none;width:max-content}"
+    private static let css =
+        "html,body{background:transparent!important}body.note{margin:0;padding:4em;max-width:none;width:max-content}"
         + "body.note>.math.display{margin:0;overflow:visible}"
 
     func move(to view: PlatformView) {
@@ -268,8 +277,9 @@ import UIKit
             // Every KaTeX font before the first formula. A font loads when a formula first needs it, and
             // `document.fonts.ready` was seen settled while it still loaded: a big delimiter's (KaTeX_Size1) came out
             // blank, and that picture was kept.
-            _ = try? await web.callAsyncJavaScript("await Promise.all([...document.fonts].map(f => f.load().catch(() => null)))",
-                                                   arguments: [:], in: nil, contentWorld: .defaultClient)
+            _ = try? await web.callAsyncJavaScript(
+                "await Promise.all([...document.fonts].map(f => f.load().catch(() => null)))",
+                arguments: [:], in: nil, contentWorld: .defaultClient)
             guard finished === loading else { return }
             loading = nil
             loaded = true
@@ -288,7 +298,8 @@ import UIKit
     /// With `room`, the snapshot reaches that many ems past the boxes and is cut to its ink; without, it's the boxes.
     func draw(_ source: String, syntax: MathSyntax, display: Bool, size: CGFloat, dark: Bool, room: CGFloat?) async -> Drawn {
         if !loaded { await withCheckedContinuation { onLoad.append($0) } }
-        let escaped = source.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;").replacingOccurrences(of: ">", with: "&gt;")
+        let escaped = source.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;").replacingOccurrences(
+            of: ">", with: "&gt;")
         let html = display ? "<div class=\"math display\">\(escaped)</div>" : "<span class=\"math\">\(escaped)</span>"
         // Every part's box, not only KaTeX's outer one: a tall accent or a limit reaches past it. Not the MathML copy
         // for screen readers, which KaTeX hides in a 1px box its contents run far out of.
@@ -321,7 +332,9 @@ import UIKit
         let arguments: [String: Any] = ["html": html, "syntax": syntax.rawValue, "size": Double(size), "color": color]
 
         let answer: Any?
-        do { answer = try await web.callAsyncJavaScript(script, arguments: arguments, contentWorld: .defaultClient) } catch { return .failed }
+        do { answer = try await web.callAsyncJavaScript(script, arguments: arguments, contentWorld: .defaultClient) } catch {
+            return .failed
+        }
         guard let found = answer as? [NSNumber], found.count == 4 else { return .unreadable }
         let ink = CGRect(x: found[0].doubleValue, y: found[1].doubleValue, width: found[2].doubleValue, height: found[3].doubleValue)
         // Untrimmed, glyphs still reach a little past their boxes, so a quarter em of room around them; in whole
@@ -357,8 +370,11 @@ import UIKit
         let scale = CGFloat(w) / size.width
         var pixels = [UInt8](repeating: 0, count: w * h * 4)
         let drawn = pixels.withUnsafeMutableBytes { buffer -> Bool in
-            guard let context = CGContext(data: buffer.baseAddress, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
-                                          space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+            guard
+                let context = CGContext(
+                    data: buffer.baseAddress, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
+                    space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+            else { return false }
             context.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
             return true
         }

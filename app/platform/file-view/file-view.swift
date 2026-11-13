@@ -15,9 +15,12 @@ struct FileView: View {
     @State private var query = ""
     @Environment(\.askClaude) private var askClaude
 
-    init(workspace: Workspace, course: LoadedCourse, material: UUID, requestedPage: Binding<Int?> = .constant(nil),
-         shownPage: Binding<Int?> = .constant(nil), remembersPage: Bool = true) {
-        _model = State(initialValue: FileViewModel(workspace: workspace, course: course, subject: .material(material), remembersPage: remembersPage))
+    init(
+        workspace: Workspace, course: LoadedCourse, material: UUID, requestedPage: Binding<Int?> = .constant(nil),
+        shownPage: Binding<Int?> = .constant(nil), remembersPage: Bool = true
+    ) {
+        _model = State(
+            initialValue: FileViewModel(workspace: workspace, course: course, subject: .material(material), remembersPage: remembersPage))
         _requestedPage = requestedPage
         _shownPage = shownPage
     }
@@ -89,8 +92,9 @@ struct FileView: View {
         case .pdf(let controller):
             PDFContent(model: model, controller: controller, thumbnails: thumbnails)
         case .markdown(let text):
-            NotePreview(text: text, baseURL: model.url.deletingLastPathComponent(), math: model.math, embeds: model.embeds,
-                        revision: model.notesRevision)
+            NotePreview(
+                text: text, baseURL: model.url.deletingLastPathComponent(), math: model.math, embeds: model.embeds,
+                revision: model.notesRevision)
         case .source(let text):
             SourceFileEditor(text: .constant(text), language: model.format.highlightLanguage, reveal: .constant(nil), editable: false)
         case .image(let url):
@@ -142,7 +146,8 @@ struct FileView: View {
             if let c = pdf {
                 if model.splitting == nil {
                     // Not `sidebar.leading`: the course column's button beside it is that glyph (#402).
-                    Button(.materialsViewerThumbnails, systemImage: "sidebar.squares.left") { thumbnails.toggle() }.help(Text(.materialsViewerThumbnails))
+                    Button(.materialsViewerThumbnails, systemImage: "sidebar.squares.left") { thumbnails.toggle() }.help(
+                        Text(.materialsViewerThumbnails))
                 }
                 // Its own width always: squeezed, the count broke a digit per line (#402).
                 Text("\(c.page + 1) / \(c.pageCount)").monospacedDigit().foregroundStyle(Theme.Palette.textSecondary)
@@ -180,7 +185,8 @@ struct FileView: View {
 
     @ViewBuilder func pageTools(_ c: PDFController) -> some View {
         if model.canSplit, model.splitting == nil {
-            Button(.designPageRangeSplit, systemImage: "scissors") { Task { await model.startSplit(c) } }.help(Text(.designPageRangeSplitHelp))
+            Button(.designPageRangeSplit, systemImage: "scissors") { Task { await model.startSplit(c) } }.help(
+                Text(.designPageRangeSplitHelp))
         }
         if let link = model.pageLink(c.page) {
             Button(.fileViewCopyPageLink, systemImage: "link") { copyLink(link) }.help(Text(.fileViewCopyPageLink))
@@ -201,10 +207,20 @@ struct FileView: View {
                 .frame(minWidth: 64, idealWidth: 160, maxWidth: 160)
                 .onSubmit { c.find(query) }
             if !c.matches.isEmpty {
-                Text("\(c.matchIndex + 1)/\(c.matches.count)").font(Theme.Typeface.caption).monospacedDigit().foregroundStyle(Theme.Palette.textTertiary)
-                    .fixedSize()
-                Button { c.step(-1) } label: { Image(systemName: "chevron.up") }.buttonStyle(.ghost)
-                Button { c.step(1) } label: { Image(systemName: "chevron.down") }.buttonStyle(.ghost)
+                Text("\(c.matchIndex + 1)/\(c.matches.count)").font(Theme.Typeface.caption).monospacedDigit().foregroundStyle(
+                    Theme.Palette.textTertiary
+                )
+                .fixedSize()
+                Button {
+                    c.step(-1)
+                } label: {
+                    Image(systemName: "chevron.up")
+                }.buttonStyle(.ghost)
+                Button {
+                    c.step(1)
+                } label: {
+                    Image(systemName: "chevron.down")
+                }.buttonStyle(.ghost)
             }
         }
         .toolbarField()
@@ -226,12 +242,16 @@ struct PDFContent: View {
             // Closing leaves the screen's views drawn once more through this binding: they read the split as it was
             // shown, and a write after closing doesn't open it again. A stand-in split here had one zone, and a row
             // still holding the third ran off its end (#179).
-            LectureSplitPane(controller: controller, split: Binding(get: { model.splitting ?? shown },
-                                                                     set: { if model.splitting != nil { model.splitting = $0 } }),
-                             units: course.file.units, note: model.splitNote,
-                             claude: model.claudeFailed ? ClaudeSplitButton(asking: model.askingClaude) { Task { await model.retryClaude() } } : nil,
-                             save: model.saveSplit, cancel: model.cancelSplit)
-                .courseAccent(model.accent(course))
+            LectureSplitPane(
+                controller: controller,
+                split: Binding(
+                    get: { model.splitting ?? shown },
+                    set: { if model.splitting != nil { model.splitting = $0 } }),
+                units: course.file.units, note: model.splitNote,
+                claude: model.claudeFailed ? ClaudeSplitButton(asking: model.askingClaude) { Task { await model.retryClaude() } } : nil,
+                save: model.saveSplit, cancel: model.cancelSplit
+            )
+            .courseAccent(model.accent(course))
         } else if let course = model.course {
             PDFPane(controller: controller, thumbnails: thumbnails, strip: model.pageStrip(pageCount: controller.pageCount))
                 .courseAccent(model.accent(course))

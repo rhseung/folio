@@ -44,9 +44,10 @@ final class LectureProgressModel {
         return file.lectureProgress(of: materialId, pageCount: pageCount).map { span in
             let classes = span.sessions.compactMap { id in file.sessions.first { $0.id == id } }
                 .map { Class(id: $0.id, day: file.day(of: $0, calendar: workspace.calendar)) }
-            return Row(firstPage: span.firstPage, lastPage: span.lastPage,
-                       pages: span.firstPage == span.lastPage ? "p.\(span.firstPage)" : "p.\(span.firstPage)–\(span.lastPage)",
-                       classes: classes)
+            return Row(
+                firstPage: span.firstPage, lastPage: span.lastPage,
+                pages: span.firstPage == span.lastPage ? "p.\(span.firstPage)" : "p.\(span.firstPage)–\(span.lastPage)",
+                classes: classes)
         }
     }
 

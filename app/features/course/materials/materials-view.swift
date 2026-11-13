@@ -20,19 +20,26 @@ struct MaterialsView: View {
         Group {
             if let m = model.viewed {
                 // Another file starts over: page, zoom, search and unsaved text belong to the old one.
-                FileView(workspace: model.workspace, course: model.course, material: m.id, requestedPage: $model.requestedPage,
-                         shownPage: $model.shownPage).id(m.id)
+                FileView(
+                    workspace: model.workspace, course: model.course, material: m.id, requestedPage: $model.requestedPage,
+                    shownPage: $model.shownPage
+                ).id(m.id)
             } else {
                 list
             }
         }
         .task { await model.load() }
-        .fileImporter(isPresented: Binding(get: { model.relinking != nil }, set: { if !$0 { model.relinking = nil } }), allowedContentTypes: [.item]) { result in
+        .fileImporter(
+            isPresented: Binding(get: { model.relinking != nil }, set: { if !$0 { model.relinking = nil } }), allowedContentTypes: [.item]
+        ) { result in
             if case .success(let url) = result { model.relink(to: url) }
             model.relinking = nil
         }
-        .confirmationDialog(String(localized: .materialsUntrackConfirm), isPresented: Binding(get: { model.disconnecting != nil }, set: { if !$0 { model.disconnecting = nil } }),
-                            presenting: model.disconnecting) { m in
+        .confirmationDialog(
+            String(localized: .materialsUntrackConfirm),
+            isPresented: Binding(get: { model.disconnecting != nil }, set: { if !$0 { model.disconnecting = nil } }),
+            presenting: model.disconnecting
+        ) { m in
             Button(.materialsUntrack, role: .destructive) { model.untrack(m) }
         } message: { m in
             Text(.materialsUntrackMessage(m.path))
@@ -59,7 +66,9 @@ struct MaterialsView: View {
             guard ext != nil || old != nil else { return }
             if ext != nil { model.trackFixtureFiles() }
             model.viewing = ext.flatMap { ext in
-                model.materials.first { !$0.isFolder && ($0.path as NSString).pathExtension.lowercased() == ext && $0.status == .classified }?.id
+                model.materials.first {
+                    !$0.isFolder && ($0.path as NSString).pathExtension.lowercased() == ext && $0.status == .classified
+                }?.id
             }
             SnapshotDriver.shared.materialsOpenFile = model.viewing != nil
         }
@@ -147,7 +156,9 @@ struct MaterialsView: View {
             Text(folder.name).font(Theme.Typeface.bodyStrong).lineLimit(1)
             Text("\(folder.count)").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()
             Spacer()
-            Menu { folderMenu(folder) } label: {
+            Menu {
+                folderMenu(folder)
+            } label: {
                 Image(systemName: "ellipsis")
             }
             .menuStyle(.button)
@@ -178,8 +189,9 @@ struct MaterialsView: View {
 
     /// A `.tex` row's menu opens its PDF too; the PDF's own menu is on its page's `⋯`.
     func menu(_ m: FolioDomain.Material) -> some View {
-        MaterialMenu(courseId: model.course.id, materialId: m.id, host: .list, moves: model.moves,
-                     relink: { model.relinking = m.id }, untrack: { model.disconnecting = m })
+        MaterialMenu(
+            courseId: model.course.id, materialId: m.id, host: .list, moves: model.moves,
+            relink: { model.relinking = m.id }, untrack: { model.disconnecting = m })
     }
 
     @ViewBuilder func fileRow(_ m: FolioDomain.Material, name: String, pdf: FolioDomain.Material?) -> some View {
@@ -209,7 +221,9 @@ struct MaterialsView: View {
             if !m.isFolder { Button(.materialsOpen) { open(m) }.buttonStyle(.ghost) }
             #endif
             // Also here, not only on a long press, so a touch finds it.
-            Menu { menu(m) } label: {
+            Menu {
+                menu(m)
+            } label: {
                 Image(systemName: "ellipsis")
             }
             .menuStyle(.button)
@@ -224,51 +238,55 @@ struct MaterialsView: View {
     @ViewBuilder func inbox(_ unclassified: [FolioDomain.Material]) -> some View {
         let inbox = model.inbox(unclassified)
         let prefix = model.prefix
-        NoticeCard(title: String(localized: .materialsInboxTitle(unclassified.count)), detail: String(localized: .materialsInboxDetail),
-                   systemImage: "tray.fill", trailing: { EmptyView() }) {
-                if model.suggestions == nil {
-                    CardRow(last: true) { ProgressView().controlSize(.small); Text(.materialsInboxLoading).foregroundStyle(Theme.Palette.textTertiary) }
+        NoticeCard(
+            title: String(localized: .materialsInboxTitle(unclassified.count)), detail: String(localized: .materialsInboxDetail),
+            systemImage: "tray.fill", trailing: { EmptyView() }
+        ) {
+            if model.suggestions == nil {
+                CardRow(last: true) {
+                    ProgressView().controlSize(.small); Text(.materialsInboxLoading).foregroundStyle(Theme.Palette.textTertiary)
                 }
-                ForEach(Array(inbox.groups.enumerated()), id: \.element) { i, group in
-                    let files = model.files(in: group, among: unclassified)
-                    CardRow(last: i == inbox.groups.count - 1 && inbox.orphans.isEmpty) {
-                        VStack(alignment: .leading, spacing: Theme.Space.xs) {
-                            Text(model.source(group))
-                                .font(Theme.Typeface.bodyStrong).lineLimit(1)
-                            HStack(spacing: Theme.Space.tight) {
-                                Image(systemName: "arrow.turn.down.right").foregroundStyle(Theme.Palette.textTertiary)
-                                Text(model.target(group))
-                                    .font(Theme.Typeface.mono).lineLimit(1)
-                                if let reason = group[0].review { Chip(reason.label, tone: .warning) }
-                            }
+            }
+            ForEach(Array(inbox.groups.enumerated()), id: \.element) { i, group in
+                let files = model.files(in: group, among: unclassified)
+                CardRow(last: i == inbox.groups.count - 1 && inbox.orphans.isEmpty) {
+                    VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                        Text(model.source(group))
+                            .font(Theme.Typeface.bodyStrong).lineLimit(1)
+                        HStack(spacing: Theme.Space.tight) {
+                            Image(systemName: "arrow.turn.down.right").foregroundStyle(Theme.Palette.textTertiary)
+                            Text(model.target(group))
+                                .font(Theme.Typeface.mono).lineLimit(1)
+                            if let reason = group[0].review { Chip(reason.label, tone: .warning) }
                         }
-                        Spacer()
-                        Button(.materialsApprove) { model.approve(group) }.buttonStyle(.prominent)
-                        relocateMenu(group.map(\.from))
-                        Button(.materialsIgnore) { model.ignore(files) }.buttonStyle(.ghost)
                     }
-                    .contentShape(.rect)
-                    .contextMenu {
-                        Button(.materialsApprove) { model.approve(group) }
-                        relocateMenu(group.map(\.from))
-                        Divider()
-                        Button(.materialsIgnore) { model.ignore(files) }
-                    }
+                    Spacer()
+                    Button(.materialsApprove) { model.approve(group) }.buttonStyle(.prominent)
+                    relocateMenu(group.map(\.from))
+                    Button(.materialsIgnore) { model.ignore(files) }.buttonStyle(.ghost)
                 }
-                ForEach(Array(inbox.orphans.enumerated()), id: \.element.id) { i, m in
-                    CardRow(last: i == inbox.orphans.count - 1) {
-                        Text(m.path).font(Theme.Typeface.bodyStrong).lineLimit(1)
-                        Spacer()
-                        relocateMenu([prefix + m.path])
-                        Button(.materialsIgnore) { model.ignore([m.id]) }.buttonStyle(.ghost)
-                    }
-                    .contentShape(.rect)
-                    .contextMenu {
-                        relocateMenu([prefix + m.path])
-                        Divider()
-                        Button(.materialsIgnore) { model.ignore([m.id]) }
-                    }
+                .contentShape(.rect)
+                .contextMenu {
+                    Button(.materialsApprove) { model.approve(group) }
+                    relocateMenu(group.map(\.from))
+                    Divider()
+                    Button(.materialsIgnore) { model.ignore(files) }
                 }
+            }
+            ForEach(Array(inbox.orphans.enumerated()), id: \.element.id) { i, m in
+                CardRow(last: i == inbox.orphans.count - 1) {
+                    Text(m.path).font(Theme.Typeface.bodyStrong).lineLimit(1)
+                    Spacer()
+                    relocateMenu([prefix + m.path])
+                    Button(.materialsIgnore) { model.ignore([m.id]) }.buttonStyle(.ghost)
+                }
+                .contentShape(.rect)
+                .contextMenu {
+                    relocateMenu([prefix + m.path])
+                    Divider()
+                    Button(.materialsIgnore) { model.ignore([m.id]) }
+                }
+            }
         }
     }
 
@@ -297,7 +315,10 @@ struct MaterialLinksEditor: View {
 
     var body: some View {
         // Every row writes as it is toggled, so there is nothing to cancel.
-        SheetForm(title: model.linksTitle(materialId), confirm: String(localized: .commonDone), carded: false, width: Self.width, cancellable: false) {
+        SheetForm(
+            title: model.linksTitle(materialId), confirm: String(localized: .commonDone), carded: false, width: Self.width,
+            cancellable: false
+        ) {
             links
         } onConfirm: {
             dismiss()
@@ -330,7 +351,9 @@ struct MaterialLinksEditor: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Space.l) {
                 if let m = model.materials.first(where: { $0.id == materialId }) { name(m) }
-                if model.isLecture(materialId) { LectureProgressBlock(workspace: model.workspace, course: model.course.id, material: materialId) { dismiss() } }
+                if model.isLecture(materialId) {
+                    LectureProgressBlock(workspace: model.workspace, course: model.course.id, material: materialId) { dismiss() }
+                }
                 Block(String(localized: .materialsLinksSessions)) {
                     Card {
                         if sessions.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .materialsLinksNoSessions)) } }
@@ -343,9 +366,11 @@ struct MaterialLinksEditor: View {
                                 Text(model.sessionTitle(s)).lineLimit(1).layoutPriority(1)
                                 Spacer(minLength: Theme.Space.s)
                                 if let link {
-                                    PageRangeField(range: link.pageRange, pages: model.pageCounts[materialId],
-                                                   taught: model.taught(materialId, besides: s.id), seen: model.seen(materialId, in: s),
-                                                   sections: model.sections(materialId), compact: true) {
+                                    PageRangeField(
+                                        range: link.pageRange, pages: model.pageCounts[materialId],
+                                        taught: model.taught(materialId, besides: s.id), seen: model.seen(materialId, in: s),
+                                        sections: model.sections(materialId), compact: true
+                                    ) {
                                         model.setPages(materialId, session: s.id, $0)
                                     }
                                 }

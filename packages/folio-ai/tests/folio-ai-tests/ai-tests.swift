@@ -1,8 +1,9 @@
-@testable import FolioAI
 import FolioDomain
 import Foundation
 import Synchronization
 import Testing
+
+@testable import FolioAI
 
 final class StubProtocol: URLProtocol, @unchecked Sendable {
     nonisolated(unsafe) static var captured: URLRequest?
@@ -13,14 +14,18 @@ final class StubProtocol: URLProtocol, @unchecked Sendable {
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
     override func startLoading() {
         Self.captured = request
-        Self.body = request.httpBody ?? request.httpBodyStream.map { stream in
-            stream.open()
-            defer { stream.close() }
-            var data = Data()
-            var buffer = [UInt8](repeating: 0, count: 4096)
-            while stream.hasBytesAvailable { let n = stream.read(&buffer, maxLength: buffer.count); if n <= 0 { break }; data.append(buffer, count: n) }
-            return data
-        }
+        Self.body =
+            request.httpBody
+            ?? request.httpBodyStream.map { stream in
+                stream.open()
+                defer { stream.close() }
+                var data = Data()
+                var buffer = [UInt8](repeating: 0, count: 4096)
+                while stream.hasBytesAvailable {
+                    let n = stream.read(&buffer, maxLength: buffer.count); if n <= 0 { break }; data.append(buffer, count: n)
+                }
+                return data
+            }
         let response = HTTPURLResponse(url: request.url!, statusCode: Self.reply.0, httpVersion: nil, headerFields: nil)!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: Self.reply.1)
@@ -38,11 +43,17 @@ struct APIProviderTests {
     }
 
     @Test func sendsDocumentedHeadersAndBody() async throws {
-        StubProtocol.reply = (200, Data(#"{"id":"msg_1","model":"claude-opus-5-5","content":[{"type":"thinking","thinking":""},{"type":"text","text":"안녕"}],"stop_reason":"end_turn","usage":{"input_tokens":12,"output_tokens":3,"cache_read_input_tokens":100}}"#.utf8))
+        StubProtocol.reply = (
+            200,
+            Data(
+                #"{"id":"msg_1","model":"claude-opus-5-5","content":[{"type":"thinking","thinking":""},{"type":"text","text":"안녕"}],"stop_reason":"end_turn","usage":{"input_tokens":12,"output_tokens":3,"cache_read_input_tokens":100}}"#
+                    .utf8)
+        )
         let client = ClaudeClient(provider: provider())
         let png = Data([0x89, 0x50, 0x4E, 0x47])
-        let response = try await client.text(.chat, system: [.text("과목 요약", cache: true)],
-                                             messages: [Message(role: .user, content: [.image(png, mediaType: "image/png"), .text("질문")])])
+        let response = try await client.text(
+            .chat, system: [.text("과목 요약", cache: true)],
+            messages: [Message(role: .user, content: [.image(png, mediaType: "image/png"), .text("질문")])])
         #expect(response.text == "안녕")
         #expect(response.usage.cache_read_input_tokens == 100)
 
@@ -58,15 +69,22 @@ struct APIProviderTests {
         #expect(body["output_config"]?["effort"] == .string("medium"))
         #expect(body["temperature"] == nil && body["thinking"] == nil)
         guard case .array(let system)? = body["system"], case .array(let messages)? = body["messages"],
-              case .array(let content)? = messages.first?["content"] else { Issue.record("shape"); return }
+            case .array(let content)? = messages.first?["content"]
+        else { Issue.record("shape"); return }
         #expect(system.first?["cache_control"]?["type"] == .string("ephemeral"))
         #expect(content.first?["source"]?["data"] == .string(png.base64EncodedString()))
         #expect(content.first?["source"]?["media_type"] == .string("image/png"))
     }
 
     @Test func haikuTasksSkipTheFallback() async throws {
-        StubProtocol.reply = (200, Data(#"{"id":"m","model":"claude-haiku-5-5","content":[{"type":"text","text":"{\"title\":\"HW5\",\"due\":null}"}],"stop_reason":"end_turn","usage":{"input_tokens":1,"output_tokens":1}}"#.utf8))
-        let result = try await ClaudeClient(provider: provider()).run(.extractAssignment, AssignmentExtraction.self, system: [], messages: [Message(role: .user, content: [.text("pdf")])])
+        StubProtocol.reply = (
+            200,
+            Data(
+                #"{"id":"m","model":"claude-haiku-5-5","content":[{"type":"text","text":"{\"title\":\"HW5\",\"due\":null}"}],"stop_reason":"end_turn","usage":{"input_tokens":1,"output_tokens":1}}"#
+                    .utf8)
+        )
+        let result = try await ClaudeClient(provider: provider()).run(
+            .extractAssignment, AssignmentExtraction.self, system: [], messages: [Message(role: .user, content: [.text("pdf")])])
         #expect(result == AssignmentExtraction(title: "HW5", due: nil))
         let body = try JSONDecoder().decode(JSONValue.self, from: try #require(StubProtocol.body))
         #expect(body["model"] == .string("claude-haiku-5-5") && body["fallbacks"] == nil)
@@ -83,7 +101,9 @@ struct APIProviderTests {
 
     @Test func missingKey() async {
         let p = APIProvider(apiKey: { nil })
-        await #expect(throws: ClaudeError.missingAPIKey) { try await p.send(ClaudeClient(provider: p).request(.chat, system: [], messages: [])) }
+        await #expect(throws: ClaudeError.missingAPIKey) {
+            try await p.send(ClaudeClient(provider: p).request(.chat, system: [], messages: []))
+        }
     }
 }
 
@@ -98,7 +118,8 @@ struct ClaudeClientTests {
     @Test func schemaMismatchIsRetriedOnceThenReported() async throws {
         let good = #"{"verdict":"partial","missing":["귀납 가정"],"feedback":"가정을 쓰세요.","lines":[{"line":3,"note":"비약"}]}"#
         let fake = FakeProvider(responses: [FakeProvider.reply("not json"), FakeProvider.reply(good)])
-        let result = try await ClaudeClient(provider: fake).grade(question: "Q", modelAnswer: "A", rubric: ["귀납 가정"], answer: "x", rules: "")
+        let result = try await ClaudeClient(provider: fake).grade(
+            question: "Q", modelAnswer: "A", rubric: ["귀납 가정"], answer: "x", rules: "")
         #expect(result.verdict == .partial && result.lines.first?.line == 3)
         #expect(await fake.requests.count == 2)
         #expect(await fake.requests.first?.output_config?.effort == .high)
@@ -111,7 +132,8 @@ struct ClaudeClientTests {
 
     @Test func usageIsReportedWithCost() async throws {
         let seen = UsageSink()
-        let client = ClaudeClient(provider: FakeProvider(responses: [FakeProvider.reply("hi")]), onUsage: { e in Task { await seen.add(e) } })
+        let client = ClaudeClient(
+            provider: FakeProvider(responses: [FakeProvider.reply("hi")]), onUsage: { e in Task { await seen.add(e) } })
         _ = try await client.text(.chat, system: [], messages: [])
         try await Task.sleep(for: .milliseconds(50))
         let events = await seen.events
@@ -150,12 +172,16 @@ struct ContextTests {
     }
 
     @Test func aNotesImagesFollowItsTextEachNamed() {
-        let note = ContextItem(id: "n", title: "열린 노트: 9주차", tier: .focus, text: "![a](assets/a.jpg)",
-                               images: [.init(name: "a.jpg", data: Data([1])), .init(name: "b.jpg", data: Data([2]))])
+        let note = ContextItem(
+            id: "n", title: "열린 노트: 9주차", tier: .focus, text: "![a](assets/a.jpg)",
+            images: [.init(name: "a.jpg", data: Data([1])), .init(name: "b.jpg", data: Data([2]))])
         let built = ContextBuilder.build([note], budgetTokens: 10_000)
-        #expect(built.userBlocks == [.text("<열린 노트: 9주차>\n![a](assets/a.jpg)\n</열린 노트: 9주차>"),
-                                     .text("열린 노트: 9주차의 그림 a.jpg:"), .image(Data([1]), mediaType: "image/jpeg"),
-                                     .text("열린 노트: 9주차의 그림 b.jpg:"), .image(Data([2]), mediaType: "image/jpeg")])
+        #expect(
+            built.userBlocks == [
+                .text("<열린 노트: 9주차>\n![a](assets/a.jpg)\n</열린 노트: 9주차>"),
+                .text("열린 노트: 9주차의 그림 a.jpg:"), .image(Data([1]), mediaType: "image/jpeg"),
+                .text("열린 노트: 9주차의 그림 b.jpg:"), .image(Data([2]), mediaType: "image/jpeg"),
+            ])
         #expect(ContextBuilder.estimate(note) == 5_006)
     }
 
@@ -169,14 +195,17 @@ struct ContextTests {
     }
 
     @Test func pricing() {
-        let usage = Usage(input_tokens: 1_000_000, output_tokens: 100_000, cache_creation_input_tokens: 0, cache_read_input_tokens: 1_000_000)
+        let usage = Usage(
+            input_tokens: 1_000_000, output_tokens: 100_000, cache_creation_input_tokens: 0, cache_read_input_tokens: 1_000_000)
         #expect(ModelPricing.table["claude-opus-5-5"]!.cost(of: usage) == 4 + 2 + 0.2)
     }
 
     @Test func schemasRequireEveryPropertyAndForbidExtras() {
         for schema in [GradingResult.schema, FileClassification.schema, AssignmentExtraction.schema, GradingPolicyExtraction.schema] {
             #expect(schema["additionalProperties"] == .bool(false))
-            guard case .object(let props)? = schema["properties"], case .array(let required)? = schema["required"] else { Issue.record("shape"); continue }
+            guard case .object(let props)? = schema["properties"], case .array(let required)? = schema["required"] else {
+                Issue.record("shape"); continue
+            }
             #expect(Set(required) == Set(props.keys.map(JSONValue.string)))
         }
     }
@@ -202,9 +231,11 @@ struct CLIProviderTests {
             #"{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"1개입니다."}}}"#,
             #"{"type":"result","result":"과목은 1개입니다."}"#,
         ]
-        #expect(lines.compactMap { CLIProvider.event(Data($0.utf8)) } == [
-            .turn, .text("Look at the note."), .tool("mcp__folio__course_list"), .toolInput("{}"), .turn, .text("과목은 "), .text("1개입니다."),
-        ])
+        #expect(
+            lines.compactMap { CLIProvider.event(Data($0.utf8)) } == [
+                .turn, .text("Look at the note."), .tool("mcp__folio__course_list"), .toolInput("{}"), .turn, .text("과목은 "),
+                .text("1개입니다."),
+            ])
     }
 
     /// Stopping a request ends the process at once instead of letting it run to the end of the answer.
@@ -215,12 +246,12 @@ struct CLIProviderTests {
         let script = dir.appending(path: "claude"), pidFile = dir.appending(path: "pid")
         // `exec`, so the process the provider started is the one still running, not a shell waiting on a child.
         try """
-            #!/bin/sh
-            read line
-            echo $$ > '\(pidFile.path)'
-            echo '{"type":"stream_event","event":{"type":"message_start"}}'
-            exec sleep 30
-            """.write(to: script, atomically: true, encoding: .utf8)
+        #!/bin/sh
+        read line
+        echo $$ > '\(pidFile.path)'
+        echo '{"type":"stream_event","event":{"type":"message_start"}}'
+        exec sleep 30
+        """.write(to: script, atomically: true, encoding: .utf8)
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)
 
         let started = Mutex(false)
@@ -239,8 +270,10 @@ struct CLIProviderTests {
 
     let request = MessagesRequest(
         model: "claude-opus-5-5", max_tokens: 100, system: [.text("규칙")],
-        messages: [Message(role: .user, content: [.text("첫 질문")]), Message(role: .assistant, content: [.text("첫 답")]),
-                   Message(role: .user, content: [.text("두 번째 질문")])],
+        messages: [
+            Message(role: .user, content: [.text("첫 질문")]), Message(role: .assistant, content: [.text("첫 답")]),
+            Message(role: .user, content: [.text("두 번째 질문")]),
+        ],
         output_config: OutputConfig(effort: .low, format: .init(schema: .object(["type": .string("object")]))))
 
     /// No tools: the CLI may only answer, never touch the GIST folder.
@@ -265,18 +298,28 @@ struct CLIProviderTests {
         #expect(config["mcpServers"]?["folio"]?["args"] == .array(["mcp", "--gist", "/g", "--propose"].map(JSONValue.string)))
 
         let proposal = ActionProposal(command: "exam add", input: .object(["title": .string("퀴즈")]))
-        let toolResult = try JSONEncoder().encode(JSONValue.object([
-            "type": .string("user"),
-            "message": .object(["content": .array([.object(["type": .string("tool_result"), "content": .array([
-                .object(["type": .string("text"), "text": .string("{}")]), .object(["type": .string("text"), "text": .string(proposal.text)]),
-            ])])])]),
-        ]))
+        let toolResult = try JSONEncoder().encode(
+            JSONValue.object([
+                "type": .string("user"),
+                "message": .object([
+                    "content": .array([
+                        .object([
+                            "type": .string("tool_result"),
+                            "content": .array([
+                                .object(["type": .string("text"), "text": .string("{}")]),
+                                .object(["type": .string("text"), "text": .string(proposal.text)]),
+                            ]),
+                        ])
+                    ])
+                ]),
+            ]))
         let output = toolResult + Data("\n".utf8) + Data(#"{"type":"result","is_error":false,"result":"제안했습니다","usage":{}}"#.utf8)
         #expect(try CLIProvider.response(from: output, request: request).proposals == [proposal])
     }
 
     @Test func readsTheResultLine() throws {
-        let ok = Data("""
+        let ok = Data(
+            """
             {"type":"system","subtype":"init"}
             {"type":"result","is_error":false,"stop_reason":"tool_use","result":"{}","structured_output":{"answer":2},"session_id":"s","usage":{"input_tokens":2,"output_tokens":5},"modelUsage":{"claude-haiku-5-5":{}}}
             """.utf8)
@@ -291,11 +334,16 @@ struct CLIProviderTests {
     @Test(.enabled(if: ProcessInfo.processInfo.environment["FOLIO_LIVE_CLI"] == "1"))
     func liveStructuredAnswer() async throws {
         struct Answer: Decodable { var answer: Int }
-        let client = ClaudeClient(provider: CLIProvider(executable: try #require(CLIProvider.find())), overrides: [.classifyFile: TaskConfig(model: TaskConfig.small, effort: .low, maxTokens: 100)])
-        let schema: JSONValue = .object(["type": .string("object"), "properties": .object(["answer": .object(["type": .string("integer")])]),
-                                         "required": .array([.string("answer")]), "additionalProperties": .bool(false)])
-        let r = try await client.structured(.classifyFile, as: Answer.self, schema: schema, system: [.text("Answer briefly.")],
-                                            messages: [Message(role: .user, content: [.text("2+3?")])])
+        let client = ClaudeClient(
+            provider: CLIProvider(executable: try #require(CLIProvider.find())),
+            overrides: [.classifyFile: TaskConfig(model: TaskConfig.small, effort: .low, maxTokens: 100)])
+        let schema: JSONValue = .object([
+            "type": .string("object"), "properties": .object(["answer": .object(["type": .string("integer")])]),
+            "required": .array([.string("answer")]), "additionalProperties": .bool(false),
+        ])
+        let r = try await client.structured(
+            .classifyFile, as: Answer.self, schema: schema, system: [.text("Answer briefly.")],
+            messages: [Message(role: .user, content: [.text("2+3?")])])
         #expect(r.answer == 5)
     }
 }

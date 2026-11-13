@@ -78,8 +78,10 @@ final class CourseModel {
         switch place.kind {
         case .session, .assignment, .exam, .card, .problemSet: return id
         // A note, a file, a unit and a recording open on a page of their own; the rest are no item of a page.
-        case .note, .material, .unit, .recording, .course, .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals, .semester,
-             .person: return nil
+        case .note, .material, .unit, .recording, .course, .today, .grades, .requirements, .people, .codes, .settings, .whatsNew,
+            .proposals, .semester,
+            .person:
+            return nil
         }
     }
 
@@ -120,7 +122,9 @@ final class CourseModel {
     func recentDetail(_ s: Session, in file: CourseFile) -> String { noteState(s, in: file) }
 
     func noteState(_ session: Session, in file: CourseFile) -> String {
-        if session.reviewNoteId != nil { return String(localized: session.reviewNoteUnfinished ? .courseReviewNoteDraft : .courseReviewNote) }
+        if session.reviewNoteId != nil {
+            return String(localized: session.reviewNoteUnfinished ? .courseReviewNoteDraft : .courseReviewNote)
+        }
         if session.roughNoteId != nil { return String(localized: .sessionsRoughNote) }
         return String(localized: file.needsReviewNote(session, at: workspace.now) ? .courseReviewNoteMissing : .courseReviewNotNeeded)
     }
@@ -141,7 +145,9 @@ final class CourseModel {
 
     // MARK: Overview
 
-    func score(_ file: CourseFile) -> GradeCalculator.CourseScore { GradeCalculator.score(components: file.components, entries: file.scores) }
+    func score(_ file: CourseFile) -> GradeCalculator.CourseScore {
+        GradeCalculator.score(components: file.components, entries: file.scores)
+    }
     func unclassified(_ file: CourseFile) -> [FolioDomain.Material] { file.materials.filter { $0.status == .unclassified } }
     func reviews(now: Date) -> [Workspace.ReviewEntry] { workspace.reviewQueue(now: now).filter { $0.courseId == courseId } }
     func suggested(_ course: LoadedCourse, now: Date) -> Workspace.SuggestedSession? { workspace.suggestedSession(for: course, now: now) }
@@ -194,7 +200,8 @@ final class CourseModel {
     }
 
     func assignmentsNote(_ file: CourseFile) -> String? {
-        file.assignments.isEmpty ? nil : String(localized: .courseAssignmentsNote(file.assignments.count, file.assignments.count - openAssignments(file).count))
+        file.assignments.isEmpty
+            ? nil : String(localized: .courseAssignmentsNote(file.assignments.count, file.assignments.count - openAssignments(file).count))
     }
 
     /// A glance, not the list: the units due first, then the ones taught most recently.
@@ -204,12 +211,15 @@ final class CourseModel {
         return Array((due + covered.suffix(8).reversed()).prefix(8))
     }
 
-    func stats(_ file: CourseFile, reviews: [Workspace.ReviewEntry], suggested: Workspace.SuggestedSession?, now: Date) -> [StatStrip.Item] {
+    func stats(_ file: CourseFile, reviews: [Workspace.ReviewEntry], suggested: Workspace.SuggestedSession?, now: Date) -> [StatStrip.Item]
+    {
         // A class the timetable promises counts before it is made; without it a course that makes sessions as it goes
         // never showed a next class.
         let made: (date: Date, subject: String?)? = file.sessions.filter { $0.date > now && !$0.isCancelled }.min { $0.date < $1.date }
             .map { (date: $0.date, subject: file.subject(of: $0)) }
-        let planned: (date: Date, subject: String?)? = suggested.flatMap { $0.suggestion.date > now ? (date: $0.suggestion.date, subject: nil) : nil }
+        let planned: (date: Date, subject: String?)? = suggested.flatMap {
+            $0.suggestion.date > now ? (date: $0.suggestion.date, subject: nil) : nil
+        }
         let nextClass = [made, planned].compactMap { $0 }.min { $0.date < $1.date }
         let nextExam = file.exams.compactMap { e in e.start.map { (e, $0) } }.filter { $0.1 > now }.min { $0.1 < $1.1 }
         let nextDue = file.assignments.compactMap { a in a.due.map { (a, $0) } }
@@ -219,23 +229,35 @@ final class CourseModel {
         var items: [StatStrip.Item] = []
         if let next = nextClass {
             // The weekday rides in the detail: with it the date was cut off in a narrow window.
-            items.append(.init(title: String(localized: .courseNextClass), value: next.date.formatted(.dateTime.month().day()),
-                               detail: "\(next.date.formatted(.dateTime.weekday())) \(next.date.formatted(date: .omitted, time: .shortened))" + (next.subject.map { " · \($0)" } ?? "")))
+            items.append(
+                .init(
+                    title: String(localized: .courseNextClass), value: next.date.formatted(.dateTime.month().day()),
+                    detail: "\(next.date.formatted(.dateTime.weekday())) \(next.date.formatted(date: .omitted, time: .shortened))"
+                        + (next.subject.map { " · \($0)" } ?? "")))
         } else {
             items.append(.init(title: String(localized: .courseNextClass), value: "-"))
         }
         if let (exam, start) = nextExam {
             let d = days(to: start)
-            items.append(.init(title: String(localized: .courseNextExam), value: "\(exam.title) \(d == 0 ? "D-day" : "D-\(d)")",
-                               detail: start.formatted(.dateTime.month().day().weekday()), tone: d <= 7 ? .danger : .plain))
+            items.append(
+                .init(
+                    title: String(localized: .courseNextExam), value: "\(exam.title) \(d == 0 ? "D-day" : "D-\(d)")",
+                    detail: start.formatted(.dateTime.month().day().weekday()), tone: d <= 7 ? .danger : .plain))
         } else {
             items.append(.init(title: String(localized: .courseNextExam), value: "-"))
         }
-        items.append(.init(title: String(localized: .courseReviewToday), value: String(localized: .courseUnitsValue(reviews.count)),
-                           detail: maxOverdue > 0 ? String(localized: .courseMaxOverdue(maxOverdue)) : nil, tone: maxOverdue > 0 ? .warning : .plain))
-        items.append(.init(title: String(localized: .courseNearestDue), value: nextDue?.0.title ?? "-", detail: nextDue?.1.formatted(.dateTime.month().day().weekday().hour().minute())))
+        items.append(
+            .init(
+                title: String(localized: .courseReviewToday), value: String(localized: .courseUnitsValue(reviews.count)),
+                detail: maxOverdue > 0 ? String(localized: .courseMaxOverdue(maxOverdue)) : nil, tone: maxOverdue > 0 ? .warning : .plain))
+        items.append(
+            .init(
+                title: String(localized: .courseNearestDue), value: nextDue?.0.title ?? "-",
+                detail: nextDue?.1.formatted(.dateTime.month().day().weekday().hour().minute())))
         // Each figure opens the page it sums up, in the order appended above.
-        for (i, target) in [CourseSection.sessions, .exams, .units, .assignments].enumerated() { items[i].action = { [weak self] in self?.section = target } }
+        for (i, target) in [CourseSection.sessions, .exams, .units, .assignments].enumerated() {
+            items[i].action = { [weak self] in self?.section = target }
+        }
         return items
     }
 }

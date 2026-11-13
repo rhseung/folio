@@ -1,6 +1,7 @@
-@testable import FolioDomain
 import Foundation
 import Testing
+
+@testable import FolioDomain
 
 /// Shapes from the 2026 fall calendar: sessions imported from Notion carry only a day.
 struct CalendarImportTests {
@@ -23,9 +24,12 @@ struct CalendarImportTests {
     @Test func fillsKnownDaysAndAddsTheRest() {
         let existing = Session(device: device, at: now, week: 2, date: calendar.startOfDay(for: at(8, 0)))
         let file = CourseFile(course: Course(device: device, at: now, title: "선형대수학"), sessions: [existing])
-        let recitation = CalendarMeeting(course: "GS2004 선형대수학", start: at(8, 18, 30), end: at(8, 19, 30), room: "C110", topic: "Recitation")
-        let meetings = [lecture(8), lecture(10), recitation, lecture(15), lecture(17), lecture(22),
-                        CalendarMeeting(course: "GS2004 선형대수학", start: at(23, 21), end: at(23, 22, 15))]
+        let recitation = CalendarMeeting(
+            course: "GS2004 선형대수학", start: at(8, 18, 30), end: at(8, 19, 30), room: "C110", topic: "Recitation")
+        let meetings = [
+            lecture(8), lecture(10), recitation, lecture(15), lecture(17), lecture(22),
+            CalendarMeeting(course: "GS2004 선형대수학", start: at(23, 21), end: at(23, 22, 15)),
+        ]
         let start = LocalDate(year: 2026, month: 8, day: 31)!
         let r = CalendarImporter.merge(meetings, into: file, semesterStart: start, calendar: calendar, device: device, now: now)
 
@@ -48,11 +52,13 @@ struct CalendarImportTests {
     @Test func linksNotesNamedAfterMeetings() {
         let lab = Session(device: device, at: now, week: 3, date: at(16, 10, 30))
         let taken = UUID(), topic = UUID(), free = UUID()
-        let links = CalendarImporter.noteLinks(sessions: [lab], titles: [lab.id: "Accuracy & Precision"], notes: [
-            (taken, "Accuracy & Precision", NoteMeta(id: taken, kind: .review, sessionId: UUID())),
-            (topic, "Accuracy & Precision", NoteMeta(id: topic, kind: .unit)),
-            (free, "Accuracy & Precision", NoteMeta(id: free)),
-        ])
+        let links = CalendarImporter.noteLinks(
+            sessions: [lab], titles: [lab.id: "Accuracy & Precision"],
+            notes: [
+                (taken, "Accuracy & Precision", NoteMeta(id: taken, kind: .review, sessionId: UUID())),
+                (topic, "Accuracy & Precision", NoteMeta(id: topic, kind: .unit)),
+                (free, "Accuracy & Precision", NoteMeta(id: free)),
+            ])
         #expect(links.map(\.note) == [free])
     }
 
@@ -61,7 +67,9 @@ struct CalendarImportTests {
         let first = Session(device: device, at: now, week: 3, date: at(16, 10, 30))
         let second = Session(device: device, at: now, week: 4, date: at(23, 10, 30))
         let note = UUID()
-        let links = CalendarImporter.noteLinks(sessions: [second, first], titles: [first.id: "Kinematics", second.id: "Kinematics"], notes: [(note, "Kinematics", NoteMeta(id: note))])
+        let links = CalendarImporter.noteLinks(
+            sessions: [second, first], titles: [first.id: "Kinematics", second.id: "Kinematics"],
+            notes: [(note, "Kinematics", NoteMeta(id: note))])
         #expect(links.map(\.session) == [first.id])
     }
 
@@ -74,8 +82,9 @@ struct CalendarImportTests {
         after.start = at(7, 14, 30, month: 10)
 
         // The calendar spans 9/8 to 10/7: 10/5 falls inside with no meeting, 12/14 is past its end.
-        let r = CalendarImporter.merge([lecture(8), after], into: file, semesterStart: LocalDate(year: 2026, month: 8, day: 31)!,
-                                       calendar: calendar, device: device, now: now)
+        let r = CalendarImporter.merge(
+            [lecture(8), after], into: file, semesterStart: LocalDate(year: 2026, month: 8, day: 31)!,
+            calendar: calendar, device: device, now: now)
         #expect(r.cancelled.map(\.id) == [holiday.id])
         #expect(r.file.sessions.first { $0.id == late.id }?.isCancelled == false)
     }
@@ -87,7 +96,9 @@ struct CalendarImportTests {
         let final = Exam(device: device, at: now, title: "Final", start: at(14, 9, month: 12))
         let file = CourseFile(course: Course(device: device, at: now, title: "선형대수학"), exams: [midterm, final])
         let exams = [
-            CalendarExam(course: "", title: "Midterm", start: at(20, 20, month: 10), end: at(20, 22, 45, month: 10), location: "C 104", memo: "자리배치표대로 앉기"),
+            CalendarExam(
+                course: "", title: "Midterm", start: at(20, 20, month: 10), end: at(20, 22, 45, month: 10), location: "C 104",
+                memo: "자리배치표대로 앉기"),
             CalendarExam(course: "", title: "Final", start: at(16, 9, month: 12), end: at(16, 11, month: 12)),
             CalendarExam(course: "", title: "Quiz1", start: at(1, 9, month: 10), end: at(1, 10, month: 10)),
         ]
@@ -117,16 +128,20 @@ struct LabUnitTests {
         var c = Calendar(identifier: .gregorian)
         c.timeZone = TimeZone(identifier: "Asia/Seoul")!
         let day = { (d: Int) in c.date(from: DateComponents(year: 2026, month: 9, day: d, hour: 10))! }
-        let meet = { (d: Int, lab: Int?) in CalendarMeeting(course: "GS1211 일반화학실험", start: day(d), end: day(d) + 7200, topic: "TLC", lab: lab) }
+        let meet = { (d: Int, lab: Int?) in
+            CalendarMeeting(course: "GS1211 일반화학실험", start: day(d), end: day(d) + 7200, topic: "TLC", lab: lab)
+        }
         let file = CourseFile(course: Course(device: device, at: now, title: "일반화학실험"))
-        let r = CalendarImporter.merge([meet(15, 4), meet(17, 4), meet(22, nil)], into: file, semesterStart: LocalDate("2026-08-31")!,
-                                       calendar: c, device: device, now: now)
+        let r = CalendarImporter.merge(
+            [meet(15, 4), meet(17, 4), meet(22, nil)], into: file, semesterStart: LocalDate("2026-08-31")!,
+            calendar: c, device: device, now: now)
 
         #expect(r.file.units.map(\.title) == ["Lab04 TLC"])
         #expect(r.file.units[0].sessionIds == r.file.sessions.prefix(2).map(\.id))
         #expect(r.file.sessions[2].unitIds.isEmpty)
-        let again = CalendarImporter.merge([meet(15, 4), meet(17, 4), meet(22, nil)], into: r.file, semesterStart: LocalDate("2026-08-31")!,
-                                           calendar: c, device: device, now: now)
+        let again = CalendarImporter.merge(
+            [meet(15, 4), meet(17, 4), meet(22, nil)], into: r.file, semesterStart: LocalDate("2026-08-31")!,
+            calendar: c, device: device, now: now)
         #expect(again.added.isEmpty && again.filled.isEmpty && again.file.units == r.file.units)
     }
 }

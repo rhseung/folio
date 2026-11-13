@@ -64,8 +64,9 @@ extension QuickAdd {
         if let group, repeats == nil || repeats?.unit == .week {
             repeats = AssignmentRepeat(every: repeats?.every ?? 1, .week, weekdays: group.days.count > 1 ? group.days : [])
         }
-        return QuickAdd(courseId: course, title: title, due: day.map { calendar.date(byAdding: .minute, value: minute ?? defaultMinute, to: $0)! },
-                        repeats: repeats, spans: spans, repeatRanges: due.filter { $0.rule != nil }.map { $0.core(in: line) },
-                        weekdayRanges: due.filter { $0.weekdayGroup != nil }.map { $0.core(in: line) })
+        return QuickAdd(
+            courseId: course, title: title, due: day.map { calendar.date(byAdding: .minute, value: minute ?? defaultMinute, to: $0)! },
+            repeats: repeats, spans: spans, repeatRanges: due.filter { $0.rule != nil }.map { $0.core(in: line) },
+            weekdayRanges: due.filter { $0.weekdayGroup != nil }.map { $0.core(in: line) })
     }
 }

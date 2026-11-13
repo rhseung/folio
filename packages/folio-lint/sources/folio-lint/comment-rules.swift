@@ -5,16 +5,20 @@ import SwiftSyntax
 // whose every word is already in the name under it. The rest is the review's.
 extension Rules {
     static var restatingComment: Rule {
-        Rule(name: "restating-comment",
-             advice: "a comment says why the code is this way; drop one that only names what the declaration under it already says") { code in
+        Rule(
+            name: "restating-comment",
+            advice: "a comment says why the code is this way; drop one that only names what the declaration under it already says"
+        ) { code in
             var hits: [Hit] = []
-            for file in code.files(under: "app", "packages/folio-core/sources", "packages/folio-markdown/sources",
-                                   "packages/folio-ai/sources")
+            for file in code.files(
+                under: "app", "packages/folio-core/sources", "packages/folio-markdown/sources",
+                "packages/folio-ai/sources")
             // An @Action field's `///` is its CLI help.
             where !file.path.contains("/generated/") && !file.path.contains("/folio-actions/") {
                 walk(Syntax(file.tree)) { node in
                     guard let keyword = declarationKeyword(node), let first = node.firstToken(viewMode: .sourceAccurate),
-                          let comment = loneComment(before: first), restates(comment, file.restOfLine(after: keyword)) else { return }
+                        let comment = loneComment(before: first), restates(comment, file.restOfLine(after: keyword))
+                    else { return }
                     hits.append(Hit("restating-comment", file, file.line(of: first) - 1, comment))
                 }
             }
@@ -68,7 +72,8 @@ extension Rules {
         let symbols = Set("`\\[]<>/=+*#@$%^&|~")
         let tags = ["MARK", "TODO", "FIXME", "swiftlint", "design:", "strings:"]
         guard !said.isEmpty, !hasHangul(comment), !comment.contains(where: symbols.contains),
-              !tags.contains(where: { comment.hasPrefix($0) }) else { return false }
+            !tags.contains(where: { comment.hasPrefix($0) })
+        else { return false }
         return said.isSubset(of: words(String(declaration.prefix(120))))
     }
 
@@ -85,7 +90,8 @@ extension Rules {
         var previous: Character?
         for character in text {
             if let previous, previous.isASCII, previous.isLowercase || previous.isNumber, character.isASCII,
-               character.isUppercase {
+                character.isUppercase
+            {
                 spaced.append(" ")
             }
             spaced.append(character)

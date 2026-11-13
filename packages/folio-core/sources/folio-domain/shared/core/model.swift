@@ -34,7 +34,9 @@ public enum ModelError: Error, Equatable, CustomStringConvertible {
     case notFound(String)
     case rule(String)
     public var description: String {
-        switch self { case .notFound(let s), .rule(let s): s }
+        switch self {
+        case .notFound(let s), .rule(let s): s
+        }
     }
 }
 
@@ -57,8 +59,10 @@ extension Document {
     public var violations: Set<Violation> { Self.model.violations(in: self) }
 
     /// Changes one item, or throws `notFound` naming the item kind.
-    public mutating func update<E: Identifiable & Sendable>(_ items: WritableKeyPath<Self, [E]>, _ id: UUID,
-                                                           _ change: (inout E) throws -> Void) throws where E.ID == UUID {
+    public mutating func update<E: Identifiable & Sendable>(
+        _ items: WritableKeyPath<Self, [E]>, _ id: UUID,
+        _ change: (inout E) throws -> Void
+    ) throws where E.ID == UUID {
         guard let i = self[keyPath: items].firstIndex(where: { $0.id == id }) else {
             throw ModelError.notFound(String(localized: .modelNotFound(Korean.object(Self.model.noun(of: E.self)))))
         }
@@ -177,9 +181,10 @@ public func Items<Doc: Sendable, P, E: Identifiable & Sendable>(
     _ parents: WritableKeyPath<Doc, [P]> & Sendable, _ items: WritableKeyPath<P, [E]> & Sendable, noun: String,
     name: KeyPath<E, String> & Sendable, @MemberBuilder<Doc, E> _ members: () -> [Member<Doc, E>] = { [] }
 ) -> AnyItems<Doc> where E.ID == UUID {
-    collection(get: { $0[keyPath: parents].flatMap { $0[keyPath: items] } },
-               modify: { doc, body in for i in doc[keyPath: parents].indices { body(&doc[keyPath: parents][i][keyPath: items]) } },
-               noun: noun, name: { e, _ in e[keyPath: name] }, members())
+    collection(
+        get: { $0[keyPath: parents].flatMap { $0[keyPath: items] } },
+        modify: { doc, body in for i in doc[keyPath: parents].indices { body(&doc[keyPath: parents][i][keyPath: items]) } },
+        noun: noun, name: { e, _ in e[keyPath: name] }, members())
 }
 
 /// The document's one item of a kind, such as a course file's course.
@@ -187,13 +192,14 @@ public func One<Doc: Sendable, E: Identifiable & Sendable>(
     _ item: WritableKeyPath<Doc, E> & Sendable, noun: String, name: KeyPath<E, String> & Sendable,
     @MemberBuilder<Doc, E> _ members: () -> [Member<Doc, E>] = { [] }
 ) -> AnyItems<Doc> where E.ID == UUID {
-    collection(get: { [$0[keyPath: item]] },
-               modify: { doc, body in
-                   var one = [doc[keyPath: item]]
-                   body(&one)
-                   if let e = one.first { doc[keyPath: item] = e }
-               },
-               noun: noun, name: { e, _ in e[keyPath: name] }, members())
+    collection(
+        get: { [$0[keyPath: item]] },
+        modify: { doc, body in
+            var one = [doc[keyPath: item]]
+            body(&one)
+            if let e = one.first { doc[keyPath: item] = e }
+        },
+        noun: noun, name: { e, _ in e[keyPath: name] }, members())
 }
 
 /// A condition on the whole document, such as a range in settings.
@@ -222,7 +228,8 @@ public func Pair<Doc: Sendable, A: Identifiable & Sendable, B: Identifiable & Se
         return aSet.symmetricDifference(bSet).filter { aIds.contains($0.a) && bs[$0.b] != nil }
             .map { p in
                 let a = index.names[p.a] ?? p.a.uuidString, b = index.names[p.b] ?? p.b.uuidString
-                let aNoun = index.nouns[ObjectIdentifier(A.self)] ?? "\(A.self)", bNoun = index.nouns[ObjectIdentifier(B.self)] ?? "\(B.self)"
+                let aNoun = index.nouns[ObjectIdentifier(A.self)] ?? "\(A.self)",
+                    bNoun = index.nouns[ObjectIdentifier(B.self)] ?? "\(B.self)"
                 return Violation(rule, subject: p.a, String(localized: .modelPairOneSided(aNoun, Korean.quoted(a, "과", "와"), bNoun, b)))
             }
     }
@@ -241,7 +248,9 @@ private func collection<Doc: Sendable, E: Identifiable & Sendable>(
             holders: { doc, id in get(doc).filter { r.points($0).contains(id) }.map(\.id) },
             values: { doc, id in get(doc).first { $0.id == id }.map(r.points) ?? [] },
             detach: { doc, id, replacement in
-                modify(&doc) { items in for i in items.indices where r.points(items[i]).contains(id) { r.detach(&items[i], id, replacement) } }
+                modify(&doc) { items in
+                    for i in items.indices where r.points(items[i]).contains(id) { r.detach(&items[i], id, replacement) }
+                }
             })
     }
     return AnyItems(
@@ -290,47 +299,53 @@ struct RefInfo<E>: Sendable {
 public func Check<Doc: Sendable, E: Identifiable & Sendable>(
     _ rule: RuleID, _ message: String, _ holds: @escaping @Sendable (E, Doc) -> Bool
 ) -> Member<Doc, E> where E.ID == UUID {
-    Member(check: { e, doc, label, _ in
-        holds(e, doc) ? [] : [Violation(rule, subject: e.id, message.replacingOccurrences(of: "{name}", with: label))]
-    }, ref: nil)
+    Member(
+        check: { e, doc, label, _ in
+            holds(e, doc) ? [] : [Violation(rule, subject: e.id, message.replacingOccurrences(of: "{name}", with: label))]
+        }, ref: nil)
 }
 
 /// A condition that needs other documents; it passes when `World` doesn't have them.
 public func Check<Doc: Sendable, E: Identifiable & Sendable>(
     _ rule: RuleID, _ message: String, _ holds: @escaping @Sendable (E, Doc, World) -> Bool
 ) -> Member<Doc, E> where E.ID == UUID {
-    Member(check: { e, doc, label, index in
-        holds(e, doc, index.world) ? [] : [Violation(rule, subject: e.id, message.replacingOccurrences(of: "{name}", with: label))]
-    }, ref: nil)
+    Member(
+        check: { e, doc, label, index in
+            holds(e, doc, index.world) ? [] : [Violation(rule, subject: e.id, message.replacingOccurrences(of: "{name}", with: label))]
+        }, ref: nil)
 }
 
 public func NonEmpty<Doc: Sendable, E: Identifiable & Sendable>(
     _ field: KeyPath<E, String> & Sendable, _ message: String
 ) -> Member<Doc, E> where E.ID == UUID {
-    Check(RuleID("\(E.self).\(folioField(field)).empty"), message) { e, _ in !e[keyPath: field].trimmingCharacters(in: .whitespaces).isEmpty }
+    Check(RuleID("\(E.self).\(folioField(field)).empty"), message) { e, _ in !e[keyPath: field].trimmingCharacters(in: .whitespaces).isEmpty
+    }
 }
 
 public func Ref<Doc: Sendable, E: Identifiable & Sendable, T>(
     _ field: WritableKeyPath<E, UUID> & Sendable, to target: T.Type, as label: String? = nil, onDelete: OnDelete
 ) -> Member<Doc, E> where E.ID == UUID {
-    reference(field: folioField(field), to: target, label: label, onDelete: onDelete, points: { [$0[keyPath: field]] },
-              detach: { e, _, replacement in if let replacement { e[keyPath: field] = replacement } })
+    reference(
+        field: folioField(field), to: target, label: label, onDelete: onDelete, points: { [$0[keyPath: field]] },
+        detach: { e, _, replacement in if let replacement { e[keyPath: field] = replacement } })
 }
 
 public func Ref<Doc: Sendable, E: Identifiable & Sendable, T>(
     _ field: WritableKeyPath<E, UUID?> & Sendable, to target: T.Type, as label: String? = nil, onDelete: OnDelete
 ) -> Member<Doc, E> where E.ID == UUID {
-    reference(field: folioField(field), to: target, label: label, onDelete: onDelete, points: { $0[keyPath: field].map { [$0] } ?? [] },
-              detach: { e, _, replacement in e[keyPath: field] = replacement })
+    reference(
+        field: folioField(field), to: target, label: label, onDelete: onDelete, points: { $0[keyPath: field].map { [$0] } ?? [] },
+        detach: { e, _, replacement in e[keyPath: field] = replacement })
 }
 
 public func Refs<Doc: Sendable, E: Identifiable & Sendable, T>(
     _ field: WritableKeyPath<E, [UUID]> & Sendable, to target: T.Type, as label: String? = nil, onDelete: OnDelete
 ) -> Member<Doc, E> where E.ID == UUID {
-    reference(field: folioField(field), to: target, label: label, onDelete: onDelete, points: { $0[keyPath: field] },
-              detach: { e, id, replacement in
-                  e[keyPath: field] = e[keyPath: field].compactMap { $0 == id ? replacement : $0 }
-              })
+    reference(
+        field: folioField(field), to: target, label: label, onDelete: onDelete, points: { $0[keyPath: field] },
+        detach: { e, id, replacement in
+            e[keyPath: field] = e[keyPath: field].compactMap { $0 == id ? replacement : $0 }
+        })
 }
 
 private func reference<Doc: Sendable, E: Identifiable & Sendable, T>(
@@ -346,7 +361,8 @@ private func reference<Doc: Sendable, E: Identifiable & Sendable, T>(
             let noun = index.nouns[ObjectIdentifier(E.self)] ?? "\(E.self)"
             let what = label ?? index.nouns[kind] ?? "\(T.self)"
             return points(e).filter { !known.contains($0) }.map {
-                Violation(rule, subject: e.id, String(localized: .modelMissingTarget(noun, name, Korean.subject(what), index.place, "\($0)")))
+                Violation(
+                    rule, subject: e.id, String(localized: .modelMissingTarget(noun, name, Korean.subject(what), index.place, "\($0)")))
             }
         },
         ref: RefInfo(target: kind, onDelete: onDelete, points: points, detach: detach))
@@ -364,9 +380,10 @@ private func field(_ path: AnyKeyPath) -> String {
 
 extension Model {
     func index(_ doc: Doc, _ world: World) -> ModelIndex<Doc> {
-        ModelIndex(ids: Dictionary(collections.map { ($0.kind, Set($0.all(doc).map(\.id))) }, uniquingKeysWith: { a, b in a.union(b) }),
-                   nouns: Dictionary(collections.map { ($0.kind, $0.noun) }, uniquingKeysWith: { a, _ in a }), place: place, world: world,
-                   names: Dictionary(collections.flatMap { $0.all(doc) }.map { ($0.id, $0.name) }, uniquingKeysWith: { a, _ in a }))
+        ModelIndex(
+            ids: Dictionary(collections.map { ($0.kind, Set($0.all(doc).map(\.id))) }, uniquingKeysWith: { a, b in a.union(b) }),
+            nouns: Dictionary(collections.map { ($0.kind, $0.noun) }, uniquingKeysWith: { a, _ in a }), place: place, world: world,
+            names: Dictionary(collections.flatMap { $0.all(doc) }.map { ($0.id, $0.name) }, uniquingKeysWith: { a, _ in a }))
     }
 
     public func violations(in doc: Doc, world: World = World()) -> Set<Violation> {
@@ -394,14 +411,16 @@ extension Model {
 
     func remove(_ kind: ObjectIdentifier, _ id: UUID, in doc: inout Doc) throws {
         guard let items = items(of: kind), let name = items.all(doc).first(where: { $0.id == id })?.name else {
-            throw ModelError.notFound(String(localized: .modelNotFound(Korean.object(items(of: kind)?.noun ?? String(localized: .modelNounItem)))))
+            throw ModelError.notFound(
+                String(localized: .modelNotFound(Korean.object(items(of: kind)?.noun ?? String(localized: .modelNounItem)))))
         }
 
         let pointing = collections.flatMap { c in c.refs.filter { $0.target == kind }.map { (c, $0) } }
         for (c, r) in pointing where r.onDelete == .restrict {
             guard let holder = r.holders(doc, id).first else { continue }
             let by = c.all(doc).first { $0.id == holder }?.name ?? ""
-            throw ModelError.rule(String(localized: .modelDeleteRestricted(c.noun, Korean.quoted(by, "이", "가"), items.noun, Korean.quoted(name, "을", "를"))))
+            throw ModelError.rule(
+                String(localized: .modelDeleteRestricted(c.noun, Korean.quoted(by, "이", "가"), items.noun, Korean.quoted(name, "을", "를"))))
         }
 
         let cascaded = pointing.filter { $0.1.onDelete == .cascade }.map { ($0.0.kind, $0.1.holders(doc, id)) }
@@ -427,7 +446,8 @@ extension Model {
 public enum Korean {
     static func hasFinalConsonant(_ word: String) -> Bool {
         guard let last = word.unicodeScalars.last(where: { !CharacterSet.whitespaces.contains($0) }),
-              (0xAC00...0xD7A3).contains(last.value) else { return false }
+            (0xAC00...0xD7A3).contains(last.value)
+        else { return false }
         return (last.value - 0xAC00) % 28 != 0
     }
 

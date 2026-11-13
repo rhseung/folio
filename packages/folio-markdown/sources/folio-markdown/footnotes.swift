@@ -51,8 +51,10 @@ public enum Footnotes {
                 let r = NSRange(m.range, in: s)
                 guard r.location >= skip else { continue }
                 let label = NSRange(m.1.startIndex..<m.1.endIndex, in: s)
-                out.append(Mark(range: NSRange(location: line.range.location + r.location, length: r.length),
-                                label: NSRange(location: line.range.location + label.location, length: label.length), definition: false))
+                out.append(
+                    Mark(
+                        range: NSRange(location: line.range.location + r.location, length: r.length),
+                        label: NSRange(location: line.range.location + label.location, length: label.length), definition: false))
             }
         }
         return out
@@ -120,7 +122,8 @@ final class FootnoteBook {
 
     static func label(of node: Markup?) -> String? {
         guard let text = node as? Markdown.Text, text.string.first == Footnotes.marker,
-              let m = text.string.prefixMatch(of: Footnotes.maskedStart) else { return nil }
+            let m = text.string.prefixMatch(of: Footnotes.maskedStart)
+        else { return nil }
         return String(m.1)
     }
 

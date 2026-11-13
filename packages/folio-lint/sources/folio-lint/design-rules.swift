@@ -4,8 +4,10 @@ import SwiftSyntax
 // screen alone carries `// design: one-off, <why>` on its line.
 extension Rules {
     static var designValue: Rule {
-        Rule(name: "design-value", strict: true,
-             advice: "take type sizes, colours and corner radii from Theme, or mark the line `// design: one-off, <why>`") { code in
+        Rule(
+            name: "design-value", strict: true,
+            advice: "take type sizes, colours and corner radii from Theme, or mark the line `// design: one-off, <why>`"
+        ) { code in
             var hits: [Hit] = []
             // app/design is exempt: it is where the tokens are applied.
             for file in code.files(under: "app/features", "app/app") {
@@ -21,9 +23,11 @@ extension Rules {
     // Spacing, sizes and corner radii sit on a 4pt grid, 2pt where 4 is too coarse. Type sizes and stroke widths are
     // exempt, and so are 1pt hairlines. Sums (`Theme.Space.s + 2`) are past what a check can judge; the review sees them.
     static var designGrid: Rule {
-        Rule(name: "design-grid", strict: true,
-             advice: "spacing, sizes and radii are multiples of 4, or of 2 where 4 is too coarse; "
-                 + "mark a real exception `// design: one-off, <why>`") { code in
+        Rule(
+            name: "design-grid", strict: true,
+            advice: "spacing, sizes and radii are multiples of 4, or of 2 where 4 is too coarse; "
+                + "mark a real exception `// design: one-off, <why>`"
+        ) { code in
             var hits: [Hit] = []
             for file in code.files(under: "app") {
                 for token in file.tokens {
@@ -43,13 +47,16 @@ extension Rules {
     // button in the course's colour and its ghost buttons in the system's. The note benches in app-tests set the accent
     // alone, which their reference pictures were drawn with, so app-tests is not checked.
     static var courseAccent: Rule {
-        Rule(name: "course-accent", strict: true,
-             advice: "set a course's colour with .courseAccent(_:), not environment(\\.accent, …)") { code in
+        Rule(
+            name: "course-accent", strict: true,
+            advice: "set a course's colour with .courseAccent(_:), not environment(\\.accent, …)"
+        ) { code in
             var hits: [Hit] = []
             for file in code.files(under: "app") where !file.path.hasPrefix("app/design/") {
                 for call in file.nodes(FunctionCallExprSyntax.self) where calledName(call) == "environment" {
                     guard let path = call.arguments.first?.expression.as(KeyPathExprSyntax.self),
-                          path.trimmedDescription == "\\.accent" else { continue }
+                        path.trimmedDescription == "\\.accent"
+                    else { continue }
                     hits.append(Hit("course-accent", file, file.line(of: path), "environment(\\.accent"))
                 }
             }
@@ -68,16 +75,19 @@ extension Rules {
                 return (".system(size:", Syntax(label))
             }
             if calledName(call) == "Color", call.calledExpression.is(DeclReferenceExprSyntax.self),
-               ["red", "white", "hue", "light"].contains(label.text) {
+                ["red", "white", "hue", "light"].contains(label.text)
+            {
                 return ("Color(\(label.text):", Syntax(label))
             }
         }
         if let argument = node.as(LabeledExprSyntax.self), let label = argument.label, label.text == "cornerRadius",
-           let first = argument.expression.firstToken(viewMode: .sourceAccurate), first.isNumber {
+            let first = argument.expression.firstToken(viewMode: .sourceAccurate), first.isNumber
+        {
             return ("cornerRadius: \(first.text)", Syntax(label))
         }
         if let token = node.as(TokenSyntax.self), case .integerLiteral(let text) = token.tokenKind, text.hasPrefix("0x"),
-           text.dropFirst(2).filter(\.isHexDigit).count >= 6 {
+            text.dropFirst(2).filter(\.isHexDigit).count >= 6
+        {
             return (text, node)
         }
         if let member = node.as(MemberAccessExprSyntax.self), systemColors.contains(member.declName.baseName.text) {
@@ -85,8 +95,9 @@ extension Rules {
             if let base = member.base {
                 if base.as(DeclReferenceExprSyntax.self)?.baseName.text == "Color" { return ("Color.\(name)", node) }
             } else if let before = member.previousToken(viewMode: .sourceAccurate),
-                      [.leftParen, .colon, .comma, .infixQuestionMark, .postfixQuestionMark].contains(before.tokenKind),
-                      !isShadowBlack(member) {
+                [.leftParen, .colon, .comma, .infixQuestionMark, .postfixQuestionMark].contains(before.tokenKind),
+                !isShadowBlack(member)
+            {
                 return (".\(name)", node)
             }
         }
@@ -99,8 +110,9 @@ extension Rules {
         var current = member.parent
         while let node = current, !node.is(LabeledExprSyntax.self) { current = node.parent }
         guard let argument = current?.as(LabeledExprSyntax.self), argument.label?.text == "color",
-              argument.expression.firstToken(viewMode: .sourceAccurate) == member.firstToken(viewMode: .sourceAccurate),
-              let call = argument.parent?.parent?.as(FunctionCallExprSyntax.self) else { return false }
+            argument.expression.firstToken(viewMode: .sourceAccurate) == member.firstToken(viewMode: .sourceAccurate),
+            let call = argument.parent?.parent?.as(FunctionCallExprSyntax.self)
+        else { return false }
         return calledName(call) == "shadow"
     }
 
@@ -122,7 +134,8 @@ extension Rules {
             return nil
         }
         guard let operand = token.nextToken(viewMode: .sourceAccurate)?.nextToken(viewMode: .sourceAccurate),
-              let literal = offGridLiteral(at: operand) else { return nil }
+            let literal = offGridLiteral(at: operand)
+        else { return nil }
         let sign = operand.tokenKind == .prefixOperator("-") ? "-" : ""
         return (lead + sign + literal.text, literal)
     }
@@ -132,14 +145,17 @@ extension Rules {
         let arguments = Array(call.arguments)
         switch calledName(call) {
         case "padding":
-            guard let last = arguments.last, last.label == nil, arguments.count == 1
-                || (arguments.count == 2 && arguments[0].label == nil
-                    && arguments[0].expression.as(MemberAccessExprSyntax.self)?.base == nil),
-                let literal = offGridNumber(last.expression) else { return nil }
+            guard let last = arguments.last, last.label == nil,
+                arguments.count == 1
+                    || (arguments.count == 2 && arguments[0].label == nil
+                        && arguments[0].expression.as(MemberAccessExprSyntax.self)?.base == nil),
+                let literal = offGridNumber(last.expression)
+            else { return nil }
             return ("padding(\(last.expression.trimmedDescription))", literal)
         case "CourseDot", "Avatar":
             guard let size = arguments.first(where: { $0.label?.text == "size" }),
-                  let literal = offGridNumber(size.expression) else { return nil }
+                let literal = offGridNumber(size.expression)
+            else { return nil }
             return ("size: \(size.expression.trimmedDescription)", literal)
         default:
             return nil
@@ -152,8 +168,10 @@ extension Rules {
         if let negative = expression.as(PrefixOperatorExprSyntax.self), negative.operator.text == "-" {
             expression = negative.expression
         }
-        guard let literal = expression.as(IntegerLiteralExprSyntax.self)?.literal
-            ?? expression.as(FloatLiteralExprSyntax.self)?.literal else { return nil }
+        guard
+            let literal = expression.as(IntegerLiteralExprSyntax.self)?.literal
+                ?? expression.as(FloatLiteralExprSyntax.self)?.literal
+        else { return nil }
         return offGridLiteral(at: literal)
     }
 

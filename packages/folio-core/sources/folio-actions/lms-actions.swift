@@ -4,13 +4,15 @@ import Foundation
 
 // No classroom is tied to a course (one course can have two, and some are no course at all), so this only records
 // that a classroom was seen and what it held then.
-@Action("lms seen", "처음 본 LMS 강의실을 기록하고 지금 있는 항목을 제안함에서 숨기기", discussion: """
+@Action(
+    "lms seen", "처음 본 LMS 강의실을 기록하고 지금 있는 항목을 제안함에서 숨기기",
+    discussion: """
         강의실을 처음 볼 때 그 강의실에 이미 있는 파일과 공지를 --items로 넘겨, 그 뒤에 올라온 것만 제안한다.
         강의실을 과목에 잇지 않는다. 제안은 받을 때마다 과목을 고른다.
         """,
-        done: "LMS 강의실 {classrooms}을(를) 기록했습니다",
-        examples: ["folio lms seen 27967 28011 --items file:139109 --items notice:23464"],
-        phrases: ["LMS 강의실 기록", "LMS 새 강의실"])
+    done: "LMS 강의실 {classrooms}을(를) 기록했습니다",
+    examples: ["folio lms seen 27967 28011 --items file:139109 --items notice:23464"],
+    phrases: ["LMS 강의실 기록", "LMS 새 강의실"])
 public struct LMSSeen {
     /// LMS 강의실 번호(course/view.php?id=)
     @Arg var classrooms: [Int]
@@ -30,10 +32,11 @@ public struct LMSSeen {
     }
 }
 
-@Action("lms mark", "LMS 항목을 제안함에서 숨기기, --off면 다시 제안하기",
-        done: "LMS 항목 {keys}을(를) 표시했습니다",
-        examples: ["folio lms mark notice:23464 file:139109", "folio lms mark notice:23464 --off"],
-        phrases: ["LMS 제안 무시", "LMS 공지 숨기기"])
+@Action(
+    "lms mark", "LMS 항목을 제안함에서 숨기기, --off면 다시 제안하기",
+    done: "LMS 항목 {keys}을(를) 표시했습니다",
+    examples: ["folio lms mark notice:23464 file:139109", "folio lms mark notice:23464 --off"],
+    phrases: ["LMS 제안 무시", "LMS 공지 숨기기"])
 public struct LMSMark {
     /// 항목. assignment:139941, file:139109, notice:23464 꼴
     @Arg var keys: [String]
@@ -66,10 +69,12 @@ public struct LMSAcceptItem: Codable, Sendable, Hashable {
 
 // "모두 추가" on a course's proposals is this one action, so it asks once and stops before writing anything when one
 // item is refused.
-@Action("lms accept", "LMS 제안을 과목에 받기. 과제는 과제로 더하고, 받은 파일은 Lectures로 가져오고, 모두 제안함에서 숨긴다",
-        discussion: "항목 파일은 [{\"key\":\"assignment:139950\",\"title\":\"HW5\",\"due\":\"2026-11-20T14:55:00Z\"}, {\"key\":\"file:139200\",\"file\":\"/tmp/05_Matchings.pdf\"}, {\"key\":\"notice:23464\"}] 꼴이다.",
-        effect: .creates, done: "{course}에 LMS 항목을 받았습니다",
-        phrases: ["LMS 과제 추가", "LMS 자료 받기", "LMS 제안 모두 추가"])
+@Action(
+    "lms accept", "LMS 제안을 과목에 받기. 과제는 과제로 더하고, 받은 파일은 Lectures로 가져오고, 모두 제안함에서 숨긴다",
+    discussion:
+        "항목 파일은 [{\"key\":\"assignment:139950\",\"title\":\"HW5\",\"due\":\"2026-11-20T14:55:00Z\"}, {\"key\":\"file:139200\",\"file\":\"/tmp/05_Matchings.pdf\"}, {\"key\":\"notice:23464\"}] 꼴이다.",
+    effect: .creates, done: "{course}에 LMS 항목을 받았습니다",
+    phrases: ["LMS 과제 추가", "LMS 자료 받기", "LMS 제안 모두 추가"])
 public struct LMSAccept {
     /// 과목
     @Arg var course: Course.ID

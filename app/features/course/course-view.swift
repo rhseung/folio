@@ -25,8 +25,10 @@ struct CourseView: View {
                     case .overview: CourseOverview(model: model, course: course)
                     case .sessions:
                         if let recording = model.openRecording {
-                            RecordingPage(workspace: workspace, course: course, recording: recording, place: model.place, moved: model.moved)
-                                .id(recording.id)
+                            RecordingPage(
+                                workspace: workspace, course: course, recording: recording, place: model.place, moved: model.moved
+                            )
+                            .id(recording.id)
                         } else {
                             SessionsView(workspace: workspace, course: course)
                         }
@@ -37,7 +39,8 @@ struct CourseView: View {
                         }
                     case .notes: CourseNotesPage(model: model, course: course)
                     // One branch for every quiz page, so the quiz model and a pending solve request survive switching pages.
-                    case .quizSolve, .quizCards, .quizStats, .quizProblems: QuizView(workspace: model.workspace, course: course, section: $model.section)
+                    case .quizSolve, .quizCards, .quizStats, .quizProblems:
+                        QuizView(workspace: model.workspace, course: course, section: $model.section)
                     case .materials: MaterialsView(workspace: workspace, course: course, place: model.place, moved: model.moved)
                     case .assignments: AssignmentsView(workspace: workspace, course: course)
                     case .grades: CourseGradesView(workspace: workspace, course: course)
@@ -92,7 +95,8 @@ struct CourseColumn: View {
                 // Code and name only; credits, grading and professors are on the overview page.
                 // Laid out like a ColumnRow, the dot in the icon column, so the title and the rows below share their edges.
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                    Text(course.codeLine(model.workspace)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
+                    Text(course.codeLine(model.workspace)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+                        .lineLimit(1)
                         .padding(.leading, ColumnRow<EmptyView>.titleInset - Theme.Inset.listRow.leading)
                     HStack(spacing: ColumnRow<EmptyView>.gap) {
                         CourseMark(icon: course.file.course.icon, color: accent.color, font: Theme.Glyph.lineTitle)
@@ -146,13 +150,19 @@ struct CourseColumn: View {
                         Caption(String(localized: .courseRecent)).padding(.horizontal, Theme.Space.s).padding(.bottom, Theme.Space.tight)
                         ForEach(recent) { session in
                             Button {
-                                if let id = session.roughNoteId ?? session.reviewNoteId { model.show(note: id) } else { model.section = .sessions }
+                                if let id = session.roughNoteId ?? session.reviewNoteId {
+                                    model.show(note: id)
+                                } else {
+                                    model.section = .sessions
+                                }
                             } label: {
                                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                                     Text(model.recentTitle(session, in: file)).lineLimit(1)
                                     Text(model.recentDetail(session, in: file)).lineLimit(1)
                                         .font(Theme.Typeface.label.weight(.regular))
-                                        .foregroundStyle(file.needsReviewNote(session, at: model.workspace.now) ? Theme.Palette.danger : Theme.Palette.textTertiary)
+                                        .foregroundStyle(
+                                            file.needsReviewNote(session, at: model.workspace.now)
+                                                ? Theme.Palette.danger : Theme.Palette.textTertiary)
                                 }
                                 .padding(Theme.Inset.listRow)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -192,8 +202,9 @@ struct CourseNotesPage: View {
             }
             .overflowFade(.vertical)
         } else {
-            NotesView(workspace: model.workspace, course: course, selection: model.openNote, anchor: model.noteAnchor, insert: $model.noteInsert,
-                      moves: model.noteMoves)
+            NotesView(
+                workspace: model.workspace, course: course, selection: model.openNote, anchor: model.noteAnchor, insert: $model.noteInsert,
+                moves: model.noteMoves)
         }
     }
 }
@@ -213,7 +224,10 @@ struct CourseOverview: View {
         let suggested = model.suggested(course, now: now)
         let unclassified = model.unclassified(file)
         // Two columns that each run as long as their own blocks; a grid row made the short week card as tall as the units.
-        let layout = wide ? AnyLayout(HStackLayout(alignment: .top, spacing: Theme.Space.xl)) : AnyLayout(VStackLayout(alignment: .leading, spacing: Theme.Space.xl))
+        let layout =
+            wide
+            ? AnyLayout(HStackLayout(alignment: .top, spacing: Theme.Space.xl))
+            : AnyLayout(VStackLayout(alignment: .leading, spacing: Theme.Space.xl))
 
         Page {
             PageHeader(title: course.title, subtitle: model.subtitle(file)) {
@@ -233,8 +247,11 @@ struct CourseOverview: View {
             StatStrip(items: model.stats(file, reviews: reviews, suggested: suggested, now: now))
 
             if !unclassified.isEmpty {
-                NoticeCard(title: String(localized: .courseUnclassifiedNotice(unclassified.count)), detail: String(localized: .courseUnclassifiedDetail),
-                           systemImage: "tray.fill") {
+                NoticeCard(
+                    title: String(localized: .courseUnclassifiedNotice(unclassified.count)),
+                    detail: String(localized: .courseUnclassifiedDetail),
+                    systemImage: "tray.fill"
+                ) {
                     Button(.courseReviewMaterials) { model.section = .materials }.buttonStyle(.ghost)
                 }
             }
@@ -251,7 +268,11 @@ struct CourseOverview: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .topLeading)
             }
-            .onGeometryChange(for: Bool.self) { $0.size.width >= 620 } action: { wide = $0 }
+            .onGeometryChange(for: Bool.self) {
+                $0.size.width >= 620
+            } action: {
+                wide = $0
+            }
 
             InfoBlocks(workspace: model.workspace, course: course)
         }
@@ -268,9 +289,11 @@ struct CourseOverview: View {
                     ForEach(Array(sessions.enumerated()), id: \.element.id) { i, s in
                         CardRow(last: i == sessions.count - 1) {
                             VStack(spacing: 0) {
-                                Text(s.date.formatted(.dateTime.weekday(.abbreviated))).font(Theme.Typeface.label.weight(.regular)).foregroundStyle(Theme.Palette.textTertiary)
+                                Text(s.date.formatted(.dateTime.weekday(.abbreviated))).font(Theme.Typeface.label.weight(.regular))
+                                    .foregroundStyle(Theme.Palette.textTertiary)
                                 // The bare number: Korean's day format adds 일, which overflowed the 34pt column.
-                                Text(verbatim: "\(model.day(of: s.date))").font(Theme.Typeface.figureMedium).foregroundStyle(s.date > now ? accent.ink : Theme.Palette.text)
+                                Text(verbatim: "\(model.day(of: s.date))").font(Theme.Typeface.figureMedium).foregroundStyle(
+                                    s.date > now ? accent.ink : Theme.Palette.text)
                             }
                             .frame(width: 34)
                             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
@@ -301,7 +324,11 @@ struct CourseOverview: View {
         let shown = Array(open.prefix(5))
         return Block(String(localized: .courseSectionAssignments), note: model.assignmentsNote(file)) {
             Card {
-                if shown.isEmpty { CardRow(last: true) { EmptyLine(String(localized: file.assignments.isEmpty ? .courseNoAssignments : .courseNoOpenAssignments)) } }
+                if shown.isEmpty {
+                    CardRow(last: true) {
+                        EmptyLine(String(localized: file.assignments.isEmpty ? .courseNoAssignments : .courseNoOpenAssignments))
+                    }
+                }
                 ForEach(Array(shown.enumerated()), id: \.element.id) { i, a in
                     CardRow(last: i == shown.count - 1 && open.count == shown.count) {
                         AssignmentStatusIcon(status: a.status)
@@ -331,9 +358,14 @@ struct CourseOverview: View {
 
     func unitsBlock(_ file: CourseFile, reviews: [Workspace.ReviewEntry]) -> some View {
         let shown = model.glanceUnits(file, reviews: reviews)
-        return Block(String(localized: .courseSectionUnits), note: file.units.count > shown.count ? String(localized: .courseUnitsNote(file.units.count, shown.count)) : nil) {
+        return Block(
+            String(localized: .courseSectionUnits),
+            note: file.units.count > shown.count ? String(localized: .courseUnitsNote(file.units.count, shown.count)) : nil
+        ) {
             Card {
-                if shown.isEmpty { CardRow(last: true) { EmptyLine(String(localized: file.units.isEmpty ? .courseNoUnits : .courseNoCoveredUnits)) } }
+                if shown.isEmpty {
+                    CardRow(last: true) { EmptyLine(String(localized: file.units.isEmpty ? .courseNoUnits : .courseNoCoveredUnits)) }
+                }
                 ForEach(Array(shown.enumerated()), id: \.element.id) { i, unit in
                     let entry = reviews.first { $0.item.unitId == unit.id }
                     ReviewOpener(courseId: course.id, unitId: unit.id) {
@@ -341,10 +373,14 @@ struct CourseOverview: View {
                             Text(unit.title).lineLimit(1)
                             Spacer(minLength: Theme.Space.s)
                             if let entry {
-                                Chip(String(localized: entry.item.overdueDays > 0 ? .unitsDaysLate(entry.item.overdueDays) : .courseReviewToday),
-                                     tone: entry.item.overdueDays > 0 ? .danger : .accent)
+                                Chip(
+                                    String(
+                                        localized: entry.item.overdueDays > 0 ? .unitsDaysLate(entry.item.overdueDays) : .courseReviewToday),
+                                    tone: entry.item.overdueDays > 0 ? .danger : .accent)
                             } else {
-                                Text(.sessionsCount(unit.sessionIds.count)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).fixedSize()
+                                Text(.sessionsCount(unit.sessionIds.count)).font(Theme.Typeface.caption).foregroundStyle(
+                                    Theme.Palette.textTertiary
+                                ).fixedSize()
                             }
                         }
                     }
@@ -356,7 +392,10 @@ struct CourseOverview: View {
     }
 
     func gradesBlock(_ file: CourseFile, score: GradeCalculator.CourseScore) -> some View {
-        Block(String(localized: .courseSectionGrades), note: file.components.isEmpty ? nil : String(localized: .courseRemainingWeight(Int(score.remainingWeight.rounded())))) {
+        Block(
+            String(localized: .courseSectionGrades),
+            note: file.components.isEmpty ? nil : String(localized: .courseRemainingWeight(Int(score.remainingWeight.rounded())))
+        ) {
             Card(padding: Theme.Space.l) {
                 if file.components.isEmpty {
                     EmptyLine(String(localized: .courseNoComponents))
@@ -364,7 +403,9 @@ struct CourseOverview: View {
                     VStack(alignment: .leading, spacing: Theme.Space.m) {
                         HStack(alignment: .firstTextBaseline, spacing: Theme.Space.l) {
                             Figure(String(localized: .courseSecured), score.secured.oneDecimal, font: Theme.Typeface.figureCompact)
-                            Figure(String(localized: .courseProjectedTitle), score.projected.map(\.oneDecimal) ?? "-", tint: accent.ink, font: Theme.Typeface.figureCompact)
+                            Figure(
+                                String(localized: .courseProjectedTitle), score.projected.map(\.oneDecimal) ?? "-", tint: accent.ink,
+                                font: Theme.Typeface.figureCompact)
                         }
                         .sensitive()
                         // Names live in the segment tooltips and on the grades page; listed here they swamp the card.

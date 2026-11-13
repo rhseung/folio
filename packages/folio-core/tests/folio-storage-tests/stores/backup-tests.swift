@@ -1,8 +1,9 @@
 import FolioDomain
 import FolioFixtures
-@testable import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioStorage
 
 struct BackupTests {
     let calendar = Calendar(identifier: .iso8601)
@@ -10,10 +11,12 @@ struct BackupTests {
 
     func files(under root: URL) -> Set<String> {
         let base = root.standardizedFileURL.resolvingSymlinksInPath().path.count + 1
-        let walk = FileManager.default.enumerator(at: root.standardizedFileURL.resolvingSymlinksInPath(), includingPropertiesForKeys: [.isRegularFileKey])
-        return Set((walk?.allObjects as? [URL] ?? [])
-            .filter { (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true }
-            .map { String($0.standardizedFileURL.resolvingSymlinksInPath().path.dropFirst(base)) })
+        let walk = FileManager.default.enumerator(
+            at: root.standardizedFileURL.resolvingSymlinksInPath(), includingPropertiesForKeys: [.isRegularFileKey])
+        return Set(
+            (walk?.allObjects as? [URL] ?? [])
+                .filter { (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true }
+                .map { String($0.standardizedFileURL.resolvingSymlinksInPath().path.dropFirst(base)) })
     }
 
     @Test func clonesTheWholeGISTOnTheSameVolumeAndRestoresOneCourse() throws {

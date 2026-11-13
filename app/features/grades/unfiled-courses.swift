@@ -14,7 +14,8 @@ final class UnfiledCoursesModel {
 
     func detail(_ course: Course) -> String {
         let semester = workspace.semester(of: course)
-        return [semester?.title ?? "", String(localized: .semesterCredits(course.credits.formatted()))].filter { !$0.isEmpty }.joined(separator: " · ")
+        return [semester?.title ?? "", String(localized: .semesterCredits(course.credits.formatted()))].filter { !$0.isEmpty }.joined(
+            separator: " · ")
     }
 
     var refusal: String? { workspace.refusal(TranscriptMove()) }
@@ -35,8 +36,10 @@ struct UnfiledCoursesNotice: View {
     var body: some View {
         let courses = model.courses
         if !courses.isEmpty {
-            NoticeCard(title: String(localized: .unfiledTitle(courses.count)), detail: model.refusal ?? String(localized: .unfiledDetail),
-                       systemImage: "folder.badge.questionmark") {
+            NoticeCard(
+                title: String(localized: .unfiledTitle(courses.count)), detail: model.refusal ?? String(localized: .unfiledDetail),
+                systemImage: "folder.badge.questionmark"
+            ) {
                 Button(.unfiledMoveEllipsis) { confirming = true }.buttonStyle(.pointing(.bordered)).disabled(model.refusal != nil)
             } rows: {
                 ForEach(Array(courses.enumerated()), id: \.element.id) { i, course in

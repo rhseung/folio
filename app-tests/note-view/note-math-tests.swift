@@ -3,6 +3,7 @@ import FolioDomain
 import FolioMarkdown
 import Foundation
 import Testing
+
 @testable import Folio
 
 /// Math for the edit view's bubble and completion menu (`NoteMath`), drawn by the preview's KaTeX in a hidden page:
@@ -12,19 +13,24 @@ import Testing
 struct NoteMathTests {
     /// Carries the page as the edit view does, in a window nobody sees.
     static let window: NSWindow = {
-        let window = NSWindow(contentRect: CGRect(x: -20_000, y: -20_000, width: 400, height: 300), styleMask: [.borderless],
-                              backing: .buffered, defer: false)
+        let window = NSWindow(
+            contentRect: CGRect(x: -20_000, y: -20_000, width: 400, height: 300), styleMask: [.borderless],
+            backing: .buffered, defer: false)
         window.orderBack(nil)
         return window
     }()
 
     /// The picture once drawn; nil when it fails or doesn't come in time. Trimmed to its ink, as the bubble's is,
     /// unless asked otherwise.
-    func picture(_ source: String, _ syntax: MathSyntax = .latex, display: Bool = false, dark: Bool = false, trim: Bool = true,
-                 by math: NoteMath = .shared) async -> NoteMath.Picture? {
+    func picture(
+        _ source: String, _ syntax: MathSyntax = .latex, display: Bool = false, dark: Bool = false, trim: Bool = true,
+        by math: NoteMath = .shared
+    ) async -> NoteMath.Picture? {
         math.host(in: Self.window.contentView!)
         var done = false
-        if let hit = math.picture(source, syntax: syntax, display: display, size: 16, dark: dark, trim: trim, ready: { done = true }) { return hit }
+        if let hit = math.picture(source, syntax: syntax, display: display, size: 16, dark: dark, trim: trim, ready: { done = true }) {
+            return hit
+        }
         let clock = ContinuousClock(), until = clock.now + .seconds(20)
         while !done, clock.now < until {
             // Another test's editor may have taken the page into its window.
@@ -107,9 +113,14 @@ struct NoteMathTests {
         ("큰 괄호", #"\left(\frac{a}{b}\right)"#, "(a/b)"),
         ("화살표", #"A \xrightarrow{f \circ g} B \to C"#, "A stackrel(f @ g)(->) B -> C"),
         ("한글", #"\text{확률 } P(A) = \frac{1}{2}"#, #""확률 " P(A) = 1/2"#),
-        ("긴 줄", (1...24).map { "a_{\($0)} x^{\($0)}" }.joined(separator: " + "), (1...24).map { "a_(\($0)) x^(\($0))" }.joined(separator: " + ")),
-        ("합집합 블록", #"\left|\left(\bigcup_{i \in I} A_i\right) \cap \left(\bigcup_{i \in J} B_i\right)\right| \geq |I| + |J| - m"#,
-         "abs((bigcup_(i in I) A_i) cap (bigcup_(i in J) B_i)) >= absI + absJ - m"),
+        (
+            "긴 줄", (1...24).map { "a_{\($0)} x^{\($0)}" }.joined(separator: " + "),
+            (1...24).map { "a_(\($0)) x^(\($0))" }.joined(separator: " + ")
+        ),
+        (
+            "합집합 블록", #"\left|\left(\bigcup_{i \in I} A_i\right) \cap \left(\bigcup_{i \in J} B_i\right)\right| \geq |I| + |J| - m"#,
+            "abs((bigcup_(i in I) A_i) cap (bigcup_(i in J) B_i)) >= absI + absJ - m"
+        ),
         ("합집합", #"\left|\bigcup_{i \in I} A_i\right| \geq |I|"#, "abs(bigcup_(iinI)A_i) >= abs(I)"),
         ("목록", "s_1,s_2,s_3,s_4,s_5", "s_1,s_2,s_3,s_4,s_5"),
     ]
@@ -132,7 +143,8 @@ struct NoteMathTests {
                 let scale = CGFloat(pixels.width) / picture.size.width
                 #expect(abs(CGFloat(pixels.height) / picture.size.height - scale) < 0.01, "\(source): stretched")
                 let margins = [ink.minX, ink.minY, pixels.width - 1 - ink.maxX, pixels.height - 1 - ink.maxY]
-                #expect(margins.allSatisfy { CGFloat($0) < scale }, "\(source) dark \(dark): margins \(margins) at \(scale)x, \(picture.size)")
+                #expect(
+                    margins.allSatisfy { CGFloat($0) < scale }, "\(source) dark \(dark): margins \(margins) at \(scale)x, \(picture.size)")
             }
         }
         // Nothing to draw, or what KaTeX can't read: no picture, and no bubble.
@@ -198,7 +210,10 @@ struct NoteMathTests {
     /// formula has drawn again (untrimmed, so it isn't the kept picture).
     @Test func bigDelimitersDrawTheFirstTime() async throws {
         let formulas: [(String, MathSyntax)] = [
-            ("det(B - tI) = det(Q^-1AQ - tI) = det(Q^-1(A-tI)Q) =\ndet(Q^-1)det(A - tI)det(Q) = 1/(det(Q)) det(A - tI) det(Q) =\ndet(A - tI)", .asciimath),
+            (
+                "det(B - tI) = det(Q^-1AQ - tI) = det(Q^-1(A-tI)Q) =\ndet(Q^-1)det(A - tI)det(Q) = 1/(det(Q)) det(A - tI) det(Q) =\ndet(A - tI)",
+                .asciimath
+            ),
             (#"\det\left(Q^{-1}\right)"#, .latex),
             (#"\left(\frac{\frac{a}{b}}{\frac{c}{d}}\right) + \left[\sum_{i=1}^{n} x_i\right]"#, .latex),
         ]
@@ -223,7 +238,11 @@ struct NoteMathTests {
             let picture = try #require(await picture(#"\left( \frac{a}{b} \right) + \sqrt{x}"#, dark: dark))
             let pixels = try Pixels(picture.image)
             #expect(pixels.inked > 0)
-            if dark { #expect(pixels.darkInk == 0, "\(pixels.darkInk) dark of \(pixels.inked)") } else { #expect(pixels.lightInk == 0, "\(pixels.lightInk) light of \(pixels.inked)") }
+            if dark {
+                #expect(pixels.darkInk == 0, "\(pixels.darkInk) dark of \(pixels.inked)")
+            } else {
+                #expect(pixels.lightInk == 0, "\(pixels.lightInk) light of \(pixels.inked)")
+            }
         }
     }
 
@@ -238,8 +257,10 @@ struct NoteMathTests {
             let (w, h) = (cg.width, cg.height)
             (width, height) = (w, h)
             var bytes = [UInt8](repeating: 0, count: w * h * 4)
-            let context = try #require(CGContext(data: &bytes, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
-                                                 space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+            let context = try #require(
+                CGContext(
+                    data: &bytes, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
+                    space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
             context.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
             for y in 0..<h {
                 for x in 0..<w {

@@ -26,7 +26,8 @@ struct ProblemSetsView: View {
                     Card {
                         if shown.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .quizProblemsNoUnits)) } }
                         ForEach(Array(shown.enumerated()), id: \.element.id) { i, unit in
-                            TallyRow(title: unit.title, tally: byUnit[unit.id]!, items: { .quizProblemsItems($0) }, last: i == shown.count - 1)
+                            TallyRow(
+                                title: unit.title, tally: byUnit[unit.id]!, items: { .quizProblemsItems($0) }, last: i == shown.count - 1)
                         }
                     }
                 }
@@ -37,22 +38,38 @@ struct ProblemSetsView: View {
     }
 
     func setBlock(_ set: ProblemSet, units: [FolioDomain.Unit]) -> some View {
-        Block(title: set.title, note: model.summary(set), trailing: {
-            HStack(spacing: Theme.Space.m) {
-                if let m = model.material(set.materialId, in: course) { Button(.quizProblemsSheet) { open(m) }.buttonStyle(.ghost) }
-                if let m = model.material(set.solutionMaterialId, in: course) { Button(.quizProblemsSolution) { open(m) }.buttonStyle(.ghost) }
-                Menu { ProblemSetMenu(courseId: course.id, set: set) } label: { Image(systemName: "ellipsis") }
+        Block(
+            title: set.title, note: model.summary(set),
+            trailing: {
+                HStack(spacing: Theme.Space.m) {
+                    if let m = model.material(set.materialId, in: course) { Button(.quizProblemsSheet) { open(m) }.buttonStyle(.ghost) }
+                    if let m = model.material(set.solutionMaterialId, in: course) {
+                        Button(.quizProblemsSolution) { open(m) }.buttonStyle(.ghost)
+                    }
+                    Menu {
+                        ProblemSetMenu(courseId: course.id, set: set)
+                    } label: {
+                        Image(systemName: "ellipsis")
+                    }
                     .menuStyle(.button).menuIndicator(.hidden).buttonStyle(.borderless).pointingHand().fixedSize()
+                }
             }
-        }) {
+        ) {
             Card(padding: Theme.Space.m) {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 46), spacing: Theme.Space.s)], spacing: Theme.Space.s) {
                     ForEach(set.problems, id: \.number) { problem in
                         let history = model.history(set: set.id, number: problem.number)
                         let sheet = model.material(set.materialId, in: course)
-                        ProblemCell(set: set, problem: problem, history: history, units: units,
-                                    linked: model.linkedTitles(problem, units: units), historyLine: model.historyLine(history),
-                                    openSheet: sheet.map { m in { openLink(AppLink(.material, m.id, anchor: problem.page.map { AppLink.Anchor.page($0) }), course: course.id) } }) { verdict in
+                        ProblemCell(
+                            set: set, problem: problem, history: history, units: units,
+                            linked: model.linkedTitles(problem, units: units), historyLine: model.historyLine(history),
+                            openSheet: sheet.map { m in
+                                {
+                                    openLink(
+                                        AppLink(.material, m.id, anchor: problem.page.map { AppLink.Anchor.page($0) }), course: course.id)
+                                }
+                            }
+                        ) { verdict in
                             model.record(verdict, set: set.id, number: problem.number, in: course)
                         } toggleUnit: { unit in
                             model.toggle(unit, set: set.id, problem: problem, in: course)
@@ -81,7 +98,9 @@ struct ProblemSetSheet: View {
     var body: some View {
         let pdfOptions = model.pdfOptions
         SheetForm(title: String(localized: .quizProblemsAddTitle), confirm: String(localized: .commonAdd), disabled: !model.canAdd) {
-            FormRow(label: String(localized: .quizProblemsFieldTitle)) { InlineField(String(localized: .quizProblemsFieldTitleExample), text: $model.title) }
+            FormRow(label: String(localized: .quizProblemsFieldTitle)) {
+                InlineField(String(localized: .quizProblemsFieldTitleExample), text: $model.title)
+            }
             FormRow(label: String(localized: .quizProblemsSheet), detail: model.sheetDetail) {
                 SearchSelect(selection: $model.problemId, options: pdfOptions)
             }
@@ -114,14 +133,20 @@ struct ProblemCell: View {
 
     var body: some View {
         let status = WrongFlow.status(history)
-        let (fill, ink): (Color, Color) = switch status {
-        case .open: (Theme.Palette.dangerFill, Theme.Palette.danger)
-        case .resolved: (accent.tint, accent.ink)
-        case .neverWrong: history.isEmpty ? (Theme.Palette.fill, Theme.Palette.textSecondary) : (Theme.Palette.success.opacity(Theme.Opacity.tint), Theme.Palette.success)
-        }
+        let (fill, ink): (Color, Color) =
+            switch status {
+            case .open: (Theme.Palette.dangerFill, Theme.Palette.danger)
+            case .resolved: (accent.tint, accent.ink)
+            case .neverWrong:
+                history.isEmpty
+                    ? (Theme.Palette.fill, Theme.Palette.textSecondary)
+                    : (Theme.Palette.success.opacity(Theme.Opacity.tint), Theme.Palette.success)
+            }
         // A correct answer on an open problem is what resolves it; the button says so.
         let correct = WrongFlow.isOpen(status) ? String(localized: .quizProblemsResolve) : Verdict.correct.label
-        Button { open = true } label: {
+        Button {
+            open = true
+        } label: {
             VStack(spacing: Theme.Space.xxs) {
                 Text(problem.number).font(Theme.Typeface.bodyStrong).monospacedDigit()
                 if case .resolved = status { Image(systemName: "checkmark").font(Theme.Glyph.tiny) }
@@ -134,15 +159,23 @@ struct ProblemCell: View {
         .buttonStyle(.pointing(.plain))
         .help(linked)
         .contextMenu {
-            ItemMenu(source: ProblemMenuSource(problem: problem, units: units, correct: correct, openSheet: openSheet, mark: mark, toggleUnit: toggleUnit))
+            ItemMenu(
+                source: ProblemMenuSource(
+                    problem: problem, units: units, correct: correct, openSheet: openSheet, mark: mark, toggleUnit: toggleUnit))
         }
         .popover(isPresented: $open) {
             VStack(alignment: .leading, spacing: Theme.Space.m) {
                 Text(.quizProblemsCellTitle(set.title, problem.number)).font(Theme.Typeface.bodyStrong)
                 HStack(spacing: Theme.Space.s) {
-                    Button(correct) { mark(.correct); open = false }
-                    Button(Verdict.partial.label) { mark(.partial); open = false }
-                    Button(Verdict.wrong.label) { mark(.wrong); open = false }
+                    Button(correct) {
+                        mark(.correct); open = false
+                    }
+                    Button(Verdict.partial.label) {
+                        mark(.partial); open = false
+                    }
+                    Button(Verdict.wrong.label) {
+                        mark(.wrong); open = false
+                    }
                 }
                 if !history.isEmpty {
                     Text(historyLine)

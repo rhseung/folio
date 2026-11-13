@@ -24,8 +24,10 @@ public struct NoteMeta: Equatable, Sendable {
     public var tags: [String]
     public var math: MathSyntax
 
-    public init(id: UUID? = UUID(), kind: NoteKind = .free, sessionId: UUID? = nil, unitIds: [UUID] = [], examId: UUID? = nil, tags: [String] = [],
-                math: MathSyntax = .latex) {
+    public init(
+        id: UUID? = UUID(), kind: NoteKind = .free, sessionId: UUID? = nil, unitIds: [UUID] = [], examId: UUID? = nil, tags: [String] = [],
+        math: MathSyntax = .latex
+    ) {
         self.id = id
         self.kind = kind
         self.sessionIds = sessionId.map { [$0] } ?? []
@@ -53,7 +55,9 @@ public enum NoteFormat: String, Codable, Sendable, CaseIterable {
     }
 
     public init?(path: String) {
-        guard let format = Self.allCases.first(where: { $0.fileExtension == (path as NSString).pathExtension.lowercased() }) else { return nil }
+        guard let format = Self.allCases.first(where: { $0.fileExtension == (path as NSString).pathExtension.lowercased() }) else {
+            return nil
+        }
         self = format
     }
 }
@@ -107,12 +111,14 @@ extension CourseFile {
     /// exam's scope as they are today, so unlinking a session from a unit takes its notes off that unit too.
     public func meta(of entry: NoteEntry) -> NoteMeta {
         let sessions = sessions(pointingAt: entry.id)
-        let units: [UUID] = switch entry.kind {
-        case .unit: entry.unitIds
-        case .rough, .review: UnitTree.outline(self.units).map(\.unit).filter { u in sessions.contains { u.sessionIds.contains($0.id) } }.map(\.id)
-        case .examSummary: exams.first { $0.id == entry.examId }?.scopeUnitIds ?? []
-        case .free: []
-        }
+        let units: [UUID] =
+            switch entry.kind {
+            case .unit: entry.unitIds
+            case .rough, .review:
+                UnitTree.outline(self.units).map(\.unit).filter { u in sessions.contains { u.sessionIds.contains($0.id) } }.map(\.id)
+            case .examSummary: exams.first { $0.id == entry.examId }?.scopeUnitIds ?? []
+            case .free: []
+            }
         var meta = NoteMeta(id: entry.id, kind: entry.kind, unitIds: units, examId: entry.examId, tags: entry.tags, math: entry.math)
         meta.sessionIds = sessions.map(\.id)
         return meta
@@ -145,14 +151,16 @@ public enum NoteTemplate {
     /// `text` with the heading `body(for:title:)` wrote changed from `old` to `new`. Only the first top heading, and
     /// only when it still reads `old`: one the user rewrote is theirs.
     public static func retitled(_ text: String, from old: String, to new: String, format: NoteFormat) -> String {
-        let (heading, replacement) = switch format {
-        case .markdown: ("# \(old)", "# \(new)")
-        case .tex: ("\\section*{\(texEscaped(old))}", "\\section*{\(texEscaped(new))}")
-        }
+        let (heading, replacement) =
+            switch format {
+            case .markdown: ("# \(old)", "# \(new)")
+            case .tex: ("\\section*{\(texEscaped(old))}", "\\section*{\(texEscaped(new))}")
+            }
         var lines = text.components(separatedBy: "\n")
         let isTop: (String) -> Bool = format == .markdown ? { $0.hasPrefix("# ") } : { $0.hasPrefix("\\section") }
         guard let i = lines.firstIndex(where: { isTop($0.trimmingCharacters(in: .whitespaces)) }),
-              lines[i].trimmingCharacters(in: .whitespaces) == heading else { return text }
+            lines[i].trimmingCharacters(in: .whitespaces) == heading
+        else { return text }
         lines[i] = replacement
         return lines.joined(separator: "\n")
     }
@@ -166,7 +174,8 @@ public enum NoteTemplate {
         guard old != new else { return text }
         func rebase(_ path: String) -> String? {
             guard !path.isEmpty, !path.hasPrefix("/"), !path.hasPrefix("#"), !path.contains("://"),
-                  path.firstIndex(of: ":").map({ colon in !path[..<colon].contains("/") }) != true else { return nil }
+                path.firstIndex(of: ":").map({ colon in !path[..<colon].contains("/") }) != true
+            else { return nil }
             let cut = path.firstIndex { $0 == "#" || $0 == "?" } ?? path.endIndex
             var target = old.split(separator: "/").map(String.init)
             for part in path[..<cut].split(separator: "/") {
@@ -192,7 +201,8 @@ public enum NoteTemplate {
                 let decoded = raw.removingPercentEncoding ?? raw
                 guard let moved = rebase(decoded) else { return String(m.0) }
                 // Written encoded, or a space a bare destination can't hold: encoded as the editor writes links.
-                let out = bracketed || (raw == decoded && !moved.contains(" "))
+                let out =
+                    bracketed || (raw == decoded && !moved.contains(" "))
                     ? moved : moved.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed.union(["#", "?"])) ?? moved
                 return "\(m.1)\(bracketed ? "<\(out)>" : out)"
             }

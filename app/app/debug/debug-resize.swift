@@ -64,13 +64,17 @@ import SwiftUI
         width = most
     }
 
-    static func run(window: () -> NSWindow?, workspace: Workspace, openTab: ((AppLink, UUID) -> Void)?, front: (Int) -> Void,
-                    openBeside: (AppLink, UUID) -> Void, frontPanes: () -> TabPanes?) async {
+    static func run(
+        window: () -> NSWindow?, workspace: Workspace, openTab: ((AppLink, UUID) -> Void)?, front: (Int) -> Void,
+        openBeside: (AppLink, UUID) -> Void, frontPanes: () -> TabPanes?
+    ) async {
         guard let file else { return }
         try? await Task.sleep(for: .seconds(4))
         guard let window = window() ?? NSApp.windows.first(where: { $0.isVisible && $0.canBecomeMain }) else { return }
         if let folder = environment["FOLIO_RESIZE_RECORD"] {
-            await record(in: folder, window: window, workspace: workspace, openTab: openTab, front: front, openBeside: openBeside, frontPanes: frontPanes)
+            await record(
+                in: folder, window: window, workspace: workspace, openTab: openTab, front: front, openBeside: openBeside,
+                frontPanes: frontPanes)
             // folio:not-an-action debug measurements, outside the GIST folder
             try? "done\n".write(to: file, atomically: true, encoding: .utf8)
             return NSApp.terminate(nil)
@@ -92,11 +96,12 @@ import SwiftUI
             }
         }
         // 1 is Today, the window's own first tab; 2 a note, 3 a course.
-        let number = switch environment["FOLIO_RESIZE_FRONT"] {
-        case "today": 1
-        case "course": 3
-        default: 2
-        }
+        let number =
+            switch environment["FOLIO_RESIZE_FRONT"] {
+            case "today": 1
+            case "course": 3
+            default: 2
+            }
         // `FOLIO_RESIZE_PANES` panes in the tab in front (#62), a lecture file and a course's quiz beside it, what a
         // class's layout holds; and in the course tab behind it, so the row has a tab of several panes behind.
         let panes = environment["FOLIO_RESIZE_PANES"].flatMap(Int.init) ?? 1
@@ -136,7 +141,8 @@ import SwiftUI
         let wide = environment["FOLIO_RESIZE_WIDTH"].flatMap(Double.init).map { min(CGFloat($0), screen.width) } ?? screen.width
         window.setFrame(NSRect(x: screen.minX, y: screen.minY, width: wide, height: min(900, screen.height)), display: true)
         try? await Task.sleep(for: .seconds(2))
-        let probe = ResizeProbe(window: window, least: least, most: screen.width, legs: environment["FOLIO_RESIZE_LEGS"].flatMap(Int.init) ?? 4)
+        let probe = ResizeProbe(
+            window: window, least: least, most: screen.width, legs: environment["FOLIO_RESIZE_LEGS"].flatMap(Int.init) ?? 4)
         for name in leading { probe.rest[name] = probe.x(of: name) }
         if let act = environment["FOLIO_RESIZE_ACT"], let folder = environment["FOLIO_RESIZE_SHOTS"] {
             if probe.grab() { await probe.act(act, folder: folder) }
@@ -162,11 +168,15 @@ import SwiftUI
 
     /// Where the marked view in this window starts across it; nil when none is in the window or it is hidden.
     private func x(of name: String) -> CGFloat? {
-        Self.marked[name]?.allObjects.first { $0.window === window && !$0.isHiddenOrHasHiddenAncestor }.map { $0.convert(NSPoint.zero, to: nil).x }
+        Self.marked[name]?.allObjects.first { $0.window === window && !$0.isHiddenOrHasHiddenAncestor }.map {
+            $0.convert(NSPoint.zero, to: nil).x
+        }
     }
 
     private func end(of name: String) -> CGFloat? {
-        Self.marked[name]?.allObjects.first { $0.window === window && !$0.isHiddenOrHasHiddenAncestor }.map { $0.convert(NSPoint(x: $0.bounds.maxX, y: 0), to: nil).x }
+        Self.marked[name]?.allObjects.first { $0.window === window && !$0.isHiddenOrHasHiddenAncestor }.map {
+            $0.convert(NSPoint(x: $0.bounds.maxX, y: 0), to: nil).x
+        }
     }
 
     private func drive() async {
@@ -197,7 +207,10 @@ import SwiftUI
             }
             at["newTabEnd"] = (end(of: "newTab") ?? -1, 1)
             if let divider { at["divider"] = (divider.convert(NSPoint.zero, to: nil).x, 1) }
-            frames.append(Frame(width: last.width, interval: now - last.time, setFrame: last.setFrame, moved: moved, overflowed: overflowed, overlapped: overlapped, at: at))
+            frames.append(
+                Frame(
+                    width: last.width, interval: now - last.time, setFrame: last.setFrame, moved: moved, overflowed: overflowed,
+                    overlapped: overlapped, at: at))
         }
         if leg >= legs {
             link.invalidate()
@@ -224,7 +237,9 @@ import SwiftUI
     /// Takes the first divider of the tab in front. No input is sent: the window needn't be in front.
     private func grab() -> Bool {
         let dividers = Self.marked["divider"]?.allObjects.filter { $0.window === window && !$0.isHiddenOrHasHiddenAncestor } ?? []
-        note = "active=\(NSApp.isActive) visible=\(window.occlusionState.contains(.visible)) dividers at " + dividers.map { String(format: "%.0f", $0.convert(NSPoint.zero, to: nil).x) }.joined(separator: ",")
+        note =
+            "active=\(NSApp.isActive) visible=\(window.occlusionState.contains(.visible)) dividers at "
+            + dividers.map { String(format: "%.0f", $0.convert(NSPoint.zero, to: nil).x) }.joined(separator: ",")
         guard dividers.count == 1, PaneDragHook.shared.row != nil, let divider = dividers.first else { return false }
         self.divider = divider
         let mid = divider.convert(NSPoint(x: divider.bounds.midX, y: divider.bounds.midY), to: nil)
@@ -256,7 +271,8 @@ import SwiftUI
                 guard let tab = Self.marked["firstTab"]?.allObjects.first(where: { $0.window === window }) else { return }
                 point = tab.convert(NSPoint(x: tab.bounds.maxX - 48, y: tab.bounds.midY), to: nil)
             } else {
-                point = content.convert(NSPoint(x: content.bounds.maxX - Theme.Size.panelInset - Theme.Size.paneStrip / 2, y: content.bounds.midY), to: nil)
+                point = content.convert(
+                    NSPoint(x: content.bounds.maxX - Theme.Size.panelInset - Theme.Size.paneStrip / 2, y: content.bounds.midY), to: nil)
             }
             return menu(at: point)
         }
@@ -283,13 +299,18 @@ import SwiftUI
     /// `<folder>/ready`, waits for the recorder to write `<folder>/recording`, then runs `FOLIO_RESIZE_ACT` by commas,
     /// a second and a half apart: `column` (the focused pane's column button), `wide` (the first divider dragged
     /// `FOLIO_RESIZE_SPAN` points left), `even`, `tab` (the page again in a new tab).
-    private static func record(in folder: String, window: NSWindow, workspace: Workspace, openTab: ((AppLink, UUID) -> Void)?,
-                               front: (Int) -> Void, openBeside: (AppLink, UUID) -> Void, frontPanes: () -> TabPanes?) async {
+    private static func record(
+        in folder: String, window: NSWindow, workspace: Workspace, openTab: ((AppLink, UUID) -> Void)?,
+        front: (Int) -> Void, openBeside: (AppLink, UUID) -> Void, frontPanes: () -> TabPanes?
+    ) async {
         let courses = workspace.currentCourses
-        guard let course = environment["FOLIO_RESIZE_COURSE"].flatMap({ name in courses.first { $0.title.contains(name) } }) ?? courses.first else { return }
+        guard
+            let course = environment["FOLIO_RESIZE_COURSE"].flatMap({ name in courses.first { $0.title.contains(name) } }) ?? courses.first
+        else { return }
         let screen = window.screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         let wide = environment["FOLIO_RESIZE_WIDTH"].flatMap(Double.init).map { min(CGFloat($0), screen.width) } ?? screen.width
-        let high = environment["FOLIO_RESIZE_HEIGHT"].flatMap(Double.init).map { min(CGFloat($0), screen.height) } ?? min(900, screen.height)
+        let high =
+            environment["FOLIO_RESIZE_HEIGHT"].flatMap(Double.init).map { min(CGFloat($0), screen.height) } ?? min(900, screen.height)
         window.setFrame(NSRect(x: screen.minX, y: screen.maxY - high, width: wide, height: high), display: true)
         let page = AppLink.course(course.id, page: environment["FOLIO_RESIZE_PAGE"].flatMap(AppLink.CoursePage.init(rawValue:)))
         if environment["FOLIO_RESIZE_BESIDE"] == "overview" {
@@ -301,7 +322,8 @@ import SwiftUI
         try? await Task.sleep(for: .seconds(environment["FOLIO_RESIZE_SETTLE"].flatMap(Double.init) ?? 6))
         let fm = FileManager.default
         // folio:not-an-action debug measurements, outside the GIST folder
-        try? "window \(window.frame) panes \(frontPanes()?.count ?? 0) column \(frontPanes()?.focusedTrail.column != nil)\n".write(toFile: "\(folder)/setup.txt", atomically: true, encoding: .utf8)
+        try? "window \(window.frame) panes \(frontPanes()?.count ?? 0) column \(frontPanes()?.focusedTrail.column != nil)\n".write(
+            toFile: "\(folder)/setup.txt", atomically: true, encoding: .utf8)
         // folio:not-an-action debug handshake with the recorder, outside the GIST folder
         fm.createFile(atPath: "\(folder)/ready", contents: nil)
         for _ in 0..<200 where !fm.fileExists(atPath: "\(folder)/recording") { try? await Task.sleep(for: .milliseconds(50)) }
@@ -329,9 +351,12 @@ import SwiftUI
     /// for `screencapture -l` to shoot from outside: a menu is a window of its own, which the app can't draw itself,
     /// and the app may not shoot the screen.
     private func menu(at point: NSPoint) {
-        guard let event = NSEvent.mouseEvent(with: .rightMouseDown, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
-                                             windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1),
-              let frame = window.contentView?.superview else { return }
+        guard
+            let event = NSEvent.mouseEvent(
+                with: .rightMouseDown, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1),
+            let frame = window.contentView?.superview
+        else { return }
         var view = frame.hitTest(frame.convert(point, from: nil))
         while let v = view, v.menu(for: event) == nil { view = v.superview }
         guard let view, let menu = view.menu(for: event) else { return note += " no menu" }
@@ -362,7 +387,8 @@ import SwiftUI
         while capture.isRunning { usleep(2000) }
         // Without screen recording allowed, drawn by the window instead, its buttons and glass left out.
         guard !FileManager.default.fileExists(atPath: path), let view = window.contentView?.superview,
-              let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
+            let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds)
+        else { return }
         view.cacheDisplay(in: view.bounds, to: rep)
         // folio:not-an-action debug measurements, outside the GIST folder
         try? rep.representation(using: .png, properties: [:])?.write(to: URL(filePath: path))
@@ -371,9 +397,10 @@ import SwiftUI
     /// Frame by frame, for a band the table flags: the width, then each item's x and how many of it the window held.
     private func trace() -> String {
         frames.map { f in
-            "\(Int(f.width))\t" + (Self.leading + ["trailing", "newTabEnd", "divider"]).map { n in
-                f.at[n].map { "\(n)=\(String(format: "%.1f", $0.x))x\($0.count)" } ?? "\(n)=-"
-            }.joined(separator: "\t")
+            "\(Int(f.width))\t"
+                + (Self.leading + ["trailing", "newTabEnd", "divider"]).map { n in
+                    f.at[n].map { "\(n)=\(String(format: "%.1f", $0.x))x\($0.count)" } ?? "\(n)=-"
+                }.joined(separator: "\t")
         }.joined(separator: "\n")
     }
 
@@ -389,7 +416,8 @@ import SwiftUI
             let total = intervals.reduce(0, +)
             // Hitch time: how far each frame ran past one refresh and a half, per second of resizing (Apple's ms/s).
             let hitch = intervals.reduce(0) { $0 + max(0, $1 - refresh * 1.5) } / max(total, 1e-9)
-            var out = "\(name)\tframes=\(frames.count)\tfps=\(String(format: "%.1f", Double(frames.count) / max(total, 1e-9)))"
+            var out =
+                "\(name)\tframes=\(frames.count)\tfps=\(String(format: "%.1f", Double(frames.count) / max(total, 1e-9)))"
                 + "\tp50=\(ms(pct(intervals, 0.5)))\tp95=\(ms(pct(intervals, 0.95)))\thitch_ms_per_s=\(ms(hitch))"
                 + "\tsetFrame_p50=\(ms(pct(frames.map(\.setFrame), 0.5)))\toverflow_frames=\(frames.filter(\.overflowed).count)"
                 + "\toverlap_frames=\(frames.filter(\.overlapped).count)"

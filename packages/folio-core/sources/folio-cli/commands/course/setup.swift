@@ -24,7 +24,8 @@ struct SemesterCommand: ParsableCommand {
         subcommands: [List.self, Show.self] + GeneratedCommands.semester)
 
     struct List: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .semesterListAbstract), discussion: String(localized: .semesterListDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .semesterListAbstract), discussion: String(localized: .semesterListDiscussion))
         @OptionGroup var g: GlobalOptions
         @Flag(help: ArgumentHelp(String(localized: .commonHelpLines))) var lines = false
 
@@ -38,7 +39,10 @@ struct SemesterCommand: ParsableCommand {
                 return
             }
             let current = try? r.currentSemester().id
-            var t = Table(header: [String(localized: .semesterListHeaderSemester), String(localized: .semesterListHeaderName), String(localized: .semesterListHeaderSpan)])
+            var t = Table(header: [
+                String(localized: .semesterListHeaderSemester), String(localized: .semesterListHeaderName),
+                String(localized: .semesterListHeaderSpan),
+            ])
             for s in semesters {
                 let cells = [s.folder?.name ?? s.source ?? String(localized: .semesterRecognized), "\(s.year) \(s.term.rawValue)", span(s)]
                 t.rows.append(s.id == current ? cells.map { $0.styled(.bold) } : cells)
@@ -49,15 +53,20 @@ struct SemesterCommand: ParsableCommand {
     }
 
     struct Show: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .semesterShowAbstract), discussion: String(localized: .semesterShowDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .semesterShowAbstract), discussion: String(localized: .semesterShowDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .semesterShowHelpSemester), valueName: "semester"), completion: .custom(Complete.semesters)) var semester: String?
+        @Argument(
+            help: ArgumentHelp(String(localized: .semesterShowHelpSemester), valueName: "semester"), completion: .custom(Complete.semesters)
+        ) var semester: String?
 
         func run() throws {
             let r = Resolver(try CLI.context(g))
             let s = try r.semester(semester)
             if g.json { return try printJSON(s) }
-            say((s.folder?.name ?? s.source ?? String(localized: .semesterRecognized)).styled(.bold) + "  \(s.year) \(s.term.rawValue)".styled(.dim))
+            say(
+                (s.folder?.name ?? s.source ?? String(localized: .semesterRecognized)).styled(.bold)
+                    + "  \(s.year) \(s.term.rawValue)".styled(.dim))
             say(String(localized: .semesterShowStart(s.start?.description ?? "-")))
             say(String(localized: .semesterShowEnd(s.end?.description ?? "-")))
             if let w = s.midtermWeek { say(String(localized: .semesterShowMidterm(w))) }
@@ -77,9 +86,12 @@ struct CourseCommand: ParsableCommand {
         subcommands: [List.self, Show.self] + GeneratedCommands.course + [Set.self])
 
     struct List: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .courseListAbstract), discussion: String(localized: .courseListDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .courseListAbstract), discussion: String(localized: .courseListDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Option(help: ArgumentHelp(String(localized: .courseListHelpSemester), valueName: "semester"), completion: .custom(Complete.semesters)) var semester: String?
+        @Option(
+            help: ArgumentHelp(String(localized: .courseListHelpSemester), valueName: "semester"), completion: .custom(Complete.semesters))
+        var semester: String?
         @Flag(help: ArgumentHelp(String(localized: .courseListHelpAll))) var all = false
         @Flag(help: ArgumentHelp(String(localized: .commonHelpLines))) var lines = false
 
@@ -93,10 +105,17 @@ struct CourseCommand: ParsableCommand {
                 return
             }
             let catalog = try? r.ctx.catalog()
-            var t = Table(header: ["", String(localized: .courseListHeaderCode), String(localized: .courseListHeaderCourse), String(localized: .courseListHeaderCredits), String(localized: .courseListHeaderMode), String(localized: .courseListHeaderGrade)], shrink: [2])
+            var t = Table(
+                header: [
+                    "", String(localized: .courseListHeaderCode), String(localized: .courseListHeaderCourse),
+                    String(localized: .courseListHeaderCredits), String(localized: .courseListHeaderMode),
+                    String(localized: .courseListHeaderGrade),
+                ], shrink: [2])
             for c in courses {
-                t.rows.append(["●".course(c.color), c.tag, c.course.title, c.course.credits.formatted(), c.course.gradingMode.rawValue.toned,
-                               catalog?.grade(c.course.finalGrade).map { GradesLock.masked($0.symbol) } ?? ""])
+                t.rows.append([
+                    "●".course(c.color), c.tag, c.course.title, c.course.credits.formatted(), c.course.gradingMode.rawValue.toned,
+                    catalog?.grade(c.course.finalGrade).map { GradesLock.masked($0.symbol) } ?? "",
+                ])
             }
             t.print()
             footer(courses.count, hidden: all ? nil : String(localized: .courseListHiddenAll))
@@ -104,9 +123,11 @@ struct CourseCommand: ParsableCommand {
     }
 
     struct Show: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .courseShowAbstract), discussion: String(localized: .courseShowDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .courseShowAbstract), discussion: String(localized: .courseShowDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String = ""
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses))
+        var course: String = ""
 
         func run() throws {
             let r = Resolver(try CLI.context(g))
@@ -124,7 +145,9 @@ struct CourseCommand: ParsableCommand {
             if !x.schedule.isEmpty {
                 say(String(localized: .courseShowSchedule))
                 for t in x.schedule {
-                    say("    \(ClassTime.weekdayNames[t.weekday - 1]) \(String(format: "%02d:%02d–%02d:%02d", t.startMinute / 60, t.startMinute % 60, t.endMinute / 60, t.endMinute % 60)) \(t.room)")
+                    say(
+                        "    \(ClassTime.weekdayNames[t.weekday - 1]) \(String(format: "%02d:%02d–%02d:%02d", t.startMinute / 60, t.startMinute % 60, t.endMinute / 60, t.endMinute % 60)) \(t.room)"
+                    )
                 }
             }
             if x.sharingApproved == true { say(String(localized: .courseShowSharingApproved)) }
@@ -133,13 +156,16 @@ struct CourseCommand: ParsableCommand {
     }
 
     struct Set: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .courseSetAbstract), discussion: String(localized: .courseSetDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .courseSetAbstract), discussion: String(localized: .courseSetDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String = ""
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses))
+        var course: String = ""
         @Option(help: ArgumentHelp(String(localized: .commonHelpMemo))) var memo: String?
         @Option(help: ArgumentHelp(String(localized: .commonHelpCredits))) var credits: Double?
         @Option(help: ArgumentHelp(String(localized: .commonHelpMode))) var mode: GradingMode?
-        @Option(help: ArgumentHelp(String(localized: .courseSetHelpColor(CourseColor.presets.joined(separator: ", "))), valueName: "color")) var color: String?
+        @Option(help: ArgumentHelp(String(localized: .courseSetHelpColor(CourseColor.presets.joined(separator: ", "))), valueName: "color"))
+        var color: String?
         @Option(help: ArgumentHelp(String(localized: .courseSetHelpIcon), valueName: "symbol")) var icon: String?
         @Option(help: ArgumentHelp(String(localized: .courseSetHelpReviews))) var reviews: Toggle?
         @Option(help: ArgumentHelp(String(localized: .courseSetHelpSharingApproved))) var sharingApproved: Toggle?
@@ -158,7 +184,8 @@ struct CourseCommand: ParsableCommand {
             if let color {
                 let token = color == "none" ? "" : color
                 guard token.isEmpty || CourseColor.presets.contains(token) else {
-                    throw CLIError(exit: .usage, message: String(localized: .courseSetColorUnknown(CourseColor.presets.joined(separator: ", "))))
+                    throw CLIError(
+                        exit: .usage, message: String(localized: .courseSetColorUnknown(CourseColor.presets.joined(separator: ", "))))
                 }
                 fields.append(.color(token))
             }
@@ -179,17 +206,24 @@ struct CatalogCommand: ParsableCommand {
         commandName: "catalog", abstract: String(localized: .catalogAbstract), subcommands: [Show.self] + GeneratedCommands.catalog)
 
     struct Show: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .catalogShowAbstract), discussion: String(localized: .catalogShowDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .catalogShowAbstract), discussion: String(localized: .catalogShowDiscussion))
         @OptionGroup var g: GlobalOptions
 
         func run() throws {
             let catalog = try CLI.context(g).catalog()
             if g.json { return try printJSON(catalog) }
             say(String(localized: .catalogShowCodes).styled(.bold) + "  " + catalog.codes.map(\.prefix).joined(separator: " "))
-            say(String(localized: .catalogShowLetterGrades).styled(.bold) + "  " + catalog.letterGrades.map(\.symbol).joined(separator: " "))
-            say(String(localized: .catalogShowCategories).styled(.bold) + "  " + String(localized: .catalogShowCategoryCount(catalog.categories.count)))
+            say(
+                String(localized: .catalogShowLetterGrades).styled(.bold) + "  " + catalog.letterGrades.map(\.symbol).joined(separator: " ")
+            )
+            say(
+                String(localized: .catalogShowCategories).styled(.bold) + "  "
+                    + String(localized: .catalogShowCategoryCount(catalog.categories.count)))
             say(String(localized: .catalogShowPeople).styled(.bold) + "  " + catalog.people.map(\.name).joined(separator: ", "))
-            say(String(localized: .catalogShowHandbooks).styled(.bold) + "  " + catalog.handbooks.map { String($0.year) }.joined(separator: ", "))
+            say(
+                String(localized: .catalogShowHandbooks).styled(.bold) + "  "
+                    + catalog.handbooks.map { String($0.year) }.joined(separator: ", "))
         }
     }
 }
@@ -199,17 +233,24 @@ struct SettingsCommand: ParsableCommand {
         commandName: "settings", abstract: String(localized: .settingsAbstract), subcommands: [Show.self] + GeneratedCommands.settings)
 
     struct Show: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .settingsShowAbstract), discussion: String(localized: .settingsShowDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .settingsShowAbstract), discussion: String(localized: .settingsShowDiscussion))
         @OptionGroup var g: GlobalOptions
 
         func run() throws {
             let s = try CLI.context(g).settings()
             if g.json { return try printJSON(s) }
-            say(String(localized: .settingsShowDayBoundary).styled(.bold) + String(format: "  %02d:%02d", s.dayBoundaryMinutes / 60, s.dayBoundaryMinutes % 60))
+            say(
+                String(localized: .settingsShowDayBoundary).styled(.bold)
+                    + String(format: "  %02d:%02d", s.dayBoundaryMinutes / 60, s.dayBoundaryMinutes % 60))
             say(String(localized: .settingsShowClassMinutes).styled(.bold) + "  " + String(localized: .settingsShowMinutes(s.classMinutes)))
-            say(String(localized: .settingsShowIntervals).styled(.bold) + "  " + s.review.intervals.map { String(localized: .settingsShowDays($0)) }.joined(separator: ", "))
+            say(
+                String(localized: .settingsShowIntervals).styled(.bold) + "  "
+                    + s.review.intervals.map { String(localized: .settingsShowDays($0)) }.joined(separator: ", "))
             say(String(localized: .settingsShowNewNoteMath).styled(.bold) + "  \(s.newNoteMath.rawValue)")
-            say(String(localized: .settingsShowBackup).styled(.bold) + "  \(s.backup.enabled ? s.backup.folder : String(localized: .settingsShowOff))")
+            say(
+                String(localized: .settingsShowBackup).styled(.bold)
+                    + "  \(s.backup.enabled ? s.backup.folder : String(localized: .settingsShowOff))")
         }
     }
 }

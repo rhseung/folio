@@ -4,9 +4,12 @@ import Foundation
 
 extension RequirementCommand {
     struct Check: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .requirementCheckAbstract), discussion: String(localized: .requirementCheckDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .requirementCheckAbstract), discussion: String(localized: .requirementCheckDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .requirementCheckHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String?
+        @Argument(
+            help: ArgumentHelp(String(localized: .requirementCheckHelpCourse), valueName: "course"), completion: .custom(Complete.courses))
+        var course: String?
         @Option(help: ArgumentHelp(String(localized: .requirementCheckHelpOnly), valueName: "kind")) var only: [RequirementAudit.Kind] = []
 
         func run() throws {
@@ -42,10 +45,20 @@ extension RequirementCommand {
             let report = Report(
                 suggestions: audit.suggestions.map { s in
                     let c = refs[s.courseId]
-                    return .init(course: c?.code ?? "", title: c?.course.title ?? "", code: s.code, year: s.year, from: names(c?.course.categoryIds ?? []), to: names(s.categoryIds))
+                    return .init(
+                        course: c?.code ?? "", title: c?.course.title ?? "", code: s.code, year: s.year,
+                        from: names(c?.course.categoryIds ?? []), to: names(s.categoryIds))
                 },
-                overShared: audit.overShared.map { .init(category: catalog.category($0.categoryId)?.name ?? "", cap: $0.cap, credits: $0.earned + $0.inProgress, courses: $0.courses.map(tag)) },
-                unallowed: audit.unallowed.map { .init(category: catalog.category($0.categoryId)?.name ?? "", cap: $0.cap, credits: $0.unallowed.map(\.credits).reduce(0, +), courses: $0.unallowed.map(tag)) },
+                overShared: audit.overShared.map {
+                    .init(
+                        category: catalog.category($0.categoryId)?.name ?? "", cap: $0.cap, credits: $0.earned + $0.inProgress,
+                        courses: $0.courses.map(tag))
+                },
+                unallowed: audit.unallowed.map {
+                    .init(
+                        category: catalog.category($0.categoryId)?.name ?? "", cap: $0.cap,
+                        credits: $0.unallowed.map(\.credits).reduce(0, +), courses: $0.unallowed.map(tag))
+                },
                 unassigned: audit.unassigned.map(tag))
             if g.json {
                 try printJSON(report)
@@ -60,14 +73,22 @@ extension RequirementCommand {
         func printReport(_ report: Report, refs: [UUID: CourseRef]) {
             let titles = Dictionary(refs.values.map { ($0.code, $0.course.title) }, uniquingKeysWith: { a, _ in a })
             func courses(_ codes: [String]) {
-                var t = Table(header: [String(localized: .requirementCheckHeaderCode), String(localized: .requirementCheckHeaderCourse)], shrink: [1])
+                var t = Table(
+                    header: [String(localized: .requirementCheckHeaderCode), String(localized: .requirementCheckHeaderCourse)], shrink: [1])
                 t.rows = codes.map { [$0, titles[$0] ?? ""] }
                 t.print()
             }
             if !report.suggestions.isEmpty {
                 say(String(localized: .requirementCheckSuggestionsTitle(report.suggestions.count)).styled(.bold))
-                var t = Table(header: [String(localized: .requirementCheckHeaderCode), String(localized: .requirementCheckHeaderCourse), String(localized: .requirementCheckHeaderHandbook), String(localized: .requirementCheckHeaderNow), String(localized: .requirementCheckHeaderHandbookCategories)], shrink: [1, 3])
-                t.rows = report.suggestions.map { [$0.course, $0.title, "\($0.year) \($0.code)", $0.from.joined(separator: ", "), $0.to.joined(separator: ", ")] }
+                var t = Table(
+                    header: [
+                        String(localized: .requirementCheckHeaderCode), String(localized: .requirementCheckHeaderCourse),
+                        String(localized: .requirementCheckHeaderHandbook), String(localized: .requirementCheckHeaderNow),
+                        String(localized: .requirementCheckHeaderHandbookCategories),
+                    ], shrink: [1, 3])
+                t.rows = report.suggestions.map {
+                    [$0.course, $0.title, "\($0.year) \($0.code)", $0.from.joined(separator: ", "), $0.to.joined(separator: ", ")]
+                }
                 t.print()
                 say(String(localized: .requirementCheckSuggestionsHint).styled(.dim))
             }
@@ -108,19 +129,37 @@ extension RequirementCommand {
             let suggestion = HandbookClassifier.suggest(courses: [c], semesters: r.semesters, catalog: catalog).first
             let sharing = GPACalculator.shared(courses: [c], catalog: catalog).map { s in
                 let allowed = s.unallowed.isEmpty
-                return One.Sharing(category: catalog.category(s.categoryId)?.name ?? "", allowed: allowed,
-                                   reason: !allowed ? String(localized: .requirementCheckReasonNone) : c.sharingApproved == true ? String(localized: .requirementCheckReasonApproved) : String(localized: .requirementCheckReasonShared(codes.joined(separator: "/"))))
+                return One.Sharing(
+                    category: catalog.category(s.categoryId)?.name ?? "", allowed: allowed,
+                    reason: !allowed
+                        ? String(localized: .requirementCheckReasonNone)
+                        : c.sharingApproved == true
+                            ? String(localized: .requirementCheckReasonApproved)
+                            : String(localized: .requirementCheckReasonShared(codes.joined(separator: "/"))))
             }
-            let one = One(course: ref.code, title: c.title, categories: c.categoryIds.compactMap { catalog.category($0)?.name },
-                          handbook: areas.map { .init(year: $0.year, area: $0.area) },
-                          suggested: suggestion.map { $0.categoryIds.compactMap { catalog.category($0)?.name } }, sharing: sharing)
+            let one = One(
+                course: ref.code, title: c.title, categories: c.categoryIds.compactMap { catalog.category($0)?.name },
+                handbook: areas.map { .init(year: $0.year, area: $0.area) },
+                suggested: suggestion.map { $0.categoryIds.compactMap { catalog.category($0)?.name } }, sharing: sharing)
             if g.json { return try printJSON(one) }
             courseHeader(ref, catalog: catalog)
-            say(String(localized: .requirementCheckCategories(one.categories.isEmpty ? String(localized: .requirementCheckNone).styled(.yellow) : one.categories.joined(separator: ", "))))
+            say(
+                String(
+                    localized: .requirementCheckCategories(
+                        one.categories.isEmpty
+                            ? String(localized: .requirementCheckNone).styled(.yellow) : one.categories.joined(separator: ", "))))
             if let a = areas.first { say(String(localized: .requirementCheckHandbook(a.year, a.area))) }
-            if let s = one.suggested { say(String(localized: .requirementCheckSuggestionLabel) + String(localized: .requirementCheckSuggestion(s.joined(separator: ", "))).styled(.yellow)) }
+            if let s = one.suggested {
+                say(
+                    String(localized: .requirementCheckSuggestionLabel)
+                        + String(localized: .requirementCheckSuggestion(s.joined(separator: ", "))).styled(.yellow))
+            }
             for s in sharing {
-                say(String(localized: .requirementCheckSharing(s.category)) + (s.allowed ? String(localized: .requirementCheckSharingAllowed(s.reason)) : String(localized: .requirementCheckSharingUnallowed(s.reason)).styled(.yellow)))
+                say(
+                    String(localized: .requirementCheckSharing(s.category))
+                        + (s.allowed
+                            ? String(localized: .requirementCheckSharingAllowed(s.reason))
+                            : String(localized: .requirementCheckSharingUnallowed(s.reason)).styled(.yellow)))
             }
         }
 

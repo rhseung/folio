@@ -1,11 +1,12 @@
-import FolioActions
 import FolioAI
+import FolioActions
 import FolioDomain
 import FolioFixtures
 import FolioStorage
 import Foundation
 import PDFKit
 import Testing
+
 @testable import Folio
 
 /// A lecture's units (#321): proposed in the add sheet, edited on the split screen, and drawn where its progress shows.
@@ -33,7 +34,8 @@ struct LectureSectionsModelTests {
     }
 
     func proposal(_ units: [FolioDomain.Unit]) -> LectureSplit {
-        let found = LectureSplit([.init(title: "Matchings", firstPage: 1, lastPage: 1), .init(title: "Berge", firstPage: 9, lastPage: 9)], pageCount: 16)!
+        let found = LectureSplit(
+            [.init(title: "Matchings", firstPage: 1, lastPage: 1), .init(title: "Berge", firstPage: 9, lastPage: 9)], pageCount: 16)!
         var split = SectionMatch.match(found, units: units)
         split.setUnit(units.first { $0.title == "매칭" }?.id, of: 0, match: .name)
         return split
@@ -73,8 +75,10 @@ struct LectureSectionsModelTests {
     /// takes no sections at all.
     @Test func putOffOrNoLongerALectureWritesNoSections() async throws {
         let course = try #require(workspace.course(graphTheory))
-        let model = ImportPlaceModel(workspace: workspace, course: course, files: [try incoming("07_Flows.pdf")],
-                                     places: MaterialIntake.places(assignmentFolders: ["HW01"])) { _, units, _ in .found(proposal(units), .claude) }
+        let model = ImportPlaceModel(
+            workspace: workspace, course: course, files: [try incoming("07_Flows.pdf")],
+            places: MaterialIntake.places(assignmentFolders: ["HW01"])
+        ) { _, units, _ in .found(proposal(units), .claude) }
         await settle(model)
         model.later(0)
         #expect(model.sectionsLine(model.rows[0]) == "단원 구간 없음 · 나중에 나누기")
@@ -87,7 +91,9 @@ struct LectureSectionsModelTests {
 
     @Test func nothingFoundSplitsByHand() async throws {
         let course = try #require(workspace.course(graphTheory))
-        let model = ImportPlaceModel(workspace: workspace, course: course, files: [try incoming("a.pdf"), try incoming("b.pdf")], places: []) { _, _, _ in
+        let model = ImportPlaceModel(
+            workspace: workspace, course: course, files: [try incoming("a.pdf"), try incoming("b.pdf")], places: []
+        ) { _, _, _ in
             .nothing(pageCount: 12)
         }
         await settle(model)
@@ -112,7 +118,10 @@ struct LectureSectionsModelTests {
             return
         }
         #expect(split.sections.map(\.pages) == [1...8, 9...16, 17...24])
-        #expect(split.sections.map(\.title) == ["Matchings", "Hall's theorem", "Augmenting paths and Berge's theorem in simple bipartite graphs"])
+        #expect(
+            split.sections.map(\.title) == [
+                "Matchings", "Hall's theorem", "Augmenting paths and Berge's theorem in simple bipartite graphs",
+            ])
         #expect(split.sections.allSatisfy { $0.isNew })
         let missing = await LectureReader.find(URL(filePath: "/nonexistent.pdf"), units: units, claude: nil)
         #expect(missing == .unreadable)
@@ -166,16 +175,19 @@ struct LectureSectionsModelTests {
 
     /// What a stand-in Claude proposes: two new units over ten pages. Each call makes new section ids.
     var claudes: LectureSplit {
-        var split = LectureSplit([.init(title: "Overview", firstPage: 1, lastPage: 1), .init(title: "IP", firstPage: 4, lastPage: 4)], pageCount: 10)!
+        var split = LectureSplit(
+            [.init(title: "Overview", firstPage: 1, lastPage: 1), .init(title: "IP", firstPage: 4, lastPage: 4)], pageCount: 10)!
         for i in split.sections.indices { split.makeNew(i) }
         return split
     }
 
     func standIn(_ answer: ClaudeFinding, asked: (@MainActor () -> Void)? = nil) -> LectureClaude {
-        LectureClaude(off: { nil }, ask: { _, _ in
-            asked?()
-            return answer
-        })
+        LectureClaude(
+            off: { nil },
+            ask: { _, _ in
+                asked?()
+                return answer
+            })
     }
 
     /// Claude reads every page, not only the titles: each page's text goes under its title, and the divider slides,
@@ -250,8 +262,9 @@ struct LectureSectionsModelTests {
         await model.retryClaude()
         #expect(!asked)
 
-        let sheet = ImportPlaceModel(workspace: workspace, course: course, files: [try incoming("08_Cuts.pdf")], places: [],
-                                     find: { _, _, _ in .nothing(pageCount: 10) }, claude: standIn(.found(claudes)) { asked = true })
+        let sheet = ImportPlaceModel(
+            workspace: workspace, course: course, files: [try incoming("08_Cuts.pdf")], places: [],
+            find: { _, _, _ in .nothing(pageCount: 10) }, claude: standIn(.found(claudes)) { asked = true })
         await settle(sheet)
         #expect(!sheet.showsRetry(0))
         sheet.retryClaude(0)
@@ -264,8 +277,9 @@ struct LectureSectionsModelTests {
         let course = try #require(workspace.course(graphTheory))
         let claudes = claudes
         let failure = "Claude가 나누지 못했습니다. 요청이 실패했습니다"
-        let model = ImportPlaceModel(workspace: workspace, course: course, files: [try incoming("09_Network layer.pdf")], places: [],
-                                     find: { _, _, _ in .failed(failure, pageCount: 10) }, claude: standIn(.found(claudes)))
+        let model = ImportPlaceModel(
+            workspace: workspace, course: course, files: [try incoming("09_Network layer.pdf")], places: [],
+            find: { _, _, _ in .failed(failure, pageCount: 10) }, claude: standIn(.found(claudes)))
         await settle(model)
         #expect(model.sectionsLine(model.rows[0]) == failure && model.showsRetry(0))
         let before = file
@@ -277,8 +291,9 @@ struct LectureSectionsModelTests {
         model.confirm()
         #expect(file.units.contains { $0.title == "IP" })
 
-        let failing = ImportPlaceModel(workspace: workspace, course: course, files: [try incoming("10_Routing.pdf")], places: [],
-                                       find: { _, _, _ in .failed(failure, pageCount: 10) }, claude: standIn(.nothing))
+        let failing = ImportPlaceModel(
+            workspace: workspace, course: course, files: [try incoming("10_Routing.pdf")], places: [],
+            find: { _, _, _ in .failed(failure, pageCount: 10) }, claude: standIn(.nothing))
         await settle(failing)
         failing.retryClaude(0)
         for _ in 0..<50 where !failing.asking.isEmpty { await Task.yield() }
@@ -310,14 +325,16 @@ struct LectureSectionsModelTests {
         #expect(why.hasPrefix("Claude가 나누지 못했습니다"))
 
         let course = try #require(workspace.course(graphTheory))
-        let sheet = ImportPlaceModel(workspace: workspace, course: course, files: [try incoming("11_Flows.pdf")], places: [],
-                                     find: { _, _, _ in .failed(why, pageCount: 10) }, claude: standIn(.nothing))
+        let sheet = ImportPlaceModel(
+            workspace: workspace, course: course, files: [try incoming("11_Flows.pdf")], places: [],
+            find: { _, _, _ in .failed(why, pageCount: 10) }, claude: standIn(.nothing))
         await settle(sheet)
         #expect(sheet.sectionsLine(sheet.rows[0]) == why && sheet.showsRetry(0))
     }
 
     @Test func theProgressBarReadsTheUnitsItReaches() throws {
-        workspace.run(MaterialSplit(course: graphTheory, material: slides.id, sections: [LectureCut(unit: matching, firstPage: 3, lastPage: 8)]))
+        workspace.run(
+            MaterialSplit(course: graphTheory, material: slides.id, sections: [LectureCut(unit: matching, firstPage: 3, lastPage: 8)]))
         let session = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now))?.made)
         let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: session)
         #expect(model.zones(slides.id).map(\.pages) == [1...2, 3...8])
@@ -334,7 +351,8 @@ struct LectureSectionsModelTests {
     }
 
     @Test func theMaterialsPageShowsASplitUnitAsTheFilesOwnNotAsThroughAClass() throws {
-        workspace.run(MaterialSplit(course: graphTheory, material: slides.id, sections: [LectureCut(unit: matching, firstPage: 3, lastPage: 8)]))
+        workspace.run(
+            MaterialSplit(course: graphTheory, material: slides.id, sections: [LectureCut(unit: matching, firstPage: 3, lastPage: 8)]))
         let model = MaterialsModel(workspace: workspace, course: try #require(workspace.course(graphTheory)))
         #expect(model.unitIds(of: slides.id).isEmpty)
         #expect(!model.unitsViaSessions(of: slides.id).contains(matching))
@@ -367,7 +385,9 @@ struct LectureSplitScreenTests {
         controller = PDFController(document: document, page: 0)
         await model.startSplit(controller)
         host = NSHostingView(rootView: AnyView(PDFContent(model: model, controller: controller).environment(workspace)))
-        let window = NSWindow(contentRect: CGRect(x: -20_000, y: -20_000, width: 1180, height: 720), styleMask: [.borderless], backing: .buffered, defer: false)
+        let window = NSWindow(
+            contentRect: CGRect(x: -20_000, y: -20_000, width: 1180, height: 720), styleMask: [.borderless], backing: .buffered,
+            defer: false)
         window.contentView = host
         try await settle()
     }

@@ -58,15 +58,19 @@ struct NoteMenuSource: ItemMenuSource {
                 if let open { open() } else if let id = note.meta.id { openLink(AppLink(.note, id), course: courseId) }
             }
         case .openPDF:
-            MenuRow(command, .materialsOpenPdf, "doc.richtext", .action { if let builtPDF { openLink(AppLink(.material, builtPDF), course: courseId) } })
+            MenuRow(
+                command, .materialsOpenPdf, "doc.richtext",
+                .action { if let builtPDF { openLink(AppLink(.material, builtPDF), course: courseId) } })
         case .build:
             MenuRow(command, .textFileBuild, "hammer", disabled: !canBuild, .action { build?() })
         case .review(let review):
-            MenuRow(command, .notesReviewDone, "checkmark.circle", .check(review.isChecked) { _ in
-                if let reviewed, let unfinished = review.toggled.reviewUnfinished {
-                    workspace.setReviewNoteUnfinished(unfinished, of: reviewed.id, in: courseId)
-                }
-            })
+            MenuRow(
+                command, .notesReviewDone, "checkmark.circle",
+                .check(review.isChecked) { _ in
+                    if let reviewed, let unfinished = review.toggled.reviewUnfinished {
+                        workspace.setReviewNoteUnfinished(unfinished, of: reviewed.id, in: courseId)
+                    }
+                })
         case .edit:
             .edit(command) {
                 save?()
@@ -94,10 +98,12 @@ struct NoteMenuSource: ItemMenuSource {
                 save?()
                 sheets.confirm(workspace.askMove(note, into: folder, course: course) { [moves] ctx in moves?.keep(ctx) })
             }
-        } + [MenuRow.Leaf(id: "new", title: String(localized: .notesFolderNewEllipsis), symbol: "folder.badge.plus") {
-            save?()
-            sheets.present(.noteFolder(NoteSheetRequest(course: courseId, note: note, moves: moves)))
-        }]
+        } + [
+            MenuRow.Leaf(id: "new", title: String(localized: .notesFolderNewEllipsis), symbol: "folder.badge.plus") {
+                save?()
+                sheets.present(.noteFolder(NoteSheetRequest(course: courseId, note: note, moves: moves)))
+            }
+        ]
     }
 }
 
@@ -117,7 +123,9 @@ struct NoteMenu: View {
     var save: (@MainActor () -> Void)?
 
     var body: some View {
-        ItemMenu(source: NoteMenuSource(workspace: workspace, courseId: courseId, note: note, host: host, moves: moves, open: open, build: build,
-                                        canBuild: canBuild, removed: removed, save: save, openLink: openLink, sheets: sheets))
+        ItemMenu(
+            source: NoteMenuSource(
+                workspace: workspace, courseId: courseId, note: note, host: host, moves: moves, open: open, build: build,
+                canBuild: canBuild, removed: removed, save: save, openLink: openLink, sheets: sheets))
     }
 }

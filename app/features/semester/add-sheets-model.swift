@@ -26,7 +26,9 @@ final class AddSemesterModel {
     var exists: Bool { workspace.transcript.semesters.contains { $0.year == year && $0.term == term } }
 
     var note: String? {
-        exists ? String(localized: .semesterAddExists) : SemesterFolder(year: year, term: term).map { String(localized: .semesterFolderNote($0.name)) }
+        exists
+            ? String(localized: .semesterAddExists)
+            : SemesterFolder(year: year, term: term).map { String(localized: .semesterFolderNote($0.name)) }
     }
 
     func add() -> UUID? {
@@ -63,6 +65,7 @@ final class AddCourseModel {
 
     func add() -> UUID? {
         guard let codeId, let credits else { return nil }
-        return workspace.run(CourseAdd(code: codeId, number: number, title: title, credits: credits, mode: mode, semester: semester.id))?.made
+        return workspace.run(CourseAdd(code: codeId, number: number, title: title, credits: credits, mode: mode, semester: semester.id))?
+            .made
     }
 }

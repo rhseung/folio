@@ -66,7 +66,9 @@ struct TodayHeader: View {
                     Text(day.weekday).font(Theme.Typeface.label)
                     Text("\(day.day.day)").font(Theme.Typeface.bodyStrong).monospacedDigit()
                     HStack(spacing: Theme.Space.xxs) {
-                        ForEach(day.courses.prefix(4), id: \.self) { CourseDot(color: model.workspace.accent($0).color, size: Theme.Space.tight) }
+                        ForEach(day.courses.prefix(4), id: \.self) {
+                            CourseDot(color: model.workspace.accent($0).color, size: Theme.Space.tight)
+                        }
                     }
                     .frame(height: Theme.Space.tight)
                 }

@@ -1,9 +1,10 @@
-@testable import FolioCLI
 import FolioActions
 import FolioDomain
 import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioCLI
 
 /// Rules the app keeps by hiding controls, held by the actions so `folio` and `folio run` can't break them either.
 struct ActionSafetyTests {
@@ -19,8 +20,11 @@ struct ActionSafetyTests {
 
     @Test func singleComponentTakesOneScore() throws {
         let gist = try Harness.fixtureCopy()
-        settled([["component", "add", "EC4207", "중간고사", "--weight", "30", "--aggregation", "single"],
-                 ["score", "add", "EC4207", "--component", "중간고사", "--score", "8.5", "--max", "30"]], gist: gist)
+        settled(
+            [
+                ["component", "add", "EC4207", "중간고사", "--weight", "30", "--aggregation", "single"],
+                ["score", "add", "EC4207", "--component", "중간고사", "--score", "8.5", "--max", "30"],
+            ], gist: gist)
         let r = h.cli(["score", "add", "EC4207", "--component", "중간고사", "--title", "Midterm", "--score", "11", "--max", "30"], gist: gist)
         #expect(r.code == Exit.rule.rawValue)
         #expect(r.err.contains("단일 성적 항목 '중간고사'"))
@@ -69,8 +73,11 @@ struct ActionSafetyTests {
 
     @Test func catalogKeepsRowsInUse() throws {
         let gist = try Harness.fixtureCopy()
-        settled([["catalog", "set", "--file", try GradesSetupTests().catalogFile()],
-                 ["course", "add", "EC", "4208-01", "네트워크", "--semester", "2026-3"]], gist: gist)
+        settled(
+            [
+                ["catalog", "set", "--file", try GradesSetupTests().catalogFile()],
+                ["course", "add", "EC", "4208-01", "네트워크", "--semester", "2026-3"],
+            ], gist: gist)
         let r = h.cli(["run", "catalog", "set", "--input", #"{"catalog":{"codes":[]}}"#, "--yes"], gist: gist)
         #expect(r.code == Exit.rule.rawValue)
         #expect(r.err.contains("과목 '네트워크'의 강의 코드가 catalog.json에 없습니다"))
@@ -79,7 +86,8 @@ struct ActionSafetyTests {
     @Test func courseIdIsNotReused() throws {
         let gist = try Harness.fixtureCopy()
         settled([["catalog", "set", "--file", try GradesSetupTests().catalogFile()]], gist: gist)
-        let r = h.cli(["course", "add", "EC", "4208-01", "네트워크", "--semester", "2026-3", "--id", Harness.graphTheory.uuidString], gist: gist)
+        let r = h.cli(
+            ["course", "add", "EC", "4208-01", "네트워크", "--semester", "2026-3", "--id", Harness.graphTheory.uuidString], gist: gist)
         #expect(r.code == Exit.rule.rawValue)
     }
 
@@ -95,9 +103,12 @@ struct ActionSafetyTests {
 
     @Test func cancellingASessionDropsItsAttendance() throws {
         let gist = try Harness.fixtureCopy()
-        settled([["session", "add", "EC4207", "--date", "2026-10-20 10:30"],
-                 ["attendance", "set", "EC4207/10-20", "absent"],
-                 ["session", "set", "EC4207/10-20", "--kind", "cancelled"]], gist: gist)
+        settled(
+            [
+                ["session", "add", "EC4207", "--date", "2026-10-20 10:30"],
+                ["attendance", "set", "EC4207/10-20", "absent"],
+                ["session", "set", "EC4207/10-20", "--kind", "cancelled"],
+            ], gist: gist)
         let file = try GISTStore(url: gist).courseStores().map { try $0.load().model }.first { $0.course.id == Harness.graphTheory }!
         #expect(file.attendance.isEmpty)
         let r = h.cli(["attendance", "set", "EC4207/10-20", "absent"], gist: gist)
@@ -108,9 +119,12 @@ struct ActionSafetyTests {
     /// A makeup is held like a lecture: turning a class into one keeps its attendance.
     @Test func aMakeupKeepsItsAttendance() throws {
         let gist = try Harness.fixtureCopy()
-        settled([["session", "add", "EC4207", "--date", "2026-10-20 10:30"],
-                 ["attendance", "set", "EC4207/10-20", "absent"],
-                 ["session", "set", "EC4207/10-20", "--kind", "makeup"]], gist: gist)
+        settled(
+            [
+                ["session", "add", "EC4207", "--date", "2026-10-20 10:30"],
+                ["attendance", "set", "EC4207/10-20", "absent"],
+                ["session", "set", "EC4207/10-20", "--kind", "makeup"],
+            ], gist: gist)
         let file = try GISTStore(url: gist).courseStores().map { try $0.load().model }.first { $0.course.id == Harness.graphTheory }!
         #expect(file.attendance.map(\.state) == [.absent])
         #expect(file.sessions.first { $0.id == file.attendance.first?.sessionId }?.kind == .makeup)

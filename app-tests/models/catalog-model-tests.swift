@@ -1,6 +1,7 @@
 import FolioDomain
 import Foundation
 import Testing
+
 @testable import Folio
 
 @MainActor
@@ -80,9 +81,11 @@ struct CodesModelTests {
     @Test func searchHidesProgramsWithoutAMatch() throws {
         let model = CodesModel(workspace: try fixtureWorkspace())
         var c = Catalog()
-        c.codes = [CourseCode(device: device, at: .now, prefix: "MA", department: "수리과학과", program: "학사과정"),
-                   CourseCode(device: device, at: .now, prefix: "EC", department: "전기전자컴퓨터공학부", program: "학사과정"),
-                   CourseCode(device: device, at: .now, prefix: "GS", department: "기초교육학부", program: "")]
+        c.codes = [
+            CourseCode(device: device, at: .now, prefix: "MA", department: "수리과학과", program: "학사과정"),
+            CourseCode(device: device, at: .now, prefix: "EC", department: "전기전자컴퓨터공학부", program: "학사과정"),
+            CourseCode(device: device, at: .now, prefix: "GS", department: "기초교육학부", program: ""),
+        ]
         #expect(model.shown("학사과정", in: c).map(\.prefix) == ["EC", "MA"])
         model.query = "전기"
         #expect(model.showsProgram("학사과정", in: c))

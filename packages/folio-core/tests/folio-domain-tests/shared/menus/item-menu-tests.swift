@@ -43,7 +43,8 @@ struct ItemMenuTests {
 
     /// Whatever the class holds and whenever the menu opens, rows come by group, delete last, edit and share always.
     @Test func everyMenuIsInGroupOrderWithDeleteLast() async {
-        await propertyCheck(input: Gen.int(in: 0...(7 * 24 * 4)), Gen.int(in: 0...3), Gen.int(in: 0...3), Gen.int(in: 0...2)) { quarter, recorded, flags, host in
+        await propertyCheck(input: Gen.int(in: 0...(7 * 24 * 4)), Gen.int(in: 0...3), Gen.int(in: 0...3), Gen.int(in: 0...2)) {
+            quarter, recorded, flags, host in
             var f = course()
             f.sessions[0].roughNoteId = flags & 1 == 1 ? UUID() : nil
             f.sessions[0].isCancelled = flags & 2 == 2
@@ -80,7 +81,10 @@ struct ItemMenuTests {
         f.sessions[0].reviewNoteId = UUID()
         f.sessions[0].reviewNoteUnfinished = true
         f.recordings = [recording(f, 0)]
-        #expect(commands(f, at: at(2, 12)) == [.openNote(.rough), .openNote(.review), .play(f.recordings[0].id), .review(.writing), .edit, .share, .remove])
+        #expect(
+            commands(f, at: at(2, 12)) == [
+                .openNote(.rough), .openNote(.review), .play(f.recordings[0].id), .review(.writing), .edit, .share, .remove,
+            ])
         f.recordings.append(recording(f, 1))
         #expect(commands(f, at: at(2, 12)).contains(.recordings(f.recordings.map(\.id))))
     }
@@ -128,8 +132,12 @@ struct ItemMenuTests {
     @Test func theSheetPutsWhatTheClassCoveredFirstOnceItBegan() {
         let f = course()
         let s = f.sessions[0]
-        #expect(f.sections(of: s, kind: .lecture, start: s.date, at: at(2, 12), takesAttendance: true) == [.progress, .units, .notes, .attendance, .info])
-        #expect(f.sections(of: s, kind: .lecture, start: s.date, at: at(2, 9), takesAttendance: true) == [.info, .units, .notes, .attendance])
+        #expect(
+            f.sections(of: s, kind: .lecture, start: s.date, at: at(2, 12), takesAttendance: true) == [
+                .progress, .units, .notes, .attendance, .info,
+            ])
+        #expect(
+            f.sections(of: s, kind: .lecture, start: s.date, at: at(2, 9), takesAttendance: true) == [.info, .units, .notes, .attendance])
         #expect(f.sections(of: s, kind: .cancelled, start: s.date, at: at(2, 12), takesAttendance: true) == [.info])
         #expect(f.sections(of: nil, kind: .makeup, start: s.date, at: at(2, 12), takesAttendance: false) == [.info, .units])
         var g = f

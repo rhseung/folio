@@ -76,7 +76,8 @@ struct SessionReferenceTests {
         #expect(f.sessions(matching: "11-03", calendar: calendar).count == 2)
         let evening = session(at(11, 3, 19, 0))
         let g = file([second, first, evening])
-        #expect([first, second, evening].map { g.reference(of: $0, calendar: calendar) } == ["11-03 00:00", "11-03 00:00 2", "11-03 19:00"])
+        #expect(
+            [first, second, evening].map { g.reference(of: $0, calendar: calendar) } == ["11-03 00:00", "11-03 00:00 2", "11-03 19:00"])
     }
 
     /// A course over New Year that meets on the same month and day twice tells them apart by the year.
@@ -116,10 +117,11 @@ struct SessionReferenceTests {
         let new = Recording(device: device, at: .now, sessionId: s.id, file: "Recordings/11-03(화).m4a")
         f.recordings = [old, second, mine, loose, new]
 
-        #expect(f.legacyRecordingRetitles(calendar: calendar) == [
-            RecordingRetitle(recording: old.id, file: old.file, name: "11-03(화)"),
-            RecordingRetitle(recording: second.id, file: second.file, name: "11-03(화)"),
-        ])
+        #expect(
+            f.legacyRecordingRetitles(calendar: calendar) == [
+                RecordingRetitle(recording: old.id, file: old.file, name: "11-03(화)"),
+                RecordingRetitle(recording: second.id, file: second.file, name: "11-03(화)"),
+            ])
     }
 
     // MARK: Properties
@@ -131,10 +133,12 @@ struct SessionReferenceTests {
 
     func make(_ rows: [(Int, Int, Int)]) -> CourseFile {
         let start = at(3, 2, 0, 0)
-        return file(rows.map { day, slot, made in
-            let date = calendar.date(byAdding: .minute, value: Self.minutes[slot], to: calendar.date(byAdding: .day, value: day, to: start)!)!
-            return session(date, made: start.addingTimeInterval(TimeInterval(made)))
-        })
+        return file(
+            rows.map { day, slot, made in
+                let date = calendar.date(
+                    byAdding: .minute, value: Self.minutes[slot], to: calendar.date(byAdding: .day, value: day, to: start)!)!
+                return session(date, made: start.addingTimeInterval(TimeInterval(made)))
+            })
     }
 
     @Test func everyClassHasItsOwnReference() async {
@@ -148,7 +152,9 @@ struct SessionReferenceTests {
     @Test func aReferenceFindsItsClassAlone() async {
         await propertyCheck(input: Self.sessions) { rows in
             let f = make(rows)
-            for s in f.sessions { #expect(f.sessions(matching: f.reference(of: s, calendar: calendar), calendar: calendar).map(\.id) == [s.id]) }
+            for s in f.sessions {
+                #expect(f.sessions(matching: f.reference(of: s, calendar: calendar), calendar: calendar).map(\.id) == [s.id])
+            }
         }
     }
 

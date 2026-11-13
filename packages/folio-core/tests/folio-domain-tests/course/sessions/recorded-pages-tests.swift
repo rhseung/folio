@@ -16,22 +16,31 @@ struct RecordedPagesTests {
     @Test func pagesPassedOnTheWayDoNotCount() {
         // Paging from 3 to 9 to find the slide, then staying.
         let r = recording([
-            PageVisit(at: 0, materialId: slides, page: 3), PageVisit(at: 100, materialId: slides, page: 4), PageVisit(at: 101, materialId: slides, page: 5),
+            PageVisit(at: 0, materialId: slides, page: 3), PageVisit(at: 100, materialId: slides, page: 4),
+            PageVisit(at: 101, materialId: slides, page: 5),
             PageVisit(at: 102, materialId: slides, page: 12), PageVisit(at: 103, materialId: slides, page: 9),
         ])
         #expect(r.viewedPages() == [SessionMaterial(materialId: slides, firstPage: 3, lastPage: 9)])
     }
 
     @Test func aPageCountsFromTwentySeconds() {
-        let visits = [PageVisit(at: 0, materialId: slides, page: 2), PageVisit(at: 19, materialId: slides, page: 3), PageVisit(at: 40, materialId: slides, page: nil)]
+        let visits = [
+            PageVisit(at: 0, materialId: slides, page: 2), PageVisit(at: 19, materialId: slides, page: 3),
+            PageVisit(at: 40, materialId: slides, page: nil),
+        ]
         #expect(recording(visits).viewedPages() == [SessionMaterial(materialId: slides, firstPage: 3, lastPage: 3)])
         // Closing the file ends its last page's time; the rest of the class doesn't count toward it.
-        #expect(recording([PageVisit(at: 0, materialId: slides, page: 2), PageVisit(at: 10, materialId: slides, page: nil)]).viewedPages().isEmpty)
+        #expect(
+            recording([PageVisit(at: 0, materialId: slides, page: 2), PageVisit(at: 10, materialId: slides, page: nil)]).viewedPages()
+                .isEmpty)
     }
 
     @Test func theLastPageRunsToTheAudiosEnd() {
         #expect(recording([PageVisit(at: 0, materialId: slides, page: 7)], duration: 19).viewedPages().isEmpty)
-        #expect(recording([PageVisit(at: 0, materialId: slides, page: 7)], duration: 30).viewedPages() == [SessionMaterial(materialId: slides, firstPage: 7, lastPage: 7)])
+        #expect(
+            recording([PageVisit(at: 0, materialId: slides, page: 7)], duration: 30).viewedPages() == [
+                SessionMaterial(materialId: slides, firstPage: 7, lastPage: 7)
+            ])
     }
 
     @Test func filesKeepTheOrderTheyWereOpenedIn() {
@@ -39,7 +48,11 @@ struct RecordedPagesTests {
             PageVisit(at: 0, materialId: other, page: 10), PageVisit(at: 60, materialId: slides, page: 1),
             PageVisit(at: 120, materialId: other, page: 2), PageVisit(at: 180, materialId: other, page: nil),
         ])
-        #expect(r.viewedPages() == [SessionMaterial(materialId: other, firstPage: 2, lastPage: 10), SessionMaterial(materialId: slides, firstPage: 1, lastPage: 1)])
+        #expect(
+            r.viewedPages() == [
+                SessionMaterial(materialId: other, firstPage: 2, lastPage: 10),
+                SessionMaterial(materialId: slides, firstPage: 1, lastPage: 1),
+            ])
     }
 
     @Test func aVisitIsKeptOnlyWhenTheScreenChanges() {
@@ -55,7 +68,9 @@ struct RecordedPagesTests {
     }
 
     @Test func aRecordingSavedBeforePagesWereKeptReadsAsNone() throws {
-        let old = Data(#"{"id":"A0000000-0000-4000-8000-0000000000E1","createdAt":"2026-01-01T00:00:00Z","updatedAt":"2026-01-01T00:00:00Z","updatedBy":"A0000000-0000-4000-8000-0000000000E2","file":"Recordings/a.m4a","startedAt":"2026-01-01T00:00:00Z","duration":60,"bookmarks":[]}"#.utf8)
+        let old = Data(
+            #"{"id":"A0000000-0000-4000-8000-0000000000E1","createdAt":"2026-01-01T00:00:00Z","updatedAt":"2026-01-01T00:00:00Z","updatedBy":"A0000000-0000-4000-8000-0000000000E2","file":"Recordings/a.m4a","startedAt":"2026-01-01T00:00:00Z","duration":60,"bookmarks":[]}"#
+                .utf8)
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         #expect(try decoder.decode(Recording.self, from: old).pages.isEmpty)
@@ -69,11 +84,17 @@ struct RecordedPagesTests {
         file.sessions = [Session(device: device, at: now, week: 5, date: now)]
         let session = file.sessions[0].id
         file.linkMaterial(a.id, session: session, firstPage: 1, lastPage: 3)
-        let r = recording([PageVisit(at: 0, materialId: a.id, page: 8), PageVisit(at: 60, materialId: b.id, page: 2),
-                           PageVisit(at: 120, materialId: b.id, page: 6), PageVisit(at: 180, materialId: UUID(), page: 1)], session: session)
+        let r = recording(
+            [
+                PageVisit(at: 0, materialId: a.id, page: 8), PageVisit(at: 60, materialId: b.id, page: 2),
+                PageVisit(at: 120, materialId: b.id, page: 6), PageVisit(at: 180, materialId: UUID(), page: 1),
+            ], session: session)
 
         #expect(file.linkViewedPages(of: r) == 1)
-        #expect(file.sessions[0].materials == [SessionMaterial(materialId: a.id, firstPage: 1, lastPage: 3), SessionMaterial(materialId: b.id, firstPage: 2, lastPage: 6)])
+        #expect(
+            file.sessions[0].materials == [
+                SessionMaterial(materialId: a.id, firstPage: 1, lastPage: 3), SessionMaterial(materialId: b.id, firstPage: 2, lastPage: 6),
+            ])
         #expect(file.materials[1].sessionIds == [session])
 
         // Again changes nothing.

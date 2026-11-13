@@ -12,8 +12,10 @@ struct NewMaterialFileSheet: View {
     }
 
     var body: some View {
-        SheetForm(title: String(localized: .materialsNewTitle), confirm: String(localized: .materialsNewConfirm), disabled: !model.canCreate,
-                  note: String(localized: .materialsNewNote)) {
+        SheetForm(
+            title: String(localized: .materialsNewTitle), confirm: String(localized: .materialsNewConfirm), disabled: !model.canCreate,
+            note: String(localized: .materialsNewNote)
+        ) {
             FormRow(label: String(localized: .materialsNewFolder)) {
                 ChoiceMenu(selection: $model.folder, options: model.folderOptions)
             }

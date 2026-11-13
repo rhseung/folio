@@ -23,7 +23,9 @@ struct SessionSheet: View {
     static let maxHeight: CGFloat = 520
 
     init(workspace: Workspace, request: SessionSheetRequest, step: String? = nil, saved: (() -> Void)? = nil) {
-        self.init(model: SessionSheetModel(workspace: workspace, request: request), focus: request.focus, asked: request.asked, step: step, saved: saved)
+        self.init(
+            model: SessionSheetModel(workspace: workspace, request: request), focus: request.focus, asked: request.asked, step: step,
+            saved: saved)
     }
 
     /// With a model already set up, as the renders show a class mid-edit (picked as 휴강).
@@ -36,9 +38,11 @@ struct SessionSheet: View {
     }
 
     var body: some View {
-        SheetForm(title: model.title, confirm: model.confirm, disabled: model.disabled, note: model.note,
-                  carded: false, width: 640, mark: CourseMark(model.workspace, model.courseId),
-                  cancel: asked ? String(localized: .wrapUpLater) : nil, step: step) {
+        SheetForm(
+            title: model.title, confirm: model.confirm, disabled: model.disabled, note: model.note,
+            carded: false, width: 640, mark: CourseMark(model.workspace, model.courseId),
+            cancel: asked ? String(localized: .wrapUpLater) : nil, step: step
+        ) {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: Theme.Space.l) {
@@ -61,8 +65,11 @@ struct SessionSheet: View {
             if let saved { saved() } else { dismiss() }
         }
         .task { await model.load() }
-        .confirmationDialog(String(localized: .assignmentsOpenUnsaved), isPresented: Binding(get: { splitting != nil }, set: { if !$0 { splitting = nil } }),
-                            titleVisibility: .visible, presenting: splitting) { id in
+        .confirmationDialog(
+            String(localized: .assignmentsOpenUnsaved),
+            isPresented: Binding(get: { splitting != nil }, set: { if !$0 { splitting = nil } }),
+            titleVisibility: .visible, presenting: splitting
+        ) { id in
             Button(.assignmentsOpenSave) {
                 guard model.submit() else { return }
                 leave(for: id)
@@ -119,19 +126,25 @@ struct SessionSheet: View {
                         .opacity(row.included ? 1 : Theme.Opacity.ended)
                     // The file's own action, under its name: the bar beside it is only for picking pages.
                     if model.zones(row.id).isEmpty {
-                        Button { split(row.id) } label: { Label(.designPageRangeSplit, systemImage: "scissors") }
-                            .buttonStyle(.pointing(.plain))
-                            .font(Theme.Typeface.caption)
-                            .foregroundStyle(model.accent.ink)
-                            .help(Text(.designPageRangeSplitHelp))
+                        Button {
+                            split(row.id)
+                        } label: {
+                            Label(.designPageRangeSplit, systemImage: "scissors")
+                        }
+                        .buttonStyle(.pointing(.plain))
+                        .font(Theme.Typeface.caption)
+                        .foregroundStyle(model.accent.ink)
+                        .help(Text(.designPageRangeSplitHelp))
                     }
                 }
                 .frame(width: 136, alignment: .leading)
                 // All the rest of the row: the tiles' names need every point the bar can get.
-                PageRangeField(range: row.range, pages: model.pageCounts[row.id], taught: model.taught(row.id),
-                               seen: model.seen(row.id), sections: model.zones(row.id)) { model.setRange(row.id, $0) }
-                    .frame(maxWidth: .infinity)
-                    .opacity(row.included ? 1 : Theme.Opacity.ended)
+                PageRangeField(
+                    range: row.range, pages: model.pageCounts[row.id], taught: model.taught(row.id),
+                    seen: model.seen(row.id), sections: model.zones(row.id)
+                ) { model.setRange(row.id, $0) }
+                .frame(maxWidth: .infinity)
+                .opacity(row.included ? 1 : Theme.Opacity.ended)
             }
         }
         if !model.addable.isEmpty {
@@ -169,9 +182,11 @@ struct SessionSheet: View {
         // Its own row under the chips, not after them: there it moved with every pick, and the open popover, anchored to
         // it, jumped away from the pointer.
         CardRow(last: true) {
-            SearchPicker(options: options, isSelected: { model.units.contains($0) }, pick: { model.pick($0) }, multiple: true,
-                         prompt: String(localized: .wrapUpUnitsSearch), flexible: true, create: { model.makeUnit($0) },
-                         createTitle: { String(localized: .sessionSheetUnitsNew($0)) }) {
+            SearchPicker(
+                options: options, isSelected: { model.units.contains($0) }, pick: { model.pick($0) }, multiple: true,
+                prompt: String(localized: .wrapUpUnitsSearch), flexible: true, create: { model.makeUnit($0) },
+                createTitle: { String(localized: .sessionSheetUnitsNew($0)) }
+            ) {
                 HStack(spacing: Theme.Space.s) {
                     Image(systemName: "plus")
                     Text(.sessionSheetUnitsAdd)
@@ -187,7 +202,9 @@ struct SessionSheet: View {
         HStack(spacing: Theme.Space.xs) {
             // Wraps within the row instead of truncating: unit titles run long ("Walk, Trail, Path, Cycle, Girth").
             Text(unit.title).fixedSize(horizontal: false, vertical: true)
-            Button { model.removeUnit(unit.id) } label: {
+            Button {
+                model.removeUnit(unit.id)
+            } label: {
                 Image(systemName: "xmark").font(Theme.Glyph.tiny).foregroundStyle(Theme.Palette.textTertiary)
             }
             .buttonStyle(.pointing(.plain))
@@ -222,8 +239,9 @@ struct SessionSheet: View {
         }
         if model.showsReview, let review = model.review {
             FormRow(label: String(localized: .sessionSheetReview), last: true) {
-                Segmented(selection: Binding(get: { model.review ?? review }, set: { model.review = $0 }),
-                          options: review.choices.map { ($0, model.reviewLabel($0)) })
+                Segmented(
+                    selection: Binding(get: { model.review ?? review }, set: { model.review = $0 }),
+                    options: review.choices.map { ($0, model.reviewLabel($0)) })
             }
         }
     }

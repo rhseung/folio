@@ -12,8 +12,10 @@ struct LinkCandidatesTests {
 
     @Test func theCourseWrittenInComesFirst() {
         let own = UUID()
-        let hits = [hit(.note, there, "매칭 정리"), hit(.note, here, "매칭"), hit(.material, there, "05_Matchings.pdf"),
-                    hit(.note, here, "지금 노트", id: own), hit(.exam, here, "중간고사")]
+        let hits = [
+            hit(.note, there, "매칭 정리"), hit(.note, here, "매칭"), hit(.material, there, "05_Matchings.pdf"),
+            hit(.note, here, "지금 노트", id: own), hit(.exam, here, "중간고사"),
+        ]
         let ordered = LinkCandidates.order(hits, course: here, excluding: own)
         #expect(ordered.map(\.item.title) == ["매칭", "중간고사", "매칭 정리", "05_Matchings.pdf"])
     }

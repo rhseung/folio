@@ -1,5 +1,5 @@
-import FolioActions
 import FolioAI
+import FolioActions
 import FolioDomain
 import Foundation
 import Observation
@@ -78,7 +78,9 @@ final class QuizSolveModel {
         let cards = quiz.cards
         let byUnit = QuizStats.tally(cards, keys: { [$0.unitId] }, history: { self.quiz.history(of: $0.id) })
         let today = workspace.today
-        let exam = course.file.exams.filter { ($0.start ?? .distantPast) > workspace.now && !$0.scopeUnitIds.isEmpty }.min { $0.start! < $1.start! }
+        let exam = course.file.exams.filter { ($0.start ?? .distantPast) > workspace.now && !$0.scopeUnitIds.isEmpty }.min {
+            $0.start! < $1.start!
+        }
         let reviewUnits = Set(workspace.reviewQueue(now: workspace.now).filter { $0.courseId == course.id }.map(\.item.unitId))
         let groups = UnitsView.groups(course.outline).compactMap { g -> (title: String?, units: [FolioDomain.Unit])? in
             let rows = ((g.root.map { [$0] } ?? []) + g.rows.map(\.unit)).filter { byUnit[$0.id] != nil }
@@ -86,16 +88,17 @@ final class QuizSolveModel {
         }
         let withCards = Set(byUnit.keys)
 
-        return Pane(byUnit: byUnit,
-                    wrong: cards.filter { WrongFlow.isDue(quiz.history(of: $0.id), today: today) }.count,
-                    exam: exam,
-                    examCards: exam.map { e in cards.filter { e.scopeUnitIds.contains($0.unitId) }.count } ?? 0,
-                    reviewUnits: reviewUnits,
-                    reviewCards: cards.filter { reviewUnits.contains($0.unitId) }.count,
-                    groups: groups,
-                    withCards: withCards,
-                    empty: units(course).filter { !withCards.contains($0.id) }.count,
-                    preview: buildDeck(course).count)
+        return Pane(
+            byUnit: byUnit,
+            wrong: cards.filter { WrongFlow.isDue(quiz.history(of: $0.id), today: today) }.count,
+            exam: exam,
+            examCards: exam.map { e in cards.filter { e.scopeUnitIds.contains($0.unitId) }.count } ?? 0,
+            reviewUnits: reviewUnits,
+            reviewCards: cards.filter { reviewUnits.contains($0.unitId) }.count,
+            groups: groups,
+            withCards: withCards,
+            empty: units(course).filter { !withCards.contains($0.id) }.count,
+            preview: buildDeck(course).count)
     }
 
     func examDetail(_ pane: Pane) -> String {
@@ -107,7 +110,9 @@ final class QuizSolveModel {
     }
 
     func footer(_ pane: Pane) -> String {
-        let categories = scope.categories.isEmpty ? String(localized: .quizSolveAllCategories)
+        let categories =
+            scope.categories.isEmpty
+            ? String(localized: .quizSolveAllCategories)
             : CardCategory.allCases.filter(scope.categories.contains).map(\.label).joined(separator: ", ")
         return String(localized: .quizSolveSummary(scope.unitIds.intersection(pane.withCards).count, categories, pane.preview))
     }
@@ -147,10 +152,12 @@ final class QuizSolveModel {
     }
 
     func unitDetail(_ tally: WrongTally) -> String {
-        [String(localized: .quizCardCount(tally.items)),
-         tally.accuracy == nil ? nil : String(localized: .quizSolveAccuracy(tally.accuracyText)),
-         tally.open > 0 ? String(localized: .quizOpenCount(tally.open)) : nil]
-            .compactMap { $0 }.joined(separator: " · ")
+        [
+            String(localized: .quizCardCount(tally.items)),
+            tally.accuracy == nil ? nil : String(localized: .quizSolveAccuracy(tally.accuracyText)),
+            tally.open > 0 ? String(localized: .quizOpenCount(tally.open)) : nil,
+        ]
+        .compactMap { $0 }.joined(separator: " · ")
     }
 
     func unitHelp(_ tally: WrongTally) -> String {
@@ -159,8 +166,9 @@ final class QuizSolveModel {
 
     func buildDeck(_ course: LoadedCourse) -> [QuizCard] {
         var rng = SystemRandomNumberGenerator()
-        return QuizDeck.build(cards: quiz.cards, units: units(course).map(\.id), scope: scope, order: order, history: quiz.history,
-                              today: workspace.today, using: &rng)
+        return QuizDeck.build(
+            cards: quiz.cards, units: units(course).map(\.id), scope: scope, order: order, history: quiz.history,
+            today: workspace.today, using: &rng)
     }
 
     func start(label: String, course: LoadedCourse) {
@@ -237,9 +245,12 @@ final class QuizSolveModel {
         let given = answer
         Task {
             do {
-                let r = try await client.grade(question: card.prompt, modelAnswer: card.answer, rubric: card.rubric, answer: given, rules: "")
+                let r = try await client.grade(
+                    question: card.prompt, modelAnswer: card.answer, rubric: card.rubric, answer: given, rules: "")
                 let v = Verdict(rawValue: r.verdict.rawValue) ?? .wrong
-                pending = Pending(cardId: card.id, answer: given, verdict: v, original: v, grader: .ai, missing: r.missing, feedback: r.feedback, byClaude: true)
+                pending = Pending(
+                    cardId: card.id, answer: given, verdict: v, original: v, grader: .ai, missing: r.missing, feedback: r.feedback,
+                    byClaude: true)
             } catch ClaudeError.missingAPIKey {
                 missingKey = true
                 failure = ""
@@ -263,8 +274,12 @@ final class QuizSolveModel {
 
     func commit(_ course: LoadedCourse) {
         guard let p = pending else { return }
-        workspace.run(QuizRecord(course: course.id, attempt: QuizAttemptEvent(cardId: p.cardId, answer: p.answer.isEmpty ? nil : p.answer, verdict: p.verdict,
-                                                                         grader: p.grader, missing: p.missing, overridden: p.verdict != p.original)))
+        workspace.run(
+            QuizRecord(
+                course: course.id,
+                attempt: QuizAttemptEvent(
+                    cardId: p.cardId, answer: p.answer.isEmpty ? nil : p.answer, verdict: p.verdict,
+                    grader: p.grader, missing: p.missing, overridden: p.verdict != p.original)))
         round.append(p.verdict)
         pending = nil
         quiz.load(course)

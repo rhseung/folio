@@ -36,15 +36,18 @@ final class TodayModel {
 
     func day(now: Date) -> Day {
         let summary = self.summary(now: now)
-        return Day(summary: summary, reviews: reviews(summary, now: now), classes: ribbonClasses(summary, now: now),
-                   wash: washCourses(summary, now: now))
+        return Day(
+            summary: summary, reviews: reviews(summary, now: now), classes: ribbonClasses(summary, now: now),
+            wash: washCourses(summary, now: now))
     }
 
     var current: [LoadedCourse] { workspace.currentCourses }
 
     var nextDayStart: Date {
         let calendar = workspace.calendar
-        let start = workspace.today.date(in: calendar).flatMap { calendar.date(byAdding: .minute, value: workspace.settings.dayBoundaryMinutes, to: $0) }
+        let start = workspace.today.date(in: calendar).flatMap {
+            calendar.date(byAdding: .minute, value: workspace.settings.dayBoundaryMinutes, to: $0)
+        }
         return start.flatMap { calendar.date(byAdding: .day, value: 1, to: $0) } ?? .distantFuture
     }
 
@@ -61,8 +64,9 @@ final class TodayModel {
     func reviews(_ summary: TodaySummary, now: Date) -> Reviews {
         let queue = workspace.reviewQueue(now: now)
         let progress = reviewProgress(now: now)
-        return Reviews(queue: queue.filter { $0.item.deferred == nil }, deferred: queue.filter { $0.item.deferred != nil },
-                       notes: summary.missingReviewNotes, doneToday: progress.doneToday, streak: progress.streak)
+        return Reviews(
+            queue: queue.filter { $0.item.deferred == nil }, deferred: queue.filter { $0.item.deferred != nil },
+            notes: summary.missingReviewNotes, doneToday: progress.doneToday, streak: progress.streak)
     }
 
     /// Units reviewed today (skips aside, which aren't study) and the days-in-a-row streak, across every course.
@@ -86,12 +90,15 @@ final class TodayModel {
 
     /// Timetable suggestions for the study day on screen: past midnight but before the boundary, tomorrow's aren't today's.
     func suggested(now: Date, on day: LocalDate) -> [Workspace.SuggestedSession] {
-        workspace.suggestedSessions(now: now).filter { workspace.settings.studyDay(of: $0.suggestion.date, calendar: workspace.calendar) == day }
+        workspace.suggestedSessions(now: now).filter {
+            workspace.settings.studyDay(of: $0.suggestion.date, calendar: workspace.calendar) == day
+        }
     }
 
     /// The study day's courses in class order, each once: the page's wash takes their colors left to right.
     func washCourses(_ summary: TodaySummary, now: Date) -> [UUID] {
-        let classes = summary.classesToday.map { ($0.session.date, $0.courseId) }
+        let classes =
+            summary.classesToday.map { ($0.session.date, $0.courseId) }
             + suggested(now: now, on: summary.studyDay).map { ($0.suggestion.date, $0.courseId) }
         var seen = Set<UUID>()
         return classes.sorted { $0.0 < $1.0 }.map(\.1).filter { seen.insert($0).inserted }
@@ -124,7 +131,11 @@ final class TodayModel {
         var groups: [NoteGroup] = []
         for item in shown {
             let label = sessionWhen(item, today: today)
-            if groups.last?.label == label { groups[groups.count - 1].items.append(item) } else { groups.append(NoteGroup(label: label, items: [item])) }
+            if groups.last?.label == label {
+                groups[groups.count - 1].items.append(item)
+            } else {
+                groups.append(NoteGroup(label: label, items: [item]))
+            }
         }
         return (groups, more)
     }
@@ -143,7 +154,8 @@ final class TodayModel {
     }
 
     func capLabel(_ cap: AttendanceCap) -> String {
-        String(localized: .todayAttendanceCap(workspace.catalog.grade(cap.maxGrade)?.symbol ?? String(localized: .todayAttendanceCapFallback)))
+        String(
+            localized: .todayAttendanceCap(workspace.catalog.grade(cap.maxGrade)?.symbol ?? String(localized: .todayAttendanceCapFallback)))
     }
 
     // MARK: Labels
@@ -260,11 +272,13 @@ final class TodayModel {
     func ribbonClasses(_ summary: TodaySummary, now: Date) -> [RibbonClass] {
         // A session without a weekly slot has no end; the expected one keeps it a visible block rather than a sliver.
         let made = summary.classesToday.map { item in
-            RibbonClass(courseId: item.courseId, start: item.session.date,
-                        end: item.session.expectedEnd(schedule: workspace.course(item.courseId)?.file.course.schedule ?? [],
-                                                      classMinutes: workspace.settings.classMinutes, calendar: workspace.calendar),
-                        name: workspace.course(item.courseId)?.file.subject(of: item.session) ?? "", sessionId: item.session.id,
-                        isMakeup: item.session.kind == .makeup)
+            RibbonClass(
+                courseId: item.courseId, start: item.session.date,
+                end: item.session.expectedEnd(
+                    schedule: workspace.course(item.courseId)?.file.course.schedule ?? [],
+                    classMinutes: workspace.settings.classMinutes, calendar: workspace.calendar),
+                name: workspace.course(item.courseId)?.file.subject(of: item.session) ?? "", sessionId: item.session.id,
+                isMakeup: item.session.kind == .makeup)
         }
         let planned = suggested(now: now, on: summary.studyDay).map {
             RibbonClass(courseId: $0.courseId, start: $0.suggestion.date, end: $0.suggestion.end, name: "", suggested: $0)
@@ -274,12 +288,16 @@ final class TodayModel {
 
     /// A planned class, or one with no unit yet, has no name; its part is left out rather than left blank.
     func ribbonHelp(_ item: RibbonClass) -> String {
-        [title(item.courseId), item.isMakeup ? String(localized: .sessionsMakeup) : "", item.name, "\(time(item.start)) – \(time(item.end))"]
-            .filter { !$0.isEmpty }.joined(separator: " · ")
+        [
+            title(item.courseId), item.isMakeup ? String(localized: .sessionsMakeup) : "", item.name,
+            "\(time(item.start)) – \(time(item.end))",
+        ]
+        .filter { !$0.isEmpty }.joined(separator: " · ")
     }
 
     func ribbon(_ classes: [RibbonClass], on day: LocalDate) -> DayRibbon {
-        DayRibbon(day: day, classes: classes.map { DateInterval(start: $0.start, end: max($0.start, $0.end)) }, calendar: workspace.calendar)
+        DayRibbon(
+            day: day, classes: classes.map { DateInterval(start: $0.start, end: max($0.start, $0.end)) }, calendar: workspace.calendar)
     }
 
     func ribbonNote(_ classes: [RibbonClass], summary: TodaySummary) -> String? {
@@ -314,8 +332,12 @@ final class TodayModel {
 
     /// The next class to start after `now`, made or only on the timetable.
     func nextClass(after now: Date) -> (courseId: UUID, date: Date)? {
-        let made = current.flatMap { c in c.file.sessions.filter { !$0.isCancelled && $0.date > now }.map { (courseId: c.id, date: $0.date) } }
-        let planned = workspace.suggestedSessions(now: now).filter { $0.suggestion.date > now }.map { (courseId: $0.courseId, date: $0.suggestion.date) }
+        let made = current.flatMap { c in
+            c.file.sessions.filter { !$0.isCancelled && $0.date > now }.map { (courseId: c.id, date: $0.date) }
+        }
+        let planned = workspace.suggestedSessions(now: now).filter { $0.suggestion.date > now }.map {
+            (courseId: $0.courseId, date: $0.suggestion.date)
+        }
         return (made + planned).min { $0.date < $1.date }
     }
 
@@ -323,7 +345,10 @@ final class TodayModel {
     func nextClassLine(after now: Date) -> (when: String, courseId: UUID)? {
         guard let next = nextClass(after: now) else { return nil }
         let soon = next.date.timeIntervalSince(now) < 6 * 86_400
-        return (next.date.formatted(soon ? .dateTime.weekday(.wide).hour().minute() : .dateTime.month().day().weekday().hour().minute()), next.courseId)
+        return (
+            next.date.formatted(soon ? .dateTime.weekday(.wide).hour().minute() : .dateTime.month().day().weekday().hour().minute()),
+            next.courseId
+        )
     }
 
     func time(_ date: Date) -> String { date.formatted(date: .omitted, time: .shortened) }
@@ -347,7 +372,9 @@ final class TodayModel {
         return (1...7).map { iso in
             let day = studyDay.adding(days: iso - weekday)
             let inTerm = (semester?.start.map { $0 <= day } ?? true) && (semester?.end.map { day <= $0 } ?? true)
-            let slots = inTerm ? current.map(\.file.course).flatMap { c in c.schedule.filter { $0.weekday == iso }.map { ($0.startMinute, c.id) } } : []
+            let slots =
+                inTerm
+                ? current.map(\.file.course).flatMap { c in c.schedule.filter { $0.weekday == iso }.map { ($0.startMinute, c.id) } } : []
             var seen = Set<UUID>()
             let courses = slots.sorted { $0.0 < $1.0 }.map(\.1).filter { seen.insert($0).inserted }
             return WeekDay(day: day, weekday: ClassTime.weekdayNames[iso - 1], isToday: day == studyDay, courses: courses)
@@ -355,14 +382,21 @@ final class TodayModel {
     }
 
     /// The line under the date, as Markdown-styled pieces whose bold runs are the counts; `urgent` colors them.
-    func summaryLine(classes: [RibbonClass], summary: TodaySummary, reviews: Reviews, now: Date) -> [(text: AttributedString, urgent: Bool)] {
+    func summaryLine(classes: [RibbonClass], summary: TodaySummary, reviews: Reviews, now: Date) -> [(text: AttributedString, urgent: Bool)]
+    {
         var pieces: [(AttributedString, Bool)] = []
 
         let ended = classes.filter { $0.end <= now }.count
-        pieces.append((classes.isEmpty ? AttributedString(localized: .todayLineNoClasses)
-                       : ended == classes.count ? AttributedString(localized: .todayLineClassesDone(classes.count))
-                       : ended > 0 ? AttributedString(localized: .todayLineClassesEnded(classes.count, ended))
-                       : AttributedString(localized: .todayLineClasses(classes.count)), false))
+        pieces.append(
+            (
+                classes.isEmpty
+                    ? AttributedString(localized: .todayLineNoClasses)
+                    : ended == classes.count
+                        ? AttributedString(localized: .todayLineClassesDone(classes.count))
+                        : ended > 0
+                            ? AttributedString(localized: .todayLineClassesEnded(classes.count, ended))
+                            : AttributedString(localized: .todayLineClasses(classes.count)), false
+            ))
 
         let due = summary.deadlines.filter(\.isToday).count
         if due > 0 { pieces.append((AttributedString(localized: .todayLineDue(due)), true)) }
@@ -411,7 +445,10 @@ final class TodayModel {
     func sessionWhen(_ item: TodaySummary.SessionItem, today: LocalDate) -> String {
         let day = workspace.settings.studyDay(of: item.session.date, calendar: workspace.calendar)
         let gap = day.days(until: today)
-        return gap == 0 ? String(localized: .todayWhenToday) : gap == 1 ? String(localized: .todayWhenYesterday)
-            : item.session.date.formatted(gap < 7 ? .dateTime.weekday(.wide) : .dateTime.month().day())
+        return gap == 0
+            ? String(localized: .todayWhenToday)
+            : gap == 1
+                ? String(localized: .todayWhenYesterday)
+                : item.session.date.formatted(gap < 7 ? .dateTime.weekday(.wide) : .dateTime.month().day())
     }
 }

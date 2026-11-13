@@ -1,6 +1,7 @@
 import FolioDomain
 import Foundation
 import Testing
+
 @testable import Folio
 
 /// The split screen's thumbnail column (#321): a lecture of 12 pages in a unit's section 1–4, a new unit's 5–8 and
@@ -9,8 +10,12 @@ struct SplitStripTests {
     let base: LectureSplit
 
     init() throws {
-        var split = try #require(LectureSplit([.init(title: "Intro", firstPage: 1, lastPage: 1), .init(title: "Hall", firstPage: 5, lastPage: 5),
-                                           .init(title: "", firstPage: 9, lastPage: 9)], pageCount: 12))
+        var split = try #require(
+            LectureSplit(
+                [
+                    .init(title: "Intro", firstPage: 1, lastPage: 1), .init(title: "Hall", firstPage: 5, lastPage: 5),
+                    .init(title: "", firstPage: 9, lastPage: 9),
+                ], pageCount: 12))
         split.setUnit(UUID(), of: 0)
         split.makeNew(1)
         base = split
@@ -24,18 +29,26 @@ struct SplitStripTests {
     /// `○` new, `·` no unit), `h` a folded one, `e` the edit row; `|` a page on its section's tint, `*` a page picked.
     func column(_ strip: SplitStrip, _ split: LectureSplit) -> [String] {
         strip.items(split, name: names(split)).map { item in
-            func dot(_ s: StripSection) -> String { switch s.kind { case .held: "●"; case .new: "○"; case .none: "·" } }
-            let lead: String = switch item.lead {
-            case .header(let s, let open)?: (open ? "H" : "h") + dot(s) + s.title
-            case .edit(let s)?: "e" + s.label
-            case .draft?: "d"
-            case nil: ""
+            func dot(_ s: StripSection) -> String {
+                switch s.kind {
+                case .held: "●"
+                case .new: "○"
+                case .none: "·"
+                }
             }
-            let mark = switch item.mark {
-            case .plain: ""
-            case .tinted: "|"
-            case .picked: "*"
-            }
+            let lead: String =
+                switch item.lead {
+                case .header(let s, let open)?: (open ? "H" : "h") + dot(s) + s.title
+                case .edit(let s)?: "e" + s.label
+                case .draft?: "d"
+                case nil: ""
+                }
+            let mark =
+                switch item.mark {
+                case .plain: ""
+                case .tinted: "|"
+                case .picked: "*"
+                }
             return lead + (item.page.map { " \($0)\(mark)" } ?? "")
         }
     }

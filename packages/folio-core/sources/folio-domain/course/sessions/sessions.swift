@@ -134,7 +134,9 @@ public struct Session: Entity {
         (a.date, a.createdAt, a.id.uuidString) < (b.date, b.createdAt, b.id.uuidString)
     }
 
-    public func needsReviewNote(at now: Date) -> Bool { !isCancelled && !skipsReview && date <= now && (reviewNoteId == nil || reviewNoteUnfinished) }
+    public func needsReviewNote(at now: Date) -> Bool {
+        !isCancelled && !skipsReview && date <= now && (reviewNoteId == nil || reviewNoteUnfinished)
+    }
 }
 
 /// Sessions are made as classes happen, not ahead for the whole term: the weekly schedule only suggests the next lecture,
@@ -151,19 +153,25 @@ public enum SessionPlanner {
     /// starting within its time (or a date-only one that day) stands for it even when cancelled, so a 휴강 moves on to the next.
     /// Exam weeks (counted from `start`) hold no lectures. An exam in a class's time is part of that class, so it
     /// doesn't take the class away.
-    public static func suggestion(schedule: [ClassTime], sessions: [Session], from start: LocalDate?, to end: LocalDate?,
-                                  examWeeks: Set<Int> = [], now: Date, calendar: Calendar) -> Suggestion? {
-        planned(schedule: schedule, sessions: sessions, from: start, to: end, examWeeks: examWeeks,
-                days: 8, now: now, calendar: calendar).first
+    public static func suggestion(
+        schedule: [ClassTime], sessions: [Session], from start: LocalDate?, to end: LocalDate?,
+        examWeeks: Set<Int> = [], now: Date, calendar: Calendar
+    ) -> Suggestion? {
+        planned(
+            schedule: schedule, sessions: sessions, from: start, to: end, examWeeks: examWeeks,
+            days: 8, now: now, calendar: calendar
+        ).first
     }
 
     /// Every class the schedule still holds, from the one under way to the term's end, that no session stands for,
     /// by the same rules as `suggestion`. Nothing is stored: a class is made a session only when something is done to
     /// it, so a change to the class times or the term moves the plan with it. Without an end, the coming week only;
     /// `days` caps it sooner.
-    public static func planned(schedule: [ClassTime], sessions: [Session], from start: LocalDate?, to end: LocalDate?,
-                               examWeeks: Set<Int> = [], days: Int? = nil,
-                               now: Date, calendar: Calendar) -> [Suggestion] {
+    public static func planned(
+        schedule: [ClassTime], sessions: [Session], from start: LocalDate?, to end: LocalDate?,
+        examWeeks: Set<Int> = [], days: Int? = nil,
+        now: Date, calendar: Calendar
+    ) -> [Suggestion] {
         guard !schedule.isEmpty else { return [] }
         let today = calendar.startOfDay(for: now)
         let anchor = start?.date(in: calendar)
@@ -199,8 +207,10 @@ public enum SessionPlanner {
 
     /// A new session at `date`. Its week counts Monday-based weeks from the term's start (or, without one, from the
     /// earliest session).
-    public static func session(at date: Date, sessions: [Session], termStart: LocalDate?,
-                               calendar: Calendar, device: DeviceID, now: Date) -> Session {
+    public static func session(
+        at date: Date, sessions: [Session], termStart: LocalDate?,
+        calendar: Calendar, device: DeviceID, now: Date
+    ) -> Session {
         let anchor = termStart?.date(in: calendar) ?? sessions.map(\.date).min() ?? date
         return Session(device: device, at: now, week: week(of: date, anchor: anchor, calendar: calendar), date: date)
     }
@@ -326,7 +336,8 @@ public enum OnlineLink {
         guard !trimmed.isEmpty, !trimmed.contains(where: \.isWhitespace) else { return nil }
         let full = trimmed.contains("://") ? trimmed : "https://" + trimmed
         guard let url = URL(string: full), let scheme = url.scheme?.lowercased(), scheme == "https" || scheme == "http",
-              let host = url.host(), host.contains(".") else { return nil }
+            let host = url.host(), host.contains(".")
+        else { return nil }
         return url
     }
 
@@ -342,7 +353,8 @@ public enum OnlineLink {
         app.host = "zoom.us"
         app.path = "/join"
         let pwd = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "pwd" }?.value
-        app.queryItems = [URLQueryItem(name: "action", value: "join"), URLQueryItem(name: "confno", value: parts[1])]
+        app.queryItems =
+            [URLQueryItem(name: "action", value: "join"), URLQueryItem(name: "confno", value: parts[1])]
             + (pwd.map { [URLQueryItem(name: "pwd", value: $0)] } ?? [])
         return app.url
     }
@@ -381,20 +393,24 @@ extension CourseFile {
 
     /// `Lab<NN>` number -> the week of the first session linked to that lab's unit.
     public var labWeeks: [Int: Int] {
-        Dictionary(units.compactMap { u in
-            guard let n = u.labNumber, let first = sessions.filter({ u.sessionIds.contains($0.id) }).min(by: { $0.date < $1.date }) else { return nil }
-            return (n, first.week)
-        }, uniquingKeysWith: { a, _ in a })
+        Dictionary(
+            units.compactMap { u in
+                guard let n = u.labNumber, let first = sessions.filter({ u.sessionIds.contains($0.id) }).min(by: { $0.date < $1.date })
+                else { return nil }
+                return (n, first.week)
+            }, uniquingKeysWith: { a, _ in a })
     }
 
     /// Links the session to experiment `number`'s unit, making `Lab<NN> <experiment>` at the top level when there is
     /// none, so the parts of a two-session experiment share one unit. `id` is the new unit's.
     public mutating func linkLab(_ number: Int, session: UUID, experiment: String, id: UUID = UUID(), device: DeviceID, at now: Date) {
-        let unit = units.first { $0.labNumber == number }?.id ?? {
-            let title = [AssignmentKind.lab.folderName(number), experiment].filter { !$0.isEmpty }.joined(separator: " ")
-            units.append(Unit(id: id, device: device, at: now, title: title, order: UnitTree.nextOrder(under: nil, in: units)))
-            return id
-        }()
+        let unit =
+            units.first { $0.labNumber == number }?.id
+            ?? {
+                let title = [AssignmentKind.lab.folderName(number), experiment].filter { !$0.isEmpty }.joined(separator: " ")
+                units.append(Unit(id: id, device: device, at: now, title: title, order: UnitTree.nextOrder(under: nil, in: units)))
+                return id
+            }()
         if !units.contains(where: { $0.id == unit && $0.sessionIds.contains(session) }) { toggle(session: session, unit: unit) }
     }
 }
@@ -492,15 +508,18 @@ extension CourseFile {
     /// A day with two classes is typed for both, so a lookup by it lists their references instead of guessing.
     public func references(of session: Session, calendar: Calendar) -> [String] {
         let d = calendar.dateComponents([.year, .month, .day], from: session.date)
-        return [reference(of: session, calendar: calendar), "\(d.month!)/\(d.day!)", String(format: "%02d-%02d", d.month!, d.day!),
-                String(format: "%04d-%02d-%02d", d.year!, d.month!, d.day!)] + (subject(of: session).map { [$0] } ?? [])
+        return [
+            reference(of: session, calendar: calendar), "\(d.month!)/\(d.day!)", String(format: "%02d-%02d", d.month!, d.day!),
+            String(format: "%04d-%02d-%02d", d.year!, d.month!, d.day!),
+        ] + (subject(of: session).map { [$0] } ?? [])
     }
 
     /// The classes `text` names by `references`, ignoring case and spaces: one for its reference, every class of a day.
     public func sessions(matching text: String, calendar: Calendar) -> [Session] {
         let key = Self.referenceKey(text)
         guard !key.isEmpty else { return [] }
-        return sessions.filter { s in references(of: s, calendar: calendar).contains { Self.referenceKey($0) == key } }.sorted(by: Session.inOrder)
+        return sessions.filter { s in references(of: s, calendar: calendar).contains { Self.referenceKey($0) == key } }.sorted(
+            by: Session.inOrder)
     }
 
     static func referenceKey(_ text: String) -> String { text.lowercased().filter { !$0.isWhitespace } }
@@ -525,7 +544,8 @@ extension CourseFile {
     public func legacySessionNoteRetitles(calendar: Calendar) -> [NoteRetitle] {
         notes.compactMap { entry in
             guard entry.kind == .rough || entry.kind == .review,
-                  let session = sessions(pointingAt: entry.id).first(where: { $0.note(of: entry.kind) == entry.id }) else { return nil }
+                let session = sessions(pointingAt: entry.id).first(where: { $0.note(of: entry.kind) == entry.id })
+            else { return nil }
             let name = ((entry.path as NSString).lastPathComponent as NSString).deletingPathExtension
             guard name.precomposedStringWithCanonicalMapping.wholeMatch(of: /\d+주차-\d+( 정리)?( \d+)?/) != nil else { return nil }
             return NoteRetitle(note: entry.id, path: entry.path, title: noteTitle(for: session, kind: entry.kind, calendar: calendar))
@@ -569,15 +589,18 @@ extension CourseFile {
     }
 
     static func fileNameSafe(_ text: String) -> String {
-        let s = String(text.map { ch -> Character in
-            if "/\\|".contains(ch) { return "-" }
-            if ":#^[]".contains(ch) || ch.isNewline { return " " }
-            return ch
-        })
+        let s = String(
+            text.map { ch -> Character in
+                if "/\\|".contains(ch) { return "-" }
+                if ":#^[]".contains(ch) || ch.isNewline { return " " }
+                return ch
+            })
         return String(s.split(whereSeparator: \.isWhitespace).joined(separator: " ").drop { $0 == "." })
     }
 
-    static let danglingWords: Set<String> = ["a", "an", "and", "as", "at", "by", "for", "from", "in", "into", "of", "on", "or", "the", "to", "under", "vs", "with", "&"]
+    static let danglingWords: Set<String> = [
+        "a", "an", "and", "as", "at", "by", "for", "from", "in", "into", "of", "on", "or", "the", "to", "under", "vs", "with", "&",
+    ]
 
     static func shortened(_ text: String) -> String {
         var words: [Substring] = []

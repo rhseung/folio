@@ -1,6 +1,8 @@
 extension Fixture {
     static let standardFiles: [(path: String, content: String?)] = [
-        (".folio/transcript.json", #"""
+        (
+            ".folio/transcript.json",
+            #"""
             {
               "schemaVersion" : 2,
               "semesters" : [
@@ -40,8 +42,11 @@ extension Fixture {
               ]
             }
 
-            """#),
-        ("_Credited/영재고 AP/GS1101 일반물리학 및 연습 I/.folio/course.json", #"""
+            """#
+        ),
+        (
+            "_Credited/영재고 AP/GS1101 일반물리학 및 연습 I/.folio/course.json",
+            #"""
             {
               "course" : {
                 "categoryIds" : [],
@@ -66,8 +71,11 @@ extension Fixture {
               "schemaVersion" : 2
             }
 
-            """#),
-        ("2026-1/MA2001 선형대수학/.folio/course.json", #"""
+            """#
+        ),
+        (
+            "2026-1/MA2001 선형대수학/.folio/course.json",
+            #"""
             {
               "course" : {
                 "categoryIds" : [],
@@ -105,7 +113,8 @@ extension Fixture {
               "schemaVersion" : 1
             }
 
-            """#),
+            """#
+        ),
         ("2026-1/MA2001 선형대수학/Archive/선형대수학 노타빌리티.pdf", nil),
         ("2026-1/MA2001 선형대수학/Assignments/HW01/HW1-5070류현승.pdf", nil),
         ("2026-1/MA2001 선형대수학/Assignments/HW01/hw1.pdf", nil),
@@ -113,13 +122,18 @@ extension Fixture {
         ("2026-1/MA2001 선형대수학/Lectures/01_Vectors.pdf", nil),
         ("2026-1/MA2001 선형대수학/Lectures/05-1_Determinants.pdf", nil),
         ("2026-1/MA2001 선형대수학/Lectures/05-2_Cofactors.pdf", nil),
-        ("2026-1/MA2001 선형대수학/Notes/03-03(화).md", #"""
+        (
+            "2026-1/MA2001 선형대수학/Notes/03-03(화).md",
+            #"""
             # 03-03(화)
 
-            """#),
+            """#
+        ),
         ("2026-1/MA2001 선형대수학/Syllabus/Syllabus.pdf", nil),
         ("2026-1/_Admin/2026-1 시험시간표.pdf", nil),
-        ("2026-3/EC4207 그래프 이론/.folio/course.json", #"""
+        (
+            "2026-3/EC4207 그래프 이론/.folio/course.json",
+            #"""
             {
               "course" : {
                 "categoryIds" : [],
@@ -157,7 +171,8 @@ extension Fixture {
               "schemaVersion" : 1
             }
 
-            """#),
+            """#
+        ),
         ("2026-3/EC4207 그래프 이론/Assignments/HW03/26h3.pdf", nil),
         ("2026-3/EC4207 그래프 이론/Assignments/HW03/HW3-5070류현승.pdf", nil),
         ("2026-3/EC4207 그래프 이론/Assignments/SP01/SP1.pdf", nil),
@@ -169,16 +184,21 @@ extension Fixture {
         ("2026-3/EC4207 그래프 이론/Lectures/05_Matchings.pdf", nil),
         ("2026-3/EC4207 그래프 이론/Study/Problems.pdf", nil),
         ("2026-3/EC4207 그래프 이론/Study/Problems.tex", nil),
-        ("2026-3/EC4207 그래프 이론/Notes/09-08(화) 매칭.md", #"""
+        (
+            "2026-3/EC4207 그래프 이론/Notes/09-08(화) 매칭.md",
+            #"""
             # 09-08(화) 매칭
 
             > [!definition] Matching
             > A set of pairwise non-adjacent edges.
 
-            """#),
+            """#
+        ),
         ("2026-3/EC4207 그래프 이론/Syllabus/Syllabus.pdf", nil),
         ("2026-3/EC4207 그래프 이론/Textbooks/Introduction to Graph Theory (West).pdf", nil),
-        ("2026-3/EC4321 로봇공학/.folio/course.json", #"""
+        (
+            "2026-3/EC4321 로봇공학/.folio/course.json",
+            #"""
             {
               "course" : {
                 "categoryIds" : [],
@@ -216,17 +236,21 @@ extension Fixture {
               "schemaVersion" : 1
             }
 
-            """#),
+            """#
+        ),
         ("2026-3/EC4321 로봇공학/Assignments/Lab01/Lab1 Manual.pdf", nil),
         ("2026-3/EC4321 로봇공학/Assignments/Lab01/Lab1 Report.pdf", nil),
         ("2026-3/EC4321 로봇공학/Assignments/Project01/robot/.git/HEAD", nil),
         ("2026-3/EC4321 로봇공학/Assignments/Project01/robot/main.py", nil),
         ("2026-3/EC4321 로봇공학/Inherited/2025 Final.pdf", nil),
         ("2026-3/EC4321 로봇공학/Lectures/01_Intro.pdf", nil),
-        ("2026-3/EC4321 로봇공학/Notes/09-02(수).md", #"""
+        (
+            "2026-3/EC4321 로봇공학/Notes/09-02(수).md",
+            #"""
             # 09-02(수)
 
-            """#),
+            """#
+        ),
         ("2026-3/EC4321 로봇공학/Syllabus/Syllabus.pdf", nil),
         ("2026-3/_Admin/2026-3 강의실 배정.pdf", nil),
     ]

@@ -23,21 +23,33 @@ struct CodesView: View {
                                     CodeTile(code: code, courses: users[code.id] ?? [])
                                         .onTapGesture { model.editing = code.id }
                                         .contextMenu {
-                                            ItemMenu(source: CodeMenuSource(edit: { model.editing = code.id }, remove: remove, removable: model.removal(code.id) == nil))
+                                            ItemMenu(
+                                                source: CodeMenuSource(
+                                                    edit: { model.editing = code.id }, remove: remove,
+                                                    removable: model.removal(code.id) == nil))
                                         }
-                                        .popover(isPresented: Binding(get: { model.editing == code.id },
-                                                                      set: { if !$0 { model.closeEditor(code.id, catalog: &catalog) } }),
-                                                 arrowEdge: .bottom) {
-                                            CodeEditor(model: model, code: $catalog.codes.element(id: code.id, fallback: code), programs: programs,
-                                                       courses: users[code.id] ?? [], remove: remove)
+                                        .popover(
+                                            isPresented: Binding(
+                                                get: { model.editing == code.id },
+                                                set: { if !$0 { model.closeEditor(code.id, catalog: &catalog) } }),
+                                            arrowEdge: .bottom
+                                        ) {
+                                            CodeEditor(
+                                                model: model, code: $catalog.codes.element(id: code.id, fallback: code), programs: programs,
+                                                courses: users[code.id] ?? [], remove: remove)
                                         }
                                 }
                                 if model.query.isEmpty {
-                                    Button { model.add(program, to: &catalog) } label: {
+                                    Button {
+                                        model.add(program, to: &catalog)
+                                    } label: {
                                         Label(.codesAdd, systemImage: "plus")
                                             .foregroundStyle(Theme.Palette.textTertiary)
                                             .frame(maxWidth: .infinity, minHeight: CodeTile.height)
-                                            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.card).strokeBorder(Theme.Palette.line, style: StrokeStyle(lineWidth: 1, dash: [4, 4])))
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: Theme.Radius.card).strokeBorder(
+                                                    Theme.Palette.line, style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                                            )
                                             .contentShape(.rect)
                                     }
                                     .buttonStyle(.pointing(.plain))
@@ -67,7 +79,7 @@ private struct CodeTile: View {
         VStack(alignment: .leading, spacing: Theme.Space.xs) {
             HStack(alignment: .center) {
                 Text(code.prefix.isEmpty ? "—" : code.prefix)
-                    .font(.system(size: 20, weight: .bold, design: .rounded)) // design: one-off, the prefix is the code tile's face
+                    .font(.system(size: 20, weight: .bold, design: .rounded))  // design: one-off, the prefix is the code tile's face
                     .foregroundStyle(accent?.ink ?? Theme.Palette.text)
                 Spacer()
                 HStack(spacing: Theme.Space.xxs) {
@@ -107,12 +119,15 @@ struct CodeEditor: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 0) {
                             ForEach(records) { c in
-                                Button { openLink(.course(c.id), course: c.id) } label: {
+                                Button {
+                                    openLink(.course(c.id), course: c.id)
+                                } label: {
                                     HStack(spacing: Theme.Space.s) {
                                         CourseMark(model.workspace, c.id, inline: true)
                                         Text(c.title).lineLimit(1)
                                         Spacer(minLength: Theme.Space.s)
-                                        Text(model.workspace.semester(of: c)?.title ?? "").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+                                        Text(model.workspace.semester(of: c)?.title ?? "").font(Theme.Typeface.caption).foregroundStyle(
+                                            Theme.Palette.textTertiary)
                                     }
                                     .padding(.vertical, Theme.Space.tight)
                                     .contentShape(.rect)
@@ -131,7 +146,10 @@ struct CodeEditor: View {
             }
             Grid(alignment: .leading, horizontalSpacing: Theme.Space.m, verticalSpacing: Theme.Space.s) {
                 // Each field is as wide as what goes in it: a prefix is two or three letters, a department name is long.
-                GridRow { Text(.codesFieldPrefix); TextField("EC", text: $code.prefix).pill(width: 64, alignment: .leading) } // strings: data, a code prefix
+                GridRow {
+                    Text(.codesFieldPrefix)
+                    TextField("EC", text: $code.prefix).pill(width: 64, alignment: .leading)  // strings: data, a code prefix
+                }
                 GridRow {
                     Text(.codesFieldDepartment)
                     TextField(String(localized: .codesFieldDepartmentExample), text: $code.department).pill(width: nil, alignment: .leading)

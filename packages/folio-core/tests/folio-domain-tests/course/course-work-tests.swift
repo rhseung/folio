@@ -22,12 +22,16 @@ struct CourseWorkTests {
     // MARK: Sessions
 
     // Mon/Wed 13:00-14:15. 2026-10-26 is a Monday.
-    var monWed: [ClassTime] { [ClassTime(weekday: 1, startMinute: 780, endMinute: 855, room: "203"), ClassTime(weekday: 3, startMinute: 780, endMinute: 855)] }
+    var monWed: [ClassTime] {
+        [ClassTime(weekday: 1, startMinute: 780, endMinute: 855, room: "203"), ClassTime(weekday: 3, startMinute: 780, endMinute: 855)]
+    }
 
     @Test func suggestsTheLectureUnderWayThenTheNextOne() {
-        let during = SessionPlanner.suggestion(schedule: monWed, sessions: [], from: nil, to: nil, now: date("2026-10-26 13:30"), calendar: calendar)
+        let during = SessionPlanner.suggestion(
+            schedule: monWed, sessions: [], from: nil, to: nil, now: date("2026-10-26 13:30"), calendar: calendar)
         #expect(during?.date == date("2026-10-26 13:00") && during?.end == date("2026-10-26 14:15") && during?.room == "203")
-        let after = SessionPlanner.suggestion(schedule: monWed, sessions: [], from: nil, to: nil, now: date("2026-10-26 14:15"), calendar: calendar)
+        let after = SessionPlanner.suggestion(
+            schedule: monWed, sessions: [], from: nil, to: nil, now: date("2026-10-26 14:15"), calendar: calendar)
         #expect(after?.date == date("2026-10-28 13:00"))
     }
 
@@ -35,7 +39,8 @@ struct CourseWorkTests {
         var cancelled = Session(device: device, at: .now, week: 9, date: date("2026-10-26 13:00"))
         cancelled.isCancelled = true
         let dateOnly = Session(device: device, at: .now, week: 9, date: date("2026-10-28 00:00"))
-        let s = SessionPlanner.suggestion(schedule: monWed, sessions: [cancelled, dateOnly], from: nil, to: nil, now: date("2026-10-26 09:00"), calendar: calendar)
+        let s = SessionPlanner.suggestion(
+            schedule: monWed, sessions: [cancelled, dateOnly], from: nil, to: nil, now: date("2026-10-26 09:00"), calendar: calendar)
         #expect(s?.date == date("2026-11-02 13:00"))
     }
 
@@ -43,21 +48,25 @@ struct CourseWorkTests {
     @Test func examWeeksHoldNoLectures() {
         let fall = Semester(device: device, at: .now, year: 2026, term: .fall, start: LocalDate("2026-08-31"), end: LocalDate("2026-12-18"))
         #expect(fall.examWeeks == [8, 16])
-        let skipped = SessionPlanner.suggestion(schedule: monWed, sessions: [], from: fall.start, to: fall.end, examWeeks: fall.examWeeks,
-                                                now: date("2026-10-19 09:00"), calendar: calendar)
+        let skipped = SessionPlanner.suggestion(
+            schedule: monWed, sessions: [], from: fall.start, to: fall.end, examWeeks: fall.examWeeks,
+            now: date("2026-10-19 09:00"), calendar: calendar)
         #expect(skipped?.date == date("2026-10-26 13:00"))
 
         // An exam held in class time is part of that class, so the class still comes.
-        let held = SessionPlanner.suggestion(schedule: monWed, sessions: [], from: fall.start, to: fall.end, examWeeks: fall.examWeeks,
-                                             now: date("2026-10-26 09:00"), calendar: calendar)
+        let held = SessionPlanner.suggestion(
+            schedule: monWed, sessions: [], from: fall.start, to: fall.end, examWeeks: fall.examWeeks,
+            now: date("2026-10-26 09:00"), calendar: calendar)
         #expect(held?.date == date("2026-10-26 13:00"))
         #expect(Semester(device: device, at: .now, year: 2026, term: .summer).examWeeks.isEmpty)
     }
 
     @Test func noSuggestionOutsideTheTerm() {
-        let ended = SessionPlanner.suggestion(schedule: monWed, sessions: [], from: nil, to: LocalDate("2026-10-27"), now: date("2026-10-26 15:00"), calendar: calendar)
+        let ended = SessionPlanner.suggestion(
+            schedule: monWed, sessions: [], from: nil, to: LocalDate("2026-10-27"), now: date("2026-10-26 15:00"), calendar: calendar)
         #expect(ended == nil)
-        let before = SessionPlanner.suggestion(schedule: monWed, sessions: [], from: LocalDate("2026-10-28"), to: nil, now: date("2026-10-26 09:00"), calendar: calendar)
+        let before = SessionPlanner.suggestion(
+            schedule: monWed, sessions: [], from: LocalDate("2026-10-28"), to: nil, now: date("2026-10-26 09:00"), calendar: calendar)
         #expect(before?.date == date("2026-10-28 13:00"))
     }
 
@@ -66,20 +75,27 @@ struct CourseWorkTests {
         var cancelled = Session(device: device, at: .now, week: 11, date: date("2026-11-09 13:00"))
         cancelled.isCancelled = true
         let made = Session(device: device, at: .now, week: 10, date: date("2026-11-04 13:00"))
-        let plan = SessionPlanner.planned(schedule: monWed, sessions: [cancelled, made], from: LocalDate("2026-09-02"), to: LocalDate("2026-11-25"),
-                                          now: date("2026-11-03 09:00"), calendar: calendar)
+        let plan = SessionPlanner.planned(
+            schedule: monWed, sessions: [cancelled, made], from: LocalDate("2026-09-02"), to: LocalDate("2026-11-25"),
+            now: date("2026-11-03 09:00"), calendar: calendar)
 
-        #expect(plan.map(\.date) == ["2026-11-11 13:00", "2026-11-16 13:00", "2026-11-18 13:00", "2026-11-23 13:00", "2026-11-25 13:00"].map(date))
+        #expect(
+            plan.map(\.date)
+                == ["2026-11-11 13:00", "2026-11-16 13:00", "2026-11-18 13:00", "2026-11-23 13:00", "2026-11-25 13:00"].map(date))
 
         // Without an end, the coming week only, as the suggestion always did.
-        let open = SessionPlanner.planned(schedule: monWed, sessions: [], from: nil, to: nil, now: date("2026-11-03 09:00"), calendar: calendar)
+        let open = SessionPlanner.planned(
+            schedule: monWed, sessions: [], from: nil, to: nil, now: date("2026-11-03 09:00"), calendar: calendar)
         #expect(open.map(\.date) == ["2026-11-04 13:00", "2026-11-09 13:00"].map(date))
-        #expect(SessionPlanner.suggestion(schedule: monWed, sessions: [made], from: nil, to: nil, now: date("2026-11-03 09:00"), calendar: calendar)?.date
+        #expect(
+            SessionPlanner.suggestion(
+                schedule: monWed, sessions: [made], from: nil, to: nil, now: date("2026-11-03 09:00"), calendar: calendar)?.date
                 == date("2026-11-09 13:00"))
 
         // A hand-edited term whose start is after its end plans nothing instead of running on.
-        let flipped = SessionPlanner.planned(schedule: monWed, sessions: [], from: LocalDate("2026-12-01"), to: LocalDate("2026-11-25"),
-                                             now: date("2026-11-03 09:00"), calendar: calendar)
+        let flipped = SessionPlanner.planned(
+            schedule: monWed, sessions: [], from: LocalDate("2026-12-01"), to: LocalDate("2026-11-25"),
+            now: date("2026-11-03 09:00"), calendar: calendar)
         #expect(flipped.isEmpty)
     }
 
@@ -87,40 +103,47 @@ struct CourseWorkTests {
     @Test func aSessionInsideTheSlotStandsForIt() {
         let late = Session(device: device, at: .now, week: 10, date: date("2026-11-04 13:30"))
         let makeup = Session(device: device, at: .now, week: 11, date: date("2026-11-09 18:00"))
-        let plan = SessionPlanner.planned(schedule: monWed, sessions: [late, makeup], from: nil, to: LocalDate("2026-11-11"),
-                                          now: date("2026-11-03 09:00"), calendar: calendar)
+        let plan = SessionPlanner.planned(
+            schedule: monWed, sessions: [late, makeup], from: nil, to: LocalDate("2026-11-11"),
+            now: date("2026-11-03 09:00"), calendar: calendar)
         #expect(plan.map(\.date) == ["2026-11-09 13:00", "2026-11-11 13:00"].map(date))
     }
 
     @Test func plannedClassesSitInTheirWeeksOnTheTimeline() {
         let made = Session(device: device, at: .now, week: 10, date: date("2026-11-04 13:00"))
         let planned = Session(device: device, at: .now, week: 10, date: date("2026-11-02 13:00"))
-        let items = SessionTimeline.items(CourseFile(course: courses[0], sessions: [made]), planned: [planned], classMinutes: 75, calendar: calendar)
+        let items = SessionTimeline.items(
+            CourseFile(course: courses[0], sessions: [made]), planned: [planned], classMinutes: 75, calendar: calendar)
         #expect(items.map(\.id) == ["week-10", "planned-\(planned.date.timeIntervalSinceReferenceDate)", made.id.uuidString])
     }
 
     @Test func newSessionsCountWeeksFromTheTermStart() {
         // Term starts Wednesday 2026-09-02: that week is 1, so 2026-10-26 is 9주차.
-        let first = SessionPlanner.session(at: date("2026-10-26 13:00"), sessions: [], termStart: LocalDate("2026-09-02"),
-                                           calendar: calendar, device: device, now: .now)
+        let first = SessionPlanner.session(
+            at: date("2026-10-26 13:00"), sessions: [], termStart: LocalDate("2026-09-02"),
+            calendar: calendar, device: device, now: .now)
         #expect(first.week == 9)
 
-        let recitation = SessionPlanner.session(at: date("2026-10-27 19:00"), sessions: [first], termStart: LocalDate("2026-09-02"),
-                                                calendar: calendar, device: device, now: .now)
-        let second = SessionPlanner.session(at: date("2026-10-28 13:00"), sessions: [first, recitation], termStart: LocalDate("2026-09-02"),
-                                            calendar: calendar, device: device, now: .now)
+        let recitation = SessionPlanner.session(
+            at: date("2026-10-27 19:00"), sessions: [first], termStart: LocalDate("2026-09-02"),
+            calendar: calendar, device: device, now: .now)
+        let second = SessionPlanner.session(
+            at: date("2026-10-28 13:00"), sessions: [first, recitation], termStart: LocalDate("2026-09-02"),
+            calendar: calendar, device: device, now: .now)
         let all = [first, recitation, second]
         #expect(all.map(\.week) == [9, 9, 9])
 
         // Without a term start, weeks count from the earliest session.
-        let later = SessionPlanner.session(at: date("2026-11-02 13:00"), sessions: all, termStart: nil, calendar: calendar, device: device, now: .now)
+        let later = SessionPlanner.session(
+            at: date("2026-11-02 13:00"), sessions: all, termStart: nil, calendar: calendar, device: device, now: .now)
         #expect(later.week == 2)
     }
 
     @Test func untouchedFutureSessionsLeaveAnythingUsedAlone() {
         let now = date("2026-10-26 12:00")
         func at(_ s: String) -> Session { Session(device: device, at: .now, week: 9, date: date(s)) }
-        let past = at("2026-10-19 13:00"), empty = at("2026-11-02 13:00"), noted = at("2026-11-04 13:00"), unitLinked = at("2026-11-09 13:00")
+        let past = at("2026-10-19 13:00"), empty = at("2026-11-02 13:00"), noted = at("2026-11-04 13:00"),
+            unitLinked = at("2026-11-09 13:00")
         var online = at("2026-11-12 21:00"); online.link = "https://zoom.us/j/1"
         var makeup = at("2026-11-13 21:00"); makeup.end = date("2026-11-13 22:15")
         var cancelled = Session(device: device, at: .now, week: 10, date: date("2026-11-16 13:00"))
@@ -128,7 +151,8 @@ struct CourseWorkTests {
         var marked = at("2026-11-18 13:00"); marked.kind = .makeup
         var unit = Unit(device: device, at: .now, title: "고윳값", order: 1)
         unit.sessionIds = [unitLinked.id]
-        let file = CourseFile(course: courses[0], units: [unit], sessions: [past, empty, noted, unitLinked, online, makeup, cancelled, marked])
+        let file = CourseFile(
+            course: courses[0], units: [unit], sessions: [past, empty, noted, unitLinked, online, makeup, cancelled, marked])
 
         #expect(file.untouchedFutureSessions(now: now, notedSessions: [noted.id]).map(\.id) == [empty.id])
     }
@@ -217,10 +241,15 @@ struct CourseWorkTests {
 
     @Test func aClassWithNoEndRunsTheCoursesUsualLengthElseTheSettings() {
         // A chemistry lab meets for two hours: a makeup off the timetable runs two hours too.
-        let lab = [ClassTime(weekday: 2, startMinute: 13 * 60, endMinute: 15 * 60), ClassTime(weekday: 4, startMinute: 13 * 60, endMinute: 15 * 60),
-                   ClassTime(weekday: 5, startMinute: 9 * 60, endMinute: 9 * 60 + 50)]
+        let lab = [
+            ClassTime(weekday: 2, startMinute: 13 * 60, endMinute: 15 * 60),
+            ClassTime(weekday: 4, startMinute: 13 * 60, endMinute: 15 * 60),
+            ClassTime(weekday: 5, startMinute: 9 * 60, endMinute: 9 * 60 + 50),
+        ]
         #expect(lab.usualMinutes == 120)
-        #expect([ClassTime(weekday: 1, startMinute: 600, endMinute: 650), ClassTime(weekday: 3, startMinute: 600, endMinute: 680)].usualMinutes == 80)
+        #expect(
+            [ClassTime(weekday: 1, startMinute: 600, endMinute: 650), ClassTime(weekday: 3, startMinute: 600, endMinute: 680)].usualMinutes
+                == 80)
         #expect([ClassTime]().usualMinutes == nil)
 
         let makeup = Session(device: device, at: .now, week: 10, date: date("2026-11-04 19:00"))
@@ -254,15 +283,21 @@ struct CourseWorkTests {
     }
 
     @Test func onlyAWebAddressIsAMeetingLink() {
-        #expect(OnlineLink.url("  https://us06web.zoom.us/j/88470108867?pwd=abc.1 \n") == URL(string: "https://us06web.zoom.us/j/88470108867?pwd=abc.1"))
+        #expect(
+            OnlineLink.url("  https://us06web.zoom.us/j/88470108867?pwd=abc.1 \n")
+                == URL(string: "https://us06web.zoom.us/j/88470108867?pwd=abc.1"))
         #expect(OnlineLink.url("zoom.us/j/123") == URL(string: "https://zoom.us/j/123"))
-        for bad in ["", "884 7010 8867", "813643", "ftp://zoom.us/j/1", "회의 링크", "localhost"] { #expect(OnlineLink.url(bad) == nil, "\(bad)") }
+        for bad in ["", "884 7010 8867", "813643", "ftp://zoom.us/j/1", "회의 링크", "localhost"] {
+            #expect(OnlineLink.url(bad) == nil, "\(bad)")
+        }
     }
 
     @Test func aZoomLinkOpensTheZoomApp() throws {
         let web = try #require(URL(string: "https://us06web.zoom.us/j/88470108867?pwd=NrYC.1"))
         #expect(OnlineLink.appURL(web)?.absoluteString == "zoommtg://zoom.us/join?action=join&confno=88470108867&pwd=NrYC.1")
-        #expect(OnlineLink.appURL(try #require(URL(string: "https://zoom.us/j/123")))?.absoluteString == "zoommtg://zoom.us/join?action=join&confno=123")
+        #expect(
+            OnlineLink.appURL(try #require(URL(string: "https://zoom.us/j/123")))?.absoluteString
+                == "zoommtg://zoom.us/join?action=join&confno=123")
         #expect(OnlineLink.appURL(try #require(URL(string: "https://us06web.zoom.us/launch/jc/884"))) == nil)
         #expect(OnlineLink.appURL(try #require(URL(string: "https://meet.google.com/abc"))) == nil)
         #expect(OnlineLink.appURL(try #require(URL(string: "https://notzoom.us/j/123"))) == nil)
@@ -343,8 +378,12 @@ struct CourseWorkTests {
             let (s, file) = covering(unit)
             return file.noteTitle(for: s, kind: .rough, calendar: calendar)
         }
-        #expect(title("Forest, Tree, Leaf, Cut-Edge and Equivalent Definitions of a Tree in General") == "11-03(화) Forest, Tree, Leaf, Cut-Edge and Equivalent Definitions")
-        #expect(title("Walk, Trail, Path, Cycle and Bipartite Graphs (König's Theorem on Cycles)") == "11-03(화) Walk, Trail, Path, Cycle and Bipartite Graphs")
+        #expect(
+            title("Forest, Tree, Leaf, Cut-Edge and Equivalent Definitions of a Tree in General")
+                == "11-03(화) Forest, Tree, Leaf, Cut-Edge and Equivalent Definitions")
+        #expect(
+            title("Walk, Trail, Path, Cycle and Bipartite Graphs (König's Theorem on Cycles)")
+                == "11-03(화) Walk, Trail, Path, Cycle and Bipartite Graphs")
     }
 
     /// Units are kept whole, as many as fit, rather than the last one cut midway.
@@ -357,7 +396,8 @@ struct CourseWorkTests {
             u.sessionIds = [s.id]
             return u
         }
-        #expect(file.noteTitle(for: s, kind: .rough, calendar: calendar) == "11-03(화) Minimum Degree Two Forces a Cycle · Eulerian Circuits")
+        #expect(
+            file.noteTitle(for: s, kind: .rough, calendar: calendar) == "11-03(화) Minimum Degree Two Forces a Cycle · Eulerian Circuits")
     }
 
     /// The name is the day the class was held, as its title is, not the study day the 4 a.m. boundary would give.
@@ -379,14 +419,21 @@ struct CourseWorkTests {
         t.reviewNoteId = review
         t.roughNoteId = mine
         var file = CourseFile(course: courses[0], units: [unit], sessions: [s, t])
-        let entry = { (id: UUID, path: String, kind: NoteKind) in NoteEntry(id: id, device: device, at: .now, path: path, meta: NoteMeta(id: id, kind: kind)) }
+        let entry = { (id: UUID, path: String, kind: NoteKind) in
+            NoteEntry(id: id, device: device, at: .now, path: path, meta: NoteMeta(id: id, kind: kind))
+        }
         // macOS file names come back decomposed; the name still reads as `10주차-2`.
-        file.notes = [entry(rough, "Notes/10주차-2.md", .rough), entry(review, "Notes/10주차-1 정리 2.md", .review),
-                      entry(mine, "Notes/TCP 필기.md", .rough), entry(loose, "Notes/3주차-1.md", .rough),
-                      entry(copy, "Notes/" + "9주차-1".decomposedStringWithCanonicalMapping + ".tex", .free)]
+        file.notes = [
+            entry(rough, "Notes/10주차-2.md", .rough), entry(review, "Notes/10주차-1 정리 2.md", .review),
+            entry(mine, "Notes/TCP 필기.md", .rough), entry(loose, "Notes/3주차-1.md", .rough),
+            entry(copy, "Notes/" + "9주차-1".decomposedStringWithCanonicalMapping + ".tex", .free),
+        ]
         let retitles = file.legacySessionNoteRetitles(calendar: calendar)
-        #expect(retitles == [NoteRetitle(note: rough, path: "Notes/10주차-2.md", title: "11-05(목) Reliable data transfer"),
-                             NoteRetitle(note: review, path: "Notes/10주차-1 정리 2.md", title: "11-03(화) 정리")])
+        #expect(
+            retitles == [
+                NoteRetitle(note: rough, path: "Notes/10주차-2.md", title: "11-05(목) Reliable data transfer"),
+                NoteRetitle(note: review, path: "Notes/10주차-1 정리 2.md", title: "11-03(화) 정리"),
+            ])
 
         t.roughNoteId = copy
         file.sessions = [s, t]
@@ -407,22 +454,25 @@ struct CourseWorkTests {
     /// A note's pictures and file links are relative to its folder, so moving it rewrites them to reach the same files.
     @Test func movingANoteKeepsItsRelativeLinks() {
         let md = """
-        ![그림](assets/a%20b.png) [슬라이드](../Lectures/05_Matchings.pdf#page=3) ![](<assets/c d.png>)
-        [웹](https://example.com/x.png) [메일](mailto:a@b.c) [제목](#정의) [[note:x|이름]]
-        """
+            ![그림](assets/a%20b.png) [슬라이드](../Lectures/05_Matchings.pdf#page=3) ![](<assets/c d.png>)
+            [웹](https://example.com/x.png) [메일](mailto:a@b.c) [제목](#정의) [[note:x|이름]]
+            """
         let moved = NoteTemplate.rebased(md, from: "Notes", to: "Notes/정리/중간", format: .markdown)
-        #expect(moved == """
-        ![그림](../../assets/a%20b.png) [슬라이드](../../../Lectures/05_Matchings.pdf#page=3) ![](<../../assets/c d.png>)
-        [웹](https://example.com/x.png) [메일](mailto:a@b.c) [제목](#정의) [[note:x|이름]]
-        """)
+        #expect(
+            moved == """
+                ![그림](../../assets/a%20b.png) [슬라이드](../../../Lectures/05_Matchings.pdf#page=3) ![](<../../assets/c d.png>)
+                [웹](https://example.com/x.png) [메일](mailto:a@b.c) [제목](#정의) [[note:x|이름]]
+                """)
         #expect(NoteTemplate.rebased(moved, from: "Notes/정리/중간", to: "Notes", format: .markdown) == md)
-        #expect(NoteTemplate.rebased("![](./assets/a.png)", from: "Notes/정리", to: "Notes/정리/옛", format: .markdown) == "![](../assets/a.png)")
+        #expect(
+            NoteTemplate.rebased("![](./assets/a.png)", from: "Notes/정리", to: "Notes/정리/옛", format: .markdown) == "![](../assets/a.png)")
         #expect(NoteTemplate.rebased(md, from: "Notes", to: "Notes", format: .markdown) == md)
         #expect(NoteTemplate.rebased("![](../../밖.png)", from: "Notes", to: "Notes/정리", format: .markdown) == "![](../../밖.png)")
 
         let tex = "\\includegraphics[width=5cm]{assets/a.png}\n\\input{부록}\n\\section*{제목}\n"
-        #expect(NoteTemplate.rebased(tex, from: "Notes", to: "Notes/정리", format: .tex)
-            == "\\includegraphics[width=5cm]{../assets/a.png}\n\\input{../부록}\n\\section*{제목}\n")
+        #expect(
+            NoteTemplate.rebased(tex, from: "Notes", to: "Notes/정리", format: .tex)
+                == "\\includegraphics[width=5cm]{../assets/a.png}\n\\input{../부록}\n\\section*{제목}\n")
     }
 
     @Test func movingASessionNamesItByItsNewDate() {
@@ -443,7 +493,9 @@ struct CourseWorkTests {
         #expect(file.sessions[1].week == 11 && file.reference(of: file.sessions[1], calendar: calendar) == "11-12")
         // Moved before the class that week, it leaves the other class's reference as it was.
         file.reschedule(b.id, to: date("2026-11-09 20:00"), termStart: start, calendar: calendar)
-        #expect(file.reference(of: file.sessions[1], calendar: calendar) == "11-09" && file.reference(of: file.sessions[2], calendar: calendar) == "11-10")
+        #expect(
+            file.reference(of: file.sessions[1], calendar: calendar) == "11-09"
+                && file.reference(of: file.sessions[2], calendar: calendar) == "11-10")
     }
 
     @Test func aSessionEndingBeforeItStartsOrABadLinkIsRefused() {
@@ -496,8 +548,10 @@ struct CourseWorkTests {
 
     init() {
         gsCode = CourseCode(device: device, at: .now, prefix: "EC")
-        courses = [Course(device: device, at: .now, title: "선형대수학과 응용", number: "2004-02"),
-                   Course(device: device, at: .now, title: "그래프 이론", codes: [gsCode.id], number: "4207-01")]
+        courses = [
+            Course(device: device, at: .now, title: "선형대수학과 응용", number: "2004-02"),
+            Course(device: device, at: .now, title: "그래프 이론", codes: [gsCode.id], number: "4207-01"),
+        ]
     }
 
     @Test func parsesCourseTitleAndWeekday() {
@@ -536,7 +590,8 @@ struct CourseWorkTests {
     @Test func sameWeekdayAfterTheTimeMeansNextWeek() {
         let now = date("2026-10-23 23:59")  // Friday, deadline time reached
         #expect(QuickAdd.parse("HW5 금", courses: [], now: now, calendar: calendar).due == date("2026-10-30 23:59"))
-        #expect(QuickAdd.parse("HW5 금 23:59", courses: [], now: date("2026-10-23 12:00"), calendar: calendar).due == date("2026-10-23 23:59"))
+        #expect(
+            QuickAdd.parse("HW5 금 23:59", courses: [], now: date("2026-10-23 12:00"), calendar: calendar).due == date("2026-10-23 23:59"))
     }
 
     @Test func codesRelativeDaysAndDates() {
@@ -566,8 +621,11 @@ struct CourseWorkTests {
         #expect(r.title == "HW5" && r.due.map { calendar.component(.weekday, from: $0) } == 6)
         #expect(r.due.map { calendar.component(.hour, from: $0) } == 23)
         let m = QuickAdd.parse("PS 3 2번 11월 3일 오후 11시 59분", courses: [], now: now, calendar: calendar)
-        #expect(m.title == "PS 3 2번" && m.due.map { calendar.dateComponents([.month, .day, .hour, .minute], from: $0) }
-                == DateComponents(month: 11, day: 3, hour: 23, minute: 59))
+        #expect(
+            m.title == "PS 3 2번"
+                && m.due.map { calendar.dateComponents([.month, .day, .hour, .minute], from: $0) }
+                    == DateComponents(month: 11, day: 3, hour: 23, minute: 59)
+        )
         #expect(QuickAdd.parse("Slow Problem 2 Chapter 5 1-10", courses: [], now: now, calendar: calendar).due == nil)
     }
 
@@ -581,7 +639,9 @@ struct CourseWorkTests {
 
     @Test func deadlineWordsKeepTheirKoreanEndingsOutOfTheTitle() {
         let now = date("2026-10-22 15:00")  // Thursday
-        func read(_ line: String) -> QuickAdd { QuickAdd.parse(line, courses: [], fixedCourse: courses[1].id, now: now, calendar: calendar) }
+        func read(_ line: String) -> QuickAdd {
+            QuickAdd.parse(line, courses: [], fixedCourse: courses[1].id, now: now, calendar: calendar)
+        }
         let friday = date("2026-10-23 23:59")
         for line in ["HW4 금까지", "HW4 금요일까지", "금요일까지 HW4", "HW4 금 마감", "HW4 금요일 까지"] {
             let r = read(line)
@@ -619,9 +679,12 @@ struct CourseWorkTests {
         let now = date("2026-10-22 15:00")
         let shown = QuickAdd.parse("HW5 금", courses: courses, codes: [gsCode], defaultCourse: courses[0].id, now: now, calendar: calendar)
         #expect(shown.courseId == courses[0].id && shown.title == "HW5")
-        let named = QuickAdd.parse("EC4207 HW5 금", courses: courses, codes: [gsCode], defaultCourse: courses[0].id, now: now, calendar: calendar)
+        let named = QuickAdd.parse(
+            "EC4207 HW5 금", courses: courses, codes: [gsCode], defaultCourse: courses[0].id, now: now, calendar: calendar)
         #expect(named.courseId == courses[1].id && named.title == "HW5")
-        let fixed = QuickAdd.parse("EC4207 HW5", courses: courses, codes: [gsCode], fixedCourse: courses[0].id, defaultCourse: courses[1].id, now: now, calendar: calendar)
+        let fixed = QuickAdd.parse(
+            "EC4207 HW5", courses: courses, codes: [gsCode], fixedCourse: courses[0].id, defaultCourse: courses[1].id, now: now,
+            calendar: calendar)
         #expect(fixed.courseId == courses[0].id)
     }
 
@@ -648,9 +711,11 @@ struct CourseWorkTests {
 
     @Test func standardFolderNames() {
         #expect(AssignmentKind.parse(title: "HW5")?.kind.folderName(5) == "HW05")
-        #expect(AssignmentKind.parse(title: "lab 3 report") .map { $0.kind.folderName($0.number) } == "Lab03")
+        #expect(AssignmentKind.parse(title: "lab 3 report").map { $0.kind.folderName($0.number) } == "Lab03")
         #expect(AssignmentKind.parse(title: "Slow Problem 2") == nil)
-        #expect(StandardLayout.isExamFolderName("Quiz2") && !StandardLayout.isExamFolderName("Quiz0") && !StandardLayout.isExamFolderName("Quiz"))
+        #expect(
+            StandardLayout.isExamFolderName("Quiz2") && !StandardLayout.isExamFolderName("Quiz0")
+                && !StandardLayout.isExamFolderName("Quiz"))
     }
 }
 
@@ -690,7 +755,11 @@ struct AssignmentFilesTests {
         #expect(DueState(due: nil, now: now, calendar: cal) == .none)
         #expect(DueState(due: now.addingTimeInterval(-3 * 86400), now: now, calendar: cal) == .overdue(days: 3))
         #expect(DueState(due: now.addingTimeInterval(5 * 3600 + 60), now: now, calendar: cal) == .hours(6))
-        if case .days(let d) = DueState(due: now.addingTimeInterval(3 * 86400), now: now, calendar: cal) { #expect(d == 3) } else { Issue.record("expected days") }
+        if case .days(let d) = DueState(due: now.addingTimeInterval(3 * 86400), now: now, calendar: cal) {
+            #expect(d == 3)
+        } else {
+            Issue.record("expected days")
+        }
     }
 
     @Test func dueUrgencyCountsStudyDaysAcrossTheBoundary() {

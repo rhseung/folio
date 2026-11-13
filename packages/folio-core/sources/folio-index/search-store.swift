@@ -25,7 +25,9 @@ public final class SearchStore: Sendable {
         migrator.eraseDatabaseOnSchemaChange = true
         migrator.registerMigration("v1") { db in
             // The trigram tokenizer matches inside words; the default one splits on spaces only, so `매칭` would miss `최대매칭은`.
-            try db.execute(sql: "CREATE VIRTUAL TABLE item USING fts5(kind UNINDEXED, course UNINDEXED, id UNINDEXED, title, body, tokenize='trigram')")
+            try db.execute(
+                sql: "CREATE VIRTUAL TABLE item USING fts5(kind UNINDEXED, course UNINDEXED, id UNINDEXED, title, body, tokenize='trigram')"
+            )
             try db.execute(sql: "CREATE TABLE course (id TEXT PRIMARY KEY, root TEXT NOT NULL, signature TEXT NOT NULL)")
             // Text pulled out of a PDF, kept apart so editing course.json doesn't read every textbook again.
             try db.execute(sql: "CREATE TABLE pdf (path TEXT PRIMARY KEY, signature TEXT NOT NULL, text TEXT NOT NULL)")
@@ -70,7 +72,11 @@ public final class SearchStore: Sendable {
     public func refresh(_ gist: GISTStore, progress: (@Sendable (_ done: Int, _ total: Int) -> Void)? = nil) throws -> Int {
         let stores = try gist.courseStores()
         let known = try db.read { db in
-            try Dictionary(Row.fetchAll(db, sql: "SELECT id, root, signature FROM course").map { ($0["root"] as String, ($0["id"] as String, $0["signature"] as String)) }) { a, _ in a }
+            try Dictionary(
+                Row.fetchAll(db, sql: "SELECT id, root, signature FROM course").map {
+                    ($0["root"] as String, ($0["id"] as String, $0["signature"] as String))
+                }
+            ) { a, _ in a }
         }
         var stale: [(CourseStore, CourseFile, String)] = []
         var seen: Set<String> = []
@@ -111,22 +117,29 @@ public final class SearchStore: Sendable {
             try db.execute(sql: "DELETE FROM item WHERE course = ?", arguments: [course])
             try db.execute(sql: "DELETE FROM course WHERE id = ? OR root = ?", arguments: [course, store.url.path])
             for item in items {
-                try db.execute(sql: "INSERT INTO item (kind, course, id, title, body) VALUES (?, ?, ?, ?, ?)",
-                               arguments: [item.kind.rawValue, course, item.id.uuidString, item.title, item.body])
+                try db.execute(
+                    sql: "INSERT INTO item (kind, course, id, title, body) VALUES (?, ?, ?, ?, ?)",
+                    arguments: [item.kind.rawValue, course, item.id.uuidString, item.title, item.body])
             }
-            try db.execute(sql: "INSERT INTO course (id, root, signature) VALUES (?, ?, ?)", arguments: [course, store.url.path, signature])
+            try db.execute(
+                sql: "INSERT INTO course (id, root, signature) VALUES (?, ?, ?)", arguments: [course, store.url.path, signature])
         }
     }
 
     func pdfText(_ url: URL) throws -> String {
         let signature = Self.stamp(url)
-        if let text = try db.read({ try String.fetchOne($0, sql: "SELECT text FROM pdf WHERE path = ? AND signature = ?", arguments: [url.path, signature]) }) {
+        if let text = try db.read({
+            try String.fetchOne($0, sql: "SELECT text FROM pdf WHERE path = ? AND signature = ?", arguments: [url.path, signature])
+        }) {
             return text
         }
         // A file still in iCloud (or unreadable) has no text yet; its stamp changes once it downloads, which reads it again.
         guard let document = PDFDocument(url: url) else { return "" }
         let text = (document.string ?? "").precomposedStringWithCanonicalMapping
-        try db.write { try $0.execute(sql: "INSERT OR REPLACE INTO pdf (path, signature, text) VALUES (?, ?, ?)", arguments: [url.path, signature, text]) }
+        try db.write {
+            try $0.execute(
+                sql: "INSERT OR REPLACE INTO pdf (path, signature, text) VALUES (?, ?, ?)", arguments: [url.path, signature, text])
+        }
         return text
     }
 
@@ -134,7 +147,10 @@ public final class SearchStore: Sendable {
     /// quiz file, a tracked PDF.
     static func signature(_ store: CourseStore, _ file: CourseFile) -> String {
         var parts = [stamp(store.courseFileURL)]
-        if let files = FileManager.default.enumerator(at: store.url.appending(path: CourseFolder.notes.rawValue), includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey]) {
+        if let files = FileManager.default.enumerator(
+            at: store.url.appending(path: CourseFolder.notes.rawValue),
+            includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey])
+        {
             for case let url as URL in files { parts.append(url.lastPathComponent + stamp(url)) }
         }
         for m in file.materials where m.isPDF { parts.append(stamp(store.url.appending(path: m.path))) }
@@ -150,12 +166,15 @@ public final class SearchStore: Sendable {
     /// Everything of `kinds` in `courses`, by title, for a query with nothing typed yet.
     public func items(courses: Set<UUID>, kinds: Set<SearchKind>, limit: Int = 60) throws -> [SearchItem] {
         guard !courses.isEmpty, !kinds.isEmpty else { return [] }
-        let sql = "SELECT kind, course, id, title FROM item WHERE course IN (\(courses.map { _ in "?" }.joined(separator: ",")))"
+        let sql =
+            "SELECT kind, course, id, title FROM item WHERE course IN (\(courses.map { _ in "?" }.joined(separator: ",")))"
             + " AND kind IN (\(kinds.map { _ in "?" }.joined(separator: ","))) ORDER BY title LIMIT ?"
         let args: [any DatabaseValueConvertible] = courses.map(\.uuidString) + kinds.map(\.rawValue) + [limit]
         let rows = try db.read { try Row.fetchAll($0, sql: sql, arguments: StatementArguments(args)) }
         return rows.compactMap { row in
-            guard let kind = SearchKind(rawValue: row["kind"]), let course = UUID(uuidString: row["course"]), let id = UUID(uuidString: row["id"]) else { return nil }
+            guard let kind = SearchKind(rawValue: row["kind"]), let course = UUID(uuidString: row["course"]),
+                let id = UUID(uuidString: row["id"])
+            else { return nil }
             return SearchItem(kind: kind, courseId: course, id: id, title: row["title"])
         }
     }
@@ -178,14 +197,20 @@ public final class SearchStore: Sendable {
         }
 
         if let kinds { clauses.append("kind IN (\(kinds.map { _ in "?" }.joined(separator: ",")))"); args += kinds.map(\.rawValue) }
-        if let courses { clauses.append("course IN (\(courses.map { _ in "?" }.joined(separator: ",")))"); args += courses.map(\.uuidString) }
+        if let courses {
+            clauses.append("course IN (\(courses.map { _ in "?" }.joined(separator: ",")))"); args += courses.map(\.uuidString)
+        }
 
         // Only the text around the first word that is in the body comes back, so a textbook's body isn't read whole per hit.
         let at = "COALESCE(" + words.map { _ in "NULLIF(instr(lower(body), lower(?)), 0)" }.joined(separator: ", ") + ", 1)"
-        let sql = "SELECT kind, course, id, title, substr(body, max(1, \(at) - 60), 240) AS excerpt FROM item WHERE " + clauses.joined(separator: " AND ")
+        let sql =
+            "SELECT kind, course, id, title, substr(body, max(1, \(at) - 60), 240) AS excerpt FROM item WHERE "
+            + clauses.joined(separator: " AND ")
         let rows = try db.read { try Row.fetchAll($0, sql: sql, arguments: StatementArguments(words + args)) }
         let items = rows.compactMap { row -> SearchItem? in
-            guard let kind = SearchKind(rawValue: row["kind"]), let course = UUID(uuidString: row["course"]), let id = UUID(uuidString: row["id"]) else { return nil }
+            guard let kind = SearchKind(rawValue: row["kind"]), let course = UUID(uuidString: row["course"]),
+                let id = UUID(uuidString: row["id"])
+            else { return nil }
             return SearchItem(kind: kind, courseId: course, id: id, title: row["title"], body: row["excerpt"])
         }
         return SearchIndex(items).search(query, limit: limit)

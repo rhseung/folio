@@ -45,7 +45,11 @@ public enum LayoutCheck {
             if item.name == StandardLayout.creditedFolder, !item.isFile {
                 for source in item.children {
                     let path = "\(item.name)/\(source.name)"
-                    if source.isFile { issues.append(.init(.fileInSemesterFolder, path)) } else { courses(in: source, at: path, admin: false) }
+                    if source.isFile {
+                        issues.append(.init(.fileInSemesterFolder, path))
+                    } else {
+                        courses(in: source, at: path, admin: false)
+                    }
                 }
                 continue
             }

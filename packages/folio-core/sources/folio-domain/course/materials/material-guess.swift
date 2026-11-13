@@ -58,8 +58,10 @@ public struct IntakeGuess: Equatable, Sendable {
 extension MaterialIntake {
     /// Read in order, the first that matches wins: a name says more than a page count, and `05_` more than any word.
     /// `places` are the folders the sheet offers besides `Lectures`; a guess never points elsewhere.
-    public static func guess(_ file: IncomingFile, places: [String], sessions: [Session], exams: [Exam] = [], now: Date, settings: Settings,
-                             calendar: Calendar) -> IntakeGuess {
+    public static func guess(
+        _ file: IncomingFile, places: [String], sessions: [Session], exams: [Exam] = [], now: Date, settings: Settings,
+        calendar: Calendar
+    ) -> IntakeGuess {
         let name = file.name.precomposedStringWithCanonicalMapping
         let lower = name.lowercased()
         let offered = { (folder: CourseFolder) in places.contains(folder.rawValue) ? folder.rawValue : nil }
@@ -86,7 +88,9 @@ extension MaterialIntake {
         if let word = Keywords.syllabus.first(where: lower.contains), let folder = offered(.syllabus) {
             return IntakeGuess(folder: folder, why: .named(word))
         }
-        if let word = Keywords.examFiles.flatMap(\.words).first(where: lower.contains), let folder = examFolder(for: lower, places: places, exams: exams, now: now) {
+        if let word = Keywords.examFiles.flatMap(\.words).first(where: lower.contains),
+            let folder = examFolder(for: lower, places: places, exams: exams, now: now)
+        {
             return IntakeGuess(folder: folder, why: .named(word))
         }
         if let word = Keywords.textbook.first(where: lower.contains), let folder = offered(.textbooks) {
@@ -111,28 +115,36 @@ extension MaterialIntake {
     /// `Lecture 6`, `week3`, `5주차`. `[^a-z]` rather than `\b` in front: `_` is a word character, and `GT_lec3` is a
     /// common name.
     static func week(in name: String) -> (words: String, week: Int)? {
-        if let m = name.firstMatch(of: /(?:^|[^a-z])((?:week|wk|lecture|lec)[\s_-]*(\d{1,2}))(?!\d)/.ignoresCase()) { return (String(m.1), Int(m.2)!) }
+        if let m = name.firstMatch(of: /(?:^|[^a-z])((?:week|wk|lecture|lec)[\s_-]*(\d{1,2}))(?!\d)/.ignoresCase()) {
+            return (String(m.1), Int(m.2)!)
+        }
         if let m = name.firstMatch(of: /(\d{1,2})\s*주차/) { return (String(m.0), Int(m.1)!) }
         return nil
     }
 
     /// `HW3` → `Assignments/HW03`, but only to a folder that exists: the sheet can't make one.
     static func assignment(in name: String, places: [String]) -> (folder: String, words: String)? {
-        let keyword = /(?:^|[^a-z])((hw|homework|assignment|assign|lab|sp|slow[\s_-]?problems?|report|project|reading|과제|숙제)[\s_-]*(\d{1,2}))(?!\d)/
+        let keyword =
+            /(?:^|[^a-z])((hw|homework|assignment|assign|lab|sp|slow[\s_-]?problems?|report|project|reading|과제|숙제)[\s_-]*(\d{1,2}))(?!\d)/
         guard let m = name.firstMatch(of: keyword.ignoresCase()), let number = Int(m.3) else { return nil }
-        let prefix: AssignmentKind = switch m.2.lowercased() {
-        case "lab": .lab
-        case "report": .report
-        case "project": .project
-        case "reading": .reading
-        case let word where word == "sp" || word.hasPrefix("slow"): .slowProblem
-        default: .homework
-        }
+        let prefix: AssignmentKind =
+            switch m.2.lowercased() {
+            case "lab": .lab
+            case "report": .report
+            case "project": .project
+            case "reading": .reading
+            case let word where word == "sp" || word.hasPrefix("slow"): .slowProblem
+            default: .homework
+            }
         let base = CourseFolder.assignments.rawValue + "/"
         let folders = places.filter { $0.hasPrefix(base) }
         let numbered = folders.filter { StandardLayout.assignmentFolder(String($0.dropFirst(base.count)))?.number == number }
-        guard let folder = numbered.first(where: { StandardLayout.assignmentFolder(String($0.dropFirst(base.count)))?.prefix == prefix.rawValue })
-                ?? (numbered.count == 1 ? numbered.first : nil) else { return nil }
+        guard
+            let folder = numbered.first(where: {
+                StandardLayout.assignmentFolder(String($0.dropFirst(base.count)))?.prefix == prefix.rawValue
+            })
+                ?? (numbered.count == 1 ? numbered.first : nil)
+        else { return nil }
         return (folder, String(m.1))
     }
 
@@ -142,7 +154,8 @@ extension MaterialIntake {
     static func examFolder(for lower: String, places: [String], exams: [Exam], now: Date) -> String? {
         let offered = exams.compactMap { e in folder(of: e).flatMap { places.contains($0) ? (exam: e, folder: $0) : nil } }
         let said = { (word: Regex<Substring>) in
-            lower.contains(word) ? offered.first { $0.folder.lowercased().contains(word) || $0.exam.title.lowercased().contains(word) }?.folder : nil
+            lower.contains(word)
+                ? offered.first { $0.folder.lowercased().contains(word) || $0.exam.title.lowercased().contains(word) }?.folder : nil
         }
         if let folder = said(Keywords.midterm) ?? said(Keywords.final) { return folder }
         let dated = offered.compactMap { o in o.exam.start.map { (start: $0, folder: o.folder) } }.sorted { $0.start < $1.start }
@@ -151,8 +164,10 @@ extension MaterialIntake {
 
     /// The class a lecture file is for. Slides often come before the class, so one later today counts as today's.
     /// With a week from the name, that week's class; without, the latest.
-    static func session(week: Int?, among sessions: [Session], now: Date, settings: Settings,
-                        calendar: Calendar) -> (UUID?, IntakeGuess.SessionWhy?) {
+    static func session(
+        week: Int?, among sessions: [Session], now: Date, settings: Settings,
+        calendar: Calendar
+    ) -> (UUID?, IntakeGuess.SessionWhy?) {
         let today = settings.studyDay(of: now, calendar: calendar)
         let isToday = { (s: Session) in settings.studyDay(of: s.date, calendar: calendar) == today }
         let held = sessions.filter { !$0.isCancelled }.sorted(by: Session.inOrder)

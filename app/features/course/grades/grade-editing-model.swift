@@ -39,12 +39,14 @@ final class ScoreEntryModel {
     var sourceOptions: [PickOption<ScoreSource>] {
         let file = course.file
         let assignments = String(localized: .scoreSheetSourceAssignments), exams = String(localized: .scoreSheetSourceExams)
-        return [PickOption(id: ScoreSource.none, title: String(localized: .scoreSheetSourceNone))] + file.scoreSources(for: componentId).map { s in
-            let taken = file.hasScore(s, in: componentId, other: entry.id)
-            let section: String = if case .exam = s { exams } else { assignments }
-            return PickOption(id: s, title: file.title(of: s) ?? "", detail: taken ? String(localized: .scoreSheetSourceTaken) : nil,
-                              section: section, disabled: taken)
-        }
+        return [PickOption(id: ScoreSource.none, title: String(localized: .scoreSheetSourceNone))]
+            + file.scoreSources(for: componentId).map { s in
+                let taken = file.hasScore(s, in: componentId, other: entry.id)
+                let section: String = if case .exam = s { exams } else { assignments }
+                return PickOption(
+                    id: s, title: file.title(of: s) ?? "", detail: taken ? String(localized: .scoreSheetSourceTaken) : nil,
+                    section: section, disabled: taken)
+            }
     }
 
     /// An untitled score takes the name of what it was given for.
@@ -83,13 +85,18 @@ final class ScoreEntryModel {
     /// False when the action was refused, so the sheet stays open.
     func confirm() -> Bool {
         guard let s = Double(score), let m = Double(max) else { return false }
-        let saved = isNew
-            ? workspace.run(ScoreAdd(id: entry.id, course: course.id, component: componentId, title: title, score: s, max: m,
-                                     mean: Double(mean), stdDev: Double(stdDev), date: entry.date, exam: links.exam, assignment: links.assignment,
-                                     excused: excused))
-            : workspace.run(ScoreSet(course: course.id, score: entry.id, component: .set(componentId), title: .set(title), value: .set(s), max: .set(m),
-                                     mean: .set(Double(mean)), stdDev: .set(Double(stdDev)), exam: .set(links.exam), assignment: .set(links.assignment),
-                                     excused: .set(excused)))
+        let saved =
+            isNew
+            ? workspace.run(
+                ScoreAdd(
+                    id: entry.id, course: course.id, component: componentId, title: title, score: s, max: m,
+                    mean: Double(mean), stdDev: Double(stdDev), date: entry.date, exam: links.exam, assignment: links.assignment,
+                    excused: excused))
+            : workspace.run(
+                ScoreSet(
+                    course: course.id, score: entry.id, component: .set(componentId), title: .set(title), value: .set(s), max: .set(m),
+                    mean: .set(Double(mean)), stdDev: .set(Double(stdDev)), exam: .set(links.exam), assignment: .set(links.assignment),
+                    excused: .set(excused)))
         return saved != nil
     }
 
@@ -138,8 +145,11 @@ final class ComponentModel {
 
     var aggregationOptions: [(Aggregation, String)] {
         let n = count ?? 1
-        return [(.sum, String(localized: .aggregationSum)), (.mean, String(localized: .aggregationMean)), (.single, String(localized: .aggregationSingle)),
-                (.dropLowest(n), String(localized: .componentSheetDropLowest)), (.bestOf(n), String(localized: .componentSheetBestOf))]
+        return [
+            (.sum, String(localized: .aggregationSum)), (.mean, String(localized: .aggregationMean)),
+            (.single, String(localized: .aggregationSingle)),
+            (.dropLowest(n), String(localized: .componentSheetDropLowest)), (.bestOf(n), String(localized: .componentSheetBestOf)),
+        ]
     }
 
     var dropsLowest: Bool { aggregation == .dropLowest(count ?? 1) }
@@ -154,11 +164,16 @@ final class ComponentModel {
     var countOptions: [(Int, String)] { (1...10).map { ($0, String(localized: .componentSheetTimes($0))) } }
 
     func confirm() -> Bool {
-        let saved = isNew
-            ? workspace.run(ComponentAdd(id: component.id, course: course.id, name: name, weight: weight, aggregation: aggregation,
-                                         expectedCount: expectedCount, group: group))
-            : workspace.run(ComponentSet(course: course.id, component: component.id, name: .set(name), weight: .set(weight),
-                                         aggregation: .set(aggregation), expectedCount: .set(expectedCount), group: .set(group)))
+        let saved =
+            isNew
+            ? workspace.run(
+                ComponentAdd(
+                    id: component.id, course: course.id, name: name, weight: weight, aggregation: aggregation,
+                    expectedCount: expectedCount, group: group))
+            : workspace.run(
+                ComponentSet(
+                    course: course.id, component: component.id, name: .set(name), weight: .set(weight),
+                    aggregation: .set(aggregation), expectedCount: .set(expectedCount), group: .set(group)))
         return saved != nil
     }
 
@@ -218,8 +233,10 @@ final class PolicyModel {
 
     func confirm() -> Bool {
         // Every field the sheet shows; the cutoffs it doesn't show stay as they are.
-        workspace.run(PolicySet(course: course.id, minAttendanceRatio: .set(Double(ratio).map { $0 / 100 }), latePolicy: .set(late.isEmpty ? nil : late),
-                                latesPerAbsence: .set(Int(lates)), topGradeRatio: .set(Double(topShare).map { $0 / 100 }), attendanceCap: .set(caps),
-                                notes: .set(notes))) != nil
+        workspace.run(
+            PolicySet(
+                course: course.id, minAttendanceRatio: .set(Double(ratio).map { $0 / 100 }), latePolicy: .set(late.isEmpty ? nil : late),
+                latesPerAbsence: .set(Int(lates)), topGradeRatio: .set(Double(topShare).map { $0 / 100 }), attendanceCap: .set(caps),
+                notes: .set(notes))) != nil
     }
 }

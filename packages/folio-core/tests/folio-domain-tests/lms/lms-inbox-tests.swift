@@ -15,10 +15,14 @@ struct LMSInboxTests {
     @Test func sectionsAreKnownClassroomsByTheirOwnNames() {
         let snapshot = LMSSnapshot(
             at: now,
-            classrooms: [.init(id: 1, title: "그래프 이론[01]"), .init(id: 2, title: "그래프 이론[02]"), .init(id: 3, title: "소방 안전 교육"),
-                         .init(id: 4, title: "선형대수학")],
-            files: [.init(id: 10, classroom: 1, title: "a"), .init(id: 11, classroom: 2, title: "b"), .init(id: 12, classroom: 3, title: "c"),
-                    .init(id: 13, classroom: 4, title: "d")])
+            classrooms: [
+                .init(id: 1, title: "그래프 이론[01]"), .init(id: 2, title: "그래프 이론[02]"), .init(id: 3, title: "소방 안전 교육"),
+                .init(id: 4, title: "선형대수학"),
+            ],
+            files: [
+                .init(id: 10, classroom: 1, title: "a"), .init(id: 11, classroom: 2, title: "b"), .init(id: 12, classroom: 3, title: "c"),
+                .init(id: 13, classroom: 4, title: "d"),
+            ])
         var settings = LMSSettings()
         settings.know([3, 1, 2])
         let inbox = LMSInbox.build(snapshot, settings: settings, courses: [], now: now)
@@ -35,17 +39,19 @@ struct LMSInboxTests {
         let other = course("선형대수학", assignments: [added])
         var settings = LMSSettings(known: [1])
         settings.mark([105, 107, 108].map { LMSKey(kind: .assignment, id: $0) }, handled: true)
-        let snapshot = LMSSnapshot(at: now, classrooms: [.init(id: 1, title: "그래프 이론")], assignments: [
-            .init(id: 100, classroom: 1, title: "open", due: now.addingTimeInterval(3600)),
-            .init(id: 101, classroom: 1, title: "due now", due: now),
-            .init(id: 102, classroom: 1, title: "past", due: now.addingTimeInterval(-1)),
-            .init(id: 103, classroom: 1, title: "handed in", due: now.addingTimeInterval(3600), submitted: true),
-            .init(id: 104, classroom: 1, title: "already added"),
-            .init(id: 105, classroom: 1, title: "dismissed"),
-            .init(id: 106, classroom: 1, title: "no deadline"),
-            .init(id: 107, classroom: 1, title: "dismissed, then past", due: now.addingTimeInterval(-1)),
-            .init(id: 108, classroom: 1, title: "dismissed, then handed in", submitted: true),
-        ])
+        let snapshot = LMSSnapshot(
+            at: now, classrooms: [.init(id: 1, title: "그래프 이론")],
+            assignments: [
+                .init(id: 100, classroom: 1, title: "open", due: now.addingTimeInterval(3600)),
+                .init(id: 101, classroom: 1, title: "due now", due: now),
+                .init(id: 102, classroom: 1, title: "past", due: now.addingTimeInterval(-1)),
+                .init(id: 103, classroom: 1, title: "handed in", due: now.addingTimeInterval(3600), submitted: true),
+                .init(id: 104, classroom: 1, title: "already added"),
+                .init(id: 105, classroom: 1, title: "dismissed"),
+                .init(id: 106, classroom: 1, title: "no deadline"),
+                .init(id: 107, classroom: 1, title: "dismissed, then past", due: now.addingTimeInterval(-1)),
+                .init(id: 108, classroom: 1, title: "dismissed, then handed in", submitted: true),
+            ])
         let inbox = LMSInbox.build(snapshot, settings: settings, courses: [course("그래프 이론"), other], now: now)
         #expect(inbox.proposals.map(\.id) == ["assignment:100", "assignment:101", "assignment:106"])
         // The added one says where it went and the dismissed one can come back; a deadline that passed is neither.
@@ -57,9 +63,10 @@ struct LMSInboxTests {
     }
 
     @Test func handledFilesAndNoticesStayQuiet() {
-        let snapshot = LMSSnapshot(at: now, classrooms: [.init(id: 1, title: "그래프 이론"), .init(id: 2, title: "빈 강의실")],
-                                   files: [.init(id: 10, classroom: 1, title: "old"), .init(id: 11, classroom: 1, title: "new")],
-                                   notices: [.init(id: 20, board: 5, classroom: 1, title: "old"), .init(id: 21, board: 5, classroom: 1, title: "new")])
+        let snapshot = LMSSnapshot(
+            at: now, classrooms: [.init(id: 1, title: "그래프 이론"), .init(id: 2, title: "빈 강의실")],
+            files: [.init(id: 10, classroom: 1, title: "old"), .init(id: 11, classroom: 1, title: "new")],
+            notices: [.init(id: 20, board: 5, classroom: 1, title: "old"), .init(id: 21, board: 5, classroom: 1, title: "new")])
         var settings = LMSSettings(known: [1, 2])
         settings.mark([LMSKey(kind: .file, id: 10), LMSKey(kind: .notice, id: 20)], handled: true)
         let inbox = LMSInbox.build(snapshot, settings: settings, courses: [], now: now)
@@ -67,14 +74,18 @@ struct LMSInboxTests {
         #expect(inbox.sections[0].handled.map(\.id) == ["file:10", "notice:20"])
         #expect(inbox.sections[0].handled.map(\.proposable) == [true, true])
         #expect(inbox.sections.map(\.id) == [1])
-        #expect(snapshot.current(in: 1) == [LMSKey(kind: .file, id: 10), LMSKey(kind: .file, id: 11), LMSKey(kind: .notice, id: 20), LMSKey(kind: .notice, id: 21)])
+        #expect(
+            snapshot.current(in: 1) == [
+                LMSKey(kind: .file, id: 10), LMSKey(kind: .file, id: 11), LMSKey(kind: .notice, id: 20), LMSKey(kind: .notice, id: 21),
+            ])
     }
 
     /// Every item of a classroom stays in view, handled ones too, so a dismissal made by mistake can be taken back. Those
     /// with something new come first; one with only handled items follows, and is no count anywhere.
     @Test func classroomsWithOnlyHandledItemsFollowAndCountForNothing() {
-        let snapshot = LMSSnapshot(at: now, classrooms: [.init(id: 1, title: "다 본 강의실"), .init(id: 2, title: "새 글"), .init(id: 3, title: "빈 강의실")],
-                                   files: [.init(id: 10, classroom: 1, title: "old"), .init(id: 11, classroom: 2, title: "new")])
+        let snapshot = LMSSnapshot(
+            at: now, classrooms: [.init(id: 1, title: "다 본 강의실"), .init(id: 2, title: "새 글"), .init(id: 3, title: "빈 강의실")],
+            files: [.init(id: 10, classroom: 1, title: "old"), .init(id: 11, classroom: 2, title: "new")])
         var settings = LMSSettings(known: [1, 2, 3])
         settings.mark([LMSKey(kind: .file, id: 10)], handled: true)
         var inbox = LMSInbox.build(snapshot, settings: settings, courses: [], now: now)

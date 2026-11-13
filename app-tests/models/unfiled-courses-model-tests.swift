@@ -2,6 +2,7 @@ import FolioDomain
 import FolioStorage
 import Foundation
 import Testing
+
 @testable import Folio
 
 @MainActor
@@ -40,7 +41,8 @@ struct UnfiledCoursesModelTests {
         #expect(model.courses.isEmpty)
         #expect(workspace.allCourses.contains { $0.id == creditedCourse })
         let root = try #require(workspace.gist).url
-        #expect(FileManager.default.fileExists(atPath: root.appending(path: "_Credited/영재고 AP/GS1101 일반물리학 및 연습 I/.folio/course.json").path))
+        #expect(
+            FileManager.default.fileExists(atPath: root.appending(path: "_Credited/영재고 AP/GS1101 일반물리학 및 연습 I/.folio/course.json").path))
     }
 
     @Test func aCreditedTermWithoutASourceRefuses() throws {

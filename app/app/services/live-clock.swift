@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import SwiftUI
+
 #if os(macOS)
 import AppKit
 #else

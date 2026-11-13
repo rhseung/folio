@@ -4,6 +4,7 @@ import Foundation
 import ImageIO
 import PDFKit
 import UniformTypeIdentifiers
+
 #if os(macOS)
 import AppKit
 private typealias PlatformFont = NSFont
@@ -49,7 +50,8 @@ public enum PDFPages {
     public static func text(of raw: NSAttributedString, number: Int) -> PDFPageText {
         let title = title(of: raw)
         let words = max(PageText.words(raw.string) - (title.map(PageText.words) ?? 0), 0)
-        return PDFPageText(page: number, title: title, text: PageText.cleaned(raw.string), words: words, figures: PageText.figures(raw.string))
+        return PDFPageText(
+            page: number, title: title, text: PageText.cleaned(raw.string), words: words, figures: PageText.figures(raw.string))
     }
 
     /// Only the first lines are measured: `PageText.title` looks no further.
@@ -105,10 +107,12 @@ enum ClaudeJPEG {
     static func of(_ image: CGImage, edge: Int) -> Data? {
         let out = NSMutableData()
         guard let dest = CGImageDestinationCreateWithData(out, UTType.jpeg.identifier as CFString, 1, nil) else { return nil }
-        CGImageDestinationAddImage(dest, image, [
-            kCGImageDestinationLossyCompressionQuality: 0.8,
-            kCGImageDestinationImageMaxPixelSize: edge,
-        ] as CFDictionary)
+        CGImageDestinationAddImage(
+            dest, image,
+            [
+                kCGImageDestinationLossyCompressionQuality: 0.8,
+                kCGImageDestinationImageMaxPixelSize: edge,
+            ] as CFDictionary)
         return CGImageDestinationFinalize(dest) ? out as Data : nil
     }
 }
@@ -129,7 +133,11 @@ extension CourseStore {
     /// The images `body` of `note` embeds, in order, each found where the preview finds it.
     public func noteImageFiles(of note: NoteFile, body: String) -> [NoteImageFile] {
         NoteImages.references(in: body).map { ref in
-            let written = switch ref { case .path(let p): p; case .name(let n): n }
+            let written =
+                switch ref {
+                case .path(let p): p
+                case .name(let n): n
+                }
             return NoteImageFile(written: written, path: imageURL(ref, of: note).flatMap(coursePath(of:)))
         }
     }
@@ -137,10 +145,12 @@ extension CourseStore {
     /// Files outside the course are left out: a note's `../../secret.png` must not reach Claude.
     func imageURL(_ ref: NoteImages.Reference, of note: NoteFile) -> URL? {
         let root = url.standardizedFileURL.path + "/"
-        let candidates: [URL] = switch ref {
-        case .path(let p): [note.url.deletingLastPathComponent().appending(path: p)]
-        case .name(let n): [noteAssetsURL.appending(path: n), notesURL.appending(path: n), note.url.deletingLastPathComponent().appending(path: n)]
-        }
+        let candidates: [URL] =
+            switch ref {
+            case .path(let p): [note.url.deletingLastPathComponent().appending(path: p)]
+            case .name(let n):
+                [noteAssetsURL.appending(path: n), notesURL.appending(path: n), note.url.deletingLastPathComponent().appending(path: n)]
+            }
         return candidates.map(\.standardizedFileURL).first { $0.path.hasPrefix(root) && FileManager.default.fileExists(atPath: $0.path) }
     }
 

@@ -1,4 +1,3 @@
-@testable import FolioCLI
 import FolioActions
 import FolioDomain
 import FolioFixtures
@@ -7,6 +6,8 @@ import Foundation
 import ImageIO
 import Testing
 import UniformTypeIdentifiers
+
+@testable import FolioCLI
 
 /// The panel's reading tools (#85): a PDF's pages, a recording's transcript, a note's pictures.
 struct ReadingTests {
@@ -83,7 +84,8 @@ struct ReadingTests {
         #expect(r.code == 0, "\(r.err)")
         let file = try #require(string(array(try json(r.out)["pages"]).first?["image"]))
         #expect(FileManager.default.fileExists(atPath: file) && file.hasSuffix("06_Hall.pdf p2.jpg"))
-        let inside = h.cli(["material", "read", "EC4207/06_Hall.pdf", "--pages", "2", "--images", "--out", gist.appending(path: "pages").path], gist: gist)
+        let inside = h.cli(
+            ["material", "read", "EC4207/06_Hall.pdf", "--pages", "2", "--images", "--out", gist.appending(path: "pages").path], gist: gist)
         #expect(inside.code == Exit.usage.rawValue)
         #expect(!FileManager.default.fileExists(atPath: gist.appending(path: "pages").path))
     }
@@ -102,7 +104,8 @@ struct ReadingTests {
     func record(_ gist: URL, lines: [LectureTranscript.Line]?) throws {
         let ctx = ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now)
         let store = try ctx.store(Harness.graphTheory)
-        let rec = Recording(id: Self.recording, device: h.device, at: h.now, sessionId: nil, file: "Recordings/10-26(월).m4a", duration: 4500)
+        let rec = Recording(
+            id: Self.recording, device: h.device, at: h.now, sessionId: nil, file: "Recordings/10-26(월).m4a", duration: 4500)
         try FileManager.default.createDirectory(at: store.recordingsURL, withIntermediateDirectories: true)
         if let lines { try store.saveTranscript(LectureTranscript(locale: "ko-KR", lines: lines), of: rec) }
         try ctx.edit(Harness.graphTheory) { $0.recordings.append(rec) }
@@ -110,7 +113,12 @@ struct ReadingTests {
 
     @Test func aTranscriptIsCutToTheAskedSpan() throws {
         let gist = try Harness.fixtureCopy()
-        try record(gist, lines: [.init(start: 30, end: 40, text: "매칭의 정의"), .init(start: 75, end: 90, text: "홀의 정리"), .init(start: 200, end: 210, text: "증명")])
+        try record(
+            gist,
+            lines: [
+                .init(start: 30, end: 40, text: "매칭의 정의"), .init(start: 75, end: 90, text: "홀의 정리"),
+                .init(start: 200, end: 210, text: "증명"),
+            ])
         let r = h.cli(["recording", "transcript", "EC4207/10-26(월).m4a", "--from", "1:00", "--to", "3:00", "--json"], gist: gist)
         #expect(r.code == 0, "\(r.err)")
         let lines = array(try json(r.out)["lines"])
@@ -141,8 +149,10 @@ struct ReadingTests {
     // MARK: Note pictures
 
     static func png(width: Int = 2000, height: Int = 1000) throws -> Data {
-        let ctx = try #require(CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
-                                         space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue))
+        let ctx = try #require(
+            CGContext(
+                data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue))
         let png = NSMutableData()
         let dest = try #require(CGImageDestinationCreateWithData(png, UTType.png.identifier as CFString, 1, nil))
         CGImageDestinationAddImage(dest, try #require(ctx.makeImage()), nil)
@@ -176,8 +186,12 @@ struct ReadingTests {
     // MARK: MCP
 
     func content(_ server: MCPServer, _ gist: URL, _ name: String, _ arguments: JSONValue) throws -> (isError: Bool, blocks: [JSONValue]) {
-        let line = MCPServer.string(["jsonrpc": "2.0", "id": .number(1), "method": "tools/call", "params": ["name": .string(name), "arguments": arguments]])
-        let reply = CLI.$overrides.withValue(Overrides(gist: gist, device: h.device, now: h.now, gradesUnlocked: true)) { server.handle(line) }
+        let line = MCPServer.string([
+            "jsonrpc": "2.0", "id": .number(1), "method": "tools/call", "params": ["name": .string(name), "arguments": arguments],
+        ])
+        let reply = CLI.$overrides.withValue(Overrides(gist: gist, device: h.device, now: h.now, gradesUnlocked: true)) {
+            server.handle(line)
+        }
         let text = try #require(reply)
         let result = try #require(try json(String(decoding: text, as: UTF8.self))["result"])
         return (result["isError"] == .bool(true), array(result["content"]))
@@ -193,21 +207,25 @@ struct ReadingTests {
 
     func isJPEG(_ data: Data, edge: Int) -> Bool {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil),
-              let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
-              let w = props[kCGImagePropertyPixelWidth] as? Int, let h = props[kCGImagePropertyPixelHeight] as? Int else { return false }
+            let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+            let w = props[kCGImagePropertyPixelWidth] as? Int, let h = props[kCGImagePropertyPixelHeight] as? Int
+        else { return false }
         return CGImageSourceGetType(source) as String? == UTType.jpeg.identifier && max(w, h) == edge
     }
 
     @Test func thePanelGetsPagePicturesAsImageContent() throws {
         let gist = try withDeck()
-        let (failed, blocks) = try content(MCPServer(gist: nil, propose: true), gist, "material_read",
-                                           ["material": "EC4207/06_Hall.pdf", "pages": "9-10", "images": .bool(true)])
+        let (failed, blocks) = try content(
+            MCPServer(gist: nil, propose: true), gist, "material_read",
+            ["material": "EC4207/06_Hall.pdf", "pages": "9-10", "images": .bool(true)])
         #expect(!failed)
         let pictures = try images(blocks)
         #expect(pictures.count == 2 && pictures.allSatisfy { isJPEG($0, edge: ReadingLimit.imageEdge) })
 
         // Each picture follows a line naming it, and the page list names it the same way.
-        let labels = blocks.indices.dropLast().filter { blocks[$0 + 1]["type"] == .string("image") }.compactMap { string(blocks[$0]["text"]) }
+        let labels = blocks.indices.dropLast().filter { blocks[$0 + 1]["type"] == .string("image") }.compactMap {
+            string(blocks[$0]["text"])
+        }
         #expect(labels == ["06_Hall.pdf p.9", "06_Hall.pdf p.10"])
         #expect(string(blocks.first?["text"])?.contains("06_Hall.pdf p.9") == true)
     }
@@ -223,14 +241,23 @@ struct ReadingTests {
     @Test func thePanelReadsTranscriptsButCannotTouchRecordings() throws {
         let gist = try Harness.fixtureCopy()
         try record(gist, lines: [.init(start: 0, end: 5, text: "매칭")])
-        let (failed, blocks) = try content(MCPServer(gist: nil, propose: true), gist, "recording_transcript", ["recording": "EC4207/10-26(월).m4a"])
+        let (failed, blocks) = try content(
+            MCPServer(gist: nil, propose: true), gist, "recording_transcript", ["recording": "EC4207/10-26(월).m4a"])
         #expect(!failed && string(blocks.first?["text"])?.contains("매칭") == true)
-        guard case .array(let tools)? = try json(String(decoding: try #require(MCPServer(gist: nil, propose: true).handle(
-            MCPServer.string(["jsonrpc": "2.0", "id": .number(1), "method": "tools/list"]))), as: UTF8.self))["result"]?["tools"] else {
+        guard
+            case .array(let tools)? = try json(
+                String(
+                    decoding: try #require(
+                        MCPServer(gist: nil, propose: true).handle(
+                            MCPServer.string(["jsonrpc": "2.0", "id": .number(1), "method": "tools/list"]))), as: UTF8.self))["result"]?[
+                    "tools"]
+        else {
             Issue.record("no tools"); return
         }
         let names = Set(tools.compactMap { string($0["name"]) })
-        for tool in ["material_read", "recording_transcript", "note_images"] { #expect(names.contains(tool), "\(tool) is not in the panel") }
+        for tool in ["material_read", "recording_transcript", "note_images"] {
+            #expect(names.contains(tool), "\(tool) is not in the panel")
+        }
         for tool in ["recording_retitle", "recording_trim"] { #expect(!names.contains(tool)) }
     }
 }

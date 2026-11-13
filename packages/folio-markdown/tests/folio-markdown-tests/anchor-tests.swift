@@ -1,25 +1,26 @@
-@testable import FolioMarkdown
 import Foundation
 import Testing
 
+@testable import FolioMarkdown
+
 struct NoteAnchorTests {
     let body = """
-    # 매칭
+        # 매칭
 
-    소개
+        소개
 
-    ## 정의
+        ## 정의
 
-    짝짓기는
-    간선 집합이다. ^def
+        짝짓기는
+        간선 집합이다. ^def
 
-    - 하나
-        - 안쪽 ^inner
-    - 둘 ^two
+        - 하나
+            - 안쪽 ^inner
+        - 둘 ^two
 
-    > [!theorem] 베르주
-    > 증강 경로가 없다. ^berge
-    """
+        > [!theorem] 베르주
+        > 증강 경로가 없다. ^berge
+        """
 
     /// The line at a location, as the editor would show it with the caret there.
     func line(at location: Int?, in text: String) -> String? {

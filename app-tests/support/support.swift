@@ -2,6 +2,7 @@ import FolioDomain
 import FolioFixtures
 import FolioStorage
 import Foundation
+
 @testable import Folio
 
 /// IDs from `Fixture.standard`. 그래프 이론 starts with no sessions, units or class times.
@@ -17,7 +18,8 @@ func fixtureWorkspace() throws -> Workspace {
     setenv(Workspace.environmentKey, url.path(percentEncoded: false), 1)
     let workspace = Workspace()
     // Before opening, whose reload recovers leftovers: left unset, the first use stops the test (LocalFolders).
-    workspace.pendingRecordings = PendingRecordings(url: URL.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory))
+    workspace.pendingRecordings = PendingRecordings(
+        url: URL.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory))
     workspace.open(url, remember: false)
     return workspace
 }
