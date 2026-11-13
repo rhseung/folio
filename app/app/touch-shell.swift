@@ -58,15 +58,14 @@ extension RootView {
         .animation(.snappy(duration: 0.25), value: sidebarOpen)
     }
 
-    /// Below this the window's search is a round button, so the trail keeps room for its first and last steps.
-    static let padNarrow: CGFloat = 900
-
+    /// The toolbar is not the Mac's (2026-11-13): the search field is the sidebar's top, and of the tools only the mic
+    /// and quick add stay out, the two a class can't wait for; the rest are one "…". The iPad's tabs are its windows,
+    /// so the room they leave goes to this window's one tab, its trail.
     var padRow: some View {
-        let narrow = windowWidth <= Self.padNarrow
-        let search = narrow ? Theme.Size.toolbarButton : Theme.Size.searchField
-        // What the row holds besides the trail, at its widest: the sidebar button, back and forward, the search, the
-        // record button and the four tools, the gaps between them, and the row's margins.
-        let others = Theme.Size.toolbarButton * 8 + search + Theme.Space.s * 6 + Theme.Space.l * 2
+        let running = StudyTracker.shared.manual != nil
+        // What the row holds besides the trail: the sidebar button, back and forward, the mic, quick add and "…",
+        // a running timer's capsule, the gaps between them, and the row's margins.
+        let others = Theme.Size.toolbarButton * 6 + (running ? Self.timerWidth : 0) + Theme.Space.s * 5 + Theme.Space.l * 2
         let room = max(Breadcrumb.minWidth, windowWidth - others - Theme.Space.m * 2)
         return HStack(spacing: Theme.Space.s) {
             Button(sidebarOpen ? .rootSidebarClose : .rootSidebarOpen, systemImage: "sidebar.leading") { sidebarOpen.toggle() }
@@ -74,33 +73,85 @@ extension RootView {
                 .buttonStyle(.toolbar)
                 .toolbarGroup()
             HistoryButtons(navigator: navigator) { workspace.title(of: $0) }
-            Breadcrumb(crumbs: crumbs, foldWidth: room, maxWidth: room)
-                .toolbarField()
+            HugWidth {
+                Breadcrumb(crumbs: crumbs, foldWidth: room, maxWidth: room)
+                    .toolbarField()
+            }
             Spacer(minLength: Theme.Space.s)
-            padSearch(round: narrow)
+            if running, let manual = StudyTracker.shared.manual {
+                // Out of the "…" while it runs: its time is what a timer is for, and stopping it is one press.
+                ManualTimerButton(courseID: manual.courseId)
+                    .buttonStyle(.toolbar)
+                    .toolbarGroup()
+            }
             recordButton
-            tools
+            padTools
         }
         .padding(.horizontal, Theme.Space.l)
         .frame(height: Theme.Size.toolbarRow)
     }
 
-    func padSearch(round: Bool) -> some View {
+    /// A running timer's capsule at its widest ("0:42:10" and the stop mark).
+    static let timerWidth: CGFloat = 128
+
+    var padTools: some View {
+        HStack(spacing: Theme.Space.xxs) {
+            Button(.rootQuickAdd, systemImage: "plus") { quickAdding = true }
+                .popover(isPresented: $quickAdding, arrowEdge: .bottom) {
+                    QuickAddField(workspace: workspace, defaultCourse: navigator.current.course, showsEmptyChips: true, focusOnAppear: true, floating: true)
+                        .padding(Theme.Space.l)
+                        .frame(width: 440)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            Menu {
+                padMenu
+            } label: {
+                Label(.rootMore, systemImage: "ellipsis")
+            }
+        }
+        .labelStyle(.iconOnly)
+        .toolbarGroup()
+        .buttonStyle(.toolbar)
+        .menuStyle(.button)
+    }
+
+    @ViewBuilder var padMenu: some View {
+        if !sidebarOpen {
+            // The sidebar's search field is folded away with it.
+            Button(.commonSearch, systemImage: "magnifyingglass") { searching = true }
+            Divider()
+        }
+        if StudyTracker.shared.manual == nil, case .course(let id) = selection {
+            Button(.timerStart, systemImage: "timer") { StudyTracker.shared.startManual(id, workspace: workspace) }
+        }
+        if let panes = tabs.front {
+            LayoutMenu(choices: workspace.layoutChoices(for: panes, save: { namingLayout = panes }, manage: manageLayouts))
+        }
+        Divider()
+        Button(workspace.gradesUnlocked ? .rootLockGrades : .commonUnlockGrades, systemImage: workspace.gradesUnlocked ? "lock.open" : "lock") {
+            if workspace.gradesUnlocked { workspace.lockGrades() } else { Task { await workspace.unlockGrades() } }
+        }
+        Button(.rootReload, systemImage: "arrow.clockwise") { workspace.reload() }
+    }
+
+    /// The sidebar's top, where the iPad's search is (as in Mail and Notes): the same palette as ⌘K.
+    var sidebarSearch: some View {
         Button { searching = true } label: {
             HStack(spacing: Theme.Space.s) {
                 Image(systemName: "magnifyingglass")
-                if !round { Text(.commonSearch) }
+                Text(.commonSearch)
+                Spacer(minLength: 0)
             }
             .foregroundStyle(Theme.Palette.chromeText)
-            .frame(width: round ? Theme.Size.toolbarButton : Theme.Size.searchField - Theme.Space.m * 2, alignment: round ? .center : .leading)
-            .padding(.horizontal, round ? 0 : Theme.Space.m)
+            .padding(.horizontal, Theme.Space.m)
             .frame(height: Theme.Size.toolbarButton)
-            .background(Theme.Palette.text.opacity(Theme.Opacity.wash), in: .capsule)
-            .overlay { Capsule().strokeBorder(Theme.Palette.text.opacity(Theme.Opacity.edge)) }
-            .contentShape(.capsule)
+            .background(Theme.Palette.text.opacity(Theme.Opacity.wash), in: .rect(cornerRadius: Theme.Radius.control))
+            .contentShape(.rect)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text(.commonSearch))
+        .padding(.horizontal, Theme.Space.s)
+        .padding(.bottom, Theme.Space.s)
     }
 
     // MARK: iPhone
@@ -302,6 +353,19 @@ private extension View {
             .contentShape(.circle)
             .glassEffect(.regular.interactive(), in: .circle)
             .buttonStyle(.plain)
+    }
+}
+/// The trail's capsule at its own width, up to what the row offers. `Breadcrumb` takes all of its `maxWidth` when it
+/// can, which on the iPad's emptier row drew a capsule across the window like a search field.
+private struct HugWidth: Layout {
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard let view = subviews.first else { return .zero }
+        let own = view.sizeThatFits(.unspecified).width
+        return view.sizeThatFits(ProposedViewSize(width: min(own, proposal.width ?? own), height: proposal.height))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        subviews.first?.place(at: bounds.origin, proposal: ProposedViewSize(bounds.size))
     }
 }
 #endif

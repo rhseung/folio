@@ -26,7 +26,7 @@ struct RootView: View {
     @State var showingRecording = false
     @State var quickAdding = false
     /// The tab whose panes "지금 배치 저장…" is naming.
-    @State private var namingLayout: TabPanes?
+    @State var namingLayout: TabPanes?
     @State private var inputGuide: InputGuideRequest?
     @State private var contentHeight: CGFloat?
     @Environment(\.colorScheme) private var colorScheme
@@ -403,6 +403,9 @@ struct RootView: View {
         LiveTime(workspace) { now in
         // The places stay put and the terms scroll in the space under them, as the list of terms grows each term.
         VStack(spacing: 0) {
+        #if os(iOS)
+        sidebarSearch
+        #endif
         List(selection: listSelection) {
             Label { Text(.rootNavToday) } icon: { sidebarIcon("house", .today) }.sidebarRow(.today, selectionBinding)
             Label { Text(.rootNavGrades) } icon: { sidebarIcon("chart.line.uptrend.xyaxis", .grades) }.sidebarRow(.grades, selectionBinding)
