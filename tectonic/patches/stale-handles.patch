@@ -1,0 +1,47 @@
+diff --git a/crates/bridge_core/src/lib.rs b/crates/bridge_core/src/lib.rs
+index 1248153..fb28ac1 100644
+--- a/crates/bridge_core/src/lib.rs
++++ b/crates/bridge_core/src/lib.rs
+@@ -596,7 +596,12 @@ impl<'a> CoreBridgeState<'a> {
+     /// Close the provided output, flushing it and performing any necessary handling.
+     pub fn output_close(&mut self, id: OutputId) -> bool {
+         let mut rv = false;
+-        let mut oh = self.output_handles[id.idx()].take().unwrap();
++        // Folio: a handle this state never opened (or already closed) is an error, not a panic, which would abort the
++        // process from inside the engine's C code.
++        let Some(mut oh) = self.output_handles.get_mut(id.idx()).and_then(Option::take) else {
++            tt_warning!(self.status, "closing an output that is not open");
++            return true;
++        };
+         if let Err(e) = oh.flush() {
+             tt_warning!(self.status, "error when closing output {}", oh.name(); e.into());
+             rv = true;
+@@ -709,7 +714,11 @@ impl<'a> CoreBridgeState<'a> {
+ 
+     /// Close the provided output, performing any necessary handling.
+     pub fn input_close(&mut self, id: InputId) -> bool {
+-        let mut ih = self.input_handles[id.idx()].take().unwrap();
++        // Folio: as in `output_close`.
++        let Some(mut ih) = self.input_handles.get_mut(id.idx()).and_then(Option::take) else {
++            tt_warning!(self.status, "closing an input that is not open");
++            return true;
++        };
+         let mut rv = false;
+ 
+         if let Err(e) = ih.scan_remainder() {
+diff --git a/crates/pdf_io/pdf_io/dpx-pdfobj.c b/crates/pdf_io/pdf_io/dpx-pdfobj.c
+index 7755fe3..0cada0b 100644
+--- a/crates/pdf_io/pdf_io/dpx-pdfobj.c
++++ b/crates/pdf_io/pdf_io/dpx-pdfobj.c
+@@ -4390,9 +4390,8 @@ pdf_obj_reset_global_state(void)
+ {
+     pdf_out *p = current_output();
+ 
+-    if (p->output.handle != INVALID_HANDLE) {
+-        ttstub_output_close(p->output.handle);
+-    }
++    /* Folio: a handle still set here is left from a run that aborted. It belongs to that run's bridge state, which is
++     * gone, so closing it looks it up in this run's handles and panics where Rust can't unwind, aborting the process. */
+     p->output.handle = INVALID_HANDLE;
+     p->output.file_position = 0;
+     p->output.line_position = 0;
