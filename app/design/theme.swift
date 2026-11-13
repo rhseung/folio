@@ -45,6 +45,9 @@ enum Theme {
         /// Over the window material, a faint layer that mutes the wallpaper's hue: white in light, the page's warm dark in
         /// dark. Kept thin because a strong white over the regular material read as milk.
         static let frameTint = Color(light: 0xFFFFFF, dark: 0x1B1A19, lightOpacity: 0.40, darkOpacity: 0.36)
+        /// The iPad's window frame under the sidebar and the toolbar row. Solid: an iPad window has no material to tint,
+        /// and the system background showed through as a flat white that the paper panel couldn't stand out from.
+        static let frame = Color(light: 0xE6E4E0, dark: 0x111010)
 
         static let warning = Color(light: 0x8A4B00, dark: 0xF0B46A)
         static let warningFill = Color(light: 0xFBE9D0, dark: 0x3A2C18)
@@ -192,7 +195,12 @@ enum Theme {
         /// The outline beside a note (#387), and the most its popover takes where the note has no room for it.
         static let noteOutline: CGFloat = 224
         static let noteOutlinePopover = CGSize(width: 280, height: 400)
+        #if os(iOS)
+        /// Wider on the iPad, whose rows are a finger's height and whose names would cut short at the Mac's width.
+        static let sidebar: CGFloat = 240
+        #else
         static let sidebar: CGFloat = 216
+        #endif
         static let claudePanel: CGFloat = 380
         /// The round button a page's floating panel opens from (a course's Claude), at the content's bottom trailing corner.
         static let fab: CGFloat = 44
@@ -214,11 +222,24 @@ enum Theme {
         /// The least a finger can hit on each side, whatever the drawn size (`TouchTarget`).
         static let touchTarget: CGFloat = 44
         static let tile: CGFloat = 22
+        #if os(iOS)
+        /// A finger's size on the iPad and the iPhone, for every toolbar capsule and column button.
+        static let toolbarButton: CGFloat = 44
+        #else
         static let toolbarButton: CGFloat = 32
+        #endif
         /// The window's top row on the Mac, which the toolbar's capsules sit in the middle of (`TitleRow`).
+        #if os(iOS)
+        static let toolbarRow: CGFloat = 60
+        #else
         static let toolbarRow: CGFloat = 48
+        #endif
         /// The window's search field, after the tabs: wide enough for "검색 ⌘K", the tabs taking the row's room.
+        #if os(iOS)
+        static let searchField: CGFloat = 160
+        #else
         static let searchField: CGFloat = 120
+        #endif
         /// The longest name on a tab behind the front one, which shows where it is in full.
         static let tabName: CGFloat = 120
         /// The Mac window. Narrower than `windowMin`, the three columns squeeze a page's figures into slivers. A new
