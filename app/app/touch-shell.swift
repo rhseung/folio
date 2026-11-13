@@ -59,40 +59,45 @@ extension RootView {
     }
 
     /// The toolbar is not the Mac's (2026-11-13): the search field is the sidebar's top, and of the tools only the mic
-    /// and quick add stay out, the two a class can't wait for; the rest are one "…". The iPad's tabs are its windows,
-    /// so the room they leave goes to this window's one tab, its trail.
+    /// and quick add stay out, the two a class can't wait for; the rest are one "…". The room they leave goes to the
+    /// window's tabs, as on the Mac (`TabBar`), which fold to icons and a "+n" menu as it runs out.
     var padRow: some View {
-        let running = StudyTracker.shared.manual != nil
-        // What the row holds besides the trail: the sidebar button, back and forward, the mic, quick add and "…",
-        // a running timer's capsule, the gaps between them, and the row's margins.
-        let others = Theme.Size.toolbarButton * 6 + (running ? Self.timerWidth : 0) + Theme.Space.s * 5 + Theme.Space.l * 2
-        let room = max(Breadcrumb.minWidth, windowWidth - others - Theme.Space.m * 2)
-        return HStack(spacing: Theme.Space.s) {
-            Button(sidebarOpen ? .rootSidebarClose : .rootSidebarOpen, systemImage: "sidebar.leading") { sidebarOpen.toggle() }
-                .labelStyle(.iconOnly)
-                .buttonStyle(.toolbar)
-                .toolbarGroup()
-            HistoryButtons(navigator: navigator) { workspace.title(of: $0) }
-            HugWidth {
-                Breadcrumb(crumbs: crumbs, foldWidth: room, maxWidth: room)
-                    .toolbarField()
-            }
-            Spacer(minLength: Theme.Space.s)
-            if running, let manual = StudyTracker.shared.manual {
-                // Out of the "…" while it runs: its time is what a timer is for, and stopping it is one press.
-                ManualTimerButton(courseID: manual.courseId)
+        // Laid out as the Mac's `TitleRow`: nothing between the history buttons and the tabs, which keep their own
+        // lead (`ToolbarRow.lead`) so the first tab lines up with the panel's edge.
+        HStack(spacing: 0) {
+            HStack(spacing: Self.historyGap) {
+                Button(sidebarOpen ? .rootSidebarClose : .rootSidebarOpen, systemImage: "sidebar.leading") { sidebarOpen.toggle() }
+                    .labelStyle(.iconOnly)
                     .buttonStyle(.toolbar)
                     .toolbarGroup()
+                HistoryButtons(navigator: navigator) { workspace.title(of: $0) }
             }
-            recordButton
-            padTools
+            TabBar(tabs: tabs, workspace: workspace, crumbs: crumbs, toolbar: row, moveToWindow: moveToWindow,
+                   nameLayout: { namingLayout = $0 }, manageLayouts: manageLayouts)
+            Spacer(minLength: 0)
+            HStack(spacing: Theme.Space.s) {
+                if let manual = StudyTracker.shared.manual {
+                    // Out of the "…" while it runs: its time is what a timer is for, and stopping it is one press.
+                    ManualTimerButton(courseID: manual.courseId)
+                        .buttonStyle(.toolbar)
+                        .toolbarGroup()
+                }
+                recordButton
+                padTools
+            }
+            .onGeometryChange(for: CGFloat.self, of: \.size.width) { row.trailingWidth = $0 }
         }
-        .padding(.horizontal, Theme.Space.l)
+        .padding(.leading, padLead)
+        .padding(.trailing, TitleRowEdges.trailing)
         .frame(height: Theme.Size.toolbarRow)
+        // A windowed iPad draws its window controls over the row's top-leading corner, where the sidebar button was.
+        .onGeometryChange(for: CGFloat.self, of: { $0.containerCornerInsets.topLeading.width }) { windowControls = $0 }
+        .onChange(of: padLead, initial: true) { _, lead in row.leadingX = lead }
+        .onChange(of: windowWidth, initial: true) { _, width in row.windowWidth = width }
+        .onChange(of: sidebarOpen, initial: true) { row.panelEdge = panelEdge }
     }
 
-    /// A running timer's capsule at its widest ("0:42:10" and the stop mark).
-    static let timerWidth: CGFloat = 128
+    var padLead: CGFloat { max(TitleRowEdges.lead(fullScreen: true), windowControls) }
 
     var padTools: some View {
         HStack(spacing: Theme.Space.xxs) {
@@ -355,17 +360,10 @@ private extension View {
             .buttonStyle(.plain)
     }
 }
-/// The trail's capsule at its own width, up to what the row offers. `Breadcrumb` takes all of its `maxWidth` when it
-/// can, which on the iPad's emptier row drew a capsule across the window like a search field.
-private struct HugWidth: Layout {
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        guard let view = subviews.first else { return .zero }
-        let own = view.sizeThatFits(.unspecified).width
-        return view.sizeThatFits(ProposedViewSize(width: min(own, proposal.width ?? own), height: proposal.height))
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        subviews.first?.place(at: bounds.origin, proposal: ProposedViewSize(bounds.size))
-    }
+/// Where the toolbar row's items begin and end across the window (`ToolbarRow`): the row's margins, as on the Mac
+/// in full screen. A windowed iPad's controls push the lead further (`RootView.padLead`).
+enum TitleRowEdges {
+    static func lead(fullScreen: Bool) -> CGFloat { Theme.Space.l }
+    static let trailing = Theme.Space.l
 }
 #endif

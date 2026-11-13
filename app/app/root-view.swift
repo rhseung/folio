@@ -27,6 +27,12 @@ struct RootView: View {
     @State var quickAdding = false
     /// The tab whose panes "지금 배치 저장…" is naming.
     @State var namingLayout: TabPanes?
+    /// Where the toolbar row's tabs go and how many fit (`TabBar`), on the Mac and the iPad alike.
+    @State var row = ToolbarRow()
+    #if os(iOS)
+    /// How far the window's controls (a windowed iPad's top-leading dots) reach into the row.
+    @State var windowControls: CGFloat = 0
+    #endif
     @State private var inputGuide: InputGuideRequest?
     @State private var contentHeight: CGFloat?
     @Environment(\.colorScheme) private var colorScheme
@@ -34,7 +40,6 @@ struct RootView: View {
     /// When this window was made, which tells a window made for a link from outside from one already in use.
     @State private var madeAt = Date.now
     @State private var host = WindowHost()
-    @State private var row = ToolbarRow()
     /// The window's buttons are out of the title row, gone to the menu bar's reveal.
     @State private var fullScreen = false
     #else
@@ -92,14 +97,13 @@ struct RootView: View {
         case .beside:
             (tabs.panes(holding: pane) ?? tabs.front)?.openBeside(entry, from: pane)
         case .tab:
-            #if os(macOS)
+            #if os(iOS)
+            // The iPhone's frame has no tab strip: there a tab is a window of its own, or the pane itself.
+            guard sizeClass == .regular else { return openInWindow(entry, else: pane) }
+            #endif
             let tab = TabPanes(Navigator(entry))
             restoresSession(entry, in: tab)
             tabs.open(tab, fromLink: true)
-            #else
-            // The iPad has no tabs, so a tab there is a window of its own.
-            openInWindow(entry, else: pane)
-            #endif
         case .window:
             openInWindow(entry, else: pane)
         }
@@ -119,18 +123,17 @@ struct RootView: View {
         return tab.restore(saved, entries: entries)
     }
 
-    /// A new tab of panes side by side, as a class's start opens its pages (`ClassStartSettings.OpenIn.splitTab`). On the
-    /// iPad, whose windows are its tabs, a window of its own; where it allows only one window, the pages open in the
-    /// tab in front, the first in the focused pane and the rest beside it.
+    /// A new tab of panes side by side, as a class's start opens its pages (`ClassStartSettings.OpenIn.splitTab`). In the
+    /// iPhone's frame, which has no tab strip, a window of its own; where it allows only one window, the pages open in
+    /// the tab in front, the first in the focused pane and the rest beside it.
     func openTab(_ layout: PaneLayout, course hint: UUID?) {
         let found = layout.panes.indices.compactMap { i in workspace.entry(for: layout.panes[i].link, hint: hint).map { (i, $0) } }
         guard !found.isEmpty else { return }
+        #if os(iOS)
+        if sizeClass == .regular { return openTabHere(layout, found: found) }
+        #endif
         #if os(macOS)
-        // From the layout itself, so a class's layout remembered with its notes' modes and folds keeps them.
-        if let kept = layout.keeping({ i in found.contains { $0.0 == i } }),
-           let panes = TabPanes(layout: kept, entries: found.map(\.1)) {
-            tabs.open(panes, fromLink: true)
-        }
+        openTabHere(layout, found: found)
         #else
         let histories = found.map { LinkHistory($0.1) }
         let shares = found.map { layout.panes[$0.0].share }
@@ -149,6 +152,14 @@ struct RootView: View {
         #endif
     }
 
+    /// From the layout itself, so a class's layout remembered with its notes' modes and folds keeps them.
+    func openTabHere(_ layout: PaneLayout, found: [(Int, Navigator.Entry)]) {
+        if let kept = layout.keeping({ i in found.contains { $0.0 == i } }),
+           let panes = TabPanes(layout: kept, entries: found.map(\.1)) {
+            tabs.open(panes, fromLink: true)
+        }
+    }
+
     /// Where the system allows only one window, the link opens in place.
     func openInWindow(_ entry: Navigator.Entry, else pane: Navigator) {
         guard multipleWindows else { return pane.go(entry) }
@@ -163,7 +174,6 @@ struct RootView: View {
         OpenLinkAction { link, placement, course in open(link, in: placement, course: course, from: pane) }
     }
 
-    #if os(macOS)
     /// Out of this window into one of its own, every pane's back and forward included. The last tab is the window
     /// already.
     func moveToWindow(_ id: UUID) {
@@ -178,7 +188,6 @@ struct RootView: View {
         request.columns = moved.columns.map(\.names)
         openWindow(id: FolioApp.mainWindow, value: request)
     }
-    #endif
 
     func openFromOutside(_ link: AppLink) {
         #if os(macOS)
