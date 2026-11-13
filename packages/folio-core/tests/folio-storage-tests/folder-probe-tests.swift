@@ -11,10 +11,11 @@ struct FolderProbeTests {
             Issue.record("not read as a GIST folder")
             return
         }
-        // Credited courses sit a level deeper, under `_Credited/<source>`, past what the outline reads.
-        let inSemesters = try GISTStore(url: url).courseStores().filter { SemesterFolder(name: $0.url.deletingLastPathComponent().lastPathComponent) != nil }
+        // Credited courses too, a level deeper under `_Credited/<source>`.
+        let stores = try GISTStore(url: url).courseStores()
+        #expect(stores.contains { $0.url.path().contains(StandardLayout.creditedFolder) })
         #expect(semesters > 0)
-        #expect(courses == inSemesters.count)
+        #expect(courses == stores.count)
         #expect(FolderProbe.availability(of: url) == .ready)
     }
 

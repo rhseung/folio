@@ -35,6 +35,14 @@ struct FirstRunTests {
         #expect(FolderKind(tree) == .gist(semesters: 2, courses: 3))
     }
 
+    @Test func creditedCoursesUnderTheirSourceAreCounted() {
+        let tree = folder("GIST", [
+            folder(".folio"),
+            folder("_Credited", [folder("영재고 AP", [folder("GS1101 일반물리학 및 연습 I"), file("성적표.pdf")])]),
+        ])
+        #expect(FolderKind(tree) == .gist(semesters: 0, courses: 1))
+    }
+
     @Test func onlyTheMetadataFolderStillMarksAFolioFolder() {
         #expect(FolderKind(folder("GIST", [folder(".folio")])) == .gist(semesters: 0, courses: 0))
         #expect(FolderKind(folder("GIST", [folder("_Credited")])) == .gist(semesters: 0, courses: 0))

@@ -37,7 +37,10 @@ public enum FolderKind: Hashable, Sendable {
             !$0.isFile && ($0.name == StandardLayout.metadataFolder || $0.name == StandardLayout.creditedFolder)
         }
         guard marked else { self = .other; return }
-        let courses = semesters.flatMap(\.children).filter { !$0.isFile && StandardLayout.isCourseFolderName($0.name) }
+        // Credited courses sit under their source (`_Credited/<source>/<course>`), a level below a semester's.
+        let sources = children.filter { !$0.isFile && $0.name == StandardLayout.creditedFolder }.flatMap(\.children)
+        let courses = (semesters + sources).filter { !$0.isFile }.flatMap(\.children)
+            .filter { !$0.isFile && StandardLayout.isCourseFolderName($0.name) }
         self = .gist(semesters: semesters.count, courses: courses.count)
     }
 

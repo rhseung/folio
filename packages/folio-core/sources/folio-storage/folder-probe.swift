@@ -3,8 +3,9 @@ import Foundation
 
 /// Looks at a folder before the app opens it: what it holds (`FolderKind`) and whether its files are on this device.
 public enum FolderProbe {
-    /// The folder's first two levels by name. `FolderTree(contentsOf:)` walks the whole tree, which on a large iCloud
-    /// folder took seconds on the first screen and asked iCloud for every placeholder on the way.
+    /// The folder's first two levels by name, three under `_Credited` where course folders sit under their source.
+    /// `FolderTree(contentsOf:)` walks the whole tree, which on a large iCloud folder took seconds on the first screen
+    /// and asked iCloud for every placeholder on the way.
     public static func outline(of url: URL) throws -> FolderTree {
         func read(_ url: URL, levels: Int) throws -> FolderTree {
             let isFolder = (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true
@@ -15,7 +16,10 @@ public enum FolderProbe {
                 .sorted { $0.name < $1.name }
             return FolderTree(name: url.lastPathComponent, content: .folder(children))
         }
-        return try read(url, levels: 2)
+        let children = try FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: [.isDirectoryKey])
+            .map { try read($0, levels: $0.lastPathComponent == StandardLayout.creditedFolder ? 2 : 1) }
+            .sorted { $0.name < $1.name }
+        return FolderTree(name: url.lastPathComponent, content: .folder(children))
     }
 
     /// With `download`, asks iCloud for each file the app reads as it opens the folder that isn't here yet.
