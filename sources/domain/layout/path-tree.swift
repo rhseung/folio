@@ -1,13 +1,11 @@
 import Foundation
 
 public struct PathTree<Item> {
-    /// The folder's path; for the root, the folders every item shares (`Assignments`), or empty.
     public var path: String
     public var name: String { (path as NSString).lastPathComponent }
     public var folders: [PathTree]
     public var items: [(name: String, item: Item)]
 
-    /// The shared leading folders are folded into the root, so a list all under `Lectures/` starts at its files.
     public init(_ items: [Item], path: (Item) -> String) {
         self.init(path: "", entries: items.map { (path($0).split(separator: "/").map(String.init), $0) })
         while self.items.isEmpty, folders.count == 1 { self = folders[0] }
@@ -24,6 +22,5 @@ public struct PathTree<Item> {
             }
     }
 
-    /// Items here and in every folder below.
     public var count: Int { items.count + folders.reduce(0) { $0 + $1.count } }
 }

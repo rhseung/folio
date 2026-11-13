@@ -1,29 +1,24 @@
 import Foundation
 
-/// One local notification to schedule. The app turns `kind` into text.
 public struct PlannedNotification: Sendable, Equatable {
     public enum Kind: Sendable, Equatable {
         case assignmentDue(hoursBefore: Int)
         case examDayBefore, examMorning
         case dailyReview(count: Int)
-        /// Due right away; `id` carries the absence count so the app can tell it already sent this one.
+        // 앱이 이미 보낸 알림인지 알 수 있도록 `id`에 결석 횟수를 담는다.
         case attendanceOneAway(absences: Int)
     }
 
-    /// Stable across rebuilds so rescheduling replaces a request instead of adding a second one.
+    // 다시 예약할 때 요청을 하나 더 만들지 않고 바꾸도록, 다시 만들어도 같은 값이어야 한다.
     public var id: String
     public var date: Date
     public var kind: Kind
     public var courseId: UUID?
-    /// Assignment or exam title, or the course title for attendance.
     public var subject: String
-    /// The deadline or exam start.
     public var at: Date?
 }
 
 public enum NotificationPlan {
-    /// Deadlines and exams use real time.
-    /// - Parameter reviewCount: units in the review queue at a given moment.
     public static func build(
         courses: [CourseFile], reviewCount: (Date) -> Int, settings: NotificationSettings,
         now: Date, calendar: Calendar, reviewDays: Int = 7

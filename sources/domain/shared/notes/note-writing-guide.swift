@@ -1,7 +1,5 @@
-/// How a Folio note is written, for an agent writing one: `folio note format` prints it, the panel reads it through
-/// that tool, and `folio skill` carries it. Kept dense: it goes into Claude's context each time it is read.
-/// The dark colors are those of the hand-made figures that worked in both appearances, set beside the note tokens they
-/// stand for; a picture shown as an image can't read the page's variables, so it carries the hex values itself.
+// Claude가 읽을 때마다 맥락에 들어가므로 짧게 쓴다. 다크 색은 두 모드에서 모두 잘 보였던 손으로 그린 그림의
+// 색이고, 대응하는 노트 토큰 옆에 둔다. 이미지로 보이는 그림은 페이지 변수를 읽지 못하므로 hex 값을 직접 가진다.
 public enum NoteWritingGuide {
     public static let text = #"""
         # Folio 노트 형식

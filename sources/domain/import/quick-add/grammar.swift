@@ -1,22 +1,15 @@
 import Foundation
 
 extension QuickAdd {
-    /// How words read beside their neighbors, tried in this order at each word. Done by rule rather than left to Apple's
-    /// detector, which reads `다음 주`, `오후 3시` and `30일` against the real clock instead of `now`. A new pairing is a
-    /// case here.
+    // Apple의 날짜 인식기는 `다음 주`, `오후 3시`, `30일`을 `now`가 아니라 실제 시계로 읽으므로, 이웃 낱말의 결합은
+    // 규칙으로 한다.
     enum Rule: CaseIterable {
-        /// `다음 주`, `다음주`, `담주`, `이번 주` before a weekday.
         case weekBeforeWeekday
-        /// `오전`, `오후`, `밤` before a time.
         case meridiemBeforeTime
-        /// `3시 30분`.
         case minutesAfterHour
-        /// `11월 3일`.
         case monthBeforeDay
-        /// `30일` on its own: this month's, or next month's once it has passed.
         case dayAlone
 
-        /// How many words to step over when the rule took them, so no later rule reads them again; nil to go on.
         func apply(_ words: inout [Word], at i: Int, today: LocalDate) -> Int? {
             switch self {
             case .weekBeforeWeekday:
@@ -42,7 +35,7 @@ extension QuickAdd {
                 let hour = m / 60
                 var shifted = m
                 if !morning, hour < 12 { shifted += 12 * 60 }
-                // 밤 12시 is the day's end; 오후 12시 is noon; 오전 12시 is midnight at its start.
+                // `밤 12시`는 하루의 끝이고, `오후 12시`는 정오이며, `오전 12시`는 하루가 시작하는 자정이다.
                 if text == "밤", hour == 12 { shifted = 24 * 60 + m % 60 }
                 if morning, hour == 12 { shifted = m % 60 }
                 words[i].joined = true
@@ -87,8 +80,8 @@ extension QuickAdd {
             i += 1
         }
 
-        // `내일 7시까지` said aloud is the evening: a deadline hour of 1 to 11 with no 오전 before it is p.m. `7:00` typed
-        // with a colon is a clock reading and stays as written.
+        // 말로 한 `내일 7시까지`는 저녁이므로, 앞에 오전이 없는 1시에서 11시 사이의 마감 시각은 오후로 본다. 콜론을
+        // 넣어 친 `7:00`은 시계 표기이므로 쓴 그대로 둔다.
         for i in words.indices {
             if case let .time(m, true)? = words[i].piece, (1..<12).contains(m / 60) { words[i].piece = .time(m + 12 * 60, true) }
         }
@@ -96,8 +89,6 @@ extension QuickAdd {
 
     static let detector = try! NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue)
 
-    /// Apple's detector, for what the rules leave (`모레 오후 3시` it reads whole). It sees the words as the lexicon
-    /// rewrote them, so a phrase like `다음 주 금 오후 3시` stays whole.
     static func detect(_ words: inout [Word]) {
         var text = ""
         var offsets: [Range<Int>] = []
@@ -116,14 +107,12 @@ extension QuickAdd {
         }
     }
 
-    /// A rule said in several words (`한 달마다`, `2주에 한 번`, `하루 걸러`) becomes one word, longest first, before
-    /// any word is read beside its neighbors.
     static func joinRules(_ words: inout [Word], line: String) {
         var i = 0
         while i < words.count {
             for count in stride(from: min(4, words.count - i), through: 2, by: -1) {
                 let run = Array(words[i..<(i + count)])
-                // `까지` only on the last word, so a `까지` standing after the rule stays its own word.
+                // 규칙 뒤에 따로 선 `까지`가 독립된 낱말로 남도록, `까지`는 마지막 낱말에서만 본다.
                 guard adjoin(run, in: line),
                     let rule = AssignmentRepeat.word(run.dropLast().map(\.text).joined() + QuickAdd.core(run[count - 1].text))
                 else { continue }
@@ -139,8 +128,6 @@ extension QuickAdd {
         }
     }
 
-    /// Weekdays listed over several words (`매주 월 수`, `격주 화, 목`, `월요일과 수요일마다`) become one word naming
-    /// them, when a weekly rule comes right before or `마다` ends them; otherwise each stays as it was.
     static func joinWeekdays(_ words: inout [Word], line: String) {
         var i = 0
         while i < words.count {
@@ -164,26 +151,22 @@ extension QuickAdd {
         }
     }
 
-    /// Only spaces between the words: a course read out of the line between them parts them.
     static func adjoin(_ run: [Word], in line: String) -> Bool {
         zip(run, run.dropFirst()).allSatisfy { pair in line[pair.0.range.upperBound..<pair.1.range.lowerBound].allSatisfy(\.isWhitespace) }
     }
 
-    /// `월수` names a weekly rule's weekdays only beside one (`매주 월수`, `격주 화목`) or with `마다` (`월,수마다`);
-    /// otherwise it is a word of the title. `평일` and `주말` are title words too often (`주말 과제 매주 금`), so they
-    /// count only right after the rule (`매주 평일`).
+    // `평일`과 `주말`은 제목 낱말인 경우가 많으므로(`주말 과제 매주 금`), 규칙 바로 뒤(`매주 평일`)에서만 요일로 센다.
     static func bindWeekdays(_ words: inout [Word]) {
         let weekly = words.contains { $0.rule?.unit == .week }
         for i in words.indices where words[i].weekdayGroup?.each == false {
             let set = AssignmentRepeat.weekdaySets[QuickAdd.core(words[i].text)] != nil
             guard set ? !(i > 0 && words[i - 1].rule?.unit == .week) : !weekly else { continue }
             words[i].piece = nil
-            // Kept from Apple's detector, which could read `주말` as a date and take it out of the title.
+            // Apple의 날짜 인식기가 `주말`을 날짜로 읽어 제목에서 빼지 않도록 원래 글자를 남긴다.
             words[i].normalized = set ? "" : words[i].text
         }
     }
 
-    /// `까지` or `마감` as a word of its own belongs to the deadline before it (`금 마감`), and to the title otherwise.
     static func markEndings(_ words: inout [Word]) {
         for i in words.indices.dropFirst() where dueEndings.contains(words[i].text) && words[i - 1].isDue {
             words[i].trailer = true

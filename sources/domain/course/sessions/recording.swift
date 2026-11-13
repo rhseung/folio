@@ -1,6 +1,5 @@
 import Foundation
 
-/// One lecture recording: an audio file under `Recordings/`, with its transcript beside it.
 public struct Recording: Entity {
     public var id: UUID
     public var createdAt: Date
@@ -8,16 +7,11 @@ public struct Recording: Entity {
     public var updatedBy: DeviceID
 
     public var sessionId: UUID?
-    /// Course-relative path of the audio, e.g. `Recordings/11-03(화).m4a`.
     public var file: String
     public var startedAt: Date
-    /// Seconds of audio; pauses are not recorded, so this can be shorter than the class.
     public var duration: TimeInterval
-    /// Seconds into the audio marked while recording.
     public var bookmarks: [TimeInterval]
-    /// When the audio went to the Trash to save space, its transcript and bookmarks kept. Nil while the audio is there.
     public var audioTrashedAt: Date?
-    /// Lecture pages on screen while recording, in time order.
     public var pages: [PageVisit]
 
     public var hasAudio: Bool { audioTrashedAt == nil }
@@ -39,7 +33,6 @@ public struct Recording: Entity {
         self.pages = pages
     }
 
-    // Recordings saved before pages were kept have none, which needs no migration.
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(UUID.self, forKey: .id)
@@ -72,11 +65,9 @@ public struct Recording: Entity {
     }
 }
 
-/// A lecture page put on screen `at` seconds into the audio; it stays there until the next visit.
 public struct PageVisit: Codable, Sendable, Equatable {
     public var at: TimeInterval
     public var materialId: UUID
-    /// 1-based; nil when the file was closed.
     public var page: Int?
 
     public init(at: TimeInterval, materialId: UUID, page: Int?) {
@@ -87,11 +78,9 @@ public struct PageVisit: Codable, Sendable, Equatable {
 }
 
 extension Recording {
-    /// Long enough on a page to be listening to it; paging through to find one passes others in a second or two.
+    // 한 쪽을 듣고 있다고 볼 만큼 머문 시간이다. 쪽을 찾으며 넘기면 다른 쪽은 1초나 2초 안에 지나간다.
     public static let pageDwell: TimeInterval = 20
 
-    /// The pages of each file the class went through, in the order first opened: from the first to the last page
-    /// that stayed on screen for `pageDwell`. The last visit stops at `duration`: the audio so far while recording.
     public func viewedPages() -> [SessionMaterial] {
         var ranges: [SessionMaterial] = []
         for (i, visit) in pages.enumerated() {
@@ -108,7 +97,6 @@ extension Recording {
         return ranges
     }
 
-    /// The next visit when `page` of `material` comes on screen (nil: the file closed), or nil when nothing changed.
     public func visit(_ material: UUID, page: Int?, at time: TimeInterval) -> PageVisit? {
         let last = pages.last
         if page == nil, last?.materialId != material || last?.page == nil { return nil }
@@ -117,7 +105,6 @@ extension Recording {
     }
 }
 
-/// What was said, in timed lines. Kept in its own file because it is large and only the recording screen reads it.
 public struct LectureTranscript: Codable, Sendable, Equatable {
     public struct Line: Codable, Sendable, Equatable {
         public var start: TimeInterval
@@ -134,7 +121,6 @@ public struct LectureTranscript: Codable, Sendable, Equatable {
     public var schemaVersion = 1
     public var locale: String
     public var lines: [Line]
-    /// What the recognizer was told. Nil in transcripts made before it was kept.
     public var context: TranscriptionContext?
 
     public init(locale: String, lines: [Line] = [], context: TranscriptionContext? = nil) {
@@ -143,17 +129,15 @@ public struct LectureTranscript: Codable, Sendable, Equatable {
         self.context = context
     }
 
-    // `context` is a key added without a version bump: missing means "not kept", as with a course.json section.
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         schemaVersion = try c.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
         locale = try c.decode(String.self, forKey: .locale)
         lines = try c.decode([Line].self, forKey: .lines)
-        // A context a newer version wrote in a shape this one can't read is only a help: the lines still are.
+        // 새 판이 이 판이 못 읽는 꼴로 쓴 맥락은 보조 정보일 뿐이므로 무시하고 줄만 읽는다.
         context = try? c.decodeIfPresent(TranscriptionContext.self, forKey: .context)
     }
 
-    /// The line being spoken at `time`: the last one that has started. Lines are in time order.
     public func lineIndex(at time: TimeInterval) -> Int? {
         var low = 0, high = lines.count
         while low < high {
@@ -165,9 +149,8 @@ public struct LectureTranscript: Codable, Sendable, Equatable {
 
     public var text: String { lines.map(\.text).joined(separator: "\n") }
 
-    /// Captions cut off by a crash end well before the audio does: they are saved every few seconds while the last
-    /// sentences are still being decoded. A lecture that runs on in silence fails this too and is heard again, which
-    /// costs only time.
+    // 충돌로 끊긴 자막은 오디오보다 한참 먼저 끝난다. 마지막 문장을 아직 해독하는 동안 몇 초마다 저장하기 때문이다.
+    // 침묵으로 이어진 강의도 이 검사에 걸려 다시 듣게 되지만, 시간만 더 든다.
     public func reaches(_ duration: TimeInterval) -> Bool {
         guard let last = lines.last else { return false }
         return last.end >= duration - Self.tailAllowance
@@ -175,8 +158,8 @@ public struct LectureTranscript: Codable, Sendable, Equatable {
 
     static let tailAllowance: TimeInterval = 60
 
-    /// A transcript made from the audio that heard nothing (a quiet room, or every line a filler) must not wipe the
-    /// captions: nothing records the old file, so it could not be got back.
+    // 아무것도 듣지 못한(조용한 방이거나 모든 줄이 군말인) 받아쓰기가 기존 자막을 지우면 안 된다. 옛 파일을 기록한
+    // 곳이 없어서 되찾을 수 없기 때문이다.
     public func replaces(_ existing: LectureTranscript?) -> Bool {
         !lines.isEmpty || existing?.lines.isEmpty != false
     }

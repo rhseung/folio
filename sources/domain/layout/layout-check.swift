@@ -1,4 +1,3 @@
-/// `path` is relative to the GIST root.
 public struct LayoutIssue: Hashable, Sendable {
     public enum Kind: Hashable, Sendable {
         case unexpectedRootItem
@@ -9,7 +8,6 @@ public struct LayoutIssue: Hashable, Sendable {
         case invalidAssignmentFolder
         case invalidExamFolder
         case invalidLectureFileName
-        /// `Exams/Past` or `Notes/Exports`, from before files were split by origin. Cleanup empties them.
         case legacyFolder
     }
 
@@ -85,7 +83,6 @@ public enum LayoutCheck {
             case .exams:
                 for item in entry.children {
                     let itemPath = "\(path)/\(item.name)"
-                    // An exam names its own folder, so any folder here is one; only loose files are out of place.
                     guard !item.isFile else {
                         issues.append(.init(.invalidExamFolder, itemPath))
                         continue

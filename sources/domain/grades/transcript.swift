@@ -1,11 +1,7 @@
 import Foundation
 
-/// `GIST/.folio/transcript.json`.
-/// Every course lives in its own folder's course.json; this file holds the terms and degree-wide rules.
 public struct Transcript: Codable, Sendable, Equatable {
     public var semesters: [Semester]
-    /// Courses schema v1 kept here without a folder. Nothing adds to it: `transcript move` gives each its folder and
-    /// empties it, and until then they count nowhere.
     public var unfiledCourses: [Course]
     public var targetGPA: Double?
     public var graduation: GraduationRule
@@ -27,7 +23,6 @@ public struct Transcript: Codable, Sendable, Equatable {
         graduation = try c.decodeIfPresent(GraduationRule.self, forKey: .graduation) ?? .init()
     }
 
-    // The key leaves the file once the courses are moved, so a moved transcript.json shows no trace of them.
     public func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(semesters, forKey: .semesters)
@@ -37,15 +32,11 @@ public struct Transcript: Codable, Sendable, Equatable {
     }
 }
 
-/// Degree-wide rules from the handbook (학칙 제68조); per-category ones live on `Category`.
-/// It also holds the student's own info (내 정보): the track, which decides which program-specific categories apply, and the school mail.
 public struct GraduationRule: Codable, Sendable, Equatable {
     public var totalCredits: Double
     public var minGPA: Double
-    /// The handbook's requirement table is chosen by admission year (학번).
     public var admissionYear: Int?
     public var programs: [StudentProgram]
-    /// The account mail to professors is written from.
     public var email: String
 
     public init(
@@ -68,7 +59,6 @@ public struct GraduationRule: Codable, Sendable, Equatable {
     }
 }
 
-/// A declared program, pointing at the department's course code.
 public struct StudentProgram: Codable, Sendable, Equatable, Hashable {
     public enum Kind: String, Codable, Sendable, CaseIterable {
         case major, doubleMajor, minor, intensive
@@ -83,7 +73,6 @@ public struct StudentProgram: Codable, Sendable, Equatable, Hashable {
     }
 }
 
-/// Totals and GPA are never stored; they are computed from the semester's courses.
 public struct Semester: Entity {
     public var id: UUID
     public var createdAt: Date
@@ -94,15 +83,10 @@ public struct Semester: Entity {
     public var term: Term
     public var start: LocalDate?
     public var end: LocalDate?
-    /// Sorts semesters in time order; credited terms (no folder number) come first in their year.
     public var order: Int { year * 10 + (term.folderNumber ?? 0) }
-    /// Only for `credited` terms; regular terms sum their courses.
     public var creditedHours: Double?
-    /// Only for `credited` terms: where the credits came from (`영재고 AP`), which names the term's folder.
     public var source: String?
     public var memo: String
-    /// The weeks whose classes give way to midterms and to finals, counted as sessions count them. Nil takes the
-    /// term's default.
     public var midtermWeek: Int?
     public var finalWeek: Int?
 
@@ -124,7 +108,7 @@ public struct Semester: Entity {
         self.memo = memo
     }
 
-    /// GIST's regular terms run 16 weeks with one exam week each, midterms in the 8th and finals in the last.
+    // GIST의 정규 학기는 16주이고 시험 주가 하나씩 있다. 중간고사는 8주차, 기말고사는 마지막 주이다.
     public var defaultExamWeeks: (midterm: Int, final: Int)? {
         term == .spring || term == .fall ? (8, 16) : nil
     }
@@ -133,22 +117,18 @@ public struct Semester: Entity {
         Set([midtermWeek ?? defaultExamWeeks?.midterm, finalWeek ?? defaultExamWeeks?.final].compactMap { $0 })
     }
 
-    /// Derived from year and term rather than stored, so the two can't disagree. Nil for credited terms.
     public var folder: SemesterFolder? {
         SemesterFolder(year: year, term: term)
     }
 
-    /// Where the term's course folders go, relative to the GIST root: `2026-3`, or `_Credited/<source>`. Nil for a
-    /// credited term without a source yet.
     public var coursesFolder: String? {
         folder?.name ?? source.flatMap(StandardLayout.creditedFolder(source:))
     }
 }
 
 extension [Semester] {
-    /// The term `today` falls in by its dates; otherwise the newest one started, where a term without a start counts as
-    /// started (dates are often filled in late); with none started, the next to start. A credited term is never current:
-    /// it has no dates and no term folder to add to.
+    // 날짜를 늦게 채우는 일이 많으므로, 시작일이 없는 학기는 시작한 것으로 본다. 인정학기는 날짜와 학기 폴더가
+    // 없으므로 지금 학기가 되지 않는다.
     public func current(on today: LocalDate) -> Semester? {
         let terms = filter { $0.term != .credited }.sorted { $0.order < $1.order }
         return terms.last { ($0.start.map { $0 <= today } ?? false) && ($0.end.map { today <= $0 } ?? true) }

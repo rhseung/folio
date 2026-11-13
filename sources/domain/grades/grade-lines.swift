@@ -1,7 +1,5 @@
 import Foundation
 
-/// A course's components in order, each followed by its scores. A run of components sharing a group sits under one
-/// heading weighing the whole run.
 public enum GradeLine: Sendable, Equatable, Identifiable {
     case group(String, weight: Double, first: UUID)
     case component(GradeComponent, indented: Bool)
@@ -9,14 +7,13 @@ public enum GradeLine: Sendable, Equatable, Identifiable {
 
     public var id: String {
         switch self {
-        // Keyed by its first component: two runs apart can share a group name.
+        // 떨어져 있는 두 묶음이 같은 그룹 이름을 쓸 수 있으므로, 묶음의 첫 구성 요소로 키를 정한다.
         case .group(_, _, let first): "group-\(first.uuidString)"
         case .component(let c, _): c.id.uuidString
         case .entry(let e, _): e.id.uuidString
         }
     }
 
-    /// `components` sorted by order.
     public static func lines(_ components: [GradeComponent], scores: [ScoreEntry]) -> [GradeLine] {
         var lines: [GradeLine] = []
         for (i, c) in components.enumerated() {

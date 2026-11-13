@@ -1,27 +1,19 @@
 import Foundation
 
-/// What each release changed, as the app shows it after an update (#415).
-///
-/// One shape is written in two places and read by one reader: a PR's body carries a `## 패치 노트` section of item lines
-/// (`- feat: …`, `- fix: …`, `- change: …`, each optionally ending in a `(folio://…)` link), and the release script
-/// (`scripts/release-notes.sh`) copies the merged PRs' lines into the GitHub release's body under the same heading, in
-/// `### feat`-style groups. The app reads the releases back from GitHub, so a PR body edited after its merge still
-/// reaches the release.
+// PR 본문의 `## 패치 노트` 절과, 릴리스 스크립트(`scripts/release-notes.sh`)가 GitHub 릴리스 본문에 쓰는 같은
+// 제목의 절은 모양이 같고, 이 읽기 하나가 둘을 읽는다. 앱은 GitHub에서 릴리스를 다시 읽으므로, 머지 뒤에 고친
+// PR 본문도 릴리스에 들어간다.
 public enum PatchNotes {
-    /// Named as commits are, in English and untranslated (2026-11-10 사용자). In the order a release lists them.
     public enum Kind: String, CaseIterable, Hashable, Sendable {
         case feat, fix, change
 
-        /// What a line starts with. Data rather than UI copy: every line is matched against it, and the release script
-        /// matches the same words.
+        // UI 문구가 아니라 데이터이다. 모든 줄을 이 값과 맞추고, 릴리스 스크립트도 같은 낱말로 맞춘다.
         public var prefix: String { rawValue }
     }
 
     public struct Item: Hashable, Sendable {
         public var kind: Kind
         public var text: String
-        /// Only a place of the app (`AppLink.Kind.isPlace`, a settings tab included): an item is read by everyone, and
-        /// a note or a course is somebody's own.
         public var link: AppLink?
 
         public init(kind: Kind, text: String, link: AppLink? = nil) {
@@ -31,7 +23,6 @@ public enum PatchNotes {
         }
     }
 
-    /// `major.minor.patch`, as `FolioVersion` writes it and a release tag carries it (`v0.3.0`).
     public struct Version: Hashable, Comparable, Sendable, CustomStringConvertible {
         public var major: Int
         public var minor: Int
@@ -77,14 +68,11 @@ public enum PatchNotes {
     // MARK: Reading the text
 
     public static let heading = "패치 노트"
-    /// The shape of the item lines. The release script writes `marker` under the heading; a release whose marker
-    /// names a later shape is skipped rather than misread.
+    // 릴리스 스크립트가 제목 아래에 `marker`를 쓴다. 마커가 더 나중의 모양을 가리키는 릴리스는 잘못 읽지 않도록
+    // 건너뛴다.
     public static let format = 1
     public static var marker: String { "<!-- folio-patch-notes \(format) -->" }
 
-    /// The items of the `## 패치 노트` section of a PR's or a release's body, in the order written. Lines that are not
-    /// items (prose, a blank line, the marker, a release's `### feat` group headings) are passed over; the section ends
-    /// at the next heading of its level or above.
     public static func items(in body: String) -> [Item] {
         var inSection = false
         var items: [Item] = []
@@ -102,7 +90,7 @@ public enum PatchNotes {
         return items
     }
 
-    /// A markdown heading's level: `#`s and a space. A line opening with an issue number (`#415 관련`) is text.
+    // `#415 관련`처럼 이슈 번호로 시작하는 줄은 제목이 아니라 글이다.
     static func headingLevel(_ line: String) -> Int? {
         guard let m = line.wholeMatch(of: /([#]{1,6})(\s.*)?/) else { return nil }
         return m.1.count
@@ -118,8 +106,6 @@ public enum PatchNotes {
         return Int(m.1)
     }
 
-    /// `- feat: 노트 목차 (folio://settings/notes)`. A link that is not a place is dropped and its text with it, so
-    /// the line still reads as a sentence.
     public static func item(_ line: String) -> Item? {
         var rest = Substring(line.trimmingCharacters(in: .whitespaces))
         guard let bullet = rest.first, bullet == "-" || bullet == "*" else { return nil }
@@ -142,13 +128,10 @@ public enum PatchNotes {
         return Item(kind: kind, text: text, link: link)
     }
 
-    /// The line `item(_:)` reads back.
     public static func line(_ item: Item) -> String {
         "- \(item.kind.prefix): \(item.text)" + (item.link.map { " (\($0.string))" } ?? "")
     }
 
-    /// GitHub's list of releases (`GET /repos/{owner}/{repo}/releases`), newest first. Drafts and prereleases are
-    /// left out, as is a release whose tag is no version.
     public static func releases(fromGitHub data: Data) throws -> [Release] {
         struct Raw: Decodable {
             var tagName: String
@@ -173,29 +156,21 @@ public enum PatchNotes {
 
     // MARK: After an update
 
-    /// What came of asking GitHub for the releases.
     public enum Feed: Hashable, Sendable {
         case notLoaded
         case failed
         case loaded([Release])
     }
 
-    /// What the app does about the notes at launch and as the minute turns.
     public enum Step: Hashable, Sendable {
-        /// Nothing new since the last look (or an older app opened after a newer one).
         case nothing
-        /// The first launch, or an update without a new feature: remembered as seen, nothing shown.
         case markSeen
         case fetch
-        /// Not now: GitHub failed (next launch), the release isn't published yet, or a class or a recording is under way.
         case wait
         case show(Summary)
     }
 
-    /// `seen` is the version this device last looked at, nil before the first launch with the notes. Only a version
-    /// with a new feature shows the sheet; several versions skipped at once show one.
     public static func step(seen: Version?, current: Version, feed: Feed, busy: Bool) -> Step {
-        // A first install has nothing to compare against: all of it is new.
         guard let seen else { return .markSeen }
         guard seen < current else { return .nothing }
 
@@ -207,7 +182,6 @@ public enum PatchNotes {
         }
 
         let unseen = between(releases, after: seen, upTo: current)
-        // Until the running version's release is published (a draft is skipped), its notes aren't known yet.
         guard unseen.first?.version == current else { return .wait }
         guard unseen.contains(where: \.hasNewFeature) else { return .markSeen }
         if busy { return .wait }
@@ -218,13 +192,9 @@ public enum PatchNotes {
         releases.filter { seen < $0.version && $0.version <= current }.sorted { $0.version > $1.version }
     }
 
-    /// One sheet for the versions an update brought, however many were skipped.
     public struct Summary: Hashable, Sendable {
-        /// Newest first, never empty.
         public var releases: [Release]
         public var since: Version
-        /// Every item of those versions, as one list the way the page lists a version: kind by kind, each kind's newest
-        /// version first.
         public var items: [Item]
 
         public var latest: Release { releases[0] }
@@ -238,12 +208,10 @@ public enum PatchNotes {
 
     // MARK: The page
 
-    /// Every release up to `current`, newest first: a later one is for an app not yet installed.
     public static func history(_ releases: [Release], upTo current: Version) -> [Release] {
         releases.filter { $0.version <= current }.sorted { $0.version > $1.version }
     }
 
-    /// The releases with the items of `kind` (any, when nil) whose text has `query`; a release left with none is left out.
     public static func filter(_ releases: [Release], kind: Kind?, query: String) -> [Release] {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         let options: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive, .widthInsensitive]
@@ -256,7 +224,6 @@ public enum PatchNotes {
         }
     }
 
-    /// A release's items in one list, kind by kind in `Kind` order, each kind in the order written.
     public static func ordered(_ items: [Item]) -> [Item] {
         Kind.allCases.flatMap { kind in items.filter { $0.kind == kind } }
     }

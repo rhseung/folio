@@ -1,11 +1,7 @@
 import Foundation
 
-// The data model as a declaration: each document lists its items, what they point at, what happens to a pointer when
-// its target goes, and the checks every save must pass. Rules, cascading removal and name lookup all come from this
-// one place, so the app, the CLI and `folio run` can't disagree about them.
-
-/// A rule's stable name. Saves compare violations by rule and subject, never by message, so rewording a message or
-/// renaming an item doesn't make a problem the file already had look new.
+// 저장은 메시지가 아니라 규칙과 대상으로 위반을 비교한다. 그래서 메시지 문구를 고치거나 항목 이름을 바꿔도
+// 파일에 이미 있던 문제가 새 문제로 보이지 않는다.
 public struct RuleID: Hashable, Sendable, ExpressibleByStringLiteral, CustomStringConvertible {
     public let name: String
     public init(_ name: String) { self.name = name }
@@ -41,13 +37,9 @@ public enum ModelError: Error, Equatable, CustomStringConvertible {
 }
 
 public enum OnDelete: Sendable {
-    /// The pointing item goes too (a component's scores).
     case cascade
-    /// The pointer is cleared, or the id dropped from a list.
     case nullify
-    /// The removal is refused while anything points at the item.
     case restrict
-    /// For a parent pointer: the children take the removed item's parent.
     case reparent
 }
 
@@ -58,7 +50,6 @@ public protocol Document: Sendable {
 extension Document {
     public var violations: Set<Violation> { Self.model.violations(in: self) }
 
-    /// Changes one item, or throws `notFound` naming the item kind.
     public mutating func update<E: Identifiable & Sendable>(
         _ items: WritableKeyPath<Self, [E]>, _ id: UUID,
         _ change: (inout E) throws -> Void
@@ -69,7 +60,6 @@ extension Document {
         try change(&self[keyPath: items][i])
     }
 
-    /// Removes an item and settles everything that points at it, as the model declares.
     public mutating func remove<E: Identifiable & Sendable>(_ type: E.Type, _ id: UUID) throws where E.ID == UUID {
         try Self.model.remove(ObjectIdentifier(type), id, in: &self)
     }
@@ -87,7 +77,6 @@ extension Document {
 
 public struct Model<Doc: Sendable>: Sendable {
     let parts: [ModelPart<Doc>]
-    /// Where a missing target was looked for, as messages say it: "이 과목에".
     let place: String
 
     public init(place: String, @ModelBuilder<Doc> _ content: () -> [ModelPart<Doc>]) {
@@ -107,8 +96,6 @@ public enum ModelPart<Doc: Sendable>: Sendable {
     case rule(AnyRule<Doc>)
 }
 
-/// The other documents a rule may look at: a course's codes live in the catalog, a catalog row is used by courses.
-/// A rule whose document isn't given passes, so checking one file never needs every file.
 public struct World: Sendable {
     public var catalog: Catalog?
     public var transcript: Transcript?
@@ -125,7 +112,6 @@ public struct World: Sendable {
     public static func buildBlock(_ parts: [ModelPart<Doc>]...) -> [ModelPart<Doc>] { parts.flatMap { $0 } }
 }
 
-/// One kind of item in a document. Nested items (an exam's plan) are flattened across their parents.
 public struct AnyItems<Doc: Sendable>: Sendable {
     let kind: ObjectIdentifier
     let type: String
@@ -136,24 +122,18 @@ public struct AnyItems<Doc: Sendable>: Sendable {
     let refs: [AnyRef<Doc>]
 }
 
-/// A pointer field of one item kind, seen from the document.
 struct AnyRef<Doc: Sendable>: Sendable {
     let target: ObjectIdentifier
     let onDelete: OnDelete
-    /// Ids of the items whose field points at `id`.
     let holders: @Sendable (Doc, UUID) -> [UUID]
-    /// What the item `id` points at.
     let values: @Sendable (Doc, UUID) -> [UUID]
-    /// Replaces `id` with `replacement` (nil: clears it, or drops it from a list) in every item pointing at it.
     let detach: @Sendable (inout Doc, UUID, UUID?) -> Void
 }
 
-/// A rule on the document as a whole.
 public struct AnyRule<Doc: Sendable>: Sendable {
     let check: @Sendable (Doc, ModelIndex<Doc>) -> [Violation]
 }
 
-/// The ids and names of every item, built once per check.
 struct ModelIndex<Doc: Sendable> {
     let ids: [ObjectIdentifier: Set<UUID>]
     let nouns: [ObjectIdentifier: String]
@@ -176,7 +156,6 @@ public func Items<Doc: Sendable, E: Identifiable & Sendable>(
     Items(items, noun: noun, name: { e, _ in e[keyPath: name] }, members)
 }
 
-/// Items kept inside other items, such as an exam's study plan.
 public func Items<Doc: Sendable, P, E: Identifiable & Sendable>(
     _ parents: WritableKeyPath<Doc, [P]> & Sendable, _ items: WritableKeyPath<P, [E]> & Sendable, noun: String,
     name: KeyPath<E, String> & Sendable, @MemberBuilder<Doc, E> _ members: () -> [Member<Doc, E>] = { [] }
@@ -187,7 +166,6 @@ public func Items<Doc: Sendable, P, E: Identifiable & Sendable>(
         noun: noun, name: { e, _ in e[keyPath: name] }, members())
 }
 
-/// The document's one item of a kind, such as a course file's course.
 public func One<Doc: Sendable, E: Identifiable & Sendable>(
     _ item: WritableKeyPath<Doc, E> & Sendable, noun: String, name: KeyPath<E, String> & Sendable,
     @MemberBuilder<Doc, E> _ members: () -> [Member<Doc, E>] = { [] }
@@ -202,18 +180,15 @@ public func One<Doc: Sendable, E: Identifiable & Sendable>(
         noun: noun, name: { e, _ in e[keyPath: name] }, members())
 }
 
-/// A condition on the whole document, such as a range in settings.
 public func Rule<Doc: Sendable>(_ rule: RuleID, _ message: String, _ holds: @escaping @Sendable (Doc, World) -> Bool) -> AnyRule<Doc> {
     AnyRule { doc, index in holds(doc, index.world) ? [] : [Violation(rule, subject: nil, message)] }
 }
 
-/// A condition on the whole document that can fail for several items. Each failure needs its own subject: two
-/// failures of one rule with the same subject count as one.
+// 실패마다 대상이 따로 있어야 한다. 한 규칙의 두 실패가 대상이 같으면 하나로 센다.
 public func Rule<Doc: Sendable>(_ rule: RuleID, _ failures: @escaping @Sendable (Doc, World) -> [(UUID?, String)]) -> AnyRule<Doc> {
     AnyRule { doc, index in failures(doc, index.world).map { Violation(rule, subject: $0.0, $0.1) } }
 }
 
-/// Declares that `a`'s list and `b`'s list mirror each other: `x` lists `y` exactly when `y` lists `x`.
 public func Pair<Doc: Sendable, A: Identifiable & Sendable, B: Identifiable & Sendable>(
     _ aItems: KeyPath<Doc, [A]> & Sendable, _ aList: KeyPath<A, [UUID]> & Sendable,
     _ bItems: KeyPath<Doc, [B]> & Sendable, _ bList: KeyPath<B, [UUID]> & Sendable
@@ -223,7 +198,6 @@ public func Pair<Doc: Sendable, A: Identifiable & Sendable, B: Identifiable & Se
         let bs = Dictionary(doc[keyPath: bItems].map { ($0.id, Set($0[keyPath: bList])) }, uniquingKeysWith: { a, _ in a })
         let aSet = Set(doc[keyPath: aItems].flatMap { a in a[keyPath: aList].map { Pair2(a: a.id, b: $0) } })
         let bSet = Set(doc[keyPath: bItems].flatMap { b in b[keyPath: bList].map { Pair2(a: $0, b: b.id) } })
-        // Only pairs whose both ends exist: a dangling id is the ref check's business.
         let aIds = Set(doc[keyPath: aItems].map(\.id))
         return aSet.symmetricDifference(bSet).filter { aIds.contains($0.a) && bs[$0.b] != nil }
             .map { p in
@@ -288,14 +262,12 @@ struct RefInfo<E>: Sendable {
 }
 
 @resultBuilder public enum MemberBuilder<Doc: Sendable, E: Sendable> {
-    // Without it each line is typed on its own and `Ref(\.field, ...)` can't learn which item it belongs to.
+    // 이것이 없으면 각 줄의 형식을 따로 추론하므로, `Ref(\.field, ...)`가 어느 항목에 속하는지 알 수 없다.
     public static func buildExpression(_ member: Member<Doc, E>) -> [Member<Doc, E>] { [member] }
-    /// A shared list of members, such as the course checks a course file and the transcript both apply.
     public static func buildExpression(_ members: [Member<Doc, E>]) -> [Member<Doc, E>] { members }
     public static func buildBlock(_ members: [Member<Doc, E>]...) -> [Member<Doc, E>] { members.flatMap { $0 } }
 }
 
-/// A condition each item must meet. `{name}` in the message is the item's display name.
 public func Check<Doc: Sendable, E: Identifiable & Sendable>(
     _ rule: RuleID, _ message: String, _ holds: @escaping @Sendable (E, Doc) -> Bool
 ) -> Member<Doc, E> where E.ID == UUID {
@@ -305,7 +277,6 @@ public func Check<Doc: Sendable, E: Identifiable & Sendable>(
         }, ref: nil)
 }
 
-/// A condition that needs other documents; it passes when `World` doesn't have them.
 public func Check<Doc: Sendable, E: Identifiable & Sendable>(
     _ rule: RuleID, _ message: String, _ holds: @escaping @Sendable (E, Doc, World) -> Bool
 ) -> Member<Doc, E> where E.ID == UUID {
@@ -356,7 +327,6 @@ private func reference<Doc: Sendable, E: Identifiable & Sendable, T>(
     let rule = RuleID("\(E.self).\(field)")
     return Member(
         check: { e, _, name, index in
-            // A target kind the model doesn't list lives in another document; that check needs the other files.
             guard let known = index.ids[kind] else { return [] }
             let noun = index.nouns[ObjectIdentifier(E.self)] ?? "\(E.self)"
             let what = label ?? index.nouns[kind] ?? "\(T.self)"
@@ -368,7 +338,6 @@ private func reference<Doc: Sendable, E: Identifiable & Sendable, T>(
         ref: RefInfo(target: kind, onDelete: onDelete, points: points, detach: detach))
 }
 
-/// `\ScoreEntry.componentId` → `componentId`, for rule names.
 func folioField(_ path: AnyKeyPath) -> String { field(path) }
 
 private func field(_ path: AnyKeyPath) -> String {
@@ -398,12 +367,11 @@ extension Model {
         return Set(out)
     }
 
-    /// The first message for violations `after` has and `before` didn't: a file that was already broken stays editable.
+    // 이미 깨진 파일도 고칠 수 있도록, `before`에 없던 위반만 본다.
     public func newViolation(before: Doc, after: Doc, world: World = World()) -> Violation? {
         newViolation(before, in: world, after, in: world)
     }
 
-    /// The same, when the other documents changed too: a catalog edit checked against a course file it doesn't touch.
     public func newViolation(_ before: Doc, in old: World, _ after: Doc, in new: World) -> Violation? {
         let had = violations(in: before, world: old)
         return violations(in: after, world: new).subtracting(had).sorted { ($0.rule.name, $0.message) < ($1.rule.name, $1.message) }.first
@@ -442,7 +410,6 @@ extension Model {
     }
 }
 
-/// Korean particles that depend on whether the word ends in a consonant.
 public enum Korean {
     static func hasFinalConsonant(_ word: String) -> Bool {
         guard let last = word.unicodeScalars.last(where: { !CharacterSet.whitespaces.contains($0) }),
@@ -451,13 +418,10 @@ public enum Korean {
         return (last.value - 0xAC00) % 28 != 0
     }
 
-    /// `'중간고사'를`: the particle follows the quoted word, not the quote mark.
     public static func quoted(_ word: String, _ afterConsonant: String, _ afterVowel: String) -> String {
         "'\(word)'" + (hasFinalConsonant(word) ? afterConsonant : afterVowel)
     }
 
-    /// 시험이, 과제가
     public static func subject(_ word: String) -> String { word + (hasFinalConsonant(word) ? "이" : "가") }
-    /// 시험을, 과제를
     public static func object(_ word: String) -> String { word + (hasFinalConsonant(word) ? "을" : "를") }
 }

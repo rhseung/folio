@@ -1,13 +1,9 @@
 import Foundation
 
-/// How a PDF page's text reads, the same for the lecture splitter (#450) and the panel's `material read` (#85), so
-/// what Claude reads of a page doesn't depend on who asked.
 public enum PageText {
-    /// PDFKit's stand-in for an image or a drawing in a page's text. Counted as a word it made a diagram of labels
-    /// read as two hundred words of text, and left in it filled an excerpt in place of the words.
+    // PDFKit은 쪽 글에서 그림과 도형 자리에 이 문자를 넣는다. 이 문자를 낱말로 세면 라벨이 붙은 도표 하나가 글 이백
+    // 낱말로 읽혔고, 글에 남겨 두면 발췌가 낱말 대신 이 문자로 채워졌다.
     public static let figure: Character = "\u{FFFC}"
-    /// A slide's title sits in its first few lines. Reading the largest type on the whole page would take a big
-    /// formula or a diagram's label instead.
     public static let titleLines = 4
 
     public static func words(_ text: String) -> Int {
@@ -18,7 +14,6 @@ public enum PageText {
         text.reduce(0) { $1 == figure ? $0 + 1 : $0 }
     }
 
-    /// The page's text as Claude reads it: figures out, each line's whitespace run together, empty lines dropped.
     public static func cleaned(_ text: String) -> String {
         text.split(whereSeparator: \.isNewline).compactMap { line -> String? in
             let words = line.split(whereSeparator: { $0.isWhitespace || $0 == figure })
@@ -27,9 +22,8 @@ public enum PageText {
         .joined(separator: "\n")
     }
 
-    /// The line set in the largest type among the page's first `titleLines` lines, in reading order with each line's
-    /// largest font size (0 when it has none). A line of figures only isn't a line of the slide: a diagram's
-    /// stand-ins came first on a page and used up the lines before its title.
+    // 그림 자리 문자만 있는 줄은 슬라이드의 줄로 세지 않는다. 도표의 그림 자리 문자가 쪽 맨 앞에 나와서 제목 앞의
+    // 줄 수를 다 써 버린 일이 있었다.
     public static func title(_ lines: [(text: String, size: Double)]) -> String? {
         var best: (size: Double, title: String)?
         var counted = 0
@@ -46,32 +40,21 @@ public enum PageText {
     public static let blank = CharacterSet.whitespaces.union(CharacterSet(charactersIn: String(figure)))
 }
 
-/// How much one read hands Claude (#85). A tool's answer stays in the conversation for every later turn, so a whole
-/// textbook in one answer would crowd out the rest; past a limit a read stops at a page or a line and says where to
-/// go on.
 public enum ReadingLimit {
     public static let pages = 30
-    /// Pages of titles per read: skimming a deck for where things are.
     public static let titles = 400
-    /// Characters of page text per read. A dense textbook page runs to a few thousand.
     public static let pageText = 40_000
-    /// Pictures per read, pages or a note's images: about 1,800 tokens each at `imageEdge`.
     public static let images = 8
-    /// Characters of transcript per read, about twenty minutes of a lecture.
     public static let transcript = 20_000
-    /// The long side of a picture, in pixels: Claude scales anything larger down to about this, so more only costs
-    /// upload. The panel's own page and note pictures use the same.
+    // Claude는 이보다 큰 그림을 이 크기 정도로 줄이므로, 더 크게 보내면 업로드 비용만 든다.
     public static let imageEdge = 1568
 
-    /// `asked` (1-based, all pages when nil) kept to a file of `count` pages. Nil when it misses the file.
     public static func clamp(_ asked: ClosedRange<Int>?, count: Int) -> ClosedRange<Int>? {
         guard count > 0 else { return nil }
         let first = max(asked?.lowerBound ?? 1, 1), last = min(asked?.upperBound ?? count, count)
         return first <= last ? first...last : nil
     }
 
-    /// The pages one read serves of `asked`: at most `most` from its start, and of those as many as fit in `budget`
-    /// characters of text, `lengths` giving each page's from the first. The first page always goes, however long.
     public static func served(_ asked: ClosedRange<Int>, most: Int, lengths: [Int] = [], budget: Int = .max) -> ClosedRange<Int> {
         let capped = min(asked.count, max(most, 1))
         var taken = 0, used = 0
@@ -84,7 +67,6 @@ public enum ReadingLimit {
         return asked.lowerBound...(asked.lowerBound + taken - 1)
     }
 
-    /// What to ask for after `served` to go on through `asked`, as many pages as one read takes: nil when done.
     public static func next(after served: ClosedRange<Int>, asked: ClosedRange<Int>, most: Int) -> ClosedRange<Int>? {
         guard served.upperBound < asked.upperBound else { return nil }
         let first = served.upperBound + 1
@@ -93,11 +75,9 @@ public enum ReadingLimit {
 }
 
 extension LectureTranscript {
-    /// The lines said between `from` and `to` (seconds, either open), cut at a line once `budget` characters are
-    /// used; the first line always goes. `next` is where to start the next read when the cut came before `to`. A line
-    /// still being spoken at `from` is in, so a moment from a link starts mid-sentence rather than after it. It has to
-    /// run on a second past `from`: `next` is written in whole seconds, and a line that ended within the second before
-    /// the cut would otherwise come back at the start of the next read, and a long one again and again.
+    // `from` 시점에 아직 말하는 중인 줄도 넣는다. 링크로 연 시점이 문장 뒤가 아니라 문장 중간부터 시작하게 하기 위해서다.
+    // 그 줄은 `from`보다 1초 넘게 이어져야 한다. `next`는 초 단위로 적으므로, 이 조건이 없으면 자른 지점 직전 1초 안에
+    // 끝난 줄이 다음 읽기의 처음에 다시 나오고, 긴 줄은 거듭 나온다.
     public func window(from: TimeInterval?, to: TimeInterval?, budget: Int = ReadingLimit.transcript) -> (
         lines: [Line], next: TimeInterval?
     ) {

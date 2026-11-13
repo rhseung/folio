@@ -1,6 +1,5 @@
-/// The app and `folio` keep grades shown this long after the owner unlocks them.
 public enum GradeLock {
     public static let unlockSeconds: Double = 5 * 60
-    /// The longest `folio unlock --for` takes, so a typo like 999h can't leave grades open for good.
+    // 999h 같은 오타로 성적이 계속 열려 있지 않도록 `folio unlock --for`의 최대 시간을 제한한다.
     public static let maxUnlockSeconds: Double = 12 * 60 * 60
 }

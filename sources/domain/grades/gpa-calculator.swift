@@ -1,12 +1,9 @@
 import Foundation
 
-/// Totals are always computed from courses, never stored.
 public enum GPACalculator {
-    /// `3.800`, or `-` with nothing graded yet.
     public static func label(_ gpa: Double?) -> String { gpa.map { String(format: "%.3f", $0) } ?? "-" }
 
     public struct Summary: Sendable, Equatable {
-        /// Credits of courses whose grade counts toward credits (S counts; U, W don't).
         public var totalCredits: Double
         public var effectiveCredits: Double
         public var gradePoints: Double
@@ -30,7 +27,6 @@ public enum GPACalculator {
         }
     }
 
-    /// Courses without a final grade (in progress) count nowhere.
     public static func summary(of courses: [Course], catalog: Catalog) -> Summary {
         courses.reduce(.zero) { sum, course in
             guard let grade = catalog.grade(course.finalGrade) else { return sum }
@@ -44,7 +40,6 @@ public enum GPACalculator {
         }
     }
 
-    /// A credited term (인정학기) contributes only its credited hours, never GPA.
     public static func semester(_ semester: Semester, courses: [Course], catalog: Catalog) -> Summary {
         guard semester.term != .credited else {
             return Summary(totalCredits: semester.creditedHours ?? 0, effectiveCredits: 0, gradePoints: 0)
@@ -52,7 +47,6 @@ public enum GPACalculator {
         return summary(of: courses.filter { $0.semesterId == semester.id }, catalog: catalog)
     }
 
-    /// Credited terms (인정학기) add their hours to total credits only.
     public static func cumulative(semesters: [Semester], courses: [Course], catalog: Catalog) -> Summary {
         var result = summary(
             of: courses.filter { c in semesters.contains { $0.id == c.semesterId && $0.term != .credited } }, catalog: catalog)
@@ -68,8 +62,6 @@ public enum GPACalculator {
         summary(of: courses.filter { countsTowardMajor($0, catalog: catalog) }, catalog: catalog)
     }
 
-    /// GPA of one declared program (EC 주전공, AI 복수전공): courses in a category that belongs to it. A course marked as
-    /// not counting toward a major stays out.
     public static func program(_ codeId: UUID, courses: [Course], catalog: Catalog) -> Summary {
         summary(
             of: courses.filter { course in
@@ -78,8 +70,6 @@ public enum GPACalculator {
             }, catalog: catalog)
     }
 
-    /// Credits a program still needs: the minimums of its top-level categories less the credits graded so far.
-    /// In-progress courses are still to be graded, so they count as remaining.
     public static func programRemaining(_ codeId: UUID, courses: [Course], catalog: Catalog) -> Double {
         let credits = categoryCredits(courses: courses, catalog: catalog)
         return catalog.categories
@@ -88,7 +78,6 @@ public enum GPACalculator {
             .reduce(0) { $0 + max(0, ($1.minCredits ?? 0) - (credits[$1.id]?.earned ?? 0)) }
     }
 
-    /// Average grade points needed over `remainingCredits` to reach `target` cumulative GPA. Nil if no credits remain.
     public static func requiredAverage(target: Double, current: Summary, remainingCredits: Double) -> Double? {
         guard remainingCredits > 0 else { return nil }
         return (target * (current.effectiveCredits + remainingCredits) - current.gradePoints) / remainingCredits

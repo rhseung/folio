@@ -1,9 +1,6 @@
 import Foundation
 
-/// A file made from nothing in the materials screen, such as `hw4.tex` in an assignment's folder.
 public enum NewMaterialFile {
-    /// The user's own folders. A received folder holds only what was received, and a course's top and `Assignments` or
-    /// `Exams` hold folders only. This is the shape alone; `accepts(folder:places:)` also asks for a real assignment or exam.
     public static func accepts(folder: String) -> Bool {
         let parts = folder.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
         guard parts.allSatisfy(isFileName), let top = CourseFolder(rawValue: parts[0]) else { return false }
@@ -14,8 +11,6 @@ public enum NewMaterialFile {
         }
     }
 
-    /// Below `Assignments` and `Exams`, only the folder of an item in `places` (or one below it): a typo from the CLI
-    /// would otherwise make `Exams/중간고사오타`, a folder no exam owns.
     public static func accepts(folder: String, places: [String]) -> Bool {
         guard accepts(folder: folder) else { return false }
         let parts = folder.split(separator: "/").map(String.init)
@@ -23,7 +18,6 @@ public enum NewMaterialFile {
         return places.contains(parts.prefix(2).joined(separator: "/"))
     }
 
-    /// Study and Archive, then each assignment's and exam's folder, made or not yet: the first file makes the folder.
     public static func places(assignments: [Assignment], exams: [Exam], assignmentFolders: [String]) -> [String] {
         var seen = Set<String>()
         let all =
@@ -34,8 +28,6 @@ public enum NewMaterialFile {
         return all.filter { accepts(folder: $0) && seen.insert($0).inserted }
     }
 
-    /// The folder of the assignment due last (made last when none has a date), the one most likely being written; else
-    /// the first place.
     public static func defaultPlace(assignments: [Assignment], places: [String]) -> String? {
         let newest = assignments.map { ($0, AssignmentFiles.path(of: $0)) }
             .filter { places.contains($0.1) }
@@ -43,21 +35,17 @@ public enum NewMaterialFile {
         return newest?.1 ?? places.first
     }
 
-    /// One path component that Finder shows: no separator, not hidden, not `..`.
     public static func isFileName(_ name: String) -> Bool {
         !name.isEmpty && name == name.trimmingCharacters(in: .whitespaces) && !name.contains("/") && !name.contains(":")
             && !name.hasPrefix(".")
     }
 
-    /// A `.tex` that builds as it is; any other format starts empty.
     public static func text(for name: String) -> String {
         MaterialFormat(path: name) == .tex ? TexDocument.wrap([""]) : ""
     }
 }
 
-/// The document every `.tex` Folio makes starts from, notes and materials alike.
 public enum TexDocument {
-    /// kotex because the user writes Korean; the AMS packages because most of it is math.
     static let preamble = [
         "\\documentclass[11pt]{article}", "\\usepackage{kotex}", "\\usepackage{amsmath, amssymb, amsthm}", "", "\\begin{document}",
     ]

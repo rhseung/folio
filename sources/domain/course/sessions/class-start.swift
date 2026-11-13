@@ -1,7 +1,5 @@
 import Foundation
 
-/// What the app does by itself when a class starts (#391): the recording, the rough note and the linked lectures.
-/// In settings.json, so every device does the same. Every item starts off.
 public struct ClassStartSettings: Codable, Sendable, Equatable {
     public enum Item: String, Codable, Sendable, CaseIterable {
         case recording, roughNote, lecture
@@ -25,9 +23,6 @@ public struct ClassStartSettings: Codable, Sendable, Equatable {
         case here, beside, tab, window
     }
 
-    /// Where the rough note and the lectures open (2026-11-09 사용자): together in a new tab, side by side as the
-    /// layout chosen for it lays them out (`Settings.classStartPreset`, "수업 중" unless another is chosen), or in the
-    /// tab in front, each at its own `Place`.
     public enum OpenIn: String, Codable, Sendable, CaseIterable {
         case splitTab, currentTab
     }
@@ -37,25 +32,19 @@ public struct ClassStartSettings: Codable, Sendable, Equatable {
     }
 
     public var recording = Recording.off
-    /// From the class's start: negative before it, positive after.
     public var recordingOffsetMinutes = 0
     public var stopsRecording = false
-    /// From the class's end, when `stopsRecording`: negative before it, positive after (#416).
     public var stopAfterMinutes = 0
     public var roughNote = RoughNote.off
     public var roughNotePlace = Place.here
     public var lecture = Lecture.off
     public var lecturePlace = Place.beside
     public var openIn = OpenIn.splitTab
-    /// Every linked lecture rather than the first.
     public var allLectures = false
-    /// At the page after where the last class stopped, when one did.
     public var resumesLecture = true
     public var screen = Screen.notify
-    /// The layout the pages open in (`Settings.classStartPreset`), by id; nil for "수업 중".
     public var preset: String?
-    /// Items a course turns off, by course ID (a course where recording isn't allowed). Strings, not UUIDs: JSON
-    /// writes a dictionary keyed by anything else as a flat array.
+    // JSON은 다른 타입을 키로 쓴 딕셔너리를 평평한 배열로 쓰므로, 과목 ID를 UUID가 아니라 문자열 키로 둔다.
     public var courseOff: [String: [Item]] = [:]
 
     public init() {}
@@ -81,7 +70,6 @@ public struct ClassStartSettings: Codable, Sendable, Equatable {
 
     public func off(for course: UUID) -> Set<Item> { Set(courseOff[course.uuidString] ?? []) }
 
-    /// Kept in `Item` order, and dropped when nothing is off, so the file only names courses that differ.
     public mutating func setOff(_ items: Set<Item>, for course: UUID) {
         courseOff[course.uuidString] = items.isEmpty ? nil : Item.allCases.filter(items.contains)
     }
@@ -97,16 +85,13 @@ public struct ClassStartSettings: Codable, Sendable, Equatable {
 
     public func isOn(for course: UUID) -> Bool { Item.allCases.contains { isOn($0, course: course) } }
 
-    /// Before the class when the recording starts ahead of it, so the class counts from then.
     func lead(course: UUID) -> TimeInterval {
         isOn(.recording, course: course) ? TimeInterval(max(0, -recordingOffsetMinutes) * 60) : 0
     }
 }
 
-/// A class the app may start by itself: a session, or a class the timetable holds that no session stands for yet.
 public struct StartingClass: Equatable, Sendable {
     public var courseId: UUID
-    /// Nil for the timetable's class, which becomes a session when something is done for it.
     public var sessionId: UUID?
     public var start: Date
     public var end: Date
@@ -118,15 +103,12 @@ public struct StartingClass: Equatable, Sendable {
         self.end = end
     }
 
-    /// The same before and after the timetable's class is saved as a session at its start, so what was done for it
-    /// is done once.
+    // 시간표의 수업을 그 시작 시각에 회차로 저장해도 키가 같아야, 그 수업에 한 일을 두 번 하지 않는다.
     public var key: String { "\(courseId.uuidString)@\(Int(start.timeIntervalSinceReferenceDate))" }
 }
 
 public enum ClassStart {
-    /// What comes due for a class, each done once.
     public enum Step: String, Hashable, Sendable, CaseIterable {
-        /// Going to the class: its rough note, its lectures and the session itself.
         case open
         case recording
     }
@@ -141,13 +123,9 @@ public enum ClassStart {
         }
     }
 
-    /// The class starting now: from its start (from its recording's, when that comes first) to its end. A cancelled
-    /// session, a class already over, one in an exam week and a course with every item off never are. A session
-    /// with no end of its own and no slot (a date-only import) has no known time, so it never starts either, as it
-    /// is never under way (`TodaySummary.ongoingClass`). Of classes that overlap, the one that started last wins: a
-    /// class running over is behind the one the student has gone to. Two starting at the same moment leave nothing,
-    /// since starting the wrong course's recording is worse than starting none.
-    /// Clock time only: a class past midnight is the one under way then, whichever study day it falls in.
+    // 겹치는 수업 중에서는 가장 늦게 시작한 수업을 고른다. 시간을 넘긴 수업보다 학생이 옮겨 간 수업이 앞서기 때문이다.
+    // 같은 순간에 시작하는 수업이 둘이면 아무것도 고르지 않는다. 다른 과목의 녹음을 시작하는 것이 아무것도 시작하지
+    // 않는 것보다 나쁘기 때문이다.
     public static func starting(_ courses: [Course], settings: Settings, now: Date, calendar: Calendar) -> StartingClass? {
         let candidates = courses.flatMap { classes(of: $0, settings: settings, around: now, calendar: calendar) }.filter { c in
             c.start.addingTimeInterval(-settings.classStart.lead(course: c.courseId)) <= now && now < c.end
@@ -157,16 +135,12 @@ public enum ClassStart {
         return last.count == 1 ? last[0] : nil
     }
 
-    /// The class under way at `now`, or else the next to start, whatever is set to start by itself: the class the
-    /// settings' recording span is shown for (`9:55 – 11:20`).
     public static func next(_ courses: [Course], settings: Settings, now: Date, calendar: Calendar) -> StartingClass? {
         courses.flatMap { classes(of: $0, settings: settings, around: now, days: 9, calendar: calendar, onlyOn: false) }
             .filter { $0.end > now }
             .min { $0.start < $1.start }
     }
 
-    /// The course's classes near `now`: its sessions with a known end, and the timetable's classes from the day
-    /// before to `days - 2` days after that no session stands for (`SessionPlanner.planned`).
     static func classes(
         of course: Course, settings: Settings, around now: Date, days: Int = 3, calendar: Calendar,
         onlyOn: Bool = true
@@ -179,7 +153,7 @@ public enum ClassStart {
             return StartingClass(courseId: id, sessionId: s.id, start: s.date, end: end)
         }
 
-        // From the day before, so a class that began before midnight is still found after it.
+        // 자정 전에 시작한 수업도 자정 뒤에 찾도록 전날부터 본다.
         let planned = SessionPlanner.planned(
             schedule: file.course.schedule, sessions: file.sessions, from: course.term?.start, to: course.term?.end,
             examWeeks: course.term?.examWeeks ?? [], days: days,
@@ -189,8 +163,6 @@ public enum ClassStart {
         return sessions + planned
     }
 
-    /// The steps whose time has come: going to the class once it starts, and the recording at its own time. Nothing
-    /// once the class is over.
     public static func due(_ c: StartingClass, settings: ClassStartSettings, now: Date) -> Set<Step> {
         guard now < c.end, settings.isOn(for: c.courseId) else { return [] }
         var due: Set<Step> = now >= c.start ? [.open] : []
@@ -202,8 +174,6 @@ public enum ClassStart {
         c.start.addingTimeInterval(TimeInterval(settings.recordingOffsetMinutes * 60))
     }
 
-    /// When a recording the class started stops by itself; nil when it runs until stopped. Never before it starts:
-    /// a stop set before the end of a short class would otherwise come ahead of the start.
     public static func recordingStop(_ c: StartingClass, settings: ClassStartSettings) -> Date? {
         guard settings.stopsRecording else { return nil }
         return max(c.end.addingTimeInterval(TimeInterval(settings.stopAfterMinutes * 60)), recordingStart(c, settings: settings))
@@ -211,8 +181,6 @@ public enum ClassStart {
 }
 
 extension CourseFile {
-    /// The lecture files linked to the class (`routes`), in the order `Lectures` names them: the first only unless
-    /// `all`, each at the page after where the last class stopped when `resumes` and one did.
     public func startingLectures(for session: Session, all: Bool, resumes: Bool) -> [(material: UUID, page: Int?)] {
         let linked = lectureFiles.filter { !routes(of: $0, to: .session(session.id)).isEmpty }
         return (all ? linked : Array(linked.prefix(1))).map { m in (m.id, resumes ? resumePage(of: m.id, for: session) : nil) }

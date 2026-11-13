@@ -1,14 +1,10 @@
 import CryptoKit
 import Foundation
 
-/// A picture a note embeds, kept in `Notes/assets` by file name. Not a material: a note's drawing would otherwise land
-/// in the material list and its kinds. Only SVG, the one format Claude writes and the checks below can read.
 public enum NoteFigure {
     public static let folder = CourseFolder.notes.rawValue + "/" + StandardLayout.noteAssetsFolder
     static let other: Set<String> = ["png", "jpg", "jpeg", "gif", "webp", "heic", "pdf", "html"]
 
-    /// `graph`, `graph.svg`, `assets/graph.svg` or `Notes/assets/graph.svg` as `graph.svg`; nil for anything that
-    /// isn't one SVG file right in `assets`.
     public static func fileName(_ given: String) -> String? {
         var name = given.trimmingCharacters(in: .whitespacesAndNewlines)
         for prefix in [folder + "/", StandardLayout.noteAssetsFolder + "/"] where name.hasPrefix(prefix) {
@@ -22,7 +18,6 @@ public enum NoteFigure {
         return name
     }
 
-    /// Course-relative.
     public static func path(_ fileName: String) -> String { folder + "/" + fileName }
 
     public enum Problem: Hashable, Sendable {
@@ -43,14 +38,14 @@ public enum NoteFigure {
         }
     }
 
-    /// What keeps the SVG from drawing as written in a note. A note shows it as an image, which runs no script and
-    /// loads nothing else, so such parts would quietly be missing; and an image can't read the page's colors, so
-    /// without a dark rule of its own its dark strokes and words vanish on the dark page.
+    // 노트는 SVG를 이미지로 보인다. 이미지는 스크립트를 실행하지 않고 다른 것을 불러오지 않으므로, 그런 부분은
+    // 아무 표시 없이 빠진다. 또 이미지는 페이지 색을 읽지 못하므로, 자체 다크 규칙이 없으면 짙은 선과 글자가 다크
+    // 페이지에서 보이지 않는다.
     public static func problems(_ svg: String) -> [Problem] {
         let reader = SVGReader()
         let parser = XMLParser(data: Data(svg.utf8))
         parser.delegate = reader
-        // Entities could pull in other files.
+        // 엔티티는 다른 파일을 끌어올 수 있다.
         parser.shouldResolveExternalEntities = false
         guard parser.parse() else {
             let reason = parser.parserError.map { ($0 as NSError).localizedDescription } ?? ""
@@ -81,7 +76,6 @@ public enum NoteFigure {
         return found
     }
 
-    /// A reference the picture can follow on its own: a part of itself or data written in.
     static func inside(_ ref: String) -> Bool {
         let r = ref.trimmingCharacters(in: .whitespaces)
         return r.isEmpty || r.hasPrefix("#") || r.lowercased().hasPrefix("data:")
@@ -117,25 +111,21 @@ private final class SVGReader: NSObject, XMLParserDelegate {
     }
 }
 
-/// A page a note runs in a `cb-widget` block, kept in the course's `.folio/widgets/<id>.html`.
 public enum NoteWidget {
     public typealias ID = UUID
 
-    /// Course-relative.
     public static func path(_ id: ID) -> String {
         StandardLayout.metadataFolder + "/" + StandardLayout.widgetsFolder + "/" + id.uuidString + ".html"
     }
 
-    /// What a widget's page may do: run its own inline code and styles, and load nothing. The app's frame and
-    /// `folio note widget render` run widgets under the same one.
     public static let policy = [
         "default-src 'none'", "script-src 'unsafe-inline' 'unsafe-eval'", "style-src 'unsafe-inline'",
         "img-src data: blob:", "font-src data:", "media-src data: blob:", "form-action 'none'", "base-uri 'none'",
     ].joined(separator: "; ")
 
-    /// The policy as the page's first element: WebKit doesn't apply a policy header to a frame's page, only to a
-    /// window's. After a doctype, which a tag ahead of it would turn off; on the doctype's line, so the page's own line
-    /// numbers in errors stay as written.
+    // WebKit은 창의 페이지에만 정책 헤더를 적용하고 프레임의 페이지에는 적용하지 않으므로, 정책을 페이지의 첫
+    // 요소로 넣는다. 앞에 태그가 있으면 doctype이 꺼지므로 doctype 뒤에 넣고, 오류의 줄 번호가 쓴 그대로 남도록
+    // doctype과 같은 줄에 넣는다.
     public static func withPolicy(_ page: Data) -> Data {
         let meta = Data("<meta http-equiv=\"Content-Security-Policy\" content=\"\(policy)\">".utf8)
         let head = String(decoding: page.prefix(256), as: UTF8.self)
@@ -144,7 +134,7 @@ public enum NoteWidget {
         return page.prefix(end) + meta + page.dropFirst(end)
     }
 
-    /// The policy doesn't cover peer connections, which could otherwise carry data out.
+    // 정책은 peer connection을 막지 않으므로, 막지 않으면 peer connection이 데이터를 밖으로 내보낼 수 있다.
     public static let noPeersScript =
         "for (const k of ['RTCPeerConnection', 'webkitRTCPeerConnection', 'RTCDataChannel']) { try { delete window[k]; window[k] = undefined } catch {} }"
 
@@ -160,13 +150,11 @@ public enum NoteWidget {
         }
     }
 
-    /// What can't work in the widget's frame, whose policy loads nothing from outside: the page would run without
-    /// it and show nothing where it was. Links are left alone; the frame doesn't open them either way.
     public static func problems(_ html: String) -> [Problem] {
         guard !html.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return [.empty] }
         var found: [String] = []
-        // Quoted anywhere, so a script's `img.src = "plot.png"` counts too; unquoted only inside a tag, where a
-        // script's `img.src = url` (a variable) can't be.
+        // 따옴표로 감싼 값은 어디서든 세므로 스크립트의 `img.src = "plot.png"`도 센다. 따옴표 없는 값은 태그 안에서만
+        // 센다. 스크립트의 `img.src = url`(변수)은 태그 안에 있을 수 없기 때문이다.
         found += html.matches(of: /[\s.]src\s*=\s*(?:"([^"]*)"|'([^']*)')/.ignoresCase()).map { String($0.1 ?? $0.2 ?? "") }
         found += html.matches(of: /<[a-z][^>]*\ssrc\s*=\s*([^'"\s>]+)/.ignoresCase()).map { String($0.1) }
         found += html.matches(of: /<link\b[^>]*\bhref\s*=\s*['"]?([^'"\s>]+)/.ignoresCase()).map { String($0.1) }
@@ -177,8 +165,6 @@ public enum NoteWidget {
         return problems.filter { seen.insert($0).inserted }
     }
 
-    /// What the policy lets a page use: a part of itself, data written in, or something its script made. A value
-    /// built in a template string (`${…}`) is only known when the script runs.
     static func inside(_ ref: String) -> Bool {
         let r = ref.trimmingCharacters(in: .whitespaces).lowercased()
         return r.isEmpty || r.hasPrefix("#") || r.hasPrefix("data:") || r.hasPrefix("blob:") || r.contains("${")
@@ -186,7 +172,6 @@ public enum NoteWidget {
 }
 
 public enum ContentHash {
-    /// What `show` reports and `--expect` checks: the text as it was read.
     public static func of(_ text: String) -> String {
         SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined()
     }

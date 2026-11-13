@@ -12,7 +12,6 @@ public enum CardSource: String, Codable, Sendable, CaseIterable {
     case ai, manual, material
 }
 
-/// `.folio/quizzes/<unit ID>.json` holds one unit's cards.
 public struct QuizFile: Codable, Sendable, Equatable {
     public var unitId: UUID
     public var cards: [QuizCard]
@@ -33,16 +32,13 @@ public struct QuizCard: Entity {
     public var type: CardType
     public var category: CardCategory
     public var prompt: String
-    /// Widget ID or image path.
     public var figure: String?
     public var options: [String]
     public var answer: String
-    /// Elements whose absence makes an answer wrong.
     public var rubric: [String]
     public var source: CardSource
     public var sourceMaterialId: UUID?
     public var sourceProblem: String?
-    /// The note block the card was made from; a changed block marks the card "원본 변경됨".
     public var noteId: UUID?
     public var noteBlockId: String?
     public var noteBlockHash: String?
@@ -78,7 +74,6 @@ public struct QuizAttemptEvent: LogEvent, Equatable {
     public var verdict: Verdict
     public var grader: Grader
     public var missing: [String]
-    /// The user changed the grader's verdict; statistics use the changed one (`verdict`).
     public var overridden: Bool
     public var hintUsed: Bool
 
@@ -99,7 +94,6 @@ public struct QuizAttemptEvent: LogEvent, Equatable {
     }
 }
 
-/// `problem_attempt` log event for numbered problems solved on paper or in ink.
 public struct ProblemAttemptEvent: LogEvent, Equatable {
     public static let type = "problem_attempt"
     public var problemSetId: UUID
@@ -115,7 +109,6 @@ public struct ProblemAttemptEvent: LogEvent, Equatable {
     }
 }
 
-/// Problem sets, past exams, textbook exercises: numbered problems tracked like cards.
 public struct ProblemSet: Entity {
     public var id: UUID
     public var createdAt: Date
@@ -151,19 +144,15 @@ public struct ProblemSet: Entity {
     }
 }
 
-/// The wrong-answer flow for cards and problems alike.
 public enum WrongStatus: Equatable, Sendable {
     case neverWrong
-    /// Wrong or partial and not yet answered correctly since.
     case open(since: LocalDate)
-    /// Answered correctly after being wrong; checked once more 7 days later.
     case resolved(on: LocalDate, recheckDue: LocalDate?)
 }
 
 public enum WrongFlow {
     public static let recheckAfterDays = 7
 
-    /// Status after a time-ordered list of (study day, verdict).
     public static func status(_ attempts: [(day: LocalDate, verdict: Verdict)]) -> WrongStatus {
         var status = WrongStatus.neverWrong
         for (day, verdict) in attempts {
@@ -173,7 +162,7 @@ public enum WrongFlow {
             case (.open, .correct):
                 status = .resolved(on: day, recheckDue: day.adding(days: recheckAfterDays))
             case (.resolved(let on, let due?), .correct) where day >= due:
-                status = .resolved(on: on, recheckDue: nil)  // passed the recheck
+                status = .resolved(on: on, recheckDue: nil)
             default:
                 break
             }
@@ -181,7 +170,6 @@ public enum WrongFlow {
         return status
     }
 
-    /// Belongs in the wrong list today: still open, or resolved with its 7-day recheck reached.
     public static func isDue(_ attempts: [(day: LocalDate, verdict: Verdict)], today: LocalDate) -> Bool {
         switch status(attempts) {
         case .open: true
@@ -194,7 +182,6 @@ public enum WrongFlow {
         if case .open = s { true } else { false }
     }
 
-    /// Up to `count` cards for a review: open wrong cards first (oldest first), then the longest unattempted.
     public static func pickForReview(cards: [UUID], attempts: [UUID: [(day: LocalDate, verdict: Verdict)]], today: LocalDate, count: Int)
         -> [UUID]
     {
@@ -206,7 +193,6 @@ public enum WrongFlow {
         return Array((due + rest).prefix(count))
     }
 
-    /// Correct share of attempts, counting partial as half.
     public static func accuracy(_ verdicts: [Verdict]) -> Double? {
         guard !verdicts.isEmpty else { return nil }
         let score = verdicts.reduce(0.0) { $0 + ($1 == .correct ? 1 : $1 == .partial ? 0.5 : 0) }

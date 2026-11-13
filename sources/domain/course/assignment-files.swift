@@ -1,12 +1,10 @@
 import Foundation
 
 public enum AssignmentFiles {
-    /// `HW 3` → `HW03`; titles that name no assignment kind are their own folder name.
     public static func folder(of assignment: Assignment) -> String {
         AssignmentKind.parse(title: assignment.title).map { $0.kind.folderName($0.number) } ?? assignment.title
     }
 
-    /// `Assignments/HW03`, course-relative.
     public static func path(of assignment: Assignment) -> String {
         "\(CourseFolder.assignments.rawValue)/\(folder(of: assignment))"
     }
@@ -16,8 +14,6 @@ public enum AssignmentFiles {
         return materials.filter { $0.path.hasPrefix(prefix) && $0.status != .ignored }
     }
 
-    /// `HW3-5070류현승.pdf`, `SP1_이름.pdf`: kind and number first, then a separator and more — the usual way a
-    /// submission is named. Anything else in the folder (`26h3.pdf`) is taken as the problem.
     public static func guessKind(fileName: String) -> MaterialKind {
         let pattern = try! Regex("(?i)^(\(AssignmentKind.allCases.map(\.rawValue).joined(separator: "|")))\\s*\\d{1,2}[-_ ].+")
         return fileName.wholeMatch(of: pattern) != nil ? .submission : .problem
@@ -29,7 +25,7 @@ public enum AssignmentFiles {
     }
 }
 
-/// Real clock time, not the study-day boundary.
+// 마감까지 남은 시간은 공부일 경계가 아니라 실제 시각으로 센다.
 public enum DueState: Equatable, Sendable {
     case none
     case overdue(days: Int)
@@ -48,9 +44,6 @@ public enum DueState: Equatable, Sendable {
     }
 }
 
-/// How near an open deadline is, the one rule every screen that colors a deadline reads (Today's list, a course's
-/// assignments). Today and tomorrow are urgent and the rest of the coming week soon, counted in study days: with a 04:00
-/// boundary, 02:00 the night after next is still tomorrow's work.
 public enum DueUrgency: Int, Comparable, Sendable {
     case urgent, soon, later
 
@@ -66,7 +59,6 @@ public enum DueUrgency: Int, Comparable, Sendable {
 }
 
 extension Settings {
-    /// Study days from `now` to `date`: 0 on the same study day, negative once it has passed.
     public func studyDays(from now: Date, until date: Date, calendar: Calendar) -> Int {
         studyDay(of: now, calendar: calendar).days(until: studyDay(of: date, calendar: calendar))
     }

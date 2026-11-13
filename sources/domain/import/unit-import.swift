@@ -1,6 +1,5 @@
 import Foundation
 
-/// One unit from a units file, with the sessions that covered it, as the command line names them (`11-03`, `11/3`).
 public struct UnitSpec: Codable, Sendable, Equatable {
     public var title: String
     public var sessions: [String]?
@@ -13,7 +12,6 @@ public struct UnitSpec: Codable, Sendable, Equatable {
     }
 }
 
-/// `{"course": "<course folder>", "units": [...]}`; other keys (sources, notes) are ignored.
 public struct UnitFile: Codable, Sendable {
     public var course: String
     public var units: [UnitSpec]
@@ -23,14 +21,11 @@ public enum UnitImporter {
     public struct Result: Sendable {
         public var file: CourseFile
         public var added: [String]
-        /// Session links made, as `unit ← session`.
         public var linked: [String]
         public var unknownSessions: [String]
     }
 
-    /// Units match by title under the same parent, so re-running adds nothing and units edited in the app keep their IDs.
-    /// New units go after their existing siblings. Links are only added, on both sides; nothing is removed.
-    /// A name that picks no class, or a day with two, is reported unknown and links nothing.
+    // 같은 부모 아래에서 제목으로 단원을 맞추므로, 다시 실행해도 더하는 단원이 없고 앱에서 고친 단원도 ID를 유지한다.
     public static func merge(_ specs: [UnitSpec], into file: CourseFile, calendar: Calendar, device: DeviceID, now: Date) -> Result {
         var file = file
         var added: [String] = [], linked: [String] = [], unknown: [String] = []

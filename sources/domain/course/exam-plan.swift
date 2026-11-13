@@ -1,11 +1,9 @@
 import Foundation
 
-/// What a plan item is about; finishing that work will later complete the item automatically.
 public struct ExamPlanTarget: Codable, Sendable, Hashable {
     public enum Kind: String, Codable, Sendable, CaseIterable {
         case unit
         case problemSet = "problem_set"
-        /// The quiz cards of one unit.
         case quiz
     }
 
@@ -18,7 +16,6 @@ public struct ExamPlanTarget: Codable, Sendable, Hashable {
     }
 }
 
-/// One dated to-do on an exam's plan timeline. Whether it is done lives in the log (`plan_check`), not here.
 public struct ExamPlanItem: Codable, Sendable, Equatable, Identifiable {
     public var id: UUID
     public var day: LocalDate
@@ -37,7 +34,6 @@ public struct PlanCheckEvent: LogEvent, Equatable {
     public static let type = "plan_check"
     public var itemId: UUID
     public var done: Bool
-    /// Set when finishing the target's work checked the item, not the user.
     public var auto: Bool
 
     public init(itemId: UUID, done: Bool, auto: Bool = false) {
@@ -54,7 +50,7 @@ public enum ExamPlan {
         public var item: ExamPlanItem
     }
 
-    /// Items whose latest `plan_check` says done. Events may come from several devices' logs in any order.
+    // 이벤트는 여러 기기의 로그에서 순서 없이 들어온다.
     public static func done(_ events: [(at: Date, event: PlanCheckEvent)]) -> Set<UUID> {
         var latest: [UUID: (at: Date, done: Bool)] = [:]
         for (at, e) in events where latest[e.itemId].map({ at >= $0.at }) ?? true {

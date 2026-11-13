@@ -1,13 +1,10 @@
 import Foundation
 
-/// How far one graduation requirement is: by passed courses when it sets a count (콜로퀴움), by credits otherwise.
 public struct RequirementStatus: Sendable, Equatable {
     public var countsCourses: Bool
     public var done: Double
     public var taking: Double
-    /// Nil when the category sets neither a count nor a positive credit minimum.
     public var goal: Double?
-    /// A category with no goal is never met; it only collects courses.
     public var met: Bool
     public var over: Bool
 

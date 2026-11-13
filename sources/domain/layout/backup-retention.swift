@@ -1,6 +1,5 @@
 import Foundation
 
-/// Every day for the recent window, then one per week.
 public enum BackupRetention {
     public static func keep(_ days: [LocalDate], today: LocalDate, dailyDays: Int, calendar: Calendar) -> Set<LocalDate> {
         var kept = Set(days.filter { $0.days(until: today) < dailyDays })

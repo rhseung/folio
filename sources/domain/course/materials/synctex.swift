@@ -1,13 +1,9 @@
 import Foundation
 
-/// The SyncTeX data of one TeX build, read for the way back from a point in the PDF to the source line that put text
-/// there (#41).
-///
-/// Written here rather than taken from a package: the only parser is the C one in TeX Live (`synctex_parser.c`), with
-/// no Swift package around it, and going from a page point to a line needs only the boxes and their positions.
+// 패키지를 쓰지 않고 직접 구현한다. 파서는 TeX Live의 C 구현(`synctex_parser.c`)뿐이고 그것을 감싼 Swift 패키지가
+// 없다. 또 쪽의 점에서 원문 줄을 찾는 데에는 상자와 그 위치만 있으면 된다.
 public struct SyncTeX: Sendable, Equatable {
     public struct Place: Sendable, Equatable {
-        /// As the engine opened it: an absolute path when the build ran with real file names.
         public var file: String
         public var line: Int
 
@@ -17,14 +13,12 @@ public struct SyncTeX: Sendable, Equatable {
         }
     }
 
-    /// A position a record of the source put on the page, in PDF points from the page's top-left corner.
     struct Mark: Sendable, Equatable {
         var tag: Int
         var line: Int
         var x: Double
     }
 
-    /// One line of type (`(` record): its rectangle around the baseline, and what was set on it in reading order.
     struct Row: Sendable, Equatable {
         var tag: Int
         var line: Int
@@ -51,13 +45,11 @@ public struct SyncTeX: Sendable, Equatable {
     }
 
     var inputs: [Int: String] = [:]
-    /// Rows by 1-based page number.
     var pages: [Int: [Row]] = [:]
 
-    /// TeX's scaled points per PDF point: 65536 per TeX point, 72.27 TeX points per inch, 72 PDF points per inch.
+    // TeX 포인트 하나는 65536 scaled point이고, 1인치는 72.27 TeX 포인트이자 72 PDF 포인트다.
     static let scaledPerPoint = 65536 * 72.27 / 72
 
-    /// Reads the uncompressed text of a `.synctex` file.
     public init(text: String) {
         var unit = 1.0
         var magnification = 1000.0
@@ -65,8 +57,6 @@ public struct SyncTeX: Sendable, Equatable {
         var yOffset = 0.0
         var page = 0
         var rows: [Row] = []
-        // Indices into `rows` of the `(` records still open; `[` boxes hold rows but no marks of their own, so they
-        // stand on the stack as nil.
         var open: [Int?] = []
         var inContent = false
 
@@ -109,7 +99,6 @@ public struct SyncTeX: Sendable, Equatable {
                     tag: record.tag, line: record.line, x: scale(record.h, offset: xOffset), baseline: scale(record.v, offset: yOffset),
                     width: scale(record.size[0], offset: 0), height: scale(record.size[1], offset: 0),
                     depth: scale(record.size[2], offset: 0))
-                // A row inside another row (an `\hbox`, a formula) is also a place on the outer one.
                 if let parent = open.last ?? nil { rows[parent].marks.append(Mark(tag: row.tag, line: row.line, x: row.x)) }
                 rows.append(row)
                 open.append(rows.count - 1)
@@ -122,10 +111,8 @@ public struct SyncTeX: Sendable, Equatable {
         }
     }
 
-    /// The source line under a point of a page (1-based), in PDF points from the page's top-left corner. The smallest
-    /// row around the point is the line of type clicked, or the nearest one when the click fell between lines; on it,
-    /// the last thing set before the point names the line, since a paragraph's row carries the line where TeX ended
-    /// the paragraph, not where its words are.
+    // 문단의 줄은 단어가 있는 줄이 아니라 TeX가 문단을 끝낸 원문 줄을 지닌다. 그래서 그 줄 위에서 점 앞에 마지막으로
+    // 놓인 것이 원문 줄을 정한다.
     public func place(page: Int, x: Double, y: Double) -> Place? {
         guard let rows = pages[page]?.filter({ $0.area > 0 }), !rows.isEmpty else { return nil }
         let around = rows.filter { $0.contains(x: x, y: y) }
@@ -145,7 +132,7 @@ public struct SyncTeX: Sendable, Equatable {
         line.hasPrefix(name) ? line.dropFirst(name.count) : nil
     }
 
-    /// `tag,line[,column]:h,v[:W,H,D]`, after the record's type character.
+    // 레코드 종류 문자 뒤의 꼴은 `tag,line[,column]:h,v[:W,H,D]`이다.
     private static func record(_ body: Substring) -> (tag: Int, line: Int, h: Int, v: Int, size: [Int])? {
         let fields = body.split(separator: ":", omittingEmptySubsequences: false)
         guard fields.count >= 2 else { return nil }

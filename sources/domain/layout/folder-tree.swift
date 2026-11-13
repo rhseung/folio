@@ -1,9 +1,7 @@
-/// Snapshot of a folder on disk. Storage reads it once; layout and tracking rules then run on it as pure functions.
 public struct FolderTree: Hashable, Sendable {
     public enum Content: Hashable, Sendable {
         case file(size: Int64)
         case folder([FolderTree])
-        /// A folder shown as a single item and not descended into.
         case opaque(OpaqueReason)
     }
 

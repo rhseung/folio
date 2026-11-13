@@ -1,14 +1,13 @@
 import Foundation
 
 extension Exam {
-    /// Over once it has ended, not when the day turns: an exam that finished this morning is no longer coming.
+    // 날이 바뀔 때가 아니라 시험이 끝났을 때 지난 것으로 본다. 오늘 아침에 끝난 시험은 다가오는 시험이 아니다.
     public func isOver(now: Date, today: LocalDate, calendar: Calendar) -> Bool {
         if let end { return end < now }
         return start.map { LocalDate($0, in: calendar) < today } ?? false
     }
 }
 
-/// The assignments page's groups, in the order they are shown.
 public enum AssignmentGroup: CaseIterable, Sendable {
     case overdue, open, submitted, graded
 
@@ -20,7 +19,6 @@ public enum AssignmentGroup: CaseIterable, Sendable {
         }
     }
 
-    /// Work still to do by the nearest deadline; finished work by the latest first.
     public func sorted(_ items: [Assignment]) -> [Assignment] {
         switch self {
         case .overdue, .open: items.sorted { ($0.due ?? .distantFuture, $0.title) < ($1.due ?? .distantFuture, $1.title) }
@@ -29,8 +27,6 @@ public enum AssignmentGroup: CaseIterable, Sendable {
     }
 }
 
-/// The notes page's groups, in the order they are shown. Generic over the note because the files are Storage's: the
-/// rule needs only each note's properties and title.
 public enum NoteGroup: CaseIterable, Sendable {
     case classes, exams, units, free
 
@@ -53,9 +49,6 @@ public enum NoteGroup: CaseIterable, Sendable {
         }
     }
 
-    /// Class notes by their latest class, the newest first: a review note covering several classes sits with the last
-    /// of them. Notes of one class keep the rough note before the review note. Exam summaries by the exam's start, the
-    /// next first. The rest by title.
     public func sorted<Note>(_ notes: [Note], meta: (Note) -> NoteMeta, title: (Note) -> String, in file: CourseFile) -> [Note] {
         func byTitle(_ a: Note, _ b: Note) -> Bool { title(a).localizedStandardCompare(title(b)) == .orderedAscending }
 
@@ -80,14 +73,11 @@ public enum NoteGroup: CaseIterable, Sendable {
 }
 
 extension CourseFile {
-    /// A note's sessions, in date order: the sessions are the only place the link is kept. A rough note has one; a
-    /// review note may cover several classes caught up on at once.
     public func sessions(pointingAt note: UUID?) -> [Session] {
         guard let note else { return [] }
         return sessions.filter { $0.roughNoteId == note || $0.reviewNoteId == note }.sorted(by: Session.inOrder)
     }
 
-    /// `11/3(화) – 11/10(화)`: the days of the note's first and last sessions, or the one alone. Nil with none.
     public func sessionSpan(of note: UUID?, calendar: Calendar) -> String? {
         let linked = sessions(pointingAt: note)
         guard let first = linked.first, let last = linked.last else { return nil }
@@ -95,15 +85,13 @@ extension CourseFile {
         return first.id == last.id ? day(first) : String(localized: .sessionSpan(day(first), day(last)))
     }
 
-    /// A unit note's units in outline order. `order` counts among siblings only, so sorting by it alone would
-    /// interleave chapters and their units.
+    // `order`는 형제 사이의 순서일 뿐이라서, 이 값만으로 정렬하면 장과 그 아래 단원이 뒤섞인다.
     public func units(of note: NoteMeta) -> [Unit] {
         UnitTree.outline(units).map(\.unit).filter { note.unitIds.contains($0.id) }
     }
 }
 
 extension ReviewState {
-    /// A state exists as soon as a class covered the unit, so having one says nothing about reviewing it.
     public func isOnTrack(today: LocalDate) -> Bool {
         !writeNoteFirst && (due.map { $0 >= today } ?? true)
     }

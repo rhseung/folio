@@ -1,7 +1,5 @@
 import Foundation
 
-/// One exam; maps 1:1 to its `Exams/<folder>` folder. A quiz and a final are the same thing here: what an exam counts
-/// for is its grade component, what it covers is its scope.
 public struct Exam: Entity {
     public var id: UUID
     public var createdAt: Date
@@ -9,19 +7,17 @@ public struct Exam: Entity {
     public var updatedBy: DeviceID
 
     public var title: String
-    /// Real clock time; exam times ignore the day boundary so they are never seen late.
     public var start: Date?
     public var end: Date?
     public var location: String
     public var scopeUnitIds: [UUID]
     public var scopeText: String
-    /// Allowed materials (calculator, cheat sheet, ...).
     public var allowed: String
     public var componentId: UUID?
     public var memo: String
     public var plan: [ExamPlanItem]
-    /// The prep folder's name under `Exams`, kept rather than worked out from the title: a renamed exam keeps its
-    /// folder, and folders made before titles named them (`Midterm` for 중간고사) keep pointing at their files.
+    // 폴더 이름을 제목에서 계산하지 않고 저장한다. 그래야 제목을 바꾼 시험도 폴더를 지키고, 제목으로 폴더 이름을 짓기
+    // 전에 만든 폴더(중간고사의 `Midterm`)도 계속 그 파일을 가리킨다.
     public var folder: String?
 
     public init(
@@ -46,7 +42,7 @@ public struct Exam: Entity {
 }
 
 extension Exam {
-    // `plan` came after the first course.json files, so a missing key means no plan.
+    // `plan`은 첫 course.json 파일들보다 나중에 생겼으므로, 키가 없으면 계획이 없다는 뜻이다.
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(UUID.self, forKey: .id)
@@ -84,20 +80,15 @@ public struct Assignment: Entity {
     public var updatedBy: DeviceID
 
     public var title: String
-    /// Real clock time, like exams.
     public var due: Date?
     public var status: AssignmentStatus
     public var componentId: UUID?
-    /// A group of components it scores in all at once, one score each (a lab report graded on materials, results and
-    /// discussion). Set instead of `componentId`.
     public var componentGroup: String?
-    /// Only the next one exists; handing it in makes the one after (`CourseFile.continueRepeating`).
     public var repeats: AssignmentRepeat?
     public var problemMaterialId: UUID?
     public var submissionMaterialIds: [UUID]
     public var unitIds: [UUID]
     public var source: AssignmentSource
-    /// The LMS assignment it was added from (`LMSAssignment.id`), so the LMS doesn't propose it again.
     public var lmsId: Int?
     public var memo: String
 
@@ -117,9 +108,6 @@ public struct Assignment: Entity {
 }
 
 extension CourseFile {
-    /// Once a repeating assignment is handed in, the next one: on the rule's next deadline, same title, rule, group and
-    /// component, as long as it falls by `end` and isn't there yet. Only the one just handed in moves the series on, so
-    /// deleting a later one ends it.
     public mutating func continueRepeating(_ id: UUID, until end: Date?, calendar: Calendar, device: DeviceID, now: Date) {
         guard let a = assignments.first(where: { $0.id == id }), let rule = a.repeats, !a.status.isOpen, let due = a.due,
             !assignments.contains(where: { $0.title == a.title && ($0.due ?? .distantPast) > due })
@@ -134,8 +122,7 @@ extension CourseFile {
         assignments.append(made)
     }
 
-    /// The deadline after `due` in the series titled `title`. A monthly series keeps the day it started on, so one
-    /// clamped to a short month's end goes back to the 31st; the sheet's hint and the next assignment both ask here.
+    // 월 반복은 처음 시작한 날을 지킨다. 그래서 짧은 달의 말일로 당겨진 마감도 다음 달에는 31일로 돌아간다.
     public func nextDue(after due: Date, rule: AssignmentRepeat, title: String, calendar: Calendar) -> Date {
         let first = (assignments.filter { $0.title == title && $0.repeats?.unit == .month }.compactMap(\.due) + [due]).min()!
         return rule.next(after: due, day: calendar.component(.day, from: first), calendar: calendar)

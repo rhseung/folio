@@ -1,7 +1,5 @@
 import Foundation
 
-/// A note editor snippet: `trigger` then Tab (or the completion menu) puts `body` in its place. `$1`, `$2` … in the
-/// body mark where the caret goes; any other `$` is itself. `inMath` snippets expand only inside a TeX formula.
 public struct MathSnippet: Codable, Sendable, Equatable, Hashable {
     public var trigger: String
     public var body: String
@@ -13,7 +11,6 @@ public struct MathSnippet: Codable, Sendable, Equatable, Hashable {
         self.inMath = inMath
     }
 
-    /// After Obsidian's LaTeX Suite, whose triggers notes' writers already type, kept to the ones TeX needs most.
     public static let defaults: [MathSnippet] = [
         MathSnippet(trigger: "mk", body: "$$1$", inMath: false),
         MathSnippet(trigger: "dm", body: "$$\n$1\n$$", inMath: false),
@@ -38,9 +35,6 @@ public struct MathSnippet: Codable, Sendable, Equatable, Hashable {
         MathSnippet(trigger: "@e", body: "\\varepsilon", inMath: true),
     ]
 
-    /// The formula snippets of an AsciiMath note, where these take the place of the TeX ones above; the snippets
-    /// outside formulas (`mk`, `dm`) come from `defaults` in either. Arguments go in brackets, which Tab moves through.
-    /// Only what AsciiMath has no short form for: `->`, `<=`, `oo` and the Greek names are written as they are.
     public static let asciiMathDefaults: [MathSnippet] = [
         MathSnippet(trigger: "//", body: "frac($1)($2)", inMath: true),
         MathSnippet(trigger: "sr", body: "^2", inMath: true),

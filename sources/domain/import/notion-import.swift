@@ -1,13 +1,8 @@
 import Foundation
 
-/// Notion data as read through the Notion MCP, in a Notion-independent shape.
-/// IDs are the Notion page IDs, so importing twice yields the same entity IDs.
-/// Judgement calls (rule text → aggregation and attendance caps, exam times written in
-/// page bodies) are already resolved in this file; the original text stays in `policy.notes` and `memo`.
 public struct NotionExport: Codable, Sendable {
     public struct SemesterRow: Codable, Sendable {
         public var id: UUID
-        /// `2026 가을학기`, or `인정학기` for credited terms.
         public var title: String
         public var start: LocalDate?
         public var end: LocalDate?
@@ -68,7 +63,6 @@ public struct NotionExport: Codable, Sendable {
 
     public struct CapRow: Codable, Sendable {
         public var absences: Int
-        /// Letter grade symbol, e.g. `B0`.
         public var grade: String
     }
 
@@ -83,10 +77,8 @@ public struct NotionExport: Codable, Sendable {
         public var id: UUID
         public var title: String
         public var titleEn: String?
-        /// `4207-01`; the part before `-` is the course number used in folder names.
         public var number: String
         public var credits: Double
-        /// `상대평가`, `절대평가` or `S/U`.
         public var mode: String
         public var gradeId: UUID?
         public var absoluteScore: Double?
@@ -112,9 +104,7 @@ public struct NotionExport: Codable, Sendable {
 public struct NotionImportResult: Sendable, Equatable {
     public var transcript: Transcript
     public var catalog: Catalog
-    /// GIST-relative course folder path → its course.json.
     public var courseFiles: [String: CourseFile]
-    /// Messages for things the user should check (unknown semester titles, unmatched references, ...).
     public var warnings: [String]
 
     public init(transcript: Transcript, catalog: Catalog, courseFiles: [String: CourseFile], warnings: [String]) {
@@ -131,7 +121,6 @@ public enum NotionImporter {
     static let majorGroup = "전공"
     static let gradingModes: [String: GradingMode] = ["상대평가": .relative, "절대평가": .absolute, "S/U": .passFail]
 
-    /// `2026 가을학기` → (2026, fall).
     static func term(of title: String) -> (year: Int, term: Term)? {
         guard let m = title.firstMatch(of: /(\d{4})\s*(봄|여름|가을|겨울)학기/), let term = termNames[String(m.2)] else { return nil }
         return (Int(m.1)!, term)
@@ -168,8 +157,6 @@ public enum NotionImporter {
                 semesters.append(Semester(id: row.id, device: device, at: now, year: year, term: term, start: row.start, end: row.end))
             } else if row.title == creditedTitle {
                 let hours = export.courses.filter { $0.semesterId == row.id }.reduce(0) { $0 + $1.credits }
-                // Credited terms take the earliest regular year so ordering stays sensible. Notion has no source for it;
-                // the row's title keeps its courses together until the user names one.
                 semesters.append(
                     Semester(
                         id: row.id, device: device, at: now, year: regularYears.min() ?? 0, term: .credited, creditedHours: hours,
@@ -244,7 +231,6 @@ public enum NotionImporter {
         )
     }
 
-    /// A folder for a course nothing on disk matches yet: every course has one, even with no files to put in it.
     static func newCourseFolder(for row: NotionExport.CourseRow, in semester: Semester, prefixes: [UUID: String]) -> String? {
         guard let parent = semester.coursesFolder, let prefix = row.codeIds.first.flatMap({ prefixes[$0] }),
             let name = StandardLayout.courseFolderName(prefix: prefix, number: row.number, title: row.title)
@@ -252,7 +238,6 @@ public enum NotionImporter {
         return "\(parent)/\(name)"
     }
 
-    /// `<semester folder>/<code><number> ...`, trying every cross-listed code.
     static func courseFolder(for row: NotionExport.CourseRow, in semester: Semester, prefixes: [UUID: String], gist: FolderTree) -> String?
     {
         guard let folder = semester.folder, let node = gist[child: folder.name] else { return nil }

@@ -1,9 +1,6 @@
 import Foundation
 
-/// The unit outline: `order` ranks siblings under the same parent.
 public enum UnitTree {
-    /// Units in outline order with their depth. A unit whose parent is gone, or that sits in a parent cycle,
-    /// is listed at the top level so it never disappears from the screen.
     public static func outline(_ units: [Unit]) -> [(unit: Unit, depth: Int)] {
         var result: [(unit: Unit, depth: Int)] = []
         var seen: Set<UUID> = []
@@ -18,7 +15,6 @@ public enum UnitTree {
         return result
     }
 
-    /// The unit itself and everything under it.
     public static func subtree(of id: UUID, in units: [Unit]) -> Set<UUID> {
         var result: Set<UUID> = [id]
         var frontier = [id]
@@ -28,19 +24,16 @@ public enum UnitTree {
         return result
     }
 
-    /// Drops a unit when one under it is also picked, so a session on `Chapter 1` and `1.3` reads `1.3`.
     public static func deepest(_ picked: [Unit], in units: [Unit]) -> [Unit] {
         let ids = Set(picked.map(\.id))
         return picked.filter { subtree(of: $0.id, in: units).subtracting([$0.id]).isDisjoint(with: ids) }
     }
 
-    /// Units that may become the parent of `id` without creating a cycle.
     public static func parentChoices(for id: UUID, in units: [Unit]) -> [Unit] {
         let excluded = subtree(of: id, in: units)
         return outline(units).map(\.unit).filter { !excluded.contains($0.id) }
     }
 
-    /// Swaps the unit with its previous (`-1`) or next (`+1`) sibling and renumbers the siblings 1...n.
     @discardableResult
     public static func move(_ id: UUID, by offset: Int, in units: inout [Unit]) -> Bool {
         guard let unit = units.first(where: { $0.id == id }) else { return false }
@@ -54,7 +47,6 @@ public enum UnitTree {
         return true
     }
 
-    /// Moves the unit under `parent` (nil for the top level) as its last child. Refuses moves that would make a cycle.
     @discardableResult
     public static func setParent(_ id: UUID, to parent: UUID?, in units: inout [Unit]) -> Bool {
         guard let i = units.firstIndex(where: { $0.id == id }) else { return false }
@@ -78,7 +70,6 @@ public enum UnitTree {
 }
 
 extension CourseFile {
-    /// Links or unlinks a session, keeping `Unit.sessionIds` and `Session.unitIds` in step.
     public mutating func toggle(session: UUID, unit: UUID) {
         guard let u = units.firstIndex(where: { $0.id == unit }), let s = sessions.firstIndex(where: { $0.id == session }) else { return }
         let linked = units[u].sessionIds.contains(session)
@@ -90,10 +81,8 @@ extension CourseFile {
         }
     }
 
-    /// Adds or removes the unit from an exam's scope, keeping `Exam.scopeUnitIds` and `Unit.examIds` in step.
     public mutating func toggle(exam: UUID, unit: UUID) {
         guard units.contains(where: { $0.id == unit }), let e = exams.firstIndex(where: { $0.id == exam }) else { return }
-        // A chapter brings its sections: an exam on Chapter 2 covers everything under it.
         let group = UnitTree.subtree(of: unit, in: units)
         let on = !exams[e].scopeUnitIds.contains(unit)
         for id in UnitTree.outline(units).map(\.unit.id) where group.contains(id) { setScope(exam: e, unit: id, on: on) }
@@ -109,15 +98,13 @@ extension CourseFile {
         }
     }
 
-    /// Units taught before `date`: linked to a held session that started earlier, plus their ancestors,
-    /// so a chapter whose sections were covered is in scope with them.
     public func unitsTaught(before date: Date) -> [UUID] {
         let held = Set(sessions.filter { !$0.isCancelled && $0.date < date }.map(\.id))
         var ids = Set(units.filter { !held.isDisjoint(with: $0.sessionIds) }.map(\.id))
         for id in Array(ids) {
             var parent = units.first { $0.id == id }?.parentId
             var steps = 0
-            // The step limit stops a parent cycle in hand-edited JSON.
+            // 손으로 고친 JSON의 부모 순환에서 멈추도록 걸음 수를 제한한다.
             while let p = parent, steps < units.count {
                 ids.insert(p)
                 parent = units.first { $0.id == p }?.parentId
@@ -127,7 +114,6 @@ extension CourseFile {
         return UnitTree.outline(units).map(\.unit.id).filter(ids.contains)
     }
 
-    /// Exactly these units in the exam's scope, on both sides: the exam sheet picks a whole selection at once.
     public mutating func setScope(_ unitIds: [UUID], exam: UUID) {
         guard let e = exams.firstIndex(where: { $0.id == exam }) else { return }
         for id in exams[e].scopeUnitIds where !unitIds.contains(id) { setScope(exam: e, unit: id, on: false) }
@@ -136,27 +122,23 @@ extension CourseFile {
         }
     }
 
-    /// Adds units to an exam's scope on both sides; units already in it are left alone. Returns the units added.
     @discardableResult
     public mutating func addScope(_ unitIds: [UUID], exam: UUID) -> [UUID] {
         guard let e = exams.firstIndex(where: { $0.id == exam }) else { return [] }
         let added = unitIds.filter { !exams[e].scopeUnitIds.contains($0) }
-        // Exactly these units: a section skipped in class stays out even though its chapter is in.
+        // 고른 단원만 넣는다. 장이 범위에 들어도 수업에서 건너뛴 절은 빠진다.
         for id in added { setScope(exam: e, unit: id, on: true) }
         return added
     }
 }
 
 extension CourseFile {
-    /// The unit a note is about: the first of its units as `meta(of:)` reads them (a unit note's own, a class note's
-    /// session's, an exam note's scope). A unit since removed is skipped.
     public func unit(ofNote id: UUID) -> UUID? {
         guard let entry = notes.first(where: { $0.id == id }) else { return nil }
         let known = Set(units.map(\.id))
         return meta(of: entry).unitIds.first(where: known.contains)
     }
 
-    /// Where a new card goes: the unit on screen, else the open note's, else the first in the outline.
     public func unitForNewCard(viewing unit: UUID?, note: UUID?) -> UUID? {
         if let unit, units.contains(where: { $0.id == unit }) { return unit }
         return note.flatMap(unit(ofNote:)) ?? UnitTree.outline(units).first?.unit.id

@@ -4,7 +4,6 @@ import Foundation
 public struct CategoryTreeRow: Sendable, Equatable {
     public var category: Category
     public var depth: Int
-    /// The top-level ancestor's group, so a child stays under it whatever its own group says.
     public var group: String
 
     public init(category: Category, depth: Int, group: String) {
@@ -19,8 +18,6 @@ extension Category {
         Array(categories.filter { $0.parentId == nil }.map(\.group).uniqued())
     }
 
-    /// Each category followed by its children, depth first. A parent missing from the list makes its child a root
-    /// rather than hiding it, and a cycle stops at the first category seen again.
     public static func tree(_ categories: [Category]) -> [CategoryTreeRow] {
         var result: [CategoryTreeRow] = []
         func visit(_ c: Category, depth: Int, group: String) {

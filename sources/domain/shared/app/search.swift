@@ -4,7 +4,6 @@ public enum SearchKind: String, CaseIterable, Sendable {
     case note, material, assignment, exam, session, unit, quiz
 }
 
-/// `id` is the entity to open.
 public struct SearchItem: Sendable, Hashable {
     public var kind: SearchKind
     public var courseId: UUID
@@ -16,8 +15,8 @@ public struct SearchItem: Sendable, Hashable {
         self.kind = kind
         self.courseId = courseId
         self.id = id
-        // File names on Apple file systems often come back decomposed (NFD) while typed Hangul is composed (NFC);
-        // without this, `강의` typed never matches a file named `강의`.
+        // Apple 파일 시스템은 파일 이름을 분해형(NFD)으로 돌려주는 일이 많고, 입력한 한글은 조합형(NFC)이다. 이
+        // 변환이 없으면 입력한 `강의`가 `강의`라는 파일과 맞지 않는다.
         self.title = title.precomposedStringWithCanonicalMapping
         self.body = body.precomposedStringWithCanonicalMapping
     }
@@ -25,7 +24,6 @@ public struct SearchItem: Sendable, Hashable {
 
 public struct SearchHit: Sendable, Hashable {
     public var item: SearchItem
-    /// Body text around the first match, when the title alone didn't match.
     public var snippet: String?
 
     public init(item: SearchItem, snippet: String? = nil) {
@@ -34,7 +32,6 @@ public struct SearchHit: Sendable, Hashable {
     }
 }
 
-/// Ranking and snippets over the rows the SQLite index (FolioIndex `SearchStore`) found.
 public struct SearchIndex: Sendable {
     public var items: [SearchItem]
 
@@ -42,8 +39,6 @@ public struct SearchIndex: Sendable {
         self.items = items
     }
 
-    /// Every word of the query must appear in the title or body. Title matches rank above body matches:
-    /// exact title, then title prefix, then title contains, then body; shorter titles first within a rank.
     public func search(_ query: String, limit: Int = 60) -> [SearchHit] {
         let words = query.precomposedStringWithCanonicalMapping.split(whereSeparator: \.isWhitespace).map(String.init)
         guard !words.isEmpty else { return [] }
@@ -83,8 +78,6 @@ public struct SearchIndex: Sendable {
         return (start > body.startIndex ? "…" : "") + text + (end < body.endIndex ? "…" : "")
     }
 
-    /// A course's searchable items. `notes` carry their body without frontmatter; notes without an ID can't be opened and are left out.
-    /// `cards` come from the course's quiz files, which live apart from course.json.
     public static func items(
         for file: CourseFile, notes: [(id: UUID, title: String, body: String)], cards: [QuizCard] = [],
         calendar: Calendar = .current
@@ -96,7 +89,6 @@ public struct SearchIndex: Sendable {
             }
             + file.assignments.map { SearchItem(kind: .assignment, courseId: course, id: $0.id, title: $0.title, body: $0.memo) }
             + file.exams.map { SearchItem(kind: .exam, courseId: course, id: $0.id, title: $0.title, body: $0.scopeText) }
-            // The reference goes in the body, so `11-03` finds the class as the command line names it.
             + file.sessions.map {
                 SearchItem(
                     kind: .session, courseId: course, id: $0.id, title: file.title(of: $0, calendar: calendar),

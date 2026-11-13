@@ -1,7 +1,5 @@
 import Foundation
 
-/// One year's handbook (학사편람) table of which category each listed course belongs to, e.g. `HS2734` → `PPE`.
-/// Values are category names, so the table decides the mapping and code never names a category.
 public struct Handbook: Codable, Sendable, Equatable {
     public var year: Int
     public var source: String
@@ -21,19 +19,17 @@ public enum HandbookClassifier {
         public var code: String
         public var year: Int
         public var categoryId: UUID
-        /// The course's categories after applying: other categories this table assigns are replaced.
         public var categoryIds: [UUID]
     }
 
-    /// A course is looked up only in the handbook of the year it was taken, since areas move between years.
-    /// Each of its codes is tried, so a course listed as both `PP2734` and `HS2734` is found under `HS2734`.
+    // 영역은 해마다 바뀌므로, 과목은 그 과목을 들은 해의 학사편람에서만 찾는다.
     public static func suggest(courses: [Course], semesters: [Semester], catalog: Catalog) -> [Suggestion] {
         let years = Dictionary(semesters.map { ($0.id, $0.year) }, uniquingKeysWith: { a, _ in a })
         return courses.compactMap { course in
             guard let year = course.semesterId.flatMap({ years[$0] }),
                 let handbook = catalog.handbooks.first(where: { $0.year == year })
             else { return nil }
-            let number = course.number.split(separator: "-").first.map(String.init) ?? ""  // the handbook lists 2734, not section 2734-01
+            let number = course.number.split(separator: "-").first.map(String.init) ?? ""  // 학사편람은 분반 번호 2734-01이 아니라 2734로 적는다.
             let codes = course.codes.compactMap { id in catalog.codes.first { $0.id == id }?.prefix }.map { $0 + number }
             guard let code = codes.first(where: { handbook.areas[$0] != nil }),
                 let target = catalog.categories.first(where: { $0.name == handbook.areas[code] }),

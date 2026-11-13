@@ -1,6 +1,5 @@
 import Foundation
 
-/// One error or warning from a TeX build, located in a file when the engine said where.
 public struct TexIssue: Equatable, Sendable, Codable {
     public enum Severity: String, Equatable, Sendable, Codable { case error, warning }
 
@@ -22,10 +21,8 @@ public struct TexIssue: Equatable, Sendable, Codable {
     }
 }
 
-/// The time a TeX build stamps into its PDF and `\today`, given to Tectonic as `SOURCE_DATE_EPOCH` (#41). Midnight
-/// of the calendar day, not the moment: a rebuild of unchanged text the same day gives the same bytes, so iCloud has
-/// nothing new to sync, while `\today` still prints the day it was built. It is the calendar day rather than the
-/// study day, because `\today` prints a calendar date.
+// 지금 시각이 아니라 달력 날짜의 자정을 `SOURCE_DATE_EPOCH`로 쓴다. 그래야 같은 날 바뀌지 않은 글을 다시 빌드하면
+// 같은 바이트가 나와서 iCloud가 새로 동기화할 것이 없다.
 public enum TexBuildTime {
     public static func sourceDateEpoch(at now: Date, calendar: Calendar) -> Int {
         Int(calendar.startOfDay(for: now).timeIntervalSince1970)
@@ -33,13 +30,9 @@ public enum TexBuildTime {
 }
 
 public enum TexLog {
-    /// Reads Tectonic's console output, which names each problem as `error: hw.tex:5: Undefined control sequence`.
-    /// The TeX log itself is not read: its `l.5` lines don't say which `\input` file they belong to.
-    /// An unlocated error is kept only when no located one came, because Tectonic follows every real error
-    /// with generic ones ("the XeTeX engine had an unrecoverable error").
-    ///
-    /// Builds keep going past errors so all of them show at once, which repeats them: TeX runs again when the `.aux`
-    /// changed, and one broken line (a missing package) can raise the same error dozens of times. Each is kept once.
+    // TeX 로그의 `l.5` 줄은 어느 `\input` 파일의 줄인지 알려 주지 않으므로 Tectonic의 콘솔 출력을 읽는다. Tectonic은
+    // 실제 오류마다 일반적인 오류를 뒤에 붙이므로, 위치 없는 오류는 위치 있는 오류가 없을 때만 남긴다. `.aux`가 바뀌면
+    // TeX가 다시 돌아 같은 오류가 수십 번 나오므로, 오류마다 한 번만 남긴다.
     public static func issues(_ output: String) -> [TexIssue] {
         var located: [TexIssue] = []
         var general: [TexIssue] = []
@@ -56,8 +49,8 @@ public enum TexLog {
             } else {
                 continue
             }
-            // Tectonic's own note that it went past errors. Kept as one, so a build whose errors didn't print as
-            // `error:` lines still counts as failed and its PDF, with parts left out, is not placed.
+            // Tectonic이 오류를 넘기고 계속 빌드했다는 메모다. 이 메모를 하나로 남겨야 오류가 `error:` 줄로 찍히지 않은
+            // 빌드도 실패로 세고, 일부가 빠진 PDF를 두지 않는다.
             if severity == .warning, rest.hasPrefix("errors were issued by the TeX engine") {
                 general.append(TexIssue(.error, message: String(rest)))
             } else if let issue = parseLocated(severity, rest) {
@@ -72,14 +65,14 @@ public enum TexLog {
         return errors.isEmpty ? general.prefix(1) + located : located
     }
 
-    /// `file:line: message`. A file name may hold colons, so the line number is the first all-digit field.
+    // 파일 이름에 콜론이 들어갈 수 있으므로, 모두 숫자인 첫 칸을 줄 번호로 본다.
     private static func parseLocated(_ severity: TexIssue.Severity, _ rest: Substring) -> TexIssue? {
         let parts = rest.split(separator: ":", omittingEmptySubsequences: false)
         guard parts.count >= 3 else { return nil }
         for i in 1..<(parts.count - 1) {
             if let n = Int(parts[i]), n > 0 {
                 let file = parts[..<i].joined(separator: ":")
-                // TeX's own `! LaTeX Error:` keeps its bang when Tectonic passes it on.
+                // Tectonic이 넘겨준 TeX의 `! LaTeX Error:`는 앞의 느낌표를 그대로 지닌다.
                 var message = parts[(i + 1)...].joined(separator: ":").trimmingCharacters(in: .whitespaces)
                 if message.hasPrefix("! ") { message.removeFirst(2) }
                 guard !file.isEmpty, !message.isEmpty else { return nil }

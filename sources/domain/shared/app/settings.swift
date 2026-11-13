@@ -1,30 +1,19 @@
 import Foundation
 
-/// `GIST/.folio/settings.json`. Every user-tunable number lives here; the defaults below are the only place
-/// they are written down.
 public struct Settings: Codable, Sendable, Equatable {
-    /// Minutes after midnight when "today" turns over. 240 = 04:00.
     public var dayBoundaryMinutes: Int
     public var review: ReviewSettings
-    /// "노트 작성 규칙", always sent to Claude with the course context.
     public var noteRules: String
     public var notifications: NotificationSettings
     public var backup: BackupSettings
-    /// Section headings per `NoteKind` raw value; kinds left out use `NoteTemplate.defaultSections`.
     public var noteTemplates: [String: [String]]
-    /// Math syntax for notes made in the app. Notes keep theirs in the frontmatter, so changing this touches no note.
     public var newNoteMath: MathSyntax
     public var sidebar: SidebarOrder
-    /// How long a class runs when nothing else says: no end on the session, no slot, and no class times on the course.
     public var classMinutes: Int
-    /// The note editor's snippets, or nil for `MathSnippet.defaults`. Left nil until changed, so the defaults can grow
-    /// with the app.
+    // 기본값이 앱과 함께 늘어날 수 있도록, 바꾸기 전까지는 nil로 둔다.
     public var mathSnippets: [MathSnippet]?
-    /// An AsciiMath note's formula snippets, or nil for `MathSnippet.asciiMathDefaults`, kept as `mathSnippets` is.
     public var asciiMathSnippets: [MathSnippet]?
     public var classStart: ClassStartSettings
-    /// The layouts the user saved and named, in their order (#62, "지금 배치 저장…"). The built-in ones come before
-    /// them and aren't kept here.
     public var panePresets: [PanePreset]
     public var lms: LMSSettings
 
@@ -78,8 +67,6 @@ public struct Settings: Codable, Sendable, Equatable {
 
     public var presets: [PanePreset] { PanePreset.builtIn + panePresets }
 
-    /// The layout a class's start opens its pages in, side by side (`ClassStartSettings.OpenIn.splitTab`): the one
-    /// chosen, or "수업 중" when none is or the chosen one was deleted.
     public var classStartPreset: PanePreset {
         classStart.preset.flatMap { id in presets.first { $0.id == id } } ?? .inClass
     }
@@ -87,27 +74,21 @@ public struct Settings: Codable, Sendable, Equatable {
     public var snippets: [MathSnippet] { mathSnippets ?? MathSnippet.defaults }
     public var asciiSnippets: [MathSnippet] { asciiMathSnippets ?? MathSnippet.asciiMathDefaults }
 
-    /// Blank headings are rows the editor keeps while they're being typed; a note never gets them.
     public func noteSections(for kind: NoteKind) -> [String] {
         (noteTemplates[kind.rawValue] ?? NoteTemplate.defaultSections(for: kind)).filter {
             !$0.trimmingCharacters(in: .whitespaces).isEmpty
         }
     }
 
-    /// The study day `date` belongs to: work done at 02:00 counts for the previous day.
     public func studyDay(of date: Date, calendar: Calendar) -> LocalDate {
         LocalDate(calendar.date(byAdding: .minute, value: -dayBoundaryMinutes, to: date)!, in: calendar)
     }
 }
 
 public struct ReviewSettings: Codable, Sendable, Equatable {
-    /// Days between reviews, step by step.
     public var intervals: [Int]
-    /// Passes (good or easy) at the last step after which a unit is settled.
     public var settleAfterPasses: Int
-    /// Reviews per day; the lowest-priority overflow moves to tomorrow. Nil means no limit.
     public var dailyLimit: Int?
-    /// Within this many days before an exam, intervals are capped at half the days left.
     public var examWindowDays: Int
     public var cardsPerReview: Int
     public var weights: PriorityWeights
@@ -124,11 +105,8 @@ public struct ReviewSettings: Codable, Sendable, Equatable {
         self.weights = weights
     }
 
-    /// The interval at `step`; steps past the last keep the last interval.
     public func interval(atStep step: Int) -> Int { intervals[min(max(step, 0), intervals.count - 1)] }
 
-    /// The days a unit studied on `day` comes back when each review is done on its day: what the settings show
-    /// under the intervals (`11/10 → 11/11 · 11/14 · …`).
     public func reviewDays(after day: LocalDate) -> [LocalDate] {
         var next = day
         return intervals.map {
@@ -139,7 +117,7 @@ public struct ReviewSettings: Codable, Sendable, Equatable {
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let d = ReviewSettings()
-        // Every step is indexed and divided by, so a hand-edited empty or non-positive list falls back to the default.
+        // 모든 단계를 인덱스로 쓰고 나눗셈에도 쓰므로, 손으로 고친 목록이 비었거나 양수가 아니면 기본값으로 돌아간다.
         let decoded = try c.decodeIfPresent([Int].self, forKey: .intervals)?.filter { $0 > 0 } ?? []
         intervals = decoded.isEmpty ? d.intervals : decoded
         settleAfterPasses = try c.decodeIfPresent(Int.self, forKey: .settleAfterPasses) ?? d.settleAfterPasses
@@ -150,15 +128,10 @@ public struct ReviewSettings: Codable, Sendable, Equatable {
     }
 }
 
-/// Weights of the overdue-priority terms.
 public struct PriorityWeights: Codable, Sendable, Equatable {
-    /// × (days overdue / current interval)
     public var overdue: Double
-    /// × 1 / (days until the nearest exam that covers the unit + 1)
     public var exam: Double
-    /// × (1 - recent quiz accuracy)
     public var quizMiss: Double
-    /// × open wrong cards
     public var openWrong: Double
 
     public init(overdue: Double = 1, exam: Double = 3, quizMiss: Double = 1, openWrong: Double = 0.2) {
@@ -169,7 +142,6 @@ public struct PriorityWeights: Codable, Sendable, Equatable {
     }
 }
 
-/// Notification timing. Times are minutes after midnight in real (clock) time.
 public struct NotificationSettings: Codable, Sendable, Equatable {
     public var assignmentDue = true
     public var assignmentLeadHours = [24, 3]
@@ -198,12 +170,9 @@ public struct NotificationSettings: Codable, Sendable, Equatable {
     }
 }
 
-/// Only the Mac app backs up.
 public struct BackupSettings: Codable, Sendable, Equatable {
     public var enabled = true
-    /// Local folder outside iCloud; `~` is expanded on the device that backs up.
     public var folder = "~/Backups/Folio/auto"
-    /// Archives newer than this are all kept; older ones thin out to one per week.
     public var dailyDays = 30
 
     public init() {}
@@ -218,7 +187,7 @@ public struct BackupSettings: Codable, Sendable, Equatable {
 }
 
 extension KeyedDecodingContainer {
-    /// Settings files from older app versions lack newer keys; those fall back to the default.
+    // 예전 앱의 설정 파일에는 새 키가 없으므로, 없는 키는 기본값으로 읽는다.
     func value<T: Decodable>(_ key: Key, or fallback: T) throws -> T {
         try decodeIfPresent(T.self, forKey: key) ?? fallback
     }

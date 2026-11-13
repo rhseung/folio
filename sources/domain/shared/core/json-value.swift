@@ -1,4 +1,3 @@
-/// For where the shape isn't fixed: unknown fields, schemas sent to Claude, raw log payloads.
 public enum JSONValue: Hashable, Sendable, Codable {
     case null
     case bool(Bool)

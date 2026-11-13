@@ -1,13 +1,8 @@
 import Foundation
 
-// GIST LMS (Coursemos on Moodle 3.2, #132). FolioLMS reads its pages into these values; the rules for what becomes a
-// proposal live here so the app, the CLI and the tests ask one place.
-
-/// An LMS course page ("강의실"). Its id is Moodle's course id, stable across terms.
 public struct LMSClassroom: Codable, Hashable, Sendable, Identifiable {
     public var id: Int
     public var title: String
-    /// "교과", "비교과", "교류강좌": the label Coursemos puts before the title.
     public var kind: String?
     public var professors: String?
 
@@ -22,7 +17,6 @@ public struct LMSClassroom: Codable, Hashable, Sendable, Identifiable {
 }
 
 public struct LMSAssignment: Codable, Hashable, Sendable, Identifiable {
-    /// The activity's course-module id (`mod/assign/view.php?id=`).
     public var id: Int
     public var classroom: Int
     public var title: String
@@ -41,13 +35,12 @@ public struct LMSAssignment: Codable, Hashable, Sendable, Identifiable {
     public var url: URL { LMS.url("/mod/assign/view.php?id=\(id)") }
 }
 
-/// A file activity (Coursemos `ubfile`). Whether it downloads is only known when its page is opened: allowed files
-/// redirect to the original, others show only the Coursemos viewer, and those stay a link.
+// 받을 수 있는 파일인지는 페이지를 열어야 안다. 허용된 파일은 원본으로 리디렉션되고, 나머지는 Coursemos
+// 뷰어만 보이므로 링크로 남긴다.
 public struct LMSFile: Codable, Hashable, Sendable, Identifiable {
     public var id: Int
     public var classroom: Int
     public var title: String
-    /// The week heading it sits under, such as "5주차 [9월28일 - 10월4일]".
     public var week: String?
 
     public init(id: Int, classroom: Int, title: String, week: String? = nil) {
@@ -60,8 +53,6 @@ public struct LMSFile: Codable, Hashable, Sendable, Identifiable {
     public var key: LMSKey { .init(kind: .file, id: id) }
     public var url: URL { LMS.url("/mod/ubfile/view.php?id=\(id)") }
 
-    /// `Lectures` names files `<week>_<title>`, so a download named `Ch5.pdf` under "5주차 […]" lands as
-    /// `05_Ch5.pdf`. A name that already starts with a number keeps the professor's numbering.
     public func lectureName(_ downloaded: String) -> String {
         guard downloaded.first?.isNumber == false, let week, let number = Int(week.prefix { $0.isNumber }) else { return downloaded }
         return String(format: "%02d_", number) + downloaded
@@ -69,13 +60,12 @@ public struct LMSFile: Codable, Hashable, Sendable, Identifiable {
 }
 
 public struct LMSNotice: Codable, Hashable, Sendable, Identifiable {
-    /// The post's id (`bwid`); unique across boards.
+    // `bwid`는 게시판 전체에서 겹치지 않는다.
     public var id: Int
     public var board: Int
     public var classroom: Int
     public var title: String
     public var author: String?
-    /// The day it was posted, as the board shows it (no time).
     public var posted: Date?
 
     public init(id: Int, board: Int, classroom: Int, title: String, author: String? = nil, posted: Date? = nil) {
@@ -91,7 +81,6 @@ public struct LMSNotice: Codable, Hashable, Sendable, Identifiable {
     public var url: URL { LMS.url("/mod/ubboard/article.php?id=\(board)&bwid=\(id)") }
 }
 
-/// Everything one sync read. A cache on this device; the settings hold what the user decided about it.
 public struct LMSSnapshot: Codable, Hashable, Sendable {
     public var at: Date
     public var classrooms: [LMSClassroom]
@@ -110,13 +99,10 @@ public struct LMSSnapshot: Codable, Hashable, Sendable {
         self.notices = notices
     }
 
-    /// The files and notices a classroom has now: seeing it the first time marks these handled, so only what comes later
-    /// is proposed.
     public func current(in classroom: Int) -> [LMSKey] {
         files.filter { $0.classroom == classroom }.map(\.key) + notices.filter { $0.classroom == classroom }.map(\.key)
     }
 
-    /// Replaces one classroom's items with `other`'s, keeping the rest.
     public mutating func merge(_ other: LMSSnapshot, in classroom: Int) {
         assignments.removeAll { $0.classroom == classroom }
         files.removeAll { $0.classroom == classroom }
@@ -127,7 +113,6 @@ public struct LMSSnapshot: Codable, Hashable, Sendable {
     }
 }
 
-/// One LMS item across syncs, written in settings as `assignment:139941`.
 public struct LMSKey: Hashable, Sendable, Codable, Comparable, CustomStringConvertible {
     public enum Kind: String, Sendable, CaseIterable {
         case assignment, file, notice
@@ -165,15 +150,8 @@ public struct LMSKey: Hashable, Sendable, Codable, Comparable, CustomStringConve
     public static func < (a: LMSKey, b: LMSKey) -> Bool { (a.kind.rawValue, a.id) < (b.kind.rawValue, b.id) }
 }
 
-/// `settings.json`'s `lms`: shared by the user's devices through the GIST folder. The login lives in the keychain.
-///
-/// No classroom is tied to a course: one course can have two classrooms, and a classroom can be no course at all
-/// (safety training). Each item picks its course when it is added.
 public struct LMSSettings: Codable, Sendable, Equatable {
-    /// Classrooms seen before. A classroom is proposed from only once it is here, and it gets here with its files and
-    /// notices of that moment marked handled, so a new term doesn't arrive as hundreds of old posts.
     public var known: [Int]
-    /// Items added or dismissed, so they aren't proposed again. Assignments are also kept off by their `lmsId`.
     public var handled: [LMSKey]
 
     public init(known: [Int] = [], handled: [LMSKey] = []) {
@@ -187,7 +165,7 @@ public struct LMSSettings: Codable, Sendable, Equatable {
         handled = try c.decodeIfPresent([LMSKey].self, forKey: .handled) ?? []
     }
 
-    /// Both lists stay sorted and without repeats, so two devices doing the same thing write the same file.
+    // 두 기기가 같은 일을 하면 같은 파일을 쓰도록, 두 목록은 정렬하고 중복 없이 둔다.
     public mutating func know(_ classrooms: [Int]) {
         known = Set(known).union(classrooms).sorted()
     }
@@ -198,7 +176,6 @@ public struct LMSSettings: Codable, Sendable, Equatable {
         handled = set.sorted()
     }
 
-    /// The snapshot's classrooms not seen before, which the next sync makes known.
     public func unseen(in snapshot: LMSSnapshot) -> [LMSClassroom] {
         let known = Set(known)
         return snapshot.classrooms.filter { !known.contains($0.id) }
@@ -207,13 +184,12 @@ public struct LMSSettings: Codable, Sendable, Equatable {
 
 public enum LMS {
     public static let base = URL(string: "https://lms.gist.ac.kr")!
-    /// Dates on the LMS pages are Korean local time with no zone written.
+    // LMS 페이지의 날짜는 시간대를 적지 않은 한국 시각이다.
     public static let timeZone = TimeZone(identifier: "Asia/Seoul")!
 
     public static func url(_ path: String) -> URL { URL(string: path, relativeTo: base)!.absoluteURL }
 }
 
-/// One thing the LMS has that Folio doesn't yet, for the user to add to a course of their choice or dismiss.
 public struct LMSProposal: Hashable, Sendable, Identifiable {
     public enum Item: Hashable, Sendable {
         case assignment(LMSAssignment)
@@ -256,16 +232,12 @@ public struct LMSProposal: Hashable, Sendable, Identifiable {
     }
 }
 
-/// What the proposals screen shows: a section per LMS classroom, under the classroom's own name.
 public struct LMSInbox: Sendable, Equatable {
-    /// An item no longer proposed: dismissed, marked when its classroom was first seen, or added. Kept in view so a
-    /// dismissal made by mistake can be taken back.
     public struct Handled: Sendable, Equatable, Identifiable {
         public var proposal: LMSProposal
-        /// The course an assignment is in by its `lmsId`.
         public var course: UUID?
-        /// Whether taking the mark back would propose it. An assignment already in a course, handed in or past its
-        /// deadline would not: `build` leaves it out of the proposals, so it would drop out of view altogether.
+        // 과목에 이미 있거나, 제출했거나, 마감이 지난 과제는 `build`가 제안에서 빼므로, 표시를 거두면 화면에서 아예
+        // 사라진다. 그래서 이런 과제는 false이다.
         public var proposable: Bool
         public var id: String { proposal.id }
     }
@@ -288,18 +260,9 @@ public struct LMSInbox: Sendable, Equatable {
     public init(sections: [Section] = []) { self.sections = sections }
 
     public var proposals: [LMSProposal] { sections.flatMap(\.proposals) }
-    /// The sections with something to propose, for the counts outside the proposals screen.
     public var waiting: [Section] { sections.filter { !$0.proposals.isEmpty } }
     public var isEmpty: Bool { proposals.isEmpty }
 
-    /// - Only known classrooms propose (`LMSSettings.known`); one seen for the first time waits for the sync to mark
-    ///   what it already holds.
-    /// - An assignment is proposed while it can still be done: not handed in, and not past its deadline.
-    /// - Nothing already handled, and no assignment any course already has by its `lmsId`, whichever course it went to.
-    ///   Those are the section's `handled`. An assignment left to pass its deadline is neither; one dismissed before
-    ///   it passed stays handled, but can't be proposed again.
-    /// - Sections with something to propose come first, then those with only handled items; each part keeps the
-    ///   dashboard's order. A classroom with neither has no section.
     public static func build(_ snapshot: LMSSnapshot, settings: LMSSettings, courses: [CourseFile], now: Date) -> LMSInbox {
         let known = Set(settings.known)
         let handledKeys = Set(settings.handled)

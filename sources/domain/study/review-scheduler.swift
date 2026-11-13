@@ -2,7 +2,6 @@ import Foundation
 
 public enum ReviewResult: String, Codable, Sendable, CaseIterable {
     case again, hard, good, easy
-    /// Not needed (already studied, e.g. for a past exam): the unit settles until a wrong card or an exam plan brings it back.
     case skip
 }
 
@@ -19,18 +18,13 @@ public struct ReviewEvent: LogEvent, Equatable {
     }
 }
 
-/// Everything the scheduler needs about one unit, already reduced to study days.
 public struct UnitReviewInput: Sendable {
     public var unitId: UUID
-    /// Day the cycle starts: the review note's creation day, or the last session's day when there is no review note.
     public var startDay: LocalDate
-    /// No review note yet: the first task is writing it, due on `startDay`.
     public var needsReviewNote: Bool
     public var reviews: [(day: LocalDate, result: ReviewResult)]
     public var wrongCardDays: [LocalDate]
-    /// Days of upcoming exams whose scope includes the unit.
     public var examDays: [LocalDate]
-    /// Settled units come back only while an exam plan covers them.
     public var inExamPlan: Bool
     public var quizAccuracy: Double?
     public var openWrongCards: Int
@@ -54,7 +48,6 @@ public struct UnitReviewInput: Sendable {
 
 public struct ReviewState: Sendable, Equatable {
     public var unitId: UUID
-    /// Index into the interval steps.
     public var step: Int
     public var due: LocalDate?
     public var settled: Bool
@@ -68,12 +61,10 @@ public struct ReviewState: Sendable, Equatable {
         self.writeNoteFirst = writeNoteFirst
     }
 
-    /// Due on the study day or overdue: what Today lists, and what the menus can skip for today.
     public func isDue(on today: LocalDate) -> Bool { due.map { $0 <= today } ?? false }
 }
 
 public enum ReviewScheduler {
-    /// Replays reviews and wrong cards in day order.
     public static func state(of input: UnitReviewInput, settings: ReviewSettings, today: LocalDate) -> ReviewState {
         let steps = settings.intervals
         let last = steps.count - 1
@@ -104,7 +95,6 @@ public enum ReviewScheduler {
                 settled = passesAtLast >= settings.settleAfterPasses
                 due = schedule(from: day, interval: steps[step], input: input, settings: settings)
             case .wrongCard:
-                // A wrong card pulls the next review to tomorrow and drops a step.
                 step = max(0, step - 1)
                 passesAtLast = 0
                 settled = false
@@ -119,8 +109,6 @@ public enum ReviewScheduler {
         return ReviewState(unitId: input.unitId, step: step, due: due, settled: settled, writeNoteFirst: writeNote)
     }
 
-    /// Next review after `day`, shortened before exams: never past the day before the next exam, and within
-    /// the exam window at most half the days left.
     static func schedule(from day: LocalDate, interval: Int, input: UnitReviewInput, settings: ReviewSettings) -> LocalDate {
         var interval = interval
         if let exam = input.examDays.filter({ $0 > day }).min() {
@@ -146,7 +134,6 @@ public enum ReviewScheduler {
         public var deferred: DeferReason?
     }
 
-    /// Units due today or earlier, highest priority first. Past the daily limit, the rest are marked deferred.
     public static func queue(_ states: [ReviewState], inputs: [UnitReviewInput], settings: ReviewSettings, today: LocalDate) -> [Item] {
         let byUnit = Dictionary(keepingFirst: inputs.map { ($0.unitId, $0) })
         let w = settings.weights
@@ -171,8 +158,7 @@ public enum ReviewScheduler {
         return items
     }
 
-    /// Today's queue across `courses`, each with its review log. The daily limit spans all courses, so one course's
-    /// list filters this queue rather than building its own.
+    // 하루 한도는 모든 과목에 걸리므로, 한 과목의 목록은 따로 만들지 않고 이 큐를 거른다.
     public static func queue(
         courses: [(file: CourseFile, reviews: [(at: Date, event: ReviewEvent)])], settings: Settings,
         calendar: Calendar, now: Date
@@ -199,7 +185,7 @@ public struct ReviewEntry: Sendable, Equatable {
 }
 
 extension LocalDate {
-    /// Day arithmetic in UTC, where every day has 24 hours.
+    // UTC에서는 모든 날이 24시간이므로 날짜 계산은 UTC로 한다.
     static let utc: Calendar = {
         var c = Calendar(identifier: .gregorian)
         c.timeZone = TimeZone(identifier: "UTC")!
@@ -216,9 +202,7 @@ extension LocalDate {
 }
 
 extension UnitReviewInput {
-    /// Scheduler input for every unit of a course. A unit's cycle starts from its latest session; without a review
-    /// note on that session, writing the note comes first.
-    // shortcut: starts from the session day, not the review note's creation day; use the note file's creation date once notes record it.
+    // 임시 처리: 복습 노트를 만든 날이 아니라 회차 날짜부터 센다. 노트가 만든 날을 기록하게 되면 노트 파일의 생성일을 쓴다.
     public static func all(
         for file: CourseFile, reviews: [(at: Date, event: ReviewEvent)], settings: Settings, calendar: Calendar, now: Date
     ) -> [UnitReviewInput] {
@@ -242,8 +226,6 @@ extension UnitReviewInput {
 }
 
 public enum ReviewStreak {
-    /// Study days in a row with a review, ending today. A today with nothing done yet keeps yesterday's run alive,
-    /// so the count doesn't drop to zero every morning.
     public static func days(_ reviewDays: Set<LocalDate>, today: LocalDate) -> Int {
         var day = reviewDays.contains(today) ? today : today.adding(days: -1)
         var count = 0

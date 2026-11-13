@@ -1,16 +1,11 @@
 import Foundation
 
-/// One class meeting from a calendar export. `course` is the course folder name, e.g. `GS1211 일반화학실험`.
 public struct CalendarMeeting: Codable, Sendable, Equatable {
     public var course: String
     public var start: Date
     public var end: Date
     public var room: String
-    /// The event's title. Not kept on the session, which has no topic of its own: it names a new lab unit, and a
-    /// note of the same title becomes the class's review note.
     public var topic: String
-    /// The experiment's `Lab<NN>` number: the session links to that lab's unit. The parts of a two-session
-    /// experiment share it.
     public var lab: Int?
 
     public init(course: String, start: Date, end: Date, room: String = "", topic: String = "", lab: Int? = nil) {
@@ -23,7 +18,6 @@ public struct CalendarMeeting: Codable, Sendable, Equatable {
     }
 }
 
-/// One exam from a calendar export, for the course folder `course`. `title` names the exam (`중간고사`, `Quiz2`).
 public struct CalendarExam: Codable, Sendable, Equatable {
     public var course: String
     public var title: String
@@ -46,18 +40,12 @@ public enum CalendarImporter {
     public struct Result: Sendable {
         public var file: CourseFile
         public var added: [Session]
-        /// Existing sessions that only had a date and got the meeting's time or lab unit.
         public var filled: [Session]
-        /// Each matched session's meeting title, for `noteLinks`.
         public var titles: [UUID: String]
-        /// Sessions inside the calendar's span on a day it has no meeting for: the class was cancelled.
         public var cancelled: [Session]
-        /// Set only when the course had no schedule.
         public var schedule: [ClassTime]
     }
 
-    /// Adds a session for each meeting with none that day, preferring one at the meeting's time; existing sessions keep
-    /// their week and only gain a missing time or lab unit. Re-running adds nothing.
     public static func merge(
         _ meetings: [CalendarMeeting], into file: CourseFile, semesterStart: LocalDate,
         calendar: Calendar, device: DeviceID, now: Date
@@ -70,7 +58,7 @@ public enum CalendarImporter {
             return Result(file: file, added: [], filled: [], titles: [:], cancelled: [], schedule: [])
         }
         let firstMonday = calendar.startOfWeek(containing: first)
-        // A session stands for one meeting only, so a lecture and a recitation on the same day stay two.
+        // 회차 하나는 모임 하나만 나타내므로, 같은 날의 강의와 리시테이션은 두 회차로 남는다.
         var matched: Set<UUID> = []
         for m in meetings.sorted(by: { $0.start < $1.start }) {
             let sameDay = file.sessions.indices.filter {
@@ -80,7 +68,7 @@ public enum CalendarImporter {
                 let before = file.sessions[i]
                 matched.insert(before.id)
                 titles[before.id] = m.topic
-                // Imported sessions carry only a day; midnight means no time was known.
+                // 가져온 회차는 날만 가지므로, 자정이면 시각을 몰랐다는 뜻이다.
                 if before.date == calendar.startOfDay(for: before.date) { file.sessions[i].date = m.start }
                 if let lab = m.lab { file.linkLab(lab, session: before.id, experiment: m.topic, device: device, at: now) }
                 if file.sessions[i] != before {
@@ -119,7 +107,7 @@ public enum CalendarImporter {
         return Result(file: file, added: added, filled: filled, titles: titles, cancelled: cancelled, schedule: schedule)
     }
 
-    /// Times that repeat at least three times; one-off meetings (a makeup, a single extra session) are left out.
+    // 보강이나 한 번뿐인 추가 수업을 빼도록, 세 번 이상 되풀이되는 시각만 주간 시간으로 본다.
     static func weeklySlots(_ meetings: [CalendarMeeting], calendar: Calendar) -> [ClassTime] {
         let slots = meetings.map { m -> ClassTime in
             let minute = { (d: Date) in calendar.component(.hour, from: d) * 60 + calendar.component(.minute, from: d) }
@@ -130,9 +118,8 @@ public enum CalendarImporter {
         return counts.filter { $0.value >= 3 }.keys.sorted { ($0.weekday, $0.startMinute) < ($1.weekday, $1.startMinute) }
     }
 
-    /// Session -> review note pairs where a session's meeting title (`titles`) is a note's title and neither is linked
-    /// yet. Only a free or review note is taken: a unit note's units or a rough note's kind would be lost by becoming a
-    /// review note. Each note goes to one session, the first by order, since two sessions with one title can't share a note.
+    // 단원 노트나 초안 노트를 복습 노트로 바꾸면 그 노트의 단원이나 종류를 잃으므로, 자유 노트와 복습 노트만 잇는다.
+    // 제목이 같은 두 회차는 노트 하나를 나눠 쓸 수 없으므로, 노트는 순서상 첫 회차 하나에만 잇는다.
     public static func noteLinks(sessions: [Session], titles: [UUID: String], notes: [(id: UUID, title: String, meta: NoteMeta)]) -> [(
         session: UUID, note: UUID
     )] {
@@ -149,12 +136,9 @@ public enum CalendarImporter {
         public var file: CourseFile
         public var added: [Exam]
         public var filled: [Exam]
-        /// The course already has an exam by this title on another day; the calendar and the file disagree, so nothing changes.
         public var conflicts: [(exam: Exam, calendar: CalendarExam)]
     }
 
-    /// An exam of the same title that has no time yet or is on the same day gains the calendar's time, room and memo
-    /// where they are empty; otherwise a new exam is added. Re-running adds nothing.
     public static func mergeExams(_ exams: [CalendarExam], into file: CourseFile, calendar: Calendar, device: DeviceID, now: Date)
         -> ExamResult
     {
@@ -175,7 +159,6 @@ public enum CalendarImporter {
                     filled.append(x)
                 }
             } else if let i = same.first {
-                // A title names one exam, so the same title on another day is the calendar and the file disagreeing.
                 conflicts.append((file.exams[i], e))
             } else {
                 var x = Exam(

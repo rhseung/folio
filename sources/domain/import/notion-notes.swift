@@ -1,15 +1,11 @@
 import Foundation
 
-/// One course's lecture notes and score breakdown as dumped from Notion (`<dump>/<page id>/index.json`).
-/// IDs are Notion page IDs and are kept as Folio IDs, so importing twice adds nothing new.
 public struct NotionCourseDump: Codable, Sendable {
     public struct NoteRow: Codable, Sendable {
         public var id: UUID
         public var title: String
-        /// `러프`, `복습` or nil.
         public var kind: String?
         public var date: String?
-        /// Body file relative to the dump folder; nil for an empty page.
         public var file: String?
     }
 
@@ -47,7 +43,6 @@ public struct NotionCourseDump: Codable, Sendable {
     }
 }
 
-/// A note to write: its body comes from `sourceFile` in the dump.
 public struct NotionNotePlan: Sendable, Equatable {
     public var id: UUID
     public var title: String
@@ -72,7 +67,7 @@ public struct NotionMergeResult: Sendable {
 }
 
 public enum NotionNotesImporter {
-    /// Titles come back with markdown escapes (`1\\. Numbers`) or wrapped in tags (`<p>Worksheet</p>`).
+    // 노션 제목은 마크다운 이스케이프(`1\\. Numbers`)가 붙거나 태그(`<p>Worksheet</p>`)로 감싸여 온다.
     static func clean(_ title: String) -> String {
         var s = title
         s.replace(/<[^>]+>/) { _ in "" }
@@ -80,14 +75,11 @@ public enum NotionNotesImporter {
         return s.split(whereSeparator: \.isWhitespace).joined(separator: " ")
     }
 
-    /// `7주차-2` or `7주차-2 정리`: how the Notion pages are titled, which this import has to read.
     static func session(of title: String) -> (week: Int, index: Int, review: Bool)? {
         guard let m = title.trimmingCharacters(in: .whitespaces).wholeMatch(of: /(\d+)주차-(\d+)(\s*정리)?/) else { return nil }
         return (Int(m.1)!, Int(m.2)!, m.3 != nil)
     }
 
-    /// Adds sessions, note links, grade components and scores from `dump` to `file` without touching what is there.
-    /// Notes whose ID is in `existingNotes` are skipped; the caller writes the returned note plans.
     public static func merge(
         _ dump: NotionCourseDump, into file: CourseFile, existingNotes: Set<UUID>,
         calendar: Calendar, device: DeviceID, now: Date
@@ -96,8 +88,6 @@ public enum NotionNotesImporter {
         var result = NotionMergeResult(file: file, notes: [], sessionsAdded: 0, componentsAdded: 0, scoresAdded: 0, warnings: [])
 
         let dump = cleaned(dump)
-        // Notion's `7주차-2` -> the session made or found for it. Names here follow the dates, so the second class
-        // Notion knew of in a week may be named 7주차-1; a rerun finds it by the notes it already links.
         var named: [String: UUID] = [:]
         for row in dump.notes.sorted(by: { ($0.date ?? "", $0.title) < ($1.date ?? "", $1.title) }) {
             guard let source = row.file else { continue }
@@ -108,8 +98,7 @@ public enum NotionNotesImporter {
                 kind = review ? .review : .rough
                 let key = "\(s.week)주차-\(s.index)"
                 let day = row.date.flatMap(LocalDate.init).flatMap { $0.date(in: calendar) }
-                // A session another Notion number already took is a different class: matching it again by date or
-                // name would fold two classes into one.
+                // 다른 노션 번호가 이미 가져간 회차는 다른 수업이다. 날짜나 이름으로 다시 맞추면 두 수업이 하나로 합쳐진다.
                 let claimed = Set(named.filter { $0.key != key }.values)
                 let index: Int
                 if let existing = file.sessions.firstIndex(where: { $0.roughNoteId == row.id || $0.reviewNoteId == row.id })
@@ -129,11 +118,11 @@ public enum NotionNotesImporter {
                     result.sessionsAdded += 1
                     index = file.sessions.count - 1
                 }
-                // A note already in course.json keeps the links its entry has: linking it here would set only the
-                // session's side, and would bring back a link the user removed.
+                // 이미 course.json에 있는 노트는 그 항목의 연결을 유지한다. 여기서 이으면 회차 쪽만 정해지고, 사용자가 지운
+                // 연결이 되살아난다.
                 if !existingNotes.contains(row.id) {
-                    // A session holds one note of each kind. One that has another keeps it, and this note comes in
-                    // without the session rather than as a second note the model refuses.
+                    // 회차는 종류마다 노트를 하나만 가진다. 이미 다른 노트를 가진 회차는 그 노트를 유지하고, 이 노트는 모델이 거절할
+                    // 둘째 노트가 되지 않도록 회차 없이 들어온다.
                     let s = file.sessions[index]
                     let taken = s.note(of: kind).map { $0 != row.id } ?? false
                     if taken {
@@ -164,7 +153,6 @@ public enum NotionNotesImporter {
         return result
     }
 
-    /// Notion's number for a class: its week and its place in that week by date. Only for matching Notion's titles.
     static func ordinal(of session: Session, in sessions: [Session]) -> (Int, Int) {
         let week = sessions.filter { $0.week == session.week }.sorted(by: Session.inOrder)
         return (session.week, (week.firstIndex { $0.id == session.id } ?? week.count) + 1)
@@ -177,8 +165,6 @@ public enum NotionNotesImporter {
         return d
     }
 
-    /// Top-level rows are components; every leaf under one becomes a score of that component.
-    /// A top-level row with its own score and no children is scored under its own name.
     static func mergeScores(
         _ rows: [NotionCourseDump.ScoreRow], into file: inout CourseFile, result: inout NotionMergeResult, device: DeviceID, now: Date
     ) {
@@ -196,8 +182,8 @@ public enum NotionNotesImporter {
             return chain
         }
 
-        // A row already stored as a component (an earlier import may have stored sub-items) keeps its scores;
-        // its parent is then not added on top, which would count the same weight twice.
+        // 이미 구성 요소로 저장한 행(앞선 가져오기가 하위 항목을 저장했을 수 있다)은 점수를 유지한다. 그 위에 부모를
+        // 더하면 같은 비중을 두 번 세므로 부모는 더하지 않는다.
         let covered = Set(rows.filter { existing($0) != nil }.flatMap { ancestors($0.id).dropFirst() })
         let hadComponents = !file.components.isEmpty
 
@@ -216,7 +202,7 @@ public enum NotionNotesImporter {
             result.componentsAdded += 1
         }
 
-        // Some courses give weights as points (summing to 1000); components are percentages.
+        // 어떤 과목은 비중을 점수(합이 1000)로 주지만, 구성 요소의 비중은 백분율이다.
         let total = file.components.map(\.weight).reduce(0, +)
         if !hadComponents, total > 150 {
             for i in file.components.indices { file.components[i].weight *= 100 / total }

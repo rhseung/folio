@@ -1,14 +1,11 @@
-/// The first run's steps (#453, 안 B). Only the folder can't be put off: every later step writes into it.
 public enum FirstRunStep: String, CaseIterable, Sendable, Hashable, Comparable {
     case welcome, folder, term, profile, permissions, claude
 
-    /// Steps that can be put off with "나중에" and done later in settings.
     public var isOptional: Bool { self > .folder }
 
     public var next: FirstRunStep? { Self.allCases.firstIndex(of: self).flatMap { Self.allCases.dropFirst($0 + 1).first } }
     public var previous: FirstRunStep? { Self.allCases.firstIndex(of: self).flatMap { $0 > 0 ? Self.allCases[$0 - 1] : nil } }
 
-    /// A step past the folder writes into the folder, so it opens only once one is open.
     public func isReachable(folderOpen: Bool) -> Bool { self <= .folder || folderOpen }
 
     public static func < (a: Self, b: Self) -> Bool {
@@ -16,20 +13,18 @@ public enum FirstRunStep: String, CaseIterable, Sendable, Hashable, Comparable {
     }
 }
 
-/// How the folder step starts: an empty folder that the term step fills, or a folder Folio has written before.
 public enum FolderStart: String, CaseIterable, Sendable, Hashable {
     case fresh, existing
 }
 
-/// What a picked folder holds, read from its top two levels: enough to tell a GIST folder from anything else without
-/// walking a whole iCloud tree on the first screen.
+// 첫 화면에서 iCloud 트리 전체를 훑지 않도록 위 두 단계만 읽는다. GIST 폴더인지 가리는 데는 이것으로 충분하다.
 public enum FolderKind: Hashable, Sendable {
     case empty
     case gist(semesters: Int, courses: Int)
     case other
 
     public init(_ tree: FolderTree) {
-        // Hidden files other than `.folio` are the system's (.DS_Store, Icon\r, a sync's markers), not the student's.
+        // `.folio`가 아닌 숨은 파일(.DS_Store, Icon\r, 동기화 표시 파일)은 시스템의 파일이고 학생의 파일이 아니다.
         let children = tree.children.filter { $0.name == StandardLayout.metadataFolder || !$0.name.hasPrefix(".") }
         guard !children.isEmpty else { self = .empty; return }
         let semesters = children.filter { !$0.isFile && SemesterFolder(name: $0.name) != nil }
@@ -39,14 +34,12 @@ public enum FolderKind: Hashable, Sendable {
                 !$0.isFile && ($0.name == StandardLayout.metadataFolder || $0.name == StandardLayout.creditedFolder)
             }
         guard marked else { self = .other; return }
-        // Credited courses sit under their source (`_Credited/<source>/<course>`), a level below a semester's.
         let sources = children.filter { !$0.isFile && $0.name == StandardLayout.creditedFolder }.flatMap(\.children)
         let courses = (semesters + sources).filter { !$0.isFile }.flatMap(\.children)
             .filter { !$0.isFile && StandardLayout.isCourseFolderName($0.name) }
         self = .gist(semesters: semesters.count, courses: courses.count)
     }
 
-    /// The start this folder fits, so picking a GIST folder from "새로 시작" opens it rather than refusing it.
     public var start: FolderStart? {
         switch self {
         case .empty: .fresh
@@ -55,8 +48,6 @@ public enum FolderKind: Hashable, Sendable {
         }
     }
 
-    /// Why the folder can't be used for `start`. A fresh start lays semester folders at the top, where a GIST folder
-    /// holds nothing else, so it needs the folder empty.
     public func problem(for start: FolderStart) -> FolderChoiceProblem? {
         switch (start, self) {
         case (.fresh, .empty), (.existing, .gist): nil
@@ -72,15 +63,13 @@ public enum FolderChoiceProblem: Hashable, Sendable {
     case alreadyFolio, notEmpty, empty, notFolio
 }
 
-/// Whether the remembered folder can be opened on this device. The files the app reads as it opens (transcript,
-/// settings, catalog, every course.json) must be here: in an iCloud folder not yet downloaded they are placeholders,
-/// and reading one would show an empty term over the real one.
+// 앱이 열 때 읽는 파일(transcript, settings, catalog, 모든 course.json)이 이 기기에 있어야 한다. 아직 내려받지
+// 않은 iCloud 폴더의 파일은 자리표시자라서, 읽으면 실제 학기 대신 빈 학기를 보인다.
 public enum FolderAvailability: Hashable, Sendable {
     case ready
     case missing
     case downloading(done: Int, total: Int)
 
-    /// `downloaded` holds one flag per file the app reads as it opens the folder.
     public init(exists: Bool, downloaded: [Bool]) {
         guard exists else { self = .missing; return }
         let done = downloaded.count { $0 }

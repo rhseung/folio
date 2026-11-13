@@ -30,7 +30,6 @@ extension CourseFile {
         }
     }
 
-    /// Assignments then exams, each with the ones counting toward the component first, then by date.
     public func scoreSources(for component: UUID) -> [ScoreSource] {
         let a = assignments.sorted { x, y in
             let (cx, cy) = (counts(.assignment(x.id), toward: component), counts(.assignment(y.id), toward: component))
@@ -51,13 +50,12 @@ extension CourseFile {
         }
     }
 
-    /// The assignment sheet shows one score per component, so a second score for the same assignment and component
-    /// would be hidden there and overwritten by its next save.
+    // 과제 시트는 구성 요소마다 점수를 하나만 보여 준다. 같은 과제와 구성 요소에 점수가 둘 있으면 둘째 점수는
+    // 시트에 보이지 않고, 다음에 저장할 때 덮어써진다.
     public func hasScore(_ source: ScoreSource, in component: UUID, other entry: UUID? = nil) -> Bool {
         source != .none && scores.contains { $0.id != entry && $0.componentId == component && $0.source == source }
     }
 
-    /// A score means the assignment was graded, whatever its status said, from whichever page the score came.
     public mutating func markGraded(_ assignment: UUID, device: DeviceID, now: Date) {
         guard scores.contains(where: { $0.assignmentId == assignment }),
             let i = assignments.firstIndex(where: { $0.id == assignment }), assignments[i].status != .graded

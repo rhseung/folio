@@ -1,12 +1,10 @@
 import Algorithms
 import Foundation
 
-/// `material_view` log event: the page a PDF was left at. Kept in the per-device log rather than a shared file
-/// because it changes on every reading; the newest event across devices wins, so the iPad resumes where the Mac stopped.
 public struct MaterialViewEvent: LogEvent, Equatable {
     public static let type = "material_view"
     public var materialId: UUID
-    /// 0-based page index.
+    // 0부터 센 쪽 번호다.
     public var page: Int
 
     public init(materialId: UUID, page: Int) {
@@ -16,8 +14,6 @@ public struct MaterialViewEvent: LogEvent, Equatable {
 }
 
 extension CourseFile {
-    /// Links a material to a session or changes its page range. The pages live in `Session.materials`;
-    /// `Material.sessionIds` mirrors the link so either side can be read alone.
     public mutating func linkMaterial(_ material: UUID, session: UUID, firstPage: Int? = nil, lastPage: Int? = nil) {
         guard let m = materials.firstIndex(where: { $0.id == material }), let s = sessions.firstIndex(where: { $0.id == session }) else {
             return
@@ -48,7 +44,6 @@ extension CourseFile {
         if linked { materials[m].examIds.append(exam) }
     }
 
-    /// What an exam gathers: the files in its own folder, then the ones linked to it from elsewhere (`Study`, `Inherited`).
     public func materials(for exam: Exam) -> [Material] { materials(of: .exam(exam.id)).map(\.material) }
 
     public func sessionLinks(of material: UUID) -> [(session: Session, link: SessionMaterial)] {
@@ -56,8 +51,6 @@ extension CourseFile {
             .compactMap { s in s.materials.first { $0.materialId == material }.map { (s, $0) } }
     }
 
-    /// A refresh usually registered that file as a new material when the original went missing; that duplicate
-    /// is dropped and everything that referred to it is moved here, so the user's links survive under the original ID.
     public mutating func relinkMaterial(
         _ id: UUID, to path: String, hash: String?, size: Int64?, bookmark: Data?, device: DeviceID, now: Date
     ) {

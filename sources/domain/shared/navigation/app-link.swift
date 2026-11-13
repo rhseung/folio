@@ -1,35 +1,24 @@
 import Foundation
 
-/// The address of anything the app shows: `folio://<kind>/<ID>[#page=N|#^block|#heading|#t=12:30]`, or a place that needs no
-/// ID (`folio://today`, `folio://settings/claude`). Every way in (a note's link, the search palette, the sidebar, the CLI, a window's history)
-/// names its target with this one value, so there is one place that opens it.
 public struct AppLink: Hashable, Sendable {
     public enum Kind: String, CaseIterable, Sendable {
         case today, grades, requirements, people, codes, settings
-        /// What each release changed (#415).
         case whatsNew = "whats-new"
-        /// What the LMS brought in, waiting to be added or dismissed (#132).
         case proposals
         case semester, course, session, unit, note, material, assignment, exam, card
         case problemSet = "problem-set"
         case person, recording
 
-        /// Where what a link of this kind names is kept, so where it is looked for.
         public enum Home: Sendable {
-            /// A page of the app itself, with no ID.
             case app
-            /// `transcript.json`: a semester.
             case transcript
-            /// `catalog.json`: a person.
             case catalog
-            /// A course's `course.json`.
             case course
-            /// A unit's quiz file in a course, read only when a link to it is opened.
             case quiz
         }
 
-        // No default in the switches below: a new kind doesn't compile until it says where it lives, what may follow
-        // its `#` and whether it has pages, and every switch over these facts (or over the kind) then has to place it.
+        // 아래 switch에는 default를 두지 않는다. 그래야 새 종류는 어디에 있는지, `#` 뒤에 무엇이 오는지, 페이지가
+        // 있는지를 정할 때까지 컴파일되지 않고, 이 값들(또는 종류)을 가르는 모든 switch가 새 종류를 다루게 된다.
         public var home: Home {
             switch self {
             case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals: .app
@@ -42,7 +31,6 @@ public struct AppLink: Hashable, Sendable {
 
         public var isPlace: Bool { home == .app }
 
-        /// What may follow `#`: a material's page, a note's block or heading, a recording's moment.
         public var anchors: Set<Anchor.Kind> {
             switch self {
             case .material: [.page]
@@ -54,7 +42,6 @@ public struct AppLink: Hashable, Sendable {
             }
         }
 
-        /// Whether a path part after it names a page of its own: a course's pages, settings' tabs.
         public var hasPages: Bool {
             switch self {
             case .course, .settings: true
@@ -66,11 +53,10 @@ public struct AppLink: Hashable, Sendable {
     }
 
     public enum Anchor: Hashable, Sendable {
-        /// 1-based, as a PDF viewer counts.
         case page(Int)
         case block(String)
         case heading(String)
-        /// Whole seconds into the audio: the address follows playback, and a fraction would make every tick a new link.
+        // 주소가 재생 위치를 따라가므로, 소수를 쓰면 틱마다 새 링크가 생긴다. 그래서 초 단위 정수로 둔다.
         case time(Int)
 
         public enum Kind: Hashable, Sendable {
@@ -96,18 +82,17 @@ public struct AppLink: Hashable, Sendable {
         }
     }
 
-    /// A course's own pages. Overview is the course itself and is never written.
     public enum CoursePage: String, CaseIterable, Sendable {
         case overview, sessions, units, notes, materials, quiz, cards, stats, problems, assignments, exams, grades
     }
 
-    /// A tab is a screen of its own, like a course's page, so it is a path and not an anchor: the window's history
-    /// compares links without anchors and would take two tabs for one step.
+    // 창의 기록은 앵커를 빼고 링크를 비교하므로, 탭을 앵커로 두면 두 탭을 한 걸음으로 본다. 그래서 탭은 과목의
+    // 페이지처럼 경로로 둔다.
     public enum SettingsPage: String, CaseIterable, Sendable {
         case general, record, classes = "class", notes, review, notifications, claude, lms, backup, about
 
-        /// Tabs before #416 merged or renamed them. Links in patch notes, notes and remembered tabs still name them,
-        /// so they are read as the tab that took them over and written by the new name.
+        // 합치거나 이름을 바꾸기 전의 탭 이름이다. 패치 노트, 노트, 기억한 탭의 링크가 아직 이 이름을 쓰므로, 이어받은
+        // 탭으로 읽고 새 이름으로 쓴다.
         static let formerNames: [String: SettingsPage] = ["profile": .record, "letters": .record, "recording": .classes]
 
         public init?(rawValue: String) {
@@ -119,12 +104,9 @@ public struct AppLink: Hashable, Sendable {
     public private(set) var kind: Kind
     public private(set) var id: UUID?
     public private(set) var page: CoursePage?
-    /// Nil opens the tab settings showed last.
     public private(set) var settingsPage: SettingsPage?
     public private(set) var anchor: Anchor?
 
-    /// Parts that don't belong to the kind are dropped, so two links to the same thing are equal: a place has no ID,
-    /// only a course and settings have pages, and anchors are the kind's own (`Kind.anchors`).
     private init(kind: Kind, id: UUID?, page: CoursePage?, settingsPage: SettingsPage? = nil, anchor: Anchor?) {
         self.kind = kind
         self.id = kind.isPlace ? nil : id
@@ -151,7 +133,6 @@ public struct AppLink: Hashable, Sendable {
         self.init(kind: kind, id: id, page: nil, anchor: anchor)
     }
 
-    /// The same target without its page, block or heading: what a window's history compares.
     public var withoutAnchor: AppLink { with(nil) }
 
     public func with(_ anchor: Anchor?) -> AppLink { AppLink(kind: kind, id: id, page: page, settingsPage: settingsPage, anchor: anchor) }
@@ -177,13 +158,13 @@ public struct AppLink: Hashable, Sendable {
 
     public var url: URL { URL(string: string)! }
 
-    /// Only unreserved ASCII stays as is. Everything else is escaped, so a link ends where links in text end (space,
-    /// `)`, `}`, `]`, quotes), a heading can't be read as a block (`^`) or a page (`=`), and a copied link pastes
-    /// unchanged into markdown, TeX and plain text.
+    // 예약되지 않은 ASCII만 그대로 두고 나머지는 모두 이스케이프한다. 그래야 링크가 글 속 링크가 끝나는 자리(공백,
+    // `)`, `}`, `]`, 따옴표)에서 끝나고, 제목이 블록(`^`)이나 쪽(`=`)으로 읽히지 않으며, 복사한 링크를 마크다운,
+    // TeX, 일반 텍스트에 붙여도 바뀌지 않는다.
     static let headingAllowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~")
 
-    /// Foundation escapes the `^` of a block when it makes the URL, so there `%5E` followed by a block ID is a block.
-    /// A heading that starts with `^` reads as a block from a URL; Obsidian, whose links these follow, has none.
+    // Foundation은 URL을 만들 때 블록의 `^`를 이스케이프하므로, URL에서 `%5E` 뒤에 블록 ID가 오면 블록이다. URL에서
+    // `^`로 시작하는 제목은 블록으로 읽는다. 이 링크가 따르는 Obsidian에는 그런 제목이 없다.
     public init?(url: URL) {
         var string = url.absoluteString
         if let hash = string.firstIndex(of: "#") {
@@ -195,8 +176,7 @@ public struct AppLink: Hashable, Sendable {
         self.init(string: string)
     }
 
-    /// Read by hand rather than through `URLComponents`, which refuses a raw heading with spaces or Hangul, the way
-    /// a note's wiki link puts it into the preview.
+    // `URLComponents`는 노트의 위키 링크가 미리보기에 넣는 대로 공백이나 한글이 든 날 제목을 거절하므로, 손으로 읽는다.
     public init?(string: String) {
         let prefix = "\(Self.scheme)://"
         guard string.count > prefix.count, string.prefix(prefix.count).lowercased() == prefix else { return nil }
@@ -229,7 +209,7 @@ public struct AppLink: Hashable, Sendable {
         self.init(kind: kind, id: id, page: page, anchor: Self.anchor(fragment, of: kind))
     }
 
-    /// A note's heading may read `t=1:00`, which the preview hands over raw, so only a kind that takes a moment reads one.
+    // 미리보기는 노트 제목 `t=1:00`을 그대로 넘기므로, 재생 위치를 받는 종류만 이 값을 읽는다.
     static func anchor(_ fragment: String, of kind: Kind) -> Anchor? {
         guard !fragment.isEmpty else { return nil }
         if let m = fragment.wholeMatch(of: /page=(\d{1,6})/), let n = Int(m.1) { return .page(n) }
@@ -241,26 +221,22 @@ public struct AppLink: Hashable, Sendable {
         return heading.isEmpty ? nil : .heading(heading)
     }
 
-    /// `12:30`, `1:02:03`: how a player shows the moment, so the address reads like it.
     public static func clock(_ seconds: Int) -> String {
         seconds >= 3600
             ? String(format: "%d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60)
             : String(format: "%d:%02d", seconds / 60, seconds % 60)
     }
 
-    /// `t=750`, `t=12:30` and `t=1:02:03` all name a moment; with one colon the first part is minutes.
     static func time(_ a: Substring?, _ b: Substring?, _ c: Substring) -> Anchor? {
         let parts = [a, b].compactMap { $0 }.compactMap { Int($0) } + [Int(c) ?? 0]
         return .time(parts.reduce(0) { $0 * 60 + $1 })
     }
 
-    /// The `^id` a note writes after a block (`BlockID` in FolioMarkdown).
     static func isBlockID(_ s: String) -> Bool { s.wholeMatch(of: /[A-Za-z0-9-]+/) != nil }
 
     // MARK: Links in text
 
-    /// `folio://` addresses written in text: a markdown link's target, TeX's `\href{…}`, or a bare address in a
-    /// code or text file. Ranges count UTF-16 units, as text views do.
+    // 범위는 텍스트 뷰처럼 UTF-16 단위로 센다.
     public static func links(in text: String) -> [(range: NSRange, link: AppLink)] {
         let ns = text as NSString
         return text.matches(of: Self.pattern).compactMap { m in
@@ -272,18 +248,15 @@ public struct AppLink: Hashable, Sendable {
         .filter { $0.range.location != NSNotFound && NSMaxRange($0.range) <= ns.length }
     }
 
-    /// The address under `offset` (UTF-16), for a ⌘-click.
     public static func link(in text: String, at offset: Int) -> AppLink? {
         links(in: text).first { $0.range.location <= offset && offset < NSMaxRange($0.range) }?.link
     }
 
-    /// Ends where a link written in text ends: whitespace, quotes, a closing bracket, or TeX's backslash.
     static var pattern: Regex<Substring> { #/[Ff][Oo][Ll][Ii][Oo]://[^\s<>"'`(){}\[\]\\|]+/# }
 
-    /// Punctuation closing the sentence an address ends is not part of it (`시험은 folio://exam/<ID>#page=12.`), except
-    /// in a heading anchor, which may end with it: kept on a page, time or block, it would no longer read as one and
-    /// open at the top. A note's preview links a bare address by the same rule (FolioMarkdown's
-    /// `HTMLRenderer.linkAddresses`).
+    // 주소가 끝나는 문장의 문장부호(`시험은 folio://exam/<ID>#page=12.`)는 주소에 넣지 않는다. 제목 앵커는 문장부호로
+    // 끝날 수 있으므로 예외이다. 쪽, 시각, 블록에 문장부호를 남기면 그 앵커로 읽히지 않아 맨 위에서 열린다. 노트
+    // 미리보기도 같은 규칙으로 맨 주소를 링크로 만든다(FolioMarkdown의 `HTMLRenderer.linkAddresses`).
     static func trimmed(_ written: String) -> String {
         if let hash = written.firstIndex(of: "#") {
             let anchor = written[written.index(after: hash)...]
@@ -327,8 +300,6 @@ extension AppLink {
         self.init(kind, item.id)
     }
 
-    /// The course whose `course.json` holds the target. Cards live in quiz files of their own, which the caller
-    /// reads; for them, and for what no course holds (`Kind.home` other than `.course`), this is nil.
     public func course(in files: [CourseFile]) -> UUID? {
         guard let id else { return nil }
         let holds: (CourseFile) -> Bool
@@ -351,17 +322,14 @@ extension AppLink {
 // MARK: Other addresses under the scheme
 
 extension AppLink {
-    /// `folio://action/…`: the Claude panel's buttons (copy, apply a proposal), links because its page runs no script.
-    /// Never a kind, so a button can't be read as something to open, and a link can't press a button.
+    // 패널 페이지는 스크립트를 실행하지 않으므로 Claude 패널의 버튼(복사, 제안 적용)은 링크이다. 버튼이 열 대상으로
+    // 읽히거나 링크가 버튼을 누르지 않도록, 이 이름은 종류가 되지 않는다.
     public static let actionHost = "action"
 
     public static func isAction(_ url: URL) -> Bool {
         url.scheme?.lowercased() == scheme && url.host?.lowercased() == actionHost
     }
 
-    /// `folio://note/<title>`, which a hand-written `[[제목]]` renders to. Not an `AppLink`: a title names a note only
-    /// within the course of the note it is written in, so the view showing that note looks it up (`[NoteFile].linked`).
-    /// Nil for anything else, an ID link to a note included.
     public static func noteTitle(_ url: URL) -> String? {
         guard url.scheme?.lowercased() == scheme, url.host?.lowercased() == Kind.note.rawValue, AppLink(url: url) == nil else { return nil }
         let title = String(url.path.dropFirst())
@@ -369,13 +337,9 @@ extension AppLink {
     }
 }
 
-/// Where a window (or later a pane) has been, for back and forward. Only moves between screens go in; changing data
-/// is undone by the actions, not here.
 public struct LinkHistory<Place: Equatable & Sendable>: Equatable, Sendable {
-    /// Oldest first.
     public private(set) var back: [Place] = []
     public private(set) var current: Place
-    /// Nearest first.
     public private(set) var forward: [Place] = []
     public let limit: Int
 
@@ -387,7 +351,6 @@ public struct LinkHistory<Place: Equatable & Sendable>: Equatable, Sendable {
     public var canGoBack: Bool { !back.isEmpty }
     public var canGoForward: Bool { !forward.isEmpty }
 
-    /// A new place drops what was ahead, as in a browser. The same place again adds nothing.
     public mutating func visit(_ place: Place) {
         guard place != current else { return }
         back.append(current)
@@ -396,7 +359,6 @@ public struct LinkHistory<Place: Equatable & Sendable>: Equatable, Sendable {
         current = place
     }
 
-    /// The same screen showing something else of its own (a PDF scrolled to another page): no new step.
     public mutating func replace(_ place: Place) {
         current = place
     }
@@ -422,5 +384,4 @@ public struct LinkHistory<Place: Equatable & Sendable>: Equatable, Sendable {
     }
 }
 
-/// A tab moved to a window of its own takes its history along.
 extension LinkHistory: Codable where Place: Codable {}

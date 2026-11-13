@@ -1,6 +1,5 @@
 import Foundation
 
-/// A file or opaque folder found in a course folder. `path` is relative to the course folder.
 public struct ScannedEntry: Hashable, Sendable {
     public var path: String
     public var isFolder: Bool
@@ -26,11 +25,8 @@ public struct ScannedEntry: Hashable, Sendable {
     }
 }
 
-/// Disk access the tracker needs, injected so the algorithm stays pure and testable.
 public struct TrackingIO {
-    /// Current relative path of the material's bookmark target if it still lies in the course folder.
     public var resolveBookmark: (Material) -> String?
-    /// SHA-256 hex of a file, or nil if it isn't available locally (e.g. not downloaded from iCloud).
     public var hash: (String) throws -> String?
     public var makeBookmark: (String) -> Data?
 
@@ -46,7 +42,6 @@ public struct TrackingIO {
 }
 
 public enum MaterialTracking {
-    /// The role for a path: a course-specific `folderRoles` override (longest matching folder) wins over the standard layout.
     public static func role(for path: String, overrides: [String: MaterialRole]) -> MaterialRole? {
         let match = overrides.keys
             .filter { path.hasPrefix($0.hasSuffix("/") ? $0 : $0 + "/") }
@@ -54,9 +49,6 @@ public enum MaterialTracking {
         return match.flatMap { overrides[$0] } ?? MaterialRole(path: path)
     }
 
-    /// Matches tracked materials to what is on disk:
-    /// same path → bookmark → content hash; unmatched materials become `missing` (links are kept),
-    /// and new files are registered, classified by folder when the folder has a role.
     public static func reconcile(
         _ materials: [Material], with scanned: [ScannedEntry], folderRoles: [String: MaterialRole] = [:],
         io: TrackingIO, device: DeviceID, now: Date
@@ -77,7 +69,7 @@ public enum MaterialTracking {
         for i in result.indices {
             let m = result[i]
             if let entry = unclaimed.removeValue(forKey: m.path) {
-                if entry.size != m.size {  // replaced in place
+                if entry.size != m.size {
                     result[i].size = entry.size
                     result[i].hash = entry.isFolder ? nil : try io.hash(entry.path)
                 }
@@ -130,9 +122,8 @@ public enum MaterialTracking {
         return result
     }
 
-    /// A `.tex` next to a same-named PDF is that PDF's source. Names are compared ignoring case, as the file system does.
-    /// The link is worked out again every time: a move keeps both ids, so a link kept from before would point a moved
-    /// `.tex` at the PDF in its old folder.
+    // 이름은 파일 시스템처럼 대소문자를 가리지 않고 비교한다. 옮겨도 두 ID가 그대로이므로, 전에 만든 연결을 남기면 옮긴
+    // `.tex`가 옛 폴더의 PDF를 가리킨다. 그래서 연결을 매번 다시 계산한다.
     static func linkTexSources(_ materials: inout [Material]) {
         let pdfs = Dictionary(
             materials.filter { MaterialFormat(path: $0.path) == .pdf }.map { ($0.path.lowercased(), $0.id) },
@@ -146,22 +137,18 @@ public enum MaterialTracking {
 }
 
 extension [Material] {
-    /// Found by name rather than `sourceOf`, which is only refreshed by tracking and lags behind a `material mv`.
+    // `sourceOf`는 추적할 때만 새로 고치므로 `material mv`를 바로 따라가지 못한다. 그래서 이름으로 찾는다.
     public func builtPDF(of source: Material) -> Material? {
         guard let pdf = MaterialFormat.builtPDF(of: source.path)?.lowercased() else { return nil }
         return first { $0.path.lowercased() == pdf }
     }
 
-    /// A `.tex` and the PDF built from it are one item in a list (#109): the PDF goes, and its `.tex` stands for both.
-    /// Only a PDF whose `.tex` is in the same list goes, so a list split by role never loses a PDF to a source it
-    /// doesn't show. A missing PDF stays: its row is where it gets re-pointed or dropped.
+    // 같은 목록에 `.tex`가 있는 PDF만 뺀다. 그래야 역할별로 나눈 목록이 보이지 않는 원본 때문에 PDF를 잃지 않는다.
     public func withoutBuiltPDFs() -> [Material] {
         let hidden = Set(builtPDFsHidden().values.map(\.id))
         return filter { !hidden.contains($0.id) }
     }
 
-    /// The PDFs `withoutBuiltPDFs` leaves out, by the `.tex` whose row stands for them there. That row is the only way
-    /// left to the PDF's own links, renaming and trashing, so it reaches exactly these and no PDF shown in its own row.
     public func builtPDFsHidden() -> [Material.ID: Material] {
         var hidden: [Material.ID: Material] = [:]
         for source in self {

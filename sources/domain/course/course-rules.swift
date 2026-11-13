@@ -1,10 +1,9 @@
 import Foundation
 
-// Rules every saved file keeps, whichever action wrote it. Checked on the whole file rather than in each action,
-// since the app hides what breaks them but `folio run` takes whole entities and can reach any field.
+// 앱은 규칙을 어기는 값을 숨기지만 `folio run`은 엔티티 전체를 받아 어느 필드에든 닿는다. 그래서 어느 액션이 썼든
+// 저장하는 파일 전체에서 규칙을 검사한다.
 
 extension Course {
-    /// Checks a course record keeps wherever it is stored: in its course file, or in the transcript when it has no folder.
     static func members<Doc: Sendable>() -> [Member<Doc, Course>] {
         [
             NonEmpty(\.title, String(localized: .courseTitleEmpty)),
@@ -18,7 +17,6 @@ extension Course {
                 c.schedule.allSatisfy { $0.link.map { OnlineLink.url($0) != nil } ?? true }
             },
             Ref(\.semesterId, to: Semester.self, onDelete: .restrict),
-            // Passes in the transcript, which has no materials: a course there has no folder.
             Ref(\.syllabusMaterialId, to: Material.self, as: String(localized: .modelLabelSyllabus), onDelete: .nullify),
             Check("Course.semester", String(localized: .ruleCourseSemester)) { c, _, w in
                 guard let t = w.transcript, let s = c.semesterId else { return true }
@@ -50,7 +48,6 @@ extension Course {
 }
 
 extension Session {
-    /// The session's materials as ids, so the model can treat them like any other list of pointers.
     var materialIds: [UUID] {
         get { materials.map(\.materialId) }
         set { materials = materials.filter { newValue.contains($0.materialId) } }
@@ -58,8 +55,6 @@ extension Session {
 }
 
 extension ExamPlanItem {
-    // A target is one pointer whose kind says what it points at, so the model sees it as two optional pointers.
-    // Clearing one keeps the item as a plain dated to-do.
     var unitTarget: UUID? {
         get { target.flatMap { $0.kind == .problemSet ? nil : $0.id } }
         set { pointTarget(unitTarget, to: newValue) }
@@ -77,8 +72,6 @@ extension ExamPlanItem {
 }
 
 extension ProblemSet {
-    /// Every problem's units as one list. Problems have no ids of their own, so the model reaches them through the set;
-    /// setting it keeps on each problem only the units still listed.
     var problemUnitIds: [UUID] {
         get { problems.flatMap(\.unitIds) }
         set { for i in problems.indices { problems[i].unitIds = problems[i].unitIds.filter(newValue.contains) } }
@@ -108,7 +101,6 @@ extension CourseFile: Document {
         Items(\.sessions, noun: String(localized: .modelNounSession), name: { s, f in f.title(of: s, calendar: .current) }) {
             Refs(\.unitIds, to: Unit.self, onDelete: .nullify)
             Refs(\.materialIds, to: Material.self, onDelete: .nullify)
-            // The session is the only side that holds the link, so the note it names must be of that slot's kind.
             Ref(\.roughNoteId, to: NoteEntry.self, onDelete: .nullify)
             Ref(\.reviewNoteId, to: NoteEntry.self, onDelete: .nullify)
             Check("Session.noteKind", String(localized: .ruleSessionNoteKind)) { s, f in
@@ -202,20 +194,16 @@ extension CourseFile: Document {
         Items(\.notes, noun: String(localized: .modelNounNote), name: \.path) {
             Refs(\.unitIds, to: Unit.self, onDelete: .nullify)
             Ref(\.examId, to: Exam.self, onDelete: .nullify)
-            // Notes are found by their file, so two entries on one file would give it two sets of properties.
             Check("NoteEntry.path", String(localized: .ruleNotePath)) { n, f in f.notes.count { $0.path == n.path } == 1 }
-            // Other kinds read their units from their session or exam; a stored copy would go stale and resurface.
             Check("NoteEntry.units", String(localized: .ruleNoteUnits)) { n, _ in n.kind == .unit || n.unitIds.isEmpty }
         }
-        // A rough note is taken during one class, so a second session pointing at it would give it two. A review note
-        // may cover several classes reviewed at once; `Session.noteKind` keeps one note from filling both slots.
         Rule("NoteEntry.session") { f, _ in
             let pointers = f.sessions.compactMap(\.roughNoteId)
             let counts = Dictionary(pointers.map { ($0, 1) }, uniquingKeysWith: +)
             return f.notes.filter { (counts[$0.id] ?? 0) > 1 }.map { ($0.id, String(localized: .ruleNoteSession($0.path))) }
         }
-        // One violation per pair, on the later class: a save that adds a range fails on that pair alone, and the
-        // message names both classes, so whichever the user was editing, the other one is in it.
+        // 쌍마다 위반을 하나만 내고 늦은 수업에 붙인다. 범위를 더하는 저장은 그 쌍 하나로만 실패하고, 메시지가 두 수업을
+        // 모두 말하므로 사용자가 어느 쪽을 고치고 있든 다른 쪽이 메시지에 있다.
         Rule("Session.progressOverlap") { f, _ in
             f.progressOverlaps().map { o in
                 let file = f.materials.first { $0.id == o.material }.map { URL(fileURLWithPath: $0.path).lastPathComponent } ?? ""
@@ -268,7 +256,6 @@ extension Transcript: Document {
             }
         }
         Items(\.unfiledCourses, noun: String(localized: .modelNounCourse), name: \.title) { Course.members() }
-        // Two credited terms with one source would share `_Credited/<source>`, and neither would own its courses.
         Rule("Transcript.creditedSources") { t, _ in
             let credited = t.semesters.filter { $0.term == .credited && $0.source != nil }
             return credited.filter { s in credited.contains { $0.id != s.id && $0.source == s.source } }
@@ -301,7 +288,6 @@ extension Semester {
         return "\(year) \(term)"
     }
 
-    /// Monday-based weeks from the start to the end, as the semester screen counts them.
     var weekCount: Int? {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC")!

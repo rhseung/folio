@@ -1,14 +1,8 @@
 import Foundation
 
-/// The course's sessions read down one timeline: each week, its sessions and exams in date order, and a month marker
-/// wherever the month turns (the timeline shows only the day). Classes the schedule still holds come in as `planned`,
-/// unsaved sessions placed in their weeks like any other. An exam held during a class rides on that class instead of
-/// taking a row; only the times decide this, never what the exam is.
 public enum SessionTimeline {
     public enum Item: Identifiable, Sendable {
-        /// With the month when the week opens one.
         case week([Session], month: Date?)
-        /// A month that begins partway through a week.
         case month(Date)
         case exam(Exam, Date)
         case session(Session, exams: [Exam])
@@ -42,7 +36,6 @@ public enum SessionTimeline {
         }
         let dated = file.exams.compactMap { e in e.start.map { (exam: e, date: $0) } }.sorted { $0.date < $1.date }
 
-        // A cancelled class held nothing, so an exam in its slot stands on its own.
         var onClass: [UUID: [Exam]] = [:]
         var free: [(exam: Exam, date: Date)] = []
         let classes = (file.sessions + planned).filter { !$0.isCancelled }.sorted(by: Session.inOrder)
@@ -77,7 +70,7 @@ public enum SessionTimeline {
             while let e = pending.first, calendar.startOfWeek(containing: e.date) == week {
                 rows.append((e.date, exam(e))); pending.removeFirst()
             }
-            // Index breaks ties so sessions keep Session.inOrder; `sort` alone isn't stable.
+            // `sort`는 안정 정렬이 아니므로, 같은 값은 인덱스로 순서를 정해 `Session.inOrder`의 순서를 지킨다.
             rows = rows.enumerated().sorted { ($0.element.date, $0.offset) < ($1.element.date, $1.offset) }.map(\.element)
             items.append(.week(sessions, month: opens(rows[0].date) ? rows[0].date : nil))
             for (i, row) in rows.enumerated() {
@@ -90,19 +83,14 @@ public enum SessionTimeline {
 }
 
 extension CourseFile {
-    /// Past classes still owing their review note, the count the sessions page warns with.
     public func missingReviewNotes(at now: Date) -> Int {
         sessions.filter { needsReviewNote($0, at: now) }.count
     }
 
-    /// Classes still to meet: saved ones ahead that are not 휴강 (an absence marked ahead still meets) and the
-    /// timetable's planned ones not saved yet. The planner leaves out any slot a session already fills, so the two
-    /// never count the same class.
     public func remainingClasses(after now: Date, planned: [Session]) -> Int {
         sessions.filter { $0.date > now && !$0.isCancelled }.count + planned.filter { $0.date > now && !$0.isCancelled }.count
     }
 
-    /// Held classes no unit covers, newest first. None while the course has no units: there is nothing to link yet.
     public func sessionsNeedingUnits(at now: Date) -> [Session] {
         units.isEmpty ? [] : sessions.filter { needsUnits($0, at: now) }.sorted { $0.date > $1.date }
     }

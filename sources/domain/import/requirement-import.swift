@@ -1,6 +1,5 @@
 import Foundation
 
-/// A requirement row transcribed from the handbook. `parent` is a category name.
 public struct RequirementSpec: Codable, Sendable, Equatable {
     public var name: String
     public var group: String
@@ -11,13 +10,10 @@ public struct RequirementSpec: Codable, Sendable, Equatable {
     public var minCount: Int?
     public var maxSharedCredits: Double?
     public var rule: String?
-    /// Renames a category instead of adding one, so courses already in it stay put.
     public var renamedFrom: String?
-    /// Course code prefix of the program this belongs to (`EC`); nil for common requirements.
     public var program: String?
 }
 
-/// A requirements file: the student's track plus the categories. A bare array of specs is read as categories only.
 public struct RequirementFile: Codable, Sendable {
     public struct Program: Codable, Sendable {
         public var code: String
@@ -45,16 +41,16 @@ public enum RequirementImporter {
         public var categories: [Category]
         public var added: [String]
         public var changed: [String]
-        /// Existing categories the file doesn't mention. They are kept: courses may still point at them.
+        // 과목이 아직 가리킬 수 있으므로, 파일에 없는 기존 카테고리도 남긴다.
         public var untouched: [String]
     }
 
-    /// The undergraduate code for a prefix; the code table also lists the graduate one under the same prefix.
+    // 코드 표는 같은 접두어 아래에 대학원 코드도 함께 적으므로 학부 코드를 고른다.
     public static func code(_ prefix: String, in codes: [CourseCode]) -> CourseCode? {
         codes.first { $0.prefix == prefix && $0.program == "학사과정" } ?? codes.first { $0.prefix == prefix }
     }
 
-    /// Matches by name (or `renamedFrom`), keeping each category's ID so course assignments survive.
+    // 과목 배정이 유지되도록, 이름(또는 `renamedFrom`)으로 맞춰 각 카테고리의 ID를 지킨다.
     public static func merge(_ rows: [RequirementSpec], into existing: [Category], codes: [CourseCode] = [], device: DeviceID, now: Date)
         -> Result
     {
@@ -84,7 +80,7 @@ public enum RequirementImporter {
             seen.insert(c.id)
         }
 
-        // Parents last: a row may name a parent that appears after it.
+        // 행이 자기보다 뒤에 나오는 부모를 가리킬 수 있으므로, 부모는 모든 행을 넣은 뒤에 잇는다.
         for row in rows {
             guard let i = categories.firstIndex(where: { $0.name == row.name }) else { continue }
             let parent = row.parent.flatMap { name in categories.first { $0.name == name }?.id }

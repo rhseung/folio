@@ -1,53 +1,38 @@
 import Foundation
 
-/// What a class's wrap-up asks about, in the order it asks. Announcements made in class (new assignments, exam dates)
-/// are offered too but never missing: most classes have none.
 public enum WrapUpItem: String, CaseIterable, Sendable {
     case progress, units, note, attendance
 }
 
 extension CourseFile {
-    /// Whether the class's sheet is its wrap-up: the class is over, or a recording of it has stopped (`recorded`: one
-    /// that just did and isn't saved yet). Before that the sheet is opened to link units, a note or the class's link
-    /// ahead (2026-11-10). Real time, not the study day: the class ends at its own end.
     public func isWrappingUp(_ session: Session, recorded: Bool = false, at now: Date, classMinutes: Int, calendar: Calendar) -> Bool {
         recorded || recordings.contains { $0.sessionId == session.id }
             || session.isOver(at: now, schedule: course.schedule, classMinutes: classMinutes, calendar: calendar)
     }
 
-    /// Saving the class's sheet counts as wrapping it up once the sheet is its wrap-up, by the same rule the sheet
-    /// opened with: every wrap-up field was there to see. A class still ahead or under way, or one that didn't happen,
-    /// has nothing to wrap up yet; counting a save made during the class (to link its units) would stop the today card
-    /// asking for its progress.
+    // 수업 중에 단원을 연결하려고 저장한 것까지 정리로 세면, 오늘 화면의 카드가 그 수업의 진도를 더는 묻지 않는다.
     public func savingWrapsUp(_ session: Session, recorded: Bool = false, at now: Date, classMinutes: Int, calendar: Calendar) -> Bool {
         !session.isCancelled && isWrappingUp(session, recorded: recorded, at: now, classMinutes: classMinutes, calendar: calendar)
     }
 
-    /// What `session` has nothing for yet, in asking order. `recorded`: a recording of it has just stopped and isn't
-    /// saved yet. Progress is asked only of a course with lecture files to go through.
     public func wrapUpGaps(of session: Session, recorded: Bool = false) -> [WrapUpItem] {
         let lectures = Set(lectureFiles.map(\.id))
         return WrapUpItem.allCases.filter { item in
             switch item {
             case .progress: !lectures.isEmpty && !session.materials.contains { lectures.contains($0.materialId) && $0.pages != nil }
             case .units: session.unitIds.isEmpty
-            // A review note means the class was written up, whether or not notes were taken during it.
             case .note: session.roughNoteId == nil && session.reviewNoteId == nil
-            // Present is stored as no entry, so it is known only from a recording, an entry, or a saved wrap-up.
+            // 출석은 기록이 없는 것으로 저장하므로, 녹음이나 출결 기록, 저장한 정리로만 알 수 있다.
             case .attendance: !attendanceKnown(of: session, recorded: recorded)
             }
         }
     }
 
-    /// Attended for certain: someone recorded the class, or said how they attended.
     public func attendanceKnown(of session: Session, recorded: Bool = false) -> Bool {
         recorded || session.isWrappedUp || attendance.contains { $0.sessionId == session.id }
             || recordings.contains { $0.sessionId == session.id }
     }
 
-    /// Classes the today screen asks to wrap up at `now`: ended, not cancelled, not wrapped up, with something missing,
-    /// and only until the course's next class starts. After that the class is asked about from its menu only: a list
-    /// that kept every class of the term would be ignored.
     public func classesToWrapUp(at now: Date, classMinutes: Int, calendar: Calendar) -> [Session] {
         sessions.filter { s in
             guard !s.isCancelled, !s.isWrappedUp,
@@ -59,9 +44,6 @@ extension CourseFile {
         .sorted(by: Session.inOrder)
     }
 
-    /// Classes of earlier study days still left to wrap up, oldest first: classes from before wrap-ups existed were
-    /// never asked about, so their gaps are not choices. A saved wrap-up ends the question even with gaps left, since
-    /// what it left empty was. Today's classes are the today card's and the recording prompt's until the day turns.
     public func unwrappedPastSessions(at now: Date, settings: Settings, calendar: Calendar) -> [Session] {
         sessions.filter { isLeftUnwrapped($0, at: now, settings: settings, calendar: calendar) }.sorted(by: Session.inOrder)
     }
@@ -72,8 +54,6 @@ extension CourseFile {
             && !wrapUpGaps(of: s).isEmpty
     }
 
-    /// When the course meets next after `session`: its next session that isn't cancelled, or the next weekly class
-    /// no cancelled session stands for, whichever is sooner. Nil for a course with neither.
     public func nextClassStart(after session: Session, calendar: Calendar) -> Date? {
         let later = sessions.filter { !$0.isCancelled && $0.date > session.date }
             .map(\.date).min()
@@ -82,7 +62,6 @@ extension CourseFile {
         return [later, slot].compactMap { $0 }.min()
     }
 
-    /// The first weekly class starting after `date`, two weeks ahead at most, other than those at `skipping`.
     static func nextSlot(in schedule: [ClassTime], after date: Date, skipping: Set<Date>, calendar: Calendar) -> Date? {
         guard !schedule.isEmpty else { return nil }
         let day = calendar.startOfDay(for: date)
@@ -97,8 +76,6 @@ extension CourseFile {
         return nil
     }
 
-    /// The notes a wrap-up offers as a class's note, newest first: those no class holds yet. A review note is written
-    /// after its classes and an exam's note is the exam's, so neither is offered.
     public var classNoteChoices: [NoteEntry] {
         let taken = Set(sessions.flatMap { [$0.roughNoteId, $0.reviewNoteId].compactMap { $0 } })
         return notes.filter { !taken.contains($0.id) && $0.kind != .review && $0.examId == nil }
@@ -107,19 +84,11 @@ extension CourseFile {
 }
 
 extension Session {
-    /// Whether the sheet starts a suggested range checked. A file the class already links that nothing gives both
-    /// ends for keeps its link as it is: checked, it would hold the save until an end is picked, for a class that
-    /// linked the file whole on purpose. Unchecked leaves a link alone, so saving with it unchecked writes nothing.
-    /// Until the class is wrapped up (`CourseFile.isWrappingUp`) only the pages it has saved start checked
-    /// (2026-11-10): the sheet is opened then to link units or a note ahead, and a suggestion checked would hold that
-    /// save until an end the class hasn't reached is picked, or write pages it is still going through.
     public func wrapUpChecks(_ range: SessionMaterial, wrappingUp: Bool) -> Bool {
         guard wrappingUp else { return range.firstPage != nil && range.lastPage != nil && materials.contains(range) }
         return (range.firstPage != nil && range.lastPage != nil) || !materials.contains { $0.materialId == range.materialId }
     }
 
-    /// The ranges among `ranges` the class doesn't have yet. The wrap-up shows every class's current pages, so a
-    /// save writes only what was changed or newly suggested.
     public func changedRanges(_ ranges: [SessionMaterial]) -> [SessionMaterial] {
         ranges.filter { r in
             guard let had = materials.first(where: { $0.materialId == r.materialId }) else { return true }
@@ -127,9 +96,8 @@ extension Session {
         }
     }
 
-    /// The files whose links a save takes off: those the class links whose rows started checked and were unchecked.
-    /// A row that started unchecked (a file linked whole, kept as it is; a suggestion while the class is on) writes
-    /// nothing however it is left, or opening the sheet and saving would drop links nobody touched.
+    // 처음에 꺼진 행(그대로 둔 파일 전체 연결, 수업 중의 제안)은 어떻게 두든 아무것도 쓰지 않는다. 그렇지 않으면
+    // 시트를 열고 저장만 해도 아무도 건드리지 않은 연결이 사라진다.
     public func droppedLinks(started: Set<UUID>, kept: Set<UUID>) -> [UUID] {
         materials.map(\.materialId).filter { started.contains($0) && !kept.contains($0) }
     }

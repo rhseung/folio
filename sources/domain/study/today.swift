@@ -1,12 +1,10 @@
 import Foundation
 
-/// `study_session` log event: time a course screen was in front.
 public struct StudySessionEvent: LogEvent, Equatable {
     public static let type = "study_session"
     public var courseId: UUID
     public var start: Date
     public var end: Date
-    /// Which screen: `note`, `ink`, `quiz`, `review`, `pdf`, `manual`, ...
     public var screen: String
 
     public init(courseId: UUID, start: Date, end: Date, screen: String) {
@@ -18,8 +16,6 @@ public struct StudySessionEvent: LogEvent, Equatable {
 }
 
 public enum StudyTime {
-    /// Seconds per study day for one course. Overlapping records (two devices open at once) count once;
-    /// a record is credited to the study day it started in.
     public static func perDay(_ sessions: [StudySessionEvent], settings: Settings, calendar: Calendar) -> [LocalDate: TimeInterval] {
         var merged: [(start: Date, end: Date)] = []
         for s in sessions.filter({ $0.end > $0.start }).sorted(by: { $0.start < $1.start }) {
@@ -34,7 +30,6 @@ public enum StudyTime {
         return result
     }
 
-    /// `40분`, `2시간`, `1시간 20분`.
     public static func label(_ seconds: TimeInterval) -> String {
         let minutes = Int(seconds / 60)
         return minutes < 60
@@ -46,8 +41,6 @@ public enum StudyTime {
 }
 
 extension CourseFile {
-    /// Absences so far and the cap the next one reaches, when that next absence would reach it.
-    /// Marks ahead of their class don't count yet.
     public func capOneAway(at now: Date) -> (absences: Int, cap: AttendanceCap)? {
         let absences = GradeCalculator.absences(in: heldAttendance(at: now), policy: policy)
         guard let cap = GradeCalculator.nextCap(absences: absences, policy: policy), cap.absences == absences + 1 else { return nil }
@@ -59,7 +52,6 @@ public struct TodaySummary: Sendable {
     public struct ExamItem: Sendable, Equatable {
         public var courseId: UUID
         public var exam: Exam
-        /// Days from today's study day to the exam's calendar day (0 = today).
         public var dDay: Int
     }
 
@@ -78,17 +70,14 @@ public struct TodaySummary: Sendable {
     public var exams: [ExamItem]
     public var deadlines: [DeadlineItem]
     public var classesToday: [SessionItem]
-    /// Past sessions with no review note yet, oldest first.
     public var missingReviewNotes: [SessionItem]
 
-    /// How many days ahead exams are listed.
     public static let examHorizon = 30
 
     public static func build(courses: [CourseFile], now: Date, settings: Settings, calendar: Calendar, examHorizonDays: Int = examHorizon)
         -> TodaySummary
     {
         let today = settings.studyDay(of: now, calendar: calendar)
-        // The study day runs from the boundary to the next boundary, in real time.
         let dayStart = calendar.date(byAdding: .minute, value: settings.dayBoundaryMinutes, to: today.date(in: calendar)!)!
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)!
 
@@ -105,15 +94,14 @@ public struct TodaySummary: Sendable {
             }
 
             for a in file.assignments where a.status.isOpen {
-                // Deadlines use real time: one at 01:00 tonight is still "today" only if it hasn't passed. Every one still
-                // ahead shows, however far: a long project is due as surely as tomorrow's homework.
+                // 마감은 실제 시각을 쓴다. 오늘 밤 01:00 마감은 지나지 않았을 때만 오늘 할 일이다.
                 guard let due = a.due, due >= now else { continue }
                 deadlines.append(DeadlineItem(courseId: id, assignment: a, isToday: due < dayEnd))
             }
 
             for s in file.sessions where !s.isCancelled {
                 if s.date >= dayStart && s.date < dayEnd { classes.append(SessionItem(courseId: id, session: s)) }
-                // From the moment the class ends, not the next study day: the review note is written the same day.
+                // 복습 노트는 같은 날 쓰므로, 다음 공부일이 아니라 수업이 끝난 순간부터 센다.
                 if file.needsReviewNote(s, at: now), (s.end(schedule: file.course.schedule, calendar: calendar) ?? s.date) <= now {
                     missing.append(SessionItem(courseId: id, session: s))
                 }
@@ -131,15 +119,12 @@ public struct TodaySummary: Sendable {
 }
 
 extension TodaySummary {
-    /// The one thing a course's sidebar row says about its day.
     public enum CourseHint: Sendable, Equatable {
         case dueToday(Assignment)
         case nextClass(Date)
         case exam(days: Int)
     }
 
-    /// Most pressing first: something due today, then the course's next class still ahead today, then an exam within
-    /// `examWithinDays`. The class under way isn't one: its row already shows the time left.
     public func hint(for courseId: UUID, now: Date, examWithinDays: Int = 7) -> CourseHint? {
         if let due = deadlines.first(where: { $0.courseId == courseId && $0.isToday }) { return .dueToday(due.assignment) }
         if let next = classesToday.first(where: { $0.courseId == courseId && $0.session.date > now }) {
@@ -159,8 +144,6 @@ extension TodaySummary {
         }
     }
 
-    /// The class under way at `now`. Its end is its own (a makeup's) or else the weekly slot's it starts in, so a session
-    /// with neither, a date-only import, never is.
     public static func ongoingClass(in courses: [CourseFile], at now: Date, calendar: Calendar) -> OngoingClass? {
         for file in courses {
             for s in file.sessions where !s.isCancelled && s.date <= now {

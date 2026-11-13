@@ -1,11 +1,8 @@
 import Foundation
 
-/// Where a class's review stands, as its menu checks it and its sheet picks it. Two values without a note (owed or
-/// not), two with one (being written or written), so the menu needs a single check row whichever the class has.
 public enum ClassReview: Hashable, Sendable, CaseIterable {
     case needed, notNeeded, writing, written
 
-    /// The values the class can move between: a note's existence isn't a choice here, it is made or linked.
     public var choices: [ClassReview] {
         switch self {
         case .needed, .notNeeded: [.needed, .notNeeded]
@@ -13,7 +10,6 @@ public enum ClassReview: Hashable, Sendable, CaseIterable {
         }
     }
 
-    /// The menu's one check row names the checked value: 복습 필요 없음 without a note, 작성 완료 with one.
     public var isChecked: Bool { self == .notNeeded || self == .written }
 
     public var toggled: ClassReview {
@@ -25,7 +21,6 @@ public enum ClassReview: Hashable, Sendable, CaseIterable {
         }
     }
 
-    /// The session flag a move to this value writes. The other flag is left alone.
     public var skipsReview: Bool? {
         switch self {
         case .needed: false
@@ -43,26 +38,21 @@ public enum ClassReview: Hashable, Sendable, CaseIterable {
     }
 }
 
-/// What a saved class's menu can hold. Rows for things the class doesn't have are left out rather than greyed: no
-/// open-note row without the note, no recording row without a recording.
 public enum SessionMenuCommand: ItemCommand {
-    /// The class on its own screen, from anywhere else.
     case open
     case join
     case openNote(NoteKind)
     case makeReviewNote
     case play(UUID)
-    /// Several recordings: a submenu, one row each.
     case recordings([UUID])
     case record
-    /// The one review row, holding the value it toggles from.
     case review(ClassReview)
     case edit
     case unlink(unit: UUID)
     case share
     case remove
 
-    // No default: a new command doesn't compile until it says where it goes.
+    // `default`를 두지 않는다. 그래야 새 명령은 어느 무리에 들지 정할 때까지 컴파일되지 않는다.
     public var group: MenuGroup {
         switch self {
         case .open, .join, .openNote, .makeReviewNote, .play, .recordings: .open
@@ -76,21 +66,17 @@ public enum SessionMenuCommand: ItemCommand {
     }
 }
 
-/// The groups of a class's one sheet, which edits everything a class has (#403).
 public enum SessionSection: String, CaseIterable, Sendable {
     case progress, units, notes, attendance, info
 }
 
 extension Session {
-    /// Before its end the class is still to be held, so its menu offers what holding it takes; after, what follows it.
     public func isOver(at now: Date, schedule: [ClassTime], classMinutes: Int, calendar: Calendar) -> Bool {
         now >= expectedEnd(schedule: schedule, classMinutes: classMinutes, calendar: calendar)
     }
 }
 
 extension CourseFile {
-    /// Nil when nothing about review is asked of the class: it didn't happen, or the course is left out of review.
-    /// A note made anyway still has its state.
     public func review(of session: Session) -> ClassReview? {
         if session.reviewNoteId != nil { return session.reviewNoteUnfinished ? .writing : .written }
         guard course.reviews != false, !session.isCancelled else { return nil }
@@ -101,8 +87,6 @@ extension CourseFile {
         recordings.filter { $0.sessionId == session.id }
     }
 
-    /// A class's menu at `now`, in menu order. Ahead and under way: joining, the rough note, recording. Once over: the
-    /// notes, the review check and the recordings. Editing, sharing and deleting always.
     public func commands(for session: Session, at now: Date, host: MenuHost, classMinutes: Int, calendar: Calendar) -> [SessionMenuCommand]
     {
         var commands: [SessionMenuCommand] = []
@@ -129,9 +113,6 @@ extension CourseFile {
         return commands.inMenuOrder()
     }
 
-    /// The sheet's groups for a class of `kind` starting at `start`, or one being added (`session` nil). Once the class
-    /// has begun the sheet asks what it covered first and its time last; ahead of it, the time comes first and there is
-    /// no progress yet. A cancelled class has only its time and kind.
     public func sections(of session: Session?, kind: Session.Kind, start: Date, at now: Date, takesAttendance: Bool) -> [SessionSection] {
         if kind == .cancelled { return [.info] }
         let attendance: [SessionSection] = takesAttendance ? [.attendance] : []

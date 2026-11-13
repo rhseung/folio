@@ -3,7 +3,6 @@ import Foundation
 public enum MaterialRole: String, Codable, Sendable, CaseIterable {
     case syllabus, lecture, exercise, textbook, inherited, assignment, lab, exam, study, archive, other
 
-    /// The role implied by where a file sits (`path` relative to the course folder), or nil outside role folders.
     public init?(path: String) {
         let parts = path.split(separator: "/").map(String.init)
         guard parts.count >= 2, let folder = CourseFolder(rawValue: parts[0]) else { return nil }
@@ -28,7 +27,6 @@ public enum MaterialRole: String, Codable, Sendable, CaseIterable {
 }
 
 public enum MaterialKind: String, Codable, Sendable, CaseIterable {
-    /// `pastExam` is a past exam paper or its solution, wherever it sits; usually under `Inherited`.
     case problem, solution, submission, slides, book, syllabus, pastExam, other
 }
 
@@ -36,31 +34,24 @@ public enum MaterialStatus: String, Codable, Sendable, CaseIterable {
     case classified, unclassified, missing, ignored
 }
 
-/// A tracked file (or code-project folder) in a course folder. Identified by `id`; `path` is only the last place it was seen.
 public struct Material: Entity {
     public var id: UUID
     public var createdAt: Date
     public var updatedAt: Date
     public var updatedBy: DeviceID
 
-    /// Relative to the course folder, `/`-separated.
     public var path: String
     public var isFolder: Bool
     public var bookmark: Data?
-    /// SHA-256 hex. Nil until the file is downloaded from iCloud, and for folders.
     public var hash: String?
     public var size: Int64?
     public var role: MaterialRole?
     public var kind: MaterialKind?
-    /// The PDF this `.tex` file is the source of.
     public var sourceOf: UUID?
-    /// For a PDF: its hash when `material build` last wrote it. Any other hash means the PDF came from somewhere else
-    /// (a professor, another TeX), and a build asks before replacing it.
     public var builtHash: String?
     public var solutionOf: UUID?
     public var sessionIds: [UUID]
     public var unitIds: [UUID]
-    /// Exams this file was made or kept for. A file in an exam's own folder belongs to it without a link.
     public var examIds: [UUID]
     public var status: MaterialStatus
 
@@ -88,8 +79,8 @@ public struct Material: Entity {
 }
 
 extension MaterialRole {
-    /// Roles before folders were split by origin (course.json v4). The v5 migration renames them, but an older
-    /// migration that decodes the whole file runs first and must read them too.
+    // 폴더를 출처별로 나누기 전(course.json v4)의 역할 이름이다. v5 마이그레이션이 이 이름을 바꾸지만, 그보다 먼저
+    // 파일 전체를 디코딩하는 이전 마이그레이션도 이 이름을 읽어야 한다.
     public static let legacy: [String: MaterialRole] = ["pastExam": .inherited, "examPrep": .exam]
 
     public init(from decoder: Decoder) throws {
@@ -102,7 +93,8 @@ extension MaterialRole {
 }
 
 extension Material {
-    /// Written out so `examIds`, added in course.json v5, may be absent: migrations before v5 decode the whole file.
+    // `examIds`는 course.json v5에서 추가했다. v5 이전 마이그레이션도 파일 전체를 디코딩하므로, 이 값이 없어도
+    // 읽히도록 디코더를 직접 쓴다.
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(UUID.self, forKey: .id)

@@ -1,6 +1,5 @@
 import Foundation
 
-/// Stored as `sum`, `mean`, `single`, `dropLowest:1`, `bestOf:3` so course.json stays readable.
 public enum Aggregation: Hashable, Sendable, Codable {
     case sum
     case mean
@@ -51,14 +50,10 @@ public struct GradeComponent: Entity {
     public var updatedBy: DeviceID
 
     public var name: String
-    /// Percent of the final score.
     public var weight: Double
     public var order: Int
     public var aggregation: Aggregation
-    /// Planned number of sub-scores; lets the calculator tell how much of the component is still to come.
     public var expectedCount: Int?
-    /// Components a syllabus lists under one heading (Reports: materials, results, discussion). Display and assignment
-    /// scoring only; each still counts by its own weight.
     public var group: String?
 
     public init(
@@ -87,7 +82,6 @@ public struct ScoreEntry: Entity {
     public var title: String
     public var score: Double
     public var max: Double
-    /// Class mean and standard deviation, when published.
     public var mean: Double?
     public var stdDev: Double?
     public var date: LocalDate?
@@ -113,7 +107,6 @@ public struct ScoreEntry: Entity {
     }
 }
 
-/// The highest grade allowed once absences reach `absences`.
 public struct AttendanceCap: Codable, Sendable, Hashable {
     public var absences: Int
     public var maxGrade: UUID
@@ -138,13 +131,9 @@ public struct GradePolicy: Codable, Sendable, Equatable {
     public var attendanceCap: [AttendanceCap]
     public var minAttendanceRatio: Double?
     public var latePolicy: String?
-    /// Absolute-grading cutoffs, when published.
     public var cutoffs: [GradeCutoff]
-    /// Rules that couldn't be structured, verbatim.
     public var notes: String
-    /// Relative grading: the share of the class given an A (A+ and A0), the rest going to B and C. Nil means the default.
     public var topGradeRatio: Double?
-    /// "지각 3회 = 결석 1회": every this many lates count as one absence toward the caps. Nil means lates never do.
     public var latesPerAbsence: Int?
 
     public static let defaultTopGradeRatio = 0.5

@@ -1,10 +1,8 @@
 import Algorithms
 import Foundation
 
-/// A card's or problem's attempts in time order, as study days.
 public typealias AttemptHistory = [(day: LocalDate, verdict: Verdict)]
 
-/// Counts for a group of cards or problems under the wrong-answer flow.
 public struct WrongTally: Equatable, Sendable {
     public var items = 0
     public var attempted = 0
@@ -31,7 +29,6 @@ public struct WrongTally: Equatable, Sendable {
 }
 
 public enum QuizStats {
-    /// An item with several keys (a problem in two units) counts in each.
     public static func tally<Item, Key: Hashable>(_ items: [Item], keys: (Item) -> [Key], history: (Item) -> AttemptHistory) -> [Key:
         WrongTally]
     {
@@ -54,7 +51,6 @@ public enum QuizOrder: String, CaseIterable, Sendable {
 
 public struct QuizScope: Equatable, Sendable {
     public var unitIds: Set<UUID>
-    /// Empty means every category.
     public var categories: Set<CardCategory>
     public var onlyWrong: Bool
 
@@ -66,7 +62,6 @@ public struct QuizScope: Equatable, Sendable {
 }
 
 public enum QuizDeck {
-    /// `units` in course order; cards within a unit keep their file order.
     public static func build(
         cards: [QuizCard], units: [UUID], scope: QuizScope, order: QuizOrder,
         history: [UUID: AttemptHistory], today: LocalDate,
@@ -91,7 +86,6 @@ public enum QuizDeck {
 extension QuizCard {
     public static let trueFalseOptions = ["참", "거짓"]
 
-    /// True/false and choice cards are graded on the spot; the rest need Claude or the user.
     public var gradesInstantly: Bool { type == .trueFalse || type == .choice }
 
     public func verdict(choosing option: String) -> Verdict {
@@ -100,7 +94,7 @@ extension QuizCard {
 }
 
 extension ProblemSet {
-    /// Reads `1-5, 7, 8a` as 1, 2, 3, 4, 5, 7, 8a. Ranges are numeric only and capped so a typo can't make thousands.
+    // 오타로 수천 개가 생기지 않도록, 범위는 숫자만 받고 개수를 제한한다.
     public static func numbers(from text: String) -> [String] {
         var result: [String] = []
         for part in text.split(whereSeparator: { $0 == "," || $0 == " " }).map(String.init) {

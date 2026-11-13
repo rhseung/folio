@@ -2,7 +2,6 @@ import Foundation
 
 public typealias DeviceID = UUID
 
-/// Every stored entity carries these so iCloud conflict copies can be merged item by item (newer `updatedAt` wins).
 public protocol Entity: Identifiable, Codable, Sendable, Equatable where ID == UUID {
     var createdAt: Date { get set }
     var updatedAt: Date { get set }
@@ -16,7 +15,6 @@ extension Entity {
     }
 }
 
-/// A calendar date without time or time zone, stored as `yyyy-MM-dd`.
 public struct LocalDate: Hashable, Comparable, Sendable, Codable, CustomStringConvertible {
     public var year: Int
     public var month: Int
@@ -61,8 +59,8 @@ public struct LocalDate: Hashable, Comparable, Sendable, Codable, CustomStringCo
 }
 
 extension Dictionary {
-    /// Keeps the first value of a repeated key. Ids come from files people copy and edit, and a repeat must not crash
-    /// the app the way `uniqueKeysWithValues` does.
+    // ID는 사람이 복사하고 고치는 파일에서 오므로 키가 겹칠 수 있다. `uniqueKeysWithValues`는 겹친 키에서 앱을
+    // 비정상 종료시키므로, 여기서는 첫 값을 쓴다.
     public init<S: Sequence>(keepingFirst pairs: S) where S.Element == (Key, Value) {
         self.init(pairs, uniquingKeysWith: { first, _ in first })
     }

@@ -3,21 +3,18 @@ import Foundation
 public enum NoteKind: String, Codable, Sendable, CaseIterable {
     case rough, review
     case examSummary = "exam_summary"
-    // A unit note was a topic note; its files say `topic`, read as they are rather than migrated (#336).
+    // 단원 노트는 예전에 주제 노트였다. 파일에는 `topic`으로 적혀 있고, 마이그레이션하지 않고 그대로 읽는다.
     case unit = "topic"
     case free
 }
 
-/// Notes without the frontmatter key are LaTeX, as Obsidian and Notion write them.
 public enum MathSyntax: String, Codable, Sendable, CaseIterable {
     case latex, asciimath
 }
 
 public struct NoteMeta: Equatable, Sendable {
-    /// Nil for markdown that hasn't been given an ID yet (e.g. moved in from an old 노트 folder).
     public var id: UUID?
     public var kind: NoteKind
-    /// In date order. A review note may cover several classes caught up on at once; a rough note has one.
     public var sessionIds: [UUID]
     public var unitIds: [UUID]
     public var examId: UUID?
@@ -37,7 +34,6 @@ public struct NoteMeta: Equatable, Sendable {
         self.math = math
     }
 
-    /// The first session, or setting the only one. Old frontmatter and the action inputs name a single session.
     public var sessionId: UUID? {
         get { sessionIds.first }
         set { sessionIds = newValue.map { [$0] } ?? [] }
@@ -62,25 +58,18 @@ public enum NoteFormat: String, Codable, Sendable, CaseIterable {
     }
 }
 
-/// A note's properties, kept in course.json beside its path instead of in the file. A `.tex` file has no place for
-/// them that TeX and other editors leave alone, and keeping them out of both formats lets the two work the same way.
-/// The note's sessions are not stored here: the sessions pointing at it say so (`Session.roughNoteId`, `reviewNoteId`),
-/// and a second copy here drifted from them. Read the links through `CourseFile.meta(of:)`.
 public struct NoteEntry: Entity {
     public var id: UUID
     public var createdAt: Date
     public var updatedAt: Date
     public var updatedBy: DeviceID
 
-    /// Relative to the course folder, `/`-separated, like a material's.
     public var path: String
     public var kind: NoteKind
-    /// A unit note's own units. Other kinds take theirs from their session or exam, so they store none.
     public var unitIds: [UUID]
     public var examId: UUID?
     public var tags: [String]
     public var math: MathSyntax
-    /// The hash of the PDF `note build` last wrote. A different file in that place is someone else's export.
     public var builtHash: String?
 
     public init(id: UUID, device: DeviceID, at date: Date, path: String, meta: NoteMeta) {
@@ -96,7 +85,6 @@ public struct NoteEntry: Entity {
         apply(meta)
     }
 
-    /// Everything but the id, which an entry keeps for life, and the session, which the session holds.
     public mutating func apply(_ meta: NoteMeta) {
         kind = meta.kind
         unitIds = meta.kind == .unit ? meta.unitIds : []
@@ -107,8 +95,6 @@ public struct NoteEntry: Entity {
 }
 
 extension CourseFile {
-    /// A note's links as they read now: its sessions are the ones pointing at it, and its units are theirs or the
-    /// exam's scope as they are today, so unlinking a session from a unit takes its notes off that unit too.
     public func meta(of entry: NoteEntry) -> NoteMeta {
         let sessions = sessions(pointingAt: entry.id)
         let units: [UUID] =
@@ -125,7 +111,6 @@ extension CourseFile {
     }
 }
 
-/// Settings may override the section headings; these are the defaults.
 public enum NoteTemplate {
     public static func defaultSections(for kind: NoteKind) -> [String] {
         switch kind {
@@ -148,8 +133,7 @@ public enum NoteTemplate {
         }
     }
 
-    /// `text` with the heading `body(for:title:)` wrote changed from `old` to `new`. Only the first top heading, and
-    /// only when it still reads `old`: one the user rewrote is theirs.
+    // 첫 최상위 제목이 아직 `old`일 때만 바꾼다. 사용자가 고쳐 쓴 제목은 사용자의 것이다.
     public static func retitled(_ text: String, from old: String, to new: String, format: NoteFormat) -> String {
         let (heading, replacement) =
             switch format {
@@ -165,11 +149,7 @@ public enum NoteTemplate {
         return lines.joined(separator: "\n")
     }
 
-    /// `text` of a note moved from the folder `old` to `new` (paths in the course folder), with the paths it gives
-    /// relative to its own folder still reaching the same files: `![](assets/a.png)` written in `Notes` reads
-    /// `![](../assets/a.png)` in `Notes/정리`. The preview and TeX resolve them from the note's folder, so a move would
-    /// otherwise break every picture. Links with a scheme, absolute paths, anchors, and paths that climb out of the
-    /// course stay as written.
+    // 미리보기와 TeX는 상대 경로를 노트 폴더에서 풀므로, 고치지 않으면 옮길 때마다 그림이 모두 깨진다.
     public static func rebased(_ text: String, from old: String, to new: String, format: NoteFormat) -> String {
         guard old != new else { return text }
         func rebase(_ path: String) -> String? {
@@ -200,7 +180,6 @@ public enum NoteTemplate {
                 let raw = bracketed ? String(written.dropFirst().dropLast()) : written
                 let decoded = raw.removingPercentEncoding ?? raw
                 guard let moved = rebase(decoded) else { return String(m.0) }
-                // Written encoded, or a space a bare destination can't hold: encoded as the editor writes links.
                 let out =
                     bracketed || (raw == decoded && !moved.contains(" "))
                     ? moved : moved.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed.union(["#", "?"])) ?? moved
@@ -213,7 +192,6 @@ public enum NoteTemplate {
         }
     }
 
-    /// A title is plain text, so TeX's special characters in it are written as themselves.
     static func texEscaped(_ text: String) -> String {
         text.map { c -> String in
             switch c {
@@ -227,10 +205,7 @@ public enum NoteTemplate {
     }
 }
 
-/// Notes are files, not rows in a document, so they have no entity type; this names their id where an action points
-/// at one (`Note.ID`), the way `Exam.ID` does.
 public enum Note {
     public typealias ID = UUID
-    /// Course-relative, for actions that work on a note's file whether or not it has an id yet.
     public typealias Path = String
 }

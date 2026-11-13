@@ -1,10 +1,8 @@
 import Foundation
 
-/// A graded term on the GPA trend: its own GPA and the credits behind it, and the cumulative GPA through it.
 public struct GPATrendPoint: Sendable, Equatable {
     public var semester: Semester
     public var gpa: Double
-    /// Effective credits, so a 3-credit summer weighs less than an 18-credit term.
     public var credits: Double
     public var cumulative: Double?
 
@@ -17,8 +15,6 @@ public struct GPATrendPoint: Sendable, Equatable {
 }
 
 extension GPACalculator {
-    /// `semesters` in order. A credited term (인정학기) and a term with nothing graded get no point of their own, but
-    /// the cumulative through a later term still counts them.
     public static func trend(semesters: [Semester], courses: [Course], catalog: Catalog) -> [GPATrendPoint] {
         semesters.indices.compactMap { i in
             let s = semesters[i]

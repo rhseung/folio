@@ -1,6 +1,5 @@
 import Foundation
 
-/// `<course>/.folio/chats/<id>.json`: one conversation with Claude about a course.
 public struct Chat: Entity {
     public var id: UUID
     public var createdAt: Date
@@ -27,9 +26,7 @@ public struct ChatMessage: Codable, Sendable, Equatable, Identifiable {
     public var role: Role
     public var text: String
     public var at: Date
-    /// Titles of the context items sent with this question, so the record shows what Claude was given.
     public var context: [String]
-    /// Changes the answer proposed through the Folio tools, kept until the user applies them.
     public var proposals: [ActionProposal]?
 
     public init(id: UUID = UUID(), role: Role, text: String, at: Date, context: [String] = [], proposals: [ActionProposal]? = nil) {

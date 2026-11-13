@@ -1,6 +1,5 @@
 import Foundation
 
-/// `GIST/.folio/catalog.json`: lookup tables shared by every course.
 public struct Catalog: Codable, Sendable, Equatable {
     public var codes: [CourseCode]
     public var categories: [Category]
@@ -28,19 +27,17 @@ public struct Catalog: Codable, Sendable, Equatable {
         handbooks = try c.decodeIfPresent([Handbook].self, forKey: .handbooks) ?? []
     }
 
-    /// The top of the grade scale, read from the letter grades; 4.5 only until a catalog is imported.
     public var maxPoints: Double { letterGrades.compactMap(\.points).max() ?? 4.5 }
 
     public func grade(_ id: UUID?) -> LetterGrade? {
         id.flatMap { id in letterGrades.first { $0.id == id } }
     }
 
-    /// A child of a hidden category is hidden too.
     public func scoped(to programs: [StudentProgram]) -> Catalog {
         let declared = Set(programs.map(\.codeId))
         func applies(_ c: Category, depth: Int = 0) -> Bool {
             guard c.programId.map(declared.contains) ?? true else { return false }
-            // depth guards a parent cycle in hand-edited JSON
+            // 손으로 고친 JSON의 부모 순환을 깊이 제한으로 막는다.
             guard depth < 16, let parent = c.parentId.flatMap(category) else { return true }
             return applies(parent, depth: depth + 1)
         }
@@ -49,11 +46,10 @@ public struct Catalog: Codable, Sendable, Equatable {
         return copy
     }
 
-    /// The program a category belongs to: its own, else the nearest ancestor's.
     public func program(of category: Category) -> UUID? {
         var current: Category? = category
         var steps = 0
-        // The step limit stops a parent cycle in hand-edited JSON.
+        // 손으로 고친 JSON의 부모 순환을 단계 제한으로 막는다.
         while let c = current, steps < 16 {
             if let p = c.programId { return p }
             current = c.parentId.flatMap(self.category)
@@ -81,11 +77,9 @@ public struct CourseCode: Entity {
     public var updatedAt: Date
     public var updatedBy: DeviceID
 
-    /// `EC`, `GS`, ...
     public var prefix: String
     public var department: String
     public var program: String
-    /// Which yearly handbook (학사편람) the code comes from.
     public var source: String
 
     public init(
@@ -110,21 +104,14 @@ public struct Category: Entity {
     public var updatedBy: DeviceID
 
     public var name: String
-    /// Grouping used by graduation requirements.
     public var group: String
     public var isMajor: Bool
     public var parentId: UUID?
-    /// Graduation requirement for this category, entered from the handbook.
     public var minCredits: Double?
     public var maxCredits: Double?
-    /// Passed courses required, for zero-credit requirements such as colloquia and arts/PE semesters.
     public var minCount: Int?
-    /// Which courses count and where the numbers come from, as written in the handbook.
     public var rule: String?
-    /// The program (a course code) this requirement belongs to; nil for ones every student has.
     public var programId: UUID?
-    /// Most credits its courses may also count toward another program's categories: 9 for a double major, 0 for a
-    /// minor (학사편람). The student picks which by putting a course in both; what goes past this is not counted here.
     public var maxSharedCredits: Double?
 
     public init(
@@ -146,7 +133,6 @@ public struct Category: Entity {
     }
 }
 
-/// A grade symbol and how it counts. S, U, W, P and F live here too, so no symbol is special-cased in code.
 public struct LetterGrade: Entity {
     public var id: UUID
     public var createdAt: Date
@@ -154,16 +140,11 @@ public struct LetterGrade: Entity {
     public var updatedBy: DeviceID
 
     public var symbol: String
-    /// Grade points (A+ = 4.5). Nil for symbols without points (S, U, W).
     public var points: Double?
     public var countsInGpa: Bool
     public var countsInCredits: Bool
-    /// Whether the credits count toward graduation and requirement categories. Nil follows `countsInCredits`;
-    /// W sets it off, since it counts in the semester's total (as Notion and the transcript do) but earns nothing.
     public var countsTowardGraduation: Bool?
     public var earnsCredits: Bool { countsTowardGraduation ?? countsInCredits }
-    /// Grading modes this symbol is given in. Nil infers it: symbols with points only in letter-graded courses,
-    /// the rest (S, U, W) anywhere. S and W look the same otherwise, so S/U set it to keep out of letter courses.
     public var modes: [GradingMode]?
 
     public func applies(to mode: GradingMode) -> Bool {
