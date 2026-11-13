@@ -32,12 +32,10 @@ public struct WikiLink: Hashable, Sendable {
     /// `folio://settings/claude`), so it is never looked for as a note's title.
     public var isAddress: Bool { addressPath != nil }
 
-    /// Whether the link opens something in the app rather than a note named by its title or a file.
     public var isAppLink: Bool { objectKind != nil || isAddress }
 
     static let scheme = "folio://"
 
-    /// The address after `folio://`, split at `/`.
     var addressPath: [String]? {
         guard target.count > Self.scheme.count, target.prefix(Self.scheme.count).lowercased() == Self.scheme else { return nil }
         return target.dropFirst(Self.scheme.count).split(separator: "/", omittingEmptySubsequences: false).map(String.init)

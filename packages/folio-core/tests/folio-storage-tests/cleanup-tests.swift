@@ -33,20 +33,24 @@ struct CleanupTests {
         #expect(plan.removals == ["\(ec)/Exams/Quiz1"])
         #expect(move["\(chem)/Exams/Past/관훈 선배 리포트"].map { ($0.to, $0.kind) }! == ("\(chem)/Inherited/관훈 선배 리포트", nil))
         #expect(move["\(chem)/Exams/Past/mid-sol.pdf"].map { ($0.to, $0.kind) }! == ("\(chem)/Inherited/mid-sol.pdf", .pastExam))
+
         // The journal says these came from `Exam Review`; the image beside them is only a suggestion.
         #expect(move["\(la)/Exercises/Proofs.pdf"].map { ($0.to, $0.exam, $0.review) }! == ("\(la)/Study/Proofs.pdf", "Midterm", nil))
         #expect(move["\(la)/Exercises/exercise 1.png"].map { ($0.to, $0.review) }! == ("\(la)/Study/exercise 1.png", .guessedOrigin))
         #expect(targets["\(ec)/Midterm Seating.pdf"] == "\(ec)/Exams/Midterm/Seating.pdf")
+
         // Without the lab schedule the week is unknown, so the manual takes the next free week and is flagged.
         #expect(targets["\(robot)/Manuals/Lab1 Manual.pdf"]?.hasPrefix("\(robot)/Lectures/") == true)
         #expect(plan.moves.first { $0.from == "\(robot)/Manuals/Lab1 Manual.pdf" }?.review == .unknownWeek)
         #expect(targets["\(robot)/Reports/Lab1 Report.pdf"] == "\(robot)/Assignments/Lab01/Lab1 Report.pdf")
+
         // A code project keeps its name; only its parent changes.
         #expect(targets["\(robot)/Assignments/robot"] == "\(robot)/Assignments/Project01/robot")
     }
 
     @Test func applyReachesStandardLayoutAndUndoRestoresIt() throws {
         let gist = GISTStore(url: try Fixture.legacy.copyToTemp())
+
         // The journal itself changes, so trees are compared without it.
         func tree() throws -> FolderTree {
             var tree = try gist.readTree()

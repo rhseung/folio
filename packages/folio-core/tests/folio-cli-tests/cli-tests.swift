@@ -108,6 +108,7 @@ struct SessionCommandTests {
         let marked = "a \u{1B}[33mhit\u{1B}[0m and more"
         let cut = marked.truncated(to: 5)
         #expect(cut.plain == "a hi…")
+
         // The reset past the cut is kept, so the yellow doesn't run into the next column.
         #expect(cut == "a \u{1B}[33mhi\u{1B}[0m\u{1B}[0m…")
     }
@@ -122,6 +123,7 @@ struct SchemaTests {
                 Issue.record("\(a["command"] ?? .null) has no input properties")
                 continue
             }
+
             // Backing up takes nothing: the folder and retention come from settings.json. Moving takes every unfiled course.
             #expect(!props.isEmpty || [.string("backup create"), .string("transcript move")].contains(a["command"]), "\(a["command"] ?? .null)")
         }
@@ -187,6 +189,7 @@ struct AgentTests {
         #expect(r.code == 0)
         #expect(r.out.contains("folio assignment set"))
         #expect(h.cli(["help", "zzzz"], gist: gist).code == Exit.notFound.rawValue)
+
         // Command names and topics still go to their own help.
         #expect(h.cli(["help", "refs"], gist: gist).out.contains("가리키기"))
     }
@@ -223,12 +226,14 @@ struct GradesLockTests {
         let gist = try Harness.fixtureCopy()
         #expect(h.cli(["catalog", "set", "--file", try GradesSetupTests().catalogFile(), "--yes"], gist: gist).code == 0)
         #expect(h.cli(["course", "set", "EC4207", "--grade", "A+", "--yes"], gist: gist).code == 0)
+
         // Commands that exist to show grades stop with 5 instead of printing them.
         for args in [["gpa"], ["transcript", "list"], ["score", "list", "EC4207"]] {
             let r = h.cli(args, gist: gist, gradesLocked: true)
             #expect(r.code == 5, "\(args)")
             #expect(!r.out.contains("A+"))
         }
+
         // Others keep working and hide just the grade.
         let locked = h.cli(["course", "show", "EC4207"], gist: gist, gradesLocked: true)
         #expect(locked.code == 0 && locked.out.contains("성적  ••") && !locked.out.contains("A+"))
@@ -243,6 +248,7 @@ struct GradesLockTests {
         #expect(h.cli(["unlock", "--for", "soon"], gist: URL(filePath: "/nonexistent")).code == 2)
         #expect(h.cli(["unlock", "--for", "12h"], gist: URL(filePath: "/nonexistent")).code == 0)
         #expect(h.cli(["unlock", "--for", "12h1s"], gist: URL(filePath: "/nonexistent")).code == 2)
+
         // Unlocking asks even for a longer time; a refusal leaves it locked.
         #expect(h.cli(["unlock", "--for", "1h"], gist: URL(filePath: "/nonexistent"), gradesLocked: true).code == 5)
     }

@@ -103,6 +103,7 @@ struct WorkspaceLinkTests {
         let title = workspace.title(of: Navigator.Entry(link: AppLink(.exam, exam), course: graphTheory))
         #expect(title.hasSuffix("· 중간고사"))
         #expect(workspace.title(of: Navigator.Entry(link: .place(.today))) == String(localized: .rootNavToday))
+
         let session = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now))?.made)
         let recording = Recording(device: workspace.device, at: .now, sessionId: session, file: "Recordings/a.m4a")
         try ActionContext(gist: try #require(workspace.gist), device: workspace.device).edit(graphTheory) { $0.recordings = [recording] }
@@ -127,6 +128,7 @@ struct WorkspaceLinkTests {
         #expect(workspace.label(of: .settings(.claude)) == "\(String(localized: .rootNavSettings)) · Claude")
         #expect(workspace.name(of: .course(graphTheory, page: .units))?.hasPrefix(course.title) == true)
         #expect(workspace.name(of: AppLink(.exam, UUID())) == nil)
+
         // The preview shows it, whether the link is written by kind and ID or as the copied address.
         let embeds = NoteEmbedSource(workspace: workspace, course: course, own: nil).embeds(revision: 0, text: "")
         for written in ["[[\(page.string)]]", "[[material:\(material.id.uuidString)#page=2]]"] {

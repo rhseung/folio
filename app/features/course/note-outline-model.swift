@@ -50,7 +50,6 @@ final class NoteOutlineModel {
         Set(outline.entries.indices.filter { open.contains(outline.entries[$0].anchor) })
     }
 
-    /// Reads the note's headings again, as the note is written.
     func read(_ text: String) {
         guard text != self.text else { return }
         self.text = text

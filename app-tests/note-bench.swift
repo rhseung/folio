@@ -67,7 +67,6 @@ import WebKit
     let pulse: Pulse
     private var note: Note?
 
-    /// `anchor` is the heading or block a link opened the note at.
     init(_ kind: Kind, text: Binding<String>, width: CGFloat = 900, height: CGFloat = 720, dark: Bool = false, baseURL: URL? = NoteBench.notes,
          anchor: AppLink.Anchor? = nil) {
         let window = NSWindow(contentRect: CGRect(x: -20_000, y: -20_000, width: width, height: height), styleMask: [.borderless], backing: .buffered, defer: false)
@@ -207,7 +206,6 @@ import WebKit
         return context.makeImage().map { Pixels($0, page: page) }
     }
 
-    /// Has SwiftUI update the note view, as a change anywhere around it in the app does.
     func update(sourceLocation: SourceLocation = #_sourceLocation) async {
         pulse.count += 1
         await settle()
@@ -303,7 +301,6 @@ import WebKit
     enum Hit: Equatable {
         /// The note, or what it shows at that point and handles itself: a widget, a block that scrolls sideways.
         case note
-        /// The panel's own scroller.
         case scroller
         case other(String)
     }
@@ -372,7 +369,6 @@ import WebKit
         textView?.setSelectedRange(NSRange(location: location, length: 0))
     }
 
-    /// A standard editing action, as a key sends it.
     func perform(_ action: Selector) { _ = input?.tryToPerform(action, with: nil) }
 
     func focus() { if let input { window.makeFirstResponder(input) } }

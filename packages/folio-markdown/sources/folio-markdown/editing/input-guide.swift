@@ -1,8 +1,6 @@
 import Foundation
 
-/// The edit view's typing help, as the input guide lists it (#395): what to type and what it gives, by situation.
-///
-/// Read from the tables the editor itself reads (the catalog's `/` blocks, languages and snippets for the note's math
+/// The input guide (#395) reads the tables the editor itself reads (the catalog's `/` blocks, languages and snippets for the note's math
 /// syntax, the callout kinds, the TeX environments, the pairs and list marks, the table keys), so a snippet added in
 /// settings or a block added to `/` shows here without another copy. Words are `Phrase`s for the app to say in its
 /// language; names already in it (a `/` block's title) and markdown come as they are.
@@ -97,7 +95,6 @@ public enum InputGuide {
                       [.key("\\begin{"), .result(.phrase(.environmentList))], keywords: TeXCommands.environments),
             ]
         } else if let sample = AsciiMathSymbols.all.first(where: { $0.name.count >= 4 }) {
-            // A word's first letters, and the names they bring up.
             let typed = String(sample.name.prefix(2))
             // The typed letters can be a name of their own (`fr`); showing it back reads as an echo, not a result.
             let found = Completion.filter(AsciiMathSymbols.items, typed, prefixOnly: true).map(\.title).filter { $0 != typed }
@@ -171,7 +168,6 @@ public enum InputGuide {
         }
     }
 
-    /// The entries in their sections, in the sections' order, leaving out empty ones.
     public static func grouped(_ entries: [Entry]) -> [(section: Section, entries: [Entry])] {
         Section.allCases.compactMap { section in
             let rows = entries.filter { $0.section == section }
@@ -179,7 +175,6 @@ public enum InputGuide {
         }
     }
 
-    /// The first few names of a list, and an ellipsis when there are more.
     public static func listed(_ names: [String], first: Int = 4) -> String {
         names.prefix(first).joined(separator: ", ") + (names.count > first ? " …" : "")
     }
@@ -216,7 +211,6 @@ public enum InputGuide {
         return typed
     }
 
-    /// The `/` blocks with their shortcut as the detail the menu shows on the right.
     public static func annotated(_ blocks: [CompletionItem], snippets: [Snippet]) -> [CompletionItem] {
         blocks.map { item in
             var item = item

@@ -26,6 +26,7 @@ struct AppLinkTests {
         #expect(AppLink(string: r + "#t=1:02:03") == AppLink(.recording, id, anchor: .time(3723)))
         #expect(AppLink(string: r + "#t=") == AppLink(.recording, id))
         #expect(AppLink(string: r + "#t=12:30")?.withoutAnchor == AppLink(.recording, id))
+
         // A moment means nothing to a note, and a note's heading that reads like one stays a heading.
         #expect(AppLink(string: "folio://note/\(id.uuidString)#t=1:00") == AppLink(.note, id, anchor: .heading("t=1:00")))
         let heading = AppLink(.note, id, anchor: .heading("t=1:00"))
@@ -66,10 +67,12 @@ struct AppLinkTests {
         #expect(AppLink.settings(nil) == .place(.settings))
         #expect(AppLink(string: "folio://Settings/Review") == .settings(.review))
         #expect(AppLink(string: "folio://settings/class#x") == .settings(.classes))
+
         // Another tab is another step in a window's history.
         #expect(AppLink.settings(.claude).withoutAnchor != AppLink.settings(.general).withoutAnchor)
         #expect(AppLink.settings(.claude).with(.heading("x")) == .settings(.claude))
         #expect(AppLink(string: "folio://settings/nowhere") == nil)
+
         // Tabs #416 merged: old links open the tab that took them over, and are written by its name.
         #expect(AppLink(string: "folio://settings/profile") == .settings(.record))
         #expect(AppLink(string: "folio://Settings/Letters") == .settings(.record))
@@ -102,6 +105,7 @@ struct AppLinkTests {
             let paged = AppLink(string: "folio://\(kind.rawValue)/\(id.uuidString)/materials")
             #expect((paged != nil) == kind.hasPages, "\(kind)")
         }
+
         #expect(AppLink(string: "folio://settings/claude") != nil && AppLink.Kind.settings.hasPages)
     }
 
@@ -133,11 +137,13 @@ struct AppLinkTests {
     @Test func findsLinksWrittenInText() {
         let link = AppLink(.material, id, anchor: .page(4))
         let tex = "See \\href{\(link.string)}{the slides} and folio://grades."
+
         // The sentence's full stop isn't part of the address; a heading's last character is.
         #expect(AppLink.links(in: tex).map(\.link) == [link, .place(.grades)])
         #expect((tex as NSString).substring(with: AppLink.links(in: tex)[1].range) == "folio://grades")
         #expect(AppLink.links(in: "folio://exam/\(id.uuidString)!").map(\.link) == [AppLink(.exam, id)])
         #expect(AppLink.links(in: "folio://note/\(id.uuidString)#Intro.").map(\.link) == [AppLink(.note, id, anchor: .heading("Intro."))])
+
         // A page, time or block is still one at the end of a sentence.
         #expect(AppLink.links(in: "범위는 folio://material/\(id.uuidString)#page=12.").map(\.link) == [AppLink(.material, id, anchor: .page(12))])
         #expect(AppLink.links(in: "folio://recording/\(id.uuidString)#t=12:30.").map(\.link) == [AppLink(.recording, id, anchor: .time(750))])
@@ -147,6 +153,7 @@ struct AppLinkTests {
         #expect(AppLink.link(in: tex, at: 1) == nil)
         let md = "[슬라이드](\(link.string)) 한글 folio://today"
         #expect(AppLink.links(in: md).map(\.link) == [link, .place(.today)])
+
         // Offsets count UTF-16 units, as text views do: the Hangul before the link shifts it by one unit each.
         let range = AppLink.links(in: md)[0].range
         #expect((md as NSString).substring(with: range) == link.string)
@@ -167,14 +174,17 @@ struct AppLinkTests {
         a.exams.append(exam)
         let note = UUID()
         a.notes.append(NoteEntry(id: note, device: device, at: now, path: "Notes/매칭.md", meta: NoteMeta(id: note)))
+
         #expect(AppLink(.note, note).course(in: [b, a]) == a.course.id)
         #expect(AppLink(.exam, exam.id).course(in: [b, a]) == a.course.id)
         #expect(AppLink.course(b.course.id).course(in: [a, b]) == b.course.id)
         #expect(AppLink(.exam, UUID()).course(in: [a, b]) == nil)
         #expect(AppLink(.card, UUID()).course(in: [a, b]) == nil)
+
         let set = ProblemSet(device: device, at: now, title: "Exercise 1")
         a.problemSets.append(set)
         #expect(AppLink(.problemSet, set.id).course(in: [b, a]) == a.course.id)
+
         // What lives outside a course is never found in one, even by an ID a course happens to use.
         for kind in AppLink.Kind.allCases where !kind.isPlace && kind.home != .course {
             #expect(AppLink(kind, a.course.id).course(in: [a, b]) == nil, "\(kind)")
@@ -244,6 +254,7 @@ struct LinkHistoryTests {
         h.visit("b")
         h.visit("c")
         let back = h.goBack()
+
         #expect(back && h.current == "b" && h.forward == ["c"])
         h.visit("d")
         #expect(h.back == ["a", "b"] && h.forward.isEmpty)

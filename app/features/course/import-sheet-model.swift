@@ -266,6 +266,7 @@ final class ImportPlaceModel {
     private func readSections(_ id: Int) {
         let row = rows[id]
         guard isLecture(row), sections[id] == nil, reads[id] == nil, row.url.pathExtension.lowercased() == "pdf" else { return }
+
         sections[id] = .reading(done: 0, total: 0)
         let units = course.file.units
         reads[id] = Task { [weak self, find] in
@@ -274,6 +275,7 @@ final class ImportPlaceModel {
                 self.sections[id] = .reading(done: done, total: total)
             }
             guard let self, !Task.isCancelled else { return }
+
             switch found {
             case .found(let split, let source): self.sections[id] = .proposed(split, source: source)
             case .nothing(let count): self.sections[id] = .nothing(pageCount: count)
@@ -365,7 +367,6 @@ final class ImportPlaceModel {
         }
     }
 
-    /// The summary line under a lecture row.
     func sectionsLine(_ row: Row) -> String? {
         if asking.contains(row.id), isLecture(row) { return String(localized: .lectureClaudeReading) }
         switch sections(of: row) {
@@ -390,7 +391,6 @@ final class ImportPlaceModel {
         }
     }
 
-    /// What approving writes for a row: nothing for a row put off, still being read, or no longer a lecture.
     #if DEBUG
     /// Sets a row's sections at once, as the form renders need: they draw before a read would finish.
     func show(_ state: Sections, for id: Int) {
@@ -400,6 +400,7 @@ final class ImportPlaceModel {
     }
     #endif
 
+    /// What approving writes for a row: nothing for a row put off, still being read, or no longer a lecture.
     func cuts(_ row: Row) -> [LectureCut]? {
         guard case .proposed(let split, _)? = sections(of: row) else { return nil }
         let cuts = split.cuts

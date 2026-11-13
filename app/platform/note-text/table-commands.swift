@@ -5,8 +5,8 @@ import AppKit
 import UIKit
 #endif
 
-/// The table commands as the edit view offers them: their names in the app's language and symbols. Their keys and
-/// groups are `TableCommand`'s, which the input guide reads too; what each one does to the source is `TableEditing`'s.
+/// Only names and symbols live here: the keys and groups are `TableCommand`'s, which the input guide reads too; what
+/// each one does to the source is `TableEditing`'s.
 ///
 /// The keys act only with the caret in a table, so outside one they stay the text view's and the app's. None of them is
 /// taken elsewhere in the note screen (⌘S, ⌘E, ⌘K, ⌘/, ⌘[ and ⌘] are).

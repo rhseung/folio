@@ -47,6 +47,7 @@ struct RunCommand: ParsableCommand {
                 return UUID(uuidString: s) != nil ? s : try r.id(kind, s, in: course).uuidString
             }
         }
+
         // A whole file's decoder fills a missing key with its default: `{"settings":{}}` would reset every setting.
         if let (key, current) = try Self.wholeFile(A.command, ctx), let given = o[key] { o[key] = current.overlaid(with: given) }
         try perform(spec: try A.decode(JSONEncoder().encode(JSONValue.object(o))), g, ctx: ctx)

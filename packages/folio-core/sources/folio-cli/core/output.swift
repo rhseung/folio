@@ -1,7 +1,6 @@
 import FolioStorage
 import Foundation
 
-/// Every failure maps to one of these.
 enum Exit: Int32 {
     case success = 0, unexpected = 1, usage = 2, notFound = 3, rule = 4, needsConfirmation = 5, conflict = 6, coverage = 7
 
@@ -144,7 +143,6 @@ extension Character {
 }
 
 extension String {
-    /// Columns once escape sequences are left out.
     var columns: Int { plain.reduce(0) { $0 + $1.columns } }
 
     var plain: String { replacing(Self.escape, with: "") }

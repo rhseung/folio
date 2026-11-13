@@ -30,6 +30,7 @@ public struct TexEngine: Sendable {
         let epoch = TexBuildTime.sourceDateEpoch(at: now, calendar: calendar)
         try FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
         let pdf = outDir.appending(path: source.deletingPathExtension().lastPathComponent + ".pdf")
+
         // Online, Tectonic checks its package bundle on every build, which took a homework from half a second to
         // nine. Packages it already fetched are enough for most rebuilds; only a missing one needs the network. An empty
         // cache (a new install, or one the system cleared) has no bundle index to work offline from at all.
@@ -43,6 +44,7 @@ public struct TexEngine: Sendable {
         if !run.made, !Self.hasErrors(issues) {
             issues.insert(TexIssue(.error, message: run.output.split(whereSeparator: \.isNewline).last.map(String.init) ?? "Tectonic"), at: 0)
         }
+
         // Past an error Tectonic still writes a PDF, but with the broken parts left out; placed beside the source it
         // would replace a good one, possibly the copy to hand in.
         return Build(pdf: run.made && !Self.hasErrors(issues) ? pdf : nil, issues: issues)
@@ -73,6 +75,7 @@ public struct TexEngine: Sendable {
         // A build that dies before writing its own would otherwise leave the last one, made for other text.
         try? FileManager.default.removeItem(at: pdf.deletingPathExtension().appendingPathExtension("synctex.gz"))
         try FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
+
         // A build time fixed to the day (`TexBuildTime`) keeps the PDF's bytes the same for an unchanged source, so
         // there is nothing new for iCloud to sync or for `course.json` to rehash. It is the build date rather than
         // deterministic mode, which gives the same PDF but blanks the file names in the SyncTeX data, leaving no way to

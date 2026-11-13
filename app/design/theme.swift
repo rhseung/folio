@@ -272,6 +272,16 @@ enum Theme {
         static let windowShare = 0.9
     }
 
+    enum Motion {
+        static let quick = Animation.snappy(duration: 0.2)
+        static let standard = Animation.snappy(duration: 0.25)
+        static let settle = Animation.snappy(duration: 0.35)
+        /// `PaneGlide` steps the panes' widths along this same curve while `PaneRow` animates the rest, so the two
+        /// can't take their timing from different places: a pane's edge would land before its neighbour stops.
+        static let paneSpring = Spring.smooth(duration: 0.34)
+        static let pane = Animation.spring(paneSpring)
+    }
+
     enum Typeface {
         static let pageTitle = Font.system(size: 28, weight: .bold)
         static let columnTitle = Font.system(size: 19, weight: .bold)
@@ -307,7 +317,6 @@ enum Theme {
         static let regular = Font.system(size: 11, weight: .semibold)
         /// Round check buttons.
         static let check = Font.system(size: 16)
-        /// A window toolbar button.
         static let toolbar = Font.system(size: toolbarSize)
         /// `toolbar`'s point size, for measuring a toolbar symbol's ink (`TabBar.plusInk`).
         static let toolbarSize: CGFloat = 15 // design: one-off. A type size, which the grid leaves out.
@@ -318,7 +327,6 @@ enum Theme {
         /// A line icon beside a column's title, a size up so it holds its own next to the bold title. It keeps the
         /// list's 22pt slot, so the title still lines up with the rows' words below.
         static let lineTitle = Font.system(size: 20)
-        /// The floating action button's symbol.
         static let fab = Font.system(size: 18, weight: .semibold)
         /// A panel's send button or empty-state symbol.
         static let large = Font.system(size: 22)
@@ -399,7 +407,7 @@ extension View {
 }
 
 extension Color {
-    /// A color that follows the light or dark appearance. Hex values keep the tokens readable against the design file.
+    /// Hex values keep the tokens readable against the design file.
     init(light: UInt32, dark: UInt32, lightOpacity: CGFloat = 1, darkOpacity: CGFloat = 1) {
         #if os(macOS)
         self.init(nsColor: NSColor(name: nil) { appearance in

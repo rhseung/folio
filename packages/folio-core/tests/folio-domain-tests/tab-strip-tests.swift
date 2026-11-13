@@ -19,10 +19,13 @@ struct TabStripTests {
         for t in ["b", "c"] { s.open(t) }
         s.select("a")
         s.open("d", afterSelected: true)
+
         #expect(s.tabs == ["a", "d", "b", "c"] && s.selected == "d")
+
         // Another from there goes after it in turn.
         s.open("e", afterSelected: true)
         #expect(s.tabs == ["a", "d", "e", "b", "c"])
+
         // From the last tab, last.
         s.select("c")
         s.open("f", afterSelected: true)
@@ -34,13 +37,16 @@ struct TabStripTests {
         for t in ["b", "c", "d"] { s.open(t) }
         s.select("b")
         let first = s.close("b")
+
         #expect(first)
         #expect(s.tabs == ["a", "c", "d"] && s.selected == "c")
+
         // The last one hands over to the one before it.
         s.select("d")
         let last = s.close("d")
         #expect(last)
         #expect(s.selected == "c")
+
         // A tab behind closes without moving the front one.
         let behind = s.close("a")
         #expect(behind)
@@ -67,6 +73,7 @@ struct TabStripTests {
         var s = TabStrip("a")
         for t in ["b", "c"] { s.open(t) }
         s.selectNext()
+
         #expect(s.selected == "a")
         s.selectPrevious()
         #expect(s.selected == "c")
@@ -76,9 +83,11 @@ struct TabStripTests {
         #expect(s.selected == "b")
         s.select(number: 0)
         #expect(s.selected == "b")
+
         // ⌘9 is the last, with fewer than nine tabs or more.
         s.select(number: 9)
         #expect(s.selected == "c")
+
         for t in 3...11 { s.open("\(t)") }
         s.select(number: 1)
         s.select(number: 9)
@@ -157,17 +166,23 @@ struct TabFitTests {
         let front = TabFit.Front(trail: 300, chrome: 200, compactChrome: 120)
         let others = [TabFit.Other(full: 150, icons: 70, stacked: 50), TabFit.Other(single: 100, icon: 32)]
         func step(_ room: Double) -> Int { TabFit.layout(room: room, front: front, others: others, gap: 8, more: 80).step }
+
         // All of it: 500 + 150 + 100 + 2 gaps.
         #expect(step(766) == 0)
+
         // ① names go: 500 + 70 + 32 + 16.
         #expect(step(765) == 1 && step(618) == 1)
+
         // ② the other tab of two panes stacks: 500 + 50 + 32 + 16.
         #expect(step(617) == 2 && step(598) == 2)
+
         // ③ the tab in front's other segments go to icons: 420 + 50 + 32 + 16.
         #expect(step(597) == 3 && step(518) == 3)
+
         // ④ the menu: alone beside the tab in front, 420 + 80 + 8.
         let menu = TabFit.layout(room: 517, front: front, others: others, gap: 8, more: 80)
         #expect(menu.step == 4 && menu.shown == 0 && menu.hidden == 2)
+
         // ⑤ the trail folds: 400 - 88 - 120 leaves it 192 of its 300.
         let fit = TabFit.layout(room: 400, front: front, others: others, gap: 8, more: 80)
         #expect(TabFit.trail(room: 400, front: front, others: others, layout: fit, gap: 8, more: 80) == 192)
@@ -202,8 +217,10 @@ struct TabFitTests {
                 #expect(start == Double(after) + 8)
             }
         }
+
         // The sidebar open: the panel's edge at 216, the buttons ending at 189.
         #expect(TabFit.lead(panelEdge: 216, after: 189, gap: 8) == 27)
+
         // Folded, the edge is under the buttons.
         #expect(TabFit.lead(panelEdge: 4, after: 189, gap: 8) == 8)
     }
@@ -254,6 +271,7 @@ struct TabFitTests {
             let least = front.chrome(compact: fit.compactFront) + (fit.hidden > 0 ? 88 : 0)
             #expect(width <= r || r < least)
         }
+
         // By hand: the menu alone beside a front tab held to 200 - 88 - 40 = 72, which with its capsule fills the row.
         let fit = layout(200, others: [100, 100])
         #expect(TabFit.width(front: lone, others: singles([100, 100]), layout: fit, trail: 72, gap: 8, more: 80) == 200)
@@ -333,11 +351,13 @@ struct TabKeepTests {
             let p = TabKeep.Policy(limit: limit, idle: 500)
             let playing = Set(played)
             let kept = TabKeep.alive(selected: selected, alive: alive, left: left, now: now, policy: p, pressure: pressure, playing: playing)
+
             let held = playing.intersection(alive).union([selected])
             #expect(held.isSubset(of: kept))
             #expect(kept.subtracting([selected]).isSubset(of: alive))
             #expect(kept.subtracting(held).count <= (pressure ? 0 : limit))
             for id in kept.subtracting(held) { #expect(now.timeIntervalSince(left[id]!) < 500) }
+
             // Nothing kept is older than something dropped that was within the time.
             let dropped = alive.subtracting(kept).filter { now.timeIntervalSince(left[$0]!) < 500 }
             if !pressure, let oldestKept = kept.subtracting(held).map({ left[$0]! }).min(), let newestDropped = dropped.map({ left[$0]! }).max() {

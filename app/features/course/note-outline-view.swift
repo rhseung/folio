@@ -26,7 +26,7 @@ struct NoteOutlineList: View {
                 }
                 .overflowFade(.vertical)
                 .onChange(of: marked) { _, id in
-                    if let id { withAnimation(.snappy(duration: 0.25)) { proxy.scrollTo(id) } }
+                    if let id { withAnimation(Theme.Motion.standard) { proxy.scrollTo(id) } }
                 }
                 .onAppear { if let marked { proxy.scrollTo(marked, anchor: .center) } }
             }
@@ -53,7 +53,7 @@ struct NoteOutlineList: View {
             .buttonStyle(.pointing(.plain))
             .help(row.title)
             if row.folds {
-                Button { withAnimation(.snappy(duration: 0.25)) { model.toggle(row.index) } } label: {
+                Button { withAnimation(Theme.Motion.standard) { model.toggle(row.index) } } label: {
                     Image(systemName: "chevron.right")
                         .font(Theme.Typeface.caption)
                         .rotationEffect(.degrees(row.open ? 90 : 0))

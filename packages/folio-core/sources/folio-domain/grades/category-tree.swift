@@ -15,7 +15,6 @@ public struct CategoryTreeRow: Sendable, Equatable {
 }
 
 extension Category {
-    /// Groups of the top-level categories, in catalog order.
     public static func groups(_ categories: [Category]) -> [String] {
         Array(categories.filter { $0.parentId == nil }.map(\.group).uniqued())
     }

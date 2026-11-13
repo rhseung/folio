@@ -28,7 +28,6 @@ public struct RequirementAudit: Sendable, Equatable {
 
     public var isEmpty: Bool { suggestions.isEmpty && overShared.isEmpty && unallowed.isEmpty && unassigned.isEmpty }
 
-    /// Only these checks' findings; the rest come back empty.
     public func keeping(_ kinds: Set<Kind>) -> RequirementAudit {
         var a = self
         if !kinds.contains(.handbook) { a.suggestions = [] }

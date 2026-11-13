@@ -40,6 +40,7 @@ struct ClassStartTests {
         let c = try #require(starting([file], s, at: at(2, 10, 30)))
         #expect(c == StartingClass(courseId: file.course.id, sessionId: nil, start: at(2, 10, 30), end: at(2, 11, 45)))
         #expect(ClassStart.due(c, settings: s.classStart, now: at(2, 10, 30)) == [.open])
+
         // Opened mid-class, the app catches up; after the class, nothing.
         #expect(starting([file], s, at: at(2, 11, 44)) == c)
         #expect(starting([file], s, at: at(2, 11, 45)) == nil)
@@ -101,8 +102,10 @@ struct ClassStartTests {
         var first = course("선형대수학", start: 9 * 60, end: 10 * 60 + 45)
         let second = course()
         let s = settings()
+
         #expect(try #require(starting([first, second], s, at: at(2, 10, 20))).courseId == first.course.id)
         #expect(try #require(starting([first, second], s, at: at(2, 10, 35))).courseId == second.course.id)
+
         // A makeup at the same time as another course's class: no telling which one the student went to.
         first.course.schedule = []
         var makeup = Session(device: device, at: at(1, 9), week: 10, date: at(2, 10, 30))
@@ -110,6 +113,7 @@ struct ClassStartTests {
         makeup.end = at(2, 12)
         first.sessions = [makeup]
         #expect(starting([first, second], s, at: at(2, 10, 35)) == nil)
+
         // Unless one of them does nothing at the start.
         var off = s
         off.classStart.setOff(Set(ClassStartSettings.Item.allCases), for: first.course.id)
@@ -154,6 +158,7 @@ struct ClassStartTests {
         s.stopsRecording = true
         s.stopAfterMinutes = 5
         #expect(ClassStart.recordingStop(c, settings: s) == at(2, 11, 50))
+
         // Before the end too (끝나기 10분 전), but never before the recording starts.
         s.stopAfterMinutes = -10
         #expect(ClassStart.recordingStop(c, settings: s) == at(2, 11, 35))

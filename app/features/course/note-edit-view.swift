@@ -16,7 +16,7 @@ struct NoteEditSheet: View {
                 InlineField(String(localized: .notesRenameField), text: $model.name)
             }
             FormRow(label: String(localized: .notesEditFolder), last: !model.choosesMath && model.pdfName == nil) {
-                ChoiceMenu(selection: $model.folder, options: model.folders.map { ($0, NoteListModel.folderLabel($0)) })
+                ChoiceMenu(selection: $model.folder, options: model.folderOptions)
             }
             if model.choosesMath {
                 FormRow(label: String(localized: .notesMathSyntax), last: model.pdfName == nil) {

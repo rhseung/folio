@@ -1,6 +1,6 @@
 import CoreGraphics
 
-/// A new Mac window's size, from the screen it opens on. `visible` is the screen less the menu bar and Dock.
+/// `visible` is the screen less the menu bar and Dock.
 enum WindowSize {
     static func opening(in visible: CGSize) -> CGSize {
         CGSize(width: side(ideal: Theme.Size.windowIdeal.width, least: Theme.Size.windowMin.width, room: visible.width),

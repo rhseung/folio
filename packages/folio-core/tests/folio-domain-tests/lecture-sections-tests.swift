@@ -30,6 +30,7 @@ struct LectureSectionsTests {
         let m = f.materials[0].id
         pages(&f, 1, 0, 5...8)
         pages(&f, 2, 0, 9...13)
+
         // One unit across two files: its pages in the other file don't show here.
         pages(&f, 2, 1, 1...3)
         #expect(f.lectureZones(of: m, pageCount: 16) == [
@@ -38,6 +39,7 @@ struct LectureSectionsTests {
             LectureZone(firstPage: 9, lastPage: 13, units: [f.units[2].id]),
             LectureZone(firstPage: 14, lastPage: 16, units: []),
         ])
+
         // Without the count the file ends where the last unit does.
         #expect(f.lectureZones(of: m, pageCount: nil).last == LectureZone(firstPage: 9, lastPage: 13, units: [f.units[2].id]))
         #expect(f.lectureZones(of: f.materials[1].id, pageCount: 10).first == LectureZone(firstPage: 1, lastPage: 3, units: [f.units[2].id]))
@@ -80,6 +82,7 @@ struct LectureSectionsTests {
         session.materials = [SessionMaterial(materialId: f.materials[0].id, firstPage: 1, lastPage: 5),
                              SessionMaterial(materialId: f.materials[1].id),
                              SessionMaterial(materialId: f.materials[1].id, firstPage: 2, lastPage: 6)]
+
         // The first file has no units' pages, and the second's first link has no range.
         #expect(f.splitProgress(of: session)?.material == f.materials[1].id)
         #expect(f.splitProgress(of: session)?.pages == 2...6)
@@ -151,12 +154,14 @@ struct LectureSectionsTests {
             LectureCut(unit: new, title: "Berge", firstPage: 20, lastPage: 24),
             LectureCut(unit: UUID(), firstPage: 13, lastPage: 19),
         ], device: device, now: now)
+
         // The other file's pages stay.
         #expect(f.units[0].lecturePages == [UnitPages(materialId: f.materials[1].id, firstPage: 1, lastPage: 5)])
         #expect(f.units[1].lecturePages == [UnitPages(materialId: m, firstPage: 1, lastPage: 8)])
         let berge = f.units.first { $0.id == new }
         #expect(berge?.title == "Berge" && berge?.parentId == f.units[0].id)
         #expect(berge?.lecturePages.map(\.pages) == [9...12, 20...24])
+
         // A cut naming no unit and no title makes nothing.
         #expect(f.units.count == 5)
     }
@@ -205,11 +210,13 @@ struct LectureSectionsTests {
         #expect(s.sections.map(\.pages) == [1...4, 5...10, 11...12])
         s.moveEdge(of: 1, to: 2)
         #expect(s.sections.map(\.pages) == [1...1, 2...10, 11...12])
+
         // Short of its end, its end comes back; past a neighbor's last page, it stops before it.
         s.moveEdge(of: 1, to: 6)
         #expect(s.sections.map(\.pages) == [1...1, 2...6, 7...12])
         s.moveEdge(of: 1, to: 30)
         #expect(s.sections.map(\.pages) == [1...1, 2...11, 12...12])
+
         // The last section's end pages go to no unit.
         var t = LectureSplit(pageCount: 8)
         t.setUnit(UUID(), of: 0)
@@ -224,20 +231,24 @@ struct LectureSectionsTests {
                                            .init(title: "C", firstPage: 9, lastPage: 9)], pageCount: 12))
         s.setUnit(a, of: 0)
         s.setUnit(b, of: 1)
+
         // From a section's start: it keeps its unit and takes the pages after.
         #expect(s.carve(5...10) == 1)
         #expect(s.sections.map(\.pages) == [1...4, 5...10, 11...12] && s.sections[1].unit == b)
+
         // Out of a section's middle: a section for no unit, and the rest of that section after it, still its unit's.
         #expect(s.carve(2...3) == 1)
         #expect(s.sections.map(\.pages) == [1...1, 2...3, 4...4, 5...10, 11...12])
         #expect(s.sections.map(\.unit) == [a, nil, a, b, nil])
         #expect(Set(s.sections.map(\.id)).count == 5)
+
         // Ending inside a section: the pages after the range stay that section's, under its id and title.
         let tail = s.sections[3]
         #expect(s.carve(4...6) == 2)
         #expect(s.sections.map(\.pages) == [1...1, 2...3, 4...6, 7...10, 11...12])
         #expect(s.sections.map(\.unit) == [a, nil, a, b, nil])
         #expect(s.sections[3].id == tail.id && s.sections[3].title == tail.title)
+
         // A range that is already a section stays as it is.
         let before = s
         #expect(s.carve(7...10) == 3 && s == before)
@@ -253,7 +264,9 @@ struct LectureSectionsTests {
         let made = s.sections[2].unit
         s.rename(2, to: "Hall")
         s.makeNew(2)
+
         #expect(s.sections[2].unit == made)
+
         // A new unit without a name can't be made.
         s.makeNew(3)
         #expect(s.cuts == [LectureCut(unit: unit, firstPage: 1, lastPage: 6), LectureCut(unit: made!, title: "Hall", firstPage: 7, lastPage: 8)])
@@ -303,6 +316,7 @@ struct LectureSectionsTests {
         let found = LectureReading.sections(outline: outline, pageCount: 24)
         #expect(found?.map(\.title) == ["Matchings", "König's theorem", "Hall"])
         #expect(found?.map(\.firstPage) == [1, 5, 9])
+
         // A bookmark per slide is no outline.
         let everySlide = (1...20).map { LectureReading.Bookmark(title: "Slide \($0)", page: $0) }
         #expect(LectureReading.sections(outline: everySlide, pageCount: 20) == nil)

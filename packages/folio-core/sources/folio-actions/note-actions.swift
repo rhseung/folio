@@ -15,7 +15,6 @@ func note(_ ctx: ActionContext, course: UUID, id: UUID) throws -> NoteFile {
     return note
 }
 
-/// A note in `Notes/` with `body`, or the template for its kind and format.
 @Action("note add", "Notes 폴더에 마크다운이나 LaTeX 노트 만들기. 본문을 주지 않으면 종류의 템플릿", effect: .creates, done: "노트 '{title}'을(를) 만들었습니다",
         examples: [#"folio note add EC4207 "매칭 정리" --kind topic --unit 매칭"#, #"folio note add EC4207 "매칭 정리" --format tex"#,
                    ##"echo "# 메모" | folio note add EC4207 "시험 메모" --body -"##],
@@ -42,11 +41,13 @@ public struct NoteAdd {
     public func run(_ ctx: ActionContext) throws {
         let title = title.trimmingCharacters(in: .whitespaces)
         guard !title.isEmpty else { throw ActionError.rule(String(localized: .errorNoteTitleEmpty)) }
+
         let settings = try ctx.settings()
         var meta = NoteMeta(id: id, kind: kind, math: settings.newNoteMath)
         try NoteLinks(kind: kind, session: session, exam: exam, units: units).apply(to: &meta, in: try ctx.file(course), calendar: ctx.calendar)
         let body = body ?? NoteTemplate.body(for: kind, title: title, sections: settings.noteSections(for: kind), format: format)
         let made = try ctx.createNote(course, title: title, meta: meta, format: format, body: body)
+
         if let session = meta.sessionId {
             try ctx.edit(course) { f in
                 f.linkNote(made, to: session, as: kind)
@@ -58,7 +59,7 @@ public struct NoteAdd {
     }
 }
 
-/// What a note of each kind points at; the others are dropped, so a note has one kind's links at a time.
+/// Links the kind doesn't read are dropped, so a note has one kind's links at a time.
 struct NoteLinks {
     var kind: NoteKind
     var session: Session.ID?
@@ -86,8 +87,7 @@ struct NoteLinks {
     }
 }
 
-/// Writes the whole file as given. With `expected`, refuses when the file is no longer that text: it was changed
-/// elsewhere since it was read.
+/// With `expected`, refuses when the file is no longer that text: it was changed elsewhere since it was read.
 @Action("note write", "노트 파일 전체를 바꾸기. 노트의 프로퍼티는 course.json에 있어 그대로다", done: "노트 '{note}'을(를) 썼습니다",
         phrases: ["노트 수정", "노트 내용 바꾸기"], cli: .manual(reason: "--expect의 해시를 지금 노트와 비교한 뒤 그 원문을 expected로 넘긴다"))
 public struct NoteWrite {
@@ -160,8 +160,7 @@ public struct NoteEdit {
     }
 }
 
-/// Gives a note made outside Folio an entry in course.json, so sessions and searches can point at it. The file is
-/// left as it is.
+/// Only course.json gains an entry; the note file is left as it is.
 @Action("note adopt", "Folio 밖에서 만든 노트에 ID 붙이기", done: "노트 '{note}'에 ID를 붙였습니다",
         examples: ["folio note adopt EC4207/Notes/외부.md"], phrases: ["밖에서 만든 노트 등록"])
 public struct NoteAdopt {
@@ -246,7 +245,6 @@ public struct NoteLinkSessions {
     }
 }
 
-/// Takes one session off a note; the other sessions a review note covers keep it.
 @Action("note unlink-session", "회차 하나에서 노트 떼기. 노트가 맡은 다른 회차는 그대로 둔다", done: "회차 '{session}'에서 노트 '{note}'을(를) 뗐습니다",
         examples: [#"folio note unlink-session "EC4207/10-26(월) 정리" 10-26"#], phrases: ["복습 노트 회차 빼기", "노트 회차 연결 풀기"])
 public struct NoteUnlinkSession {
@@ -311,6 +309,7 @@ public struct NoteMigrate {
                     f.notes.append(NoteEntry(id: id, device: ctx.device, at: ctx.now, path: store.notePath(of: n.url), meta: meta))
                 }
             }
+
             for n in notes {
                 try ctx.io(Change(.changed, ctx.relative(n.url))) { try store.write(NoteFile(url: n.url, meta: NoteMeta(id: nil)), text: n.text) }
             }
@@ -391,6 +390,7 @@ public struct NoteRetitleSessions {
                 moves.append(PlannedMove(from: try ctx.relative(course, r.path), to: ctx.relative(url)))
             }
         }
+
         guard !moves.isEmpty else { return }
         for move in moves { ctx.record(Change(.moved, move.from, to: move.to)) }
         if let batch = try NoteTitles.follow(moves, ctx, move: { try MoveJournal.apply(moves, in: ctx.gist.url, device: ctx.device, now: ctx.now) }) {
@@ -424,8 +424,10 @@ public struct NoteMove {
             throw ActionError.rule(String(localized: .errorNoteMovePlace(to)))
         }
         guard target.standardizedFileURL != source.url.standardizedFileURL else { return }
+
         let move = PlannedMove(from: ctx.relative(source.url), to: ctx.relative(target))
         ctx.record(Change(.moved, move.from, to: move.to))
+
         // The PDF this note's build wrote takes the new title in the same batch, so the next build finds it and one undo
         // puts both back. Another file at the new name stays and the PDF keeps its own: nothing is overwritten.
         let file = try ctx.file(course)
@@ -436,6 +438,7 @@ public struct NoteMove {
         guard let batch = try NoteTitles.follow(moves, ctx, move: { try MoveJournal.apply(moves, in: ctx.gist.url, device: ctx.device, now: ctx.now) })
         else { return }
         ctx.made(batch)
+
         if let built, let material = file.materials.first(where: { $0.path == built.from }) {
             try ctx.edit(course) { f in
                 let url = store.fileURL(built.to)
@@ -463,6 +466,7 @@ enum NoteTitles {
         var renamed: [UUID: [Rename]] = [:]
         var edits: [Edit] = []
         var courses: [(id: UUID, store: CourseStore)] = []
+
         for store in try ctx.gist.courseStores() {
             let course = try store.load().model.course.id
             courses.append((course, store))
@@ -478,9 +482,11 @@ enum NoteTitles {
             if !notes.isEmpty { renamed[course] = notes }
         }
         guard !renamed.isEmpty else { return ctx.dryRun ? nil : try move() }
+
         let title = { (path: String) in ((path as NSString).lastPathComponent as NSString).deletingPathExtension }
         let folder = { (path: String) in (path as NSString).deletingLastPathComponent }
         let everywhere = renamed.values.flatMap { $0 }
+
         for (course, store) in courses {
             let notes = renamed[course] ?? []
             for n in try ctx.notes(course) where !notes.isEmpty || n.format == .markdown {
@@ -499,6 +505,7 @@ enum NoteTitles {
                 if text != before { edits.append(Edit(store: store, url: own.map { store.fileURL($0.to) } ?? n.url, text: text)) }
             }
         }
+
         let batch = ctx.dryRun ? nil : try move()
         for (course, notes) in renamed where notes.contains(where: { $0.note != nil }) {
             try ctx.edit(course) { f in
@@ -605,7 +612,7 @@ public struct QuizRecord {
     }
 }
 
-/// A new set, or the whole of one with the same id.
+/// A set with an existing id is replaced whole.
 @Action("problem-set add", "문제 번호로 문제 묶음 만들기", effect: .creates, done: "문제 묶음을 저장했습니다",
         phrases: ["문제 묶음 만들기", "연습문제 등록"], cli: .manual(reason: "제목과 문제 번호로 문제 묶음(ProblemSet) 전체를 만든다"))
 public struct ProblemSetSave {
@@ -684,7 +691,6 @@ public struct ProblemRecord {
 
 // MARK: Review
 
-/// The review result and the time spent, in this device's log.
 @Action("review record", "단원 복습 결과와 걸린 시간을 기록", effect: .logs, done: "단원 '{unit}'의 복습을 기록했습니다",
         examples: [#"folio review record EC4207/매칭 good --start "2026-10-28 20:00" --end "2026-10-28 20:40""#],
         phrases: ["복습했", "공부했", "복습 완료", "복습 기록", "공부함"])
@@ -708,8 +714,8 @@ public struct ReviewRecord {
     }
 }
 
-/// Marks units as not needing review, one `skip` event each. The time counts only when the unit was open (the review
-/// screen passes when it opened); skipped from a list, nothing was studied.
+/// The time counts only when the unit was open (the review screen passes when it opened); skipped from a list, nothing
+/// was studied.
 @Action("review skip", "단원을 복습하지 않아도 되는 것으로 표시. 단원을 열어 본 시간이 있으면 공부 시간으로 남긴다. 여러 개면 확인을 받는다", effect: .logs,
         confirm: "단원 {units}의 복습을 건너뜁니다.", done: "단원 {units}을(를) 건너뛰었습니다",
         phrases: ["복습 안 해도", "복습 빼기", "복습 건너뛰기", "복습 필요 없음"], cli: .manual(reason: "<과목>/<단원>마다 과목이 달라도 되는 대상(Target) 목록을 만든다"))

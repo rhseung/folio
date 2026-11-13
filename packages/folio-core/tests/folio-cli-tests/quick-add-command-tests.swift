@@ -66,6 +66,7 @@ struct QuickAddCommandTests {
         try h.expectSame(["add", "로봇 매주 금요일 23:59 Weekly Quiz", "--repeats", "none"]) { _ in
             AssignmentAdd(course: Self.robotics, title: "Weekly Quiz", due: date("2026-10-30 23:59"))
         }
+
         // Clearing the deadline clears the repeat with it, as the deadline chip's clear button does.
         try h.expectSame(["add", "로봇 매주 금요일 23:59 Weekly Quiz", "--due", "none"]) { _ in
             AssignmentAdd(course: Self.robotics, title: "Weekly Quiz")
@@ -75,6 +76,7 @@ struct QuickAddCommandTests {
     @Test func aLineWithoutACourseWritesNothing() throws {
         let gist = try Harness.fixtureCopy()
         let before = try Harness.files(gist)
+
         // 선형대수학 was last semester's, so the line names none of this semester's courses.
         let r = h.cli(["add", "선대 HW5 금 23:59"], gist: gist)
         #expect(r.code == Exit.notFound.rawValue)

@@ -1,8 +1,7 @@
 import SwiftUI
 
-/// A PDF with its page strip: the PDF renderer of `FileView`. The controller drives it from outside (the bar's page,
-/// zoom and search; a link's page), and the strip (`PageStrip`) cuts the thumbnails into the classes' progress (#147),
-/// so whatever opens a lecture through `FileView`, the materials tab or a review's source, shows the same sections.
+/// The strip cuts the thumbnails into the classes' progress here (#147), so whatever opens a lecture through
+/// `FileView`, the materials tab or a review's source, shows the same sections.
 struct PDFPane: View {
     let controller: PDFController
     var thumbnails = true

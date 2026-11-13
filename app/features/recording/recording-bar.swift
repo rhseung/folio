@@ -138,7 +138,7 @@ struct RecordingFace<Outline: InsettableShape>: View {
             .clipShape(shape)
         }
         // Eased, not sprung: the level comes five times a second, and a spring overshot each sample into a flicker.
-        .animation(.smooth(duration: 0.35), value: voice)
+        .animation(Theme.Motion.pane, value: voice)
     }
 
     private static func anchor(_ point: CGPoint, in size: CGSize) -> UnitPoint {
@@ -163,7 +163,7 @@ private struct TranscriptFeed: View {
 
     /// One line above the captions, so the card itself stays as it is: what the captions were told, opened on a click.
     @ViewBuilder var context: some View {
-        Button { withAnimation(.snappy(duration: 0.25)) { showingContext.toggle() } } label: {
+        Button { withAnimation(Theme.Motion.standard) { showingContext.toggle() } } label: {
             HStack(spacing: Theme.Space.s) {
                 Image(systemName: "doc.text").foregroundStyle(Theme.Palette.textTertiary)
                 Text(model.contextSummary).lineLimit(1).truncationMode(.middle).foregroundStyle(Theme.Palette.textSecondary)

@@ -65,12 +65,14 @@ public struct PageRange: Equatable, Sendable {
     /// is pushed along past it. The other end is also brought into the file, for a count learned after it was set.
     public func moving(_ end: End, to page: Int?, pages: Int?, besides taken: [ClosedRange<Int>] = []) -> PageRange {
         var bounds = room(besides: taken, pages: pages)
+
         // An empty range has no room yet: the page it is given decides it, and a taken page sets nothing.
         if first == nil, last == nil, let page {
             let file = Self.bounds(pages)
             guard let around = Self.room(at: min(max(page, file.lowerBound), file.upperBound), besides: taken, pages: pages) else { return self }
             bounds = around
         }
+
         let clamp = { (p: Int) in min(max(p, bounds.lowerBound), bounds.upperBound) }
         let moved = page.map(clamp)
         switch end {
@@ -160,6 +162,7 @@ extension CourseFile {
         let covered = coverage(of: material)
         let end = pageCount ?? covered.map(\.pages.upperBound).max() ?? 0
         guard end > 0 else { return [] }
+
         var spans: [LectureSpan] = []
         for page in 1...end {
             let sessions = covered.filter { $0.pages.contains(page) }.map(\.session.id)
@@ -207,6 +210,15 @@ extension CourseFile {
     /// Pages of `material` the classes other than `session` took, in page order: where a range of `session` may not go.
     public func pagesTaken(in material: UUID, besides session: UUID) -> [ClosedRange<Int>] {
         pagesTaught(in: material, besides: session).map(\.pages).sorted { $0.lowerBound < $1.lowerBound }
+    }
+
+    /// The classes a new range of `material`'s pages can be saved as, the latest first: those held up to today that
+    /// have no pages of it yet. A class with pages there is changed from its own section of the page strip instead,
+    /// and a cancelled class taught nothing.
+    public func sessionsForNewRange(of material: UUID, now: Date, settings: Settings, calendar: Calendar) -> [Session] {
+        Session.held(among: sessions.filter { !$0.isCancelled }, now: now, settings: settings, calendar: calendar)
+            .reversed()
+            .filter { s in s.materials.first { $0.materialId == material }?.pages == nil }
     }
 }
 
@@ -280,6 +292,7 @@ extension CourseFile {
             first = min(first, count)
             last = last.map { min($0, count) }
         }
+
         var range = PageRange(first: first, last: last)
         // Saved pages already passed the rule. Anything guessed is kept off other classes' pages: a class that only
         // went back over pages taught before (a recap) is suggested no pages rather than those.
@@ -296,6 +309,7 @@ extension CourseFile {
         guard let link = earlier.lazy.reversed().compactMap({ $0.materials.last { $0.pages != nil } }).first,
               let end = link.pages?.upperBound else { return nil }
         guard let count = pageCounts[link.materialId], end >= count else { return link.materialId }
+
         let lectures = lectureFiles
         guard let i = lectures.firstIndex(where: { $0.id == link.materialId }), i + 1 < lectures.count else { return nil }
         return lectures[i + 1].id

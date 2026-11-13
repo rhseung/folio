@@ -1,7 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// One row of an item menu: how a source draws one of its commands.
 struct MenuRow: Identifiable {
     /// A row inside a submenu. Plain actions only, so a menu goes one level deep at most: on iPad a submenu replaces
     /// the menu it opened from, and a second level loses the way back.
@@ -45,7 +44,6 @@ struct MenuRow: Identifiable {
         self.init(id: command, group: command.group, title: String(localized: title), symbol: symbol, role: role, disabled: disabled, kind: kind)
     }
 
-    /// "삭제…" and the like: the same title and symbol on every item, in red.
     static func remove<C: ItemCommand>(_ command: C, _ action: @escaping @MainActor () -> Void) -> MenuRow {
         MenuRow(command, .commonDeleteEllipsis, "trash", role: .destructive, .action(action))
     }
@@ -67,7 +65,7 @@ struct MenuRow: Identifiable {
     }
 }
 
-/// Finder's window on the file, selected. Nothing on iPadOS, whose menus don't offer it.
+/// Nothing on iPadOS, whose menus don't offer it.
 @MainActor func revealInFinder(_ url: URL) {
     #if os(macOS)
     NSWorkspace.shared.activateFileViewerSelecting([url])
@@ -82,8 +80,6 @@ struct MenuRow: Identifiable {
     func row(_ command: Command) -> MenuRow
 }
 
-/// Draws a source's rows, with a divider where the band changes (`MenuGroup.band`). Used in `.contextMenu`, a `⋯`
-/// button's `Menu`, and a search result's menu.
 struct ItemMenu<Source: ItemMenuSource>: View {
     let source: Source
 

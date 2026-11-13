@@ -41,6 +41,7 @@ struct SettingsModelTests {
         model.follow(.place(.settings))
         model.follow(.place(.grades))
         #expect(model.tab == .review)
+
         // Tabs #416 merged open the tab that took them over.
         model.follow(try #require(AppLink(string: "folio://settings/letters")))
         #expect(model.tab == .record)

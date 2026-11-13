@@ -2,8 +2,6 @@ import FolioDomain
 import Foundation
 import Observation
 
-/// The course page: which section is open, the note the notes section shows, and what the course column and the
-/// overview draw.
 @MainActor @Observable
 final class CourseModel {
     let workspace: Workspace
@@ -54,6 +52,7 @@ final class CourseModel {
         defer { following = false }
         place = link
         noteAnchor = nil
+
         switch link.kind {
         case .course: section = CourseSection(link.page ?? .overview)
         case .note:

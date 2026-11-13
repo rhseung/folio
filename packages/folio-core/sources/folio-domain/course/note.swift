@@ -119,7 +119,7 @@ extension CourseFile {
     }
 }
 
-/// Note bodies. Settings may override the section headings; these are the defaults.
+/// Settings may override the section headings; these are the defaults.
 public enum NoteTemplate {
     public static func defaultSections(for kind: NoteKind) -> [String] {
         switch kind {

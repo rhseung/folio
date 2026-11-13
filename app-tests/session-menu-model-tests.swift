@@ -99,13 +99,13 @@ struct SessionMenuModelTests {
         perform(try row(menu, .commonEditEllipsis))
         guard case .session(let request)? = presented else { Issue.record("no sheet"); return }
         #expect(request.session == id && request.course == graphTheory && !request.asked)
+
         perform(try row(menu, .commonDeleteEllipsis))
         #expect(asked != nil && asked?.refusal == nil)
         asked?.perform()
         #expect(try file(workspace).sessions.allSatisfy { $0.id != id })
     }
 
-    /// On a unit's page the class can be let go of that unit.
     @Test func aUnitPageUnlinksTheClass() throws {
         let workspace = try fixtureWorkspace()
         let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: workspace.now.addingTimeInterval(-86_400)))?.made)

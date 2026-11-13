@@ -51,6 +51,7 @@ struct TodayBackupTests {
     /// Both copies back up into one shared folder, so their settings.json match; each run's output is checked and cleared.
     func backupCopies() throws -> (URL, URL, URL) {
         let (a, b) = (try Harness.fixtureCopy(), try Harness.fixtureCopy())
+
         // Restores land beside the backup folder, so it gets a parent of its own.
         let folder = FileManager.default.temporaryDirectory.appending(path: "folio-backups-\(UUID().uuidString)/auto")
         for gist in [a, b] {

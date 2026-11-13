@@ -14,8 +14,6 @@ import PDFKit
 import QuickLookThumbnailing
 import UniformTypeIdentifiers
 
-/// One file in a pane, whatever opened it: a course's material, a note shown as a source in review, or a file outside
-/// any course (a semester's `_Admin`). Picks the renderer from the file's format and loads what that renderer needs.
 @MainActor @Observable
 final class FileViewModel {
     enum Subject {
@@ -84,7 +82,6 @@ final class FileViewModel {
 
     // MARK: Splitting a lecture (#321)
 
-    /// The split being edited, while the split screen is up.
     var splitting: LectureSplit?
     private(set) var splitNote: String?
     /// The outline and titles being read as the screen opens: Claude waits until they are.
@@ -100,7 +97,6 @@ final class FileViewModel {
     /// Bumped by each read and each ask, so an answer that comes after a newer one is dropped.
     @ObservationIgnored private var splitRead = 0
 
-    /// A course's lecture PDF can be split into its units.
     var canSplit: Bool {
         guard let m = material, let course, format.renderer == .pdf else { return false }
         return course.file.lectureFiles.contains { $0.id == m.id }
@@ -119,12 +115,14 @@ final class FileViewModel {
             splitNote = nil
             return
         }
+
         splitting = LectureSplit(pageCount: controller.pageCount)
         let claude = lectureClaude.map { $0.off() == nil } ?? false
         splitNote = String(localized: claude ? .lectureClaudeReading : .fileViewSplitReading)
         readingSplit = true
         askingClaude = claude
         let read = splitRead
+
         let found: LectureFinding
         if let findSplit {
             found = await findSplit(url, file.units)
@@ -134,6 +132,7 @@ final class FileViewModel {
         guard read == splitRead else { return }
         readingSplit = false
         askingClaude = false
+
         // Left alone while it was read: a cut made meanwhile is the user's and stays.
         guard let current = splitting, current.sections.count == 1, current.sections[0].unit == nil else { return }
         switch found {
@@ -151,7 +150,7 @@ final class FileViewModel {
 
     var canRetryClaude: Bool { claudeFailed && splitting != nil && !readingSplit && !askingClaude }
 
-    /// Claude's reading again, after it gave none. It is still only a proposal: nothing is written until "저장".
+    /// Still only a proposal: nothing is written until "저장".
     func retryClaude() async {
         guard canRetryClaude, let claude = lectureClaude else { return }
         splitRead += 1
@@ -174,6 +173,15 @@ final class FileViewModel {
     }
 
     func cancelSplit() { closeSplit() }
+
+    var splitAsk: UUID? { workspace.splitAsk }
+
+    /// The progress sheet asks for a file's split screen before the file is open, so it is taken once the PDF is.
+    func takeSplitAsk(_ controller: PDFController?) {
+        guard let ask = workspace.splitAsk, ask == material?.id, let controller else { return }
+        workspace.splitAsk = nil
+        Task { await startSplit(controller) }
+    }
 
     private func closeSplit() {
         splitting = nil
@@ -279,11 +287,23 @@ final class FileViewModel {
         return .latex
     }
 
+    /// Kept, not made on each read: the source holds the notes it read until the notes revision changes, and a new one
+    /// per body would read every linked note again.
+    @ObservationIgnored private var embedSource: (url: URL, source: NoteEmbedSource)?
+
     /// A note's embeds come from its course; a markdown file elsewhere shows only the links.
     var embeds: NoteEmbedSource? {
         guard let course else { return nil }
-        return NoteEmbedSource(workspace: workspace, course: course, own: url)
+        let url = url
+        if let kept = embedSource, kept.url == url { return kept.source }
+        let source = NoteEmbedSource(workspace: workspace, course: course, own: url)
+        embedSource = (url, source)
+        return source
     }
+
+    var notesRevision: Int { workspace.notesRevision }
+
+    func accent(_ course: LoadedCourse) -> CourseAccent { workspace.accent(course.id) }
 
     // MARK: PDF
 
@@ -308,7 +328,7 @@ final class FileViewModel {
         material.map { AppLink(.material, $0.id, anchor: .page(page + 1)) }
     }
 
-    /// The page's text and picture for the Claude panel. Nil off a course material: the panel belongs to a course.
+    /// Nil off a course material: the panel belongs to a course.
     func pageContext(_ page: Int, in controller: PDFController) -> ContextItem? {
         guard let m = material, let pdfPage = controller.view.document?.page(at: page) else { return nil }
         let name = "\((m.path as NSString).lastPathComponent) p\(page + 1).jpg"

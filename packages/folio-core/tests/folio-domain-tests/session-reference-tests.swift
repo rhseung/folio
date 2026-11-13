@@ -54,10 +54,13 @@ struct SessionReferenceTests {
         let makeup = session(at(11, 3, 21, 0), made: at(11, 1))
         let other = session(at(11, 5))
         let f = file([cancelled, makeup, other])
+
         #expect(f.reference(of: cancelled, calendar: calendar) == "11-03 10:30")
         #expect(f.reference(of: makeup, calendar: calendar) == "11-03 21:00")
+
         // Unlike 10주차-1 and 10주차-2, a makeup leaves the other days' classes as they were.
         #expect(f.reference(of: other, calendar: calendar) == "11-05")
+
         // A session not yet in the file is named where its date puts it.
         let more = session(at(11, 5, 19, 0))
         #expect(f.reference(of: more, calendar: calendar) == "11-05 19:00")
@@ -112,6 +115,7 @@ struct SessionReferenceTests {
         let loose = Recording(device: device, at: .now, sessionId: nil, file: "Recordings/3주차-1.m4a")
         let new = Recording(device: device, at: .now, sessionId: s.id, file: "Recordings/11-03(화).m4a")
         f.recordings = [old, second, mine, loose, new]
+
         #expect(f.legacyRecordingRetitles(calendar: calendar) == [
             RecordingRetitle(recording: old.id, file: old.file, name: "11-03(화)"),
             RecordingRetitle(recording: second.id, file: second.file, name: "11-03(화)"),
@@ -189,6 +193,7 @@ struct SessionReferenceTests {
                 u.sessionIds = [s.id]
                 return u
             }
+
             let name = f.noteTitle(for: s, kind: .rough, calendar: calendar)
             let day = "11-03(화)"
             #expect(name.hasPrefix(day))
@@ -196,6 +201,7 @@ struct SessionReferenceTests {
                 #expect(name == day)
                 return
             }
+
             let subject = String(name.dropFirst(day.count + 1))
             #expect(!subject.isEmpty && subject.count <= 60)
             guard first.count <= 60 else { return }

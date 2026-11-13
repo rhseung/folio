@@ -26,6 +26,7 @@ struct StagedFolderTests {
         #expect(!StagedFolder.isInside(copy.url.standardizedFileURL.path, source.standardizedFileURL.path))
         #expect(try text(copy.url.appending(path: "2026-3/EC4207/note.md")) == "note")
         #expect(!isLink(copy.url.appending(path: "2026-3/EC4207/note.md")))
+
         // Linked whole, never copied file by file.
         #expect(isLink(copy.url.appending(path: "2026-3/EC4207/Assignments/Code/.git")))
         let made = copy.url
@@ -46,6 +47,7 @@ struct StagedFolderTests {
         #expect(try text(source.appending(path: "2026-3/EC4207/note.md")) == "note")
         #expect(try text(source.appending(path: ".folio/logs/device.jsonl")) == "line 1\n")
         #expect(try text(copy.url.appending(path: ".folio/logs/device.jsonl")) == "line 1\nline 2\n")
+
         // Removed in the copy, not put in the user's Trash.
         #expect(!FileManager.default.fileExists(atPath: copy.url.appending(path: "2026-3/EC4207/Notes/new.md").path))
         #expect(!FileManager.default.fileExists(atPath: source.appending(path: "2026-3/EC4207/Notes").path))
@@ -85,6 +87,7 @@ struct StagedFolderTests {
         #expect(try text(source.appending(path: "2026-3/EC4207/note.md")) == "note")
         #expect(try text(source.appending(path: "2026-3/EC4207/Assignments/Code/.git/HEAD")) == "ref")
         #expect(!FileManager.default.fileExists(atPath: source.appending(path: "2026-3/EC4207/Assignments/Code/.git/new").path))
+
         // Outside `run` the fence is off, as for every other write.
         try CoordinatedFile.write(Data("x".utf8), to: source.appending(path: "other.txt"))
     }

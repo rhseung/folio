@@ -81,6 +81,7 @@ public struct ImportNotes {
         let dumps = try folders.map { ($0, try JSONDecoder().decode(NotionCourseDump.self, from: Data(contentsOf: $0.appending(path: "index.json")))) }
         var links: [String: String] = [:]
         for (_, dump) in dumps { for n in dump.notes { links[n.id.uuidString.lowercased().replacingOccurrences(of: "-", with: "")] = n.title } }
+
         for (dumpFolder, dump) in dumps {
             guard ctx.hasFolder(dump.coursePageId) else {
                 if !dump.notes.isEmpty || !dump.scores.isEmpty { ctx.note(String(localized: .noteImportNotesNoFolder(dump.title, dump.notes.count, dump.scores.count))) }
@@ -93,6 +94,7 @@ public struct ImportNotes {
             let r = NotionNotesImporter.merge(dump, into: try ctx.file(dump.coursePageId), existingNotes: existing, calendar: ctx.calendar, device: ctx.device, now: ctx.now)
             ctx.note(String(localized: .noteImportNotesCourse(dump.title, r.sessionsAdded, r.notes.count, r.componentsAdded, r.scoresAdded, dump.images.filter { $0.file != nil }.count)))
             for w in r.warnings { ctx.note(String(localized: .noteImportNotesCheck(dump.title, w))) }
+
             // Two Notion pages often share a title ("숙제"), so each name is chosen before any file exists.
             var urls: [UUID: URL] = [:]
             for plan in r.notes where !existing.contains(plan.id) {
@@ -100,6 +102,7 @@ public struct ImportNotes {
                 urls[plan.id] = url
                 ctx.record(Change(.added, ctx.relative(url)))
             }
+
             if !ctx.dryRun { try store.writeNotionNotes(r.notes, dump: dump, folder: dumpFolder, links: links, at: urls) }
             let paths = urls.mapValues { store.notePath(of: $0) }
             try ctx.edit(dump.coursePageId) { f in
@@ -138,6 +141,7 @@ public struct ImportCalendar {
                 ctx.note(String(localized: .noteImportCalendarNoStart(name)))
                 continue
             }
+
             let r = CalendarImporter.merge(group, into: file, semesterStart: start, calendar: ctx.calendar, device: ctx.device, now: ctx.now)
             let notes = store.notes(in: file)
             let links = CalendarImporter.noteLinks(sessions: r.file.sessions, titles: r.titles, notes: notes.compactMap { n in n.meta.id.map { ($0, n.title, n.meta) } })
@@ -145,11 +149,13 @@ public struct ImportCalendar {
             if !r.schedule.isEmpty {
                 ctx.note(String(localized: .noteImportCalendarSchedule(name, r.schedule.map { "\(ClassTime.weekdayNames[$0.weekday - 1]) \(String(format: "%02d:%02d-%02d:%02d", $0.startMinute / 60, $0.startMinute % 60, $0.endMinute / 60, $0.endMinute % 60)) \($0.room)" }.joined(separator: ", "))))
             }
+
             // A lab's unit title already holds the meeting's title.
             let label = { (s: Session) in r.file.units(of: s).first?.title ?? r.titles[s.id] ?? "" }
             for s in r.added { ctx.note("+ \(r.file.reference(of: s, calendar: ctx.calendar)) \(weekdayTime(s.date))\(label(s).isEmpty ? "" : " · \(label(s))")") }
             for s in r.filled { ctx.note("~ \(r.file.reference(of: s, calendar: ctx.calendar)) \(weekdayTime(s.date))\(label(s).isEmpty ? "" : " · \(label(s))")") }
             for s in r.cancelled { ctx.note(String(localized: .noteImportCalendarCancelled(r.file.reference(of: s, calendar: ctx.calendar), weekdayTime(s.date)))) }
+
             var result = r.file
             for l in links {
                 guard let note = notes.first(where: { $0.meta.id == l.note }), let n = result.notes.firstIndex(where: { $0.id == l.note }),
@@ -236,6 +242,7 @@ public struct ImportRequirements {
         for prefix in Set(file.categories.compactMap(\.program) + (file.programs ?? []).map(\.code)) where RequirementImporter.code(prefix, in: codes) == nil {
             throw ActionError.rule(String(localized: .errorImportUnknownCode(prefix)))
         }
+
         let r = RequirementImporter.merge(file.categories, into: catalog.categories, codes: codes, device: ctx.device, now: ctx.now)
         let fmt = { (c: FolioDomain.Category) in
             let parent = c.parentId.flatMap { id in r.categories.first { $0.id == id }?.name }.map { " ⊂ \($0)" } ?? ""
@@ -244,6 +251,7 @@ public struct ImportRequirements {
             let program = c.programId.flatMap { id in codes.first { $0.id == id }?.prefix }.map { " (\($0))" } ?? ""
             return "\(c.name) [\(c.group)]\(program)\(parent) \(credits)"
         }
+
         for name in r.added { ctx.note("+ " + fmt(r.categories.first { $0.name == name }!)) }
         for name in r.changed {
             let after = r.categories.first { $0.name == name }!
@@ -251,6 +259,7 @@ public struct ImportRequirements {
             ctx.note("~ " + fmt(after) + (before.name != after.name ? String(localized: .noteImportRequirementsRenamed(before.name)) : "") + String(localized: .noteImportRequirementsBefore) + fmt(before))
         }
         for name in r.untouched { ctx.note(String(localized: .noteImportRequirementsUntouched(name))) }
+
         try ctx.editCatalog { $0.categories = r.categories }
         try ctx.editTranscript { t in
             if let year = file.admissionYear { t.graduation.admissionYear = year }
@@ -278,18 +287,21 @@ public struct ImportHandbook {
         var catalog = try ctx.catalog()
         let unknown = Set(handbook.areas.values).subtracting(catalog.categories.map(\.name))
         guard unknown.isEmpty else { throw ActionError.rule(String(localized: .errorImportUnknownCategory(unknown.sorted().joined(separator: ", ")))) }
+
         catalog.handbooks.removeAll { $0.year == handbook.year }
         catalog.handbooks.append(handbook)
         catalog.handbooks.sort { $0.year < $1.year }
         for (name, n) in Dictionary(grouping: handbook.areas.values, by: { $0 }).mapValues(\.count).sorted(by: { $0.key < $1.key }) {
             ctx.note(String(localized: .noteImportHandbookArea(handbook.year, name, n)))
         }
+
         let courses = try ctx.gist.allCourses()
         let suggestions = HandbookClassifier.suggest(courses: courses, semesters: try ctx.transcript().semesters, catalog: catalog)
         for s in suggestions {
             ctx.note(String(localized: .noteImportHandbookSuggestion(courses.first { $0.id == s.courseId }!.title, s.code, catalog.category(s.categoryId)!.name)))
         }
         try ctx.editCatalog { $0.handbooks = catalog.handbooks }
+
         guard accept else { return }
         let byId = Dictionary(keepingFirst: suggestions.map { ($0.courseId, $0.categoryIds) })
         for id in try courseIDs(ctx).values.sorted(by: { $0.uuidString < $1.uuidString }) {

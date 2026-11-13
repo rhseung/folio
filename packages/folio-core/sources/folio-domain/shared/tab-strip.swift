@@ -53,14 +53,12 @@ public struct TabStrip<ID: Hashable & Sendable>: Equatable, Sendable {
         return true
     }
 
-    /// Keeps `id` alone, in front.
     public mutating func closeOthers(than id: ID) {
         guard tabs.contains(id) else { return }
         tabs = [id]
         selected = id
     }
 
-    /// Puts `id` at `index` among the tabs, as a drag drops it there.
     public mutating func move(_ id: ID, to index: Int) {
         guard let i = tabs.firstIndex(of: id) else { return }
         tabs.remove(at: i)
@@ -138,7 +136,6 @@ public enum TabFit {
             hidden > 0 ? 4 : compactFront ? 3 : stacked ? 2 : iconsOnly ? 1 : 0
         }
 
-        /// What an other tab takes in this layout.
         public func width(of tab: Other) -> Double {
             !iconsOnly ? tab.full : stacked ? tab.stacked : tab.icons
         }
@@ -168,6 +165,7 @@ public enum TabFit {
         for step in steps where front.width(compact: step.compactFront) + beside(others, layout: step, gap: gap, more: more) <= room {
             return step
         }
+
         guard n > 0 else { return steps[3] }
         // The menu stays even when no icon fits beside the tab in front, which then folds its own trail.
         var fit = Layout(iconsOnly: true, stacked: true, compactFront: true, shown: n - 1, hidden: 1)

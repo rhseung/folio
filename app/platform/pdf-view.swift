@@ -82,7 +82,7 @@ final class PDFController {
     func zoomOut() { view.zoomOut(nil) }
     func fit() { view.autoScales = true }
 
-    /// Finds every occurrence and highlights them all; synchronous, so it runs on submit, not per keystroke.
+    /// Synchronous, so it runs on submit, not per keystroke.
     func find(_ text: String) {
         matches = text.isEmpty ? [] : view.document?.findString(text, withOptions: [.caseInsensitive, .diacriticInsensitive]) ?? []
         view.highlightedSelections = matches

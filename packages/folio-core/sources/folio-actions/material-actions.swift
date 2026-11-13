@@ -66,7 +66,6 @@ public struct MaterialLinkUnit {
     }
 }
 
-
 // The status comes before the materials on the command line, so it is declared first.
 @Action("material status", "자료의 상태 바꾸기. 여러 개면 확인을 받는다", confirm: "자료 {materials}의 상태를 {status}(으)로 바꿉니다.",
         done: "자료 {materials}을(를) {status}(으)로 바꿨습니다",
@@ -108,7 +107,6 @@ public struct MaterialKindSet {
     }
 }
 
-/// Points a material at a file inside the course folder, to replace a missing one.
 @Action("material relink", "사라진 자료를 과목 폴더 안의 다른 파일에 다시 잇기", done: "자료 '{material}'을(를) {file}에 다시 이었습니다",
         phrases: ["사라진 파일 다시 연결", "파일 경로 바뀜"], cli: .manual(reason: "상대 경로를 명령을 실행한 폴더가 아니라 과목 폴더 기준으로 푼다"))
 public struct MaterialRelink {
@@ -131,7 +129,6 @@ public struct MaterialRelink {
     }
 }
 
-/// Stops tracking the file. The file stays; sessions, problem sets and assignments let go of it.
 @Action("material untrack", "자료 추적 그만두기. 파일은 그대로 두고 회차, 문제 묶음, 과제의 연결은 푼다", done: "자료 '{material}'의 추적을 그만뒀습니다",
         examples: ["folio material untrack EC4207/Seating.pdf"], phrases: ["추적 그만", "자료 목록에서 빼기"])
 public struct MaterialUntrack {
@@ -148,8 +145,7 @@ public struct MaterialUntrack {
     }
 }
 
-/// Registers new files in the course folder, re-links moved ones, and gives each `Assignments/` folder without one an
-/// assignment. Moves and renames nothing. Without a course, every course with a folder.
+/// Files moved in Finder are re-linked rather than registered again.
 @Action("material track", "과목 폴더의 새 파일을 등록하고 과제 폴더에 과제를 만든다",
         discussion: "옮기거나 이름을 바꾸지 않는다. 과목을 빼면 모든 과목에 한다. 지난 학기의 새 과제는 제출함으로 둔다.", done: "자료를 등록했습니다",
         examples: ["folio material track EC4207", "folio material track --dry-run"],
@@ -178,7 +174,6 @@ public struct MaterialTrack {
     }
 }
 
-/// One file for `material import`: where it goes, and the class it is for.
 public struct ImportItem: Codable, Sendable, Hashable {
     /// Absolute path.
     public var file: String
@@ -213,6 +208,7 @@ public struct MaterialImport {
             if let session = item.session { _ = try index(session, in: file.sessions, .valueSession) }
             if let cuts = item.sections { try checkCuts(cuts, in: file) }
         }
+
         var linked: [(path: String, item: ImportItem)] = []
         for item in items {
             let url = URL(filePath: item.file)
@@ -226,6 +222,7 @@ public struct MaterialImport {
                 linked.append((path, item))
             }
         }
+
         try ctx.edit(course) { f in
             try store.refreshMaterials(in: &f, device: ctx.device, now: ctx.now)
             for (path, item) in linked {
@@ -237,7 +234,7 @@ public struct MaterialImport {
     }
 }
 
-/// Renames or moves a file through `moves.jsonl`, keeping its ID and links. `made` is the batch, for `cleanup undo`.
+/// `made` is the `moves.jsonl` batch, for `cleanup undo`.
 @Action("material mv", "자료 파일을 옮기거나 이름 바꾸기. ID와 연결은 그대로", discussion: "moves.jsonl에 남겨서 folio cleanup undo로 되돌릴 수 있다.",
         effect: .moves, confirm: "{material}을(를) {to}(으)로 옮깁니다.", done: "{material}을(를) {to}(으)로 옮겼습니다",
         examples: ["folio material mv EC4207/Seating.pdf Exams/Midterm/자리.pdf --dry-run"],
@@ -266,7 +263,6 @@ public struct MaterialMove {
     }
 }
 
-/// To the Trash, where the user can still put it back, and no longer tracked.
 @Action("material rm", "자료 파일을 휴지통으로 옮기고 추적에서 뺀다", discussion: "휴지통에서 되살릴 수 있다.", effect: .removes,
         confirm: "{material}을(를) 휴지통으로 옮깁니다.", done: "{material}을(를) 휴지통으로 옮겼습니다",
         examples: ["folio material rm EC4207/Seating.pdf --dry-run"], phrases: ["파일 삭제", "휴지통"])

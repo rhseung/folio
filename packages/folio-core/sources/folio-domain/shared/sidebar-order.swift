@@ -28,8 +28,8 @@ public struct SidebarOrder: Codable, Sendable, Equatable {
         return result
     }
 
-    /// Moves the course at `source` in `term`'s shown order to sit before `destination` (`count` for the end), as a
-    /// list's drag reports it within that term. The other terms' entries stay as they were.
+    /// `destination` is as a list's drag reports it (`count` for the end), within one term's `shown` order. The other
+    /// terms' entries stay as they were.
     public mutating func move(_ shown: [UUID], from source: Int, to destination: Int) {
         guard shown.indices.contains(source) else { return }
         var order = shown

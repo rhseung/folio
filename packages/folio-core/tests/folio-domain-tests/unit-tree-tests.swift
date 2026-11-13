@@ -47,6 +47,7 @@ struct UnitTreeTests {
         let b = unit("B", 1, parent: a)
         let c = unit("C", 2)
         var units = [a, b, c]
+
         #expect(Set(UnitTree.parentChoices(for: a.id, in: units).map(\.title)) == ["C"])
         #expect(!UnitTree.setParent(a.id, to: b.id, in: &units))
         #expect(UnitTree.setParent(c.id, to: a.id, in: &units))
@@ -65,6 +66,7 @@ struct UnitTreeTests {
         exam.scopeUnitIds = [removed.id, parent.id]
         var file = CourseFile(course: Course(device: device, at: now, title: "T"), units: [parent, removed, child], sessions: [session], exams: [exam])
         try file.remove(Unit.self, removed.id)
+
         #expect(titles(file.units) == ["P", "-K"])
         #expect(file.sessions[0].unitIds.isEmpty)
         #expect(file.exams[0].scopeUnitIds == [parent.id])
@@ -77,8 +79,10 @@ struct UnitTreeTests {
         var file = CourseFile(course: Course(device: device, at: now, title: "T"), units: [u], sessions: [s], exams: [e])
         file.toggle(session: s.id, unit: u.id)
         file.toggle(exam: e.id, unit: u.id)
+
         #expect(file.units[0].sessionIds == [s.id] && file.sessions[0].unitIds == [u.id])
         #expect(file.units[0].examIds == [e.id] && file.exams[0].scopeUnitIds == [u.id])
+
         file.toggle(session: s.id, unit: u.id)
         file.toggle(exam: e.id, unit: u.id)
         #expect(file.units[0].sessionIds.isEmpty && file.sessions[0].unitIds.isEmpty)

@@ -38,6 +38,7 @@ struct ExamsModelTests {
             #expect(editor.apply())
             #expect(!editor.isNew && editor.title == "\(title) 편집")
         }
+
         let model = ExamsModel(workspace: workspace, course: course)
         let (coming, past) = model.exams(now: now)
         #expect(coming.map(\.title) == ["퀴즈 3"])
@@ -127,9 +128,11 @@ struct AssignmentsModelTests {
         #expect(model.repeatDetail == "마감을 정해야 다음 과제가 생깁니다")
         model.pickRepeat(.biweekly)
         #expect(!model.customRepeat && model.repeatLabel == "격주")
+
         model.hasDue = true
         model.due = try #require(workspace.calendar.date(from: DateComponents(year: 2026, month: 11, day: 6, hour: 23, minute: 59)))  // Friday
         #expect(model.repeatDetail == "제출로 바꾸면 다음 과제가 \(CourseFile.deadline(model.due.addingTimeInterval(14 * 86_400), calendar: workspace.calendar)) 마감으로 생깁니다")
+
         model.customizeRepeat()
         #expect(model.customRepeat && model.customRule == .biweekly && model.dueWeekday == 5)
         model.customRule = AssignmentRepeat(every: 2, .week, weekdays: [1, 3])
@@ -223,6 +226,7 @@ struct MaterialsModelTests {
         #expect(model.kindWhy(model.rows[0]) == "추측: 이름의 HW2")
         // Nothing about Notes.pdf pointed anywhere: it sits in Lectures without a ✦.
         #expect(model.kindWhy(model.rows[2]) == nil)
+
         let placements = model.placements
         #expect(placements[1].path == "Lectures/01_Vectors 2.pdf" && placements[1].suffix == " 2")
         #expect(model.nameNote(placements[1]) == "같은 이름이 있어 뒤에 2를 붙입니다")
@@ -240,15 +244,18 @@ struct MaterialsModelTests {
         model.click(2, extend: true)
         model.click(0, toggle: true)
         #expect(model.selection == [0, 1, 2])
+
         let textbooks = try #require(model.kinds.first { $0.places == ["Textbooks"] })
         model.setKind(textbooks, for: model.targets(model.rows[1]))
         #expect(model.rows.map(\.folder) == ["Textbooks", "Textbooks", "Textbooks", "Lectures"])
         // A row outside the selection changes alone.
         #expect(model.targets(model.rows[3]) == [3])
+
         let assignments = try #require(model.kinds.firstIndex { $0.perItem })
         #expect(model.applyKind(number: assignments + 1))
         // The newest assignment: the likely one.
         #expect(model.rows.prefix(3).allSatisfy { $0.folder == "Assignments/HW02" })
+
         model.step(1, extend: false)
         #expect(model.selection == [1])
         model.step(1, extend: true)
@@ -286,6 +293,7 @@ struct MaterialsModelTests {
         }
         let unit = try #require(workspace.run(UnitAdd(course: graphTheory, title: "보강"))?.made)
         workspace.run(UnitLink(course: graphTheory, unit: unit, sessions: [makeup], linked: true))
+
         let course = try #require(workspace.course(graphTheory))
         let model = ImportPlaceModel(workspace: workspace, course: course, files: [URL(filePath: "/tmp/a.pdf")], places: [])
         let sessions = model.sessions
@@ -382,6 +390,7 @@ struct NotesModelTests {
         #expect(sheet.target == "고윳값 2.md" && sheet.message?.hasPrefix("Notes/고윳값 2.md(으)로 바꿉니다.") == true)
         sheet.name = "a/b"
         #expect(sheet.target == "a-b.md")
+
         let revision = workspace.notesRevision
         #expect(sheet.apply())
         #expect(workspace.notesRevision > revision)
@@ -412,14 +421,14 @@ struct NotesModelTests {
         let id = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "행렬식"))?.made)
         try FileManager.default.createDirectory(at: course.store.url.appending(path: "Notes/정리"), withIntermediateDirectories: true)
         let note = try #require(try course.store.note(id: id))
-        #expect(NoteListModel.moveTargets(note, in: course.store) == ["정리"])
-        #expect(NoteListModel.folderLabel("정리") == "Notes/정리" && NoteListModel.folderLabel("") == "Notes")
+        #expect(course.store.noteMoveTargets(for: note) == ["정리"])
+        #expect(CourseStore.noteFolderLabel("정리") == "Notes/정리" && CourseStore.noteFolderLabel("") == "Notes")
         let moves = MoveUndo()
-        let pending = try #require(NoteListModel.askMove(note, into: "정리", course: course, workspace: workspace) { moves.keep($0) })
+        let pending = try #require(workspace.askMove(note, into: "정리", course: course) { moves.keep($0) })
         #expect(pending.question.contains("Notes/정리/행렬식.md"))
         pending.perform()
         let moved = try #require(try course.store.note(id: id))
-        #expect(course.store.coursePath(of: moved.url) == "Notes/정리/행렬식.md" && NoteListModel.moveTargets(moved, in: course.store) == [""])
+        #expect(course.store.coursePath(of: moved.url) == "Notes/정리/행렬식.md" && course.store.noteMoveTargets(for: moved) == [""])
         #expect(moves.batch != nil)
     }
 
@@ -468,10 +477,12 @@ struct NotesModelTests {
         sheet.name = " 중간 대비 "
         #expect(sheet.target == "중간 대비/행렬식.md" && sheet.message == "폴더 Notes/중간 대비을(를) 만들고 Notes/중간 대비/행렬식.md(으)로 옮깁니다.")
         #expect(sheet.move())
+
         let list = NoteListModel(workspace: workspace, course: course)
         list.reload()
         let moved = try #require(list.notes.first { $0.meta.id == id })
         #expect(course.store.coursePath(of: moved.url) == "Notes/중간 대비/행렬식.md" && list.folders == ["", "중간 대비"])
+
         let again = NoteFolderModel(workspace: workspace, course: course, note: moved)
         again.name = "중간 대비"
         #expect(!again.canSave && again.message == "노트가 이미 이 폴더에 있습니다.")
@@ -530,6 +541,7 @@ struct NotesModelTests {
         editor.load()
         editor.pick(second, as: .review)
         #expect(editor.linkedSessions.map(\.id) == [first, second] && editor.meta.sessionIds == [first, second])
+
         let file = try #require(workspace.course(linearAlgebra)).file
         #expect([first, second].allSatisfy { s in file.sessions.first { $0.id == s }?.reviewNoteId == id })
         let span = try #require(file.sessionSpan(of: id, calendar: workspace.calendar))
@@ -537,6 +549,7 @@ struct NotesModelTests {
         let list = NoteListModel(workspace: workspace, course: course)
         list.reload()
         #expect(list.parts.first?.rows.first { $0.note.meta.id == id }?.detail == "\(span) · 복습")
+
         editor.pick(first, as: .review)
         #expect(editor.linkedSessions.map(\.id) == [second])
     }

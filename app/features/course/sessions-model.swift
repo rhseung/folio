@@ -74,6 +74,7 @@ final class SessionsModel {
             weeks.append(Week(number: number, start: start, range: range(from: start), thisWeek: start == thisWeek,
                               examWeek: semester?.examWeeks.contains(number) ?? false, rows: []))
         }
+
         for item in SessionTimeline.items(file, planned: plan.map(\.draft), classMinutes: workspace.settings.classMinutes, calendar: calendar) {
             switch item {
             case .week(let sessions, _):
@@ -91,6 +92,7 @@ final class SessionsModel {
                 weeks[weeks.count - 1].rows.append(TimelineRow(item: item, planned: byDate[s.date]))
             }
         }
+
         return weeks
     }
 
@@ -111,11 +113,19 @@ final class SessionsModel {
     }
 
     private func clock(_ start: Date, end: Date?) -> String {
-        let minute = { (d: Date) in self.calendar.component(.hour, from: d) * 60 + self.calendar.component(.minute, from: d) }
+        let minute = { (d: Date) in Self.minute(of: d, in: self.calendar) }
         return end.map { TimeMenu.range(minute(start), minute($0)) } ?? TimeMenu.label(minute(start))
     }
 
-    /// The marker's line: day and time, then where.
+    static func minute(of date: Date, in calendar: Calendar) -> Int {
+        calendar.component(.hour, from: date) * 60 + calendar.component(.minute, from: date)
+    }
+
+    /// `화 오전 10:30`, under the date on a suggested class's row.
+    static func weekdayTime(_ date: Date, in calendar: Calendar) -> String {
+        date.formatted(.dateTime.weekday()) + " " + TimeMenu.label(minute(of: date, in: calendar))
+    }
+
     func examLine(_ exam: Exam, _ date: Date) -> String {
         ([dayLine(date, end: exam.end)] + (exam.location.isEmpty ? [] : [exam.location])).joined(separator: " · ")
     }
@@ -129,9 +139,7 @@ final class SessionsModel {
     }
 
     func examTime(_ exam: Exam) -> String? {
-        guard let start = exam.start else { return nil }
-        let minute = { (d: Date) in self.calendar.component(.hour, from: d) * 60 + self.calendar.component(.minute, from: d) }
-        return exam.end.map { TimeMenu.range(minute(start), minute($0)) } ?? TimeMenu.label(minute(start))
+        exam.start.map { clock($0, end: exam.end) }
     }
 
     /// Days left only while the exam is ahead. A past one keeps its red but says nothing more: its score is a grade
@@ -194,7 +202,6 @@ final class SessionsModel {
         return file.unwrappedPastSessions(at: now ?? workspace.now, settings: workspace.settings, calendar: calendar)
     }
 
-    /// What the row's mark lists; empty for a class that has none.
     func leftGaps(_ session: Session, in file: CourseFile, now: Date? = nil) -> [WrapUpItem] {
         guard isCurrent(file), file.isLeftUnwrapped(session, at: now ?? workspace.now, settings: workspace.settings, calendar: calendar)
         else { return [] }
@@ -209,7 +216,6 @@ final class SessionsModel {
         wrapUpRun = WrapUpRun(sessions: left.map(\.id))
     }
 
-    /// The next class of the run once one is saved, and the run's end after the last.
     func wrappedUpOne() {
         guard var run = wrapUpRun else { return }
         run.index += 1
@@ -222,11 +228,24 @@ final class SessionsModel {
 
     // MARK: A session's row
 
+    struct CardTiming {
+        let expectedEnd: Date
+        let live: Bool
+        /// The share of the class gone, which fills the card from the left; nil when it isn't under way.
+        let progress: Double?
+        let offersStart: Bool
+    }
+
+    func timing(of session: Session, in file: CourseFile, now: Date) -> CardTiming {
+        let end = session.expectedEnd(schedule: file.course.schedule, classMinutes: workspace.settings.classMinutes, calendar: calendar)
+        return CardTiming(expectedEnd: end, live: isOngoing(session, end: end, now: now), progress: progress(session, end: end, now: now),
+                          offersStart: offersJoin(session, in: file, now: now))
+    }
+
     func isOngoing(_ session: Session, end: Date?, now: Date) -> Bool {
         !session.isCancelled && end.map { now >= session.date && now < $0 } ?? false
     }
 
-    /// How far the class under way has gone, for the dot's ring; nil when it isn't under way.
     func progress(_ session: Session, end: Date?, now: Date) -> Double? {
         guard isOngoing(session, end: end, now: now), let end else { return nil }
         return now.timeIntervalSince(session.date) / end.timeIntervalSince(session.date)
@@ -276,4 +295,38 @@ final class SessionsModel {
 
     /// What the card's buttons and a timetable slot's menu do; a saved class's menu is `SessionMenuSource`.
     var menu: SessionMenuModel { SessionMenuModel(workspace: workspace, courseId: courseId) }
+}
+
+/// What `SessionUnitsButton` shows.
+struct SessionUnits {
+    let file: CourseFile
+    let session: Session
+    let linked: [FolioDomain.Unit]
+    let shown: [FolioDomain.Unit]
+    let missing: Bool
+
+    init(_ session: Session, in file: CourseFile, now: Date) {
+        self.file = file
+        self.session = session
+        linked = file.units(of: session)
+        shown = UnitTree.deepest(linked, in: file.units)
+        missing = file.needsUnits(session, at: now)
+    }
+
+    var offered: Bool { !file.units.isEmpty && (!linked.isEmpty || !session.skipsReview) }
+
+    var titles: String { shown.map(\.title).joined(separator: " · ") }
+
+    var symbol: String { missing ? "exclamationmark.triangle.fill" : linked.isEmpty ? "plus" : "link" }
+
+    var label: String { shown.isEmpty ? String(localized: missing ? .sessionsUnitsNeeded : .sessionsUnitsLink) : titles }
+
+    // The label truncates on a narrow row, so the tooltip carries every title.
+    var help: String {
+        missing ? String(localized: .sessionsUnitsMissingHelp) : shown.isEmpty ? String(localized: .sessionsUnitsHelp)
+            : shown.map(\.title).joined(separator: "\n")
+    }
+
+    // Read only where a row draws the strip, not for every card.
+    var progress: (material: UUID, pages: ClosedRange<Int>)? { file.splitProgress(of: session) }
 }

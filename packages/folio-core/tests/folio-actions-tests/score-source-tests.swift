@@ -102,6 +102,7 @@ struct ScoreSourceTests {
         try run(AssignmentSave(course: course, assignment: assignment, title: .set("HW 3 (보충)")))
         let a = try #require(try file().assignments.first { $0.id == assignment })
         #expect(a.title == "HW 3 (보충)" && a.due == now && a.componentId == homework && a.memo == "3번 질문함" && a.status == .graded)
+
         // The score stays, its title following the assignment's.
         let s = try #require(try score(in: homework))
         #expect(s.score == 9 && s.max == 10 && s.title == "HW 3 (보충)")
@@ -110,6 +111,7 @@ struct ScoreSourceTests {
     @Test func aScoreWithoutItsComponentNeedsOneTarget() throws {
         try run(AssignmentSave(course: course, assignment: assignment, componentId: .set(homework), scores: .set([.init(component: nil, score: 9, max: 10)])))
         #expect(try score(in: homework)?.score == 9)
+
         // A score for a component the assignment doesn't count toward is refused, not dropped.
         #expect(throws: ActionError.self) {
             try run(AssignmentSave(course: course, assignment: assignment, scores: .set([.init(component: lab, score: 9, max: 10)])))

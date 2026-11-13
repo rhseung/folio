@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// The one plain button: text in the tint, an icon tight to its word, a pill in the tint on hover and press. Color comes
-/// from `.tint(_:)`, not `.foregroundStyle(_:)`, which the style's own foreground would cover.
+/// Color comes from `.tint(_:)`, not `.foregroundStyle(_:)`, which the style's own foreground would cover.
 struct GhostButtonStyle: ButtonStyle {
     /// For a `Label` shown as its icon alone; a `.labelStyle(.iconOnly)` outside would lose to the style's own.
     var iconOnly = false
@@ -50,8 +49,8 @@ struct GhostLabelStyle: LabelStyle {
     }
 }
 
-/// A window toolbar button: the glyph alone in a square, a round wash on hover. The system's own toolbar buttons sit in
-/// glass capsules that crowded the compact row, and without the capsule they are spaced far apart.
+/// The system's own toolbar buttons sit in glass capsules that crowded the compact row, and without the capsule they
+/// are spaced far apart.
 struct ToolbarButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         ToolbarButton(configuration: configuration)

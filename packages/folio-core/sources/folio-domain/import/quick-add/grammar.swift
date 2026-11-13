@@ -80,6 +80,7 @@ extension QuickAdd {
             }
             i += 1
         }
+
         // `내일 7시까지` said aloud is the evening: a deadline hour of 1 to 11 with no 오전 before it is p.m. `7:00` typed
         // with a colon is a clock reading and stays as written.
         for i in words.indices {

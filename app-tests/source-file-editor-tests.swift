@@ -3,7 +3,6 @@ import SwiftUI
 import Testing
 @testable import Folio
 
-/// The `.tex` and code file editor, which hands its text to the binding as the note editor does.
 @MainActor @Suite(.serialized)
 struct SourceFileEditorTests {
     @Test func aSyllableBeingComposedSurvivesTheEditorUpdating() throws {
@@ -21,6 +20,7 @@ struct SourceFileEditorTests {
         scroll.frame = window.contentView!.bounds
         window.contentView!.addSubview(scroll)
         window.makeFirstResponder(view)
+
         view.setSelectedRange(NSRange(location: 1, length: 0))
         let none = NSRange(location: NSNotFound, length: 0)
         view.setMarkedText("ㄴ", selectedRange: NSRange(location: 1, length: 0), replacementRange: none)
@@ -29,6 +29,7 @@ struct SourceFileEditorTests {
         view.setMarkedText("나", selectedRange: NSRange(location: 1, length: 0), replacementRange: none)
         editor.update(view, coordinator)
         #expect(view.string == "가나")
+
         // Leaving the window ends the syllable without a keystroke.
         view.unmarkText()
         #expect(box.text == "가나")

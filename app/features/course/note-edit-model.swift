@@ -24,7 +24,7 @@ final class NoteEditModel {
         self.note = note
         self.moves = moves
         name = note.title
-        folder = NoteListModel.folder(of: note, in: course.store)
+        folder = course.store.noteFolder(of: note)
         math = note.meta.math
         // The course handed in may predate the note's entry; read as `meta` does, or the sheet opens already changed.
         math = meta.math
@@ -32,14 +32,14 @@ final class NoteEditModel {
 
     var course: LoadedCourse { workspace.course(initial.id) ?? initial }
 
-    /// From course.json as it is now: the bar's link menu, the Claude panel or the CLI may have linked the note since
-    /// `note` was read, and writing the old links back with the syntax would undo that.
-    private var meta: NoteMeta { (course.store.note(at: course.store.notePath(of: note.url), in: course.file) ?? note).meta }
+    private var meta: NoteMeta { (course.stored(note) ?? note).meta }
 
     var folders: [String] {
         let all = course.store.noteFolders()
         return all.contains(folder) ? all : [folder] + all
     }
+
+    var folderOptions: [(String, String)] { folders.map { ($0, CourseStore.noteFolderLabel($0)) } }
 
     /// The syntax is the markdown preview's; a `.tex` note is TeX throughout, and a note with no ID has no entry to keep it.
     var choosesMath: Bool { note.format == .markdown && note.meta.id != nil }
@@ -52,10 +52,10 @@ final class NoteEditModel {
         return course.store.movedNoteURL(note, to: path, in: course.file)
     }
 
-    /// Notes-relative, the way `note mv` takes it, with the name `note mv` will give.
-    var target: String? { targetURL.flatMap { NoteListModel.notesPath(of: $0, in: course.store) } }
+    /// With the name `note mv` will give, ` 2` included.
+    var target: String? { targetURL.flatMap { course.store.notesPath(of: $0) } }
 
-    var relocates: Bool { target.map { $0 != NoteListModel.notesPath(of: note.url, in: course.store) } ?? false }
+    var relocates: Bool { target.map { $0 != course.store.notesPath(of: note.url) } ?? false }
     var changesMath: Bool { choosesMath && math != meta.math }
 
     var canSave: Bool { target != nil && (relocates || changesMath) }
@@ -76,9 +76,9 @@ final class NoteEditModel {
     func apply() -> Bool {
         guard canSave, let target, let path = course.store.coursePath(of: note.url) else { return false }
         if changesMath, let id = note.meta.id {
-            let now = meta
-            guard workspace.run(NoteLink(course: course.id, note: id, kind: now.kind, session: now.sessionId, exam: now.examId,
-                                         units: now.unitIds, math: math)) != nil else { return false }
+            var now = meta
+            now.math = math
+            guard workspace.run(NoteLink(course: course.id, note: id, meta: now)) != nil else { return false }
         }
         guard relocates else { return true }
         let ran = workspace.run(NoteMove(course: course.id, note: path, to: target))

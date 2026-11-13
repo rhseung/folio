@@ -85,6 +85,7 @@ final class QuizSolveModel {
             return rows.isEmpty ? nil : (g.root?.title, rows)
         }
         let withCards = Set(byUnit.keys)
+
         return Pane(byUnit: byUnit,
                     wrong: cards.filter { WrongFlow.isDue(quiz.history(of: $0.id), today: today) }.count,
                     exam: exam,
@@ -229,6 +230,7 @@ final class QuizSolveModel {
             failure = ""
             return
         }
+
         busy = true
         failure = nil
         let client = workspace.claude(for: course)

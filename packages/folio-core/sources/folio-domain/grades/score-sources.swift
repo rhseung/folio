@@ -1,6 +1,5 @@
 import Foundation
 
-/// What a score was given for: one assignment, one exam, or neither.
 public enum ScoreSource: Hashable, Sendable {
     case none, assignment(UUID), exam(UUID)
 }

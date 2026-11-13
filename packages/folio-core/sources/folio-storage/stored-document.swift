@@ -14,7 +14,7 @@ public enum StorageError: Error, Equatable {
     case outsideStage(String)
 }
 
-/// A JSON file format. Bump `schemaVersion` and add a migration (from the old version, on raw JSON) whenever the shape changes.
+/// Bump `schemaVersion` and add a migration (from the old version, on raw JSON) whenever the shape changes.
 public protocol StoredModel: Codable {
     static var schemaVersion: Int { get }
     static var migrations: [Int: @Sendable (inout JSONValue) throws -> Void] { get }

@@ -2,7 +2,6 @@
 import AppKit
 import SwiftUI
 
-/// A word the quick add line read, as the text view marks it: a pill behind it.
 struct QuickAddMark: Equatable {
     var range: NSRange
     var fill: Color

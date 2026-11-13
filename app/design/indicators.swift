@@ -1,7 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// Muted label above a value.
 struct Caption: View {
     let text: String
     init(_ text: String) { self.text = text }
@@ -10,7 +9,6 @@ struct Caption: View {
     }
 }
 
-/// A row of figures sharing one card, separated by hairlines.
 struct StatStrip: View {
     struct Item: Identifiable {
         var id: String { title }
@@ -67,7 +65,6 @@ struct StatStrip: View {
     }
 }
 
-/// Meaning carried by color in badges and figures.
 enum Tone {
     case plain, accent, warning, danger, success, info
 
@@ -93,7 +90,7 @@ enum Tone {
     }
 }
 
-/// Small rounded label. `.accent` takes the course color from the environment.
+/// `.accent` takes the course color from the environment.
 struct Chip: View {
     @Environment(\.accent) private var accent
     let text: String
@@ -171,7 +168,6 @@ struct CourseDot: View {
     var body: some View { Circle().fill(color).frame(width: size, height: size) }
 }
 
-/// Thin progress bar in the course accent.
 struct Meter: View {
     @Environment(\.accent) private var accent
     let value: Double
@@ -188,7 +184,6 @@ struct Meter: View {
     }
 }
 
-/// A key, or what is typed, as a cap: the search palette's keys, the input guide's examples.
 struct KeyCap: View {
     let key: String
     init(_ key: String) { self.key = key }
@@ -201,7 +196,6 @@ struct KeyCap: View {
     }
 }
 
-/// Muted line used where a list has nothing to show.
 struct EmptyLine: View {
     let text: String
     init(_ text: String) { self.text = text }
@@ -213,11 +207,10 @@ struct EmptyLine: View {
 
 extension View {
     func rolling(_ value: String) -> some View {
-        contentTransition(.numericText()).animation(.snappy(duration: 0.35), value: value)
+        contentTransition(.numericText()).animation(Theme.Motion.settle, value: value)
     }
 }
 
-/// A round check in the course accent.
 struct CheckCircle: View {
     @Environment(\.accent) private var accent
     let on: Bool
@@ -233,7 +226,6 @@ struct CheckCircle: View {
     }
 }
 
-/// A caption over a large number that rolls when it changes.
 struct Figure: View {
     let title: String
     let value: String
@@ -256,6 +248,5 @@ struct Figure: View {
 }
 
 extension Double {
-    /// Scores and percentages read to one decimal: `87.5`.
     var oneDecimal: String { formatted(.number.precision(.fractionLength(1))) }
 }

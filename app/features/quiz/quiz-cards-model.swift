@@ -138,6 +138,7 @@ final class GenerateCardsModel {
     func make() {
         busy = true
         failure = nil
+
         let client = workspace.claude(for: course)
         let context = cardContext()
         let (unitId, device, title, count, type) = (unit.id, workspace.device, unit.title, count, type)

@@ -25,7 +25,6 @@ struct CourseIconPicker: View {
     }
 }
 
-/// The picker's popover: a search line over the symbols grouped by field.
 struct CourseIconPanel: View {
     let icon: String?
     let color: Color

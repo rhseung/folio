@@ -29,6 +29,7 @@ struct NoteStoreTests {
         #expect(notes.titled("MATCHING")?.url.lastPathComponent == "Matching.md")
         #expect(notes.titled("09-08(화) 매칭")?.meta.id != nil)
         #expect(notes.titled("없음") == nil)
+
         // A link may name the file; a `.tex` note is still a note to open.
         try store.createNote(at: store.newNoteURL(title: "증명", format: .tex), text: "")
         let all = try store.notes()
@@ -55,6 +56,7 @@ struct NoteStoreTests {
         try store.createNote(at: first, text: "")
         #expect(first.lastPathComponent == "09-08(화) 매칭 정리.md")
         #expect(store.newNoteURL(title: "09-08(화) 매칭 정리", format: .markdown).lastPathComponent == "09-08(화) 매칭 정리 2.md")
+
         // The title is the file name, so another format doesn't free it.
         #expect(store.newNoteURL(title: "09-08(화) 매칭 정리", format: .tex).lastPathComponent == "09-08(화) 매칭 정리 2.tex")
         #expect(store.newNoteURL(title: "숙제", format: .markdown, avoiding: ["숙제", "숙제 2"]).lastPathComponent == "숙제 3.md")
@@ -106,6 +108,7 @@ struct NoteStoreTests {
 
     @Test func contextImagesReadEmbedsInsideTheCourseAsShrunkJPEG() throws {
         let store = try store()
+
         // A 2000x1000 PNG: wide enough to be shrunk to the 1568px edge.
         let ctx = try #require(CGContext(data: nil, width: 2000, height: 1000, bitsPerComponent: 8, bytesPerRow: 0,
                                          space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue))

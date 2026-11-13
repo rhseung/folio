@@ -10,7 +10,6 @@ enum QuickAddLine {
     static let overhang: CGFloat = 1
 }
 
-/// A word the line read: the deadline, the course (in its color) or the assignment's kind and number.
 struct ReadMark: TextAttribute {
     var fill: Color
 }
@@ -49,9 +48,7 @@ struct ReadMarkRenderer: TextRenderer {
     }
 }
 
-/// One floating line that adds an assignment (`선대 HW5 금 23:59`), read as it is typed: pills behind the words it
-/// read, and under the line a chip for each value it will save, which opens to correct it. Today, the toolbar's
-/// popover and the assignments screen share it, so the line reads the same wherever it is typed.
+/// Today, the toolbar's popover and the assignments screen share it, so the line reads the same wherever it is typed.
 struct QuickAddField: View {
     @State private var model: QuickAddModel
     @State private var fieldSize = CGSize.zero
@@ -60,7 +57,6 @@ struct QuickAddField: View {
     @State private var lineHeights = (one: CGFloat(0), three: CGFloat(0))
     @Environment(\.quickAddTypedSample) private var typedSample
 
-    /// Takes the keyboard as it appears, as in the toolbar's popover.
     private let focusOnAppear: Bool
     /// In the toolbar's popover, a floating thing, the field is glass; on the page it is paper like the page's other
     /// fields (`Card`), since glass belongs only to the frame and what floats over it.
@@ -177,7 +173,6 @@ struct QuickAddField: View {
     }
 
     #if os(macOS)
-    /// The words the line read, for the Mac's text view to give room and a pill.
     private func textMarks(_ parsed: QuickAdd?) -> [QuickAddMark] {
         guard let parsed else { return [] }
         let text = model.text
@@ -254,8 +249,7 @@ private extension Character {
     var isHangul: Bool { unicodeScalars.first.map { (0xAC00...0xD7A3).contains($0.value) } ?? false }
 }
 
-/// One value the line will save, which opens to change it: the course from a list, the deadline from a calendar, the
-/// repeat, the kind and number. Each is a button or menu, so a tap opens it as a click does.
+/// Each chip is a button or menu, so a tap opens it as a click does.
 struct QuickAddChip: View {
     static let inset = Theme.Space.m
     let model: QuickAddModel

@@ -5,7 +5,6 @@ import Testing
 
 /// Table edits on the source, with `‸` marking the caret since `|` is the table's.
 struct TableEditingTests {
-    /// The text with the caret marks taken out, and the selection they marked.
     static func marked(_ text: String) -> (NSString, NSRange) {
         let ns = text as NSString
         let first = ns.range(of: "‸").location

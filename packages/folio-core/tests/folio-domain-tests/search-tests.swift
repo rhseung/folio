@@ -63,7 +63,9 @@ struct SearchTests {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
         let items = SearchIndex.items(for: file, notes: [(UUID(), "09-08(화) 매칭", "본문")], cards: [card], calendar: calendar)
+
         #expect(items.map(\.kind) == [.note, .material, .assignment, .exam, .session, .unit, .quiz])
+
         // A class goes by its day and units, and its reference is in the body so `11-03` finds it.
         #expect(items.map(\.title) == ["09-08(화) 매칭", "05_Matchings.pdf", "HW3", "중간고사", file.title(of: session, calendar: calendar), "Covers", "덮개의 정의"])
         #expect(items[4].title.hasSuffix(": Covers") && items[4].body == file.reference(of: session, calendar: calendar))

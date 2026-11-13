@@ -100,7 +100,6 @@ struct TrafficLights: NSViewRepresentable {
         var fullScreen: (Bool) -> Void
         private var windowObservers: [NSObjectProtocol] = []
         private var frameObservers: [NSObjectProtocol] = []
-        /// The buttons whose frames are watched.
         private var watched: [ObjectIdentifier] = []
         /// Each watched button's middle from the close button's, across the window, as AppKit spaced them.
         private var spacing: [CGFloat] = []
@@ -122,6 +121,7 @@ struct TrafficLights: NSViewRepresentable {
             frameObservers = []
             watched = []
             guard let window else { return }
+
             let center = NotificationCenter.default
             let changes: [Notification.Name] = [
                 NSWindow.didResizeNotification, NSWindow.didEndLiveResizeNotification, NSWindow.didBecomeKeyNotification,
@@ -140,6 +140,7 @@ struct TrafficLights: NSViewRepresentable {
                     MainActor.assumeIsolated { self?.fullScreen(full) }
                 }
             }
+
             let full = window.styleMask.contains(.fullScreen)
             // Joining the window happens while SwiftUI updates its views, which mustn't change what they read.
             Task { @MainActor [weak self] in self?.fullScreen(full) }

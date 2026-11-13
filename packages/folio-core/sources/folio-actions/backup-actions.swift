@@ -9,8 +9,7 @@ extension ActionContext {
     }
 }
 
-/// Today's archive in the backup folder from settings.json. Nothing inside the GIST folder
-/// changes, so the archive's path goes to `notes` rather than `changes`.
+/// Nothing inside the GIST folder changes, so the archive's path goes to `notes` rather than `changes`.
 @Action("backup create", "오늘 백업을 만든다",
         discussion: """
         설정의 백업 폴더(기본 ~/Backups/Folio/auto)에 오늘 백업을 만든다. GIST 폴더와 같은 디스크면 GIST 전체를 APFS 복제로 Folio-<날짜> 폴더에 떠서 바뀐 파일만큼만 공간을 쓴다. iCloud에만 있는 파일은 내려받지 않고 건너뛴다. 다른 디스크면 GIST의 .folio와 각 과목의 Notes, Ink, .folio를 Folio-<날짜>.zip으로 묶는다.
@@ -32,7 +31,6 @@ public struct BackupCreate {
     }
 }
 
-/// Copies one course out of the backup of `day` into a new folder beside the backup folder.
 /// Never writes into the GIST folder; the extracted folder's path is the action's only note.
 @Action("backup restore", "한 과목을 백업에서 새 폴더로 꺼낸다",
         discussion: "과목을 백업 폴더 옆 restored 폴더에 새로 꺼낸다. 복제 백업이면 과목 폴더 전체, zip 백업이면 Notes, Ink, .folio를 꺼낸다. GIST 폴더는 건드리지 않으니 비교해서 직접 옮긴다.",

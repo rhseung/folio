@@ -12,7 +12,7 @@ import UIKit
 private typealias PlatformFont = UIFont
 #endif
 
-/// One page as `material read` gives it: 1-based, its title and its text by the rules of `PageText`.
+/// `page` is 1-based.
 public struct PDFPageText: Equatable, Sendable {
     public var page: Int
     public var title: String?
@@ -31,7 +31,7 @@ public struct PDFPageText: Equatable, Sendable {
     }
 }
 
-/// Reads a PDF's pages for Claude with PDFKit. Nothing here writes: it is the read side of the panel's tools (#85).
+/// Nothing here writes: it is the read side of the panel's tools (#85).
 public enum PDFPages {
     /// Through the file coordinator, as every other read, so a file still in iCloud downloads first.
     public static func open(_ url: URL) -> PDFDocument? {
@@ -100,7 +100,6 @@ public enum PDFPages {
     }
 }
 
-/// JPEG encoding for what Claude is shown.
 enum ClaudeJPEG {
     /// The image as a JPEG, scaled down so its long side is at most `edge`, never up.
     static func of(_ image: CGImage, edge: Int) -> Data? {
@@ -114,7 +113,6 @@ enum ClaudeJPEG {
     }
 }
 
-/// A picture a note embeds, as `note images` reads it.
 public struct NoteImageFile: Equatable, Sendable {
     /// As the note wrote it: `assets/IMG_1.jpg`, or a bare name from `![[IMG_1.jpg]]`.
     public var written: String

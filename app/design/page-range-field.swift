@@ -1,15 +1,11 @@
 import FolioDomain
 import SwiftUI
 
-/// A lecture file's pages as a thin bar, with one class's range on it in the course accent. Pages other classes took
-/// lie faintly in the bar, and the pages seen while recording are a dotted line under it to take in one tap. The
-/// numbers float over the handles only while one is dragged, pointed at, keyed or tapped; nothing under the bar
-/// repeats them, so the row stays as tall as a form row. Every change goes through `PageRange`
-/// (`moving`, `tapping`, `shifted`), so the range stays within the file and in order during a drag as much as after.
+/// The numbers float over the handles only while one is dragged, pointed at, keyed or tapped; nothing under the bar
+/// repeats them, so the row stays as tall as a form row. Every change goes through `PageRange` (`moving`, `tapping`,
+/// `shifted`), so the range stays within the file and in order during a drag as much as after.
 ///
-/// A lecture split into units (#321) draws its zones as named tiles instead of the thin rail (the section bar, e2): the
-/// range lies over them, the tiles it reaches name themselves in the course ink, and its ends settle on zone edges
-/// unless ⌥ is held. A name keeps clear of the handles, in the widest stretch of its tile no handle is near.
+/// A lecture split into units (#321) draws its zones as named tiles instead of the thin rail (the section bar, e2).
 struct PageRangeField: View {
     /// Pages another class took through the file.
     struct Taught: Identifiable {

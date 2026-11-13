@@ -4,7 +4,7 @@ public enum SearchKind: String, CaseIterable, Sendable {
     case note, material, assignment, exam, session, unit, quiz
 }
 
-/// One searchable thing in a course. `id` is the entity to open.
+/// `id` is the entity to open.
 public struct SearchItem: Sendable, Hashable {
     public var kind: SearchKind
     public var courseId: UUID
@@ -48,6 +48,7 @@ public struct SearchIndex: Sendable {
         let words = query.precomposedStringWithCanonicalMapping.split(whereSeparator: \.isWhitespace).map(String.init)
         guard !words.isEmpty else { return [] }
         let options: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive, .widthInsensitive]
+
         var ranked: [(rank: Int, hit: SearchHit)] = []
         for item in items {
             let inTitle = words.map { item.title.range(of: $0, options: options) != nil }
@@ -65,6 +66,7 @@ public struct SearchIndex: Sendable {
             let bodyWord = zip(words, inTitle).first { !$1 }?.0
             ranked.append((rank, SearchHit(item: item, snippet: bodyWord.flatMap { Self.snippet(of: $0, in: item.body, options: options) })))
         }
+
         return ranked
             .sorted { ($0.rank, $0.hit.item.title.count, $0.hit.item.title) < ($1.rank, $1.hit.item.title.count, $1.hit.item.title) }
             .prefix(limit)

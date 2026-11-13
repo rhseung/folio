@@ -21,24 +21,22 @@ struct TodayView: View {
     }
 
     func page(now: Date) -> some View {
-        let summary = model.summary(now: now)
-        let reviews = model.reviews(now: now)
-        let classes = model.ribbonClasses(summary, now: now)
+        let day = model.day(now: now)
         return Page {
-            TodayWash(model: model, courses: model.washCourses(summary, now: now))
+            TodayWash(model: model, courses: day.wash)
         } content: {
-            TodayHeader(model: model, summary: summary, classes: classes, reviews: reviews)
-            DayRibbonCard(model: model, summary: summary, classes: classes, go: go, openNote: openNote)
+            TodayHeader(model: model, summary: day.summary, classes: day.classes, reviews: day.reviews)
+            DayRibbonCard(model: model, summary: day.summary, classes: day.classes, go: go, openNote: openNote)
             QuickAddField(workspace: model.workspace, showsEmptyChips: true)
-            wrapUpBlock(model.wrapUps(now: model.workspace.liveNow))
+            wrapUpBlock(model.liveWrapUps)
             AttendanceWarnings(model: model)
             UnfiledCoursesNotice(workspace: model.workspace)
-            agenda(summary)
-            ExamPlanTodayBlock(courses: model.current)
-            reviewBlock(reviews, notes: summary.missingReviewNotes, today: summary.studyDay)
+            agenda(day.summary)
+            ExamPlanTodayBlock(workspace: model.workspace)
+            reviewBlock(day.reviews, today: day.summary.studyDay)
             StudyTimeBlock(workspace: model.workspace)
         }
-        .navigationSubtitle(summary.studyDay.description)
+        .navigationSubtitle(day.summary.studyDay.description)
         .sheet(item: $model.editing) { item in
             AssignmentSheet(workspace: model.workspace, course: item.course, assignment: item.assignment) { id, placement in
                 openLink(AppLink(.material, id), in: placement, course: item.course.id)
@@ -145,7 +143,7 @@ struct TodayView: View {
     }
 
     func deadlinesBlock(_ summary: TodaySummary) -> some View {
-        let (shown, more) = model.shownDeadlines(model.deadlineRows(summary.deadlines, studyDay: summary.studyDay))
+        let (shown, more) = model.shownDeadlines(summary)
         return Block(title: String(localized: .todayDeadlines), note: summary.deadlines.isEmpty ? nil : "\(summary.deadlines.count)", trailing: {
             if more > 0 { Button(String(localized: .todayMore(more))) { model.showsAllDeadlines = true }.buttonStyle(.ghost) }
         }) {
@@ -173,11 +171,7 @@ struct TodayView: View {
     func deadlineRow(_ row: TodayModel.DeadlineRow) -> some View {
         let item = row.item
         let accent = model.workspace.accent(item.courseId)
-        let tone: Tone? = switch row.urgency {
-        case .urgent: .danger
-        case .soon: .warning
-        case .later: nil
-        }
+        let tone = row.tone
         return Button { model.edit(item) } label: {
             HStack(spacing: Theme.Space.s) {
                 AssignmentStatusIcon(status: item.assignment.status, tint: accent.color, size: 18)
@@ -208,17 +202,16 @@ struct TodayView: View {
 
     /// A class's review note comes first, then the units: writing the note is the day's review of that class,
     /// and a unit linked to it waits on the note anyway.
-    func reviewBlock(_ reviews: TodayModel.Reviews, notes: [TodaySummary.SessionItem], today: LocalDate) -> some View {
-        let queue = reviews.queue, all = reviews.all
-        let left = queue.count + notes.count, done = reviews.doneToday
+    func reviewBlock(_ reviews: TodayModel.Reviews, today: LocalDate) -> some View {
+        let left = reviews.left, done = reviews.doneToday
         // A list title right under the progress line read as its caption; a step more keeps the line over both lists.
         return VStack(alignment: .leading, spacing: Theme.Space.l) {
             HStack(spacing: Theme.Space.m) {
                 Text(.todayReviews).font(Theme.Typeface.sectionTitle).foregroundStyle(Theme.Palette.textSecondary)
-                if left + done > 0 {
-                    Text(.todayReviewsProgress(done, done + left)).font(Theme.Typeface.caption).monospacedDigit()
+                if reviews.total > 0 {
+                    Text(.todayReviewsProgress(done, reviews.total)).font(Theme.Typeface.caption).monospacedDigit()
                         .foregroundStyle(left == 0 ? Theme.Palette.success : Theme.Palette.textSecondary)
-                    progress(Double(done) / Double(done + left))
+                    progress(reviews.fraction)
                 } else {
                     Spacer(minLength: 0)
                 }
@@ -228,8 +221,8 @@ struct TodayView: View {
                         .foregroundStyle(Theme.Palette.warning)
                         .symbolEffect(.bounce, value: reviews.streak)
                 }
-                if !all.isEmpty {
-                    Button(.todayReviewsSkipAll) { model.skip(all) }
+                if !reviews.all.isEmpty {
+                    Button(.todayReviewsSkipAll) { model.skip(reviews.all) }
                         .buttonStyle(.ghost)
                         .font(Theme.Typeface.caption)
                 }
@@ -244,8 +237,8 @@ struct TodayView: View {
                 // Two lists, like exams and deadlines above: writing a class's note and reviewing units are different
                 // jobs, and in one card their rows read as one kind of thing.
                 Fold(wideFrom: Self.pairWidth) {
-                    notesList(notes, today: today).frame(maxWidth: .infinity, alignment: .topLeading)
-                    unitsList(queue).frame(maxWidth: .infinity, alignment: .topLeading)
+                    notesList(reviews.notes, today: today).frame(maxWidth: .infinity, alignment: .topLeading)
+                    unitsList(reviews.queue).frame(maxWidth: .infinity, alignment: .topLeading)
                 }
             }
             deferredList(reviews.deferred)
@@ -258,7 +251,7 @@ struct TodayView: View {
                 GeometryReader { proxy in Capsule().fill(Theme.Palette.success).frame(width: proxy.size.width * fraction) }
             }
             .frame(height: Theme.Space.xs)
-            .animation(.snappy(duration: 0.35), value: fraction)
+            .animation(Theme.Motion.settle, value: fraction)
     }
 
     /// A group's name with the rule under it, as in the deadline list. 12pt from the rule to the first row sits
@@ -339,7 +332,7 @@ struct TodayView: View {
             // The menu's review check as a button, so the row and the menu say and do the same.
             if finishing, let source = SessionMenu.source(model.workspace, item.courseId, item.session.id, host: .elsewhere,
                                                            openNote: openNote(in: item.courseId), openLink: openLink, openURL: openURL, sheets: sheets),
-               let review = model.workspace.course(item.courseId)?.file.review(of: item.session) {
+               let review = model.review(of: item) {
                 ItemButton(source: source, command: .review(review))
                 .buttonStyle(.ghost)
                 .font(Theme.Typeface.caption)
@@ -439,14 +432,6 @@ struct TodayView: View {
 
     func openNote(in course: UUID) -> (UUID) -> Void {
         { openLink(AppLink(.note, $0), course: course) }
-    }
-}
-
-extension View {
-    // As wide as the widest time in the column's font: a fixed width truncated or wrapped `오후 1:00`.
-    // Verbatim: it is a measuring sample of the formatted time, never shown.
-    func timeColumn() -> some View {
-        ZStack(alignment: .leading) { Text(verbatim: "오후 12:00").hidden(); self }.lineLimit(1)
     }
 }
 

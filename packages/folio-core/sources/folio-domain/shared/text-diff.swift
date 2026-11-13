@@ -27,6 +27,7 @@ public enum TextDiff {
             case .insert(let offset, _, _): inserted.insert(offset)
             }
         }
+
         var out: [Line] = []
         var i = 0, j = 0
         while i < old.count || j < new.count {
@@ -63,6 +64,7 @@ public enum TextDiff {
             }
             run = []
         }
+
         for line in lines {
             if case .same = line {
                 run.append(line)

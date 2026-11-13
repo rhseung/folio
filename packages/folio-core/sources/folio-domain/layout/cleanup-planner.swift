@@ -56,7 +56,7 @@ public enum ReviewReason: String, Codable, Sendable, CaseIterable {
 }
 
 public enum CleanupPlanner {
-    /// The spec's legacy-name table. Standard names (`Lectures`, `Assignments`, ...) are handled by CourseFolder.
+    /// Standard names (`Lectures`, `Assignments`, ...) are handled by CourseFolder.
     enum LegacyFolder {
         case lectures, assignments(AssignmentKind), labManuals, labReports, pastExams(source: String?), examReview, textbooks, notes
     }
@@ -148,7 +148,7 @@ public enum CleanupPlanner {
     }
 }
 
-/// Plans one course folder. Paths are relative to the course folder.
+/// Paths are relative to the course folder.
 struct CoursePlanner {
     let course: FolderTree
     let labs: [String: Int]
@@ -202,6 +202,7 @@ struct CoursePlanner {
                 moves.append(.init(from: child.name, to: "\(CourseFolder.assignments.rawValue)/\(folder)/\(child.name)", review: .unknownFolder))
             }
         }
+
         numberLectures()
         return resolveCollisions()
     }
@@ -359,6 +360,7 @@ struct CoursePlanner {
             parsed[i].1 = (next, nil, .unknownWeek)
             next += 1
         }
+
         let byWeek = Dictionary(grouping: parsed, by: { $0.1!.week })
         for (week, items) in byWeek {
             let bases = Set(items.map { Keywords.title(of: $0.0.name, stripping: $0.1!.leading).base }).sorted()

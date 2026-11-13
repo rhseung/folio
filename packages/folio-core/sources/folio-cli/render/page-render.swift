@@ -1,7 +1,6 @@
 import FolioDomain
 import Foundation
 
-/// One drawing of a picture or widget at one width and appearance.
 struct RenderedShot: Codable, Sendable {
     var theme: String
     var width: Int
@@ -129,6 +128,7 @@ private final class OffscreenPage: NSObject, WKNavigationDelegate, WKScriptMessa
         for s in scripts { config.userContentController.addUserScript(WKUserScript(source: s, injectionTime: .atDocumentStart, forMainFrameOnly: false)) }
         config.userContentController.add(handler, name: PageRender.consoleHandler)
         defer { config.userContentController.removeScriptMessageHandler(forName: PageRender.consoleHandler) }
+
         let frame = NSRect(x: 0, y: 0, width: width, height: start)
         let view = WKWebView(frame: frame, configuration: config)
         view.navigationDelegate = handler
@@ -139,17 +139,20 @@ private final class OffscreenPage: NSObject, WKNavigationDelegate, WKScriptMessa
         window.appearance = appearance
         window.contentView = view
         defer { window.close() }
+
         // An address of its own rather than none: errors from a page with no origin read only "Script error.". Nothing
         // serves it, and the page's policy loads nothing anyway.
         view.loadHTMLString(page, baseURL: OffscreenPage.base)
         guard spin(10, until: { handler.loaded || handler.failure != nil }) else { throw failed(String(localized: .renderTimedOut)) }
         if let failure = handler.failure { throw failed(failure) }
         pause(settle)
+
         let measured = evaluate(view, "Math.ceil(document.documentElement.getBoundingClientRect().height)") as? Double ?? Double(start)
         let height = min(max(Int(measured), 16), PageRender.tallest)
         window.setContentSize(NSSize(width: width, height: height))
         view.frame = NSRect(x: 0, y: 0, width: width, height: height)
         pause(0.3)
+
         guard let image = snapshot(view) else { throw failed(String(localized: .renderNoImage)) }
         return Shot(png: try png(image, width: width, height: height), height: height, console: handler.console)
     }

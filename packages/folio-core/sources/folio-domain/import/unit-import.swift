@@ -46,6 +46,7 @@ public enum UnitImporter {
                     added.append(spec.title)
                     id = unit.id
                 }
+
                 for name in spec.sessions ?? [] {
                     let matches = file.sessions(matching: name, calendar: calendar)
                     guard matches.count == 1, let s = file.sessions.firstIndex(where: { $0.id == matches[0].id }) else {
@@ -64,6 +65,7 @@ public enum UnitImporter {
                 visit(spec.children ?? [], parent: id)
             }
         }
+
         visit(specs, parent: nil)
         return Result(file: file, added: added, linked: linked, unknownSessions: unknown)
     }

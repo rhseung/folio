@@ -21,6 +21,7 @@ struct ExamPlanTests {
         let data = try JSONEncoder().encode(original)
         let json = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
         let first = try #require((json["plan"] as? [[String: Any]])?.first)
+
         #expect(first["day"] as? String == "2026-10-18")
         #expect((first["target"] as? [String: Any])?["kind"] as? String == "unit")
         #expect(try JSONDecoder().decode(Exam.self, from: data) == original)
@@ -37,6 +38,7 @@ struct ExamPlanTests {
     @Test func latestCheckWins() {
         let a = UUID(), b = UUID(), c = UUID()
         let t = { (s: Double) in Date(timeIntervalSince1970: s) }
+
         // Logs from two devices arrive unsorted.
         let events: [(at: Date, event: PlanCheckEvent)] = [
             (t(30), PlanCheckEvent(itemId: a, done: false)),

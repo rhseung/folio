@@ -146,11 +146,13 @@ public struct PaneLayout: Hashable, Sendable {
         let at = min(max(index, 0), panes.count)
         let joining = Double(other.panes.count) / Double(panes.count + other.panes.count)
         for i in panes.indices { panes[i].share *= 1 - joining }
+
         var added = other.panes
         for (rank, j) in other.panes.indices.sorted(by: { other.panes[$0].pressed < other.panes[$1].pressed }).enumerated() {
             added[j].pressed = clock + 1 + rank
         }
         for j in added.indices { added[j].share *= joining }
+
         clock += added.count
         panes.insert(contentsOf: added, at: at)
         press(at + other.focus)
@@ -270,7 +272,6 @@ public struct PaneLayout: Hashable, Sendable {
         }
     }
 
-    /// Which panes fold, with each pane's width and the gaps after them.
     public struct Fit: Equatable, Sendable {
         public var fold: Fold
         public var widths: [Double]
@@ -318,6 +319,7 @@ public struct PaneLayout: Hashable, Sendable {
             case .open, .hidden: 0
             }
         }
+
         var left = max(0, room - widths.reduce(0, +) - drawn.gaps(gap).reduce(0, +))
         // Shares first; a pane they'd leave under `minWidth` is held there and the rest share again.
         var sharing = drawn.open
@@ -337,7 +339,6 @@ public struct PaneLayout: Hashable, Sendable {
         return widths
     }
 
-    /// Every pane in place.
     public var unfolded: Fold { Fold(self) }
 }
 
@@ -361,9 +362,11 @@ extension PaneLayout: Codable {
                               collapsed: try p.decodeIfPresent(Bool.self, forKey: .collapsed) ?? false,
                               pressed: try p.decode(Int.self, forKey: .pressed)))
         }
+
         guard !panes.isEmpty, panes.allSatisfy({ $0.share > 0 && $0.share.isFinite }) else {
             throw DecodingError.dataCorruptedError(forKey: .panes, in: c, debugDescription: "No panes, or a share that isn't positive")
         }
+
         let total = panes.map(\.share).reduce(0, +)
         for i in panes.indices { panes[i].share /= total }
         self.panes = panes

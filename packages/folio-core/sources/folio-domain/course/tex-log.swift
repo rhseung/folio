@@ -66,6 +66,7 @@ public enum TexLog {
                 general.append(TexIssue(.error, message: String(rest)))
             }
         }
+
         located = located.uniqued()
         let errors = located.filter { $0.severity == .error }
         return errors.isEmpty ? general.prefix(1) + located : located

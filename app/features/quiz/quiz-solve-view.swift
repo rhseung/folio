@@ -413,7 +413,6 @@ struct QuizSolveView: View {
     }
 }
 
-
 /// Math stays as TeX until KaTeX is bundled.
 func markdown(_ text: String) -> AttributedString {
     (try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(text)

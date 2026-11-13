@@ -94,7 +94,6 @@ final class ExamsModel {
 
     func days(to date: Date) -> Int { max(workspace.days(to: date), 0) }
 
-    /// Date over weekday and time.
     func when(_ exam: Exam) -> (date: String, time: String?) {
         guard let start = exam.start else { return (String(localized: .examsNoDate), nil) }
         let time = exam.end.map { TimeMenu.range(minute(start), minute($0)) } ?? TimeMenu.label(minute(start))

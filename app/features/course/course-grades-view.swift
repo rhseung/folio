@@ -345,7 +345,7 @@ struct StandingCurve: View {
     }
 }
 
-/// A grade component's menu. Only the grades page shows components, so its sheet stays the page's.
+/// Only the grades page shows components, so its sheet stays the page's.
 @MainActor
 struct ComponentMenuSource: ItemMenuSource {
     let model: CourseGradesModel

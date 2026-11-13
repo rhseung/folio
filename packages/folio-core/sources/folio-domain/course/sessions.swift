@@ -35,7 +35,6 @@ public struct Unit: Entity {
     }
 }
 
-/// A lecture file linked to a session, optionally only some pages.
 public struct SessionMaterial: Codable, Sendable, Hashable {
     public var materialId: UUID
     public var firstPage: Int?
@@ -171,6 +170,7 @@ public enum SessionPlanner {
         let limit = days ?? (end == nil ? 8 : Int.max)
         let dates = sessions.map(\.date)
         let dateOnly = Set(dates)
+
         var result: [Suggestion] = []
         var offset = 0
         while offset < limit {
@@ -181,6 +181,7 @@ public enum SessionPlanner {
             if let end, local > end { break }
             if let start, local < start { continue }
             if let anchor, examWeeks.contains(week(of: day, anchor: anchor, calendar: calendar)) { continue }
+
             let weekday = calendar.isoWeekday(of: day)
             for slot in schedule.filter({ $0.weekday == weekday }).sorted(by: { $0.startMinute < $1.startMinute }) {
                 let begin = calendar.date(byAdding: .minute, value: slot.startMinute, to: day)!
@@ -250,7 +251,6 @@ extension LocalDate {
 }
 
 extension Session {
-    /// The weekly slot the class starts in, if any.
     public func slot(in schedule: [ClassTime], calendar: Calendar) -> ClassTime? {
         let minute = calendar.component(.hour, from: date) * 60 + calendar.component(.minute, from: date)
         let weekday = calendar.isoWeekday(of: date)
@@ -336,6 +336,7 @@ public enum OnlineLink {
         guard let host = url.host()?.lowercased(), host == "zoom.us" || host.hasSuffix(".zoom.us") else { return nil }
         let parts = url.pathComponents.filter { $0 != "/" }
         guard parts.count >= 2, parts[0] == "j", parts[1].allSatisfy(\.isNumber) else { return nil }
+
         var app = URLComponents()
         app.scheme = "zoommtg"
         app.host = "zoom.us"
@@ -398,7 +399,7 @@ extension CourseFile {
     }
 }
 
-/// A recording to be renamed: its entry, its audio's course-relative path now, and the name (no extension) it takes.
+/// `file` is the audio's course-relative path now; `name` has no extension.
 public struct RecordingRetitle: Equatable, Sendable {
     public var recording: UUID
     public var file: String
@@ -411,7 +412,7 @@ public struct RecordingRetitle: Equatable, Sendable {
     }
 }
 
-/// A note to be renamed: its entry, where its file is now (course-relative), and the title it takes.
+/// `path` is course-relative.
 public struct NoteRetitle: Equatable, Sendable {
     public var note: UUID
     public var path: String
@@ -476,9 +477,11 @@ extension CourseFile {
         }
         let otherYear = sameMonthDay.contains { calendar.component(.year, from: $0.date) != c.year }
         var ref = (otherYear ? String(format: "%04d-", c.year!) : "") + String(format: "%02d-%02d", c.month!, c.day!)
+
         let sameDay = sameMonthDay.filter { calendar.isDate($0.date, inSameDayAs: session.date) }
         guard sameDay.count > 1 else { return ref }
         ref += String(format: " %02d:%02d", c.hour!, c.minute!)
+
         let minute = { (s: Session) in calendar.dateComponents([.hour, .minute], from: s.date) }
         let sameMinute = sameDay.filter { minute($0) == minute(session) }.sorted(by: Session.inOrder)
         if let i = sameMinute.firstIndex(where: { $0.id == session.id }), i > 0 { ref += " \(i + 1)" }
@@ -583,6 +586,7 @@ extension CourseFile {
             words.append(word)
         }
         guard !words.isEmpty else { return String(text.prefix(noteSubjectLimit)) }
+
         var s = words.joined(separator: " ")
         while true {
             let before = s
@@ -605,7 +609,6 @@ extension CourseFile {
             && !units.contains { $0.sessionIds.contains(session.id) }
     }
 
-    /// `units` linked to the session, in outline order.
     public func units(of session: Session) -> [Unit] {
         UnitTree.outline(units).map(\.unit).filter { $0.sessionIds.contains(session.id) }
     }
@@ -634,6 +637,7 @@ extension CourseFile {
     public mutating func linkNote(_ id: UUID, to session: UUID?, as kind: NoteKind) {
         let keeps = kind == .review && session != nil
         for s in sessions where s.roughNoteId == id || (!keeps && s.reviewNoteId == id) { unlinkNote(id, from: s.id) }
+
         guard let session, let i = sessions.firstIndex(where: { $0.id == session }) else { return }
         switch kind {
         case .rough: sessions[i].roughNoteId = id

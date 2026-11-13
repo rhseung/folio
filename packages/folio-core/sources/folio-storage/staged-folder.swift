@@ -40,7 +40,6 @@ public final class StagedFolder: @unchecked Sendable {
 
     deinit { remove() }
 
-    /// Runs `body` with every coordinated write held inside the copy.
     public func run<T>(_ body: () throws -> T) rethrows -> T {
         try Self.$fence.withValue(url) { try body() }
     }

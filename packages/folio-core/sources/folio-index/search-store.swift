@@ -19,6 +19,7 @@ public final class SearchStore: Sendable {
         } else {
             db = try DatabaseQueue()
         }
+
         var migrator = DatabaseMigrator()
         // A cache can always be rebuilt, so a schema change drops it instead of migrating.
         migrator.eraseDatabaseOnSchemaChange = true
@@ -86,6 +87,7 @@ public final class SearchStore: Sendable {
                 try db.execute(sql: "DELETE FROM course WHERE root = ?", arguments: [root])
             }
         }
+
         for (i, (store, file, signature)) in stale.enumerated() {
             progress?(i, stale.count)
             try index(store, file, signature: signature)
@@ -103,6 +105,7 @@ public final class SearchStore: Sendable {
         for (i, item) in items.enumerated() where item.kind == .material && MaterialFormat(path: item.body) == .pdf {
             items[i].body += "\n" + (try pdfText(store.url.appending(path: item.body)))
         }
+
         let course = file.course.id.uuidString
         try db.write { db in
             try db.execute(sql: "DELETE FROM item WHERE course = ?", arguments: [course])
@@ -173,8 +176,10 @@ public final class SearchStore: Sendable {
             clauses.append("(title LIKE ? ESCAPE '\\' OR body LIKE ? ESCAPE '\\')")
             args += [like, like]
         }
+
         if let kinds { clauses.append("kind IN (\(kinds.map { _ in "?" }.joined(separator: ",")))"); args += kinds.map(\.rawValue) }
         if let courses { clauses.append("course IN (\(courses.map { _ in "?" }.joined(separator: ",")))"); args += courses.map(\.uuidString) }
+
         // Only the text around the first word that is in the body comes back, so a textbook's body isn't read whole per hit.
         let at = "COALESCE(" + words.map { _ in "NULLIF(instr(lower(body), lower(?)), 0)" }.joined(separator: ", ") + ", 1)"
         let sql = "SELECT kind, course, id, title, substr(body, max(1, \(at) - 60), 240) AS excerpt FROM item WHERE " + clauses.joined(separator: " AND ")

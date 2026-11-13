@@ -43,7 +43,6 @@ public enum PageText {
         return best?.title
     }
 
-    /// Blank around a line: spaces and figures.
     public static let blank = CharacterSet.whitespaces.union(CharacterSet(charactersIn: String(figure)))
 }
 
@@ -51,7 +50,6 @@ public enum PageText {
 /// textbook in one answer would crowd out the rest; past a limit a read stops at a page or a line and says where to
 /// go on.
 public enum ReadingLimit {
-    /// Pages of text per read.
     public static let pages = 30
     /// Pages of titles per read: skimming a deck for where things are.
     public static let titles = 400

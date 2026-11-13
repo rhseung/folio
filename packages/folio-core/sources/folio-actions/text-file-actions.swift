@@ -61,6 +61,7 @@ public struct MaterialNew {
         guard NewMaterialFile.accepts(folder: folder, places: places) else { throw ActionError.rule(String(localized: .errorMaterialNewNoItem(folder))) }
         guard NewMaterialFile.isFileName(name) else { throw ActionError.rule(String(localized: .errorMaterialNewName(name))) }
         guard MaterialFormat(path: name).isText else { throw ActionError.rule(String(localized: .errorMaterialNewFormat(name))) }
+
         let path = "\(folder)/\(name)"
         // Tracking sees a code project as one folder, so a file made inside it would have no row to open. Read from the
         // disk: the tracked list lags a `git init` or a project not tracked yet.
@@ -71,6 +72,7 @@ public struct MaterialNew {
             throw ActionError.conflict(String(localized: .errorMaterialNewTaken(path)))
         }
         try ctx.io(Change(.added, try ctx.relative(course, path))) { try store.createText(path, text: NewMaterialFile.text(for: name)) }
+
         guard !ctx.dryRun else { return }
         try ctx.edit(course) { f in try store.refreshMaterials(in: &f, device: ctx.device, now: ctx.now) }
         // A folder grown past the size limit is also tracked as one item; the file is there, but there is no row to open.
@@ -101,6 +103,7 @@ public struct MaterialBuild {
         let file = try ctx.file(course)
         let m = file.materials[try index(material, in: file.materials, .valueMaterial)]
         guard let built = MaterialFormat.builtPDF(of: m.path) else { throw ActionError.rule(String(localized: .errorMaterialNotTex(m.path))) }
+
         let existing = file.materials.builtPDF(of: m)
         let target = existing?.path ?? built
         let exists = FileManager.default.fileExists(atPath: store.fileURL(target).path)
@@ -109,14 +112,17 @@ public struct MaterialBuild {
         if exists, !ours, !overwrite {
             throw ActionError.conflict(String(localized: .errorBuildWouldReplace(target)))
         }
+
         let change = Change(exists ? .changed : .added, try ctx.relative(course, target))
         guard !ctx.dryRun else {
             ctx.record(change)
             return
         }
+
         let source = store.fileURL(m.path)
         let output = try pdf.map { try Self.output($0, of: source) } ?? Self.compile(source, ctx)
         try ctx.io(change) { try store.replaceFile(target, with: output, keepOld: exists && !ours) }
+
         try ctx.edit(course) { f in
             try store.refreshMaterials(in: &f, device: ctx.device, now: ctx.now)
             if let i = f.materials.firstIndex(where: { $0.path == target }) {
@@ -163,6 +169,7 @@ public struct NoteBuild {
         let store = try ctx.store(course)
         let file = try FolioActions.note(ctx, course: course, path: note)
         guard file.format == .tex else { throw ActionError.rule(String(localized: .errorMaterialNotTex(note))) }
+
         let target = store.exportPath(of: file)
         let exists = FileManager.default.fileExists(atPath: store.fileURL(target).path)
         // The entry holds the hash that tells this build's PDF from someone else's; without one every later build would
@@ -175,16 +182,19 @@ public struct NoteBuild {
         if exists, !ours, !overwrite {
             throw ActionError.conflict(String(localized: .errorBuildWouldReplace(target)))
         }
+
         let change = Change(exists ? .changed : .added, try ctx.relative(course, target))
         guard !ctx.dryRun else {
             ctx.record(change)
             return
         }
+
         let built = try pdf.map { try MaterialBuild.output($0, of: file.url) } ?? MaterialBuild.compile(file.url, ctx)
         try ctx.io(change) {
             try FileManager.default.createDirectory(at: store.fileURL(target).deletingLastPathComponent(), withIntermediateDirectories: true)
             try store.replaceFile(target, with: built, keepOld: exists && !ours)
         }
+
         let hash = try store.hash(target)
         try ctx.edit(course) { f in
             if let i = f.notes.firstIndex(where: { $0.id == entry.id }) { f.notes[i].builtHash = hash }

@@ -202,8 +202,6 @@ struct MaterialCommand: ParsableCommand {
 
 /// A text material's JSON also carries the file as it is now and the hash `material write --expect` compares. The
 /// material's own `hash` is from the last tracking, so after a change from another device it would never match.
-/// A material as `material show --json` gives it: its entry, the format the app opens it by, and a text file's
-/// content with the hash `material write --expect` compares.
 struct ShownMaterial: Encodable {
     var material: Material
     var text: String?

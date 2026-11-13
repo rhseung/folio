@@ -100,7 +100,6 @@ public enum Footnotes {
 /// The footnotes of one note as its page is drawn: what each label says, and the numbers given out in the order
 /// the references come. A class, so a table cell's renderer, a copy, numbers on from the note's.
 final class FootnoteBook {
-    /// Each label's text, as the inlines of its definition.
     let definitions: [String: [Markup]]
     private(set) var numbered: [String] = []
     private var uses: [String: Int] = [:]

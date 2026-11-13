@@ -70,7 +70,6 @@ enum LayoutSnapshots {
         return nil
     }
 
-    /// Pops `menu` up, draws it with the window, and closes it.
     static func pop(_ menu: NSMenu, at point: NSPoint, in window: NSWindow, step name: String, directory: URL) async {
         let started = Date()
         // The menu tracks the run loop in its own mode, where no task runs: a timer in `.common` mode takes the picture

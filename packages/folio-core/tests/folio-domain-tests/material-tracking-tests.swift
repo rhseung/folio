@@ -97,6 +97,7 @@ struct MaterialTrackingTests {
             io: io(), device: device, now: t1
         )
         let pdf = try #require(moved.first { $0.path == "HW/hw.pdf" })
+
         #expect(moved.first { $0.path == "HW/hw.tex" }?.sourceOf == pdf.id)
         #expect(moved.builtPDF(of: moved[i])?.id == pdf.id)
     }
@@ -116,9 +117,11 @@ struct MaterialTrackingTests {
         #expect(Set(result.withoutBuiltPDFs().map(\.path)) == ["Study/Summary.tex", "Study/Other.pdf", "HW/Summary.pdf"])
         let tex = try #require(result.first { $0.path == "Study/Summary.tex" })
         #expect(result.builtPDFsHidden().mapValues(\.path) == [tex.id: "Study/Summary.pdf"])
+
         // A list without the source keeps the PDF, and a list without the PDF has none for the source to stand for.
         #expect(result.filter { $0.path.hasSuffix(".pdf") }.withoutBuiltPDFs().count == 3)
         #expect(result.filter { $0.path.hasSuffix(".tex") }.builtPDFsHidden().isEmpty)
+
         // A missing PDF keeps its row, to be re-pointed or dropped.
         var gone = result
         let i = try #require(gone.firstIndex { $0.path == "Study/Summary.pdf" })

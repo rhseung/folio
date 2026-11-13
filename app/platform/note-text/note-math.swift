@@ -17,7 +17,6 @@ import UIKit
         return context.objectForKeyedSubscript("folioNative")
     }()
 
-    /// The code block languages the highlighter knows, by the name each is offered under.
     static let languages: [String] = helpers?.objectForKeyedSubscript("languages").call(withArguments: [])?.toArray()?.compactMap { $0 as? String } ?? []
 
     /// Token spans in UTF-16 offsets of `code`, with the highlighter's classes.
@@ -143,6 +142,7 @@ import UIKit
         let page = page ?? make()
         page.move(to: host)
         guard page.hosted else { return }
+
         busy = true
         let job = queue.removeFirst(), turn = UUID(), started = ContinuousClock.now
         current = turn
@@ -179,7 +179,6 @@ import UIKit
     }
 }
 
-/// The hidden page: the note stylesheet and the preview's script, one formula at a time, as wide as it runs.
 @MainActor private final class MathPage: NSObject, WKNavigationDelegate {
     let web: WKWebView
     /// One point of the hosting view, clipping the page: the page lays out and draws, and nothing of it shows.
@@ -199,6 +198,7 @@ import UIKit
         web = WKWebView(frame: CGRect(origin: .zero, size: Self.canvas), configuration: config)
         frame = MathFrame(frame: CGRect(x: 0, y: 0, width: 1, height: 1))
         super.init()
+
         #if os(macOS)
         web.setValue(false, forKey: "drawsBackground")
         // WebKit stops drawing a page whose window it judges covered, and an editor window often partly is; this page
@@ -216,6 +216,7 @@ import UIKit
         web.scrollView.backgroundColor = .clear
         frame.clipsToBounds = true
         #endif
+
         frame.addSubview(web)
         web.navigationDelegate = self
         load()
@@ -318,6 +319,7 @@ import UIKit
             """
         let color = String(format: "#%06X", dark ? Swatch.text.dark : Swatch.text.light)
         let arguments: [String: Any] = ["html": html, "syntax": syntax.rawValue, "size": Double(size), "color": color]
+
         let answer: Any?
         do { answer = try await web.callAsyncJavaScript(script, arguments: arguments, contentWorld: .defaultClient) } catch { return .failed }
         guard let found = answer as? [NSNumber], found.count == 4 else { return .unreadable }
@@ -329,6 +331,7 @@ import UIKit
             .union(CGRect(x: ceil(ink.maxX) + margin, y: ceil(ink.maxY) + margin, width: 0, height: 0))
             .intersection(web.bounds)
         guard rect.width > 0, rect.height > 0 else { return .unreadable }
+
         let snapshot = WKSnapshotConfiguration()
         snapshot.rect = rect
         // The page is drawn afresh for the picture; waiting for the screen would wait on a window that may not show.
@@ -360,6 +363,7 @@ import UIKit
             return true
         }
         guard drawn else { return nil }
+
         // The page is transparent, so any alpha is ink, its antialiased edge included. Rows run from the top.
         var minX = w, minY = h, maxX = -1, maxY = -1
         for y in 0..<h {
@@ -372,6 +376,7 @@ import UIKit
             }
         }
         guard maxX >= 0 else { return nil }
+
         let points = CGRect(x: floor(CGFloat(minX) / scale), y: floor(CGFloat(minY) / scale), width: 0, height: 0)
             .union(CGRect(x: ceil(CGFloat(maxX + 1) / scale), y: ceil(CGFloat(maxY + 1) / scale), width: 0, height: 0))
         let crop = CGRect(x: points.minX * scale, y: points.minY * scale, width: points.width * scale, height: points.height * scale)

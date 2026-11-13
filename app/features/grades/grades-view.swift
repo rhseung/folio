@@ -67,7 +67,7 @@ struct GradesView: View {
                     ForEach(model.semesterRows, id: \.semester.id) { row in
                         let s = row.semester, sum = row.summary, inProgress = row.inProgress
                         let open = model.expanded == s.id
-                        let toggle = { withAnimation(.snappy(duration: 0.2)) { model.toggle(s.id) } }
+                        let toggle = { withAnimation(Theme.Motion.quick) { model.toggle(s.id) } }
                         Button(action: toggle) {
                             CardRow {
                                 HStack(spacing: Theme.Space.s) {

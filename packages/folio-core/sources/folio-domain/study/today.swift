@@ -52,7 +52,6 @@ extension CourseFile {
     }
 }
 
-/// Everything the today screen shows, computed from course files and review states.
 public struct TodaySummary: Sendable {
     public struct ExamItem: Sendable, Equatable {
         public var courseId: UUID
@@ -99,12 +98,14 @@ public struct TodaySummary: Sendable {
                 let d = today.days(until: LocalDate(start, in: calendar))
                 if d <= examHorizonDays { exams.append(ExamItem(courseId: id, exam: exam, dDay: d)) }
             }
+
             for a in file.assignments where a.status.isOpen {
                 // Deadlines use real time: one at 01:00 tonight is still "today" only if it hasn't passed. Every one still
                 // ahead shows, however far: a long project is due as surely as tomorrow's homework.
                 guard let due = a.due, due >= now else { continue }
                 deadlines.append(DeadlineItem(courseId: id, assignment: a, isToday: due < dayEnd))
             }
+
             for s in file.sessions where !s.isCancelled {
                 if s.date >= dayStart && s.date < dayEnd { classes.append(SessionItem(courseId: id, session: s)) }
                 // From the moment the class ends, not the next study day: the review note is written the same day.
@@ -113,6 +114,7 @@ public struct TodaySummary: Sendable {
                 }
             }
         }
+
         return TodaySummary(
             studyDay: today,
             exams: exams.sorted { $0.exam.start! < $1.exam.start! },

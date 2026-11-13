@@ -76,6 +76,7 @@ final class SemesterModel {
         guard let s = semester, s.isOver(on: LocalDate(workspace.now, in: workspace.calendar), among: workspace.transcript.semesters) else { audio = nil; return }
         let courses = courses(in: s)
         let shelf = courses.map { ($0.store, $0.file.recordings.filter(\.hasAudio)) }
+
         // Off the main actor: telling whether a recording has lines decodes its whole transcript, and a semester holds
         // dozens of 75-minute ones, which froze the page as it opened.
         let tallies = await Task.detached {
@@ -84,6 +85,7 @@ final class SemesterModel {
                 return (count: trimmable.count, kept: withAudio.count - trimmable.count, bytes: trimmable.map { store.audioSize(of: $0) }.reduce(0, +))
             }
         }.value
+
         let items = zip(courses, tallies).filter { $1.count > 0 }.map { AudioNotice.Item(course: $0, count: $1.count, bytes: $1.bytes) }
         audio = items.isEmpty ? nil : AudioNotice(items: items, kept: tallies.map(\.kept).reduce(0, +))
     }

@@ -112,6 +112,7 @@ struct NoteHangulPadTests {
                 typed += marked
                 marked = ""
             }
+
             let step = "\(place), key \(n) (\(key))"
             pulse.count += 1
             await Self.settle(window)

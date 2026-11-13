@@ -1,7 +1,7 @@
 import FolioDomain
 import SwiftUI
 
-/// A person's menu in the people list (#403). Their page is their editor; deleting asks on that page.
+/// Their page is their editor (#403), so deleting asks on that page.
 @MainActor
 struct PersonMenuSource: ItemMenuSource {
     let person: Person
@@ -23,7 +23,7 @@ struct PersonMenuSource: ItemMenuSource {
     }
 }
 
-/// A code's tile menu. Editing is the tile's popover; a code a course still uses can't go.
+/// Editing is the tile's popover; a code a course still uses can't go.
 @MainActor
 struct CodeMenuSource: ItemMenuSource {
     let edit: @MainActor () -> Void
@@ -40,7 +40,6 @@ struct CodeMenuSource: ItemMenuSource {
     }
 }
 
-/// A requirement category's menu, on its figure.
 @MainActor
 struct RequirementMenuSource: ItemMenuSource {
     let show: @MainActor () -> Void

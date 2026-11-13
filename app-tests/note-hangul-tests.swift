@@ -46,6 +46,7 @@ struct NoteHangulTests {
         let model = NoteEditorModel(workspace: workspace, course: course, note: file)
         model.load()
         if !model.body.contains("\n") { model.body += "\n둘째 줄" }
+
         let bench = NoteBench(.edit, text: Binding(get: { model.body }, set: { model.body = $0 }), baseURL: model.baseURL)
         await bench.settle()
         bench.focus()

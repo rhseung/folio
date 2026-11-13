@@ -148,11 +148,13 @@ final class Workspace {
             do { return try read() } catch { problems.append("\(name): \(error)"); return nil }
         }
         func exists(_ url: URL) -> Bool { FileManager.default.fileExists(atPath: url.path) }
+
         transcript = attempt("transcript.json") { exists(gist.transcriptURL) ? try gist.loadTranscript().model : Transcript() } ?? transcript
         let loadedCatalog = attempt("catalog.json") { exists(gist.catalogURL) ? try gist.loadCatalog().model : Catalog() }
         catalog = loadedCatalog ?? catalog
         catalogLoaded = loadedCatalog != nil
         settings = attempt("settings.json") { try gist.loadSettings().model } ?? settings
+
         let stores = attempt(String(localized: .workspaceCourseFolders)) { try gist.courseStores() } ?? []
         var seen = Set<UUID>()
         courses = stores.compactMap { store in
@@ -163,9 +165,11 @@ final class Workspace {
             }
             return course
         }
+
         reviewEvents = Dictionary(keepingFirst: courses.map { c in
             (c.id, (try? c.store.log.readAll().filter { $0.type == ReviewEvent.type }) ?? [])
         })
+
         // Never cleared here: callers reload right after a failed save, whose message must stay up.
         if !problems.isEmpty { error = String(localized: .workspaceUnreadableFiles) + "\n" + problems.joined(separator: "\n") }
         // A reload follows writes the app can't see into (an iCloud sync, the folio command), so every list re-reads.
