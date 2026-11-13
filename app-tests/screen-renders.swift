@@ -85,6 +85,10 @@ struct ScreenRenders {
         var batches = [plain, Batch(pages: columns.map { name, entry in
             ("column-hidden-\(name)", { AnyView(ScreenView(workspace: workspace, entry: entry).environment(\.columnPrefs, hidden)) })
         })]
+        // The first run's steps at every width, the narrowest standing in for an iPhone, over the scenario's open folder.
+        batches.append(Batch(pages: FirstRunStep.allCases.map { step in
+            ("first-run-\(step.rawValue)", { AnyView(FirstRunView(workspace: workspace, step: step)) })
+        }))
         for (name, query) in [("search-empty", ""), ("search", "매칭")] {
             batches.append(Batch(setup: { SnapshotDriver.shared.searchQuery = query },
                                  sheets: [(name, { AnyView(SearchPalette(workspace: workspace, close: {}, choose: { _, _ in })) })]))

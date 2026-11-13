@@ -11,7 +11,6 @@ struct RootView: View {
     /// search and links alike. The iPad has one, its windows being its tabs.
     @State private var tabs: WindowTabs
     let request: WindowRequest?
-    @State private var pickingFolder = false
     @State private var addingSemester = false
     @State private var addingCourse = false
     /// Terms flipped from their default: the current term starts open, the others closed.
@@ -196,14 +195,8 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if workspace.gist == nil {
-                ContentUnavailableView {
-                    Label(.rootPickGistTitle, systemImage: "folder")
-                } description: {
-                    Text(.rootPickGistDetail)
-                } actions: {
-                    Button(.rootPickFolder) { pickingFolder = true }
-                }
+            if workspace.gist == nil || workspace.showsFirstRun {
+                FirstRunView(workspace: workspace)
             } else {
                 shell {
                     detail
@@ -287,9 +280,6 @@ struct RootView: View {
         // it in a new tab of its own.
         .onOpenURL { url in if let link = AppLink(url: url) { openFromOutside(link) } }
         .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
-        .fileImporter(isPresented: $pickingFolder, allowedContentTypes: [.folder]) { result in
-            if case .success(let url) = result { workspace.open(url) }
-        }
         // Also in a Release build made with RESIZE_PROBE: a debug build's SwiftUI timings say little about the app's.
         #if os(macOS) && (DEBUG || RESIZE_PROBE)
         .task {

@@ -142,8 +142,11 @@ private struct GeneralSettings: View {
                 FormRow(label: String(localized: .settingsAppearance), device: true) {
                     Segmented(selection: $appearance, options: Appearance.allCases.map { ($0, $0.label) }, symbols: Appearance.allCases.map(\.symbol))
                 }
-                FormRow(label: String(localized: .settingsGistFolder), detail: model.folderPath, device: true, last: true) {
+                FormRow(label: String(localized: .settingsGistFolder), detail: model.folderPath, device: true) {
                     Button(.settingsPickFolder) { pickingFolder = true }
+                }
+                FormRow(label: String(localized: .settingsFirstRun), last: true) {
+                    Button(.settingsFirstRunShow) { model.workspace.showsFirstRun = true }
                 }
             }
         }
@@ -481,31 +484,10 @@ private struct NoteSettingsForm: View {
 
 private struct ClaudeSettings: View {
     @Bindable var model: SettingsModel
-    @AppStorage(Workspace.subscriptionKey) private var subscription = true
 
     var body: some View {
         Block(String(localized: .settingsConnection)) {
-            Card {
-                #if os(macOS)
-                FormRow(label: String(localized: .settingsConnectionMethod), detail: model.connectionDetail(subscription: subscription),
-                        device: true, warns: model.connectionWarns(subscription: subscription)) {
-                    ChoiceMenu(selection: $subscription, options: [(true, String(localized: .settingsSubscription)), (false, String(localized: .settingsApiKey))])
-                }
-                .onChange(of: subscription) { model.workspace.claudeRevision += 1 }
-                #endif
-                if let hint = model.keyHint, !model.replacingKey {
-                    FormRow(label: String(localized: .settingsApiKey), last: true) {
-                        Text(hint).font(Theme.Typeface.mono).foregroundStyle(Theme.Palette.textSecondary)
-                        Button(.settingsChange) { model.replacingKey = true }
-                    }
-                } else {
-                    FormRow(label: String(localized: .settingsApiKey),
-                            detail: model.keyMissing(subscription: subscription) ? String(localized: .settingsApiKeyMissing) : nil, warns: true, last: true) {
-                        SecureField("sk-ant-…", text: $model.apiKey).pill(width: 180).onSubmit(model.saveKey)
-                        Button(.commonSave, action: model.saveKey).disabled(model.apiKey.isEmpty)
-                    }
-                }
-            }
+            ClaudeConnectionCard(model: model)
         }
         FormTextArea(label: String(localized: .settingsNoteRules), text: $model.settings.noteRules)
         Block(String(localized: .settingsUsage)) {
@@ -524,6 +506,36 @@ private struct ClaudeSettings: View {
         }
         // Read once per visit: it parses every course's log file.
         .task(model.loadUsage)
+    }
+}
+
+/// How Claude is reached and the API key, which settings and the first run's Claude step both show.
+struct ClaudeConnectionCard: View {
+    @Bindable var model: SettingsModel
+    @AppStorage(Workspace.subscriptionKey) private var subscription = true
+
+    var body: some View {
+        Card {
+            #if os(macOS)
+            FormRow(label: String(localized: .settingsConnectionMethod), detail: model.connectionDetail(subscription: subscription),
+                    device: true, warns: model.connectionWarns(subscription: subscription)) {
+                ChoiceMenu(selection: $subscription, options: [(true, String(localized: .settingsSubscription)), (false, String(localized: .settingsApiKey))])
+            }
+            .onChange(of: subscription) { model.workspace.claudeRevision += 1 }
+            #endif
+            if let hint = model.keyHint, !model.replacingKey {
+                FormRow(label: String(localized: .settingsApiKey), last: true) {
+                    Text(hint).font(Theme.Typeface.mono).foregroundStyle(Theme.Palette.textSecondary)
+                    Button(.settingsChange) { model.replacingKey = true }
+                }
+            } else {
+                FormRow(label: String(localized: .settingsApiKey),
+                        detail: model.keyMissing(subscription: subscription) ? String(localized: .settingsApiKeyMissing) : nil, warns: true, last: true) {
+                    SecureField("sk-ant-…", text: $model.apiKey).pill(width: 180).onSubmit(model.saveKey)
+                    Button(.commonSave, action: model.saveKey).disabled(model.apiKey.isEmpty)
+                }
+            }
+        }
     }
 }
 

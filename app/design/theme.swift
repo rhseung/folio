@@ -52,6 +52,11 @@ enum Theme {
         static let warningBanner = Color(light: 0xFBE9D0, dark: 0x54401F)
         static let danger = Color(light: 0x9C3A1E, dark: 0xF08A70)
         static let dangerFill = Color(light: 0xFBE4DD, dark: 0x3A201A)
+        /// The app icon's colors (app/resources/AppIcon.icon), for the mark the first run draws: its top bar in ink,
+        /// the two below in coral, on white or, in dark, near black.
+        static let markInk = Color(light: 0x2B2B30, dark: 0xF2F0EC)
+        static let markCoral = Color(light: 0xFF7A59, dark: 0xFF8F73)
+        static let markBack = Color(light: 0xFFFFFF, dark: 0x1D1D1D)
         static let success = Color(light: 0x1E7D4F, dark: 0x5FCF98)
         /// Neutral news, neither good nor a warning: a release's new features beside its fixes (green) and changes (amber).
         static let info = Color(light: 0x1D4A8A, dark: 0x8DB8F2)
@@ -207,6 +212,16 @@ enum Theme {
         static let paneStrip: CGFloat = 40
         #endif
         static let dot: CGFloat = 8
+        /// The app's mark beside its name in the first run's step list, and alone on its welcome.
+        static let appMark: CGFloat = 24
+        static let appMarkLarge: CGFloat = 64
+        /// The first run's steps read at this width at most, centered in the panel.
+        static let firstRunColumn: CGFloat = 560
+        /// Below this the first run drops its step list for one column with dots, as on an iPhone.
+        static let firstRunNarrow: CGFloat = 640
+        /// The icon square of a choice card (the folder step's 새로 시작 and 기존 폴더).
+        static let optionTile: CGFloat = 40
+        static let radio: CGFloat = 20
         /// The box a lecture's page is fitted into in its thumbnail column, whatever its shape: a 16:9 slide fills it,
         /// a 4:3 one is as tall and narrower. Wide for slides, which most lectures are.
         static let pageThumbnail = CGSize(width: 152, height: 84)
