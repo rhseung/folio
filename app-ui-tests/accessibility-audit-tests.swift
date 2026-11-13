@@ -119,11 +119,12 @@ struct AuditFinding: CustomStringConvertible {
         self.screen = screen
         type = issue.auditType
         summary = issue.compactDescription
-        element = issue.element.map { e in
-            let label = e.label.isEmpty ? "-" : "\"\(e.label)\""
-            let id = e.identifier.isEmpty ? "" : " #\(e.identifier)"
-            return "\(e.elementType.name) \(label)\(id)"
-        } ?? "no element"
+        element =
+            issue.element.map { e in
+                let label = e.label.isEmpty ? "-" : "\"\(e.label)\""
+                let id = e.identifier.isEmpty ? "" : " #\(e.identifier)"
+                return "\(e.elementType.name) \(label)\(id)"
+            } ?? "no element"
     }
 
     var description: String { "\(screen): [\(type.name)] \(summary) — \(element)" }
@@ -141,7 +142,9 @@ enum KnownFindings {
     static let entries: [Entry] = []
 
     static func covers(_ finding: AuditFinding) -> Bool {
-        entries.contains { ($0.screen == "*" || $0.screen == finding.screen) && $0.type == finding.type && finding.element.contains($0.element) }
+        entries.contains {
+            ($0.screen == "*" || $0.screen == finding.screen) && $0.type == finding.type && finding.element.contains($0.element)
+        }
     }
 }
 
