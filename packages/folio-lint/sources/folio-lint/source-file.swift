@@ -76,6 +76,8 @@ public final class Codebase {
         self.init(files: files)
     }
 
+    var paths: [String] { texts.keys.sorted() }
+
     func files(under folders: String...) -> [SourceFile] {
         texts.keys.filter { path in folders.contains { path.hasPrefix($0 + "/") } }.sorted().map(file)
     }

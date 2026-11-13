@@ -259,3 +259,97 @@ private let view = "app/features/demo/demo-view.swift"
         ])
     }
 }
+
+@Suite struct AppDirectionTests {
+    @Test func lowerLayersAndOtherFeaturesModels() {
+        let files = [
+            "app/features/course/note-embed.swift": "struct NoteEmbedSource {}\nfinal class CourseModel {}",
+            "app/features/settings/settings-model.swift": "final class SettingsModel {}",
+            "app/features/first-run/first-run-model.swift": "let settings = SettingsModel(); let embed = NoteEmbedSource()",
+            "app/platform/note-preview.swift": "let source: NoteEmbedSource",
+            "app/features/course/course-view.swift": "let model: CourseModel",
+            "app/design/theme.swift": "struct Theme {}",
+            "app/features/today/today-view.swift": "let theme = Theme()",
+        ]
+        #expect(found(files, "app-direction") == ["NoteEmbedSource from features/course", "SettingsModel from features/settings"])
+    }
+}
+
+@Suite struct KindDefaultTests {
+    @Test func aDefaultInASwitchOverAppLinkKinds() {
+        let files = [
+            "packages/folio-core/sources/folio-domain/app-link.swift": """
+                struct AppLink { enum Kind: String { case today, note, material } }
+                """,
+            "app/app/screen.swift": """
+                func screen(_ link: AppLink) {
+                    switch link.kind {
+                    case .note: break
+                    default: break
+                    }
+                    switch link.kind {
+                    case .today, .note, .material: break
+                    }
+                    switch item.kind {
+                    case .note, .heading: break
+                    default: break
+                    }
+                }
+                """,
+        ]
+        #expect(found(files, "kind-default") == ["switch link.kind default:"])
+    }
+}
+
+@Suite struct MinuteTimelineTests {
+    @Test func slowSchedulesButNotSecondTimers() {
+        let source = """
+            TimelineView(.everyMinute) { _ in row }
+            TimelineView(.periodic(from: start, by: 86_400)) { _ in page }
+            TimelineView(.periodic(from: start, by: 1)) { _ in timer }
+            TimelineView(.animation) { _ in glide }
+            """
+        #expect(found([view: source], "minute-timeline") == ["TimelineView(.everyMinute)", "TimelineView(.periodic)"])
+    }
+}
+
+@Suite struct ScreenToolbarTests {
+    @Test func theWindowToolbarFromAScreen() {
+        let source = "Text(.commonSave).toolbar { Button(.commonClose) {} }.buttonStyle(.toolbar).toolbarGroup()"
+        #expect(found([view: source], "screen-toolbar") == [".toolbar"])
+        #expect(found(["app/app/window.swift": source], "screen-toolbar").isEmpty)
+    }
+}
+
+@Suite struct LaunchEnvironmentTests {
+    @Test func theEnvironmentOutsideTheLaunchFiles() {
+        let read = "let env = ProcessInfo.processInfo.environment"
+        let files = [
+            "app/platform/pdf-view.swift": read,
+            "app/app/workspace.swift": read,
+            "app/app/debug-snapshots.swift": read,
+            "app-tests/render-tests.swift": read,
+            "packages/folio-core/tests/folio-cli-tests/env.swift": read,
+            "app/features/demo/demo-model.swift": "#if DEBUG\n\(read)\n#endif",
+        ]
+        #expect(found(files, "launch-environment") == ["ProcessInfo.processInfo.environment"])
+    }
+}
+
+@Suite struct NameAndFolderTests {
+    @Test func kebabCaseNames() {
+        let files = [
+            "app/features/demo/demo-view.swift": "", "app/features/Demo/DemoModel.swift": "",
+            "packages/folio-core/Package.swift": "", "app/features/demo/grade_math.swift": "",
+        ]
+        #expect(found(files, "kebab-names") == ["Demo", "DemoModel", "grade_math"])
+    }
+
+    @Test func foldersPastTwentyFiles() {
+        var files: [String: String] = [:]
+        for index in 1...21 { files["app/app/file-\(index).swift"] = "" }
+        for index in 1...20 { files["app/design/file-\(index).swift"] = "" }
+        let hits = Rules.all.filter { $0.name == "folder-size" }.flatMap { $0.hits(in: Codebase(files: files)) }
+        #expect(hits.map(\.path) == ["app/app"])
+    }
+}

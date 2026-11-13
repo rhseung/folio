@@ -8,8 +8,12 @@ public struct Hit: Hashable, Sendable {
     public let key: String
 
     init(_ check: String, _ file: SourceFile, _ line: Int, _ key: String) {
+        self.init(check, path: file.path, line, key)
+    }
+
+    init(_ check: String, path: String, _ line: Int, _ key: String) {
         self.check = check
-        path = file.path
+        self.path = path
         self.line = line
         self.key = key.split(whereSeparator: \.isWhitespace).joined(separator: " ")
     }
@@ -38,7 +42,8 @@ public enum Rules {
     public static var all: [Rule] {
         [
             viewWorkspaceCall, viewBodyLogic, uiString, layoutName, layer, restatingComment, designValue, designGrid,
-            courseAccent, localFolders,
+            courseAccent, localFolders, appDirection, kindDefault, minuteTimeline, screenToolbar, launchEnvironment,
+            kebabNames, folderSize,
         ]
     }
 }
