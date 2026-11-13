@@ -195,8 +195,19 @@ enum Theme {
         /// The outline beside a note (#387), and the most its popover takes where the note has no room for it.
         static let noteOutline: CGFloat = 224
         static let noteOutlinePopover = CGSize(width: 280, height: 400)
-        /// The iPad's too: its rows grow to a finger's height, not its names, which keep the Mac's 13pt.
-        static let sidebar: CGFloat = 216
+        /// The iPad's and the iPhone's chrome (toolbar, sidebar) is the Mac's at this one scale, from the Mac's 32pt
+        /// toolbar button to 36 (2026-11-13 사용자). Sized part by part for a finger, the sidebar's 13pt names floated
+        /// in 44pt rows and the toolbar row looked thick; at one scale the two keep the Mac's proportions.
+        #if os(iOS)
+        static let chromeScale: CGFloat = 36 / 32
+        #else
+        static let chromeScale: CGFloat = 1
+        #endif
+        /// A Mac chrome size at `chromeScale`, kept on the 2pt grid.
+        static func chrome(_ mac: CGFloat) -> CGFloat { (mac * chromeScale / 2).rounded() * 2 }
+        static let sidebar: CGFloat = chrome(216)
+        /// A sidebar row out of the Mac's own sidebar list, which sizes its rows itself (32pt there).
+        static let sidebarRow: CGFloat = chrome(32)
         static let claudePanel: CGFloat = 380
         /// The round button a page's floating panel opens from (a course's Claude), at the content's bottom trailing corner.
         static let fab: CGFloat = 44
@@ -218,17 +229,13 @@ enum Theme {
         /// The least a finger can hit on each side, whatever the drawn size (`TouchTarget`).
         static let touchTarget: CGFloat = 44
         static let tile: CGFloat = 22
-        #if os(iOS)
-        /// A finger's size on the iPad and the iPhone, for every toolbar capsule and column button.
-        static let toolbarButton: CGFloat = 44
-        #else
-        static let toolbarButton: CGFloat = 32
-        #endif
+        /// Every toolbar capsule and column button.
+        static let toolbarButton: CGFloat = chrome(32)
         /// The window's top row on the Mac, which the toolbar's capsules sit in the middle of (`TitleRow`).
         #if os(iOS)
-        /// 4 above and below the 44 buttons, not the Mac's 8: the status bar already sits above the row, and with 8 the
-        /// panel began some 20 lower than in the system's own apps.
-        static let toolbarRow: CGFloat = 52
+        /// 4 above and below the buttons, not the Mac's 8: the status bar already sits above the row, and with 8 the
+        /// panel began lower than in the system's own apps.
+        static let toolbarRow: CGFloat = toolbarButton + Space.xs * 2
         #else
         static let toolbarRow: CGFloat = 48
         #endif
@@ -265,6 +272,8 @@ enum Theme {
         /// For text measured with the platform font (`GrowingTextEditor`).
         static let bodySize = CGFloat(13)
         static let bodyStrong = Font.system(size: 13, weight: .semibold)
+        /// The sidebar's names, the Mac's 13pt at the chrome's scale (`Size.chromeScale`).
+        static let sidebar = Font.system(size: (bodySize * Size.chromeScale).rounded())
         static let caption = Font.system(size: 12)
         /// File names and paths.
         static let mono = Font.system(size: 12, design: .monospaced)

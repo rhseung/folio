@@ -428,8 +428,8 @@ struct RootView: View {
             navHeight = height
         }
         #if os(iOS)
-        // The plain list there reports no content height until it scrolls: six rows a finger's height, at least.
-        .frame(height: max(navHeight ?? 0, Theme.Size.rowHeight * 6 + Theme.Space.s))
+        // The plain list there reports no content height until it scrolls: six rows, at least.
+        .frame(height: max(navHeight ?? 0, Theme.Size.sidebarRow * 6 + Theme.Space.s))
         #else
         .frame(height: navHeight)
         #endif
@@ -474,10 +474,9 @@ struct RootView: View {
         // Out of a split view the iPad's sidebar style is grouped cards; plain rows lie flat on the frame as the Mac's.
         .listStyle(.plain)
         .listRowSeparator(.hidden)
-        // The Mac's sizes but a finger's height: a plain list's default is the 17pt body and a 52pt row, which made the
-        // sidebar a size apart from the 13pt pages beside it.
-        .font(Theme.Typeface.body)
-        .environment(\.defaultMinListRowHeight, Theme.Size.rowHeight)
+        // The Mac's sidebar at the chrome's scale: a plain list's default is the 17pt body and a 52pt row.
+        .font(Theme.Typeface.sidebar)
+        .environment(\.defaultMinListRowHeight, Theme.Size.sidebarRow)
         #endif
         .labelStyle(SidebarLabelStyle())
         }
