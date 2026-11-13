@@ -41,7 +41,7 @@ struct ScreenFitTests {
             // No default: a new kind fails here too until the test gives it something to point at.
             let link: AppLink
             switch kind {
-            case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew: link = .place(kind)
+            case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals: link = .place(kind)
             case .semester: link = AppLink(.semester, try #require(workspace.currentSemester).id)
             case .course: link = .course(course.id)
             case .session: link = try first(.session, file.sessions.map(\.id))

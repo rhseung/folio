@@ -15,6 +15,7 @@ enum GeneratedCommands {
     static let exam: [any ParsableCommand.Type] = [ExamAdd.self, ExamSet.self, ExamRemove.self, ExamSummary.self]
     static let examPlan: [any ParsableCommand.Type] = [ExamPlanAdd.self, ExamPlanRemove.self]
     static let `import`: [any ParsableCommand.Type] = [ImportNotion.self, ImportNotes.self, ImportCalendar.self, ImportExams.self, ImportUnits.self, ImportRequirements.self, ImportHandbook.self]
+    static let lms: [any ParsableCommand.Type] = [LMSSeen.self, LMSMark.self, LMSAccept.self]
     static let material: [any ParsableCommand.Type] = [MaterialLinkUnit.self, MaterialLinkExam.self, MaterialStatusSet.self, MaterialKindSet.self, MaterialUntrack.self, MaterialTrack.self, MaterialMove.self, MaterialTrash.self, MaterialNew.self, MaterialBuild.self]
     static let note: [any ParsableCommand.Type] = [NoteAdd.self, NoteAdopt.self, NoteLink.self, NoteLinkSessions.self, NoteUnlinkSession.self, NoteRemove.self, NoteMigrate.self, NoteRetitleSessions.self, NoteMove.self, NoteBuild.self]
     static let noteFigure: [any ParsableCommand.Type] = [NoteFigureAdd.self, NoteFigureWrite.self]
@@ -953,7 +954,8 @@ enum GeneratedCommands {
                 course: c.id,
                 title: title,
                 due: due.map { $0.date },
-                repeats: repeats
+                repeats: repeats,
+                lms: nil
             )
             try perform(spec: action, g, ctx: ctx)
         }
@@ -2046,6 +2048,69 @@ enum GeneratedCommands {
                 result: result,
                 start: start.date,
                 end: end.date
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct LMSSeen: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "seen", abstract: "처음 본 LMS 강의실을 기록하고 지금 있는 항목을 제안함에서 숨기기", discussion: """
+            강의실을 처음 볼 때 그 강의실에 이미 있는 파일과 공지를 --items로 넘겨, 그 뒤에 올라온 것만 제안한다.
+            강의실을 과목에 잇지 않는다. 제안은 받을 때마다 과목을 고른다.
+
+            예시:
+              folio lms seen 27967 28011 --items file:139109 --items notice:23464
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: "LMS 강의실 번호(course/view.php?id=). 여러 번 줄 수 있다") var classrooms: [Int]
+        @Option(help: "제안함에서 숨길 항목. file:139109, notice:23464 꼴. 여러 번 줄 수 있다") var items: [String] = []
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let action = FolioActions.LMSSeen(
+                classrooms: classrooms,
+                items: items
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct LMSMark: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "mark", abstract: "LMS 항목을 제안함에서 숨기기, --off면 다시 제안하기", discussion: """
+            예시:
+              folio lms mark notice:23464 file:139109
+              folio lms mark notice:23464 --off
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: "항목. assignment:139941, file:139109, notice:23464 꼴. 여러 번 줄 수 있다") var keys: [String]
+        @Flag(name: .customLong("off"), help: "다시 제안하기") var off = false
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let action = FolioActions.LMSMark(
+                keys: keys,
+                handled: !off
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct LMSAccept: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "accept", abstract: "LMS 제안을 과목에 받기. 과제는 과제로 더하고, 받은 파일은 Lectures로 가져오고, 모두 제안함에서 숨긴다", discussion: """
+            항목 파일은 [{\"key\":\"assignment:139950\",\"title\":\"HW5\",\"due\":\"2026-11-20T14:55:00Z\"}, {\"key\":\"file:139200\",\"file\":\"/tmp/05_Matchings.pdf\"}, {\"key\":\"notice:23464\"}] 꼴이다.
+
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String = ""
+        @Option(help: ArgumentHelp("받을 항목", valueName: "items.json"), completion: .file(extensions: ["json"])) var items: String
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let c = try r.course(course)
+            let action = FolioActions.LMSAccept(
+                course: c.id,
+                items: try readJSONFile([LMSAcceptItem].self, items)
             )
             try perform(spec: action, g, ctx: ctx)
         }

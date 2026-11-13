@@ -128,6 +128,7 @@ struct ScreenRenders {
             ("people", Navigator.Entry(link: .place(.people))),
             ("codes", Navigator.Entry(link: .place(.codes))),
             ("whats-new", Navigator.Entry(link: .place(.whatsNew))),
+            ("proposals", Navigator.Entry(link: .place(.proposals))),
         ]
         entries += SettingsTab.allCases.map { ("settings-\($0)", Navigator.Entry(link: .settings($0.page))) }
         if let semester = workspace.currentSemester {

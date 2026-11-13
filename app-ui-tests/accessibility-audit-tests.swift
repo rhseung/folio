@@ -74,7 +74,8 @@ final class AccessibilityAuditTests: XCTestCase {
         let stores = try GISTStore(url: gist).courseStores()
         let store = try XCTUnwrap(stores.first { $0.url.lastPathComponent.hasPrefix("EC4207") })
         let course = try store.load().model.course
-        return (app, Targets(course: course.id, semester: course.semesterId))
+        let semester = try XCTUnwrap(course.semesterId, "EC4207 has no semester")
+        return (app, Targets(course: course.id, semester: semester))
     }
 
     // MARK: Audit

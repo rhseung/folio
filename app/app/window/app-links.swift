@@ -148,6 +148,7 @@ extension Workspace {
         case .people: return String(localized: .rootNavPeople)
         case .codes: return String(localized: .rootNavCodes)
         case .whatsNew: return String(localized: .whatsNewTitle)
+        case .proposals: return String(localized: .rootNavProposals)
         case .settings:
             return [String(localized: .rootNavSettings), link.settingsPage.map { SettingsTab($0).label }].compactMap { $0 }.joined(
                 separator: " · ")
@@ -165,7 +166,7 @@ extension Workspace {
         let file = entry.course.flatMap(course)?.file
         let name = { (path: String) in ((path as NSString).lastPathComponent as NSString).deletingPathExtension }
         switch link.kind {
-        case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .semester: return nil
+        case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals, .semester: return nil
         case .person: return catalog.people.first { $0.id == link.id }?.name
         case .course: return file.flatMap { _ in link.page.map { CourseSection($0).title } }
         case .session: return file.flatMap { f in f.sessions.first { $0.id == link.id }.map { f.title(of: $0, calendar: calendar) } }

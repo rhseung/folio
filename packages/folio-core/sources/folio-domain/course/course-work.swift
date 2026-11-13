@@ -97,6 +97,8 @@ public struct Assignment: Entity {
     public var submissionMaterialIds: [UUID]
     public var unitIds: [UUID]
     public var source: AssignmentSource
+    /// The LMS assignment it was added from (`LMSAssignment.id`), so the LMS doesn't propose it again.
+    public var lmsId: Int?
     public var memo: String
 
     public init(id: UUID = UUID(), device: DeviceID, at date: Date, title: String, due: Date? = nil, source: AssignmentSource = .manual) {

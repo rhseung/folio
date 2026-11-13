@@ -1,3 +1,4 @@
+import FolioDomain
 import SwiftUI
 
 struct DdayChip: View {
@@ -26,5 +27,17 @@ struct DdayChip: View {
             } animation: { _ in
                 .easeInOut(duration: 0.5)
             }
+    }
+}
+
+// Today's deadlines and the 제안함's deadline chip both read this, so a deadline reads the same before and after it is added.
+extension DueUrgency {
+    static func text(_ due: Date, studyDays days: Int) -> String {
+        let time = due.formatted(date: .omitted, time: .shortened)
+        return switch DueUrgency(studyDays: days) {
+        case .urgent: String(localized: days == 0 ? .todayDeadlinesTodayAt(time) : .todayDeadlinesTomorrowAt(time))
+        case .soon: String(localized: .todayDeadlinesInDays(days))
+        case .later: due.formatted(.dateTime.month().day().weekday())
+        }
     }
 }

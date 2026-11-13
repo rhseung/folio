@@ -6,7 +6,7 @@ import SwiftUI
 /// One tab for each thing a student comes to change (#416), in three runs down the column: what is set once, what
 /// changes over a term, and the app and what it connects to. The raw value is the tab's name in `folio://settings/…`.
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, record, classes = "class", notes, review, notifications, claude, backup, about
+    case general, record, classes = "class", notes, review, notifications, claude, lms, backup, about
     var id: Self { self }
     static let storageKey = "settingsTab"
 
@@ -19,6 +19,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .review: "repeat"
         case .notifications: "bell"
         case .claude: "sparkle"
+        case .lms: "link"
         case .backup: "externaldrive"
         case .about: "info.circle"
         }
@@ -28,7 +29,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         switch self {
         case .general, .record: 0
         case .classes, .notes, .review: 1
-        case .notifications, .claude, .backup, .about: 2
+        case .notifications, .claude, .lms, .backup, .about: 2
         }
     }
 }
@@ -90,6 +91,7 @@ struct SettingsView: View {
         case .review: ReviewSettingsForm(model: model)
         case .notifications: NotificationSettingsForm(settings: $model.settings.notifications)
         case .claude: ClaudeSettings(model: model)
+        case .lms: LMSSettingsForm(workspace: model.workspace)
         case .backup: BackupSettingsForm(model: model)
         case .about: AboutSettings(model: model)
         }

@@ -232,12 +232,18 @@ public struct AssignmentAdd {
     var due: Date?
     /// 반복. weekly, daily, biweekly, monthly, 3d, 2w, 1m, weekly:mon,wed, 또는 빠른 추가의 말(매일, 격일, 3일마다, 격주, 매월, 매주 월수, 월,수마다, 평일마다)
     var repeats: AssignmentRepeat?
+    /// The LMS assignment it comes from (`LMSAssignment.id`), when added from the LMS proposals.
+    @Hidden var lms: Int?
 
     public func run(_ ctx: ActionContext) throws {
         guard !title.isEmpty else { throw ActionError.rule(String(localized: .errorAssignmentTitleEmpty)) }
         try ctx.edit(course) { f in
-            var a = Assignment(id: id, device: ctx.device, at: ctx.now, title: title, due: due)
+            if let lms, let same = f.assignments.first(where: { $0.lmsId == lms }) {
+                throw ActionError.rule(String(localized: .errorLmsAssignmentAdded(same.title)))
+            }
+            var a = Assignment(id: id, device: ctx.device, at: ctx.now, title: title, due: due, source: lms == nil ? .manual : .lms)
             a.repeats = repeats
+            a.lmsId = lms
             f.assignments.append(a)
         }
 

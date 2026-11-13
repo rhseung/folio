@@ -29,6 +29,13 @@ disabled_rules:
   - vertical_parameter_alignment
   # swift-format moves a closure's parameters to the next line when the call fills the line.
   - closure_parameter_position
+  # These five put the current count in their message (`currently spans 632 lines`), which is what the baseline
+  # matches on, so one line added to or taken from a long file made it new. Long files are split when work touches them.
+  - file_length
+  - type_body_length
+  - function_body_length
+  - cyclomatic_complexity
+  - function_parameter_count
 
 opt_in_rules:
   - private_swiftui_state

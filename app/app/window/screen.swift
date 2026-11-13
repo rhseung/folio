@@ -4,7 +4,7 @@ import SwiftUI
 /// The screen a link is drawn on. A window picks its screen here and nowhere else, and so will a pane (#62): the
 /// switch over the link's kind has no default, so a new kind of link doesn't compile until it has a screen.
 enum Screen: Hashable {
-    case today, grades, requirements, people, codes, settings, whatsNew
+    case today, grades, requirements, people, codes, settings, whatsNew, proposals
     case semester(UUID)
     /// Everything a course holds opens in the course, which follows the link to its section and item.
     case course(UUID)
@@ -21,6 +21,7 @@ enum Screen: Hashable {
         case .codes: self = .codes
         case .settings: self = .settings
         case .whatsNew: self = .whatsNew
+        case .proposals: self = .proposals
         case .semester: self = link.id.map(Screen.semester) ?? .missing
         case .course, .session, .unit, .note, .material, .assignment, .exam, .card, .problemSet, .recording:
             self = entry.course.map(Screen.course) ?? .missing
@@ -37,6 +38,7 @@ enum Screen: Hashable {
         case .codes: .place(.codes)
         case .settings: .place(.settings)
         case .whatsNew: .place(.whatsNew)
+        case .proposals: .place(.proposals)
         case .semester(let id): AppLink(.semester, id)
         case .course(let id): .course(id)
         case .missing: nil
@@ -61,6 +63,7 @@ struct ScreenView: View {
             case .codes: CodesView(workspace: workspace)
             case .settings: SettingsView(workspace: workspace)
             case .whatsNew: WhatsNewView(workspace: workspace)
+            case .proposals: ProposalsView(workspace: workspace)
             case .semester(let id): SemesterView(workspace: workspace, semesterID: id).id(id)
             case .course(let id): CourseView(workspace: workspace, courseID: id).id(id)
             case .missing:
