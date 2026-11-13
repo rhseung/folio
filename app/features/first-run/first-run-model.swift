@@ -94,6 +94,17 @@ final class FirstRunModel {
 
     var isLast: Bool { trouble == nil && step.next == nil }
 
+    func isDone(_ step: FirstRunStep) -> Bool { trouble == nil && step < self.step }
+
+    /// Reconnecting a lost folder can't be put off, so it offers no 나중에 and marks nothing optional.
+    var offersLater: Bool { step.isOptional && trouble == nil }
+
+    func marksOptional(_ step: FirstRunStep) -> Bool { step.isOptional && trouble == nil && !isDone(step) }
+
+    var primaryTitle: LocalizedStringResource {
+        trouble != nil ? .commonOpen : isLast ? .firstRunStart : .firstRunContinue
+    }
+
     /// 계속 (시작 on the last step, 열기 when connecting a folder again).
     func proceed() {
         if step == .folder {
@@ -138,6 +149,12 @@ final class FirstRunModel {
     }
 
     // MARK: Folder
+
+    /// Picks how to start; true when the folder picker should open, as no usable folder is picked yet.
+    func choose(_ start: FolderStart) -> Bool {
+        self.start = start
+        return picked == nil || pickedProblem != nil
+    }
 
     func choose(_ url: URL) {
         if waiting {

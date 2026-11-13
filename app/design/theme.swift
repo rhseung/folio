@@ -279,7 +279,7 @@ enum Theme {
         /// `PaneGlide` steps the panes' widths along this same curve while `PaneRow` animates the rest, so the two
         /// can't take their timing from different places: a pane's edge would land before its neighbour stops.
         static let paneSpring = Spring.smooth(duration: 0.34)
-        static let pane = Animation.smooth(duration: 0.34)
+        static let pane = Animation.spring(paneSpring)
     }
 
     enum Typeface {
