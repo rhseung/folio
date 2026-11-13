@@ -2,7 +2,7 @@
 import CompilerPluginSupport
 import PackageDescription
 
-// Layers: CLI, Gen -> Actions -> Storage -> Domain, Actions -> Macros (compile time only), CLI -> Index -> Storage, Storage and Actions -> Markdown (note frontmatter). Domain must stay free of file I/O and UI (see AGENTS.md "레이어").
+// Layers: CLI, Gen -> Actions -> Storage -> Domain, App -> LMS -> Domain (reads the school LMS; no writes), Actions -> Macros (compile time only), CLI -> Index -> Storage, Storage and Actions -> Markdown (note frontmatter). Domain must stay free of file I/O and UI (see AGENTS.md "레이어").
 let package = Package(
     name: "FolioCore",
     // UI strings live in each target's Localizable.xcstrings as keys; the catalog generates `.key` symbols.
@@ -14,6 +14,7 @@ let package = Package(
         .library(name: "FolioStorage", targets: ["FolioStorage"]),
         .library(name: "FolioActions", targets: ["FolioActions"]),
         .library(name: "FolioIndex", targets: ["FolioIndex"]),
+        .library(name: "FolioLMS", targets: ["FolioLMS"]),
         .executable(name: "folio", targets: ["FolioCommand"]),
         .executable(name: "folio-gen", targets: ["FolioGen"]),
         .executable(name: "folio-fixture", targets: ["FolioFixtureWriter"]),
@@ -26,6 +27,8 @@ let package = Package(
         // Tests only: random inputs for properties every input must keep, beside the hand-worked examples.
         .package(url: "https://github.com/x-sheep/swift-property-based", from: "2.0.1"),
         .package(url: "https://github.com/groue/GRDB.swift", from: "7.0.0"),
+        // GIST LMS pages (#132): students get no web service token, so Folio reads the Coursemos HTML.
+        .package(url: "https://github.com/scinfu/SwiftSoup", from: "2.8.0"),
         // Matches the Swift 6.4 toolchain, so builds use its prebuilt copy instead of compiling swift-syntax.
         .package(url: "https://github.com/swiftlang/swift-syntax", from: "604.0.0"),
     ],
@@ -50,6 +53,7 @@ let package = Package(
         ], path: "sources/folio-macros"),
         .target(name: "FolioActions", dependencies: ["FolioStorage", .product(name: "FolioMarkdown", package: "folio-markdown"), "FolioMacros"], path: "sources/folio-actions", resources: [.process("Localizable.xcstrings")]),
         .target(name: "FolioIndex", dependencies: ["FolioStorage", .product(name: "FolioMarkdown", package: "folio-markdown"), .product(name: "GRDB", package: "GRDB.swift")], path: "sources/folio-index"),
+        .target(name: "FolioLMS", dependencies: ["FolioDomain", .product(name: "SwiftSoup", package: "SwiftSoup")], path: "sources/folio-lms"),
         .target(name: "FolioCLI", dependencies: ["FolioActions", "FolioIndex", .product(name: "ArgumentParser", package: "swift-argument-parser"), .product(name: "GRDB", package: "GRDB.swift")], path: "sources/folio-cli", resources: [.process("Localizable.xcstrings")]),
         // Only the entry point: an executable target's test build gets no string-catalog symbols, so the commands live
         // in the FolioCLI library that the tests import.
@@ -63,6 +67,7 @@ let package = Package(
         .testTarget(name: "FolioStorageTests", dependencies: ["FolioFixtures", "FolioStorage"], path: "tests/folio-storage-tests"),
         .testTarget(name: "FolioActionsTests", dependencies: ["FolioFixtures", "FolioActions"], path: "tests/folio-actions-tests"),
         .testTarget(name: "FolioIndexTests", dependencies: ["FolioFixtures", "FolioIndex", "FolioActions"], path: "tests/folio-index-tests"),
+        .testTarget(name: "FolioLMSTests", dependencies: ["FolioLMS"], path: "tests/folio-lms-tests"),
         .testTarget(name: "FolioCLITests", dependencies: ["FolioFixtures", "FolioCLI"], path: "tests/folio-cli-tests"),
         .testTarget(name: "FolioMacrosTests", dependencies: ["FolioMacros", .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax")], path: "tests/folio-macros-tests"),
     ]

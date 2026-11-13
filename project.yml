@@ -49,6 +49,8 @@ targets:
         product: FolioActions
       - package: FolioCore
         product: FolioIndex
+      - package: FolioCore
+        product: FolioLMS
       # Only the #if DEBUG previews use it (Workspace.scenario).
       - package: FolioCore
         product: FolioFixtures
