@@ -465,6 +465,10 @@ struct RootView: View {
         // Out of a split view the iPad's sidebar style is grouped cards; plain rows lie flat on the frame as the Mac's.
         .listStyle(.plain)
         .listRowSeparator(.hidden)
+        // The Mac's sizes but a finger's height: a plain list's default is the 17pt body and a 52pt row, which made the
+        // sidebar a size apart from the 13pt pages beside it.
+        .font(Theme.Typeface.body)
+        .environment(\.defaultMinListRowHeight, Theme.Size.rowHeight)
         #endif
         .labelStyle(SidebarLabelStyle())
         }

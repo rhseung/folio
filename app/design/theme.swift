@@ -195,12 +195,8 @@ enum Theme {
         /// The outline beside a note (#387), and the most its popover takes where the note has no room for it.
         static let noteOutline: CGFloat = 224
         static let noteOutlinePopover = CGSize(width: 280, height: 400)
-        #if os(iOS)
-        /// Wider on the iPad, whose rows are a finger's height and whose names would cut short at the Mac's width.
-        static let sidebar: CGFloat = 240
-        #else
+        /// The iPad's too: its rows grow to a finger's height, not its names, which keep the Mac's 13pt.
         static let sidebar: CGFloat = 216
-        #endif
         static let claudePanel: CGFloat = 380
         /// The round button a page's floating panel opens from (a course's Claude), at the content's bottom trailing corner.
         static let fab: CGFloat = 44
@@ -230,7 +226,9 @@ enum Theme {
         #endif
         /// The window's top row on the Mac, which the toolbar's capsules sit in the middle of (`TitleRow`).
         #if os(iOS)
-        static let toolbarRow: CGFloat = 60
+        /// 4 above and below the 44 buttons, not the Mac's 8: the status bar already sits above the row, and with 8 the
+        /// panel began some 20 lower than in the system's own apps.
+        static let toolbarRow: CGFloat = 52
         #else
         static let toolbarRow: CGFloat = 48
         #endif
