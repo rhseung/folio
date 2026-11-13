@@ -4,6 +4,7 @@
 included:
   - app
   - app-tests
+  - app-ui-tests
   - packages/folio-core/sources
   - packages/folio-core/tests
   - packages/folio-markdown/sources
