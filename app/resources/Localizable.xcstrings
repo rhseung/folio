@@ -5182,6 +5182,622 @@
         }
       }
     },
+    "first-run.add-course": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목 추가"
+          }
+        }
+      }
+    },
+    "first-run.add-semester": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학기 추가"
+          }
+        }
+      }
+    },
+    "first-run.allow": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "허용"
+          }
+        }
+      }
+    },
+    "first-run.allowed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "허용됨"
+          }
+        }
+      }
+    },
+    "first-run.app-name": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folio"
+          }
+        }
+      }
+    },
+    "first-run.back": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "뒤로"
+          }
+        }
+      }
+    },
+    "first-run.claude-subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트 정리, 자료 분류, 퀴즈 만들기를 Claude에게 맡겨요."
+          }
+        }
+      }
+    },
+    "first-run.continue": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "계속"
+          }
+        }
+      }
+    },
+    "first-run.course-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목 %lld개"
+          }
+        }
+      }
+    },
+    "first-run.current-term": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금 학기"
+          }
+        }
+      }
+    },
+    "first-run.day": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "하루"
+          }
+        }
+      }
+    },
+    "first-run.day-boundary": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "하루가 바뀌는 시각"
+          }
+        }
+      }
+    },
+    "first-run.day-boundary-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 시각 전까지는 전날로 세요"
+          }
+        }
+      }
+    },
+    "first-run.downloaded-files": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일 %1$lld / %2$lld"
+          }
+        }
+      }
+    },
+    "first-run.downloading-banner": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iCloud에서 내려받는 중"
+          }
+        }
+      }
+    },
+    "first-run.downloading-subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다 받으면 바로 열어요."
+          }
+        }
+      }
+    },
+    "first-run.empty-folder": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빈 폴더"
+          }
+        }
+      }
+    },
+    "first-run.existing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기존 폴더 가져오기"
+          }
+        }
+      }
+    },
+    "first-run.existing-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "쓰던 폴더를 그대로 열어요."
+          }
+        }
+      }
+    },
+    "first-run.find-again": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 찾기"
+          }
+        }
+      }
+    },
+    "first-run.folder-subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 과목과 노트가 이 폴더에 파일로 남아요."
+          }
+        }
+      }
+    },
+    "first-run.fresh": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새로 시작"
+          }
+        }
+      }
+    },
+    "first-run.fresh-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빈 폴더를 골라 학기 폴더부터 만들어요."
+          }
+        }
+      }
+    },
+    "first-run.later": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "나중에"
+          }
+        }
+      }
+    },
+    "first-run.microphone": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마이크"
+          }
+        }
+      }
+    },
+    "first-run.microphone-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 녹음과 받아쓰기"
+          }
+        }
+      }
+    },
+    "first-run.missing-banner": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "폴더가 없거나 옮겨졌어요"
+          }
+        }
+      }
+    },
+    "first-run.missing-existing-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "옮긴 폴더나 다른 폴더를 골라요."
+          }
+        }
+      }
+    },
+    "first-run.missing-subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마지막으로 연 폴더를 열 수 없어요."
+          }
+        }
+      }
+    },
+    "first-run.notifications": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "알림"
+          }
+        }
+      }
+    },
+    "first-run.notifications-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 시작과 마감"
+          }
+        }
+      }
+    },
+    "first-run.open-settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정 열기"
+          }
+        }
+      }
+    },
+    "first-run.optional": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선택"
+          }
+        }
+      }
+    },
+    "first-run.other-folder": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 폴더"
+          }
+        }
+      }
+    },
+    "first-run.permissions-subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업이 시작되면 알리고 바로 녹음해요."
+          }
+        }
+      }
+    },
+    "first-run.problem-already-folio": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학기와 과목이 이미 있는 폴더예요. 기존 폴더 가져오기로 열어요."
+          }
+        }
+      }
+    },
+    "first-run.problem-empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빈 폴더예요. 새로 시작으로 열어요."
+          }
+        }
+      }
+    },
+    "first-run.problem-not-empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빈 폴더가 아니에요. 새 폴더를 만들어 골라 주세요."
+          }
+        }
+      }
+    },
+    "first-run.problem-not-folio": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학기 폴더나 .folio가 없는 폴더예요."
+          }
+        }
+      }
+    },
+    "first-run.profile-subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학번과 전공에 맞는 졸업 요건을 보여 줘요."
+          }
+        }
+      }
+    },
+    "first-run.reconnect-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자료 폴더 다시 연결"
+          }
+        }
+      }
+    },
+    "first-run.semester": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학기"
+          }
+        }
+      }
+    },
+    "first-run.semester-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학기 %lld개"
+          }
+        }
+      }
+    },
+    "first-run.start": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시작"
+          }
+        }
+      }
+    },
+    "first-run.step-claude": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude 연결"
+          }
+        }
+      }
+    },
+    "first-run.step-folder": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자료 폴더"
+          }
+        }
+      }
+    },
+    "first-run.step-permissions": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "권한"
+          }
+        }
+      }
+    },
+    "first-run.step-profile": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 정보"
+          }
+        }
+      }
+    },
+    "first-run.step-term": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학기와 하루"
+          }
+        }
+      }
+    },
+    "first-run.step-welcome": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "소개"
+          }
+        }
+      }
+    },
+    "first-run.term-subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 화면이 이 학기와 하루 경계로 수업과 할 일을 세요."
+          }
+        }
+      }
+    },
+    "first-run.unreadable": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "폴더를 읽을 수 없어요."
+          }
+        }
+      }
+    },
+    "first-run.welcome-materials": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "강의 자료와 노트"
+          }
+        }
+      }
+    },
+    "first-run.welcome-recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 녹음과 받아쓰기"
+          }
+        }
+      }
+    },
+    "first-run.welcome-review": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습과 시험 준비"
+          }
+        }
+      }
+    },
+    "first-run.welcome-subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목마다 강의 자료, 노트, 녹음, 복습을 한곳에서 다뤄요."
+          }
+        }
+      }
+    },
     "grades.by-semester": {
       "extractionState": "manual",
       "localizations": {
@@ -13542,6 +14158,17 @@
         }
       }
     },
+    "root.more": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "더 보기"
+          }
+        }
+      }
+    },
     "root.nav.codes": {
       "extractionState": "manual",
       "localizations": {
@@ -13549,6 +14176,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "강의 코드"
+          }
+        }
+      }
+    },
+    "root.nav.courses": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목"
           }
         }
       }
@@ -13615,39 +14253,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 다음 수업"
-          }
-        }
-      }
-    },
-    "root.pick-folder": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "폴더 고르기"
-          }
-        }
-      }
-    },
-    "root.pick-gist-detail": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "iCloud Drive의 GIST 폴더를 한 번 고르면 다음부터는 바로 엽니다."
-          }
-        }
-      }
-    },
-    "root.pick-gist-title": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "GIST 폴더를 고르세요"
           }
         }
       }
@@ -16266,6 +16871,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "시험"
+          }
+        }
+      }
+    },
+    "settings.first-run": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "첫 실행 화면"
+          }
+        }
+      }
+    },
+    "settings.first-run-show": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 보기"
           }
         }
       }

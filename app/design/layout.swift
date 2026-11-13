@@ -8,6 +8,7 @@ struct Page<Content: View, Backdrop: View>: View {
     @ViewBuilder var content: Content
     // Not private: a private property would make the memberwise init private too.
     @Environment(\.linkFocus) var focus
+    @Environment(\.pageGutter) var gutter
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -21,7 +22,7 @@ struct Page<Content: View, Backdrop: View>: View {
                     // on the page keeps its own.
                     .scrollIndicators(.automatic)
                     .frame(maxWidth: maxWidth, alignment: .leading)
-                    .padding(.horizontal, Theme.Space.xxl)
+                    .padding(.horizontal, gutter)
                     .padding(.top, Theme.Space.xl)
                     .clearOfColumnButtons(inset: Theme.Space.xl)
                     .padding(.bottom, Theme.Space.xxl * 2)
@@ -44,6 +45,12 @@ struct Page<Content: View, Backdrop: View>: View {
         .foregroundStyle(Theme.Palette.text)
         .font(Theme.Typeface.body)
     }
+}
+
+extension EnvironmentValues {
+    /// A page's side margin. The iPhone's screen sets a narrower one (#134): at 390pt across, the Mac's 32 on each side
+    /// left a sixth of the screen empty.
+    @Entry var pageGutter: CGFloat = Theme.Space.xxl
 }
 
 extension Page where Backdrop == EmptyView {
