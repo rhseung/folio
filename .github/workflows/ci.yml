@@ -27,6 +27,7 @@ jobs:
       test-app-rest: ${{ steps.files.outputs.test-app }}
       build-ipad: ${{ steps.files.outputs.build-ipad }}
       test-ipad: ${{ steps.files.outputs.test-ipad }}
+      test-a11y: ${{ steps.files.outputs.test-a11y }}
     steps:
       - id: files
         env:
@@ -34,7 +35,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           PR: ${{ github.event.pull_request.number }}
         run: |
-          tasks="test test-app build-ipad test-ipad"
+          tasks="test test-app build-ipad test-ipad test-a11y"
           run_all() { for t in $tasks; do echo "$t=true" >> "$GITHUB_OUTPUT"; done; exit 0; }
           [ "$EVENT" = pull_request ] || run_all
           # A rename's old path counts too: moving a file out of app/ changes what app/ builds.
@@ -51,20 +52,23 @@ jobs:
           checks='^scripts/(note-screens|release-notes|install-release)\.sh$|^packages/folio-lint/|^\.swiftlint(\.yml|-baseline\.json)$|^\.periphery\.yml$|^lefthook\.yml$|^\.github/workflows/quality\.yml$'
           # build-ipad builds the app target alone. test-app builds the same target and resources for the Mac, so a
           # resource that breaks the bundle fails there.
-          build_ipad="$none|^app-tests/|$checks|^\.claude/|^app/resources/web/"
-          test_app="$none|$checks|^\.claude/"
+          build_ipad="$none|^app-tests/|^app-ui-tests/|$checks|^\.claude/|^app/resources/web/"
+          test_app="$none|^app-ui-tests/|$checks|^\.claude/"
           # FolioPadTests compiles app-tests/ipad only.
-          test_ipad="$none|$checks|^\.claude/|^app-tests/[^/]+$|^app-tests/(support|note-view|window|screens|models|references|fixtures)/"
+          test_ipad="$none|^app-ui-tests/|$checks|^\.claude/|^app-tests/[^/]+$|^app-tests/(support|note-view|window|screens|models|references|fixtures)/"
+          # The accessibility audit launches the Mac app; app-tests is another target's.
+          test_a11y="$none|^app-tests/|$checks|^\.claude/"
           needs() { if grep -qvE "$1" <<< "$files"; then echo true; else echo false; fi; }
-          # test reads app/ and app-tests/ only for their Swift files (folio-lint, SwiftLint and the action checks), which a
-          # pattern can't say without lookahead.
-          if [ -n "$(grep -vE "$none|^(app|app-tests)/" <<< "$files" || true)" ] || grep -qE '^(app|app-tests)/.*\.swift$' <<< "$files"
+          # test reads app/, app-tests/ and app-ui-tests/ only for their Swift files (folio-lint, SwiftLint and the action
+          # checks), which a pattern can't say without lookahead.
+          if [ -n "$(grep -vE "$none|^(app|app-tests|app-ui-tests)/" <<< "$files" || true)" ] || grep -qE '^(app|app-tests|app-ui-tests)/.*\.swift$' <<< "$files"
           then test=true; else test=false; fi
           {
             echo "test=$test"
             echo "test-app=$(needs "$test_app")"
             echo "build-ipad=$(needs "$build_ipad")"
             echo "test-ipad=$(needs "$test_ipad")"
+            echo "test-a11y=$(needs "$test_a11y")"
           } | tee -a "$GITHUB_OUTPUT"
 
   test:
@@ -134,11 +138,15 @@ jobs:
       matrix:
         # test-app builds the Mac app to host the screen-model tests, so it stands in for build-mac. Its tests take five
         # minutes on one main thread, so two runners split them: the note-view suites and the rest. The test-app job
-        # below reports both. test-ipad runs the iPad's own tests on a simulator.
-        task: [test-app-notes, test-app-rest, build-ipad, test-ipad]
+        # below reports both. test-ipad runs the iPad's own tests on a simulator. test-a11y audits the main screens
+        # (#471); the ruleset doesn't require it.
+        task: [test-app-notes, test-app-rest, build-ipad, test-ipad, test-a11y]
     env:
       RUN: ${{ needs.changes.outputs[matrix.task] != 'false' }}
       MISE_TASK: ${{ startsWith(matrix.task, 'test-app-') && 'test-app' || matrix.task }}
+      # The audit builds the same Debug Mac app as test-app and starts from its cache, which it never saves: its
+      # UI test runner would only take room in that cache.
+      CACHE_TASK: ${{ (startsWith(matrix.task, 'test-app-') || matrix.task == 'test-a11y') && 'test-app' || matrix.task }}
       FOLIO_TEST_PART: ${{ matrix.task == 'test-app-notes' && 'notes' || matrix.task == 'test-app-rest' && 'rest' || '' }}
       # Every other check builds Debug, so the iPad build goes Release: it also catches code that reaches what only
       # exists under #if DEBUG. It runs on PRs because macOS-only APIs broke main three times when it ran after merging.
@@ -170,7 +178,7 @@ jobs:
       - if: env.RUN == 'true'
         id: key
         run: |
-          echo "base=derived-data-$MISE_TASK-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}" >> "$GITHUB_OUTPUT"
+          echo "base=derived-data-$CACHE_TASK-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}" >> "$GITHUB_OUTPUT"
           echo "deps=${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}" >> "$GITHUB_OUTPUT"
       # One cache per task: each builds another platform or configuration into its own DerivedData. The index, logs
       # and test results are rebuilt by every run and aren't worth the download. Each push to main saves a new cache,
@@ -232,7 +240,7 @@ jobs:
         run: mise run ${{ env.MISE_TASK }}
       # A run that failed to build would leave a cache without the dependencies; a failed test still saves, since the
       # app was built.
-      - if: ${{ !cancelled() && env.RUN == 'true' && (github.event_name == 'push' || steps.cache.outputs.cache-matched-key == '') && (steps.run.outcome == 'success' || (steps.run.outcome == 'failure' && hashFiles('.build/DerivedData/Build/Products/*/Folio.app/**/Info.plist') != '')) }}
+      - if: ${{ !cancelled() && env.RUN == 'true' && matrix.task != 'test-a11y' && (github.event_name == 'push' || steps.cache.outputs.cache-matched-key == '') && (steps.run.outcome == 'success' || (steps.run.outcome == 'failure' && hashFiles('.build/DerivedData/Build/Products/*/Folio.app/**/Info.plist') != '')) }}
         id: keep
         run: du -sh .build/DerivedData/* || true
       - if: ${{ !cancelled() && steps.keep.outcome == 'success' }}
@@ -260,6 +268,13 @@ jobs:
         with:
           name: note-screens
           path: .build/note-screens
+          if-no-files-found: ignore
+      # Each finding is a failure in the summary that `mise run test-a11y` prints; the result bundle has the screens.
+      - if: failure() && matrix.task == 'test-a11y'
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-a11y
+          path: .build/test-a11y.xcresult
           if-no-files-found: ignore
 
   # The ruleset requires build (test-app), which the two halves above run between them; this reports both under that
