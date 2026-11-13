@@ -21,7 +21,7 @@ struct NoteSourceTests {
     }
 
     static var sample: String {
-        let url = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "fixtures/all-markdown.md")
+        let url = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appending(path: "fixtures/all-markdown.md")
         return Frontmatter.split((try? String(contentsOf: url, encoding: .utf8)) ?? "").body
     }
 

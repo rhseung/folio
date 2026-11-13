@@ -55,7 +55,7 @@ jobs:
           build_ipad="$none|^app-tests/|^app-ui-tests/|$checks|^\.claude/|^app/resources/web/"
           test_app="$none|^app-ui-tests/|$checks|^\.claude/"
           # FolioPadTests compiles app-tests/ipad only.
-          test_ipad="$none|^app-ui-tests/|$checks|^\.claude/|^app-tests/[^/]+$|^app-tests/(references|fixtures)/"
+          test_ipad="$none|^app-ui-tests/|$checks|^\.claude/|^app-tests/[^/]+$|^app-tests/(support|note-view|window|screens|models|references|fixtures)/"
           # The accessibility audit launches the Mac app; app-tests is another target's.
           test_a11y="$none|^app-tests/|$checks|^\.claude/"
           needs() { if grep -qvE "$1" <<< "$files"; then echo true; else echo false; fi; }
@@ -254,7 +254,7 @@ jobs:
             Folio.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
             ~/Library/Caches/org.swift.swiftpm/manifests
           key: ${{ steps.cache.outputs.cache-primary-key }}
-      # Sheets of pictures a test lays out for a PR (app-tests/note-render.swift), passing or not; not references.
+      # Sheets of pictures a test lays out for a PR (app-tests/support/note-render.swift), passing or not; not references.
       # NoteSourceTests lays them out, in the rest half; two uploads under one name would fail.
       - if: ${{ !cancelled() && env.RUN == 'true' && matrix.task == 'test-app-rest' }}
         uses: actions/upload-artifact@v7

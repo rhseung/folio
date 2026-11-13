@@ -4,7 +4,7 @@ import FolioDomain
 
 /// Lays a note view out in a window that's never shown, and writes it to `FOLIO_NOTE_RENDER` as a PNG when set.
 @MainActor enum NoteRender {
-    static let fixtures = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "fixtures")
+    static let fixtures = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appending(path: "fixtures")
 
     static func host(_ view: NSTextView, width: CGFloat = 900, dark: Bool = false) -> NSWindow {
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: width, height: 800), styleMask: [.borderless], backing: .buffered, defer: false)

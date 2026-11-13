@@ -6,7 +6,7 @@ import Testing
 /// `folio note figure/widget render` draws a page in the note's colors, but the CLI can't link the app's theme, so it
 /// keeps a generated copy. A stale copy would show Claude a figure in colors the note no longer has.
 struct NoteThemeCopyTests {
-    static let copy = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+    static let copy = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         .appending(path: "packages/folio-core/sources/folio-cli/render/note-theme.swift")
 
     @MainActor static func source() -> String {

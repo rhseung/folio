@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Takes the note-view pictures a CI run left in its note-screens artifact (missing or changed ones) as the new
-# references. The references must come from CI's runner, whose macOS the comparison checks (app-tests/note-pixels.swift).
+# references. The references must come from CI's runner, whose macOS the comparison checks (app-tests/support/note-pixels.swift).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 run="${1:?usage: mise run note-screens -- <CI run ID>}"

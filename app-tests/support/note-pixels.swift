@@ -120,7 +120,7 @@ struct Pixels: Equatable {
 /// in `FOLIO_NOTE_SCREENS`, which CI uploads as the `note-screens` artifact. `mise run note-screens -- <run>` copies the
 /// new pictures in as references.
 enum NoteScreens {
-    static let references = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "references/notes")
+    static let references = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appending(path: "references/notes")
     static let environment = ProcessInfo.processInfo.environment
     static let out = environment["FOLIO_NOTE_SCREENS"].flatMap { $0.isEmpty ? nil : URL(filePath: $0, directoryHint: .isDirectory) }
     static let strict = !(environment["FOLIO_NOTE_SCREENS_STRICT"] ?? "").isEmpty

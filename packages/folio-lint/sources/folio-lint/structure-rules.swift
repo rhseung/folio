@@ -182,7 +182,7 @@ extension Rules {
     }
 
     static let launchFiles: Set<String> = [
-        "app/app/folio-app.swift", "app/app/local-folders.swift", "app/app/workspace.swift",
+        "app/app/folio-app.swift", "app/app/services/local-folders.swift", "app/app/workspace/workspace.swift",
         "packages/folio-core/sources/folio-cli/core/environment.swift",
     ]
 
