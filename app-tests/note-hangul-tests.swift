@@ -42,7 +42,7 @@ struct NoteHangulTests {
         let workspace = try fixtureWorkspace()
         let course = try #require(workspace.course(linearAlgebra))
         let notes = NotesModel(workspace: workspace, course: course)
-        let file = try #require(notes.note(try #require(notes.noteId(titled: "03-03(화)"))))
+        let file = try #require(notes.note(workspace.noteId(titled: "03-03(화)", in: course)))
         let model = NoteEditorModel(workspace: workspace, course: course, note: file)
         model.load()
         if !model.body.contains("\n") { model.body += "\n둘째 줄" }

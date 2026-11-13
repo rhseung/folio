@@ -52,7 +52,7 @@ struct NoteList: View {
         }
         .confirming($model.pending)
         // Notes made elsewhere (the Claude panel, a session's rough note) and links changed in the editor show up here too.
-        .onChange(of: model.workspace.notesRevision) { model.reload() }
+        .onChange(of: model.notesRevision) { model.reload() }
         .task(id: model.course.id) {
             model.reload()
             #if DEBUG && os(macOS)
@@ -97,16 +97,14 @@ struct NotesView: View {
     var anchor: AppLink.Anchor?
     var insert: Binding<String?> = .constant(nil)
     let moves: MoveUndo
-    let open: (UUID) -> Void
 
     init(workspace: Workspace, course: LoadedCourse, selection: UUID?, anchor: AppLink.Anchor? = nil, insert: Binding<String?> = .constant(nil),
-         moves: MoveUndo, open: @escaping (UUID) -> Void) {
+         moves: MoveUndo) {
         _model = State(initialValue: NotesModel(workspace: workspace, course: course))
         self.moves = moves
         self.selection = selection
         self.anchor = anchor
         self.insert = insert
-        self.open = open
     }
 
     var body: some View {
@@ -114,10 +112,8 @@ struct NotesView: View {
             if note.format == .tex {
                 TextFileView(workspace: model.workspace, course: model.course, note: note, moves: moves).id(note.url)
             } else {
-                NoteEditor(workspace: model.workspace, course: model.course, note: note, anchor: anchor, insert: insert, moves: moves) { title in
-                    if let id = model.noteId(titled: title) { open(id) }
-                }
-                .id(note.url)
+                NoteEditor(workspace: model.workspace, course: model.course, note: note, anchor: anchor, insert: insert, moves: moves)
+                    .id(note.url)
             }
         } else {
             ContentUnavailableView(String(localized: .notesChoose), systemImage: "doc.text", description: Text(.notesChooseDetail))
@@ -133,9 +129,9 @@ struct NoteEditor: View {
     @Environment(\.accent) private var accent
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.showInputGuide) private var showInputGuide
+    @Environment(\.openLink) private var openLink
     var anchor: AppLink.Anchor?
     var insert: Binding<String?> = .constant(nil)
-    let openNote: (String) -> Void
     @State private var panes = NotePanes()
     @State private var wide = false
     @State private var preview = PreviewLink()
@@ -154,14 +150,13 @@ struct NoteEditor: View {
     let moves: MoveUndo?
 
     init(workspace: Workspace, course: LoadedCourse, note: NoteFile, anchor: AppLink.Anchor? = nil, insert: Binding<String?> = .constant(nil),
-         moves: MoveUndo? = nil, openNote: @escaping (String) -> Void) {
+         moves: MoveUndo? = nil) {
         let model = NoteEditorModel(workspace: workspace, course: course, note: note)
         _model = State(initialValue: model)
         _palette = State(initialValue: MathPaletteModel(editor: model))
         self.moves = moves
         self.anchor = anchor
         self.insert = insert
-        self.openNote = openNote
     }
 
     var body: some View {
@@ -213,7 +208,7 @@ struct NoteEditor: View {
                     NotePreview(text: model.body, baseURL: model.baseURL, math: model.meta.math, openNote: openNote, anchor: anchor,
                                 noteLink: model.note.meta.id.map { AppLink(.note, $0) }, edit: model.replaceLines,
                                 link: shown == .split ? preview : nil, toggleMode: toggleMode, embeds: model.embeds,
-                                revision: model.workspace.notesRevision, views: outline.views)
+                                revision: model.notesRevision, views: outline.views)
                 }
                 if outlineDocked {
                     Theme.Palette.lineSoft.frame(width: 1)
@@ -259,7 +254,7 @@ struct NoteEditor: View {
         #if DEBUG && os(macOS)
         .onChange(of: SnapshotDriver.shared.mathPaletteOpen) { _, open in showsMath = open }
         #endif
-        .onChange(of: model.workspace.notesRevision) { model.refresh() }
+        .onChange(of: model.notesRevision) { model.refresh() }
         .onChange(of: scenePhase) { _, phase in if phase != .active { model.saveIfDirty() } }
         .onDisappear { model.saveIfDirty() }
         #if os(macOS)
@@ -317,6 +312,10 @@ struct NoteEditor: View {
 
     func toggleMode() { panes.toggle() }
 
+    func openNote(_ title: String) {
+        if let link = model.link(titled: title) { openLink(link, course: model.course.id) }
+    }
+
     var editor: some View {
         MarkdownEditor(text: $model.body, baseURL: model.baseURL, math: model.meta.math, insert: $model.pendingInsert,
                        saveFile: model.saveFile, openNote: openNote,
@@ -324,8 +323,8 @@ struct NoteEditor: View {
                            preview.follow(line: line, frac: frac)
                            outline.views.editorScrolled(line)
                        },
-                       assist: NoteAssist(settings: model.workspace.settings, links: model.links), anchor: anchor, embeds: model.embeds,
-                       revision: model.workspace.notesRevision, insertMath: $model.pendingMath,
+                       assist: model.assist, anchor: anchor, embeds: model.embeds,
+                       revision: model.notesRevision, insertMath: $model.pendingMath,
                        openGuide: { showInputGuide(model.meta.math) },
                        views: outline.views)
     }
