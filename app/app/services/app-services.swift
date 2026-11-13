@@ -17,6 +17,11 @@ private struct AppServices: ViewModifier {
         var semester: UUID?
     }
 
+    struct LMSInputs: Equatable {
+        var gist: URL?
+        var connected: Bool
+    }
+
     var inputs: PlanInputs {
         PlanInputs(settings: workspace.settings.notifications, edits: workspace.courses.map(\.file.course.updatedAt),
                    reviews: workspace.reviewEvents.values.map(\.count).reduce(0, +), semester: workspace.currentSemester?.id)
@@ -30,6 +35,14 @@ private struct AppServices: ViewModifier {
                 try? await Task.sleep(for: .seconds(2))
                 guard !Task.isCancelled else { return }
                 await NotificationScheduler.reschedule(workspace)
+            }
+            // Every half hour: the LMS serves the whole school, so no faster.
+            .task(id: LMSInputs(gist: workspace.gist?.url, connected: workspace.lms.isConnected)) {
+                guard workspace.gist != nil, !workspace.runsOnFixture, workspace.lms.isConnected else { return }
+                while !Task.isCancelled {
+                    await workspace.syncLMS()
+                    try? await Task.sleep(for: .seconds(30 * 60))
+                }
             }
             #if os(macOS)
             .task(id: workspace.gist?.url) {

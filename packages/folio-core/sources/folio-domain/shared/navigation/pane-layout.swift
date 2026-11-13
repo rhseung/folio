@@ -402,7 +402,7 @@ extension CourseFile {
         switch link.kind {
         case .note: return sessions.first { $0.roughNoteId == id || $0.reviewNoteId == id }?.id
         case .recording: return recordings.first { $0.id == id }?.sessionId
-        case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .semester, .course, .session, .unit,
+        case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals, .semester, .course, .session, .unit,
              .material, .assignment, .exam, .card, .problemSet, .person:
             return nil
         }
