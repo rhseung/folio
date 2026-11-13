@@ -2,7 +2,6 @@ import FolioDomain
 import FolioMarkdown
 import Foundation
 
-/// The file name is the title; the course file's note entry at the same path holds the rest.
 public struct NoteFile: Equatable, Sendable {
     public var url: URL
     public var meta: NoteMeta
@@ -15,7 +14,6 @@ public struct NoteFile: Equatable, Sendable {
     }
 }
 
-/// Course paths. `blocked`: another file already has the new name, so the PDF stays where it is.
 public struct BuiltPDFMove: Equatable, Sendable {
     public var from: String
     public var to: String
@@ -23,22 +21,16 @@ public struct BuiltPDFMove: Equatable, Sendable {
 }
 
 extension Array where Element == NoteFile {
-    /// The note a link names by its title (Obsidian style): written as it is, or else ignoring case, as Obsidian
-    /// also matches.
     public func titled(_ title: String) -> NoteFile? {
         first { $0.title == title } ?? first { $0.title.caseInsensitiveCompare(title) == .orderedSame }
     }
 
-    /// The note a link by title (`[[제목]]`, `[[제목.md]]`) opens. Opening the link, drawing what it embeds and drawing
-    /// it broken all ask this one rule, so a link never opens a note the preview says isn't there.
     public func linked(_ target: String) -> NoteFile? {
         titled(target.hasSuffix(".md") ? String(target.dropLast(3)) : target)
     }
 }
 
 extension NoteMeta {
-    /// Folio's keys in a note's frontmatter, from before the properties moved to course.json. Only the one-time
-    /// `note migrate` reads them.
     static let frontmatterKeys = ["id", "kind", "sessionId", "unitIds", "examId", "tags", "math"]
 
     init(frontmatter fm: Frontmatter) {
@@ -59,8 +51,6 @@ extension CourseStore {
 
     static let nonNoteFolders: Set<String> = [StandardLayout.noteAssetsFolder, StandardLayout.legacyNoteExportsFolder]
 
-    /// The path a note entry stores. Note URLs are always built from the course folder, so the fallback is never
-    /// taken in practice; it only spares callers an optional.
     public func notePath(of file: URL) -> String {
         coursePath(of: file) ?? "\(CourseFolder.notes.rawValue)/\(file.lastPathComponent)"
     }
@@ -69,7 +59,6 @@ extension CourseStore {
         notes(in: try load().model)
     }
 
-    /// A file without an entry (made outside Folio) has no id until it is adopted.
     public func notes(in file: CourseFile) -> [NoteFile] {
         let entries = Dictionary(file.notes.map { ($0.path, $0) }, uniquingKeysWith: { a, _ in a })
         return noteURLs().map { NoteFile(url: $0, meta: entries[notePath(of: $0)].map(file.meta(of:)) ?? NoteMeta(id: nil)) }.sorted {
@@ -114,14 +103,12 @@ extension CourseStore {
         String(decoding: try CoordinatedFile.read(note.url), as: UTF8.self)
     }
 
-    /// Writes `text` as it is. The note's properties live in course.json, so nothing is added to the file.
     public func write(_ note: NoteFile, text: String) throws {
         try CoordinatedFile.write(Data(text.utf8), to: note.url)
     }
 
-    /// Where a new note titled `title` goes: `Notes/<title>.<ext>`, or ` 2`, ` 3`, ... when the name is taken.
-    /// A name is taken in any format, since the title is the file name: `증명.md` beside `증명.tex` would be two notes
-    /// that links and the list can't tell apart. `taken` holds names chosen for notes not written yet.
+    // 제목이 파일 이름이므로 이름은 어느 형식에서든 겹친다. `증명.tex` 옆의 `증명.md`는 링크와 목록이 구분하지 못하는
+    // 두 노트가 된다.
     public func newNoteURL(title: String, format: NoteFormat, avoiding taken: Set<String> = []) -> URL {
         let taken = Set(taken.map { $0.lowercased() })
         let isFree = { (name: String) in
@@ -140,9 +127,8 @@ extension CourseStore {
         return notesURL.appending(path: "\(name).\(format.fileExtension)")
     }
 
-    /// Where `note` goes renamed or moved to `path` in Notes/ (`정리/증명`; the note's own extension may be given), or nil
-    /// for a folder notes can't be in or another format. A name another note of the course has gets ` 2`, ` 3`, ...,
-    /// in any folder: a link names a note by its title alone (`[[증명]]`), so two of one title would share their links.
+    // 링크는 제목만으로 노트를 가리키므로(`[[증명]]`) 같은 제목의 노트 둘은 링크를 나눠 갖게 된다. 그래서 과목의 다른
+    // 노트가 가진 이름이면 어느 폴더든 ` 2`, ` 3`을 붙인다.
     public func movedNoteURL(_ note: NoteFile, to path: String, in file: CourseFile) -> URL? {
         var parts = path.split(separator: "/").map { $0.trimmingCharacters(in: .whitespaces) }
         guard var name = parts.popLast(), parts.allSatisfy({ StandardLayout.noteFolderProblem($0) == nil }) else { return nil }
@@ -163,7 +149,6 @@ extension CourseStore {
         return parts.reduce(notesURL) { $0.appending(path: $1) }.appending(path: "\(title).\(note.format.fileExtension)")
     }
 
-    /// Folders in Notes/ a note can be moved to, Notes-relative and sorted; Notes/ itself is "".
     public func noteFolders() -> [String] {
         guard
             let enumerator = FileManager.default.enumerator(
@@ -182,22 +167,16 @@ extension CourseStore {
         return folders.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
     }
 
-    /// Where a note's PDF goes, by title, wherever in Notes/ the note sits: Study, with everything else self-made.
-    /// Notes/ keeps only notes, and a PDF there would be listed as neither a note nor a material.
     public func exportPath(of note: NoteFile) -> String {
         "\(CourseFolder.study.rawValue)/\(note.title).pdf"
     }
 
-    /// The PDF `note build` wrote for a `.tex` note, while it is still that build's: at `exportPath` with the hash the
-    /// note's entry kept. A PDF there with another hash is someone else's export of the same name.
     public func builtPDF(of note: NoteFile, in file: CourseFile) -> String? {
         guard note.format == .tex, let id = note.meta.id, let made = file.notes.first(where: { $0.id == id })?.builtHash else { return nil }
         let path = exportPath(of: note)
         return (try? hash(path)) == made ? path : nil
     }
 
-    /// Where the note's built PDF goes when the note moves to `url`: `exportPath` under the new title. Nil without a
-    /// built PDF or when the title stays (a move to another folder).
     public func builtPDFMove(of note: NoteFile, to url: URL, in file: CourseFile) -> BuiltPDFMove? {
         guard let from = builtPDF(of: note, in: file) else { return nil }
         let to = exportPath(of: NoteFile(url: url, meta: note.meta))
@@ -205,12 +184,10 @@ extension CourseStore {
         return BuiltPDFMove(from: from, to: to, blocked: FileManager.default.fileExists(atPath: fileURL(to).path))
     }
 
-    /// Creates the file only; the caller adds its entry to course.json.
     public func createNote(at url: URL, text: String) throws {
         try CoordinatedFile.write(Data(text.utf8), to: url)
     }
 
-    /// To the Trash, not deleted: a note is the user's own writing. Its images stay in `assets/`, which other notes may share.
     public func trashNote(_ note: NoteFile) throws {
         try CoordinatedFile.trash(note.url)
     }
@@ -228,7 +205,6 @@ extension CourseStore {
         return files.filter { (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true }.sorted { date($0) > date($1) }
     }
 
-    /// How `note` links an asset path returned by `addNoteAsset` (`assets/x.png`); notes can sit in subfolders of Notes/.
     public func link(to assetPath: String, from note: NoteFile) -> String {
         let depth =
             note.url.deletingLastPathComponent().standardizedFileURL.pathComponents.count
@@ -241,8 +217,6 @@ extension CourseStore {
         try addNoteAsset(named: file.lastPathComponent, data: try Data(contentsOf: file))
     }
 
-    /// Saves `data` in `Notes/assets/` and returns the note-relative path. Never overwrites: the same bytes reuse the
-    /// file already there, different bytes under a taken name get ` 2`, ` 3`, ...
     @discardableResult
     public func addNoteAsset(named name: String, data: Data) throws -> String {
         try FileManager.default.createDirectory(at: noteAssetsURL, withIntermediateDirectories: true)
@@ -261,7 +235,6 @@ extension CourseStore {
         }
     }
 
-    /// Characters that break paths or Obsidian links become `-`.
     static func fileName(for title: String) -> String {
         let cleaned = title.map { "/\\:#^[]|".contains($0) ? "-" : $0 }
         let name = String(cleaned).trimmingCharacters(in: .whitespaces)

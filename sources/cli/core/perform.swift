@@ -8,7 +8,6 @@ struct WriteResult: Encodable {
     var made: UUID?
     var changes: [Change]
     var notes: [String]
-    /// What a command read before building the action, such as `folio add`'s line.
     var read: JSONValue?
 }
 
@@ -64,7 +63,6 @@ func renderChanges(_ changes: [Change], done: String, dryRun: Bool, root: URL) {
     }
 }
 
-/// A field value on one line: strings bare, absent as 없음, anything nested as compact JSON cut to fit.
 func shown(_ v: JSONValue?) -> String {
     let text: String
     switch v {
@@ -77,7 +75,7 @@ func shown(_ v: JSONValue?) -> String {
     return text.split(whereSeparator: \.isNewline).joined(separator: " ").truncated(to: 60)
 }
 
-/// `[y/N]` at a terminal; anywhere else only `--yes` goes ahead, so an agent stops instead of waiting (exit 5).
+// 에이전트가 기다리지 않고 멈추도록(종료 코드 5), 터미널이 아니면 `--yes`만 진행한다.
 func ask(_ question: String, _ options: GlobalOptions) throws {
     guard !options.yes else { return }
     guard Style.isTerminal, isatty(STDIN_FILENO) == 1, !options.json else {

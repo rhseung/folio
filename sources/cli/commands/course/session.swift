@@ -3,7 +3,6 @@ import FolioActions
 import FolioDomain
 import Foundation
 
-/// A lecture, the usual kind, goes unsaid.
 private func kindLabel(_ s: Session) -> String? {
     switch s.kind {
     case .lecture: nil
@@ -91,7 +90,6 @@ struct SessionCommand: ParsableCommand {
             if let end = s.end(schedule: f.course.schedule, calendar: r.ctx.calendar) {
                 say(String(localized: .sessionShowEnd(end.formatted(date: .omitted, time: .shortened))))
             }
-            // The slot's link counts too: that's the one the join button opens.
             if let link = s.link(schedule: f.course.schedule, calendar: r.ctx.calendar) {
                 say(String(localized: .sessionShowLink(link.absoluteString)))
             }

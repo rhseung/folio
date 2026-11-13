@@ -50,7 +50,6 @@ public struct SessionAdd {
             s.setEnd(end, schedule: f.course.schedule, calendar: ctx.calendar)
             f.sessions.append(s)
             for unit in Set(units) { f.toggle(session: id, unit: unit) }
-            // In the same edit as the session, so a refused attendance (on a 휴강) leaves no session behind.
             if let attendance, attendance != .present {
                 f.attendance.append(Attendance(device: ctx.device, at: ctx.now, sessionId: id, state: attendance))
             }
@@ -59,8 +58,8 @@ public struct SessionAdd {
     }
 }
 
-/// Only sessions nothing points at: a note, recording or other link left pointing at nothing is worse than a stray
-/// session. An unreadable note folder might point at any of them, so none goes then.
+// 노트, 녹음, 다른 링크가 아무것도 가리키지 않게 되는 것은 남은 회차보다 나쁘다. 노트 폴더를 읽지 못하면 그 안의
+// 노트가 어느 회차든 가리킬 수 있으므로 아무것도 지우지 않는다.
 @Action(
     "session rm", "아무것도 연결되지 않은 회차 지우기",
     discussion: "노트, 녹음, 출석, 자료, 단원이 연결된 회차는 지우지 않는다(종료 코드 4). 수업이 없던 날이면 session set --kind cancelled로 휴강 표시한다.",
@@ -128,8 +127,6 @@ public struct SessionSet {
 }
 
 extension CourseFile {
-    /// When and how a class meets and its review flags, written the same by `session set` (the menu's review check) and
-    /// `session wrap-up` (the class's sheet), so the two can't drift apart.
     mutating func set(
         session id: UUID, date: Patch<Date>, end: Patch<Date?>, link: Patch<String?>, kind: Patch<Session.Kind>,
         skipsReview: Patch<Bool>, reviewUnfinished: Patch<Bool>, termStart: LocalDate?, calendar: Calendar
@@ -143,16 +140,13 @@ extension CourseFile {
             skipsReview.apply(&s.skipsReview)
             reviewUnfinished.apply(&s.reviewNoteUnfinished)
         }
-        // A review note covering several classes is written once, so they are marked together.
         if let unfinished = reviewUnfinished.value, let note = sessions.first(where: { $0.id == id })?.reviewNoteId {
             setReviewNoteUnfinished(note, unfinished)
         }
-        // A class that didn't happen has no attendance to count.
         if kind.value == .cancelled { attendance.removeAll { $0.sessionId == id } }
     }
 }
 
-/// A new review note starts unfinished: making it is not writing it.
 @Action(
     "session note", "회차의 러프 노트와 복습 노트. 없으면 템플릿으로 만든다", effect: .creates, done: "회차 '{session}'의 노트",
     examples: ["folio session note EC4207/10-26 review"], phrases: ["수업 노트", "강의 필기", "러프 노트", "복습 노트 열기"])
@@ -191,7 +185,6 @@ public struct SessionNote {
     }
 }
 
-/// Present is the default, so it is stored as no entry.
 @Action(
     "attendance set", "회차의 출결 정하기. 출석이 기본값이다", done: "회차 '{session}'의 출결을 {state}(으)로 정했습니다",
     examples: ["folio attendance set EC4207/10-26 absent"],
@@ -279,14 +272,13 @@ public struct UnitSet {
     }
 }
 
-/// Moves a unit among its siblings (`by` -1 up, 1 down) or under another parent (nil for the top level).
 @Action(
     "unit move", "단원을 형제 사이에서 옮기거나 다른 단원 아래로 옮기기", done: "단원 '{unit}'을(를) 옮겼습니다",
     cli: .manual(reason: "--up, --down, --parent, --top 중 하나가 옮길 곳(Target) 하나가 된다"))
 public struct UnitMove {
     public enum Target: Codable, Sendable, Equatable {
         case by(Int), parent(UUID?)
-        // CaseIterable lets `folio actions --schema` list every case; Codable synthesis still uses these keys.
+        // `folio actions --schema`가 모든 케이스를 나열하도록 CaseIterable을 붙인다. Codable 합성은 여전히 이 키를 쓴다.
         enum CodingKeys: CodingKey, CaseIterable { case by, parent }
     }
     @Arg var course: Course.ID
@@ -297,7 +289,6 @@ public struct UnitMove {
         try ctx.edit(course) { f in
             _ = try index(unit, in: f.units, .valueUnit)
             switch target {
-            // Already first or last: nothing to do, as with the app's arrow buttons.
             case .by(let offset): _ = UnitTree.move(unit, by: offset, in: &f.units)
             case .parent(let parent):
                 guard UnitTree.setParent(unit, to: parent, in: &f.units) else { throw ActionError.rule(String(localized: .errorUnitCycle)) }
@@ -306,7 +297,6 @@ public struct UnitMove {
     }
 }
 
-/// Keeps `Unit.sessionIds` and `Session.unitIds` in step.
 @Action(
     "unit link", "단원에 회차 연결하기, --off면 풀기", done: "단원 '{unit}'의 회차 연결을 바꿨습니다",
     examples: ["folio unit link EC4207/트리 10-26 10-28", "folio unit link EC4207/트리 10-28 --off --dry-run"],
@@ -333,7 +323,6 @@ public struct UnitLink {
 
 // MARK: Lecture sections
 
-/// Checks one unit's pages of a lecture file before anything is written.
 func checkPages(_ first: Int, _ last: Int) throws {
     guard first >= 1, first <= last else { throw ActionError.rule(String(localized: .errorUnitPagesRange(first, last))) }
 }
@@ -422,7 +411,6 @@ public struct UnitPagesRemove {
     }
 }
 
-/// Every cut is checked before the file is changed: a unit that is missing must come with the title to make it.
 func checkCuts(_ cuts: [LectureCut], in f: CourseFile) throws {
     for cut in cuts {
         try checkPages(cut.firstPage, cut.lastPage)
@@ -434,8 +422,6 @@ func checkCuts(_ cuts: [LectureCut], in f: CourseFile) throws {
     }
 }
 
-/// The whole split of one lecture file at once, as the split screen and the add sheet approve it: every unit's
-/// pages of the file become these, and units named only by a title are made.
 @Action(
     "material split", "렉처 파일을 단원 구간으로 나누기. 그 파일의 단원 구간을 모두 이 목록으로 바꾸고, 없는 단원은 만든다",
     done: "{material}을(를) 단원 구간으로 나눴습니다",
@@ -455,7 +441,6 @@ public struct MaterialSplit {
     }
 }
 
-/// The units under the unit go in or out with it.
 @Action(
     "exam scope", "시험 범위에 단원 넣기, --off면 빼기", done: "시험 '{exam}'의 범위를 바꿨습니다",
     cli: .manual(reason: "--unit마다 액션을 한 번씩 같은 맥락에서 돌려 결과를 하나로 보이고, --taught면 exam scope --taught를 돌린다"))
@@ -476,8 +461,6 @@ public struct ExamScope {
     }
 }
 
-/// What one class went through, every lecture file at once, as the end-of-class prompt saves it: one action, so a
-/// range the rules refuse leaves the other files unwritten too. Files left out keep their links.
 @Action(
     "session progress", "수업의 렉처 진도 기록하기. 자료마다 이번 수업이 다룬 쪽을 회차에 연결한다",
     discussion: "자료마다 <자료>:<시작>-<끝>으로 쓴다. 한 쪽이면 <자료>:<쪽>. 적지 않은 자료의 연결은 그대로 둔다.",
@@ -505,9 +488,6 @@ public struct SessionProgress {
     }
 }
 
-/// Everything a class's sheet saves, in one action so a part the rules refuse leaves the rest unwritten too: what the
-/// class covered (progress, units), how it was attended and reviewed, and when and how it meets. Once the class is
-/// over or recorded, saving marks it wrapped up, which is what stops it being asked about: what was left empty stays so on purpose.
 @Action(
     "session wrap-up", "회차 편집과 수업 정리: 렉처 진도, 단원, 출결, 복습, 일시, 종류, 온라인 링크를 한 번에 적는다. 끝난 수업이면 정리했다고 표시한다",
     discussion: "렉처 파일은 <자료>:<시작>-<끝>으로 쓴다. 주지 않은 것은 그대로 둔다. 끝났거나 녹음을 마친 수업(휴강 아님)이면 정리했다고 표시해 오늘 화면의 수업 정리에서 뺀다.",
@@ -557,7 +537,7 @@ public struct SessionWrapUp {
                 termStart: start, calendar: ctx.calendar)
 
             let i = try index(session, in: f.sessions, .valueSession)
-            // Before the ranges: a file both given and unlinked ends up linked with the pages given.
+            // 범위보다 먼저 뗀다. 그래야 함께 주고 뗀 파일이 준 쪽으로 연결된다.
             for material in unlinked {
                 _ = try index(material, in: f.materials, .valueMaterial)
                 f.unlinkMaterial(material, session: session)
@@ -572,7 +552,7 @@ public struct SessionWrapUp {
                 for unit in Set(f.sessions[i].unitIds).symmetricDifference(units) { f.toggle(session: session, unit: unit) }
             }
 
-            // The sheet always passes the class's attendance, so an entry already in that state keeps its time and device.
+            // 시트는 늘 수업의 출결을 넘기므로, 이미 그 상태인 항목은 시각과 기기를 지킨다.
             let had = f.attendance.first { $0.sessionId == session }?.state ?? .present
             if case .set(let state) = attendance, had != state {
                 f.attendance.removeAll { $0.sessionId == session }
@@ -580,7 +560,6 @@ public struct SessionWrapUp {
             }
 
             let s = f.sessions[i]
-            // Again after the attendance above: a class that didn't happen has none to count.
             if s.isCancelled { f.attendance.removeAll { $0.sessionId == session } }
             if f.savingWrapsUp(s, recorded: recorded, at: ctx.now, classMinutes: classMinutes, calendar: ctx.calendar) {
                 f.sessions[i].isWrappedUp = true
@@ -589,8 +568,8 @@ public struct SessionWrapUp {
     }
 }
 
-/// Only files the session has no link to are linked: a range the user set stays, and a lecture that returned to an
-/// earlier file would otherwise shrink its range to what this class saw.
+// 사용자가 정한 범위를 지키고, 앞 파일로 돌아간 수업이 그 범위를 이 수업에서 본 쪽으로 줄이지 않도록, 회차에 연결이
+// 없는 파일만 연결한다.
 @Action(
     "session link-viewed", "녹음 중 본 강의 페이지를 회차에 연결하기. 연결이 없는 자료만 더하고 있는 연결은 그대로 둔다",
     discussion: "앱 안의 PDF 보기에서 20초 이상 머문 페이지의 처음부터 끝까지가 범위다. 녹음이 끝나면 앱이 부른다.",

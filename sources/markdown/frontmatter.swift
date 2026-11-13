@@ -1,8 +1,6 @@
-/// YAML frontmatter limited to what notes use: `key: value`, `key: [a, b]` and a `- item` block list under `key:`.
-/// Lines it doesn't understand are kept verbatim, so notes written elsewhere (e.g. Obsidian) survive a save.
+// 읽지 못한 줄은 그대로 보존하므로 Obsidian 같은 다른 곳에서 쓴 노트도 저장한 뒤에 내용이 남는다.
 public struct Frontmatter: Equatable, Sendable {
     enum Line: Equatable, Sendable {
-        /// `block` holds the indented or `- ` lines under the key, kept verbatim: Obsidian writes lists that way.
         case field(key: String, value: String, block: [String] = [])
         case raw(String)
     }
@@ -15,9 +13,8 @@ public struct Frontmatter: Equatable, Sendable {
 
     static let delimiter = "---"
 
-    /// Text without a leading `---` block has empty frontmatter.
     public static func split(_ text: String) -> (frontmatter: Frontmatter, body: String) {
-        // Files saved on Windows: "\r\n" is one Character, so splitting on "\n" would see one long line.
+        // Windows에서 저장한 파일의 `\r\n`은 Character 하나이므로, `\n`으로 나누면 긴 줄 하나로 보인다.
         var text = text.replacing("\r\n", with: "\n")
         if text.hasPrefix("\u{FEFF}") { text.removeFirst() }
         var all = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
@@ -70,7 +67,6 @@ public struct Frontmatter: Equatable, Sendable {
     }
 
     public mutating func setList(_ key: String, _ values: [String]) {
-        // Unchanged lists keep their own layout, so a save doesn't rewrite an Obsidian block list.
         guard values != list(key) else { return }
         let value = values.isEmpty ? nil : "[" + values.map(Self.quote).joined(separator: ", ") + "]"
         let index = lines.firstIndex { if case .field(let k, _, _) = $0 { k == key } else { false } }

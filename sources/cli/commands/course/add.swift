@@ -3,9 +3,6 @@ import FolioActions
 import FolioDomain
 import Foundation
 
-/// `folio add "선대 HW5 금 23:59"`: the app's quick-add line, read by the same `QuickAdd.parse` and saved by the same
-/// `AssignmentAdd`. Written by hand rather than as an action: what it saves is `assignment add`, and the line is only
-/// another way to fill that action's fields.
 struct AddCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "add", abstract: String(localized: .addAbstract), discussion: String(localized: .addDiscussion))
@@ -28,13 +25,10 @@ struct AddCommand: ParsableCommand {
     func run() throws {
         let ctx = try CLI.context(g)
         let r = Resolver(ctx)
-        // The courses the line can name are the ones the app's quick add reads: this semester's.
         let current = (try? r.currentSemester()).map { s in r.courses.filter { $0.course.semesterId == s.id } } ?? []
         let read = QuickAdd.parse(
             line, courses: current.map(\.course), codes: (try? ctx.catalog().codes) ?? [], now: ctx.now, calendar: ctx.calendar)
 
-        // The options stand over what the line reads, as the chips' picks do, and clearing the deadline clears the
-        // repeat with it, as the deadline chip's clear button does.
         var parsed = read
         if let course { parsed.courseId = try r.course(course).id }
         if let due { parsed.due = due.value?.date }

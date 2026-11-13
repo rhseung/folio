@@ -1,10 +1,7 @@
 import Foundation
 
-/// A GFM table as rows of cell texts, the header first, every row as wide as the table.
 public struct TableGrid: Equatable, Sendable {
-    /// `left`, `center` or `right` for each column; nil where the delimiter row gives none.
     public var alignments: [String?]
-    /// Each cell's markdown as written between the pipes, unescaped pipes and all.
     public var rows: [[String]]
 
     public init(alignments: [String?], rows: [[String]]) {

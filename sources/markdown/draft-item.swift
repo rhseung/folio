@@ -1,12 +1,10 @@
 import Foundation
 
-/// A lone `-` indented past the line above is a list item being started (Enter, then Tab), but CommonMark reads it as a
-/// setext underline and makes that line a heading until the item has text. Its dash is swapped for a look-alike of the
-/// same length, so offsets and lines still match the source.
+// `-` 하나만 윗줄보다 들여 쓴 줄은 목록 항목을 시작하는 중(Enter 뒤 Tab)이지만, CommonMark는 이 줄을 setext 밑줄로
+// 읽어 윗줄을 제목으로 만든다. 그래서 대시를 길이가 같은 비슷한 글자로 바꿔 오프셋과 줄이 원문과 맞게 한다.
 public enum DraftItem {
     public static let lookAlike: Character = "\u{2010}"
 
-    /// UTF-16 offsets of such dashes.
     public static func dashes(in text: String) -> [Int] {
         var out: [Int] = []
         var offset = 0

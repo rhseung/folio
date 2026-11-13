@@ -2,7 +2,6 @@ import FolioDomain
 import FolioStorage
 import Foundation
 
-/// Bookmarks stay with the transcripts, and a recording with no transcript keeps its audio (`RecordingRetention`).
 @Action(
     "recording trim", "지난 학기 녹음의 오디오를 휴지통으로 옮기고 받아쓰기는 남기기",
     discussion: "받아쓰기가 없는 녹음은 오디오를 남긴다. 휴지통에서 되살릴 수 있다.", effect: .removes,
@@ -25,8 +24,8 @@ public struct RecordingTrim {
             let course = file.course.id
             let trimmed = RecordingRetention.trimmable(file.recordings) { store.transcript(of: $0)?.lines.isEmpty == false }
             guard !trimmed.isEmpty else { continue }
-            // The entry goes first: audio left behind by a failed trash is harmless, an entry saying there is audio
-            // where there is none sends the player to a missing file and keeps the notice counting it.
+            // 항목을 먼저 지운다. 실패한 휴지통 이동이 남긴 오디오는 해가 없지만, 없는 오디오가 있다는 항목은 플레이어를 없는
+            // 파일로 보내고 알림이 그것을 계속 센다.
             let ids = Set(trimmed.map(\.id))
             try ctx.edit(course) { f in
                 for i in f.recordings.indices where ids.contains(f.recordings[i].id) {
@@ -43,9 +42,6 @@ public struct RecordingTrim {
     }
 }
 
-/// Renames recordings still named `3주차-1.m4a` after their class's day, as new ones are named (#325). The audio and
-/// its transcript move as one `moves.jsonl` batch (`made`); `cleanup undo` of it puts them back, and the entries follow
-/// both ways.
 @Action(
     "recording retitle", "예전 이름(3주차-1)의 녹음 파일을 날짜 이름(11-03(화))으로 바꾸기. 받아쓰기 파일도 함께 바뀐다",
     discussion:
@@ -68,8 +64,6 @@ public struct RecordingRetitleLegacy {
             var taken = Set(onDisk + file.recordings.flatMap { [name($0.file), name($0.transcriptFile)] })
             for r in file.legacyRecordingRetitles(calendar: ctx.calendar) {
                 guard let recording = file.recordings.first(where: { $0.id == r.recording }) else { continue }
-                // Trimmed audio is in the Trash, and audio still being compressed isn't in the folder yet: only the
-                // files that are there move, and with neither there is nothing to rename.
                 let parts = [r.file, recording.transcriptFile].filter { FileManager.default.fileExists(atPath: store.fileURL($0).path) }
                 guard !parts.isEmpty else { continue }
                 var target = Recording.file(named: r.name, taken: taken)
@@ -93,10 +87,7 @@ public struct RecordingRetitleLegacy {
     }
 }
 
-/// A recording's entry names its audio, so moving the audio or its transcript renames the entry.
 enum RecordingFiles {
-    /// Points each recording whose audio or transcript is in `moves` (GIST-relative, as `moves.jsonl` keeps them) at
-    /// its new place, keeping the audio's extension. Courses no move reaches aren't loaded.
     static func follow(_ moves: [PlannedMove], _ ctx: ActionContext) throws {
         for store in try ctx.gist.courseStores() {
             let prefix = ctx.relative(store.url) + "/"

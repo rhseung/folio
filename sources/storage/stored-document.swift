@@ -4,17 +4,14 @@ import Foundation
 public enum StorageError: Error, Equatable {
     case missingSchemaVersion(URL)
     case missingMigration(from: Int, URL)
-    /// The file was written by a newer app version; saving could lose its changes.
     case newerSchema(found: Int, supported: Int, URL)
     case coordination(String)
-    /// A text file in another encoding (a CP949 `.csv`). Read leniently and saved back, it would lose every byte that
-    /// didn't decode, so it isn't read at all.
+    // 다른 인코딩의 글 파일(CP949 `.csv`)을 느슨하게 읽어 다시 저장하면 디코딩하지 못한 바이트를 모두 잃으므로, 아예
+    // 읽지 않는다.
     case notUTF8(String)
-    /// A write inside a `StagedFolder` that would have reached the original folder.
     case outsideStage(String)
 }
 
-/// Bump `schemaVersion` and add a migration (from the old version, on raw JSON) whenever the shape changes.
 public protocol StoredModel: Codable {
     static var schemaVersion: Int { get }
     static var migrations: [Int: @Sendable (inout JSONValue) throws -> Void] { get }
@@ -28,8 +25,6 @@ extension Transcript: StoredModel {
     public static let schemaVersion = 2
     public static let migrations: [Int: @Sendable (inout JSONValue) throws -> Void] = [1: unfileCourses]
 
-    /// v1 kept courses without a folder under `courses`. Every course now has a folder, so they wait under
-    /// `unfiledCourses` for `transcript move`. The version stops an older app from adding new ones beside them.
     static func unfileCourses(_ raw: inout JSONValue) throws {
         let courses = raw["courses"]
         raw["courses"] = nil
@@ -43,13 +38,10 @@ extension CourseFile: StoredModel {
         1: dropSessionKind, 2: dropSessionIndex, 3: dropExamKind, 4: splitRolesByOrigin, 5: keepNoteLinksOnSessions, 6: spellOutRepeats,
     ]
 
-    /// v6 had one repeat, `"weekly"`. A rule now has an interval, a unit and weekdays, which an older app can't read,
-    /// so the version keeps it from opening the file rather than failing on the first rule it meets.
     static func spellOutRepeats(_ raw: inout JSONValue) throws {
         guard case .array(var assignments)? = raw["assignments"] else { return }
         for i in assignments.indices {
             guard case .string(let text)? = assignments[i]["repeats"] else { continue }
-            // Only `weekly` was ever written; anything else is dropped rather than left for decoding to fail on.
             assignments[i]["repeats"] =
                 AssignmentRepeat(text: text).map { r in
                     .object([
@@ -61,13 +53,6 @@ extension CourseFile: StoredModel {
         raw["assignments"] = .array(assignments)
     }
 
-    /// v5 kept a note's session twice, as the note's `sessionId` and the session's `roughNoteId`/`reviewNoteId`, and
-    /// gave rough, review and exam notes a copy of their session's units or exam's scope that never followed later
-    /// changes. The session now holds the link alone and those units are read from it. A note's `sessionId` is moved
-    /// to its session when that slot is free and nothing else points at the note; a note a session points at takes
-    /// that slot's kind (`import calendar` linked review notes without making them one); a second pointer at a note
-    /// lets go of it, the first in the file keeping it. A pointer at a unit or exam note lets go too: that
-    /// `import calendar` took any unlinked note, and making it a review note would drop the units its user chose.
     static func keepNoteLinksOnSessions(_ raw: inout JSONValue) throws {
         func id(_ value: JSONValue?) -> UUID? { if case .string(let s)? = value { UUID(uuidString: s) } else { nil } }
         let slots = [("roughNoteId", "rough"), ("reviewNoteId", "review")]
@@ -109,9 +94,6 @@ extension CourseFile: StoredModel {
         if raw["notes"] != nil { raw["notes"] = .array(notes) }
     }
 
-    /// v4 roles mixed origin and purpose: `pastExam` for `Exams/Past`, `examPrep` for anything in an exam folder. Past
-    /// exams now sit in `Inherited` and an exam folder holds only that exam's record, so the roles follow the folders.
-    /// Files stay where they are; the cleanup plan moves them and marks past exam papers, which a user can review.
     static func splitRolesByOrigin(_ raw: inout JSONValue) throws {
         guard case .array(var materials)? = raw["materials"] else { return }
         for i in materials.indices {
@@ -123,9 +105,6 @@ extension CourseFile: StoredModel {
         raw["materials"] = .array(materials)
     }
 
-    /// v3 exams had a kind (midterm, final, quiz, other) the prep folder was named from. The exam now keeps the folder
-    /// it had, so its files stay put. An `other` exam had none; it gets one from its title, as a new exam would, after
-    /// the others, so it never takes a name a real folder already holds.
     static func dropExamKind(_ raw: inout JSONValue) throws {
         guard case .array(var exams)? = raw["exams"] else { return }
         var quizzes = 0
@@ -135,7 +114,6 @@ extension CourseFile: StoredModel {
             exams[i]["kind"] = nil
             if kind == .string("quiz") { quizzes += 1 }
             let title = exams[i]["title"].flatMap { if case .string(let t) = $0 { t } else { nil } } ?? ""
-            // The v3 rule: a title that is a standard folder name names the folder, else the kind does.
             let named = StandardLayout.isExamFolderName(title)
             let byKind: String? =
                 switch kind {
@@ -162,16 +140,12 @@ extension CourseFile: StoredModel {
         raw["exams"] = .array(exams)
     }
 
-    /// v2 stored each session's place in its week, given as "last + 1" when it was made, so a makeup added first took
-    /// 10주차-2 and the class before it 10주차-3. The place now follows the dates in the week.
     static func dropSessionIndex(_ raw: inout JSONValue) throws {
         guard case .array(var sessions)? = raw["sessions"] else { return }
         for i in sessions.indices { sessions[i]["index"] = nil }
         raw["sessions"] = .array(sessions)
     }
 
-    /// v1 sessions had a `kind` and a lab number. A session is now one class: `cancelled` is a flag, a lab is a unit
-    /// the session links to, and recitations and makeups are plain sessions.
     static func dropSessionKind(_ raw: inout JSONValue) throws {
         guard case .array(var sessions)? = raw["sessions"] else { return }
         var labs: [(index: Int, number: Int)] = []
@@ -182,11 +156,10 @@ extension CourseFile: StoredModel {
             sessions[i]["lab"] = nil
             switch kind {
             case .string("cancelled"): sessions[i]["cancelled"] = .bool(true)
-            // Keeps what the name `9주차 리시테이션` used to say.
             case .string("recitation"):
                 if sessions[i]["topic"] == .string("") { sessions[i]["topic"] = .string("리시테이션") }
-            // A lab without a number keeps only the units it already links to: guessing one from its place among labs
-            // linked a real session to the wrong lab.
+            // 번호 없는 실험은 이미 연결한 단원만 지킨다. 실험들 사이의 순서로 번호를 짐작했더니 실제 회차가 엉뚱한 실험에
+            // 연결되었다.
             case .string("lab"):
                 if case .number(let n)? = number { labs.append((i, Int(n))) }
             default: break
@@ -196,9 +169,7 @@ extension CourseFile: StoredModel {
         guard !labs.isEmpty else { return }
 
         var file = try JSONFormat.decoder.decode(CourseFile.self, from: JSONFormat.encoder.encode(raw))
-        // The model has no topic any more; the raw session still holds the one the lab's unit is named after.
         let topic = { (i: Int) -> String in if case .string(let t)? = sessions[i]["topic"] { t } else { "" } }
-        // By number, then date, so a lab's unit takes its title from its first session.
         for lab in labs.map({ (session: file.sessions[$0.index], topic: topic($0.index), number: $0.number) })
             .sorted(by: { ($0.number, $0.session.date) < ($1.number, $1.session.date) })
         {
@@ -209,7 +180,7 @@ extension CourseFile: StoredModel {
         raw = JSONValue.preservingUnknownKeys(old: raw, new: encoded, model: file)
     }
 
-    /// Reading a v1 file again before it is saved must make the same unit, so its id comes from the first lab session's.
+    // 저장하기 전에 v1 파일을 다시 읽어도 같은 단원이 나와야 하므로, id를 첫 실험 회차의 id에서 만든다.
     static func derivedID(_ id: UUID) -> UUID {
         var bytes = id.uuid
         bytes.15 ^= 0x5A
@@ -229,7 +200,6 @@ extension QuizFile: StoredModel {
     public static let schemaVersion = 1
 }
 
-/// A model plus the raw JSON it was read from, so saving keeps keys this app version doesn't know.
 public struct StoredDocument<Model: StoredModel> {
     public var model: Model
     public let fileVersion: Int

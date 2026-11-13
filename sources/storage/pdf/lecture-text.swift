@@ -3,7 +3,6 @@ import Foundation
 import PDFKit
 
 extension CourseStore {
-    /// A missing or unreadable file reads as nothing: hints are a help, never a reason to fail a transcription.
     public func lectureText(_ pages: [LecturePages]) -> String {
         pages.compactMap { range -> String? in
             guard let data = try? CoordinatedFile.read(fileURL(range.path)), let document = PDFDocument(data: data) else { return nil }
@@ -17,7 +16,6 @@ extension CourseStore {
 }
 
 extension CourseStore {
-    /// Slow: it reads the slides' PDFs for terms.
     public func transcriptionContext(_ file: CourseFile, session: Session, recording: Recording?) -> TranscriptionContext {
         let context = file.transcriptionContext(for: session, recording: recording)
         return context.reading(lectureText(context.slides))

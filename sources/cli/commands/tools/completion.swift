@@ -19,14 +19,14 @@ struct CompletionCommand: ParsableCommand {
 }
 
 enum Complete {
-    /// A `GlobalOptions()` made by hand has no parsed values and traps when read, so `--gist` is taken from the words.
+    // 손으로 만든 `GlobalOptions()`에는 파싱한 값이 없어 읽으면 멈추므로, `--gist`를 낱말에서 읽는다.
     static func resolver(_ words: [String] = []) -> Resolver? {
         let given = words.firstIndex(of: "--gist").flatMap { words.indices.contains($0 + 1) ? words[$0 + 1] : nil }
         return (try? CLI.gist(path: given)).map { Resolver(ActionContext(gist: $0, device: UUID())) }
     }
 
-    /// zsh and fish show a note beside each candidate (fzf-tab too), so a list of codes says what each one is. bash has
-    /// nowhere to put one. zsh splits value and note at the first unescaped colon.
+    // zsh와 fish(fzf-tab도)는 후보 옆에 설명을 보이므로 코드 목록이 각 코드가 무엇인지 말할 수 있다. bash에는 설명을 둘
+    // 곳이 없다. zsh는 이스케이프하지 않은 첫 콜론에서 값과 설명을 나눈다.
     static func described(_ pairs: [(String, String)]) -> [String] {
         pairs.map { value, note in
             switch CompletionShell.requesting {
@@ -42,7 +42,6 @@ enum Complete {
         return described(r.courses.map { ($0.code, title(r, $0)) })
     }
 
-    /// `그래프 이론 · 2026-3`.
     static func title(_ r: Resolver, _ c: CourseRef) -> String {
         let semester = r.semesters.first { $0.id == c.course.semesterId }?.folder?.name
         return ([c.course.title] + (semester.map { [$0] } ?? [])).joined(separator: " · ")
@@ -98,7 +97,6 @@ enum Complete {
             })
     }
 
-    /// `--component 과제` names an item of the course given earlier on the line, so that course's items are offered.
     static let componentNames = CompletionKind.custom { words, _, _ in
         guard let r = resolver(words) else { return [] }
         let course = words.dropFirst().lazy.filter { !$0.hasPrefix("-") }.compactMap { try? r.course($0) }.first

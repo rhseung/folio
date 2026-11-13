@@ -1,17 +1,14 @@
 import Darwin
 import Foundation
 
-/// A throwaway copy of a GIST folder that actions run in for real, so a change that builds on earlier unapplied ones
-/// (a unit's pages after the unit, an edit after a new note) is checked, and read back, as it will be once those are
-/// applied. The original is never written: inside `run`, `CoordinatedFile` refuses any write that would land outside
-/// the copy.
-///
-/// Files are APFS clones, which take no room and part from the original on the first write. A file iCloud has evicted
-/// (dataless) is not cloned, since cloning would download it: the copy holds a link to the original instead, and a
-/// write through the copy first replaces the link with the file's bytes. A `.git` folder is linked whole, since
-/// nothing writes into one and a code assignment's history can hold thousands of files.
+// 적용하지 않은 앞 변경에 기대는 변경(단원 뒤의 단원 쪽, 새 노트 뒤의 편집)을 적용된 뒤와 같게 검사하고 다시 읽으려고,
+// 액션을 사본에서 실제로 돌린다. `run` 안에서는 `CoordinatedFile`이 사본 밖으로 가는 쓰기를 거절하므로 원본에는
+// 쓰지 않는다.
+//
+// 파일은 APFS 복제라 자리를 차지하지 않고, 처음 쓸 때 원본과 나뉜다. iCloud가 비운(dataless) 파일은 복제하면
+// 내려받게 되므로, 사본에 원본으로 가는 링크를 두고 처음 쓸 때 링크를 파일 내용으로 바꾼다. `.git` 폴더는 아무도
+// 쓰지 않고 코드 과제의 기록이 파일 수천 개일 수 있으므로 통째로 링크한다.
 public final class StagedFolder: @unchecked Sendable {
-    /// The copy of the GIST folder, under the same name.
     public let url: URL
     private let base: URL
 
@@ -20,7 +17,6 @@ public final class StagedFolder: @unchecked Sendable {
     public init(copying source: URL) throws {
         let fm = FileManager.default
         let source = source.standardizedFileURL
-        // On the original's volume, where cloning works; never inside the GIST folder, which iCloud would sync.
         let near = try? fm.url(for: .itemReplacementDirectory, in: .userDomainMask, appropriateFor: source, create: true)
         if let near, !Self.isInside(near.standardizedFileURL.path, source.path) {
             base = near
@@ -46,7 +42,8 @@ public final class StagedFolder: @unchecked Sendable {
 
     public func remove() { try? FileManager.default.removeItem(at: base) }
 
-    static let dataless: UInt32 = 0x4000_0000  // SF_DATALESS in <sys/stat.h>
+    // `<sys/stat.h>`의 `SF_DATALESS`이다.
+    static let dataless: UInt32 = 0x4000_0000
 
     private static func mirror(_ source: String, into target: String) throws {
         let fm = FileManager.default
@@ -81,15 +78,12 @@ public final class StagedFolder: @unchecked Sendable {
         return path == root || path.hasPrefix(root + "/")
     }
 
-    /// The path with every link resolved, `/private` included, so two spellings of one place compare equal.
     static func real(_ path: String) -> String? {
         guard let p = realpath(path, nil) else { return nil }
         defer { free(p) }
         return String(cString: p)
     }
 
-    /// Inside `run`: refuses a write to `url` that would reach outside the copy, by its path or through a linked folder.
-    /// `detach` replaces a link at `url` with what it points to (`keep`) or with nothing, so the write lands in the copy.
     static func guardWrite(_ url: URL, detach: Bool = false, keep: Bool = false) throws {
         guard let root = fence else { return }
         let fm = FileManager.default
@@ -100,7 +94,7 @@ public final class StagedFolder: @unchecked Sendable {
             try fm.removeItem(atPath: path)
             if keep, fm.fileExists(atPath: original.path) { try fm.copyItem(at: original, to: URL(filePath: path)) }
         }
-        // The nearest folder that exists: one about to be made would otherwise be made through the link.
+        // 있는 폴더 중 가장 가까운 것을 본다. 그러지 않으면 곧 만들 폴더가 링크를 거쳐 만들어진다.
         var parent = url.deletingLastPathComponent().standardizedFileURL
         while real(parent.path) == nil, parent.path != "/" { parent = parent.deletingLastPathComponent() }
         if let realParent = real(parent.path), let realRoot = real(root.path), !isInside(realParent, realRoot) {

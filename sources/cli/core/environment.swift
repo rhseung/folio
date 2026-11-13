@@ -21,7 +21,6 @@ struct GlobalOptions: ParsableArguments {
     var noPick = false
 }
 
-/// What tests pin down so the CLI and a direct action leave the same files.
 struct Overrides: Sendable {
     var gist: URL
     var device: DeviceID
@@ -29,9 +28,6 @@ struct Overrides: Sendable {
     var gradesUnlocked = true
 }
 
-/// One answer's `folio mcp --propose` runs its commands in a staged copy of the GIST folder (`ProposalStage`), which
-/// holds the proposals made so far. With `writes`, a command's dry run writes for real into the copy, so the next one
-/// builds on it; without, it only reads there.
 struct Staging: Sendable {
     var folder: StagedFolder
     var writes: Bool
@@ -41,10 +37,8 @@ enum CLI {
     @TaskLocal static var overrides: Overrides?
     @TaskLocal static var staging: Staging?
 
-    /// The app keeps its folder as a bookmark in its own defaults (`Workspace.bookmarkKey`).
     static let appDefaults = "com.rhseung.folio"
     static let appBookmarkKey = "folio.gistBookmark"
-    /// Written by the app beside the bookmark (`Workspace.pathKey`); the bookmark stays as the fallback for an app that hasn't yet.
     static let appPathKey = "folio.gistPath"
 
     static func gist(_ options: GlobalOptions) throws -> GISTStore {
@@ -72,7 +66,7 @@ enum CLI {
             hints: [String(localized: .gistUnknownHintOption), String(localized: .gistUnknownHintEnv)])
     }
 
-    /// Its own ID, apart from the Mac app's, so the two never append to the same log file.
+    // Mac 앱과 같은 로그 파일에 줄을 더하지 않도록 자기 ID를 따로 둔다.
     static var device: DeviceID {
         overrides?.device ?? LocalDevice.id(in: UserDefaults(suiteName: "com.rhseung.folio.cli") ?? .standard)
     }

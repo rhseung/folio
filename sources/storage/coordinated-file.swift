@@ -1,6 +1,5 @@
 import Foundation
 
-/// All file reads and writes go through NSFileCoordinator so iCloud and other processes see consistent files.
 enum CoordinatedFile {
     static func read(_ url: URL) throws -> Data {
         var error: NSError?
@@ -11,7 +10,6 @@ enum CoordinatedFile {
         return try finish(result, error)
     }
 
-    /// Writes to a temporary file and swaps it in, so a crash never leaves a half-written file.
     static func write(_ data: Data, to url: URL) throws {
         try StagedFolder.guardWrite(url, detach: true)
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -23,8 +21,8 @@ enum CoordinatedFile {
         try finish(result, error)
     }
 
-    /// Never overwrites: fails if `url` exists. Written beside it first and moved in, so it is never half-written;
-    /// `write` replaces, so checking first would leave a moment for another device's file to be overwritten.
+    // `write`는 덮어쓰므로, 먼저 확인하고 쓰면 그 사이에 다른 기기의 파일을 덮어쓸 틈이 생긴다. 그래서 옆에 먼저 쓴 뒤
+    // 옮겨 넣는다.
     static func create(_ data: Data, at url: URL) throws {
         try StagedFolder.guardWrite(url)
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -43,7 +41,6 @@ enum CoordinatedFile {
         try finish(result, error)
     }
 
-    /// Appends without rewriting existing bytes; used only for append-only logs.
     static func append(_ data: Data, to url: URL) throws {
         try StagedFolder.guardWrite(url, detach: true, keep: true)
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -55,9 +52,7 @@ enum CoordinatedFile {
         try finish(result, error)
     }
 
-    /// Never overwrites: fails if `target` exists.
     static func move(_ source: URL, to target: URL) throws {
-        // A link moves as a link, so only where it lands is checked.
         try StagedFolder.guardWrite(source)
         try StagedFolder.guardWrite(target)
         let coordinator = NSFileCoordinator()
@@ -73,7 +68,6 @@ enum CoordinatedFile {
         try finish(result, error)
     }
 
-    /// Never overwrites: fails if `target` exists.
     static func copy(_ source: URL, to target: URL) throws {
         try StagedFolder.guardWrite(target)
         var error: NSError?
@@ -85,7 +79,6 @@ enum CoordinatedFile {
         try finish(result, error)
     }
 
-    /// A missing file is not an error.
     static func remove(_ url: URL) throws {
         try StagedFolder.guardWrite(url)
         guard FileManager.default.fileExists(atPath: url.path) else { return }
@@ -98,7 +91,6 @@ enum CoordinatedFile {
     }
 
     static func trash(_ url: URL) throws {
-        // The Trash is outside the staged copy, and its file would outlive it.
         if StagedFolder.fence != nil { return try remove(url) }
         var error: NSError?
         var result: Result<Void, any Error>?
@@ -136,13 +128,12 @@ extension StoredDocument {
     }
 }
 
-/// Read-only access for the app's web views, which show a note's images by absolute URL.
 public enum LocalFile {
     public static func read(_ url: URL) -> Data? { try? CoordinatedFile.read(url) }
     public static func exists(_ url: URL) -> Bool { FileManager.default.fileExists(atPath: url.path) }
 
-    /// A coordinated read brings an iCloud placeholder down, as `CourseStore.download` does for a material, so a view
-    /// that reads the file itself (PDFKit, Quick Look) finds its contents there. Nil when it isn't there to read.
+    // 조정된 읽기는 iCloud 자리표시자를 내려받으므로, 파일을 직접 읽는 보기(PDFKit, Quick Look)가 그 자리에서 내용을
+    // 찾는다.
     public static func download(_ url: URL) -> URL? {
         guard exists(url) else { return nil }
         var error: NSError?

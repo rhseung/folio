@@ -21,13 +21,10 @@ enum Exit: Int32 {
 struct CLIError: Error {
     var exit: Exit
     var message: String
-    /// Refs the user can pass instead, e.g. the courses an ambiguous name matched.
     var candidates: [String] = []
-    /// Runnable commands that fix it, shown under the message.
     var hints: [String] = []
 }
 
-/// Tests swap it out to keep the test log clean and to read what a command printed.
 final class Sink: @unchecked Sendable {
     var out: (String) -> Void
     var err: (String) -> Void
@@ -42,14 +39,12 @@ final class Sink: @unchecked Sendable {
 func say(_ line: String = "") { Sink.current.out(line) }
 func warn(_ line: String) { Sink.current.err(line) }
 
-/// Same field names and date format as course.json.
 func printJSON(_ value: some Encodable) throws {
     say(String(decoding: try JSONEncoder.folio.encode(value), as: UTF8.self))
 }
 
 // MARK: Style
 
-/// The terminal's 16 colors, so light and dark themes both read.
 enum Style {
     case bold, dim, green, yellow, red, blue, magenta, cyan
 
@@ -76,8 +71,6 @@ extension String {
         return "\u{1B}[\(styles.map(\.sgr).joined(separator: ";"))m\(self)\u{1B}[0m"
     }
 
-    /// A course's color token (`CourseColor.token`, always a preset) as the nearest of the terminal's own 16
-    /// colors, which the user's theme already tunes for its background.
     func course(_ token: String) -> String {
         let ansi: [String: Style] = [
             "violet": .magenta, "pink": .magenta, "blue": .blue, "teal": .cyan, "green": .green,
@@ -86,7 +79,6 @@ extension String {
         return ansi[token].map { styled($0) } ?? styled(.dim)
     }
 
-    /// Enum values read by what they mean for the user: done green, at risk yellow, missed red, set aside dim.
     var toned: String {
         switch self {
         case "present", "submitted", "graded", "good", "easy": styled(.green)
@@ -98,8 +90,6 @@ extension String {
         }
     }
 
-    /// The words of a search marked where they occur, ignoring case. Ranges come from the plain text, so one word can't
-    /// match inside the escape codes another word's mark added.
     func highlighting(_ words: [String]) -> String {
         guard Style.enabled else { return self }
         var marked: [Range<String.Index>] = []
@@ -118,7 +108,6 @@ extension String {
         return out + self[at...]
     }
 
-    /// A clickable path where the terminal supports OSC 8.
     func link(_ url: URL) -> String {
         guard Style.enabled else { return self }
         return "\u{1B}]8;;\(url.absoluteString)\u{1B}\\\(self)\u{1B}]8;;\u{1B}\\"
@@ -128,8 +117,8 @@ extension String {
 // MARK: Width
 
 extension Character {
-    /// Terminal columns. Neither Foundation nor Noora counts Hangul as wide (Noora only checks `isIdeographic`), and
-    /// tables must line up with Korean names, so East Asian Wide and Fullwidth ranges are listed here.
+    // Foundation과 Noora 모두 한글을 넓은 글자로 세지 않는다(Noora는 `isIdeographic`만 본다). 표가 한국어 이름과 줄을
+    // 맞춰야 하므로 East Asian Wide와 Fullwidth 범위를 여기 둔다.
     var columns: Int {
         guard let s = unicodeScalars.first else { return 0 }
         if s.properties.generalCategory == .nonspacingMark || s.properties.generalCategory == .format { return 0 }
@@ -153,8 +142,6 @@ extension String {
 
     func padded(to width: Int) -> String { self + String(repeating: " ", count: max(0, width - columns)) }
 
-    /// Cut to `width` columns with `…`. Escape codes are copied through without counting, so a search match or a colored
-    /// code stays marked up to the cut.
     func truncated(to width: Int) -> String {
         guard columns > width else { return self }
         var out = "", used = 0, at = startIndex, styled = false
@@ -171,12 +158,11 @@ extension String {
             used += c.columns
             at = index(after: at)
         }
-        // The codes past the cut still run, so a link or color opened before it gets closed.
+        // 잘린 뒤의 코드도 실행해야 그 앞에서 연 링크나 색이 닫힌다.
         return out + self[at...].matches(of: Self.escape).map { String($0.output) }.joined() + (styled ? "\u{1B}[0m" : "") + "…"
     }
 }
 
-/// Terminal width, or nil when output is not a terminal (then nothing is cut).
 var terminalWidth: Int? {
     guard Style.isTerminal else { return nil }
     var size = winsize()
@@ -184,8 +170,6 @@ var terminalWidth: Int? {
     return Int(ProcessInfo.processInfo.environment["COLUMNS"] ?? "")
 }
 
-/// No border lines: columns line up by spacing and the header is dim. `shrink` lists columns to cut first, in order,
-/// when the table is wider than the terminal; names stay whole.
 struct Table {
     var header: [String]
     var rows: [[String]] = []

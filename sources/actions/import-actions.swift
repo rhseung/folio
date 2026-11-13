@@ -2,21 +2,14 @@ import FolioDomain
 import FolioStorage
 import Foundation
 
-// One-time imports from Notion, the calendar and hand-written tables. A dry run is the
-// plan to review; `ctx.notes` carries what was skipped or needs checking.
-
-/// Course folder name (`EC4207 그래프 이론`) to course id, for payloads that name courses by folder.
 func courseIDs(_ ctx: ActionContext) throws -> [String: UUID] {
     Dictionary(
         try ctx.gist.courseStores().map { ($0.url.lastPathComponent, try $0.load().model.course.id) }, uniquingKeysWith: { a, _ in a })
 }
 
 func shortTime(_ d: Date?) -> String { d?.formatted(.dateTime.month().day().weekday().hour().minute()) ?? "-" }
-/// After a class's reference (`11-03`), which already says the day.
 func weekdayTime(_ d: Date) -> String { d.formatted(.dateTime.weekday().hour().minute()) }
 
-/// Writes transcript.json, catalog.json and the course.json of every matched folder. Never overwrites: refuses when
-/// transcript.json or catalog.json exists, and skips folders that already have a course.json.
 @Action(
     "import notion", "노션 학기, 강의, 성적을 transcript.json, catalog.json, course.json으로",
     discussion: """
@@ -72,8 +65,6 @@ public struct ImportNotion {
     }
 }
 
-/// Notion lecture notes and score tables, from a dump folder holding `<page id>/index.json`, `notes/`, `assets/` per
-/// course. Note ids are Notion page ids, so running it again adds nothing twice.
 @Action(
     "import notes", "노션 강의 정리와 점수를 노트, 회차, 성적 항목으로",
     discussion: """
@@ -83,7 +74,6 @@ public struct ImportNotion {
     effect: .creates, done: "노션 강의 정리를 가져왔습니다", examples: ["folio import notes ~/Downloads/notion-dump --dry-run"],
     phrases: ["노션 강의 정리 가져오기"])
 public struct ImportNotes {
-    // An absolute path: the action doesn't know where the command ran.
     /// 덤프 폴더
     @Arg @Folder var folder: String
 
@@ -108,8 +98,8 @@ public struct ImportNotes {
                 continue
             }
             let store = try ctx.store(dump.coursePageId)
-            // Entries, not files: one whose file was deleted or renamed outside Folio still holds its id and path, and
-            // planning that note again would add a second entry with both.
+            // 파일이 아니라 항목으로 센다. Folio 밖에서 파일을 지우거나 이름을 바꾼 항목도 id와 경로를 갖고 있어서, 그 노트를
+            // 다시 계획하면 둘을 모두 가진 둘째 항목이 생긴다.
             let existing = Set(try ctx.file(dump.coursePageId).notes.map(\.id))
             let r = NotionNotesImporter.merge(
                 dump, into: try ctx.file(dump.coursePageId), existingNotes: existing, calendar: ctx.calendar, device: ctx.device,
@@ -121,7 +111,6 @@ public struct ImportNotes {
                         dump.images.filter { $0.file != nil }.count)))
             for w in r.warnings { ctx.note(String(localized: .noteImportNotesCheck(dump.title, w))) }
 
-            // Two Notion pages often share a title ("숙제"), so each name is chosen before any file exists.
             var urls: [UUID: URL] = [:]
             for plan in r.notes where !existing.contains(plan.id) {
                 let url = store.newNoteURL(
@@ -144,8 +133,6 @@ public struct ImportNotes {
     }
 }
 
-/// Class meetings from the calendar become sessions; days in the span without a meeting become cancelled, and review
-/// notes named after a session get linked to it.
 @Action(
     "import calendar", "캘린더의 수업을 회차로",
     discussion: """
@@ -190,7 +177,6 @@ public struct ImportCalendar {
                             }.joined(separator: ", "))))
             }
 
-            // A lab's unit title already holds the meeting's title.
             let label = { (s: Session) in r.file.units(of: s).first?.title ?? r.titles[s.id] ?? "" }
             for s in r.added {
                 ctx.note(
@@ -226,8 +212,6 @@ public struct ImportCalendar {
     }
 }
 
-/// Exams from the calendar's "시험" calendar. An exam on the same day only fills blanks; one on another day is left
-/// alone and reported.
 @Action(
     "import exams", "캘린더의 시험을 시험으로",
     discussion: """
@@ -263,7 +247,6 @@ public struct ImportExams {
     }
 }
 
-/// Units matched by title: only missing ones are added, and session links are only added.
 @Action(
     "import units", "단원 표를 단원으로",
     discussion: """
@@ -293,8 +276,6 @@ public struct ImportUnits {
     }
 }
 
-/// Graduation requirement categories into catalog.json, and the student's admission year and programs into
-/// transcript.json.
 @Action(
     "import requirements", "졸업 요건 분류와 학생 정보", discussion: "강의 코드 표에 없는 코드가 있으면 실행하지 않는다(종료 코드 4).",
     done: "졸업 요건을 가져왔습니다", examples: ["folio import requirements ~/Downloads/requirements.json --dry-run"], phrases: ["졸업 요건 가져오기"])
@@ -345,8 +326,6 @@ public struct ImportRequirements {
     }
 }
 
-/// A year's handbook (학사편람) area table into catalog.json, replacing the same year. With `accept`, the suggested
-/// categories are set on the courses too; otherwise they wait for approval in the app.
 @Action(
     "import handbook", "학사편람 분류 표",
     discussion: "같은 해 표는 바꾼다. 과목의 분류 제안을 보여 주며, 앱의 졸업 요건 화면에서 승인하거나 --accept로 바로 적용한다.",

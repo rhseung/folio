@@ -10,7 +10,6 @@ struct RunCommand: ParsableCommand {
         discussion: String(localized: .runDiscussion))
 
     @OptionGroup var g: GlobalOptions
-    // Unrecognized words stay in the name, so `exam scope --taught` names its action.
     @Argument(parsing: .allUnrecognized, help: ArgumentHelp(String(localized: .runHelpAction), valueName: "action")) var action: [String]
     @Option(help: ArgumentHelp(String(localized: .runHelpInput), valueName: "JSON")) var input: String
 
@@ -32,7 +31,6 @@ struct RunCommand: ParsableCommand {
         guard case .object(var o) = json else { throw CLIError(exit: .usage, message: String(localized: .runNotObject)) }
         let r = Resolver(ctx)
         var course: CourseRef?
-        // The course comes first: the other items are looked up inside it.
         for f in A.spec.fields.sorted(by: { ($0.ref == "Course" ? 0 : 1) < ($1.ref == "Course" ? 0 : 1) }) {
             if f.role == .new {
                 if o[f.name] == nil { o[f.name] = .string(UUID().uuidString) }
@@ -50,7 +48,7 @@ struct RunCommand: ParsableCommand {
             }
         }
 
-        // A whole file's decoder fills a missing key with its default: `{"settings":{}}` would reset every setting.
+        // 파일 전체의 디코더는 빠진 키를 기본값으로 채우므로 `{"settings":{}}`는 모든 설정을 되돌린다.
         if let (key, current) = try Self.wholeFile(A.command, ctx), let given = o[key] { o[key] = current.overlaid(with: given) }
         try perform(spec: try A.decode(JSONEncoder().encode(JSONValue.object(o))), g, ctx: ctx)
     }
@@ -88,7 +86,6 @@ extension Action {
 }
 
 extension JSONValue {
-    /// Objects merge key by key; anything else, arrays included, is replaced.
     func overlaid(with patch: JSONValue) -> JSONValue {
         guard case .object(var base) = self, case .object(let p) = patch else { return patch }
         for (k, v) in p { base[k] = base[k].map { $0.overlaid(with: v) } ?? v }

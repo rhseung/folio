@@ -1,12 +1,8 @@
 import Foundation
 
-/// AsciiMath names offered on a word typed in an AsciiMath note's formula, in the order offered.
-///
-/// Source: the symbol tables of asciimath2tex 1.5.0 (`setup_symbols`: `greek_letters`, `relations`, `constants`,
-/// `unary_symbols`, `binary_symbols`), the converter the preview and the edit view run (sources/web/package.json,
-/// sources/web/src/math.js, sources/web/src/native.js). Only names of letters are here, since only a word opens the menu; `->`, `!=`
-/// and the like are typed as they are. Spellings that only repeat another (`Sin`, `lamda`, `epsi`) are left out. Every
-/// sample here converts without its name left over (checked with the converter's `parse` when the list was made).
+// 출처는 asciimath2tex 1.5.0의 기호 표(`setup_symbols`)이고, 미리보기와 편집 보기가 쓰는 변환기와 같다. 메뉴는
+// 낱말을 칠 때만 열리므로 글자로 된 이름만 둔다. 모든 예시는 목록을 만들 때 변환기의 `parse`로 이름이 남지 않고
+// 변환되는지 확인했다.
 public enum AsciiMathSymbols {
     public struct Symbol: Sendable, Equatable {
         public let name: String
@@ -18,8 +14,6 @@ public enum AsciiMathSymbols {
             return name + (0..<arguments).map { "(\(fills[min($0, fills.count - 1)]))" }.joined()
         }
 
-        // Arguments in brackets, as AsciiMath groups them; Tab moves on through them as through TeX's braces
-        // (`SourceEditing.slot`).
         var item: CompletionItem {
             let body = name + (0..<arguments).map { "($\($0 + 1))" }.joined()
             return CompletionItem(
@@ -31,13 +25,11 @@ public enum AsciiMathSymbols {
             "root": ["3", "x"], "color": ["red", "x"], "stackrel": ["!", "="], "overset": ["!", "="], "underset": ["n", "to"],
             "bb": ["R"], "bbb": ["R"], "cc": ["L"], "fr": ["g"], "text": ["text"],
         ]
-        /// Nothing to see on their own: spacing, and words the converter sets as text between spaces.
         private static let noPreview: Set<String> = ["quad", "qquad", "and", "or", "if"]
     }
 
     private static let table: [(String, Int, MathCategory)] = {
         let groups: [(String, Int, MathCategory)] = [
-            // Structures first: what a formula is usually built around.
             ("frac root", 2, .operators), ("stackrel overset underset color", 2, .fonts), ("sqrt", 1, .operators),
             (
                 "abs norm floor ceil hat bar vec dot ddot tilde ul overline underline obrace ubrace cancel bb bbb cc tt sf fr text", 1,
@@ -57,7 +49,6 @@ public enum AsciiMathSymbols {
                 "oo del grad aleph prime cdots ldots vdots ddots quad qquad angle triangle square therefore because CC NN QQ RR ZZ", 0,
                 .symbols
             ),
-            // Functions, written before their argument as `sin x` or `sin(x)`.
             ("sin cos tan sec csc cot sinh cosh tanh arcsin arccos arctan log ln exp det dim gcd lcm min max mod", 0, .functions),
         ]
         return groups.flatMap { names, n, category in names.split(separator: " ").map { (String($0), n, category) } }

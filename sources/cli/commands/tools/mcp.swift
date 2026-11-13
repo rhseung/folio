@@ -4,7 +4,6 @@ import FolioDomain
 import FolioStorage
 import Foundation
 
-/// The client starts it per session, so there is no server to keep running.
 struct MCPCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "mcp", abstract: String(localized: .mcpAbstract), discussion: String(localized: .mcpDiscussion))
@@ -14,7 +13,7 @@ struct MCPCommand: ParsableCommand {
 
     func run() throws {
         let server = MCPServer(gist: gist, propose: propose)
-        // stdout carries the protocol, so replies are written straight to it and never through `print`'s buffer.
+        // stdout이 프로토콜을 실으므로 답은 `print`의 버퍼를 거치지 않고 바로 쓴다.
         while let line = readLine() {
             guard let reply = server.handle(line) else { continue }
             FileHandle.standardOutput.write(reply + Data("\n".utf8))
@@ -35,10 +34,8 @@ struct MCPServer {
 
     let gist: String?
     let propose: Bool
-    /// The proposals this answer has made, which later commands build on and read back (`--propose` only).
     let stage: ProposalStage?
     let tools: [Tool]
-    /// Every action and read command, listed or not: what `action_search` finds and `action_run` runs.
     let catalog: [Tool]
 
     init(gist: String?, propose: Bool) {
@@ -52,9 +49,8 @@ struct MCPServer {
         tools = (propose ? all.filter { Self.inPanel($0.command) } : all) + Self.generalTools(propose: propose)
     }
 
-    /// Commands written by hand that write by building one action (`add` reads a quick-add line into `assignment add`).
-    /// Read off the help like a read command, they would otherwise be marked read-only and skip `--dry-run` under
-    /// `--propose`. The action they build is the one proposed.
+    // 도움말에서 읽으면 읽기 명령처럼 읽기 전용으로 표시되어 `--propose`에서 `--dry-run`을 건너뛴다. 그래서 액션 하나를
+    // 만들어 쓰는 손 명령을 여기 적고, 만든 액션을 제안한다.
     static let builds: [String: String] = ["add": "assignment add"]
 
     static func writing(_ tool: Tool, propose: Bool) -> Tool {
@@ -69,21 +65,16 @@ struct MCPServer {
         return t
     }
 
-    /// What the app's Claude panel (`--propose`) opens: the tools for talking about one course. Every tool's
-    /// definition goes with every question, so imports, backups, cleanup, settings, the transcript and the like
-    /// would cost tokens on each one without being used there. The terminal's `folio mcp` keeps them all.
     static let panelGroups: Set<String> = [
         "note", "session", "unit", "exam", "assignment", "material", "quiz", "score", "component", "attendance", "review",
         "problem-set", "search", "today",
     ]
-    /// `recording` stays out as a group: its other commands rename and trash audio, which a course talk never needs.
     static let panelCommands: Set<String> = ["course show", "course list", "recording transcript"]
 
     static func inPanel(_ command: String) -> Bool {
         panelCommands.contains(command) || command.split(separator: " ").first.map { panelGroups.contains(String($0)) } == true
     }
 
-    /// One JSON-RPC line in, the reply line out; notifications get none.
     func handle(_ line: String) -> Data? {
         guard let message = try? JSONDecoder().decode(JSONValue.self, from: Data(line.utf8)) else {
             return Self.encode(["jsonrpc": "2.0", "id": .null, "error": ["code": .number(-32700), "message": "parse error"]])
@@ -137,9 +128,9 @@ struct MCPServer {
         return Self.result(run.code == 0 ? run.out : run.err + run.out, failed: run.code != 0, pictures: run.pictures)
     }
 
-    /// Under `--propose` a write runs twice in the answer's staged copy: as a dry run that may refuse, then for real
-    /// there, so a refused one leaves nothing half-written for the next to build on. Once the copy exists every read
-    /// runs in it too, and sees what was proposed. `search` keeps to the folder: its index is the folder's.
+    // `--propose`에서 쓰기는 답의 사본에서 두 번 돈다. 거절할 수 있는 dry run으로 한 번, 그다음 실제로 한 번이다. 그래야
+    // 거절된 쓰기가 다음 쓰기가 기댈 반쯤 쓴 상태를 남기지 않는다. 사본이 생긴 뒤에는 읽기도 사본에서 돌아 제안한 것을
+    // 본다. `search`의 색인은 폴더의 것이므로 `search`는 폴더에서 돈다.
     func proposing(_ tool: Tool, _ command: String, _ argv: [String], _ stage: ProposalStage) -> JSONValue {
         guard tool.write else {
             let folder = command == "search" ? nil : stage.folder
@@ -168,13 +159,11 @@ struct MCPServer {
             return Self.result(run.code == 0 ? run.out : run.err + run.out, failed: run.code != 0)
         }
 
-        // Run once more against the folder alone: failing there, it needs the earlier proposals applied first.
         let after = stage.staged > 0 && Self.execute(argv).code != 0 ? stage.earlier(input) : []
         stage.record(stages ? ProposalStage.made(from: run.out.joined(separator: "\n")) : ProposalStage.Made(items: [:], paths: []))
         var content: [JSONValue] = [["type": "text", "text": .string(Self.compact(run.out.joined(separator: "\n")))]]
-        // In the result too: the app replaces the system prompt, so the server's instructions may never reach Claude.
+        // 앱이 시스템 프롬프트를 바꾸므로 서버의 지시가 Claude에 닿지 않을 수 있어, 결과에도 넣는다.
         content.insert(["type": "text", "text": .string(String(localized: .mcpInstructionsPropose))], at: 0)
-        // What the panel shows an approve button for: the action with every name already resolved to its UUID.
         content.append([
             "type": "text", "text": .string(ActionProposal(command: command, input: input, after: after.isEmpty ? nil : after).text),
         ])
@@ -197,7 +186,6 @@ struct MCPServer {
             CLI.$staging.withValue(staging) {
                 Built.$record.withValue({ command, input in built.add(command, input) }) {
                     Sink.$current.withValue(Sink(out: { out.add("out", .string($0)) }, err: { out.add("err", .string($0)) })) {
-                        // Held to the copy even for a dry run, which should write nothing anywhere.
                         if let staging { return staging.folder.run { Folio.run(argv) } }
                         return Folio.run(argv)
                     }
@@ -216,8 +204,6 @@ struct MCPServer {
         ]
     }
 
-    /// Each picture a read command handed over (`Pictures`), after a line naming it: image blocks carry no name, and
-    /// the text lists them by these labels.
     static func labeled(_ pictures: [Pictures.Picture]) -> [JSONValue] {
         pictures.flatMap { p -> [JSONValue] in
             [
@@ -240,9 +226,6 @@ struct MCPServer {
     static let searchTool = "action_search"
     static let runTool = "action_run"
 
-    /// The way to every action the panel doesn't list. Opening all of them would send some 20k tokens of definitions
-    /// with each question; leaning on the client's own deferred tool loading would tie the panel to how that works.
-    /// The app's panel names these two in its progress line (`ClaudeModel.toolLabel`), which can't link this module.
     static func generalTools(propose: Bool) -> [Tool] {
         var run: JSONValue = [
             "action": ["type": "string", "description": .string(String(localized: .mcpRunActionHelp))],
@@ -278,15 +261,13 @@ struct MCPServer {
 
     static let searchMost = 10
 
-    /// `folio help <request>`'s ranking, kept to what `action_run` can run, with each one's input schema.
     func search(_ arguments: JSONValue) -> JSONValue {
         guard case .string(let query)? = arguments["query"], !query.trimmingCharacters(in: .whitespaces).isEmpty else {
             return Self.failure(String(localized: .mcpSearchNoQuery))
         }
-        // Clamped as a Double: `Int(1e300)` traps and would end the server.
+        // `Int(1e300)`은 멈춰 서버를 끝내므로 Double로 자른다.
         let limit = if case .number(let n)? = arguments["limit"] { Int(min(max(n, 1), Double(Self.searchMost))) } else { 5 }
         let listed = Set(tools.map(\.name))
-        // Asked for more than shown: some matches are commands that aren't tools (`run`, `unlock`) and drop out.
         let found = Finder.find(query, limit: Self.searchMost * 2).compactMap { m -> JSONValue? in
             let command = String(m.command.dropFirst("folio ".count))
             guard let t = catalog.first(where: { $0.command == command }) else { return nil }
@@ -303,8 +284,6 @@ struct MCPServer {
         ]
     }
 
-    /// Runs one catalog entry as its own tool would, so writes are dry runs and proposals under `--propose`, and the
-    /// grades lock is the command's own.
     func runAny(_ arguments: JSONValue) -> JSONValue {
         guard case .string(let given)? = arguments["action"] else { return Self.failure(String(localized: .mcpRunNoAction)) }
         let name = given.trimmingCharacters(in: .whitespaces).replacing(/^folio\s+/, with: "")
@@ -317,8 +296,6 @@ struct MCPServer {
         return call(tool, input)
     }
 
-    /// The pictures a render command carries as base64 (`RenderResult`), as image content Claude looks at, taken out
-    /// of the text, where they would be read as tens of thousands of characters.
     static func images(_ text: inout String) -> [JSONValue] {
         guard text.contains("\"png\""), let value = try? JSONDecoder().decode(JSONValue.self, from: Data(text.utf8)),
             case .array(let items)? = value["images"]
@@ -390,7 +367,6 @@ struct MCPServer {
         return found
     }
 
-    /// Kept out of the read tools: these are about the tool itself (or reach the user's screen), not the GIST data.
     static let notTools: Set<String> = ["actions", "run", "skill", "completion", "mcp", "unlock", "lock", "cleanup plan", "help", "open"]
     static let globalOptions: Set<String> = ["gist", "json", "dry-run", "yes", "no-pick", "help", "version"]
 
@@ -416,7 +392,6 @@ struct MCPServer {
         var command: Command
     }
 
-    /// Read off ArgumentParser's own description of the commands, so a new read command needs no tool code.
     static func readTools() -> [Tool] {
         let dump: String
         do {
@@ -476,7 +451,7 @@ struct MCPServer {
                 default: for value in values { options += ["--\(key(a))", value] }
                 }
             }
-            // After `--` a name like `-1` stays a value instead of reading as an option.
+            // `--` 뒤에 두어야 `-1` 같은 이름이 옵션이 아니라 값으로 남는다.
             return command.split(separator: " ").map(String.init) + options + ["--json"] + (positionals.isEmpty ? [] : ["--"] + positionals)
         }
     }
@@ -490,8 +465,6 @@ struct MCPServer {
         }
     }
 
-    /// `--json` output as Claude reads it: one line, without the nulls and empty lists that made up most of a
-    /// pretty-printed `session list`. Text that isn't a JSON object or array, such as an error, stays as it is.
     static func compact(_ text: String) -> String {
         guard let first = text.first(where: { !$0.isWhitespace }), first == "{" || first == "[",
             let value = try? JSONDecoder().decode(JSONValue.self, from: Data(text.utf8))
@@ -499,7 +472,7 @@ struct MCPServer {
         return string(pruned(value))
     }
 
-    /// Drops object members that say nothing. Array elements stay even when empty, so positions keep their meaning.
+    // 배열의 위치가 뜻을 지키도록 배열 요소는 비어 있어도 남긴다.
     static func pruned(_ v: JSONValue) -> JSONValue {
         switch v {
         case .object(let o):

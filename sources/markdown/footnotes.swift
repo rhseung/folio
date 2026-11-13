@@ -1,22 +1,16 @@
 import Foundation
 import Markdown
 
-/// GFM footnotes: `[^label]` in the text, and `[^label]: text` at the start of a line defining it.
-///
-/// Read here, not by the parser: swift-markdown 0.9 doesn't turn on cmark-gfm's footnote extension. Before parsing,
-/// a definition's `[` is swapped for `marker` (same length in UTF-16, so offsets still match the source). Left as it
-/// is, `[^1]: https://…` is a CommonMark link definition: it vanishes, and every `[^1]` becomes a link to it. Swapped,
-/// the definition stays a paragraph that starts with the marker, and a reference stays text, found in the rendered
-/// inline HTML as wikilinks are.
+// swift-markdown 0.9는 cmark-gfm의 각주 확장을 켜지 않으므로 각주를 여기서 읽는다. 그대로 두면 `[^1]: https://`는
+// CommonMark 링크 정의가 되어 사라지고, 모든 `[^1]`이 그 정의로 가는 링크가 된다. 그래서 파싱 전에 정의의 `[`를
+// `marker`로 바꾼다. 두 글자는 UTF-16 길이가 같으므로 오프셋이 원문과 맞는다.
 public enum Footnotes {
     public static let marker: Character = "\u{E001}"
 
     static var definitionLine: Regex<(Substring, Substring)> { #/^ {0,3}\[\^([^\]\s]+)\]:/# }
     static var reference: Regex<(Substring, Substring)> { #/\[\^([^\]\s]+)\]/# }
-    /// A masked definition's start as the paragraph's first text holds it, with the space after the colon.
     static var maskedStart: Regex<(Substring, Substring)> { #/^\x{E001}\^([^\]\s]+)\]:[ \t]*/# }
 
-    /// Labels match ignoring case, as link labels do.
     static func key(_ label: some StringProtocol) -> String { label.lowercased() }
 
     public static func mask(_ text: String) -> String {
@@ -27,16 +21,12 @@ public enum Footnotes {
         return out as String
     }
 
-    /// Where footnote syntax is in the source, for the editor's colors: the label and the marks around it.
     public struct Mark: Equatable, Sendable {
-        /// From `[` to `]`, or to the colon for a definition.
         public var range: NSRange
         public var label: NSRange
         public var definition: Bool
     }
 
-    /// Every definition at a line's start and every reference elsewhere, outside fenced code. Inline code and math are
-    /// the caller's to leave out: it knows where they are.
     public static func marks(in text: String) -> [Mark] {
         var out: [Mark] = []
         for line in lines(text) {
@@ -63,13 +53,10 @@ public enum Footnotes {
     struct Line {
         var range: NSRange
         var text: String
-        /// The label's range in the whole text when the line defines a footnote.
         var definition: NSRange?
-        /// Where the definition's `[` is in the whole text.
         var bracket: Int
     }
 
-    /// The lines outside fenced code, which is where footnotes are.
     static func lines(_ text: String) -> [Line] {
         var out: [Line] = []
         var fence: String?
@@ -99,14 +86,11 @@ public enum Footnotes {
     }
 }
 
-/// The footnotes of one note as its page is drawn: what each label says, and the numbers given out in the order
-/// the references come. A class, so a table cell's renderer, a copy, numbers on from the note's.
 final class FootnoteBook {
     let definitions: [String: [Markup]]
     private(set) var numbered: [String] = []
     private var uses: [String: Int] = [:]
 
-    /// The definitions anywhere in `document`; the first one of a label counts, as in GFM.
     init(_ document: Markup) {
         var found: [String: [Markup]] = [:]
         func walk(_ node: Markup) {
@@ -129,8 +113,6 @@ final class FootnoteBook {
 
     static func label(of p: Paragraph) -> String? { label(of: p.child(at: 0)) }
 
-    /// Definitions on the lines right after one another are one paragraph to CommonMark, each line after the first
-    /// joined to it by a soft break; each starts a footnote of its own, as in GFM.
     static func split(_ p: Paragraph) -> [(String, [Markup])] {
         var out: [(String, [Markup])] = []
         let inlines = Array(p.inlineChildren).map { $0 as Markup }
@@ -149,7 +131,6 @@ final class FootnoteBook {
         Self.label(of: p).map { definitions[Footnotes.key($0)] != nil } ?? false
     }
 
-    /// The footnote's number and which use of it this is (1 for the first), or nil when nothing defines it.
     func use(_ label: String) -> (number: Int, use: Int)? {
         let key = Footnotes.key(label)
         guard definitions[key] != nil else { return nil }

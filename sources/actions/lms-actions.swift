@@ -2,8 +2,6 @@ import FolioDomain
 import FolioStorage
 import Foundation
 
-// No classroom is tied to a course (one course can have two, and some are no course at all), so this only records
-// that a classroom was seen and what it held then.
 @Action(
     "lms seen", "처음 본 LMS 강의실을 기록하고 지금 있는 항목을 제안함에서 숨기기",
     discussion: """
@@ -53,10 +51,7 @@ public struct LMSMark {
     }
 }
 
-/// One LMS proposal the user accepted. A file carries the path it was downloaded to; one the LMS shows only in its
-/// viewer has none and cannot be accepted, only opened or dismissed.
 public struct LMSAcceptItem: Codable, Sendable, Hashable {
-    /// assignment:139950, file:139200, notice:23464
     public var key: String
     public var title: String?
     public var due: Date?
@@ -67,8 +62,6 @@ public struct LMSAcceptItem: Codable, Sendable, Hashable {
     }
 }
 
-// "모두 추가" on a course's proposals is this one action, so it asks once and stops before writing anything when one
-// item is refused.
 @Action(
     "lms accept", "LMS 제안을 과목에 받기. 과제는 과제로 더하고, 받은 파일은 Lectures로 가져오고, 모두 제안함에서 숨긴다",
     discussion:

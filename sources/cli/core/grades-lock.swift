@@ -3,10 +3,7 @@ import FolioDomain
 import Foundation
 import LocalAuthentication
 
-/// The grades lock in the terminal. Each run is its own process, so an unlock is kept as a file's time, not in
-/// memory. Like the app's lock it hides grades from someone looking at the screen; course.json stays readable.
 enum GradesLock {
-    /// Its modification date is when the lock comes back.
     static let stamp = URL.cachesDirectory.appending(path: "Folio/grades-unlocked")
 
     static var isUnlocked: Bool {
@@ -17,7 +14,6 @@ enum GradesLock {
         return !hasPasscode
     }
 
-    /// With no password set there is nothing to check against; locking would only shut the owner out (as in the app).
     static var hasPasscode: Bool {
         if CLI.overrides != nil { return true }
         var error: NSError?
@@ -26,8 +22,6 @@ enum GradesLock {
 
     static func masked(_ value: String) -> String { isUnlocked ? value : "••".styled(.dim) }
 
-    /// For commands whose whole point is grades: asks for Touch ID or the Mac password when locked. The prompt is a
-    /// system dialog, so it reaches the owner even when an agent runs the command.
     static func require() throws {
         guard !isUnlocked else { return }
         try authenticate()
@@ -37,7 +31,6 @@ enum GradesLock {
     static func authenticate() throws {
         final class Result: @unchecked Sendable { var ok = false }
         let result = Result(), done = DispatchSemaphore(value: 0)
-        // Tests never raise a system dialog; their override stands for the owner's answer.
         if let o = CLI.overrides {
             result.ok = o.gradesUnlocked
         } else {
@@ -61,7 +54,6 @@ enum GradesLock {
 
     static func lock() { try? FileManager.default.removeItem(at: stamp) }
 
-    /// `90s`, `30m`, `1h`, `1h30m`.
     static func seconds(_ text: String) -> Double? {
         let parts = text.matches(of: /(\d+)([hms])/)
         guard !parts.isEmpty, parts.map { String($0.output.0) }.joined() == text else { return nil }

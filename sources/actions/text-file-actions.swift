@@ -30,8 +30,7 @@ public struct MaterialWrite {
 }
 
 extension MaterialWrite {
-    /// Only UTF-8 is replaced: a file in another encoding would be rewritten as UTF-8, which the program that made it
-    /// may not read.
+    // 다른 인코딩의 파일을 UTF-8로 다시 쓰면 그 파일을 만든 프로그램이 읽지 못할 수 있으므로, UTF-8 파일만 바꾼다.
     static func read(_ store: CourseStore, _ path: String) throws -> String {
         do {
             return try store.readText(path)
@@ -41,8 +40,6 @@ extension MaterialWrite {
     }
 }
 
-/// Never over a file already there, nor `hw4 2.tex` beside it: the user named the file, and a different one is not the
-/// file they asked for. Which assignment or exam it is for follows from its folder, as for any file put there.
 @Action(
     "material new", "과제·시험 폴더나 Study, Archive에 새 텍스트 파일(.tex, 코드, .txt 등) 만들기. .tex는 바로 빌드되는 문서 틀로 시작한다",
     effect: .creates, done: "{folder}/{name}을(를) 만들었습니다",
@@ -70,8 +67,8 @@ public struct MaterialNew {
         guard MaterialFormat(path: name).isText else { throw ActionError.rule(String(localized: .errorMaterialNewFormat(name))) }
 
         let path = "\(folder)/\(name)"
-        // Tracking sees a code project as one folder, so a file made inside it would have no row to open. Read from the
-        // disk: the tracked list lags a `git init` or a project not tracked yet.
+        // 추적은 코드 프로젝트를 폴더 하나로 보므로, 그 안에 만든 파일에는 열 행이 없다. 추적 목록은 `git init`이나 아직
+        // 추적하지 않은 프로젝트를 늦게 따라가므로 디스크에서 읽는다.
         if let project = store.codeProject(containing: folder)
             ?? file.materials.first(where: { $0.isFolder && path.hasPrefix($0.path + "/") })?.path
         {
@@ -84,7 +81,6 @@ public struct MaterialNew {
 
         guard !ctx.dryRun else { return }
         try ctx.edit(course) { f in try store.refreshMaterials(in: &f, device: ctx.device, now: ctx.now) }
-        // A folder grown past the size limit is also tracked as one item; the file is there, but there is no row to open.
         guard let m = try ctx.file(course).materials.first(where: { $0.path == path }) else {
             throw ActionError.rule(String(localized: .errorMaterialNewUntracked(path)))
         }
@@ -92,9 +88,6 @@ public struct MaterialNew {
     }
 }
 
-/// Puts the PDF next to the `.tex` under the same name, where tracking already reads it as the source's output. A PDF
-/// there that this action didn't write is someone's file: replacing it takes `overwrite`, and it goes to the Trash.
-/// No examples: the equivalence test runs each one for real, and a first build fetches TeX packages for minutes.
 @Action(
     "material build", "LaTeX 자료(.tex)를 Tectonic으로 PDF로 만들어 옆에 같은 이름으로 둔다", done: "'{material}'을(를) PDF로 만들었습니다",
     phrases: ["tex 컴파일", "latex 빌드", "PDF 만들기"])
@@ -144,8 +137,8 @@ public struct MaterialBuild {
         }
     }
 
-    /// The file takes a tracked PDF's place and its hash is marked as built, so the next build replaces it without
-    /// asking. Any other file passed in could put itself over a course PDF that way.
+    // 이 파일은 추적된 PDF의 자리를 차지하고 해시가 빌드한 것으로 표시되어, 다음 빌드가 묻지 않고 바꾼다. 그래서
+    // 넘겨받은 다른 파일이 이 방법으로 과목 PDF를 덮어쓰지 못하게 한다.
     static func output(_ path: String, of source: URL) throws -> URL {
         let folder = TexOutput.folder(for: source).resolvingSymlinksInPath().path + "/"
         let url = URL(filePath: path).resolvingSymlinksInPath()
@@ -162,9 +155,6 @@ public struct MaterialBuild {
     }
 }
 
-/// A note's PDF goes to `Study/<title>.pdf`, not beside it: Notes/ holds only notes. The place is chosen by title, so two notes can share it and another tool's export may already be there; as
-/// with `material build`, only a PDF this action wrote is replaced without `overwrite`, and a replaced one goes to the
-/// Trash. No examples, for the same reason as `material build`.
 @Action(
     "note build", "LaTeX 노트(.tex)를 Tectonic으로 PDF로 만들어 Study에 둔다", done: "노트 '{note}'을(를) PDF로 만들었습니다",
     phrases: ["tex 노트 컴파일", "노트 PDF 만들기"])
@@ -185,8 +175,7 @@ public struct NoteBuild {
 
         let target = store.exportPath(of: file)
         let exists = FileManager.default.fileExists(atPath: store.fileURL(target).path)
-        // The entry holds the hash that tells this build's PDF from someone else's; without one every later build would
-        // ask about the PDF it just made.
+        // 이 빌드의 PDF를 남의 PDF와 구분하는 해시를 항목이 가진다. 항목이 없으면 이후 빌드마다 방금 만든 PDF를 묻는다.
         guard let entry = try ctx.file(course).notes.first(where: { $0.id == file.meta.id }) else {
             throw ActionError.rule(String(localized: .errorNoteBuildNoEntry(note)))
         }
@@ -212,7 +201,6 @@ public struct NoteBuild {
         let hash = try store.hash(target)
         try ctx.edit(course) { f in
             if let i = f.notes.firstIndex(where: { $0.id == entry.id }) { f.notes[i].builtHash = hash }
-            // Study is a material folder, so the PDF is tracked right away as material build does.
             try store.refreshMaterials(in: &f, device: ctx.device, now: ctx.now)
             if let i = f.materials.firstIndex(where: { $0.path == target }) {
                 try store.rehash(f.materials[i].id, in: &f, device: ctx.device, now: ctx.now)

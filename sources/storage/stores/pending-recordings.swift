@@ -1,7 +1,6 @@
 import FolioDomain
 import Foundation
 
-/// A recording whose audio is still on this device, waiting to be compressed and moved into its course folder.
 public struct PendingRecording: Codable, Sendable, Equatable {
     public var courseId: UUID
     public var recording: Recording
@@ -12,8 +11,6 @@ public struct PendingRecording: Codable, Sendable, Equatable {
     }
 }
 
-/// Audio is recorded here, outside the GIST folder: iCloud would upload a half-written file over and over, and an
-/// uncompressed file left by a crash stays readable here until the next launch moves it into place.
 public struct PendingRecordings: Sendable {
     public let url: URL
 
@@ -28,7 +25,6 @@ public struct PendingRecordings: Sendable {
         try JSONFormat.encoder.encode(pending).write(to: infoURL(of: pending.recording.id), options: .atomic)
     }
 
-    /// Recordings with audio on disk. One whose info can't be read is left alone rather than guessed at.
     public func all() -> [PendingRecording] {
         let files = (try? FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)) ?? []
         return files.filter { $0.pathExtension == "json" }.compactMap { file in
@@ -40,7 +36,6 @@ public struct PendingRecordings: Sendable {
         }
     }
 
-    /// Only once the audio is in its course folder.
     public func remove(_ id: UUID) {
         for file in [audioURL(of: id), compressedURL(of: id), infoURL(of: id)] { try? FileManager.default.removeItem(at: file) }
     }

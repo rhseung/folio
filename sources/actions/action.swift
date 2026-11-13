@@ -2,27 +2,19 @@ import FolioDomain
 import FolioStorage
 import Foundation
 
-/// The app's screens and the `folio` CLI build the same value and run it the same way, so the files they leave behind
-/// are the same.
-/// Declared with `@Action`, which writes `spec` and checks the declaration.
 public protocol Action: Codable, Sendable {
     static var spec: ActionSpec { get }
     func run(_ ctx: ActionContext) throws
 }
 
 extension Action {
-    /// `folio actions --check` matches commands on it.
     public static var command: String { spec.command }
 }
 
-/// Each case is its own CLI exit code.
 public enum ActionError: Error, Equatable, CustomStringConvertible {
     case notFound(String)
-    /// The data rules forbid it, e.g. deleting a session that a note still points at.
     case rule(String)
-    /// The file changed elsewhere since it was read.
     case conflict(String)
-    /// The input doesn't fit together or doesn't fit the data's shape, e.g. a settings key that isn't there.
     case input(String)
 
     public var description: String {
@@ -39,15 +31,12 @@ public enum ActionError: Error, Equatable, CustomStringConvertible {
     }
 }
 
-/// A file the action created, changed, removed or moved, relative to the GIST folder. `item` names the entry inside a
-/// JSON file (`exams/<id>`); nil means the file as a whole.
 public struct Change: Codable, Sendable, Equatable {
     public enum Kind: String, Codable, Sendable { case added, changed, removed, moved }
     public var kind: Kind
     public var path: String
     public var item: String?
     public var to: String?
-    /// For a changed entry, each field that changed, with its value before and after (nil: absent).
     public var fields: [Field]?
 
     public struct Field: Codable, Sendable, Equatable {
@@ -70,8 +59,7 @@ public struct Change: Codable, Sendable, Equatable {
 }
 
 extension Change {
-    /// A note file, a note's entry in course.json, where its kind and links live, or a widget a note runs: an open
-    /// note shows a rewritten widget only when it is drawn again.
+    // 열린 노트는 다시 그릴 때에야 다시 쓴 위젯을 보이므로, 노트가 쓰는 위젯도 노트를 건드린 것으로 본다.
     public var touchesNotes: Bool {
         func inNotes(_ path: String?) -> Bool { path?.split(separator: "/").contains { $0 == CourseFolder.notes.rawValue } == true }
         let courseFile = path.split(separator: "/").last == Substring(StandardLayout.courseFile)
@@ -80,20 +68,17 @@ extension Change {
         return inNotes(path) || inNotes(to) || widget || courseFile && item?.hasPrefix(Self.notesItem) == true
     }
 
-    /// A unit's card file under `.folio/quizzes`, or a card's attempt in the log, which decides its open wrong answers.
     public var touchesQuizzes: Bool {
         let parts = path.split(separator: "/").map(String.init)
         return zip(parts, parts.dropFirst()).contains { $0 == (StandardLayout.metadataFolder, StandardLayout.quizzesFolder) }
             || item == QuizAttemptEvent.type
     }
 
-    /// `diff` names an entry by the JSON key of the array it is in: `CourseFile.notes` encodes as `notes`.
+    // `diff`는 항목을 그것이 든 배열의 JSON 키로 부른다. `CourseFile.notes`는 `notes`로 인코딩된다.
     static let notesItem = "notes/"
 }
 
 extension [Change] {
-    /// One entry per file and item, for an action that touches the same item more than once (or several actions run
-    /// on one context): added stays added, a later removal wins, and each field keeps its first before and last after.
     public func coalesced() -> [Change] {
         var out: [Change] = []
         var at: [String: Int] = [:]
@@ -115,7 +100,6 @@ extension [Change] {
     }
 }
 
-/// All reads and writes of an action go through here, so a dry run is the same code with the writes left out.
 public final class ActionContext {
     public let gist: GISTStore
     public let device: DeviceID
@@ -123,24 +107,18 @@ public final class ActionContext {
     public let calendar: Calendar
     public let dryRun: Bool
     public private(set) var changes: [Change] = []
-    /// The item the action made, e.g. a new session or note; the app opens it.
     public private(set) var made: UUID?
-    /// Course files saved by the action, so the app can show them without reading every course again.
     public private(set) var savedCourses: [UUID: StoredDocument<CourseFile>] = [:]
-    /// True when something other than a course file changed: the app then reads everything again.
     public private(set) var needsReload = false
     public private(set) var loggedCourses: Set<UUID> = []
-    /// What an import skipped or wants checked, for the person reading the result.
     public private(set) var notes: [String] = []
 
     private var stores: [UUID: CourseStore]?
     private var courseDocs: [UUID: StoredDocument<CourseFile>] = [:]
-    // Read once and kept, so an action that edits two files checks and previews the second against the first's edit.
     private var transcriptDoc: StoredDocument<Transcript>?
     private var catalogDoc: StoredDocument<Catalog>?
     private var settingsDoc: StoredDocument<Settings>?
 
-    /// `courses` is the app's map of course folders; the CLI leaves it out and the folder is scanned when needed.
     public init(
         gist: GISTStore, device: DeviceID, now: Date = .now, calendar: Calendar = .current, dryRun: Bool = false,
         courses: [UUID: CourseStore]? = nil
@@ -153,8 +131,6 @@ public final class ActionContext {
         self.stores = courses
     }
 
-    /// Runs the action against documents the caller already holds, as the app does to enable its buttons. Only for a
-    /// dry run: these are bare models, without the unknown keys a save must keep.
     public func preload(courses: [StoredDocument<CourseFile>], transcript: Transcript, catalog: Catalog, settings: Settings) {
         precondition(dryRun, "preloaded documents are never saved")
         for doc in courses { courseDocs[doc.model.course.id] = doc }
@@ -183,7 +159,7 @@ public final class ActionContext {
 
     public func hasFolder(_ course: UUID) -> Bool { (try? store(course)) != nil }
 
-    /// Read from disk once per action: another device or the app may have changed the file since it was shown.
+    // 보인 뒤에 다른 기기나 앱이 파일을 바꿨을 수 있으므로 액션마다 한 번 디스크에서 읽는다.
     public func file(_ course: UUID) throws -> CourseFile {
         try document(course).model
     }
@@ -194,7 +170,6 @@ public final class ActionContext {
 
     public func settings() throws -> Settings { try settingsDocument().model }
 
-    // Only a missing file starts empty; one that fails to read must not be replaced.
     private func transcriptDocument() throws -> StoredDocument<Transcript> {
         if let transcriptDoc { return transcriptDoc }
         let doc =
@@ -217,8 +192,6 @@ public final class ActionContext {
         return doc
     }
 
-    /// The display name of any item: a course, a semester, a catalog row, or anything in a course file. A class is
-    /// named by this context's calendar, which the model's names don't have.
     public func name(of id: UUID) -> String? {
         if let n = (try? transcript())?.name(of: id) ?? (try? catalog())?.name(of: id) { return n }
         for course in ((try? courseStores()) ?? [:]).keys {
@@ -269,13 +242,10 @@ public final class ActionContext {
         if !dryRun { try store.save(doc) }
     }
 
-    /// Every note file of the course with the properties this action's copy of course.json gives it, so a note made
-    /// or linked earlier in the same action is already seen.
     public func notes(_ course: UUID) throws -> [NoteFile] {
         try store(course).notes(in: file(course))
     }
 
-    /// The id is known before writing, so a dry run returns it too.
     @discardableResult
     public func createNote(_ course: UUID, title: String, meta: NoteMeta, format: NoteFormat = .markdown, body: String) throws -> UUID {
         let store = try store(course)
@@ -297,14 +267,13 @@ public final class ActionContext {
         if !dryRun { try gist.save(doc) }
     }
 
-    /// Runs `change` and the rules on a copy without saving, so an action can refuse before it moves folders the
-    /// edit names: a refusal after the move would leave transcript.json pointing at a folder that's gone.
+    // 이동 뒤에 거절하면 transcript.json이 없어진 폴더를 가리키므로, 편집이 말하는 폴더를 옮기기 전에 사본으로 규칙을
+    // 확인한다.
     public func checkTranscript(_ change: (inout Transcript) throws -> Void) throws {
         var model = try transcript()
         try checkTranscript(&model, change)
     }
 
-    /// Whether `change` changed anything.
     @discardableResult
     private func checkTranscript(_ model: inout Transcript, _ change: (inout Transcript) throws -> Void) throws -> Bool {
         let before = model
@@ -345,12 +314,12 @@ public final class ActionContext {
         if !dryRun { try gist.save(doc) }
     }
 
-    /// A save may not add a violation; ones the file already had stay allowed, so a broken file can be fixed in steps.
+    // 저장은 새 위반을 더할 수 없다. 파일에 이미 있던 위반은 허용하므로, 깨진 파일을 여러 번에 나눠 고칠 수 있다.
     private func refuseNewViolation<D: Document>(_ before: D, _ after: D, _ world: World) throws {
         if let v = D.model.newViolation(before, in: world, after, in: world) { throw ActionError.rule(v.message) }
     }
 
-    /// Course files point into the catalog and the transcript, so changing those can break a course file it doesn't touch.
+    // 과목 파일은 카탈로그와 성적표를 가리키므로, 그것을 바꾸면 손대지 않은 과목 파일도 깨질 수 있다.
     private func refuseBreakingCourses(_ before: World, _ after: World) throws {
         for course in try courseStores().keys.sorted(by: { $0.uuidString < $1.uuidString }) {
             let file = try file(course)
@@ -370,7 +339,6 @@ public final class ActionContext {
         if !dryRun { try store.log.append(event, device: device, at: date ?? now) }
     }
 
-    /// A file system change outside the JSON files (a folder, a note, a moved file). `perform` runs only for real.
     @discardableResult
     public func io<T>(_ change: Change, _ perform: () throws -> T) throws -> T? {
         changes.append(change)
@@ -384,7 +352,6 @@ public final class ActionContext {
 
     public func note(_ line: String) { notes.append(line) }
 
-    /// Forces the app to read everything again, e.g. after a course folder is renamed.
     public func invalidate() {
         needsReload = true
         stores = nil
@@ -405,8 +372,6 @@ public final class ActionContext {
     }
 }
 
-/// Per entry: arrays of objects with an `id` report each added, changed or removed entry, other keys the key itself.
-/// Who edited and when are left out, since every edit stamps them.
 func diff<M: Encodable>(_ before: M, _ after: M, path: String) -> [Change] {
     func json(_ m: M) -> [String: JSONValue] {
         guard let data = try? JSONEncoder().encode(m), case .object(let o)? = try? JSONDecoder().decode(JSONValue.self, from: data) else {
@@ -432,7 +397,6 @@ func diff<M: Encodable>(_ before: M, _ after: M, path: String) -> [Change] {
         return result
     }
 
-    /// Top-level fields of two versions of one object; anything else is one field named `name`.
     func fields(_ name: String, _ old: JSONValue?, _ new: JSONValue?) -> [Change.Field] {
         guard case .object(let o)? = stripped(old), case .object(let n)? = stripped(new) else {
             return [Change.Field(name: name, before: old, after: new)]

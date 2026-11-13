@@ -4,10 +4,8 @@ import FolioDomain
 import Foundation
 
 extension Resolver {
-    /// A score by its title or id; several scores often share a component, so titles are what tell them apart.
     func score(_ name: String, in c: CourseRef) throws -> ScoreEntry {
         let f = c.file
-        // An untitled score shows as its component's name, so it is found by that name too.
         return try pick(
             name, f.scores, what: "점수", names: { [f.name(of: $0.id) ?? $0.title] },
             ref: { "\(c.code)/\($0.title.isEmpty ? $0.id.uuidString : $0.title)" })
@@ -18,7 +16,6 @@ extension Resolver {
     }
 }
 
-/// `sum`, `mean`, `single`, `dropLowest:1`, `bestOf:3`, read the way course.json stores them.
 extension Aggregation: ExpressibleByArgument {
     public init?(argument: String) {
         guard let v = try? JSONDecoder().decode(Aggregation.self, from: Data("\"\(argument)\"".utf8)) else { return nil }
@@ -27,7 +24,6 @@ extension Aggregation: ExpressibleByArgument {
     public static var allValueStrings: [String] { ["sum", "mean", "single", "dropLowest:<n>", "bestOf:<n>"] }
 }
 
-/// `█████░░░░░ 50%`: the number next to the bar keeps it readable without color.
 func bar(_ fraction: Double, width: Int = 10) -> String {
     let filled = Int((min(max(fraction, 0), 1) * Double(width)).rounded())
     return String(repeating: "█", count: filled) + String(repeating: "░", count: width - filled)

@@ -1,18 +1,14 @@
 import Foundation
 
-/// ```` ```cb-table ```` holding JSON: used only when a table needs merged cells or
-/// block content in cells; simple tables stay plain markdown tables.
 public struct CBTable: Codable, Equatable, Sendable {
     public static let language = "cb-table"
 
     public struct Column: Codable, Equatable, Sendable {
         public var width: Double?
-        /// `left`, `center` or `right`.
         public var align: String?
     }
 
     public struct Cell: Codable, Equatable, Sendable {
-        /// Markdown, may contain lists, math and line breaks.
         public var text: String
         public var colspan: Int?
         public var rowspan: Int?
@@ -29,7 +25,6 @@ public struct CBTable: Codable, Equatable, Sendable {
 
     static let alignments: Set<String> = ["left", "center", "right"]
 
-    /// `draw` draws a cell's markdown, so its footnotes, embeds and references are drawn as the note's are.
     static func render(json: String, draw: (String) -> String) -> String {
         guard let table = try? JSONDecoder().decode(CBTable.self, from: Data(json.utf8)) else {
             return "<pre class=\"invalid-block\">\(HTMLRenderer.escape(json))</pre>\n"
@@ -56,7 +51,6 @@ public struct CBTable: Codable, Equatable, Sendable {
     }
 }
 
-/// ```` ```cb-widget ```` holding `{"id": "<widget ID>", "height": 320}`; the HTML lives in `.folio/widgets/<id>.html`.
 public struct CBWidget: Codable, Equatable, Sendable {
     public static let language = "cb-widget"
 

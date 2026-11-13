@@ -31,7 +31,6 @@ extension CourseStore {
         return format == .pdf || isContextText(format)
     }
 
-    /// Reading downloads an iCloud placeholder, as files handed to Claude need.
     public func contextText(ofMaterial path: String) throws -> String? {
         let url = url.appending(path: path)
         let format = MaterialFormat(path: path)
@@ -42,7 +41,6 @@ extension CourseStore {
         return String(decoding: try CoordinatedFile.read(url), as: UTF8.self)
     }
 
-    /// Files outside the course or that don't decode are left out.
     public func contextImages(of note: NoteFile, body: String, limit: Int = 20) -> [(name: String, data: Data)] {
         NoteImages.references(in: body).compactMap { ref -> (String, Data)? in
             guard let file = imageURL(ref, of: note), let data = try? CoordinatedFile.read(file), let jpeg = Self.contextJPEG(data) else {

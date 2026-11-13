@@ -7,7 +7,6 @@ extension MaterialRole: ExpressibleByArgument {}
 extension MaterialKind: ExpressibleByArgument {}
 
 extension CourseRef {
-    /// A second ref in the same course may be written with or without `<course>/` in front.
     func local(_ ref: String) -> String {
         ref.hasPrefix(code + "/") ? String(ref.dropFirst(code.count + 1)) : ref
     }
@@ -167,7 +166,6 @@ struct MaterialCommand: ParsableCommand {
                         exit: .conflict, message: String(localized: .materialWriteConflict(m.path)),
                         hints: [String(localized: .materialWriteConflictHint(c.code, m.path))])
                 }
-                // The action checks again right before writing, so a change between here and there is caught too.
                 expected = current
             }
             try perform(spec: MaterialWrite(course: c.id, material: m.id, text: try readText(file), expected: expected), g, ctx: ctx)
@@ -211,10 +209,9 @@ struct MaterialCommand: ParsableCommand {
             let r = Resolver(ctx)
             let (c, name) = try r.split(material)
             let m = try r.material(name, in: c)
-            // A title no unit has is a new unit; one new title written twice is the same new unit.
             var made: [String: UUID] = [:]
             let cuts = try sections.map { arg in
-                // The first colon: the pages never hold one, a unit's title may.
+                // 쪽에는 콜론이 없고 단원 제목에는 있을 수 있으므로 첫 콜론에서 나눈다.
                 guard let colon = arg.firstIndex(of: ":") else {
                     throw CLIError(exit: .usage, message: String(localized: .materialSplitFormat(arg)))
                 }
@@ -236,8 +233,8 @@ struct MaterialCommand: ParsableCommand {
 
 }
 
-/// A text material's JSON also carries the file as it is now and the hash `material write --expect` compares. The
-/// material's own `hash` is from the last tracking, so after a change from another device it would never match.
+// 자료의 `hash`는 마지막 추적 때의 값이라 다른 기기에서 바꾼 뒤에는 맞지 않으므로, 글 자료의 JSON에는 지금 파일과
+// `material write --expect`가 비교할 해시를 함께 싣는다.
 struct ShownMaterial: Encodable {
     var material: Material
     var text: String?

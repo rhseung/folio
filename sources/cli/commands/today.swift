@@ -29,7 +29,6 @@ struct TodayCommand: ParsableCommand {
         var deadlines: [Item]
         var plan: [Item]
         var attendance: [Item]
-        /// Seconds per course over the last 14 study days.
         var studyTime: [Item]
     }
 
@@ -116,11 +115,9 @@ struct TodayCommand: ParsableCommand {
                 header: ["", "", "", ""],
                 rows: items.map { i in
                     let at = i.at.map { time ? when($0, now: now, time: true) : "" } ?? ""
-                    // A near exam's date already reads "D-7"; the detail would say it twice.
                     let detail = i.detail.map { at.plain.hasPrefix($0) ? "" : $0 } ?? ""
                     return [tag[i.courseId] ?? i.course, i.title, at, detail.styled(.dim)]
                 }, shrink: [1, 3])
-            // Each section's title says what the columns are; a header row per section would only repeat it.
             t.render().dropFirst().forEach { say($0) }
         }
         if let o = out.ongoing { section(String(localized: .todaySectionOngoing), [o]) }

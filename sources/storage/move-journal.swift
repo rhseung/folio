@@ -5,19 +5,13 @@ extension CleanupPlan: StoredModel {
     public static let schemaVersion = 1
 }
 
-/// One line of `.folio/moves.jsonl` (GIST root). Paths are relative to the GIST root.
-/// Every filesystem change the app makes is journaled right after it happens, so even a batch that
-/// failed halfway can be undone.
 public struct MoveRecord: Codable, Sendable, Equatable {
     public enum Op: String, Codable, Sendable {
         case move
         case makeFolder
         case removeFolder
-        /// `.DS_Store` and Office lock files removed so an emptied folder can go. Not restored by undo.
         case removeJunk
-        /// A course schema v1 kept in transcript.json got its folder's course.json (`to`). Undo puts it back.
         case fileCourse
-        /// Undo of `fileCourse`: the course.json in `from` went back to transcript.json.
         case unfileCourse
     }
 
@@ -38,7 +32,6 @@ public enum MoveJournal {
         case targetExists(String)
         case unknownBatch(UUID)
         case outsideGIST(String)
-        /// The course has sessions, notes or other data since it was filed, which transcript.json can't hold.
         case courseChanged(String)
     }
 
@@ -54,14 +47,12 @@ public enum MoveJournal {
             .compactMap { try? JSONFormat.decoder.decode(MoveRecord.self, from: Data($0)) }
     }
 
-    /// Runs `moves` in order, then removes `removals` if they are still empty, and returns the batch ID for `undo`.
-    /// Checks every source and target first, so a stale plan fails before anything moves.
     @discardableResult
     public static func apply(_ moves: [PlannedMove], removing removals: [String] = [], in gist: URL, device: DeviceID, now: Date) throws
         -> UUID
     {
         let fm = FileManager.default
-        // Lexical, since a target doesn't exist yet: `a/../../x` must not reach past the GIST folder.
+        // 대상은 아직 없으므로 글자로 비교한다. `a/../../x`가 GIST 폴더 밖에 닿으면 안 된다.
         let root = gist.standardizedFileURL.path + "/"
         for path in moves.flatMap({ [$0.from, $0.to] }) + removals
         where !gist.appending(path: path).standardizedFileURL.path.hasPrefix(root) {
@@ -81,7 +72,6 @@ public enum MoveJournal {
         return writer.batch
     }
 
-    /// GIST-relative paths the journal shows were taken out of an `Exam Review` folder, where they are now.
     public static func selfMadePaths(in gist: URL) throws -> Set<String> {
         CleanupPlanner.selfMade(
             moves: try records(in: gist).compactMap { r in
@@ -90,8 +80,6 @@ public enum MoveJournal {
             })
     }
 
-    /// Writes each course into `folder/.folio/course.json` under the same id, making the folders it needs. The caller
-    /// then takes the courses out of transcript.json; `undo` of the batch puts them back.
     @discardableResult
     public static func file(_ courses: [(course: Course, folder: String)], in gist: URL, device: DeviceID, now: Date) throws -> UUID {
         let root = gist.standardizedFileURL.path + "/"
@@ -117,7 +105,6 @@ public enum MoveJournal {
         for record in records.reversed() {
             switch record.op {
             case .move: try writer.move(record.to!, to: record.from!)
-            // Files may have been added to a folder the batch made; those stay, and so does the folder.
             case .makeFolder: try writer.removeFolderIfEmpty(record.to!)
             case .removeFolder: try writer.makeFolder(record.from!)
             case .removeJunk, .unfileCourse: break
@@ -201,7 +188,7 @@ public enum MoveJournal {
             var candidates = Set<String>()
             for folder in folders {
                 var path = folder
-                while path.contains("/") {  // never the GIST root or a semester folder
+                while path.contains("/") {
                     candidates.insert(path)
                     path = (path as NSString).deletingLastPathComponent
                 }

@@ -26,9 +26,7 @@ struct SearchCommand: ParsableCommand {
             let inSemester = Set(r.courses.filter { $0.course.semesterId == id }.map(\.id))
             courses = courses.map { $0.intersection(inSemester) } ?? inSemester
         }
-        // Tests point at throwaway folders; an in-memory index keeps them out of the user's caches.
         let index = try CLI.overrides == nil ? SearchStore.local(for: r.ctx.gist) : SearchStore(url: nil)
-        // A first build reads every PDF and can take a minute; at a terminal, say how far it is on stderr.
         let showProgress = isatty(STDERR_FILENO) == 1 && !g.json
         try index.refresh(r.ctx.gist) { done, total in
             guard showProgress else { return }

@@ -3,8 +3,6 @@ import FolioActions
 import Foundation
 import GRDB
 
-/// `folio help <자연어>`: finds commands from a plain-language request, so an agent (or a person) who doesn't know the
-/// command names can get from "과제 마감 바꾸기" to `assignment set --due`.
 enum Finder {
     struct Entry {
         var path: [String]
@@ -21,7 +19,6 @@ enum Finder {
         var score: Double
     }
 
-    /// Keys match inside the request, so particles (`과제를`, `지워줘`) don't matter.
     static let synonyms: [(String, [String])] = [
         ("할 일", ["assignment", "plan"]), ("할일", ["assignment", "plan"]), ("과제", ["assignment"]), ("숙제", ["assignment"]),
         ("마감", ["assignment", "due"]), ("제출", ["assignment", "status"]),
@@ -43,13 +40,10 @@ enum Finder {
         ("기록", ["record", "add"]), ("옮기", ["move"]), ("순서", ["move"]),
     ]
 
-    /// A test checks every command has some, so a new command can't be left unfindable. Measured against the
-    /// synonym table alone in FinderEvaluation.
     static let phrases: [String: [String]] = written.merging(
         Actions.all.map { ($0.spec.command, $0.spec.phrases) }.filter { !$0.1.isEmpty },
         uniquingKeysWith: { a, b in a + b.filter { !a.contains($0) } })
 
-    /// Commands not yet declared with `@Action` keep theirs here; declared ones give `phrases:`.
     private static let written: [String: [String]] = [
         "today": ["오늘 할 일", "오늘 일정", "지금 뭐 해야", "하루 요약"],
         "add": ["빠른 추가", "한 줄로 추가", "금요일까지 과제", "말로 과제 추가"],
@@ -89,12 +83,11 @@ enum Finder {
         "skill": ["에이전트 스킬", "스킬 설치"], "completion": ["자동 완성", "탭 완성"],
     ]
 
-    /// Built once: rendering every command's help is most of a search's time.
     static let allEntries = entries()
 
     static func entries(_ type: ParsableCommand.Type = Folio.self, path: [String] = []) -> [Entry] {
         let config = type.configuration
-        // Closures, not key paths: key paths on these metatypes crash the compiler (SILGen).
+        // key path 대신 클로저를 쓴다. 이 메타타입의 key path는 컴파일러(SILGen)를 멈추게 한다.
         let subs = config.subcommands + config.groupedSubcommands.flatMap { $0.subcommands }
         if subs.isEmpty {
             let help = Folio.helpMessage(for: type)
@@ -102,17 +95,14 @@ enum Finder {
                 .filter { $0.hasPrefix("folio ") }.map { $0.replacing(/\s{2,}\S.*$/, with: "") }
             return [Entry(path: path, abstract: config.abstract, help: help, examples: examples)]
         }
-        // The root lists grouped commands under `subcommands` too.
         var seen: Set<String> = []
         return subs.filter { seen.insert($0._commandName).inserted }.flatMap { entries($0, path: path + [$0._commandName]) }
     }
 
-    /// BM25 (SQLite FTS5) over each command's path, abstract, phrases and help, weighted 10 : 5 : 8 : 1, with the
-    /// request's words plus their synonyms joined by OR. A word matches as a prefix, so `과제` finds `과제를`.
+    // BM25(SQLite FTS5)로 명령의 경로, 요약, 구절, 도움말을 10 : 5 : 8 : 1로 가중한다. 요청의 낱말과 동의어를 OR로 잇고,
+    // 낱말은 접두어로 맞으므로 `과제`가 `과제를`을 찾는다.
     static func find(_ request: String, limit: Int = 5) -> [Match] {
         let text = request.lowercased().precomposedStringWithCanonicalMapping
-        // Particles and verb endings left on a word would keep it from matching, since a word matches only as a prefix:
-        // `마감을` → `마감`, `빠졌어` → `빠졌` (phrases are written to that stem).
         let words = text.split(whereSeparator: \.isWhitespace).map { w in
             String(w).replacing(/(으로|하기|하고|해줘|하는|어요|에요|을|를|이|가|은|는|에|의|로|해|기|어|아|음|대|래|야|지|냐|줘|요)$/, with: "")
         }.filter { !$0.isEmpty }
@@ -134,7 +124,7 @@ enum Finder {
                             e.help + "\n" + e.examples.joined(separator: "\n"),
                         ])
                 }
-                // Ties go to the earlier command, so the same request always gives the same list.
+                // 같은 요청이 늘 같은 목록을 내도록 동점은 앞선 명령이 이긴다.
                 return try Row.fetchAll(
                     db, sql: "SELECT rowid, bm25(c, 10.0, 5.0, 8.0, 1.0) AS s FROM c WHERE c MATCH ? ORDER BY s, rowid LIMIT ?",
                     arguments: [query, limit]

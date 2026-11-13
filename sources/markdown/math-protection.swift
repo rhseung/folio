@@ -1,19 +1,14 @@
-/// Markdown escapes would eat TeX (`\{` becomes `{`, `a_1_b` turns into emphasis), so math is wrapped
-/// in code before parsing: `$$...$$` becomes a fenced block in `blockLanguage` and `$...$` an inline code span
-/// starting with `mathMarker`. Code spans and fenced code are left alone, and `\$` is a literal dollar.
-/// A `|` inside `[[…]]` is escaped too: in a table row GFM would split the cell there and drop the cells past the
-/// header's width, as `[[note:<ID>|title]]` always has one. GFM unescapes `\|` in a cell and markdown elsewhere, so
-/// the renderer still reads `[[target|alias]]`.
+// 마크다운 이스케이프는 TeX을 망가뜨리므로(`\{`가 `{`가 되고 `a_1_b`가 강조가 된다) 파싱 전에 수식을 코드로 감싼다.
+// `[[...]]` 안의 `|`도 이스케이프한다. 표의 행에서 GFM이 그 자리에서 칸을 나누고 머리 폭을 넘는 칸을 버리기
+// 때문이다. GFM은 칸 안과 다른 곳의 `\|`를 되돌리므로 렌더러는 여전히 `[[target|alias]]`를 읽는다.
 public enum MathProtection {
-    /// Not `math`: that is a fence the writer chose, which is TeX whatever the note's syntax (`MathFence`), while a
-    /// `$$` block is in the note's syntax. The private-use character keeps the two apart.
+    // `math`는 쓴 사람이 고른 펜스라 노트 문법과 상관없이 TeX이고, `$$` 블록은 노트 문법을 따른다. 사용 영역 문자로 둘을
+    // 구분한다.
     public static let blockLanguage = "\u{E000}math"
-    /// Private-use character marking an inline code span that holds math.
     public static let marker: Character = "\u{E000}"
 
     static func protect(_ text: String) -> String { protectMapped(text).text }
 
-    /// Also the original line each protected line came from (1-based), since a one-line `$$…$$` becomes three.
     static func protectMapped(_ text: String) -> (text: String, origin: [Int]) {
         var out: [String] = []
         var origin: [Int] = []
@@ -33,7 +28,6 @@ public enum MathProtection {
                 out.append(line)
                 continue
             }
-            // Keep the quote/indent prefix so display math stays inside its container.
             let prefix = String(line.prefix { $0 == " " || $0 == ">" })
             if line.dropFirst(prefix.count).hasPrefix("$$") {
                 var body = String(line.dropFirst(prefix.count + 2)).trimmingCharacters(in: .whitespaces)
@@ -44,7 +38,6 @@ public enum MathProtection {
                 out.append(prefix + "```" + blockLanguage)
                 out += body.trimmingCharacters(in: .newlines).split(separator: "\n", omittingEmptySubsequences: false).map { prefix + $0 }
                 while origin.count < out.count { origin.append(n) }
-                // The closing fence stands for the line the `$$` closed on, so the block ends where its source does.
                 out.append(prefix + "```")
                 origin.append(lines.startIndex)
                 continue
@@ -96,7 +89,6 @@ public enum MathProtection {
         return result
     }
 
-    /// Pipes escaped, as a GFM cell needs them; ones already escaped stay as they are.
     static func escapePipes(_ text: some StringProtocol) -> String {
         var out = ""
         var escaped = false
@@ -118,21 +110,15 @@ public enum MathProtection {
     }
 }
 
-/// A fenced block written as a formula in a syntax of its own, so one block of an AsciiMath note can be TeX (which has
-/// `\begin{align}` and the other environments AsciiMath lacks) without the whole note changing. `$…$` and `$$…$$` stay
-/// in the note's syntax.
 public enum MathFence {
-    /// The same raw values as the note's `math` frontmatter, so the app reads them as its own syntax.
     public enum Syntax: String, Sendable, CaseIterable {
         case latex, asciimath
     }
 
-    /// The fence names, in the order the language menu offers them.
     public static let languages: [(name: String, syntax: Syntax)] = [
         ("math", .latex), ("tex", .latex), ("latex", .latex), ("asciimath", .asciimath), ("am", .asciimath),
     ]
 
-    /// The syntax a fence's info string (or just its language) names, or nil for a code block.
     public static func syntax(_ info: String?) -> Syntax? {
         guard let word = info?.split(whereSeparator: \.isWhitespace).first?.lowercased() else { return nil }
         return languages.first { $0.name == word }?.syntax

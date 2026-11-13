@@ -15,7 +15,6 @@ struct ActionsCommand: ParsableCommand {
         var action: String
         var command: String
         var hasCommand: Bool
-        /// False when the command is written by hand, which then needs `manualReason`.
         var generated: Bool
         var manualReason: String?
         var screens: [String]
@@ -37,7 +36,6 @@ struct ActionsCommand: ParsableCommand {
         let rows = Actions.all.map { type in
             let name = String(describing: type)
             let call = "\(name)("
-            // `exam scope --taught`: a flag of an existing command counts as that command.
             let path = type.command.components(separatedBy: " --")[0]
             return Row(
                 action: name, command: type.command, hasCommand: commands.contains(path),
@@ -108,7 +106,6 @@ struct ActionsCommand: ParsableCommand {
         }
     }
 
-    /// Calls that write to the GIST folder. The app reaches them only through actions; anything else needs a marker.
     nonisolated(unsafe) static let writePattern =
         #/\.save\(|\.write\(to:|\.log\.append\(|MoveJournal\.(apply|undo)|FileManager\.default\.(createDirectory|moveItem|removeItem|copyItem|trashItem|createFile)|\.trashNote\(|\.ensureID\(/#
 

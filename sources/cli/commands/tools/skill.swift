@@ -2,12 +2,9 @@ import ArgumentParser
 import FolioDomain
 import Foundation
 
-/// The note format a level down, under the skill's own title. The same text `folio note format` prints.
 private let noteGuide = NoteWritingGuide.text.split(separator: "\n", omittingEmptySubsequences: false)
     .map { $0.hasPrefix("#") ? "#" + $0 : $0 }.joined(separator: "\n")
 
-/// The binary holds the only copy so an agent outside the repository can install it; the repository's
-/// `.claude/skills/folio/SKILL.md` is a test-checked copy of this text.
 enum Skill {
     static let text = #"""
         ---
@@ -128,7 +125,7 @@ enum Skill {
         ```
         """#
 
-    /// What goes on disk: the literal drops the newline before its closing delimiter.
+    // 문자열 리터럴은 닫는 구분자 앞의 줄바꿈을 빼므로 디스크에 쓸 때 붙인다.
     static var file: String { text + "\n" }
 }
 

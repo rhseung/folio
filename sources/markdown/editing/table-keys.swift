@@ -1,7 +1,5 @@
 import Foundation
 
-/// A table command's key, always with ⌘. The edit views take it by key code on the Mac and as a key command on the iPad;
-/// the input guide shows it.
 public struct TableShortcut: Equatable, Sendable {
     public enum Key: Sendable { case up, down, left, right, enter, delete }
 
@@ -17,7 +15,6 @@ public struct TableShortcut: Equatable, Sendable {
         self.control = control
     }
 
-    /// As a menu writes it, the modifiers in the system's order: `⌃⌥⇧⌘↑`.
     public var symbols: String {
         let key =
             switch key {
@@ -40,8 +37,6 @@ extension TableCommand {
         [.format],
     ]
 
-    /// Rows and columns are added with ⌘ and ⌥⌘, moved with ⌃⌘, deleted with ⇧⌘⌫ and ⌥⇧⌘⌫, as Typora and Obsidian's
-    /// Advanced Tables have most of them. Tidying is rare enough for the menu alone.
     public var shortcut: TableShortcut? {
         switch self {
         case .rowBelow: TableShortcut(key: .enter)

@@ -1,15 +1,12 @@
 import Foundation
 
-/// Image files a note embeds, in order: `![alt](path)` and Obsidian's `![[file]]` / `![[file|400]]`.
 public enum NoteImages {
     static let extensions: Set<String> = ["png", "jpg", "jpeg", "heic", "gif", "webp", "tif", "tiff"]
     static var link: Regex<(Substring, Substring)> { /!\[[^\]]*\]\(<?([^)>]+?)>?(?:\s+"[^"]*")?\)/ }
     static var wiki: Regex<(Substring, Substring)> { /!\[\[([^\]|#]+?)\\?(?:[|#][^\]]*)?\]\]/ }
 
     public enum Reference: Equatable, Sendable {
-        /// Relative to the note's folder.
         case path(String)
-        /// A bare file name, found wherever Obsidian would look.
         case name(String)
     }
 

@@ -37,10 +37,8 @@ struct Folio: ParsableCommand {
         ]
     )
 
-    /// Below the command list; ArgumentParser would put a discussion above it.
     static let footer = String(localized: .folioFooter)
 
-    /// ArgumentParser's help labels are English and fixed; these sit at line starts or in parentheses, so columns stay aligned.
     static func korean(_ help: String) -> String {
         [
             ("OVERVIEW: ", ""), ("USAGE: ", String(localized: .helpLabelUsage)), ("ARGUMENTS:", String(localized: .helpLabelArguments)),
@@ -52,14 +50,12 @@ struct Folio: ParsableCommand {
         .reduce(help) { $0.replacingOccurrences(of: $1.0, with: $1.1) }
     }
 
-    /// Only the start of a line changes, so columns still line up.
     static func colored(_ help: String) -> String {
         guard Style.enabled else { return help }
         return help.split(separator: "\n", omittingEmptySubsequences: false).map { raw -> String in
             let line = String(raw)
             let body = String(line.drop { $0 == " " })
             let indent = String(repeating: " ", count: line.count - body.count)
-            // Splits at the first run of two or more spaces, where an option's or example's description starts.
             func split(_ s: String) -> (String, String) {
                 guard let gap = s.firstMatch(of: /\s{2,}\S/) else { return (s, "") }
                 return (String(s[..<gap.range.lowerBound]), String(s[gap.range.lowerBound...]))
@@ -85,7 +81,6 @@ struct Folio: ParsableCommand {
         Darwin.exit(run(Array(CommandLine.arguments.dropFirst())))
     }
 
-    /// Tests call this in-process.
     static func run(_ arguments: [String]) -> Int32 {
         let json = arguments.contains("--json")
         if arguments.first == "help", arguments.count == 2 {
@@ -96,7 +91,6 @@ struct Folio: ParsableCommand {
             }
         }
 
-        // `folio help 과제 마감 바꾸기`: words that aren't a command name are a request to find one.
         let words = arguments.dropFirst().filter { !$0.hasPrefix("-") }
         if arguments.first == "help", let first = words.first, !first.hasPrefix("-"), Topic(first) == nil,
             !commandNames.contains(first)
@@ -124,7 +118,6 @@ struct Folio: ParsableCommand {
         } catch {
             let code = exitCode(for: error)
             if code == .success {
-                // The footer goes under the root's help, not under `--version`'s line.
                 let root = arguments.allSatisfy { $0.hasPrefix("-") || $0 == "help" } && !arguments.contains("--version")
                 say(colored(korean(fullMessage(for: error))) + (root ? "\n\n" + footer : ""))
                 return 0
@@ -133,7 +126,7 @@ struct Folio: ParsableCommand {
                 report(typo, json: json)
                 return typo.exit.rawValue
             }
-            // ArgumentParser's own usage failures exit 64; Folio gives usage errors 2.
+            // ArgumentParser의 사용법 실패는 64로 끝나지만 Folio의 사용법 오류는 2다.
             let exit: Exit = code == .validationFailure ? .usage : Exit(rawValue: code.rawValue) ?? .unexpected
             report(CLIError(exit: exit, message: exit == .unexpected ? String(describing: error) : fullMessage(for: error)), json: json)
             return exit.rawValue
@@ -144,12 +137,11 @@ struct Folio: ParsableCommand {
         Set((configuration.subcommands + configuration.groupedSubcommands.flatMap { $0.subcommands }).map { $0._commandName })
     }
 
-    /// `exam ad` → `exam add`. ArgumentParser blames whatever follows the typo (`Unknown option '--gist'`) and suggests nothing.
     static func unknownCommand(_ arguments: [String]) -> CLIError? {
         var command: ParsableCommand.Type = Folio.self
         var path = ["folio"]
         for arg in arguments where !arg.hasPrefix("-") && arg != "help" {
-            // Closures, not key paths: key paths on these metatypes crash the compiler (SILGen).
+            // key path 대신 클로저를 쓴다. 이 메타타입의 key path는 컴파일러(SILGen)를 멈추게 한다.
             let subs = command.configuration.subcommands + command.configuration.groupedSubcommands.flatMap { $0.subcommands }
             guard !subs.isEmpty else { return nil }
             if let next = subs.first(where: { $0._commandName == arg }) {
@@ -157,7 +149,6 @@ struct Folio: ParsableCommand {
                 path.append(arg)
                 continue
             }
-            // Insertions plus removals: a typo of one letter is 1, a swapped letter 2.
             let near = subs.map { s in (s._commandName, Array(s._commandName).difference(from: Array(arg)).count) }
                 .filter { $0.1 <= 2 }.min { $0.1 < $1.1 }
             let here = path.joined(separator: " ")

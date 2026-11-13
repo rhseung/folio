@@ -5,27 +5,19 @@ struct RenderedShot: Codable, Sendable {
     var theme: String
     var width: Int
     var height: Int
-    /// PNG, base64. `folio mcp` hands it to Claude as an image.
     var png: String
 }
 
 struct RenderResult: Codable, Sendable {
     var images: [RenderedShot]
-    /// The widget's console errors and warnings, and what its policy blocked.
     var console: [String]
-    /// What `note figure add` / `note widget add` would refuse.
     var problems: [String]
 }
 
-/// Draws note pictures and widgets the way a note shows them, off screen, so Claude can look at what it wrote: words
-/// that overlap, parts cut off, colors lost in dark. A command-line program can host `WKWebView` in a window it never
-/// shows; the app's panel reaches this through `folio mcp`, so both use the same drawing.
 enum PageRender {
     static let widths = [480, 900]
-    /// A widget page that grows past this is cut: a taller picture costs Claude more than it shows.
     static let tallest = 1800
 
-    /// The note's padding around a picture, and its rules for one: centered, never wider than the column.
     static func figurePage(_ svg: String, accent: String) -> String {
         let data = Data(svg.utf8).base64EncodedString()
         return """
@@ -35,12 +27,10 @@ enum PageRender {
             """
     }
 
-    /// The note's colors as a widget's frame gets them, on the note's card, which shows through the frame in the note.
     static func theme(_ accent: String) -> String {
         (NoteTheme.css[accent] ?? NoteTheme.css[CourseColor.neutral] ?? "") + ":where(html){background:var(--card)}"
     }
 
-    /// Before the widget's own code: the theme first, so the widget's styles win, and errors caught from the start.
     static func widgetScripts(accent: String) -> [String] {
         let css = String(decoding: (try? JSONEncoder().encode(theme(accent))) ?? Data(), as: UTF8.self)
         return [
@@ -74,7 +64,6 @@ enum PageRender {
 
     static func widget(_ html: String, accent: String, widths: [Int]) throws -> RenderResult {
         let page = String(decoding: NoteWidget.withPolicy(Data(html.utf8)), as: UTF8.self)
-        // A widget's block starts at 320 points, the height a page sized by its frame keeps.
         let (images, console) = try shots(page, scripts: widgetScripts(accent: accent), widths: widths, start: 320, settle: 0.6)
         return RenderResult(images: images, console: console, problems: NoteWidget.problems(html).map(\.message))
     }
@@ -83,7 +72,7 @@ enum PageRender {
         [RenderedShot], [String]
     ) {
         #if os(macOS)
-        // WebKit runs on the main thread, and only there does a run loop turn for it.
+        // WebKit은 메인 스레드에서 돌고, 그 스레드에서만 run loop가 돈다.
         guard Thread.isMainThread else { throw CLIError(exit: .unexpected, message: String(localized: .renderNotMain)) }
         return try MainActor.assumeIsolated {
             var images: [RenderedShot] = []
@@ -94,7 +83,6 @@ enum PageRender {
                     images.append(
                         RenderedShot(theme: dark ? "dark" : "light", width: width, height: shot.height, png: shot.png.base64EncodedString())
                     )
-                    // The same page logs the same at every size; each message once.
                     for line in shot.console where !console.contains(line) { console.append(line) }
                 }
             }
@@ -123,10 +111,8 @@ private final class OffscreenPage: NSObject, WKNavigationDelegate, WKScriptMessa
     }
 
     static func shoot(_ page: String, scripts: [String], width: Int, dark: Bool, start: Int, settle: TimeInterval) throws -> Shot {
-        // No Dock icon and no menu bar: the window is never shown.
         NSApplication.shared.setActivationPolicy(.prohibited)
         let config = WKWebViewConfiguration()
-        // Nothing the page stores outlives the drawing.
         config.websiteDataStore = .nonPersistent()
         let handler = OffscreenPage()
         for s in scripts {
@@ -146,8 +132,8 @@ private final class OffscreenPage: NSObject, WKNavigationDelegate, WKScriptMessa
         window.contentView = view
         defer { window.close() }
 
-        // An address of its own rather than none: errors from a page with no origin read only "Script error.". Nothing
-        // serves it, and the page's policy loads nothing anyway.
+        // origin 없는 페이지의 오류는 `Script error.`로만 읽히므로 자기 주소를 준다. 그 주소를 서비스하는 것은 없고, 페이지
+        // 정책도 아무것도 불러오지 않는다.
         view.loadHTMLString(page, baseURL: OffscreenPage.base)
         guard spin(10, until: { handler.loaded || handler.failure != nil }) else { throw failed(String(localized: .renderTimedOut)) }
         if let failure = handler.failure { throw failed(failure) }
@@ -165,7 +151,7 @@ private final class OffscreenPage: NSObject, WKNavigationDelegate, WKScriptMessa
 
     static let base = URL(string: "folio-render://page/")!
 
-    /// The page loaded here is the only one: a widget sent to an address would carry data out in it.
+    // 위젯이 주소로 이동하면 그 주소에 데이터를 실어 내보낼 수 있으므로, 여기서 불러온 페이지 하나만 허용한다.
     func webView(
         _ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
         decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void
@@ -185,7 +171,7 @@ private final class OffscreenPage: NSObject, WKNavigationDelegate, WKScriptMessa
     }
 
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
-        // A widget that logs in a loop would otherwise fill Claude's context.
+        // 반복해서 로그를 남기는 위젯이 Claude의 맥락을 채우지 않도록 40줄로 제한한다.
         guard let line = message.body as? String, console.count < 40 else { return }
         console.append(String(line.prefix(600)))
     }
@@ -237,7 +223,7 @@ private final class OffscreenPage: NSObject, WKNavigationDelegate, WKScriptMessa
         return box.value
     }
 
-    /// At one pixel per point: an image Claude reads costs by its pixels, and twice the pixels show it nothing new.
+    // Claude가 읽는 이미지는 픽셀 수로 비용이 들고 두 배 픽셀은 새로 보여 주는 것이 없으므로, 포인트당 1픽셀로 그린다.
     private static func png(_ image: NSImage, width: Int, height: Int) throws -> Data {
         guard
             let rep = NSBitmapImageRep(

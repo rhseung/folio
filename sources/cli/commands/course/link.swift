@@ -12,7 +12,6 @@ struct LinkTarget: ParsableArguments {
     @Option(help: ArgumentHelp(String(localized: .linkHelpHeading), valueName: "heading")) var heading: String?
     @Option(help: ArgumentHelp(String(localized: .linkHelpBlock), valueName: "id")) var block: String?
     @Option(help: ArgumentHelp(String(localized: .linkHelpTime), valueName: "m:ss")) var time: String?
-    // A string, not an enum: which names it takes depends on the kind, a course's pages or settings' tabs.
     @Option(help: ArgumentHelp(String(localized: .linkHelpSection), valueName: "page")) var section: String?
 
     struct Resolved: Encodable {
@@ -29,8 +28,6 @@ struct LinkTarget: ParsableArguments {
         if time != nil, !kind.anchors.contains(.time) { throw usage(.linkTimeOnlyRecording) }
         if section != nil, !kind.hasPages { throw usage(.linkSectionOnlyCourse) }
         if kind.isPlace, !ref.isEmpty { throw usage(.linkPlaceTakesNoRef(kind.rawValue)) }
-        // No default: one sent every kind it didn't name to the note lookup, which then printed a link of the new kind
-        // carrying a note's ID.
         switch kind {
         case .today, .grades, .requirements, .people, .codes, .whatsNew, .proposals:
             return done(.place(kind), title: kind.rawValue)
@@ -80,7 +77,6 @@ struct LinkTarget: ParsableArguments {
         }
     }
 
-    /// Something a course holds, named `<course>/<name>`.
     func item(_ r: Resolver, find: (CourseRef, String) throws -> (UUID, String)) throws -> Resolved {
         let (c, name) = try r.split(ref)
         let (id, title) = try find(c, name)
@@ -91,7 +87,7 @@ struct LinkTarget: ParsableArguments {
         return done(link, title: "\(c.code)/\(title)")
     }
 
-    /// Read as the address reads it, so `--time 12:30` and `#t=12:30` name the same moment.
+    // 주소와 같은 방식으로 읽어야 `--time 12:30`과 `#t=12:30`이 같은 시각을 가리킨다.
     func moment(_ written: String) throws -> AppLink.Anchor {
         guard let link = AppLink(string: "folio://recording/\(UUID().uuidString)#t=\(written)"), let anchor = link.anchor else {
             throw usage(.linkBadTime(written))
@@ -110,7 +106,6 @@ struct LinkTarget: ParsableArguments {
         return (id, file.title)
     }
 
-    /// Cards have no names to speak of (a prompt is a sentence), so one is named by its ID, as `quiz list` prints it.
     func card(_ r: Resolver) throws -> Resolved {
         let (c, rest): (CourseRef?, String) = ref.contains("/") ? try r.split(ref) : (nil, ref)
         guard let id = UUID(uuidString: rest) else { throw usage(.linkCardNeedsId) }
@@ -162,11 +157,11 @@ struct OpenCommand: ParsableCommand {
 
     func run() throws {
         let resolved = try target.resolve(Resolver(try CLI.context(g)))
-        // Tests and dry runs only print it: an app window opening under `swift test` would take the user's focus.
+        // `swift test`에서 앱 창이 열리면 사용자의 포커스를 가져가므로, 테스트와 dry run은 출력만 한다.
         if !g.dryRun, CLI.overrides == nil {
             let p = Process()
             p.executableURL = URL(filePath: "/usr/bin/open")
-            // The URL form: a block's `^` isn't valid in a URL, and the app reads it back escaped (`AppLink(url:)`).
+            // 블록의 `^`는 URL에 쓸 수 없으므로 URL 꼴로 넘기고, 앱은 이스케이프된 값을 되읽는다(`AppLink(url:)`).
             p.arguments = [AppLink(string: resolved.link)?.url.absoluteString ?? resolved.link]
             try p.run()
             p.waitUntilExit()

@@ -2,12 +2,10 @@ import FolioDomain
 import Foundation
 
 public enum MaterialFileError: Error, Equatable {
-    /// Picked files must already be in the course folder: bringing one in is a move, which needs the cleanup's approval flow.
     case outsideCourseFolder(String)
 }
 
 extension CourseStore {
-    /// The material's file, downloaded from iCloud first if needed (a coordinated read waits for the download).
     public func download(_ material: Material) throws -> URL {
         let file = url.appending(path: material.path)
         var error: NSError?
@@ -27,21 +25,18 @@ extension CourseStore {
 }
 
 extension CourseStore {
-    /// Lexical, since a planned path may not exist yet.
     public func contains(_ coursePath: String) -> Bool {
         let (root, path) = (url.standardizedFileURL.path, fileURL(coursePath).standardizedFileURL.path)
         return path == root || path.hasPrefix(root + "/")
     }
 
     public func coursePath(of file: URL) -> String? {
-        // Resolve symlinks on both sides: picked URLs and the GIST URL can differ by `/private` (temp folders) or aliases.
+        // 고른 URL과 GIST URL은 `/private`(임시 폴더)나 별칭만큼 다를 수 있으므로 양쪽의 심볼릭 링크를 푼다.
         let root = url.resolvingSymlinksInPath().path(percentEncoded: false).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         let target = file.resolvingSymlinksInPath().path(percentEncoded: false).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         return target.hasPrefix(root + "/") ? String(target.dropFirst(root.count + 1)) : nil
     }
 
-    /// Copies a file from outside into `folder` (course-relative) and returns its path. A taken name gets ` 2`, so nothing
-    /// is overwritten. Copying in leaves the original where it was, so unlike a move it needs no approval.
     public func importFile(_ source: URL, into folder: String, name: String? = nil) throws -> String {
         let dir = url.appending(path: folder)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -50,12 +45,10 @@ extension CourseStore {
         return "\(folder)/\(fileName)"
     }
 
-    /// What `folder` (course-relative) holds now, so the add sheet steps a name past it as `importFile` will.
     public func names(in folder: String) -> Set<String> {
         Set((try? FileManager.default.contentsOfDirectory(atPath: url.appending(path: folder).path)) ?? [])
     }
 
-    /// Moves or renames a tracked file through `moves.jsonl`, so it can be undone, keeping its ID and links.
     public func move(_ id: UUID, to newPath: String, gist: URL, in file: inout CourseFile, device: DeviceID, now: Date) throws -> UUID {
         guard let m = file.materials.first(where: { $0.id == id }) else { throw CocoaError(.fileNoSuchFile) }
         let root = gist.standardizedFileURL.path
@@ -66,8 +59,6 @@ extension CourseStore {
         return batch
     }
 
-    /// Moves a tracked file to the Trash, where the user can still put it back, and stops tracking it.
-    /// Links to it stay, as with disconnecting.
     public func trash(_ id: UUID, in file: inout CourseFile) throws {
         guard let m = file.materials.first(where: { $0.id == id }) else { return }
         try CoordinatedFile.trash(fileURL(m.path))

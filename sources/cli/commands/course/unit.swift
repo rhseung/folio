@@ -110,11 +110,9 @@ struct UnitCommand: ParsableCommand {
     }
 }
 
-/// `├─ `, `└─ ` and `│  ` for item `i` of an outline given as depths.
 func treePrefix(_ depths: [Int], at i: Int) -> String {
     let d = depths[i]
     guard d > 0 else { return "" }
-    // Whether another sibling at `level` follows before the tree climbs above it.
     func continues(_ level: Int) -> Bool {
         for j in (i + 1)..<depths.count {
             if depths[j] < level { return false }
@@ -125,7 +123,6 @@ func treePrefix(_ depths: [Int], at i: Int) -> String {
     return (1..<d).map { continues($0) ? "│  " : "   " }.joined() + (continues(d) ? "├─ " : "└─ ")
 }
 
-/// One action per item on a shared context, so the command prints one result (and one JSON value) for all of them.
 func performAll<A: Action>(_ actions: [A], _ options: GlobalOptions, ctx: ActionContext, done: String) throws {
     for a in actions.dropLast() {
         do {

@@ -2,15 +2,12 @@ import Foundation
 import Markdown
 
 extension WikiLink {
-    /// A link to an app object by ID, as link completion writes it: `[[<kind>:<ID>#<fragment>|<alias>]]`. `fragment`
-    /// is what goes after `#` (a heading, `^block`, `page=12`). Brackets and `|` would end the link early, so they
-    /// don't go into the alias.
+    // 대괄호와 `|`는 링크를 일찍 끝내므로 이름에 넣지 않는다.
     public static func written(_ kind: String, _ id: UUID, fragment: String? = nil, alias: String? = nil, embed: Bool = false) -> String {
         let part = fragment.map { "#" + $0 } ?? ""
         return (embed ? "!" : "") + "[[\(kind):\(id.uuidString)\(part)\(aliasPart(alias))]]"
     }
 
-    /// A link by its `folio://` address, for what has no `<kind>:<ID>` form (a place, a course's page).
     public static func written(address: String, alias: String? = nil) -> String {
         "[[\(address)\(aliasPart(alias))]]"
     }
@@ -22,8 +19,6 @@ extension WikiLink {
         return name.flatMap { $0.isEmpty ? nil : "|" + $0 } ?? ""
     }
 
-    /// Whether an app link pasted at `caret` goes in as a link of its own (`[[material:<ID>#page=2|이름]]`). Not inside
-    /// a link being written (`[[…`, `](…`, `<…`), whose target the address is, nor in code or math, where it is text.
     public static func pastesAsLink(in text: NSString, at caret: Int) -> Bool {
         guard SourcePlace.at(caret, in: text) == .text else { return false }
         let line = text.lineRange(for: NSRange(location: caret, length: 0))
@@ -31,7 +26,6 @@ extension WikiLink {
         return prefix.firstMatch(of: #/\[\[[^\]]*$/#) == nil && prefix.firstMatch(of: #/\]\([^)\s]*$/#) == nil && !prefix.hasSuffix("<")
     }
 
-    /// Whether `heading` can follow `#` in a link: `]` and `|` would end it.
     public static func linkable(heading: String) -> Bool {
         !heading.isEmpty && !heading.contains { "[]|#\n".contains($0) }
     }
@@ -43,16 +37,12 @@ extension ParsedNote {
         public var text: String
     }
 
-    /// A block a link can point at with `#^id`: a paragraph, a list item or a quote (a callout among them).
     public struct LinkableBlock: Equatable, Sendable {
-        /// The body line (1-based) its ID is written at the end of.
         public var line: Int
-        /// Its first line without markers, to tell it by.
         public var excerpt: String
         public var id: String?
     }
 
-    /// The headings in the order written, their text as written.
     public var headings: [HeadingLine] {
         NoteOutline.headings(in: document).compactMap { h in
             let text = NoteOutline.anchor(of: h)
@@ -60,14 +50,14 @@ extension ParsedNote {
         }
     }
 
-    /// The blocks in the order written. A list item's ID goes after its own text, before its sublist, so that
-    /// `blockSource` reads it as the item and not as the last item of the sublist.
+    // 목록 항목의 ID는 항목 자기 글 뒤, 하위 목록 앞에 둔다. 그래야 `blockSource`가 하위 목록의 마지막 항목이 아니라
+    // 이 항목으로 읽는다.
     public var linkableBlocks: [LinkableBlock] {
         var out: [LinkableBlock] = []
         func add(_ lines: ClosedRange<Int>?) {
             guard let lines else { return }
             let last = bodyLines[lines.upperBound - 1].trimmingCharacters(in: .whitespaces)
-            // A formula or a fence closing there would no longer close with the ID after it.
+            // 그 줄이 수식이나 펜스를 닫는다면, 뒤에 ID가 붙은 뒤로는 더는 닫지 못한다.
             guard !last.hasSuffix("$$"), !last.hasSuffix("```"), !last.hasSuffix("~~~") else { return }
             let first = BlockID.strip(String(bodyLines[lines.lowerBound - 1])).text
             let excerpt = first.replacing(
@@ -94,8 +84,6 @@ extension ParsedNote {
         return out
     }
 
-    /// Where ` ^id` goes in `text` (UTF-16, as text views count) to name the block whose ID line is `line`: at the end
-    /// of that line, before any trailing spaces. Nil when the body can't be lined up with `text`.
     public static func blockTag(in text: String, line: Int, id: String) -> SourceEditing.Edit? {
         let note = ParsedNote(text)
         guard line >= 1, line <= note.bodyLines.count, text.hasSuffix(note.body) else { return nil }
@@ -108,7 +96,6 @@ extension ParsedNote {
 }
 
 extension BlockID {
-    /// A new ID none of `taken` has: six letters and digits, as Obsidian makes them, so links stay short.
     public static func make(avoiding taken: Set<String>, using generator: inout some RandomNumberGenerator) -> String {
         let alphabet = Array("abcdefghijklmnopqrstuvwxyz0123456789")
         while true {

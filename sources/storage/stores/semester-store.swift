@@ -3,7 +3,7 @@ import Foundation
 
 extension GISTStore {
     public func addSemester(_ semester: Semester) throws {
-        // Only a missing file starts empty; one that fails to read must not be replaced by a single-semester file.
+        // 파일이 없을 때만 비어 시작한다. 읽지 못한 파일을 학기 하나짜리 파일로 바꾸면 안 된다.
         var doc = FileManager.default.fileExists(atPath: transcriptURL.path) ? try loadTranscript() : StoredDocument(new: Transcript())
         guard !doc.model.semesters.contains(where: { $0.year == semester.year && $0.term == semester.term }) else {
             throw MoveJournal.Failure.targetExists(semester.folder?.name ?? "\(semester.year)")
@@ -22,8 +22,6 @@ extension GISTStore {
         try save(doc)
     }
 
-    /// Only `.folio/course.json`: the standard subfolders are made when something first goes in them, so a past or
-    /// credited course isn't a stack of empty folders.
     @discardableResult
     public func createCourse(_ course: Course, folderName: String, in semester: Semester) throws -> CourseStore {
         guard let parent = semester.coursesFolder else { throw MoveJournal.Failure.targetExists(folderName) }

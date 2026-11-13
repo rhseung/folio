@@ -2,9 +2,7 @@ import FolioDomain
 import Foundation
 
 extension FolderTree {
-    /// Reads a folder, skipping ignored files and not descending into code projects or oversized folders (IndexRules).
-    /// `depth` is the depth of `url` below the GIST root (0 for the root, 2 for a course folder).
-    // shortcut: iCloud placeholders are read as regular files; check ubiquitous download status if names show up as `.x.icloud`.
+    // shortcut: 아직 내려받지 않은 iCloud placeholder도 보통 파일로 읽는다. 이름이 `.x.icloud`로 보이면 ubiquitous 내려받기 상태를 확인한다.
     public init(contentsOf url: URL, depth: Int = 0) throws {
         let values = try url.resourceValues(forKeys: [.isDirectoryKey, .fileSizeKey])
         guard values.isDirectory == true else {

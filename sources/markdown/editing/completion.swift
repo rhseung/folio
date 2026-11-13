@@ -1,26 +1,14 @@
 import Foundation
 
-/// What is being completed at the caret: the kind of thing, what has been typed of it, and what an accepted
-/// candidate replaces.
 public struct CompletionQuery: Equatable, Sendable {
     public enum Kind: Equatable, Sendable {
-        /// `/` at a line start or after a space: a block to insert.
         case slash
-        /// `> [!`: a callout type.
         case callout
-        /// An opening code fence: the block's language.
         case codeLanguage
-        /// `\` in a formula: a TeX command, or in an AsciiMath note a symbol by its AsciiMath name, which goes in without
-        /// the `\` that asked for it. A bare `\` offers every symbol and math snippet, category by category.
         case texCommand
-        /// `\begin{` in TeX math: an environment, closed with its `\end`.
         case texEnvironment
-        /// A snippet's trigger just before the caret.
         case snippet
-        /// A word in AsciiMath math: a symbol or function by its AsciiMath name, or a snippet.
         case asciiMath
-        /// Inside `[[` or `![[`: what the link points at, or the heading, block or page in it. The app finds the
-        /// candidates, which come late (`CompletionMenu.more`).
         case link(LinkQuery)
     }
 
@@ -29,9 +17,8 @@ public struct CompletionQuery: Equatable, Sendable {
     public let range: NSRange
     public let place: SourcePlace
 
-    /// Whether Return takes the picked candidate. A menu that opened by itself, on a bare fence or a snippet's
-    /// trigger, leaves Return a line break, else a fence without a language or a line ending in `->` couldn't be
-    /// ended; Tab still takes it.
+    // 저절로 열린 메뉴(맨 펜스, 스니펫 트리거)에서 Return이 후보를 고르면 언어 없는 펜스나 `->`로 끝나는 줄을 끝낼 수
+    // 없다. 그래서 이때 Return은 줄바꿈이고 Tab만 후보를 고른다.
     public var takesReturn: Bool {
         switch kind {
         case .snippet, .asciiMath: false
@@ -40,8 +27,6 @@ public struct CompletionQuery: Equatable, Sendable {
         }
     }
 
-    /// The same query narrowed or widened by typing, for which the menu keeps its pick and, while late candidates are
-    /// on their way, its rows.
     public func continues(_ other: CompletionQuery) -> Bool {
         guard range.location == other.range.location else { return false }
         if case .link(let a) = kind, case .link(let b) = other.kind { return a.part == b.part && a.target == b.target }
@@ -49,23 +34,17 @@ public struct CompletionQuery: Equatable, Sendable {
     }
 }
 
-/// The link being written around the caret, `[[target#fragment|alias]]`, as the text has it.
 public struct LinkQuery: Equatable, Sendable {
     public enum Part: Equatable, Sendable {
         case target
-        /// After `#`: a heading of the note.
         case heading
-        /// After `#^`: a block of the note.
         case block
-        /// After `#page=`: a page of the file.
         case page
     }
 
     public var part: Part
     public var embed: Bool
-    /// A note's title or `<kind>:<ID>`, as written; empty for `.target`, whose typing is the query's text.
     public var target: String
-    /// A name already written after `|`, which the link keeps.
     public var alias: String?
 
     public init(part: Part, embed: Bool = false, target: String = "", alias: String? = nil) {
@@ -76,26 +55,18 @@ public struct LinkQuery: Equatable, Sendable {
     }
 }
 
-/// One candidate in the completion menu. `body` is inserted as a snippet's is: `$1` … mark the caret.
 public struct CompletionItem: Equatable, Sendable, Identifiable {
     public var id: String
     public var title: String
     public var detail: String?
-    /// An SF Symbol name.
     public var symbol: String?
-    /// A formula shown rendered beside the title, in TeX unless `previewAsciiMath`.
     public var preview: String?
     public var previewAsciiMath: Bool
-    /// Other names it is found by, as `table` for 표.
     public var keywords: [String]
     public var body: String
-    /// A block of its own, put on a new line when the `/` came after text.
     public var block: Bool
-    /// Where the caret goes in `body`, which then goes in as written: a link's title may hold `$1` of its own.
     public var caret: Int?
-    /// Leaves the caret where another menu opens, as a file's link does at its page.
     public var continues: Bool
-    /// Where a formula's symbol is found when the whole list is browsed.
     public var category: MathCategory?
 
     public init(
@@ -118,15 +89,11 @@ public struct CompletionItem: Equatable, Sendable, Identifiable {
     }
 }
 
-/// What the menu can offer that the note's text alone doesn't say: the `/` blocks with their names in the app's
-/// language, the code languages, the snippets, and whether the note's math is TeX.
 public struct CompletionCatalog: Sendable {
     public var slash: [CompletionItem]
     public var languages: [String]
     public var snippets: [Snippet]
-    /// TeX commands and math snippets are TeX; an AsciiMath note's formulas have their own short forms.
     public var tex: Bool
-    /// The math snippets of the syntax the note doesn't use, for a math fence written in that one.
     public var otherMath: [Snippet]
 
     public init(
@@ -139,13 +106,10 @@ public struct CompletionCatalog: Sendable {
         self.otherMath = otherMath
     }
 
-    /// What a fence can say after its backticks: the math fences first, then the code languages (less the ones a math
-    /// fence took) and the widget.
     public var fenceNames: [String] {
         MathFence.languages.map(\.name) + languages.filter { MathFence.syntax($0) == nil } + [CBWidget.language]
     }
 
-    /// The catalog for the formula at `place`: in a math fence of the other syntax, that syntax's commands and snippets.
     public func at(_ place: SourcePlace) -> CompletionCatalog {
         guard let fence = place.fence, (fence == .latex) != tex else { return self }
         var other = self
@@ -173,7 +137,6 @@ public enum Completion {
 
         switch place {
         case .text:
-            // Inside a link nothing else is offered: a `/` or a snippet's trigger there is part of a name.
             if let m = prefix.firstMatch(of: #/(!?)\[\[([^\[\]]*)$/#) {
                 return link(m.2, embed: m.1 == "!", start: caret - m.2.utf16.count - 2, caret: caret, rest: rest, place: place)
             }
@@ -193,12 +156,10 @@ public enum Completion {
             }
         case .math(_, let content, _):
             guard catalog.tex else {
-                // AsciiMath has no commands; a `\` here asks for its names as one does in TeX, and the name replaces it.
-                // An escape the writer means (`\ ` for a space) stays when the menu is closed with Esc.
                 if let m = prefix.firstMatch(of: #/(?:^|[^\\])\\([A-Za-z]*)$/#), caret - m.1.utf16.count - 1 >= content.location {
                     return make(.texCommand, m.1).widened(by: 1)
                 }
-                // Two letters or more: one letter is a variable, and offering on it would cover every formula.
+                // 글자 하나는 변수이므로, 한 글자에서 제안하면 모든 수식에 메뉴가 뜬다.
                 if let m = prefix.firstMatch(of: #/(?:^|[^A-Za-z\\])([A-Za-z]{2,})$/#), caret - m.1.utf16.count >= content.location,
                     !asciiMath(String(m.1), catalog: catalog).isEmpty
                 {
@@ -224,7 +185,6 @@ public enum Completion {
         return nil
     }
 
-    /// The candidates for `query`, best first.
     public static func items(for query: CompletionQuery, catalog: CompletionCatalog) -> [CompletionItem] {
         let catalog = catalog.at(query.place)
         switch query.kind {
@@ -249,22 +209,18 @@ public enum Completion {
         }
     }
 
-    // Numbered, since settings don't stop two snippets sharing a trigger and the menu needs distinct ids.
+    // 설정은 두 스니펫이 같은 트리거를 쓰는 것을 막지 않는데 메뉴에는 서로 다른 id가 필요하므로 번호를 붙인다.
     static func snippets(_ catalog: CompletionCatalog, trigger: String, inMath: Bool) -> [CompletionItem] {
         catalog.snippets.enumerated().filter { $0.element.trigger == trigger && $0.element.inMath == inMath }.map { i, s in
             CompletionItem(id: "snippet.\(i).\(s.trigger)", title: s.trigger, detail: s.expanded.text, symbol: "text.insert", body: s.body)
         }
     }
 
-    /// The snippets `word` triggers, then the symbols whose name starts with it.
     static func asciiMath(_ word: String, catalog: CompletionCatalog) -> [CompletionItem] {
         snippets(catalog, trigger: word, inMath: true) + filter(AsciiMathSymbols.items, word, prefixOnly: true)
     }
 
-    /// The link around the caret. `start` is where its `[[` is and `inner` what is between that and the caret; the rest
-    /// of the link after the caret, up to its `]]`, is part of what a candidate replaces.
     static func link(_ inner: Substring, embed: Bool, start: Int, caret: Int, rest: String, place: SourcePlace) -> CompletionQuery? {
-        // Past `|` is the name the writer gives the link, which nothing completes.
         guard !inner.contains("|") else { return nil }
         let tail = rest.prefixMatch(of: #/[^\[\]]*\]\]/#).map { String($0.0) }
         let alias = tail.flatMap { t in t.firstIndex(of: "|").map { String(t[t.index(after: $0)...].dropLast(2)) } }
@@ -287,8 +243,6 @@ public enum Completion {
         return make(.heading, target: target, typed: after)
     }
 
-    /// Names that start with what's typed come first, then names that contain it; `prefixOnly` keeps only the first,
-    /// as for TeX commands, where a name containing `in` is rarely the one meant.
     public static func filter(_ items: [CompletionItem], _ typed: String, prefixOnly: Bool = false) -> [CompletionItem] {
         let q = typed.lowercased()
         guard !q.isEmpty else { return items }
@@ -332,7 +286,6 @@ public enum Completion {
             let line = text.lineRange(for: NSRange(location: range.location, length: 0))
             let before = text.substring(with: NSRange(location: line.location, length: range.location - line.location))
             if item.block, !before.trimmingCharacters(in: .whitespaces).isEmpty {
-                // The space before `/` would trail the line the block leaves.
                 let trailing =
                     before.utf16.count - before.replacingOccurrences(of: "[ \\t]+$", with: "", options: .regularExpression).utf16.count
                 range = NSRange(location: range.location - trailing, length: range.length + trailing)
@@ -344,7 +297,6 @@ public enum Completion {
         return Snippet(trigger: "", body: body, inMath: false).edit(replacing: range)
     }
 
-    /// An opening fence with no fence after it to close it: the fences after it all pair among themselves.
     static func fenceNeedsClosing(_ text: NSString, at index: Int) -> Bool {
         let line = text.lineRange(for: NSRange(location: index, length: 0))
         guard let open = Fence(text.substring(with: SourceLines.content(line, in: text))) else { return false }
@@ -360,12 +312,10 @@ public enum Completion {
 }
 
 extension CompletionQuery {
-    /// The same query reaching `n` more characters back, over the `/` or `\` that started it.
     func widened(by n: Int) -> CompletionQuery {
         CompletionQuery(kind: kind, text: text, range: NSRange(location: range.location - n, length: range.length + n), place: place)
     }
 
-    /// The same query after `n` characters went in (or out, when negative) before it.
     public func shifted(by n: Int) -> CompletionQuery {
         CompletionQuery(kind: kind, text: text, range: NSRange(location: range.location + n, length: range.length), place: place)
     }

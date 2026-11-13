@@ -3,17 +3,12 @@ import FolioDomain
 import FolioStorage
 import Foundation
 
-/// JSON Schema for action inputs, read off the input types by decoding them with a decoder that answers every
-/// question with a placeholder and notes what was asked. That keeps the schema from drifting from the types;
-/// Swift has no reflection over `Decodable`, and schema libraries need a macro on
-/// every domain type.
 final class SchemaBuilder {
     var defs: [String: JSONValue] = [:]
     private var building: Set<String> = []
 
     func schema(_ type: any Decodable.Type) -> JSONValue { schemaOf(type) }
 
-    /// The type's own shape rather than a reference to it, for the actions themselves.
     func inline(_ type: any Decodable.Type) -> JSONValue { sniffing(type) }
     private func sniffing<T: Decodable>(_ type: T.Type) -> JSONValue { sniff(T.self) }
 
@@ -25,7 +20,7 @@ final class SchemaBuilder {
         if let a = T.self as? any SniffArray.Type { return .object(["type": "array", "items": schema(a.element)]) }
         if let d = T.self as? any SniffDictionary.Type { return .object(["type": "object", "additionalProperties": schema(d.value)]) }
         if let o = T.self as? any SniffOptional.Type { return schema(o.wrapped) }
-        // `CourseSet.Field` and `SemesterSet.Field` must not share one entry.
+        // `CourseSet.Field`와 `SemesterSet.Field`가 한 항목을 나누면 안 된다.
         let name = String(reflecting: T.self).split(separator: ".").dropFirst().joined(separator: ".")
         if defs[name] == nil, !building.contains(name) {
             building.insert(name)
@@ -35,7 +30,6 @@ final class SchemaBuilder {
         return .object(["$ref": .string("#/$defs/\(name)")])
     }
 
-    /// A struct's fields, or for an enum with payloads (keys listed by `CaseIterable` coding keys) one shape per case.
     private func sniff<T: Decodable>(_ type: T.Type) -> JSONValue {
         let first = Probe(builder: self, caseIndex: 0)
         _ = try? T(from: Sniffer(first))
@@ -53,7 +47,6 @@ final class SchemaBuilder {
     static func cases<E: CaseIterable & RawRepresentable>(_ e: E.Type) -> [String] { e.allCases.map { "\($0.rawValue)" } }
     static func firstCase<E: CaseIterable>(_ e: E.Type) -> Any? { e.allCases.first }
 
-    /// A value of `T` to hand back to whoever is decoding, so it carries on to the next field.
     func placeholder<T: Decodable>(_ type: T.Type, probe: Probe) throws -> T {
         if let hint = T.self as? any SchemaHint.Type, let v = hint.example as? T { return v }
         if let e = T.self as? any CaseIterable.Type, let v = Self.firstCase(e) as? T { return v }
@@ -65,7 +58,6 @@ final class Probe {
     let builder: SchemaBuilder
     let caseIndex: Int
     var properties: [String: JSONValue] = [:]
-    /// Filled in after they are handed out (an enum case's payload), so read when the shape is.
     var nested: [String: Probe] = [:]
     var required: [String] = []
     var single: JSONValue?
@@ -104,7 +96,6 @@ struct Sniffer: Decoder {
         let probe: Probe
         var codingPath: [any CodingKey] = []
 
-        /// Asked only by enums with payloads (and types keeping unknown keys): the case under study.
         var allKeys: [Key] {
             guard let cases = Key.self as? any CaseIterable.Type else { return [] }
             let all = Self.keys(cases).compactMap { $0 as? Key }
@@ -137,7 +128,6 @@ struct Sniffer: Decoder {
         func superDecoder(forKey key: Key) throws -> any Decoder { Sniffer(probe) }
     }
 
-    /// Always empty: element types come from the static type instead (`SniffArray`).
     struct Unkeyed: UnkeyedDecodingContainer {
         var codingPath: [any CodingKey] = []
         var count: Int? { 0 }
@@ -204,7 +194,6 @@ extension LocalDate: SchemaHint {
     static var schema: JSONValue { ["type": "string", "format": "date"] }
     static var example: Any { LocalDate(year: 2026, month: 1, day: 1)! }
 }
-/// Written as one string, so the decoder can't see its cases.
 extension Aggregation: SchemaHint {
     static var schema: JSONValue { ["type": "string", "description": "sum, mean, single, dropLowest:<n>, bestOf:<n>"] }
     static var example: Any { Aggregation.sum }
@@ -215,8 +204,6 @@ extension JSONValue: ExpressibleByStringLiteral, ExpressibleByDictionaryLiteral 
     public init(dictionaryLiteral elements: (String, JSONValue)...) { self = .object(Dictionary(elements) { a, _ in a }) }
 }
 
-/// The decoded shape with what only the declaration knows: which kind of item a field names (`x-folio-ref`, a UUID
-/// or a name), and that a `Patch` field may be left out.
 func declaredInput(_ spec: ActionSpec, _ sniffed: JSONValue) -> JSONValue {
     guard case .object(var o) = sniffed, case .object(var props)? = o["properties"], case .array(let required)? = o["required"] else {
         return sniffed
@@ -227,7 +214,8 @@ func declaredInput(_ spec: ActionSpec, _ sniffed: JSONValue) -> JSONValue {
             let one: JSONValue = ["type": "string", "x-folio-ref": .string(kind)]
             p = f.many ? ["type": "array", "items": one] : ["type": "string", "x-folio-ref": .string(kind)]
         }
-        // JSON input takes only RFC 3339 with an offset, unlike the commands' "2026-11-20 23:59"; agents guessed wrong without it.
+        // JSON 입력은 명령의 `2026-11-20 23:59`와 달리 오프셋이 붙은 RFC 3339만 받는데, 이 안내가 없을 때 에이전트가 잘못
+        // 추측했다.
         let dateHint = p["format"] == "date-time" ? "시간대를 붙인 ISO 8601. 예: 2026-11-20T23:59:00+09:00" : ""
         let help = [f.help, f.patch && f.optional ? "null이면 지운다" : "", dateHint].filter { !$0.isEmpty }.joined(separator: ". ")
         if !help.isEmpty { p["description"] = .string(help) }
@@ -273,7 +261,6 @@ func actionSchemas() -> JSONValue {
         "$defs": .object(builder.defs),
     ]
 }
-/// Read from a string as well as its object, so the decoder would see only the string.
 extension AssignmentRepeat: SchemaHint {
     static var schema: JSONValue {
         let rule: JSONValue = [

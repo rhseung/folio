@@ -13,7 +13,6 @@ extension Resolver {
     }
 }
 
-/// What `note show --json` reports and `note write --expect` checks: the note as it was read.
 func contentHash(_ text: String) -> String { ContentHash.of(text) }
 
 func readText(_ source: String) throws -> String {
@@ -44,7 +43,6 @@ struct NoteCommand: ParsableCommand {
             var id: UUID?
             var path: String
             var kind: NoteKind
-            /// The first of `sessionIds`, kept for readers from before a review note could cover several.
             var sessionId: UUID?
             var sessionIds: [UUID]
             var examId: UUID?
@@ -94,7 +92,6 @@ struct NoteCommand: ParsableCommand {
             var id: UUID?
             var path: String
             var text: String
-            /// Pass to `note write --expect` so a change made meanwhile isn't overwritten.
             var hash: String
         }
 
@@ -127,7 +124,6 @@ struct NoteCommand: ParsableCommand {
                         exit: .conflict, message: String(localized: .noteWriteConflict(path)),
                         hints: [String(localized: .noteWriteConflictHint(c.code, path))])
                 }
-                // The action checks again right before writing, so a change between here and there is caught too.
                 expected = current
             }
             try perform(spec: NoteWrite(course: c.id, note: path, text: try readText(file), expected: expected), g, ctx: ctx)

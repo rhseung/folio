@@ -1,11 +1,8 @@
 import Foundation
 
-/// TeX commands offered after `\` in a formula, in the order offered, and the `\begin{…}` environments.
-///
-/// Source: KaTeX's list of supported functions (https://katex.org/docs/supported.html) for the KaTeX the preview
-/// bundles (sources/web/package.json, 0.19.1), narrowed to what notes write; every name here renders in that KaTeX
-/// (checked with `katex.renderToString` when the list was made). KaTeX has no API that lists its functions, and its
-/// table also holds symbols typed as themselves, so the list is kept by hand.
+// 출처는 미리보기가 묶은 KaTeX 0.19.1의 지원 함수 목록이다. KaTeX에는 함수 목록을 내주는 API가 없고 그 표에는
+// 그대로 치는 기호도 섞여 있어서, 목록을 손으로 관리한다. 모든 이름은 목록을 만들 때 `katex.renderToString`으로
+// 그려지는지 확인했다.
 public enum TeXCommands {
     public struct Command: Sendable, Equatable {
         public let name: String
@@ -29,13 +26,11 @@ public enum TeXCommands {
             "textit": ["text"], "operatorname": ["rank"], "textcolor": ["red", "x"], "pmod": ["n"], "overset": ["!", "="],
             "stackrel": ["!", "="], "underset": ["n", "\\to"],
         ]
-        /// Nothing to see on their own: spacing, delimiters waiting for their pair.
         private static let noPreview: Set<String> = ["quad", "qquad", "left", "right", "phantom", "not"]
     }
 
     private static let table: [(String, Int, MathCategory)] = {
         let groups: [(String, Int, MathCategory)] = [
-            // Structures first: what a formula is usually built around.
             ("frac dfrac tfrac binom", 2, .operators), ("sqrt", 1, .operators),
             ("sum prod int iint iiint oint lim limsup liminf", 0, .operators),
             ("left right", 0, .fonts),

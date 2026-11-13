@@ -3,8 +3,6 @@ import FolioMarkdown
 import Foundation
 
 extension CourseStore {
-    /// Writes each plan that has a place in `urls`; existing assets are left alone. The caller picks the places, so a
-    /// dry run reports the same paths, and adds the entries to course.json.
     public func writeNotionNotes(
         _ plans: [NotionNotePlan], dump: NotionCourseDump, folder: URL, links: [String: String], at urls: [UUID: URL]
     ) throws {

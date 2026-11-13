@@ -17,7 +17,6 @@ public struct GISTStore: Sendable {
 
     public var settingsURL: URL { metadataURL.appending(path: StandardLayout.settingsFile) }
 
-    /// Defaults when settings.json doesn't exist yet.
     public func loadSettings() throws -> StoredDocument<Settings> {
         FileManager.default.fileExists(atPath: settingsURL.path)
             ? try StoredDocument.read(from: settingsURL) : StoredDocument(new: Settings())
@@ -39,8 +38,6 @@ public struct GISTStore: Sendable {
         try courseStores().map { try $0.load().model.course }
     }
 
-    /// Writes a Notion import. Never overwrites: transcript.json and catalog.json must not exist yet,
-    /// and course folders that already have a course.json are skipped and returned.
     public func write(_ result: NotionImportResult) throws -> [String] {
         for existing in [transcriptURL, catalogURL] where FileManager.default.fileExists(atPath: existing.path) {
             throw MoveJournal.Failure.targetExists(existing.lastPathComponent)
@@ -63,8 +60,6 @@ public struct GISTStore: Sendable {
         try FolderTree(contentsOf: url)
     }
 
-    /// The cleanup plan for the folder as it is now. The journal tells which files in `Exercises` an earlier cleanup took
-    /// from `Exam Review`, which the tree alone can't.
     public func cleanupPlan(skip: Set<String> = [], labs: [String: [String: Int]] = [:], labWeeks: [String: [Int: Int]] = [:]) throws
         -> CleanupPlan
     {
@@ -79,7 +74,6 @@ public struct GISTStore: Sendable {
             selfMade: try MoveJournal.selfMadePaths(in: url), exams: exams)
     }
 
-    /// Copies the whole GIST folder to `<directory>/GIST-<timestamp>` outside iCloud. Required before cleanup.
     public func backup(into directory: URL, now: Date) throws -> URL {
         let stamp = now.formatted(.iso8601.year().month().day().time(includingFractionalSeconds: false).timeSeparator(.omitted))
         let target = directory.appending(path: "GIST-\(stamp)")
@@ -100,8 +94,6 @@ public struct GISTStore: Sendable {
         try transcript.write(to: transcriptURL)
     }
 
-    /// Lists the folders that hold course folders, and those, only; reading the whole tree (thousands of files) would
-    /// make every app launch slow.
     public func courseStores() throws -> [CourseStore] {
         let fm = FileManager.default
         func folders(_ path: String) -> [String] {
@@ -130,8 +122,6 @@ public struct CourseStore: Sendable {
     public var courseFileURL: URL { metadataURL.appending(path: StandardLayout.courseFile) }
     public var log: EventLog { EventLog(folder: metadataURL.appending(path: StandardLayout.logsFolder)) }
 
-    /// Creates the standard folder for an assignment or exam. Creating is not moving,
-    /// so it needs no approval. Returns the course-relative path, or nil when the item has no standard folder.
     @discardableResult
     public func ensureFolder(assignmentTitle: String) throws -> String? {
         guard let (kind, number) = AssignmentKind.parse(title: assignmentTitle) else { return nil }
@@ -147,7 +137,6 @@ public struct CourseStore: Sendable {
         metadataURL.appending(path: StandardLayout.quizzesFolder).appending(path: "\(unit.uuidString).json")
     }
 
-    /// An empty file for units without cards yet.
     public func loadQuiz(unit: UUID) throws -> StoredDocument<QuizFile> {
         let url = quizURL(unit: unit)
         return FileManager.default.fileExists(atPath: url.path)
@@ -166,7 +155,6 @@ public struct CourseStore: Sendable {
         try document.write(to: courseFileURL)
     }
 
-    /// Re-links materials to files on disk and registers new ones. Does not move or rename anything.
     public func refreshMaterials(in file: inout CourseFile, device: DeviceID, now: Date) throws {
         let scanned = ScannedEntry.materials(in: try FolderTree(contentsOf: url, depth: IndexRules.courseFolderDepth))
         file.materials = try MaterialTracking.reconcile(
@@ -194,8 +182,8 @@ public struct CourseStore: Sendable {
 }
 
 enum FileHash {
-    /// Streams the file so large textbooks don't load into memory. Nil if iCloud hasn't downloaded it yet,
-    /// because reading would force a download.
+    // 큰 교재를 메모리에 올리지 않도록 스트림으로 읽는다. iCloud가 아직 내려받지 않았으면 읽기가 내려받기를
+    // 일으키므로 nil을 돌려준다.
     static func sha256(of url: URL) throws -> String? {
         let status = try url.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]).ubiquitousItemDownloadingStatus
         if let status, status != .current { return nil }

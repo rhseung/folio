@@ -7,9 +7,7 @@ struct CourseRef: Identifiable {
     var course: Course
     var store: CourseStore
     var file: CourseFile
-    /// `EC4207`: the folder's code, or the catalog's prefix and number.
     var code: String
-    /// The color token the app shows this course in: its own, or the preset for its place in the semester.
     var color = ""
 
     var id: UUID { course.id }
@@ -32,7 +30,7 @@ final class Resolver {
             guard let f = try? s.load().model else { return nil }
             return CourseRef(course: f.course, store: s, file: f, code: code(f.course, folder: s.url.lastPathComponent))
         }
-        // Same order the app counts in (Workspace.courses(in:)), so a course without a color gets the same preset.
+        // 앱이 세는 순서(`Workspace.courses(in:)`)와 같아야 색이 없는 과목이 같은 프리셋을 받는다.
         for i in refs.indices {
             let siblings = refs.filter { $0.course.semesterId == refs[i].course.semesterId }.sorted { $0.course.title < $1.course.title }
             refs[i].color = CourseColor.token(refs[i].course.color, position: siblings.firstIndex { $0.id == refs[i].id } ?? 0)
@@ -42,7 +40,6 @@ final class Resolver {
 
     lazy var semesters: [Semester] = ((try? ctx.transcript().semesters) ?? []).sorted { $0.order < $1.order }
 
-    /// The semester holding today, else the latest that has started, else the latest.
     func currentSemester() throws -> Semester {
         let today = LocalDate(ctx.now, in: ctx.calendar)
         if let s = semesters.current(on: today) { return s }
@@ -60,8 +57,6 @@ final class Resolver {
         try pick(ref, courses, what: "과목", names: { [$0.code, $0.course.title, $0.store.url.lastPathComponent] }, ref: \.code)
     }
 
-    /// `EC4207/11-03`, or the item alone when `course` is given separately. An empty ref, or a course alone, leaves
-    /// the item empty so the kind's lookup picks it with fzf.
     func split(_ ref: String, course: String? = nil) throws -> (CourseRef, String) {
         if let course { return (try self.course(course), ref) }
         guard let slash = ref.firstIndex(of: "/") else {
@@ -72,8 +67,6 @@ final class Resolver {
         return (try self.course(String(ref[..<slash])), String(ref[ref.index(after: slash)...]))
     }
 
-    /// By reference (`11-03`, `11-03 14:00`), by day (`11/3`, `2026-11-03`), or by what it covered. Two classes on one
-    /// day match the day together, so the error lists their references.
     func session(_ name: String, in c: CourseRef) throws -> Session {
         let f = c.file
         return try pick(
@@ -81,7 +74,6 @@ final class Resolver {
             ref: { "\(c.code)/\(f.reference(of: $0, calendar: self.ctx.calendar))" })
     }
 
-    /// By its class, as a session is (`11-03`), or by its file.
     func recording(_ name: String, in c: CourseRef) throws -> Recording {
         let f = c.file
         let session = { (r: Recording) in
@@ -132,8 +124,6 @@ final class Resolver {
         try pick(ref, items, what: what, id: { $0.id }, names: names, ref: label)
     }
 
-    /// A UUID, then an exact name (ignoring case and spacing), then a name that contains it. More than one match is an
-    /// error listing them, never a guess.
     func pick<T>(_ ref: String, _ items: [T], what: String, id: (T) -> UUID?, names: (T) -> [String], ref label: (T) -> String) throws -> T
     {
         if ref.isEmpty {
@@ -162,7 +152,6 @@ final class Resolver {
         throw CLIError(exit: .notFound, message: String(localized: .resolveAmbiguous(what, ref)), candidates: hits.map(label))
     }
 
-    /// `given`, or when it is empty several names picked at a terminal; otherwise a usage error.
     func many(_ given: [String], from names: [String], what: String) throws -> [String] {
         guard given.isEmpty else { return given }
         let picked = Picker.chooseMany(names, prompt: what)
@@ -175,13 +164,13 @@ final class Resolver {
     }
 }
 
-/// fzf for ambiguous names, only where a person is at the terminal: an agent must get exit 3, not a prompt that waits.
+// 에이전트가 기다리는 프롬프트가 아니라 종료 코드 3을 받도록, fzf는 사람이 터미널에 있을 때만 쓴다.
 enum Picker {
     nonisolated(unsafe) static var allowed = false
     nonisolated(unsafe) static var gist: String?
 
     static func enable(_ options: GlobalOptions) {
-        // Tests run commands in parallel under overrides; each writing these unguarded statics crashed the test process.
+        // 테스트는 overrides로 명령을 나란히 돌리는데, 각각 이 static을 보호 없이 쓰면 테스트 프로세스가 멈췄다.
         guard CLI.overrides == nil else { return }
         let env = ProcessInfo.processInfo.environment
         allowed = !options.json && !options.noPick && env["FOLIO_NO_PICK"] == nil && isatty(STDIN_FILENO) == 1 && isatty(STDOUT_FILENO) == 1
@@ -192,7 +181,6 @@ enum Picker {
         run(lines, prompt: prompt, multi: false).first
     }
 
-    /// Tab marks several; nothing picked is an empty list.
     static func chooseMany(_ lines: [String], prompt: String) -> [String] {
         run(lines, prompt: prompt, multi: true)
     }
@@ -203,7 +191,6 @@ enum Picker {
 
     static func run(_ lines: [String], prompt: String, multi: Bool) -> [String] {
         guard allowed else { return [] }
-        // The same binary that is running, so a preview never reads another install's data.
         let quoted = { (s: String) in "'" + s.replacing("'", with: "'\\''") + "'" }
         let folder = gist.map { " --gist " + quoted($0) } ?? ""
         let preview = previews[prompt].map { ["--preview=\(quoted(CommandLine.arguments[0])) \($0) show {}\(folder)"] } ?? []

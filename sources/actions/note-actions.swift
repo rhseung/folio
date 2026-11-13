@@ -57,7 +57,6 @@ public struct NoteAdd {
         if let session = meta.sessionId {
             try ctx.edit(course) { f in
                 f.linkNote(made, to: session, as: kind)
-                // As `session note` does: making a review note is not writing it.
                 if kind == .review, let i = f.sessions.firstIndex(where: { $0.id == session }) { f.sessions[i].reviewNoteUnfinished = true }
             }
         }
@@ -65,21 +64,18 @@ public struct NoteAdd {
     }
 }
 
-/// Links the kind doesn't read are dropped, so a note has one kind's links at a time.
 struct NoteLinks {
     var kind: NoteKind
     var session: Session.ID?
     var exam: Exam.ID?
     var units: [FolioDomain.Unit.ID]
 
-    /// Checked here as well as by the model, for an error that names what is missing.
     func apply(to meta: inout NoteMeta, in course: CourseFile, calendar: Calendar) throws {
         if kind == .rough || kind == .review, let session {
             guard let s = course.sessions.first(where: { $0.id == session }) else {
                 throw ActionError.notFound(String(localized: .errorNotFoundSession))
             }
             if s.isCancelled { throw ActionError.rule(String(localized: .errorNoteCancelledSession)) }
-            // Taking it would leave the other note pointing at a session that no longer points back.
             if let other = s.note(of: kind), other != meta.id {
                 let name = course.title(of: s, calendar: calendar)
                 throw ActionError.rule(
@@ -95,12 +91,10 @@ struct NoteLinks {
         meta.kind = kind
         meta.sessionId = kind == .rough || kind == .review ? session : nil
         meta.examId = kind == .examSummary ? exam : nil
-        // Other kinds read their units from the session or exam, so a unit note's units go when it becomes one.
         meta.unitIds = kind == .unit ? units : []
     }
 }
 
-/// With `expected`, refuses when the file is no longer that text: it was changed elsewhere since it was read.
 @Action(
     "note write", "노트 파일 전체를 바꾸기. 노트의 프로퍼티는 course.json에 있어 그대로다", done: "노트 '{note}'을(를) 썼습니다",
     phrases: ["노트 수정", "노트 내용 바꾸기"], cli: .manual(reason: "--expect의 해시를 지금 노트와 비교한 뒤 그 원문을 expected로 넘긴다"))
@@ -118,9 +112,8 @@ public struct NoteWrite {
     }
 }
 
-/// Changes part of a note without sending the whole text, as `note write` must. Each `old` has to occur exactly
-/// once in the text the replacements before it left, which also does `expected`'s job: text changed elsewhere no
-/// longer matches.
+// 각 `old`는 앞선 바꾸기가 남긴 글에서 정확히 한 번 나와야 한다. 그래서 `expected`의 역할도 한다. 다른 곳에서 바뀐
+// 글은 더는 맞지 않는다.
 @Action(
     "note edit", "노트 일부 고치기. 찾아 바꾸거나 끝에 붙인다. 노트 전체를 다시 쓰지 않는다", done: "노트 '{note}'을(를) 고쳤습니다",
     examples: [
@@ -160,7 +153,6 @@ public struct NoteEdit {
             let n = i + 1
             guard !r.old.isEmpty else { throw ActionError.rule(String(localized: .errorNoteEditEmptyOld(n))) }
             let ranges = text.ranges(of: r.old)
-            // Not there most likely means the note changed since it was read, the case `note write` calls a conflict.
             guard let range = ranges.first else {
                 throw ActionError.conflict(String(localized: .errorNoteEditMissing(n, Self.excerpt(r.old), note)))
             }
@@ -182,7 +174,6 @@ public struct NoteEdit {
     }
 }
 
-/// Only course.json gains an entry; the note file is left as it is.
 @Action(
     "note adopt", "Folio 밖에서 만든 노트에 ID 붙이기", done: "노트 '{note}'에 ID를 붙였습니다",
     examples: ["folio note adopt EC4207/Notes/외부.md"], phrases: ["밖에서 만든 노트 등록"])
@@ -207,8 +198,6 @@ public struct NoteAdopt {
     }
 }
 
-/// One kind at a time: becoming another kind lets go of the session or exam the old one belonged to. Writes the
-/// note's entry and the session's note link together.
 @Action(
     "note link", "노트의 종류와 회차, 시험, 단원 연결, 수식 문법 정하기",
     discussion: """
@@ -250,9 +239,6 @@ public struct NoteLink {
     }
 }
 
-/// One review note for several classes caught up on at once. Each session points at the note, as a session with its
-/// own note does, so course.json keeps its shape. Sessions already linked stay; one holding another review note is
-/// refused before anything is written, as `note link` refuses it.
 @Action(
     "note link-sessions", "복습 노트를 회차 여러 개에 연결하기. 이미 연결된 회차는 그대로 둔다", done: "노트 '{note}'에 회차를 연결했습니다",
     examples: [#"folio note link-sessions "EC4207/10-26(월) 정리" 10-26 10-28"#],
@@ -295,7 +281,6 @@ public struct NoteUnlinkSession {
                 throw ActionError.notFound(String(localized: .errorNotFoundNote("\(note)")))
             }
             let s = f.sessions[try index(session, in: f.sessions, .valueSession)]
-            // A mistyped session would otherwise report the note taken off a class it was never on.
             guard s.roughNoteId == note || s.reviewNoteId == note else {
                 throw ActionError.rule(String(localized: .errorNoteSessionNotLinked(f.title(of: s, calendar: ctx.calendar))))
             }
@@ -304,10 +289,8 @@ public struct NoteUnlinkSession {
     }
 }
 
-/// Moves Folio's properties out of the notes' frontmatter into course.json, once, for notes from before #206. The
-/// entries are saved before any file is touched, so a run that stops halfway is finished by running it again. A note
-/// that already has an entry gives it what the entry lacks (`merge`) before its frontmatter goes. A link to a session, unit or exam that is gone is dropped, as is a second
-/// note of one kind on a session: the model would refuse the whole file for either.
+// 파일을 건드리기 전에 항목을 저장하므로, 중간에 멈춘 실행은 다시 돌리면 마무리된다. 없어진 회차, 단원, 시험으로
+// 가는 링크와 한 회차에 같은 종류로 붙은 둘째 노트는 버린다. 둘 중 하나라도 있으면 모델이 파일 전체를 거절한다.
 @Action(
     "note migrate", "노트 frontmatter의 프로퍼티를 course.json으로 옮기고 파일에서 지우기. 예전 노트를 한 번 정리한다",
     discussion:
@@ -335,11 +318,8 @@ public struct NoteMigrate {
                     meta.sessionId = meta.sessionId.flatMap { id in f.sessions.contains { $0.id == id } ? id : nil }
                     meta.examId = meta.examId.flatMap { id in f.exams.contains { $0.id == id } ? id : nil }
                     meta.unitIds = meta.unitIds.filter { id in f.units.contains { $0.id == id } }
-                    // A note copied in Finder carries the original's id; the copy gets its own.
+                    // Finder에서 복사한 노트는 원본의 id를 지니므로 사본에 새 id를 준다.
                     let id = meta.id.flatMap { id in f.notes.contains { $0.id == id } ? nil : id } ?? UUID()
-                    // Before #206 taking a session's note left the old one's frontmatter pointing at it. The note the
-                    // session points back to keeps the link; any other of that kind loses it. The one that keeps it is
-                    // linked from the session too, or the session would still ask for that note.
                     if meta.kind == .rough || meta.kind == .review, let s = f.sessions.first(where: { $0.id == meta.sessionId }) {
                         let pointed = s.note(of: meta.kind)
                         if pointed.map({ $0 != id }) ?? false { meta.sessionId = nil } else { f.linkNote(id, to: s.id, as: meta.kind) }
@@ -356,9 +336,6 @@ public struct NoteMigrate {
         }
     }
 
-    /// The entry may have been made or edited after the frontmatter was last written (adopted, linked in the app), so
-    /// it wins wherever it holds a value: tags are joined, and the rest is filled only where the entry is empty. Kind
-    /// and math always hold one. A link the entry's kind doesn't read (`CourseFile.meta(of:)`) is not filled in.
     static func merge(_ meta: NoteMeta, into i: Int, of f: inout CourseFile, _ ctx: ActionContext) {
         let before = f.notes[i]
         var e = before
@@ -369,7 +346,6 @@ public struct NoteMigrate {
             e.touch(by: ctx.device, at: ctx.now)
             f.notes[i] = e
         }
-        // A session already holding another note of this kind keeps it, as for a note without an entry.
         if e.kind == .rough || e.kind == .review, f.sessions(pointingAt: e.id).isEmpty,
             let s = f.sessions.first(where: { $0.id == meta.sessionId }), s.note(of: e.kind) == nil
         {
@@ -377,20 +353,18 @@ public struct NoteMigrate {
         }
     }
 
-    /// The entry's id stays, since sessions and links by ID already point at it. Links to the frontmatter's other id
-    /// would break, so those are named for the person to fix by hand; an id nothing points at goes quietly.
+    // 회차와 ID 링크가 이미 항목의 id를 가리키므로 그 id를 지킨다. frontmatter의 다른 id로 가는 링크는 깨지므로 사람이
+    // 고치도록 이름을 알리고, 아무것도 가리키지 않는 id는 조용히 버린다.
     func reportOldIDs(_ notes: [FrontmatterNote], course: UUID, store: CourseStore, _ ctx: ActionContext) throws {
         let file = try ctx.file(course)
         let replaced = notes.compactMap { n -> (path: String, id: UUID)? in
             let path = store.notePath(of: n.url)
-            // An id another entry has (a copy made in Finder) is that note's, and links to it are right.
             guard let old = n.meta.id, let entry = file.notes.first(where: { $0.path == path }), entry.id != old,
                 !file.notes.contains(where: { $0.id == old })
             else { return nil }
             return (path, old)
         }
         guard !replaced.isEmpty else { return }
-        // The frontmatter notes are read without their own `id:` line, which names the old id but isn't a link.
         let stripped = Dictionary(notes.map { ($0.url.standardizedFileURL, $0.text) }, uniquingKeysWith: { a, _ in a })
         let texts = try ctx.notes(course).map { n in try stripped[n.url.standardizedFileURL] ?? store.read(n) }
         for r in replaced {
@@ -403,8 +377,6 @@ public struct NoteMigrate {
     }
 }
 
-/// Renames the session notes still named `10주차-2` the way `session note` names new ones (#273). The files move as one
-/// `moves.jsonl` batch (`made`), and `cleanup undo` of it turns names, headings and links back. A taken name gets ` 2`.
 @Action(
     "note retitle", "예전 이름(10주차-2)의 회차 노트를 날짜와 단원 이름으로 바꾸기. 노트의 첫 제목과 다른 노트의 링크도 따라 바뀐다",
     discussion:
@@ -423,12 +395,10 @@ public struct NoteRetitleSessions {
             let store = try ctx.store(course)
             var taken = Set<String>()
             for r in try ctx.file(course).legacySessionNoteRetitles(calendar: ctx.calendar) {
-                // An entry whose file was renamed or deleted in Finder has nothing to move, and the journal would
-                // refuse the whole batch for it.
+                // Finder에서 파일 이름을 바꾸거나 지운 항목은 옮길 것이 없고, 그런 항목이 있으면 기록이 묶음 전체를 거절한다.
                 let source = store.fileURL(r.path)
                 guard FileManager.default.fileExists(atPath: source.path) else { continue }
-                // newNoteURL names a file in Notes/ itself; a note filed deeper would move up a folder, which is more
-                // than a rename.
+                // `newNoteURL`은 Notes/ 바로 안의 파일 이름을 정하므로, 더 깊이 둔 노트는 이름 바꾸기를 넘어 한 폴더 위로 옮겨진다.
                 let url = store.newNoteURL(title: r.title, format: NoteFormat(path: r.path) ?? .markdown, avoiding: taken)
                 guard source.deletingLastPathComponent().standardizedFileURL == url.deletingLastPathComponent().standardizedFileURL else {
                     continue
@@ -448,10 +418,6 @@ public struct NoteRetitleSessions {
     }
 }
 
-/// Renames a note or moves it to another folder of Notes/ as `note retitle` renames: one `moves.jsonl` batch (`made`)
-/// that `cleanup undo` turns back, with its entry's path, its heading and the links to it following. `to` is
-/// Notes-relative, with or without the note's extension; a name another note of the course has gets ` 2`, so the
-/// app passes the name it showed.
 @Action(
     "note mv", "노트 이름 바꾸기나 Notes 안의 다른 폴더로 옮기기. 노트의 첫 제목과 다른 노트의 링크도 따라 바뀐다",
     discussion:
@@ -479,8 +445,8 @@ public struct NoteMove {
         let move = PlannedMove(from: ctx.relative(source.url), to: ctx.relative(target))
         ctx.record(Change(.moved, move.from, to: move.to))
 
-        // The PDF this note's build wrote takes the new title in the same batch, so the next build finds it and one undo
-        // puts both back. Another file at the new name stays and the PDF keeps its own: nothing is overwritten.
+        // 다음 빌드가 찾고 한 번의 되돌리기로 둘 다 돌아오도록, 이 노트의 빌드가 쓴 PDF도 같은 묶음에서 새 제목을 받는다.
+        // 새 이름에 다른 파일이 있으면 그 파일을 남기고 PDF는 제 이름을 지킨다. 아무것도 덮어쓰지 않는다.
         let file = try ctx.file(course)
         let built = store.builtPDFMove(of: source, to: target, in: file).flatMap { $0.blocked ? nil : $0 }
         let pdf = try built.map { PlannedMove(from: try ctx.relative(course, $0.from), to: try ctx.relative(course, $0.to)) }
@@ -503,20 +469,10 @@ public struct NoteMove {
     }
 }
 
-/// A note's title is its file name, so moving a note's file renames it.
 enum NoteTitles {
-    /// Runs `move` (`moves` are GIST-relative, as `moves.jsonl` keeps them) and carries each moved note's title
-    /// over: its entry's path, the heading its template wrote, its own links to files relative to its folder (a note
-    /// moved to another folder), the links to it by title from the course's notes, and
-    /// the shown title of links to it by ID (`[[note:<ID>|title]]`) from every course's notes, since an ID reaches
-    /// across courses. Moves of other files pass through. The texts are read before `move`, so a dry run reports them
-    /// from where they are. Returns what `move` returned; nothing on a dry run.
     static func follow(_ moves: [PlannedMove], _ ctx: ActionContext, move: () throws -> UUID) throws -> UUID? {
-        // Loading every course is only worth it when a note moved; an undo of a folder cleanup shouldn't fail on one.
         guard moves.contains(where: { NoteFormat(path: $0.from) != nil }) else { return ctx.dryRun ? nil : try move() }
         struct Edit { var store: CourseStore, url: URL, text: String }
-        // `note` is nil for a note file without an entry yet (moved in from an old folder, not opened): its heading,
-        // pictures and the links to it by title follow all the same.
         typealias Rename = (note: UUID?, from: String, to: String)
         var renamed: [UUID: [Rename]] = [:]
         var edits: [Edit] = []
@@ -581,8 +537,7 @@ enum NoteTitles {
     }
 }
 
-/// Sessions let go of the note first: a note left behind by a failed trash is harmless, a link to nothing is not.
-/// The note goes to the Trash; its images stay in `assets/`, which other notes may share.
+// 실패한 휴지통 이동이 남긴 노트는 해가 없지만 아무것도 가리키지 않는 링크는 해가 되므로, 회차가 먼저 노트를 놓는다.
 @Action(
     "note rm", "노트를 휴지통으로. 회차의 연결도 뗀다", discussion: "그림은 assets에 남는다.", effect: .removes,
     confirm: "{note}을(를) 휴지통으로 옮깁니다.", done: "{note}을(를) 휴지통으로 옮겼습니다",
@@ -608,8 +563,6 @@ public struct NoteRemove {
 
 // MARK: Quiz
 
-/// Adds cards or replaces those with the same id. `movedFrom` is the unit an edited card left; it is taken out there
-/// only after the new copy is saved.
 @Action(
     "quiz add", "JSON 파일의 카드를 넣거나 같은 ID의 카드를 바꾸기",
     discussion: "파일은 course.json과 같은 필드 이름을 쓰는 QuizCard 배열이다. 단원을 옮긴 카드는 --moved-from에 예전 단원을 준다.",
@@ -642,7 +595,6 @@ public struct QuizCardSave {
     }
 }
 
-/// Past attempts stay in the log. The command finds the card by its prompt among the unit's cards.
 @Action(
     "quiz rm", "카드 지우기. 풀이 기록은 남는다", effect: .removes, confirm: "단원 '{unit}'의 카드를 지웁니다. 풀이 기록은 남습니다.",
     done: "단원 '{unit}'의 카드를 지웠습니다", examples: ["folio quiz rm EC4207/매칭 3F2A9C1E-0000-4000-8000-000000000001"], phrases: ["카드 삭제"])
@@ -679,7 +631,6 @@ public struct QuizRecord {
     }
 }
 
-/// A set with an existing id is replaced whole.
 @Action(
     "problem-set add", "문제 번호로 문제 묶음 만들기", effect: .creates, done: "문제 묶음을 저장했습니다",
     phrases: ["문제 묶음 만들기", "연습문제 등록"], cli: .manual(reason: "제목과 문제 번호로 문제 묶음(ProblemSet) 전체를 만든다"))
@@ -697,7 +648,6 @@ public struct ProblemSetSave {
     }
 }
 
-/// The number grid and unit links go; problem and solution files and past attempts stay.
 @Action(
     "problem-set rm", "문제 묶음 지우기. 문제 파일과 풀이 기록은 남는다", effect: .removes,
     confirm: "문제 묶음 '{set}'을(를) 지웁니다. 문제 파일과 풀이 기록은 남습니다.", done: "문제 묶음 '{set}'을(를) 지웠습니다",
@@ -796,8 +746,6 @@ public struct ReviewRecord {
     }
 }
 
-/// The time counts only when the unit was open (the review screen passes when it opened); skipped from a list, nothing
-/// was studied.
 @Action(
     "review skip", "단원을 복습하지 않아도 되는 것으로 표시. 단원을 열어 본 시간이 있으면 공부 시간으로 남긴다. 여러 개면 확인을 받는다", effect: .logs,
     confirm: "단원 {units}의 복습을 건너뜁니다.", done: "단원 {units}을(를) 건너뛰었습니다",

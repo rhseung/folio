@@ -5,11 +5,9 @@ public enum TableCommand: String, CaseIterable, Sendable {
     case rowAbove, rowBelow, columnLeft, columnRight
     case deleteRow, deleteColumn
     case moveRowUp, moveRowDown, moveColumnLeft, moveColumnRight
-    /// Lines the pipes up, as every other command also does.
     case format
 }
 
-/// Only GFM pipe tables: a `cb-table` is drawn by the preview but not edited (#39).
 public enum TableEditing {
     public static func table(in text: NSString, selection: NSRange) -> TableSource? {
         TableSource(text, selection)
@@ -24,9 +22,7 @@ public struct TableSource {
     public let grid: TableGrid
     public let cell: (row: Int, column: Int)
     let text: NSString
-    /// The table's lines, without the last line break.
     let block: NSRange
-    /// What stands before the table on its first line and on the rest (a quote's `> `, a list item's indent).
     let firstPrefix: String
     let restPrefix: String
 
@@ -40,7 +36,6 @@ public struct TableSource {
         let document = Document(parsing: protected.text)
         let caretLine = Self.line(of: selection.location, in: lines)
 
-        // Lines of the protected text, 1-based, to the source's, 0-based.
         func source(_ line: Int) -> Int? {
             guard line >= 1, line <= protected.origin.count else { return nil }
             return protected.origin[line - 1] - 1
@@ -53,7 +48,7 @@ public struct TableSource {
                 let last = source(range.upperBound.line),
                 first <= caretLine, caretLine <= last
             {
-                // The column is in UTF-8 bytes of the protected line; what's before it is the same in the source.
+                // 열은 보호한 줄의 UTF-8 바이트 단위이고, 그 앞의 글은 원문과 같다.
                 let line = protectedLines[range.lowerBound.line - 1]
                 let bytes = min(range.lowerBound.column - 1, line.utf8.count)
                 let column = String(line.utf8.prefix(bytes)).map { $0.utf16.count } ?? 0
@@ -66,9 +61,7 @@ public struct TableSource {
         guard let found else { return nil }
 
         var last = found.last
-        // A table's range could run on over blank lines after it.
         while last > found.first, text.substring(with: lines[last]).trimmingCharacters(in: .whitespaces).isEmpty { last -= 1 }
-        // A caret on such a line is outside the table; its rows below would not reach that far.
         guard caretLine <= last else { return nil }
         let first = lines[found.first]
         let firstPrefix = text.substring(with: NSRange(location: first.location, length: min(found.column, first.length)))
@@ -99,7 +92,6 @@ public struct TableSource {
             alignments: (0..<width).map { i in i < delimiter.count ? Self.alignment(delimiter[i].text) : nil },
             rows: [cells(header)] + body.map(cells))
 
-        // The delimiter row holds no cell; a caret on it is in the header.
         let line = caretLine - found.first
         let content = contents[line]
         let at = selection.location - content.range.location - content.cut
@@ -110,8 +102,6 @@ public struct TableSource {
 
     // MARK: Editing
 
-    /// The source with `command` done, the caret at the end of the cell it leaves you in; nil when it can't be done
-    /// here (a move past the edge, deleting the last row or column).
     public func edit(_ command: TableCommand) -> SourceEditing.Edit? {
         var grid = grid
         let (r, c) = cell
@@ -176,7 +166,6 @@ public struct TableSource {
             i += 1
         }
         i = min(i, units.count)
-        // What follows the last pipe is a cell only if it holds something.
         let rest = String(utf16CodeUnits: Array(units[start..<i]), count: i - start)
         if !rest.trimmingCharacters(in: .whitespaces).isEmpty || out.isEmpty { cell(start, i) }
         return out
@@ -191,8 +180,7 @@ public struct TableSource {
         }
     }
 
-    /// Where a `[[…]]` starting at `i` ends, past its `]]`. Its `|` is the link's, not a cell's, as Obsidian and the
-    /// preview read it (`MathProtection`), so the link's own `[[target|alias]]` keeps the row's cells whole.
+    // `[[...]]` 안의 `|`는 칸 구분자가 아니라 링크의 구분자다. Obsidian과 미리보기(`MathProtection`)도 이렇게 읽는다.
     static func wikiLinkEnd(_ units: [UInt16], _ i: Int) -> Int? {
         guard i + 1 < units.count, units[i] == 0x5B, units[i + 1] == 0x5B else { return nil }
         var j = i + 2
@@ -203,7 +191,6 @@ public struct TableSource {
         return nil
     }
 
-    /// Pipes inside a cell's text escaped, as GFM needs them; ones already escaped, and a link's, stay as they are.
     static func escapePipes(_ text: String) -> String {
         let units = Array(text.utf16)
         var out: [UInt16] = []
@@ -279,7 +266,6 @@ public struct TableSource {
         lines.lastIndex { $0.location <= offset } ?? 0
     }
 
-    /// A line's quote marks and indent, no longer than the table's first line has.
     static func prefix(of line: String, upTo length: Int) -> String {
         var out = ""
         for ch in line {
@@ -290,8 +276,6 @@ public struct TableSource {
     }
 }
 
-/// How many columns text takes in a monospaced font: Hangul, CJK and emoji two, combining marks none. Pipes are lined
-/// up by it, so a table of Korean lines up in the edit view as one of English does.
 public enum DisplayWidth {
     public static func of(_ text: String) -> Int {
         text.reduce(0) { $0 + of($1) }

@@ -1,18 +1,13 @@
 import Foundation
 
-/// Math (`$…$`, `$$…$$`), headings, lists and tables are already compatible and pass through.
 public enum NotionMarkdown {
-    /// - Parameters:
-    ///   - links: Notion page ID (32 lowercase hex, no dashes) → note title, so mentions of imported pages become `[[title]]`.
-    ///   - images: the exact `source` attribute of an `<image>` → path relative to the note. Missing ones are dropped.
+    // Notion 페이지 ID는 대시 없는 소문자 16진수 32자다.
     public static func convert(_ text: String, links: [String: String] = [:], images: [String: String] = [:]) -> String {
         var out: [String] = []
         var depth = 0
-        // How the next line decides the title of a just-opened quote block.
         enum Pending { case boldTitle(String, Bool), summary, firstLine, obsidianCallout }
         var pending: (kind: Pending, depth: Int)?
         var afterHeader = false
-        // HTML lists inside markdown list items: marker and indentation per open list.
         var lists: [(indent: String, ordered: Bool, count: Int)] = []
         var bullet: String?
         var table: (indent: String, rows: [[String]], cell: [String]?)?
@@ -100,7 +95,6 @@ public enum NotionMarkdown {
                 settle()
                 depth = max(0, depth - 1)
                 afterHeader = false
-                // Without a break the next quote block would join this one.
                 emit("", at: depth)
                 continue
             }
@@ -143,7 +137,7 @@ public enum NotionMarkdown {
                     header("note", folded: true, title: line(trimmed), at: p.depth)
                     continue
                 case .obsidianCallout:
-                    // Obsidian callouts pasted into Notion arrive as quotes with an escaped `\[!type\]` first line.
+                    // Notion에 붙인 Obsidian 콜아웃은 첫 줄이 이스케이프된 `\[!type\]`인 인용으로 온다.
                     if let m = trimmed.wholeMatch(of: /\\?\[!([A-Za-z-]+)\\?\]([+-]?)\s*(.*)/) {
                         pending = nil
                         header(String(m.1).lowercased(), folded: m.2 == "-", title: line(String(m.3)), at: p.depth)
@@ -161,7 +155,6 @@ public enum NotionMarkdown {
                 emit(b + line(trimmed), at: depth)
                 bullet = String(repeating: " ", count: b.count)
             } else {
-                // Toggle children are tab-indented under their title.
                 emit(line(depth > 0 && raw.hasPrefix("\t") ? String(raw.dropFirst()) : raw), at: depth)
             }
         }
@@ -169,7 +162,6 @@ public enum NotionMarkdown {
         return out.joined(separator: "\n")
     }
 
-    /// Wrapper tags with no Folio counterpart; their content stays.
     static let dropped: Set<String> = [
         "<p>", "</p>", "<p />", "<p/>", "<columns>", "</columns>", "<column>", "</column>", "</pdf>", "</image>",
     ]
@@ -205,7 +197,6 @@ public enum NotionMarkdown {
         s.replace(/<pdf\s+source="([^"]*)"[^>]*?(?:\/>|>(.*?)<\/pdf>|>)/) { m in
             images[String(m.1)].map { "[\(($0 as NSString).lastPathComponent)](\($0))" } ?? ""
         }
-        // Mentions sometimes arrive already as markdown links to the Notion page.
         s.replace(/\[([^\]]*)\]\((https?:\/\/(?:app\.notion\.com|(?:www\.)?notion\.so)\/[^)\s]*)\)/) { m in
             guard let id = m.2.firstMatch(of: /[0-9a-f]{32}/).map({ String($0.0) }), let title = links[id] else { return String(m.0) }
             return m.1 == title || m.1.isEmpty ? "[[\(title)]]" : "[[\(title)|\(m.1)]]"

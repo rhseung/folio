@@ -3,7 +3,6 @@ import FolioDomain
 import FolioStorage
 import Foundation
 
-/// A picture or widget file as `show --json` reports it, with the hash its `write --expect` compares.
 struct NoteFileBody: Encodable {
     var name: String
     var path: String
@@ -16,7 +15,6 @@ struct NoteFileItem: Encodable {
     var path: String
     var size: Int
     var modified: Date?
-    /// Notes whose text names the file, by course-relative path.
     var notes: [String]
 }
 
@@ -152,7 +150,6 @@ extension NoteCommand {
                 let given = try text ?? html.map(readText)
                 var course: CourseRef?
                 var ref = ""
-                // With the page given, the course alone names the accent.
                 if given != nil, !widget.isEmpty, !widget.contains("/") {
                     course = try r.course(widget)
                 } else if !widget.isEmpty || given == nil {
@@ -176,7 +173,6 @@ extension NoteCommand {
     }
 }
 
-/// Where a render's pictures go when a person runs it; `--json` (and so `folio mcp`) carries them in the output.
 struct RenderOutput: ParsableArguments {
     @Option(name: .customLong("width"), help: ArgumentHelp(String(localized: .noteRenderHelpWidth), valueName: "points")) var widths:
         [Int] = []
@@ -198,7 +194,6 @@ struct RenderOutput: ParsableArguments {
     }
 }
 
-/// Reads as `material write` does: only UTF-8 text.
 enum MaterialText {
     static func read(_ store: CourseStore, _ path: String) throws -> String {
         guard FileManager.default.fileExists(atPath: store.fileURL(path).path) else {
@@ -217,7 +212,6 @@ private func readFigure(_ c: CourseRef, _ name: String) throws -> (String, Strin
     return (file, try MaterialText.read(c.store, NoteFigure.path(file)))
 }
 
-/// Which notes use each file: a picture by its file name, a widget by its id, as each appears in a note's text.
 private func listFiles(_ c: CourseRef, _ files: [(name: String, path: String)], json: Bool) throws {
     let notes = (try? c.store.notes()) ?? []
     let texts = notes.compactMap { n in (try? c.store.read(n)).map { (c.store.coursePath(of: n.url) ?? n.url.lastPathComponent, $0) } }

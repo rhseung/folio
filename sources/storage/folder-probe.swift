@@ -1,11 +1,9 @@
 import FolioDomain
 import Foundation
 
-/// Looks at a folder before the app opens it: what it holds (`FolderKind`) and whether its files are on this device.
 public enum FolderProbe {
-    /// The folder's first two levels by name, three under `_Credited` where course folders sit under their source.
-    /// `FolderTree(contentsOf:)` walks the whole tree, which on a large iCloud folder took seconds on the first screen
-    /// and asked iCloud for every placeholder on the way.
+    // `FolderTree(contentsOf:)`는 트리 전체를 읽는데, 큰 iCloud 폴더에서는 첫 화면에 몇 초가 걸렸고 지나가는
+    // 자리표시자마다 iCloud에 내려받기를 요청했다.
     public static func outline(of url: URL) throws -> FolderTree {
         func read(_ url: URL, levels: Int) throws -> FolderTree {
             let isFolder = (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true
@@ -22,7 +20,6 @@ public enum FolderProbe {
         return FolderTree(name: url.lastPathComponent, content: .folder(children))
     }
 
-    /// With `download`, asks iCloud for each file the app reads as it opens the folder that isn't here yet.
     public static func availability(of url: URL, download: Bool = false) -> FolderAvailability {
         let manager = FileManager.default
         var isFolder: ObjCBool = false
@@ -37,7 +34,6 @@ public enum FolderProbe {
         return FolderAvailability(exists: true, downloaded: flags)
     }
 
-    /// The files `Workspace.reload` reads, where they exist here or as an iCloud placeholder.
     static func launchFiles(in root: URL) -> [URL] {
         let metadata = StandardLayout.metadataFolder
         var files = [StandardLayout.transcriptFile, StandardLayout.settingsFile, StandardLayout.catalogFile]
@@ -56,7 +52,7 @@ public enum FolderProbe {
         return files.filter { FileManager.default.fileExists(atPath: $0.path(percentEncoded: false)) || placeholder(of: $0) != nil }
     }
 
-    /// A file iCloud hasn't downloaded may be listed as `.<name>.icloud` beside where it will be.
+    // iCloud가 내려받지 않은 파일은 제자리 옆에 `.<name>.icloud`로 보일 수 있다.
     static func placeholder(of file: URL) -> URL? {
         let stub = file.deletingLastPathComponent().appending(path: ".\(file.lastPathComponent).icloud")
         return FileManager.default.fileExists(atPath: stub.path(percentEncoded: false)) ? stub : nil
@@ -64,7 +60,6 @@ public enum FolderProbe {
 
     static func isDownloaded(_ file: URL) -> Bool {
         guard FileManager.default.fileExists(atPath: file.path(percentEncoded: false)) else { return false }
-        // Outside iCloud there is no status: the file is simply here.
         guard let status = (try? file.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]))?.ubiquitousItemDownloadingStatus
         else { return true }
         return status == .current || status == .downloaded

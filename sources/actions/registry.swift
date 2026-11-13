@@ -1,6 +1,5 @@
 import FolioDomain
 
-/// Every action, in one place: `folio actions --check` fails on any of them without a CLI command or an equivalence test.
 public enum Actions {
     public static let all: [any Action.Type] =
         platform + [
@@ -32,9 +31,6 @@ public enum Actions {
             ImportHandbook.self,
         ]
 
-    /// How each command's proposal stands to an earlier one for the same item (`Chat.supersededProposals`). A
-    /// `set` action whose every other field is a `Patch` writes only the fields it names. Everything else is left
-    /// out: it adds, makes, removes or logs, and a later proposal of it doesn't make an earlier one pointless.
     public static let targets: [String: ProposalTarget] = {
         func arguments(_ type: any Action.Type) -> [String] { type.spec.fields.filter { $0.role == .argument }.map(\.name) }
         var targets = Dictionary(
@@ -44,9 +40,9 @@ public enum Actions {
                 return (type.command, ProposalTarget(arguments: arguments(type), effect: .sets))
             }, uniquingKeysWith: { a, _ in a })
 
-        // The specs can't tell these from `note edit`, which appends: their fields are plain values, not `Patch`.
-        // A rewrite leaves nothing of an earlier rewrite or edit of the same file. `note link` writes its kind and
-        // links; a link left out is cleared rather than kept, so treating it as kept only ever supersedes less.
+        // spec으로는 이 액션들을 덧붙이는 `note edit`와 구분할 수 없다. 필드가 `Patch`가 아니라 맨 값이기 때문이다. 다시
+        // 쓰기는 같은 파일의 앞선 다시 쓰기나 편집을 아무것도 남기지 않는다. `note link`는 종류와 링크를 쓰고 빠진 링크를
+        // 지우므로, 이것을 지키는 것으로 다뤄도 덜 대체할 뿐이다.
         targets[NoteWrite.command] = ProposalTarget(arguments: arguments(NoteWrite.self), effect: .replaces(covers: [NoteEdit.command]))
         targets[MaterialWrite.command] = ProposalTarget(arguments: arguments(MaterialWrite.self), effect: .replaces(covers: []))
         targets[NoteFigureWrite.command] = ProposalTarget(arguments: arguments(NoteFigureWrite.self), effect: .replaces(covers: []))
@@ -55,7 +51,6 @@ public enum Actions {
         return targets
     }()
 
-    /// Backups shell out to ditto and live on the Mac only.
     #if os(macOS)
     static let platform: [any Action.Type] = [BackupCreate.self, BackupRestore.self]
     #else

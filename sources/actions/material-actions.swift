@@ -73,7 +73,7 @@ public struct MaterialLinkUnit {
     }
 }
 
-// The status comes before the materials on the command line, so it is declared first.
+// 명령줄에서 상태가 자료보다 앞에 오므로 먼저 선언한다.
 @Action(
     "material status", "자료의 상태 바꾸기. 여러 개면 확인을 받는다", confirm: "자료 {materials}의 상태를 {status}(으)로 바꿉니다.",
     done: "자료 {materials}을(를) {status}(으)로 바꿨습니다",
@@ -94,7 +94,7 @@ public struct MaterialStatusSet {
     }
 }
 
-// The kind comes before the materials on the command line, so it is declared first.
+// 명령줄에서 종류가 자료보다 앞에 오므로 먼저 선언한다.
 @Action(
     "material kind", "자료의 종류(문제, 제출물, 해설 등) 바꾸기. 여러 개면 확인을 받는다",
     discussion: "과제 폴더의 파일은 종류가 없으면 이름으로 짐작한다(HW3-이름.pdf는 제출물, 나머지는 문제).",
@@ -156,7 +156,6 @@ public struct MaterialUntrack {
     }
 }
 
-/// Files moved in Finder are re-linked rather than registered again.
 @Action(
     "material track", "과목 폴더의 새 파일을 등록하고 과제 폴더에 과제를 만든다",
     discussion: "옮기거나 이름을 바꾸지 않는다. 과목을 빼면 모든 과목에 한다. 지난 학기의 새 과제는 제출함으로 둔다.", done: "자료를 등록했습니다",
@@ -177,7 +176,6 @@ public struct MaterialTrack {
                 try store.refreshMaterials(in: &f, device: ctx.device, now: ctx.now)
                 for title in AssignmentKind.unmatchedFolders(folders, assignments: f.assignments) {
                     var a = Assignment(device: ctx.device, at: ctx.now, title: title)
-                    // A past semester's assignments were all handed in; there is no record saying otherwise.
                     if ended { a.status = .submitted }
                     f.assignments.append(a)
                 }
@@ -187,12 +185,9 @@ public struct MaterialTrack {
 }
 
 public struct ImportItem: Codable, Sendable, Hashable {
-    /// Absolute path.
     public var file: String
-    /// Course-relative.
     public var folder: String
     public var session: Session.ID?
-    /// A lecture's sections as the add sheet approved them (#321); nil leaves the file unsplit.
     public var sections: [LectureCut]?
 
     public init(file: String, folder: String, session: Session.ID? = nil, sections: [LectureCut]? = nil) {
@@ -200,9 +195,6 @@ public struct ImportItem: Codable, Sendable, Hashable {
     }
 }
 
-/// Copies files in from outside, each into its own folder, registers them, and links each to its session. A file put
-/// in `Lectures` for a session takes the session's week in front of its name. A file already in this course is linked
-/// where it is. Every item is checked before the first copy, so one that can't go in stops them all.
 @Action(
     "material import", "바깥 파일을 과목 폴더로 복사해 등록하고 회차에 연결", effect: .creates, done: "파일 {items}을(를) 가져왔습니다",
     phrases: ["파일 가져오기", "다운로드한 자료 넣기", "외부 파일 복사"], cli: .manual(reason: "파일마다 --folder와 --session을 붙여 가져올 항목(ImportItem)을 만든다"))
@@ -247,7 +239,6 @@ public struct MaterialImport {
     }
 }
 
-/// `made` is the `moves.jsonl` batch, for `cleanup undo`.
 @Action(
     "material mv", "자료 파일을 옮기거나 이름 바꾸기. ID와 연결은 그대로", discussion: "moves.jsonl에 남겨서 folio cleanup undo로 되돌릴 수 있다.",
     effect: .moves, confirm: "{material}을(를) {to}(으)로 옮깁니다.", done: "{material}을(를) {to}(으)로 옮겼습니다",
@@ -298,8 +289,6 @@ public struct MaterialTrash {
     }
 }
 
-/// Moves the user approved, journaled in `moves.jsonl` as one batch (`made`). `course`, when given, has its materials
-/// re-linked afterwards.
 @Action(
     "cleanup apply", "검토한 계획대로 옮기기. 먼저 GIST 폴더 전체를 백업한다", effect: .moves, confirm: "파일과 폴더 {moves}을(를) 옮깁니다.", done: "파일 {moves}을(를) 옮겼습니다",
     phrases: ["정리 실행"],
@@ -319,8 +308,8 @@ public struct CleanupApply {
         try annotate(ctx)
     }
 
-    /// Writes each moved file's exam link and kind. Tracking runs first so the file's material already has its new
-    /// path (and keeps its id when it was tracked before). Undoing the moves leaves these on the materials.
+    // 추적을 먼저 돌려야 파일의 자료가 새 경로를 갖고, 전에 추적하던 파일이면 id를 지킨다. 이동을 되돌려도 이 값은
+    // 자료에 남는다.
     func annotate(_ ctx: ActionContext) throws {
         let annotated = moves.filter { $0.exam != nil || $0.kind != nil }
         guard !annotated.isEmpty else { return }
@@ -334,7 +323,6 @@ public struct CleanupApply {
                     guard let m = f.materials.firstIndex(where: { $0.path == String(move.to.dropFirst(base.count)) }) else { continue }
                     if let kind = move.kind { f.materials[m].kind = kind }
                     guard let folder = move.exam else { continue }
-                    // The plan read the exams earlier; one renamed or deleted since can't be linked.
                     if let exam = f.exams.first(where: { $0.folder == folder }) {
                         f.setMaterial(f.materials[m].id, exam: exam.id, linked: true)
                     } else {
@@ -353,7 +341,6 @@ public struct CleanupApply {
 public struct CleanupUndo {
     /// 묶음 ID
     @Arg var batch: MoveBatch.ID
-    // The app's course page passes its course, to re-link its materials after the undo.
     @Hidden var course: Course.ID?
 
     public func run(_ ctx: ActionContext) throws {
@@ -363,10 +350,8 @@ public struct CleanupUndo {
         let moves = records.reversed().compactMap { r in
             r.op == .move ? r.to.flatMap { to in r.from.map { PlannedMove(from: to, to: $0) } } : nil
         }
-        // Notes `note retitle` or `note mv` renamed take their old titles back, in headings and links too.
         let undone = try NoteTitles.follow(
             moves, ctx, move: { try MoveJournal.undo(batch: batch, in: ctx.gist.url, device: ctx.device, now: ctx.now) })
-        // Recordings `recording retitle` renamed point at their old names again.
         try RecordingFiles.follow(moves, ctx)
         guard let undone else { return }
         ctx.made(undone)
@@ -375,7 +360,6 @@ public struct CleanupUndo {
     }
 }
 
-/// One `moves.jsonl` batch, as `cleanup apply` and `material mv` report it.
 public enum MoveBatch {
     public typealias ID = UUID
 }

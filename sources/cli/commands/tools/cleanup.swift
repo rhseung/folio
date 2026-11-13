@@ -22,7 +22,6 @@ struct CleanupCommand: ParsableCommand {
         .nameCollision: String(localized: .cleanupReasonNameCollision),
     ]
 
-    /// What the move writes to course.json: the exam it links to, and the past exam mark.
     static func link(_ m: PlannedMove) -> String {
         ((m.exam.map { [String(localized: .cleanupPlanLinkExam($0))] } ?? [])
             + (m.kind == .pastExam ? [String(localized: .cleanupPlanLinkPastExam)] : []))
@@ -45,7 +44,6 @@ struct CleanupCommand: ParsableCommand {
             say(
                 String(localized: .cleanupPlanTitle).styled(.bold) + "  "
                     + String(localized: .cleanupPlanSummary(plan.moves.count, plan.moves.filter { $0.review != nil }.count)).styled(.dim))
-            // Grouped by destination: `<semester>/<course>` or `<semester>/_Admin`.
             let groups = Dictionary(grouping: plan.moves) { $0.to.split(separator: "/").prefix(2).joined(separator: "/") }
             for group in groups.keys.sorted() {
                 let semester = group.split(separator: "/")[0]
@@ -94,7 +92,6 @@ struct CleanupCommand: ParsableCommand {
             let file = try StoredDocument<CleanupPlan>.read(from: URL(filePath: absolute(plan))).model
             let moves = includeFlagged ? file.moves : file.moves.filter { $0.review == nil }
             if !g.dryRun {
-                // Asked before the backup, so a declined run leaves no copy behind.
                 try ask(String(localized: .cleanupApplyConfirm(moves.count)), g)
                 let copy = try ctx.gist.backup(into: URL(filePath: absolute(backup)), now: ctx.now)
                 if !g.json { say(String(localized: .cleanupApplyBackup(copy.path)).styled(.dim)) }

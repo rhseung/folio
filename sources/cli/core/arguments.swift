@@ -19,7 +19,6 @@ extension GradingMode: ExpressibleByArgument {}
 extension Term: ExpressibleByArgument {}
 extension ReviewResult: ExpressibleByArgument {}
 
-/// `lecture`, `cancelled`, `makeup`, and the Korean the app shows, as `Toggle` reads it.
 extension Session.Kind: ExpressibleByArgument {
     public init?(argument: String) {
         switch argument {
@@ -31,7 +30,6 @@ extension Session.Kind: ExpressibleByArgument {
     }
 }
 
-/// `2026-10-28`, `2026-10-28 14:30`, `2026-10-28T14:30`, or full ISO 8601, in local time unless it says otherwise.
 struct DateArg: ExpressibleByArgument {
     var date: Date
 
@@ -55,7 +53,6 @@ struct DateArg: ExpressibleByArgument {
     static var defaultCompletionKind: CompletionKind { .default }
 }
 
-/// JSON when it reads as JSON, otherwise the word as a string: `300`, `"[1, 3]"`, `asciimath`.
 extension JSONValue: ExpressibleByArgument {
     public init?(argument: String) {
         self = (try? JSONDecoder().decode(JSONValue.self, from: Data(argument.utf8))) ?? .string(argument)
@@ -66,8 +63,6 @@ extension LocalDate: ExpressibleByArgument {
     public init?(argument: String) { self.init(argument) }
 }
 
-/// `none` clears an optional field in a set command; anything else is read as `T`. One word for every command, so
-/// `--due none`, `--end none` and `--late-policy none` all read the same.
 enum Clearable<T: ExpressibleByArgument>: ExpressibleByArgument {
     case clear, set(T)
     init?(argument: String) {
@@ -79,11 +74,9 @@ enum Clearable<T: ExpressibleByArgument>: ExpressibleByArgument {
 }
 
 extension [String] {
-    /// A repeatable option given as `none` alone empties the list it replaces.
     var clearing: [String] { self == ["none"] ? [] : self }
 }
 
-/// `true`/`false` with the Korean the app shows, for set commands that flip one state.
 struct Toggle: ExpressibleByArgument {
     var value: Bool
     init?(argument: String) {

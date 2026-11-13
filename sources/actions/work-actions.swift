@@ -164,7 +164,6 @@ public struct ExamPlanRemove {
     }
 }
 
-/// The latest line across every device's log wins.
 @Action(
     "exam plan-check", "공부 계획 항목 끝내기, --undo면 되돌리기", effect: .logs, done: "공부 계획 항목 '{item}'을(를) 표시했습니다",
     cli: .manual(reason: "항목을 <과목>/<시험> 안에서 찾지만 액션은 시험을 받지 않고, --undo면 완료 문구가 달라진다"))
@@ -208,7 +207,6 @@ public struct ExamSummary {
 
 // MARK: Assignments
 
-/// The last moment a repeating assignment may fall: the end of the term's last day.
 func repeatEnd(_ ctx: ActionContext, course: UUID) throws -> Date? {
     try ctx.semester(of: ctx.file(course).course)?.end?.date(in: ctx.calendar)
         .flatMap { ctx.calendar.date(byAdding: .day, value: 1, to: $0) }?.addingTimeInterval(-1)
@@ -273,7 +271,6 @@ public struct AssignmentAdd {
     phrases: ["미뤄졌", "연기", "마감일", "마감 변경", "기한 연장", "과제 메모", "과제 이름"])
 public struct AssignmentSave {
     public struct Score: Codable, Sendable, Equatable {
-        /// Nil for the one component the assignment counts toward.
         public var component: UUID?
         public var score: Double
         public var max: Double
@@ -304,7 +301,6 @@ public struct AssignmentSave {
     /// 준 항목의 점수만 바꾸고 다른 항목의 점수는 그대로 둔다. 빈 목록이면 점수를 모두 지운다
     @CLIName("score") @Parsed("score", "9/10. 묶음이면 <항목>:9/10") var score: Patch<[Score]>
 
-    // A repeating series shares one title, so each score is told apart by its date.
     static func scoreTitle(_ title: String, repeats: AssignmentRepeat?, due: Date?) -> String {
         repeats != nil ? due.map { "\(title) \($0.formatted(.dateTime.month(.defaultDigits).day()))" } ?? title : title
     }
@@ -328,7 +324,6 @@ public struct AssignmentSave {
             repeats.apply(&a.repeats)
             memo.apply(&a.memo)
 
-            // A component and a group are two ways to say where the assignment counts, so giving one drops the other.
             if case .set(let id) = componentId { (a.componentId, a.componentGroup) = (id, nil) }
             if case .set(let g) = componentGroup { (a.componentId, a.componentGroup) = (g == nil ? a.componentId : nil, g) }
             if let g = a.componentGroup, g != old.componentGroup, !f.components.contains(where: { $0.group == g }) {
@@ -340,8 +335,6 @@ public struct AssignmentSave {
             }
             let own = f.scores.filter { $0.assignmentId == assignment }
             let target = covered(a.componentGroup, a.componentId)
-            // What the sheet showed before: with no target it shows the component of the first score. A score there
-            // that the new target leaves out goes; one moved elsewhere on the grades page stays.
             let shown = target + covered(old.componentGroup, old.componentId ?? own.first?.componentId).filter { !target.contains($0) }
             func resolved(_ list: [Score]) throws -> [(component: UUID, score: Double, max: Double)] {
                 try list.map { s in
@@ -359,7 +352,7 @@ public struct AssignmentSave {
 
             var given = own.filter { target.contains($0.componentId) }.map { (component: $0.componentId, score: $0.score, max: $0.max) }
             if let list = scores.value { given = try resolved(list) }
-            // One component's score given on the command line must not take the others' with it.
+            // 명령줄에서 준 한 평가 항목의 점수가 다른 항목의 점수까지 가져가면 안 된다.
             if let list = score.value {
                 if list.isEmpty { given = [] }
                 for s in try resolved(list) {
@@ -376,7 +369,6 @@ public struct AssignmentSave {
             for s in given {
                 kept.insert(s.component)
                 if let j = f.scores.firstIndex(where: { $0.assignmentId == assignment && $0.componentId == s.component }) {
-                    // The title follows the assignment until it is named on the grades page.
                     let named = f.scores[j].title == oldTitle || f.scores[j].title.isEmpty ? entryTitle : f.scores[j].title
                     guard (f.scores[j].title, f.scores[j].score, f.scores[j].max) != (named, s.score, s.max) else { continue }
                     (f.scores[j].title, f.scores[j].score, f.scores[j].max) = (named, s.score, s.max)
@@ -486,7 +478,6 @@ public struct ScoreAdd {
 }
 
 extension CourseFile {
-    /// A repeating assignment graded by its score moves the series on, as handing it in does.
     mutating func scoredAssignment(_ id: UUID, until end: Date?, _ ctx: ActionContext) {
         markGraded(id, device: ctx.device, now: ctx.now)
         continueRepeating(id, until: end, calendar: ctx.calendar, device: ctx.device, now: ctx.now)
@@ -542,7 +533,6 @@ public struct ScoreSet {
                 excused.apply(&e.excused)
                 e.touch(by: ctx.device, at: ctx.now)
             }
-            // Only a newly made link grades the assignment, so editing its score keeps a status set by hand.
             if case .set(let a?) = assignment, a != linked { f.scoredAssignment(a, until: end, ctx) }
         }
     }
@@ -653,7 +643,7 @@ public struct ComponentRemove {
     }
 }
 
-/// Swaps a component with its neighbor and renumbers all, since imported components may share one `order`.
+// 가져온 평가 항목은 같은 `order`를 가질 수 있으므로 모두 번호를 다시 매긴다.
 @Action(
     "component move", "성적 항목을 한 칸 위나 아래로", done: "성적 항목 '{component}'을(를) 옮겼습니다",
     cli: .manual(reason: "--up과 --down 플래그가 옮길 칸 수(by)가 된다"))
@@ -726,7 +716,6 @@ extension GradeComponent {
         var c = self
         c.name = c.name.trimmingCharacters(in: .whitespaces)
         c.group = c.group?.trimmingCharacters(in: .whitespaces).nilIfEmpty
-        // A single score is one by definition.
         if c.aggregation == .single { c.expectedCount = nil }
         return c
     }

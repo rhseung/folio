@@ -49,7 +49,6 @@ public struct SemesterAdd {
     }
 }
 
-/// The source names the term's folder, so changing it renames `_Credited/<source>` too, through `moves.jsonl`.
 @Action(
     "semester source", "인정학기의 출처 정하기. 폴더가 있으면 _Credited/<출처> 폴더 이름도 바뀌므로 확인을 받는다", effect: .moves,
     confirm: "인정학기 '{semester}'의 출처를 '{source}'(으)로 정합니다.", done: "인정학기 '{semester}'의 출처를 '{source}'(으)로 정했습니다",
@@ -74,7 +73,6 @@ public struct SemesterSource {
             }
         }
 
-        // Checked before the move: on a regular term, `coursesFolder` is the whole semester folder.
         try ctx.checkTranscript(edit)
         if let from = old.coursesFolder, let to = StandardLayout.creditedFolder(source: source), from != to,
             FileManager.default.fileExists(atPath: ctx.gist.url.appending(path: from).path)
@@ -167,7 +165,7 @@ public struct CourseAdd {
             throw ActionError.rule(String(localized: .errorCreditedNeedsSource(semester.name)))
         }
 
-        // Course folders are found by the id in their course.json, so a second folder with this id would be unreachable.
+        // 과목 폴더는 course.json의 id로 찾으므로, 같은 id의 둘째 폴더는 찾을 수 없게 된다.
         guard !ctx.hasFolder(course.id) else { throw ActionError.rule(String(localized: .errorIdTakenCourse("\(course.id)"))) }
         let folder = try CourseRename.folderName(title: course.title, codes: course.codes, number: course.number, catalog: ctx.catalog())
         let path = "\(parent)/\(folder)"
@@ -179,8 +177,6 @@ public struct CourseAdd {
     }
 }
 
-/// course.json is the source of truth; the folder follows it. The rename goes to `moves.jsonl` so `cleanup undo` can
-/// reverse it.
 @Action(
     "course rename", "과목 이름, 코드, 번호 바꾸기. 폴더 이름도 바뀌므로 확인을 받는다",
     discussion: "폴더 이동은 .folio/moves.jsonl에 남아 `folio cleanup undo`로 되돌릴 수 있다.",
@@ -197,7 +193,6 @@ public struct CourseRename {
     /// 일련번호
     var number: Patch<String>
 
-    /// `<main code><number> <title>`.
     public static func folderName(title: String, codes: [UUID], number: String, catalog: Catalog) throws -> String {
         guard let prefix = codes.first.flatMap({ id in catalog.codes.first { $0.id == id } })?.prefix,
             let name = StandardLayout.courseFolderName(prefix: prefix, number: number, title: title)
@@ -236,7 +231,7 @@ public struct CourseSet {
     public enum Field: Codable, Sendable, Equatable {
         case memo(String), credits(Double), gradingMode(GradingMode), instructors([UUID]), categories([UUID]), color(String), icon(String?),
             schedule([ClassTime]), reviews(Bool), finalGrade(UUID?), sharingApproved(Bool)
-        // CaseIterable lets `folio actions --schema` list every case; Codable synthesis still uses these keys.
+        // `folio actions --schema`가 모든 케이스를 나열하도록 CaseIterable을 붙인다. Codable 합성은 여전히 이 키를 쓴다.
         enum CodingKeys: CodingKey, CaseIterable {
             case memo, credits, gradingMode, instructors, categories, color, icon, schedule, reviews, finalGrade, sharingApproved
         }
@@ -253,13 +248,12 @@ public struct CourseSet {
             case .instructors(let v): c.instructorIds = v
             case .categories(let v): c.categoryIds = v
             case .color(let v): c.color = v
-            // An empty name clears it too, so the key leaves course.json instead of holding "".
+            // course.json에 `""`를 두지 않고 키를 빼도록 빈 이름도 지운다.
             case .icon(let v): c.icon = v?.isEmpty == false ? v : nil
             case .schedule(let v):
                 c.schedule = v.map {
                     var t = $0; t.link = OnlineLink.stored(t.link); return t
                 }
-            // Nil stays nil while on, so untouched course.json files keep their shape.
             case .reviews(let v): if v != (c.reviews != false) { c.reviews = v ? nil : false }
             case .finalGrade(let v): c.finalGrade = v
             case .sharingApproved(let v): c.sharingApproved = v ? true : nil
@@ -303,9 +297,6 @@ public struct GraduationSet {
     }
 }
 
-/// The categories come from the handbook here, not from the caller, so the app and the CLI apply what
-/// `requirement check` lists. Every course is matched before any is written, so a course with no suggestion leaves
-/// the others untouched.
 @Action(
     "requirement accept", "학사편람의 분류 제안 받아들이기. 여러 과목이면 확인을 받는다",
     confirm: "과목 {courses}의 분류를 학사편람대로 바꿉니다.", done: "과목 {courses}의 분류를 학사편람대로 바꿨습니다",
@@ -328,7 +319,6 @@ public struct RequirementAccept {
     }
 }
 
-/// Rows that changed are stamped as edited from this device. Unknown keys are kept.
 @Action(
     "catalog set", "catalog.json을 파일 내용으로 바꾸기. 바뀐 행만 수정 시각이 바뀐다",
     discussion: "`folio catalog show --json`으로 받은 파일을 고쳐서 넣는다. 모르는 필드는 남는다.",
@@ -359,8 +349,6 @@ public struct CatalogSet {
     }
 }
 
-/// One value by its key path, so a command changes one setting without sending the rest; the app's settings screen
-/// sends the whole file instead.
 @Action(
     "settings set", "설정 하나를 바꾸거나 settings.json 전체를 파일 내용으로 바꾸기",
     discussion: """
@@ -401,7 +389,6 @@ public struct SettingsSet {
 }
 
 extension JSONValue {
-    /// Replaces the value at an existing key path; a key that isn't there is a typo, not a new setting.
     mutating func set(_ keys: [String], to value: JSONValue, path: String) throws {
         guard let key = keys.first else { self = value; return }
         guard case .object(var o) = self, var child = o[key] else {

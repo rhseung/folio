@@ -2,14 +2,12 @@ import FolioDomain
 import Foundation
 
 extension JSONValue {
-    /// Returns `new` plus every key of `old` that `model` (the value `new` was encoded from) has no property for,
-    /// recursing into nested objects and into arrays matched by `id`. Fields written by a newer app version
-    /// survive a save this way, while fields the model knows and cleared stay cleared.
     static func preservingUnknownKeys(old: JSONValue, new: JSONValue, model: Any) -> JSONValue {
         let mirror = Mirror(reflecting: unwrapped(model))
         switch (old, new, mirror.displayStyle) {
         case (_, _, .dictionary):
-            return new  // dictionary keys are data, not fields: a missing key was deleted
+            // 딕셔너리 키는 필드가 아니라 데이터이므로, 빠진 키는 지운 것이다.
+            return new
         case (.object(let o), .object(var n), _):
             let properties = Dictionary(
                 mirror.children.compactMap { c in c.label.map { ($0, c.value) } },
@@ -44,8 +42,8 @@ extension JSONValue {
     }
 }
 
-/// The one JSON format for every Folio file: sorted keys and pretty printing keep iCloud and git diffs small,
-/// and fractional-second ISO 8601 dates keep event order stable within a second.
+// 정렬한 키와 pretty printing은 iCloud와 git의 diff를 작게 하고, 소수 초까지 쓴 ISO 8601 날짜는 같은 초 안의 이벤트
+// 순서를 지킨다.
 enum JSONFormat {
     static let encoder: JSONEncoder = {
         let e = JSONEncoder()
@@ -82,6 +80,5 @@ extension JSONDecoder {
 }
 
 extension JSONEncoder {
-    /// The encoder Folio writes its files with, so CLI output reads like course.json.
     public static var folio: JSONEncoder { JSONFormat.encoder }
 }

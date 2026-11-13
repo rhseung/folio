@@ -3,13 +3,8 @@ import FolioActions
 import FolioDomain
 import Foundation
 
-// What the generated commands (generated/commands.swift) call: one lookup and one completion per kind of item, so a
-// new action's command needs no code of its own.
-
 extension Resolver {
-    /// `parent` is the item a child kind (a plan item, a card) is looked up in; without it the whole course is searched.
     func id(_ kind: String, _ ref: String, in course: CourseRef? = nil, parent: UUID? = nil) throws -> UUID {
-        // A second item in the same course may be written with or without `<course>/` in front.
         let ref = course?.local(ref) ?? ref
         func scoped() throws -> CourseRef {
             guard let course else { throw CLIError(exit: .usage, message: String(localized: .resolveNeedCourse(ref))) }
@@ -35,7 +30,6 @@ extension Resolver {
         case "QuizCard": try card(ref, unit: parent, in: scoped()).id
         case "NoteWidget": try widget(ref, in: scoped())
         case "MoveBatch":
-            // A batch has no name: `cleanup apply` and the moves print its id.
             if let id = UUID(uuidString: ref) {
                 id
             } else {
@@ -45,7 +39,6 @@ extension Resolver {
         }
     }
 
-    /// In `exam`, or in every exam of the course for `run --input`, which has no exam to look in.
     func planItem(_ ref: String, exam: UUID?, in c: CourseRef) throws -> ExamPlanItem {
         if let exam {
             guard let e = c.file.exams.first(where: { $0.id == exam }) else {
@@ -59,7 +52,6 @@ extension Resolver {
         ).1
     }
 
-    /// In `unit`'s deck, or in every deck of the course.
     func card(_ ref: String, unit: UUID?, in c: CourseRef) throws -> QuizCard {
         let units = unit.map { id in c.file.units.filter { $0.id == id } } ?? c.file.units
         guard unit == nil || !units.isEmpty else {
@@ -69,7 +61,6 @@ extension Resolver {
         return try pick(ref, cards, what: "카드", names: { [$0.prompt] }, ref: { $0.id.uuidString })
     }
 
-    /// A widget has no name; notes point at it by the id in its `cb-widget` block.
     func widget(_ ref: String, in c: CourseRef) throws -> UUID {
         guard let id = UUID(uuidString: ref) else { throw CLIError(exit: .usage, message: String(localized: .resolveNotWidget(ref))) }
         guard FileManager.default.fileExists(atPath: c.store.fileURL(NoteWidget.path(id)).path) else {
@@ -95,17 +86,15 @@ extension Resolver {
     }
 }
 
-/// A value an `@Parsed` field reads from one command-line word, names in it looked up like any other.
 protocol CLIText {
     init(cli text: String, _ r: Resolver, in course: CourseRef?) throws
 }
 
 extension Resolver {
-    /// The type comes from the action's field the value goes into.
     func parse<T: CLIText>(_ text: String, in course: CourseRef?) throws -> T { try T(cli: text, self, in: course) }
 }
 
-/// Splits at the last colon: a file or item name may hold one, the number after it never does.
+// 파일이나 항목 이름에는 콜론이 들 수 있지만 그 뒤의 숫자에는 들지 않으므로 마지막 콜론에서 나눈다.
 private func pair(_ text: String, _ error: @autoclosure () -> String) throws -> (String, String) {
     guard let i = text.lastIndex(of: ":") else { throw CLIError(exit: .usage, message: error()) }
     return (String(text[..<i]), String(text[text.index(after: i)...]))
@@ -116,7 +105,6 @@ private func scoped(_ course: CourseRef?, _ text: String) throws -> CourseRef {
     return course
 }
 
-/// `05_Matchings.pdf:3-12`, or `:7` for one page.
 extension SessionMaterial: CLIText {
     init(cli text: String, _ r: Resolver, in course: CourseRef?) throws {
         let c = try scoped(course, text)
@@ -129,7 +117,6 @@ extension SessionMaterial: CLIText {
     }
 }
 
-/// `6:B0`: absences and the highest grade left.
 extension AttendanceCap: CLIText {
     init(cli text: String, _ r: Resolver, in course: CourseRef?) throws {
         let (n, grade) = try pair(text, String(localized: .componentPolicyBadPair(text)))
@@ -138,7 +125,6 @@ extension AttendanceCap: CLIText {
     }
 }
 
-/// `A+:95`: a grade and the lowest score that gets it.
 extension GradeCutoff: CLIText {
     init(cli text: String, _ r: Resolver, in course: CourseRef?) throws {
         let (grade, n) = try pair(text, String(localized: .componentPolicyBadPair(text)))
@@ -147,7 +133,6 @@ extension GradeCutoff: CLIText {
     }
 }
 
-/// `major:EC`: the program and its department's course code.
 extension StudentProgram: CLIText {
     init(cli text: String, _ r: Resolver, in course: CourseRef?) throws {
         let parts = text.split(separator: ":", maxSplits: 1).map(String.init)
@@ -162,7 +147,6 @@ extension StudentProgram: CLIText {
     }
 }
 
-/// `9/10`, or `<component>:9/10` when the assignment counts toward several; the action picks the one it counts toward.
 extension AssignmentSave.Score: CLIText {
     init(cli text: String, _ r: Resolver, in course: CourseRef?) throws {
         let c = try scoped(course, text)
@@ -196,8 +180,6 @@ func perform<A: Action>(spec action: A, _ options: GlobalOptions, ctx: ActionCon
     let spec = A.spec
     if let record = Built.record { record(A.command, try JSONValue(action)) }
     let confirm = spec.asks(action) ? spec.confirm.map { spec.render($0, action, ctx: ctx) } : nil
-    // Rendered before running so the name of an item the action removes still shows; an item it makes has a name
-    // only after.
     let before = spec.effect == .creates ? nil : spec.render(spec.done, action, ctx: ctx)
     let result = try perform(
         action, options, ctx: ctx, done: before ?? spec.render(spec.done, action, ctx: ctx), confirm: confirm, read: read)
@@ -205,7 +187,6 @@ func perform<A: Action>(spec action: A, _ options: GlobalOptions, ctx: ActionCon
     return result
 }
 
-/// The value an `@FromFile` field reads: JSON in the file at `path`, or standard input for `-`.
 func readJSONFile<T: Decodable>(_ type: T.Type, _ path: String) throws -> T {
     let data: Data
     if path == "-" {
@@ -223,7 +204,6 @@ func readJSONFile<T: Decodable>(_ type: T.Type, _ path: String) throws -> T {
     }
 }
 
-/// The action a command built, for tests that run the same input through `run --input` and directly.
 enum Built {
     @TaskLocal static var record: (@Sendable (String, JSONValue) -> Void)?
 }

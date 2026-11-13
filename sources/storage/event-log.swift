@@ -1,7 +1,6 @@
 import FolioDomain
 import Foundation
 
-/// `data` stays raw so event types from newer app versions are read without loss.
 public struct LoggedEvent: Sendable, Equatable {
     public var id: UUID
     public var at: Date
@@ -16,14 +15,11 @@ public struct LoggedEvent: Sendable, Equatable {
 }
 
 extension Sequence<LoggedEvent> {
-    /// A line that doesn't decode is skipped, so one bad line hides nothing else.
     public func events<E: LogEvent>(_: E.Type) -> [(at: Date, event: E)] {
         compactMap { e in (try? e.decode(E.self)).flatMap { $0 }.map { (at: e.at, event: $0) } }
     }
 }
 
-/// `.folio/logs/<device ID>.jsonl`. Each device appends only to its own file and never edits a line,
-/// so two devices never write the same file.
 public struct EventLog: Sendable {
     static let schemaVersion = 1
 
@@ -51,7 +47,6 @@ public struct EventLog: Sendable {
         try CoordinatedFile.append(JSONFormat.lineEncoder.encode(line) + Data("\n".utf8), to: fileURL(for: device))
     }
 
-    /// Lines that fail to parse (e.g. a write cut off mid-line) are skipped.
     public func readAll() throws -> [LoggedEvent] {
         guard FileManager.default.fileExists(atPath: folder.path) else { return [] }
         let files = try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
@@ -69,7 +64,6 @@ public struct EventLog: Sendable {
 public enum LocalDevice {
     static let key = "folio.deviceID"
 
-    /// Stable per install and never synced, so each device keeps writing to its own log file.
     public static func id(in defaults: UserDefaults = .standard) -> DeviceID {
         if let stored = defaults.string(forKey: key).flatMap(UUID.init(uuidString:)) { return stored }
         let id = UUID()

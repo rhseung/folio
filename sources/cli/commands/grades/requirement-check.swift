@@ -115,7 +115,6 @@ extension RequirementCommand {
             var course, title: String
             var categories: [String]
             var handbook: [Area]
-            /// Categories the handbook of the year taken would give it, when they differ.
             var suggested: [String]?
             var sharing: [Sharing]
         }
@@ -163,7 +162,6 @@ extension RequirementCommand {
             }
         }
 
-        /// A code no course has yet: only the handbook tables can say where it would go.
         func code(_ code: String, catalog: Catalog, notFound: CLIError) throws {
             let areas = HandbookClassifier.areas(of: code, catalog: catalog)
             guard !areas.isEmpty else { throw notFound }

@@ -3,7 +3,6 @@ import FolioActions
 import FolioDomain
 import Foundation
 
-/// Read-only: grades and credits are changed on the course (`folio course set`), the term on the semester.
 struct TranscriptCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "transcript", abstract: String(localized: .transcriptAbstract),

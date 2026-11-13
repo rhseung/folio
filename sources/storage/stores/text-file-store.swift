@@ -13,13 +13,10 @@ extension CourseStore {
         try CoordinatedFile.write(Data(text.utf8), to: fileURL(coursePath))
     }
 
-    /// Fails when the name is taken, by a file or a folder.
     public func createText(_ coursePath: String, text: String) throws {
         try CoordinatedFile.create(Data(text.utf8), at: fileURL(coursePath))
     }
 
-    /// The folder at or above `folder` (below the course folder) that tracking reads as one code project, as the disk has
-    /// it now: a folder tracked file by file becomes one when `git init` runs in it.
     public func codeProject(containing folder: String) -> String? {
         let parts = folder.split(separator: "/").map(String.init)
         for n in parts.indices {
@@ -30,21 +27,17 @@ extension CourseStore {
         return nil
     }
 
-    /// Replaces a file the app made itself, such as a build's PDF. Never used for files the user brought in.
-    /// `keepOld` sends the file there to the Trash first, where the user can still take it back.
     public func replaceFile(_ coursePath: String, with source: URL, keepOld: Bool = false) throws {
         let data = try Data(contentsOf: source)
         if keepOld, FileManager.default.fileExists(atPath: fileURL(coursePath).path) { try CoordinatedFile.trash(fileURL(coursePath)) }
         try CoordinatedFile.write(data, to: fileURL(coursePath))
     }
 
-    /// Nil when iCloud hasn't downloaded the file yet.
     public func hash(_ coursePath: String) throws -> String? {
         try FileHash.sha256(of: fileURL(coursePath))
     }
 
-    /// Takes the size and hash of a file just written in place. `refreshMaterials` only rehashes a file whose size
-    /// changed, so an edit that keeps the length would leave the old hash behind.
+    // `refreshMaterials`는 크기가 바뀐 파일만 다시 해시하므로, 길이가 같은 편집은 옛 해시를 남긴다.
     public func rehash(_ material: UUID, in file: inout CourseFile, device: DeviceID, now: Date) throws {
         guard let i = file.materials.firstIndex(where: { $0.id == material }) else { return }
         let url = fileURL(file.materials[i].path)

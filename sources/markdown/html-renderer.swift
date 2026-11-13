@@ -1,9 +1,7 @@
 import Foundation
 import Markdown
 
-/// - Math becomes `<span class="math">` / `<div class="math display">` holding raw TeX for KaTeX to typeset.
-/// - Links use the `folio://` scheme: `folio://note/<title>#<heading or ^block>`, `folio://material/<id>#page=12`.
-/// - Raw HTML in notes is escaped, not executed; notes come from many sources and the viewer is not a sandbox.
+// 노트의 원시 HTML은 실행하지 않고 이스케이프한다. 노트는 여러 곳에서 오고, 보기는 샌드박스가 아니다.
 public struct HTMLRenderer {
     public static func render(_ note: ParsedNote) -> String {
         blocks(note, embeds: nil, lines: false).map(\.html).joined()
@@ -13,7 +11,6 @@ public struct HTMLRenderer {
         render(ParsedNote(markdown))
     }
 
-    /// An answer in the Claude panel: as a note, but `tex` and `latex` fences stay code.
     public static func render(answer: String) -> String {
         blocks(ParsedNote(answer), embeds: nil, lines: false, mathFences: false).map(\.html).joined()
     }
@@ -23,8 +20,6 @@ public struct HTMLRenderer {
         public var lines: ClosedRange<Int>?
     }
 
-    /// The note block by block, so a page can redraw only the blocks that changed and follow an editor by line. Task
-    /// boxes carry their item's body line as `data-line`, so a tick can be written back to the source.
     public static func blocks(_ note: ParsedNote, embeds: NoteEmbeds? = nil) -> [Block] {
         blocks(note, embeds: embeds, lines: true)
     }
@@ -41,7 +36,6 @@ public struct HTMLRenderer {
         var out = r.rendered(Array(note.document.children)).map { Block(html: $0.html, lines: note.lines(of: $0.node)) }
         let section = r.footnoteSection()
         guard !section.isEmpty else { return out }
-        // The list follows the editor from its last definition, unless a block below that is drawn above the list.
         let definitions = note.document.children.compactMap {
             ($0 as? Paragraph).flatMap { book.isDefinition($0) ? note.lines(of: $0) : nil }
         }
@@ -52,21 +46,15 @@ public struct HTMLRenderer {
 
     var counters: [String: Int] = [:]
     var note: ParsedNote?
-    /// Without it embeds and block references show only their links, as in the Claude panel and PDF export.
     var embeds: NoteEmbeds?
-    /// The notes (and parts of them) this one is drawn inside, outermost first.
     var trail: [String] = []
-    /// Inside an embed or a reference's preview, where an `id` would repeat the other note's: a link to a heading
-    /// or block scrolls to the first element with its id.
+    // 임베드나 참조 미리보기 안에서는 `id`를 달지 않는다. 다른 노트의 `id`와 겹치면 제목이나 블록 링크가 엉뚱한 첫
+    // 요소로 스크롤된다.
     var nested = false
-    /// Inside a reference's preview, whose own references get no preview: it would hold the next one, and so on.
+    // 참조 미리보기 안의 참조에도 미리보기를 달면 그 안에 다음 미리보기가 끝없이 들어간다.
     var previewing = false
-    /// The note's footnotes, numbered as references to them are drawn.
     var footnotes: FootnoteBook?
-    /// Inside a markdown link's text, where an address can't be a link of its own: anchors don't nest.
     var inLink = false
-    /// Off in the Claude panel, whose `tex` and `latex` fences hold source to copy, not a formula to read; `math` is
-    /// a formula there too, as it was before fences chose a syntax.
     var mathFences = true
 
     func mathFence(_ language: String) -> MathFence.Syntax? {
@@ -111,7 +99,6 @@ public struct HTMLRenderer {
     mutating func block(_ node: Markup) -> String {
         switch node {
         case let p as Paragraph:
-            // A definition is drawn in the list at the note's end, not where it was written.
             if footnotes?.isDefinition(p) == true { return "" }
             if NoteOutline.isContents(p) { return contents(of: p.root) }
             if embeds != nil, let links = Self.embedsOnly(p) { return links.map { embed($0) }.joined() }
@@ -141,8 +128,6 @@ public struct HTMLRenderer {
         }
     }
 
-    /// `[TOC]`: the headings of the document it is written in, nested by level, each a link to its heading. Drawn
-    /// from another note (an embed), where its headings have no ids, the items are no links.
     func contents(of document: Markup) -> String {
         let headings = NoteOutline.headings(in: document).filter { $0.level <= NoteOutline.depth }
         guard !headings.isEmpty else { return "" }
@@ -150,7 +135,6 @@ public struct HTMLRenderer {
         let items = headings.map { h in
             var r = HTMLRenderer()
             r.inLink = true
-            // The heading's own links and references would nest inside the item's link.
             let title = Self.splitBlockID(r.inlines(Array(h.inlineChildren))).html
                 .replacing(/<template\b(?s:.*?)<\/template>/, with: "").replacing(/<\/?a\b[^>]*>/, with: "")
                 .replacing(Footnotes.reference, with: "")
@@ -158,7 +142,6 @@ public struct HTMLRenderer {
             return (levels.firstIndex(of: h.level) ?? 0, item)
         }
 
-        // Each item holds the deeper ones after it, up to the next one no deeper.
         func list(_ items: ArraySlice<(Int, String)>) -> String {
             guard !items.isEmpty else { return "" }
             var out = "<ul>"
@@ -183,7 +166,6 @@ public struct HTMLRenderer {
     mutating func listItem(_ item: ListItem) -> String {
         let line = note?.lines(of: item).map { " data-line=\"\($0.lowerBound)\"" } ?? ""
         let box = item.checkbox.map { "<input type=\"checkbox\"\(line) disabled\($0 == .checked ? " checked" : "")> " } ?? ""
-        // The item's own text renders without <p>, also above a sublist; a <p> there would add a paragraph margin.
         if let p = item.child(at: 0) as? Paragraph {
             let (html, id) = Self.splitBlockID(inlines(Array(p.inlineChildren)))
             return "<li\(idAttribute(id))>\(box)\(html)\(blocks(Array(item.children.dropFirst())))</li>\n"
@@ -197,7 +179,7 @@ public struct HTMLRenderer {
         case MathProtection.blockLanguage:
             return "<div class=\"math display\">\(Self.escape(code))</div>\n"
         case let language? where mathFence(language) != nil:
-            // Its own `data-math`, which the page reads before the note's (sources/web/src/reader.js).
+            // 페이지는 노트의 `data-math`보다 이 블록의 값을 먼저 읽는다(sources/web/src/reader.js).
             return "<div class=\"math display\"\(Self.mathAttribute(mathFence(language)?.rawValue))>\(Self.escape(code))</div>\n"
         case CBTable.language:
             let r = inner()
@@ -227,14 +209,13 @@ public struct HTMLRenderer {
             }.joined()
         }
         let head = "<thead><tr>\(cells(t.head, tag: "th"))</tr></thead>"
-        // `rows` is lazy: mapped and joined as is, it interpolates as the sequence's type name, not the rows.
+        // `rows`는 lazy 시퀀스라 그대로 이어 붙이면 행이 아니라 시퀀스의 타입 이름이 들어간다.
         let body = Array(t.body.rows).map { "<tr>\(cells($0, tag: "td"))</tr>" }.joined()
         return "<table>\(head)<tbody>\(body)</tbody></table>\n"
     }
 
-    /// A cell showing one short word (`10/26(월)`, `9주차-1`) is drawn on one line. WebKit breaks such a word after `/` and
-    /// `(` even with `keep-all` and `overflow-wrap: normal`, so beside a long column a date stood as `10/` `26(` `월)`.
-    /// A longer word may still wrap, so one long name or address doesn't push the table past the column.
+    // WebKit은 `keep-all`과 `overflow-wrap: normal`에서도 `/`와 `(` 뒤에서 낱말을 끊어, 긴 열 옆의 날짜가 `10/` `26(`
+    // `월)`로 나뉘었다. 그래서 짧은 낱말 하나인 칸은 한 줄로 그린다.
     static func isShortWord(_ text: String) -> Bool {
         let t = text.trimmingCharacters(in: .whitespaces)
         return !t.isEmpty && t.count <= 16 && !t.contains(where: \.isWhitespace)
@@ -259,7 +240,6 @@ public struct HTMLRenderer {
         var title = header.title
         if CalloutHeader.numbered.contains(header.type) {
             if let explicit = header.explicitNumber {
-                // `Theorem 1.20 (Name)` keeps the textbook number; drop it from the title so it isn't shown twice.
                 label += " " + explicit
                 title = title.replacingOccurrences(of: #"^(?:[A-Za-z]+\s+)?\#(explicit)\s*"#, with: "", options: .regularExpression)
             } else {
@@ -277,14 +257,12 @@ public struct HTMLRenderer {
             body = "<p>\(body)</p>\n"
         }
         var inner = blocks(Array(quote.children.dropFirst()))
-        // A block ID on the callout's last paragraph names the whole callout, as in Obsidian.
         if let m = inner.firstMatch(of: /<p id="\^([A-Za-z0-9-]+)">((?s:.*))<\/p>\n$/), !m.2.contains("<p") {
             id = String(m.1)
             inner.replaceSubrange(m.range, with: "<p>\(m.2)</p>\n")
         }
         body += inner
 
-        // A proof right under a theorem (or lemma, corollary, proposition) belongs to it and starts folded.
         let open = attached ? false : !header.folded
         let classes = "callout callout-\(header.type)" + (attached ? " attached" : "")
         let titleHTML = title.isEmpty ? "" : " <span class=\"callout-title\">\(inlineMarkdown(title))</span>"
@@ -308,8 +286,6 @@ public struct HTMLRenderer {
     mutating func inline(_ node: Markup) -> String {
         switch node {
         case let t as Markdown.Text:
-            // Only a footnote definition's first text starts with the marker. Its label is the list's; where the
-            // definition isn't drawn as one, it shows as written.
             if t.string.first == Footnotes.marker {
                 guard footnotes != nil, let m = t.string.prefixMatch(of: Footnotes.maskedStart) else {
                     return Self.escape("[" + t.string.dropFirst())
@@ -334,14 +310,12 @@ public struct HTMLRenderer {
             defer { inLink = outer }
             return "<a href=\"\(Self.escape(l.destination ?? ""))\">\(inlines(Array(l.inlineChildren)))</a>"
         case let i as Markdown.Image:
-            // Obsidian's `![alt|300](src)`: a width after the last bar; without it the image takes the column.
             var alt = i.plainText, width = ""
             if let m = alt.firstMatch(of: /\s*\|\s*(\d+)(?:x\d+)?$/) {
                 width = " width=\"\(m.1)\""
                 alt = String(alt[..<m.range.lowerBound])
             }
             return "<img src=\"\(Self.escape(i.source ?? ""))\" alt=\"\(Self.escape(alt))\"\(width)>"
-        // A line break in the source is one on the page, as in Obsidian and in the editor, which shows notes line by line.
         case is SoftBreak:
             return "<br>\n"
         case is LineBreak:
@@ -367,7 +341,6 @@ public struct HTMLRenderer {
         return out + replaceWikiLinks(String(html[cursor...]))
     }
 
-    /// A label nothing defines stays as written, as in GFM.
     func linkFootnotes(_ html: String) -> String {
         guard let footnotes, html.contains("[^") else { return html }
         let protected = /(<code>.*?<\/code>|<span class="math">.*?<\/span>)/
@@ -376,7 +349,6 @@ public struct HTMLRenderer {
             String(
                 s.replacing(Footnotes.reference) { m in
                     guard let (n, use) = footnotes.use(Self.unescape(String(m.1))) else { return String(m.0) }
-                    // Inside an embed or a preview, ids would repeat the page's own.
                     if nested { return "<sup class=\"footnote-ref\">\(n)</sup>" }
                     return "<sup class=\"footnote-ref\"><a href=\"#fn-\(n)\" id=\"\(Self.footnoteRef(n, use))\">\(n)</a></sup>"
                 })
@@ -392,7 +364,6 @@ public struct HTMLRenderer {
 
     static func footnoteRef(_ n: Int, _ use: Int) -> String { use == 1 ? "fnref-\(n)" : "fnref-\(n)-\(use)" }
 
-    /// Drawing one footnote can number another, which then comes after it, so the list is read while it grows.
     mutating func footnoteSection() -> String {
         guard let footnotes else { return "" }
         var items = ""
@@ -418,8 +389,8 @@ public struct HTMLRenderer {
     func replaceWikiLinks(_ s: String) -> String {
         s.replacing(WikiLink.pattern) { m in
             let link = WikiLink(m)
-            // The link was read from rendered HTML, so its target and alias are escaped already; a found title is not,
-            // nor an address's heading, which was unescaped from `%..`.
+            // 링크는 그린 HTML에서 읽었으므로 대상과 이름은 이미 이스케이프되어 있다. 찾은 제목과 `%..`에서 되돌린 주소의
+            // 제목은 그렇지 않다.
             let href = link.isAddress ? Self.escape(Self.unescape(link.href)) : link.href
             var named = link
             named.target = Self.unescape(link.target)
@@ -428,7 +399,6 @@ public struct HTMLRenderer {
             let text = link.alias ?? objectName(named).map(Self.escape) ?? ((found.title.map(Self.escape) ?? link.target) + fragment)
             let missing = found.missing ? " missing" : ""
             return link.isEmbed
-                // A link, not a block: it stands inside the paragraph the embed was written in, with other text.
                 ? "<a class=\"embed\(missing)\" href=\"\(href)\">\(text)</a>"
                 : "<a class=\"wikilink\(missing)\" href=\"\(href)\">\(text)</a>" + preview(link)
         }
@@ -439,9 +409,6 @@ public struct HTMLRenderer {
         return embeds.name(link.href)
     }
 
-    /// A `folio://` address written as it is, which markdown makes no link of, as GFM links a bare `https://`. Not
-    /// inside another link, a tag, code or math. Punctuation closing a sentence isn't part of it, except in a heading
-    /// anchor (`trimmedAddress`).
     func linkAddresses(_ html: String) -> String {
         guard !inLink, html.localizedCaseInsensitiveContains("folio://") else { return html }
         let protected = /(?s)(<a\b[^>]*>.*?<\/a>|<code>.*?<\/code>|<span class="math">.*?<\/span>|<template\b.*?<\/template>|<[^>]*>)/
@@ -463,8 +430,8 @@ public struct HTMLRenderer {
         return out + replace(html[cursor...])
     }
 
-    /// FolioDomain's `AppLink.trimmed`, which the editors find addresses by, so both views link the same text: kept
-    /// on a page, time or block anchor, the full stop would make it read as a heading and open at the top.
+    // 편집기가 주소를 찾는 FolioDomain의 `AppLink.trimmed`와 같게 자른다. 쪽, 시각, 블록 앵커에 마침표를 남기면 제목
+    // 앵커로 읽혀 노트의 맨 위에서 열린다.
     static func trimmedAddress(_ written: String) -> String {
         if let hash = written.firstIndex(of: "#") {
             let anchor = written[written.index(after: hash)...]
@@ -473,9 +440,6 @@ public struct HTMLRenderer {
         return String(written.reversed().drop { ".,;:!?".contains($0) }.reversed())
     }
 
-    /// For a link by ID, the title of the note it names, which a link without its own name shows. `missing` when no
-    /// note has the ID, or none the title a link by title names, which only a page drawing embeds can tell; elsewhere
-    /// (the Claude panel, PDF export) the link shows its target. A link to a file or another app object is left alone.
     func noteTitle(_ link: WikiLink) -> (title: String?, missing: Bool) {
         guard let embeds, link.namesNote else { return (nil, false) }
         guard let id = link.noteID else { return (nil, !embeds.hasNote(link.target)) }
@@ -485,8 +449,6 @@ public struct HTMLRenderer {
 
     // MARK: Embeds and references
 
-    /// The links of a paragraph holding nothing but note embeds, each of which is drawn as a block in its place. An
-    /// embed beside other text stays a link: a block can't stand inside a paragraph.
     static func embedsOnly(_ p: Paragraph) -> [WikiLink]? {
         var text = ""
         for child in p.inlineChildren {
@@ -503,8 +465,6 @@ public struct HTMLRenderer {
         return links
     }
 
-    /// The part of another note an embed points at, drawn under its name, which opens the note. One that can't be
-    /// drawn (missing, inside itself, too deep) says why in its place.
     func embed(_ link: WikiLink) -> String {
         let part = link.blockID.map { " › ^" + $0 } ?? link.fragment.map { " › " + $0 } ?? ""
         let found = noteTitle(link)
@@ -524,17 +484,14 @@ public struct HTMLRenderer {
         var child = inner()
         child.trail = trail + [key]
         child.nested = true
-        // The part shown may reference footnotes defined elsewhere in its note, usually at the end.
         child.footnotes = FootnoteBook(ParsedNote(found.text).document)
         let body = child.blocks(Array(ParsedNote(section).document.children)) + child.footnoteSection()
         return "<div class=\"embed\"\(Self.mathAttribute(found.math))>\(head)<div class=\"embed-body\">\n\(body)</div></div>\n"
     }
 
-    /// A block reference carries the block it names, which the page shows while the pointer rests on the link. A
-    /// template holds it: its content is inert and may stand inside the paragraph, where a block element can't.
+    // `template`의 내용은 동작하지 않으므로 블록 요소가 들어갈 수 없는 문단 안에도 둘 수 있다.
     func preview(_ link: WikiLink) -> String {
         guard !previewing else { return "" }
-        // The link was read from rendered HTML, so its target is escaped there.
         var named = link
         named.target = Self.unescape(link.target)
         guard let card = card(named) else { return "" }
@@ -546,8 +503,6 @@ public struct HTMLRenderer {
         public var math: String?
     }
 
-    /// The card a block reference (`[[노트#^블록]]`, as written in the source) shows in the preview, for a view that
-    /// shows the source and floats the card itself. Nil for any other link.
     public static func referenceCard(_ link: WikiLink, embeds: NoteEmbeds) -> ReferenceCard? {
         var r = HTMLRenderer()
         r.embeds = embeds
@@ -555,7 +510,6 @@ public struct HTMLRenderer {
         return r.card(link)
     }
 
-    /// Its own references get no card.
     func card(_ link: WikiLink) -> ReferenceCard? {
         guard let embeds, let block = link.blockID, link.namesNote else { return nil }
         guard trail.count <= NoteEmbeds.depth, let found = embeds.find(link),
@@ -611,7 +565,6 @@ public struct HTMLRenderer {
 }
 
 extension BlockQuote {
-    /// The header comes from the first line only; `plainText` would join the whole paragraph with spaces.
     public var calloutHeader: CalloutHeader? {
         guard let p = child(at: 0) as? Paragraph else { return nil }
         let firstLine = Array(p.inlineChildren).prefix { !($0 is SoftBreak || $0 is LineBreak) }.map { HTMLRenderer.sourceText($0) }

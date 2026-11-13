@@ -10,7 +10,6 @@ extension ActionContext {
     }
 }
 
-/// Nothing inside the GIST folder changes, so the archive's path goes to `notes` rather than `changes`.
 @Action(
     "backup create", "오늘 백업을 만든다",
     discussion: """
@@ -35,7 +34,6 @@ public struct BackupCreate {
     }
 }
 
-/// Never writes into the GIST folder; the extracted folder's path is the action's only note.
 @Action(
     "backup restore", "한 과목을 백업에서 새 폴더로 꺼낸다",
     discussion: "과목을 백업 폴더 옆 restored 폴더에 새로 꺼낸다. 복제 백업이면 과목 폴더 전체, zip 백업이면 Notes, Ink, .folio를 꺼낸다. GIST 폴더는 건드리지 않으니 비교해서 직접 옮긴다.",

@@ -4,10 +4,6 @@ import FolioStorage
 import Foundation
 import PDFKit
 
-// The panel's tools for reading what a course holds beyond its text files (#85): a PDF's pages, a recording's
-// transcript, a note's pictures. Each read is capped (`ReadingLimit`) and says where the next one starts, as a tool's
-// answer stays in the conversation for every later turn.
-
 extension MaterialCommand {
     struct Read: ParsableCommand {
         static let configuration = CommandConfiguration(
@@ -25,11 +21,9 @@ extension MaterialCommand {
         struct Page: Encodable {
             var page: Int
             var title: String?
-            /// Left out in `--titles`, where the words count says which pages are pictures more than text.
             var text: String?
             var words: Int
             var figures: Int
-            /// Where its picture went: a file, or the name Claude got it under.
             var image: String?
         }
 
@@ -40,7 +34,6 @@ extension MaterialCommand {
             var last: Int
             var outline: [Bookmark]?
             var pages: [Page]
-            /// The `--pages` to pass to go on; nil once the asked pages are all read.
             var next: String?
         }
 
@@ -117,7 +110,6 @@ extension MaterialCommand {
             }
         }
 
-        /// `9`, `9-12`, `9-` (to the end).
         static func range(_ written: String) throws -> ClosedRange<Int> {
             guard let m = written.trimmingCharacters(in: .whitespaces).wholeMatch(of: /(\d{1,6})(?:(-)(\d{1,6})?)?/), let first = Int(m.1)
             else {
@@ -151,7 +143,6 @@ extension RecordingCommand {
         @Option(help: ArgumentHelp(String(localized: .recordingTranscriptHelpTo), valueName: "m:ss")) var to: String?
 
         struct Line: Encodable {
-            /// `12:30`: what `folio link recording … --time` takes, so an answer can point at the moment.
             var at: String
             var text: String
         }
@@ -161,7 +152,6 @@ extension RecordingCommand {
             var session: String?
             var duration: String
             var lines: [Line]
-            /// The `--from` to pass to go on; nil once the asked span is all read.
             var next: String?
         }
 
@@ -195,7 +185,6 @@ extension RecordingCommand {
             }
         }
 
-        /// `750`, `12:30`, `1:02:03`, read as a recording's address reads its `#t=`.
         static func seconds(_ written: String) throws -> TimeInterval {
             let link = AppLink(string: "folio://recording/\(UUID().uuidString)#t=\(written.trimmingCharacters(in: .whitespaces))")
             guard case .time(let s)? = link?.anchor else {
@@ -220,9 +209,7 @@ extension NoteCommand {
 
         struct Item: Encodable {
             var index: Int
-            /// As the note wrote it, or as `--file` gave it.
             var written: String
-            /// Course-relative; nil when the note names a file the course doesn't have.
             var path: String?
             var image: String?
         }
@@ -230,7 +217,6 @@ extension NoteCommand {
         struct Shown: Encodable {
             var note: String?
             var pictures: [Item]
-            /// The `--from` to pass to go on.
             var next: Int?
         }
 
@@ -254,7 +240,6 @@ extension NoteCommand {
             } else if let found {
                 listed = store.noteImageFiles(of: found.note, body: try store.read(found.note))
             } else {
-                // A course alone: what Notes/assets holds, named, for picking with `--file`.
                 let assets = store.noteAssets().compactMap(store.coursePath(of:)).filter { MaterialFormat(path: $0) == .image }.sorted()
                 return try show(Shown(note: nil, pictures: assets.enumerated().map { Item(index: $0 + 1, written: $1, path: $1) }), c)
             }
@@ -294,7 +279,6 @@ extension NoteCommand {
             }
         }
 
-        /// Beside the note first, then where a bare name in a note is looked for, then from the course folder.
         static func locate(_ written: String, in store: CourseStore, near note: NoteFile?) throws -> NoteImageFile {
             guard MaterialFormat(path: written) == .image else {
                 throw CLIError(exit: .usage, message: String(localized: .noteImagesNotImage(written)))

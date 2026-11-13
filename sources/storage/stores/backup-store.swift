@@ -2,10 +2,6 @@ import FolioDomain
 import Foundation
 
 #if os(macOS)
-/// Daily backups. Nothing here writes inside the GIST folder.
-/// On the GIST folder's own volume a backup is an APFS clone of the whole folder, which costs disk only for
-/// files changed since. A clone can't cross volumes, and copying every lecture daily would cost gigabytes, so
-/// elsewhere it falls back to zipping GIST/.folio and each course's Notes, Ink and .folio.
 public struct BackupStore: Sendable {
     public enum Failure: Error, Equatable {
         case insideGIST(String)
@@ -22,7 +18,6 @@ public struct BackupStore: Sendable {
 
     public struct Created: Sendable, Equatable {
         public var url: URL
-        /// Files only in iCloud, left out rather than downloaded.
         public var skipped: Int
     }
 
@@ -38,7 +33,6 @@ public struct BackupStore: Sendable {
         self.folder = folder
     }
 
-    /// A backup folder inside the GIST folder would sync to iCloud and be backed up into itself.
     func checkFolder() throws {
         let root = gist.url.standardizedFileURL.path + "/"
         guard !(folder.standardizedFileURL.path + "/").hasPrefix(root) else { throw Failure.insideGIST(folder.path) }
@@ -81,7 +75,6 @@ public struct BackupStore: Sendable {
         let fm = FileManager.default
         try fm.createDirectory(at: folder, withIntermediateDirectories: true)
         let target = target(for: today, clone: clone)
-        // Build next to the target and swap in, so a failed run never leaves a half-written backup under the real name.
         let partial = folder.appending(path: ".\(UUID().uuidString).partial")
         defer { try? fm.removeItem(at: partial) }
         var skipped = 0
@@ -99,10 +92,9 @@ public struct BackupStore: Sendable {
         return Created(url: target, skipped: skipped)
     }
 
-    /// Path strings with mkdir and copyfile, not FileManager: its URL and path APIs rewrite names to NFD, so a
-    /// Korean file name saved as NFC would come back under different bytes.
-    /// Item by item instead of one recursive copy, so a file iCloud has evicted is skipped rather than
-    /// downloaded: fetching gigabytes of lectures would stall the backup and refill the disk.
+    // FileManager의 URL과 경로 API는 이름을 NFD로 바꾸므로, NFC로 저장한 한국어 파일 이름이 다른 바이트로 돌아온다.
+    // 그래서 경로 문자열과 mkdir, copyfile을 쓴다. iCloud가 비운 파일을 내려받지 않고 건너뛰도록 한 번에 재귀 복사하지
+    // 않고 항목마다 복사한다. 렉처 몇 GB를 받으면 백업이 멈추고 디스크가 다시 찬다.
     static func cloneTree(_ source: String, into target: String, skip: (String) -> Bool = { _ in false }) throws -> Int {
         var skipped = 0
         for name in try FileManager.default.contentsOfDirectory(atPath: source) {
@@ -115,7 +107,6 @@ public struct BackupStore: Sendable {
             } else if skip(from) {
                 skipped += 1
             } else {
-                // COPYFILE_CLONE falls back to a plain copy where cloning isn't possible.
                 guard copyfile(from, to, nil, copyfile_flags_t(COPYFILE_CLONE | COPYFILE_NOFOLLOW)) == 0 else { throw posixFailure(from) }
             }
         }
@@ -141,8 +132,6 @@ public struct BackupStore: Sendable {
         try Self.ditto(["-c", "-k", "--sequesterRsrc", "--keepParent", root.path, archive.path])
     }
 
-    /// Copies one course out of `archive` into `target`, a new folder outside GIST: the whole course folder from
-    /// a clone, its Notes, Ink and .folio from a zip. Restoring never overwrites; the user compares and copies back by hand.
     public func restore(course: CourseStore, from archive: Archive, to target: URL) throws {
         let fm = FileManager.default
         guard !fm.fileExists(atPath: target.path) else { throw Failure.targetExists(target.path) }

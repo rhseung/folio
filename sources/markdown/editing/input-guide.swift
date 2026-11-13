@@ -1,18 +1,10 @@
 import Foundation
 
-/// The input guide (#395) reads the tables the editor itself reads (the catalog's `/` blocks, languages and snippets for the note's math
-/// syntax, the callout kinds, the TeX environments, the pairs and list marks, the table keys), so a snippet added in
-/// settings or a block added to `/` shows here without another copy. Words are `Phrase`s for the app to say in its
-/// language; names already in it (a `/` block's title) and markdown come as they are.
 public enum InputGuide {
     public enum Section: String, CaseIterable, Sendable {
-        /// Typing opens the completion menu.
         case menu
-        /// Tab expands or moves.
         case tab
-        /// The editor types along.
         case auto
-        /// Keys and the menu in a table.
         case table
     }
 
@@ -28,11 +20,8 @@ public enum InputGuide {
     public enum Words: Equatable, Sendable {
         case phrase(Phrase)
         case table(TableCommand)
-        /// Already in the reader's language: a `/` block's title.
         case named(String)
-        /// Markdown or a formula, shown in a fixed-width face.
         case code(String)
-        /// Names, of which the guide shows the first few (`listed`).
         case list([String])
     }
 
@@ -47,7 +36,6 @@ public enum InputGuide {
         public var title: Words
         public var note: Words?
         public var steps: [Step]
-        /// What else finds it: every name of a list `note` shows only the start of.
         public var keywords: [String]
 
         public init(_ id: String, _ section: Section, _ title: Words, note: Words? = nil, _ steps: [Step], keywords: [String] = []) {
@@ -60,12 +48,9 @@ public enum InputGuide {
         }
     }
 
-    /// The `/` menu's item that opens the guide, which the guide leaves out of the blocks it lists.
     public static let menuItemID = "slash.input-guide"
     public static let tab = "⇥"
 
-    /// Everything the guide lists, in its sections' order. `menus` is false where the edit view has no completion menu
-    /// (the iPad, #31), `tableMenu` where a table has no menu of commands (also the iPad).
     public static func entries(catalog: CompletionCatalog, menus: Bool = true, tableMenu: Bool = true) -> [Entry] {
         (menus ? menuEntries(catalog) : []) + tabEntries(catalog) + autoEntries() + tableEntries(menu: tableMenu)
     }
@@ -91,7 +76,6 @@ public enum InputGuide {
                 "menu.language", .menu, .phrase(.codeLanguage), note: .list(languages), [.key("```"), .result(.phrase(.languageList))],
                 keywords: languages),
         ]
-        // A bare `\` lists them all in either syntax (#392); AsciiMath takes the name in its place.
         out.append(
             Entry(
                 "menu.symbols", .menu, .phrase(.mathSymbols), note: .phrase(.inMath), [.key("\\"), .result(.phrase(.symbolsByCategory))],
@@ -104,7 +88,6 @@ public enum InputGuide {
             ]
         } else if let sample = AsciiMathSymbols.all.first(where: { $0.name.count >= 4 }) {
             let typed = String(sample.name.prefix(2))
-            // The typed letters can be a name of their own (`fr`); showing it back reads as an echo, not a result.
             let found = Completion.filter(AsciiMathSymbols.items, typed, prefixOnly: true).map(\.title).filter { $0 != typed }
             out.append(
                 Entry(
@@ -115,10 +98,8 @@ public enum InputGuide {
     }
 
     static func tabEntries(_ catalog: CompletionCatalog) -> [Entry] {
-        // Numbered, since settings don't stop two snippets sharing a trigger.
         let snippets = catalog.snippets.enumerated().map { i, s in
             let written = shown(s.body)
-            // A snippet that writes what a `/` block does goes by that block's name, as `mk` by 인라인 수식's.
             if !s.inMath, let block = catalog.slash.first(where: { $0.body == s.body }) {
                 return Entry(
                     "tab.snippet.\(i)", .tab, .named(block.title), note: .phrase(.snippet),
@@ -168,7 +149,6 @@ public enum InputGuide {
         return out
     }
 
-    /// The entries whose words hold `typed`, ignoring case; `words` says them as the app does.
     public static func filter(_ entries: [Entry], _ typed: String, words: (Words) -> String) -> [Entry] {
         let q = typed.trimmingCharacters(in: .whitespaces).lowercased()
         guard !q.isEmpty else { return entries }
@@ -195,7 +175,6 @@ public enum InputGuide {
         names.prefix(first).joined(separator: ", ") + (names.count > first ? " …" : "")
     }
 
-    /// A snippet's body on one line with its caret marks as `…`, where one types: `$$1$` as `$…$`.
     public static func shown(_ body: String) -> String {
         let units = Array(body.utf16)
         var out: [UInt16] = []
@@ -217,9 +196,6 @@ public enum InputGuide {
         return opener + "…" + closer
     }
 
-    /// The fastest way to write what a `/` block puts in, for the menu to show beside it: a snippet that writes the same
-    /// (`mk ⇥`), or the block's own markdown when it is short enough to type (`##`, `- [ ]`, `> [!`). Nil for a block
-    /// longer than a line or with a place for the caret in it (a table, a template).
     public static func shortcut(for item: CompletionItem, snippets: [Snippet]) -> String? {
         if let snippet = snippets.first(where: { !$0.inMath && $0.body == item.body }) { return snippet.trigger + " " + tab }
         let typed = item.body.trimmingCharacters(in: .whitespacesAndNewlines)

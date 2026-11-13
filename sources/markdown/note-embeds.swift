@@ -1,14 +1,10 @@
 import Foundation
 import Markdown
 
-/// What a note's embeds (`![[노트#제목]]`) and block references (`[[노트#^블록]]`) show. FolioMarkdown reads no files:
-/// the app finds the note a link names, and the renderer cuts out the part the link points at.
 public struct NoteEmbeds {
     public struct Note {
-        /// Tells notes apart, so a note reached again inside itself is not drawn again.
         public var key: String
         public var text: String
-        /// The note's math syntax (`latex`, `asciimath`), which may differ from the note it is drawn in.
         public var math: String?
 
         public init(key: String, text: String, math: String? = nil) {
@@ -18,7 +14,6 @@ public struct NoteEmbeds {
         }
     }
 
-    /// What an embed that can't be drawn says in its place.
     public struct Labels {
         public var missing: String
         public var loop: String
@@ -31,18 +26,13 @@ public struct NoteEmbeds {
         }
     }
 
-    /// The note being rendered, so embedding itself is caught as a loop at once.
     public var key: String?
     public var labels: Labels
     public var find: (WikiLink) -> Note?
-    /// The title of the note an ID names, which a link without its own name shows. Apart from `find`, which only
-    /// returns notes it can draw: a link to a LaTeX note still resolves. Nil when no note has the ID.
+    // `find`와 따로 둔다. `find`는 그릴 수 있는 노트만 돌려주지만, LaTeX 노트로 가는 링크도 제목을 찾아야 한다.
     public var title: (UUID) -> String?
-    /// Whether a link by title (`[[제목]]`, written by hand) names a note, found as the app finds it to open the link,
-    /// so a link drawn whole always opens and one drawn broken never does. Like `title`, apart from `find`.
+    // 앱이 링크를 열 때와 같은 방법으로 찾아야, 온전히 그린 링크는 항상 열리고 깨진 링크로 그린 것은 열리지 않는다.
     public var hasNote: (String) -> Bool
-    /// What a link to anything else in the app shows without a name of its own (a file's name and page, an exam's
-    /// title), given the link's `href`. Nil leaves it showing what is written.
     public var name: (String) -> String?
 
     public init(
@@ -58,30 +48,24 @@ public struct NoteEmbeds {
         self.find = find
     }
 
-    /// A loop is caught by its keys, but notes embedding one another without one could still draw a whole course into
-    /// one page; past this depth an embed shows only its link.
+    // 고리는 키로 막지만, 고리 없이 서로 임베드하는 노트들이 과목 전체를 한 페이지에 그릴 수 있어서 깊이를 제한한다.
     public static let depth = 4
 }
 
 extension WikiLink {
-    /// A link to a note rather than to an app object or another file: `![[그림.png]]` and `![[slides.pdf]]` embed files,
-    /// which this doesn't draw. An extension must start with a letter, so a title like `v1.2` is still a note.
+    // 확장자는 글자로 시작해야 하므로 `v1.2` 같은 제목은 노트로 읽는다.
     var namesNote: Bool {
         if isAppLink { return objectKind == "note" }
         let ext = (target as NSString).pathExtension
         return ext.lowercased() == "md" || ext.wholeMatch(of: /[A-Za-z][A-Za-z0-9]{0,4}/) == nil
     }
 
-    /// What an embed or a reference is told apart by in a loop: the note and the part of it.
     func key(in note: String) -> String {
         note + (blockID.map { "#^" + $0 } ?? fragment.map { "#" + $0 } ?? "")
     }
 }
 
 extension ParsedNote {
-    /// The part of the note a link points at, as markdown: under a heading (the heading included, up to the next
-    /// heading as high or higher), a block (its paragraph, list item or callout), or the whole body without either.
-    /// Nil when the note has no such heading or block.
     public func section(heading: String?, block: String?) -> String? {
         if let block { return blockSource(block) }
         if let heading { return headingSection(heading) }
@@ -99,8 +83,6 @@ extension ParsedNote {
         return source(start...end)
     }
 
-    /// A list item is the item with its sublists, written as a list of one; anything else is the whole top-level block
-    /// (a block ID on a callout's last paragraph names the callout, as the renderer reads it).
     func blockSource(_ id: String) -> String? {
         guard let (range, item) = blockLines(id) else { return nil }
         guard let lines = item else { return source(range) }
@@ -109,7 +91,6 @@ extension ParsedNote {
         return rows.map { String($0.dropFirst(min(indent, $0.prefix(while: { $0 == " " || $0 == "\t" }).count))) }.joined(separator: "\n")
     }
 
-    /// Headings match as Obsidian matches them: by their text, ignoring case.
     func headingIndex(_ heading: String, in tops: [Markup]) -> Int? {
         let wanted = heading.trimmingCharacters(in: .whitespaces)
         return tops.firstIndex { node in
