@@ -77,7 +77,7 @@ private struct TargetCourseMenu<More: View>: View {
         } label: {
             HStack(spacing: Theme.Space.xs) {
                 Text(label)
-                Image(systemName: "chevron.down").font(Theme.Glyph.small)
+                Image(systemName: "chevron.down").font(Theme.Glyph.small).accessibilityHidden(true)
             }
         }
         .menuStyle(.button).buttonStyle(SoftButtonStyle(strong: strong)).menuIndicator(.hidden)
