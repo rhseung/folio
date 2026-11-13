@@ -19,12 +19,15 @@ final class FirstRunModel {
     private(set) var permissions: [SystemPermission: SystemPermission.State] = [:]
     /// The picked folder is still coming down from iCloud: the folder step shows its download in place of the choice.
     private(set) var waiting = false
+    /// Started to connect a lost folder again. Kept apart from `trouble`, which clears once a folder it waited for opens.
+    private var reconnecting = false
     #if DEBUG
     /// Shown in place of the workspace's own trouble by the debug walk (`FirstRunDebug`), which has a folder open.
     /// Nothing is picked yet then, as when the remembered folder is really gone.
     var debugTrouble: FolderTrouble? {
         didSet {
             guard debugTrouble != nil else { return }
+            reconnecting = true
             picked = nil
             step = .folder
         }
@@ -47,7 +50,10 @@ final class FirstRunModel {
         }
         settings.load()
         // A lost folder is the folder step alone, whatever step was asked for.
-        if trouble != nil { self.step = .folder }
+        if trouble != nil {
+            self.step = .folder
+            reconnecting = true
+        }
     }
 
     // MARK: Steps
@@ -92,14 +98,17 @@ final class FirstRunModel {
     func proceed() {
         if step == .folder {
             guard canContinue, let picked else { return }
-            let wasLost = trouble != nil && !waiting
             if picked.url != workspace.gist?.url {
                 guard workspace.openWhenHere(picked.url) else { waiting = true; return }
                 settings.load()
             }
+            waiting = false
             // A lost folder reconnected is the whole job; an empty one picked instead still needs its term.
-            if wasLost, start == .existing { return finish() }
-            if wasLost { workspace.showsFirstRun = true }
+            if reconnecting {
+                reconnecting = false
+                if start == .existing { return finish() }
+                workspace.showsFirstRun = true
+            }
         }
         if step == .claude, !settings.apiKey.isEmpty { settings.saveKey() }
         advance()

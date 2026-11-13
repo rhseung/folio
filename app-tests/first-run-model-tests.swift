@@ -139,6 +139,27 @@ struct FirstRunModelTests {
         #expect(model.step == .term)
     }
 
+    @Test func aLostFolderReconnectedAfterADownloadStillEndsTheRun() async throws {
+        let workspace = bareWorkspace()
+        workspace.folderTrouble = .missing(path: "/nowhere/GIST")
+        let model = FirstRunModel(workspace: workspace)
+        let url = try Fixture.standard.copyToTemp()
+        let course = try #require(try GISTStore(url: url).courseStores().first).url.appending(path: ".folio")
+        let real = course.appending(path: "course.json"), stub = course.appending(path: ".course.json.icloud")
+        try FileManager.default.moveItem(at: real, to: stub)
+        model.choose(url)
+        model.proceed()
+        #expect(workspace.gist == nil)
+
+        try FileManager.default.moveItem(at: stub, to: real)
+        for _ in 0..<50 where workspace.gist == nil { try await Task.sleep(for: .milliseconds(100)) }
+        #expect(workspace.gist != nil)
+        workspace.showsFirstRun = true
+        model.proceed()
+        #expect(model.step == .folder)
+        #expect(!workspace.showsFirstRun)
+    }
+
     @Test func pickingAnotherFolderStopsWaitingForTheFirst() throws {
         let workspace = bareWorkspace()
         let model = FirstRunModel(workspace: workspace, step: .folder)
