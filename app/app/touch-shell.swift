@@ -257,8 +257,8 @@ extension RootView {
     }
 
     var phoneSearch: some View {
+        // `phoneRoute` takes the result out of the search tab: to the courses' tab, or a place's own tab.
         SearchPalette(workspace: workspace, close: { phoneSelection.wrappedValue = .today }) { link, course in
-            phoneSearching = false
             open(link, course: course)
         }
         .padding(.horizontal, Theme.Space.l)
