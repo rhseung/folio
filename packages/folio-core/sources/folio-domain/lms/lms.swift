@@ -295,7 +295,7 @@ public struct LMSInbox: Sendable, Equatable {
     /// - An assignment is proposed while it can still be done: not handed in, and not past its deadline.
     /// - Nothing already handled, and no assignment any course already has by its `lmsId`, whichever course it went to.
     ///   Those are the section's `handled`. An assignment left to pass its deadline is neither; one dismissed before
-///   it passed stays handled, but can't be proposed again.
+    ///   it passed stays handled, but can't be proposed again.
     /// - Sections with something to propose come first, then those with only handled items; each part keeps the
     ///   dashboard's order. A classroom with neither has no section.
     public static func build(_ snapshot: LMSSnapshot, settings: LMSSettings, courses: [CourseFile], now: Date) -> LMSInbox {
