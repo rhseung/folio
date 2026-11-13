@@ -260,8 +260,11 @@ public struct LMSInbox: Sendable, Equatable {
     /// dismissal made by mistake can be taken back.
     public struct Handled: Sendable, Equatable, Identifiable {
         public var proposal: LMSProposal
-        /// The course an assignment is in by its `lmsId`. Such an assignment can't be proposed again, since it is there.
+        /// The course an assignment is in by its `lmsId`.
         public var course: UUID?
+        /// Whether taking the mark back would propose it. An assignment already in a course, handed in or past its
+        /// deadline would not: `build` leaves it out of the proposals, so it would drop out of view altogether.
+        public var proposable: Bool
         public var id: String { proposal.id }
     }
 
@@ -291,7 +294,8 @@ public struct LMSInbox: Sendable, Equatable {
     ///   what it already holds.
     /// - An assignment is proposed while it can still be done: not handed in, and not past its deadline.
     /// - Nothing already handled, and no assignment any course already has by its `lmsId`, whichever course it went to.
-    ///   Those are the section's `handled`. An assignment left to pass its deadline is neither.
+    ///   Those are the section's `handled`. An assignment left to pass its deadline is neither; one dismissed before
+///   it passed stays handled, but can't be proposed again.
     /// - Sections with something to propose come first, then those with only handled items; each part keeps the
     ///   dashboard's order. A classroom with neither has no section.
     public static func build(_ snapshot: LMSSnapshot, settings: LMSSettings, courses: [CourseFile], now: Date) -> LMSInbox {
@@ -300,26 +304,27 @@ public struct LMSInbox: Sendable, Equatable {
         var addedTo: [Int: UUID] = [:]
         for course in courses { for a in course.assignments { if let id = a.lmsId { addedTo[id] = course.course.id } } }
         var open: [Int: [LMSProposal.Item]] = [:]
-        var done: [Int: [(LMSProposal.Item, UUID?)]] = [:]
+        var done: [Int: [(item: LMSProposal.Item, course: UUID?, proposable: Bool)]] = [:]
         for a in snapshot.assignments {
+            let doable = !a.submitted && (a.due.map { $0 >= now } ?? true)
             if let course = addedTo[a.id] {
-                done[a.classroom, default: []].append((.assignment(a), course))
+                done[a.classroom, default: []].append((.assignment(a), course, false))
             } else if handledKeys.contains(a.key) {
-                done[a.classroom, default: []].append((.assignment(a), nil))
-            } else if !a.submitted && (a.due.map { $0 >= now } ?? true) {
+                done[a.classroom, default: []].append((.assignment(a), nil, doable))
+            } else if doable {
                 open[a.classroom, default: []].append(.assignment(a))
             }
         }
         for f in snapshot.files {
-            if handledKeys.contains(f.key) { done[f.classroom, default: []].append((.file(f), nil)) } else { open[f.classroom, default: []].append(.file(f)) }
+            if handledKeys.contains(f.key) { done[f.classroom, default: []].append((.file(f), nil, true)) } else { open[f.classroom, default: []].append(.file(f)) }
         }
         for n in snapshot.notices {
-            if handledKeys.contains(n.key) { done[n.classroom, default: []].append((.notice(n), nil)) } else { open[n.classroom, default: []].append(.notice(n)) }
+            if handledKeys.contains(n.key) { done[n.classroom, default: []].append((.notice(n), nil, true)) } else { open[n.classroom, default: []].append(.notice(n)) }
         }
         let sections = snapshot.classrooms.compactMap { room -> Section? in
             guard known.contains(room.id) else { return nil }
             let proposals = (open[room.id] ?? []).map { LMSProposal(item: $0, classroom: room) }
-            let handled = (done[room.id] ?? []).map { Handled(proposal: LMSProposal(item: $0.0, classroom: room), course: $0.1) }
+            let handled = (done[room.id] ?? []).map { Handled(proposal: LMSProposal(item: $0.item, classroom: room), course: $0.course, proposable: $0.proposable) }
             return proposals.isEmpty && handled.isEmpty ? nil : Section(classroom: room, proposals: proposals, handled: handled)
         }
         return LMSInbox(sections: sections.filter { !$0.proposals.isEmpty } + sections.filter { $0.proposals.isEmpty })

@@ -9,6 +9,19 @@ extension Workspace {
         return LMSInbox.build(snapshot, settings: settings.lms, courses: courses.map(\.file), now: now)
     }
 
+    var lmsLastSync: String {
+        guard let at = lms.snapshot?.at, at > .distantPast else { return String(localized: .lmsNeverSynced) }
+        return String(localized: .lmsLastSync(lmsTime(at)))
+    }
+
+    /// Today and this year leave out what they repeat: "오후 2:40", "11월 20일 (금) 23:59".
+    func lmsTime(_ date: Date) -> String {
+        if calendar.isDate(date, inSameDayAs: now) { return date.formatted(date: .omitted, time: .shortened) }
+        let sameYear = calendar.component(.year, from: date) == calendar.component(.year, from: now)
+        let day: Date.FormatStyle = sameYear ? .dateTime.month().day().weekday(.abbreviated) : .dateTime.year().month().day().weekday(.abbreviated)
+        return date.formatted(day.hour().minute())
+    }
+
     /// A classroom seen for the first time gets its files and notices of now marked handled, so a new term doesn't
     /// propose hundreds of old posts; its open assignments are still proposed.
     func syncLMS() async {

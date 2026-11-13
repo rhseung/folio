@@ -34,7 +34,7 @@ struct LMSInboxTests {
         // Added to some course from another classroom's proposal: still not proposed again.
         let other = course("선형대수학", assignments: [added])
         var settings = LMSSettings(known: [1])
-        settings.mark([LMSKey(kind: .assignment, id: 105)], handled: true)
+        settings.mark([105, 107, 108].map { LMSKey(kind: .assignment, id: $0) }, handled: true)
         let snapshot = LMSSnapshot(at: now, classrooms: [.init(id: 1, title: "그래프 이론")], assignments: [
             .init(id: 100, classroom: 1, title: "open", due: now.addingTimeInterval(3600)),
             .init(id: 101, classroom: 1, title: "due now", due: now),
@@ -43,12 +43,17 @@ struct LMSInboxTests {
             .init(id: 104, classroom: 1, title: "already added"),
             .init(id: 105, classroom: 1, title: "dismissed"),
             .init(id: 106, classroom: 1, title: "no deadline"),
+            .init(id: 107, classroom: 1, title: "dismissed, then past", due: now.addingTimeInterval(-1)),
+            .init(id: 108, classroom: 1, title: "dismissed, then handed in", submitted: true),
         ])
         let inbox = LMSInbox.build(snapshot, settings: settings, courses: [course("그래프 이론"), other], now: now)
         #expect(inbox.proposals.map(\.id) == ["assignment:100", "assignment:101", "assignment:106"])
         // The added one says where it went and the dismissed one can come back; a deadline that passed is neither.
-        #expect(inbox.sections[0].handled.map(\.id) == ["assignment:104", "assignment:105"])
-        #expect(inbox.sections[0].handled.map(\.course) == [other.course.id, nil])
+        // One dismissed and then past or handed in stays in view, but taking the mark back would show it nowhere.
+        let handled = inbox.sections[0].handled
+        #expect(handled.map(\.id) == ["assignment:104", "assignment:105", "assignment:107", "assignment:108"])
+        #expect(handled.map(\.course) == [other.course.id, nil, nil, nil])
+        #expect(handled.map(\.proposable) == [false, true, false, false])
     }
 
     @Test func handledFilesAndNoticesStayQuiet() {
@@ -60,6 +65,7 @@ struct LMSInboxTests {
         let inbox = LMSInbox.build(snapshot, settings: settings, courses: [], now: now)
         #expect(inbox.proposals.map(\.id) == ["file:11", "notice:21"])
         #expect(inbox.sections[0].handled.map(\.id) == ["file:10", "notice:20"])
+        #expect(inbox.sections[0].handled.map(\.proposable) == [true, true])
         #expect(inbox.sections.map(\.id) == [1])
         #expect(snapshot.current(in: 1) == [LMSKey(kind: .file, id: 10), LMSKey(kind: .file, id: 11), LMSKey(kind: .notice, id: 20), LMSKey(kind: .notice, id: 21)])
     }

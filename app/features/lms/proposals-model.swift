@@ -32,7 +32,7 @@ final class ProposalsModel {
             if case .assignment(let a) = p.item, let due = a.due { return (due, a.title) }
             return nil
         }.min { $0.0 < $1.0 }
-        return first.map { String(localized: .lmsTodayDetail(Self.time($0.0, now: workspace.now, calendar: workspace.calendar), $0.1)) }
+        return first.map { String(localized: .lmsTodayDetail(workspace.lmsTime($0.0), $0.1)) }
     }
 
     var subtitle: String { String(localized: .lmsProposalsSubtitle) }
@@ -43,13 +43,8 @@ final class ProposalsModel {
         case .needsLogin: String(localized: .lmsNeedsLogin)
         case .failed(let reason): reason
         case .syncing: String(localized: .lmsSyncing)
-        case .idle: lastSync
+        case .idle: workspace.lmsLastSync
         }
-    }
-
-    var lastSync: String {
-        guard let at = workspace.lms.snapshot?.at, at > .distantPast else { return String(localized: .lmsNeverSynced) }
-        return String(localized: .lmsLastSync(Self.time(at, now: workspace.now, calendar: workspace.calendar)))
     }
 
     func canAdd(_ p: LMSProposal) -> Bool {
@@ -114,21 +109,12 @@ final class ProposalsModel {
         if showingHandled.contains(section.id) { showingHandled.remove(section.id) } else { showingHandled.insert(section.id) }
     }
 
-    /// An assignment already in a course stays there; only a dismissed or passed-over item can be proposed again.
-    func canProposeAgain(_ h: LMSInbox.Handled) -> Bool { h.course == nil }
+    func canProposeAgain(_ h: LMSInbox.Handled) -> Bool { h.proposable }
 
     func proposeAgain(_ h: LMSInbox.Handled) { workspace.propose(again: [h.proposal]) }
 
     func detail(_ h: LMSInbox.Handled) -> String {
         guard let id = h.course, let course = workspace.courses.first(where: { $0.id == id }) else { return detail(h.proposal) }
         return [detail(h.proposal), String(localized: .lmsAddedTo(course.title))].joined(separator: " · ")
-    }
-
-    /// Today and this year leave out what they repeat: "오후 2:40", "11월 20일 (금) 23:59".
-    static func time(_ date: Date, now: Date, calendar: Calendar) -> String {
-        if calendar.isDate(date, inSameDayAs: now) { return date.formatted(date: .omitted, time: .shortened) }
-        let sameYear = calendar.component(.year, from: date) == calendar.component(.year, from: now)
-        let day: Date.FormatStyle = sameYear ? .dateTime.month().day().weekday(.abbreviated) : .dateTime.year().month().day().weekday(.abbreviated)
-        return date.formatted(day.hour().minute())
     }
 }

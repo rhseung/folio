@@ -21,7 +21,7 @@ final class LMSSettingsModel {
         case .failed(let reason): return reason
         case .off, .idle:
             let count = workspace.lmsInbox.proposals.count
-            let last = ProposalsModel(workspace: workspace).lastSync
+            let last = workspace.lmsLastSync
             return count == 0 ? last : String(localized: .lmsSyncDetail(last, count))
         }
     }
