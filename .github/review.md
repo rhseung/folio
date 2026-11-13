@@ -14,7 +14,7 @@ claude-review-plugin이 PR을 검토할 때 `AGENTS.md`와 함께 읽는 파일�
     - 경로나 제목으로 항목을 식별하는 코드(ID로 식별해야 한다)
     - 개발이나 테스트 중에 실제 GIST 폴더나 이 Mac의 `Application Support/Folio`에 쓸 수 있는 경로. 경로를 직접 얻는 코드는 `check-local-folders`가 잡으니, 그 밖의 길(환경 변수나 설정에서 읽은 경로, 테스트에서 덮어쓰지 않은 기본값)을 본다
 - **공개 저장소.** 실제 성적, GPA, 학업 데이터(노션 내보내기, 캘린더, 학사편람 파일)가 테스트, 픽스처, 문서에 들어간 경우
-- **화면의 모델과 뷰.** `check-code`는 뷰의 `workspace.<메서드>(` 호출과 `some View` 멤버 안의 `filter`, `reduce`, `sorted`, `count(where:)`, `Dictionary(grouping:)`만 잡는다. 바뀐 화면마다 아래를 하나씩 본다.
+- **화면의 모델과 뷰.** `check-code`는 뷰의 `workspace.<메서드>(` 호출과 `some View` 멤버 안의 `filter`, `reduce`, `sorted`, `count(where:)`, `min(by:)`, `max(by:)`, `partition`, `Dictionary(grouping:)`만 잡는다. 바뀐 화면마다 아래를 하나씩 본다.
     - 뷰가 `some View`가 아닌 도우미(`private func`, 계산 프로퍼티)로 묶기, 거르기, 세기, 정렬을 옮겨 놓고 `body`에서 부르는 경우. `first(where:)`, `contains(where:)`, `compactMap`으로 거르기, `.count`를 조건에 쓰는 것도 같다
     - 뷰가 `workspace`의 데이터(`settings`, `catalog`, `course`)를 읽어 스스로 판단하는 경우. 뷰는 모델이 내놓은 값을 그린다. 리비전 값(`notesRevision`, `quizRevision`)을 `onChange`로 지켜보는 것과 `liveNow`를 읽는 것은 괜찮다
     - 버튼을 켜고 끄거나 막힌 이유와 확인 문구를 화면이 직접 정하는 경우. `workspace.can`, `refusal`, `confirmation`, `ask`와 `.confirming`을 써야 한다
