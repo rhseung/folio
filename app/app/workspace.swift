@@ -24,6 +24,12 @@ final class Workspace {
     private(set) var courses: [LoadedCourse] = []
     private(set) var reviewEvents: [UUID: [LoggedEvent]] = [:]
     var error: String?
+    /// The first run (#453) shows in place of the window's pages: on a device that has never opened a folder, or when
+    /// asked for again from settings.
+    var showsFirstRun = false
+    /// Why the folder this device remembers isn't open. The first run's folder step reports it.
+    var folderTrouble: FolderTrouble?
+    @ObservationIgnored var folderWait: Task<Void, Never>?
     /// Bumped when the Claude connection setting or the API key changes. Neither lives in observed state (UserDefaults,
     /// the keychain), so views reading `claudeReady` would otherwise keep a stale answer.
     var claudeRevision = 0
@@ -87,23 +93,34 @@ final class Workspace {
         if LocalFolders.isIsolated(env) { return }
         if let path = env[Self.environmentKey] {
             open(URL(filePath: path, directoryHint: .isDirectory), remember: false)
-        } else if let data = UserDefaults.standard.data(forKey: Self.bookmarkKey) {
-            var stale = false
-            if let url = try? URL(resolvingBookmarkData: data, bookmarkDataIsStale: &stale) {
-                open(url, remember: stale)
-            }
+        } else if UserDefaults.standard.data(forKey: Self.bookmarkKey) != nil {
+            openRemembered()
+        } else {
+            showsFirstRun = true
         }
+        #if DEBUG
+        if FirstRunDebug.requested { showsFirstRun = true }
+        #endif
+    }
+
+    /// Whether this run may change the folder the device remembers. A test, a preview or a fixture run (`FOLIO_GIST`)
+    /// opens folders of its own, and writing one down would have the next real launch open a fixture.
+    nonisolated static var remembersFolders: Bool {
+        let env = ProcessInfo.processInfo.environment
+        return !LocalFolders.isIsolated(env) && env[environmentKey] == nil
     }
 
     func open(_ url: URL, remember: Bool = true) {
         // Access stays open for the app's lifetime; iPadOS requires it for folders picked in Files.
         _ = url.startAccessingSecurityScopedResource()
-        if remember, let data = try? url.bookmarkData() {
-            UserDefaults.standard.set(data, forKey: Self.bookmarkKey)
-        }
-        if ProcessInfo.processInfo.environment[Self.environmentKey] == nil {
+        if Self.remembersFolders {
+            if remember, let data = try? url.bookmarkData() {
+                UserDefaults.standard.set(data, forKey: Self.bookmarkKey)
+            }
             UserDefaults.standard.set(url.path(percentEncoded: false), forKey: Self.pathKey)
         }
+        folderTrouble = nil
+        folderWait?.cancel()
         gist = GISTStore(url: url)
         watcher?.stop()
         watcher = GISTWatcher(url: url) { [weak self] in Task { @MainActor in self?.changedOutside() } }

@@ -2,16 +2,15 @@ import FolioDomain
 import SwiftUI
 
 struct RootView: View {
-    @Environment(Workspace.self) private var workspace
+    @Environment(Workspace.self) var workspace
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openWindow) private var openWindow
     @Environment(\.supportsMultipleWindows) private var multipleWindows
     @Environment(\.paneMemory) private var paneMemory
     /// The window's tabs, each with the history every move in it goes through, so back and forward cover the sidebar,
     /// search and links alike. The iPad has one, its windows being its tabs.
-    @State private var tabs: WindowTabs
+    @State var tabs: WindowTabs
     let request: WindowRequest?
-    @State private var pickingFolder = false
     @State private var addingSemester = false
     @State private var addingCourse = false
     /// Terms flipped from their default: the current term starts open, the others closed.
@@ -20,12 +19,18 @@ struct RootView: View {
     @State private var hoveredTerm: UUID?
     /// The fixed list's own height, measured: the rows' height follows the system's sidebar size setting.
     @State private var navHeight: CGFloat?
-    @State private var searching = false
-    @AppStorage("sidebarOpen") private var sidebarOpen = true
-    @State private var showingRecording = false
-    @State private var quickAdding = false
+    @State var searching = false
+    @AppStorage("sidebarOpen") var sidebarOpen = true
+    @State var showingRecording = false
+    @State var quickAdding = false
     /// The tab whose panes "지금 배치 저장…" is naming.
-    @State private var namingLayout: TabPanes?
+    @State var namingLayout: TabPanes?
+    /// Where the toolbar row's tabs go and how many fit (`TabBar`), on the Mac and the iPad alike.
+    @State var row = ToolbarRow()
+    #if os(iOS)
+    /// How far the window's controls (a windowed iPad's top-leading dots) reach into the row.
+    @State var windowControls: CGFloat = 0
+    #endif
     @State private var inputGuide: InputGuideRequest?
     @State private var contentHeight: CGFloat?
     @Environment(\.colorScheme) private var colorScheme
@@ -33,11 +38,13 @@ struct RootView: View {
     /// When this window was made, which tells a window made for a link from outside from one already in use.
     @State private var madeAt = Date.now
     @State private var host = WindowHost()
-    @State private var row = ToolbarRow()
     /// The window's buttons are out of the title row, gone to the menu bar's reveal.
     @State private var fullScreen = false
     #else
-    @State private var windowWidth: CGFloat = 1200
+    @State var windowWidth: CGFloat = 1200
+    @Environment(\.horizontalSizeClass) var sizeClass
+    /// The iPhone's search tab is in front (`touchShell`).
+    @State var phoneSearching = false
     #endif
 
     init(request: WindowRequest? = nil) {
@@ -75,7 +82,11 @@ struct RootView: View {
             workspace.error = String(localized: .linkNotFound(link.string))
             return
         }
+        #if os(iOS)
+        let pane = (placement == .here ? phoneRoute(entry) : nil) ?? pane ?? navigator
+        #else
         let pane = pane ?? navigator
+        #endif
         switch placement {
         case .here:
             // Opening a class's note, not moving about in it.
@@ -84,14 +95,13 @@ struct RootView: View {
         case .beside:
             (tabs.panes(holding: pane) ?? tabs.front)?.openBeside(entry, from: pane)
         case .tab:
-            #if os(macOS)
+            #if os(iOS)
+            // The iPhone's frame has no tab strip: there a tab is a window of its own, or the pane itself.
+            guard sizeClass == .regular else { return openInWindow(entry, else: pane) }
+            #endif
             let tab = TabPanes(Navigator(entry))
             restoresSession(entry, in: tab)
             tabs.open(tab, fromLink: true)
-            #else
-            // The iPad has no tabs, so a tab there is a window of its own.
-            openInWindow(entry, else: pane)
-            #endif
         case .window:
             openInWindow(entry, else: pane)
         }
@@ -111,18 +121,17 @@ struct RootView: View {
         return tab.restore(saved, entries: entries)
     }
 
-    /// A new tab of panes side by side, as a class's start opens its pages (`ClassStartSettings.OpenIn.splitTab`). On the
-    /// iPad, whose windows are its tabs, a window of its own; where it allows only one window, the pages open in the
-    /// tab in front, the first in the focused pane and the rest beside it.
+    /// A new tab of panes side by side, as a class's start opens its pages (`ClassStartSettings.OpenIn.splitTab`). In the
+    /// iPhone's frame, which has no tab strip, a window of its own; where it allows only one window, the pages open in
+    /// the tab in front, the first in the focused pane and the rest beside it.
     func openTab(_ layout: PaneLayout, course hint: UUID?) {
         let found = layout.panes.indices.compactMap { i in workspace.entry(for: layout.panes[i].link, hint: hint).map { (i, $0) } }
         guard !found.isEmpty else { return }
+        #if os(iOS)
+        if sizeClass == .regular { return openTabHere(layout, found: found) }
+        #endif
         #if os(macOS)
-        // From the layout itself, so a class's layout remembered with its notes' modes and folds keeps them.
-        if let kept = layout.keeping({ i in found.contains { $0.0 == i } }),
-           let panes = TabPanes(layout: kept, entries: found.map(\.1)) {
-            tabs.open(panes, fromLink: true)
-        }
+        openTabHere(layout, found: found)
         #else
         let histories = found.map { LinkHistory($0.1) }
         let shares = found.map { layout.panes[$0.0].share }
@@ -141,6 +150,14 @@ struct RootView: View {
         #endif
     }
 
+    /// From the layout itself, so a class's layout remembered with its notes' modes and folds keeps them.
+    func openTabHere(_ layout: PaneLayout, found: [(Int, Navigator.Entry)]) {
+        if let kept = layout.keeping({ i in found.contains { $0.0 == i } }),
+           let panes = TabPanes(layout: kept, entries: found.map(\.1)) {
+            tabs.open(panes, fromLink: true)
+        }
+    }
+
     /// Where the system allows only one window, the link opens in place.
     func openInWindow(_ entry: Navigator.Entry, else pane: Navigator) {
         guard multipleWindows else { return pane.go(entry) }
@@ -155,7 +172,6 @@ struct RootView: View {
         OpenLinkAction { link, placement, course in open(link, in: placement, course: course, from: pane) }
     }
 
-    #if os(macOS)
     /// Out of this window into one of its own, every pane's back and forward included. The last tab is the window
     /// already.
     func moveToWindow(_ id: UUID) {
@@ -170,7 +186,6 @@ struct RootView: View {
         request.columns = moved.columns.map(\.names)
         openWindow(id: FolioApp.mainWindow, value: request)
     }
-    #endif
 
     func openFromOutside(_ link: AppLink) {
         #if os(macOS)
@@ -195,14 +210,8 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if workspace.gist == nil {
-                ContentUnavailableView {
-                    Label(.rootPickGistTitle, systemImage: "folder")
-                } description: {
-                    Text(.rootPickGistDetail)
-                } actions: {
-                    Button(.rootPickFolder) { pickingFolder = true }
-                }
+            if workspace.isInFirstRun {
+                FirstRunView(workspace: workspace)
             } else {
                 shell {
                     detail
@@ -212,9 +221,6 @@ struct RootView: View {
                         .environment(\.showInputGuide) { showInputGuide($0) }
                         .background { Button(.commonSearch) { searching = true }.keyboardShortcut("k").opacity(0).accessibilityHidden(true) }
                 }
-                #if os(iOS)
-                .toolbar { globalTools }
-                #endif
                 .environment(\.openLink, openLink)
                 .environment(\.sheetRoom, contentHeight)
                 // The window less its toolbar (and an iPad's keyboard): a sheet taller than that ran off the window.
@@ -286,9 +292,6 @@ struct RootView: View {
         // it in a new tab of its own.
         .onOpenURL { url in if let link = AppLink(url: url) { openFromOutside(link) } }
         .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
-        .fileImporter(isPresented: $pickingFolder, allowedContentTypes: [.folder]) { result in
-            if case .success(let url) = result { workspace.open(url) }
-        }
         // Also in a Release build made with RESIZE_PROBE: a debug build's SwiftUI timings say little about the app's.
         #if os(macOS) && (DEBUG || RESIZE_PROBE)
         .task {
@@ -389,14 +392,8 @@ struct RootView: View {
         }
     }
 
-    /// The Mac's rows select themselves (see `sidebarRow`), so the list's own selection stays empty there.
-    var listSelection: Binding<Screen?> {
-        #if os(macOS)
-        .constant(nil)
-        #else
-        selectionBinding
-        #endif
-    }
+    /// The rows select themselves (see `sidebarRow`), so the list's own selection stays empty.
+    var listSelection: Binding<Screen?> { .constant(nil) }
 
     var sidebar: some View {
         // Ticks for the class under way: its row's fill and minutes. Around the list, not inside the row, so the row's
@@ -404,6 +401,9 @@ struct RootView: View {
         LiveTime(workspace) { now in
         // The places stay put and the terms scroll in the space under them, as the list of terms grows each term.
         VStack(spacing: 0) {
+        #if os(iOS)
+        sidebarSearch
+        #endif
         List(selection: listSelection) {
             Label { Text(.rootNavToday) } icon: { sidebarIcon("house", .today) }.sidebarRow(.today, selectionBinding)
             Label { Text(.rootNavGrades) } icon: { sidebarIcon("chart.line.uptrend.xyaxis", .grades) }.sidebarRow(.grades, selectionBinding)
@@ -416,7 +416,12 @@ struct RootView: View {
         .onScrollGeometryChange(for: CGFloat.self) { $0.contentSize.height } action: { _, height in
             navHeight = height
         }
+        #if os(iOS)
+        // The plain list there reports no content height until it scrolls: six rows, at least.
+        .frame(height: max(navHeight ?? 0, Theme.Size.sidebarRow * 6 + Theme.Space.s))
+        #else
         .frame(height: navHeight)
+        #endif
         .focusable(false)
         List(selection: listSelection) {
             // The current term starts open, since its courses are what's opened daily.
@@ -452,7 +457,16 @@ struct RootView: View {
                 .transition(.move(edge: .bottom).combined(with: .opacity))
         }
         }
+        #if os(macOS)
         .listStyle(.sidebar)
+        #else
+        // Out of a split view the iPad's sidebar style is grouped cards; plain rows lie flat on the frame as the Mac's.
+        .listStyle(.plain)
+        .listRowSeparator(.hidden)
+        // The Mac's sidebar at the chrome's scale: a plain list's default is the 17pt body and a 52pt row.
+        .font(Theme.Typeface.sidebar)
+        .environment(\.defaultMinListRowHeight, Theme.Size.sidebarRow)
+        #endif
         .labelStyle(SidebarLabelStyle())
         }
         .sheet(isPresented: $addingSemester) {
@@ -499,11 +513,7 @@ struct RootView: View {
         .containerBackground(colorScheme == .light ? .thinMaterial : .regularMaterial, for: .window)
         .animation(Theme.Motion.standard, value: sidebarOpen)
         #else
-        NavigationSplitView {
-            sidebar.navigationSplitViewColumnWidth(min: 220, ideal: 250)
-        } detail: {
-            content().background(Theme.Palette.page)
-        }
+        touchShell(content: content)
         #endif
     }
 
@@ -536,29 +546,6 @@ struct RootView: View {
             #endif
         }
         .onChange(of: lead, initial: true) { _, lead in row.leadingX = lead }
-    }
-    #else
-    /// Actions that work from any page, so they live in the window's toolbar rather than on one screen.
-    @ToolbarContentBuilder var globalTools: some ToolbarContent {
-        // Back and forward right after the sidebar, as in Safari. One item, so the crumb after them knows where it
-        // starts (`crumbStart`).
-        ToolbarItem(placement: .navigation) {
-            HistoryButtons(navigator: navigator) { workspace.title(of: $0) }
-        }
-        .sharedBackgroundVisibility(.hidden)
-        // A course adds its section after this; pages add their own controls after that.
-        ToolbarItem(placement: .navigation) { crumb }
-            .sharedBackgroundVisibility(.hidden)
-        ToolbarSpacer(.flexible)
-        // Between two flexible spacers: centered in the room the crumb and the buttons leave. Not `.principal`, which
-        // centers on the window and, pushed over the panel, crowded the buttons into overflow.
-        ToolbarItem { searchButton }
-            .sharedBackgroundVisibility(.hidden)
-        ToolbarSpacer(.flexible)
-        ToolbarItem { recordButton }
-            .sharedBackgroundVisibility(.hidden)
-        ToolbarItem { tools }
-            .sharedBackgroundVisibility(.hidden)
     }
     #endif
 
@@ -621,29 +608,6 @@ struct RootView: View {
 
     var panelEdge: CGFloat { sidebarOpen ? Theme.Size.sidebar : Theme.Size.panelInset }
 
-    #if os(iOS)
-    var panelStart: CGFloat { panelEdge + Theme.Space.l }
-
-    var tabLead: CGFloat { max(Theme.Space.s, panelStart - Self.crumbStart) }
-
-    var crumb: some View {
-        // Folds before where a window-centered search field would begin, so the trail doesn't push it aside; truncates
-        // only where the field and the buttons would run out of room.
-        let room = windowWidth / 2 - Theme.Size.searchField / 2 - Theme.Space.l - panelStart
-        // The elapsed time takes the record button's place and is wider than it.
-        let tools = Self.trailingTools + (workspace.recorder.isActive ? Self.recordingTimeWidth - Theme.Size.toolbarButton : 0)
-        let limit = windowWidth - panelStart - Theme.Size.searchField - tools
-        let inset = Theme.Space.m * 2  // the capsule's own padding, left out of the trail's room
-        return Breadcrumb(crumbs: crumbs, foldWidth: max(Breadcrumb.minWidth, room - inset), maxWidth: max(Breadcrumb.minWidth, limit - inset))
-            .toolbarField()
-            .padding(.leading, tabLead)
-    }
-
-    /// Where the item after back and forward begins, from the window's left edge; measured in a window screenshot.
-    static let crumbStart: CGFloat = 140 + historyGap + HistoryButtons.width
-    /// The trailing buttons and the gaps around the search field, measured at their widest.
-    static let trailingTools: CGFloat = 288
-    #endif
     static let historyGap = Theme.Space.s
     /// The time's widest, a class past an hour ("1:15:00"), for the trail's room. The button itself hugs the time:
     /// held at this width, a short "9:48" sat in a wide gap and crowded the toolbar.
@@ -944,16 +908,14 @@ private extension View {
         if let menu { menu } else if let link = destination.link { LinkMenu(link: link) }
     }
 
-    /// On the Mac each row picks itself and draws its own fill: the Mac sidebar's selection is one gray whatever the
-    /// tint, which turned a chosen course into a gray block. The iPad keeps the list's selection, which also pushes the
-    /// detail when the split view folds into one column.
+    /// Each row picks itself and draws its own fill: the Mac sidebar's selection is one gray whatever the tint, which
+    /// turned a chosen course into a gray block, and the iPad's list out of a split view has no sidebar selection.
     /// `guide` draws the term's line beside a course row. On the Mac it is in the row background, which spans the row
     /// spacing, so the segments join without overlapping (a see-through line darkens where segments overlap).
     /// `guideShown` fades the line rather than leaving it out: the Mac list doesn't redraw a row background whose views
     /// come and go, only one whose values change, and rebuilding the row instead made it jump as it opened.
     @ViewBuilder func sidebarRow(_ destination: Screen, _ selection: Binding<Screen?>, fill: Color = Theme.Palette.sidebarSelection, guide: SidebarGuide? = nil, guideShown: Bool = true, progress: Double? = nil, note: String? = nil, menu: AnyView? = nil) -> some View {
         let line = guide.map { GuideSegment(guide: $0).stroke(Theme.Palette.chromeLine, lineWidth: 1).frame(width: SidebarGuide.reach + 1) }
-        #if os(macOS)
         let chosen = selection.wrappedValue == destination
         // A tap, not a Button: a button keeps the press, so the list's own drag to reorder never starts.
         frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
@@ -979,15 +941,13 @@ private extension View {
                 }
             }
         )
+        #if os(iOS)
+        // The Mac's row insets, so the fill and the guide sit where they are measured there.
+        .listRowInsets(EdgeInsets(top: 0, leading: Theme.Space.l, bottom: 0, trailing: Theme.Space.s))
+        .listRowSeparator(.hidden)
+        #endif
         .accessibilityAddTraits(chosen ? [.isButton, .isSelected] : .isButton)
         .accessibilityAction { selection.wrappedValue = destination }
         .contextMenu { rowMenu(destination, note: note, menu: menu) }
-        #else
-        tag(destination)
-            .contextMenu { rowMenu(destination, note: note, menu: menu) }
-            .background(alignment: .leading) {
-                if guide != .stem, let line { line.padding(.vertical, -Theme.Space.xs).padding(.leading, Theme.Size.tile / 2) }
-            }
-        #endif
     }
 }

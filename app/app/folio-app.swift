@@ -24,9 +24,7 @@ struct FolioApp: App {
         WindowGroup(id: Self.mainWindow, for: WindowRequest.self) { $request in
             RootView(request: request)
                 #if os(macOS)
-                // Bounded both ways, so the window's least size is this frame's own: with only a least size the
-                // hosting view measured the whole window's content for it on every layout of a resize or a drag (#62).
-                .frame(minWidth: Theme.Size.windowMin.width, maxWidth: .infinity, minHeight: Theme.Size.windowMin.height, maxHeight: .infinity)
+                .mainWindowFrame(firstRun: workspace.isInFirstRun)
                 #endif
                 .appServices()
                 .followsAppearance()
@@ -41,6 +39,9 @@ struct FolioApp: App {
             WindowPlacement(.center, size: WindowSize.opening(in: context.defaultDisplay.visibleRect.size))
         }
         .defaultLaunchBehavior(Self.hostingTests ? .suppressed : .automatic)
+        // The window's size follows the content's both ways, so the first run's fixed frame is a window that can't be
+        // resized or zoomed, and the app's frame has no upper bound.
+        .windowResizability(.contentSize)
         // No title bar or toolbar: the window draws its own 48pt top row (`TitleRow`), a height no toolbar has (#62).
         .windowStyle(.hiddenTitleBar)
         #endif

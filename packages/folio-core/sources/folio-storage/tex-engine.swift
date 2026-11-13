@@ -62,9 +62,12 @@ public struct TexEngine: Sendable {
         outputFolder(for: source).appending(path: source.deletingPathExtension().lastPathComponent + ".synctex.gz")
     }
 
-    /// A package or `\input` file Tectonic hasn't fetched yet, which an online build may find.
+    /// A package, `\input` file or font Tectonic hasn't fetched yet, which an online build may find. A font only xdvipdfmx
+    /// reads (`cmmi10.pfb` for the first `$x$`) isn't missed until the PDF is written, and xdvipdfmx says so in words of
+    /// its own.
     static func missesAFile(_ output: String) -> Bool {
         output.contains("not found") || output.contains("failed to open input file")
+            || output.contains("Could not locate a virtual/physical font")
     }
 
     private func run(_ source: URL, outDir: URL, pdf: URL, epoch: Int, cachedOnly: Bool) throws -> (output: String, made: Bool) {
