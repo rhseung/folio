@@ -65,7 +65,7 @@ private struct SectionActions: View {
 private struct TargetCourseMenu<More: View>: View {
     let model: ProposalsModel
     let label: String
-    var accent = false
+    var strong = false
     let pick: (UUID) -> Void
     @ViewBuilder var more: () -> More
 
@@ -83,14 +83,14 @@ private struct TargetCourseMenu<More: View>: View {
                 Image(systemName: "chevron.down").font(Theme.Glyph.small)
             }
         }
-        .menuStyle(.button).buttonStyle(SoftButtonStyle(accent: accent)).menuIndicator(.hidden)
+        .menuStyle(.button).buttonStyle(SoftButtonStyle(strong: strong)).menuIndicator(.hidden)
         .fixedSize()
     }
 }
 
 extension TargetCourseMenu where More == EmptyView {
-    init(model: ProposalsModel, label: String, accent: Bool = false, pick: @escaping (UUID) -> Void) {
-        self.init(model: model, label: label, accent: accent, pick: pick, more: { EmptyView() })
+    init(model: ProposalsModel, label: String, strong: Bool = false, pick: @escaping (UUID) -> Void) {
+        self.init(model: model, label: label, strong: strong, pick: pick, more: { EmptyView() })
     }
 }
 
@@ -122,7 +122,7 @@ private struct ProposalRow: View {
                     }
                     Button(.lmsDismiss) { model.dismiss([proposal]) }.buttonStyle(SoftButtonStyle())
                     if model.canAdd(proposal) {
-                        TargetCourseMenu(model: model, label: String(localized: .commonAdd), accent: true) { course in
+                        TargetCourseMenu(model: model, label: String(localized: .commonAdd), strong: true) { course in
                             Task { await model.add([proposal], into: course) }
                         }
                         .disabled(model.isAdding([proposal]))
@@ -188,30 +188,25 @@ private struct DueChip: View {
 }
 
 /// 제안함's buttons are filled capsules, not the app's ghost text (#132, decided for this screen only): a row of three
-/// tinted words read as one blue line. Gray for the side actions, the course accent for the one add per row.
+/// tinted words read as one blue line, and a blue add was too loud again. All gray; the one add per row is set apart by
+/// darker, bolder words.
 private struct SoftButtonStyle: ButtonStyle {
-    var accent = false
+    var strong = false
     var iconOnly = false
 
     func makeBody(configuration: Configuration) -> some View {
-        SoftButton(configuration: configuration, accent: accent, iconOnly: iconOnly)
+        SoftButton(configuration: configuration, strong: strong, iconOnly: iconOnly)
     }
 }
 
 private struct SoftButton: View {
     let configuration: ButtonStyleConfiguration
-    let accent: Bool
+    let strong: Bool
     let iconOnly: Bool
-    @Environment(\.accent) private var courseAccent
     @Environment(\.isEnabled) private var isEnabled
     @State private var hovering = false
 
     var body: some View {
-        // `.gray` is the accent where no course is in view, and 제안함 is outside every course: the add would read as one more
-        // gray button, so it takes the app's accent as `.prominent` does.
-        let tint: Color = courseAccent == .gray ? .accentColor : courseAccent.color
-        let ink: Color = accent ? (courseAccent == .gray ? .accentColor : courseAccent.ink) : Theme.Palette.textSecondary
-        let fill: Color = accent ? tint : Theme.Palette.textSecondary
         let strength = Theme.Opacity.tint * (configuration.isPressed ? 2 : hovering && isEnabled ? 1.5 : 1)
         Group {
             if iconOnly {
@@ -223,10 +218,10 @@ private struct SoftButton: View {
                     .padding(.vertical, Theme.Space.xs + Theme.Space.xxs)
             }
         }
-        .font(accent ? Theme.Typeface.bodyStrong : Theme.Typeface.body)
+        .font(strong ? Theme.Typeface.bodyStrong : Theme.Typeface.body)
         .lineLimit(1)
-        .foregroundStyle(ink)
-        .background(fill.opacity(strength), in: .capsule)
+        .foregroundStyle(strong ? Theme.Palette.text : Theme.Palette.textSecondary)
+        .background(Theme.Palette.textSecondary.opacity(strength), in: .capsule)
         .contentShape(TouchTarget())
         .opacity(isEnabled ? 1 : 0.45)
         .onHover { hovering = $0 }
