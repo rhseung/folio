@@ -193,14 +193,18 @@ final class TodayModel {
         return items.compactMap { item in
             guard let due = item.assignment.due else { return nil }
             let days = studyDay.days(until: workspace.settings.studyDay(of: due, calendar: calendar))
-            let time = due.formatted(date: .omitted, time: .shortened)
             let urgency = DueUrgency(studyDays: days)
-            let text = switch urgency {
-            case .urgent: String(localized: days == 0 ? .todayDeadlinesTodayAt(time) : .todayDeadlinesTomorrowAt(time))
-            case .soon: String(localized: .todayDeadlinesInDays(days))
-            case .later: due.formatted(.dateTime.month().day().weekday())
-            }
-            return DeadlineRow(item: item, urgency: urgency, due: text)
+            return DeadlineRow(item: item, urgency: urgency, due: Self.dueText(due, studyDays: days))
+        }
+    }
+
+    /// Also the 제안함's deadline chip, so a deadline reads the same before and after it is added.
+    static func dueText(_ due: Date, studyDays days: Int) -> String {
+        let time = due.formatted(date: .omitted, time: .shortened)
+        return switch DueUrgency(studyDays: days) {
+        case .urgent: String(localized: days == 0 ? .todayDeadlinesTodayAt(time) : .todayDeadlinesTomorrowAt(time))
+        case .soon: String(localized: .todayDeadlinesInDays(days))
+        case .later: due.formatted(.dateTime.month().day().weekday())
         }
     }
 

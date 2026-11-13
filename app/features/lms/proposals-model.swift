@@ -9,11 +9,14 @@ final class ProposalsModel {
     let workspace: Workspace
     /// Proposals being added: a file downloads first, and its row waits.
     private(set) var adding: Set<String> = []
+    /// Classrooms whose handled items are shown. Folded by default: the first sync alone marks a term's worth of posts.
+    var showingHandled: Set<Int> = []
 
     init(workspace: Workspace) { self.workspace = workspace }
 
     var inbox: LMSInbox { workspace.lmsInbox }
     var sections: [LMSInbox.Section] { inbox.sections }
+    var waiting: [LMSInbox.Section] { inbox.waiting }
 
     /// The courses an item can go to: this term's, in the sidebar's order, or every course between terms.
     var targets: [(id: UUID, title: String)] {
@@ -62,12 +65,19 @@ final class ProposalsModel {
         return false
     }
 
-    /// What a row is: a deadline, the name it gets in `Lectures`, a notice's date and author.
+    /// An assignment's deadline as Today's list shows it, with how near it is. The chip carries it, not the detail line.
+    func due(_ p: LMSProposal) -> (text: String, urgency: DueUrgency)? {
+        guard case .assignment(let a) = p.item, let due = a.due else { return nil }
+        let calendar = workspace.calendar
+        let days = workspace.settings.studyDays(from: workspace.now, until: due, calendar: calendar)
+        return (TodayModel.dueText(due, studyDays: days), DueUrgency(studyDays: days))
+    }
+
+    /// What a row is: the name it gets in `Lectures`, a notice's date and author.
     func detail(_ p: LMSProposal) -> String {
         switch p.item {
-        case .assignment(let a):
-            let due = a.due.map { String(localized: .lmsDue(Self.time($0, now: workspace.now, calendar: workspace.calendar))) }
-            return [String(localized: .lmsKindAssignment), due].compactMap { $0 }.joined(separator: " · ")
+        case .assignment:
+            return String(localized: .lmsKindAssignment)
         case .file(let f):
             let place = "\(CourseFolder.lectures.rawValue)/\(f.lectureName(f.title))"
             return [String(localized: .lmsKindFile), isViewerOnly(p) ? nil : place].compactMap { $0 }.joined(separator: " · ")
@@ -97,6 +107,22 @@ final class ProposalsModel {
     }
 
     func dismiss(_ proposals: [LMSProposal]) { workspace.dismiss(proposals) }
+
+    func showsHandled(_ section: LMSInbox.Section) -> Bool { showingHandled.contains(section.id) }
+
+    func toggleHandled(_ section: LMSInbox.Section) {
+        if showingHandled.contains(section.id) { showingHandled.remove(section.id) } else { showingHandled.insert(section.id) }
+    }
+
+    /// An assignment already in a course stays there; only a dismissed or passed-over item can be proposed again.
+    func canProposeAgain(_ h: LMSInbox.Handled) -> Bool { h.course == nil }
+
+    func proposeAgain(_ h: LMSInbox.Handled) { workspace.propose(again: [h.proposal]) }
+
+    func detail(_ h: LMSInbox.Handled) -> String {
+        guard let id = h.course, let course = workspace.courses.first(where: { $0.id == id }) else { return detail(h.proposal) }
+        return [detail(h.proposal), String(localized: .lmsAddedTo(course.title))].joined(separator: " · ")
+    }
 
     /// Today and this year leave out what they repeat: "오후 2:40", "11월 20일 (금) 23:59".
     static func time(_ date: Date, now: Date, calendar: Calendar) -> String {

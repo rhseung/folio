@@ -256,10 +256,26 @@ public struct LMSProposal: Hashable, Sendable, Identifiable {
 
 /// What the proposals screen shows: a section per LMS classroom, under the classroom's own name.
 public struct LMSInbox: Sendable, Equatable {
+    /// An item no longer proposed: dismissed, marked when its classroom was first seen, or added. Kept in view so a
+    /// dismissal made by mistake can be taken back.
+    public struct Handled: Sendable, Equatable, Identifiable {
+        public var proposal: LMSProposal
+        /// The course an assignment is in by its `lmsId`. Such an assignment can't be proposed again, since it is there.
+        public var course: UUID?
+        public var id: String { proposal.id }
+    }
+
     public struct Section: Sendable, Equatable, Identifiable {
         public var classroom: LMSClassroom
         public var proposals: [LMSProposal]
+        public var handled: [Handled]
         public var id: Int { classroom.id }
+
+        public init(classroom: LMSClassroom, proposals: [LMSProposal], handled: [Handled] = []) {
+            self.classroom = classroom
+            self.proposals = proposals
+            self.handled = handled
+        }
     }
 
     public var sections: [Section]
@@ -267,28 +283,45 @@ public struct LMSInbox: Sendable, Equatable {
     public init(sections: [Section] = []) { self.sections = sections }
 
     public var proposals: [LMSProposal] { sections.flatMap(\.proposals) }
-    public var isEmpty: Bool { sections.isEmpty }
+    /// The sections with something to propose, for the counts outside the proposals screen.
+    public var waiting: [Section] { sections.filter { !$0.proposals.isEmpty } }
+    public var isEmpty: Bool { proposals.isEmpty }
 
     /// - Only known classrooms propose (`LMSSettings.known`); one seen for the first time waits for the sync to mark
     ///   what it already holds.
     /// - An assignment is proposed while it can still be done: not handed in, and not past its deadline.
     /// - Nothing already handled, and no assignment any course already has by its `lmsId`, whichever course it went to.
-    /// - Sections keep the dashboard's order; a classroom with nothing to propose has none.
+    ///   Those are the section's `handled`. An assignment left to pass its deadline is neither.
+    /// - Sections with something to propose come first, then those with only handled items; each part keeps the
+    ///   dashboard's order. A classroom with neither has no section.
     public static func build(_ snapshot: LMSSnapshot, settings: LMSSettings, courses: [CourseFile], now: Date) -> LMSInbox {
         let known = Set(settings.known)
-        let handled = Set(settings.handled)
-        let added = Set(courses.flatMap { $0.assignments.compactMap(\.lmsId) })
-        var items: [Int: [LMSProposal.Item]] = [:]
-        for a in snapshot.assignments where !a.submitted && (a.due.map { $0 >= now } ?? true) && !added.contains(a.id)
-            && !handled.contains(a.key) {
-            items[a.classroom, default: []].append(.assignment(a))
+        let handledKeys = Set(settings.handled)
+        var addedTo: [Int: UUID] = [:]
+        for course in courses { for a in course.assignments { if let id = a.lmsId { addedTo[id] = course.course.id } } }
+        var open: [Int: [LMSProposal.Item]] = [:]
+        var done: [Int: [(LMSProposal.Item, UUID?)]] = [:]
+        for a in snapshot.assignments {
+            if let course = addedTo[a.id] {
+                done[a.classroom, default: []].append((.assignment(a), course))
+            } else if handledKeys.contains(a.key) {
+                done[a.classroom, default: []].append((.assignment(a), nil))
+            } else if !a.submitted && (a.due.map { $0 >= now } ?? true) {
+                open[a.classroom, default: []].append(.assignment(a))
+            }
         }
-        for f in snapshot.files where !handled.contains(f.key) { items[f.classroom, default: []].append(.file(f)) }
-        for n in snapshot.notices where !handled.contains(n.key) { items[n.classroom, default: []].append(.notice(n)) }
+        for f in snapshot.files {
+            if handledKeys.contains(f.key) { done[f.classroom, default: []].append((.file(f), nil)) } else { open[f.classroom, default: []].append(.file(f)) }
+        }
+        for n in snapshot.notices {
+            if handledKeys.contains(n.key) { done[n.classroom, default: []].append((.notice(n), nil)) } else { open[n.classroom, default: []].append(.notice(n)) }
+        }
         let sections = snapshot.classrooms.compactMap { room -> Section? in
-            guard known.contains(room.id), let list = items[room.id], !list.isEmpty else { return nil }
-            return Section(classroom: room, proposals: list.map { LMSProposal(item: $0, classroom: room) })
+            guard known.contains(room.id) else { return nil }
+            let proposals = (open[room.id] ?? []).map { LMSProposal(item: $0, classroom: room) }
+            let handled = (done[room.id] ?? []).map { Handled(proposal: LMSProposal(item: $0.0, classroom: room), course: $0.1) }
+            return proposals.isEmpty && handled.isEmpty ? nil : Section(classroom: room, proposals: proposals, handled: handled)
         }
-        return LMSInbox(sections: sections)
+        return LMSInbox(sections: sections.filter { !$0.proposals.isEmpty } + sections.filter { $0.proposals.isEmpty })
     }
 }

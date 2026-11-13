@@ -32,8 +32,11 @@ struct ProposalsModelTests {
         await workspace.syncLMS()
         #expect(workspace.settings.lms.known == [1, 2])
         // The file and the notice were there when the classrooms were first seen; the open assignment still can be done.
-        #expect(model.sections.map(\.classroom.title) == ["그래프 이론[01]"])
+        #expect(model.waiting.map(\.classroom.title) == ["그래프 이론[01]"])
         #expect(model.inbox.proposals.map(\.id) == ["assignment:100"])
+        // They stay in view as handled, the classroom with nothing new last.
+        #expect(model.sections.map(\.id) == [1, 2])
+        #expect(model.sections.map { $0.handled.map(\.id) } == [["file:200"], ["notice:300"]])
         #expect(model.total == 1)
         #expect(model.earliestDue?.contains("Homework Set #5") == true)
     }
@@ -57,5 +60,14 @@ struct ProposalsModelTests {
         #expect(model.inbox.proposals.map(\.id) == ["file:200"])
         let left = try #require(model.inbox.proposals.first)
         #expect(!model.canAdd(left) && model.isViewerOnly(left))
+
+        // The added assignment says where it went and stays there; the dismissed notice can be proposed again.
+        let handled = model.sections.flatMap(\.handled)
+        let added = try #require(handled.first { $0.id == "assignment:100" })
+        #expect(!model.canProposeAgain(added) && model.detail(added).contains("그래프 이론"))
+        let notice = try #require(handled.first { $0.id == "notice:300" })
+        #expect(model.canProposeAgain(notice))
+        model.proposeAgain(notice)
+        #expect(model.inbox.proposals.map(\.id) == ["file:200", "notice:300"])
     }
 }

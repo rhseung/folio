@@ -21847,17 +21847,6 @@
         }
       }
     },
-    "lms.due": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "마감 %@"
-          }
-        }
-      }
-    },
     "lms.kind.assignment": {
       "extractionState": "manual",
       "localizations": {
@@ -22206,6 +22195,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "과목에 추가"
+          }
+        }
+      }
+    },
+    "lms.handled": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "처리한 항목 %lld개"
+          }
+        }
+      }
+    },
+    "lms.restore": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 제안"
+          }
+        }
+      }
+    },
+    "lms.added-to": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에 추가함"
           }
         }
       }

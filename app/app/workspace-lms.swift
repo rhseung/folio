@@ -41,4 +41,8 @@ extension Workspace {
     func dismiss(_ proposals: [LMSProposal]) {
         run(LMSMark(keys: proposals.map(\.key.description), handled: true))
     }
+
+    func propose(again proposals: [LMSProposal]) {
+        run(LMSMark(keys: proposals.map(\.key.description), handled: false))
+    }
 }

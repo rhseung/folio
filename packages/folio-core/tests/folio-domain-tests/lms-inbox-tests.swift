@@ -46,6 +46,9 @@ struct LMSInboxTests {
         ])
         let inbox = LMSInbox.build(snapshot, settings: settings, courses: [course("그래프 이론"), other], now: now)
         #expect(inbox.proposals.map(\.id) == ["assignment:100", "assignment:101", "assignment:106"])
+        // The added one says where it went and the dismissed one can come back; a deadline that passed is neither.
+        #expect(inbox.sections[0].handled.map(\.id) == ["assignment:104", "assignment:105"])
+        #expect(inbox.sections[0].handled.map(\.course) == [other.course.id, nil])
     }
 
     @Test func handledFilesAndNoticesStayQuiet() {
@@ -56,8 +59,28 @@ struct LMSInboxTests {
         settings.mark([LMSKey(kind: .file, id: 10), LMSKey(kind: .notice, id: 20)], handled: true)
         let inbox = LMSInbox.build(snapshot, settings: settings, courses: [], now: now)
         #expect(inbox.proposals.map(\.id) == ["file:11", "notice:21"])
+        #expect(inbox.sections[0].handled.map(\.id) == ["file:10", "notice:20"])
         #expect(inbox.sections.map(\.id) == [1])
         #expect(snapshot.current(in: 1) == [LMSKey(kind: .file, id: 10), LMSKey(kind: .file, id: 11), LMSKey(kind: .notice, id: 20), LMSKey(kind: .notice, id: 21)])
+    }
+
+    /// Every item of a classroom stays in view, handled ones too, so a dismissal made by mistake can be taken back. Those
+    /// with something new come first; one with only handled items follows, and is no count anywhere.
+    @Test func classroomsWithOnlyHandledItemsFollowAndCountForNothing() {
+        let snapshot = LMSSnapshot(at: now, classrooms: [.init(id: 1, title: "다 본 강의실"), .init(id: 2, title: "새 글"), .init(id: 3, title: "빈 강의실")],
+                                   files: [.init(id: 10, classroom: 1, title: "old"), .init(id: 11, classroom: 2, title: "new")])
+        var settings = LMSSettings(known: [1, 2, 3])
+        settings.mark([LMSKey(kind: .file, id: 10)], handled: true)
+        var inbox = LMSInbox.build(snapshot, settings: settings, courses: [], now: now)
+        #expect(inbox.sections.map(\.id) == [2, 1])
+        #expect(inbox.waiting.map(\.id) == [2])
+        #expect(!inbox.isEmpty)
+        settings.mark([LMSKey(kind: .file, id: 11)], handled: true)
+        inbox = LMSInbox.build(snapshot, settings: settings, courses: [], now: now)
+        #expect(inbox.isEmpty && inbox.waiting.isEmpty)
+        #expect(inbox.sections.map(\.id) == [1, 2])
+        settings.mark([LMSKey(kind: .file, id: 10)], handled: false)
+        #expect(LMSInbox.build(snapshot, settings: settings, courses: [], now: now).proposals.map(\.id) == ["file:10"])
     }
 
     @Test func markAndKnowKeepTheListsSortedAndUnique() {
