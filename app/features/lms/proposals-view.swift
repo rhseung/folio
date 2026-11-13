@@ -1,9 +1,8 @@
 import FolioDomain
 import SwiftUI
 
-/// 제안함 (#132, 시안 "LMS · 제안함"): a block per LMS classroom under its own name. Each row is added to a course
-/// picked then, or dismissed; "모두 추가" adds the block's addable rows to one course as one action. Under them, folded,
-/// what the classroom has that was handled, so a dismissal made by mistake can be proposed again.
+/// 제안함 (#132, 시안 "LMS · 제안함"). Hidden items stay folded under each classroom so a dismissal made by mistake can
+/// be taken back.
 struct ProposalsView: View {
     @State private var model: ProposalsModel
 
@@ -12,18 +11,17 @@ struct ProposalsView: View {
     var body: some View {
         Page(maxWidth: 760) {
             PageHeader(title: String(localized: .rootNavProposals), subtitle: model.subtitle)
-            let sections = model.sections
             if model.inbox.isEmpty {
                 EmptyCard(symbol: "tray", tone: model.workspace.lms.isConnected ? .success : .plain,
                           title: String(localized: .lmsProposalsEmpty), detail: model.emptyDetail)
             }
-            ForEach(sections) { section in
-                Block(title: section.classroom.title, note: section.proposals.isEmpty ? nil : "\(section.proposals.count)", trailing: {
+            ForEach(model.sections) { section in
+                Block(title: section.classroom.title, note: model.count(section), trailing: {
                     if !section.proposals.isEmpty { SectionActions(model: model, section: section) }
                 }) {
                     Card {
                         ForEach(section.proposals) { p in
-                            ProposalRow(model: model, proposal: p, last: section.handled.isEmpty && p.id == section.proposals.last?.id)
+                            ProposalRow(model: model, proposal: p, last: model.isLast(p, in: section))
                         }
                         if !section.handled.isEmpty {
                             DisclosureRow(label: String(localized: .lmsHidden(section.handled.count)), isOpen: Binding(
@@ -40,7 +38,6 @@ struct ProposalsView: View {
     }
 }
 
-/// "모두 추가 ⌄" holds the courses and, under them, "모두 무시"; a classroom with only notices has just "모두 무시".
 private struct SectionActions: View {
     let model: ProposalsModel
     let section: LMSInbox.Section
@@ -116,7 +113,7 @@ private struct ProposalRow: View {
                 }
             } control: {
                 HStack(spacing: Theme.Space.s) {
-                    if !model.canAdd(proposal) || proposal.key.kind == .assignment {
+                    if model.showsOpen(proposal) {
                         Button { openURL(proposal.url) } label: { Label(.lmsOpen, systemImage: "arrow.up.forward.app") }
                             .buttonStyle(SoftButtonStyle(iconOnly: true)).help(String(localized: .lmsOpen))
                     }
@@ -138,7 +135,6 @@ private struct ProposalRow: View {
     }
 }
 
-/// A handled item: open in the LMS, or proposed again. An assignment already in a course only says which.
 private struct HandledRow: View {
     let model: ProposalsModel
     let handled: LMSInbox.Handled
@@ -223,7 +219,7 @@ private struct SoftButton: View {
         .foregroundStyle(strong ? Theme.Palette.text : Theme.Palette.textSecondary)
         .background(Theme.Palette.textSecondary.opacity(strength), in: .capsule)
         .contentShape(TouchTarget())
-        .opacity(isEnabled ? 1 : 0.45)
+        .opacity(isEnabled ? 1 : Theme.Opacity.disabled)
         .onHover { hovering = $0 }
         #if os(macOS)
         .pointerStyle(isEnabled ? .link : nil)
@@ -231,7 +227,6 @@ private struct SoftButton: View {
     }
 }
 
-/// 오늘의 알림 카드: how many proposals wait, by classroom, and the way to them. Nothing when none wait.
 struct LMSTodayNotice: View {
     @State private var model: ProposalsModel
     @Environment(\.openLink) private var openLink

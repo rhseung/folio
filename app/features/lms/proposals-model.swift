@@ -92,6 +92,14 @@ final class ProposalsModel {
 
     func addable(_ section: LMSInbox.Section) -> [LMSProposal] { section.proposals.filter(canAdd) }
 
+    /// A classroom left with only hidden items counts for nothing, so its header shows no number.
+    func count(_ section: LMSInbox.Section) -> String? { section.proposals.isEmpty ? nil : "\(section.proposals.count)" }
+
+    func isLast(_ p: LMSProposal, in section: LMSInbox.Section) -> Bool { section.handled.isEmpty && p.id == section.proposals.last?.id }
+
+    /// A file that can be added says enough in its row; an assignment's page has the submission details the row leaves out.
+    func showsOpen(_ p: LMSProposal) -> Bool { !canAdd(p) || p.key.kind == .assignment }
+
     func isAdding(_ proposals: [LMSProposal]) -> Bool { !adding.isDisjoint(with: proposals.map(\.id)) }
 
     func add(_ proposals: [LMSProposal], into course: UUID) async {
