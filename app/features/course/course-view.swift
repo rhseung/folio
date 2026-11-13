@@ -92,7 +92,7 @@ struct CourseView: View {
                             RecordingPage(workspace: workspace, course: course, recording: recording, place: model.place, moved: model.moved)
                                 .id(recording.id)
                         } else {
-                            SessionsView(workspace: workspace, course: course) { model.show(note: $0) }
+                            SessionsView(workspace: workspace, course: course)
                         }
                     case .units:
                         UnitsView(workspace: workspace, course: course, place: model.place) { id in
@@ -105,7 +105,7 @@ struct CourseView: View {
                     case .materials: MaterialsView(workspace: workspace, course: course, place: model.place, moved: model.moved)
                     case .assignments: AssignmentsView(workspace: workspace, course: course)
                     case .grades: CourseGradesView(workspace: workspace, course: course)
-                    case .exams: ExamsView(workspace: workspace, course: course) { model.show(note: $0) }
+                    case .exams: ExamsView(workspace: workspace, course: course)
                     }
                 }
                 .environment(\.linkFocus, model.focus)
@@ -257,7 +257,7 @@ struct CourseNotesPage: View {
             .overflowFade(.vertical)
         } else {
             NotesView(workspace: model.workspace, course: course, selection: model.openNote, anchor: model.noteAnchor, insert: $model.noteInsert,
-                      moves: model.noteMoves) { model.openNote = $0 }
+                      moves: model.noteMoves)
         }
     }
 }

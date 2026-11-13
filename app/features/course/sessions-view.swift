@@ -7,16 +7,15 @@ import SwiftUI
 /// off the schedule is added by hand.
 struct SessionsView: View {
     @Environment(\.accent) private var accent
+    @Environment(\.openLink) private var openLink
     @State private var model: SessionsModel
     let course: LoadedCourse
-    let openNote: (UUID) -> Void
     @State private var editingTimes = false
     @State private var adding = false
 
-    init(workspace: Workspace, course: LoadedCourse, openNote: @escaping (UUID) -> Void) {
+    init(workspace: Workspace, course: LoadedCourse) {
         _model = State(initialValue: SessionsModel(workspace: workspace, courseId: course.id))
         self.course = course
-        self.openNote = openNote
     }
 
     var body: some View {
@@ -120,6 +119,10 @@ struct SessionsView: View {
             .contentShape(.rect)
             .contextMenu { Button(.sessionsClassTimesAddEllipsis) { editingTimes = true } }
         }
+    }
+
+    func openNote(_ id: UUID) {
+        openLink(AppLink(.note, id), course: course.id)
     }
 
     func leftUnwrappedCard(_ left: [Session], file: CourseFile) -> some View {
