@@ -1,7 +1,6 @@
 import FolioDomain
 import Foundation
 
-/// Shown to the user, who saves only the ones picked.
 public struct QuizCardDrafts: StructuredResult, Equatable {
     public struct Draft: Codable, Sendable, Equatable {
         public var type: String
@@ -20,7 +19,6 @@ public struct QuizCardDrafts: StructuredResult, Equatable {
             self.rubric = rubric
         }
 
-        /// nil when a choice card's answer isn't one of its options.
         public func card(unitId: UUID, device: DeviceID, at date: Date) -> QuizCard? {
             let type = CardType(rawValue: type) ?? .free
             var options = options
@@ -50,8 +48,6 @@ public struct QuizCardDrafts: StructuredResult, Equatable {
 }
 
 extension ClaudeClient {
-    /// `context` holds the course summary and the unit's notes; it goes through
-    /// `ContextBuilder` so the summary is cached and the notes are cut to the budget.
     public func makeCards(
         unitTitle: String, count: Int, type: CardType?, context: [ContextItem],
         budgetTokens: Int = 60_000

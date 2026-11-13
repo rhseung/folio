@@ -1,8 +1,6 @@
 import Foundation
 import SwiftSyntax
 
-// AGENTS.md "이름과 주석": a comment says what the code can't. Only the plain case is mechanical: a one-line comment
-// whose every word is already in the name under it. The rest is the review's.
 extension Rules {
     static var restatingComment: Rule {
         Rule(
@@ -12,7 +10,6 @@ extension Rules {
             var hits: [Hit] = []
             for file in code.files(
                 under: "sources", except: "sources/lint", "sources/lint-command")
-            // An @Action field's `///` is its CLI help.
             where !file.path.contains("/generated/") && !file.path.hasPrefix("sources/actions/") {
                 walk(Syntax(file.tree)) { node in
                     guard let keyword = declarationKeyword(node), let first = node.firstToken(viewMode: .sourceAccurate),
@@ -40,8 +37,6 @@ extension Rules {
         return nil
     }
 
-    // A comment run of more than one line explains something, so only a lone line counts: on its own line, with no
-    // comment line just above it and no blank line before the declaration.
     static func loneComment(before token: TokenSyntax) -> String? {
         let pieces = Array(token.leadingTrivia.pieces)
         var index = pieces.count - 1
@@ -67,7 +62,6 @@ extension Rules {
 
     static func restates(_ comment: String, _ declaration: String) -> Bool {
         let said = words(comment).subtracting(filler)
-        // A code span or a symbol says something the name can't, such as the syntax a case stands for.
         let symbols = Set("`\\[]<>/=+*#@$%^&|~")
         let tags = ["MARK", "TODO", "FIXME", "swiftlint", "design:", "strings:"]
         guard !said.isEmpty, !hasHangul(comment), !comment.contains(where: symbols.contains),
@@ -83,7 +77,6 @@ extension Rules {
         "let", "func",
     ]
 
-    // `courseTitle` and "course titles" both give {course, title, titles}.
     static func words(_ text: String) -> Set<String> {
         var spaced = ""
         var previous: Character?

@@ -1,7 +1,5 @@
 import SwiftSyntax
 
-// AGENTS.md "레이어". The compiler already refuses a Folio module importing the wrong Folio module; what it can't see is
-// a module reaching a system framework its layer has no business with.
 extension Rules {
     static var layer: Rule {
         Rule(
@@ -19,7 +17,6 @@ extension Rules {
             for file in code.files(under: "sources/domain", "sources/markdown") {
                 hits += diskAccess(in: file)
             }
-            // Debug-only code (snapshot walks writing their pictures) is not a screen the shipped app runs.
             for file in code.files(under: "sources/app/features") where !isDebugFile(file.path) {
                 for token in file.tokens where token.tokenKind == .identifier("FileManager") && !file.debugOnly(token) {
                     hits.append(Hit("layer", file, file.line(of: token), "FileManager in a screen"))

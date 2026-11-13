@@ -6,8 +6,6 @@ public enum ClaudeTask: String, Codable, Sendable, CaseIterable {
         widget, lectureSections
 }
 
-/// Light jobs (file classification) on the small model, grading and proof review on the large one.
-/// Defaults are defined here only; settings may override per task.
 public struct TaskConfig: Codable, Sendable, Equatable {
     public var model: String
     public var effort: Effort
@@ -19,8 +17,8 @@ public struct TaskConfig: Codable, Sendable, Equatable {
     public static func defaults(for task: ClaudeTask) -> TaskConfig {
         switch task {
         case .classifyFile, .extractAssignment: TaskConfig(model: small, effort: .low, maxTokens: 4_000)
-        // Reads every page's text (#450), about 20k tokens for a 107-page deck. On low the small model put a few
-        // boundaries a slide off; on medium it drew the same ones as the large model at a thirtieth of the cost.
+        // 모든 쪽의 글을 읽으므로 107쪽 덱이면 약 20k token이다. low에서 작은 모델은 경계 몇 개를 한 슬라이드씩
+        // 어긋나게 잡았고, medium에서는 큰 모델과 같은 경계를 30분의 1 비용으로 잡았다.
         case .lectureSections: TaskConfig(model: small, effort: .medium, maxTokens: 8_000)
         case .grading: TaskConfig(model: large, effort: .high, maxTokens: 16_000)
         case .chat, .reviewNoteDraft, .examSummaryDraft, .quizCards, .extractGradingPolicy, .examPlan, .widget:
@@ -28,11 +26,9 @@ public struct TaskConfig: Codable, Sendable, Equatable {
         }
     }
 
-    /// Server-side refusal fallback exists for the Opus line, not for Haiku.
     var supportsFallback: Bool { model.hasPrefix("claude-opus") }
 }
 
-/// $ per million tokens. Cache writes are billed at 1.25× input; reads at the listed rate.
 public struct ModelPricing: Sendable, Equatable {
     public var input: Double
     public var output: Double
@@ -86,7 +82,6 @@ public struct ClaudeClient: Sendable {
         )
     }
 
-    /// Refusals and truncation throw instead of returning partial text.
     public func text(
         _ task: ClaudeTask, system: [ContentBlock], messages: [Message],
         onEvent: (@Sendable (StreamEvent) -> Void)? = nil
@@ -94,7 +89,6 @@ public struct ClaudeClient: Sendable {
         try await send(task, request(task, system: system, messages: messages), onEvent: onEvent)
     }
 
-    /// A reply that doesn't decode is asked for once more, then reported.
     public func structured<T: Decodable & Sendable>(
         _ task: ClaudeTask, as _: T.Type, schema: JSONValue,
         system: [ContentBlock], messages: [Message]

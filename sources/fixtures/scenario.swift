@@ -3,19 +3,12 @@ import FolioDomain
 import FolioStorage
 import Foundation
 
-/// Situations to judge a screen against: `Fixture.standard` grown through the actions around a pinned moment, so a
-/// render or preview shows the same day whatever the real clock says. Nothing here comes from real data.
 public enum Scenario: String, CaseIterable, Sendable {
-    /// Six classes with the second under way, overdue reviews, deadlines into next month, three exams.
     case busyDay
-    /// The same day with six exams in the next month, more than fit side by side.
     case manyExams
-    /// A Saturday: no classes and a few things pending.
     case quietDay
-    /// The term's first day, nothing scheduled yet.
     case empty
 
-    /// Korean time: the class times and dues below are a Korean student's day.
     public static let calendar: Calendar = {
         var c = Calendar(identifier: .gregorian)
         c.timeZone = TimeZone(identifier: "Asia/Seoul")!
@@ -36,8 +29,8 @@ public enum Scenario: String, CaseIterable, Sendable {
         let build = Builder(gist: GISTStore(url: folder))
         switch self {
         case .busyDay, .manyExams:
-            // Before the slides are tracked, so the course holds this file's hash. Split into units below, they need
-            // pages to open: a placeholder left the split screen and the section bars with nothing to show.
+            // 과목이 이 파일의 hash를 갖도록 슬라이드를 추적하기 전에 쓴다. 아래에서 단원으로 나누므로 열 수 있는 쪽이
+            // 필요하다. 자리표시자로는 나누기 화면과 구간 막대에 보일 것이 없었다.
             try SampleLecture.write(to: folder.appending(path: Builder.graphFolder).appending(path: Builder.matchingSlides))
             try build.busyDay(extraExams: self == .manyExams)
         case .quietDay: try build.quietDay()
@@ -68,7 +61,6 @@ private struct Builder {
 
     func at(_ m: Int, _ d: Int, _ h: Int = 0, _ min: Int = 0) -> Date { Scenario.at(2026, m, d, h, min) }
 
-    /// Each action runs at its own moment, so notes, reviews and edits are stamped when they would have happened.
     @discardableResult
     func run(_ action: some Action, at now: Date) throws -> UUID {
         let ctx = ActionContext(gist: gist, device: device, now: now, calendar: Scenario.calendar)
@@ -80,7 +72,6 @@ private struct Builder {
         weekdays.map { ClassTime(weekday: $0, startMinute: start, endMinute: end, room: room) }
     }
 
-    /// A held class whose review note is written, or left half done.
     @discardableResult
     func session(_ course: UUID, _ date: Date, minutes: Int = 75, note: Bool = true, unfinished: Bool = false) throws -> UUID {
         let id = try run(SessionAdd(course: course, date: date), at: date)
@@ -110,7 +101,7 @@ private struct Builder {
     func busyDay(extraExams: Bool = false) throws {
         let setup = at(8, 28, 10)
         let codes = ["EC", "MA", "PS", "GS"].map { CourseCode(device: device, at: setup, prefix: $0) }
-        // Invented scale, categories and people: the repo is public, so nothing here is a real grade or person.
+        // 저장소가 공개이므로 등급 체계, 분류, 사람은 모두 지어낸 것이다. 실제 성적이나 사람은 없다.
         let grades =
             [("A+", 4.5), ("A0", 4.0), ("B+", 3.5), ("B0", 3.0), ("C+", 2.5), ("C0", 2.0), ("D+", 1.5), ("D0", 1.0), ("F", 0.0)]
             .map { LetterGrade(device: device, at: setup, symbol: $0.0, points: $0.1, countsInGpa: true, countsInCredits: $0.0 != "F") }
@@ -118,7 +109,6 @@ private struct Builder {
         let major = Category(device: device, at: setup, name: "전공", group: "전공", isMajor: true, minCredits: 36)
         let science = Category(device: device, at: setup, name: "기초과학", group: "기초", minCredits: 30)
         let humanities = Category(device: device, at: setup, name: "인문사회", group: "교양", minCredits: 24)
-        // Fixed ids: avatar colors follow them.
         let people = [
             Person(
                 id: UUID(uuidString: "A0000000-0000-4000-8000-000000000001")!, device: device, at: setup, name: "김도윤",
@@ -145,7 +135,6 @@ private struct Builder {
         let writing = try run(
             CourseAdd(code: codes[3].id, number: "1511", title: "글쓰기의 기초", credits: 2, mode: .passFail, semester: fall), at: setup)
 
-        // Mon/Wed back to back, the way a full GIST timetable runs, and an evening class on Wednesdays.
         let timetable: [(UUID, [ClassTime], String)] = [
             (graph, slots([1, 3], 540, 615, "A101"), "point.3.connected.trianglepath.dotted"),
             (robotics, slots([1, 3], 630, 705, "C204"), "gearshape.2"),
@@ -157,7 +146,6 @@ private struct Builder {
         for (course, schedule, icon) in timetable {
             try run(CourseSet(course: course, fields: [.schedule(schedule), .icon(icon)]), at: setup)
         }
-        // A colloquium carries no credits and nothing to study, but still meets every week; graphite keeps it quiet.
         let colloquium = try run(
             CourseAdd(code: codes[3].id, number: "9331", title: "콜로퀴움", credits: 0, mode: .passFail, semester: fall), at: setup)
         try run(
@@ -174,7 +162,6 @@ private struct Builder {
         try run(CourseSet(course: linearAlgebra, fields: [.finalGrade(grades[1].id)]), at: at(6, 30, 12))
         try gradeBook(graph, at: setup)
 
-        // The last two weeks of classes. Notes are written up to last week; this Monday's still owe theirs.
         var held: [UUID: [Date: UUID]] = [:]
         for (course, schedule, _) in timetable {
             for day in [at(10, 19), at(10, 21), at(10, 26), at(10, 28), at(11, 2), at(11, 4)] {
@@ -197,7 +184,6 @@ private struct Builder {
         let scheduling = try unit(os, "프로세스 스케줄링", [s(os, 10, 19), s(os, 10, 21)], at: at(10, 21, 15))
         _ = try unit(os, "교착 상태", [s(os, 10, 26)], at: at(10, 26, 15))
         let conditional = try unit(prob, "조건부 확률", [s(prob, 10, 26), s(prob, 10, 28)], at: at(10, 28, 16))
-        // A Friday evening makeup, off the timetable, so the class in session today has one on its page.
         let makeup = try run(SessionAdd(course: robotics, date: at(10, 30, 19), end: at(10, 30, 20, 15), kind: .makeup), at: at(10, 28, 12))
         try run(SessionNote(course: robotics, session: makeup, kind: .review), at: at(10, 30, 21))
         try run(SessionSet(course: robotics, session: makeup, reviewUnfinished: .set(false)), at: at(10, 30, 21))
@@ -205,7 +191,6 @@ private struct Builder {
         _ = try unit(robotics, "역기구학과 야코비안", [s(robotics, 10, 28)], at: at(10, 28, 12))
         _ = try unit(physics, "전기장과 가우스 법칙", [s(physics, 10, 26), s(physics, 10, 28)], at: at(10, 28, 18))
 
-        // A streak up to this morning, which also fills the study-time chart.
         try review(graph, matching, .good, at(10, 23, 21), minutes: 40)
         try review(os, scheduling, .hard, at(10, 30, 20), minutes: 55)
         try review(graph, matching, .good, at(11, 1, 14), minutes: 30)
@@ -224,7 +209,6 @@ private struct Builder {
             (graph, "SP2", at(12, 2, 23, 59), .todo),
             (robotics, "Final Project", at(12, 18, 23, 59), .todo),
         ]
-        // Repeats of each kind, for the assignment list's labels.
         let repeats: [String: AssignmentRepeat] = [
             "HW6": .biweekly, "HW5": .weekly, "SP2": AssignmentRepeat(.week, weekdays: [1, 3]),
             "HW4": AssignmentRepeat(every: 3, .day),
@@ -251,8 +235,6 @@ private struct Builder {
             at: at(11, 1, 10))
     }
 
-    /// Monday's class recorded with the slides open, so its replay has a transcript and the pages it was on. The audio
-    /// isn't written: a fixture has no sound to play, and the player shows the length the recording kept.
     func recording(_ course: UUID, session: UUID, start: Date) throws {
         try run(MaterialTrack(course: course), at: start)
         let ctx = ActionContext(gist: gist, device: device, now: start, calendar: Scenario.calendar)
@@ -283,8 +265,6 @@ private struct Builder {
         try ctx.edit(course) { $0.recordings.append(recording) }
     }
 
-    /// The matching slides split into the chapter's units (#321), two of them new under it, and the classes' pages
-    /// through the file, so the section bars and strips have something to draw.
     func lectureSections(_ course: UUID, matching: UUID, classes: [UUID]) throws {
         let ctx = ActionContext(gist: gist, device: device, now: at(10, 21, 12), calendar: Scenario.calendar)
         guard let slides = try ctx.file(course).materials.first(where: { $0.path == Self.matchingSlides })?.id else { return }
@@ -306,13 +286,11 @@ private struct Builder {
                     course: course, material: slides, session: session, linked: true, firstPage: pages.lowerBound,
                     lastPage: pages.upperBound), at: at(11, 2, 11))
         }
-        // The last class reached both new units; its row has no title naming them, so it draws the strip.
         for unit in ["B0000000-0000-4000-8000-000000000002", "B0000000-0000-4000-8000-000000000003"] {
             try run(UnitLink(course: course, unit: UUID(uuidString: unit)!, sessions: [classes[2]]), at: at(11, 2, 11))
         }
     }
 
-    /// A syllabus with scores in so far, so the course's grade page has a curve and a projection to draw.
     func gradeBook(_ course: UUID, at setup: Date) throws {
         let homework = try run(ComponentAdd(course: course, name: "과제", weight: 30, expectedCount: 6), at: setup)
         let quizzes = try run(

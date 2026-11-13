@@ -1,9 +1,8 @@
 import SwiftSyntax
 
-// The app reaches Application Support only through LocalFolders, which refuses this Mac's real folders to tests,
-// previews and renders. A path asked of the system anywhere else would skip that refusal; tests/unit/app is checked too,
-// since a test is where a hand-made path would recover the user's unfinished recordings into a fixture. Packages
-// can't import LocalFolders and have no business there, so for them any use fails.
+// LocalFolders만 테스트와 미리보기와 렌더에 이 Mac의 실제 폴더를 주지 않는다. 다른 곳에서 시스템에 경로를 물으면 이
+// 거절을 건너뛰므로 tests/unit/app도 검사한다. 테스트에서 손으로 만든 경로가 사용자의 끝나지 않은 녹음을 픽스처로
+// 복구할 수 있기 때문이다. 패키지는 LocalFolders를 import할 수 없으므로 어떤 사용이든 실패한다.
 extension Rules {
     static var localFolders: Rule {
         Rule(
@@ -12,7 +11,7 @@ extension Rules {
         ) { code in
             let exempt: Set = ["sources/app/app/services/local-folders.swift", "tests/unit/app/support/local-folders-tests.swift"]
             var hits: [Hit] = []
-            // folio-lint names the paths it looks for.
+            // folio-lint는 자기가 찾는 경로 이름을 코드에 적으므로 검사에서 뺀다.
             for file in code.files(
                 under: "sources", "tests", except: "sources/lint", "sources/lint-command", "tests/unit/lint", "tests/e2e/app")
             where !exempt.contains(file.path) {

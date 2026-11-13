@@ -1,7 +1,6 @@
 import SwiftSyntax
 
 extension Rules {
-    // AGENTS.md "문자열 키": screen copy lives in the string catalog as a key.
     static var uiString: Rule {
         Rule(
             name: "ui-string",
@@ -23,7 +22,6 @@ extension Rules {
         }
     }
 
-    // AGENTS.md "단일 출처": folder and file names come from standard-layout.swift alone.
     static var layoutName: Rule {
         Rule(
             name: "layout-name",
@@ -47,8 +45,6 @@ extension Rules {
         "settings.json", "moves.jsonl",
     ]
 
-    // An English word is copy only where SwiftUI shows its first argument; anywhere else it is an identifier, a key or
-    // a format. Hangul is copy everywhere.
     static let copyViews: Set<String> = [
         "Text", "Button", "Label", "Toggle", "Picker", "Section", "Menu", "TextField", "SecureField", "LabeledContent",
         "GroupBox", "DisclosureGroup", "Link", "NavigationLink", "ContentUnavailableView", "LocalizedStringKey",

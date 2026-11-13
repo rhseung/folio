@@ -1,7 +1,5 @@
 import SwiftSyntax
 
-// docs/DESIGN.md: screens take type sizes, colours, corner radii and spacing from Theme. A value that belongs to one
-// screen alone carries `// design: one-off, <why>` on its line.
 extension Rules {
     static var designValue: Rule {
         Rule(
@@ -9,7 +7,6 @@ extension Rules {
             advice: "take type sizes, colours and corner radii from Theme, or mark the line `// design: one-off, <why>`"
         ) { code in
             var hits: [Hit] = []
-            // sources/app/design is exempt: it is where the tokens are applied.
             for file in code.files(under: "sources/app/features", "sources/app/app") {
                 walk(Syntax(file.tree)) { node in
                     guard let found = rawDesignValue(node), !file.oneOff(found.at) else { return }
@@ -20,8 +17,6 @@ extension Rules {
         }
     }
 
-    // Spacing, sizes and corner radii sit on a 4pt grid, 2pt where 4 is too coarse. Type sizes and stroke widths are
-    // exempt, and so are 1pt hairlines. Sums (`Theme.Space.s + 2`) are past what a check can judge; the review sees them.
     static var designGrid: Rule {
         Rule(
             name: "design-grid", strict: true,
@@ -43,9 +38,7 @@ extension Rules {
         }
     }
 
-    // `.courseAccent(_:)` sets the accent and the ghost buttons' tint together; the accent set alone left a sheet's main
-    // button in the course's colour and its ghost buttons in the system's. The note benches in tests/unit/app set the accent
-    // alone, which their reference pictures were drawn with, so tests/unit/app is not checked.
+    // tests/unit/app의 note bench는 accent만 정한 상태로 기준 이미지를 그렸으므로 tests/unit/app은 검사하지 않는다.
     static var courseAccent: Rule {
         Rule(
             name: "course-accent", strict: true,
@@ -104,7 +97,6 @@ extension Rules {
         return nil
     }
 
-    // A shadow is black in any theme, faded or not: `.shadow(color: .black.opacity(0.18), …)`.
     static func isShadowBlack(_ member: MemberAccessExprSyntax) -> Bool {
         guard member.declName.baseName.text == "black" else { return false }
         var current = member.parent
@@ -120,7 +112,6 @@ extension Rules {
         "spacing", "width", "height", "cornerRadius", "top", "leading", "bottom", "trailing", "minLength", "dx", "dy",
     ]
 
-    // `width: 3`, `CGFloat = 3`: a label or a CGFloat default with an off-grid number straight after it.
     static func gridValue(after token: TokenSyntax) -> (what: String, at: TokenSyntax)? {
         let lead: String
         switch token.tokenKind {
@@ -140,7 +131,6 @@ extension Rules {
         return (lead + sign + literal.text, literal)
     }
 
-    // `.padding(3)`, `.padding(.top, 3)`, `CourseDot(…, size: 3)`.
     static func gridValue(in call: FunctionCallExprSyntax) -> (what: String, at: TokenSyntax)? {
         let arguments = Array(call.arguments)
         switch calledName(call) {
@@ -162,7 +152,6 @@ extension Rules {
         }
     }
 
-    // The whole expression is the number, as in `padding(3)`; `padding(3 * x)` is past the check.
     static func offGridNumber(_ expression: ExprSyntax) -> TokenSyntax? {
         var expression = expression
         if let negative = expression.as(PrefixOperatorExprSyntax.self), negative.operator.text == "-" {
@@ -175,7 +164,6 @@ extension Rules {
         return offGridLiteral(at: literal)
     }
 
-    // A number that starts here, after an optional minus: any fraction, or an odd whole number but a 1pt hairline.
     static func offGridLiteral(at token: TokenSyntax) -> TokenSyntax? {
         var token = token
         if token.tokenKind == .prefixOperator("-"), let next = token.nextToken(viewMode: .sourceAccurate) { token = next }

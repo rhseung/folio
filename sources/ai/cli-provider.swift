@@ -3,9 +3,8 @@ import Foundation
 import Synchronization
 
 #if os(macOS)
-/// Runs the user's own Claude Code CLI on their subscription. Its own tools stay off, so
-/// Claude can't touch files; with `folio` given, the chat gets Folio's actions through `folio mcp --propose`, which
-/// reads freely but turns every change into a proposal the user approves in the panel.
+// Claude Code의 자체 도구는 꺼서 Claude가 파일을 건드리지 못하게 한다. `folio mcp --propose`는 자유롭게 읽지만, 모든
+// 변경을 사용자가 패널에서 승인하는 제안으로 바꾼다.
 public struct CLIProvider: ClaudeProvider {
     public struct FolioTools: Sendable, Equatable {
         public var executable: URL
@@ -26,7 +25,7 @@ public struct CLIProvider: ClaudeProvider {
         self.folio = folio
     }
 
-    /// Apps opened from the Finder don't get the shell's PATH, so the usual install places are checked directly.
+    // Finder에서 연 앱은 셸의 PATH를 받지 못하므로, 흔히 설치되는 위치를 직접 확인한다.
     public static func find() -> URL? {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         return ["\(home)/.local/bin/claude", "/opt/homebrew/bin/claude", "/usr/local/bin/claude", "\(home)/.claude/local/claude"]
@@ -34,7 +33,6 @@ public struct CLIProvider: ClaudeProvider {
             .map { URL(fileURLWithPath: $0) }
     }
 
-    /// Where `mise run install-cli` puts it, or Homebrew's places.
     public static func findFolio() -> URL? {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         return ["\(home)/.local/bin/folio", "/opt/homebrew/bin/folio", "/usr/local/bin/folio"]
@@ -52,7 +50,6 @@ public struct CLIProvider: ClaudeProvider {
             let server: [String: Any] = ["command": folio.executable.path, "args": ["mcp", "--gist", folio.gist.path, "--propose"]]
             let config = try JSONSerialization.data(
                 withJSONObject: ["mcpServers": ["folio": server]], options: [.sortedKeys, .withoutEscapingSlashes])
-            // `--strict-mcp-config` above keeps the user's own servers out; only this one is allowed.
             args += ["--mcp-config", String(decoding: config, as: UTF8.self), "--allowedTools", "mcp__folio"]
         }
         if let systemFile { args += ["--system-prompt-file", systemFile.path] }
@@ -63,7 +60,7 @@ public struct CLIProvider: ClaudeProvider {
         return args
     }
 
-    /// One user message. The CLI takes no assistant turns as input, so earlier turns go in front as a transcript.
+    // CLI는 assistant 차례를 입력으로 받지 않으므로, 이전 차례를 대화 기록으로 만들어 앞에 붙인다.
     static func input(for request: MessagesRequest) throws -> Data {
         guard let last = request.messages.last else { throw ClaudeError.invalidOutput("no message to send") }
         let history = request.messages.dropLast().map { m in
@@ -80,7 +77,6 @@ public struct CLIProvider: ClaudeProvider {
         return text.isEmpty ? nil : text
     }
 
-    /// The `result` line of the stream, shaped like an API response so `ClaudeClient` treats both providers alike.
     static func response(from output: Data, request: MessagesRequest) throws -> MessagesResponse {
         let lines = String(decoding: output, as: UTF8.self).split(separator: "\n")
         guard let line = lines.last(where: { $0.contains(#""type":"result""#) }),
@@ -103,7 +99,6 @@ public struct CLIProvider: ClaudeProvider {
         let usage = result["usage"]
         var model = request.model
         if case .object(let models)? = result["modelUsage"], let first = models.keys.sorted().first { model = first }
-        // Structured output arrives through a tool call, which is a finished answer here.
         let stop = string(result["stop_reason"]).map { $0 == "tool_use" ? "end_turn" : $0 }
         let found = proposals(lines)
         return MessagesResponse(
@@ -116,7 +111,6 @@ public struct CLIProvider: ClaudeProvider {
         )
     }
 
-    /// The changes `folio mcp --propose` handed back in tool results along the way.
     static func proposals(_ lines: [Substring]) -> [ActionProposal] {
         lines.flatMap { line -> [ActionProposal] in
             guard line.contains(ActionProposal.marker), let value = try? JSONDecoder().decode(JSONValue.self, from: Data(line.utf8)),
@@ -139,8 +133,6 @@ public struct CLIProvider: ClaudeProvider {
         try await respond(request, onEvent: onEvent)
     }
 
-    /// A line of `--include-partial-messages` output. Each assistant message, one per tool round, opens with
-    /// `message_start`; a tool call opens its block with the tool's name before its input streams in.
     static func event(_ line: Data) -> StreamEvent? {
         guard let value = try? JSONDecoder().decode(JSONValue.self, from: line), value["type"] == .string("stream_event"),
             let event = value["event"]
@@ -169,7 +161,7 @@ public struct CLIProvider: ClaudeProvider {
         try FileManager.default.createDirectory(at: temp, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: temp) }
 
-        // The course context can run to hundreds of kilobytes, past the argument size limit, so it goes in a file.
+        // 과목 맥락은 수백 KB에 이르러 인자 크기 한도를 넘을 수 있으므로 파일로 넘긴다.
         var systemFile: URL?
         if let system = Self.systemText(request) {
             systemFile = temp.appending(path: "system.txt")
@@ -180,8 +172,8 @@ public struct CLIProvider: ClaudeProvider {
             try Self.arguments(for: request, systemFile: systemFile, folio: folio) + (onEvent == nil ? [] : ["--include-partial-messages"])
         let (executable, cwd, errorFile) = (executable, workingDirectory, temp.appending(path: "stderr.txt"))
         let running = Running()
-        // Detached because the read blocks its thread. A detached task doesn't inherit cancellation, so the handler
-        // carries it over by ending the process, which ends the read too.
+        // 읽기가 스레드를 막으므로 detached task에서 돌린다. detached task는 취소를 물려받지 않으므로, 핸들러가
+        // 프로세스를 끝내서 읽기도 함께 끝낸다.
         let (output, status) = try await withTaskCancellationHandler {
             try await Task.detached {
                 try Self.run(executable, args, input: input, cwd: cwd, stderr: errorFile, running: running) { line in
@@ -214,20 +206,18 @@ public struct CLIProvider: ClaudeProvider {
         FileManager.default.createFile(atPath: stderr.path, contents: nil)
         process.standardInput = stdin
         process.standardOutput = stdout
-        // A file, not a pipe: an unread stderr pipe that fills up would stall the process.
+        // pipe가 아니라 파일에 쓴다. 아무도 읽지 않는 stderr pipe가 가득 차면 프로세스가 멈추기 때문이다.
         process.standardError = try FileHandle(forWritingTo: stderr)
 
         try running.start(process)
         let writer = stdin.fileHandleForWriting
-        // A process stopped before it read all its input would otherwise kill the app with SIGPIPE on the write below.
+        // 입력을 다 읽기 전에 멈춘 프로세스에 아래에서 쓰면 SIGPIPE로 앱이 종료되므로 이를 막는다.
         _ = fcntl(writer.fileDescriptor, F_SETNOSIGPIPE, 1)
-        // Written from another thread so a long prompt can't block while stdout fills.
         Thread.detachNewThread {
             try? writer.write(contentsOf: input)
             try? writer.close()
         }
 
-        // Read as it comes, not to the end, so the answer's text deltas reach the panel while it is being written.
         let reader = stdout.fileHandleForReading
         var output = Data(), pending = Data()
         while case let chunk = reader.availableData, !chunk.isEmpty {
@@ -243,13 +233,13 @@ public struct CLIProvider: ClaudeProvider {
         return (output, process.terminationStatus)
     }
 
-    /// One request's process, so cancelling the request ends it. Otherwise `claude` runs on, and bills, to the end of
-    /// an answer nobody will see.
+    // 요청마다 프로세스를 두어야 요청을 취소할 때 프로세스도 끝난다. 그러지 않으면 아무도 보지 않을 답을 `claude`가
+    // 끝까지 쓰고, 그만큼 요금이 나간다.
     final class Running: Sendable {
         private let state = Mutex<(process: Process?, cancelled: Bool)>((nil, false))
 
-        /// Under the lock, so a cancel that lands while the process starts isn't lost; and `terminate()` on a process
-        /// not yet started raises an Objective-C exception rather than doing nothing.
+        // 프로세스가 시작되는 사이에 들어온 취소를 놓치지 않도록 잠금 안에서 시작한다. 시작하지 않은 프로세스에
+        // `terminate()`를 부르면 Objective-C 예외가 나기 때문이기도 하다.
         func start(_ process: Process) throws {
             try state.withLock { s in
                 if s.cancelled { throw CancellationError() }

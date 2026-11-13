@@ -3,7 +3,6 @@ import Foundation
 
 public struct ContextItem: Sendable, Equatable, Identifiable {
     public enum Tier: Int, Sendable, Comparable {
-        // Later tiers are dropped first when over budget.
         case courseSummary, userRules, focus, related, search
         public static func < (a: Tier, b: Tier) -> Bool { a.rawValue < b.rawValue }
     }
@@ -12,7 +11,6 @@ public struct ContextItem: Sendable, Equatable, Identifiable {
     public var title: String
     public var tier: Tier
     public var text: String
-    /// JPEG images that go with the text, such as the photos a note embeds.
     public var images: [Image]
 
     public struct Image: Sendable, Equatable {
@@ -31,7 +29,6 @@ public struct ContextItem: Sendable, Equatable, Identifiable {
 }
 
 public struct BuiltContext: Sendable, Equatable {
-    /// System blocks; the stable part (course summary, rules) carries the cache breakpoint.
     public var system: [ContentBlock]
     public var userBlocks: [ContentBlock]
     public var included: [ContextItem]
@@ -39,7 +36,6 @@ public struct BuiltContext: Sendable, Equatable {
 }
 
 public enum ContextBuilder {
-    /// ≈ 3 characters per token for mixed Korean/English; a 1568px image ≈ 2,500 tokens.
     public static func estimate(_ item: ContextItem) -> Int {
         item.text.count / 3 + item.images.count * 2_500
     }
@@ -64,7 +60,6 @@ public enum ContextBuilder {
         var userBlocks: [ContentBlock] = []
         for item in included where item.tier > .userRules {
             userBlocks.append(.text("<\(item.title)>\n\(item.text)\n</\(item.title)>"))
-            // Each image is named before it, so Claude can tie it to the link in the text above.
             for image in item.images {
                 userBlocks.append(.text("\(item.title)의 그림 \(image.name):"))
                 userBlocks.append(.image(image.data, mediaType: "image/jpeg"))
@@ -91,7 +86,7 @@ public enum ContextBuilder {
             }
         }
         if !file.course.memo.isEmpty { lines += ["메모:", file.course.memo] }
-        // Sorted and timestamp-free so the cached prefix stays byte-identical between requests.
+        // 캐시된 앞부분이 요청마다 바이트 단위로 같아야 하므로, 정렬하고 시각을 넣지 않는다.
         return ContextItem(id: "course:\(file.course.id)", title: "과목 요약", tier: .courseSummary, text: lines.joined(separator: "\n"))
     }
 }

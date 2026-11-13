@@ -12,12 +12,9 @@ public struct LMSCredentials: Sendable, Equatable {
     }
 }
 
-/// The LMS login in the keychain, synced by iCloud Keychain so the Mac and the iPad share it (#132). Students get no
-/// web service token, so the password itself is what logs Folio in again when the LMS session ends.
 public enum LMSCredentialStore {
     static let service = "com.rhseung.folio.lms"
 
-    /// Reads and removes the item whether or not it syncs (see `save`).
     static var base: [String: Any] {
         [
             kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
@@ -45,8 +42,8 @@ public enum LMSCredentialStore {
         q[kSecAttrLabel as String] = "Folio GIST LMS"
         q[kSecAttrSynchronizable as String] = true
         var status = SecItemAdd(q as CFDictionary, nil)
-        // An app signed without a team (Sign to Run Locally) may not write a syncing item; it keeps the login on this
-        // device rather than not at all, and a signed build writes it synced on the next connect.
+        // 팀 없이 서명한 앱(Sign to Run Locally)은 동기화되는 항목을 쓰지 못할 수 있다. 그때는 로그인을 아예 남기지
+        // 않는 대신 이 기기에만 남기고, 서명한 빌드는 다음 연결 때 동기화되는 항목으로 쓴다.
         if status == errSecMissingEntitlement {
             q[kSecAttrSynchronizable as String] = false
             status = SecItemAdd(q as CFDictionary, nil)
@@ -60,14 +57,13 @@ public enum LMSCredentialStore {
 }
 
 public enum LMSError: Error, Equatable, Sendable {
-    /// No login saved, or the saved one was refused: the user has to connect again.
     case needsLogin
     case refused
     case http(Int)
 }
 
-/// One LMS web session. Pages that come back as the login form log in once with the saved login and are fetched
-/// again; a second refusal stops, since repeating a wrong password can lock the portal account.
+// 로그인 폼으로 돌아온 페이지는 저장된 로그인으로 한 번 로그인한 뒤 다시 받는다. 틀린 비밀번호를 거듭 보내면 포털
+// 계정이 잠길 수 있으므로 두 번째 거절에서 멈춘다.
 public actor LMSClient {
     let session: URLSession
     let credentials: @Sendable () -> LMSCredentials?
@@ -75,7 +71,6 @@ public actor LMSClient {
     private var last: ContinuousClock.Instant?
     private var refused = false
 
-    /// `pause` spaces requests out: the LMS serves the whole school.
     public init(credentials: @escaping @Sendable () -> LMSCredentials? = LMSCredentialStore.read, pause: Duration = .milliseconds(500)) {
         let config = URLSessionConfiguration.ephemeral
         config.httpCookieAcceptPolicy = .always
@@ -95,7 +90,7 @@ public actor LMSClient {
         return again
     }
 
-    /// Logs in with the saved login. Moodle wants its session cookie before the form, so the form is fetched first.
+    // Moodle은 폼보다 세션 cookie를 먼저 요구하므로 폼을 먼저 받는다.
     public func login() async throws {
         guard !refused, let login = credentials() else { throw LMSError.needsLogin }
         _ = try await get("/login/index.php")
@@ -111,8 +106,6 @@ public actor LMSClient {
         }
     }
 
-    /// The file behind a `ubfile` activity, saved into `folder` under its own name; nil when the LMS only shows it in
-    /// the Coursemos viewer, which Folio leaves as a link rather than working around.
     public func download(_ file: LMSFile, into folder: URL) async throws -> URL? {
         let path = "/mod/ubfile/view.php?id=\(file.id)"
         var (data, response) = try await fetch(path)
@@ -136,8 +129,8 @@ public actor LMSClient {
         try await send(URLRequest(url: LMS.url(path)))
     }
 
-    /// `URLComponents` leaves `+` and `&` in values as they are, which a form body reads as a space and a new field;
-    /// a password may hold either.
+    // `URLComponents`는 값 안의 `+`와 `&`를 그대로 두는데, form body에서 이 문자는 공백과 새 필드로 읽힌다. 비밀번호에
+    // 둘 중 하나가 들어 있을 수 있다.
     static func form(_ fields: KeyValuePairs<String, String>) -> String {
         var allowed = CharacterSet.alphanumerics.intersection(.init(charactersIn: Unicode.Scalar(0)..<Unicode.Scalar(128)))
         allowed.insert(charactersIn: "-._~")
@@ -153,8 +146,6 @@ public actor LMSClient {
     }
 }
 
-/// One pass over the LMS: the classroom list, then each classroom's assignments, files and notices. Every classroom is
-/// read, since none is tied to a course; three pages each, with the client's pause between requests.
 public enum LMSSync {
     public static func read(_ client: LMSClient, at now: Date) async throws -> LMSSnapshot {
         var snapshot = LMSSnapshot(at: now, classrooms: try LMSPages.classrooms(await client.page("/")))

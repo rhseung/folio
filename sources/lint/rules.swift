@@ -4,7 +4,7 @@ public struct Hit: Hashable, Sendable {
     public let check: String
     public let path: String
     public let line: Int
-    // The baseline matches places by this, not by line, so a place keeps its entry when lines above it move.
+    // 기준선은 줄이 아니라 이 값으로 자리를 맞춘다. 그래서 위의 줄이 움직여도 자리가 자기 항목을 유지한다.
     public let key: String
 
     init(_ check: String, _ file: SourceFile, _ line: Int, _ key: String) {
@@ -24,7 +24,7 @@ public struct Hit: Hashable, Sendable {
 public struct Rule {
     public let name: String
     public let advice: String
-    // A strict rule has no baseline: every place passed it when it was written, so any hit fails, `--update` or not.
+    // strict 규칙에는 기준선이 없다. 규칙을 만들 때 모든 자리가 통과했으므로, `--update`를 주든 말든 걸리면 실패한다.
     public let strict: Bool
     let find: (Codebase) -> [Hit]
 
@@ -51,7 +51,6 @@ public enum Rules {
 // MARK: Exemptions
 
 extension SourceFile {
-    // Code the shipped app never runs: `#if DEBUG` and `#Preview`. A `#if DEBUG … #else` leaves the `#else` checked.
     func debugOnly(_ node: some SyntaxProtocol) -> Bool {
         var current = node.parent
         while let ancestor = current {
@@ -67,8 +66,6 @@ extension SourceFile {
         return false
     }
 
-    // `// strings: data, <why>` covers its line up to the mark, and the whole block or literal when the line opens one:
-    // a keyword list is long, and marking each of its lines would bury the list.
     func dataMarks() -> [Range<Int>] {
         var ranges: [Range<Int>] = []
         for token in tokens where token.trailingTrivia.pieces.contains(where: { $0.lineCommentText.map(isDataMark) ?? false }) {
@@ -118,7 +115,6 @@ extension TriviaPiece {
 }
 
 extension StringLiteralExprSyntax {
-    // Interpolated code is left out: `"\(count) items"` is the copy " items".
     var plainText: String {
         segments.map { segment in
             if case .stringSegment(let text) = segment { return text.content.text }

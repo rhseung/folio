@@ -1,6 +1,5 @@
 import SwiftSyntax
 
-// AGENTS.md "화면: 모델과 뷰": a view lays out what its model gives it.
 extension Rules {
     static var viewWorkspaceCall: Rule {
         Rule(
@@ -45,7 +44,6 @@ extension Rules {
         }
     }
 
-    // A view's helpers often sit in an extension in another file, so the names come from every file first.
     static func viewNames(_ files: [SourceFile]) -> Set<String> {
         var names: Set<String> = []
         for file in files {
@@ -77,7 +75,6 @@ extension Rules {
         return false
     }
 
-    // `model.workspace` is the same reach past the model as `workspace` itself.
     static func workspaceToken(_ base: ExprSyntax) -> TokenSyntax? {
         if let reference = base.as(DeclReferenceExprSyntax.self), reference.baseName.text == "workspace" {
             return reference.baseName
@@ -94,7 +91,6 @@ extension Rules {
             let name = member.declName.baseName
             switch name.text {
             case "filter", "reduce", "sorted", "partition": return ("." + name.text, name)
-            // `count` alone is a property read, and `min()` of comparable values is no rule; only the closure forms are.
             case "count": return label == "where" ? (".count(where", name) : nil
             case "min", "max": return label == "by" ? (".\(name.text)(by", name) : nil
             default: return nil
@@ -108,7 +104,6 @@ extension Rules {
         return nil
     }
 
-    // The innermost `some View` member around the node: `body` or one of its pieces.
     static func viewMember(around node: some SyntaxProtocol) -> String? {
         var current = node.parent
         while let ancestor = current {

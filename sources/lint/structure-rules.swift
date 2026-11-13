@@ -2,8 +2,6 @@ import Foundation
 import SwiftSyntax
 
 extension Rules {
-    // AGENTS.md "레이어" and "화면: 모델과 뷰": app/design and app/platform are what screens build on, so they can't
-    // reach back into a screen, and a screen's model is its own. The compiler can't see this: sources/app is one module.
     static var appDirection: Rule {
         Rule(
             name: "app-direction",
@@ -27,8 +25,6 @@ extension Rules {
         }
     }
 
-    // A type name declared under sources/app/features, by the feature it belongs to. A name also declared elsewhere is left out:
-    // which one a file means is past a syntax tree.
     static func featureTypes(in code: Codebase) -> [String: String] {
         var owners: [String: String] = [:]
         var elsewhere: Set<String> = []
@@ -60,9 +56,6 @@ extension Rules {
         return String(parts[3])
     }
 
-    // AGENTS.md "앱 링크": a switch over AppLink.Kind has no `default:`, so a new kind doesn't compile until every
-    // place handles it. Which enum a switch is over is past a syntax tree; a `….kind` switch whose every case is a
-    // kind of AppLink is taken to be one.
     static var kindDefault: Rule {
         Rule(
             name: "kind-default",
@@ -120,8 +113,6 @@ extension Rules {
         return kinds
     }
 
-    // AGENTS.md "구조 축" 라이브 시계: a view that changes by the minute reads `workspace.liveNow`, which also moves when
-    // the app comes forward or the Mac wakes; a TimelineView of its own misses both. Only a timer counting seconds keeps one.
     static var minuteTimeline: Rule {
         Rule(
             name: "minute-timeline",
@@ -153,8 +144,6 @@ extension Rules {
         return schedule.trimmedDescription
     }
 
-    // AGENTS.md "화면 계약": a screen puts nothing in the window's toolbar; its tools go in PageBar and its side panels
-    // behind a FAB, since the window (or a pane) draws the frame.
     static var screenToolbar: Rule {
         Rule(
             name: "screen-toolbar",
@@ -174,8 +163,6 @@ extension Rules {
         }
     }
 
-    // Launch settings (the GIST folder, test hosting, the isolated local folders) are read where the app and the CLI
-    // set themselves up, so a knob for one run can't sit unseen in a screen. Debug code and tests are free to read them.
     static var launchEnvironment: Rule {
         Rule(
             name: "launch-environment",
@@ -199,7 +186,6 @@ extension Rules {
         "sources/cli/core/environment.swift",
     ]
 
-    // AGENTS.md "이름과 주석": file and folder names are lower kebab case.
     static var kebabNames: Rule {
         Rule(name: "kebab-names", advice: "name files and folders in lower kebab case (AGENTS.md \"이름과 주석\")") { code in
             var hits: [Hit] = []
@@ -226,8 +212,6 @@ extension Rules {
 
     static let folderLimit = 20
 
-    // A folder past twenty files has stopped saying what is in it; split it by the parts a reader looks for
-    // (`features/<기능>/<구역>`), and keep tests in the shape of their sources.
     static var folderSize: Rule {
         Rule(
             name: "folder-size",

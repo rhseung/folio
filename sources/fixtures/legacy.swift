@@ -1,6 +1,7 @@
 extension Fixture {
     static let legacyFiles: [(path: String, content: String?)] = [
-        // An earlier cleanup moved `Exam Review` into `Exercises` whole; only the journal still says those files are self-made.
+        // 예전 정리가 `Exam Review`를 통째로 `Exercises`로 옮겼다. 그 파일들을 직접 만들었다는 사실은 이 기록에만 남아
+        // 있다.
         (
             ".folio/moves.jsonl",
             #"""

@@ -1,9 +1,7 @@
 import Foundation
 
-/// They live in code and are written out on demand, so the public repository carries no folder of course files.
 public enum Fixture: String, CaseIterable, Sendable {
     case standard
-    /// The unorganized shape of the real folder. Only for cleanup-tool tests.
     case legacy
 
     var files: [(path: String, content: String?)] {
@@ -13,8 +11,8 @@ public enum Fixture: String, CaseIterable, Sendable {
         }
     }
 
-    /// A file without content gets a line naming its own path, so every placeholder (the `.pdf`s too, which are not
-    /// valid PDFs) has a distinct hash. A path ending in `/` is an empty folder.
+    // 내용이 없는 파일에는 자기 경로를 적은 줄을 써서, 모든 자리표시자(올바른 PDF가 아닌 `.pdf` 포함)의 hash가 서로
+    // 다르게 한다. `/`로 끝나는 경로는 빈 폴더다.
     public func write(to folder: URL) throws {
         let fm = FileManager.default
         for (path, content) in files {
@@ -28,7 +26,6 @@ public enum Fixture: String, CaseIterable, Sendable {
         }
     }
 
-    /// A fresh copy under the temp directory, so a test never sees another test's writes.
     public func copyToTemp() throws -> URL {
         let dest = FileManager.default.temporaryDirectory.appending(path: "folio-\(UUID().uuidString)/GIST")
         try write(to: dest)

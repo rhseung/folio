@@ -1,26 +1,20 @@
 import Foundation
 
-/// Where requests go: `CLIProvider` (Mac, the user's Claude Code subscription), `APIProvider` (both platforms),
-/// and `FakeProvider` in tests.
 public protocol ClaudeProvider: Sendable {
     func send(_ request: MessagesRequest) async throws -> MessagesResponse
     func send(_ request: MessagesRequest, onEvent: @escaping @Sendable (StreamEvent) -> Void) async throws -> MessagesResponse
 }
 
-/// What an answer is doing while it is written. An answer that uses tools comes as several assistant messages, and
-/// only the last one is the answer; the ones before it lead up to tool calls.
 public enum StreamEvent: Sendable, Equatable {
-    /// A new assistant message began, so the text so far belonged to an earlier one.
     case turn
     case text(String)
-    /// A tool call, by its full name (`mcp__folio__note_show`).
     case tool(String)
-    /// A piece of that call's input JSON, which streams in after its name.
     case toolInput(String)
 }
 
 extension ClaudeProvider {
-    // shortcut: the API provider answers all at once; give it SSE streaming if API-key users find the wait too blank.
+    // shortcut: API 프로바이더는 답을 한 번에 돌려준다. API 키 사용자가 기다리는 동안 화면이 너무 비어 보인다고 하면
+    // SSE streaming을 붙인다.
     public func send(_ request: MessagesRequest, onEvent: @escaping @Sendable (StreamEvent) -> Void) async throws -> MessagesResponse {
         try await send(request)
     }

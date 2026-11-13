@@ -1,6 +1,5 @@
-// Places that broke a rule before the rule existed pass, a new place fails, and a listed place that is gone fails too
-// until the list is rewritten, so the list only shrinks. Entries are a multiset: two identical calls in one file are two
-// entries, and fixing one of them shows.
+// 규칙이 생기기 전에 규칙을 어긴 자리는 통과하고, 새 자리는 실패한다. 목록에 있는데 사라진 자리도 목록을 다시 쓸 때까지
+// 실패하므로, 목록은 줄어들기만 한다. 항목은 multiset이라 한 파일의 같은 호출 둘은 항목 둘이고, 하나를 고치면 드러난다.
 public enum Baseline {
     public struct Report {
         public let new: [Hit]

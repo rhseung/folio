@@ -2,10 +2,7 @@ import FolioDomain
 import Foundation
 import SwiftSoup
 
-/// Reads the Coursemos pages (theme `coursemosv2`) into LMS values. The selectors were read from the logged-in pages
-/// on 2026-11-13; a Coursemos update can change them, and a page that stops matching reads as empty rather than wrong.
 public enum LMSPages {
-    /// The dashboard's course boxes: `.course_box a.course_link` holding labels, the title and the professors.
     public static func classrooms(_ html: String) throws -> [LMSClassroom] {
         let doc = try SwiftSoup.parse(html)
         var seen = Set<Int>()
@@ -20,21 +17,17 @@ public enum LMSPages {
         }
     }
 
-    /// `mod/assign/index.php?id=<classroom>`: week, title (linked), deadline, submission, grade. The week cell is
-    /// filled only on a week's first row, and weeks are split by divider rows.
     public static func assignments(_ html: String, classroom: Int) throws -> [LMSAssignment] {
         try rows(html).compactMap { cells in
             guard cells.count >= 4, let link = try cells[1].select("a[href]").first(),
                 let id = query(try link.attr("href"), "id")
             else { return nil }
             let due = try time(cells[2].text())
-            // Moodle's own words: anything but these counts as not handed in.
             let submitted = try ["제출 완료", "Submitted for grading", "Submitted"].contains(cells[3].text())
             return LMSAssignment(id: id, classroom: classroom, title: try link.text(), due: due, submitted: submitted)
         }
     }
 
-    /// `mod/ubfile/index.php?id=<classroom>`: week, title (linked), description.
     public static func files(_ html: String, classroom: Int) throws -> [LMSFile] {
         var week: String?
         return try rows(html).compactMap { cells in
@@ -46,8 +39,6 @@ public enum LMSPages {
         }
     }
 
-    /// `mod/ubboard/my.php?mc=<classroom>`: number, title (linked, after the classroom's name in brackets), author,
-    /// date, views.
     public static func notices(_ html: String, classroom: Int) throws -> [LMSNotice] {
         let doc = try SwiftSoup.parse(html)
         return try doc.select("table.ubboard_table tbody tr").array().compactMap { tr in
@@ -63,7 +54,6 @@ public enum LMSPages {
         }
     }
 
-    /// Whether a page is the login form, which every page turns into once the session is gone.
     public static func isLogin(_ html: String) -> Bool {
         html.contains("name=\"password\"") && html.contains("/login/index.php")
     }

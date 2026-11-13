@@ -1,15 +1,11 @@
 import FolioDomain
 import Foundation
 
-/// Claude's reading of a lecture's pages. Only a proposal: the add sheet shows it, and nothing is written until
-/// the user approves (#321).
 public struct LectureSectionDrafts: StructuredResult, Equatable {
     public struct Draft: Codable, Sendable, Equatable {
         public var title: String
         public var firstPage: Int
-        /// A unit of the course, by its exact title; nil for a section that is a unit of its own.
         public var unit: String?
-        /// Pages no unit takes: a title page, an appendix, extra slides. Optional so an answer without it still reads.
         public var skip: Bool?
 
         public init(title: String, firstPage: Int, unit: String? = nil, skip: Bool? = nil) {
@@ -33,13 +29,9 @@ public struct LectureSectionDrafts: StructuredResult, Equatable {
     ])
 }
 
-/// One page as Claude reads it to split a lecture (#450): its title, the start of the rest of its text, and a small
-/// picture when its text doesn't say what it shows: almost no words (a figure, a formula, a scanned slide), mostly
-/// figures, or the same words as an earlier page (a roadmap shown again with the next part highlighted).
 public struct LecturePage: Sendable, Equatable {
     public var title: String?
     public var body: String
-    /// JPEG.
     public var image: Data?
 
     public init(title: String?, body: String = "", image: Data? = nil) {
@@ -48,18 +40,11 @@ public struct LecturePage: Sendable, Equatable {
         self.image = image
     }
 
-    /// Characters of body per page when the deck is short. A slide's first few lines say what it is about; the rest
-    /// is detail that costs tokens without moving a boundary.
     public static let excerpt = 280
-    /// Body across the whole deck: a long deck gets less per page rather than a bigger question.
     public static let budget = 36_000
-    /// Under this, a page's own words don't say what it shows.
     public static let fewWords = 12
-    /// Under this, a page that repeats an earlier one's words is too short to tell apart from a chance match.
     static let repeatWords = 8
-    /// Pictures per question, at about 250 tokens each at `thumbnail`.
     public static let maxImages = 24
-    /// The long side of a page's picture, in pixels: enough to read a slide's heading and see what its figure is.
     public static let thumbnail: CGFloat = 512
 
     public static func excerptLength(pages: Int) -> Int {
@@ -67,7 +52,6 @@ public struct LecturePage: Sendable, Equatable {
         return max(min(excerpt, budget / pages), 60)
     }
 
-    /// The start of a page's text with its title and figures taken out and its whitespace run together, cut at a word.
     public static func excerpt(_ text: String, title: String?, limit: Int) -> String {
         var rest = text
         if let title, let range = rest.range(of: title) { rest.removeSubrange(range) }
@@ -83,10 +67,6 @@ public struct LecturePage: Sendable, Equatable {
         return out
     }
 
-    /// Which pages (0-based) of these texts get a picture, at most `maxImages`. Pages with few words and repeated
-    /// pages come first: there the text says least, and a repeated roadmap's highlight is what marks a boundary. Pages
-    /// that are mostly figures fill what is left. Each kind is spread over the deck when there are too many, so a
-    /// long run of figures at the end doesn't take them all.
     public static func pictured(texts: [String], titles: [String?]) -> [Int] {
         var seen: Set<String> = [], first: [Int] = [], then: [Int] = []
         for (i, text) in texts.enumerated() {
@@ -103,7 +83,7 @@ public struct LecturePage: Sendable, Equatable {
         return (firstKept + spread(then, maxImages - firstKept.count)).sorted()
     }
 
-    /// A page's words without its numbers, which differ in a repeated slide's footer ("4-3", "4-67").
+    // 반복된 슬라이드는 꼬리말의 숫자("4-3", "4-67")만 다르므로 숫자를 뺀다.
     static func shape(_ text: String) -> String {
         text.lowercased().split(whereSeparator: { $0.isWhitespace || $0 == PageText.figure || $0.isNumber }).joined(separator: " ")
     }
@@ -116,8 +96,6 @@ public struct LecturePage: Sendable, Equatable {
 }
 
 extension ClaudeClient {
-    /// The add sheet asks when the outline and slide titles say nothing, and both screens ask when the user presses "Claude로 나누기". Nil when the
-    /// answer leaves nothing usable.
     public func lectureSections(file: String, pages: [LecturePage], units: [FolioDomain.Unit]) async throws -> LectureSplit? {
         let system: [ContentBlock] = [
             .text(
@@ -142,8 +120,6 @@ extension ClaudeClient {
         return Self.split(drafts, pageCount: pages.count, units: units)
     }
 
-    /// The text first and the pictures after it, each under its page number: one long text block keeps the pages in
-    /// order to read, and a picture only has to say which page it is.
     static func lectureQuestion(file: String, pages: [LecturePage], units: [FolioDomain.Unit]) -> [ContentBlock] {
         let outline = UnitTree.outline(units).map { String(repeating: "  ", count: $0.depth) + "- " + $0.unit.title }
         let limit = LecturePage.excerptLength(pages: pages.count)
@@ -173,9 +149,6 @@ extension ClaudeClient {
         return blocks
     }
 
-    /// Drafts as a split: a unit Claude named is taken only when it is one of the course's (by exact title), a section
-    /// Claude skips goes to no unit, and every other section becomes a new unit of its title. Neighbors under the same
-    /// unit, or both under none, are one section: a cut between them would only be a second range of the same unit.
     static func split(_ drafts: LectureSectionDrafts, pageCount: Int, units: [FolioDomain.Unit]) -> LectureSplit? {
         let found = drafts.sections.map {
             (
@@ -184,7 +157,6 @@ extension ClaudeClient {
             )
         }
         guard var split = LectureSplit(found.map(\.section), pageCount: pageCount) else { return nil }
-        // By id: tidying moves first pages and drops sections past the file.
         let drafted = Dictionary(keepingFirst: found.map { ($0.section.id, $0.draft) })
         for (i, section) in split.sections.enumerated() {
             let draft = drafted[section.id]

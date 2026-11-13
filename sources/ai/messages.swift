@@ -1,8 +1,8 @@
 import FolioDomain
 import Foundation
 
-// Wire types for `POST /v1/messages`. Swift has no official Anthropic SDK, so these mirror the documented
-// HTTP shapes (anthropic-version 2026-10-21) and nothing more.
+// `POST /v1/messages`의 전송 타입이다. Swift용 공식 Anthropic SDK가 없으므로 문서화된 HTTP 형식(anthropic-version
+// 2026-10-21)만 그대로 옮긴다.
 
 public struct CacheControl: Codable, Sendable, Equatable {
     public var type = "ephemeral"
@@ -12,7 +12,6 @@ public struct CacheControl: Codable, Sendable, Equatable {
 public enum ContentBlock: Codable, Sendable, Equatable {
     case text(String, cache: Bool = false)
     case image(Data, mediaType: String, cache: Bool = false)
-    /// Blocks the app doesn't act on (thinking, fallback markers, ...), kept so they can be echoed back unchanged.
     case other(JSONValue)
 
     enum CodingKeys: String, CodingKey { case type, text, source, cache_control }
@@ -76,7 +75,6 @@ public struct MessagesRequest: Encodable, Sendable, Equatable {
     public var system: [ContentBlock]?
     public var messages: [Message]
     public var output_config: OutputConfig?
-    /// `"default"`: on a safety refusal the server re-runs the request on Anthropic's recommended fallback model.
     public var fallbacks: String?
 
     var betas: [String] { fallbacks == nil ? [] : [ClaudeAPI.fallbackBeta] }
@@ -100,12 +98,10 @@ public struct Usage: Codable, Sendable, Equatable {
 
 public struct MessagesResponse: Codable, Sendable, Equatable {
     public var id: String
-    /// The model that actually answered; differs from the request after a fallback.
     public var model: String
     public var content: [ContentBlock]
     public var stop_reason: String?
     public var usage: Usage
-    /// Changes Claude asked for through the Folio tools; only the CLI provider has those tools.
     public var proposals: [ActionProposal]?
 
     public init(id: String, model: String, content: [ContentBlock], stop_reason: String?, usage: Usage, proposals: [ActionProposal]? = nil)
@@ -126,10 +122,8 @@ public struct MessagesResponse: Codable, Sendable, Equatable {
 public enum ClaudeError: Error, Equatable {
     case missingAPIKey
     case http(status: Int, body: String)
-    /// The model (and its fallback) declined; the content must not be used.
     case refused
     case truncated
-    /// Structured output still didn't match the schema after one retry.
     case invalidOutput(String)
 }
 

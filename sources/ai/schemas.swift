@@ -1,8 +1,6 @@
 import FolioDomain
 import Foundation
 
-/// Each type carries the JSON schema
-/// sent as `output_config.format`, so the schema and the decoder can't drift apart.
 public protocol StructuredResult: Decodable, Sendable {
     static var schema: JSONValue { get }
 }
@@ -30,7 +28,6 @@ enum Schema {
 public struct GradingResult: StructuredResult, Equatable {
     public enum Verdict: String, Codable, Sendable { case correct, partial, wrong }
     public struct LineNote: Codable, Sendable, Equatable {
-        /// 1-based line of the answer (or of the handwriting image, top to bottom).
         public var line: Int
         public var note: String
     }
@@ -48,11 +45,9 @@ public struct GradingResult: StructuredResult, Equatable {
     ])
 }
 
-/// Only a proposal: nothing moves without approval.
 public struct FileClassification: StructuredResult, Equatable {
     public var role: String
     public var kind: String
-    /// Course-relative standard path, file name included.
     public var suggestedPath: String
     public var week: Int?
     public var assignmentTitle: String?
@@ -72,18 +67,15 @@ public struct FileClassification: StructuredResult, Equatable {
 
 public struct AssignmentExtraction: StructuredResult, Equatable {
     public var title: String
-    /// ISO 8601 with offset, or null when the document has no deadline.
     public var due: String?
 
     public static let schema = Schema.object(["title": Schema.string, "due": Schema.nullable(Schema.string)])
 }
 
-/// The user confirms before saving.
 public struct GradingPolicyExtraction: StructuredResult, Equatable {
     public struct Component: Codable, Sendable, Equatable {
         public var name: String
         public var weight: Double
-        /// `sum`, `mean`, `single`, `dropLowest:N`, `bestOf:N`.
         public var aggregation: String
         public var expectedCount: Int?
     }
@@ -97,7 +89,6 @@ public struct GradingPolicyExtraction: StructuredResult, Equatable {
     public var attendanceCaps: [Cap]
     public var minAttendanceRatio: Double?
     public var latePolicy: String?
-    /// Rules that don't fit the fields, quoted.
     public var notes: String
 
     public static let schema = Schema.object([
@@ -119,7 +110,6 @@ extension ClaudeClient {
         try await structured(task, as: type, schema: T.schema, system: system, messages: messages)
     }
 
-    /// `answerImages` are PNG pages of handwriting.
     public func grade(
         question: String, modelAnswer: String, rubric: [String], answer: String?, answerImages: [Data] = [],
         rules: String

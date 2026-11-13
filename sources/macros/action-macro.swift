@@ -2,8 +2,6 @@ import Foundation
 import SwiftSyntax
 import SwiftSyntaxMacros
 
-/// `@Action("exam rm", "시험 기록 지우기", effect: .removes, confirm: "...", done: "...")` on a struct of fields and a
-/// `run`: writes its init, coding, `spec` and `Action` conformance, so the declaration is all an action needs.
 public struct ActionMacro: MemberMacro, ExtensionMacro {
     public static func expansion(
         of node: AttributeSyntax, attachedTo declaration: some DeclGroupSyntax, providingExtensionsOf type: some TypeSyntaxProtocol,
@@ -68,7 +66,6 @@ struct MacroError: Error, CustomStringConvertible {
     init(_ description: String) { self.description = description }
 }
 
-/// The attribute's arguments as Swift source, to pass through into `ActionSpec(...)`.
 private struct Arguments {
     var command = "", summary = "", discussion = "\"\"", effect = "changes", confirm: String?, done = "", examples = "[]", phrases = "[]"
     var generated = "true", manualReason: String?, undoable = "false"
@@ -94,7 +91,7 @@ private struct Arguments {
             case "cli":
                 guard source != ".generated" else { break }
                 generated = "false"
-                // `.manual(reason: "...")`: the reason as written, so the spec carries the same literal.
+                // spec이 같은 literal을 갖도록 `.manual(reason: "...")`의 이유를 쓴 그대로 옮긴다.
                 if let call = arg.expression.as(FunctionCallExprSyntax.self),
                     let reason = call.arguments.first(where: { $0.label?.text == "reason" })
                 {
@@ -132,7 +129,6 @@ private struct Field {
             let binding = v.bindings.first, binding.accessorBlock == nil,
             let name = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text
         else { return nil }
-        // A constant with a value isn't an input.
         if v.bindingSpecifier.text == "let", binding.initializer != nil { return nil }
         self.name = name
         defaultValue = binding.initializer?.value.trimmedDescription
@@ -187,7 +183,6 @@ private struct Field {
             ref = String(inner.dropLast(3).split(separator: ".").last!)
             base = "UUID"
         } else if inner.hasSuffix(".Path") {
-            // A file named by its course-relative path: `Note.Path` is the kind "NotePath".
             ref = String(inner.dropLast(5).split(separator: ".").last!) + "Path"
             base = "String"
         } else {

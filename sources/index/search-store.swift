@@ -6,12 +6,9 @@ import GRDB
 import PDFKit
 import Synchronization
 
-/// The per-device search index: a cache in local SQLite, rebuilt from the course folders whenever
-/// they change, never written back to them.
 public final class SearchStore: Sendable {
     let db: DatabaseQueue
 
-    /// `url` nil keeps the index in memory.
     public init(url: URL?) throws {
         if let url {
             try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -21,29 +18,26 @@ public final class SearchStore: Sendable {
         }
 
         var migrator = DatabaseMigrator()
-        // A cache can always be rebuilt, so a schema change drops it instead of migrating.
         migrator.eraseDatabaseOnSchemaChange = true
         migrator.registerMigration("v1") { db in
-            // The trigram tokenizer matches inside words; the default one splits on spaces only, so `매칭` would miss `최대매칭은`.
+            // trigram tokenizer는 낱말 안에서도 찾는다. 기본 tokenizer는 공백에서만 나누므로 `매칭`으로 `최대매칭은`을
+            // 찾지 못한다.
             try db.execute(
                 sql: "CREATE VIRTUAL TABLE item USING fts5(kind UNINDEXED, course UNINDEXED, id UNINDEXED, title, body, tokenize='trigram')"
             )
             try db.execute(sql: "CREATE TABLE course (id TEXT PRIMARY KEY, root TEXT NOT NULL, signature TEXT NOT NULL)")
-            // Text pulled out of a PDF, kept apart so editing course.json doesn't read every textbook again.
             try db.execute(sql: "CREATE TABLE pdf (path TEXT PRIMARY KEY, signature TEXT NOT NULL, text TEXT NOT NULL)")
         }
-        // Exams joined the index: emptying it reads every course again, PDFs from their cache. The items go too, since
-        // `refresh` finds a removed course's items through `course`, and would never drop those of one gone meanwhile.
+        // 시험이 색인에 들어왔으므로 비워서 모든 과목을 다시 읽고, PDF는 캐시에서 읽는다. `refresh`는 지운 과목의
+        // 항목을 `course`로 찾으므로, 그사이 사라진 과목의 항목도 지워지도록 항목도 함께 비운다.
         migrator.registerMigration("v2-exams") { db in
             try db.execute(sql: "DELETE FROM course")
             try db.execute(sql: "DELETE FROM item")
         }
-        // Classes are found by day and topic now, not `9주차-1`: same emptying, so no course keeps the old titles.
         migrator.registerMigration("v3-session-days") { db in
             try db.execute(sql: "DELETE FROM course")
             try db.execute(sql: "DELETE FROM item")
         }
-        // Classes lost their topic and go by their units: an unchanged course.json would otherwise keep the topics found.
         migrator.registerMigration("v4-session-units") { db in
             try db.execute(sql: "DELETE FROM course")
             try db.execute(sql: "DELETE FROM item")
@@ -53,8 +47,8 @@ public final class SearchStore: Sendable {
 
     private static let opened = Mutex<[URL: SearchStore]>([:])
 
-    /// The app's index for this device, outside the GIST folder so iCloud never syncs it. One per file, shared by the
-    /// search palette and the note editors: two connections writing one database would wait on each other's locks.
+    // iCloud가 동기화하지 않도록 GIST 폴더 밖에 둔다. 두 연결이 한 데이터베이스에 쓰면 서로의 잠금을 기다리므로,
+    // 파일마다 하나만 두고 검색 팔레트와 노트 편집기가 함께 쓴다.
     public static func local(for gist: GISTStore, in folder: URL = URL.cachesDirectory) throws -> SearchStore {
         let name = Data(gist.url.standardizedFileURL.path.utf8).base64EncodedString().filter(\.isLetter).suffix(40)
         let url = folder.appending(path: "Folio/search-\(name).sqlite")
@@ -66,8 +60,6 @@ public final class SearchStore: Sendable {
         }
     }
 
-    /// `progress` gets (read so far, to read) before each course and once at the end, so a first build (minutes, with
-    /// textbooks) can show how far it is.
     @discardableResult
     public func refresh(_ gist: GISTStore, progress: (@Sendable (_ done: Int, _ total: Int) -> Void)? = nil) throws -> Int {
         let stores = try gist.courseStores()
@@ -133,7 +125,6 @@ public final class SearchStore: Sendable {
         }) {
             return text
         }
-        // A file still in iCloud (or unreadable) has no text yet; its stamp changes once it downloads, which reads it again.
         guard let document = PDFDocument(url: url) else { return "" }
         let text = (document.string ?? "").precomposedStringWithCanonicalMapping
         try db.write {
@@ -143,8 +134,6 @@ public final class SearchStore: Sendable {
         return text
     }
 
-    /// What changes when anything the index reads from this course changes: course.json, any file under Notes/, a unit's
-    /// quiz file, a tracked PDF.
     static func signature(_ store: CourseStore, _ file: CourseFile) -> String {
         var parts = [stamp(store.courseFileURL)]
         if let files = FileManager.default.enumerator(
@@ -163,7 +152,6 @@ public final class SearchStore: Sendable {
         return "\(v.contentModificationDate?.timeIntervalSince1970 ?? 0):\(v.fileSize ?? 0)"
     }
 
-    /// Everything of `kinds` in `courses`, by title, for a query with nothing typed yet.
     public func items(courses: Set<UUID>, kinds: Set<SearchKind>, limit: Int = 60) throws -> [SearchItem] {
         guard !courses.isEmpty, !kinds.isEmpty else { return [] }
         let sql =
@@ -179,12 +167,10 @@ public final class SearchStore: Sendable {
         }
     }
 
-    /// Every word must appear in the title or body; ranking and snippets are `SearchIndex`'s, run on the rows that match.
     public func search(_ query: String, kinds: Set<SearchKind>? = nil, courses: Set<UUID>? = nil, limit: Int = 60) throws -> [SearchHit] {
         let words = query.precomposedStringWithCanonicalMapping.split(whereSeparator: \.isWhitespace).map(String.init)
         guard !words.isEmpty else { return [] }
         var clauses: [String] = [], args: [any DatabaseValueConvertible] = []
-        // Trigrams index words of three or more characters; shorter ones (most Korean words) are found by scanning.
         let long = words.filter { $0.count >= 3 }
         if !long.isEmpty {
             clauses.append("item MATCH ?")
@@ -201,7 +187,6 @@ public final class SearchStore: Sendable {
             clauses.append("course IN (\(courses.map { _ in "?" }.joined(separator: ",")))"); args += courses.map(\.uuidString)
         }
 
-        // Only the text around the first word that is in the body comes back, so a textbook's body isn't read whole per hit.
         let at = "COALESCE(" + words.map { _ in "NULLIF(instr(lower(body), lower(?)), 0)" }.joined(separator: ", ") + ", 1)"
         let sql =
             "SELECT kind, course, id, title, substr(body, max(1, \(at) - 60), 240) AS excerpt FROM item WHERE "

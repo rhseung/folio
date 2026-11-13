@@ -6,7 +6,7 @@ public struct SourceFile {
     public let path: String
     public let tree: SourceFileSyntax
     let lines: [Substring]
-    // UTF-8 offsets, as swift-syntax positions are.
+    // swift-syntax의 위치처럼 UTF-8 offset이다.
     private let lineStarts: [Int]
 
     init(path: String, text: String) {
@@ -49,7 +49,6 @@ func walk(_ node: Syntax, _ visit: (Syntax) -> Void) {
     }
 }
 
-/// The repository's Swift files by path from its root, each parsed once however many rules read it.
 public final class Codebase {
     private let texts: [String: String]
     private var parsed: [String: SourceFile] = [:]
@@ -64,8 +63,6 @@ public final class Codebase {
             let base = (root as NSString).appendingPathComponent(folder)
             guard let walker = FileManager.default.enumerator(atPath: base) else { continue }
             while let path = walker.nextObject() as? String {
-                // Hidden folders hold build products (`.build`) and editor state, never sources; node_modules (the web
-                // bundle's packages) holds thousands of files and no Swift.
                 let name = (path as NSString).lastPathComponent
                 if name.hasPrefix(".") || name == "node_modules" {
                     walker.skipDescendants()

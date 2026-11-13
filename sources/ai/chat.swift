@@ -2,15 +2,13 @@ import FolioDomain
 import Foundation
 
 extension ContextBuilder {
-    /// Context budget for the chat panel, well under the model's window so the conversation itself still fits.
     public static let chatBudgetTokens = 150_000
 
     public static func rules(_ text: String) -> ContextItem {
         ContextItem(id: "rules", title: "노트 작성 규칙", tier: .userRules, text: text)
     }
 
-    /// `path` is relative to the course folder. It and the ID go in the text so Claude knows which file the note is and
-    /// can name it to Folio's tools; without them it guessed, and took a similar note for the open one.
+    // 경로와 ID를 글에 넣지 않으면 Claude가 어느 파일인지 몰라, 비슷한 노트를 열린 노트로 잘못 짚었다.
     public static func note(id: UUID, title: String, path: String, body: String, images: [ContextItem.Image] = [], open: Bool)
         -> ContextItem
     {
@@ -23,16 +21,14 @@ extension ContextBuilder {
         ContextItem(id: "material:\(path)", title: "자료: \(path)", tier: .related, text: text)
     }
 
-    /// One page of a PDF the user is looking at, asked about from the file view (#120). `page` is 1-based, as the user
-    /// and the app link (`#page=N`) count it. The picture goes too: a slide's text alone loses its figures and formulas.
+    // `page`는 사용자와 앱 링크(`#page=N`)가 세는 대로 1부터 센다. 슬라이드의 글만 보내면 그림과 수식이 빠지므로 그림도
+    // 함께 보낸다.
     public static func materialPage(id: UUID, path: String, page: Int, text: String, image: ContextItem.Image?) -> ContextItem {
         ContextItem(
             id: "material:\(path)#page=\(page)", title: "자료: \(path) \(page)쪽", tier: .focus,
             text: "경로: \(path)\nID: \(id.uuidString)\n쪽: \(page)\n\n\(text)", images: image.map { [$0] } ?? [])
     }
 
-    /// A pane of the window's tab (#62), as the chat panel sees it: the panel is the window's one, so it has to say
-    /// which pane is meant by "this". `shows` is nil for a folded pane, which goes by its address alone.
     public struct Pane: Sendable, Equatable {
         public var address: String
         public var shows: String?
@@ -45,8 +41,6 @@ extension ContextBuilder {
         }
     }
 
-    /// The tab's panes, the focused one first and marked, then the rest left to right. Nil for a lone pane, which
-    /// the open note or page already is.
     public static func panes(_ panes: [Pane]) -> ContextItem? {
         guard panes.count > 1 else { return nil }
         let ordered = panes.filter(\.focused) + panes.filter { !$0.focused }
@@ -59,7 +53,6 @@ extension ContextBuilder {
             text: "창의 탭에 나란히 열린 칸이다. 초점 칸이 사용자가 지금 보는 칸이다.\n" + lines.joined(separator: "\n"))
     }
 
-    /// `openNote` is the focused pane's note (or the first open one), `alsoOpen` the notes the other panes show.
     public static func chatItems(
         course: CourseFile, rules: String, panes: ContextItem? = nil, openNote: ContextItem?,
         alsoOpen: [ContextItem] = [], added: [ContextItem], removed: Set<String>, now: Date
@@ -90,9 +83,6 @@ extension ClaudeClient {
         says where the next one starts; read on only as far as the question needs.
         """
 
-    /// An earlier answer as sent back: its text, then what became of each change it proposed. Without the second
-    /// part Claude can't tell a change the user never approved from one that failed.
-    /// `superseded` holds the positions of proposals a later answer replaced, which the panel no longer offers.
     static func history(_ message: ChatMessage, superseded: Set<Int> = []) -> String {
         guard let proposals = message.proposals, !proposals.isEmpty else { return message.text }
         let lines = proposals.enumerated().map { i, p in
@@ -107,7 +97,6 @@ extension ClaudeClient {
         return message.text + "\n\n[Changes proposed in this answer]\n" + lines.joined(separator: "\n")
     }
 
-    /// The proposal's input with long values such as a note's text cut short, so the history doesn't repeat them whole.
     static func brief(_ input: JSONValue) -> String {
         func cut(_ v: JSONValue) -> JSONValue {
             switch v {
@@ -122,9 +111,6 @@ extension ClaudeClient {
         return String(decoding: (try? encoder.encode(cut(input))) ?? Data(), as: UTF8.self)
     }
 
-    /// The context goes in the system prompt (stable part, cached) and in front
-    /// of the newest question only; earlier turns are sent as plain text. `targets` is what
-    /// `Chat.supersededProposals` decides by, which FolioAI can't read from the actions itself.
     public func reply(
         to chat: Chat, context: BuiltContext, targets: [String: ProposalTarget] = [:],
         onEvent: (@Sendable (StreamEvent) -> Void)? = nil
@@ -144,10 +130,8 @@ public struct MonthlyUsage: Sendable, Equatable {
     public var year: Int
     public var month: Int
     public var requests: Int
-    /// Input including cache writes and reads.
     public var inputTokens: Int
     public var outputTokens: Int
-    /// Dollars; events of a model missing from the price table count as zero.
     public var cost: Double
 }
 

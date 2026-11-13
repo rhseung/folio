@@ -2,9 +2,8 @@ import CoreGraphics
 import CoreText
 import Foundation
 
-/// A slide deck drawn in memory, a big title on each page, so the lecture reader and the split screen have a real PDF
-/// to read: the fixtures' other `.pdf`s are placeholders PDFKit can't open. `busyDay` ships it as the matching slides.
-/// CoreGraphics and CoreText only, so it draws the same on the Mac and the iPad.
+// 픽스처의 다른 `.pdf`는 PDFKit이 열지 못하는 자리표시자이므로, 렉처 읽기와 나누기 화면이 읽을 실제 PDF를 메모리에서
+// 그린다. Mac과 iPad에서 같게 그리도록 CoreGraphics와 CoreText만 쓴다.
 public enum SampleLecture {
     public static let titles = [
         "Matchings", "Definitions", "Examples", "Maximum matchings", "Alternating paths", "Exercise", "Proof", "Summary",
@@ -13,10 +12,8 @@ public enum SampleLecture {
         "Running time", "Exercise", "Summary",
     ]
 
-    /// Chapter pages carry only their title, as a deck's dividers do.
     public static let chapters: Set<Int> = [0, 8, 16]
 
-    /// 16:9 pages: the title in large type at the top, then a few body lines.
     public static func data(_ titles: [String] = titles) -> Data {
         let data = NSMutableData()
         var box = CGRect(x: 0, y: 0, width: 960, height: 540)
