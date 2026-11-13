@@ -26,7 +26,7 @@ struct ProposalsView: View {
                             ProposalRow(model: model, proposal: p, last: section.handled.isEmpty && p.id == section.proposals.last?.id)
                         }
                         if !section.handled.isEmpty {
-                            DisclosureRow(label: String(localized: .lmsHandled(section.handled.count)), isOpen: Binding(
+                            DisclosureRow(label: String(localized: .lmsHidden(section.handled.count)), isOpen: Binding(
                                 get: { model.showsHandled(section) }, set: { _ in model.toggleHandled(section) }), last: true) {
                                 ForEach(section.handled) { h in
                                     HandledRow(model: model, handled: h, last: h.id == section.handled.last?.id)

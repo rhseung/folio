@@ -22199,17 +22199,6 @@
         }
       }
     },
-    "lms.handled": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "처리한 항목 %lld개"
-          }
-        }
-      }
-    },
     "lms.restore": {
       "extractionState": "manual",
       "localizations": {
@@ -22228,6 +22217,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@에 추가함"
+          }
+        }
+      }
+    },
+    "lms.hidden": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "숨긴 항목 %lld개"
           }
         }
       }
