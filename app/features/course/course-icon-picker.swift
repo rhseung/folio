@@ -39,6 +39,13 @@ struct CourseIconPanel: View {
     }
 
     static let columns = 8
+    /// The cells' gap leaves room for each one's 44pt touch target (`TouchTarget`) without taking its neighbour's taps;
+    /// a pointer aims finer, so the Mac keeps the tighter grid.
+    #if os(iOS)
+    static let gap = Theme.Size.touchTarget - Theme.Size.toolbarButton
+    #else
+    static let gap = Theme.Space.xs
+    #endif
 
     // SF Symbols has no public catalog or Korean search terms, so the subject subset and its words live here.
     static let groups = [ // strings: data, matched against what the user types
@@ -190,8 +197,8 @@ struct CourseIconPanel: View {
                         ForEach(groups, id: \.title) { group in
                             VStack(alignment: .leading, spacing: Theme.Space.xs) {
                                 Caption(group.title)
-                                LazyVGrid(columns: Array(repeating: GridItem(.fixed(cell), spacing: Theme.Space.xs), count: Self.columns),
-                                          alignment: .leading, spacing: Theme.Space.xs) {
+                                LazyVGrid(columns: Array(repeating: GridItem(.fixed(cell), spacing: Self.gap), count: Self.columns),
+                                          alignment: .leading, spacing: Self.gap) {
                                     ForEach(group.symbols, id: \.0) { symbol, words in
                                         self.cell(symbol, name: words.split(separator: " ").first.map(String.init) ?? symbol).id(symbol)
                                     }
@@ -207,7 +214,7 @@ struct CourseIconPanel: View {
             // Fixed so the popover doesn't jump in size as the search narrows the grid.
             .frame(height: 340)
         }
-        .frame(width: cell * CGFloat(Self.columns) + Theme.Space.xs * CGFloat(Self.columns - 1) + Theme.Space.m * 2)
+        .frame(width: cell * CGFloat(Self.columns) + Self.gap * CGFloat(Self.columns - 1) + Theme.Space.m * 2)
         .font(Theme.Typeface.body)
         .onAppear {
             query = ""
@@ -224,7 +231,7 @@ struct CourseIconPanel: View {
                 .foregroundStyle(chosen ? color : Theme.Palette.textSecondary)
                 .frame(width: Theme.Size.toolbarButton, height: Theme.Size.toolbarButton)
                 .background(chosen ? color.opacity(Theme.Opacity.tint) : .clear, in: .rect(cornerRadius: Theme.Radius.control))
-                .contentShape(.rect)
+                .contentShape(TouchTarget())
         }
         .buttonStyle(.pointing(.plain))
         .help(name)

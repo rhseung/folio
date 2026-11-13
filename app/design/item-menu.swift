@@ -180,7 +180,7 @@ struct PageMenuButton<Items: View>: View {
                 Label(.menuMore, systemImage: "ellipsis").labelStyle(.iconOnly)
                     .foregroundStyle(Theme.Palette.textSecondary)
                     .frame(width: Theme.Size.toolbarButton, height: Theme.Size.toolbarButton)
-                    .contentShape(.rect)
+                    .contentShape(TouchTarget())
             }
             .menuStyle(.button)
             .menuIndicator(.hidden)

@@ -45,6 +45,9 @@ enum Theme {
         /// Over the window material, a faint layer that mutes the wallpaper's hue: white in light, the page's warm dark in
         /// dark. Kept thin because a strong white over the regular material read as milk.
         static let frameTint = Color(light: 0xFFFFFF, dark: 0x1B1A19, lightOpacity: 0.40, darkOpacity: 0.36)
+        /// The iPad's window frame under the sidebar and the toolbar row. Solid: an iPad window has no material to tint,
+        /// and the system background showed through as a flat white that the paper panel couldn't stand out from.
+        static let frame = Color(light: 0xE6E4E0, dark: 0x111010)
 
         static let warning = Color(light: 0x8A4B00, dark: 0xF0B46A)
         static let warningFill = Color(light: 0xFBE9D0, dark: 0x3A2C18)
@@ -52,6 +55,11 @@ enum Theme {
         static let warningBanner = Color(light: 0xFBE9D0, dark: 0x54401F)
         static let danger = Color(light: 0x9C3A1E, dark: 0xF08A70)
         static let dangerFill = Color(light: 0xFBE4DD, dark: 0x3A201A)
+        /// The app icon's colors (app/resources/AppIcon.icon), for the mark the first run draws: its top bar in ink,
+        /// the two below in coral, on white or, in dark, near black.
+        static let markInk = Color(light: 0x2B2B30, dark: 0xF2F0EC)
+        static let markCoral = Color(light: 0xFF7A59, dark: 0xFF8F73)
+        static let markBack = Color(light: 0xFFFFFF, dark: 0x1D1D1D)
         static let success = Color(light: 0x1E7D4F, dark: 0x5FCF98)
         /// Neutral news, neither good nor a warning: a release's new features beside its fixes (green) and changes (amber).
         static let info = Color(light: 0x1D4A8A, dark: 0x8DB8F2)
@@ -192,7 +200,19 @@ enum Theme {
         /// The outline beside a note (#387), and the most its popover takes where the note has no room for it.
         static let noteOutline: CGFloat = 224
         static let noteOutlinePopover = CGSize(width: 280, height: 400)
-        static let sidebar: CGFloat = 216
+        /// The iPad's and the iPhone's chrome (toolbar, sidebar) is the Mac's at this one scale, from the Mac's 32pt
+        /// toolbar button to 36 (2026-11-13 사용자). Sized part by part for a finger, the sidebar's 13pt names floated
+        /// in 44pt rows and the toolbar row looked thick; at one scale the two keep the Mac's proportions.
+        #if os(iOS)
+        static let chromeScale: CGFloat = 36 / 32
+        #else
+        static let chromeScale: CGFloat = 1
+        #endif
+        /// A Mac chrome size at `chromeScale`, kept on the 2pt grid.
+        static func chrome(_ mac: CGFloat) -> CGFloat { (mac * chromeScale / 2).rounded() * 2 }
+        static let sidebar: CGFloat = chrome(216)
+        /// A sidebar row out of the Mac's own sidebar list, which sizes its rows itself (32pt there).
+        static let sidebarRow: CGFloat = chrome(32)
         static let claudePanel: CGFloat = 380
         /// The round button a page's floating panel opens from (a course's Claude), at the content's bottom trailing corner.
         static let fab: CGFloat = 44
@@ -207,6 +227,18 @@ enum Theme {
         static let paneStrip: CGFloat = 40
         #endif
         static let dot: CGFloat = 8
+        /// The app's mark beside its name in the first run's step list, and alone on its welcome.
+        static let appMark: CGFloat = 24
+        static let appMarkLarge: CGFloat = 64
+        /// The first run's steps read at this width at most, centered in the panel.
+        static let firstRunColumn: CGFloat = 560
+        /// Below this the first run drops its step list for one column with dots, as on an iPhone.
+        static let firstRunNarrow: CGFloat = 640
+        /// The Mac window while the first run shows: a small landing window of its own, not the app's large one.
+        static let firstRunWindow = CGSize(width: 960, height: 600)
+        /// The icon square of a choice card (the folder step's 새로 시작 and 기존 폴더).
+        static let optionTile: CGFloat = 40
+        static let radio: CGFloat = 20
         /// The box a lecture's page is fitted into in its thumbnail column, whatever its shape: a 16:9 slide fills it,
         /// a 4:3 one is as tall and narrower. Wide for slides, which most lectures are.
         static let pageThumbnail = CGSize(width: 152, height: 84)
@@ -214,11 +246,22 @@ enum Theme {
         /// The least a finger can hit on each side, whatever the drawn size (`TouchTarget`).
         static let touchTarget: CGFloat = 44
         static let tile: CGFloat = 22
-        static let toolbarButton: CGFloat = 32
+        /// Every toolbar capsule and column button.
+        static let toolbarButton: CGFloat = chrome(32)
         /// The window's top row on the Mac, which the toolbar's capsules sit in the middle of (`TitleRow`).
+        #if os(iOS)
+        /// 4 above and below the buttons, not the Mac's 8: the status bar already sits above the row, and with 8 the
+        /// panel began lower than in the system's own apps.
+        static let toolbarRow: CGFloat = toolbarButton + Space.xs * 2
+        #else
         static let toolbarRow: CGFloat = 48
+        #endif
         /// The window's search field, after the tabs: wide enough for "검색 ⌘K", the tabs taking the row's room.
+        #if os(iOS)
+        static let searchField: CGFloat = 160
+        #else
         static let searchField: CGFloat = 120
+        #endif
         /// The longest name on a tab behind the front one, which shows where it is in full.
         static let tabName: CGFloat = 120
         /// The Mac window. Narrower than `windowMin`, the three columns squeeze a page's figures into slivers. A new
@@ -256,6 +299,8 @@ enum Theme {
         /// For text measured with the platform font (`GrowingTextEditor`).
         static let bodySize = CGFloat(13)
         static let bodyStrong = Font.system(size: 13, weight: .semibold)
+        /// The sidebar's names, the Mac's 13pt at the chrome's scale (`Size.chromeScale`).
+        static let sidebar = Font.system(size: (bodySize * Size.chromeScale).rounded())
         static let caption = Font.system(size: 12)
         /// File names and paths.
         static let mono = Font.system(size: 12, design: .monospaced)

@@ -266,6 +266,15 @@ def exempt_ranges(s):
             code_line = s.code[a:off].rstrip()
             if code_line and code_line[-1] in "{[(":
                 ranges.append((a, block_end(s.code, a + len(code_line) - 1)))
+    return ranges + debug_ranges(s)
+
+
+DEBUG_FILE = re.compile(r"(^|/)debug-[^/]*\.swift$|-snapshots\.swift$")
+
+
+def debug_ranges(s):
+    """Offsets of `#if DEBUG` blocks and `#Preview`s: code the shipped app never runs."""
+    ranges = []
     depth_debug, open_at = [], None
     for m in re.finditer(r"^[ \t]*#(if|elseif|else|endif)\b(.*)$", s.code, re.M):
         kind, rest = m.group(1), m.group(2)
@@ -301,7 +310,7 @@ def exempt_ranges(s):
 def ui_strings():
     hits = []
     for path in swift_files("app"):
-        if re.search(r"(^|/)debug-[^/]*\.swift$|-snapshots\.swift$", path):
+        if DEBUG_FILE.search(path):
             continue
         s = load(path)
         exempt = exempt_ranges(s)
@@ -355,9 +364,15 @@ def layers():
         s = load(path)
         for m in DISK.finditer(s.code):
             hits.append(Hit("layer", path, s.line_of(m.start()), "disk: " + re.sub(r"\s+", "", m.group(0))))
+    # Debug-only code (snapshot walks writing their pictures) is not a screen the shipped app runs.
     for path in swift_files("app/features"):
+        if DEBUG_FILE.search(path):
+            continue
         s = load(path)
+        debug = debug_ranges(s)
         for m in re.finditer(r"\bFileManager\b", s.code):
+            if any(a <= m.start() < b for a, b in debug):
+                continue
             hits.append(Hit("layer", path, s.line_of(m.start()), "FileManager in a screen"))
     return hits
 
