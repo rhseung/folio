@@ -55,7 +55,7 @@ extension RootView {
             .ignoresSafeArea(.container, edges: .bottom)
         }
         .background(Theme.Palette.frame.ignoresSafeArea())
-        .animation(.snappy(duration: 0.25), value: sidebarOpen)
+        .animation(Theme.Motion.standard, value: sidebarOpen)
     }
 
     /// The toolbar is not the Mac's (2026-11-13): the search field is the sidebar's top, and of the tools only the mic
