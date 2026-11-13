@@ -25,6 +25,8 @@ struct NoticeCard<Trailing: View, Rows: View>: View {
     let title: String
     var detail: String?
     var systemImage = "exclamationmark.bubble.fill"
+    /// News rather than a problem (a folder still coming down from iCloud): the banner in blue, not amber.
+    var informs = false
     @ViewBuilder var trailing: Trailing
     @ViewBuilder var rows: Rows
 
@@ -46,7 +48,7 @@ struct NoticeCard<Trailing: View, Rows: View>: View {
             // A row's padding and height, so the banner is never slimmer than an empty card beside it.
             .padding(Theme.Inset.row)
             .frame(maxWidth: .infinity, minHeight: Theme.Size.rowHeight, alignment: .leading)
-            .background(Theme.Palette.warningBanner, in: .rect(cornerRadius: Theme.Radius.card))
+            .background(informs ? Theme.Palette.infoFill : Theme.Palette.warningBanner, in: .rect(cornerRadius: Theme.Radius.card))
             rows
         }
     }
@@ -55,7 +57,7 @@ struct NoticeCard<Trailing: View, Rows: View>: View {
 extension NoticeCard {
     func words(detailIdeal: CGFloat?) -> some View {
         HStack(spacing: Theme.Space.m) {
-            Image(systemName: systemImage).foregroundStyle(Theme.Palette.warning).font(Theme.Typeface.bodyStrong)
+            Image(systemName: systemImage).foregroundStyle(informs ? Theme.Palette.info : Theme.Palette.warning).font(Theme.Typeface.bodyStrong)
                 .frame(width: Theme.Size.tile)
             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                 Text(title).font(Theme.Typeface.bodyStrong).lineLimit(1)
