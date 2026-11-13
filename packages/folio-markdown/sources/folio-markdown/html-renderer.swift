@@ -42,7 +42,9 @@ public struct HTMLRenderer {
         let section = r.footnoteSection()
         guard !section.isEmpty else { return out }
         // The list follows the editor from its last definition, unless a block below that is drawn above the list.
-        let definitions = note.document.children.compactMap { ($0 as? Paragraph).flatMap { book.isDefinition($0) ? note.lines(of: $0) : nil } }
+        let definitions = note.document.children.compactMap {
+            ($0 as? Paragraph).flatMap { book.isDefinition($0) ? note.lines(of: $0) : nil }
+        }
         let last = out.filter { !$0.html.isEmpty }.compactMap(\.lines?.lowerBound).max() ?? 0
         out.append(Block(html: section, lines: definitions.last.flatMap { $0.lowerBound >= last ? $0 : nil }))
         return out
@@ -206,7 +208,8 @@ public struct HTMLRenderer {
         case CBWidget.language:
             return CBWidget.render(json: code)
         case let language?:
-            return "<pre data-lang=\"\(Self.escape(language))\"><code class=\"language-\(Self.escape(language))\">\(Self.escape(code))</code></pre>\n"
+            return
+                "<pre data-lang=\"\(Self.escape(language))\"><code class=\"language-\(Self.escape(language))\">\(Self.escape(code))</code></pre>\n"
         case nil:
             return "<pre><code>\(Self.escape(code))</code></pre>\n"
         }
@@ -370,12 +373,13 @@ public struct HTMLRenderer {
         let protected = /(<code>.*?<\/code>|<span class="math">.*?<\/span>)/
         let nested = nested
         let replace = { (s: Substring) -> String in
-            String(s.replacing(Footnotes.reference) { m in
-                guard let (n, use) = footnotes.use(Self.unescape(String(m.1))) else { return String(m.0) }
-                // Inside an embed or a preview, ids would repeat the page's own.
-                if nested { return "<sup class=\"footnote-ref\">\(n)</sup>" }
-                return "<sup class=\"footnote-ref\"><a href=\"#fn-\(n)\" id=\"\(Self.footnoteRef(n, use))\">\(n)</a></sup>"
-            })
+            String(
+                s.replacing(Footnotes.reference) { m in
+                    guard let (n, use) = footnotes.use(Self.unescape(String(m.1))) else { return String(m.0) }
+                    // Inside an embed or a preview, ids would repeat the page's own.
+                    if nested { return "<sup class=\"footnote-ref\">\(n)</sup>" }
+                    return "<sup class=\"footnote-ref\"><a href=\"#fn-\(n)\" id=\"\(Self.footnoteRef(n, use))\">\(n)</a></sup>"
+                })
         }
         var out = ""
         var cursor = html.startIndex
@@ -443,11 +447,12 @@ public struct HTMLRenderer {
         let protected = /(?s)(<a\b[^>]*>.*?<\/a>|<code>.*?<\/code>|<span class="math">.*?<\/span>|<template\b.*?<\/template>|<[^>]*>)/
         let address = /[Ff][Oo][Ll][Ii][Oo]:\/\/[^\s<>"'`(){}\[\]\\|&]+/
         let replace = { (s: Substring) -> String in
-            String(s.replacing(address) { m in
-                let written = String(m.0)
-                let kept = Self.trimmedAddress(written)
-                return "<a href=\"\(kept)\">\(kept)</a>" + written.dropFirst(kept.count)
-            })
+            String(
+                s.replacing(address) { m in
+                    let written = String(m.0)
+                    let kept = Self.trimmedAddress(written)
+                    return "<a href=\"\(kept)\">\(kept)</a>" + written.dropFirst(kept.count)
+                })
         }
         var out = ""
         var cursor = html.startIndex
@@ -493,7 +498,8 @@ public struct HTMLRenderer {
         }
         let links = WikiLink.all(in: text)
         guard !links.isEmpty, links.allSatisfy({ $0.isEmbed && $0.namesNote }),
-              text.replacing(WikiLink.pattern, with: "").allSatisfy(\.isWhitespace) else { return nil }
+            text.replacing(WikiLink.pattern, with: "").allSatisfy(\.isWhitespace)
+        else { return nil }
         return links
     }
 
@@ -508,7 +514,8 @@ public struct HTMLRenderer {
 
         guard let embeds else { return "<p>\(head)</p>\n" }
         guard trail.count <= NoteEmbeds.depth else { return empty(embeds.labels.tooDeep) }
-        guard let found = embeds.find(link), let section = ParsedNote(found.text).section(heading: link.fragment, block: link.blockID) else {
+        guard let found = embeds.find(link), let section = ParsedNote(found.text).section(heading: link.fragment, block: link.blockID)
+        else {
             return empty(embeds.labels.missing)
         }
         let key = link.key(in: found.key)
@@ -552,7 +559,8 @@ public struct HTMLRenderer {
     func card(_ link: WikiLink) -> ReferenceCard? {
         guard let embeds, let block = link.blockID, link.namesNote else { return nil }
         guard trail.count <= NoteEmbeds.depth, let found = embeds.find(link),
-              let section = ParsedNote(found.text).section(heading: nil, block: block) else {
+            let section = ParsedNote(found.text).section(heading: nil, block: block)
+        else {
             return ReferenceCard(html: "<p class=\"embed-note\">\(Self.escape(embeds.labels.missing))</p>", math: nil)
         }
 
@@ -606,7 +614,8 @@ extension BlockQuote {
     /// The header comes from the first line only; `plainText` would join the whole paragraph with spaces.
     public var calloutHeader: CalloutHeader? {
         guard let p = child(at: 0) as? Paragraph else { return nil }
-        let firstLine = Array(p.inlineChildren).prefix { !($0 is SoftBreak || $0 is LineBreak) }.map { HTMLRenderer.sourceText($0) }.joined()
+        let firstLine = Array(p.inlineChildren).prefix { !($0 is SoftBreak || $0 is LineBreak) }.map { HTMLRenderer.sourceText($0) }
+            .joined()
         return CalloutHeader(line: firstLine)
     }
 }

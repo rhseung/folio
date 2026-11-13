@@ -4,6 +4,7 @@ import FolioFixtures
 import FolioStorage
 import Foundation
 import Testing
+
 @testable import Folio
 
 /// The edit view's card for a block reference: the pointer resting on `[[노트#^블록]]` shows the block, drawn as the
@@ -16,8 +17,9 @@ struct NoteReferenceCardTests {
     func editor() throws -> (SourceTextView, NSWindow) {
         let gist = GISTStore(url: try Fixture.standard.copyToTemp())
         let store = try #require(try gist.courseStores().first { $0.url.lastPathComponent == "EC4207 그래프 이론" })
-        try store.createNote(at: store.newNoteURL(title: "보조정리", format: .markdown),
-                             text: "위\n\n증명할 것 $x^2$ ^c1\n\n아래\n\n" + Array(repeating: "긴 줄", count: 80).joined(separator: "\n") + " ^long\n")
+        try store.createNote(
+            at: store.newNoteURL(title: "보조정리", format: .markdown),
+            text: "위\n\n증명할 것 $x^2$ ^c1\n\n아래\n\n" + Array(repeating: "긴 줄", count: 80).joined(separator: "\n") + " ^long\n")
         let (view, window) = NoteAssistTests.editor(Self.text)
         view.cards = NoteEmbedSource(store: store, own: nil)
         return (view, window)
@@ -26,7 +28,8 @@ struct NoteReferenceCardTests {
     /// The middle of the character at `i`, where a pointer would rest on it.
     static func point(_ view: SourceTextView, at i: Int) throws -> NSPoint {
         let window = try #require(view.window)
-        let rect = view.convert(window.convertFromScreen(view.firstRect(forCharacterRange: NSRange(location: i, length: 1), actualRange: nil)), from: nil)
+        let rect = view.convert(
+            window.convertFromScreen(view.firstRect(forCharacterRange: NSRange(location: i, length: 1), actualRange: nil)), from: nil)
         return NSPoint(x: rect.midX, y: rect.midY)
     }
 
@@ -51,7 +54,9 @@ struct NoteReferenceCardTests {
         #expect(card.shown)
         let text = try await card.web.callAsyncJavaScript("return document.body.textContent", contentWorld: .defaultClient) as? String
         #expect(text?.hasPrefix("증명할 것") == true && text?.contains("아래") == false, "\(text ?? "")")
-        #expect(try await card.web.callAsyncJavaScript("return document.querySelectorAll('.katex').length", contentWorld: .defaultClient) as? Int == 1)
+        #expect(
+            try await card.web.callAsyncJavaScript("return document.querySelectorAll('.katex').length", contentWorld: .defaultClient)
+                as? Int == 1)
         // Under the link, the column's width, as tall as the block.
         let scroll = try #require(card.host.superview)
         let link = view.convert(try Self.point(view, at: Self.at("그 식")), to: scroll)

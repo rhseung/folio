@@ -55,12 +55,15 @@ public enum RequirementImporter {
     }
 
     /// Matches by name (or `renamedFrom`), keeping each category's ID so course assignments survive.
-    public static func merge(_ rows: [RequirementSpec], into existing: [Category], codes: [CourseCode] = [], device: DeviceID, now: Date) -> Result {
+    public static func merge(_ rows: [RequirementSpec], into existing: [Category], codes: [CourseCode] = [], device: DeviceID, now: Date)
+        -> Result
+    {
         var categories = existing
         var added: [String] = [], changed: [String] = []
         var seen = Set<UUID>()
         for row in rows {
-            let i = categories.firstIndex { $0.name == row.name } ?? row.renamedFrom.flatMap { old in categories.firstIndex { $0.name == old } }
+            let i =
+                categories.firstIndex { $0.name == row.name } ?? row.renamedFrom.flatMap { old in categories.firstIndex { $0.name == old } }
             var c = i.map { categories[$0] } ?? Category(device: device, at: now, name: row.name)
             let before = c
             c.name = row.name

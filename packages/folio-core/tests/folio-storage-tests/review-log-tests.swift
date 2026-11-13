@@ -43,7 +43,9 @@ struct ReviewLogTests {
         // Finished at 02:00 on the 3rd: before the 04:00 boundary, so it counts for the 2nd.
         let event = ReviewEvent(unitId: unit.id, result: .good, seconds: 600)
         try store.log.append(event, device: device, at: at(3, 2))
-        try store.log.append(StudySessionEvent(courseId: doc.model.course.id, start: at(3, 1), end: at(3, 2), screen: "review"), device: device, at: at(3, 2))
+        try store.log.append(
+            StudySessionEvent(courseId: doc.model.course.id, start: at(3, 1), end: at(3, 2), screen: "review"), device: device, at: at(3, 2)
+        )
 
         let logged = try store.log.readAll()
         #expect(try logged.compactMap { try $0.decode(ReviewEvent.self) } == [event])

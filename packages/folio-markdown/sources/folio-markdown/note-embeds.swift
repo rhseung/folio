@@ -45,8 +45,11 @@ public struct NoteEmbeds {
     /// title), given the link's `href`. Nil leaves it showing what is written.
     public var name: (String) -> String?
 
-    public init(key: String?, labels: Labels, title: @escaping (UUID) -> String? = { _ in nil }, hasNote: @escaping (String) -> Bool = { _ in true },
-                name: @escaping (String) -> String? = { _ in nil }, find: @escaping (WikiLink) -> Note?) {
+    public init(
+        key: String?, labels: Labels, title: @escaping (UUID) -> String? = { _ in nil },
+        hasNote: @escaping (String) -> Bool = { _ in true },
+        name: @escaping (String) -> String? = { _ in nil }, find: @escaping (WikiLink) -> Note?
+    ) {
         self.key = key
         self.labels = labels
         self.title = title
@@ -88,7 +91,8 @@ extension ParsedNote {
     func headingSection(_ heading: String) -> String? {
         let tops = Array(document.children)
         guard let i = headingIndex(heading, in: tops), let level = (tops[i] as? Heading)?.level,
-              let start = lines(of: tops[i])?.lowerBound else { return nil }
+            let start = lines(of: tops[i])?.lowerBound
+        else { return nil }
         let next = tops[(i + 1)...].first { ($0 as? Heading).map { $0.level <= level } ?? false }
         var end = next.flatMap { lines(of: $0)?.lowerBound }.map { $0 - 1 } ?? bodyLines.count
         while end > start, bodyLines[end - 1].allSatisfy(\.isWhitespace) { end -= 1 }
@@ -117,8 +121,9 @@ extension ParsedNote {
 
     func blockLines(_ id: String) -> (top: ClosedRange<Int>, item: ClosedRange<Int>?)? {
         guard let line = bodyLines.firstIndex(where: { $0.firstMatch(of: BlockID.pattern).map { String($0.1) } == id }).map({ $0 + 1 }),
-              let top = document.children.first(where: { lines(of: $0)?.contains(line) ?? false }),
-              let range = lines(of: top) else { return nil }
+            let top = document.children.first(where: { lines(of: $0)?.contains(line) ?? false }),
+            let range = lines(of: top)
+        else { return nil }
         return (range, deepestItem(in: top, holding: line).flatMap { lines(of: $0) })
     }
 

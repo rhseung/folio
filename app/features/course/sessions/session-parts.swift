@@ -29,7 +29,9 @@ struct JoinOnlineButton: View {
             Button(.sessionsJoin, systemImage: "video") { Self.join(url, openURL) }.buttonStyle(.prominent)
                 .help(url.absoluteString)
         } else {
-            SessionSlot(String(localized: .sessionsJoin), symbol: "video", help: url.absoluteString, fixed: false) { Self.join(url, openURL) }
+            SessionSlot(String(localized: .sessionsJoin), symbol: "video", help: url.absoluteString, fixed: false) {
+                Self.join(url, openURL)
+            }
         }
     }
 
@@ -82,7 +84,10 @@ struct SessionUnitsButton: View {
                         }
                     }
                     .font(Theme.Typeface.caption.weight(units.missing ? .semibold : .regular))
-                    .foregroundStyle(units.missing ? Theme.Palette.warning : units.linked.isEmpty ? Theme.Palette.textTertiary : Theme.Palette.textSecondary)
+                    .foregroundStyle(
+                        units.missing
+                            ? Theme.Palette.warning : units.linked.isEmpty ? Theme.Palette.textTertiary : Theme.Palette.textSecondary
+                    )
                     .contentShape(.rect)
                 }
             }

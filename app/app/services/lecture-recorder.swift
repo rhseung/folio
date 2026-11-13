@@ -1,6 +1,7 @@
 import AVFoundation
 import FolioDomain
 import Speech
+
 #if os(iOS)
 import UIKit
 #endif
@@ -79,7 +80,8 @@ final class LectureRecorder {
         do {
             guard await AVAudioApplication.requestRecordPermission() else { throw RecorderError.microphoneDenied }
             #if os(iOS)
-            try AVAudioSession.sharedInstance().setCategory(.playAndRecord, mode: .spokenAudio, options: [.defaultToSpeaker, .allowBluetoothHFP])
+            try AVAudioSession.sharedInstance().setCategory(
+                .playAndRecord, mode: .spokenAudio, options: [.defaultToSpeaker, .allowBluetoothHFP])
             try AVAudioSession.sharedInstance().setActive(true)
             #endif
 
@@ -101,15 +103,21 @@ final class LectureRecorder {
             // The microphone's format is read only now, after the waits above: the device can change during them,
             // and a tap in a format read before that raises an Objective-C exception, which ends the app.
             guard let (engine, input) = Self.tappableEngine(),
-                  let fileFormat = AVAudioFormat(standardFormatWithSampleRate: input.sampleRate, channels: 1) else {
+                let fileFormat = AVAudioFormat(standardFormatWithSampleRate: input.sampleRate, channels: 1)
+            else {
                 analyzerInput?.finish()
                 throw RecorderError.noMicrophone
             }
-            let audioFile = try AVAudioFile(forWriting: file, settings: [
-                AVFormatIDKey: kAudioFormatLinearPCM, AVSampleRateKey: input.sampleRate, AVNumberOfChannelsKey: 1,
-                AVLinearPCMBitDepthKey: 16, AVLinearPCMIsFloatKey: false,
-            ], commonFormat: .pcmFormatFloat32, interleaved: false)
-            guard let sink = AudioSink(file: audioFile, input: input, fileFormat: fileFormat, analyzerFormat: transcription?.1, analyzer: analyzerInput) else {
+            let audioFile = try AVAudioFile(
+                forWriting: file,
+                settings: [
+                    AVFormatIDKey: kAudioFormatLinearPCM, AVSampleRateKey: input.sampleRate, AVNumberOfChannelsKey: 1,
+                    AVLinearPCMBitDepthKey: 16, AVLinearPCMIsFloatKey: false,
+                ], commonFormat: .pcmFormatFloat32, interleaved: false)
+            guard
+                let sink = AudioSink(
+                    file: audioFile, input: input, fileFormat: fileFormat, analyzerFormat: transcription?.1, analyzer: analyzerInput)
+            else {
                 analyzerInput?.finish()
                 throw RecorderError.noMicrophone
             }
@@ -145,10 +153,12 @@ final class LectureRecorder {
                     // Backs up the configuration change notice: an interruption or sleep can stop the engine without
                     // one, and a tap made while a change was pending runs on without a sound.
                     let now = Date.now
-                    if self.state == .recording, MicrophoneTap.restartDue(
-                        running: self.engine?.isRunning ?? false,
-                        sinceHeard: now.timeIntervalSince(max(self.lastHeard, self.lastRestart)),
-                        sinceRestart: now.timeIntervalSince(self.lastRestart)) {
+                    if self.state == .recording,
+                        MicrophoneTap.restartDue(
+                            running: self.engine?.isRunning ?? false,
+                            sinceHeard: now.timeIntervalSince(max(self.lastHeard, self.lastRestart)),
+                            sinceRestart: now.timeIntervalSince(self.lastRestart))
+                    {
                         self.restartEngine()
                     }
                 }
@@ -167,9 +177,12 @@ final class LectureRecorder {
 
     /// Captions only; when they can't run, the transcript is made from the audio once the recording stops.
     private static func transcriber(for locale: Locale) async -> Transcription {
-        guard SpeechTranscriber.isAvailable, let supported = await SpeechTranscriber.supportedLocale(equivalentTo: locale) else { return .unsupported }
-        let transcriber = SpeechTranscriber(locale: supported, transcriptionOptions: [], reportingOptions: [.volatileResults],
-                                            attributeOptions: [.audioTimeRange])
+        guard SpeechTranscriber.isAvailable, let supported = await SpeechTranscriber.supportedLocale(equivalentTo: locale) else {
+            return .unsupported
+        }
+        let transcriber = SpeechTranscriber(
+            locale: supported, transcriptionOptions: [], reportingOptions: [.volatileResults],
+            attributeOptions: [.audioTimeRange])
         do {
             if let request = try await SpeechAssets.request(for: transcriber, locale: supported) {
                 // Downloading can take minutes, which a lecture that is starting doesn't have; it's ready for the next one.
@@ -202,7 +215,8 @@ final class LectureRecorder {
     /// `format` must come from `tappableEngine` just before, with no wait in between.
     private func run(_ engine: AVAudioEngine, tapping format: AVAudioFormat, into sink: AudioSink) throws {
         self.engine = engine
-        engineObserver = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main) { [weak self] _ in
+        engineObserver = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main) {
+            [weak self] _ in
             MainActor.assumeIsolated { self?.engineChanged() }
         }
         sink.install(on: engine.inputNode, format: format)
@@ -416,10 +430,12 @@ extension LectureRecorder {
     nonisolated static func compress(_ source: URL, to target: URL) throws -> TimeInterval {
         let input = try AVAudioFile(forReading: source)
         let format = input.processingFormat
-        let output = try AVAudioFile(forWriting: target, settings: [
-            AVFormatIDKey: kAudioFormatMPEG4AAC, AVSampleRateKey: format.sampleRate, AVNumberOfChannelsKey: format.channelCount,
-            AVEncoderBitRateKey: 64_000,
-        ], commonFormat: format.commonFormat, interleaved: format.isInterleaved)
+        let output = try AVAudioFile(
+            forWriting: target,
+            settings: [
+                AVFormatIDKey: kAudioFormatMPEG4AAC, AVSampleRateKey: format.sampleRate, AVNumberOfChannelsKey: format.channelCount,
+                AVEncoderBitRateKey: 64_000,
+            ], commonFormat: format.commonFormat, interleaved: format.isInterleaved)
         guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 1 << 16) else { throw RecorderError.noMicrophone }
         while input.framePosition < input.length {
             try input.read(into: buffer)
@@ -447,8 +463,10 @@ private final class AudioSink: @unchecked Sendable {
     private var energy: Float = 0
     private var energyFrames = 0
 
-    init?(file: AVAudioFile, input: AVAudioFormat, fileFormat: AVAudioFormat, analyzerFormat: AVAudioFormat?,
-          analyzer: AsyncStream<AnalyzerInput>.Continuation?) {
+    init?(
+        file: AVAudioFile, input: AVAudioFormat, fileFormat: AVAudioFormat, analyzerFormat: AVAudioFormat?,
+        analyzer: AsyncStream<AnalyzerInput>.Continuation?
+    ) {
         guard let toFile = AVAudioConverter(from: input, to: fileFormat) else { return nil }
         self.file = file
         self.toFile = toFile

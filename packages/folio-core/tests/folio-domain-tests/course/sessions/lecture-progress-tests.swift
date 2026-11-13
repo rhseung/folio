@@ -29,12 +29,13 @@ struct LectureProgressTests {
         f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 12)
         f.linkMaterial(m, session: f.sessions[1].id, firstPage: 10, lastPage: 20)
 
-        #expect(f.lectureProgress(of: m, pageCount: 30) == [
-            LectureSpan(firstPage: 1, lastPage: 9, sessions: [f.sessions[0].id]),
-            LectureSpan(firstPage: 10, lastPage: 12, sessions: [f.sessions[0].id, f.sessions[1].id]),
-            LectureSpan(firstPage: 13, lastPage: 20, sessions: [f.sessions[1].id]),
-            LectureSpan(firstPage: 21, lastPage: 30, sessions: []),
-        ])
+        #expect(
+            f.lectureProgress(of: m, pageCount: 30) == [
+                LectureSpan(firstPage: 1, lastPage: 9, sessions: [f.sessions[0].id]),
+                LectureSpan(firstPage: 10, lastPage: 12, sessions: [f.sessions[0].id, f.sessions[1].id]),
+                LectureSpan(firstPage: 13, lastPage: 20, sessions: [f.sessions[1].id]),
+                LectureSpan(firstPage: 21, lastPage: 30, sessions: []),
+            ])
 
         // Without the count, the file ends where the classes do.
         #expect(f.lectureProgress(of: m, pageCount: nil).last == LectureSpan(firstPage: 13, lastPage: 20, sessions: [f.sessions[1].id]))
@@ -48,11 +49,12 @@ struct LectureProgressTests {
         f.sessions[2].isCancelled = true
         f.linkMaterial(m, session: f.sessions[2].id, firstPage: 1, lastPage: 8)
 
-        #expect(f.lectureProgress(of: m, pageCount: 6) == [
-            LectureSpan(firstPage: 1, lastPage: 2, sessions: []),
-            LectureSpan(firstPage: 3, lastPage: 5, sessions: [f.sessions[0].id]),
-            LectureSpan(firstPage: 6, lastPage: 6, sessions: []),
-        ])
+        #expect(
+            f.lectureProgress(of: m, pageCount: 6) == [
+                LectureSpan(firstPage: 1, lastPage: 2, sessions: []),
+                LectureSpan(firstPage: 3, lastPage: 5, sessions: [f.sessions[0].id]),
+                LectureSpan(firstPage: 6, lastPage: 6, sessions: []),
+            ])
         #expect(f.unrangedSessions(of: m).map(\.id) == [f.sessions[1].id])
         #expect(course().lectureProgress(of: m, pageCount: nil).isEmpty)
     }
@@ -80,7 +82,9 @@ struct LectureProgressTests {
             }
             for span in spans {
                 for page in span.firstPage...span.lastPage {
-                    let covering = f.sessions.filter { s in s.materials.contains { $0.materialId == m && ($0.firstPage!...$0.lastPage!).contains(page) } }
+                    let covering = f.sessions.filter { s in
+                        s.materials.contains { $0.materialId == m && ($0.firstPage!...$0.lastPage!).contains(page) }
+                    }
                     #expect(Set(span.sessions) == Set(covering.map(\.id)))
                 }
             }
@@ -218,8 +222,9 @@ struct LectureProgressTests {
     @Test func aFileNoClassHasReachedStartsAtItsFirstPage() {
         let f = course()
         let m = matchings(f)
-        #expect(f.suggestedProgress(for: f.sessions[0], viewed: [SessionMaterial(materialId: m, firstPage: 4, lastPage: 9)])
-            == [SessionMaterial(materialId: m, firstPage: 1, lastPage: 9)])
+        #expect(
+            f.suggestedProgress(for: f.sessions[0], viewed: [SessionMaterial(materialId: m, firstPage: 4, lastPage: 9)])
+                == [SessionMaterial(materialId: m, firstPage: 1, lastPage: 9)])
     }
 
     @Test func aRecapIsSuggestedNoPages() {
@@ -227,8 +232,9 @@ struct LectureProgressTests {
         let m = matchings(f)
         f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 20)
         // The pages gone over belong to the class that taught them.
-        #expect(f.suggestedProgress(for: f.sessions[1], viewed: [SessionMaterial(materialId: m, firstPage: 15, lastPage: 18)])
-            == [SessionMaterial(materialId: m)])
+        #expect(
+            f.suggestedProgress(for: f.sessions[1], viewed: [SessionMaterial(materialId: m, firstPage: 15, lastPage: 18)])
+                == [SessionMaterial(materialId: m)])
     }
 
     @Test func aSuggestionStopsBeforeALaterClassesPages() {
@@ -237,8 +243,9 @@ struct LectureProgressTests {
         // The class in between is filled in after the one following it already saved its pages.
         f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 6)
         f.linkMaterial(m, session: f.sessions[2].id, firstPage: 11, lastPage: 15)
-        #expect(f.suggestedProgress(for: f.sessions[1], viewed: [SessionMaterial(materialId: m, firstPage: 5, lastPage: 13)])
-            == [SessionMaterial(materialId: m, firstPage: 7, lastPage: 10)])
+        #expect(
+            f.suggestedProgress(for: f.sessions[1], viewed: [SessionMaterial(materialId: m, firstPage: 5, lastPage: 13)])
+                == [SessionMaterial(materialId: m, firstPage: 7, lastPage: 10)])
     }
 
     /// Whatever the other classes took and the recording saw, a suggestion never names a page another class took.
@@ -268,13 +275,16 @@ struct LectureProgressTests {
         f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 12)
         f.linkMaterial(m, session: f.sessions[1].id, firstPage: 14, lastPage: 16)
         f.linkMaterial(other, session: f.sessions[1].id)
-        let viewed = [SessionMaterial(materialId: m, firstPage: 13, lastPage: 22), SessionMaterial(materialId: other, firstPage: 2, lastPage: 5)]
+        let viewed = [
+            SessionMaterial(materialId: m, firstPage: 13, lastPage: 22), SessionMaterial(materialId: other, firstPage: 2, lastPage: 5),
+        ]
 
         // Saved files first, in their order; an unranged link is filled like a new one.
-        #expect(f.suggestedProgress(for: f.sessions[1], viewed: viewed) == [
-            SessionMaterial(materialId: m, firstPage: 14, lastPage: 16),
-            SessionMaterial(materialId: other, firstPage: 1, lastPage: 5),
-        ])
+        #expect(
+            f.suggestedProgress(for: f.sessions[1], viewed: viewed) == [
+                SessionMaterial(materialId: m, firstPage: 14, lastPage: 16),
+                SessionMaterial(materialId: other, firstPage: 1, lastPage: 5),
+            ])
     }
 
     @Test func withoutARecordingTheLastFileContinues() {
@@ -286,11 +296,17 @@ struct LectureProgressTests {
 
         // A cancelled class in between changes nothing.
         f.sessions[1].isCancelled = true
-        #expect(f.suggestedProgress(for: f.sessions[2], viewed: [], pageCounts: [m: 30]) == [SessionMaterial(materialId: m, firstPage: 13, lastPage: nil)])
+        #expect(
+            f.suggestedProgress(for: f.sessions[2], viewed: [], pageCounts: [m: 30]) == [
+                SessionMaterial(materialId: m, firstPage: 13, lastPage: nil)
+            ])
 
         // Once the count says it is done, the next lecture file by name: 05_ before 06_, whatever order they were added in.
         f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 30)
-        #expect(f.suggestedProgress(for: f.sessions[2], viewed: [], pageCounts: [m: 30]) == [SessionMaterial(materialId: next, firstPage: 1, lastPage: nil)])
+        #expect(
+            f.suggestedProgress(for: f.sessions[2], viewed: [], pageCounts: [m: 30]) == [
+                SessionMaterial(materialId: next, firstPage: 1, lastPage: nil)
+            ])
 
         // The last lecture file done leaves nothing to suggest.
         f.linkMaterial(next, session: f.sessions[1].id, firstPage: 1, lastPage: 8)
@@ -302,11 +318,15 @@ struct LectureProgressTests {
         var f = course()
         let m = matchings(f)
         f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 30)
-        #expect(f.suggestedProgress(for: f.sessions[1], viewed: [SessionMaterial(materialId: m, firstPage: 28, lastPage: 50)], pageCounts: [m: 40])
-            == [SessionMaterial(materialId: m, firstPage: 31, lastPage: 40)])
+        #expect(
+            f.suggestedProgress(
+                for: f.sessions[1], viewed: [SessionMaterial(materialId: m, firstPage: 28, lastPage: 50)], pageCounts: [m: 40])
+                == [SessionMaterial(materialId: m, firstPage: 31, lastPage: 40)])
         // The file the last class finished leaves nothing new.
-        #expect(f.suggestedProgress(for: f.sessions[1], viewed: [SessionMaterial(materialId: m, firstPage: 30, lastPage: 30)], pageCounts: [m: 30])
-            == [SessionMaterial(materialId: m)])
+        #expect(
+            f.suggestedProgress(
+                for: f.sessions[1], viewed: [SessionMaterial(materialId: m, firstPage: 30, lastPage: 30)], pageCounts: [m: 30])
+                == [SessionMaterial(materialId: m)])
     }
 
     // MARK: A link added by hand, and a prompt opened again
@@ -329,16 +349,22 @@ struct LectureProgressTests {
         f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 6)
         let session = f.sessions[1]
         f.recordings = [
-            Recording(device: device, at: now, sessionId: session.id, file: "Recordings/a.m4a", duration: 600,
-                      pages: [PageVisit(at: 0, materialId: m, page: 6), PageVisit(at: 100, materialId: m, page: 9)]),
-            Recording(device: device, at: now, sessionId: session.id, file: "Recordings/b.m4a", duration: 600,
-                      pages: [PageVisit(at: 0, materialId: m, page: 10), PageVisit(at: 100, materialId: m, page: 11)]),
-            Recording(device: device, at: now, sessionId: f.sessions[2].id, file: "Recordings/c.m4a", duration: 600,
-                      pages: [PageVisit(at: 0, materialId: m, page: 30)]),
+            Recording(
+                device: device, at: now, sessionId: session.id, file: "Recordings/a.m4a", duration: 600,
+                pages: [PageVisit(at: 0, materialId: m, page: 6), PageVisit(at: 100, materialId: m, page: 9)]),
+            Recording(
+                device: device, at: now, sessionId: session.id, file: "Recordings/b.m4a", duration: 600,
+                pages: [PageVisit(at: 0, materialId: m, page: 10), PageVisit(at: 100, materialId: m, page: 11)]),
+            Recording(
+                device: device, at: now, sessionId: f.sessions[2].id, file: "Recordings/c.m4a", duration: 600,
+                pages: [PageVisit(at: 0, materialId: m, page: 30)]),
         ]
 
         #expect(f.viewedPages(of: session) == [SessionMaterial(materialId: m, firstPage: 6, lastPage: 11)])
-        #expect(f.suggestedProgress(for: session, viewed: f.viewedPages(of: session)) == [SessionMaterial(materialId: m, firstPage: 7, lastPage: 11)])
+        #expect(
+            f.suggestedProgress(for: session, viewed: f.viewedPages(of: session)) == [
+                SessionMaterial(materialId: m, firstPage: 7, lastPage: 11)
+            ])
         #expect(f.suggestedLink(of: m, for: session, pageCount: nil) == SessionMaterial(materialId: m, firstPage: 7, lastPage: 11))
     }
 
@@ -348,10 +374,12 @@ struct LectureProgressTests {
         var f = course()
         let m = matchings(f)
         let session = f.sessions[1]
-        let first = Recording(device: device, at: now, sessionId: session.id, file: "Recordings/a.m4a", duration: 600,
-                              pages: [PageVisit(at: 0, materialId: m, page: 6), PageVisit(at: 100, materialId: m, page: 9)])
-        let second = Recording(device: device, at: now, sessionId: session.id, file: "Recordings/b.m4a", duration: 600,
-                               pages: [PageVisit(at: 0, materialId: m, page: 10), PageVisit(at: 100, materialId: m, page: 11)])
+        let first = Recording(
+            device: device, at: now, sessionId: session.id, file: "Recordings/a.m4a", duration: 600,
+            pages: [PageVisit(at: 0, materialId: m, page: 6), PageVisit(at: 100, materialId: m, page: 9)])
+        let second = Recording(
+            device: device, at: now, sessionId: session.id, file: "Recordings/b.m4a", duration: 600,
+            pages: [PageVisit(at: 0, materialId: m, page: 10), PageVisit(at: 100, materialId: m, page: 11)])
         f.recordings = [first]
         let atStop = f.viewedPages(of: session, including: second)
 
@@ -522,9 +550,12 @@ struct LectureProgressTests {
 
     @Test func theLineShowsThePageOnScreenWhenItStarted() {
         let m = UUID()
-        let r = Recording(device: device, at: now, sessionId: nil, file: "Recordings/a.m4a", duration: 300, pages: [
-            PageVisit(at: 10, materialId: m, page: 3), PageVisit(at: 12, materialId: m, page: 4), PageVisit(at: 100, materialId: m, page: nil),
-        ])
+        let r = Recording(
+            device: device, at: now, sessionId: nil, file: "Recordings/a.m4a", duration: 300,
+            pages: [
+                PageVisit(at: 10, materialId: m, page: 3), PageVisit(at: 12, materialId: m, page: 4),
+                PageVisit(at: 100, materialId: m, page: nil),
+            ])
         #expect(r.visit(at: 5) == nil)
         #expect(r.visit(at: 11)?.page == 3)
         #expect(r.visit(at: 12)?.page == 4)

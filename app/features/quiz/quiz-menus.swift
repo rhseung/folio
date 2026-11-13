@@ -108,15 +108,22 @@ struct ProblemMenuSource: ItemMenuSource {
         case .openSheet:
             MenuRow(command, .quizProblemsOpenSheet, "doc.richtext", .action { openSheet?() })
         case .record:
-            MenuRow(command, .quizProblemsRecord, "pencil.and.list.clipboard", .submenu([
-                MenuRow.Leaf(id: Verdict.correct, title: correct, symbol: "checkmark") { mark(.correct) },
-                MenuRow.Leaf(id: Verdict.partial, title: Verdict.partial.label, symbol: "questionmark") { mark(.partial) },
-                MenuRow.Leaf(id: Verdict.wrong, title: Verdict.wrong.label, symbol: "xmark") { mark(.wrong) },
-            ]))
+            MenuRow(
+                command, .quizProblemsRecord, "pencil.and.list.clipboard",
+                .submenu([
+                    MenuRow.Leaf(id: Verdict.correct, title: correct, symbol: "checkmark") { mark(.correct) },
+                    MenuRow.Leaf(id: Verdict.partial, title: Verdict.partial.label, symbol: "questionmark") { mark(.partial) },
+                    MenuRow.Leaf(id: Verdict.wrong, title: Verdict.wrong.label, symbol: "xmark") { mark(.wrong) },
+                ]))
         case .units:
-            MenuRow(command, .quizUnit, "list.bullet.indent", .submenu(units.map { u in
-                MenuRow.Leaf(id: u.id, title: u.title, symbol: "list.bullet", checked: problem.unitIds.contains(u.id)) { toggleUnit(u.id) }
-            }))
+            MenuRow(
+                command, .quizUnit, "list.bullet.indent",
+                .submenu(
+                    units.map { u in
+                        MenuRow.Leaf(id: u.id, title: u.title, symbol: "list.bullet", checked: problem.unitIds.contains(u.id)) {
+                            toggleUnit(u.id)
+                        }
+                    }))
         }
     }
 }

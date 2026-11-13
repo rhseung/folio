@@ -1,7 +1,8 @@
-@testable import FolioCLI
 import Foundation
 import FoundationModels
 import Testing
+
+@testable import FolioCLI
 
 /// `folio help <자연어>` measured on fixed requests. Prints top-1, top-3 and MRR; run with `swift test --filter
 /// FinderEvaluation` after changing phrases or synonyms, with FOLIO_EVAL_MODEL=1 to add the on-device rerank. The scores assert nothing, so a worse run never fails CI.
@@ -66,7 +67,9 @@ struct FinderEvaluation {
         var methods: [(String, Method)] = [("BM25+이럴 때 (folio help)", shipped)]
 
         // A model call per request takes a minute and a half in all, too slow for every test run.
-        if ProcessInfo.processInfo.environment["FOLIO_EVAL_MODEL"] != nil, SystemLanguageModel.default.isAvailable { methods.append(("+기기 안 모델 재정렬", Rerank(Finder.entries(), first: shipped).search)) }
+        if ProcessInfo.processInfo.environment["FOLIO_EVAL_MODEL"] != nil, SystemLanguageModel.default.isAvailable {
+            methods.append(("+기기 안 모델 재정렬", Rerank(Finder.entries(), first: shipped).search))
+        }
         for (title, cases) in [("기존 케이스", Self.cases), ("1차 새 케이스", Self.heldOut), ("2차 새 케이스 (다듬기에 안 씀)", Self.fresh)] {
             try await measure(title, cases, methods)
         }
@@ -92,8 +95,9 @@ struct FinderEvaluation {
                 if rank != 0 { misses.append("\(name) | \(request) → \(ranked.prefix(3).joined(separator: ", ")) (정답 \(answers[0]))") }
             }
             let n = Double(cases.count)
-            report.append(name.padding(toLength: 22, withPad: " ", startingAt: 0)
-                          + String(format: " %3.0f%%   %3.0f%%   %.2f", Double(top1) / n * 100, Double(top3) / n * 100, rr / n))
+            report.append(
+                name.padding(toLength: 22, withPad: " ", startingAt: 0)
+                    + String(format: " %3.0f%%   %3.0f%%   %.2f", Double(top1) / n * 100, Double(top3) / n * 100, rr / n))
         }
         print((["", "\(title) \(cases.count)개"] + report + ["", "1위를 놓친 요청"] + misses).joined(separator: "\n"))
     }
@@ -118,13 +122,17 @@ struct Rerank {
     func search(_ request: String) async throws -> [String] {
         let candidates = try await first(request)
         guard candidates.count > 1 else { return candidates }
-        let list = candidates.enumerated().map { "\($0.offset + 1). folio \($0.element) — \(abstracts[$0.element] ?? "")" }.joined(separator: "\n")
-        let session = LanguageModelSession(instructions: """
-            학생이 수업, 과제, 시험, 성적을 관리하는 명령줄 도구 folio의 명령을 고른다. \
-            사용자의 요청을 실제로 처리하는 명령을 후보 중에서 고른다. 요청의 동사(했어, 바꾸기, 보여줘)가 무엇을 하려는지 본다.
-            """)
-        let picked = try await session.respond(to: "요청: \(request)\n\n후보:\n\(list)", generating: Ranking.self,
-                                               options: GenerationOptions(sampling: .greedy)).content.numbers
+        let list = candidates.enumerated().map { "\($0.offset + 1). folio \($0.element) — \(abstracts[$0.element] ?? "")" }.joined(
+            separator: "\n")
+        let session = LanguageModelSession(
+            instructions: """
+                학생이 수업, 과제, 시험, 성적을 관리하는 명령줄 도구 folio의 명령을 고른다. \
+                사용자의 요청을 실제로 처리하는 명령을 후보 중에서 고른다. 요청의 동사(했어, 바꾸기, 보여줘)가 무엇을 하려는지 본다.
+                """)
+        let picked = try await session.respond(
+            to: "요청: \(request)\n\n후보:\n\(list)", generating: Ranking.self,
+            options: GenerationOptions(sampling: .greedy)
+        ).content.numbers
         let chosen = picked.compactMap { candidates.indices.contains($0 - 1) ? candidates[$0 - 1] : nil }
         var seen = Set<String>()
         return (chosen + candidates).filter { seen.insert($0).inserted }

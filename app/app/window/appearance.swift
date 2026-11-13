@@ -1,4 +1,5 @@
 import SwiftUI
+
 #if os(macOS)
 import AppKit
 #endif
@@ -38,11 +39,12 @@ private struct AppearanceFollower: ViewModifier {
         content.onChange(of: appearance, initial: true) { _, a in
             // Left alone when it already follows the system: assigning nil drops a launch-time appearance override.
             guard a != .system || NSApp.appearance != nil else { return }
-            NSApp.appearance = switch a {
-            case .system: nil
-            case .light: NSAppearance(named: .aqua)
-            case .dark: NSAppearance(named: .darkAqua)
-            }
+            NSApp.appearance =
+                switch a {
+                case .system: nil
+                case .light: NSAppearance(named: .aqua)
+                case .dark: NSAppearance(named: .darkAqua)
+                }
         }
         #else
         content.preferredColorScheme(appearance == .system ? nil : appearance == .dark ? .dark : .light)

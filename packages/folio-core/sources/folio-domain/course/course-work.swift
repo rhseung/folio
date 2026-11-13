@@ -24,8 +24,10 @@ public struct Exam: Entity {
     /// folder, and folders made before titles named them (`Midterm` for 중간고사) keep pointing at their files.
     public var folder: String?
 
-    public init(id: UUID = UUID(), device: DeviceID, at date: Date, title: String, start: Date? = nil, end: Date? = nil, location: String = "",
-                folder: String? = nil) {
+    public init(
+        id: UUID = UUID(), device: DeviceID, at date: Date, title: String, start: Date? = nil, end: Date? = nil, location: String = "",
+        folder: String? = nil
+    ) {
         self.id = id
         self.createdAt = date
         self.updatedAt = date
@@ -118,7 +120,8 @@ extension CourseFile {
     /// deleting a later one ends it.
     public mutating func continueRepeating(_ id: UUID, until end: Date?, calendar: Calendar, device: DeviceID, now: Date) {
         guard let a = assignments.first(where: { $0.id == id }), let rule = a.repeats, !a.status.isOpen, let due = a.due,
-              !assignments.contains(where: { $0.title == a.title && ($0.due ?? .distantPast) > due }) else { return }
+            !assignments.contains(where: { $0.title == a.title && ($0.due ?? .distantPast) > due })
+        else { return }
         let next = nextDue(after: due, rule: rule, title: a.title, calendar: calendar)
         guard end.map({ next <= $0 }) ?? true else { return }
 

@@ -3,6 +3,7 @@ import FolioDomain
 import FolioMarkdown
 import SwiftUI
 import Testing
+
 @testable import Folio
 
 /// Typing help in the edit view, driven by the keys the text view gets: the completion menu, pairs and snippets, and
@@ -72,8 +73,9 @@ struct NoteAssistTests {
         let (view, _) = Self.editor("")
         Self.type(view, "```")
         #expect(view.string == "```" && view.completion.query?.kind == .codeLanguage)
-        #expect(view.completion.items.contains { $0.title == "python" } && view.completion.items.contains { $0.title == "cb-widget" }
-            && !view.completion.items.contains { $0.title == "cb-table" })
+        #expect(
+            view.completion.items.contains { $0.title == "python" } && view.completion.items.contains { $0.title == "cb-widget" }
+                && !view.completion.items.contains { $0.title == "cb-table" })
         Self.type(view, "sw")
         Self.enter(view)
         #expect(Self.caretShown(view) == "```swift\n|\n```")
@@ -230,10 +232,12 @@ struct NoteAssistTests {
         let rows = CompletionMenuView(menu: view.completion) { _ in }.rows
             .frame(width: CompletionMenuView.width, height: CompletionMenuView.height(rows: view.completion.items.count), alignment: .top)
             .clipped()
-        let renderer = ImageRenderer(content: rows
-            .background(Theme.Palette.card, in: .rect(cornerRadius: Theme.Radius.floating))
-            .environment(\.accent, CourseAccent.presets[0].accent)
-            .environment(\.colorScheme, dark ? .dark : .light))
+        let renderer = ImageRenderer(
+            content:
+                rows
+                .background(Theme.Palette.card, in: .rect(cornerRadius: Theme.Radius.floating))
+                .environment(\.accent, CourseAccent.presets[0].accent)
+                .environment(\.colorScheme, dark ? .dark : .light))
         renderer.scale = 2
         let menu = try #require(renderer.nsImage)
 
@@ -383,10 +387,13 @@ struct NoteAssistTests {
         switch link.part {
         case .target:
             let note = "[[note:N|매칭 정리]]", pdf = "[[material:M#page=|slides.pdf]]"
-            return [CompletionItem(id: "n", title: "매칭 정리", symbol: "doc.text", body: note, caret: note.utf16.count),
-                    CompletionItem(id: "m", title: "slides.pdf", detail: "로봇공학", symbol: "doc", body: pdf,
-                                   caret: (pdf as NSString).range(of: "page=").upperBound, continues: true)]
-                .filter { query.text.isEmpty || $0.title.hasPrefix(query.text) }
+            return [
+                CompletionItem(id: "n", title: "매칭 정리", symbol: "doc.text", body: note, caret: note.utf16.count),
+                CompletionItem(
+                    id: "m", title: "slides.pdf", detail: "로봇공학", symbol: "doc", body: pdf,
+                    caret: (pdf as NSString).range(of: "page=").upperBound, continues: true),
+            ]
+            .filter { query.text.isEmpty || $0.title.hasPrefix(query.text) }
         case .page:
             return [3, 1, 2].map { n in
                 let body = "[[material:M#page=\(n)|slides.pdf]]"

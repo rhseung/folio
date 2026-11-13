@@ -27,8 +27,9 @@ struct Pixels: Equatable {
         var data = [UInt8](repeating: 0, count: width * height * 4)
         var rgb: [UInt8] = [0, 0, 0]
         data.withUnsafeMutableBytes { buffer in
-            let context = CGContext(data: buffer.baseAddress, width: image.width, height: image.height, bitsPerComponent: 8, bytesPerRow: image.width * 4,
-                                    space: Self.space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+            let context = CGContext(
+                data: buffer.baseAddress, width: image.width, height: image.height, bitsPerComponent: 8, bytesPerRow: image.width * 4,
+                space: Self.space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
             let whole = CGRect(x: 0, y: 0, width: image.width, height: image.height)
             context.setFillColor(page)
             context.fill(whole)
@@ -40,7 +41,9 @@ struct Pixels: Equatable {
     }
 
     init?(contentsOf url: URL) {
-        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil), let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else { return nil }
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil), let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+            return nil
+        }
         self.init(image, page: CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1))
     }
 
@@ -49,9 +52,10 @@ struct Pixels: Equatable {
     }
 
     var image: CGImage? {
-        CGImage(width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: width * 4, space: Self.space,
-                bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
-                provider: CGDataProvider(data: Data(data) as CFData)!, decode: nil, shouldInterpolate: false, intent: .defaultIntent)
+        CGImage(
+            width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: width * 4, space: Self.space,
+            bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
+            provider: CGDataProvider(data: Data(data) as CFData)!, decode: nil, shouldInterpolate: false, intent: .defaultIntent)
     }
 
     func write(to url: URL) throws {
@@ -95,7 +99,9 @@ struct Pixels: Equatable {
                 out.withUnsafeMutableBufferPointer { o in
                     var i = 0
                     while i < a.count {
-                        if abs(Int(a[i]) - Int(b[i])) > tolerance || abs(Int(a[i + 1]) - Int(b[i + 1])) > tolerance || abs(Int(a[i + 2]) - Int(b[i + 2])) > tolerance {
+                        if abs(Int(a[i]) - Int(b[i])) > tolerance || abs(Int(a[i + 1]) - Int(b[i + 1])) > tolerance
+                            || abs(Int(a[i + 2]) - Int(b[i + 2])) > tolerance
+                        {
                             count += 1
                             (o[i], o[i + 1], o[i + 2], o[i + 3]) = (255, 0, 0, 255)
                         } else {
@@ -120,13 +126,15 @@ struct Pixels: Equatable {
 /// in `FOLIO_NOTE_SCREENS`, which CI uploads as the `note-screens` artifact. `mise run note-screens -- <run>` copies the
 /// new pictures in as references.
 enum NoteScreens {
-    static let references = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appending(path: "references/notes")
+    static let references = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appending(
+        path: "references/notes")
     static let environment = ProcessInfo.processInfo.environment
     static let out = environment["FOLIO_NOTE_SCREENS"].flatMap { $0.isEmpty ? nil : URL(filePath: $0, directoryHint: .isDirectory) }
     static let strict = !(environment["FOLIO_NOTE_SCREENS_STRICT"] ?? "").isEmpty
     static let machine = "macOS \(ProcessInfo.processInfo.operatingSystemVersionString)"
     static var recorded: String? {
-        (try? String(contentsOf: references.appending(path: "machine.txt"), encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines)
+        (try? String(contentsOf: references.appending(path: "machine.txt"), encoding: .utf8))?.trimmingCharacters(
+            in: .whitespacesAndNewlines)
     }
 
     /// Differences a font update could make stay under this share of the picture; a missing line of text, a block
@@ -143,24 +151,30 @@ enum NoteScreens {
         guard recorded == machine else {
             keep(shot, name)
             if strict {
-                Issue.record("References were made on \(recorded ?? "an unknown machine"), this is \(machine). \(whereKept)", sourceLocation: sourceLocation)
+                Issue.record(
+                    "References were made on \(recorded ?? "an unknown machine"), this is \(machine). \(whereKept)",
+                    sourceLocation: sourceLocation)
             }
             return
         }
         guard let (count, picture) = shot.difference(from: reference) else {
             keep(shot, name)
-            Issue.record("\(name) is \(shot.width)x\(shot.height), its reference \(reference.width)x\(reference.height). \(whereKept)", sourceLocation: sourceLocation)
+            Issue.record(
+                "\(name) is \(shot.width)x\(shot.height), its reference \(reference.width)x\(reference.height). \(whereKept)",
+                sourceLocation: sourceLocation)
             return
         }
         let limit = max(20, Int(Double(shot.width * shot.height) * allowed))
         guard count > limit else { return }
         keep(shot, name)
         keep(picture, "\(name)-diff")
-        Issue.record("\(name) differs from its reference in \(count) pixels (allowed \(limit)). \(whereKept)", sourceLocation: sourceLocation)
+        Issue.record(
+            "\(name) differs from its reference in \(count) pixels (allowed \(limit)). \(whereKept)", sourceLocation: sourceLocation)
     }
 
     private static var whereKept: String {
-        out.map { "The new picture is in \($0.path(percentEncoded: false)) (CI: the note-screens artifact)." } ?? "Set FOLIO_NOTE_SCREENS to keep it."
+        out.map { "The new picture is in \($0.path(percentEncoded: false)) (CI: the note-screens artifact)." }
+            ?? "Set FOLIO_NOTE_SCREENS to keep it."
     }
 
     private static func keep(_ shot: Pixels, _ name: String) {

@@ -36,7 +36,9 @@ extension QuickAdd {
             case .meridiemBeforeTime:
                 let text = QuickAdd.core(words[i].text)
                 let morning = QuickAdd.morning.contains(text)
-                guard morning || QuickAdd.evening.contains(text), i + 1 < words.count, let m = words[i + 1].minute, m < 24 * 60 else { return nil }
+                guard morning || QuickAdd.evening.contains(text), i + 1 < words.count, let m = words[i + 1].minute, m < 24 * 60 else {
+                    return nil
+                }
                 let hour = m / 60
                 var shifted = m
                 if !morning, hour < 12 { shifted += 12 * 60 }
@@ -47,12 +49,16 @@ extension QuickAdd {
                 words[i + 1].piece = .time(shifted, false)
                 return nil
             case .minutesAfterHour:
-                guard case let .minutes(mm)? = words[i].piece, i > 0, case let .time(m, spoken)? = words[i - 1].piece, m % 60 == 0 else { return nil }
+                guard case let .minutes(mm)? = words[i].piece, i > 0, case let .time(m, spoken)? = words[i - 1].piece, m % 60 == 0 else {
+                    return nil
+                }
                 words[i - 1].piece = .time(m + mm, spoken)
                 words[i].joined = true
                 return nil
             case .monthBeforeDay:
-                guard case let .month(mo)? = words[i].piece, i + 1 < words.count, case let .dayOfMonth(d)? = words[i + 1].piece else { return nil }
+                guard case let .month(mo)? = words[i].piece, i + 1 < words.count, case let .dayOfMonth(d)? = words[i + 1].piece else {
+                    return nil
+                }
                 words[i].joined = true
                 words[i + 1].piece = QuickAdd.ahead(month: mo, day: d, today: today, year: today.year).map { Piece.day($0) }
                 return 2
@@ -119,7 +125,8 @@ extension QuickAdd {
                 let run = Array(words[i..<(i + count)])
                 // `까지` only on the last word, so a `까지` standing after the rule stays its own word.
                 guard adjoin(run, in: line),
-                      let rule = AssignmentRepeat.word(run.dropLast().map(\.text).joined() + QuickAdd.core(run[count - 1].text)) else { continue }
+                    let rule = AssignmentRepeat.word(run.dropLast().map(\.text).joined() + QuickAdd.core(run[count - 1].text))
+                else { continue }
                 var merged = words[i]
                 merged.range = run[0].range.lowerBound..<run[count - 1].range.upperBound
                 merged.text = String(line[merged.range])
@@ -141,8 +148,9 @@ extension QuickAdd {
             for count in stride(from: min(7, words.count - i), through: 2, by: -1) {
                 let run = Array(words[i..<(i + count)])
                 guard adjoin(run, in: line),
-                      let list = AssignmentRepeat.weekdayList(run.dropLast().map(\.text) + [QuickAdd.core(run[count - 1].text)]),
-                      list.each || afterRule else { continue }
+                    let list = AssignmentRepeat.weekdayList(run.dropLast().map(\.text) + [QuickAdd.core(run[count - 1].text)]),
+                    list.each || afterRule
+                else { continue }
                 var merged = words[i]
                 merged.range = run[0].range.lowerBound..<run[count - 1].range.upperBound
                 merged.text = String(line[merged.range])

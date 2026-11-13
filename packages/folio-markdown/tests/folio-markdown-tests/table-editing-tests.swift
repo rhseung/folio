@@ -1,7 +1,8 @@
-@testable import FolioMarkdown
 import Foundation
 import PropertyBased
 import Testing
+
+@testable import FolioMarkdown
 
 /// Table edits on the source, with `‸` marking the caret since `|` is the table's.
 struct TableEditingTests {
@@ -24,12 +25,18 @@ struct TableEditingTests {
     static let table = "앞 문단\n\n| 이름 | 점수 |\n|---|:-:|\n| 가‸ | 1 |\n| b | 2 |\n\n뒤 문단"
 
     @Test func aRowGoesBelowAndThePipesLineUp() {
-        #expect(Self.run(.rowBelow, Self.table) == "앞 문단\n\n| 이름 | 점수 |\n| ---- | :--: |\n| 가   | 1    |\n| ‸     |      |\n| b    | 2    |\n\n뒤 문단")
+        #expect(
+            Self.run(.rowBelow, Self.table)
+                == "앞 문단\n\n| 이름 | 점수 |\n| ---- | :--: |\n| 가   | 1    |\n| ‸     |      |\n| b    | 2    |\n\n뒤 문단")
     }
 
     @Test func columnsGoEitherSideAndKeepTheirAlignment() {
-        #expect(Self.run(.columnLeft, Self.table) == "앞 문단\n\n|     | 이름 | 점수 |\n| --- | ---- | :--: |\n| ‸    | 가   | 1    |\n|     | b    | 2    |\n\n뒤 문단")
-        #expect(Self.run(.columnRight, Self.table) == "앞 문단\n\n| 이름 |     | 점수 |\n| ---- | --- | :--: |\n| 가   | ‸    | 1    |\n| b    |     | 2    |\n\n뒤 문단")
+        #expect(
+            Self.run(.columnLeft, Self.table)
+                == "앞 문단\n\n|     | 이름 | 점수 |\n| --- | ---- | :--: |\n| ‸    | 가   | 1    |\n|     | b    | 2    |\n\n뒤 문단")
+        #expect(
+            Self.run(.columnRight, Self.table)
+                == "앞 문단\n\n| 이름 |     | 점수 |\n| ---- | --- | :--: |\n| 가   | ‸    | 1    |\n| b    |     | 2    |\n\n뒤 문단")
     }
 
     @Test func rowsAndColumnsMoveAndGoAway() {
@@ -53,8 +60,13 @@ struct TableEditingTests {
 
     /// A link's `|` is not a cell's: the row keeps its cells, and the link stays as written, escaped or not.
     @Test func linksKeepTheirBars() {
-        #expect(Self.run(.format, "|a|b|\n|-|-|\n|[[note:x|이름]]‸|[[y\\|z]] c|") == "| a               | b          |\n| --------------- | ---------- |\n| [[note:x|이름]]‸ | [[y\\|z]] c |")
-        #expect(Self.run(.moveColumnRight, "|a|b|\n|-|-|\n|[[m#page=1|p.1]]–[[m#page=8|p.8]]‸|2|") == "| b   | a                                 |\n| --- | --------------------------------- |\n| 2   | [[m#page=1|p.1]]–[[m#page=8|p.8]]‸ |")
+        #expect(
+            Self.run(.format, "|a|b|\n|-|-|\n|[[note:x|이름]]‸|[[y\\|z]] c|")
+                == "| a               | b          |\n| --------------- | ---------- |\n| [[note:x|이름]]‸ | [[y\\|z]] c |")
+        #expect(
+            Self.run(.moveColumnRight, "|a|b|\n|-|-|\n|[[m#page=1|p.1]]–[[m#page=8|p.8]]‸|2|")
+                == "| b   | a                                 |\n| --- | --------------------------------- |\n| 2   | [[m#page=1|p.1]]–[[m#page=8|p.8]]‸ |"
+        )
         let source = TableSource("|a|b|\n|-|-|\n|[[n|m]]|x|" as NSString, NSRange(location: 14, length: 0))
         #expect(source?.grid.rows == [["a", "b"], ["[[n|m]]", "x"]])
     }
@@ -104,7 +116,9 @@ struct TablePropertyTests {
     }
 
     @Test func everyEditLeavesATableThatReadsBackAsItWasWritten() async {
-        await propertyCheck(input: Gen.int(in: 2...4), Gen.int(in: 1...4), Gen.int(in: 0...6).array(of: 16), Gen.int(in: 0...10).array(of: 1...8)) { rows, columns, words, steps in
+        await propertyCheck(
+            input: Gen.int(in: 2...4), Gen.int(in: 1...4), Gen.int(in: 0...6).array(of: 16), Gen.int(in: 0...10).array(of: 1...8)
+        ) { rows, columns, words, steps in
             var text = ("앞\n\n" + Self.gfm(rows: rows, columns: columns, words: words) + "\n\n뒤") as NSString
             var caret = text.range(of: "| ", options: [], range: NSRange(location: 3, length: text.length - 3)).location + 2
             for step in steps {

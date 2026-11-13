@@ -59,7 +59,9 @@ actor WhisperTranscriber {
 
     /// `running` and the busy flag it shows count until Whisper actually returns. A cancelled job comes off the queue at
     /// once but holds the model until its current window is decoded.
-    func transcribe(_ url: URL, hints: TranscriptionHints?, report: @escaping @Sendable (TranscriptionPhase) -> Void) async throws -> LectureTranscript {
+    func transcribe(_ url: URL, hints: TranscriptionHints?, report: @escaping @Sendable (TranscriptionPhase) -> Void) async throws
+        -> LectureTranscript
+    {
         running += 1
         await showBusy()
         do {
@@ -79,7 +81,9 @@ actor WhisperTranscriber {
         await MainActor.run { WhisperModel.shared.busy = busy }
     }
 
-    private func run(_ url: URL, hints: TranscriptionHints?, report: @escaping @Sendable (TranscriptionPhase) -> Void) async throws -> LectureTranscript {
+    private func run(_ url: URL, hints: TranscriptionHints?, report: @escaping @Sendable (TranscriptionPhase) -> Void) async throws
+        -> LectureTranscript
+    {
         let kit = try await load(report: report)
         let duration = (try? AVAudioFile(forReading: url)).map { max(Double($0.length) / $0.processingFormat.sampleRate, 1) } ?? 1
         report(.transcribing(0))
@@ -102,8 +106,9 @@ actor WhisperTranscriber {
             // Cuts the audio at silences, so a long quiet stretch doesn't make Whisper invent a sentence.
             chunkingStrategy: .vad)
         // A lecture read whole is several hundred megabytes of samples; streamed, a few.
-        let results = try await kit.transcribe(audioPath: url.path, audioInputOptions: AudioInputOptions(audioLoadingMode: .incremental),
-                                               decodeOptions: options)
+        let results = try await kit.transcribe(
+            audioPath: url.path, audioInputOptions: AudioInputOptions(audioLoadingMode: .incremental),
+            decodeOptions: options)
         // With silence chunking a cancelled run returns what it had instead of throwing.
         try Task.checkCancellation()
 
@@ -124,7 +129,7 @@ actor WhisperTranscriber {
         for at in [0.2, 0.5, 0.8] {
             let start = max(0, duration * at - 15)
             guard let buffer = try? AudioProcessor.loadAudio(fromPath: url.path, startTime: start, endTime: min(duration, start + 30)),
-                  let result = try? await kit.detectLangauge(audioArray: AudioProcessor.convertBufferToArray(buffer: buffer))
+                let result = try? await kit.detectLangauge(audioArray: AudioProcessor.convertBufferToArray(buffer: buffer))
             else { continue }
             let ko = result.langProbs["ko"] ?? -.infinity, en = result.langProbs["en"] ?? -.infinity
             if en > ko { english += 1 } else { korean += 1 }
@@ -153,7 +158,7 @@ actor WhisperTranscriber {
         return fillers.contains(bare)
     }
 
-    private static let fillers: Set<String> = [ // strings: data, matched against transcripts
+    private static let fillers: Set<String> = [  // strings: data, matched against transcripts
         "감사합니다", "시청해주셔서감사합니다", "시청해주셔서고맙습니다", "구독과좋아요부탁드립니다", "구독과좋아요알림설정부탁드립니다",
         "thankyou", "thanksforwatching", "thankyouforwatching", "pleasesubscribe",
     ]
@@ -164,8 +169,10 @@ actor WhisperTranscriber {
         // Core ML compiles the model for this chip on the first load, minutes on end; later loads take seconds.
         report(.preparing)
         // The tokenizer comes from the network on the first load and is kept beside the model.
-        let kit = try await WhisperKit(WhisperKitConfig(modelFolder: folder.path, tokenizerFolder: Self.base, verbose: false,
-                                                        prewarm: false, load: true, download: false))
+        let kit = try await WhisperKit(
+            WhisperKitConfig(
+                modelFolder: folder.path, tokenizerFolder: Self.base, verbose: false,
+                prewarm: false, load: true, download: false))
         self.kit = kit
         return kit
     }
@@ -185,7 +192,11 @@ actor WhisperTranscriber {
 private final class Furthest: @unchecked Sendable {
     private let lock = NSLock()
     private var value: Double = 0
-    func push(_ v: Double) -> Double { lock.withLock { value = max(value, v); return value } }
+    func push(_ v: Double) -> Double {
+        lock.withLock {
+            value = max(value, v); return value
+        }
+    }
 }
 
 /// Whether this device has the Whisper model, for settings and the player. Remembered rather than looked up: a

@@ -3,8 +3,10 @@ import Foundation
 
 let args = CommandLine.arguments.dropFirst()
 let check = args.contains("--check")
-let out = args.first { !$0.hasPrefix("--") }
-    ?? URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../folio-cli/generated/commands.swift").standardizedFileURL.path
+let out =
+    args.first { !$0.hasPrefix("--") }
+    ?? URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../folio-cli/generated/commands.swift").standardizedFileURL
+    .path
 let source = CommandSource.file(Actions.all)
 
 if check {
@@ -51,7 +53,9 @@ enum CommandSource {
         let course = fields.first { $0.ref == "Course" && $0.role == .argument && !$0.many }
         // `<과목>/<항목>`: a course argument followed by an argument for an item inside it are typed as one. A course
         // that may be left out (every course) stays its own argument.
-        let folded = course.flatMap { c in c.optional ? nil : fields.first { $0.role == .argument && $0.ref.map(scoped.contains) == true && $0.name != c.name } }
+        let folded = course.flatMap { c in
+            c.optional ? nil : fields.first { $0.role == .argument && $0.ref.map(scoped.contains) == true && $0.name != c.name }
+        }
 
         var discussion = spec.discussion.isEmpty ? [] : spec.discussion.components(separatedBy: "\n") + [""]
         if spec.effect == .removes || spec.effect == .moves { discussion += ["실행하기 전에 확인을 받는다.", ""] }
@@ -71,9 +75,13 @@ enum CommandSource {
                 if f.many {
                     // One value name per item: `<material> ...`.
                     let one = f.name.hasSuffix("s") ? String(f.name.dropLast()) : f.name
-                    out.append("    @Argument(help: ArgumentHelp(\(q("<과목>/<\(item)>. 둘째부터는 \(item)만 써도 된다")), valueName: \(q(one))), \(completion)) var \(f.name): [String]")
+                    out.append(
+                        "    @Argument(help: ArgumentHelp(\(q("<과목>/<\(item)>. 둘째부터는 \(item)만 써도 된다")), valueName: \(q(one))), \(completion)) var \(f.name): [String]"
+                    )
                 } else {
-                    out.append("    @Argument(help: ArgumentHelp(\(q("<과목>/<\(item)>")), valueName: \(q(f.name))), \(completion)) var \(f.name): String" + (last ? " = \"\"" : ""))
+                    out.append(
+                        "    @Argument(help: ArgumentHelp(\(q("<과목>/<\(item)>")), valueName: \(q(f.name))), \(completion)) var \(f.name): String"
+                            + (last ? " = \"\"" : ""))
                 }
                 continue
             }
@@ -97,8 +105,10 @@ enum CommandSource {
         }
         if let course {
             if let folded {
-                out.append(folded.many ? "        let (c, \(folded.name)First) = try r.split(\(folded.name).first ?? \"\")"
-                                       : "        let (c, \(folded.name)Name) = try r.split(\(folded.name))")
+                out.append(
+                    folded.many
+                        ? "        let (c, \(folded.name)First) = try r.split(\(folded.name).first ?? \"\")"
+                        : "        let (c, \(folded.name)Name) = try r.split(\(folded.name))")
             } else if course.optional {
                 out.append("        let c = try \(course.name).map { try r.course($0) }")
             } else {
@@ -109,12 +119,15 @@ enum CommandSource {
         let scope = course == nil ? "nil" : "c"
         var exprs: [String: String] = [:]
         for f in fields where parent(f, in: fields) == nil {
-            if f.name == course?.name { exprs[f.name] = f.optional ? "c?.id" : "c.id" }
-            else if f.name == folded?.name, f.many {
+            if f.name == course?.name {
+                exprs[f.name] = f.optional ? "c?.id" : "c.id"
+            } else if f.name == folded?.name, f.many {
                 exprs[f.name] = "try ([\(f.name)First] + \(f.name).dropFirst()).map { try r.\(lookup(f.ref!))(\(q(f.ref!)), $0, in: c) }"
+            } else if f.name == folded?.name {
+                exprs[f.name] = "try r.\(lookup(f.ref!))(\(q(f.ref!)), \(f.name)Name, in: c)"
+            } else {
+                exprs[f.name] = value(f, scope: scope)
             }
-            else if f.name == folded?.name { exprs[f.name] = "try r.\(lookup(f.ref!))(\(q(f.ref!)), \(f.name)Name, in: c)" }
-            else { exprs[f.name] = value(f, scope: scope) }
         }
         for f in fields { if let p = parent(f, in: fields) { exprs[f.name] = value(f, scope: scope, parent: exprs[p.name]) } }
 
@@ -129,7 +142,9 @@ enum CommandSource {
     }
 
     /// Kinds that live inside a course file.
-    static let scoped: Set<String> = ["Session", "Exam", "Unit", "Assignment", "GradeComponent", "ScoreEntry", "Material", "ProblemSet", "Note", "NotePath", "NoteWidget"]
+    static let scoped: Set<String> = [
+        "Session", "Exam", "Unit", "Assignment", "GradeComponent", "ScoreEntry", "Material", "ProblemSet", "Note", "NotePath", "NoteWidget",
+    ]
 
     /// Kinds named only inside another item: a plan item in its exam, a card in its unit's deck.
     static let parents: [String: String] = ["ExamPlanItem": "Exam", "QuizCard": "Unit"]
@@ -182,8 +197,12 @@ enum CommandSource {
         case .new: return "@Option(name: .customLong(\"id\"), help: .hidden) var \(f.name): UUID?"
         case .off(let flag): return "@Flag(name: .customLong(\(q(flag))), help: \(q(f.help))) var \(camel(flag)) = false"
         case .argument:
-            if f.ref != nil, !f.optional, !f.many { return "@Argument(help: \(help(f))\(completion)) var \(f.name): String" + (last ? " = \"\"" : "") }
-            if f.many { return "@Argument(help: \(help(f))\(completion)) var \(f.name): [\(t)]" + (f.defaultValue.map { " = \($0)" } ?? "") }
+            if f.ref != nil, !f.optional, !f.many {
+                return "@Argument(help: \(help(f))\(completion)) var \(f.name): String" + (last ? " = \"\"" : "")
+            }
+            if f.many {
+                return "@Argument(help: \(help(f))\(completion)) var \(f.name): [\(t)]" + (f.defaultValue.map { " = \($0)" } ?? "")
+            }
             if f.optional { return "@Argument(help: \(help(f))\(completion)) var \(f.name): \(t)?" }
             return "@Argument(help: \(help(f))\(completion)) var \(f.name): \(t)" + (f.defaultValue.map { " = \($0)" } ?? "")
         case .option:
@@ -193,7 +212,9 @@ enum CommandSource {
             if f.patch { return "@Option(\(name)help: \(help(f))\(completion)) var \(f.name): \(f.optional ? "Clearable<\(t)>" : t)?" }
             if f.many { return "@Option(\(name)help: \(help(f))\(completion)) var \(f.name): [\(t)] = []" }
             if f.optional { return "@Option(\(name)help: \(help(f))\(completion)) var \(f.name): \(t)?" }
-            if let d = f.defaultValue, f.type != "Date" { return "@Option(\(name)help: \(help(f))\(completion)) var \(f.name): \(t) = \(d)" }
+            if let d = f.defaultValue, f.type != "Date" {
+                return "@Option(\(name)help: \(help(f))\(completion)) var \(f.name): \(t) = \(d)"
+            }
             return "@Option(\(name)help: \(help(f))\(completion)) var \(f.name): \(t)"
         }
     }
@@ -226,7 +247,9 @@ enum CommandSource {
             return "\(f.name).isEmpty ? .keep : .set(\(t)\(f.name).clearing.map { \(one("$0")) })"
         }
         if f.patch {
-            if f.optional { return "\(t)\(f.name).map { p in Patch.set(\(identity ? "p.value" : "\(t)p.value.map { \(one("$0")) }")) } ?? .keep" }
+            if f.optional {
+                return "\(t)\(f.name).map { p in Patch.set(\(identity ? "p.value" : "\(t)p.value.map { \(one("$0")) }")) } ?? .keep"
+            }
             return "\(t)\(f.name).map { Patch.set(\(one("$0"))) } ?? .keep"
         }
         if f.many || f.optional { return identity ? f.name : "\(t)\(f.name).map { \(one("$0")) }" }
@@ -234,7 +257,9 @@ enum CommandSource {
     }
 
     static func q(_ s: String) -> String { "\"" + escaped(s) + "\"" }
-    static func escaped(_ s: String) -> String { s.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") }
+    static func escaped(_ s: String) -> String {
+        s.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+    }
     static func camel(_ s: String) -> String {
         let parts = s.split(separator: "-")
         return String(parts[0]) + parts.dropFirst().map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined()
@@ -249,4 +274,3 @@ enum CommandSource {
         }
     }
 }
-

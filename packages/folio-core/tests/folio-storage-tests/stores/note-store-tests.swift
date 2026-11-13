@@ -93,7 +93,10 @@ struct NoteStoreTests {
         let store = try store()
         let id = UUID(), session = UUID()
         let old = store.newNoteURL(title: "예전", format: .markdown)
-        try store.createNote(at: old, text: "---\nid: \(id.uuidString)\nkind: review\nsessionId: \(session.uuidString)\ncssclasses: wide\nmath: asciimath\n---\n# 예전\n")
+        try store.createNote(
+            at: old,
+            text:
+                "---\nid: \(id.uuidString)\nkind: review\nsessionId: \(session.uuidString)\ncssclasses: wide\nmath: asciimath\n---\n# 예전\n")
         let bare = store.newNoteURL(title: "그냥", format: .markdown)
         try store.createNote(at: bare, text: "---\nid: \(UUID().uuidString)\n---\n# 그냥\n")
         try store.createNote(at: store.newNoteURL(title: "남의 것", format: .markdown), text: "---\naliases: [x]\n---\n# 남의 것\n")
@@ -110,8 +113,10 @@ struct NoteStoreTests {
         let store = try store()
 
         // A 2000x1000 PNG: wide enough to be shrunk to the 1568px edge.
-        let ctx = try #require(CGContext(data: nil, width: 2000, height: 1000, bitsPerComponent: 8, bytesPerRow: 0,
-                                         space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue))
+        let ctx = try #require(
+            CGContext(
+                data: nil, width: 2000, height: 1000, bitsPerComponent: 8, bytesPerRow: 0,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue))
         let png = NSMutableData()
         let dest = try #require(CGImageDestinationCreateWithData(png, UTType.png.identifier as CFString, 1, nil))
         CGImageDestinationAddImage(dest, try #require(ctx.makeImage()), nil)
@@ -163,8 +168,9 @@ struct NotionNotesWriterTests {
             .write(to: dumpFolder.appending(path: "n.md"))
         try Data("<svg/>".utf8).write(to: dumpFolder.appending(path: "assets/a.svg"))
         let id = UUID()
-        let dump = NotionCourseDump(coursePageId: UUID(), title: "", notes: [], scores: [],
-                                    images: [.init(source: "notion-file-block://x?name=a.svg", file: "assets/a.svg")])
+        let dump = NotionCourseDump(
+            coursePageId: UUID(), title: "", notes: [], scores: [],
+            images: [.init(source: "notion-file-block://x?name=a.svg", file: "assets/a.svg")])
         let plan = NotionNotePlan(id: id, title: "7주차-2 정리", meta: NoteMeta(id: id, kind: .review), sourceFile: "n.md")
 
         let url = store.newNoteURL(title: plan.title, format: .markdown)
@@ -199,7 +205,8 @@ struct RecordingStoreTests {
         let gist = GISTStore(url: try Fixture.standard.copyToTemp())
         let store = try #require(try gist.courseStores().first)
         let pending = PendingRecordings(url: gist.url.deletingLastPathComponent().appending(path: "pending"))
-        let recording = Recording(device: UUID(), at: Date(timeIntervalSince1970: 3_000_000), sessionId: nil, file: try store.newRecordingFile(named: "11-03(화)"))
+        let recording = Recording(
+            device: UUID(), at: Date(timeIntervalSince1970: 3_000_000), sessionId: nil, file: try store.newRecordingFile(named: "11-03(화)"))
         try pending.save(PendingRecording(courseId: UUID(), recording: recording))
         #expect(pending.all().isEmpty)  // no audio yet
         try Data("caf".utf8).write(to: pending.audioURL(of: recording.id))

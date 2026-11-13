@@ -149,7 +149,8 @@ final class Workspace {
         }
         func exists(_ url: URL) -> Bool { FileManager.default.fileExists(atPath: url.path) }
 
-        transcript = attempt("transcript.json") { exists(gist.transcriptURL) ? try gist.loadTranscript().model : Transcript() } ?? transcript
+        transcript =
+            attempt("transcript.json") { exists(gist.transcriptURL) ? try gist.loadTranscript().model : Transcript() } ?? transcript
         let loadedCatalog = attempt("catalog.json") { exists(gist.catalogURL) ? try gist.loadCatalog().model : Catalog() }
         catalog = loadedCatalog ?? catalog
         catalogLoaded = loadedCatalog != nil
@@ -158,7 +159,9 @@ final class Workspace {
         let stores = attempt(String(localized: .workspaceCourseFolders)) { try gist.courseStores() } ?? []
         var seen = Set<UUID>()
         courses = stores.compactMap { store in
-            guard let course = attempt(store.url.lastPathComponent, { LoadedCourse(store: store, document: try store.load()) }) else { return nil }
+            guard let course = attempt(store.url.lastPathComponent, { LoadedCourse(store: store, document: try store.load()) }) else {
+                return nil
+            }
             guard seen.insert(course.id).inserted else {
                 problems.append(String(localized: .workspaceDuplicateCourseId(store.url.lastPathComponent)))
                 return nil
@@ -166,9 +169,10 @@ final class Workspace {
             return course
         }
 
-        reviewEvents = Dictionary(keepingFirst: courses.map { c in
-            (c.id, (try? c.store.log.readAll().filter { $0.type == ReviewEvent.type }) ?? [])
-        })
+        reviewEvents = Dictionary(
+            keepingFirst: courses.map { c in
+                (c.id, (try? c.store.log.readAll().filter { $0.type == ReviewEvent.type }) ?? [])
+            })
 
         // Never cleared here: callers reload right after a failed save, whose message must stay up.
         if !problems.isEmpty { error = String(localized: .workspaceUnreadableFiles) + "\n" + problems.joined(separator: "\n") }
@@ -228,8 +232,9 @@ final class Workspace {
     }
 
     func reviewQueue(now: Date) -> [ReviewEntry] {
-        ReviewScheduler.queue(courses: currentCourses.map { ($0.file, (reviewEvents[$0.id] ?? []).events(ReviewEvent.self)) },
-                              settings: settings, calendar: calendar, now: now)
+        ReviewScheduler.queue(
+            courses: currentCourses.map { ($0.file, (reviewEvents[$0.id] ?? []).events(ReviewEvent.self)) },
+            settings: settings, calendar: calendar, now: now)
     }
 
     // MARK: Semesters and courses
@@ -244,8 +249,9 @@ final class Workspace {
     /// A dry run against what the app shows, so a button follows the action's own rules rather than a copy in the view.
     private func checkContext() -> ActionContext? {
         guard let gist else { return nil }
-        let ctx = ActionContext(gist: gist, device: device, now: now, calendar: calendar, dryRun: true,
-                                courses: Dictionary(courses.map { ($0.id, $0.store) }, uniquingKeysWith: { a, _ in a }))
+        let ctx = ActionContext(
+            gist: gist, device: device, now: now, calendar: calendar, dryRun: true,
+            courses: Dictionary(courses.map { ($0.id, $0.store) }, uniquingKeysWith: { a, _ in a }))
         ctx.preload(courses: courses.map(\.document), transcript: transcript, catalog: catalog, settings: settings)
         return ctx
     }
@@ -290,8 +296,9 @@ final class Workspace {
                 // A backup or an import writes outside the folder, past the copy's fence: only a dry run, on a context
                 // of its own that reads what the ones before it wrote into the copy.
                 let staged = ActionProposal.stages(type(of: action).command)
-                do { try action.run(staged ? ctx : ActionContext(gist: gist, device: device, now: now, calendar: calendar, dryRun: true)) }
-                catch { return (i, "\(error)") }
+                do {
+                    try action.run(staged ? ctx : ActionContext(gist: gist, device: device, now: now, calendar: calendar, dryRun: true))
+                } catch { return (i, "\(error)") }
             }
             return nil
         }
@@ -324,8 +331,9 @@ final class Workspace {
 
     func runThrowing(_ action: some Action) throws -> ActionContext {
         guard let gist else { throw ActionError.notFound(String(localized: .workspaceNoGist)) }
-        let ctx = ActionContext(gist: gist, device: device, now: now, calendar: calendar,
-                                courses: Dictionary(courses.map { ($0.id, $0.store) }, uniquingKeysWith: { a, _ in a }))
+        let ctx = ActionContext(
+            gist: gist, device: device, now: now, calendar: calendar,
+            courses: Dictionary(courses.map { ($0.id, $0.store) }, uniquingKeysWith: { a, _ in a }))
         // Shown even when the action fails halfway: what it already wrote is on disk.
         defer { show(ctx) }
         try action.run(ctx)

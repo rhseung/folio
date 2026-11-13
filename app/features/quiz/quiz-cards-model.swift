@@ -1,5 +1,5 @@
-import FolioActions
 import FolioAI
+import FolioActions
 import FolioDomain
 import Foundation
 import Observation
@@ -49,7 +49,8 @@ struct CardDraft: Identifiable {
     }
 
     func card(device: DeviceID) -> QuizCard {
-        var card = original ?? QuizCard(device: device, at: .now, unitId: unitId, type: type, category: category, prompt: prompt, answer: answer)
+        var card =
+            original ?? QuizCard(device: device, at: .now, unitId: unitId, type: type, category: category, prompt: prompt, answer: answer)
         card.unitId = unitId
         card.type = type
         card.category = category
@@ -119,7 +120,8 @@ final class GenerateCardsModel {
     var canConfirm: Bool { hasKey && !busy && (candidates.isEmpty || !kept.isEmpty) }
     var countOptions: [(Int, String)] { [3, 5, 10, 15].map { ($0, String(localized: .quizCardCount($0))) } }
     var typeOptions: [(CardType?, String)] {
-        [(CardType?.none, String(localized: .quizGenerateMixed))] + [CardType.free, .proof, .choice, .trueFalse, .fill].map { (Optional($0), $0.label) }
+        [(CardType?.none, String(localized: .quizGenerateMixed))]
+            + [CardType.free, .proof, .choice, .trueFalse, .fill].map { (Optional($0), $0.label) }
     }
 
     func toggle(_ card: QuizCard) {
@@ -164,8 +166,11 @@ final class GenerateCardsModel {
 
     /// The titles are what Claude reads, not UI, so they stay as written.
     private func cardContext() -> [ContextItem] {
-        [ContextBuilder.courseSummary(course.file, now: .now)] + workspace.notes(for: unit, in: course.id).compactMap { note in
-            (try? course.store.read(note)).map { ContextItem(id: "note:\(note.title)", title: "노트 \(note.title)", tier: .focus, text: $0) }
-        }
+        [ContextBuilder.courseSummary(course.file, now: .now)]
+            + workspace.notes(for: unit, in: course.id).compactMap { note in
+                (try? course.store.read(note)).map {
+                    ContextItem(id: "note:\(note.title)", title: "노트 \(note.title)", tier: .focus, text: $0)
+                }
+            }
     }
 }

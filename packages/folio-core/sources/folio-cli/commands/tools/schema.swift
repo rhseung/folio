@@ -19,7 +19,9 @@ final class SchemaBuilder {
 
     private func schemaOf<T: Decodable>(_ type: T.Type) -> JSONValue {
         if let hint = T.self as? any SchemaHint.Type { return hint.schema }
-        if let e = T.self as? any (CaseIterable & RawRepresentable).Type { return .object(["type": "string", "enum": .array(Self.cases(e).map(JSONValue.string))]) }
+        if let e = T.self as? any (CaseIterable & RawRepresentable).Type {
+            return .object(["type": "string", "enum": .array(Self.cases(e).map(JSONValue.string))])
+        }
         if let a = T.self as? any SniffArray.Type { return .object(["type": "array", "items": schema(a.element)]) }
         if let d = T.self as? any SniffDictionary.Type { return .object(["type": "object", "additionalProperties": schema(d.value)]) }
         if let o = T.self as? any SniffOptional.Type { return schema(o.wrapped) }
@@ -38,11 +40,13 @@ final class SchemaBuilder {
         let first = Probe(builder: self, caseIndex: 0)
         _ = try? T(from: Sniffer(first))
         guard first.caseCount > 1 else { return first.shape }
-        let variants = [first.shape] + (1..<first.caseCount).map { i in
-            let p = Probe(builder: self, caseIndex: i)
-            _ = try? T(from: Sniffer(p))
-            return p.shape
-        }
+        let variants =
+            [first.shape]
+            + (1..<first.caseCount).map { i in
+                let p = Probe(builder: self, caseIndex: i)
+                _ = try? T(from: Sniffer(p))
+                return p.shape
+            }
         return .object(["oneOf": .array(variants)])
     }
 
@@ -120,7 +124,9 @@ struct Sniffer: Decoder {
             probe.field(key, probe.builder.schema(T.self), required: false)
             return nil
         }
-        func nestedContainer<NestedKey: CodingKey>(keyedBy type: NestedKey.Type, forKey key: Key) throws -> KeyedDecodingContainer<NestedKey> {
+        func nestedContainer<NestedKey: CodingKey>(keyedBy type: NestedKey.Type, forKey key: Key) throws -> KeyedDecodingContainer<
+            NestedKey
+        > {
             let inner = Probe(builder: probe.builder, caseIndex: 0)
             probe.nested[key.stringValue] = inner
             if !probe.required.contains(key.stringValue) { probe.required.append(key.stringValue) }
@@ -184,9 +190,15 @@ extension Int: SchemaHint { static var schema: JSONValue { ["type": "integer"] }
 extension Int64: SchemaHint { static var schema: JSONValue { ["type": "integer"] }; static var example: Any { Int64(0) } }
 extension Double: SchemaHint { static var schema: JSONValue { ["type": "number"] }; static var example: Any { 0.0 } }
 extension UUID: SchemaHint { static var schema: JSONValue { ["type": "string", "format": "uuid"] }; static var example: Any { UUID() } }
-extension Date: SchemaHint { static var schema: JSONValue { ["type": "string", "format": "date-time"] }; static var example: Any { Date() } }
-extension Data: SchemaHint { static var schema: JSONValue { ["type": "string", "contentEncoding": "base64"] }; static var example: Any { Data() } }
-extension URL: SchemaHint { static var schema: JSONValue { ["type": "string", "format": "uri"] }; static var example: Any { URL(filePath: "/") } }
+extension Date: SchemaHint {
+    static var schema: JSONValue { ["type": "string", "format": "date-time"] }; static var example: Any { Date() }
+}
+extension Data: SchemaHint {
+    static var schema: JSONValue { ["type": "string", "contentEncoding": "base64"] }; static var example: Any { Data() }
+}
+extension URL: SchemaHint {
+    static var schema: JSONValue { ["type": "string", "format": "uri"] }; static var example: Any { URL(filePath: "/") }
+}
 extension JSONValue: SchemaHint { static var schema: JSONValue { [:] }; static var example: Any { JSONValue.null } }
 extension LocalDate: SchemaHint {
     static var schema: JSONValue { ["type": "string", "format": "date"] }
@@ -206,7 +218,9 @@ extension JSONValue: ExpressibleByStringLiteral, ExpressibleByDictionaryLiteral 
 /// The decoded shape with what only the declaration knows: which kind of item a field names (`x-folio-ref`, a UUID
 /// or a name), and that a `Patch` field may be left out.
 func declaredInput(_ spec: ActionSpec, _ sniffed: JSONValue) -> JSONValue {
-    guard case .object(var o) = sniffed, case .object(var props)? = o["properties"], case .array(let required)? = o["required"] else { return sniffed }
+    guard case .object(var o) = sniffed, case .object(var props)? = o["properties"], case .array(let required)? = o["required"] else {
+        return sniffed
+    }
     for f in spec.fields {
         guard case .object(var p)? = props[f.name] else { continue }
         if let kind = f.ref {
@@ -225,7 +239,8 @@ func declaredInput(_ spec: ActionSpec, _ sniffed: JSONValue) -> JSONValue {
     return .object(o)
 }
 
-let actionRefNote = "항목을 가리키는 필드(course, semester, session, exam, unit, material, component, assignment, set, note)는 UUID와 이름(EC4207, 11-03, Quiz1)을 모두 받는다. 새 항목의 id는 빼면 만들어진다. x-folio-ref가 있는 필드는 그 종류의 항목을 가리킨다. NotePath는 노트를 과목 폴더 기준 경로로 가리키고, 노트 이름도 받는다."
+let actionRefNote =
+    "항목을 가리키는 필드(course, semester, session, exam, unit, material, component, assignment, set, note)는 UUID와 이름(EC4207, 11-03, Quiz1)을 모두 받는다. 새 항목의 id는 빼면 만들어진다. x-folio-ref가 있는 필드는 그 종류의 항목을 가리킨다. NotePath는 노트를 과목 폴더 기준 경로로 가리키고, 노트 이름도 받는다."
 
 func actionSchemas() -> JSONValue {
     let builder = SchemaBuilder()
@@ -249,8 +264,10 @@ func actionSchemas() -> JSONValue {
         "run": "folio run <command> --input '<JSON>'",
         "result": [
             "type": "object",
-            "properties": ["action": ["type": "string"], "dryRun": ["type": "boolean"], "made": ["type": "string", "format": "uuid"],
-                           "changes": ["type": "array"]],
+            "properties": [
+                "action": ["type": "string"], "dryRun": ["type": "boolean"], "made": ["type": "string", "format": "uuid"],
+                "changes": ["type": "array"],
+            ],
         ],
         "actions": .array(actions),
         "$defs": .object(builder.defs),
@@ -259,12 +276,21 @@ func actionSchemas() -> JSONValue {
 /// Read from a string as well as its object, so the decoder would see only the string.
 extension AssignmentRepeat: SchemaHint {
     static var schema: JSONValue {
-        let rule: JSONValue = ["type": "object", "required": .array(["every", "unit"]), "properties": [
-            "every": ["type": "integer", "minimum": .number(1)],
-            "unit": ["type": "string", "enum": .array(Unit.allCases.map { .string($0.rawValue) })],
-            "weekdays": ["type": "array", "items": ["type": "integer", "minimum": .number(1), "maximum": .number(7)], "description": "ISO weekdays, 1 = Monday; week only"],
-        ]]
-        let words: JSONValue = ["type": "string", "description": "daily, weekly, biweekly, monthly, 3d, 2w, 1m, weekly:mon,wed, 매일, 격일, 3일마다, 격주, 매월, 매주 월수, 월,수마다, 평일마다"]
+        let rule: JSONValue = [
+            "type": "object", "required": .array(["every", "unit"]),
+            "properties": [
+                "every": ["type": "integer", "minimum": .number(1)],
+                "unit": ["type": "string", "enum": .array(Unit.allCases.map { .string($0.rawValue) })],
+                "weekdays": [
+                    "type": "array", "items": ["type": "integer", "minimum": .number(1), "maximum": .number(7)],
+                    "description": "ISO weekdays, 1 = Monday; week only",
+                ],
+            ],
+        ]
+        let words: JSONValue = [
+            "type": "string",
+            "description": "daily, weekly, biweekly, monthly, 3d, 2w, 1m, weekly:mon,wed, 매일, 격일, 3일마다, 격주, 매월, 매주 월수, 월,수마다, 평일마다",
+        ]
         return ["oneOf": .array([rule, words])]
     }
     static var example: Any { AssignmentRepeat.weekly }

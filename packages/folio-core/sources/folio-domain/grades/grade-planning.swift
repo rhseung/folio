@@ -30,7 +30,8 @@ public struct SharedCredits: Sendable, Equatable {
     /// Past the cap, graded credits go first: in-progress ones only lose what the graded ones left of it.
     public var excessEarned: Double { Swift.max(0, earned - cap) + unallowed.filter { $0.finalGrade != nil }.map(\.credits).reduce(0, +) }
     public var excessInProgress: Double {
-        Swift.max(0, earned + inProgress - cap) - Swift.max(0, earned - cap) + unallowed.filter { $0.finalGrade == nil }.map(\.credits).reduce(0, +)
+        Swift.max(0, earned + inProgress - cap) - Swift.max(0, earned - cap)
+            + unallowed.filter { $0.finalGrade == nil }.map(\.credits).reduce(0, +)
     }
     public var isOver: Bool { earned + inProgress > cap }
 }
@@ -115,7 +116,7 @@ extension GPACalculator {
             var s = SharedCredits(categoryId: c.id, cap: cap, courses: [], earned: 0, inProgress: 0)
             for course in courses {
                 guard let ids = countedCategories(of: course, catalog: catalog), ids.contains(c.id),
-                      !otherPrograms(of: course, than: c, catalog: catalog).isEmpty
+                    !otherPrograms(of: course, than: c, catalog: catalog).isEmpty
                 else { continue }
                 if !canShare(course, under: c, catalog: catalog) { s.unallowed.append(course); continue }
                 s.courses.append(course)
@@ -132,7 +133,9 @@ extension GPACalculator {
         if others.isEmpty || course.sharingApproved == true { return true }
         // By prefix: the catalog can hold the same prefix twice (one per handbook year), under different ids.
         let prefixes = Set(course.codes.compactMap { catalog.code($0)?.prefix })
-        return (others + [catalog.program(of: capped)].compactMap { $0 }).allSatisfy { catalog.code($0).map { prefixes.contains($0.prefix) } ?? false }
+        return (others + [catalog.program(of: capped)].compactMap { $0 }).allSatisfy {
+            catalog.code($0).map { prefixes.contains($0.prefix) } ?? false
+        }
     }
 
     /// Whether listing the course under `categoryIds` would share it where it may not; for blocking a pick before it is made.
@@ -156,7 +159,9 @@ extension GPACalculator {
     /// Only top-level caps are applied: a capped child sits inside its parent, so subtracting both would count twice.
     public static func graduation(semesters: [Semester], courses: [Course], catalog: Catalog) -> GraduationProgress {
         let regular = Set(semesters.filter { $0.term != .credited }.map(\.id))
-        let earned = semesters.compactMap(\.creditedHours).reduce(0, +) + courses
+        let earned =
+            semesters.compactMap(\.creditedHours).reduce(0, +)
+            + courses
             .filter { regular.contains($0.semesterId ?? UUID()) && catalog.grade($0.finalGrade)?.earnsCredits == true }
             .map(\.credits).reduce(0, +)
 

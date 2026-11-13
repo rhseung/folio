@@ -4,9 +4,11 @@ import SwiftSyntax
 // a module reaching a system framework its layer has no business with.
 extension Rules {
     static var layer: Rule {
-        Rule(name: "layer",
-             advice: "keep each layer to its job (AGENTS.md \"레이어\"): packages draw no UI, FolioDomain and FolioMarkdown don't "
-                 + "touch the disk, screens reach files through FolioActions or their model's Workspace") { code in
+        Rule(
+            name: "layer",
+            advice: "keep each layer to its job (AGENTS.md \"레이어\"): packages draw no UI, FolioDomain and FolioMarkdown don't "
+                + "touch the disk, screens reach files through FolioActions or their model's Workspace"
+        ) { code in
             var hits: [Hit] = []
             for file in code.files(under: "packages") where file.path.contains("/sources/") {
                 for declaration in file.nodes(ImportDeclSyntax.self) {
@@ -43,11 +45,13 @@ extension Rules {
         for call in file.nodes(FunctionCallExprSyntax.self) {
             guard let label = call.arguments.first?.label?.text else { continue }
             if let reference = call.calledExpression.as(DeclReferenceExprSyntax.self),
-               contentsTypes.contains(reference.baseName.text), label == "contentsOf" || label == "contentsOfFile" {
+                contentsTypes.contains(reference.baseName.text), label == "contentsOf" || label == "contentsOfFile"
+            {
                 hits.append(Hit("layer", file, file.line(of: call), "disk: \(reference.baseName.text)(\(label):"))
             }
             if let member = call.calledExpression.as(MemberAccessExprSyntax.self), member.declName.baseName.text == "write",
-               label == "to" {
+                label == "to"
+            {
                 hits.append(Hit("layer", file, file.line(of: member.declName), "disk: .write(to:"))
             }
         }

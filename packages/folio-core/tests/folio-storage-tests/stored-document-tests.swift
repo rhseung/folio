@@ -1,7 +1,8 @@
 import FolioDomain
-@testable import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioStorage
 
 struct StoredDocumentTests {
     let dir = FileManager.default.temporaryDirectory.appending(path: "folio-\(UUID().uuidString)")
@@ -17,29 +18,29 @@ struct StoredDocumentTests {
     }
 
     let courseJSON = """
-    {
-      "schemaVersion": 1,
-      "futureTopLevel": {"a": 1},
-      "course": {
-        "id": "C0000000-0000-4000-8000-000000000001",
-        "createdAt": "2026-08-25T09:00:00.000Z", "updatedAt": "2026-08-25T09:00:00.000Z",
-        "updatedBy": "D0000000-0000-4000-8000-000000000001",
-        "title": "그래프 이론", "titleEn": "", "codes": [], "number": "", "categoryIds": [], "instructorIds": [],
-        "credits": 3, "gradingMode": "relative", "schedule": [], "color": "", "folderRoles": {}, "memo": "",
-        "absoluteScore": 91.5,
-        "futureCourseField": "keep me"
-      },
-      "materials": [
         {
-          "id": "A0000000-0000-4000-8000-000000000001",
-          "createdAt": "2026-08-25T09:00:00.000Z", "updatedAt": "2026-08-25T09:00:00.000Z",
-          "updatedBy": "D0000000-0000-4000-8000-000000000001",
-          "path": "Lectures/01_Intro.pdf", "isFolder": false, "sessionIds": [], "unitIds": [], "status": "classified",
-          "futureMaterialField": [1, 2]
+          "schemaVersion": 1,
+          "futureTopLevel": {"a": 1},
+          "course": {
+            "id": "C0000000-0000-4000-8000-000000000001",
+            "createdAt": "2026-08-25T09:00:00.000Z", "updatedAt": "2026-08-25T09:00:00.000Z",
+            "updatedBy": "D0000000-0000-4000-8000-000000000001",
+            "title": "그래프 이론", "titleEn": "", "codes": [], "number": "", "categoryIds": [], "instructorIds": [],
+            "credits": 3, "gradingMode": "relative", "schedule": [], "color": "", "folderRoles": {}, "memo": "",
+            "absoluteScore": 91.5,
+            "futureCourseField": "keep me"
+          },
+          "materials": [
+            {
+              "id": "A0000000-0000-4000-8000-000000000001",
+              "createdAt": "2026-08-25T09:00:00.000Z", "updatedAt": "2026-08-25T09:00:00.000Z",
+              "updatedBy": "D0000000-0000-4000-8000-000000000001",
+              "path": "Lectures/01_Intro.pdf", "isFolder": false, "sessionIds": [], "unitIds": [], "status": "classified",
+              "futureMaterialField": [1, 2]
+            }
+          ]
         }
-      ]
-    }
-    """
+        """
 
     @Test func preservesUnknownKeysAndDropsClearedOnes() throws {
         try writeRaw(courseJSON)
@@ -62,14 +63,14 @@ struct StoredDocumentTests {
     /// Sessions lost their topic (#336); a file that has one keeps it through a save, as any unknown field.
     @Test func aSessionKeepsTheTopicItNoLongerHas() throws {
         let session = """
-          "sessions": [{
-            "id": "5E000000-0000-4000-8000-000000000001",
-            "createdAt": "2026-09-01T00:00:00.000Z", "updatedAt": "2026-09-01T00:00:00.000Z",
-            "updatedBy": "D0000000-0000-4000-8000-000000000001",
-            "week": 1, "date": "2026-09-01T01:00:00.000Z", "topic": "매칭 보강",
-            "unitIds": [], "inkIds": [], "materials": []
-          }],
-        """
+              "sessions": [{
+                "id": "5E000000-0000-4000-8000-000000000001",
+                "createdAt": "2026-09-01T00:00:00.000Z", "updatedAt": "2026-09-01T00:00:00.000Z",
+                "updatedBy": "D0000000-0000-4000-8000-000000000001",
+                "week": 1, "date": "2026-09-01T01:00:00.000Z", "topic": "매칭 보강",
+                "unitIds": [], "inkIds": [], "materials": []
+              }],
+            """
         try writeRaw(courseJSON.replacingOccurrences(of: "  \"materials\": [", with: session + "\n  \"materials\": ["))
         var doc = try StoredDocument<CourseFile>.read(from: url)
         doc.model.sessions[0].isCancelled = true
@@ -83,14 +84,14 @@ struct StoredDocumentTests {
     /// changing the kind swaps the flags without touching fields the app doesn't know.
     @Test func aSessionKindRoundTripsAsItsFlags() throws {
         let session = """
-          "sessions": [{
-            "id": "5E000000-0000-4000-8000-000000000001",
-            "createdAt": "2026-09-01T00:00:00.000Z", "updatedAt": "2026-09-01T00:00:00.000Z",
-            "updatedBy": "D0000000-0000-4000-8000-000000000001",
-            "week": 1, "date": "2026-09-01T01:00:00.000Z", "futureSessionField": "keep me",
-            "unitIds": [], "inkIds": [], "materials": []
-          }],
-        """
+              "sessions": [{
+                "id": "5E000000-0000-4000-8000-000000000001",
+                "createdAt": "2026-09-01T00:00:00.000Z", "updatedAt": "2026-09-01T00:00:00.000Z",
+                "updatedBy": "D0000000-0000-4000-8000-000000000001",
+                "week": 1, "date": "2026-09-01T01:00:00.000Z", "futureSessionField": "keep me",
+                "unitIds": [], "inkIds": [], "materials": []
+              }],
+            """
         try writeRaw(courseJSON.replacingOccurrences(of: "  \"materials\": [", with: session + "\n  \"materials\": ["))
         func raw() throws -> JSONValue? {
             guard case .array(let sessions)? = try readRaw()["sessions"] else { return nil }
@@ -146,7 +147,7 @@ struct StoredDocumentTests {
             1: { raw in
                 raw["name"] = raw["title"]
                 raw["title"] = nil
-            },
+            }
         ]
         var name: String
     }

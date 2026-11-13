@@ -14,7 +14,8 @@ extension CourseRef {
 }
 
 func absolute(_ path: String) -> String {
-    URL(filePath: (path as NSString).expandingTildeInPath, relativeTo: URL(filePath: FileManager.default.currentDirectoryPath + "/")).standardizedFileURL.path
+    URL(filePath: (path as NSString).expandingTildeInPath, relativeTo: URL(filePath: FileManager.default.currentDirectoryPath + "/"))
+        .standardizedFileURL.path
 }
 
 struct MaterialCommand: ParsableCommand {
@@ -24,9 +25,11 @@ struct MaterialCommand: ParsableCommand {
             + GeneratedCommands.material)
 
     struct List: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .materialListAbstract), discussion: String(localized: .materialListDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .materialListAbstract), discussion: String(localized: .materialListDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String = ""
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses))
+        var course: String = ""
         @Flag(help: ArgumentHelp(String(localized: .materialListHelpAll))) var all = false
         @Flag(help: ArgumentHelp(String(localized: .commonHelpLines))) var lines = false
 
@@ -37,14 +40,20 @@ struct MaterialCommand: ParsableCommand {
             let materials = f.materials.sorted { $0.path < $1.path }.filter { all || $0.status != .ignored }
             if g.json { return try printJSON(materials) }
             func sessions(_ m: Material) -> String {
-                f.sessions.filter { s in s.materials.contains { $0.materialId == m.id } }.map { f.reference(of: $0, calendar: r.ctx.calendar) }.joined(separator: ", ")
+                f.sessions.filter { s in s.materials.contains { $0.materialId == m.id } }.map {
+                    f.reference(of: $0, calendar: r.ctx.calendar)
+                }.joined(separator: ", ")
             }
             if lines {
                 for m in materials { line(["\(c.code)/\(m.path)", m.role?.rawValue ?? "", m.status.rawValue, sessions(m)]) }
                 return
             }
             courseHeader(c, catalog: try? r.ctx.catalog())
-            var t = Table(header: [String(localized: .materialListHeaderPath), String(localized: .materialListHeaderRole), String(localized: .materialListHeaderStatus), String(localized: .materialListHeaderSession)], shrink: [3])
+            var t = Table(
+                header: [
+                    String(localized: .materialListHeaderPath), String(localized: .materialListHeaderRole),
+                    String(localized: .materialListHeaderStatus), String(localized: .materialListHeaderSession),
+                ], shrink: [3])
             for m in materials {
                 t.rows.append([m.path, m.role?.rawValue ?? "", m.status.rawValue.toned, sessions(m)])
             }
@@ -54,9 +63,11 @@ struct MaterialCommand: ParsableCommand {
     }
 
     struct Show: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .materialShowAbstract), discussion: String(localized: .materialShowDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .materialShowAbstract), discussion: String(localized: .materialShowDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .materialShowHelpMaterial), valueName: "material"), completion: Complete.materials) var material: String = ""
+        @Argument(help: ArgumentHelp(String(localized: .materialShowHelpMaterial), valueName: "material"), completion: Complete.materials)
+        var material: String = ""
 
         func run() throws {
             let r = Resolver(try CLI.context(g))
@@ -89,10 +100,13 @@ struct MaterialCommand: ParsableCommand {
     }
 
     struct Link: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .materialLinkAbstract), discussion: String(localized: .materialLinkDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .materialLinkAbstract), discussion: String(localized: .materialLinkDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .commonHelpMaterial), valueName: "material"), completion: Complete.materials) var material: String
-        @Argument(help: ArgumentHelp(String(localized: .materialLinkHelpSession), valueName: "session"), completion: Complete.sessions) var session: String = ""
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpMaterial), valueName: "material"), completion: Complete.materials)
+        var material: String
+        @Argument(help: ArgumentHelp(String(localized: .materialLinkHelpSession), valueName: "session"), completion: Complete.sessions)
+        var session: String = ""
         @Option(help: ArgumentHelp(String(localized: .materialLinkHelpPages), valueName: "pages")) var pages: String?
         @Flag(help: ArgumentHelp(String(localized: .materialLinkHelpOff))) var off = false
 
@@ -103,16 +117,22 @@ struct MaterialCommand: ParsableCommand {
             let m = try r.material(name, in: c)
             let s = try r.session(c.local(session), in: c)
             let bounds = pages?.split(separator: "-").compactMap { Int($0) } ?? []
-            guard pages == nil || (1...2).contains(bounds.count) else { throw CLIError(exit: .usage, message: String(localized: .materialLinkPagesFormat)) }
-            try perform(spec: MaterialLinkSession(course: c.id, material: m.id, session: s.id, linked: !off, firstPage: bounds.first, lastPage: bounds.last),
-                        g, ctx: ctx)
+            guard pages == nil || (1...2).contains(bounds.count) else {
+                throw CLIError(exit: .usage, message: String(localized: .materialLinkPagesFormat))
+            }
+            try perform(
+                spec: MaterialLinkSession(
+                    course: c.id, material: m.id, session: s.id, linked: !off, firstPage: bounds.first, lastPage: bounds.last),
+                g, ctx: ctx)
         }
     }
 
     struct Relink: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .materialRelinkAbstract), discussion: String(localized: .materialRelinkDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .materialRelinkAbstract), discussion: String(localized: .materialRelinkDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .commonHelpMaterial), valueName: "material"), completion: Complete.materials) var material: String
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpMaterial), valueName: "material"), completion: Complete.materials)
+        var material: String
         @Argument(help: ArgumentHelp(String(localized: .materialRelinkHelpFile), valueName: "file"), completion: .file()) var file: String
 
         func run() throws {
@@ -126,9 +146,11 @@ struct MaterialCommand: ParsableCommand {
     }
 
     struct Write: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .materialWriteAbstract), discussion: String(localized: .materialWriteDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .materialWriteAbstract), discussion: String(localized: .materialWriteDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .commonHelpMaterial), valueName: "material"), completion: Complete.materials) var material: String
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpMaterial), valueName: "material"), completion: Complete.materials)
+        var material: String
         @Option(help: ArgumentHelp(String(localized: .noteWriteHelpFile), valueName: "file"), completion: .file()) var file: String
         @Option(help: ArgumentHelp(String(localized: .materialWriteHelpExpect), valueName: "hash")) var expect: String?
 
@@ -141,8 +163,9 @@ struct MaterialCommand: ParsableCommand {
             if let expect, MaterialFormat(path: m.path).isText {
                 let current = try c.store.readText(m.path)
                 guard contentHash(current) == expect.lowercased() else {
-                    throw CLIError(exit: .conflict, message: String(localized: .materialWriteConflict(m.path)),
-                                   hints: [String(localized: .materialWriteConflictHint(c.code, m.path))])
+                    throw CLIError(
+                        exit: .conflict, message: String(localized: .materialWriteConflict(m.path)),
+                        hints: [String(localized: .materialWriteConflictHint(c.code, m.path))])
                 }
                 // The action checks again right before writing, so a change between here and there is caught too.
                 expected = current
@@ -152,26 +175,35 @@ struct MaterialCommand: ParsableCommand {
     }
 
     struct Import: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .materialImportAbstract), discussion: String(localized: .materialImportDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .materialImportAbstract), discussion: String(localized: .materialImportDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String
-        @Argument(help: ArgumentHelp(String(localized: .materialImportHelpFiles), valueName: "file"), completion: .file()) var files: [String]
-        @Option(help: ArgumentHelp(String(localized: .materialImportHelpFolder), valueName: "folder"), completion: .directory) var folder: String
-        @Option(help: ArgumentHelp(String(localized: .materialImportHelpSession), valueName: "session"), completion: Complete.sessions) var session: String?
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses))
+        var course: String
+        @Argument(help: ArgumentHelp(String(localized: .materialImportHelpFiles), valueName: "file"), completion: .file()) var files:
+            [String]
+        @Option(help: ArgumentHelp(String(localized: .materialImportHelpFolder), valueName: "folder"), completion: .directory) var folder:
+            String
+        @Option(help: ArgumentHelp(String(localized: .materialImportHelpSession), valueName: "session"), completion: Complete.sessions)
+        var session: String?
 
         func run() throws {
             let ctx = try CLI.context(g)
             let r = Resolver(ctx)
             let c = try r.course(course)
             let s = try session.map { try r.session(c.local($0), in: c).id }
-            try perform(spec: MaterialImport(course: c.id, items: files.map { ImportItem(file: absolute($0), folder: folder, session: s) }), g, ctx: ctx)
+            try perform(
+                spec: MaterialImport(course: c.id, items: files.map { ImportItem(file: absolute($0), folder: folder, session: s) }), g,
+                ctx: ctx)
         }
     }
 
     struct Split: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .materialSplitAbstract), discussion: String(localized: .materialSplitDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .materialSplitAbstract), discussion: String(localized: .materialSplitDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .commonHelpMaterial), valueName: "material"), completion: Complete.materials) var material: String
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpMaterial), valueName: "material"), completion: Complete.materials)
+        var material: String
         @Argument(help: ArgumentHelp(String(localized: .materialSplitHelpSections), valueName: "pages:unit")) var sections: [String] = []
 
         func run() throws {
@@ -183,13 +215,17 @@ struct MaterialCommand: ParsableCommand {
             var made: [String: UUID] = [:]
             let cuts = try sections.map { arg in
                 // The first colon: the pages never hold one, a unit's title may.
-                guard let colon = arg.firstIndex(of: ":") else { throw CLIError(exit: .usage, message: String(localized: .materialSplitFormat(arg))) }
+                guard let colon = arg.firstIndex(of: ":") else {
+                    throw CLIError(exit: .usage, message: String(localized: .materialSplitFormat(arg)))
+                }
                 let bounds = arg[..<colon].split(separator: "-", omittingEmptySubsequences: false).map { Int($0) }
                 let title = String(arg[arg.index(after: colon)...]).trimmingCharacters(in: .whitespaces)
                 guard (1...2).contains(bounds.count), let first = bounds.first ?? nil, let last = bounds.last ?? nil, !title.isEmpty else {
                     throw CLIError(exit: .usage, message: String(localized: .materialSplitFormat(arg)))
                 }
-                if let unit = c.file.units.first(where: { $0.title == title }) { return LectureCut(unit: unit.id, firstPage: first, lastPage: last) }
+                if let unit = c.file.units.first(where: { $0.title == title }) {
+                    return LectureCut(unit: unit.id, firstPage: first, lastPage: last)
+                }
                 let id = made[title] ?? UUID()
                 made[title] = id
                 return LectureCut(unit: id, title: title, firstPage: first, lastPage: last)

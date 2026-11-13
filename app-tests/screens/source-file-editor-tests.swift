@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import Testing
+
 @testable import Folio
 
 @MainActor @Suite(.serialized)
@@ -11,12 +12,14 @@ struct SourceFileEditorTests {
             var reveal: Int?
         }
         let box = Box()
-        let editor = SourceFileEditor(text: Binding(get: { box.text }, set: { box.text = $0 }), language: "latex",
-                                      reveal: Binding(get: { box.reveal }, set: { box.reveal = $0 }))
+        let editor = SourceFileEditor(
+            text: Binding(get: { box.text }, set: { box.text = $0 }), language: "latex",
+            reveal: Binding(get: { box.reveal }, set: { box.reveal = $0 }))
         let coordinator = editor.makeCoordinator()
         let scroll = editor.makeView(coordinator)
         let view = try #require(scroll.documentView as? SourceFileTextView)
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 600, height: 400), styleMask: [.borderless], backing: .buffered, defer: false)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 600, height: 400), styleMask: [.borderless], backing: .buffered, defer: false)
         scroll.frame = window.contentView!.bounds
         window.contentView!.addSubview(scroll)
         window.makeFirstResponder(view)

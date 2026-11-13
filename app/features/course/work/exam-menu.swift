@@ -29,9 +29,11 @@ struct ExamMenuSource: ItemMenuSource {
         case .summary:
             MenuRow(command, hasSummary ? .examsSummaryOpen : .examsSummaryMake, "doc.text", .action(openSummary))
         case .addFiles:
-            MenuRow(command, .menuAddFilesEllipsis, "doc.badge.plus", .action {
-                if let folder = MaterialIntake.folder(of: exam) { sheets.addFiles(FileIntake(course: courseId, folder: folder)) }
-            })
+            MenuRow(
+                command, .menuAddFilesEllipsis, "doc.badge.plus",
+                .action {
+                    if let folder = MaterialIntake.folder(of: exam) { sheets.addFiles(FileIntake(course: courseId, folder: folder)) }
+                })
         case .edit:
             .edit(command) { sheets.present(.exam(course: courseId, exam: exam.id)) }
         case .share:
@@ -64,8 +66,10 @@ struct ExamMenu: View {
 
     var body: some View {
         if let exam = workspace.course(courseId)?.file.exams.first(where: { $0.id == examId }) {
-            ItemMenu(source: ExamMenuSource(workspace: workspace, courseId: courseId, exam: exam, host: host, summary: summary,
-                                            openLink: openLink, sheets: sheets))
+            ItemMenu(
+                source: ExamMenuSource(
+                    workspace: workspace, courseId: courseId, exam: exam, host: host, summary: summary,
+                    openLink: openLink, sheets: sheets))
         }
     }
 }
@@ -89,7 +93,9 @@ struct PlanItemMenu: View {
     let toggle: () -> Void
 
     var body: some View {
-        ItemMenu(source: PlanItemMenuSource(workspace: workspace, courseId: courseId, examId: examId, item: item, done: done, toggle: toggle, sheets: sheets))
+        ItemMenu(
+            source: PlanItemMenuSource(
+                workspace: workspace, courseId: courseId, examId: examId, item: item, done: done, toggle: toggle, sheets: sheets))
     }
 }
 

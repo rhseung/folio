@@ -63,7 +63,8 @@ struct BackupRetentionTests {
 
 struct ServiceSettingsTests {
     @Test func oldSettingsFileGetsNewDefaults() throws {
-        let s = try JSONDecoder().decode(Settings.self, from: Data(#"{"dayBoundaryMinutes":300,"notifications":{"examMorning":false}}"#.utf8))
+        let s = try JSONDecoder().decode(
+            Settings.self, from: Data(#"{"dayBoundaryMinutes":300,"notifications":{"examMorning":false}}"#.utf8))
         #expect(s.dayBoundaryMinutes == 300)
         #expect(s.notifications.examMorning == false)
         #expect(s.notifications.assignmentLeadHours == [24, 3] && s.notifications.dailyReview)
@@ -104,8 +105,9 @@ struct NotificationPlanTests {
         file.sessions = sessions
         file.attendance = sessions.map { Attendance(device: device, at: now, sessionId: $0.id, state: .absent) }
 
-        let plan = NotificationPlan.build(courses: [file], reviewCount: { $0 < at(25, 0) ? 2 : 0 }, settings: NotificationSettings(),
-                                          now: now, calendar: calendar)
+        let plan = NotificationPlan.build(
+            courses: [file], reviewCount: { $0 < at(25, 0) ? 2 : 0 }, settings: NotificationSettings(),
+            now: now, calendar: calendar)
         let ids = plan.map(\.id)
         #expect(plan.first?.kind == .attendanceOneAway(absences: 5))
         #expect(plan.filter { if case .assignmentDue = $0.kind { true } else { false } }.map(\.date) == [at(23, 23), at(24, 20)])

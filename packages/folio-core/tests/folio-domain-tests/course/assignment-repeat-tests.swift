@@ -39,7 +39,9 @@ struct AssignmentRepeatTests {
         let monWed = AssignmentRepeat(.week, weekdays: [1, 3])
         #expect(monWed.next(after: mon, calendar: c) == date("2026-11-04 09:00", c))
         #expect(monWed.next(after: date("2026-11-04 09:00", c), calendar: c) == date("2026-11-09 09:00", c))
-        #expect(AssignmentRepeat(every: 2, .week, weekdays: [1, 3]).next(after: date("2026-11-04 09:00", c), calendar: c) == date("2026-11-16 09:00", c))
+        #expect(
+            AssignmentRepeat(every: 2, .week, weekdays: [1, 3]).next(after: date("2026-11-04 09:00", c), calendar: c)
+                == date("2026-11-16 09:00", c))
 
         // A deadline moved off the rule's days goes back onto them.
         #expect(monWed.next(after: date("2026-11-06 09:00", c), calendar: c) == date("2026-11-09 09:00", c))
@@ -71,7 +73,8 @@ struct AssignmentRepeatTests {
     @Test func theNextDeadlineIsLaterOnTheRulesDay() async {
         let calendars = [seoul, newYork]
         let base = date("2026-01-01 00:00", seoul)
-        await propertyCheck(input: Self.rule, Gen.int(in: 0...(3 * 365 * 24 * 4)), Gen.int(in: 0...1), Gen.int(in: 1...31)) { rule, quarters, zone, day in
+        await propertyCheck(input: Self.rule, Gen.int(in: 0...(3 * 365 * 24 * 4)), Gen.int(in: 0...1), Gen.int(in: 1...31)) {
+            rule, quarters, zone, day in
             let c = calendars[zone]
             let due = base.addingTimeInterval(Double(quarters) * 15 * 60)
             let next = rule.next(after: due, day: day, calendar: c)
@@ -152,8 +155,9 @@ struct AssignmentRepeatTests {
     @Test func storedAsAnObjectAndReadFromTheOldString() throws {
         let rule = AssignmentRepeat(every: 2, .week, weekdays: [1, 3])
         let json = try JSONEncoder().encode(rule)
-        #expect(try JSONDecoder().decode(JSONValue.self, from: json)
-            == .object(["every": .number(2), "unit": .string("week"), "weekdays": .array([.number(1), .number(3)])]))
+        #expect(
+            try JSONDecoder().decode(JSONValue.self, from: json)
+                == .object(["every": .number(2), "unit": .string("week"), "weekdays": .array([.number(1), .number(3)])]))
         #expect(try JSONDecoder().decode(AssignmentRepeat.self, from: json) == rule)
         #expect(try JSONDecoder().decode(AssignmentRepeat.self, from: Data(#""weekly""#.utf8)) == .weekly)
         #expect(throws: DecodingError.self) { try JSONDecoder().decode(AssignmentRepeat.self, from: Data(#""someday""#.utf8)) }

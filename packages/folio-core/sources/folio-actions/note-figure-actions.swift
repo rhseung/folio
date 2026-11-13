@@ -6,10 +6,11 @@ import Foundation
 // write is checked before it lands: what fails here would otherwise show up only as a broken drawing in the note.
 // No examples: the equivalence test runs each one for real, and these read their text from a file.
 
-@Action("note figure add", "노트 그림(SVG)을 Notes/assets에 새로 쓰기. 같은 이름이 있으면 쓰지 않는다. 노트에는 ![설명](assets/<이름>.svg)로 넣는다",
-        discussion: "XML이 올바른지, 스크립트와 바깥 참조가 없는지, 다크 모드 규칙(prefers-color-scheme: dark)이 있는지 본다. 노트 형식은 folio note format.",
-        effect: .creates, done: "그림 '{name}'을(를) 만들었습니다",
-        phrases: ["그림 추가", "SVG 그림 넣기", "노트 그림 만들기", "도식 그리기", "다이어그램 그림"])
+@Action(
+    "note figure add", "노트 그림(SVG)을 Notes/assets에 새로 쓰기. 같은 이름이 있으면 쓰지 않는다. 노트에는 ![설명](assets/<이름>.svg)로 넣는다",
+    discussion: "XML이 올바른지, 스크립트와 바깥 참조가 없는지, 다크 모드 규칙(prefers-color-scheme: dark)이 있는지 본다. 노트 형식은 folio note format.",
+    effect: .creates, done: "그림 '{name}'을(를) 만들었습니다",
+    phrases: ["그림 추가", "SVG 그림 넣기", "노트 그림 만들기", "도식 그리기", "다이어그램 그림"])
 public struct NoteFigureAdd {
     /// 과목
     @Arg var course: Course.ID
@@ -42,8 +43,9 @@ public struct NoteFigureAdd {
 
 /// Replaces the whole file against the hash of what was read, as `note write` does: a picture changed meanwhile by
 /// the app or another device is not overwritten.
-@Action("note figure write", "노트 그림(SVG) 전체를 바꾸기. note figure show의 해시를 --expect로 넘겨 그사이 바뀌지 않았는지 확인한다",
-        done: "그림 '{name}'을(를) 썼습니다", phrases: ["그림 다시 그리기", "SVG 수정"])
+@Action(
+    "note figure write", "노트 그림(SVG) 전체를 바꾸기. note figure show의 해시를 --expect로 넘겨 그사이 바뀌지 않았는지 확인한다",
+    done: "그림 '{name}'을(를) 썼습니다", phrases: ["그림 다시 그리기", "SVG 수정"])
 public struct NoteFigureWrite {
     /// 과목
     @Arg var course: Course.ID
@@ -72,10 +74,11 @@ public struct NoteFigureWrite {
     }
 }
 
-@Action("note widget add", "노트 위젯 HTML을 .folio/widgets에 새로 쓰기. 노트에는 cb-widget 블록 {\"id\": \"<ID>\", \"height\": 320}으로 넣는다",
-        discussion: "바깥 파일과 주소를 불러오는 부분이 있으면 쓰지 않는다. 위젯 환경은 folio note format.",
-        effect: .creates, done: "위젯 {id}을(를) 만들었습니다",
-        phrases: ["위젯 만들기", "인터랙티브 위젯", "cb-widget 추가", "위젯 HTML"])
+@Action(
+    "note widget add", "노트 위젯 HTML을 .folio/widgets에 새로 쓰기. 노트에는 cb-widget 블록 {\"id\": \"<ID>\", \"height\": 320}으로 넣는다",
+    discussion: "바깥 파일과 주소를 불러오는 부분이 있으면 쓰지 않는다. 위젯 환경은 folio note format.",
+    effect: .creates, done: "위젯 {id}을(를) 만들었습니다",
+    phrases: ["위젯 만들기", "인터랙티브 위젯", "cb-widget 추가", "위젯 HTML"])
 public struct NoteWidgetAdd {
     /// 과목
     @Arg var course: Course.ID
@@ -100,8 +103,9 @@ public struct NoteWidgetAdd {
     }
 }
 
-@Action("note widget write", "노트 위젯 HTML 전체를 바꾸기. note widget show의 해시를 --expect로 넘겨 그사이 바뀌지 않았는지 확인한다",
-        done: "위젯 {widget}을(를) 썼습니다", phrases: ["위젯 다시 쓰기", "위젯 수정"])
+@Action(
+    "note widget write", "노트 위젯 HTML 전체를 바꾸기. note widget show의 해시를 --expect로 넘겨 그사이 바뀌지 않았는지 확인한다",
+    done: "위젯 {widget}을(를) 썼습니다", phrases: ["위젯 다시 쓰기", "위젯 수정"])
 public struct NoteWidgetWrite {
     /// 과목
     @Arg var course: Course.ID

@@ -3,6 +3,7 @@ import FolioDomain
 import FolioStorage
 import Foundation
 import Testing
+
 @testable import Folio
 
 /// 그래프 이론 in the standard fixture has `Study/Problems.tex` next to its PDF.
@@ -139,25 +140,25 @@ struct TextFileModelTests {
         try FileManager.default.copyItem(at: shown, to: folder.appending(path: "Problems.pdf"))
         let synctex = folder.appending(path: "Problems.synctex")
         try """
-            SyncTeX Version:1
-            Input:1:\(model.fileURL.path)
-            Input:2:\(model.fileURL.deletingLastPathComponent().path)/part.tex
-            Magnification:1000
-            Unit:1
-            X Offset:0
-            Y Offset:0
-            Content:
-            {1
-            [1,9:8799519,44254495:22609920,36044800,0
-            (1,4:8799519,8865055:22609920,454820,7208
-            g1,3:11475354,8865055
-            )
-            (2,6:8799519,9651487:22609920,533465,135003
-            g2,5:12003574,9651487
-            )
-            ]
-            }1
-            """.write(to: synctex, atomically: true, encoding: .utf8)
+        SyncTeX Version:1
+        Input:1:\(model.fileURL.path)
+        Input:2:\(model.fileURL.deletingLastPathComponent().path)/part.tex
+        Magnification:1000
+        Unit:1
+        X Offset:0
+        Y Offset:0
+        Content:
+        {1
+        [1,9:8799519,44254495:22609920,36044800,0
+        (1,4:8799519,8865055:22609920,454820,7208
+        g1,3:11475354,8865055
+        )
+        (2,6:8799519,9651487:22609920,533465,135003
+        g2,5:12003574,9651487
+        )
+        ]
+        }1
+        """.write(to: synctex, atomically: true, encoding: .utf8)
         let gzip = Process()
         gzip.executableURL = URL(filePath: "/usr/bin/gzip")
         gzip.arguments = ["-f", synctex.path]

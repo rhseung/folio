@@ -10,8 +10,10 @@ struct ScoreEntrySheet: View {
     }
 
     var body: some View {
-        SheetForm(title: model.sheetTitle, confirm: model.confirmTitle, disabled: !model.valid,
-                  deleteTitle: model.isNew ? nil : String(localized: .scoreSheetRemove), onDelete: { model.remove { dismiss() } }) {
+        SheetForm(
+            title: model.sheetTitle, confirm: model.confirmTitle, disabled: !model.valid,
+            deleteTitle: model.isNew ? nil : String(localized: .scoreSheetRemove), onDelete: { model.remove { dismiss() } }
+        ) {
             // A new score is added from its component's tile, which already picked the component.
             if !model.isNew {
                 FormRow(label: String(localized: .scoreSheetComponent)) {
@@ -21,7 +23,11 @@ struct ScoreEntrySheet: View {
             FormRow(label: String(localized: .scoreSheetSource), detail: String(localized: .scoreSheetSourceDetail)) {
                 SearchSelect(selection: Binding(get: { model.source }, set: { model.pick($0) }), options: model.sourceOptions)
             }
-            if model.hasTitle { FormRow(label: String(localized: .scoreSheetTitle)) { InlineField(String(localized: .scoreSheetTitleExample), text: $model.title) } }
+            if model.hasTitle {
+                FormRow(label: String(localized: .scoreSheetTitle)) {
+                    InlineField(String(localized: .scoreSheetTitleExample), text: $model.title)
+                }
+            }
             FormRow(label: String(localized: .scoreSheetScore)) {
                 HStack(spacing: Theme.Space.s) {
                     TextField(String(localized: .scoreSheetScore), text: $model.score).pill(width: 72)
@@ -37,7 +43,9 @@ struct ScoreEntrySheet: View {
                 }
             }
             FormRow(label: String(localized: .scoreSheetCounts), detail: String(localized: .scoreSheetCountsDetail), last: true) {
-                ChoiceMenu(selection: $model.excused, options: [(false, String(localized: .scoreSheetCounts)), (true, String(localized: .courseGradesExcused))])
+                ChoiceMenu(
+                    selection: $model.excused,
+                    options: [(false, String(localized: .scoreSheetCounts)), (true, String(localized: .courseGradesExcused))])
             }
         } onConfirm: {
             if model.confirm() { dismiss() }
@@ -55,9 +63,13 @@ struct ComponentSheet: View {
     }
 
     var body: some View {
-        SheetForm(title: model.sheetTitle, confirm: model.confirmTitle, disabled: model.invalid,
-                  deleteTitle: model.isNew ? nil : String(localized: .componentSheetRemove), onDelete: { model.remove { dismiss() } }) {
-            FormRow(label: String(localized: .componentSheetName)) { InlineField(String(localized: .componentSheetNameExample), text: $model.name) }
+        SheetForm(
+            title: model.sheetTitle, confirm: model.confirmTitle, disabled: model.invalid,
+            deleteTitle: model.isNew ? nil : String(localized: .componentSheetRemove), onDelete: { model.remove { dismiss() } }
+        ) {
+            FormRow(label: String(localized: .componentSheetName)) {
+                InlineField(String(localized: .componentSheetNameExample), text: $model.name)
+            }
             FormRow(label: String(localized: .componentSheetGroup), detail: String(localized: .componentSheetGroupDetail)) {
                 InlineField(String(localized: .componentSheetGroupExample), text: $model.group)
             }
@@ -77,7 +89,10 @@ struct ComponentSheet: View {
             }
             // A single score is one by definition, so a count there would only contradict it.
             if model.aggregation != .single {
-                FormRow(label: String(localized: .componentSheetExpectedCount), detail: String(localized: .componentSheetExpectedCountDetail), last: true) {
+                FormRow(
+                    label: String(localized: .componentSheetExpectedCount), detail: String(localized: .componentSheetExpectedCountDetail),
+                    last: true
+                ) {
                     HStack(spacing: Theme.Space.tight) {
                         TextField(String(localized: .componentSheetUnset), value: $model.expectedCount, format: .number).pill(width: 110)
                         Text(.componentSheetTimesUnit).foregroundStyle(Theme.Palette.textSecondary)
@@ -101,11 +116,17 @@ struct PolicySheet: View {
 
     var body: some View {
         let grades = model.grades
-        SheetForm(title: String(localized: .courseGradesPolicy), confirm: String(localized: .commonSave), disabled: model.invalid, carded: false, width: 560) {
+        SheetForm(
+            title: String(localized: .courseGradesPolicy), confirm: String(localized: .commonSave), disabled: model.invalid, carded: false,
+            width: 560
+        ) {
             if model.isRelative {
                 Block(String(localized: .policySheetRelative)) {
                     Card {
-                        FormRow(label: String(localized: .policySheetTopShare), detail: String(localized: .policySheetTopShareDetail(model.defaultTopShare)), last: true) {
+                        FormRow(
+                            label: String(localized: .policySheetTopShare),
+                            detail: String(localized: .policySheetTopShareDetail(model.defaultTopShare)), last: true
+                        ) {
                             HStack(spacing: Theme.Space.s) {
                                 TextField(model.defaultTopShare, text: $model.topShare).pill(width: 72)
                                 Text("%").foregroundStyle(Theme.Palette.textTertiary)
@@ -114,10 +135,17 @@ struct PolicySheet: View {
                     }
                 }
             }
-            Block(title: String(localized: .policySheetCaps), note: String(localized: .policySheetCapsNote), trailing: {
-                Button { model.addCap() } label: { Label(.policySheetAddCap, systemImage: "plus") }
+            Block(
+                title: String(localized: .policySheetCaps), note: String(localized: .policySheetCapsNote),
+                trailing: {
+                    Button {
+                        model.addCap()
+                    } label: {
+                        Label(.policySheetAddCap, systemImage: "plus")
+                    }
                     .buttonStyle(.ghost).disabled(grades.isEmpty)
-            }) {
+                }
+            ) {
                 Card {
                     if model.caps.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .policySheetNoCaps)) } }
                     ForEach(model.caps.indices, id: \.self) { i in
@@ -128,10 +156,14 @@ struct PolicySheet: View {
                             Text(.policySheetCapFrom).foregroundStyle(Theme.Palette.textSecondary)
                             ChoiceMenu(selection: cap.maxGrade, options: grades.map { ($0.id, $0.symbol) })
                             Spacer()
-                            Button { model.caps.remove(at: i) } label: { Image(systemName: "minus.circle") }
-                                .buttonStyle(.ghost)
-                                .foregroundStyle(Theme.Palette.textTertiary)
-                                .help(Text(.policySheetRemoveCap))
+                            Button {
+                                model.caps.remove(at: i)
+                            } label: {
+                                Image(systemName: "minus.circle")
+                            }
+                            .buttonStyle(.ghost)
+                            .foregroundStyle(Theme.Palette.textTertiary)
+                            .help(Text(.policySheetRemoveCap))
                         }
                     }
                 }
@@ -150,13 +182,15 @@ struct PolicySheet: View {
                             Text("%").foregroundStyle(Theme.Palette.textTertiary)
                         }
                     }
-                    FormRow(label: String(localized: .courseGradesLateSubmission), last: true) { InlineField(String(localized: .policySheetLateSubmissionExample), text: $model.late) }
+                    FormRow(label: String(localized: .courseGradesLateSubmission), last: true) {
+                        InlineField(String(localized: .policySheetLateSubmissionExample), text: $model.late)
+                    }
                 }
             }
-            FormTextArea(label: String(localized: .policySheetNotes), detail: String(localized: .policySheetNotesDetail), text: $model.notes)
+            FormTextArea(
+                label: String(localized: .policySheetNotes), detail: String(localized: .policySheetNotesDetail), text: $model.notes)
         } onConfirm: {
             if model.confirm() { dismiss() }
         }
     }
 }
-

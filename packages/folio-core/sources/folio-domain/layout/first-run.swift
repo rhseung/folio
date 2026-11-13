@@ -33,9 +33,11 @@ public enum FolderKind: Hashable, Sendable {
         let children = tree.children.filter { $0.name == StandardLayout.metadataFolder || !$0.name.hasPrefix(".") }
         guard !children.isEmpty else { self = .empty; return }
         let semesters = children.filter { !$0.isFile && SemesterFolder(name: $0.name) != nil }
-        let marked = !semesters.isEmpty || children.contains {
-            !$0.isFile && ($0.name == StandardLayout.metadataFolder || $0.name == StandardLayout.creditedFolder)
-        }
+        let marked =
+            !semesters.isEmpty
+            || children.contains {
+                !$0.isFile && ($0.name == StandardLayout.metadataFolder || $0.name == StandardLayout.creditedFolder)
+            }
         guard marked else { self = .other; return }
         // Credited courses sit under their source (`_Credited/<source>/<course>`), a level below a semester's.
         let sources = children.filter { !$0.isFile && $0.name == StandardLayout.creditedFolder }.flatMap(\.children)

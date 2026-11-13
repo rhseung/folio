@@ -2,6 +2,7 @@ import FolioActions
 import FolioDomain
 import Foundation
 import SwiftUI
+
 #if os(macOS)
 import AppKit
 #endif
@@ -44,12 +45,13 @@ struct ClassRecordingStop: Equatable {
 
 extension LinkPlacement {
     init(_ place: ClassStartSettings.Place) {
-        self = switch place {
-        case .here: .here
-        case .beside: .beside
-        case .tab: .tab
-        case .window: .window
-        }
+        self =
+            switch place {
+            case .here: .here
+            case .beside: .beside
+            case .tab: .tab
+            case .window: .window
+            }
     }
 }
 
@@ -80,10 +82,13 @@ extension Workspace {
         // while another runs (the class before, kept on until its stop time): it starts the minute that one ends.
         classStartDone[c.key] = done.union(recorderBusy ? due.subtracting([.recording]) : due)
         guard let id = c.sessionId ?? run(SessionAdd(course: c.courseId, date: c.start))?.made,
-              let loaded = course(c.courseId), let session = loaded.file.sessions.first(where: { $0.id == id }) else { return nil }
-        var step = ClassStartStep(ask: ClassStartAsk(course: loaded.id, session: id, front: setting.screen == .front,
-                                                     stopAt: ClassStart.recordingStop(c, settings: setting),
-                                                     title: "\(loaded.title) · \(loaded.file.title(of: session, calendar: calendar))"))
+            let loaded = course(c.courseId), let session = loaded.file.sessions.first(where: { $0.id == id })
+        else { return nil }
+        var step = ClassStartStep(
+            ask: ClassStartAsk(
+                course: loaded.id, session: id, front: setting.screen == .front,
+                stopAt: ClassStart.recordingStop(c, settings: setting),
+                title: "\(loaded.title) · \(loaded.file.title(of: session, calendar: calendar))"))
 
         if due.contains(.open) {
             let pages = classStartPages(for: session, in: loaded.id)
@@ -164,7 +169,8 @@ extension Workspace {
     /// From the prompt, too, once the student said yes. The microphone's refusal is the recorder's error, shown as
     /// any other.
     func recordClass(_ ask: ClassStartAsk) {
-        guard !recorder.isActive, let loaded = course(ask.course), let session = loaded.file.sessions.first(where: { $0.id == ask.session }) else { return }
+        guard !recorder.isActive, let loaded = course(ask.course), let session = loaded.file.sessions.first(where: { $0.id == ask.session })
+        else { return }
         Task {
             await startRecording(session, in: loaded)
             if let stop = ask.stopAt, let id = recorder.current { classRecordingStop = ClassRecordingStop(recording: id, at: stop) }
@@ -204,10 +210,13 @@ struct ClassStartPrompt: ViewModifier {
             .onChange(of: workspace.liveNow, initial: true) { workspace.classStartTick(at: workspace.liveNow) }
             .onChange(of: workspace.classStartAsk) { take() }
             #if os(macOS)
-            // A window opened at launch is active only after its first check, which then had no window to take it.
-            .onChange(of: active) { take() }
+        // A window opened at launch is active only after its first check, which then had no window to take it.
+        .onChange(of: active) { take() }
             #endif
-            .alert(Text(.classStartRecordTitle), isPresented: Binding(get: { asking != nil }, set: { if !$0 { asking = nil } }), presenting: asking) { ask in
+            .alert(
+                Text(.classStartRecordTitle), isPresented: Binding(get: { asking != nil }, set: { if !$0 { asking = nil } }),
+                presenting: asking
+            ) { ask in
                 Button(.classStartRecord) { workspace.recordClass(ask) }
                 Button(.commonCancel, role: .cancel) {}
             } message: { ask in
@@ -233,9 +242,11 @@ struct ClassStartPrompt: ViewModifier {
 }
 
 extension View {
-    func classStartPrompt(_ workspace: Workspace, open: @escaping @MainActor (ClassStartOpening) -> Void,
-                          openSplit: @escaping @MainActor (PaneLayout, UUID) -> Void,
-                          showing: @escaping @MainActor () -> Navigator.Entry, bringForward: @escaping @MainActor () -> Void) -> some View {
+    func classStartPrompt(
+        _ workspace: Workspace, open: @escaping @MainActor (ClassStartOpening) -> Void,
+        openSplit: @escaping @MainActor (PaneLayout, UUID) -> Void,
+        showing: @escaping @MainActor () -> Navigator.Entry, bringForward: @escaping @MainActor () -> Void
+    ) -> some View {
         modifier(ClassStartPrompt(workspace: workspace, open: open, openSplit: openSplit, showing: showing, bringForward: bringForward))
     }
 }

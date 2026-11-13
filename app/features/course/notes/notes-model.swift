@@ -42,7 +42,9 @@ final class NoteListModel {
     var shown: [NoteFile] { notes.filter { filter == nil || $0.meta.kind == filter } }
     var parts: [Part] { Self.parts(shown, file: course.file, calendar: workspace.calendar) }
 
-    var filterOptions: [(NoteKind?, String)] { [(NoteKind?.none, String(localized: .notesFilterAll))] + NoteKind.allCases.map { (Optional($0), $0.label) } }
+    var filterOptions: [(NoteKind?, String)] {
+        [(NoteKind?.none, String(localized: .notesFilterAll))] + NoteKind.allCases.map { (Optional($0), $0.label) }
+    }
     var addHelp: String { filter.map { String(localized: .notesNewKind($0.label)) } ?? String(localized: .notesNewFree) }
     var emptyLine: String { filter.map { String(localized: .notesKindEmpty($0.label)) } ?? String(localized: .notesEmpty) }
 
@@ -61,7 +63,8 @@ final class NoteListModel {
         case .classes:
             // A review note covering several classes names the range it covers.
             let sessions = file.sessions(pointingAt: meta.id)
-            let covered = sessions.count > 1
+            let covered =
+                sessions.count > 1
                 ? file.sessionSpan(of: meta.id, calendar: calendar)
                 : sessions.first.map { $0.date.formatted(.dateTime.month().day().weekday()) }
             return covered.map { "\($0) · \(meta.kind.label)" } ?? "\(meta.kind.label) · " + String(localized: .notesNoSession)
@@ -151,7 +154,8 @@ final class NoteEmbedSource {
 
     @MainActor convenience init(workspace: Workspace, course: LoadedCourse, own: URL?) {
         // The preview and the editor read it on the main actor, where the workspace is.
-        self.init(store: course.store, others: workspace.courses.filter { $0.id != course.id }.map(\.store), own: own) { [weak workspace] link in
+        self.init(store: course.store, others: workspace.courses.filter { $0.id != course.id }.map(\.store), own: own) {
+            [weak workspace] link in
             MainActor.assumeIsolated { workspace?.name(of: link) }
         }
     }
@@ -165,11 +169,14 @@ final class NoteEmbedSource {
             texts = [:]
         }
 
-        let labels = NoteEmbeds.Labels(missing: String(localized: .notesEmbedMissing), loop: String(localized: .notesEmbedLoop),
-                                       tooDeep: String(localized: .notesEmbedTooDeep))
-        return NoteEmbeds(key: own?.standardizedFileURL.path, labels: labels, title: { [self] id in noteFile(id: id)?.title },
-                          hasNote: { [self] title in note(titled: title) != nil },
-                          name: { [name] href in AppLink(string: href).flatMap { link in name(link).map(link.label) } }) { [self] link in find(link) }
+        let labels = NoteEmbeds.Labels(
+            missing: String(localized: .notesEmbedMissing), loop: String(localized: .notesEmbedLoop),
+            tooDeep: String(localized: .notesEmbedTooDeep))
+        return NoteEmbeds(
+            key: own?.standardizedFileURL.path, labels: labels, title: { [self] id in noteFile(id: id)?.title },
+            hasNote: { [self] title in note(titled: title) != nil },
+            name: { [name] href in AppLink(string: href).flatMap { link in name(link).map(link.label) } }
+        ) { [self] link in find(link) }
     }
 
     private func note(titled title: String) -> NoteFile? {
@@ -301,7 +308,8 @@ final class NoteEditorModel {
 
     /// Where the writing happens, so finishing it is one click here rather than a trip back to Today.
     var unfinishedReview: Session? {
-        guard let id = meta.id, let session = course.file.sessions.first(where: { $0.reviewNoteId == id }), session.reviewNoteUnfinished else { return nil }
+        guard let id = meta.id, let session = course.file.sessions.first(where: { $0.reviewNoteId == id }), session.reviewNoteUnfinished
+        else { return nil }
         return session
     }
 
@@ -326,13 +334,19 @@ final class NoteEditorModel {
         case .rough, .review:
             switch linkedSessions.count {
             case 0: String(localized: .notesLinkNoSession(meta.kind.label))
-            case 1: String(localized: .notesLinkSession(course.file.day(of: linkedSessions[0], calendar: workspace.calendar), meta.kind.label))
-            default: String(localized: .notesLinkSession(course.file.sessionSpan(of: meta.id, calendar: workspace.calendar) ?? "", meta.kind.label))
+            case 1:
+                String(localized: .notesLinkSession(course.file.day(of: linkedSessions[0], calendar: workspace.calendar), meta.kind.label))
+            default:
+                String(
+                    localized: .notesLinkSession(course.file.sessionSpan(of: meta.id, calendar: workspace.calendar) ?? "", meta.kind.label))
             }
         case .examSummary:
-            linkExams.first { $0.id == meta.examId }.map { String(localized: .notesLinkExam($0.title)) } ?? String(localized: .notesLinkNoExam)
+            linkExams.first { $0.id == meta.examId }.map { String(localized: .notesLinkExam($0.title)) }
+                ?? String(localized: .notesLinkNoExam)
         case .unit:
-            String(localized: .notesLinkUnit(course.file.units(of: meta).map(\.title).joined(separator: ", ").nilIfEmpty ?? String(localized: .notesNoUnits)))
+            String(
+                localized: .notesLinkUnit(
+                    course.file.units(of: meta).map(\.title).joined(separator: ", ").nilIfEmpty ?? String(localized: .notesNoUnits)))
         case .free: String(localized: .notesPartFree)
         }
     }

@@ -52,8 +52,10 @@ public struct AssignmentRepeat: Hashable, Sendable {
             let start = calendar.date(from: DateComponents(year: c.year, month: (c.month ?? 1) + every, day: 1))!
             let length = calendar.range(of: .day, in: .month, for: start)?.count ?? 28
             let month = calendar.dateComponents([.year, .month], from: start)
-            return calendar.date(from: DateComponents(year: month.year, month: month.month, day: min(day ?? c.day ?? 1, length),
-                                                      hour: c.hour, minute: c.minute, second: c.second))!
+            return calendar.date(
+                from: DateComponents(
+                    year: month.year, month: month.month, day: min(day ?? c.day ?? 1, length),
+                    hour: c.hour, minute: c.minute, second: c.second))!
         }
     }
 
@@ -62,29 +64,31 @@ public struct AssignmentRepeat: Hashable, Sendable {
     /// The rule as the quick-add line writes it and reads it back: `매일`, `3일마다`, `매주`, `격주`, `3주마다`, `매달`,
     /// `2개월마다`, with weekdays after (`매주 월수`). Data the reader takes, so it stays in code rather than the catalog.
     public var phrase: String {
-        let base = switch (unit, every) {
-        case (.day, 1): "매일"
-        case (.day, _): "\(every)일마다"
-        case (.week, 1): "매주"
-        case (.week, 2): "격주"
-        case (.week, _): "\(every)주마다"
-        case (.month, 1): "매달"
-        case (.month, _): "\(every)개월마다"
-        }
+        let base =
+            switch (unit, every) {
+            case (.day, 1): "매일"
+            case (.day, _): "\(every)일마다"
+            case (.week, 1): "매주"
+            case (.week, 2): "격주"
+            case (.week, _): "\(every)주마다"
+            case (.month, 1): "매달"
+            case (.month, _): "\(every)개월마다"
+            }
         return weekdays.isEmpty ? base : base + " " + weekdays.map { Self.weekdayLetters[$0 - 1] }.joined()
     }
 
     /// The rule as screens show it: "매일", "격주", "3일마다", "매주 월, 수".
     public var label: String {
-        let base: String = switch (unit, every) {
-        case (.day, 1): String(localized: .repeatDaily)
-        case (.day, _): String(localized: .repeatEveryDays(every))
-        case (.week, 1): String(localized: .repeatWeekly)
-        case (.week, 2): String(localized: .repeatBiweekly)
-        case (.week, _): String(localized: .repeatEveryWeeks(every))
-        case (.month, 1): String(localized: .repeatMonthly)
-        case (.month, _): String(localized: .repeatEveryMonths(every))
-        }
+        let base: String =
+            switch (unit, every) {
+            case (.day, 1): String(localized: .repeatDaily)
+            case (.day, _): String(localized: .repeatEveryDays(every))
+            case (.week, 1): String(localized: .repeatWeekly)
+            case (.week, 2): String(localized: .repeatBiweekly)
+            case (.week, _): String(localized: .repeatEveryWeeks(every))
+            case (.month, 1): String(localized: .repeatMonthly)
+            case (.month, _): String(localized: .repeatEveryMonths(every))
+            }
         guard !weekdays.isEmpty else { return base }
         return String(localized: .repeatOnWeekdays(base, weekdays.map { ClassTime.weekdayNames[$0 - 1] }.joined(separator: ", ")))
     }
@@ -166,7 +170,9 @@ public struct AssignmentRepeat: Hashable, Sendable {
         if var rule = english[head.lowercased()] ?? Self.compact(head.lowercased()) {
             if let days {
                 let names = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
-                let picked = days.lowercased().split(separator: ",").map { d in names.firstIndex { d.trimmingCharacters(in: .whitespaces).hasPrefix($0) } }
+                let picked = days.lowercased().split(separator: ",").map { d in
+                    names.firstIndex { d.trimmingCharacters(in: .whitespaces).hasPrefix($0) }
+                }
                 guard rule.unit == .week, !picked.isEmpty, picked.allSatisfy({ $0 != nil }) else { return nil }
                 rule = AssignmentRepeat(every: rule.every, .week, weekdays: picked.map { $0! + 1 })
             }
@@ -184,7 +190,8 @@ public struct AssignmentRepeat: Hashable, Sendable {
                 self = rule
                 return
             }
-            guard rule.unit == .week, let w = Self.weekdayList(rest) ?? Self.weekdayList(Array(rest.dropLast()) + [rest.last! + "마다"]) else { return nil }
+            guard rule.unit == .week, let w = Self.weekdayList(rest) ?? Self.weekdayList(Array(rest.dropLast()) + [rest.last! + "마다"])
+            else { return nil }
             self = AssignmentRepeat(every: rule.every, .week, weekdays: w.days)
             return
         }
@@ -217,8 +224,9 @@ extension AssignmentRepeat: Codable {
             return
         }
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        self.init(every: try c.decode(Int.self, forKey: .every), try c.decode(Unit.self, forKey: .unit),
-                  weekdays: try c.decodeIfPresent([Int].self, forKey: .weekdays) ?? [])
+        self.init(
+            every: try c.decode(Int.self, forKey: .every), try c.decode(Unit.self, forKey: .unit),
+            weekdays: try c.decodeIfPresent([Int].self, forKey: .weekdays) ?? [])
     }
 
     public func encode(to encoder: any Encoder) throws {

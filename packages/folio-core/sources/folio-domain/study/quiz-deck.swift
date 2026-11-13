@@ -32,7 +32,9 @@ public struct WrongTally: Equatable, Sendable {
 
 public enum QuizStats {
     /// An item with several keys (a problem in two units) counts in each.
-    public static func tally<Item, Key: Hashable>(_ items: [Item], keys: (Item) -> [Key], history: (Item) -> AttemptHistory) -> [Key: WrongTally] {
+    public static func tally<Item, Key: Hashable>(_ items: [Item], keys: (Item) -> [Key], history: (Item) -> AttemptHistory) -> [Key:
+        WrongTally]
+    {
         var result: [Key: WrongTally] = [:]
         for item in items {
             let h = history(item)
@@ -65,9 +67,11 @@ public struct QuizScope: Equatable, Sendable {
 
 public enum QuizDeck {
     /// `units` in course order; cards within a unit keep their file order.
-    public static func build(cards: [QuizCard], units: [UUID], scope: QuizScope, order: QuizOrder,
-                             history: [UUID: AttemptHistory], today: LocalDate,
-                             using rng: inout some RandomNumberGenerator) -> [QuizCard] {
+    public static func build(
+        cards: [QuizCard], units: [UUID], scope: QuizScope, order: QuizOrder,
+        history: [UUID: AttemptHistory], today: LocalDate,
+        using rng: inout some RandomNumberGenerator
+    ) -> [QuizCard] {
         let rank = Dictionary(units.enumerated().map { ($1, $0) }, uniquingKeysWith: { a, _ in a })
         let due = { (card: QuizCard) in WrongFlow.isDue(history[card.id] ?? [], today: today) }
         let picked = cards.enumerated()

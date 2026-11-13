@@ -14,7 +14,8 @@ extension Workspace {
         guard span.duration >= 60, let course = course(id) else { return }
         perform {
             // folio:not-an-action study time is an activity log, not a data change
-            try course.store.log.append(StudySessionEvent(courseId: id, start: span.start, end: span.end, screen: screen), device: device, at: span.end)
+            try course.store.log.append(
+                StudySessionEvent(courseId: id, start: span.start, end: span.end, screen: screen), device: device, at: span.end)
         }
     }
 
@@ -37,7 +38,10 @@ extension Workspace {
 
     #if os(macOS)
     var backupStore: BackupStore? {
-        gist.map { BackupStore(gist: $0, folder: URL(filePath: (settings.backup.folder as NSString).expandingTildeInPath, directoryHint: .isDirectory)) }
+        gist.map {
+            BackupStore(
+                gist: $0, folder: URL(filePath: (settings.backup.folder as NSString).expandingTildeInPath, directoryHint: .isDirectory))
+        }
     }
 
     /// Off the main actor: a backup walks every file in GIST and takes seconds. Nothing in the GIST folder changes, so no reload.
@@ -56,7 +60,8 @@ extension Workspace {
 
     func backUpIfDue() async {
         guard settings.backup.enabled, !runsOnFixture, let store = backupStore,
-              store.archives().first?.day != LocalDate(.now, in: calendar) else { return }
+            store.archives().first?.day != LocalDate(.now, in: calendar)
+        else { return }
         await backUpNow()
     }
 

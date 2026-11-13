@@ -29,10 +29,10 @@ enum PageRender {
     static func figurePage(_ svg: String, accent: String) -> String {
         let data = Data(svg.utf8).base64EncodedString()
         return """
-        <!doctype html><html><head><meta charset="utf-8"><style>\(theme(accent))\
-        body{margin:0}.col{padding:16px}img{display:block;max-width:100%;height:auto;margin:0 auto}</style></head>\
-        <body><div class="col"><img src="data:image/svg+xml;base64,\(data)"></div></body></html>
-        """
+            <!doctype html><html><head><meta charset="utf-8"><style>\(theme(accent))\
+            body{margin:0}.col{padding:16px}img{display:block;max-width:100%;height:auto;margin:0 auto}</style></head>\
+            <body><div class="col"><img src="data:image/svg+xml;base64,\(data)"></div></body></html>
+            """
     }
 
     /// The note's colors as a widget's frame gets them, on the note's card, which shows through the frame in the note.
@@ -53,18 +53,18 @@ enum PageRender {
     static let consoleHandler = "folioConsole"
 
     static let consoleScript = """
-    (() => {
-      // A stack's first frame says where; its message is not in it.
-      const err = e => `${e.name}: ${e.message}` + (e.stack ? ` @ ${e.stack.split('\\n')[0].replace(/^.*@/, '')}` : '')
-      const send = (kind, parts) => { try { webkit.messageHandlers.\(consoleHandler).postMessage(kind + ': ' + parts.map(a => {
-        try { return a instanceof Error ? err(a) : typeof a === 'object' ? JSON.stringify(a) : String(a) } catch { return String(a) }
-      }).join(' ')) } catch {} }
-      for (const k of ['error', 'warn']) { const f = console[k]; console[k] = function (...a) { send(k, a); return f.apply(this, a) } }
-      addEventListener('error', e => send('error', [e.message + (e.lineno ? ` (line ${e.lineno}:${e.colno})` : '')]))
-      addEventListener('unhandledrejection', e => send('error', ['unhandled rejection: ' + (e.reason instanceof Error ? err(e.reason) : e.reason)]))
-      document.addEventListener('securitypolicyviolation', e => send('blocked', [`${e.blockedURI} (${e.violatedDirective})`]))
-    })()
-    """
+        (() => {
+          // A stack's first frame says where; its message is not in it.
+          const err = e => `${e.name}: ${e.message}` + (e.stack ? ` @ ${e.stack.split('\\n')[0].replace(/^.*@/, '')}` : '')
+          const send = (kind, parts) => { try { webkit.messageHandlers.\(consoleHandler).postMessage(kind + ': ' + parts.map(a => {
+            try { return a instanceof Error ? err(a) : typeof a === 'object' ? JSON.stringify(a) : String(a) } catch { return String(a) }
+          }).join(' ')) } catch {} }
+          for (const k of ['error', 'warn']) { const f = console[k]; console[k] = function (...a) { send(k, a); return f.apply(this, a) } }
+          addEventListener('error', e => send('error', [e.message + (e.lineno ? ` (line ${e.lineno}:${e.colno})` : '')]))
+          addEventListener('unhandledrejection', e => send('error', ['unhandled rejection: ' + (e.reason instanceof Error ? err(e.reason) : e.reason)]))
+          document.addEventListener('securitypolicyviolation', e => send('blocked', [`${e.blockedURI} (${e.violatedDirective})`]))
+        })()
+        """
 
     static func figure(_ svg: String, accent: String, widths: [Int]) throws -> RenderResult {
         let page = figurePage(svg, accent: accent)
@@ -79,7 +79,9 @@ enum PageRender {
         return RenderResult(images: images, console: console, problems: NoteWidget.problems(html).map(\.message))
     }
 
-    static func shots(_ page: String, scripts: [String], widths: [Int], start: Int, settle: TimeInterval) throws -> ([RenderedShot], [String]) {
+    static func shots(_ page: String, scripts: [String], widths: [Int], start: Int, settle: TimeInterval) throws -> (
+        [RenderedShot], [String]
+    ) {
         #if os(macOS)
         // WebKit runs on the main thread, and only there does a run loop turn for it.
         guard Thread.isMainThread else { throw CLIError(exit: .unexpected, message: String(localized: .renderNotMain)) }
@@ -89,7 +91,9 @@ enum PageRender {
             for width in widths {
                 for dark in [false, true] {
                     let shot = try OffscreenPage.shoot(page, scripts: scripts, width: width, dark: dark, start: start, settle: settle)
-                    images.append(RenderedShot(theme: dark ? "dark" : "light", width: width, height: shot.height, png: shot.png.base64EncodedString()))
+                    images.append(
+                        RenderedShot(theme: dark ? "dark" : "light", width: width, height: shot.height, png: shot.png.base64EncodedString())
+                    )
                     // The same page logs the same at every size; each message once.
                     for line in shot.console where !console.contains(line) { console.append(line) }
                 }
@@ -125,7 +129,9 @@ private final class OffscreenPage: NSObject, WKNavigationDelegate, WKScriptMessa
         // Nothing the page stores outlives the drawing.
         config.websiteDataStore = .nonPersistent()
         let handler = OffscreenPage()
-        for s in scripts { config.userContentController.addUserScript(WKUserScript(source: s, injectionTime: .atDocumentStart, forMainFrameOnly: false)) }
+        for s in scripts {
+            config.userContentController.addUserScript(WKUserScript(source: s, injectionTime: .atDocumentStart, forMainFrameOnly: false))
+        }
         config.userContentController.add(handler, name: PageRender.consoleHandler)
         defer { config.userContentController.removeScriptMessageHandler(forName: PageRender.consoleHandler) }
 
@@ -160,14 +166,19 @@ private final class OffscreenPage: NSObject, WKNavigationDelegate, WKScriptMessa
     static let base = URL(string: "folio-render://page/")!
 
     /// The page loaded here is the only one: a widget sent to an address would carry data out in it.
-    func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void) {
+    func webView(
+        _ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
+        decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void
+    ) {
         let url = action.request.url
         decisionHandler(url?.scheme == "about" || url == Self.base ? .allow : .cancel)
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { loaded = true }
 
-    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: any Error) { failure = error.localizedDescription }
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: any Error) {
+        failure = error.localizedDescription
+    }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: any Error) {
         failure = error.localizedDescription
@@ -179,7 +190,9 @@ private final class OffscreenPage: NSObject, WKNavigationDelegate, WKScriptMessa
         console.append(String(line.prefix(600)))
     }
 
-    private static func failed(_ reason: String) -> CLIError { CLIError(exit: .unexpected, message: String(localized: .renderFailed(reason))) }
+    private static func failed(_ reason: String) -> CLIError {
+        CLIError(exit: .unexpected, message: String(localized: .renderFailed(reason)))
+    }
 
     @discardableResult
     private static func spin(_ timeout: TimeInterval, until done: () -> Bool) -> Bool {
@@ -226,8 +239,11 @@ private final class OffscreenPage: NSObject, WKNavigationDelegate, WKScriptMessa
 
     /// At one pixel per point: an image Claude reads costs by its pixels, and twice the pixels show it nothing new.
     private static func png(_ image: NSImage, width: Int, height: Int) throws -> Data {
-        guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: width, pixelsHigh: height, bitsPerSample: 8, samplesPerPixel: 4,
-                                         hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else {
+        guard
+            let rep = NSBitmapImageRep(
+                bitmapDataPlanes: nil, pixelsWide: width, pixelsHigh: height, bitsPerSample: 8, samplesPerPixel: 4,
+                hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)
+        else {
             throw failed(String(localized: .renderNoImage))
         }
         rep.size = NSSize(width: width, height: height)

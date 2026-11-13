@@ -79,8 +79,10 @@ extension String {
     /// A course's color token (`CourseColor.token`, always a preset) as the nearest of the terminal's own 16
     /// colors, which the user's theme already tunes for its background.
     func course(_ token: String) -> String {
-        let ansi: [String: Style] = ["violet": .magenta, "pink": .magenta, "blue": .blue, "teal": .cyan, "green": .green,
-                                     "orange": .yellow, "olive": .yellow, "red": .red]
+        let ansi: [String: Style] = [
+            "violet": .magenta, "pink": .magenta, "blue": .blue, "teal": .cyan, "green": .green,
+            "orange": .yellow, "olive": .yellow, "red": .red,
+        ]
         return ansi[token].map { styled($0) } ?? styled(.dim)
     }
 
@@ -134,7 +136,7 @@ extension Character {
         if s.properties.isEmojiPresentation { return 2 }
         switch s.value {
         case 0x1100...0x115F, 0x2E80...0x303E, 0x3041...0x33FF, 0x3400...0x4DBF, 0x4E00...0x9FFF, 0xA000...0xA4CF,
-             0xAC00...0xD7A3, 0xF900...0xFAFF, 0xFE30...0xFE4F, 0xFF00...0xFF60, 0xFFE0...0xFFE6, 0x20000...0x3FFFD:
+            0xAC00...0xD7A3, 0xF900...0xFAFF, 0xFE30...0xFE4F, 0xFF00...0xFF60, 0xFFE0...0xFFE6, 0x20000...0x3FFFD:
             return 2
         default:
             return 1

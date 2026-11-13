@@ -78,7 +78,8 @@ struct SemesterStoreTests {
     @Test func addSemesterThenCourse() throws {
         let gist = GISTStore(url: try Fixture.standard.copyToTemp())
         let device = UUID()
-        let semester = Semester(device: device, at: .now, year: 2027, term: .spring, start: LocalDate("2027-03-02"), end: LocalDate("2027-06-18"))
+        let semester = Semester(
+            device: device, at: .now, year: 2027, term: .spring, start: LocalDate("2027-03-02"), end: LocalDate("2027-06-18"))
         try gist.addSemester(semester)
         #expect(FileManager.default.fileExists(atPath: gist.url.appending(path: "2027-1").path))
         #expect(throws: (any Error).self) { try gist.addSemester(Semester(device: device, at: .now, year: 2027, term: .spring)) }

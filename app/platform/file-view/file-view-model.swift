@@ -1,18 +1,19 @@
-import FolioActions
 import FolioAI
+import FolioActions
 import FolioDomain
 import FolioMarkdown
 import FolioStorage
 import Foundation
+import Observation
+import PDFKit
+import QuickLookThumbnailing
+import UniformTypeIdentifiers
+
 #if os(macOS)
 import AppKit
 #else
 import UIKit
 #endif
-import Observation
-import PDFKit
-import QuickLookThumbnailing
-import UniformTypeIdentifiers
 
 @MainActor @Observable
 final class FileViewModel {
@@ -267,7 +268,8 @@ final class FileViewModel {
         guard let type = UTType(filenameExtension: url.pathExtension), !type.isDynamic else { return false }
         return await withTaskGroup(of: Bool.self) { group in
             group.addTask {
-                let request = QLThumbnailGenerator.Request(fileAt: url, size: CGSize(width: 64, height: 64), scale: 1, representationTypes: .thumbnail)
+                let request = QLThumbnailGenerator.Request(
+                    fileAt: url, size: CGSize(width: 64, height: 64), scale: 1, representationTypes: .thumbnail)
                 return (try? await QLThumbnailGenerator.shared.generateBestRepresentation(for: request)) != nil
             }
             group.addTask {
@@ -332,8 +334,9 @@ final class FileViewModel {
     func pageContext(_ page: Int, in controller: PDFController) -> ContextItem? {
         guard let m = material, let pdfPage = controller.view.document?.page(at: page) else { return nil }
         let name = "\((m.path as NSString).lastPathComponent) p\(page + 1).jpg"
-        return ContextBuilder.materialPage(id: m.id, path: m.path, page: page + 1, text: pdfPage.string ?? "",
-                                           image: Self.jpeg(of: pdfPage).map { ContextItem.Image(name: name, data: $0) })
+        return ContextBuilder.materialPage(
+            id: m.id, path: m.path, page: page + 1, text: pdfPage.string ?? "",
+            image: Self.jpeg(of: pdfPage).map { ContextItem.Image(name: name, data: $0) })
     }
 
     /// 1568px on the long edge, as the panel sends a note's pictures: Claude scales anything larger down to that.

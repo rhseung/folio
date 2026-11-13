@@ -1,8 +1,9 @@
 import FolioDomain
 import FolioFixtures
-@testable import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioStorage
 
 struct CatalogStoreTests {
     @Test func savingRequirementsKeepsUnknownKeys() throws {

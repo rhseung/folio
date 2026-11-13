@@ -75,8 +75,9 @@ final class SessionSheetModel {
     private var endPicked = false
 
     convenience init(workspace: Workspace, request: SessionSheetRequest) {
-        self.init(workspace: workspace, course: request.course, session: request.session, start: request.start,
-                  viewed: request.viewed, recorded: request.recorded)
+        self.init(
+            workspace: workspace, course: request.course, session: request.session, start: request.start,
+            viewed: request.viewed, recorded: request.recorded)
     }
 
     init(workspace: Workspace, course: UUID, session: UUID?, start: Date? = nil, viewed: [SessionMaterial] = [], recorded: Bool = false) {
@@ -91,8 +92,11 @@ final class SessionSheetModel {
         self.viewed = viewed.isEmpty ? file.flatMap { f in s.map { f.viewedPages(of: $0) } } ?? [] : viewed
         // From locals: the observed properties can't be read back before every stored property is set.
         // Present is stored as no entry, so a class without one, recorded or not, starts on present.
-        let initial = (units: s?.unitIds ?? [], attendance: s.flatMap { s in file?.attendance.first { $0.sessionId == s.id }?.state } ?? AttendanceState.present,
-                       review: s.flatMap { file?.review(of: $0) })
+        let initial = (
+            units: s?.unitIds ?? [],
+            attendance: s.flatMap { s in file?.attendance.first { $0.sessionId == s.id }?.state } ?? AttendanceState.present,
+            review: s.flatMap { file?.review(of: $0) }
+        )
         units = initial.units
         attendance = initial.attendance
         review = initial.review
@@ -139,7 +143,9 @@ final class SessionSheetModel {
     /// The groups this class shows, in order. Whether the class has begun is read from the class as saved, so moving
     /// its date in the sheet doesn't reorder the sheet under the pointer.
     var sections: [SessionSection] {
-        file?.sections(of: session, kind: kind, start: session?.date ?? start, at: workspace.now, takesAttendance: takesAttendance) ?? [.info]
+        file?.sections(of: session, kind: kind, start: session?.date ?? start, at: workspace.now, takesAttendance: takesAttendance) ?? [
+            .info
+        ]
     }
 
     func label(_ section: SessionSection) -> String {
@@ -156,8 +162,9 @@ final class SessionSheetModel {
 
     private func suggest() {
         guard let file, let session else { return }
-        let wrappingUp = file.isWrappingUp(session, recorded: recorded, at: workspace.now,
-                                           classMinutes: workspace.settings.classMinutes, calendar: calendar)
+        let wrappingUp = file.isWrappingUp(
+            session, recorded: recorded, at: workspace.now,
+            classMinutes: workspace.settings.classMinutes, calendar: calendar)
         rows = file.suggestedProgress(for: session, viewed: viewed, pageCounts: pageCounts)
             .map { range in
                 let checked = session.wrapUpChecks(range, wrappingUp: wrappingUp)
@@ -370,7 +377,8 @@ final class SessionSheetModel {
 
     private func movesWeek(_ session: Session, _ file: CourseFile) -> Bool {
         start != session.date
-            && file.week(of: start, moving: session.id, termStart: workspace.semester(of: file.course)?.start, calendar: calendar) != session.week
+            && file.week(of: start, moving: session.id, termStart: workspace.semester(of: file.course)?.start, calendar: calendar)
+                != session.week
     }
 
     private static func minute(of date: Date, from start: Date, calendar: Calendar) -> Int {
@@ -403,22 +411,24 @@ final class SessionSheetModel {
     /// Groups the sheet hides keep what the class has.
     var action: any Action {
         guard let session else {
-            return SessionAdd(course: courseId, date: start, end: end, link: storedLink, kind: kind,
-                              attendance: shows(.attendance) && attendance != .present ? attendance : nil,
-                              units: shows(.units) ? units : [])
+            return SessionAdd(
+                course: courseId, date: start, end: end, link: storedLink, kind: kind,
+                attendance: shows(.attendance) && attendance != .present ? attendance : nil,
+                units: shows(.units) ? units : [])
         }
         let review = showsReview && shows(.notes) && review != initial.review ? review : nil
-        return SessionWrapUp(course: courseId, session: session.id, ranges: ranges, unlinked: unlinked,
-                             units: shows(.units) ? .set(units) : .keep,
-                             attendance: shows(.attendance) ? .set(attendance) : .keep,
-                             date: start == session.date ? .keep : .set(start),
-                             end: endPatch(session),
-                             link: storedLink == session.link ? .keep : .set(storedLink),
-                             kind: kind == session.kind ? .keep : .set(kind),
-                             skipsReview: review?.skipsReview.map(Patch.set) ?? .keep,
-                             reviewUnfinished: review?.reviewUnfinished.map(Patch.set) ?? .keep,
-                             // The recording may not be in course.json yet: the save wraps up as the sheet opened.
-                             recorded: recorded)
+        return SessionWrapUp(
+            course: courseId, session: session.id, ranges: ranges, unlinked: unlinked,
+            units: shows(.units) ? .set(units) : .keep,
+            attendance: shows(.attendance) ? .set(attendance) : .keep,
+            date: start == session.date ? .keep : .set(start),
+            end: endPatch(session),
+            link: storedLink == session.link ? .keep : .set(storedLink),
+            kind: kind == session.kind ? .keep : .set(kind),
+            skipsReview: review?.skipsReview.map(Patch.set) ?? .keep,
+            reviewUnfinished: review?.reviewUnfinished.map(Patch.set) ?? .keep,
+            // The recording may not be in course.json yet: the save wraps up as the sheet opened.
+            recorded: recorded)
     }
 
     /// Why saving is off: a kept file without both pages says nothing about how far the class went.

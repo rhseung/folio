@@ -1,6 +1,7 @@
 import FolioDomain
 import Foundation
 import Testing
+
 @testable import Folio
 
 @MainActor
@@ -8,10 +9,12 @@ struct WhatsNewModelTests {
     typealias V = PatchNotes.Version
 
     static let releases = [
-        PatchNotes.Release(version: V(0, 3, 0), items: [
-            PatchNotes.Item(kind: .feat, text: "노트 목차"),
-            PatchNotes.Item(kind: .fix, text: "수식 말풍선 여백"),
-        ]),
+        PatchNotes.Release(
+            version: V(0, 3, 0),
+            items: [
+                PatchNotes.Item(kind: .feat, text: "노트 목차"),
+                PatchNotes.Item(kind: .fix, text: "수식 말풍선 여백"),
+            ]),
         PatchNotes.Release(version: V(0, 2, 1), items: [PatchNotes.Item(kind: .fix, text: "칸 닫기")]),
         PatchNotes.Release(version: V(0, 2, 0), items: [PatchNotes.Item(kind: .feat, text: "창 탭", link: .place(.today))]),
     ]
@@ -97,8 +100,9 @@ struct WhatsNewModelTests {
 
     func makeModel(fails: Bool = false) throws -> WhatsNewModel {
         let workspace = try fixtureWorkspace()
-        workspace.releaseNotes = ReleaseNotes(source: ReleaseList(list: Self.releases, fails: fails), defaults: try defaults(), current: V(0, 2, 1),
-                                              prompts: false)
+        workspace.releaseNotes = ReleaseNotes(
+            source: ReleaseList(list: Self.releases, fails: fails), defaults: try defaults(), current: V(0, 2, 1),
+            prompts: false)
         return WhatsNewModel(workspace: workspace)
     }
 

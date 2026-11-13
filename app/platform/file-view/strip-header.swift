@@ -24,7 +24,9 @@ struct StripHeader: View {
 
     var body: some View {
         HStack(spacing: Theme.Space.xs) {
-            Button { withAnimation(Theme.Motion.quick) { toggle() } } label: {
+            Button {
+                withAnimation(Theme.Motion.quick) { toggle() }
+            } label: {
                 Image(systemName: open ? "chevron.down" : "chevron.right")
                     .font(Theme.Glyph.small)
                     .foregroundStyle(section.kind.tinted ? accent.ink : Theme.Palette.textTertiary)
@@ -39,7 +41,8 @@ struct StripHeader: View {
                     Text(section.title).font(Theme.Typeface.bodyStrong).lineLimit(1).truncationMode(.tail)
                         .foregroundStyle(titleColor)
                     Spacer(minLength: Theme.Space.xs)
-                    Text(section.label).font(Theme.Typeface.caption).monospacedDigit().fixedSize().foregroundStyle(Theme.Palette.textSecondary)
+                    Text(section.label).font(Theme.Typeface.caption).monospacedDigit().fixedSize().foregroundStyle(
+                        Theme.Palette.textSecondary)
                 }
                 .frame(maxHeight: .infinity)
                 .contentShape(.rect)

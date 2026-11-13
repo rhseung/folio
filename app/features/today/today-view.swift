@@ -43,7 +43,8 @@ struct TodayView: View {
             }
         }
         .sheet(item: $model.wrappingUp) { item in
-            SessionSheet(workspace: model.workspace, request: SessionSheetRequest(course: item.courseId, session: item.session.id, asked: true))
+            SessionSheet(
+                workspace: model.workspace, request: SessionSheetRequest(course: item.courseId, session: item.session.id, asked: true))
         }
         .confirming($model.pending)
     }
@@ -93,8 +94,9 @@ struct TodayView: View {
     /// Exams and deadlines side by side, the two things with a date on them. Both empty, they say so once.
     @ViewBuilder func agenda(_ summary: TodaySummary) -> some View {
         if summary.exams.isEmpty && summary.deadlines.isEmpty {
-            EmptyCard(symbol: "checkmark", tone: .success, title: String(localized: .todayAgendaEmpty),
-                      detail: String(localized: .todayAgendaEmptyDetail(TodaySummary.examHorizon)))
+            EmptyCard(
+                symbol: "checkmark", tone: .success, title: String(localized: .todayAgendaEmpty),
+                detail: String(localized: .todayAgendaEmptyDetail(TodaySummary.examHorizon)))
         } else {
             // Below this a half column cuts a course name off after a word.
             Fold(wideFrom: Self.pairWidth) {
@@ -144,12 +146,16 @@ struct TodayView: View {
 
     func deadlinesBlock(_ summary: TodaySummary) -> some View {
         let (shown, more) = model.shownDeadlines(summary)
-        return Block(title: String(localized: .todayDeadlines), note: summary.deadlines.isEmpty ? nil : "\(summary.deadlines.count)", trailing: {
-            if more > 0 { Button(String(localized: .todayMore(more))) { model.showsAllDeadlines = true }.buttonStyle(.ghost) }
-        }) {
+        return Block(
+            title: String(localized: .todayDeadlines), note: summary.deadlines.isEmpty ? nil : "\(summary.deadlines.count)",
+            trailing: {
+                if more > 0 { Button(String(localized: .todayMore(more))) { model.showsAllDeadlines = true }.buttonStyle(.ghost) }
+            }
+        ) {
             if summary.deadlines.isEmpty {
-                EmptyCard(symbol: "checkmark", tone: .success, title: String(localized: .todayDeadlinesEmpty),
-                          detail: String(localized: .todayDeadlinesEmptyDetail))
+                EmptyCard(
+                    symbol: "checkmark", tone: .success, title: String(localized: .todayDeadlinesEmpty),
+                    detail: String(localized: .todayDeadlinesEmptyDetail))
             } else {
                 Card {
                     // The card has no inset and every row the same one, so a tinted row fills to the card's edges and
@@ -172,7 +178,9 @@ struct TodayView: View {
         let item = row.item
         let accent = model.workspace.accent(item.courseId)
         let tone = row.tone
-        return Button { model.edit(item) } label: {
+        return Button {
+            model.edit(item)
+        } label: {
             HStack(spacing: Theme.Space.s) {
                 AssignmentStatusIcon(status: item.assignment.status, tint: accent.color, size: 18)
                 HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
@@ -231,7 +239,9 @@ struct TodayView: View {
                 if done > 0 {
                     EmptyCard(symbol: "checkmark", tone: .success, title: String(localized: .todayReviewsDone))
                 } else {
-                    EmptyCard(symbol: CourseMark.defaultIcon, title: String(localized: .todayReviewsEmpty), detail: String(localized: .todayReviewsEmptyDetail))
+                    EmptyCard(
+                        symbol: CourseMark.defaultIcon, title: String(localized: .todayReviewsEmpty),
+                        detail: String(localized: .todayReviewsEmptyDetail))
                 }
             } else {
                 // Two lists, like exams and deadlines above: writing a class's note and reviewing units are different
@@ -281,7 +291,9 @@ struct TodayView: View {
 
     func notesList(_ notes: [TodaySummary.SessionItem], today: LocalDate) -> some View {
         let (groups, more) = model.noteGroups(notes, today: today)
-        return Block(String(localized: .todayReviewsNotes), note: notes.isEmpty ? nil : String(localized: .todayReviewsNotesNote(notes.count))) {
+        return Block(
+            String(localized: .todayReviewsNotes), note: notes.isEmpty ? nil : String(localized: .todayReviewsNotesNote(notes.count))
+        ) {
             if notes.isEmpty {
                 EmptyCard(symbol: "checkmark", tone: .success, title: String(localized: .todayReviewsNotesEmpty))
             } else {
@@ -317,7 +329,8 @@ struct TodayView: View {
                         .frame(width: Theme.Size.tile, height: Theme.Size.tile)
                     HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
                         Text(model.sessionName(item.courseId, item.session)).font(Theme.Typeface.bodyStrong).lineLimit(1).layoutPriority(1)
-                        Text(model.title(item.courseId)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
+                        Text(model.title(item.courseId)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(
+                            1)
                     }
                     Spacer(minLength: Theme.Space.s)
                 }
@@ -330,13 +343,16 @@ struct TodayView: View {
                     .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.warning)
             }
             // The menu's review check as a button, so the row and the menu say and do the same.
-            if finishing, let source = SessionMenu.source(model.workspace, item.courseId, item.session.id, host: .elsewhere,
-                                                           openNote: openNote(in: item.courseId), openLink: openLink, openURL: openURL, sheets: sheets),
-               let review = model.review(of: item) {
+            if finishing,
+                let source = SessionMenu.source(
+                    model.workspace, item.courseId, item.session.id, host: .elsewhere,
+                    openNote: openNote(in: item.courseId), openLink: openLink, openURL: openURL, sheets: sheets),
+                let review = model.review(of: item)
+            {
                 ItemButton(source: source, command: .review(review))
-                .buttonStyle(.ghost)
-                .font(Theme.Typeface.caption)
-                .help(Text(unfinished ? .todayNoteFinish : .todayNoteNoReviewHelp))
+                    .buttonStyle(.ghost)
+                    .font(Theme.Typeface.caption)
+                    .help(Text(unfinished ? .todayNoteFinish : .todayNoteNoReviewHelp))
             }
         }
         .padding(.horizontal, Theme.Space.l)
@@ -364,7 +380,8 @@ struct TodayView: View {
                             }
                             Spacer(minLength: Theme.Space.s)
                             if group.overdue > 0 {
-                                Text(.todayReviewsOverdue(group.overdue)).fontWeight(.bold).foregroundStyle(Theme.Palette.danger).fixedSize()
+                                Text(.todayReviewsOverdue(group.overdue)).fontWeight(.bold).foregroundStyle(Theme.Palette.danger)
+                                    .fixedSize()
                             }
                         }
                         ForEach(Array(shown.enumerated()), id: \.element.entry.item.unitId) { n, pair in
@@ -384,8 +401,10 @@ struct TodayView: View {
     func unitRow(_ entry: Workspace.ReviewEntry, number: Int, then rest: ArraySlice<Workspace.ReviewEntry>) -> some View {
         // Waiting on its class's note: still openable, but dimmed and without the arrow that says "start here".
         let waiting = entry.item.writeNoteFirst
-        return ReviewOpener(courseId: entry.courseId, unitId: entry.item.unitId,
-                            then: rest.map { .init(courseId: $0.courseId, unitId: $0.item.unitId) }) {
+        return ReviewOpener(
+            courseId: entry.courseId, unitId: entry.item.unitId,
+            then: rest.map { .init(courseId: $0.courseId, unitId: $0.item.unitId) }
+        ) {
             HStack(spacing: Theme.Space.s) {
                 Text("\(number)").font(Theme.Typeface.caption).monospacedDigit().foregroundStyle(Theme.Palette.textTertiary)
                     // The tile-high slot, as the note list's glyph: without it these rows came out shorter than theirs.
@@ -407,12 +426,14 @@ struct TodayView: View {
             VStack(alignment: .leading, spacing: Theme.Space.s) {
                 Text(.todayReviewsDeferred).font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(Theme.Palette.textSecondary)
                 ForEach(deferred, id: \.item.unitId) { entry in
-                    ReviewOpener(courseId: entry.courseId, unitId: entry.item.unitId) { HStack(spacing: Theme.Space.m) {
-                        CourseMark(model.workspace, entry.courseId)
-                        Text(entry.unitTitle)
-                        Spacer()
-                        Text(model.title(entry.courseId)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
-                    } }
+                    ReviewOpener(courseId: entry.courseId, unitId: entry.item.unitId) {
+                        HStack(spacing: Theme.Space.m) {
+                            CourseMark(model.workspace, entry.courseId)
+                            Text(entry.unitTitle)
+                            Spacer()
+                            Text(model.title(entry.courseId)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
+                        }
+                    }
                     .contextMenu { reviewMenu(entry) }
                 }
             }

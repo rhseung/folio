@@ -19,8 +19,10 @@ extension QuickAdd {
         public var now: Date
         public var calendar: Calendar
 
-        public init(courses: [Course], codes: [CourseCode] = [], fixedCourse: UUID? = nil, defaultCourse: UUID? = nil, now: Date,
-                    calendar: Calendar) {
+        public init(
+            courses: [Course], codes: [CourseCode] = [], fixedCourse: UUID? = nil, defaultCourse: UUID? = nil, now: Date,
+            calendar: Calendar
+        ) {
             self.courses = courses
             self.codes = codes
             self.fixedCourse = fixedCourse
@@ -30,8 +32,9 @@ extension QuickAdd {
         }
 
         public func read(_ line: String) -> QuickAdd {
-            QuickAdd.parse(line, courses: courses, codes: codes, fixedCourse: fixedCourse, defaultCourse: defaultCourse, now: now,
-                           calendar: calendar)
+            QuickAdd.parse(
+                line, courses: courses, codes: codes, fixedCourse: fixedCourse, defaultCourse: defaultCourse, now: now,
+                calendar: calendar)
         }
 
         /// The line with `value` written into it: the words read for that value replaced, taken out when it is cleared,
@@ -54,7 +57,9 @@ extension QuickAdd {
                 // The title as typed in full, then the code, which reads only as the line's first word.
                 let names = [course.title] + (code(course).map { [$0] } ?? [])
                 if let range = before.courseRanges.first {
-                    tries = names.map { line.splicing([(range, $0)]) } + names.map { line.splicing([(line.wordRange(range), "")]).prepending($0) }
+                    tries =
+                        names.map { line.splicing([(range, $0)]) }
+                        + names.map { line.splicing([(line.wordRange(range), "")]).prepending($0) }
                 } else {
                     tries = names.map { line.appending(word: $0) } + names.map { line.prepending($0) }
                 }
@@ -82,8 +87,11 @@ extension QuickAdd {
                 // goes against the time in `오후 3일마다 18:00`, and `까지` is left as the title's in `한 달마다 까지`.
                 let swapped = { (phrase: String) in
                     before.repeatRanges.first.map { first in
-                        [line.splicing([(first, phrase)] + before.repeatRanges.dropFirst().map { (line.wordRange($0), "") }
-                            + before.weekdayRanges.map { ($0, letter) })]
+                        [
+                            line.splicing(
+                                [(first, phrase)] + before.repeatRanges.dropFirst().map { (line.wordRange($0), "") }
+                                    + before.weekdayRanges.map { ($0, letter) })
+                        ]
                     } ?? []
                 }
                 switch repeats {
@@ -95,9 +103,13 @@ extension QuickAdd {
                     }
                     // `오후 3일마다 18:00` without the rule puts `오후` against the time, where it reads as the time's; the
                     // date written out in full keeps them apart.
-                    tries = [plain, line.splicing([(first, text(of: due))] + before.dueRanges.dropFirst().map { (line.wordRange($0), "") })]
+                    tries = [
+                        plain, line.splicing([(first, text(of: due))] + before.dueRanges.dropFirst().map { (line.wordRange($0), "") }),
+                    ]
                 case let rule? where rule.weekdays.isEmpty:
-                    tries = swapped(rule.phrase) + (stripped.dueRanges.first.map { [plain.splicing([($0.lowerBound..<$0.lowerBound, rule.phrase + " ")])] } ?? [])
+                    tries =
+                        swapped(rule.phrase)
+                        + (stripped.dueRanges.first.map { [plain.splicing([($0.lowerBound..<$0.lowerBound, rule.phrase + " ")])] } ?? [])
                         + [plain.appending(word: rule.phrase)]
                 case let rule?:
                     // The weekdays name the day, so the deadline's day words give way to them and only its time stays.
@@ -111,7 +123,8 @@ extension QuickAdd {
                     let others = (before.repeatRanges + before.weekdayRanges).filter { r in !before.dueRanges.contains { $0.overlaps(r) } }
                     let gone = (Array(before.dueRanges.dropFirst()) + others).map { (line.wordRange($0), "") }
                     let inPlace = before.dueRanges.first.map { [line.splicing([($0, words)] + gone)] } ?? []
-                    tries = (stripped.dueRanges.first.map { [plain.splicing([($0, words)] + ranges.dropFirst().map { ($0, "") })] } ?? [])
+                    tries =
+                        (stripped.dueRanges.first.map { [plain.splicing([($0, words)] + ranges.dropFirst().map { ($0, "") })] } ?? [])
                         + [plain.splicing(ranges.map { ($0, "") }).appending(word: words)] + inPlace
                 }
             case let .kind(kind, number):
@@ -140,14 +153,19 @@ extension QuickAdd {
 
         /// The line reads as `value`, and the rest as it did: a pick changes its own chip and no other.
         func holds(_ value: Value, _ after: QuickAdd, over before: QuickAdd) -> Bool {
-            let same = (course: after.courseId == before.courseId, due: after.due == before.due, repeats: after.repeats == before.repeats,
-                        title: after.title == before.title, kind: after.kind == before.kind && after.number == before.number)
+            let same = (
+                course: after.courseId == before.courseId, due: after.due == before.due, repeats: after.repeats == before.repeats,
+                title: after.title == before.title, kind: after.kind == before.kind && after.number == before.number
+            )
             switch value {
             case let .course(id): return after.courseId == id && same.due && same.repeats && same.title && same.kind
             // Clearing the deadline takes `매주` with it, as it sits among the deadline's words.
-            case let .due(date): return after.due == date && after.repeats == (date == nil ? nil : before.repeats) && same.course && same.title && same.kind
+            case let .due(date):
+                return after.due == date && after.repeats == (date == nil ? nil : before.repeats) && same.course && same.title && same.kind
             case let .repeats(repeats):
-                guard let rule = repeats, !rule.weekdays.isEmpty else { return after.repeats == repeats && same.course && same.due && same.title && same.kind }
+                guard let rule = repeats, !rule.weekdays.isEmpty else {
+                    return after.repeats == repeats && same.course && same.due && same.title && same.kind
+                }
                 // Weekdays move the deadline onto the first of them still ahead, at the same time.
                 guard let due = after.due, after.repeats == rule.normalized(dueWeekday: calendar.isoWeekday(of: due)) else { return false }
                 let time = { (d: Date) in calendar.dateComponents([.hour, .minute], from: d) }

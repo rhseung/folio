@@ -7,8 +7,9 @@ struct DdayChip: View {
 
     static func heat(_ days: Int) -> Color {
         let t = 1 - Double(min(max(days, 0), horizon)) / Double(horizon)
-        return t < 0.5 ? Theme.Palette.textSecondary.mix(with: Theme.Palette.warning, by: t * 2)
-                       : Theme.Palette.warning.mix(with: Theme.Palette.danger, by: (t - 0.5) * 2)
+        return t < 0.5
+            ? Theme.Palette.textSecondary.mix(with: Theme.Palette.warning, by: t * 2)
+            : Theme.Palette.warning.mix(with: Theme.Palette.danger, by: (t - 0.5) * 2)
     }
 
     var body: some View {
@@ -22,6 +23,8 @@ struct DdayChip: View {
             // The last three days pulse once on appearing, so the nearest exam catches the eye.
             .phaseAnimator([false, true], trigger: days <= 3) { chip, lit in
                 chip.scaleEffect(lit && days <= 3 ? 1.06 : 1)
-            } animation: { _ in .easeInOut(duration: 0.5) }
+            } animation: { _ in
+                .easeInOut(duration: 0.5)
+            }
     }
 }

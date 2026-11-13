@@ -4,6 +4,7 @@ import FolioMarkdown
 import Foundation
 import SwiftUI
 import Testing
+
 @testable import Folio
 
 /// The write view: the markdown source styled in place, laid out by TextKit as in the app.
@@ -21,7 +22,8 @@ struct NoteSourceTests {
     }
 
     static var sample: String {
-        let url = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appending(path: "fixtures/all-markdown.md")
+        let url = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appending(
+            path: "fixtures/all-markdown.md")
         return Frontmatter.split((try? String(contentsOf: url, encoding: .utf8)) ?? "").body
     }
 
@@ -42,7 +44,9 @@ struct NoteSourceTests {
         for word in ["본문", "섞인", "인용", "제목", "끝"] {
             let at = ns.range(of: word).location
             let caret = try #require(NoteRender.caret(view, at: at)), drawn = try #require(NoteRender.text(view, at: at))
-            #expect(abs(caret.minY - drawn.lowerBound) <= 1 && abs(caret.maxY - drawn.upperBound) <= 1, "\(word): caret \(caret), text \(drawn)")
+            #expect(
+                abs(caret.minY - drawn.lowerBound) <= 1 && abs(caret.maxY - drawn.upperBound) <= 1, "\(word): caret \(caret), text \(drawn)"
+            )
         }
     }
 
@@ -79,8 +83,10 @@ struct NoteSourceTests {
         let (view, _) = Self.editor(text)
         var opened: [AppLink] = []
         view.linkOpener = OpenLinkAction { link, _, _ in opened.append(link) }
-        let click = try #require(NSEvent.mouseEvent(with: .leftMouseDown, location: .zero, modifierFlags: .command, timestamp: 0,
-                                                    windowNumber: 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 1))
+        let click = try #require(
+            NSEvent.mouseEvent(
+                with: .leftMouseDown, location: .zero, modifierFlags: .command, timestamp: 0,
+                windowNumber: 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 1))
         let ns = text as NSString
         for word in ["매칭", "note:", "[[note", "page=3"] {
             #expect(view.openLink(at: ns.range(of: word).location + 1, event: click), "\(word)")
@@ -98,8 +104,10 @@ struct NoteSourceTests {
         let (view, _) = Self.editor(text)
         var opened: [AppLink] = []
         view.linkOpener = OpenLinkAction { link, _, _ in opened.append(link) }
-        let click = try #require(NSEvent.mouseEvent(with: .leftMouseDown, location: .zero, modifierFlags: .command, timestamp: 0,
-                                                    windowNumber: 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 1))
+        let click = try #require(
+            NSEvent.mouseEvent(
+                with: .leftMouseDown, location: .zero, modifierFlags: .command, timestamp: 0,
+                windowNumber: 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 1))
         let ns = text as NSString
         for word in ["[[folio", "material/", "page=2", "exam/"] {
             #expect(view.openLink(at: ns.range(of: word).location + 1, event: click), "\(word)")
@@ -128,7 +136,9 @@ struct NoteSourceTests {
             let size = (font?.pointSize ?? 0) / (font?.fontDescriptor.symbolicTraits.contains(.monoSpace) == true ? NoteLook.monoScale : 1)
             let line = ns.substring(with: ns.lineRange(for: r))
             let heading = line.hasPrefix("#")
-            if size != NoteLook.body, !(heading && NoteLook.headingSizes.contains(size)) { odd.append("\(size) \(ns.substring(with: r).debugDescription)") }
+            if size != NoteLook.body, !(heading && NoteLook.headingSizes.contains(size)) {
+                odd.append("\(size) \(ns.substring(with: r).debugDescription)")
+            }
         }
         #expect(odd.isEmpty, "\(odd.prefix(5))")
     }
@@ -155,7 +165,8 @@ struct NoteSourceTests {
         for text in ["- 하나", "본문", "## 제목"] {
             let (view, _) = Self.typing(text)
             view.insertNewline(nil)
-            view.setMarkedText("하", selectedRange: NSRange(location: 1, length: 0), replacementRange: NSRange(location: NSNotFound, length: 0))
+            view.setMarkedText(
+                "하", selectedRange: NSRange(location: 1, length: 0), replacementRange: NSRange(location: NSNotFound, length: 0))
             #expect(Self.size(view, at: view.markedRange().location) == NoteLook.body, "\(text)")
             view.unmarkText()
             #expect(Self.size(view, at: view.string.utf16.count - 1) == NoteLook.body, "\(text)")
@@ -172,8 +183,9 @@ struct NoteSourceTests {
             var insert: String?
         }
         let box = Box()
-        let editor = MarkdownEditor(text: Binding(get: { box.text }, set: { box.text = $0 }), baseURL: nil, math: .latex,
-                                    insert: Binding(get: { box.insert }, set: { box.insert = $0 }), saveFile: { _, _ in nil }, openNote: { _ in })
+        let editor = MarkdownEditor(
+            text: Binding(get: { box.text }, set: { box.text = $0 }), baseURL: nil, math: .latex,
+            insert: Binding(get: { box.insert }, set: { box.insert = $0 }), saveFile: { _, _ in nil }, openNote: { _ in })
         let coordinator = editor.makeCoordinator()
         let (view, window) = Self.editor(box.text)
         view.onChange = { coordinator.changed() }
@@ -201,8 +213,9 @@ struct NoteSourceTests {
             var insert: String? = "![](assets/그림.png)"
         }
         let box = Box()
-        let editor = MarkdownEditor(text: Binding(get: { box.text }, set: { box.text = $0 }), baseURL: nil, math: .latex,
-                                    insert: Binding(get: { box.insert }, set: { box.insert = $0 }), saveFile: { _, _ in nil }, openNote: { _ in })
+        let editor = MarkdownEditor(
+            text: Binding(get: { box.text }, set: { box.text = $0 }), baseURL: nil, math: .latex,
+            insert: Binding(get: { box.insert }, set: { box.insert = $0 }), saveFile: { _, _ in nil }, openNote: { _ in })
         let coordinator = editor.makeCoordinator()
         let (view, _) = Self.typing(box.text)
         view.onChange = { coordinator.changed() }
@@ -319,14 +332,17 @@ struct NoteSourceTests {
                     view.configure(accent: CourseAccent.presets[0].accent, syntax: syntax, dark: dark)
                     window.makeFirstResponder(view)
                     let ns = text as NSString
-                    view.setSelectedRange(NSRange(location: display ? ns.range(of: source).location + 1 : ns.range(of: "$").location + 2, length: 0))
+                    view.setSelectedRange(
+                        NSRange(location: display ? ns.range(of: source).location + 1 : ns.range(of: "$").location + 2, length: 0))
                     let label = "\(shape.name) \(syntax.rawValue) \(display ? "block" : "inline") \(dark ? "dark" : "light")"
                     let bubble = try #require(await Self.bubble(view), "\(label)")
                     let image = try #require(bubble.picture.image, "\(label)")
                     #expect(bubble.picture.frame.size == image.size, "\(label): \(bubble.picture.frame.size) for \(image.size)")
                     #expect(Self.inColumn(bubble, view), "\(label): \(bubble.frame) for \(view.column)")
                     if bubble.scrolls {
-                        #expect(bubble.frame.width == view.columnWidth + 2 * PreviewBubble.pad, "\(label): \(bubble.frame.width) for \(view.columnWidth)")
+                        #expect(
+                            bubble.frame.width == view.columnWidth + 2 * PreviewBubble.pad,
+                            "\(label): \(bubble.frame.width) for \(view.columnWidth)")
                     } else {
                         let picture = bubble.convert(bubble.picture.bounds, from: bubble.picture)
                         let insets = [picture.minX, picture.minY, bubble.bounds.maxX - picture.maxX, bubble.bounds.maxY - picture.maxY]
@@ -335,17 +351,21 @@ struct NoteSourceTests {
                     // As wide as the bubble, and as tall as it and the line of source it's under, whole rather than
                     // cut through by the bubble's margin.
                     let closing = ns.range(of: "$", options: .backwards).location
-                    let line = view.convert(window.convertFromScreen(view.firstRect(forCharacterRange: NSRange(location: closing, length: 1), actualRange: nil)), from: nil)
+                    let line = view.convert(
+                        window.convertFromScreen(
+                            view.firstRect(forCharacterRange: NSRange(location: closing, length: 1), actualRange: nil)), from: nil)
                     let top = min(bubble.frame.minY - 12, line.minY - 4), bottom = max(bubble.frame.maxY + 12, line.maxY + 4)
-                    let around = CGRect(x: bubble.frame.minX - 12, y: top, width: bubble.frame.width + 24, height: bottom - top).intersection(view.bounds)
+                    let around = CGRect(x: bubble.frame.minX - 12, y: top, width: bubble.frame.width + 24, height: bottom - top)
+                        .intersection(view.bounds)
                     if let cell = Self.cell(view, bubble, around: around) {
                         cells.append(cell)
                     }
                 }
                 rows.append((shape.name, cells))
             }
-            NoteRender.sheet(rows, columns: ["TeX 인라인", "TeX 블록", "AsciiMath 인라인", "AsciiMath 블록"], dark: dark,
-                             "math-bubbles-\(dark ? "dark" : "light")")
+            NoteRender.sheet(
+                rows, columns: ["TeX 인라인", "TeX 블록", "AsciiMath 인라인", "AsciiMath 블록"], dark: dark,
+                "math-bubbles-\(dark ? "dark" : "light")")
         }
     }
 
@@ -379,7 +399,9 @@ struct NoteSourceTests {
                 #expect(bubble.frame.width == view.columnWidth + 2 * PreviewBubble.pad, "\(label): \(bubble.frame.width)")
                 #expect(Self.inColumn(bubble, view), "\(label): \(bubble.frame) for \(view.column)")
                 // The picture and its padding, inside the border.
-                #expect(document.frame.width == image.size.width + 2 * (PreviewBubble.pad - 1), "\(label): \(document.frame.width) for \(image.size.width)")
+                #expect(
+                    document.frame.width == image.size.width + 2 * (PreviewBubble.pad - 1),
+                    "\(label): \(document.frame.width) for \(image.size.width)")
                 let end = document.frame.width - bubble.scroller.bounds.width
                 func offset() -> CGFloat { bubble.scroller.contentView.bounds.minX }
                 #expect(offset() == 0 && bubble.leading.isHidden && !bubble.trailing.isHidden, "\(label): opened at \(offset())")
@@ -422,9 +444,11 @@ struct NoteSourceTests {
     /// wider than the column, opening at the caret's line from its start, and taking a wheel over it, which the note
     /// took before, so it couldn't be scrolled at all.
     func multilineBlockScrolls() async throws {
-        let lines = ["det(B - tI) = det(Q^-1AQ - tI) = det(Q^-1(A-tI)Q) =",
-                     "det(Q^-1)det(A - tI)det(Q) = 1/(det(Q)) det(A - tI) det(Q) =",
-                     "det(A - tI)"]
+        let lines = [
+            "det(B - tI) = det(Q^-1AQ - tI) = det(Q^-1(A-tI)Q) =",
+            "det(Q^-1)det(A - tI)det(Q) = 1/(det(Q)) det(A - tI) det(Q) =",
+            "det(A - tI)",
+        ]
         let text = "앞\n$$\n" + lines.joined(separator: "\n") + "\n$$\n뒤"
         let (view, window) = Self.editor(text, width: 720)
         Self.shown(window)
@@ -432,7 +456,8 @@ struct NoteSourceTests {
         view.configure(accent: CourseAccent.presets[0].accent, syntax: .asciimath, dark: false)
         window.makeFirstResponder(view)
         let ns = text as NSString
-        let open = ns.range(of: "$$").location, source = ns.substring(with: NSRange(location: open, length: ns.range(of: "뒤").location - open))
+        let open = ns.range(of: "$$").location,
+            source = ns.substring(with: NSRange(location: open, length: ns.range(of: "뒤").location - open))
         view.setSelectedRange(NSRange(location: open + 1, length: 0))
         let bubble = try #require(await Self.bubble(view))
         let image = try #require(bubble.picture.image)
@@ -475,11 +500,15 @@ struct NoteSourceTests {
         bubble.hovered = false
         let (before, top, taken) = (offset(), note(), scroll.wheels)
         view.scrollWheel(with: try Self.wheel(x: -80, y: 0, at: center, in: view))
-        #expect(offset() > before && note() == top && scroll.wheels == taken, "\(label): sideways moved the formula \(before) → \(offset()), the note \(top) → \(note()); bubble took it: \(bubble.hovered)")
+        #expect(
+            offset() > before && note() == top && scroll.wheels == taken,
+            "\(label): sideways moved the formula \(before) → \(offset()), the note \(top) → \(note()); bubble took it: \(bubble.hovered)")
         let (sideways, wheels) = (offset(), scroll.wheels)
         view.scrollWheel(with: try Self.wheel(x: 0, y: -80, at: center, in: view))
         // The note's scroll doesn't move for a wheel made in the app, so only that it got it.
-        #expect(scroll.wheels == wheels + 1 && offset() == sideways, "\(label): down reached the note \(scroll.wheels - wheels) times, moved the formula \(sideways) → \(offset())")
+        #expect(
+            scroll.wheels == wheels + 1 && offset() == sideways,
+            "\(label): down reached the note \(scroll.wheels - wheels) times, moved the formula \(sideways) → \(offset())")
     }
 
     /// A trackpad's scroll by `x` and `y` points over `point` in `view`, made in the app as AppKit gets one: with no
@@ -496,8 +525,10 @@ struct NoteSourceTests {
         let event = try #require(NSEvent(cgEvent: cg))
         #expect(event.type == .scrollWheel && abs(event.scrollingDeltaX) >= abs(CGFloat(x)) / 2, "\(event)")
         let back = event.window == nil ? window.convertPoint(fromScreen: event.locationInWindow) : event.locationInWindow
-        #expect(abs(view.convert(back, from: nil).x - point.x) < 1 && abs(view.convert(back, from: nil).y - point.y) < 1,
-                "made at \(point), comes at \(view.convert(back, from: nil)) (\(event.locationInWindow), window \(String(describing: event.window)))")
+        #expect(
+            abs(view.convert(back, from: nil).x - point.x) < 1 && abs(view.convert(back, from: nil).y - point.y) < 1,
+            "made at \(point), comes at \(view.convert(back, from: nil)) (\(event.locationInWindow), window \(String(describing: event.window)))"
+        )
         return event
     }
 
@@ -516,7 +547,8 @@ struct NoteSourceTests {
     /// they are: `cacheDisplay` draws only what views draw, and the card, the picture and the fades are layers.
     static func cell(_ view: SourceTextView, _ bubble: PreviewBubble, around: CGRect) -> NSBitmapImageRep? {
         guard let rep = view.bitmapImageRepForCachingDisplay(in: around), let layer = bubble.layer,
-              let context = NSGraphicsContext(bitmapImageRep: rep) else { return nil }
+            let context = NSGraphicsContext(bitmapImageRep: rep)
+        else { return nil }
         view.cacheDisplay(in: around, to: rep)
         // The colors come in the window's display pass, which a window off every screen doesn't run; and `render(in:)`
         // draws a shadow unblurred, as a band under the card.

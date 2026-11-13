@@ -113,7 +113,9 @@ private struct SettingsColumn: View {
                                 Button {
                                     pick(t)
                                     closeColumn()
-                                } label: { ColumnRow(title: t.label, symbol: t.symbol, chosen: tab == t) }
+                                } label: {
+                                    ColumnRow(title: t.label, symbol: t.symbol, chosen: tab == t)
+                                }
                                 .buttonStyle(.pointing(.plain))
                             }
                         }
@@ -140,7 +142,9 @@ private struct GeneralSettings: View {
         Block(String(localized: .settingsScreenAndFolder)) {
             Card {
                 FormRow(label: String(localized: .settingsAppearance), device: true) {
-                    Segmented(selection: $appearance, options: Appearance.allCases.map { ($0, $0.label) }, symbols: Appearance.allCases.map(\.symbol))
+                    Segmented(
+                        selection: $appearance, options: Appearance.allCases.map { ($0, $0.label) },
+                        symbols: Appearance.allCases.map(\.symbol))
                 }
                 FormRow(label: String(localized: .settingsGistFolder), detail: model.folderPath, device: true) {
                     Button(.settingsPickFolder) { pickingFolder = true }
@@ -192,7 +196,9 @@ private struct PaneLayoutSettings: View {
                 }
             }
         }
-        .alert(String(localized: .panesPresetsRenameTitle), isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
+        .alert(
+            String(localized: .panesPresetsRenameTitle), isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })
+        ) {
             TextField(String(localized: .panesPresetsNameField), text: $name)
             Button(String(localized: .commonSave)) {
                 if let renaming { model.rename(renaming.id, to: name) }
@@ -276,10 +282,12 @@ private struct ReviewSettingsForm: View {
             }
             FormRow(label: String(localized: .settingsDailyLimit)) {
                 let limit = model.settings.review.dailyLimit
-                ScrubField(value: Binding(get: { Double(limit ?? 10) }, set: { model.settings.review.dailyLimit = Int($0.rounded()) }),
-                           range: 1...50, step: 1, width: 80)
-                    .disabled(limit == nil)
-                    .opacity(limit == nil ? 0.4 : 1)
+                ScrubField(
+                    value: Binding(get: { Double(limit ?? 10) }, set: { model.settings.review.dailyLimit = Int($0.rounded()) }),
+                    range: 1...50, step: 1, width: 80
+                )
+                .disabled(limit == nil)
+                .opacity(limit == nil ? 0.4 : 1)
                 Text(.settingsUnits).foregroundStyle(Theme.Palette.textSecondary)
                 Switch(isOn: Binding(get: { limit != nil }, set: { model.settings.review.dailyLimit = $0 ? 10 : nil }))
             }
@@ -311,7 +319,9 @@ private struct AboutSettings: View {
             FormRow(label: String(localized: .settingsVersion)) {
                 Text(model.version).foregroundStyle(Theme.Palette.textSecondary).textSelection(.enabled)
             }
-            Button { openLink(.place(.whatsNew)) } label: {
+            Button {
+                openLink(.place(.whatsNew))
+            } label: {
                 CardRow(last: true) {
                     Text(.whatsNewTitle)
                     Spacer(minLength: Theme.Space.s)
@@ -330,10 +340,13 @@ private struct NotificationSettingsForm: View {
     var body: some View {
         Block(String(localized: .settingsAssignments)) {
             Card {
-                FormRow(label: String(localized: .settingsDueAlert), last: !settings.assignmentDue) { Switch(isOn: $settings.assignmentDue) }
+                FormRow(label: String(localized: .settingsDueAlert), last: !settings.assignmentDue) {
+                    Switch(isOn: $settings.assignmentDue)
+                }
                 if settings.assignmentDue {
                     FormRow(label: String(localized: .settingsAlertLead), last: true) {
-                        IntListField(values: $settings.assignmentLeadHours, unit: String(localized: .settingsUnitHoursBefore), range: 1...336)
+                        IntListField(
+                            values: $settings.assignmentLeadHours, unit: String(localized: .settingsUnitHoursBefore), range: 1...336)
                     }
                 }
             }
@@ -341,7 +354,8 @@ private struct NotificationSettingsForm: View {
         Block(String(localized: .settingsExams)) {
             Card {
                 FormRow(label: String(localized: .settingsDayBefore)) {
-                    TimeMenu(minute: $settings.examDayBeforeMinute).disabled(!settings.examDayBefore).opacity(settings.examDayBefore ? 1 : 0.4)
+                    TimeMenu(minute: $settings.examDayBeforeMinute).disabled(!settings.examDayBefore).opacity(
+                        settings.examDayBefore ? 1 : 0.4)
                     Switch(isOn: $settings.examDayBefore)
                 }
                 FormRow(label: String(localized: .settingsMorningOf), last: true) {
@@ -391,7 +405,11 @@ private struct BackupSettingsForm: View {
         .fileImporter(isPresented: $picking, allowedContentTypes: [.folder]) { result in
             if case .success(let url) = result { model.pickBackupFolder(url) }
         }
-        Block(String(localized: .settingsRestore), note: model.archives.count > SettingsModel.archiveLimit ? String(localized: .settingsRecentArchives(SettingsModel.archiveLimit)) : nil) {
+        Block(
+            String(localized: .settingsRestore),
+            note: model.archives.count > SettingsModel.archiveLimit
+                ? String(localized: .settingsRecentArchives(SettingsModel.archiveLimit)) : nil
+        ) {
             Card {
                 if model.archives.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .settingsNoBackups)) } }
                 let shown = model.shownArchives
@@ -399,7 +417,10 @@ private struct BackupSettingsForm: View {
                     CardRow(last: i == shown.count - 1) {
                         Text(archive.day.description).monospacedDigit()
                         Spacer()
-                        SearchPicker(options: model.restoreOptions, pick: { restore($0, from: archive) }, prompt: String(localized: .settingsRestoreCoursePrompt)) {
+                        SearchPicker(
+                            options: model.restoreOptions, pick: { restore($0, from: archive) },
+                            prompt: String(localized: .settingsRestoreCoursePrompt)
+                        ) {
                             ChipLabel(String(localized: .settingsRestoreCourse))
                         }
                     }
@@ -443,31 +464,44 @@ private struct NoteSettingsForm: View {
                 }
                 ForEach(Self.kinds, id: \.self) { kind in
                     let last = kind == Self.kinds.last
-                    DisclosureRow(label: String(localized: .settingsTemplateHeadings(Self.name(kind))),
-                                  isOpen: Binding(get: { open.contains(kind) }, set: { if $0 { open.insert(kind) } else { open.remove(kind) } }),
-                                  last: last) {
+                    DisclosureRow(
+                        label: String(localized: .settingsTemplateHeadings(Self.name(kind))),
+                        isOpen: Binding(get: { open.contains(kind) }, set: { if $0 { open.insert(kind) } else { open.remove(kind) } }),
+                        last: last
+                    ) {
                         // The raw list, blanks included, so a row just added stays until it's typed into.
-                        HeadingRows(lines: Binding(
-                            get: { model.settings.noteTemplates[kind.rawValue] ?? NoteTemplate.defaultSections(for: kind) },
-                            set: { model.settings.noteTemplates[kind.rawValue] = $0 == NoteTemplate.defaultSections(for: kind) ? nil : $0 }
-                        ), last: last)
+                        HeadingRows(
+                            lines: Binding(
+                                get: { model.settings.noteTemplates[kind.rawValue] ?? NoteTemplate.defaultSections(for: kind) },
+                                set: {
+                                    model.settings.noteTemplates[kind.rawValue] = $0 == NoteTemplate.defaultSections(for: kind) ? nil : $0
+                                }
+                            ), last: last)
                     }
                 }
             }
         }
         let shown = snippets ?? model.settings.newNoteMath
-        Block(title: String(localized: .settingsSnippets), trailing: {
-            Segmented(selection: Binding(get: { shown }, set: { snippets = $0 }),
-                      options: [(.latex, MathSyntax.latex.label), (.asciimath, MathSyntax.asciimath.label)], compact: true)
-        }) {
+        Block(
+            title: String(localized: .settingsSnippets),
+            trailing: {
+                Segmented(
+                    selection: Binding(get: { shown }, set: { snippets = $0 }),
+                    options: [(.latex, MathSyntax.latex.label), (.asciimath, MathSyntax.asciimath.label)], compact: true)
+            }
+        ) {
             // Stored only once changed, so a note editor keeps getting the app's defaults until then.
             switch shown {
             case .latex:
-                SnippetList(snippets: Binding(get: { model.settings.snippets }, set: { model.settings.mathSnippets = $0 == MathSnippet.defaults ? nil : $0 }))
+                SnippetList(
+                    snippets: Binding(
+                        get: { model.settings.snippets }, set: { model.settings.mathSnippets = $0 == MathSnippet.defaults ? nil : $0 }))
             case .asciimath:
-                SnippetList(snippets: Binding(get: { model.settings.asciiSnippets },
-                                              set: { model.settings.asciiMathSnippets = $0 == MathSnippet.asciiMathDefaults ? nil : $0 }),
-                            defaults: MathSnippet.asciiMathDefaults, placed: false)
+                SnippetList(
+                    snippets: Binding(
+                        get: { model.settings.asciiSnippets },
+                        set: { model.settings.asciiMathSnippets = $0 == MathSnippet.asciiMathDefaults ? nil : $0 }),
+                    defaults: MathSnippet.asciiMathDefaults, placed: false)
             }
         }
     }
@@ -517,9 +551,13 @@ struct ClaudeConnectionCard: View {
     var body: some View {
         Card {
             #if os(macOS)
-            FormRow(label: String(localized: .settingsConnectionMethod), detail: model.connectionDetail(subscription: subscription),
-                    device: true, warns: model.connectionWarns(subscription: subscription)) {
-                ChoiceMenu(selection: $subscription, options: [(true, String(localized: .settingsSubscription)), (false, String(localized: .settingsApiKey))])
+            FormRow(
+                label: String(localized: .settingsConnectionMethod), detail: model.connectionDetail(subscription: subscription),
+                device: true, warns: model.connectionWarns(subscription: subscription)
+            ) {
+                ChoiceMenu(
+                    selection: $subscription,
+                    options: [(true, String(localized: .settingsSubscription)), (false, String(localized: .settingsApiKey))])
             }
             .onChange(of: subscription) { model.workspace.claudeRevision += 1 }
             #endif
@@ -529,9 +567,12 @@ struct ClaudeConnectionCard: View {
                     Button(.settingsChange) { model.replacingKey = true }
                 }
             } else {
-                FormRow(label: String(localized: .settingsApiKey),
-                        detail: model.keyMissing(subscription: subscription) ? String(localized: .settingsApiKeyMissing) : nil, warns: true, last: true) {
-                    SecureField("sk-ant-…", text: $model.apiKey).pill(width: 180).onSubmit(model.saveKey) // strings: data, the key's form
+                FormRow(
+                    label: String(localized: .settingsApiKey),
+                    detail: model.keyMissing(subscription: subscription) ? String(localized: .settingsApiKeyMissing) : nil, warns: true,
+                    last: true
+                ) {
+                    SecureField("sk-ant-…", text: $model.apiKey).pill(width: 180).onSubmit(model.saveKey)  // strings: data, the key's form
                     Button(.commonSave, action: model.saveKey).disabled(model.apiKey.isEmpty)
                 }
             }
@@ -553,8 +594,9 @@ struct IntScrub: View {
     var width: CGFloat = 64
 
     var body: some View {
-        ScrubField(value: Binding(get: { Double(value) }, set: { value = Int($0.rounded()) }),
-                   range: Double(range.lowerBound)...Double(range.upperBound), step: 1, width: width)
+        ScrubField(
+            value: Binding(get: { Double(value) }, set: { value = Int($0.rounded()) }),
+            range: Double(range.lowerBound)...Double(range.upperBound), step: 1, width: width)
     }
 }
 
@@ -573,7 +615,9 @@ struct IntListField: View {
                 HStack(spacing: Theme.Space.xs) {
                     Text("\(v)\(unit)").monospacedDigit()
                     if values.count > 1 {
-                        Button { values.removeAll { $0 == v } } label: {
+                        Button {
+                            values.removeAll { $0 == v }
+                        } label: {
                             Image(systemName: "xmark").font(Theme.Glyph.tiny).foregroundStyle(Theme.Palette.textTertiary)
                         }
                         .buttonStyle(.pointing(.plain))
@@ -590,13 +634,17 @@ struct IntListField: View {
             Button {
                 draft = min((values.last ?? 0) + 1, range.upperBound)
                 adding = true
-            } label: { Image(systemName: "plus") }
+            } label: {
+                Image(systemName: "plus")
+            }
             .buttonStyle(.ghost)
             .help(Text(.commonAdd))
             .popover(isPresented: $adding) {
                 HStack(spacing: Theme.Space.s) {
-                    ScrubField(value: Binding(get: { Double(draft) }, set: { draft = min(max(Int($0.rounded()), range.lowerBound), range.upperBound) }),
-                               range: Double(range.lowerBound)...Double(range.upperBound), step: 1, width: 88)
+                    ScrubField(
+                        value: Binding(
+                            get: { Double(draft) }, set: { draft = min(max(Int($0.rounded()), range.lowerBound), range.upperBound) }),
+                        range: Double(range.lowerBound)...Double(range.upperBound), step: 1, width: 88)
                     Text(unit).foregroundStyle(Theme.Palette.textSecondary)
                     Button(.commonAdd, action: add).buttonStyle(.prominent)
                 }
@@ -628,10 +676,16 @@ struct SnippetList: View {
                         .textFieldStyle(.plain)
                         .font(Theme.Typeface.mono)
                     if placed {
-                        ChoiceMenu(selection: field(i, \.inMath), options: [(false, String(localized: .settingsSnippetInText)),
-                                                                              (true, String(localized: .settingsSnippetInMath))])
+                        ChoiceMenu(
+                            selection: field(i, \.inMath),
+                            options: [
+                                (false, String(localized: .settingsSnippetInText)),
+                                (true, String(localized: .settingsSnippetInMath)),
+                            ])
                     }
-                    Button { snippets.remove(at: i) } label: {
+                    Button {
+                        snippets.remove(at: i)
+                    } label: {
                         Image(systemName: "minus.circle").foregroundStyle(Theme.Palette.textTertiary)
                     }
                     .buttonStyle(.pointing(.plain))
@@ -640,7 +694,9 @@ struct SnippetList: View {
                 .contextMenu { Button(.commonDelete, role: .destructive) { if snippets.indices.contains(i) { snippets.remove(at: i) } } }
             }
             CardRow(last: true) {
-                Button { snippets.append(MathSnippet(trigger: "", body: "", inMath: true)) } label: {
+                Button {
+                    snippets.append(MathSnippet(trigger: "", body: "", inMath: true))
+                } label: {
                     Label(.settingsSnippetAdd, systemImage: "plus").foregroundStyle(Theme.Palette.textSecondary)
                 }
                 .buttonStyle(.pointing(.plain))
@@ -654,8 +710,11 @@ struct SnippetList: View {
 
     /// Guarded: a removed row can still be asked for its value once while the list redraws.
     func field<T>(_ i: Int, _ key: WritableKeyPath<MathSnippet, T>) -> Binding<T> {
-        Binding(get: { snippets.indices.contains(i) ? snippets[i][keyPath: key] : MathSnippet(trigger: "", body: "", inMath: true)[keyPath: key] },
-                set: { if snippets.indices.contains(i) { snippets[i][keyPath: key] = $0 } })
+        Binding(
+            get: {
+                snippets.indices.contains(i) ? snippets[i][keyPath: key] : MathSnippet(trigger: "", body: "", inMath: true)[keyPath: key]
+            },
+            set: { if snippets.indices.contains(i) { snippets[i][keyPath: key] = $0 } })
     }
 }
 
@@ -669,9 +728,15 @@ struct HeadingRows: View {
             CardRow {
                 Text("\(i + 1)").monospacedDigit().foregroundStyle(Theme.Palette.textTertiary).frame(width: 18, alignment: .trailing)
                 // Guarded: a removed row can still be asked for its text once while the list redraws.
-                TextField(String(localized: .settingsHeading), text: Binding(get: { lines.indices.contains(i) ? lines[i] : "" }, set: { if lines.indices.contains(i) { lines[i] = $0 } }))
-                    .textFieldStyle(.plain)
-                Button { lines.remove(at: i) } label: {
+                TextField(
+                    String(localized: .settingsHeading),
+                    text: Binding(
+                        get: { lines.indices.contains(i) ? lines[i] : "" }, set: { if lines.indices.contains(i) { lines[i] = $0 } })
+                )
+                .textFieldStyle(.plain)
+                Button {
+                    lines.remove(at: i)
+                } label: {
                     Image(systemName: "minus.circle").foregroundStyle(Theme.Palette.textTertiary)
                 }
                 .buttonStyle(.pointing(.plain))
@@ -680,7 +745,9 @@ struct HeadingRows: View {
             .contextMenu { Button(.commonDelete, role: .destructive) { if lines.indices.contains(i) { lines.remove(at: i) } } }
         }
         CardRow(last: last) {
-            Button { lines.append("") } label: {
+            Button {
+                lines.append("")
+            } label: {
                 Label(.settingsAddHeading, systemImage: "plus").foregroundStyle(Theme.Palette.textSecondary)
             }
             .buttonStyle(.pointing(.plain))

@@ -20,9 +20,13 @@ struct NoteList: View {
                 Caption(String(localized: .notesCount(shown.count)))
                 Spacer()
                 ChoiceMenu(selection: $model.filter, options: model.filterOptions)
-                Button { model.adding = true } label: { Image(systemName: "plus") }
-                    .buttonStyle(.ghost)
-                    .help(model.addHelp)
+                Button {
+                    model.adding = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .buttonStyle(.ghost)
+                .help(model.addHelp)
             }
             .padding(.horizontal, Theme.Space.s)
             .padding(.bottom, Theme.Space.xs)
@@ -64,7 +68,9 @@ struct NoteList: View {
     func row(_ row: NoteListModel.Row) -> some View {
         let note = row.note
         let selected = note.meta.id != nil && note.meta.id == selection
-        return Button { open(note) } label: {
+        return Button {
+            open(note)
+        } label: {
             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                 Text(note.title).lineLimit(1)
                 if let detail = row.detail {
@@ -80,9 +86,11 @@ struct NoteList: View {
         .buttonStyle(.pointing(.plain))
         .help(note.title)
         .contextMenu {
-            NoteMenu(courseId: model.course.id, note: note, host: .list, moves: model.moves, open: { open(note) }, removed: {
-                if note.meta.id != nil && note.meta.id == selection { selection = nil }
-            })
+            NoteMenu(
+                courseId: model.course.id, note: note, host: .list, moves: model.moves, open: { open(note) },
+                removed: {
+                    if note.meta.id != nil && note.meta.id == selection { selection = nil }
+                })
         }
     }
 
@@ -99,8 +107,11 @@ struct NotesView: View {
     let moves: MoveUndo
     let open: (UUID) -> Void
 
-    init(workspace: Workspace, course: LoadedCourse, selection: UUID?, anchor: AppLink.Anchor? = nil, insert: Binding<String?> = .constant(nil),
-         moves: MoveUndo, open: @escaping (UUID) -> Void) {
+    init(
+        workspace: Workspace, course: LoadedCourse, selection: UUID?, anchor: AppLink.Anchor? = nil,
+        insert: Binding<String?> = .constant(nil),
+        moves: MoveUndo, open: @escaping (UUID) -> Void
+    ) {
         _model = State(initialValue: NotesModel(workspace: workspace, course: course))
         self.moves = moves
         self.selection = selection
@@ -114,7 +125,8 @@ struct NotesView: View {
             if note.format == .tex {
                 TextFileView(workspace: model.workspace, course: model.course, note: note, moves: moves).id(note.url)
             } else {
-                NoteEditor(workspace: model.workspace, course: model.course, note: note, anchor: anchor, insert: insert, moves: moves) { title in
+                NoteEditor(workspace: model.workspace, course: model.course, note: note, anchor: anchor, insert: insert, moves: moves) {
+                    title in
                     if let id = model.noteId(titled: title) { open(id) }
                 }
                 .id(note.url)
@@ -153,8 +165,11 @@ struct NoteEditor: View {
     @Environment(CrumbTrail.self) private var trail: CrumbTrail?
     let moves: MoveUndo?
 
-    init(workspace: Workspace, course: LoadedCourse, note: NoteFile, anchor: AppLink.Anchor? = nil, insert: Binding<String?> = .constant(nil),
-         moves: MoveUndo? = nil, openNote: @escaping (String) -> Void) {
+    init(
+        workspace: Workspace, course: LoadedCourse, note: NoteFile, anchor: AppLink.Anchor? = nil,
+        insert: Binding<String?> = .constant(nil),
+        moves: MoveUndo? = nil, openNote: @escaping (String) -> Void
+    ) {
         let model = NoteEditorModel(workspace: workspace, course: course, note: note)
         _model = State(initialValue: model)
         _palette = State(initialValue: MathPaletteModel(editor: model))
@@ -170,8 +185,11 @@ struct NoteEditor: View {
                 NotePanesPicker(panes: $panes, wide: wide)
             } trailing: {
                 if let session = model.unfinishedReview {
-                    Button { model.finishReview(session) } label: {
-                        Label(.notesReviewDone, systemImage: "checkmark.circle").labelStyle(.titleAndIcon).padding(.horizontal, Theme.Space.s)
+                    Button {
+                        model.finishReview(session)
+                    } label: {
+                        Label(.notesReviewDone, systemImage: "checkmark.circle").labelStyle(.titleAndIcon).padding(
+                            .horizontal, Theme.Space.s)
                     }
                     .help(Text(.notesReviewDoneHelp))
                 }
@@ -187,18 +205,25 @@ struct NoteEditor: View {
                 .popover(isPresented: $showsMath, arrowEdge: .bottom) { MathPalette(model: palette, writing: writing) }
                 NoteLinkMenu(model: model)
                 if writing {
-                    Button { showsAssets.toggle() } label: {
-                        Label(.notesAssets, systemImage: "photo.on.rectangle").foregroundStyle(showsAssets ? accent.color : Theme.Palette.textSecondary)
+                    Button {
+                        showsAssets.toggle()
+                    } label: {
+                        Label(.notesAssets, systemImage: "photo.on.rectangle").foregroundStyle(
+                            showsAssets ? accent.color : Theme.Palette.textSecondary)
                     }
                     .help(Text(.notesAssetsHelp))
                     // The way by touch; on the Mac also 도움말 › 입력 안내 (⌘/) and the `/` menu.
-                    Button { showInputGuide(model.meta.math) } label: {
+                    Button {
+                        showInputGuide(model.meta.math)
+                    } label: {
                         Label(.notesGuideTitle, systemImage: "keyboard")
                     }
                     .help(Text(.notesGuideTitle))
                 }
                 outlineButton
-                PageMenuButton(inBar: true) { NoteMenu(courseId: model.course.id, note: model.note, host: .own, moves: moves, save: model.saveIfDirty) }
+                PageMenuButton(inBar: true) {
+                    NoteMenu(courseId: model.course.id, note: model.note, host: .own, moves: moves, save: model.saveIfDirty)
+                }
             }
             if writing && showsAssets {
                 AssetTray(model: model)
@@ -210,10 +235,11 @@ struct NoteEditor: View {
                 if shown != .read { editor }
                 if shown == .split { Theme.Palette.lineSoft.frame(width: 1) }
                 if shown != .write {
-                    NotePreview(text: model.body, baseURL: model.baseURL, math: model.meta.math, openNote: openNote, anchor: anchor,
-                                noteLink: model.note.meta.id.map { AppLink(.note, $0) }, edit: model.replaceLines,
-                                link: shown == .split ? preview : nil, toggleMode: toggleMode, embeds: model.embeds,
-                                revision: model.workspace.notesRevision, views: outline.views)
+                    NotePreview(
+                        text: model.body, baseURL: model.baseURL, math: model.meta.math, openNote: openNote, anchor: anchor,
+                        noteLink: model.note.meta.id.map { AppLink(.note, $0) }, edit: model.replaceLines,
+                        link: shown == .split ? preview : nil, toggleMode: toggleMode, embeds: model.embeds,
+                        revision: model.workspace.notesRevision, views: outline.views)
                 }
                 if outlineDocked {
                     Theme.Palette.lineSoft.frame(width: 1)
@@ -224,8 +250,16 @@ struct NoteEditor: View {
                 }
             }
         }
-        .onGeometryChange(for: Bool.self) { $0.size.width >= NotePanes.sideBySide } action: { wide = $0 }
-        .onGeometryChange(for: NoteOutlineFit.self) { NoteOutlineFit(width: $0.size.width) } action: { outlineFit = $0 }
+        .onGeometryChange(for: Bool.self) {
+            $0.size.width >= NotePanes.sideBySide
+        } action: {
+            wide = $0
+        }
+        .onGeometryChange(for: NoteOutlineFit.self) {
+            NoteOutlineFit(width: $0.size.width)
+        } action: {
+            outlineFit = $0
+        }
         .onChange(of: model.body, initial: true) { outline.read(model.body) }
         .onChange(of: [paneFocused, outlineShown, outline.isEmpty], initial: true) { registerOutline() }
         .onDisappear { trail?.clearOutline(owner: outlineOwner) }
@@ -239,12 +273,17 @@ struct NoteEditor: View {
         .background(Theme.Palette.card)
         .animation(Theme.Motion.standard, value: showsAssets)
         // Edits save on their own; ⌘S is kept only for the habit, with no button of its own.
-        .background { Button("") { model.saveNow(force: false) }.keyboardShortcut("s").opacity(0).allowsHitTesting(false).accessibilityHidden(true) }
+        .background {
+            Button("") { model.saveNow(force: false) }.keyboardShortcut("s").opacity(0).allowsHitTesting(false).accessibilityHidden(true)
+        }
         // The note's name is the screen's title; clicking it renames the note. Saved first: the file is about to move.
-        .crumb(model.note.title, level: 2, symbol: "doc.text", rename: {
-            model.saveIfDirty()
-            renaming = true
-        })
+        .crumb(
+            model.note.title, level: 2, symbol: "doc.text",
+            rename: {
+                model.saveIfDirty()
+                renaming = true
+            }
+        )
         .sheet(isPresented: $renaming) { NoteEditSheet(workspace: model.workspace, course: model.course, note: model.note, moves: moves) }
         .onAppear(perform: model.load)
         .rememberingPanes($panes, id: model.note.meta.id)
@@ -302,7 +341,9 @@ struct NoteEditor: View {
     }
 
     var outlineButton: some View {
-        Button { toggleOutline() } label: {
+        Button {
+            toggleOutline()
+        } label: {
             Label(.notesOutlineTitle, systemImage: "list.bullet.indent")
                 .foregroundStyle(outlineShown ? accent.color : Theme.Palette.textSecondary)
         }
@@ -318,16 +359,17 @@ struct NoteEditor: View {
     func toggleMode() { panes.toggle() }
 
     var editor: some View {
-        MarkdownEditor(text: $model.body, baseURL: model.baseURL, math: model.meta.math, insert: $model.pendingInsert,
-                       saveFile: model.saveFile, openNote: openNote,
-                       onScroll: { [preview, outline] line, frac in
-                           preview.follow(line: line, frac: frac)
-                           outline.views.editorScrolled(line)
-                       },
-                       assist: NoteAssist(settings: model.workspace.settings, links: model.links), anchor: anchor, embeds: model.embeds,
-                       revision: model.workspace.notesRevision, insertMath: $model.pendingMath,
-                       openGuide: { showInputGuide(model.meta.math) },
-                       views: outline.views)
+        MarkdownEditor(
+            text: $model.body, baseURL: model.baseURL, math: model.meta.math, insert: $model.pendingInsert,
+            saveFile: model.saveFile, openNote: openNote,
+            onScroll: { [preview, outline] line, frac in
+                preview.follow(line: line, frac: frac)
+                outline.views.editorScrolled(line)
+            },
+            assist: NoteAssist(settings: model.workspace.settings, links: model.links), anchor: anchor, embeds: model.embeds,
+            revision: model.workspace.notesRevision, insertMath: $model.pendingMath,
+            openGuide: { showInputGuide(model.meta.math) },
+            views: outline.views)
     }
 }
 
@@ -350,11 +392,15 @@ struct NoteLinkMenu: View {
                 }
             }
             Menu(String(localized: .notesLinkAsExam)) {
-                ForEach(model.linkExams) { e in item(e.title, on: meta.kind == .examSummary && meta.examId == e.id) { model.relink(.examSummary, exam: e.id) } }
+                ForEach(model.linkExams) { e in
+                    item(e.title, on: meta.kind == .examSummary && meta.examId == e.id) { model.relink(.examSummary, exam: e.id) }
+                }
             }
             Menu(String(localized: .notesLinkAsUnit)) {
                 ForEach(model.outline, id: \.unit.id) { u, depth in
-                    item(String(repeating: "   ", count: depth) + u.title, on: meta.kind == .unit && meta.unitIds.contains(u.id)) { model.toggleUnit(u.id) }
+                    item(String(repeating: "   ", count: depth) + u.title, on: meta.kind == .unit && meta.unitIds.contains(u.id)) {
+                        model.toggleUnit(u.id)
+                    }
                 }
             }
             item(String(localized: .notesLinkAsFree), on: meta.kind == .free) { model.relink(.free) }

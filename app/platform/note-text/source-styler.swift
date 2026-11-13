@@ -1,6 +1,7 @@
 import FolioDomain
 import FolioMarkdown
 import Markdown
+
 #if os(macOS)
 import AppKit
 #else
@@ -92,7 +93,9 @@ extension NSAttributedString {
         storage.setAttributes([.foregroundColor: NoteLook.text, .paragraphStyle: Self.paragraph()], range: all)
         w.walk(document, styler: self)
         for i in DraftItem.dashes(in: text) {
-            w.set(NSRange(location: i, length: 1), [.foregroundColor: accent.native.withAlphaComponent(0.85), Self.weight: PlatformFont.Weight.semibold.rawValue])
+            w.set(
+                NSRange(location: i, length: 1),
+                [.foregroundColor: accent.native.withAlphaComponent(0.85), Self.weight: PlatformFont.Weight.semibold.rawValue])
         }
 
         for line in lines where !w.inCode(line) {
@@ -107,9 +110,13 @@ extension NSAttributedString {
             let r = NSRange(m.range, in: text)
             guard !w.inCode(r, orTable: false), !math.covers(r) else { continue }
             let open = m.1.isEmpty ? 2 : 3
-            w.set(r, [.foregroundColor: accent.inkNative, Self.weight: PlatformFont.Weight.medium.rawValue,
-                      .noteWiki: WikiLink(m).target, .underlineStyle: NSUnderlineStyle.single.rawValue,
-                      .underlineColor: accent.native.withAlphaComponent(0.4)])
+            w.set(
+                r,
+                [
+                    .foregroundColor: accent.inkNative, Self.weight: PlatformFont.Weight.medium.rawValue,
+                    .noteWiki: WikiLink(m).target, .underlineStyle: NSUnderlineStyle.single.rawValue,
+                    .underlineColor: accent.native.withAlphaComponent(0.4),
+                ])
             w.marks.append(NSRange(location: r.location, length: open))
             w.marks.append(NSRange(location: NSMaxRange(r) - 2, length: 2))
             // An ID is for Folio to find the note by, not to read: it and the `|` before the name go with the brackets.
@@ -125,14 +132,21 @@ extension NSAttributedString {
         // A bare address, which the preview links and ⌘-click opens, reads as a link here too; one that is already a
         // link's target is left to that link.
         for (r, link) in AppLink.links(in: text) where !w.inCode(r, orTable: false) && !math.covers(r) {
-            let taken = storage.attribute(.noteWiki, at: r.location, effectiveRange: nil) != nil
+            let taken =
+                storage.attribute(.noteWiki, at: r.location, effectiveRange: nil) != nil
                 || storage.attribute(.noteHref, at: r.location, effectiveRange: nil) != nil
             guard !taken else { continue }
-            w.set(r, [.foregroundColor: accent.inkNative, .noteHref: link.string, .underlineStyle: NSUnderlineStyle.single.rawValue,
-                      .underlineColor: accent.native.withAlphaComponent(0.4)])
+            w.set(
+                r,
+                [
+                    .foregroundColor: accent.inkNative, .noteHref: link.string, .underlineStyle: NSUnderlineStyle.single.rawValue,
+                    .underlineColor: accent.native.withAlphaComponent(0.4),
+                ])
         }
         for mark in Footnotes.marks(in: text) where !w.inCode(mark.range) && !math.covers(mark.range) {
-            w.set(mark.label, [.foregroundColor: accent.inkNative, Self.weight: (mark.definition ? PlatformFont.Weight.semibold : .medium).rawValue])
+            w.set(
+                mark.label,
+                [.foregroundColor: accent.inkNative, Self.weight: (mark.definition ? PlatformFont.Weight.semibold : .medium).rawValue])
             w.marks.append(NSRange(location: mark.range.location, length: mark.label.location - mark.range.location))
             w.marks.append(NSRange(location: NSMaxRange(mark.label), length: NSMaxRange(mark.range) - NSMaxRange(mark.label)))
         }
@@ -144,7 +158,8 @@ extension NSAttributedString {
         }
         for block in math.blocks {
             for n in block.lines {
-                w.set(Self.withBreak(lines[n], in: storage), [Self.mono: true, .foregroundColor: accent.inkNative, .noteMathBlock: block.tex])
+                w.set(
+                    Self.withBreak(lines[n], in: storage), [Self.mono: true, .foregroundColor: accent.inkNative, .noteMathBlock: block.tex])
                 if let syntax = block.syntax { w.set(Self.withBreak(lines[n], in: storage), [.noteMathSyntax: syntax.rawValue]) }
             }
         }
@@ -168,7 +183,9 @@ extension NSAttributedString {
             if marked { weight = PlatformFont.Weight.regular.rawValue }
             let size = level.map { NoteLook.headingSizes[$0 - 1] } ?? NoteLook.body
             let mono = attributes[Self.mono] != nil
-            let font = NoteLook.font(mono ? size * NoteLook.monoScale : size, PlatformFont.Weight(weight), italic: attributes[Self.italic] != nil && !marked, mono: mono)
+            let font = NoteLook.font(
+                mono ? size * NoteLook.monoScale : size, PlatformFont.Weight(weight), italic: attributes[Self.italic] != nil && !marked,
+                mono: mono)
             storage.addAttribute(.font, value: font, range: range)
         }
         for key in keys { storage.removeAttribute(key, range: all) }
@@ -235,7 +252,9 @@ extension NSAttributedString {
 
         func lineRanges(_ r: NSRange) -> [NSRange] {
             var out: [NSRange] = []
-            text.enumerateSubstrings(in: text.lineRange(for: r), options: [.byLines, .substringNotRequired]) { _, line, _, _ in out.append(line) }
+            text.enumerateSubstrings(in: text.lineRange(for: r), options: [.byLines, .substringNotRequired]) { _, line, _, _ in
+                out.append(line)
+            }
             return out
         }
 
@@ -270,8 +289,12 @@ extension NSAttributedString {
             dim(ends: s.prefix { $0 == "`" }.count, r, &w)
         case let link as Markdown.Link:
             let href = link.destination ?? ""
-            w.set(r, [.foregroundColor: accent.inkNative, .noteHref: href, .underlineStyle: NSUnderlineStyle.single.rawValue,
-                      .underlineColor: accent.native.withAlphaComponent(0.4)])
+            w.set(
+                r,
+                [
+                    .foregroundColor: accent.inkNative, .noteHref: href, .underlineStyle: NSUnderlineStyle.single.rawValue,
+                    .underlineColor: accent.native.withAlphaComponent(0.4),
+                ])
             if s.hasPrefix("[") {
                 let parts = Array(link.children).compactMap { w.range($0) }
                 let label = parts.dropFirst().reduce(parts.first) { acc, r in acc.map { NSUnionRange($0, r) } }
@@ -286,17 +309,20 @@ extension NSAttributedString {
             let line = w.text.lineRange(for: NSRange(location: r.location, length: 0))
             let rest = w.text.substring(with: NSRange(location: r.location, length: NSMaxRange(line) - r.location))
             guard let m = rest.firstMatch(of: #/^([-*+]|\d+[.)])(\s+)(\[[ xX]\])?/#) else { break }
-            w.set(NSRange(location: r.location, length: m.1.utf16.count),
-                  [.foregroundColor: accent.native.withAlphaComponent(0.85), Self.weight: PlatformFont.Weight.semibold.rawValue])
+            w.set(
+                NSRange(location: r.location, length: m.1.utf16.count),
+                [.foregroundColor: accent.native.withAlphaComponent(0.85), Self.weight: PlatformFont.Weight.semibold.rawValue])
             if let box = m.3 {
                 let at = r.location + m.1.utf16.count + m.2.utf16.count
                 let done = box != "[ ]"
-                w.set(NSRange(location: at, length: box.utf16.count),
-                      [.foregroundColor: NoteLook.text3, Self.mono: true, .noteTask: done])
+                w.set(
+                    NSRange(location: at, length: box.utf16.count),
+                    [.foregroundColor: NoteLook.text3, Self.mono: true, .noteTask: done])
                 if done, let p = item.child(at: 0).flatMap(w.range) {
                     let from = at + box.utf16.count
-                    w.set(NSRange(location: from, length: NSMaxRange(p) - from),
-                          [.foregroundColor: NoteLook.text3, .strikethroughStyle: NSUnderlineStyle.single.rawValue])
+                    w.set(
+                        NSRange(location: from, length: NSMaxRange(p) - from),
+                        [.foregroundColor: NoteLook.text3, .strikethroughStyle: NSUnderlineStyle.single.rawValue])
                 }
             }
         case let quote as BlockQuote:
@@ -313,7 +339,9 @@ extension NSAttributedString {
                     let type = Self.nsRange(m.range, in: s, at: first.location)
                     let color = NoteLook.callout(header.type)
                     w.set(type, [Self.weight: PlatformFont.Weight.bold.rawValue, .foregroundColor: color])
-                    w.set(NSRange(location: NSMaxRange(type), length: NSMaxRange(first) - NSMaxRange(type)), [Self.weight: PlatformFont.Weight.semibold.rawValue])
+                    w.set(
+                        NSRange(location: NSMaxRange(type), length: NSMaxRange(first) - NSMaxRange(type)),
+                        [Self.weight: PlatformFont.Weight.semibold.rawValue])
                 }
             }
         case let block as CodeBlock:
@@ -324,7 +352,10 @@ extension NSAttributedString {
             }
             guard let first = lines.first, let last = lines.last else { break }
             w.marks.append(first)
-            if lines.count > 1, w.text.substring(with: last).trimmingCharacters(in: .whitespaces).hasPrefix(String(w.text.substring(with: first).trimmingCharacters(in: .whitespaces).prefix(3))) {
+            if lines.count > 1,
+                w.text.substring(with: last).trimmingCharacters(in: .whitespaces).hasPrefix(
+                    String(w.text.substring(with: first).trimmingCharacters(in: .whitespaces).prefix(3)))
+            {
                 w.marks.append(last)
             }
             // A math fence's body is drawn as math below, not as code.
@@ -534,8 +565,10 @@ struct MathScan {
                 ascent = max(ascent, font.ascender)
                 descent = max(descent, -font.descender)
             }
-            guard ascent > 0, let style = (text.attribute(.paragraphStyle, at: p.location, effectiveRange: nil) as? NSParagraphStyle)?
-                .mutableCopy() as? NSMutableParagraphStyle else { continue }
+            guard ascent > 0,
+                let style = (text.attribute(.paragraphStyle, at: p.location, effectiveRange: nil) as? NSParagraphStyle)?
+                    .mutableCopy() as? NSMutableParagraphStyle
+            else { continue }
             let natural = ascent + descent
             let height = ((natural + style.lineSpacing) / 2).rounded() * 2
             style.lineSpacing = 0
@@ -548,7 +581,8 @@ struct MathScan {
 
     /// The caret over the text at the bottom of its line, not the whole line.
     static func caret(_ rect: CGRect, at offset: Int, in text: NSAttributedString) -> CGRect {
-        let height = afterLastBreak(offset, in: text)
+        let height =
+            afterLastBreak(offset, in: text)
             ? bodyLine[.noteCaret] as? CGFloat
             : text.attribute(.noteCaret, at: min(offset, text.length - 1), effectiveRange: nil) as? CGFloat
         guard let height, height < rect.height else { return rect }
@@ -564,9 +598,11 @@ struct MathScan {
 
     /// A body paragraph's attributes, for that line: what's typed on it is body text until the styler says otherwise.
     static var bodyLine: [NSAttributedString.Key: Any] {
-        let line = NSMutableAttributedString(string: "\n", attributes: [
-            .font: NoteLook.font(NoteLook.body), .foregroundColor: NoteLook.text, .paragraphStyle: SourceStyler.paragraph(),
-        ])
+        let line = NSMutableAttributedString(
+            string: "\n",
+            attributes: [
+                .font: NoteLook.font(NoteLook.body), .foregroundColor: NoteLook.text, .paragraphStyle: SourceStyler.paragraph(),
+            ])
         fix(line)
         return line.attributes(at: 0, effectiveRange: nil)
     }

@@ -39,7 +39,9 @@ struct GradesView: View {
                                 ChoiceMenu(selection: $model.targetProgram, options: model.targetOptions)
                             }
                         }
-                        FormRow(label: String(localized: .gradesGoalGpa)) { ScrubField(value: $model.target, range: 0...model.maxPoints, step: 0.01, fractionLength: 2, width: 96) }
+                        FormRow(label: String(localized: .gradesGoalGpa)) {
+                            ScrubField(value: $model.target, range: 0...model.maxPoints, step: 0.01, fractionLength: 2, width: 96)
+                        }
                         FormRow(label: String(localized: .gradesGoalRemaining), detail: model.remainingDetail) {
                             ScrubField(value: $model.remaining, range: 0...200, step: 1, width: 96)
                         }
@@ -95,7 +97,9 @@ struct GradesView: View {
                             .contentShape(.rect)
                         }
                         .buttonStyle(.pointing(.plain))
-                        .contextMenu { Button(open ? .gradesCollapseCourses : .gradesShowCourses, action: toggle).disabled(row.members.isEmpty) }
+                        .contextMenu {
+                            Button(open ? .gradesCollapseCourses : .gradesShowCourses, action: toggle).disabled(row.members.isEmpty)
+                        }
                         if open {
                             ForEach(row.members) { c in
                                 let grade = model.catalog.grade(c.finalGrade)
@@ -130,7 +134,9 @@ struct GradesView: View {
         }
         .navigationTitle(.gradesTitle)
         #if DEBUG && os(macOS)
-        .onAppear { if SnapshotDriver.directory != nil { model.expanded = model.semesters.first { $0.year == 2026 && $0.term == .spring }?.id } }
+        .onAppear {
+            if SnapshotDriver.directory != nil { model.expanded = model.semesters.first { $0.year == 2026 && $0.term == .spring }?.id }
+        }
         #endif
     }
 
@@ -138,9 +144,12 @@ struct GradesView: View {
         let members = model.currentMembers
         let term = model.simulatedTerm
         let total = model.simulatedTotal
-        return Block(title: String(localized: .gradesSimulation), note: model.workspace.currentSemester?.title, trailing: {
-            if !model.expected.isEmpty { Button(.gradesSimulationReset) { model.resetPicks() }.buttonStyle(.ghost) }
-        }) {
+        return Block(
+            title: String(localized: .gradesSimulation), note: model.workspace.currentSemester?.title,
+            trailing: {
+                if !model.expected.isEmpty { Button(.gradesSimulationReset) { model.resetPicks() }.buttonStyle(.ghost) }
+            }
+        ) {
             Card {
                 if members.isEmpty { CardRow { EmptyLine(String(localized: .gradesSimulationEmpty)) } }
                 ForEach(members) { c in
@@ -164,7 +173,10 @@ struct GradesView: View {
                 FormRow(label: String(localized: .gradesSimulationTermGpa), detail: model.simulatedTermDetail) {
                     Text(term.map(GradesModel.gpa) ?? "-").font(Theme.Typeface.figureSmall).rolling(term.map(GradesModel.gpa) ?? "-")
                 }
-                FormRow(label: String(localized: .gradesSimulationCumulativeGpa), detail: String(localized: .gradesGoalNow(GradesModel.gpa(cumulative))), last: true) {
+                FormRow(
+                    label: String(localized: .gradesSimulationCumulativeGpa),
+                    detail: String(localized: .gradesGoalNow(GradesModel.gpa(cumulative))), last: true
+                ) {
                     HStack(spacing: Theme.Space.s) {
                         if let change = model.simulatedChange {
                             Text(String(format: "%+.3f", change))
@@ -204,7 +216,10 @@ struct GradesView: View {
                     value(.semester)
                 }
                 HStack(spacing: Theme.Space.tight) {
-                    ZStack { Capsule().fill(Theme.Series.oneCompanion).frame(width: 16, height: 2); Circle().fill(Theme.Series.oneCompanion).frame(width: 8, height: 8) }
+                    ZStack {
+                        Capsule().fill(Theme.Series.oneCompanion).frame(width: 16, height: 2)
+                        Circle().fill(Theme.Series.oneCompanion).frame(width: 8, height: 8)
+                    }
                     Text(.gradesCumulativeGpa)
                     value(.cumulative)
                 }
@@ -233,10 +248,17 @@ struct GradesView: View {
                         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 6, topTrailingRadius: 6))
                 }
                 ForEach(solid) { p in
-                    AreaMark(x: .value(termLabel, p.label), yStart: .value("GPA", low), yEnd: .value("GPA", p.gpa), series: .value(lineLabel, "recorded"))
-                        .foregroundStyle(LinearGradient(colors: [Theme.Series.oneCompanion.opacity(0.18), Theme.Series.oneCompanion.opacity(0)], startPoint: .top, endPoint: .bottom))
-                        .interpolationMethod(.monotone)
-                        .zIndex(-1)
+                    AreaMark(
+                        x: .value(termLabel, p.label), yStart: .value("GPA", low), yEnd: .value("GPA", p.gpa),
+                        series: .value(lineLabel, "recorded")
+                    )
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Theme.Series.oneCompanion.opacity(0.18), Theme.Series.oneCompanion.opacity(0)], startPoint: .top,
+                            endPoint: .bottom)
+                    )
+                    .interpolationMethod(.monotone)
+                    .zIndex(-1)
                     LineMark(x: .value(termLabel, p.label), y: .value("GPA", p.gpa), series: .value(lineLabel, "recorded"))
                         .foregroundStyle(Theme.Series.oneCompanion)
                         .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round))
@@ -264,7 +286,8 @@ struct GradesView: View {
             .chartYAxis {
                 AxisMarks(position: .leading, values: Array(stride(from: low, through: model.maxPoints, by: 0.5))) {
                     AxisGridLine().foregroundStyle(Theme.Palette.lineSoft)
-                    AxisValueLabel(format: FloatingPointFormatStyle<Double>.number.precision(.fractionLength(1))).foregroundStyle(Theme.Palette.textTertiary)
+                    AxisValueLabel(format: FloatingPointFormatStyle<Double>.number.precision(.fractionLength(1))).foregroundStyle(
+                        Theme.Palette.textTertiary)
                 }
             }
             .chartXAxis { AxisMarks { AxisValueLabel().foregroundStyle(Theme.Palette.textTertiary) } }

@@ -17,7 +17,9 @@ struct RunCommand: ParsableCommand {
     func run() throws {
         let name = action.joined(separator: " ")
         guard let type = Actions.all.first(where: { $0.command == name }) else {
-            throw CLIError(exit: .usage, message: String(localized: .runUnknownAction(name)), candidates: Actions.all.map { $0.command }.filter { $0.hasPrefix(action.first ?? "") })
+            throw CLIError(
+                exit: .usage, message: String(localized: .runUnknownAction(name)),
+                candidates: Actions.all.map { $0.command }.filter { $0.hasPrefix(action.first ?? "") })
         }
         let text = input == "-" ? String(decoding: FileHandle.standardInput.readDataToEndOfFile(), as: UTF8.self) : input
         guard let json = try? JSONDecoder().decode(JSONValue.self, from: Data(text.utf8)) else {
@@ -78,7 +80,9 @@ extension Action {
         do {
             return try JSONDecoder.folio.decode(Self.self, from: json)
         } catch let error as DecodingError {
-            throw CLIError(exit: .usage, message: String(localized: .runBadInput(RunCommand.describe(error))), hints: [String(localized: .runBadInputHint)])
+            throw CLIError(
+                exit: .usage, message: String(localized: .runBadInput(RunCommand.describe(error))),
+                hints: [String(localized: .runBadInputHint)])
         }
     }
 }

@@ -9,7 +9,8 @@ struct BackupCommand: ParsableCommand {
         commandName: "backup", abstract: String(localized: .backupAbstract), subcommands: GeneratedCommands.backup + [List.self])
 
     struct List: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .backupListAbstract), discussion: String(localized: .backupListDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .backupListAbstract), discussion: String(localized: .backupListDiscussion))
         @OptionGroup var g: GlobalOptions
 
         func run() throws {

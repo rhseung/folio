@@ -3,16 +3,20 @@ import FolioDomain
 import FolioStorage
 import Foundation
 import Testing
+
 @testable import Folio
 
 @MainActor
 struct RecordingPlayerModelTests {
     let linearAlgebra = UUID(uuidString: "C0000000-0000-4000-8000-000000000001")!
 
-    func recorded(_ workspace: Workspace, bookmarks: [TimeInterval] = [], lines: [LectureTranscript.Line] = []) throws -> RecordingPlayerModel {
+    func recorded(_ workspace: Workspace, bookmarks: [TimeInterval] = [], lines: [LectureTranscript.Line] = []) throws
+        -> RecordingPlayerModel
+    {
         let ctx = ActionContext(gist: try #require(workspace.gist), device: workspace.device, now: workspace.now)
         let store = try ctx.store(linearAlgebra)
-        let recording = Recording(device: workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a", duration: 60, bookmarks: bookmarks)
+        let recording = Recording(
+            device: workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a", duration: 60, bookmarks: bookmarks)
         try FileManager.default.createDirectory(at: store.recordingsURL, withIntermediateDirectories: true)
         try Data("audio".utf8).write(to: store.fileURL(recording.file))
         try store.saveTranscript(LectureTranscript(locale: "ko-KR", lines: lines), of: recording)
@@ -25,9 +29,13 @@ struct RecordingPlayerModelTests {
         let f = try QuizFixture()
         let recording = Recording(device: f.workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a", bookmarks: [10])
         let model = RecordingPlayerModel(workspace: f.workspace, courseId: f.courseId, store: f.course.store, recording: recording)
-        model.transcript = LectureTranscript(locale: "ko-KR", lines: [.init(start: 0, end: 5, text: "그래프 정의"),
-                                                                      .init(start: 5, end: 11, text: "트리"),
-                                                                      .init(start: 11, end: 20, text: "그래프 탐색")])
+        model.transcript = LectureTranscript(
+            locale: "ko-KR",
+            lines: [
+                .init(start: 0, end: 5, text: "그래프 정의"),
+                .init(start: 5, end: 11, text: "트리"),
+                .init(start: 11, end: 20, text: "그래프 탐색"),
+            ])
         #expect(model.shownLines.map(\.bookmarked) == [false, true, false])
         model.query = "그래프"
         #expect(model.shownLines.map(\.index) == [0, 2])
@@ -37,7 +45,8 @@ struct RecordingPlayerModelTests {
     /// The address names the moment: a link seeks the player there, and the moment the player reports back doesn't
     /// seek it again. The audio here can't be read, so the length is the one the recording kept.
     @Test func theAddressFollowsThePlayer() throws {
-        let model = try recorded(try fixtureWorkspace(), lines: [.init(start: 0, end: 20, text: "가"), .init(start: 20, end: 60, text: "나")])
+        let model = try recorded(
+            try fixtureWorkspace(), lines: [.init(start: 0, end: 20, text: "가"), .init(start: 20, end: 60, text: "나")])
         let link = AppLink(.recording, model.recording.id)
         model.follow(link.with(.time(30)))
         #expect(model.player.time == 30 && model.player.duration == 60)
@@ -60,9 +69,11 @@ struct RecordingPlayerModelTests {
         let f = try QuizFixture()
         let recording = Recording(device: f.workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a")
         let model = RecordingPlayerModel(workspace: f.workspace, courseId: f.courseId, store: f.course.store, recording: recording)
-        model.transcript = LectureTranscript(locale: "ko-KR", lines: texts.enumerated().map { i, text in
-            LectureTranscript.Line(start: Double(i * 5), end: Double(i * 5 + 5), text: text)
-        })
+        model.transcript = LectureTranscript(
+            locale: "ko-KR",
+            lines: texts.enumerated().map { i, text in
+                LectureTranscript.Line(start: Double(i * 5), end: Double(i * 5 + 5), text: text)
+            })
         return model
     }
 
@@ -163,9 +174,11 @@ struct RecordingPlayerModelTests {
     }
 
     @Test func aMarkInAPauseGoesOnTheLineBefore() throws {
-        let model = try recorded(try fixtureWorkspace(), bookmarks: [12, 3], lines: [
-            .init(start: 0, end: 5, text: "행렬"), .init(start: 20, end: 25, text: "고윳값"),
-        ])
+        let model = try recorded(
+            try fixtureWorkspace(), bookmarks: [12, 3],
+            lines: [
+                .init(start: 0, end: 5, text: "행렬"), .init(start: 20, end: 25, text: "고윳값"),
+            ])
         #expect(model.shownLines.map(\.bookmarked) == [true, false])
         #expect(model.bookmarks == [3, 12])
     }
@@ -283,10 +296,12 @@ struct TranscriptionContextModelTests {
     var store: CourseStore { workspace.course(graphTheory)!.store }
 
     func player(context: TranscriptionContext?, lines: Bool = true, pages: [PageVisit] = []) throws -> RecordingPlayerModel {
-        let recording = Recording(device: workspace.device, at: .now, sessionId: session, file: "Recordings/a.m4a", duration: 300, pages: pages)
+        let recording = Recording(
+            device: workspace.device, at: .now, sessionId: session, file: "Recordings/a.m4a", duration: 300, pages: pages)
         try FileManager.default.createDirectory(at: store.recordingsURL, withIntermediateDirectories: true)
         try Data("audio".utf8).write(to: store.fileURL(recording.file))
-        try store.saveTranscript(LectureTranscript(locale: "ko-KR", lines: lines ? [.init(start: 0, end: 5, text: "매칭")] : [], context: context), of: recording)
+        try store.saveTranscript(
+            LectureTranscript(locale: "ko-KR", lines: lines ? [.init(start: 0, end: 5, text: "매칭")] : [], context: context), of: recording)
         let ctx = ActionContext(gist: try #require(workspace.gist), device: workspace.device, now: workspace.now)
         try ctx.edit(graphTheory) { $0.recordings = [recording] }
         workspace.reload()
@@ -335,7 +350,8 @@ struct TranscriptionContextModelTests {
     }
 
     @Test func pagesKeptWhileRecordingAreTheContext() throws {
-        let model = try player(context: nil, pages: [PageVisit(at: 0, materialId: slides.id, page: 4), PageVisit(at: 60, materialId: slides.id, page: 6)])
+        let model = try player(
+            context: nil, pages: [PageVisit(at: 0, materialId: slides.id, page: 4), PageVisit(at: 60, materialId: slides.id, page: 6)])
         #expect(model.shownContext?.source == .recording)
         #expect(model.shownContext?.slides.map { [$0.first, $0.last] } == [[4, 6]])
     }

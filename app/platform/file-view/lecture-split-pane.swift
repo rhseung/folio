@@ -57,7 +57,8 @@ struct LectureSplitPane: View {
                     SectionEditor(split: $split, units: units, page: controller.page + 1, selected: selected) { controller.go(to: $0 - 1) }
                     if let claude { claude }
                     if let note {
-                        Text(note).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).fixedSize(horizontal: false, vertical: true)
+                        Text(note).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).fixedSize(
+                            horizontal: false, vertical: true)
                     }
                 }
                 .padding(.horizontal, Theme.Space.l)
@@ -69,9 +70,11 @@ struct LectureSplitPane: View {
 
     /// The section picked on the bar and in the rows is the one the column is changing.
     private var selected: Binding<Int?> {
-        Binding(get: { strip.index(in: split) }, set: { i in
-            if let i, split.sections.indices.contains(i) { strip.edit(split.sections[i].id, in: split) } else { strip.done() }
-        })
+        Binding(
+            get: { strip.index(in: split) },
+            set: { i in
+                if let i, split.sections.indices.contains(i) { strip.edit(split.sections[i].id, in: split) } else { strip.done() }
+            })
     }
 
     static let panel: CGFloat = 400
@@ -122,11 +125,14 @@ private struct SplitThumbnails: View {
     @ViewBuilder private func lead(_ item: StripItem) -> some View {
         switch item.lead {
         case .header(let section, let open)?:
-            StripHeader(section: section, open: open, help: Text(.fileViewSplitEditHelp),
-                        toggle: { strip.toggle(section.id) }, edit: { strip.edit(section.id, in: split) })
+            StripHeader(
+                section: section, open: open, help: Text(.fileViewSplitEditHelp),
+                toggle: { strip.toggle(section.id) }, edit: { strip.edit(section.id, in: split) })
         case .edit(let section)?:
-            StripEditRow(kind: section.kind, range: section.label, confirm: String(localized: .fileViewSplitApply),
-                         canConfirm: strip.changed(split), cancel: { strip.cancel(&split) }, commit: { strip.done() }) {
+            StripEditRow(
+                kind: section.kind, range: section.label, confirm: String(localized: .fileViewSplitApply),
+                canConfirm: strip.changed(split), cancel: { strip.cancel(&split) }, commit: { strip.done() }
+            ) {
                 Text(section.title).font(Theme.Typeface.bodyStrong)
                     .foregroundStyle(section.kind == .none ? Theme.Palette.textTertiary : Theme.Palette.text)
             } extra: {
@@ -139,17 +145,20 @@ private struct SplitThumbnails: View {
 
     @ViewBuilder private func page(_ item: StripItem) -> some View {
         if let page = item.page {
-            StripPage(controller: controller, page: page, picked: item.mark == .picked, box: PageStrip.box(lecture: true), ranging: strip.editing != nil,
-                      press: { page, extend in
-                          if extend { strip.extend(to: page, in: &split) } else { strip.press(page) }
-                      },
-                      start: nil)
-                .overlay(alignment: .bottom) {
-                    if page < split.pageCount { gap(after: page) }
-                }
-                // The long press opens this menu rather than starting a change: the gaps are thin to aim at with a
-                // finger, so the cut and the join are here too.
-                .contextMenu { menu(page) }
+            StripPage(
+                controller: controller, page: page, picked: item.mark == .picked, box: PageStrip.box(lecture: true),
+                ranging: strip.editing != nil,
+                press: { page, extend in
+                    if extend { strip.extend(to: page, in: &split) } else { strip.press(page) }
+                },
+                start: nil
+            )
+            .overlay(alignment: .bottom) {
+                if page < split.pageCount { gap(after: page) }
+            }
+            // The long press opens this menu rather than starting a change: the gaps are thin to aim at with a
+            // finger, so the cut and the join are here too.
+            .contextMenu { menu(page) }
         }
     }
 

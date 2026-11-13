@@ -56,6 +56,8 @@ extension CourseStore {
     }
 
     public func transcript(of recording: Recording) -> LectureTranscript? {
-        (try? CoordinatedFile.read(fileURL(recording.transcriptFile))).flatMap { try? JSONFormat.decoder.decode(LectureTranscript.self, from: $0) }
+        (try? CoordinatedFile.read(fileURL(recording.transcriptFile))).flatMap {
+            try? JSONFormat.decoder.decode(LectureTranscript.self, from: $0)
+        }
     }
 }

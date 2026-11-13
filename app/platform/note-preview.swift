@@ -34,7 +34,9 @@ struct NotePreview {
 
     /// `enabled` false: a tab kept behind the one in front, whose page must not take ⌘E (the web view sees the key
     /// before SwiftUI's disabled buttons would refuse it).
-    @MainActor func update(_ page: NotePreviewPage, accent: CourseAccent, dark: Bool, openLink: OpenLinkAction = OpenLinkAction(), enabled: Bool = true) {
+    @MainActor func update(
+        _ page: NotePreviewPage, accent: CourseAccent, dark: Bool, openLink: OpenLinkAction = OpenLinkAction(), enabled: Bool = true
+    ) {
         page.openNote = openNote
         page.openLink = openLink
         page.noteLink = noteLink
@@ -53,14 +55,16 @@ struct NotePreview {
 #if os(macOS)
 extension NotePreview: NSViewRepresentable {
     func makeNSView(context: Context) -> PreviewWebView {
-        update(context.coordinator.page, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
-               openLink: context.environment.openLink, enabled: context.environment.isEnabled)
+        update(
+            context.coordinator.page, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
+            openLink: context.environment.openLink, enabled: context.environment.isEnabled)
         return context.coordinator.page.view
     }
 
     func updateNSView(_ view: PreviewWebView, context: Context) {
-        update(context.coordinator.page, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
-               openLink: context.environment.openLink, enabled: context.environment.isEnabled)
+        update(
+            context.coordinator.page, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
+            openLink: context.environment.openLink, enabled: context.environment.isEnabled)
     }
 
     static func dismantleNSView(_ view: PreviewWebView, coordinator: Coordinator) { coordinator.page.recycle() }
@@ -68,14 +72,16 @@ extension NotePreview: NSViewRepresentable {
 #else
 extension NotePreview: UIViewRepresentable {
     func makeUIView(context: Context) -> PreviewWebView {
-        update(context.coordinator.page, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
-               openLink: context.environment.openLink)
+        update(
+            context.coordinator.page, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
+            openLink: context.environment.openLink)
         return context.coordinator.page.view
     }
 
     func updateUIView(_ view: PreviewWebView, context: Context) {
-        update(context.coordinator.page, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
-               openLink: context.environment.openLink)
+        update(
+            context.coordinator.page, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
+            openLink: context.environment.openLink)
     }
 
     static func dismantleUIView(_ view: PreviewWebView, coordinator: Coordinator) { coordinator.page.recycle() }
@@ -199,7 +205,8 @@ extension NotePreview: UIViewRepresentable {
         // Widgets run their own code in frames; the note itself has none, and the page's policy forbids any.
         config.defaultWebpagePreferences.allowsContentJavaScript = true
         let scripts = config.userContentController
-        scripts.addUserScript(WKUserScript(source: NoteStyle.reader, injectionTime: .atDocumentEnd, forMainFrameOnly: true, in: .defaultClient))
+        scripts.addUserScript(
+            WKUserScript(source: NoteStyle.reader, injectionTime: .atDocumentEnd, forMainFrameOnly: true, in: .defaultClient))
         widgets = NoteWidgets(scripts: scripts)
         config.setURLSchemeHandler(files, forURLScheme: LocalFileScheme.scheme)
         config.setURLSchemeHandler(widgets.files, forURLScheme: WidgetFiles.scheme)
@@ -208,7 +215,8 @@ extension NotePreview: UIViewRepresentable {
         view.page = self
         scripts.add(Messages(self), contentWorld: .defaultClient, name: Messages.name)
         widgets.resized = { [weak self] key, height in
-            self?.view.callAsyncJavaScript("window.folioPreview?.size(key, height)", arguments: ["key": key, "height": height], in: nil, in: .defaultClient)
+            self?.view.callAsyncJavaScript(
+                "window.folioPreview?.size(key, height)", arguments: ["key": key, "height": height], in: nil, in: .defaultClient)
         }
         view.navigationDelegate = self
         #if os(macOS)
@@ -293,8 +301,13 @@ extension NotePreview: UIViewRepresentable {
         shown = wanted
         rendering = true
         Task {
-            if accentChanged { _ = try? await view.callAsyncJavaScript("window.folioPreview?.theme(css)", arguments: ["css": theme], contentWorld: .defaultClient) }
-            _ = try? await view.callAsyncJavaScript("window.folioPreview?.show(blocks, options)", arguments: ["blocks": blocks, "options": options], contentWorld: .defaultClient)
+            if accentChanged {
+                _ = try? await view.callAsyncJavaScript(
+                    "window.folioPreview?.theme(css)", arguments: ["css": theme], contentWorld: .defaultClient)
+            }
+            _ = try? await view.callAsyncJavaScript(
+                "window.folioPreview?.show(blocks, options)", arguments: ["blocks": blocks, "options": options],
+                contentWorld: .defaultClient)
             rendering = false
             // Beside the editor the page follows it, except right after a tick here, which leaves the editor still.
             if ticked { ticked = false } else { link?.refollow() }
@@ -326,8 +339,9 @@ extension NotePreview: UIViewRepresentable {
         case .page, .time: return
         }
         Task {
-            _ = try? await view.callAsyncJavaScript("document.getElementById(id)?.scrollIntoView({block: 'start'})", arguments: ["id": id],
-                                                     contentWorld: .defaultClient)
+            _ = try? await view.callAsyncJavaScript(
+                "document.getElementById(id)?.scrollIntoView({block: 'start'})", arguments: ["id": id],
+                contentWorld: .defaultClient)
         }
     }
 
@@ -344,8 +358,9 @@ extension NotePreview: UIViewRepresentable {
         following = nil
         followRunning = true
         Task {
-            _ = try? await view.callAsyncJavaScript("window.folioPreview?.follow(line, frac)", arguments: ["line": next.line, "frac": next.frac],
-                                                     contentWorld: .defaultClient)
+            _ = try? await view.callAsyncJavaScript(
+                "window.folioPreview?.follow(line, frac)", arguments: ["line": next.line, "frac": next.frac],
+                contentWorld: .defaultClient)
             followRunning = false
             runFollow()
         }
@@ -354,8 +369,9 @@ extension NotePreview: UIViewRepresentable {
     /// Puts the block written on `line` (of the note's text) at the top, as the editor puts a line it reveals.
     func jump(line: Int) {
         Task {
-            _ = try? await view.callAsyncJavaScript("window.folioPreview?.jump(line)", arguments: ["line": line],
-                                                     contentWorld: .defaultClient)
+            _ = try? await view.callAsyncJavaScript(
+                "window.folioPreview?.jump(line)", arguments: ["line": line],
+                contentWorld: .defaultClient)
         }
     }
 
@@ -419,8 +435,9 @@ extension NotePreview: UIViewRepresentable {
     private func open(_ url: URL) async {
         if url.scheme == LocalFileScheme.scheme, let fragment = url.fragment, url.pathExtension != "md" {
             // A link to a block or heading on this page.
-            _ = try? await view.callAsyncJavaScript("document.getElementById(id)?.scrollIntoView()", arguments: ["id": fragment.removingPercentEncoding ?? fragment],
-                                                     contentWorld: .defaultClient)
+            _ = try? await view.callAsyncJavaScript(
+                "document.getElementById(id)?.scrollIntoView()", arguments: ["id": fragment.removingPercentEncoding ?? fragment],
+                contentWorld: .defaultClient)
             return
         }
         if url.scheme == LocalFileScheme.scheme {
@@ -438,7 +455,9 @@ final class PreviewWebView: WKWebView {
     weak var page: NotePreviewPage?
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        if event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command, event.charactersIgnoringModifiers == "e", let toggleMode {
+        if event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command, event.charactersIgnoringModifiers == "e",
+            let toggleMode
+        {
             toggleMode()
             return true
         }
@@ -457,7 +476,9 @@ final class PreviewWebView: WKWebView {
             addLinkItems(menu, link)
         } else if let note = page?.noteLink, let anchor = page?.menuAnchor, note.with(anchor) != note {
             let link = note.with(anchor)
-            menu.insertItem(LinkMenuItem(String(localized: anchor.isBlock ? .linkCopyBlock : .linkCopyHeading), symbol: "link") { copyLink(link) }, at: 0)
+            menu.insertItem(
+                LinkMenuItem(String(localized: anchor.isBlock ? .linkCopyBlock : .linkCopyHeading), symbol: "link") { copyLink(link) },
+                at: 0)
             if menu.items.count > 1 { menu.insertItem(.separator(), at: 1) }
         }
         super.willOpenMenu(menu, with: event)
@@ -508,7 +529,8 @@ final class PreviewWebView: WKWebView {
     static func anchorAction(_ page: NotePreviewPage?) -> UIAction? {
         guard let note = page?.noteLink, let anchor = page?.selectionAnchor, note.with(anchor) != note else { return nil }
         let link = note.with(anchor)
-        return UIAction(title: String(localized: anchor.isBlock ? .linkCopyBlock : .linkCopyHeading), image: UIImage(systemName: "link")) { _ in
+        return UIAction(title: String(localized: anchor.isBlock ? .linkCopyBlock : .linkCopyHeading), image: UIImage(systemName: "link")) {
+            _ in
             copyLink(link)
         }
     }
@@ -521,7 +543,8 @@ extension NotePreviewPage: WKUIDelegate {
         let placements = LinkMenu.placements(multipleWindows: UIApplication.shared.supportsMultipleScenes)
         return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
             let open = placements.map { placement in
-                UIAction(title: placement.title, image: UIImage(systemName: placement.symbol)) { _ in self?.open(link.string, in: placement) }
+                UIAction(title: placement.title, image: UIImage(systemName: placement.symbol)) { _ in self?.open(link.string, in: placement)
+                }
             }
             let copy = UIAction(title: String(localized: .linkCopy), image: UIImage(systemName: "link")) { _ in copyLink(link) }
             return UIMenu(children: [UIMenu(options: .displayInline, children: open), copy])

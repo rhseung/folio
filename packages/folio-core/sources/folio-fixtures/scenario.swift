@@ -87,7 +87,9 @@ private struct Builder {
         if note {
             let end = date.addingTimeInterval(TimeInterval(minutes * 60))
             try run(SessionNote(course: course, session: id, kind: .review), at: end)
-            if !unfinished { try run(SessionSet(course: course, session: id, kind: .keep, skipsReview: .keep, reviewUnfinished: .set(false)), at: end) }
+            if !unfinished {
+                try run(SessionSet(course: course, session: id, kind: .keep, skipsReview: .keep, reviewUnfinished: .set(false)), at: end)
+            }
         }
         return id
     }
@@ -99,14 +101,18 @@ private struct Builder {
     }
 
     func review(_ course: UUID, _ unit: UUID, _ result: ReviewResult, _ start: Date, minutes: Int) throws {
-        try run(ReviewRecord(course: course, unit: unit, result: result, start: start, end: start.addingTimeInterval(TimeInterval(minutes * 60))), at: start)
+        try run(
+            ReviewRecord(
+                course: course, unit: unit, result: result, start: start, end: start.addingTimeInterval(TimeInterval(minutes * 60))),
+            at: start)
     }
 
     func busyDay(extraExams: Bool = false) throws {
         let setup = at(8, 28, 10)
         let codes = ["EC", "MA", "PS", "GS"].map { CourseCode(device: device, at: setup, prefix: $0) }
         // Invented scale, categories and people: the repo is public, so nothing here is a real grade or person.
-        let grades = [("A+", 4.5), ("A0", 4.0), ("B+", 3.5), ("B0", 3.0), ("C+", 2.5), ("C0", 2.0), ("D+", 1.5), ("D0", 1.0), ("F", 0.0)]
+        let grades =
+            [("A+", 4.5), ("A0", 4.0), ("B+", 3.5), ("B0", 3.0), ("C+", 2.5), ("C0", 2.0), ("D+", 1.5), ("D0", 1.0), ("F", 0.0)]
             .map { LetterGrade(device: device, at: setup, symbol: $0.0, points: $0.1, countsInGpa: true, countsInCredits: $0.0 != "F") }
             + [LetterGrade(device: device, at: setup, symbol: "S", points: nil, countsInGpa: false, countsInCredits: true)]
         let major = Category(device: device, at: setup, name: "전공", group: "전공", isMajor: true, minCredits: 36)
@@ -114,16 +120,30 @@ private struct Builder {
         let humanities = Category(device: device, at: setup, name: "인문사회", group: "교양", minCredits: 24)
         // Fixed ids: avatar colors follow them.
         let people = [
-            Person(id: UUID(uuidString: "A0000000-0000-4000-8000-000000000001")!, device: device, at: setup, name: "김도윤", email: "doyun@example.com", office: "A동 412", officeHours: "화 14:00-16:00"),
-            Person(id: UUID(uuidString: "A0000000-0000-4000-8000-000000000002")!, device: device, at: setup, name: "이서연", email: "seoyeon@example.com", office: "C동 301", officeHours: "목 10:00-11:00"),
-            Person(id: UUID(uuidString: "A0000000-0000-4000-8000-000000000003")!, device: device, at: setup, name: "박준호", email: "junho@example.com", role: .lecturer, office: "B동 208"),
-            Person(id: UUID(uuidString: "A0000000-0000-4000-8000-000000000004")!, device: device, at: setup, name: "최하은", email: "haeun@example.com", role: .assistant, office: "A동 405", memo: "그래프 이론 조교"),
+            Person(
+                id: UUID(uuidString: "A0000000-0000-4000-8000-000000000001")!, device: device, at: setup, name: "김도윤",
+                email: "doyun@example.com", office: "A동 412", officeHours: "화 14:00-16:00"),
+            Person(
+                id: UUID(uuidString: "A0000000-0000-4000-8000-000000000002")!, device: device, at: setup, name: "이서연",
+                email: "seoyeon@example.com", office: "C동 301", officeHours: "목 10:00-11:00"),
+            Person(
+                id: UUID(uuidString: "A0000000-0000-4000-8000-000000000003")!, device: device, at: setup, name: "박준호",
+                email: "junho@example.com", role: .lecturer, office: "B동 208"),
+            Person(
+                id: UUID(uuidString: "A0000000-0000-4000-8000-000000000004")!, device: device, at: setup, name: "최하은",
+                email: "haeun@example.com", role: .assistant, office: "A동 405", memo: "그래프 이론 조교"),
         ]
-        try run(CatalogSet(catalog: Catalog(codes: codes, categories: [major, science, humanities], letterGrades: grades, people: people)), at: setup)
-        let os = try run(CourseAdd(code: codes[0].id, number: "3204", title: "운영체제", credits: 3, mode: .relative, semester: fall), at: setup)
-        let prob = try run(CourseAdd(code: codes[1].id, number: "2004", title: "확률과 통계", credits: 3, mode: .relative, semester: fall), at: setup)
-        let physics = try run(CourseAdd(code: codes[2].id, number: "1102", title: "일반물리학", credits: 3, mode: .absolute, semester: fall), at: setup)
-        let writing = try run(CourseAdd(code: codes[3].id, number: "1511", title: "글쓰기의 기초", credits: 2, mode: .passFail, semester: fall), at: setup)
+        try run(
+            CatalogSet(catalog: Catalog(codes: codes, categories: [major, science, humanities], letterGrades: grades, people: people)),
+            at: setup)
+        let os = try run(
+            CourseAdd(code: codes[0].id, number: "3204", title: "운영체제", credits: 3, mode: .relative, semester: fall), at: setup)
+        let prob = try run(
+            CourseAdd(code: codes[1].id, number: "2004", title: "확률과 통계", credits: 3, mode: .relative, semester: fall), at: setup)
+        let physics = try run(
+            CourseAdd(code: codes[2].id, number: "1102", title: "일반물리학", credits: 3, mode: .absolute, semester: fall), at: setup)
+        let writing = try run(
+            CourseAdd(code: codes[3].id, number: "1511", title: "글쓰기의 기초", credits: 2, mode: .passFail, semester: fall), at: setup)
 
         // Mon/Wed back to back, the way a full GIST timetable runs, and an evening class on Wednesdays.
         let timetable: [(UUID, [ClassTime], String)] = [
@@ -138,8 +158,11 @@ private struct Builder {
             try run(CourseSet(course: course, fields: [.schedule(schedule), .icon(icon)]), at: setup)
         }
         // A colloquium carries no credits and nothing to study, but still meets every week; graphite keeps it quiet.
-        let colloquium = try run(CourseAdd(code: codes[3].id, number: "9331", title: "콜로퀴움", credits: 0, mode: .passFail, semester: fall), at: setup)
-        try run(CourseSet(course: colloquium, fields: [.schedule(slots([3], 1050, 1110, "Lecture Hall")), .color(CourseColor.neutral)]), at: setup)
+        let colloquium = try run(
+            CourseAdd(code: codes[3].id, number: "9331", title: "콜로퀴움", credits: 0, mode: .passFail, semester: fall), at: setup)
+        try run(
+            CourseSet(course: colloquium, fields: [.schedule(slots([3], 1050, 1110, "Lecture Hall")), .color(CourseColor.neutral)]),
+            at: setup)
 
         let staffed: [(UUID, [UUID], FolioDomain.Category)] = [
             (graph, [people[0].id, people[3].id], major), (robotics, [people[1].id], major), (os, [people[2].id], major),
@@ -160,8 +183,9 @@ private struct Builder {
                 let start = day.addingTimeInterval(TimeInterval(slot.startMinute * 60))
                 let today = day == at(11, 4)
                 let thisWeek = day >= at(11, 2)
-                held[course, default: [:]][day] = try session(course, start, minutes: slot.endMinute - slot.startMinute,
-                                                              note: !today && (!thisWeek || course == physics), unfinished: course == physics && thisWeek)
+                held[course, default: [:]][day] = try session(
+                    course, start, minutes: slot.endMinute - slot.startMinute,
+                    note: !today && (!thisWeek || course == physics), unfinished: course == physics && thisWeek)
             }
         }
         func s(_ course: UUID, _ m: Int, _ d: Int) -> UUID { held[course]![at(m, d)]! }
@@ -201,15 +225,18 @@ private struct Builder {
             (robotics, "Final Project", at(12, 18, 23, 59), .todo),
         ]
         // Repeats of each kind, for the assignment list's labels.
-        let repeats: [String: AssignmentRepeat] = ["HW6": .biweekly, "HW5": .weekly, "SP2": AssignmentRepeat(.week, weekdays: [1, 3]),
-                                                   "HW4": AssignmentRepeat(every: 3, .day),
-                                                   "Lab5 보고서": AssignmentRepeat(.week, weekdays: [1, 3])]
+        let repeats: [String: AssignmentRepeat] = [
+            "HW6": .biweekly, "HW5": .weekly, "SP2": AssignmentRepeat(.week, weekdays: [1, 3]),
+            "HW4": AssignmentRepeat(every: 3, .day),
+            "Lab5 보고서": AssignmentRepeat(.week, weekdays: [1, 3]),
+        ]
         for (course, title, due, status) in deadlines {
             let id = try run(AssignmentAdd(course: course, title: title, due: due, repeats: repeats[title]), at: at(10, 20, 9))
             if status != .todo { try run(AssignmentStatusSet(course: course, assignment: id, status: status), at: at(11, 3, 20)) }
         }
 
-        let quiz = try run(ExamAdd(course: prob, title: "Quiz 3", start: at(11, 6, 14, 30), end: at(11, 6, 15), location: "A203"), at: setup)
+        let quiz = try run(
+            ExamAdd(course: prob, title: "Quiz 3", start: at(11, 6, 14, 30), end: at(11, 6, 15), location: "A203"), at: setup)
         try run(ExamAdd(course: physics, title: "2차 시험", start: at(11, 13, 19), end: at(11, 13, 21), location: "Physics 101"), at: setup)
         try run(ExamAdd(course: os, title: "기말고사", start: at(12, 2, 13), end: at(12, 2, 15), location: "B115"), at: setup)
         try run(ExamAdd(course: graph, title: "기말고사", start: at(12, 14, 9), end: at(12, 14, 11), location: "A101"), at: setup)
@@ -218,7 +245,10 @@ private struct Builder {
             try run(ExamAdd(course: robotics, title: "중간 발표", start: at(11, 18, 10, 30), end: at(11, 18, 12), location: "C204"), at: setup)
             try run(ExamAdd(course: graph, title: "Quiz 4", start: at(11, 25, 9), end: at(11, 25, 9, 30), location: "A101"), at: setup)
         }
-        try run(ExamPlanAdd(course: prob, exam: quiz, title: "조건부 확률 연습문제 풀기", day: LocalDate(at(11, 4), in: Scenario.calendar), unit: conditional), at: at(11, 1, 10))
+        try run(
+            ExamPlanAdd(
+                course: prob, exam: quiz, title: "조건부 확률 연습문제 풀기", day: LocalDate(at(11, 4), in: Scenario.calendar), unit: conditional),
+            at: at(11, 1, 10))
     }
 
     /// Monday's class recorded with the slides open, so its replay has a transcript and the pages it was on. The audio
@@ -237,12 +267,17 @@ private struct Builder {
             (2380, "쾨니그의 정리로 넘어가면, 이분 그래프에서 최대 매칭의 크기는"), (2610, "최소 꼭짓점 덮개의 크기와 같습니다."),
             (3020, "과제 5번에 이것을 쓰는 문제가 있습니다."), (3400, "다음 시간에는 일반 그래프의 매칭, 터트의 정리를 봅니다."),
         ]
-        let transcript = LectureTranscript(locale: "ko-KR", lines: zip(lines, lines.dropFirst().map(\.0) + [3700]).map { line, end in
-            .init(start: TimeInterval(line.0), end: TimeInterval(end - 5), text: line.1)
-        })
-        let pages = [(0, 2), (230, 4), (600, 6), (1150, 9), (1690, 12), (2370, 15)].map { PageVisit(at: TimeInterval($0.0), materialId: slides.id, page: $0.1) }
-        let recording = Recording(id: UUID(uuidString: "B0000000-0000-4000-8000-000000000001")!, device: device, at: start, sessionId: session,
-                                  file: "Recordings/11-02(월).m4a", duration: 4500, bookmarks: [1700, 2610], pages: pages)
+        let transcript = LectureTranscript(
+            locale: "ko-KR",
+            lines: zip(lines, lines.dropFirst().map(\.0) + [3700]).map { line, end in
+                .init(start: TimeInterval(line.0), end: TimeInterval(end - 5), text: line.1)
+            })
+        let pages = [(0, 2), (230, 4), (600, 6), (1150, 9), (1690, 12), (2370, 15)].map {
+            PageVisit(at: TimeInterval($0.0), materialId: slides.id, page: $0.1)
+        }
+        let recording = Recording(
+            id: UUID(uuidString: "B0000000-0000-4000-8000-000000000001")!, device: device, at: start, sessionId: session,
+            file: "Recordings/11-02(월).m4a", duration: 4500, bookmarks: [1700, 2610], pages: pages)
         try FileManager.default.createDirectory(at: store.recordingsURL, withIntermediateDirectories: true)
         try store.saveTranscript(transcript, of: recording)
         try ctx.edit(course) { $0.recordings.append(recording) }
@@ -253,13 +288,23 @@ private struct Builder {
     func lectureSections(_ course: UUID, matching: UUID, classes: [UUID]) throws {
         let ctx = ActionContext(gist: gist, device: device, now: at(10, 21, 12), calendar: Scenario.calendar)
         guard let slides = try ctx.file(course).materials.first(where: { $0.path == Self.matchingSlides })?.id else { return }
-        try run(MaterialSplit(course: course, material: slides, sections: [
-            LectureCut(unit: matching, firstPage: 1, lastPage: 8),
-            LectureCut(unit: UUID(uuidString: "B0000000-0000-4000-8000-000000000002")!, title: "Hall의 정리", parent: matching, firstPage: 9, lastPage: 16),
-            LectureCut(unit: UUID(uuidString: "B0000000-0000-4000-8000-000000000003")!, title: "증가 경로", parent: matching, firstPage: 17, lastPage: 24),
-        ]), at: at(10, 21, 12))
+        try run(
+            MaterialSplit(
+                course: course, material: slides,
+                sections: [
+                    LectureCut(unit: matching, firstPage: 1, lastPage: 8),
+                    LectureCut(
+                        unit: UUID(uuidString: "B0000000-0000-4000-8000-000000000002")!, title: "Hall의 정리", parent: matching, firstPage: 9,
+                        lastPage: 16),
+                    LectureCut(
+                        unit: UUID(uuidString: "B0000000-0000-4000-8000-000000000003")!, title: "증가 경로", parent: matching, firstPage: 17,
+                        lastPage: 24),
+                ]), at: at(10, 21, 12))
         for (session, pages) in zip(classes, [1...7, 8...13, 14...20]) {
-            try run(MaterialLinkSession(course: course, material: slides, session: session, linked: true, firstPage: pages.lowerBound, lastPage: pages.upperBound), at: at(11, 2, 11))
+            try run(
+                MaterialLinkSession(
+                    course: course, material: slides, session: session, linked: true, firstPage: pages.lowerBound,
+                    lastPage: pages.upperBound), at: at(11, 2, 11))
         }
         // The last class reached both new units; its row has no title naming them, so it draws the strip.
         for unit in ["B0000000-0000-4000-8000-000000000002", "B0000000-0000-4000-8000-000000000003"] {
@@ -270,22 +315,34 @@ private struct Builder {
     /// A syllabus with scores in so far, so the course's grade page has a curve and a projection to draw.
     func gradeBook(_ course: UUID, at setup: Date) throws {
         let homework = try run(ComponentAdd(course: course, name: "과제", weight: 30, expectedCount: 6), at: setup)
-        let quizzes = try run(ComponentAdd(course: course, name: "퀴즈", weight: 20, aggregation: .dropLowest(1), expectedCount: 5), at: setup)
+        let quizzes = try run(
+            ComponentAdd(course: course, name: "퀴즈", weight: 20, aggregation: .dropLowest(1), expectedCount: 5), at: setup)
         let midterm = try run(ComponentAdd(course: course, name: "중간고사", weight: 25, aggregation: .single), at: setup)
         try run(ComponentAdd(course: course, name: "기말고사", weight: 25, aggregation: .single), at: setup)
         for (i, (score, day)) in [(9.0, at(9, 15)), (10, at(9, 29)), (7.5, at(10, 13)), (9, at(10, 27))].enumerated() {
-            try run(ScoreAdd(course: course, component: homework, title: "HW\(i + 1)", score: score, max: 10, date: LocalDate(day, in: Scenario.calendar)), at: day)
+            try run(
+                ScoreAdd(
+                    course: course, component: homework, title: "HW\(i + 1)", score: score, max: 10,
+                    date: LocalDate(day, in: Scenario.calendar)), at: day)
         }
         for (i, (score, day)) in [(8.0, at(9, 22)), (5, at(10, 6)), (9, at(10, 20))].enumerated() {
-            try run(ScoreAdd(course: course, component: quizzes, title: "Quiz \(i + 1)", score: score, max: 10, date: LocalDate(day, in: Scenario.calendar)), at: day)
+            try run(
+                ScoreAdd(
+                    course: course, component: quizzes, title: "Quiz \(i + 1)", score: score, max: 10,
+                    date: LocalDate(day, in: Scenario.calendar)), at: day)
         }
-        try run(ScoreAdd(course: course, component: midterm, title: "중간고사", score: 72, max: 100, mean: 61.5, stdDev: 12,
-                         date: LocalDate(at(10, 21), in: Scenario.calendar)), at: at(10, 23))
+        try run(
+            ScoreAdd(
+                course: course, component: midterm, title: "중간고사", score: 72, max: 100, mean: 61.5, stdDev: 12,
+                date: LocalDate(at(10, 21), in: Scenario.calendar)), at: at(10, 23))
     }
 
     func quietDay() throws {
         let setup = at(8, 28, 10)
-        try run(CourseSet(course: graph, fields: [.schedule(slots([1, 3], 540, 615, "A101")), .icon("point.3.connected.trianglepath.dotted")]), at: setup)
+        try run(
+            CourseSet(
+                course: graph, fields: [.schedule(slots([1, 3], 540, 615, "A101")), .icon("point.3.connected.trianglepath.dotted")]),
+            at: setup)
         try run(CourseSet(course: robotics, fields: [.schedule(slots([2, 4], 630, 705, "C204")), .icon("gearshape.2")]), at: setup)
         let monday = try session(graph, at(11, 2, 9), note: true)
         let wednesday = try session(graph, at(11, 4, 9), note: true)

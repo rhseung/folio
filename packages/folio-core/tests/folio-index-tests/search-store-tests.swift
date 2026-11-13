@@ -2,10 +2,11 @@ import CoreText
 import FolioActions
 import FolioDomain
 import FolioFixtures
-@testable import FolioIndex
 import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioIndex
 
 struct SearchStoreTests {
     let graphTheory = UUID(uuidString: "C0000000-0000-4000-8000-000000000002")!
@@ -20,7 +21,8 @@ struct SearchStoreTests {
         var box = CGRect(x: 0, y: 0, width: 400, height: 200)
         let ctx = try #require(CGContext(url as CFURL, mediaBox: &box, nil))
         ctx.beginPDFPage(nil)
-        let line = CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: [.font: CTFontCreateWithName("Helvetica" as CFString, 14, nil)]))
+        let line = CTLineCreateWithAttributedString(
+            NSAttributedString(string: text, attributes: [.font: CTFontCreateWithName("Helvetica" as CFString, 14, nil)]))
         ctx.textPosition = CGPoint(x: 20, y: 100)
         CTLineDraw(line, ctx)
         ctx.endPDFPage()
@@ -80,7 +82,9 @@ struct SearchStoreTests {
         #expect(try index.search("augmenting", kinds: [.quiz]).isEmpty)
 
         // Cards live in their own file, so adding one leaves course.json alone and still has to count as a change.
-        let card = QuizCard(device: ctx.device, at: ctx.now, unitId: unit, type: .free, category: .theorem, prompt: "Berge의 정리", answer: "augmenting path가 없으면 최대 매칭")
+        let card = QuizCard(
+            device: ctx.device, at: ctx.now, unitId: unit, type: .free, category: .theorem, prompt: "Berge의 정리",
+            answer: "augmenting path가 없으면 최대 매칭")
         try QuizCardSave(course: graphTheory, cards: [card], movedFrom: nil).run(ctx)
         #expect(try index.refresh(gist) == 1)
         let hit = try #require(try index.search("augmenting").first)

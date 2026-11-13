@@ -44,7 +44,8 @@ struct UnitImportTests {
         let lecture = Session(device: device, at: now, week: 2, date: day(9, 8))
         let lab = Session(device: device, at: now, week: 2, date: day(9, 8, 14))
         let file = CourseFile(course: Course(device: device, at: now, title: "물리"), sessions: [lecture, lab])
-        let r = UnitImporter.merge([UnitSpec(title: "역학", sessions: ["09-08", "09-08 14:30"])], into: file, calendar: calendar, device: device, now: now)
+        let r = UnitImporter.merge(
+            [UnitSpec(title: "역학", sessions: ["09-08", "09-08 14:30"])], into: file, calendar: calendar, device: device, now: now)
         #expect(r.unknownSessions == ["09-08"])
         #expect(r.file.units.first?.sessionIds == [lab.id])
     }
@@ -68,7 +69,9 @@ struct ExamScopeTests {
         var later = Unit(device: device, at: now, title: "Ch2", order: 1)
         later.sessionIds = [after.id]
         let exam = Exam(device: device, at: now, title: "Midterm", start: now)
-        var file = CourseFile(course: Course(device: device, at: now, title: ""), units: [later, section, chapter, skipped], sessions: [before, cancelled, after], exams: [exam])
+        var file = CourseFile(
+            course: Course(device: device, at: now, title: ""), units: [later, section, chapter, skipped],
+            sessions: [before, cancelled, after], exams: [exam])
 
         let taught = file.unitsTaught(before: exam.start!)
         #expect(taught == [chapter.id, section.id])

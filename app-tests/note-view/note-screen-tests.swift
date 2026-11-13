@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import Folio
 
 /// One way of showing a note: which view, light or dark, how wide a panel.
@@ -13,7 +14,9 @@ struct NoteShot: Sendable, CustomTestStringConvertible {
 
     /// A full panel beside a sidebar, and a narrow one: half a split iPad, a note beside its preview.
     static let widths = [900, 480]
-    static let all = NoteBench.Kind.allCases.flatMap { kind in [false, true].flatMap { dark in widths.map { NoteShot(kind: kind, dark: dark, width: $0) } } }
+    static let all = NoteBench.Kind.allCases.flatMap { kind in
+        [false, true].flatMap { dark in widths.map { NoteShot(kind: kind, dark: dark, width: $0) } }
+    }
     static let light = all.filter { !$0.dark }
 
     @MainActor func bench(_ text: String) -> NoteBench { NoteBench(kind, text, width: CGFloat(width), dark: dark) }

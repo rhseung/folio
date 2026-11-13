@@ -72,8 +72,9 @@ extension RootView {
                     .toolbarGroup()
                 HistoryButtons(navigator: navigator) { workspace.title(of: $0) }
             }
-            TabBar(tabs: tabs, workspace: workspace, crumbs: crumbs, toolbar: row, moveToWindow: moveToWindow,
-                   nameLayout: { namingLayout = $0 }, manageLayouts: manageLayouts)
+            TabBar(
+                tabs: tabs, workspace: workspace, crumbs: crumbs, toolbar: row, moveToWindow: moveToWindow,
+                nameLayout: { namingLayout = $0 }, manageLayouts: manageLayouts)
             Spacer(minLength: 0)
             HStack(spacing: Theme.Space.s) {
                 if let manual = StudyTracker.shared.manual {
@@ -103,10 +104,13 @@ extension RootView {
         HStack(spacing: Theme.Space.xxs) {
             Button(.rootQuickAdd, systemImage: "plus") { quickAdding = true }
                 .popover(isPresented: $quickAdding, arrowEdge: .bottom) {
-                    QuickAddField(workspace: workspace, defaultCourse: navigator.current.course, showsEmptyChips: true, focusOnAppear: true, floating: true)
-                        .padding(Theme.Space.l)
-                        .frame(width: 440)
-                        .fixedSize(horizontal: false, vertical: true)
+                    QuickAddField(
+                        workspace: workspace, defaultCourse: navigator.current.course, showsEmptyChips: true, focusOnAppear: true,
+                        floating: true
+                    )
+                    .padding(Theme.Space.l)
+                    .frame(width: 440)
+                    .fixedSize(horizontal: false, vertical: true)
                 }
             Menu {
                 padMenu
@@ -133,7 +137,9 @@ extension RootView {
             LayoutMenu(choices: workspace.layoutChoices(for: panes, save: { namingLayout = panes }, manage: manageLayouts))
         }
         Divider()
-        Button(workspace.gradesUnlocked ? .rootLockGrades : .commonUnlockGrades, systemImage: workspace.gradesUnlocked ? "lock.open" : "lock") {
+        Button(
+            workspace.gradesUnlocked ? .rootLockGrades : .commonUnlockGrades, systemImage: workspace.gradesUnlocked ? "lock.open" : "lock"
+        ) {
             if workspace.gradesUnlocked { workspace.lockGrades() } else { Task { await workspace.unlockGrades() } }
         }
         Button(.rootReload, systemImage: "arrow.clockwise") { workspace.reload() }
@@ -141,7 +147,9 @@ extension RootView {
 
     /// The sidebar's top, where the iPad's search is (as in Mail and Notes): the same palette as ⌘K.
     var sidebarSearch: some View {
-        Button { searching = true } label: {
+        Button {
+            searching = true
+        } label: {
             HStack(spacing: Theme.Space.s) {
                 Image(systemName: "magnifyingglass")
                 Text(.commonSearch)
@@ -207,9 +215,10 @@ extension RootView {
         ensurePhoneTabs()
         let kind = entry.link.kind
         // Not a switch over every kind: all the others stay in the tab in front.
-        let tab: PhoneTab? = if kind == .today { .today } else if kind == .grades || kind == .requirements { .grades } else {
-            phoneSearching ? .courses : nil
-        }
+        let tab: PhoneTab? =
+            if kind == .today { .today } else if kind == .grades || kind == .requirements { .grades } else {
+                phoneSearching ? .courses : nil
+            }
         guard let tab else { return nil }
         phoneSelection.wrappedValue = tab
         return tabs.navigator(tabs.ids[tab.rawValue])
@@ -226,9 +235,11 @@ extension RootView {
         .tabViewBottomAccessory { phoneAccessory }
         .onAppear { ensurePhoneTabs() }
         .sheet(isPresented: $quickAdding) {
-            QuickAddField(workspace: workspace, defaultCourse: navigator.current.course, showsEmptyChips: true, focusOnAppear: true, floating: true)
-                .padding(Theme.Space.l)
-                .presentationDetents([.medium, .large])
+            QuickAddField(
+                workspace: workspace, defaultCourse: navigator.current.course, showsEmptyChips: true, focusOnAppear: true, floating: true
+            )
+            .padding(Theme.Space.l)
+            .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showingRecording) {
             RecordingBar(workspace: workspace) { link in
@@ -244,14 +255,16 @@ extension RootView {
     @ViewBuilder func phonePage(_ tab: PhoneTab) -> some View {
         if tabs.ids.indices.contains(tab.rawValue), let panes = tabs.panes(tabs.ids[tab.rawValue]) {
             let id = tabs.ids[tab.rawValue]
-            PaneRow(workspace: workspace, panes: panes, front: id == tabs.selected && !phoneSearching, openLink: openLink(from:),
-                    play: { [tabs] pane, pause in tabs.play(id, pane: pane, pause: pause) })
-                .controlSize(.large)
-                .environment(\.barePanes, true)
-                .environment(\.pageGutter, Theme.Space.l)
-                .environment(\.showSettings) { showSettings($0) }
-                .environment(\.showInputGuide) { showInputGuide($0) }
-                .safeAreaInset(edge: .top, spacing: 0) { phoneBar(tab, navigator: panes.focused) }
+            PaneRow(
+                workspace: workspace, panes: panes, front: id == tabs.selected && !phoneSearching, openLink: openLink(from:),
+                play: { [tabs] pane, pause in tabs.play(id, pane: pane, pause: pause) }
+            )
+            .controlSize(.large)
+            .environment(\.barePanes, true)
+            .environment(\.pageGutter, Theme.Space.l)
+            .environment(\.showSettings) { showSettings($0) }
+            .environment(\.showInputGuide) { showInputGuide($0) }
+            .safeAreaInset(edge: .top, spacing: 0) { phoneBar(tab, navigator: panes.focused) }
         } else {
             Theme.Palette.page.ignoresSafeArea()
         }
@@ -274,9 +287,13 @@ extension RootView {
                 // At the tab's root only: a course's own page has its menu in its header.
                 if !navigator.history.canGoBack { phoneCoursesMenu }
             case .grades:
-                Picker(selection: Binding {
-                    navigator.screen == .requirements ? Screen.requirements : Screen.grades
-                } set: { open($0 == .requirements ? .place(.requirements) : .place(.grades)) }) {
+                Picker(
+                    selection: Binding {
+                        navigator.screen == .requirements ? Screen.requirements : Screen.grades
+                    } set: {
+                        open($0 == .requirements ? .place(.requirements) : .place(.grades))
+                    }
+                ) {
                     Text(.rootNavGrades).tag(Screen.grades)
                     Text(.rootNavRequirements).tag(Screen.requirements)
                 } label: {
@@ -332,7 +349,9 @@ extension RootView {
             }
             .padding(.horizontal, Theme.Space.s)
         } else {
-            Button { quickAdding = true } label: {
+            Button {
+                quickAdding = true
+            } label: {
                 HStack(spacing: Theme.Space.s) {
                     Image(systemName: "plus")
                     Text(.rootQuickAdd).foregroundStyle(Theme.Palette.chromeText)

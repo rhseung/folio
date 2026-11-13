@@ -26,20 +26,24 @@ struct FirstRunTests {
     }
 
     @Test func semesterFoldersAndTheirCoursesAreCounted() {
-        let tree = folder("GIST", [
-            folder(".folio", [file("transcript.json")]),
-            folder("2026-1", [folder("MA2001 선형대수학"), folder("_Admin"), file("수강신청.pdf")]),
-            folder("2026-3", [folder("EC4207 그래프 이론"), folder("CS3104 컴퓨터 네트워크")]),
-            folder("_Credited", [folder("영재고 AP")]),
-        ])
+        let tree = folder(
+            "GIST",
+            [
+                folder(".folio", [file("transcript.json")]),
+                folder("2026-1", [folder("MA2001 선형대수학"), folder("_Admin"), file("수강신청.pdf")]),
+                folder("2026-3", [folder("EC4207 그래프 이론"), folder("CS3104 컴퓨터 네트워크")]),
+                folder("_Credited", [folder("영재고 AP")]),
+            ])
         #expect(FolderKind(tree) == .gist(semesters: 2, courses: 3))
     }
 
     @Test func creditedCoursesUnderTheirSourceAreCounted() {
-        let tree = folder("GIST", [
-            folder(".folio"),
-            folder("_Credited", [folder("영재고 AP", [folder("GS1101 일반물리학 및 연습 I"), file("성적표.pdf")])]),
-        ])
+        let tree = folder(
+            "GIST",
+            [
+                folder(".folio"),
+                folder("_Credited", [folder("영재고 AP", [folder("GS1101 일반물리학 및 연습 I"), file("성적표.pdf")])]),
+            ])
         #expect(FolderKind(tree) == .gist(semesters: 0, courses: 1))
     }
 
@@ -107,4 +111,3 @@ struct FirstRunTests {
         }
     }
 }
-

@@ -22,8 +22,11 @@ public struct Recording: Entity {
 
     public var hasAudio: Bool { audioTrashedAt == nil }
 
-    public init(id: UUID = UUID(), device: DeviceID, at now: Date, sessionId: UUID?, file: String, duration: TimeInterval = 0, bookmarks: [TimeInterval] = [],
-                pages: [PageVisit] = []) {
+    public init(
+        id: UUID = UUID(), device: DeviceID, at now: Date, sessionId: UUID?, file: String, duration: TimeInterval = 0,
+        bookmarks: [TimeInterval] = [],
+        pages: [PageVisit] = []
+    ) {
         self.id = id
         self.createdAt = now
         self.updatedAt = now

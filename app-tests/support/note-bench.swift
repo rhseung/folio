@@ -4,6 +4,7 @@ import FolioMarkdown
 import SwiftUI
 import Testing
 import WebKit
+
 @testable import Folio
 
 /// A note view as the app hosts it: `MarkdownEditor` or `NotePreview` in SwiftUI, in a window that's never shown.
@@ -49,8 +50,10 @@ import WebKit
                 switch kind {
                 case .edit:
                     // `saveFile` names the update it came with, so `update()` can tell SwiftUI handed it to the view.
-                    MarkdownEditor(text: text, baseURL: baseURL, math: .latex, insert: $insert, saveFile: { _, _ in "update \(count)" }, openNote: { _ in },
-                                   anchor: anchor)
+                    MarkdownEditor(
+                        text: text, baseURL: baseURL, math: .latex, insert: $insert, saveFile: { _, _ in "update \(count)" },
+                        openNote: { _ in },
+                        anchor: anchor)
                 case .preview:
                     NotePreview(text: note, baseURL: baseURL, math: .latex, anchor: anchor)
                 }
@@ -67,9 +70,14 @@ import WebKit
     let pulse: Pulse
     private var note: Note?
 
-    init(_ kind: Kind, text: Binding<String>, width: CGFloat = 900, height: CGFloat = 720, dark: Bool = false, baseURL: URL? = NoteBench.notes,
-         anchor: AppLink.Anchor? = nil) {
-        let window = NSWindow(contentRect: CGRect(x: -20_000, y: -20_000, width: width, height: height), styleMask: [.borderless], backing: .buffered, defer: false)
+    init(
+        _ kind: Kind, text: Binding<String>, width: CGFloat = 900, height: CGFloat = 720, dark: Bool = false,
+        baseURL: URL? = NoteBench.notes,
+        anchor: AppLink.Anchor? = nil
+    ) {
+        let window = NSWindow(
+            contentRect: CGRect(x: -20_000, y: -20_000, width: width, height: height), styleMask: [.borderless], backing: .buffered,
+            defer: false)
         window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
         let pulse = Pulse()
         pulse.anchor = anchor
@@ -78,9 +86,12 @@ import WebKit
         (self.kind, self.dark, self.window, self.host, self.pulse) = (kind, dark, window, host, pulse)
     }
 
-    convenience init(_ kind: Kind, _ text: String, width: CGFloat = 900, height: CGFloat = 720, dark: Bool = false, anchor: AppLink.Anchor? = nil) {
+    convenience init(
+        _ kind: Kind, _ text: String, width: CGFloat = 900, height: CGFloat = 720, dark: Bool = false, anchor: AppLink.Anchor? = nil
+    ) {
         let note = Note(text)
-        self.init(kind, text: Binding(get: { note.text }, set: { note.text = $0 }), width: width, height: height, dark: dark, anchor: anchor)
+        self.init(
+            kind, text: Binding(get: { note.text }, set: { note.text = $0 }), width: width, height: height, dark: dark, anchor: anchor)
         self.note = note
     }
 
@@ -111,7 +122,8 @@ import WebKit
         let assets = notes.appending(path: "assets")
         try? FileManager.default.createDirectory(at: assets, withIntermediateDirectories: true)
         try? FileManager.default.copyItem(at: fixtures.appending(path: "assets/sample.png"), to: assets.appending(path: "sample.png"))
-        let page = "<!doctype html><div style='height:120px;display:grid;place-items:center;border:2px solid var(--accent);border-radius:12px'>위젯</div>"
+        let page =
+            "<!doctype html><div style='height:120px;display:grid;place-items:center;border:2px solid var(--accent);border-radius:12px'>위젯</div>"
         for id in ["11111111-2222-3333-4444-555555555555", "22222222-3333-4444-5555-666666666666"] {
             guard let file = UUID(uuidString: id).flatMap({ StandardLayout.widgetFile($0, noteFolder: notes) }) else { continue }
             try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -180,7 +192,8 @@ import WebKit
     private func previewShot(_ web: PreviewWebView) async -> (pixels: Pixels, scrollY: CGFloat)? {
         let read = "return [document.documentElement.clientWidth, innerHeight, scrollY]"
         guard let box = try? await web.callAsyncJavaScript(read, contentWorld: .defaultClient) as? [Double], box.count == 3,
-              box[0] >= 1, box[1] >= 1 else { return nil }
+            box[0] >= 1, box[1] >= 1
+        else { return nil }
         let (width, height) = (Int(box[0]), Int(box[1]))
         let config = WKSnapshotConfiguration()
         config.rect = CGRect(x: 0, y: 0, width: width, height: height)
@@ -196,8 +209,11 @@ import WebKit
 
     /// The snapshot at one pixel a point whatever the screen, so CI and a Retina Mac make pictures of the same size.
     nonisolated private static func pixels(_ image: NSImage, width: Int, height: Int, page: CGColor) -> Pixels? {
-        guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4, space: Pixels.space,
-                                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        guard
+            let context = CGContext(
+                data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4, space: Pixels.space,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return nil }
         let graphics = NSGraphicsContext(cgContext: context, flipped: false)
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = graphics
@@ -220,9 +236,10 @@ import WebKit
     func snapshot() -> Pixels {
         if kind == .preview { return shown?.pixels ?? blank }
         guard let clip = scrollView?.contentView, clip.bounds.width >= 1, clip.bounds.height >= 1,
-              let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(clip.bounds.width), pixelsHigh: Int(clip.bounds.height),
-                                         bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .calibratedRGB,
-                                         bytesPerRow: 0, bitsPerPixel: 0)?.retagging(with: .sRGB)
+            let rep = NSBitmapImageRep(
+                bitmapDataPlanes: nil, pixelsWide: Int(clip.bounds.width), pixelsHigh: Int(clip.bounds.height),
+                bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .calibratedRGB,
+                bytesPerRow: 0, bitsPerPixel: 0)?.retagging(with: .sRGB)
         else { return blank }
         // One pixel a point whatever the screen, so CI and a Retina Mac make pictures of the same size.
         rep.size = clip.bounds.size
@@ -240,7 +257,9 @@ import WebKit
         if kind == .preview {
             // Down to the last block and the page's own room below it, not the room it keeps to scroll past the end.
             let read = "const last = document.body.lastElementChild; return last ? last.getBoundingClientRect().bottom + scrollY + 96 : 0"
-            guard let web = preview, let bottom = try? await web.callAsyncJavaScript(read, contentWorld: .defaultClient) as? Double else { return blank }
+            guard let web = preview, let bottom = try? await web.callAsyncJavaScript(read, contentWorld: .defaultClient) as? Double else {
+                return blank
+            }
             window.setContentSize(NSSize(width: size.width, height: min(16_000, max(size.height, CGFloat(bottom).rounded(.up)))))
             await settle()
             return snapshot()
@@ -260,8 +279,10 @@ import WebKit
     }
 
     private var blank: Pixels {
-        Pixels(CGContext(data: nil, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: Pixels.space,
-                         bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!.makeImage()!, page: pageColor)
+        Pixels(
+            CGContext(
+                data: nil, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: Pixels.space,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!.makeImage()!, page: pageColor)
     }
 
     // MARK: Scrolling
@@ -328,10 +349,13 @@ import WebKit
     func click(at p: CGPoint) {
         let point = windowPoint(p)
         guard let view = hitView(at: p),
-              let down = NSEvent.mouseEvent(with: .leftMouseDown, location: point, modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber, context: nil,
-                                            eventNumber: 0, clickCount: 1, pressure: 1),
-              let up = NSEvent.mouseEvent(with: .leftMouseUp, location: point, modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber, context: nil,
-                                          eventNumber: 0, clickCount: 1, pressure: 0) else { return }
+            let down = NSEvent.mouseEvent(
+                with: .leftMouseDown, location: point, modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber, context: nil,
+                eventNumber: 0, clickCount: 1, pressure: 1),
+            let up = NSEvent.mouseEvent(
+                with: .leftMouseUp, location: point, modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber, context: nil,
+                eventNumber: 0, clickCount: 1, pressure: 0)
+        else { return }
         window.postEvent(up, atStart: true)
         view.mouseDown(with: down)
         // Whatever the view didn't take stays queued for the next click otherwise.

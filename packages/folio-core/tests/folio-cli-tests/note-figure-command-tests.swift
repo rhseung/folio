@@ -1,14 +1,16 @@
-@testable import FolioCLI
 import FolioActions
 import FolioDomain
 import FolioStorage
 import Foundation
 import Testing
 
+@testable import FolioCLI
+
 struct NoteFigureCommandTests {
     let h = Harness()
     let course = Harness.graphTheory
-    static let svg = #"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40"><style>.a{fill:#222}@media (prefers-color-scheme: dark){.a{fill:#E6E2DB}}</style><rect class="a" width="60" height="40"/></svg>"#
+    static let svg =
+        #"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40"><style>.a{fill:#222}@media (prefers-color-scheme: dark){.a{fill:#E6E2DB}}</style><rect class="a" width="60" height="40"/></svg>"#
     static let widget = UUID(uuidString: "A0000000-0000-4000-8000-0000000000A7")!
 
     func scratch(_ name: String, _ text: String) throws -> String {
@@ -19,7 +21,9 @@ struct NoteFigureCommandTests {
     }
 
     func addFigure() throws -> [String] { ["note", "figure", "add", "EC4207", "graph", "--svg", try scratch("graph.svg", Self.svg)] }
-    func addWidget() throws -> [String] { ["note", "widget", "add", "EC4207", "--html", try scratch("w.html", "<p>x</p>"), "--id", Self.widget.uuidString] }
+    func addWidget() throws -> [String] {
+        ["note", "widget", "add", "EC4207", "--html", try scratch("w.html", "<p>x</p>"), "--id", Self.widget.uuidString]
+    }
 
     @Test func figureAdd() throws {
         try h.expectSame(try addFigure()) { _ in NoteFigureAdd(course: course, name: "graph", svg: Self.svg) }
@@ -27,8 +31,10 @@ struct NoteFigureCommandTests {
 
     @Test func figureWrite() throws {
         let new = Self.svg.replacing("60", with: "80")
-        try h.expectSame(["note", "figure", "write", "EC4207", "graph.svg", "--svg", try scratch("new.svg", new), "--expect", ContentHash.of(Self.svg)],
-                         setup: [try addFigure()]) { _ in
+        try h.expectSame(
+            ["note", "figure", "write", "EC4207", "graph.svg", "--svg", try scratch("new.svg", new), "--expect", ContentHash.of(Self.svg)],
+            setup: [try addFigure()]
+        ) { _ in
             NoteFigureWrite(course: course, name: "graph.svg", svg: new, expect: ContentHash.of(Self.svg))
         }
     }
@@ -38,8 +44,12 @@ struct NoteFigureCommandTests {
     }
 
     @Test func widgetWrite() throws {
-        try h.expectSame(["note", "widget", "write", "EC4207/\(Self.widget.uuidString)", "--html", try scratch("y.html", "<p>y</p>"),
-                          "--expect", ContentHash.of("<p>x</p>")], setup: [try addWidget()]) { _ in
+        try h.expectSame(
+            [
+                "note", "widget", "write", "EC4207/\(Self.widget.uuidString)", "--html", try scratch("y.html", "<p>y</p>"),
+                "--expect", ContentHash.of("<p>x</p>"),
+            ], setup: [try addWidget()]
+        ) { _ in
             NoteWidgetWrite(course: course, widget: Self.widget, html: "<p>y</p>", expect: ContentHash.of("<p>x</p>"))
         }
     }
@@ -72,8 +82,10 @@ struct NoteFigureCommandTests {
     @Test func thePanelProposesFiguresAndWidgets() throws {
         let gist = try Harness.fixtureCopy()
         let before = try Harness.files(gist)
-        for (tool, arguments) in [("note_figure_add", ["course": "EC4207", "name": "graph", "svg": .string(Self.svg)] as JSONValue),
-                                  ("note_widget_add", ["course": "EC4207", "html": "<p>x</p>"])] {
+        for (tool, arguments) in [
+            ("note_figure_add", ["course": "EC4207", "name": "graph", "svg": .string(Self.svg)] as JSONValue),
+            ("note_widget_add", ["course": "EC4207", "html": "<p>x</p>"]),
+        ] {
             let (failed, texts) = try MCPTests().call(MCPServer(gist: nil, propose: true), gist, tool, arguments)
             #expect(!failed, "\(texts)")
             let proposal = try #require(texts.compactMap(ActionProposal.init(text:)).first)

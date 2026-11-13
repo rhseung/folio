@@ -36,7 +36,9 @@ struct MaterialFilesTests {
         #expect(file.materials.first { $0.id == lecture.id }?.status == .classified)
         let link = try #require(file.sessionLinks(of: lecture.id).first?.link)
         #expect((link.firstPage, link.lastPage) == (2, 9))
-        #expect(try store.download(file.materials.first { $0.id == lecture.id }!) == store.url.appending(path: "Lectures/05_Matchings (revised).pdf"))
+        #expect(
+            try store.download(file.materials.first { $0.id == lecture.id }!)
+                == store.url.appending(path: "Lectures/05_Matchings (revised).pdf"))
 
         let outside = gist.url.appending(path: "2026-3/_Admin/2026-3 강의실 배정.pdf")
         #expect(throws: MaterialFileError.self) { try store.relink(lecture.id, to: outside, in: &doc.model, device: device, now: now) }

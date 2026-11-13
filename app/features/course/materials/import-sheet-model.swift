@@ -1,5 +1,5 @@
-import FolioActions
 import FolioAI
+import FolioActions
 import FolioDomain
 import FolioStorage
 import Foundation
@@ -71,8 +71,9 @@ final class ImportPlaceModel {
         self.claude = claude ?? LectureClaude.of(workspace, course: course)
         let sessions = course.file.sessions
         rows = files.enumerated().map { i, url in
-            let guess = MaterialIntake.guess(Self.incoming(url), places: places, sessions: sessions, exams: course.file.exams, now: workspace.now,
-                                             settings: workspace.settings, calendar: workspace.calendar)
+            let guess = MaterialIntake.guess(
+                Self.incoming(url), places: places, sessions: sessions, exams: course.file.exams, now: workspace.now,
+                settings: workspace.settings, calendar: workspace.calendar)
             return Row(id: i, url: url, guess: guess, folder: guess.folder, session: guess.session)
         }
         held = Dictionary(uniqueKeysWithValues: ([CourseFolder.lectures.rawValue] + places).map { ($0, course.store.names(in: $0)) })
@@ -124,7 +125,11 @@ final class ImportPlaceModel {
         var result: [Kind] = []
         for p in [CourseFolder.lectures.rawValue] + places {
             let label = MaterialRole(path: p + "/_")?.label ?? p
-            if let i = result.firstIndex(where: { $0.label == label }) { result[i].places.append(p) } else { result.append(Kind(label: label, places: [p])) }
+            if let i = result.firstIndex(where: { $0.label == label }) {
+                result[i].places.append(p)
+            } else {
+                result.append(Kind(label: label, places: [p]))
+            }
         }
         return result
     }
@@ -145,8 +150,11 @@ final class ImportPlaceModel {
 
     /// `11/6(목) · 오늘` for today's class, which is the one a file is most often for; any other by its title.
     func sessionLabel(_ row: Row) -> String {
-        guard let s = row.session.flatMap({ id in sessions.first { $0.id == id } }) else { return String(localized: .materialsImportNoSession) }
-        return workspace.isStudyToday(s.date) ? String(localized: .materialsImportToday(course.file.day(of: s, calendar: workspace.calendar))) : sessionTitle(s)
+        guard let s = row.session.flatMap({ id in sessions.first { $0.id == id } }) else {
+            return String(localized: .materialsImportNoSession)
+        }
+        return workspace.isStudyToday(s.date)
+            ? String(localized: .materialsImportToday(course.file.day(of: s, calendar: workspace.calendar))) : sessionTitle(s)
     }
 
     func sessionNote(_ s: Session) -> String? {
@@ -169,8 +177,9 @@ final class ImportPlaceModel {
 
     /// Each row's folder and final name, planned together so two files of one name don't both claim it.
     var placements: [MaterialIntake.Placement] {
-        MaterialIntake.plan(rows.map { row in (row.url.lastPathComponent, row.folder, isLecture(row) ? session(row) : nil) },
-                            taken: { self.held[$0] ?? [] })
+        MaterialIntake.plan(
+            rows.map { row in (row.url.lastPathComponent, row.folder, isLecture(row) ? session(row) : nil) },
+            taken: { self.held[$0] ?? [] })
     }
 
     private func session(_ row: Row) -> Session? { row.session.flatMap { id in course.file.sessions.first { $0.id == id } } }
@@ -206,8 +215,10 @@ final class ImportPlaceModel {
     }
 
     private var defaultSession: UUID? {
-        MaterialIntake.guess(IncomingFile(name: ""), places: [], sessions: course.file.sessions, now: workspace.now,
-                             settings: workspace.settings, calendar: workspace.calendar).session
+        MaterialIntake.guess(
+            IncomingFile(name: ""), places: [], sessions: course.file.sessions, now: workspace.now,
+            settings: workspace.settings, calendar: workspace.calendar
+        ).session
     }
 
     // MARK: Selecting
@@ -374,15 +385,17 @@ final class ImportPlaceModel {
         case .reading(let done, let total) where total > 0 && done == total && claudeOn:
             return String(localized: .lectureClaudeReading)
         case .reading(let done, let total):
-            return total == 0 ? String(localized: .materialsImportSectionsReading) : String(localized: .materialsImportSectionsReadingPages(done, total))
+            return total == 0
+                ? String(localized: .materialsImportSectionsReading) : String(localized: .materialsImportSectionsReadingPages(done, total))
         case .proposed(let split, let source):
             let count = String(localized: .materialsImportSectionsCount(split.claimed))
             guard let source else { return count }
-            let from = switch source {
-            case .outline: String(localized: .materialsImportSectionsFromOutline)
-            case .titles: String(localized: .materialsImportSectionsFromTitles)
-            case .claude: String(localized: .materialsImportSectionsFromClaude)
-            }
+            let from =
+                switch source {
+                case .outline: String(localized: .materialsImportSectionsFromOutline)
+                case .titles: String(localized: .materialsImportSectionsFromTitles)
+                case .claude: String(localized: .materialsImportSectionsFromClaude)
+                }
             return "\(count) · \(from)"
         // Claude's reason, not the outline's and titles': they weren't read when Claude was.
         case .nothing: return claudeFailures[row.id] ?? String(localized: .materialsImportSectionsNone)

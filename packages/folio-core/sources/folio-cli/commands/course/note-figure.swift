@@ -30,12 +30,14 @@ extension NoteCommand {
 
     struct Figure: ParsableCommand {
         static let configuration = CommandConfiguration(
-            abstract: String(localized: .noteFigureAbstract), subcommands: [List.self, Show.self, Render.self] + GeneratedCommands.noteFigure)
+            abstract: String(localized: .noteFigureAbstract),
+            subcommands: [List.self, Show.self, Render.self] + GeneratedCommands.noteFigure)
 
         struct List: ParsableCommand {
             static let configuration = CommandConfiguration(abstract: String(localized: .noteFigureListAbstract))
             @OptionGroup var g: GlobalOptions
-            @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String = ""
+            @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses))
+            var course: String = ""
 
             func run() throws {
                 let r = Resolver(try CLI.context(g))
@@ -49,24 +51,31 @@ extension NoteCommand {
         struct Show: ParsableCommand {
             static let configuration = CommandConfiguration(abstract: String(localized: .noteFigureShowAbstract))
             @OptionGroup var g: GlobalOptions
-            @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String
+            @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses))
+            var course: String
             @Argument(help: ArgumentHelp(String(localized: .noteFigureHelpName), valueName: "name")) var name: String
 
             func run() throws {
                 let c = try Resolver(try CLI.context(g)).course(course)
                 let (file, text) = try readFigure(c, name)
-                if g.json { return try printJSON(NoteFileBody(name: file, path: NoteFigure.path(file), text: text, hash: contentHash(text))) }
+                if g.json {
+                    return try printJSON(NoteFileBody(name: file, path: NoteFigure.path(file), text: text, hash: contentHash(text)))
+                }
                 say(text)
             }
         }
 
         struct Render: ParsableCommand {
-            static let configuration = CommandConfiguration(abstract: String(localized: .noteFigureRenderAbstract), discussion: String(localized: .noteRenderDiscussion))
+            static let configuration = CommandConfiguration(
+                abstract: String(localized: .noteFigureRenderAbstract), discussion: String(localized: .noteRenderDiscussion))
             @OptionGroup var g: GlobalOptions
-            @Argument(help: ArgumentHelp(String(localized: .noteRenderHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String = ""
+            @Argument(
+                help: ArgumentHelp(String(localized: .noteRenderHelpCourse), valueName: "course"), completion: .custom(Complete.courses))
+            var course: String = ""
             @Argument(help: ArgumentHelp(String(localized: .noteFigureHelpName), valueName: "name")) var name: String?
             @Option(help: ArgumentHelp(String(localized: .noteFigureRenderHelpText), valueName: "svg")) var text: String?
-            @Option(help: ArgumentHelp(String(localized: .noteFigureRenderHelpFile), valueName: "file"), completion: .file()) var svg: String?
+            @Option(help: ArgumentHelp(String(localized: .noteFigureRenderHelpFile), valueName: "file"), completion: .file()) var svg:
+                String?
             @OptionGroup var out: RenderOutput
 
             func run() throws {
@@ -82,26 +91,31 @@ extension NoteCommand {
                     let (file, read) = try readFigure(c, name)
                     source = ((file as NSString).deletingPathExtension, read)
                 }
-                try out.report(try PageRender.figure(source.text, accent: c?.color ?? CourseColor.neutral, widths: out.sizes), label: source.label, json: g.json)
+                try out.report(
+                    try PageRender.figure(source.text, accent: c?.color ?? CourseColor.neutral, widths: out.sizes), label: source.label,
+                    json: g.json)
             }
         }
     }
 
     struct Widget: ParsableCommand {
         static let configuration = CommandConfiguration(
-            abstract: String(localized: .noteWidgetAbstract), subcommands: [List.self, Show.self, Render.self] + GeneratedCommands.noteWidget)
+            abstract: String(localized: .noteWidgetAbstract),
+            subcommands: [List.self, Show.self, Render.self] + GeneratedCommands.noteWidget)
 
         struct List: ParsableCommand {
             static let configuration = CommandConfiguration(abstract: String(localized: .noteWidgetListAbstract))
             @OptionGroup var g: GlobalOptions
-            @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String = ""
+            @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses))
+            var course: String = ""
 
             func run() throws {
                 let r = Resolver(try CLI.context(g))
                 let c = try r.course(course)
                 let folder = StandardLayout.metadataFolder + "/" + StandardLayout.widgetsFolder
                 let names = (try? FileManager.default.contentsOfDirectory(atPath: c.store.fileURL(folder).path)) ?? []
-                let ids = names.compactMap { n in n.hasSuffix(".html") ? UUID(uuidString: String(n.dropLast(5))) : nil }.map(\.uuidString).sorted()
+                let ids = names.compactMap { n in n.hasSuffix(".html") ? UUID(uuidString: String(n.dropLast(5))) : nil }.map(\.uuidString)
+                    .sorted()
                 try listFiles(c, ids.map { ($0, NoteWidget.path(UUID(uuidString: $0)!)) }, json: g.json)
             }
         }
@@ -116,17 +130,21 @@ extension NoteCommand {
                 let (c, ref) = try r.split(widget)
                 let id = try r.widget(ref, in: c)
                 let text = try MaterialText.read(c.store, NoteWidget.path(id))
-                if g.json { return try printJSON(NoteFileBody(name: id.uuidString, path: NoteWidget.path(id), text: text, hash: contentHash(text))) }
+                if g.json {
+                    return try printJSON(NoteFileBody(name: id.uuidString, path: NoteWidget.path(id), text: text, hash: contentHash(text)))
+                }
                 say(text)
             }
         }
 
         struct Render: ParsableCommand {
-            static let configuration = CommandConfiguration(abstract: String(localized: .noteWidgetRenderAbstract), discussion: String(localized: .noteRenderDiscussion))
+            static let configuration = CommandConfiguration(
+                abstract: String(localized: .noteWidgetRenderAbstract), discussion: String(localized: .noteRenderDiscussion))
             @OptionGroup var g: GlobalOptions
             @Argument(help: ArgumentHelp(String(localized: .noteWidgetRenderHelpWidget), valueName: "widget")) var widget: String = ""
             @Option(help: ArgumentHelp(String(localized: .noteWidgetRenderHelpText), valueName: "html")) var text: String?
-            @Option(help: ArgumentHelp(String(localized: .noteWidgetRenderHelpFile), valueName: "file"), completion: .file()) var html: String?
+            @Option(help: ArgumentHelp(String(localized: .noteWidgetRenderHelpFile), valueName: "file"), completion: .file()) var html:
+                String?
             @OptionGroup var out: RenderOutput
 
             func run() throws {
@@ -144,11 +162,15 @@ extension NoteCommand {
                 if let given {
                     source = (html.map { URL(filePath: $0).deletingPathExtension().lastPathComponent } ?? "widget", given)
                 } else {
-                    guard let c = course, !ref.isEmpty else { throw CLIError(exit: .usage, message: String(localized: .noteWidgetRenderNothing)) }
+                    guard let c = course, !ref.isEmpty else {
+                        throw CLIError(exit: .usage, message: String(localized: .noteWidgetRenderNothing))
+                    }
                     let id = try r.widget(ref, in: c)
                     source = (String(id.uuidString.prefix(8)), try MaterialText.read(c.store, NoteWidget.path(id)))
                 }
-                try out.report(try PageRender.widget(source.text, accent: course?.color ?? CourseColor.neutral, widths: out.sizes), label: source.label, json: g.json)
+                try out.report(
+                    try PageRender.widget(source.text, accent: course?.color ?? CourseColor.neutral, widths: out.sizes),
+                    label: source.label, json: g.json)
             }
         }
     }
@@ -156,7 +178,8 @@ extension NoteCommand {
 
 /// Where a render's pictures go when a person runs it; `--json` (and so `folio mcp`) carries them in the output.
 struct RenderOutput: ParsableArguments {
-    @Option(name: .customLong("width"), help: ArgumentHelp(String(localized: .noteRenderHelpWidth), valueName: "points")) var widths: [Int] = []
+    @Option(name: .customLong("width"), help: ArgumentHelp(String(localized: .noteRenderHelpWidth), valueName: "points")) var widths:
+        [Int] = []
     @Option(help: ArgumentHelp(String(localized: .noteRenderHelpOut), valueName: "folder"), completion: .directory) var out: String?
 
     var sizes: [Int] { widths.isEmpty ? PageRender.widths : widths.map { min(max($0, 200), 1600) } }
@@ -200,8 +223,9 @@ private func listFiles(_ c: CourseRef, _ files: [(name: String, path: String)], 
     let texts = notes.compactMap { n in (try? c.store.read(n)).map { (c.store.coursePath(of: n.url) ?? n.url.lastPathComponent, $0) } }
     let items = files.map { f in
         let values = try? c.store.fileURL(f.path).resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
-        return NoteFileItem(name: f.name, path: f.path, size: values?.fileSize ?? 0, modified: values?.contentModificationDate,
-                            notes: texts.filter { $0.1.contains(f.name) }.map(\.0))
+        return NoteFileItem(
+            name: f.name, path: f.path, size: values?.fileSize ?? 0, modified: values?.contentModificationDate,
+            notes: texts.filter { $0.1.contains(f.name) }.map(\.0))
     }
     if json { return try printJSON(items) }
     var t = Table(header: [String(localized: .noteFileHeaderName), String(localized: .noteFileHeaderNotes)], shrink: [1])

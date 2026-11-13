@@ -1,6 +1,7 @@
 import AppKit
 import FolioDomain
 import Testing
+
 @testable import Folio
 
 /// Changing the text or its look must not move what's on screen: TextKit 2 guesses the height of text it hasn't laid out,
@@ -12,7 +13,8 @@ struct NoteScrollTests {
 
     /// A view in a window shorter than the note, laid out to its end so it scrolls.
     static func host(_ view: NSTextView) -> NSWindow {
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 900, height: 400), styleMask: [.borderless], backing: .buffered, defer: false)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 900, height: 400), styleMask: [.borderless], backing: .buffered, defer: false)
         let scroll = NoteScrollView(document: view)
         scroll.frame = window.contentView!.bounds
         window.contentView!.addSubview(scroll)
@@ -38,7 +40,8 @@ struct NoteScrollTests {
     /// Where the line holding `i` is drawn on screen, from the layout TextKit has, without laying out more.
     static func shown(_ view: NSTextView, _ i: Int) -> CGFloat? {
         guard let manager = view.textLayoutManager, let clip = view.enclosingScrollView?.contentView,
-              let location = manager.location(manager.documentRange.location, offsetBy: i) else { return nil }
+            let location = manager.location(manager.documentRange.location, offsetBy: i)
+        else { return nil }
         manager.textViewportLayoutController.layoutViewport()
         return manager.textLayoutFragment(for: location).map { $0.layoutFragmentFrame.minY + view.textContainerOrigin.y - clip.bounds.minY }
     }
@@ -126,7 +129,8 @@ struct NoteLowerHalfTests {
         let scroll = NoteScrollView(document: view)
         view.load(NoteScrollTests.filler)
         view.configure(accent: CourseAccent.presets[0].accent, syntax: .latex, dark: false)
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 900, height: 400), styleMask: [.borderless], backing: .buffered, defer: false)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 900, height: 400), styleMask: [.borderless], backing: .buffered, defer: false)
         window.contentView!.addSubview(scroll)
         scroll.frame = window.contentView!.bounds
         window.contentView?.layoutSubtreeIfNeeded()
@@ -177,8 +181,14 @@ struct NoteLowerHalfTests {
 struct NoteRoomPastTheEndTests {
     /// A click as the window gives it: to the view under the point, with the button already up.
     static func click(_ window: NSWindow, at point: NSPoint) {
-        guard let down = NSEvent.mouseEvent(with: .leftMouseDown, location: point, modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1),
-              let up = NSEvent.mouseEvent(with: .leftMouseUp, location: point, modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 0) else { return }
+        guard
+            let down = NSEvent.mouseEvent(
+                with: .leftMouseDown, location: point, modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber, context: nil,
+                eventNumber: 0, clickCount: 1, pressure: 1),
+            let up = NSEvent.mouseEvent(
+                with: .leftMouseUp, location: point, modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber, context: nil,
+                eventNumber: 0, clickCount: 1, pressure: 0)
+        else { return }
         window.postEvent(up, atStart: true)
         window.contentView?.hitTest(point)?.mouseDown(with: down)
     }

@@ -20,9 +20,11 @@ struct ScrubField: View {
 
     var typed: Binding<Double> {
         guard magnitude else { return $value }
-        return Binding(get: { abs(value) }, set: { n in
-            value = min(max((value < 0 ? -1 : 1) * abs(n), range.lowerBound), range.upperBound)
-        })
+        return Binding(
+            get: { abs(value) },
+            set: { n in
+                value = min(max((value < 0 ? -1 : 1) * abs(n), range.lowerBound), range.upperBound)
+            })
     }
 
     var body: some View {

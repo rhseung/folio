@@ -39,10 +39,11 @@ struct ActionsCommand: ParsableCommand {
             let call = "\(name)("
             // `exam scope --taught`: a flag of an existing command counts as that command.
             let path = type.command.components(separatedBy: " --")[0]
-            return Row(action: name, command: type.command, hasCommand: commands.contains(path),
-                       generated: type.spec.generated, manualReason: type.spec.manualReason,
-                       screens: app.filter { $0.1.contains(call) }.map { ($0.0 as NSString).deletingPathExtension },
-                       equivalenceTest: tests.contains(call))
+            return Row(
+                action: name, command: type.command, hasCommand: commands.contains(path),
+                generated: type.spec.generated, manualReason: type.spec.manualReason,
+                screens: app.filter { $0.1.contains(call) }.map { ($0.0 as NSString).deletingPathExtension },
+                equivalenceTest: tests.contains(call))
         }
         let writes = Self.directWrites(app)
         let unexplained = rows.filter { !$0.generated && ($0.manualReason ?? "").isEmpty }
@@ -50,19 +51,30 @@ struct ActionsCommand: ParsableCommand {
         if g.json {
             try printJSON(Report(actions: rows, directWrites: writes, passed: passed))
         } else {
-            var t = Table(header: [String(localized: .actionsHeaderAction), String(localized: .actionsHeaderCommand), String(localized: .actionsHeaderScreens), String(localized: .actionsHeaderEquivalence)], shrink: [2])
+            var t = Table(
+                header: [
+                    String(localized: .actionsHeaderAction), String(localized: .actionsHeaderCommand),
+                    String(localized: .actionsHeaderScreens), String(localized: .actionsHeaderEquivalence),
+                ], shrink: [2])
             for r in rows {
-                t.rows.append([r.action, r.hasCommand ? r.command : String(localized: .actionsNoCommand).styled(.red),
-                               r.screens.isEmpty ? String(localized: .actionsCliOnly).styled(.dim) : r.screens.joined(separator: ", "),
-                               r.equivalenceTest ? "✓".styled(.green) : "✗".styled(.red)])
+                t.rows.append([
+                    r.action, r.hasCommand ? r.command : String(localized: .actionsNoCommand).styled(.red),
+                    r.screens.isEmpty ? String(localized: .actionsCliOnly).styled(.dim) : r.screens.joined(separator: ", "),
+                    r.equivalenceTest ? "✓".styled(.green) : "✗".styled(.red),
+                ])
             }
             t.print()
             for w in writes { say("✗".styled(.red) + " " + String(localized: .actionsDirectWrite(w))) }
             for r in unexplained { say("✗".styled(.red) + " " + String(localized: .actionsNoReason(r.command))) }
             let n = rows.count
-            say([String(localized: .actionsSummaryActions(n)), String(localized: .actionsSummaryCommands(rows.filter(\.hasCommand).count, n)),
-                 String(localized: .actionsSummaryGenerated(rows.filter(\.generated).count, n)),
-                 String(localized: .actionsSummaryTests(rows.filter(\.equivalenceTest).count, n)), String(localized: .actionsSummaryWrites(writes.count))].joined(separator: " · ").styled(.dim))
+            say(
+                [
+                    String(localized: .actionsSummaryActions(n)),
+                    String(localized: .actionsSummaryCommands(rows.filter(\.hasCommand).count, n)),
+                    String(localized: .actionsSummaryGenerated(rows.filter(\.generated).count, n)),
+                    String(localized: .actionsSummaryTests(rows.filter(\.equivalenceTest).count, n)),
+                    String(localized: .actionsSummaryWrites(writes.count)),
+                ].joined(separator: " · ").styled(.dim))
         }
         if check, !passed { throw ExitCode(Exit.coverage.rawValue) }
     }
@@ -97,7 +109,8 @@ struct ActionsCommand: ParsableCommand {
     }
 
     /// Calls that write to the GIST folder. The app reaches them only through actions; anything else needs a marker.
-    nonisolated(unsafe) static let writePattern = #/\.save\(|\.write\(to:|\.log\.append\(|MoveJournal\.(apply|undo)|FileManager\.default\.(createDirectory|moveItem|removeItem|copyItem|trashItem|createFile)|\.trashNote\(|\.ensureID\(/#
+    nonisolated(unsafe) static let writePattern =
+        #/\.save\(|\.write\(to:|\.log\.append\(|MoveJournal\.(apply|undo)|FileManager\.default\.(createDirectory|moveItem|removeItem|copyItem|trashItem|createFile)|\.trashNote\(|\.ensureID\(/#
 
     static func directWrites(_ files: [(String, String)]) -> [String] {
         files.flatMap { name, text in

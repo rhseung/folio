@@ -1,6 +1,7 @@
-@testable import FolioMarkdown
 import Foundation
 import Testing
+
+@testable import FolioMarkdown
 
 /// A fenced block can choose its formula's syntax (#16): `math`, `tex` and `latex` are TeX, `asciimath` and `am`
 /// AsciiMath, whatever the note's; `$$…$$` and `$…$` stay in the note's.
@@ -15,8 +16,9 @@ struct MathFenceTests {
     }
 
     @Test func aFenceIsDisplayMathInItsSyntax() {
-        #expect(html("```math\n\\begin{aligned}\na &= b\n\\end{aligned}\n```") ==
-            "<div class=\"math display\" data-math=\"latex\">\\begin{aligned}\na &amp;= b\n\\end{aligned}</div>\n")
+        #expect(
+            html("```math\n\\begin{aligned}\na &= b\n\\end{aligned}\n```")
+                == "<div class=\"math display\" data-math=\"latex\">\\begin{aligned}\na &amp;= b\n\\end{aligned}</div>\n")
         #expect(html("```tex\nx^2\n```") == "<div class=\"math display\" data-math=\"latex\">x^2</div>\n")
         #expect(html("```latex\nx^2\n```") == "<div class=\"math display\" data-math=\"latex\">x^2</div>\n")
         #expect(html("```asciimath\nsum_(i=1)^n i\n```") == "<div class=\"math display\" data-math=\"asciimath\">sum_(i=1)^n i</div>\n")
@@ -35,8 +37,9 @@ struct MathFenceTests {
 
     /// Claude's `latex` fences are source to copy; `math` was a formula there before fences chose a syntax.
     @Test func anAnswerKeepsTeXFencesAsCode() {
-        #expect(HTMLRenderer.render(answer: "```latex\n\\section{A}\n```") ==
-            "<pre data-lang=\"latex\"><code class=\"language-latex\">\\section{A}</code></pre>\n")
+        #expect(
+            HTMLRenderer.render(answer: "```latex\n\\section{A}\n```")
+                == "<pre data-lang=\"latex\"><code class=\"language-latex\">\\section{A}</code></pre>\n")
         #expect(HTMLRenderer.render(answer: "```math\nx\n```") == "<div class=\"math display\" data-math=\"latex\">x</div>\n")
         #expect(HTMLRenderer.render(answer: "$$\nx\n$$") == "<div class=\"math display\">x</div>\n")
     }
@@ -80,8 +83,9 @@ struct MathFenceCompletionTests {
         otherMath: [Snippet(trigger: "//", body: "frac($1)($2)", inMath: true)])
 
     var ascii: CompletionCatalog {
-        CompletionCatalog(languages: catalog.languages, snippets: catalog.snippets.filter { !$0.inMath } + catalog.otherMath, tex: false,
-                          otherMath: catalog.snippets.filter(\.inMath))
+        CompletionCatalog(
+            languages: catalog.languages, snippets: catalog.snippets.filter { !$0.inMath } + catalog.otherMath, tex: false,
+            otherMath: catalog.snippets.filter(\.inMath))
     }
 
     func query(_ s: String, _ catalog: CompletionCatalog) -> CompletionQuery? {

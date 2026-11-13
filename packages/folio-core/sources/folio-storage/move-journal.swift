@@ -57,11 +57,14 @@ public enum MoveJournal {
     /// Runs `moves` in order, then removes `removals` if they are still empty, and returns the batch ID for `undo`.
     /// Checks every source and target first, so a stale plan fails before anything moves.
     @discardableResult
-    public static func apply(_ moves: [PlannedMove], removing removals: [String] = [], in gist: URL, device: DeviceID, now: Date) throws -> UUID {
+    public static func apply(_ moves: [PlannedMove], removing removals: [String] = [], in gist: URL, device: DeviceID, now: Date) throws
+        -> UUID
+    {
         let fm = FileManager.default
         // Lexical, since a target doesn't exist yet: `a/../../x` must not reach past the GIST folder.
         let root = gist.standardizedFileURL.path + "/"
-        for path in moves.flatMap({ [$0.from, $0.to] }) + removals where !gist.appending(path: path).standardizedFileURL.path.hasPrefix(root) {
+        for path in moves.flatMap({ [$0.from, $0.to] }) + removals
+        where !gist.appending(path: path).standardizedFileURL.path.hasPrefix(root) {
             throw Failure.outsideGIST(path)
         }
         for move in moves {
@@ -80,10 +83,11 @@ public enum MoveJournal {
 
     /// GIST-relative paths the journal shows were taken out of an `Exam Review` folder, where they are now.
     public static func selfMadePaths(in gist: URL) throws -> Set<String> {
-        CleanupPlanner.selfMade(moves: try records(in: gist).compactMap { r in
-            guard r.op == .move, let from = r.from, let to = r.to else { return nil }
-            return (from, to)
-        })
+        CleanupPlanner.selfMade(
+            moves: try records(in: gist).compactMap { r in
+                guard r.op == .move, let from = r.from, let to = r.to else { return nil }
+                return (from, to)
+            })
     }
 
     /// Writes each course into `folder/.folio/course.json` under the same id, making the folders it needs. The caller
@@ -170,7 +174,8 @@ public enum MoveJournal {
 
         func removeFolderIfEmpty(_ path: String) throws {
             guard let names = try? FileManager.default.contentsOfDirectory(atPath: url(path).path),
-                  names.allSatisfy(IndexRules.isIgnoredFile) else { return }
+                names.allSatisfy(IndexRules.isIgnoredFile)
+            else { return }
             for junk in names {
                 try FileManager.default.removeItem(at: url(path).appending(path: junk))
                 try record(.removeJunk, from: "\(path)/\(junk)")

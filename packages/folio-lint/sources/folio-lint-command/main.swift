@@ -42,8 +42,9 @@ for rule in rules {
     lines += hits.map { "  \($0.path):\($0.line): \($0.key)" }
 }
 if !gone.isEmpty {
-    lines.append("Fixed or moved since packages/folio-lint/baseline.txt was written; run `mise run check-code -- --update` "
-        + "to drop them (and check it adds nothing):")
+    lines.append(
+        "Fixed or moved since packages/folio-lint/baseline.txt was written; run `mise run check-code -- --update` "
+            + "to drop them (and check it adds nothing):")
     lines += gone.map { "  " + $0.replacingOccurrences(of: "\t", with: "  ") }
 }
 if !lines.isEmpty { fail(lines.joined(separator: "\n")) }

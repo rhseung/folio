@@ -6,8 +6,10 @@ import SwiftSyntax
 // can't import LocalFolders and have no business there, so for them any use fails.
 extension Rules {
     static var localFolders: Rule {
-        Rule(name: "local-folders", strict: true,
-             advice: "reach Application Support through LocalFolders.applicationSupport; packages don't use it") { code in
+        Rule(
+            name: "local-folders", strict: true,
+            advice: "reach Application Support through LocalFolders.applicationSupport; packages don't use it"
+        ) { code in
             let exempt: Set = ["app/app/services/local-folders.swift", "app-tests/support/local-folders-tests.swift"]
             var hits: [Hit] = []
             // This package names the paths it looks for.

@@ -57,12 +57,14 @@ final class StudyTimeModel {
                 guard let bar = bars.first(where: { $0.day == day && $0.courseId == c.id }), bar.seconds > 0 else { return nil }
                 let h = bar.seconds / unit
                 defer { y += h }
-                return Segment(day: Self.label(day, today: today), courseId: c.id, title: c.title, seconds: bar.seconds,
-                               start: y == 0 ? 0 : y + gap, end: y + h)
+                return Segment(
+                    day: Self.label(day, today: today), courseId: c.id, title: c.title, seconds: bar.seconds,
+                    start: y == 0 ? 0 : y + gap, end: y + h)
             }
         }
-        return Chart(today: today, days: days, courses: courses, total: bars.map(\.seconds).reduce(0, +), perDay: perDay,
-                     inHours: inHours, segments: segments)
+        return Chart(
+            today: today, days: days, courses: courses, total: bars.map(\.seconds).reduce(0, +), perDay: perDay,
+            inHours: inHours, segments: segments)
     }
 
     /// Each logged course's fortnight, most first.
@@ -79,7 +81,8 @@ final class StudyTimeModel {
     }
 
     func axisLabel(_ value: Double, inHours: Bool) -> String {
-        value == 0 ? "0" : inHours ? String(localized: .todayStudyHours(value.formatted())) : String(localized: .todayStudyMinutes(Int(value)))
+        value == 0
+            ? "0" : inHours ? String(localized: .todayStudyHours(value.formatted())) : String(localized: .todayStudyMinutes(Int(value)))
     }
 
     func load() async {

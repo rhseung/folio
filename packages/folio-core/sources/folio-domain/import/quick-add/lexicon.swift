@@ -48,7 +48,8 @@ extension QuickAdd {
     /// The deadline's recognizers, tried on a word in this order; the first that reads it wins. A new kind of deadline
     /// word is a case here.
     enum Recognizer: CaseIterable {
-        case repeats, weekday, weekdays, relativeDay, clock, fullDate, numericDate, monthAndDay, month, dayOfMonth, spokenTime, minutes, midnight, noon
+        case repeats, weekday, weekdays, relativeDay, clock, fullDate, numericDate, monthAndDay, month, dayOfMonth, spokenTime, minutes,
+            midnight, noon
 
         /// The piece, and the word as Apple's detector should see it when that differs (`금` → `금요일`, `3/2` → `3월 2일`).
         func read(_ text: String, today: LocalDate, year: Int) -> (piece: Piece, normalized: String?)? {
@@ -70,20 +71,26 @@ extension QuickAdd {
                 guard let d = QuickAdd.relativeDays[text] else { return nil }
                 return (Piece.day(today.adding(days: d)), nil)
             case .clock:
-                guard let m = text.wholeMatch(of: /(\d{1,2}):(\d{2})/), let h = Int(m.1), let mm = Int(m.2), h < 24, mm < 60 else { return nil }
+                guard let m = text.wholeMatch(of: /(\d{1,2}):(\d{2})/), let h = Int(m.1), let mm = Int(m.2), h < 24, mm < 60 else {
+                    return nil
+                }
                 return (Piece.time(h * 60 + mm, false), nil)
             case .fullDate:
                 // `2026/3/2`: what the deadline chip writes for a day `3/2` would not read as (past, or a year out).
-                guard let m = text.wholeMatch(of: /(\d{4})[\/.\-](\d{1,2})[\/.\-](\d{1,2})\.?/), let y = Int(m.1), let mo = Int(m.2), let d = Int(m.3),
-                      let day = LocalDate(year: y, month: mo, day: d) else { return nil }
+                guard let m = text.wholeMatch(of: /(\d{4})[\/.\-](\d{1,2})[\/.\-](\d{1,2})\.?/), let y = Int(m.1), let mo = Int(m.2),
+                    let d = Int(m.3),
+                    let day = LocalDate(year: y, month: mo, day: d)
+                else { return nil }
                 return (Piece.day(day), "\(y)년 \(mo)월 \(d)일")
             case .numericDate:
                 guard let m = text.wholeMatch(of: /(\d{1,2})[\/.](\d{1,2})\.?/), let mo = Int(m.1), let d = Int(m.2),
-                      let day = QuickAdd.ahead(month: mo, day: d, today: today, year: year) else { return nil }
+                    let day = QuickAdd.ahead(month: mo, day: d, today: today, year: year)
+                else { return nil }
                 return (Piece.day(day), "\(mo)월 \(d)일")
             case .monthAndDay:
                 guard let m = text.wholeMatch(of: /(\d{1,2})월\s*(\d{1,2})일/), let mo = Int(m.1), let d = Int(m.2),
-                      let day = QuickAdd.ahead(month: mo, day: d, today: today, year: year) else { return nil }
+                    let day = QuickAdd.ahead(month: mo, day: d, today: today, year: year)
+                else { return nil }
                 return (Piece.day(day), nil)
             case .month:
                 guard let m = text.wholeMatch(of: /(\d{1,2})월/), let mo = Int(m.1), (1...12).contains(mo) else { return nil }
@@ -200,15 +207,21 @@ extension QuickAdd {
     /// The course the line names, taken out of its words. It can sit anywhere (`내일 7시 컴퓨터네트워킹에다`): a title of
     /// several words (`그래프 이론`, `확률과 통계`) typed in full first, then one word. Past the first word, short words and
     /// ones with digits or day names are skipped, so a title word like `HW5` or `금` never reads as an abbreviation.
-    static func readCourse(_ found: inout [(String, Range<String.Index>)], courses: [Course], codes: [CourseCode]) -> (id: UUID, range: Range<String.Index>)? {
+    static func readCourse(_ found: inout [(String, Range<String.Index>)], courses: [Course], codes: [CourseCode]) -> (
+        id: UUID, range: Range<String.Index>
+    )? {
         if let (at, count, id) = matchCourseWords(found.map(\.0), courses: courses) {
             let range = found[at].1.lowerBound..<found[at + count - 1].1.upperBound
             found.removeSubrange(at..<(at + count))
             return (id, range)
         }
         for (i, (word, _)) in found.enumerated() {
-            guard i == 0 || (word.count >= 2 && !word.contains(where: \.isNumber) && relativeDays[word] == nil && weekdays[String(word.prefix(1))] == nil),
-                  let match = matchCourse(word, courses: courses, codes: codes) else { continue }
+            guard
+                i == 0
+                    || (word.count >= 2 && !word.contains(where: \.isNumber) && relativeDays[word] == nil
+                        && weekdays[String(word.prefix(1))] == nil),
+                let match = matchCourse(word, courses: courses, codes: codes)
+            else { continue }
             let range = found[i].1
             found.remove(at: i)
             return (match, range)
@@ -244,7 +257,9 @@ extension QuickAdd {
     static func matchCourseWord(_ word: String, courses: [Course], codes: [CourseCode]) -> UUID? {
         let upper = word.uppercased()
         let prefixes = Dictionary(keepingFirst: codes.map { ($0.id, $0.prefix) })
-        if let c = courses.first(where: { c in c.codes.contains { (prefixes[$0] ?? "") + (c.number.split(separator: "-").first ?? "") == upper } }) {
+        if let c = courses.first(where: { c in
+            c.codes.contains { (prefixes[$0] ?? "") + (c.number.split(separator: "-").first ?? "") == upper }
+        }) {
             return c.id
         }
         if let c = courses.first(where: { $0.title == word }) ?? courses.first(where: { $0.title.hasPrefix(word) }) { return c.id }
@@ -272,7 +287,9 @@ extension AssignmentKind {
     /// The first kind and number in a line that none of `outside` covers. First in the line, not in kind order: the
     /// number chip rewrites the one it shows, and with `HW3 Lab2` in kind order a `Report3` written over `HW3` read as
     /// the `Lab2` after it.
-    public static func match(in line: String, outside: [Range<String.Index>] = []) -> (kind: AssignmentKind, number: Int, range: Range<String.Index>)? {
+    public static func match(in line: String, outside: [Range<String.Index>] = []) -> (
+        kind: AssignmentKind, number: Int, range: Range<String.Index>
+    )? {
         var first: (kind: AssignmentKind, number: Int, range: Range<String.Index>)?
         for kind in allCases {
             for m in line.matches(of: try! Regex("(?i)\\b\(kind.rawValue)\\s*(\\d{1,2})(?!\\d)"))

@@ -7,7 +7,8 @@ import Testing
 
 struct NoteFigureActionTests {
     static let course = ActionTests.graphTheory
-    static let svg = #"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><style>.a{fill:#222}@media (prefers-color-scheme: dark){.a{fill:#E6E2DB}}</style><rect class="a" width="10" height="10"/></svg>"#
+    static let svg =
+        #"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><style>.a{fill:#222}@media (prefers-color-scheme: dark){.a{fill:#E6E2DB}}</style><rect class="a" width="10" height="10"/></svg>"#
     static let widget = UUID(uuidString: "A0000000-0000-4000-8000-0000000000A7")!
     let device = UUID()
     let gist: GISTStore

@@ -8,11 +8,12 @@ extension ScoreEntry {
     public var source: ScoreSource {
         get { assignmentId.map { .assignment($0) } ?? examId.map { .exam($0) } ?? .none }
         set {
-            (assignmentId, examId) = switch newValue {
-            case .none: (nil, nil)
-            case .assignment(let a): (a, nil)
-            case .exam(let e): (nil, e)
-            }
+            (assignmentId, examId) =
+                switch newValue {
+                case .none: (nil, nil)
+                case .assignment(let a): (a, nil)
+                case .exam(let e): (nil, e)
+                }
         }
     }
 }
@@ -59,7 +60,8 @@ extension CourseFile {
     /// A score means the assignment was graded, whatever its status said, from whichever page the score came.
     public mutating func markGraded(_ assignment: UUID, device: DeviceID, now: Date) {
         guard scores.contains(where: { $0.assignmentId == assignment }),
-              let i = assignments.firstIndex(where: { $0.id == assignment }), assignments[i].status != .graded else { return }
+            let i = assignments.firstIndex(where: { $0.id == assignment }), assignments[i].status != .graded
+        else { return }
         assignments[i].status = .graded
         assignments[i].touch(by: device, at: now)
     }

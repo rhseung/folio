@@ -60,7 +60,9 @@ struct QuickAddTextView {
         storage.beginEditing()
         storage.setAttributes(base, range: NSRange(location: 0, length: length))
         for mark in marks where mark.range.length > 0 && NSMaxRange(mark.range) <= length {
-            if mark.range.location > 0 { storage.addAttribute(.kern, value: room, range: NSRange(location: mark.range.location - 1, length: 1)) }
+            if mark.range.location > 0 {
+                storage.addAttribute(.kern, value: room, range: NSRange(location: mark.range.location - 1, length: 1))
+            }
             storage.addAttribute(.kern, value: room, range: NSRange(location: NSMaxRange(mark.range) - 1, length: 1))
         }
         storage.endEditing()
@@ -136,7 +138,9 @@ extension QuickAddTextView: NSViewRepresentable {
 
     /// As tall as its lines up to three; past that it scrolls.
     func sizeThatFits(_ proposal: ProposedViewSize, nsView scroll: NSScrollView, context: Context) -> CGSize? {
-        guard let view = scroll.documentView as? NSTextView, let layout = view.layoutManager, let container = view.textContainer else { return nil }
+        guard let view = scroll.documentView as? NSTextView, let layout = view.layoutManager, let container = view.textContainer else {
+            return nil
+        }
         let width = proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? max(scroll.frame.width, 200)
         container.containerSize = NSSize(width: width, height: .greatestFiniteMagnitude)
         layout.ensureLayout(for: container)
@@ -157,7 +161,8 @@ extension QuickAddTextView.Coordinator: NSTextViewDelegate {
     /// Return adds; Tab moves on. The line is one line that wraps, so neither goes into it.
     func textView(_ textView: NSTextView, doCommandBy selector: Selector) -> Bool {
         switch selector {
-        case #selector(NSResponder.insertNewline(_:)), #selector(NSResponder.insertLineBreak(_:)), #selector(NSResponder.insertNewlineIgnoringFieldEditor(_:)):
+        case #selector(NSResponder.insertNewline(_:)), #selector(NSResponder.insertLineBreak(_:)),
+            #selector(NSResponder.insertNewlineIgnoringFieldEditor(_:)):
             if !textView.hasMarkedText() { parent.submit() }
             return true
         case #selector(NSResponder.insertTab(_:)):

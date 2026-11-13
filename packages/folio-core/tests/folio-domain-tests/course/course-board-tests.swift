@@ -57,12 +57,14 @@ struct CourseBoardTests {
         var exam = Exam(device: device, at: now, title: "중간")
         exam.scopeUnitIds = [tested.id]
         func entry(_ id: UUID, _ kind: NoteKind, units: [UUID] = [], exam: UUID? = nil) -> NoteEntry {
-            NoteEntry(id: id, device: device, at: now, path: "Notes/\(id).md", meta: NoteMeta(id: id, kind: kind, unitIds: units, examId: exam))
+            NoteEntry(
+                id: id, device: device, at: now, path: "Notes/\(id).md", meta: NoteMeta(id: id, kind: kind, unitIds: units, examId: exam))
         }
         var stale = entry(review, .review)
         stale.unitIds = [tested.id]
-        let file = CourseFile(course: Course(device: device, at: now, title: ""), units: [taught, tested], sessions: [session], exams: [exam],
-                              notes: [stale, entry(topic, .unit, units: [tested.id]), entry(summary, .examSummary, exam: exam.id), entry(loose, .rough)])
+        let file = CourseFile(
+            course: Course(device: device, at: now, title: ""), units: [taught, tested], sessions: [session], exams: [exam],
+            notes: [stale, entry(topic, .unit, units: [tested.id]), entry(summary, .examSummary, exam: exam.id), entry(loose, .rough)])
         let meta = Dictionary(uniqueKeysWithValues: file.notes.map { ($0.id, file.meta(of: $0)) })
 
         #expect(meta[review]?.sessionId == session.id && meta[review]?.unitIds == [taught.id])
@@ -77,7 +79,9 @@ struct CourseBoardTests {
         let unit = UUID()
         #expect(ReviewState(unitId: unit, step: 0, due: today, settled: false, writeNoteFirst: false).isOnTrack(today: today))
         #expect(ReviewState(unitId: unit, step: 0, due: nil, settled: true, writeNoteFirst: false).isOnTrack(today: today))
-        #expect(!ReviewState(unitId: unit, step: 0, due: LocalDate("2026-10-19")!, settled: false, writeNoteFirst: false).isOnTrack(today: today))
+        #expect(
+            !ReviewState(unitId: unit, step: 0, due: LocalDate("2026-10-19")!, settled: false, writeNoteFirst: false).isOnTrack(
+                today: today))
         #expect(!ReviewState(unitId: unit, step: 0, due: today, settled: false, writeNoteFirst: true).isOnTrack(today: today))
     }
 

@@ -131,7 +131,9 @@ extension CourseFile {
     public mutating func setScope(_ unitIds: [UUID], exam: UUID) {
         guard let e = exams.firstIndex(where: { $0.id == exam }) else { return }
         for id in exams[e].scopeUnitIds where !unitIds.contains(id) { setScope(exam: e, unit: id, on: false) }
-        for id in unitIds where !exams[e].scopeUnitIds.contains(id) && units.contains(where: { $0.id == id }) { setScope(exam: e, unit: id, on: true) }
+        for id in unitIds where !exams[e].scopeUnitIds.contains(id) && units.contains(where: { $0.id == id }) {
+            setScope(exam: e, unit: id, on: true)
+        }
     }
 
     /// Adds units to an exam's scope on both sides; units already in it are left alone. Returns the units added.

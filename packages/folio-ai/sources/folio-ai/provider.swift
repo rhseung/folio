@@ -83,6 +83,7 @@ public actor FakeProvider: ClaudeProvider {
     }
 
     public static func reply(_ text: String, model: String = "claude-opus-5-5", stop: String = "end_turn") -> MessagesResponse {
-        MessagesResponse(id: "msg_fake", model: model, content: [.text(text)], stop_reason: stop, usage: Usage(input_tokens: 10, output_tokens: 5))
+        MessagesResponse(
+            id: "msg_fake", model: model, content: [.text(text)], stop_reason: stop, usage: Usage(input_tokens: 10, output_tokens: 5))
     }
 }

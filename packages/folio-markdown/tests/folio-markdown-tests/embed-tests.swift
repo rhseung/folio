@@ -1,6 +1,7 @@
-@testable import FolioMarkdown
 import Foundation
 import Testing
+
+@testable import FolioMarkdown
 
 /// Notes found by title, as the app finds them in a course.
 private func embeds(_ notes: [String: String], own: String? = "Host", math: [String: String] = [:]) -> NoteEmbeds {
@@ -14,31 +15,32 @@ private func page(_ text: String, _ notes: [String: String], own: String? = "Hos
 }
 
 struct NoteSectionTests {
-    let note = ParsedNote("""
-    ---
-    id: x
-    ---
-    # 매칭
+    let note = ParsedNote(
+        """
+        ---
+        id: x
+        ---
+        # 매칭
 
-    소개
+        소개
 
-    ## 정의
+        ## 정의
 
-    짝짓기는 간선 집합이다. ^def
+        짝짓기는 간선 집합이다. ^def
 
-    ### 예시
+        ### 예시
 
-    - 하나
-        - 안쪽 ^inner
-    - 둘 ^two
+        - 하나
+            - 안쪽 ^inner
+        - 둘 ^two
 
-    ## 정리
+        ## 정리
 
-    > [!theorem] 베르주
-    > 증강 경로가 없다. ^berge
+        > [!theorem] 베르주
+        > 증강 경로가 없다. ^berge
 
-    끝
-    """)
+        끝
+        """)
 
     @Test func aHeadingRunsToTheNextOneAsHigh() {
         #expect(note.section(heading: "정의", block: nil) == "## 정의\n\n짝짓기는 간선 집합이다. ^def\n\n### 예시\n\n- 하나\n    - 안쪽 ^inner\n- 둘 ^two")
@@ -88,7 +90,10 @@ struct EmbedTests {
     }
 
     @Test func aMissingNoteOrHeadingSaysSo() {
-        #expect(page("![[Gone]]", [:]).contains("<div class=\"embed embed-empty\"><a class=\"embed-title\" href=\"folio://note/Gone\">Gone</a><p class=\"embed-note\">MISSING</p></div>"))
+        #expect(
+            page("![[Gone]]", [:]).contains(
+                "<div class=\"embed embed-empty\"><a class=\"embed-title\" href=\"folio://note/Gone\">Gone</a><p class=\"embed-note\">MISSING</p></div>"
+            ))
         #expect(page("![[Other#없음]]", ["Other": "# 있음"]).contains("MISSING"))
     }
 
@@ -127,18 +132,25 @@ struct EmbedTests {
 struct BlockReferencePreviewTests {
     @Test func aReferenceCarriesItsBlock() {
         let html = page("본문 [[Other#^c1|보기]] 끝 ^mine", ["Other": "위\n\n정의 $x$ ^c1\n\n아래"], math: ["Other": "latex"])
-        #expect(html.contains("<a class=\"wikilink\" href=\"folio://note/Other#^c1\">보기</a><template class=\"ref-preview\" data-math=\"latex\"><p>정의 <span class=\"math\">x</span></p>\n</template> 끝"), "\(html)")
+        #expect(
+            html.contains(
+                "<a class=\"wikilink\" href=\"folio://note/Other#^c1\">보기</a><template class=\"ref-preview\" data-math=\"latex\"><p>정의 <span class=\"math\">x</span></p>\n</template> 끝"
+            ), "\(html)")
         // The paragraph keeps its own block ID.
         #expect(html.hasPrefix("<p id=\"^mine\">"))
     }
 
     @Test func aMissingBlockSaysSo() {
-        #expect(page("[[Other#^gone]]", ["Other": "x"]).contains("<template class=\"ref-preview\"><p class=\"embed-note\">MISSING</p></template>"))
+        #expect(
+            page("[[Other#^gone]]", ["Other": "x"]).contains(
+                "<template class=\"ref-preview\"><p class=\"embed-note\">MISSING</p></template>"))
     }
 
     /// Only block references: a heading link or a whole note opens without a preview.
     @Test func otherLinksCarryNothing() {
-        #expect(!page("[[Other#제목]] [[Other]] [[material:6F1D2C4E-8A3B-4F5E-9C1D-2B7A8E0F3D41#page=2]]", ["Other": "# 제목"]).contains("template"))
+        #expect(
+            !page("[[Other#제목]] [[Other]] [[material:6F1D2C4E-8A3B-4F5E-9C1D-2B7A8E0F3D41#page=2]]", ["Other": "# 제목"]).contains("template")
+        )
     }
 
     /// A preview's own references get none, so a block naming itself is drawn once.
@@ -157,9 +169,12 @@ struct BlockReferencePreviewTests {
         let found = embeds(notes, math: ["R&D": "asciimath"])
         let card = HTMLRenderer.referenceCard(WikiLink.all(in: "[[R&D#^c1|보기]]")[0], embeds: found)
         #expect(card?.math == "asciimath")
-        #expect(page("[[R&D#^c1|보기]]", notes, math: ["R&D": "asciimath"]).contains("<template class=\"ref-preview\" data-math=\"asciimath\">\(card?.html ?? "-")</template>"))
+        #expect(
+            page("[[R&D#^c1|보기]]", notes, math: ["R&D": "asciimath"]).contains(
+                "<template class=\"ref-preview\" data-math=\"asciimath\">\(card?.html ?? "-")</template>"))
         #expect(card?.html.contains("template") == false)
-        #expect(HTMLRenderer.referenceCard(WikiLink.all(in: "[[R&D#^gone]]")[0], embeds: found)?.html == "<p class=\"embed-note\">MISSING</p>")
+        #expect(
+            HTMLRenderer.referenceCard(WikiLink.all(in: "[[R&D#^gone]]")[0], embeds: found)?.html == "<p class=\"embed-note\">MISSING</p>")
         for other in ["[[R&D]]", "[[R&D#위]]", "[[그림.png#^c1]]"] {
             #expect(HTMLRenderer.referenceCard(WikiLink.all(in: other)[0], embeds: found) == nil, "\(other)")
         }

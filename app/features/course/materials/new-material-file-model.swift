@@ -18,8 +18,9 @@ final class NewMaterialFileModel {
         self.workspace = workspace
         initial = course
         let file = course.file
-        var places = NewMaterialFile.places(assignments: file.assignments, exams: file.exams,
-                                            assignmentFolders: (try? course.store.assignmentFolders()) ?? [])
+        var places = NewMaterialFile.places(
+            assignments: file.assignments, exams: file.exams,
+            assignmentFolders: (try? course.store.assignmentFolders()) ?? [])
         // A subfolder such as `Assignments/HW04/src` is not a place of its own but still takes a file.
         if let folder, !places.contains(folder) { places.append(folder) }
         self.places = places

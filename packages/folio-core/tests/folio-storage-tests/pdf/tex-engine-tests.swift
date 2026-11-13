@@ -1,6 +1,7 @@
-@testable import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioStorage
 
 struct TexEngineTests {
     /// xdvipdfmx keeps its state in globals, and an abort left them half built: a font not fetched yet when only fetched
@@ -15,32 +16,32 @@ struct TexEngineTests {
         let broken = folder.appending(path: "broken.tex")
         // The abort comes mid-page, inside a link and a color, so their stacks are left full.
         try """
-            \\documentclass{article}
-            \\usepackage{xcolor}
-            \\usepackage{hyperref}
-            \\begin{document}
-            \\section{A}
-            \\href{https://example.com}{\\textcolor{red}{$a$\\special{pdf:bxobj @folio width 10pt height 10pt}}}
-            \\end{document}
+        \\documentclass{article}
+        \\usepackage{xcolor}
+        \\usepackage{hyperref}
+        \\begin{document}
+        \\section{A}
+        \\href{https://example.com}{\\textcolor{red}{$a$\\special{pdf:bxobj @folio width 10pt height 10pt}}}
+        \\end{document}
 
-            """.write(to: broken, atomically: true, encoding: .utf8)
+        """.write(to: broken, atomically: true, encoding: .utf8)
         // XeTeX gives up at the end of the file, before xdvipdfmx runs.
         let unfinished = folder.appending(path: "unfinished.tex")
         try "\\documentclass{article}\n\\begin{document}\n\\textcolor{red}{A\n".write(to: unfinished, atomically: true, encoding: .utf8)
         let good = folder.appending(path: "good.tex")
         try """
-            \\documentclass{article}
-            \\usepackage{xcolor}
-            \\usepackage{hyperref}
-            \\begin{document}
-            \\section{B}
-            \\href{https://example.com}{\\textcolor{blue}{$x^2$}}
-            \\newpage
-            \\section{C}
-            \\textcolor{red}{C} \\ref{c}\\label{c}
-            \\end{document}
+        \\documentclass{article}
+        \\usepackage{xcolor}
+        \\usepackage{hyperref}
+        \\begin{document}
+        \\section{B}
+        \\href{https://example.com}{\\textcolor{blue}{$x^2$}}
+        \\newpage
+        \\section{C}
+        \\textcolor{red}{C} \\ref{c}\\label{c}
+        \\end{document}
 
-            """.write(to: good, atomically: true, encoding: .utf8)
+        """.write(to: good, atomically: true, encoding: .utf8)
         let day = Date(timeIntervalSince1970: 1_800_000_000)
         func build(_ source: URL) throws -> TexEngine.Build {
             try TexEngine.shared.compile(source, into: folder.appending(path: "out"), at: day, calendar: .current)

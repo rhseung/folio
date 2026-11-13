@@ -27,15 +27,23 @@ struct SemesterView: View {
 
                 if let audio = model.audio { audioCard(audio) }
 
-                Block(title: String(localized: .semesterCourses), note: String(localized: .semesterCoursesNote), trailing: { Button(.semesterCoursesAdd) { addingCourse = true }.buttonStyle(.ghost) }) {
+                Block(
+                    title: String(localized: .semesterCourses), note: String(localized: .semesterCoursesNote),
+                    trailing: { Button(.semesterCoursesAdd) { addingCourse = true }.buttonStyle(.ghost) }
+                ) {
                     Card {
                         if courses.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .semesterCoursesEmpty)) } }
                         ForEach(Array(courses.enumerated()), id: \.element.id) { i, course in
                             CardRow(last: i == courses.count - 1) {
                                 FoldingRow {
-                                    Button { openCourse(course.id) } label: {
-                                        courseLabel(mark: CourseMark(icon: course.file.course.icon, color: model.workspace.accent(course.id).color, font: Theme.Glyph.lineTitle, duotone: true),
-                                                    title: course.title, detail: model.detail(course))
+                                    Button {
+                                        openCourse(course.id)
+                                    } label: {
+                                        courseLabel(
+                                            mark: CourseMark(
+                                                icon: course.file.course.icon, color: model.workspace.accent(course.id).color,
+                                                font: Theme.Glyph.lineTitle, duotone: true),
+                                            title: course.title, detail: model.detail(course))
                                     }
                                     .buttonStyle(.pointing(.plain))
                                 } control: {
@@ -51,7 +59,9 @@ struct SemesterView: View {
                 if semester.term == .credited { sourceBlock }
                 if semester.term != .credited {
                     Block(String(localized: .semesterTimetable)) {
-                        Timetable(model: model, layout: model.timetable(semester), today: model.markedWeekday(semester), open: open) { timetableMenu($0) }
+                        Timetable(model: model, layout: model.timetable(semester), today: model.markedWeekday(semester), open: open) {
+                            timetableMenu($0)
+                        }
                     }
 
                     // Short lists of equal weight, side by side when there's room, as on Today.
@@ -61,10 +71,14 @@ struct SemesterView: View {
                             Card {
                                 FormRow(label: String(localized: .semesterStart)) { dateChip(semester, \.start) }
                                 FormRow(label: String(localized: .semesterEnd)) { dateChip(semester, \.end) }
-                                FormRow(label: String(localized: .semesterMidtermWeek), detail: String(localized: .semesterMidtermWeekDetail)) {
+                                FormRow(
+                                    label: String(localized: .semesterMidtermWeek), detail: String(localized: .semesterMidtermWeekDetail)
+                                ) {
                                     examWeek(semester, \.midtermWeek, fallback: semester.defaultExamWeeks?.midterm)
                                 }
-                                FormRow(label: String(localized: .semesterFinalWeek), last: true) { examWeek(semester, \.finalWeek, fallback: semester.defaultExamWeeks?.final) }
+                                FormRow(label: String(localized: .semesterFinalWeek), last: true) {
+                                    examWeek(semester, \.finalWeek, fallback: semester.defaultExamWeeks?.final)
+                                }
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -87,7 +101,9 @@ struct SemesterView: View {
                                     Button(.commonOpen, systemImage: "doc.text.magnifyingglass") { viewingFile = AdminFile(url: url) }
                                     #if os(macOS)
                                     Button(.materialsOpenWithDefault, systemImage: "arrow.up.forward.app") { NSWorkspace.shared.open(url) }
-                                    Button(.commonShowInFinder, systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+                                    Button(.commonShowInFinder, systemImage: "folder") {
+                                        NSWorkspace.shared.activateFileViewerSelecting([url])
+                                    }
                                     #endif
                                 }
                             }
@@ -101,7 +117,9 @@ struct SemesterView: View {
                 await model.refreshAudio()
             }
             .sheet(item: $viewingFile) { AdminFileSheet(workspace: model.workspace, url: $0.url) }
-            .sheet(isPresented: $addingCourse) { AddCourseSheet(workspace: model.workspace, semester: semester) { if let id = $0 { openCourse(id) } } }
+            .sheet(isPresented: $addingCourse) {
+                AddCourseSheet(workspace: model.workspace, semester: semester) { if let id = $0 { openCourse(id) } }
+            }
         } else {
             ContentUnavailableView(String(localized: .semesterNotFound), systemImage: "calendar")
         }
@@ -148,9 +166,11 @@ struct SemesterView: View {
 
     /// Offered once the semester is over; the audio goes only once the user agrees, and only to the Trash.
     func audioCard(_ audio: SemesterModel.AudioNotice) -> some View {
-        NoticeCard(title: String(localized: .semesterAudioTitle(audio.count, audio.bytes.formatted(.byteCount(style: .file)))),
-                   detail: audio.kept > 0 ? String(localized: .semesterAudioDetailKept(audio.kept)) : String(localized: .semesterAudioDetail),
-                   systemImage: "waveform.badge.minus") {
+        NoticeCard(
+            title: String(localized: .semesterAudioTitle(audio.count, audio.bytes.formatted(.byteCount(style: .file)))),
+            detail: audio.kept > 0 ? String(localized: .semesterAudioDetailKept(audio.kept)) : String(localized: .semesterAudioDetail),
+            systemImage: "waveform.badge.minus"
+        ) {
             Button(.semesterAudioTrimEllipsis) { confirmingTrim = true }.buttonStyle(.pointing(.bordered))
         } rows: {
             ForEach(Array(audio.items.enumerated()), id: \.element.id) { i, item in
@@ -180,7 +200,9 @@ struct SemesterView: View {
                     CardRow(last: i == exams.count - 1) {
                         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                             Text(start.formatted(.dateTime.month().day())).font(Theme.Typeface.bodyStrong).monospacedDigit()
-                            Text(start.formatted(.dateTime.weekday().hour().minute())).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()
+                            Text(start.formatted(.dateTime.weekday().hour().minute())).font(Theme.Typeface.caption).foregroundStyle(
+                                Theme.Palette.textTertiary
+                            ).monospacedDigit()
                         }
                         .frame(width: 84, alignment: .leading)
                         CourseMark(model.workspace, item.course.id)
@@ -212,16 +234,23 @@ struct SemesterView: View {
             GradeSteps(selection: selection, grades: grades.map { ($0.id, $0.symbol, $0.points != nil) })
                 .sensitive(.control)
         } else {
-            StepToggle(selection: selection, options: [.init(value: nil, label: String(localized: .semesterGradeNone), tint: Theme.Palette.textTertiary)]
-                       + grades.map { .init(value: $0.id, label: $0.symbol, tint: $0.countsInCredits ? Theme.Palette.success : Theme.Palette.textSecondary) },
-                       ordered: false)
-                .sensitive()
+            StepToggle(
+                selection: selection,
+                options: [.init(value: nil, label: String(localized: .semesterGradeNone), tint: Theme.Palette.textTertiary)]
+                    + grades.map {
+                        .init(
+                            value: $0.id, label: $0.symbol, tint: $0.countsInCredits ? Theme.Palette.success : Theme.Palette.textSecondary)
+                    },
+                ordered: false
+            )
+            .sensitive()
         }
     }
 
     func examWeek(_ semester: Semester, _ key: WritableKeyPath<Semester, Int?>, fallback: Int?) -> some View {
-        ChoiceMenu(selection: Binding(get: { semester[keyPath: key] ?? fallback }, set: { model.setWeek(semester, key, to: $0) }),
-                   options: model.weekOptions(semester, fallback: fallback))
+        ChoiceMenu(
+            selection: Binding(get: { semester[keyPath: key] ?? fallback }, set: { model.setWeek(semester, key, to: $0) }),
+            options: model.weekOptions(semester, fallback: fallback))
     }
 
     func dateChip(_ semester: Semester, _ key: WritableKeyPath<Semester, LocalDate?>) -> some View {
@@ -277,7 +306,8 @@ struct Timetable<Menu: View>: View {
                         .frame(width: Self.gutter, alignment: .trailing)
                         ForEach(days, id: \.self) { day in
                             column(layout.slots(on: day), first: first, height: height)
-                                .background(day == today ? Theme.Palette.fill.opacity(0.5) : .clear, in: .rect(cornerRadius: Theme.Radius.control))
+                                .background(
+                                    day == today ? Theme.Palette.fill.opacity(0.5) : .clear, in: .rect(cornerRadius: Theme.Radius.control))
                         }
                     }
                     .background(alignment: .top) {
@@ -316,7 +346,8 @@ struct Timetable<Menu: View>: View {
                 .opens { open(course) }
                 .contextMenu { menu(course) }
                 .offset(y: CGFloat(slot.startMinute - first * 60) / 60 * Self.hourHeight + 1)
-                .help("\(course.title) · \(TimeMenu.range(slot.startMinute, slot.endMinute))" + (slot.room.isEmpty ? "" : " · \(slot.room)"))
+                .help(
+                    "\(course.title) · \(TimeMenu.range(slot.startMinute, slot.endMinute))" + (slot.room.isEmpty ? "" : " · \(slot.room)"))
             }
         }
         .frame(maxWidth: .infinity)
@@ -335,11 +366,17 @@ struct AddSemesterSheet: View {
     }
 
     var body: some View {
-        SheetForm(title: String(localized: .semesterAddTitle), confirm: String(localized: .commonAdd), disabled: model.exists, note: model.note) {
+        SheetForm(
+            title: String(localized: .semesterAddTitle), confirm: String(localized: .commonAdd), disabled: model.exists, note: model.note
+        ) {
             FormRow(label: String(localized: .semesterAddYear)) {
-                ScrubField(value: Binding(get: { Double(model.year) }, set: { model.year = Int($0.rounded()) }), range: 2000...2100, step: 1, width: 88)
+                ScrubField(
+                    value: Binding(get: { Double(model.year) }, set: { model.year = Int($0.rounded()) }), range: 2000...2100, step: 1,
+                    width: 88)
             }
-            FormRow(label: String(localized: .semesterAddTerm)) { ChoiceMenu(selection: $model.term, options: AddSemesterModel.terms.map { ($0, $0.label) }) }
+            FormRow(label: String(localized: .semesterAddTerm)) {
+                ChoiceMenu(selection: $model.term, options: AddSemesterModel.terms.map { ($0, $0.label) })
+            }
             FormRow(label: String(localized: .semesterStart)) { DateChip(date: $model.start, showsTime: false) }
             FormRow(label: String(localized: .semesterEnd), last: true) { DateChip(date: $model.end, showsTime: false) }
         } onConfirm: {
@@ -360,11 +397,22 @@ struct AddCourseSheet: View {
     }
 
     var body: some View {
-        SheetForm(title: String(localized: .semesterAddCourseTitle(model.semester.title)), confirm: String(localized: .commonAdd), disabled: model.disabled, note: model.note) {
-            FormRow(label: String(localized: .semesterAddCourseName)) { InlineField(String(localized: .semesterAddCourseNameExample), text: $model.title) }
+        SheetForm(
+            title: String(localized: .semesterAddCourseTitle(model.semester.title)), confirm: String(localized: .commonAdd),
+            disabled: model.disabled, note: model.note
+        ) {
+            FormRow(label: String(localized: .semesterAddCourseName)) {
+                InlineField(String(localized: .semesterAddCourseNameExample), text: $model.title)
+            }
             // Prefix and number side by side, as in 과목 편집 and as the course reads: GS2004-02.
             FormRow(label: String(localized: .semesterAddCourseCode)) {
-                SearchSelect(selection: $model.codeId, options: model.codes.map { PickOption(id: Optional($0.id), title: $0.prefix, detail: [$0.department, $0.program].filter { !$0.isEmpty }.joined(separator: " · ")) })
+                SearchSelect(
+                    selection: $model.codeId,
+                    options: model.codes.map {
+                        PickOption(
+                            id: Optional($0.id), title: $0.prefix,
+                            detail: [$0.department, $0.program].filter { !$0.isEmpty }.joined(separator: " · "))
+                    })
                 TextField("4207-01", text: $model.number).pill(width: 100)
             }
             FormRow(label: String(localized: .semesterCreditsLabel)) { CreditsField(credits: $model.credits) }

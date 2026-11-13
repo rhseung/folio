@@ -30,13 +30,15 @@ struct SectionStrip: View {
                 let lo = x(s.pages.lowerBound - 1) + (i == 0 ? 0 : 0.5)
                 let hi = x(min(s.pages.upperBound, pages)) - (i == sections.count - 1 ? 0 : 0.5)
                 let rect = CGRect(x: lo, y: 0, width: max(hi - lo, 1), height: size.height)
-                context.fill(Path(roundedRect: rect, cornerRadius: Theme.Radius.mark),
-                             with: .color(s.title.isEmpty ? Theme.Palette.fill : Theme.Palette.text.opacity(Theme.Opacity.toneEdge)))
+                context.fill(
+                    Path(roundedRect: rect, cornerRadius: Theme.Radius.mark),
+                    with: .color(s.title.isEmpty ? Theme.Palette.fill : Theme.Palette.text.opacity(Theme.Opacity.toneEdge)))
             }
             if let range {
                 let lo = x(range.lowerBound - 1), hi = x(min(range.upperBound, pages))
-                context.fill(Path(roundedRect: CGRect(x: lo, y: 0, width: max(hi - lo, 2), height: size.height), cornerRadius: Theme.Radius.mark),
-                             with: .color(accent.color))
+                context.fill(
+                    Path(roundedRect: CGRect(x: lo, y: 0, width: max(hi - lo, 2), height: size.height), cornerRadius: Theme.Radius.mark),
+                    with: .color(accent.color))
             }
         }
         .frame(width: width, height: Self.height)
@@ -175,8 +177,9 @@ struct SectionBar: View {
     private func shape(_ i: Int) -> UnevenRoundedRectangle {
         let first = i == 0, last = i == split.sections.count - 1
         let outer = Theme.Radius.control, inner = Theme.Radius.small
-        return UnevenRoundedRectangle(topLeadingRadius: first ? outer : inner, bottomLeadingRadius: first ? outer : inner,
-                                      bottomTrailingRadius: last ? outer : inner, topTrailingRadius: last ? outer : inner)
+        return UnevenRoundedRectangle(
+            topLeadingRadius: first ? outer : inner, bottomLeadingRadius: first ? outer : inner,
+            bottomTrailingRadius: last ? outer : inner, topTrailingRadius: last ? outer : inner)
     }
 
     // MARK: Drawing
@@ -218,12 +221,14 @@ struct SectionBar: View {
         .frame(width: w, height: Self.bubbleRow + Self.tile)
         .contentShape(.rect)
         .gesture(drag(width: w))
-        .simultaneousGesture(SpatialTapGesture(count: 2).onEnded { v in
-            if let made = split.split(at: page(at: v.location.x, w)) {
-                selected = made
-                bumps += 1
+        .simultaneousGesture(
+            SpatialTapGesture(count: 2).onEnded { v in
+                if let made = split.split(at: page(at: v.location.x, w)) {
+                    selected = made
+                    bumps += 1
+                }
             }
-        })
+        )
         .onContinuousHover { phase in
             switch phase {
             case .active(let p):
@@ -258,15 +263,21 @@ struct SectionBar: View {
                 clipped.clip(to: path)
                 clipped.stroke(hatch, with: .color(Theme.Palette.text.opacity(Theme.Opacity.hover)), lineWidth: 1)
             } else {
-                let opacity = selected == i ? Theme.Opacity.zonePicked : hovered == i ? Theme.Opacity.onTint
-                    : i % 2 == 0 ? Theme.Opacity.tint : Theme.Opacity.zoneAlt
+                let opacity =
+                    selected == i
+                    ? Theme.Opacity.zonePicked
+                    : hovered == i
+                        ? Theme.Opacity.onTint
+                        : i % 2 == 0 ? Theme.Opacity.tint : Theme.Opacity.zoneAlt
                 context.fill(path, with: .color(accent.color.opacity(opacity)))
             }
             if s.isNew {
-                context.stroke(shape(i).inset(by: 0.5).path(in: r), with: .color(accent.color.opacity(Theme.Opacity.liveEdge)),
-                               style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
+                context.stroke(
+                    shape(i).inset(by: 0.5).path(in: r), with: .color(accent.color.opacity(Theme.Opacity.liveEdge)),
+                    style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
             } else if selected == i {
-                context.stroke(shape(i).inset(by: 0.5).path(in: r), with: .color(accent.color.opacity(Theme.Opacity.liveEdge)), lineWidth: 1)
+                context.stroke(
+                    shape(i).inset(by: 0.5).path(in: r), with: .color(accent.color.opacity(Theme.Opacity.liveEdge)), lineWidth: 1)
             }
         }
         if let page, page >= 1, page <= split.pageCount {
@@ -285,7 +296,9 @@ struct SectionBar: View {
             let title = Text(name).font(Theme.Typeface.label).foregroundStyle(s.unit == nil ? Theme.Palette.textTertiary : accent.ink)
             let pages = Text(pagesText(s)).font(Theme.Typeface.label.weight(.regular)).foregroundStyle(Theme.Palette.textTertiary)
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: Theme.Space.xs) { title; pages }.fixedSize()
+                HStack(spacing: Theme.Space.xs) {
+                    title; pages
+                }.fixedSize()
                 // Pages cut short read as other pages: left out, as on a zone too narrow for anything.
                 if name.isEmpty { pages.fixedSize(); Color.clear } else { title.lineLimit(1).truncationMode(.tail) }
             }
@@ -368,7 +381,7 @@ private struct SectionRow: View {
                 .alert(String(localized: .designSectionsCutTitle), isPresented: $cutting) {
                     TextField(String(localized: .designSectionsCutPage), text: $cutPage)
                         #if os(iOS)
-                        .keyboardType(.numberPad)
+                    .keyboardType(.numberPad)
                         #endif
                     Button(String(localized: .designSectionsCutAction)) { cut() }
                     Button(String(localized: .commonCancel), role: .cancel) {}
@@ -382,7 +395,8 @@ private struct SectionRow: View {
     /// The bar's double click, for a screen where a double tap on a thin zone is no way to aim: the page is typed.
     private func cut() {
         guard let index, let page = Int(cutPage.trimmingCharacters(in: .whitespaces)),
-              split.sections[index].pages.contains(page) else { return }
+            split.sections[index].pages.contains(page)
+        else { return }
         split.split(at: page)
     }
 
@@ -406,9 +420,11 @@ private struct SectionRow: View {
 
     @ViewBuilder private func name(_ section: LectureSplit.Section) -> some View {
         if section.isNew {
-            TextField(String(localized: .designSectionsNamePlaceholder),
-                      text: Binding(get: { section.title }, set: { title in edit { split.rename($0, to: title) } }))
-                .textFieldStyle(.plain)
+            TextField(
+                String(localized: .designSectionsNamePlaceholder),
+                text: Binding(get: { section.title }, set: { title in edit { split.rename($0, to: title) } })
+            )
+            .textFieldStyle(.plain)
         } else {
             let own = section.title.isEmpty ? label : section.title
             Text(own.isEmpty ? String(localized: .designSectionsUnnamed) : own)
@@ -434,7 +450,10 @@ private struct SectionRow: View {
                     }
                 }
             }
-            Button(section.title.isEmpty ? String(localized: .designSectionsNewUnit) : String(localized: .designSectionsNewUnitNamed(section.title))) {
+            Button(
+                section.title.isEmpty
+                    ? String(localized: .designSectionsNewUnit) : String(localized: .designSectionsNewUnitNamed(section.title))
+            ) {
                 edit { split.makeNew($0) }
             }
             Button(String(localized: .designSectionsNoUnit)) { edit { split.setUnit(nil, of: $0) } }
@@ -445,7 +464,8 @@ private struct SectionRow: View {
             }
             .disabled(section.firstPage == section.lastPage)
             Button(String(localized: .designSectionsMergeBefore)) { edit { split.merge(after: $0 - 1) } }.disabled(index == 0)
-            Button(String(localized: .designSectionsMergeAfter)) { edit { split.merge(after: $0) } }.disabled(index == split.sections.count - 1)
+            Button(String(localized: .designSectionsMergeAfter)) { edit { split.merge(after: $0) } }.disabled(
+                index == split.sections.count - 1)
         } label: {
             HStack(spacing: Theme.Space.tight) {
                 if section.match != nil { Image(systemName: "sparkle").font(Theme.Glyph.small).foregroundStyle(accent.color) }

@@ -28,7 +28,8 @@ struct DueUrgencyPropertyTests {
     @Test func anythingWithinADayIsUrgent() async {
         await propertyCheck(input: Self.boundary, Gen.int(in: 0...86_399)) { boundary, seconds in
             let settings = Settings(dayBoundaryMinutes: boundary)
-            #expect(DueUrgency(due: start.addingTimeInterval(Double(seconds)), now: start, settings: settings, calendar: calendar) == .urgent)
+            #expect(
+                DueUrgency(due: start.addingTimeInterval(Double(seconds)), now: start, settings: settings, calendar: calendar) == .urgent)
         }
     }
 }

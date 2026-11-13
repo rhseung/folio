@@ -9,7 +9,8 @@ public enum SampleLecture {
     public static let titles = [
         "Matchings", "Definitions", "Examples", "Maximum matchings", "Alternating paths", "Exercise", "Proof", "Summary",
         "Hall's theorem", "Proof", "Proof (cont.)", "Corollaries", "Marriage problem", "Exercise", "Exercise (cont.)", "Summary",
-        "Augmenting paths and Berge's theorem in simple bipartite graphs", "Berge's theorem", "Proof", "Hungarian method", "Example", "Running time", "Exercise", "Summary",
+        "Augmenting paths and Berge's theorem in simple bipartite graphs", "Berge's theorem", "Proof", "Hungarian method", "Example",
+        "Running time", "Exercise", "Summary",
     ]
 
     /// Chapter pages carry only their title, as a deck's dividers do.
@@ -19,15 +20,18 @@ public enum SampleLecture {
     public static func data(_ titles: [String] = titles) -> Data {
         let data = NSMutableData()
         var box = CGRect(x: 0, y: 0, width: 960, height: 540)
-        guard let consumer = CGDataConsumer(data: data), let context = CGContext(consumer: consumer, mediaBox: &box, nil) else { return Data() }
+        guard let consumer = CGDataConsumer(data: data), let context = CGContext(consumer: consumer, mediaBox: &box, nil) else {
+            return Data()
+        }
         for (i, title) in titles.enumerated() {
             context.beginPDFPage(nil)
             context.setFillColor(CGColor(gray: 1, alpha: 1))
             context.fill(box)
             draw(title, size: 24, bold: true, at: CGPoint(x: 48, y: 460), in: context)
             for line in 0..<(chapters.contains(i) ? 0 : 3) {
-                draw("Slide \(i + 1), point \(line + 1): a line of body text about \(title.lowercased())", size: 14, bold: false,
-                     at: CGPoint(x: 48, y: 380 - CGFloat(line) * 28), in: context)
+                draw(
+                    "Slide \(i + 1), point \(line + 1): a line of body text about \(title.lowercased())", size: 14, bold: false,
+                    at: CGPoint(x: 48, y: 380 - CGFloat(line) * 28), in: context)
             }
             context.endPDFPage()
         }
@@ -40,7 +44,8 @@ public enum SampleLecture {
     }
 
     private static func draw(_ text: String, size: CGFloat, bold: Bool, at point: CGPoint, in context: CGContext) {
-        let font = CTFontCreateUIFontForLanguage(bold ? .emphasizedSystem : .system, size, nil)
+        let font =
+            CTFontCreateUIFontForLanguage(bold ? .emphasizedSystem : .system, size, nil)
             ?? CTFontCreateWithName("Helvetica" as CFString, size, nil)
         let attributes: [NSAttributedString.Key: Any] = [
             NSAttributedString.Key(kCTFontAttributeName as String): font,

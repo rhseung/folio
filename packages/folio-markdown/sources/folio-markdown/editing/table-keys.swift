@@ -19,14 +19,15 @@ public struct TableShortcut: Equatable, Sendable {
 
     /// As a menu writes it, the modifiers in the system's order: `⌃⌥⇧⌘↑`.
     public var symbols: String {
-        let key = switch key {
-        case .up: "↑"
-        case .down: "↓"
-        case .left: "←"
-        case .right: "→"
-        case .enter: "↩"
-        case .delete: "⌫"
-        }
+        let key =
+            switch key {
+            case .up: "↑"
+            case .down: "↓"
+            case .left: "←"
+            case .right: "→"
+            case .enter: "↩"
+            case .delete: "⌫"
+            }
         return (control ? "⌃" : "") + (option ? "⌥" : "") + (shift ? "⇧" : "") + "⌘" + key
     }
 }

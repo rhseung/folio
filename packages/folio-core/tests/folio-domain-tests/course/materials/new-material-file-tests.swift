@@ -11,8 +11,10 @@ struct NewMaterialFileTests {
         #expect(NewMaterialFile.accepts(folder: folder))
     }
 
-    @Test(arguments: ["", "Assignments", "Exams", "Lectures", "Syllabus", "Exercises", "Textbooks", "Inherited", "Notes", "Ink",
-                      "Recordings", ".folio", "Assignments/../Lectures", "Study/.hidden", "Study//x", "Elsewhere"])
+    @Test(arguments: [
+        "", "Assignments", "Exams", "Lectures", "Syllabus", "Exercises", "Textbooks", "Inherited", "Notes", "Ink",
+        "Recordings", ".folio", "Assignments/../Lectures", "Study/.hidden", "Study//x", "Elsewhere",
+    ])
     func otherFoldersDoNot(_ folder: String) {
         #expect(!NewMaterialFile.accepts(folder: folder))
     }

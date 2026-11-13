@@ -42,7 +42,9 @@ struct AssetTray: View {
         .dropDestination(for: URL.self) { urls, _ in
             model.addAssets(urls)
             return true
-        } isTargeted: { targeted = $0 }
+        } isTargeted: {
+            targeted = $0
+        }
         .task(id: model.assetsRevision) { model.reloadAssets() }
     }
 }
@@ -79,7 +81,8 @@ private struct AssetTile: View {
         .pointingHand()
         .contentShape(.rect)
         .task(id: file) {
-            let request = QLThumbnailGenerator.Request(fileAt: file, size: CGSize(width: 72, height: 56), scale: 2, representationTypes: .thumbnail)
+            let request = QLThumbnailGenerator.Request(
+                fileAt: file, size: CGSize(width: 72, height: 56), scale: 2, representationTypes: .thumbnail)
             thumbnail = try? await QLThumbnailGenerator.shared.generateBestRepresentation(for: request).cgImage
         }
     }

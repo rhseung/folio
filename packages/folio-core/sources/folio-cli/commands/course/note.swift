@@ -28,12 +28,16 @@ func readText(_ source: String) throws -> String {
 struct NoteCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "note", abstract: String(localized: .noteAbstract),
-        subcommands: [List.self, Show.self, Images.self, Write.self, Edit.self] + GeneratedCommands.note + [Figure.self, Widget.self, Format.self])
+        subcommands: [List.self, Show.self, Images.self, Write.self, Edit.self] + GeneratedCommands.note + [
+            Figure.self, Widget.self, Format.self,
+        ])
 
     struct List: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .noteListAbstract), discussion: String(localized: .noteListDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .noteListAbstract), discussion: String(localized: .noteListDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String = ""
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses))
+        var course: String = ""
         @Flag(help: ArgumentHelp(String(localized: .commonHelpLines))) var lines = false
 
         struct Item: Encodable {
@@ -54,7 +58,12 @@ struct NoteCommand: ParsableCommand {
             let notes = try store.notes()
             let path = { (n: NoteFile) in store.coursePath(of: n.url) ?? n.url.lastPathComponent }
             if g.json {
-                return try printJSON(notes.map { Item(id: $0.meta.id, path: path($0), kind: $0.meta.kind, sessionId: $0.meta.sessionId, sessionIds: $0.meta.sessionIds, examId: $0.meta.examId, unitIds: $0.meta.unitIds) })
+                return try printJSON(
+                    notes.map {
+                        Item(
+                            id: $0.meta.id, path: path($0), kind: $0.meta.kind, sessionId: $0.meta.sessionId,
+                            sessionIds: $0.meta.sessionIds, examId: $0.meta.examId, unitIds: $0.meta.unitIds)
+                    })
             }
             let f = c.file
             let session = { (n: NoteFile) in f.sessionSpan(of: n.meta.id, calendar: r.ctx.calendar) ?? "" }
@@ -63,7 +72,11 @@ struct NoteCommand: ParsableCommand {
                 return
             }
             courseHeader(c, catalog: try? r.ctx.catalog())
-            var t = Table(header: [String(localized: .noteListHeaderNote), String(localized: .noteListHeaderKind), String(localized: .noteListHeaderSession), String(localized: .noteListHeaderPath)], shrink: [3])
+            var t = Table(
+                header: [
+                    String(localized: .noteListHeaderNote), String(localized: .noteListHeaderKind),
+                    String(localized: .noteListHeaderSession), String(localized: .noteListHeaderPath),
+                ], shrink: [3])
             for n in notes { t.rows.append([n.title, n.meta.kind.rawValue, session(n), path(n)]) }
             t.print()
             footer(notes.count)
@@ -71,9 +84,11 @@ struct NoteCommand: ParsableCommand {
     }
 
     struct Show: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .noteShowAbstract), discussion: String(localized: .noteShowDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .noteShowAbstract), discussion: String(localized: .noteShowDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .noteShowHelpNote), valueName: "note"), completion: Complete.notes) var note: String = ""
+        @Argument(help: ArgumentHelp(String(localized: .noteShowHelpNote), valueName: "note"), completion: Complete.notes) var note:
+            String = ""
 
         struct Body: Encodable {
             var id: UUID?
@@ -93,9 +108,11 @@ struct NoteCommand: ParsableCommand {
     }
 
     struct Write: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .noteWriteAbstract), discussion: String(localized: .noteWriteDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .noteWriteAbstract), discussion: String(localized: .noteWriteDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .commonHelpNote), valueName: "note"), completion: Complete.notes) var note: String = ""
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpNote), valueName: "note"), completion: Complete.notes) var note: String =
+            ""
         @Option(help: ArgumentHelp(String(localized: .noteWriteHelpFile), valueName: "file"), completion: .file()) var file: String
         @Option(help: ArgumentHelp(String(localized: .noteWriteHelpExpect), valueName: "hash")) var expect: String?
 
@@ -106,8 +123,9 @@ struct NoteCommand: ParsableCommand {
             if let expect {
                 let current = try c.store.read(n)
                 guard contentHash(current) == expect.lowercased() else {
-                    throw CLIError(exit: .conflict, message: String(localized: .noteWriteConflict(path)),
-                                   hints: [String(localized: .noteWriteConflictHint(c.code, path))])
+                    throw CLIError(
+                        exit: .conflict, message: String(localized: .noteWriteConflict(path)),
+                        hints: [String(localized: .noteWriteConflictHint(c.code, path))])
                 }
                 // The action checks again right before writing, so a change between here and there is caught too.
                 expected = current
@@ -117,15 +135,19 @@ struct NoteCommand: ParsableCommand {
     }
 
     struct Edit: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .noteEditAbstract), discussion: String(localized: .noteEditDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .noteEditAbstract), discussion: String(localized: .noteEditDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .commonHelpNote), valueName: "note"), completion: Complete.notes) var note: String = ""
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpNote), valueName: "note"), completion: Complete.notes) var note: String =
+            ""
         @Option(help: ArgumentHelp(String(localized: .noteEditHelpOld), valueName: "text")) var old: [String] = []
         @Option(help: ArgumentHelp(String(localized: .noteEditHelpNew), valueName: "text")) var new: [String] = []
         @Option(help: ArgumentHelp(String(localized: .noteEditHelpAppend), valueName: "text")) var append: String?
 
         func run() throws {
-            guard old.count == new.count else { throw CLIError(exit: .usage, message: String(localized: .noteEditUnpaired(old.count, new.count))) }
+            guard old.count == new.count else {
+                throw CLIError(exit: .usage, message: String(localized: .noteEditUnpaired(old.count, new.count)))
+            }
             let ctx = try CLI.context(g)
             let (c, _, path) = try Resolver(ctx).notePath(note)
             let replacements = zip(old, new).map { NoteEdit.Replacement(old: $0, new: $1) }

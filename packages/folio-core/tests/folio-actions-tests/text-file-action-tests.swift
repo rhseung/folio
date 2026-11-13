@@ -96,7 +96,9 @@ struct TextFileActionTests {
     @Test func buildReplacesOnlyItsOwnPDFWithoutAsking() throws {
         let tex = try material(Self.tex)
         let given = try store.readText("Study/Problems.pdf")
-        #expect(throws: ActionError.self) { try run(MaterialBuild(course: Self.course, material: tex.id, pdf: try builtPDF("%PDF-1.7 built").path)) }
+        #expect(throws: ActionError.self) {
+            try run(MaterialBuild(course: Self.course, material: tex.id, pdf: try builtPDF("%PDF-1.7 built").path))
+        }
         #expect(try store.readText("Study/Problems.pdf") == given)
 
         let ctx = try run(MaterialBuild(course: Self.course, material: tex.id, pdf: try builtPDF("%PDF-1.7 built").path, overwrite: true))
@@ -175,10 +177,15 @@ struct TextFileActionTests {
     /// One build lists every mistake, and the PDF Tectonic still writes past them is not placed.
     @Test
     func aBrokenDocumentNamesEveryError() throws {
-        try store.writeText("Assignments/HW03/hw.tex", text: "\\documentclass{article}\n\\begin{document}\n\\foo\n\nA \\qux.\n\n\\baz\n\\end{document}\n")
+        try store.writeText(
+            "Assignments/HW03/hw.tex", text: "\\documentclass{article}\n\\begin{document}\n\\foo\n\nA \\qux.\n\n\\baz\n\\end{document}\n")
         try run(MaterialTrack(course: Self.course))
         let tex = try material("Assignments/HW03/hw.tex")
-        #expect(throws: ActionError.rule("PDF를 만들지 못했습니다.\nhw.tex:3: Undefined control sequence\nhw.tex:5: Undefined control sequence\nhw.tex:7: Undefined control sequence")) {
+        #expect(
+            throws: ActionError.rule(
+                "PDF를 만들지 못했습니다.\nhw.tex:3: Undefined control sequence\nhw.tex:5: Undefined control sequence\nhw.tex:7: Undefined control sequence"
+            )
+        ) {
             try run(MaterialBuild(course: Self.course, material: tex.id))
         }
         #expect(!FileManager.default.fileExists(atPath: store.fileURL("Assignments/HW03/hw.pdf").path))

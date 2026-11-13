@@ -27,10 +27,11 @@ extension JSONValue {
             let elements = Array(mirror.children.map(\.value))
             guard elements.count == n.count else { return new }
             let oldByID = Dictionary(o.compactMap { v in v["id"].map { ($0, v) } }, uniquingKeysWith: { a, _ in a })
-            return .array(zip(n, elements).map { newElement, model in
-                guard let id = newElement["id"], let oldElement = oldByID[id] else { return newElement }
-                return preservingUnknownKeys(old: oldElement, new: newElement, model: model)
-            })
+            return .array(
+                zip(n, elements).map { newElement, model in
+                    guard let id = newElement["id"], let oldElement = oldByID[id] else { return newElement }
+                    return preservingUnknownKeys(old: oldElement, new: newElement, model: model)
+                })
         default:
             return new
         }

@@ -114,9 +114,13 @@ extension CourseFile {
     /// `Lectures/` by their `05_` / `05-1_` prefix. What was on screen goes first because it is what the class did,
     /// where a link may be a whole file or a range set before the class. The session's and its units' files are
     /// merged rather than one shadowing the other: one handout linked to the class must not hide the chapter's slides.
-    public func lectureSlides(for session: Session, recording: Recording? = nil) -> (source: TranscriptionContext.Source?, pages: [LecturePages]) {
+    public func lectureSlides(for session: Session, recording: Recording? = nil) -> (
+        source: TranscriptionContext.Source?, pages: [LecturePages]
+    ) {
         func pages(_ link: SessionMaterial) -> LecturePages? {
-            materials.first { $0.id == link.materialId && $0.isPDF }.map { LecturePages(path: $0.path, first: link.firstPage, last: link.lastPage, materialId: $0.id) }
+            materials.first { $0.id == link.materialId && $0.isPDF }.map {
+                LecturePages(path: $0.path, first: link.firstPage, last: link.lastPage, materialId: $0.id)
+            }
         }
         let viewed = (recording?.viewedPages() ?? []).compactMap(pages)
         if !viewed.isEmpty { return (.recording, viewed) }
@@ -128,8 +132,12 @@ extension CourseFile {
         let whole = rest.map(\.material).sorted { $0.path < $1.path }.map { LecturePages(path: $0.path, materialId: $0.id) }
         if !linked.isEmpty || !whole.isEmpty { return (unitOnly.isEmpty ? .session : .tagged, linked + whole) }
 
-        let week = materials
-            .filter { $0.isPDF && $0.path.hasPrefix(CourseFolder.lectures.rawValue + "/") && StandardLayout.lectureWeek(($0.path as NSString).lastPathComponent) == session.week }
+        let week =
+            materials
+            .filter {
+                $0.isPDF && $0.path.hasPrefix(CourseFolder.lectures.rawValue + "/")
+                    && StandardLayout.lectureWeek(($0.path as NSString).lastPathComponent) == session.week
+            }
             .sorted { $0.path < $1.path }
             .map { LecturePages(path: $0.path, materialId: $0.id) }
         return (week.isEmpty ? nil : .week, week)
@@ -175,7 +183,8 @@ public enum LectureTerms {
             add(word.text, at: i)
             // Two words in a row, with only a space between them on the slide.
             if i + 1 < words.count, isTerm(words[i + 1].text), words[i + 1].text.lowercased() != word.text.lowercased(),
-               text[word.range.upperBound..<words[i + 1].range.lowerBound] == " " {
+                text[word.range.upperBound..<words[i + 1].range.lowerBound] == " "
+            {
                 add("\(word.text) \(words[i + 1].text)", at: i)
             }
         }
@@ -186,7 +195,8 @@ public enum LectureTerms {
         }
         // Fully ordered: Whisper's prompt drops terms from the end, so a tie left to the dictionary's order would
         // give the same slides a different prompt each run. A pair goes before the word it starts with.
-        return kept
+        return
+            kept
             .sorted { a, b in
                 (a.value.count, -a.value.first, a.key.count, b.key) > (b.value.count, -b.value.first, b.key.count, a.key)
             }

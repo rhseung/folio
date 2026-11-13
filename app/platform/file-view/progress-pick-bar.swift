@@ -10,7 +10,9 @@ struct ProgressPickBar: View {
     var body: some View {
         let on = model.pickingShown
         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-            Button { withAnimation(Theme.Motion.quick) { model.togglePicking() } } label: {
+            Button {
+                withAnimation(Theme.Motion.quick) { model.togglePicking() }
+            } label: {
                 Label(String(localized: .fileViewProgressPick), systemImage: "rectangle.stack.badge.plus")
                     .frame(maxWidth: .infinity, minHeight: Theme.Size.touchTarget, alignment: .leading)
                     .padding(.horizontal, Theme.Space.s)

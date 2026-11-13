@@ -78,15 +78,22 @@ struct UnitsView: View {
             ForEach(Self.groups(UnitTree.outline(file.units))) { group in
                 if let root = group.root {
                     let exams = model.exams(of: root, in: file)
-                    Block(title: root.title, note: model.sessionsLine(root, in: file), trailing: {
-                        HStack(spacing: Theme.Space.s) {
-                            ForEach(exams) { Chip($0.title) }
-                            ReviewBadge(state: states[root.id], today: today)
-                            Button { model.openUnit = root.id } label: { Image(systemName: "chevron.right") }
+                    Block(
+                        title: root.title, note: model.sessionsLine(root, in: file),
+                        trailing: {
+                            HStack(spacing: Theme.Space.s) {
+                                ForEach(exams) { Chip($0.title) }
+                                ReviewBadge(state: states[root.id], today: today)
+                                Button {
+                                    model.openUnit = root.id
+                                } label: {
+                                    Image(systemName: "chevron.right")
+                                }
                                 .buttonStyle(.ghost).tint(Theme.Palette.textTertiary)
                                 .help(Text(.unitsOpen))
+                            }
                         }
-                    }) {
+                    ) {
                         Card { rows(group.rows, states: states, today: today, inheritedExams: Set(exams.map(\.id))) }
                     }
                     .contextMenu { menu(root) }
@@ -109,16 +116,22 @@ struct UnitsView: View {
     }
 
     /// Exam chips only where they differ from the chapter's, so a chapter all in the midterm says it once.
-    func rows(_ rows: [(unit: FolioDomain.Unit, depth: Int)], states: [UUID: ReviewState], today: LocalDate, inheritedExams: Set<UUID>) -> some View {
+    func rows(_ rows: [(unit: FolioDomain.Unit, depth: Int)], states: [UUID: ReviewState], today: LocalDate, inheritedExams: Set<UUID>)
+        -> some View
+    {
         ForEach(Array(rows.enumerated()), id: \.element.unit.id) { i, row in
             let unit = row.unit
             let exams = model.exams(of: unit, in: course.file)
             CardRow(last: i == rows.count - 1) {
-                Button { model.openUnit = unit.id } label: {
+                Button {
+                    model.openUnit = unit.id
+                } label: {
                     HStack(spacing: Theme.Space.m) {
                         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                             Text(unit.title).font(Theme.Typeface.body)
-                            Text(model.detail(unit, state: states[unit.id], in: course.file)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
+                            Text(model.detail(unit, state: states[unit.id], in: course.file)).font(Theme.Typeface.caption).foregroundStyle(
+                                Theme.Palette.textTertiary
+                            ).lineLimit(1)
                         }
                         Spacer(minLength: Theme.Space.m)
                         if Set(exams.map(\.id)) != inheritedExams { ForEach(exams) { Chip($0.title) } }
@@ -141,9 +154,11 @@ struct UnitsView: View {
     /// Held classes no unit covers, newest first: linking one here starts its unit's review from that class.
     func unlinkedCard(_ sessions: [Session]) -> some View {
         let shown = sessions.prefix(6)
-        return NoticeCard(title: String(localized: .unitsUnlinkedTitle(sessions.count)),
-                          detail: String(localized: .unitsUnlinkedDetail),
-                          systemImage: "link.badge.plus", trailing: { EmptyView() }) {
+        return NoticeCard(
+            title: String(localized: .unitsUnlinkedTitle(sessions.count)),
+            detail: String(localized: .unitsUnlinkedDetail),
+            systemImage: "link.badge.plus", trailing: { EmptyView() }
+        ) {
             ForEach(Array(shown.enumerated()), id: \.element.id) { i, s in
                 CardRow(last: i == shown.count - 1 && sessions.count <= shown.count) {
                     Text(course.file.title(of: s, calendar: model.workspace.calendar)).lineLimit(1)
@@ -213,16 +228,24 @@ struct UnitDetail: View {
             HStack(alignment: .bottom) {
                 PageHeader(title: unit.title, subtitle: model.parentPath(unit, in: file)) { ReviewBadge(state: state, today: today) }
                 Spacer()
-                Button { reviewing = true } label: { Label(.unitsStartReview, systemImage: "play.fill") }
-                    .buttonStyle(.prominent)
-                    .controlSize(.large)
+                Button {
+                    reviewing = true
+                } label: {
+                    Label(.unitsStartReview, systemImage: "play.fill")
+                }
+                .buttonStyle(.prominent)
+                .controlSize(.large)
                 PageMenuButton { UnitMenu(courseId: course.id, unitId: unit.id, host: .own) }
             }
 
             StatStrip(items: model.stats(unit, state: state, reviews: history.count))
 
-            Block(title: String(localized: .unitsSessionsBlock), note: sessions.isEmpty ? nil : String(localized: .unitsTimes(sessions.count))) {
-                ToggleMenu(title: String(localized: .unitsLinkSessions), items: model.linkMenu(unit, in: file)) { id in model.toggle(session: id, in: unit) }
+            Block(
+                title: String(localized: .unitsSessionsBlock), note: sessions.isEmpty ? nil : String(localized: .unitsTimes(sessions.count))
+            ) {
+                ToggleMenu(title: String(localized: .unitsLinkSessions), items: model.linkMenu(unit, in: file)) { id in
+                    model.toggle(session: id, in: unit)
+                }
             } content: {
                 Card {
                     if sessions.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .unitsSessionsEmpty)) } }
@@ -265,8 +288,10 @@ struct UnitDetail: View {
                         let m = item.material
                         let missing = m.status == .missing
                         CardRow(last: i == materials.count - 1) {
-                            Image(systemName: m.isFolder ? "folder" : missing ? "exclamationmark.triangle" : m.isPDF ? "doc.richtext" : "doc")
-                                .foregroundStyle(missing ? Theme.Palette.danger : Theme.Palette.textSecondary)
+                            Image(
+                                systemName: m.isFolder ? "folder" : missing ? "exclamationmark.triangle" : m.isPDF ? "doc.richtext" : "doc"
+                            )
+                            .foregroundStyle(missing ? Theme.Palette.danger : Theme.Palette.textSecondary)
                             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                                 Text((m.path as NSString).lastPathComponent).lineLimit(1).truncationMode(.middle).help(m.path)
                                 HStack(spacing: Theme.Space.s) {
@@ -298,7 +323,9 @@ struct UnitDetail: View {
                         FlowLayout(spacing: Theme.Space.s) {
                             ForEach(model.examsByDate(file)) { exam in
                                 let on = exam.scopeUnitIds.contains(unit.id)
-                                Button { model.toggleScope(exam, unit: unit) } label: {
+                                Button {
+                                    model.toggleScope(exam, unit: unit)
+                                } label: {
                                     Label(exam.title, systemImage: on ? "checkmark" : "plus")
                                         .font(Theme.Typeface.caption.weight(on ? .semibold : .regular))
                                         .foregroundStyle(on ? accent.ink : Theme.Palette.textSecondary)
@@ -320,29 +347,46 @@ struct UnitDetail: View {
                         CardRow(last: i == history.count - 1) {
                             Text(model.studyDay(entry.at).shortLabel).monospacedDigit()
                             Spacer()
-                            Text(UnitsModel.minutes(entry.event.seconds)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
-                            Chip(entry.event.result.label, tone: entry.event.result == .again ? .danger : entry.event.result == .hard ? .warning : .plain)
+                            Text(UnitsModel.minutes(entry.event.seconds)).font(Theme.Typeface.caption).foregroundStyle(
+                                Theme.Palette.textTertiary)
+                            Chip(
+                                entry.event.result.label,
+                                tone: entry.event.result == .again ? .danger : entry.event.result == .hard ? .warning : .plain)
                         }
                     }
                 }
             }
 
-            Block(title: String(localized: .unitsEdit), note: nil, trailing: {
-                Button(.unitsDeleteEllipsis, role: .destructive, action: delete).buttonStyle(.ghost).tint(Theme.Palette.danger)
-            }) {
+            Block(
+                title: String(localized: .unitsEdit), note: nil,
+                trailing: {
+                    Button(.unitsDeleteEllipsis, role: .destructive, action: delete).buttonStyle(.ghost).tint(Theme.Palette.danger)
+                }
+            ) {
                 Card {
                     FormRow(label: String(localized: .unitsFieldName)) {
                         InlineField(String(localized: .unitsFieldNamePlaceholder), text: $model.name).onSubmit { model.rename(unit) }
                     }
                     FormRow(label: String(localized: .unitsFieldParent)) {
-                        SearchSelect(selection: Binding(get: { unit.parentId }, set: { model.setParent($0, of: unit) }),
-                                     options: [PickOption(id: UUID?.none, title: String(localized: .unitsFieldParentNone))]
-                                        + UnitTree.parentChoices(for: unit.id, in: file.units).map { PickOption(id: Optional($0.id), title: $0.title) })
+                        SearchSelect(
+                            selection: Binding(get: { unit.parentId }, set: { model.setParent($0, of: unit) }),
+                            options: [PickOption(id: UUID?.none, title: String(localized: .unitsFieldParentNone))]
+                                + UnitTree.parentChoices(for: unit.id, in: file.units).map {
+                                    PickOption(id: Optional($0.id), title: $0.title)
+                                })
                     }
                     FormRow(label: String(localized: .unitsFieldOrder), detail: String(localized: .unitsFieldOrderDetail), last: true) {
                         HStack(spacing: Theme.Space.s) {
-                            Button { model.move(unit, by: -1) } label: { Image(systemName: "arrow.up") }.help(Text(.unitsMoveUp))
-                            Button { model.move(unit, by: 1) } label: { Image(systemName: "arrow.down") }.help(Text(.unitsMoveDown))
+                            Button {
+                                model.move(unit, by: -1)
+                            } label: {
+                                Image(systemName: "arrow.up")
+                            }.help(Text(.unitsMoveUp))
+                            Button {
+                                model.move(unit, by: 1)
+                            } label: {
+                                Image(systemName: "arrow.down")
+                            }.help(Text(.unitsMoveDown))
                         }
                     }
                 }
@@ -380,10 +424,14 @@ struct UnitDetail: View {
             .strikethrough(s.isCancelled).lineLimit(1)
             .frame(maxWidth: .infinity, alignment: .leading)
         SessionNoteSlots(file: file, session: s, openNote: openNote) { if $0 == .review { openReview(s) } }
-        Button { model.unlink(s, from: unit) } label: { Image(systemName: "xmark") }
-            .buttonStyle(.ghost)
-            .foregroundStyle(Theme.Palette.textTertiary)
-            .help(Text(.unitsUnlink))
+        Button {
+            model.unlink(s, from: unit)
+        } label: {
+            Image(systemName: "xmark")
+        }
+        .buttonStyle(.ghost)
+        .foregroundStyle(Theme.Palette.textTertiary)
+        .help(Text(.unitsUnlink))
     }
 
     func openReview(_ s: Session) {
@@ -405,8 +453,10 @@ struct ToggleMenu: View {
     let toggle: (UUID) -> Void
 
     var body: some View {
-        SearchPicker(options: items.map { PickOption(id: $0.id, title: $0.label) }, isSelected: { id in items.contains { $0.id == id && $0.on } },
-                     pick: toggle, multiple: true) {
+        SearchPicker(
+            options: items.map { PickOption(id: $0.id, title: $0.label) }, isSelected: { id in items.contains { $0.id == id && $0.on } },
+            pick: toggle, multiple: true
+        ) {
             HStack(spacing: Theme.Space.xs) {
                 Image(systemName: "link")
                 Text(title)

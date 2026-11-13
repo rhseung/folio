@@ -53,8 +53,10 @@ final class MaterialsModel {
     var subtitle: String {
         let unclassified = materials.filter { $0.status == .unclassified }.count
         let missing = materials.filter { $0.status == .missing }.count
-        return ([String(localized: .materialsFileCount(materials.count))] + (unclassified == 0 ? [] : [String(localized: .materialsUnclassifiedCount(unclassified))])
-                + (missing == 0 ? [] : [String(localized: .materialsMissingCount(missing))])).joined(separator: " · ")
+        return
+            ([String(localized: .materialsFileCount(materials.count))]
+            + (unclassified == 0 ? [] : [String(localized: .materialsUnclassifiedCount(unclassified))])
+            + (missing == 0 ? [] : [String(localized: .materialsMissingCount(missing))])).joined(separator: " · ")
     }
 
     var unclassified: [FolioDomain.Material] { materials.filter { $0.status == .unclassified } }
@@ -71,12 +73,15 @@ final class MaterialsModel {
     func sections() -> [Section] {
         MaterialRole.allCases.compactMap { role in
             // A missing file that was never classified still needs a row to be re-pointed or dropped.
-            let all = materials.filter { $0.role == role && $0.status == .classified || ($0.role ?? .other) == role && $0.status == .missing }
+            let all = materials.filter {
+                $0.role == role && $0.status == .classified || ($0.role ?? .other) == role && $0.status == .missing
+            }
             let items = all.withoutBuiltPDFs()
             guard !items.isEmpty else { return nil }
             let tree = PathTree(items) { $0.path }
-            return Section(role: role, count: items.count, note: tree.path.isEmpty ? "\(items.count)" : "\(items.count) · \(tree.path)",
-                           rows: treeRows(tree, depth: 0), pdfs: all.builtPDFsHidden())
+            return Section(
+                role: role, count: items.count, note: tree.path.isEmpty ? "\(items.count)" : "\(items.count) · \(tree.path)",
+                rows: treeRows(tree, depth: 0), pdfs: all.builtPDFsHidden())
         }
     }
 
@@ -117,7 +122,8 @@ final class MaterialsModel {
         let own = linkLine(m)
         guard let pdf else { return own }
         let built = linkLine(pdf)
-        return built.isEmpty ? own : ([own].filter { !$0.isEmpty } + [String(localized: .materialsPairedPdfLinks(built))]).joined(separator: " · ")
+        return built.isEmpty
+            ? own : ([own].filter { !$0.isEmpty } + [String(localized: .materialsPairedPdfLinks(built))]).joined(separator: " · ")
     }
 
     func linkLine(_ m: FolioDomain.Material) -> String {
@@ -127,9 +133,11 @@ final class MaterialsModel {
         let own = { (routes: [MaterialRoute]) in routes.contains(.direct) || routes.contains(.pages) }
         let direct = units.filter { own($0.routes) }.map(\.unit.title)
         let via = units.filter { !own($0.routes) }.map(\.unit.title)
-        return (sessions
-                + (direct.isEmpty ? [] : [String(localized: .materialsLinkUnits(direct.joined(separator: ", ")))])
-                + (via.isEmpty ? [] : [String(localized: .materialsLinkUnitsViaSessions(via.joined(separator: ", ")))])).joined(separator: " · ")
+        return
+            (sessions
+            + (direct.isEmpty ? [] : [String(localized: .materialsLinkUnits(direct.joined(separator: ", ")))])
+            + (via.isEmpty ? [] : [String(localized: .materialsLinkUnitsViaSessions(via.joined(separator: ", ")))])).joined(
+                separator: " · ")
     }
 
     // MARK: Actions
@@ -152,8 +160,9 @@ final class MaterialsModel {
 
     func acceptsNewFile(_ folder: PathTree<FolioDomain.Material>) -> Bool {
         let file = course.file
-        return NewMaterialFile.accepts(folder: folder.path,
-                                       places: NewMaterialFile.places(assignments: file.assignments, exams: file.exams, assignmentFolders: assignmentFolders))
+        return NewMaterialFile.accepts(
+            folder: folder.path,
+            places: NewMaterialFile.places(assignments: file.assignments, exams: file.exams, assignmentFolders: assignmentFolders))
     }
 
     func startNewFile(in folder: String?) {
@@ -199,7 +208,8 @@ final class MaterialsModel {
     func rename(_ m: FolioDomain.Material) {
         guard let name = renamed(m) else { return }
         // The sheet shows the new name, so pressing it is the approval; asking again would ask twice.
-        moves.keep(workspace.run(MaterialMove(course: course.id, material: m.id, to: (dir(m.path) as NSString).appendingPathComponent(name))))
+        moves.keep(
+            workspace.run(MaterialMove(course: course.id, material: m.id, to: (dir(m.path) as NSString).appendingPathComponent(name))))
     }
 
     func move(_ m: FolioDomain.Material, into place: String) {
@@ -270,9 +280,13 @@ final class MaterialsModel {
     /// A lecture newly linked to a class starts where the end-of-class prompt would: after the last class's pages.
     func link(_ material: UUID, session: UUID, linked: Bool) {
         let s = course.file.sessions.first { $0.id == session }
-        let start = linked && isLecture(material) ? s.map { course.file.suggestedLink(of: material, for: $0, pageCount: pageCounts[material]) } : nil
-        workspace.run(MaterialLinkSession(course: course.id, material: material, session: session, linked: linked,
-                                          firstPage: start?.firstPage, lastPage: start?.lastPage))
+        let start =
+            linked && isLecture(material)
+            ? s.map { course.file.suggestedLink(of: material, for: $0, pageCount: pageCounts[material]) } : nil
+        workspace.run(
+            MaterialLinkSession(
+                course: course.id, material: material, session: session, linked: linked,
+                firstPage: start?.firstPage, lastPage: start?.lastPage))
     }
 
     func taught(_ material: UUID, besides session: UUID) -> [PageRangeField.Taught] {
@@ -288,7 +302,8 @@ final class MaterialsModel {
     }
 
     func setPages(_ material: UUID, session: UUID, _ range: PageRange) {
-        workspace.run(MaterialLinkSession(course: course.id, material: material, session: session, firstPage: range.first, lastPage: range.last))
+        workspace.run(
+            MaterialLinkSession(course: course.id, material: material, session: session, firstPage: range.first, lastPage: range.last))
     }
 
     /// PDF page counts read so far, which bound the page fields. Read when the links open, not for the whole list:
@@ -297,7 +312,8 @@ final class MaterialsModel {
 
     func loadPageCount(_ material: UUID) async {
         guard pageCounts[material] == nil, let m = materials.first(where: { $0.id == material }),
-              let n = await workspace.pageCount(of: m, course: course.id) else { return }
+            let n = await workspace.pageCount(of: m, course: course.id)
+        else { return }
         pageCounts[material] = n
     }
 

@@ -5,9 +5,11 @@ extension Rules {
     // AGENTS.md "레이어" and "화면: 모델과 뷰": app/design and app/platform are what screens build on, so they can't
     // reach back into a screen, and a screen's model is its own. The compiler can't see this: app/ is one module.
     static var appDirection: Rule {
-        Rule(name: "app-direction",
-             advice: "app/design and app/platform don't use types from app/features, and a feature doesn't use another "
-                 + "feature's Model (AGENTS.md \"레이어\"); move the shared part down to app/design, app/platform or FolioDomain") { code in
+        Rule(
+            name: "app-direction",
+            advice: "app/design and app/platform don't use types from app/features, and a feature doesn't use another "
+                + "feature's Model (AGENTS.md \"레이어\"); move the shared part down to app/design, app/platform or FolioDomain"
+        ) { code in
             let owners = featureTypes(in: code)
             var hits: [Hit] = []
             for file in code.files(under: "app") where !isDebugFile(file.path) {
@@ -16,7 +18,8 @@ extension Rules {
                 guard lower || feature != nil else { continue }
                 for token in file.tokens {
                     guard case .identifier(let name) = token.tokenKind, let owner = owners[name], owner != feature,
-                          lower || name.hasSuffix("Model"), !file.debugOnly(token) else { continue }
+                        lower || name.hasSuffix("Model"), !file.debugOnly(token)
+                    else { continue }
                     hits.append(Hit("app-direction", file, file.line(of: token), "\(name) from features/\(owner)"))
                 }
             }
@@ -61,9 +64,11 @@ extension Rules {
     // place handles it. Which enum a switch is over is past a syntax tree; a `….kind` switch whose every case is a
     // kind of AppLink is taken to be one.
     static var kindDefault: Rule {
-        Rule(name: "kind-default",
-             advice: "name every AppLink.Kind instead of `default:`, so a new kind fails to compile until it is handled "
-                 + "(AGENTS.md \"구조 축\" 앱 링크)") { code in
+        Rule(
+            name: "kind-default",
+            advice: "name every AppLink.Kind instead of `default:`, so a new kind fails to compile until it is handled "
+                + "(AGENTS.md \"구조 축\" 앱 링크)"
+        ) { code in
             let kinds = appLinkKinds(in: code)
             guard !kinds.isEmpty else { return [] }
             var hits: [Hit] = []
@@ -103,7 +108,8 @@ extension Rules {
             for declaration in file.nodes(EnumDeclSyntax.self) where declaration.name.text == "Kind" {
                 var parent = declaration.parent
                 while let node = parent, !node.is(StructDeclSyntax.self), !node.is(ExtensionDeclSyntax.self) { parent = node.parent }
-                let owner = parent?.as(StructDeclSyntax.self)?.name.text
+                let owner =
+                    parent?.as(StructDeclSyntax.self)?.name.text
                     ?? parent?.as(ExtensionDeclSyntax.self)?.extendedType.trimmedDescription
                 guard owner == "AppLink" else { continue }
                 for element in declaration.memberBlock.members.compactMap({ $0.decl.as(EnumCaseDeclSyntax.self) }) {
@@ -117,9 +123,11 @@ extension Rules {
     // AGENTS.md "구조 축" 라이브 시계: a view that changes by the minute reads `workspace.liveNow`, which also moves when
     // the app comes forward or the Mac wakes; a TimelineView of its own misses both. Only a timer counting seconds keeps one.
     static var minuteTimeline: Rule {
-        Rule(name: "minute-timeline",
-             advice: "read workspace.liveNow or LiveTime for a view that changes by the minute or day; TimelineView is for "
-                 + "timers counting seconds (AGENTS.md \"구조 축\" 라이브 시계)") { code in
+        Rule(
+            name: "minute-timeline",
+            advice: "read workspace.liveNow or LiveTime for a view that changes by the minute or day; TimelineView is for "
+                + "timers counting seconds (AGENTS.md \"구조 축\" 라이브 시계)"
+        ) { code in
             var hits: [Hit] = []
             for file in code.files(under: "app") {
                 for call in file.nodes(FunctionCallExprSyntax.self) where calledName(call) == "TimelineView" {
@@ -134,7 +142,8 @@ extension Rules {
     static func slowSchedule(_ schedule: ExprSyntax) -> Bool {
         if schedule.as(MemberAccessExprSyntax.self)?.declName.baseName.text == "everyMinute" { return true }
         guard let call = schedule.as(FunctionCallExprSyntax.self), calledName(call) == "periodic",
-              let period = call.arguments.first(where: { $0.label?.text == "by" })?.expression else { return false }
+            let period = call.arguments.first(where: { $0.label?.text == "by" })?.expression
+        else { return false }
         let text = period.trimmedDescription.filter { $0 != "_" }
         return (Double(text) ?? 0) >= 60
     }
@@ -147,14 +156,17 @@ extension Rules {
     // AGENTS.md "화면 계약": a screen puts nothing in the window's toolbar; its tools go in PageBar and its side panels
     // behind a FAB, since the window (or a pane) draws the frame.
     static var screenToolbar: Rule {
-        Rule(name: "screen-toolbar",
-             advice: "a screen doesn't fill the window's toolbar: tools go in PageBar, side panels behind a FAB "
-                 + "(AGENTS.md \"화면: 모델과 뷰\" 화면 계약)") { code in
+        Rule(
+            name: "screen-toolbar",
+            advice: "a screen doesn't fill the window's toolbar: tools go in PageBar, side panels behind a FAB "
+                + "(AGENTS.md \"화면: 모델과 뷰\" 화면 계약)"
+        ) { code in
             var hits: [Hit] = []
             for file in code.files(under: "app/features") where !isDebugFile(file.path) {
                 for call in file.nodes(FunctionCallExprSyntax.self) {
                     guard let member = call.calledExpression.as(MemberAccessExprSyntax.self),
-                          member.declName.baseName.text == "toolbar", !file.debugOnly(call) else { continue }
+                        member.declName.baseName.text == "toolbar", !file.debugOnly(call)
+                    else { continue }
                     hits.append(Hit("screen-toolbar", file, file.line(of: member.declName), ".toolbar"))
                 }
             }
@@ -165,13 +177,16 @@ extension Rules {
     // Launch settings (the GIST folder, test hosting, the isolated local folders) are read where the app and the CLI
     // set themselves up, so a knob for one run can't sit unseen in a screen. Debug code and tests are free to read them.
     static var launchEnvironment: Rule {
-        Rule(name: "launch-environment",
-             advice: "read the process environment only in the launch files ("
-                 + launchFiles.sorted().joined(separator: ", ") + ") and pass the value in") { code in
+        Rule(
+            name: "launch-environment",
+            advice: "read the process environment only in the launch files ("
+                + launchFiles.sorted().joined(separator: ", ") + ") and pass the value in"
+        ) { code in
             var hits: [Hit] = []
             for file in code.files(under: "app", "packages")
             where !isDebugFile(file.path) && !launchFiles.contains(file.path)
-                && (file.path.hasPrefix("app/") || file.path.contains("/sources/")) && !file.path.hasPrefix("packages/folio-lint/") {
+                && (file.path.hasPrefix("app/") || file.path.contains("/sources/")) && !file.path.hasPrefix("packages/folio-lint/")
+            {
                 for member in file.nodes(MemberAccessExprSyntax.self) where member.declName.baseName.text == "environment" {
                     guard member.base?.trimmedDescription == "ProcessInfo.processInfo", !file.debugOnly(member) else { continue }
                     hits.append(Hit("launch-environment", file, file.line(of: member), "ProcessInfo.processInfo.environment"))
@@ -204,9 +219,10 @@ extension Rules {
 
     static func isKebab(_ name: String) -> Bool {
         name.split(separator: ".", omittingEmptySubsequences: false).allSatisfy { piece in
-            !piece.isEmpty && piece.split(separator: "-", omittingEmptySubsequences: false).allSatisfy { word in
-                !word.isEmpty && word.allSatisfy { $0.isASCII && ($0.isLowercase || $0.isNumber) }
-            }
+            !piece.isEmpty
+                && piece.split(separator: "-", omittingEmptySubsequences: false).allSatisfy { word in
+                    !word.isEmpty && word.allSatisfy { $0.isASCII && ($0.isLowercase || $0.isNumber) }
+                }
         }
     }
 
@@ -215,9 +231,11 @@ extension Rules {
     // A folder past twenty files has stopped saying what is in it; split it by the parts a reader looks for
     // (`features/<기능>/<구역>`), and keep tests in the shape of their sources.
     static var folderSize: Rule {
-        Rule(name: "folder-size",
-             advice: "keep a folder to \(folderLimit) Swift files: group them in subfolders by what a reader looks for, "
-                 + "at most features/<기능>/<구역> deep, tests shaped like their sources") { code in
+        Rule(
+            name: "folder-size",
+            advice: "keep a folder to \(folderLimit) Swift files: group them in subfolders by what a reader looks for, "
+                + "at most features/<기능>/<구역> deep, tests shaped like their sources"
+        ) { code in
             let folders = Dictionary(grouping: code.paths) { ($0 as NSString).deletingLastPathComponent }
             return folders.filter { $0.value.count > folderLimit }.keys.sorted().map {
                 Hit("folder-size", path: $0, 1, "more than \(folderLimit) files")

@@ -18,7 +18,9 @@ struct ClassWrapUpTests {
     /// Mondays and Wednesdays 10:30–11:45, one lecture file, and the class of Monday 11/2.
     func course(lectures: Bool = true) -> CourseFile {
         var file = CourseFile(course: Course(device: device, at: at(1, 9), title: "그래프 이론"))
-        file.course.schedule = [ClassTime(weekday: 1, startMinute: 630, endMinute: 705), ClassTime(weekday: 3, startMinute: 630, endMinute: 705)]
+        file.course.schedule = [
+            ClassTime(weekday: 1, startMinute: 630, endMinute: 705), ClassTime(weekday: 3, startMinute: 630, endMinute: 705),
+        ]
         file.materials = (lectures ? ["Lectures/05_Matchings.pdf"] : ["Textbooks/West.pdf"]).map {
             Material(device: device, at: at(1, 9), path: $0, role: MaterialRole(path: $0), status: .classified)
         }
@@ -186,7 +188,8 @@ struct ClassWrapUpTests {
         let other = Session(device: device, at: at(1, 9), week: 9, date: at(1, 10, 30))
         f.sessions.append(other)
         func note(_ name: String, _ day: Int, _ kind: NoteKind = .rough, exam: UUID? = nil) -> NoteEntry {
-            NoteEntry(id: UUID(), device: device, at: at(day, 9), path: "Notes/\(name).md", meta: NoteMeta(id: nil, kind: kind, examId: exam))
+            NoteEntry(
+                id: UUID(), device: device, at: at(day, 9), path: "Notes/\(name).md", meta: NoteMeta(id: nil, kind: kind, examId: exam))
         }
         let old = note("old", 1), new = note("new", 3), held = note("held", 4), free = note("free", 2, .free)
         f.notes = [old, new, held, free, note("review", 5, .review), note("exam", 6, .examSummary, exam: UUID())]
@@ -249,8 +252,10 @@ struct ClassWrapUpTests {
         var session = course().sessions[0]
         session.materials = [SessionMaterial(materialId: a, firstPage: 3, lastPage: 9)]
         let own = SessionMaterial(materialId: a, firstPage: 3, lastPage: 9)
-        for suggested in [SessionMaterial(materialId: b, firstPage: 5), SessionMaterial(materialId: b, firstPage: 5, lastPage: 8),
-                          SessionMaterial(materialId: a, firstPage: 3, lastPage: 12)] {
+        for suggested in [
+            SessionMaterial(materialId: b, firstPage: 5), SessionMaterial(materialId: b, firstPage: 5, lastPage: 8),
+            SessionMaterial(materialId: a, firstPage: 3, lastPage: 12),
+        ] {
             #expect(!session.wrapUpChecks(suggested, wrappingUp: false))
             #expect(session.wrapUpChecks(suggested, wrappingUp: true))
         }

@@ -24,9 +24,12 @@ extension Workspace {
     private func plan(for course: LoadedCourse, now: Date, days: Int?) -> [SuggestedSession] {
         let file = course.file
         let semester = semester(of: file.course)
-        return SessionPlanner.planned(schedule: file.course.schedule, sessions: file.sessions, from: semester?.start, to: semester?.end,
-                                      examWeeks: semester?.examWeeks ?? [], days: days, now: now, calendar: calendar).map { s in
-            let draft = SessionPlanner.session(at: s.date, sessions: file.sessions, termStart: semester?.start, calendar: calendar, device: device, now: now)
+        return SessionPlanner.planned(
+            schedule: file.course.schedule, sessions: file.sessions, from: semester?.start, to: semester?.end,
+            examWeeks: semester?.examWeeks ?? [], days: days, now: now, calendar: calendar
+        ).map { s in
+            let draft = SessionPlanner.session(
+                at: s.date, sessions: file.sessions, termStart: semester?.start, calendar: calendar, device: device, now: now)
             return SuggestedSession(courseId: course.id, suggestion: s, draft: draft)
         }
     }

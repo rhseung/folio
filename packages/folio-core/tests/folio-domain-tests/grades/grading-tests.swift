@@ -9,8 +9,9 @@ struct GradingTests {
     /// Built once per test so grade IDs stay stable within it.
     let catalog: Catalog = {
         func grade(_ symbol: String, _ points: Double?, credits: Bool = true) -> LetterGrade {
-            LetterGrade(device: UUID(), at: Date(timeIntervalSince1970: 0), symbol: symbol, points: points,
-                        countsInGpa: points != nil, countsInCredits: credits)
+            LetterGrade(
+                device: UUID(), at: Date(timeIntervalSince1970: 0), symbol: symbol, points: points,
+                countsInGpa: points != nil, countsInCredits: credits)
         }
         return Catalog(letterGrades: [
             grade("A+", 4.5), grade("A0", 4), grade("B0", 3), grade("C+", 2.5), grade("C0", 2), grade("F", 0, credits: false),
@@ -81,8 +82,11 @@ struct GradingTests {
         GradeComponent(device: device, at: now, name: name, weight: weight, aggregation: aggregation, expectedCount: expected)
     }
 
-    func entry(_ component: GradeComponent, _ score: Double, _ max: Double, excused: Bool = false, mean: Double? = nil, sd: Double? = nil) -> ScoreEntry {
-        ScoreEntry(device: device, at: now, componentId: component.id, title: "", score: score, max: max, mean: mean, stdDev: sd, excused: excused)
+    func entry(_ component: GradeComponent, _ score: Double, _ max: Double, excused: Bool = false, mean: Double? = nil, sd: Double? = nil)
+        -> ScoreEntry
+    {
+        ScoreEntry(
+            device: device, at: now, componentId: component.id, title: "", score: score, max: max, mean: mean, stdDev: sd, excused: excused)
     }
 
     /// 그래프 이론: "Quiz는 최저 점수 1회를 제합니다."
@@ -147,7 +151,8 @@ struct GradingTests {
 
     @Test func zScoreIsWeightedAcrossComponents() {
         let a = component("A", 25, .single), b = component("B", 75, .single)
-        let score = GradeCalculator.score(components: [a, b], entries: [entry(a, 80, 100, mean: 70, sd: 10), entry(b, 50, 100, mean: 60, sd: 10)])
+        let score = GradeCalculator.score(
+            components: [a, b], entries: [entry(a, 80, 100, mean: 70, sd: 10), entry(b, 50, 100, mean: 60, sd: 10)])
         #expect(score.z == (0.25 * 1 + 0.75 * -1))
     }
 
@@ -176,10 +181,11 @@ struct GradingTests {
 
     @Test func linearAlgebraAttendanceCaps() {
         let catalog = catalog
-        let policy = GradePolicy(attendanceCap: [
-            AttendanceCap(absences: 6, maxGrade: id("B0")), AttendanceCap(absences: 7, maxGrade: id("C+")),
-            AttendanceCap(absences: 8, maxGrade: id("C0")), AttendanceCap(absences: 9, maxGrade: id("F")),
-        ], cutoffs: [GradeCutoff(grade: id("A+"), minScore: 90), GradeCutoff(grade: id("B0"), minScore: 70)])
+        let policy = GradePolicy(
+            attendanceCap: [
+                AttendanceCap(absences: 6, maxGrade: id("B0")), AttendanceCap(absences: 7, maxGrade: id("C+")),
+                AttendanceCap(absences: 8, maxGrade: id("C0")), AttendanceCap(absences: 9, maxGrade: id("F")),
+            ], cutoffs: [GradeCutoff(grade: id("A+"), minScore: 90), GradeCutoff(grade: id("B0"), minScore: 70)])
 
         func letter(_ score: Double, _ absences: Int) -> String? {
             GradeCalculator.letterGrade(score: score, absences: absences, policy: policy, catalog: catalog)?.symbol

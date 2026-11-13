@@ -1,10 +1,11 @@
-import FolioActions
 import FolioAI
+import FolioActions
 import FolioDomain
 import FolioStorage
 import Foundation
 import Synchronization
 import Testing
+
 @testable import Folio
 
 @MainActor
@@ -85,7 +86,8 @@ struct ClaudeModelTests {
         #expect(ClaudeModel.toolLabel("mcp__folio__action_run") == "실행할 액션 고르는 중")
         #expect(ClaudeModel.toolLabel("mcp__folio__action_run", input: #"{"action": "semest"#) == "실행할 액션 고르는 중")
         #expect(ClaudeModel.toolLabel("mcp__folio__action_run", input: #"{"action": "semester add", "inp"#) == "제안 만드는 중: semester add")
-        #expect(ClaudeModel.toolLabel("mcp__folio__action_run", input: #"{"action":"exam_scope_taught"}"#) == "제안 만드는 중: exam scope --taught")
+        #expect(
+            ClaudeModel.toolLabel("mcp__folio__action_run", input: #"{"action":"exam_scope_taught"}"#) == "제안 만드는 중: exam scope --taught")
         #expect(ClaudeModel.toolLabel("mcp__folio__action_run", input: #"{"action":"folio settings show"}"#) == "읽는 중: settings show")
     }
 
@@ -156,8 +158,10 @@ struct ClaudeModelTests {
         let model = ClaudeModel(workspace: workspace)
         let course = try #require(workspace.course(graphTheory))
         model.load(course)
-        let svg = #"<svg xmlns="http://www.w3.org/2000/svg"><style>.a{fill:#222}@media (prefers-color-scheme: dark){.a{fill:#E6E2DB}}</style><rect class="a"/></svg>"#
-        let add = ActionProposal(command: NoteFigureAdd.command, input: try JSONValue(NoteFigureAdd(course: graphTheory, name: "graph", svg: svg)))
+        let svg =
+            #"<svg xmlns="http://www.w3.org/2000/svg"><style>.a{fill:#222}@media (prefers-color-scheme: dark){.a{fill:#E6E2DB}}</style><rect class="a"/></svg>"#
+        let add = ActionProposal(
+            command: NoteFigureAdd.command, input: try JSONValue(NoteFigureAdd(course: graphTheory, name: "graph", svg: svg)))
         let line = model.describe(add)
         #expect(line.refusal == nil)
         #expect(line.change == .figure(svg))
@@ -166,7 +170,8 @@ struct ClaudeModelTests {
         #expect(images.map { String(decoding: $0, as: UTF8.self) } == [svg])
         #expect(html.contains("<details class=\"change\" open>"))
         #expect(!FileManager.default.fileExists(atPath: course.store.fileURL(NoteFigure.path("graph.svg")).path))
-        let bad = ActionProposal(command: NoteFigureAdd.command, input: try JSONValue(NoteFigureAdd(course: graphTheory, name: "g", svg: "<svg/>")))
+        let bad = ActionProposal(
+            command: NoteFigureAdd.command, input: try JSONValue(NoteFigureAdd(course: graphTheory, name: "g", svg: "<svg/>")))
         #expect(model.describe(bad).refusal != nil)
     }
 
@@ -232,9 +237,13 @@ struct ClaudeModelTests {
         let note = try #require(model.notes.first)
         let path = course.store.notePath(of: note.url)
         let old = try course.store.read(note)
-        let write = ActionProposal(command: NoteWrite.command, input: try JSONValue(NoteWrite(course: graphTheory, note: path, text: old + "<b>새 줄</b>\n")))
-        let edit = ActionProposal(command: NoteEdit.command, input: try JSONValue(NoteEdit(
-            course: graphTheory, note: path, replacements: [.init(old: "옛 글", new: "새 글\n둘째 줄")], append: "덧붙임")))
+        let write = ActionProposal(
+            command: NoteWrite.command, input: try JSONValue(NoteWrite(course: graphTheory, note: path, text: old + "<b>새 줄</b>\n")))
+        let edit = ActionProposal(
+            command: NoteEdit.command,
+            input: try JSONValue(
+                NoteEdit(
+                    course: graphTheory, note: path, replacements: [.init(old: "옛 글", new: "새 글\n둘째 줄")], append: "덧붙임")))
 
         guard case .rewrite(let lines)? = model.describe(write).change else { Issue.record("no diff"); return }
         #expect(lines.last == .added("<b>새 줄</b>"))
@@ -264,10 +273,16 @@ struct ClaudeModelTests {
         workspace.run(ExamAdd(id: b, course: graphTheory, title: "퀴즈 2"))
         let course = try #require(workspace.course(graphTheory))
         model.load(course)
-        func proposal(_ action: some Action) throws -> ActionProposal { ActionProposal(command: type(of: action).command, input: try JSONValue(action)) }
+        func proposal(_ action: some Action) throws -> ActionProposal {
+            ActionProposal(command: type(of: action).command, input: try JSONValue(action))
+        }
 
         // Each alone would go through; the second can't once the first has made the exam.
-        let refused = open([try proposal(ExamAdd(id: twin, course: graphTheory, title: "새 시험")), try proposal(ExamAdd(id: twin, course: graphTheory, title: "또"))], in: model)
+        let refused = open(
+            [
+                try proposal(ExamAdd(id: twin, course: graphTheory, title: "새 시험")),
+                try proposal(ExamAdd(id: twin, course: graphTheory, title: "또")),
+            ], in: model)
         #expect(ClaudeModel.html(try #require(model.chat), describe: model.describe).contains("folio://action/applyall/\(refused.id)"))
         model.applyAll(message: refused.id, course: course, confirmed: false)
         #expect(model.confirming == nil)
@@ -275,8 +290,11 @@ struct ClaudeModelTests {
         #expect(workspace.course(graphTheory)?.file.exams.count == 2)
         #expect(model.chat?.messages[1].proposals?.allSatisfy { $0.applied != true } == true)
 
-        let removes = open([try proposal(ExamRemove(course: graphTheory, exam: a)), try proposal(ExamRemove(course: graphTheory, exam: b)),
-                            try proposal(ExamAdd(course: graphTheory, title: "기말"))], in: model)
+        let removes = open(
+            [
+                try proposal(ExamRemove(course: graphTheory, exam: a)), try proposal(ExamRemove(course: graphTheory, exam: b)),
+                try proposal(ExamAdd(course: graphTheory, title: "기말")),
+            ], in: model)
         model.applyAll(message: removes.id, course: course, confirmed: false)
         let question = try #require(model.confirming)
         #expect(question.index == nil && question.question.split(separator: "\n").count == 2)
@@ -285,7 +303,9 @@ struct ClaudeModelTests {
         model.confirm(question, course: course)
         #expect(workspace.course(graphTheory)?.file.exams.map(\.title) == ["기말"])
         #expect(model.chat?.messages[1].proposals?.allSatisfy { $0.applied == true } == true)
-        #expect(try course.store.chats().first { $0.model.id == model.chatID }?.model.messages[1].proposals?.allSatisfy { $0.applied == true } == true)
+        #expect(
+            try course.store.chats().first { $0.model.id == model.chatID }?.model.messages[1].proposals?.allSatisfy { $0.applied == true }
+                == true)
         #expect(model.status == "제안 3개를 적용했습니다")
     }
 
@@ -297,8 +317,10 @@ struct ClaudeModelTests {
         workspace.run(ExamAdd(id: exam, course: graphTheory, title: "퀴즈"))
         let course = try #require(workspace.course(graphTheory))
         model.load(course)
-        let first = ActionProposal(command: ExamSet.command, input: try JSONValue(ExamSet(course: graphTheory, exam: exam, title: .set("첫째"))))
-        let second = ActionProposal(command: ExamSet.command, input: try JSONValue(ExamSet(course: graphTheory, exam: exam, title: .set("둘째"))))
+        let first = ActionProposal(
+            command: ExamSet.command, input: try JSONValue(ExamSet(course: graphTheory, exam: exam, title: .set("첫째"))))
+        let second = ActionProposal(
+            command: ExamSet.command, input: try JSONValue(ExamSet(course: graphTheory, exam: exam, title: .set("둘째"))))
         let answer = open([first, second], in: model)
         model.applyAll(message: answer.id, course: course, confirmed: false)
         #expect(workspace.course(graphTheory)?.file.exams.map(\.title) == ["둘째"])
@@ -314,7 +336,11 @@ struct ClaudeModelTests {
         func write(_ text: String) throws -> ActionProposal {
             ActionProposal(command: NoteWrite.command, input: try JSONValue(NoteWrite(course: graphTheory, note: path, text: text)))
         }
-        let older = ChatMessage(role: .assistant, text: "1", at: .now, proposals: [try write("첫 안"), ActionProposal(command: ExamAdd.command, input: try JSONValue(ExamAdd(course: graphTheory, title: "퀴즈")))])
+        let older = ChatMessage(
+            role: .assistant, text: "1", at: .now,
+            proposals: [
+                try write("첫 안"), ActionProposal(command: ExamAdd.command, input: try JSONValue(ExamAdd(course: graphTheory, title: "퀴즈"))),
+            ])
         let newer = ChatMessage(role: .assistant, text: "2", at: .now, proposals: [try write("둘째 안")])
         let chat = Chat(device: workspace.device, at: .now, messages: [older, newer])
         let superseded = model.superseded(chat)
@@ -335,7 +361,8 @@ struct ClaudeModelTests {
         model.load(course)
         let exam = UUID()
         let add = ActionProposal(command: ExamAdd.command, input: try JSONValue(ExamAdd(id: exam, course: graphTheory, title: "퀴즈")))
-        let rename = ActionProposal(command: ExamSet.command, input: try JSONValue(ExamSet(course: graphTheory, exam: exam, title: .set("쪽지 시험"))), after: [0])
+        let rename = ActionProposal(
+            command: ExamSet.command, input: try JSONValue(ExamSet(course: graphTheory, exam: exam, title: .set("쪽지 시험"))), after: [0])
         let answer = open([add, rename], in: model)
         var page = ClaudeModel.html(try #require(model.chat), describe: model.describe)
         #expect(page.contains("앞의 1번 제안"))
@@ -364,7 +391,8 @@ struct ClaudeModelTests {
         model.load(course)
         // The id is taken, so the first is refused for a reason of its own.
         let add = ActionProposal(command: ExamAdd.command, input: try JSONValue(ExamAdd(id: exam, course: graphTheory, title: "또 퀴즈")))
-        let rename = ActionProposal(command: ExamSet.command, input: try JSONValue(ExamSet(course: graphTheory, exam: UUID(), title: .set("x"))), after: [0])
+        let rename = ActionProposal(
+            command: ExamSet.command, input: try JSONValue(ExamSet(course: graphTheory, exam: UUID(), title: .set("x"))), after: [0])
         let answer = open([add, rename], in: model)
         let page = ClaudeModel.html(try #require(model.chat), describe: model.describe)
         #expect(page.contains("적용할 수 없어 함께 막혔습니다"))
@@ -378,9 +406,11 @@ struct ClaudeModelTests {
         let course = try #require(workspace.course(graphTheory))
         model.load(course)
         let note = UUID()
-        let add = ActionProposal(command: NoteAdd.command, input: try JSONValue(NoteAdd(id: note, course: graphTheory, title: "증명 모음", body: "첫 줄\n")))
-        let edit = ActionProposal(command: NoteEdit.command,
-                                  input: try JSONValue(NoteEdit(course: graphTheory, note: "Notes/증명 모음.md", replacements: [], append: "덧붙인 줄")), after: [0])
+        let add = ActionProposal(
+            command: NoteAdd.command, input: try JSONValue(NoteAdd(id: note, course: graphTheory, title: "증명 모음", body: "첫 줄\n")))
+        let edit = ActionProposal(
+            command: NoteEdit.command,
+            input: try JSONValue(NoteEdit(course: graphTheory, note: "Notes/증명 모음.md", replacements: [], append: "덧붙인 줄")), after: [0])
         let answer = open([add, edit], in: model)
         #expect(workspace.refusal([try #require(workspace.action(add)), try #require(workspace.action(edit))]) != nil)
         #expect(ClaudeModel.offered(answer, superseded: [], describe: model.describe) == [0, 1])
@@ -446,7 +476,9 @@ final class StoppableProvider: ClaudeProvider {
     }
 
     func send(_ request: MessagesRequest, onEvent: @escaping @Sendable (StreamEvent) -> Void) async throws -> MessagesResponse {
-        let first = requests.withLock { $0.append(request); return $0.count == 1 }
+        let first = requests.withLock {
+            $0.append(request); return $0.count == 1
+        }
         if first {
             let events: [StreamEvent] = [.turn, .text("Look at the note."), .tool("mcp__folio__note_show"), .turn]
             events.forEach(onEvent)

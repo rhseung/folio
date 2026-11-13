@@ -25,9 +25,11 @@ struct NoteHangulPadTests {
         var body: some View {
             let count = pulse.count
             // `saveFile` names the update it came with, so a step can tell SwiftUI handed it to the view.
-            MarkdownEditor(text: Binding(get: { note.text }, set: { note.text = $0 }), baseURL: nil, math: .latex, insert: $insert,
-                           saveFile: { _, _ in "update \(count)" }, openNote: { _ in })
-                .environment(\.accent, CourseAccent.presets[0].accent)
+            MarkdownEditor(
+                text: Binding(get: { note.text }, set: { note.text = $0 }), baseURL: nil, math: .latex, insert: $insert,
+                saveFile: { _, _ in "update \(count)" }, openNote: { _ in }
+            )
+            .environment(\.accent, CourseAccent.presets[0].accent)
         }
     }
 

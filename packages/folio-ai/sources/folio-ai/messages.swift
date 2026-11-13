@@ -108,7 +108,8 @@ public struct MessagesResponse: Codable, Sendable, Equatable {
     /// Changes Claude asked for through the Folio tools; only the CLI provider has those tools.
     public var proposals: [ActionProposal]?
 
-    public init(id: String, model: String, content: [ContentBlock], stop_reason: String?, usage: Usage, proposals: [ActionProposal]? = nil) {
+    public init(id: String, model: String, content: [ContentBlock], stop_reason: String?, usage: Usage, proposals: [ActionProposal]? = nil)
+    {
         self.id = id
         self.model = model
         self.content = content

@@ -16,9 +16,10 @@ extension Workspace {
     func reviewStates(of courseId: UUID, now: Date) -> [UUID: ReviewState] {
         guard let course = course(courseId) else { return [:] }
         let today = settings.studyDay(of: now, calendar: calendar)
-        return Dictionary(keepingFirst: reviewInputs(course, now: now).map {
-            ($0.unitId, ReviewScheduler.state(of: $0, settings: settings.review, today: today))
-        })
+        return Dictionary(
+            keepingFirst: reviewInputs(course, now: now).map {
+                ($0.unitId, ReviewScheduler.state(of: $0, settings: settings.review, today: today))
+            })
     }
 
     /// A note's units are read from its session or exam (`CourseFile.meta(of:)`), so a class unlinked from the unit

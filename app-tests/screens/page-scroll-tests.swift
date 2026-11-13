@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import Testing
+
 @testable import Folio
 
 /// A page doesn't stretch past its ends: the bounce pulled its backdrop off the panel's top edge.
@@ -26,7 +27,9 @@ struct PageScrollTests {
     @Test func pageDoesNotBounce() async throws {
         let rows = Rows()
         let host = NSHostingView(rootView: Rig(rows: rows))
-        let window = NSWindow(contentRect: CGRect(x: -20_000, y: -20_000, width: 600, height: 400), styleMask: [.borderless], backing: .buffered, defer: false)
+        let window = NSWindow(
+            contentRect: CGRect(x: -20_000, y: -20_000, width: 600, height: 400), styleMask: [.borderless], backing: .buffered, defer: false
+        )
         window.contentView = host
         try await Self.settle(host)
 

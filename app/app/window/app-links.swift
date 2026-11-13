@@ -149,7 +149,8 @@ extension Workspace {
         case .codes: return String(localized: .rootNavCodes)
         case .whatsNew: return String(localized: .whatsNewTitle)
         case .settings:
-            return [String(localized: .rootNavSettings), link.settingsPage.map { SettingsTab($0).label }].compactMap { $0 }.joined(separator: " · ")
+            return [String(localized: .rootNavSettings), link.settingsPage.map { SettingsTab($0).label }].compactMap { $0 }.joined(
+                separator: " · ")
         case .semester: return transcript.semesters.first { $0.id == link.id }?.title ?? ""
         case .person: return item ?? String(localized: .rootNavPeople)
         // A course's item whose course is gone: the address, as its screen says it can't be found.
@@ -174,7 +175,10 @@ extension Workspace {
         case .assignment: return file?.assignments.first { $0.id == link.id }?.title
         case .exam: return file?.exams.first { $0.id == link.id }?.title
         case .problemSet: return file?.problemSets.first { $0.id == link.id }?.title
-        case .recording: return file.flatMap { f in f.recordings.first { $0.id == link.id }.map { RecordingPlayerModel.name(of: $0, in: f, calendar: calendar) } }
+        case .recording:
+            return file.flatMap { f in
+                f.recordings.first { $0.id == link.id }.map { RecordingPlayerModel.name(of: $0, in: f, calendar: calendar) }
+            }
         // A card's prompt is a sentence in a quiz file read only on a click; the page it is on names it well enough.
         case .card: return file.map { _ in CourseSection.quizCards.title }
         }
@@ -194,13 +198,14 @@ extension Workspace {
 
 extension AppLink {
     func label(_ name: String) -> String {
-        let part: String? = switch anchor {
-        case .page(let n): String(localized: .notesAssistLinkPage(n))
-        case .heading(let heading): heading
-        case .block(let block): "^" + block
-        case .time(let t): AppLink.clock(t)
-        case nil: nil
-        }
+        let part: String? =
+            switch anchor {
+            case .page(let n): String(localized: .notesAssistLinkPage(n))
+            case .heading(let heading): heading
+            case .block(let block): "^" + block
+            case .time(let t): AppLink.clock(t)
+            case nil: nil
+            }
         return [name, part].compactMap { $0 }.joined(separator: " › ")
     }
 
@@ -208,13 +213,14 @@ extension AppLink {
     /// item's name (`[[material:<ID>#page=2|05_Matchings.pdf]]`). A place or a course's page has no `<kind>:<ID>`
     /// form and goes between the brackets as its address, which the note reads the same way.
     func noteLink(named name: String?) -> String {
-        let fragment: String?? = switch anchor {
-        case .page(let n): "page=\(n)"
-        case .block(let block): "^" + block
-        case .heading(let heading): WikiLink.linkable(heading: heading) ? heading : .none
-        case .time(let t): "t=" + AppLink.clock(t)
-        case nil: .some(nil)
-        }
+        let fragment: String?? =
+            switch anchor {
+            case .page(let n): "page=\(n)"
+            case .block(let block): "^" + block
+            case .heading(let heading): WikiLink.linkable(heading: heading) ? heading : .none
+            case .time(let t): "t=" + AppLink.clock(t)
+            case nil: .some(nil)
+            }
         guard let id, page == nil, let fragment, WikiLink.objectKinds.contains(kind.rawValue) else {
             return WikiLink.written(address: string, alias: name)
         }
@@ -239,20 +245,21 @@ extension AppLink.Anchor {
 
 extension CourseSection {
     init(_ page: AppLink.CoursePage) {
-        self = switch page {
-        case .overview: .overview
-        case .sessions: .sessions
-        case .units: .units
-        case .notes: .notes
-        case .materials: .materials
-        case .quiz: .quizSolve
-        case .cards: .quizCards
-        case .stats: .quizStats
-        case .problems: .quizProblems
-        case .assignments: .assignments
-        case .exams: .exams
-        case .grades: .grades
-        }
+        self =
+            switch page {
+            case .overview: .overview
+            case .sessions: .sessions
+            case .units: .units
+            case .notes: .notes
+            case .materials: .materials
+            case .quiz: .quizSolve
+            case .cards: .quizCards
+            case .stats: .quizStats
+            case .problems: .quizProblems
+            case .assignments: .assignments
+            case .exams: .exams
+            case .grades: .grades
+            }
     }
 
     var page: AppLink.CoursePage {
@@ -275,13 +282,17 @@ extension CourseSection {
 
 /// Where a click on a link written in a note, a file or a Claude answer goes, from every view that shows one.
 @MainActor enum NoteLinks {
-    static func open(_ href: String, base: URL?, in placement: LinkPlacement = .here, openNote: (String) -> Void, openLink: OpenLinkAction) {
+    static func open(_ href: String, base: URL?, in placement: LinkPlacement = .here, openNote: (String) -> Void, openLink: OpenLinkAction)
+    {
         // A web view hands its links over as URLs, with a block's `^` escaped, which only the URL reading takes back.
         if let link = URL(string: href).flatMap(AppLink.init(url:)) ?? AppLink(string: href) {
             openLink(link, in: placement)
             return
         }
-        guard let url = URL(string: href, relativeTo: base) ?? URL(string: href.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed) ?? "") else { return }
+        guard
+            let url = URL(string: href, relativeTo: base)
+                ?? URL(string: href.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed) ?? "")
+        else { return }
         // `[[노트 제목]]` written by hand names a note by its title; a link by ID (`[[note:<ID>]]`) is an app link above.
         if let title = AppLink.noteTitle(url) { return openNote(title) }
         switch url.scheme {

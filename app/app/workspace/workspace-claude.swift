@@ -1,5 +1,5 @@
-import FolioActions
 import FolioAI
+import FolioActions
 import FolioDomain
 import FolioStorage
 import Foundation
@@ -30,7 +30,9 @@ extension Workspace {
     func claude(for course: LoadedCourse, folioTools: Bool = false) -> ClaudeClient {
         #if os(macOS)
         if usesSubscription, let executable = CLIProvider.find() {
-            let tools = folioTools ? CLIProvider.findFolio().flatMap { folio in gist.map { CLIProvider.FolioTools(executable: folio, gist: $0.url) } } : nil
+            let tools =
+                folioTools
+                ? CLIProvider.findFolio().flatMap { folio in gist.map { CLIProvider.FolioTools(executable: folio, gist: $0.url) } } : nil
             // Covered by the subscription, so these calls stay out of the API usage and cost log.
             return ClaudeClient(provider: CLIProvider(executable: executable, workingDirectory: course.store.url, folio: tools))
         }

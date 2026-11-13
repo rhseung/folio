@@ -1,5 +1,5 @@
-import FolioDomain
 import CryptoKit
+import FolioDomain
 import Foundation
 
 public struct GISTStore: Sendable {
@@ -19,7 +19,8 @@ public struct GISTStore: Sendable {
 
     /// Defaults when settings.json doesn't exist yet.
     public func loadSettings() throws -> StoredDocument<Settings> {
-        FileManager.default.fileExists(atPath: settingsURL.path) ? try StoredDocument.read(from: settingsURL) : StoredDocument(new: Settings())
+        FileManager.default.fileExists(atPath: settingsURL.path)
+            ? try StoredDocument.read(from: settingsURL) : StoredDocument(new: Settings())
     }
 
     public func loadCatalog() throws -> StoredDocument<Catalog> {
@@ -64,15 +65,18 @@ public struct GISTStore: Sendable {
 
     /// The cleanup plan for the folder as it is now. The journal tells which files in `Exercises` an earlier cleanup took
     /// from `Exam Review`, which the tree alone can't.
-    public func cleanupPlan(skip: Set<String> = [], labs: [String: [String: Int]] = [:], labWeeks: [String: [Int: Int]] = [:]) throws -> CleanupPlan {
+    public func cleanupPlan(skip: Set<String> = [], labs: [String: [String: Int]] = [:], labWeeks: [String: [Int: Int]] = [:]) throws
+        -> CleanupPlan
+    {
         let root = url.standardizedFileURL.path
         var exams: [String: [Exam]] = [:]
         for store in try courseStores() {
             guard let file = try? store.load().model else { continue }
             exams[String(store.url.standardizedFileURL.path.dropFirst(root.count + 1))] = file.exams
         }
-        return CleanupPlanner.plan(try readTree(), skip: skip, labs: labs, labWeeks: labWeeks,
-                                   selfMade: try MoveJournal.selfMadePaths(in: url), exams: exams)
+        return CleanupPlanner.plan(
+            try readTree(), skip: skip, labs: labs, labWeeks: labWeeks,
+            selfMade: try MoveJournal.selfMadePaths(in: url), exams: exams)
     }
 
     /// Copies the whole GIST folder to `<directory>/GIST-<timestamp>` outside iCloud. Required before cleanup.
@@ -101,7 +105,9 @@ public struct GISTStore: Sendable {
     public func courseStores() throws -> [CourseStore] {
         let fm = FileManager.default
         func folders(_ path: String) -> [String] {
-            ((try? fm.contentsOfDirectory(atPath: url.appending(path: path).path)) ?? []).filter { !$0.hasPrefix(".") }.sorted().map { "\(path)/\($0)" }
+            ((try? fm.contentsOfDirectory(atPath: url.appending(path: path).path)) ?? []).filter { !$0.hasPrefix(".") }.sorted().map {
+                "\(path)/\($0)"
+            }
         }
         let terms = try fm.contentsOfDirectory(atPath: url.path).filter { SemesterFolder(name: $0) != nil }.sorted()
         return (terms + folders(StandardLayout.creditedFolder))
@@ -144,7 +150,8 @@ public struct CourseStore: Sendable {
     /// An empty file for units without cards yet.
     public func loadQuiz(unit: UUID) throws -> StoredDocument<QuizFile> {
         let url = quizURL(unit: unit)
-        return FileManager.default.fileExists(atPath: url.path) ? try StoredDocument.read(from: url) : StoredDocument(new: QuizFile(unitId: unit))
+        return FileManager.default.fileExists(atPath: url.path)
+            ? try StoredDocument.read(from: url) : StoredDocument(new: QuizFile(unitId: unit))
     }
 
     public func save(_ quiz: StoredDocument<QuizFile>) throws {

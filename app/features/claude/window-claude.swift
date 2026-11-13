@@ -24,10 +24,12 @@ struct WindowClaude: View {
             let accent = workspace.accent(target.course)
             VStack(alignment: .trailing, spacing: Theme.Space.m) {
                 if shown {
-                    ClaudePanel(workspace: workspace, course: course, openNote: target.note, alsoOpen: target.alsoOpen,
-                                panes: Self.context(panes: panes, folded: folded, workspace: workspace),
-                                openUnit: target.unit, incoming: $incoming,
-                                insertIntoNote: { text in if let pane = target.notePane { inserts[pane].text = text } }) { id in
+                    ClaudePanel(
+                        workspace: workspace, course: course, openNote: target.note, alsoOpen: target.alsoOpen,
+                        panes: Self.context(panes: panes, folded: folded, workspace: workspace),
+                        openUnit: target.unit, incoming: $incoming,
+                        insertIntoNote: { text in if let pane = target.notePane { inserts[pane].text = text } }
+                    ) { id in
                         openLink(panes.focused)(AppLink(.note, id), course: target.course)
                     }
                     // A panel per course: the one panel kept across a focus move took the context added in one course
@@ -43,7 +45,9 @@ struct WindowClaude: View {
                     .overlay(alignment: .leading) { resizeHandle }
                     .transition(.scale(scale: 0.9, anchor: .bottomTrailing).combined(with: .opacity))
                 }
-                Button { shown.toggle() } label: {
+                Button {
+                    shown.toggle()
+                } label: {
                     Image(systemName: shown ? "xmark" : "sparkle")
                         .font(Theme.Glyph.fab)
                         .foregroundStyle(shown ? Theme.Palette.textSecondary : accent.color)
@@ -73,15 +77,16 @@ struct WindowClaude: View {
         return Color.clear.frame(width: reach).contentShape(.rect)
             .offset(x: inside - reach)
             #if os(macOS)
-            .pointerStyle(.columnResize)
+        .pointerStyle(.columnResize)
             #endif
-            .gesture(DragGesture(minimumDistance: 0)
-                .onChanged { drag in
-                    let base = dragBase ?? width
-                    dragBase = base
-                    width = min(640, max(300, base - drag.translation.width))
-                }
-                .onEnded { _ in dragBase = nil })
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { drag in
+                        let base = dragBase ?? width
+                        dragBase = base
+                        width = min(640, max(300, base - drag.translation.width))
+                    }
+                    .onEnded { _ in dragBase = nil })
     }
 
     /// What the panel answers about: a course, the note it writes into and the notes and unit it reads.
@@ -108,17 +113,20 @@ struct WindowClaude: View {
             return (panes.ids[i], id)
         }
         let focused = panes.navigators[panes.focus].current
-        return Target(course: course, note: notes.first?.note, notePane: notes.first?.pane, alsoOpen: notes.dropFirst().map(\.note),
-                      unit: focused.course == course && focused.link.kind == .unit ? focused.link.id : nil)
+        return Target(
+            course: course, note: notes.first?.note, notePane: notes.first?.pane, alsoOpen: notes.dropFirst().map(\.note),
+            unit: focused.course == course && focused.link.kind == .unit ? focused.link.id : nil)
     }
 
     static func context(panes: TabPanes, folded: Set<Int>, workspace: Workspace) -> ContextItem? {
-        ContextBuilder.panes(panes.ids.indices.map { i in
-            let entry = panes.navigators[i].current
-            return ContextBuilder.Pane(address: entry.link.string,
-                                       shows: folded.contains(i) ? nil : workspace.paneMark(of: entry, trail: panes.trails[i]).title,
-                                       focused: i == panes.focus)
-        })
+        ContextBuilder.panes(
+            panes.ids.indices.map { i in
+                let entry = panes.navigators[i].current
+                return ContextBuilder.Pane(
+                    address: entry.link.string,
+                    shows: folded.contains(i) ? nil : workspace.paneMark(of: entry, trail: panes.trails[i]).title,
+                    focused: i == panes.focus)
+            })
     }
 }
 

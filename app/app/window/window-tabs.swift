@@ -137,11 +137,12 @@ final class WindowTabs {
     /// right of its focused pane, as "옆 칸에 열기" opens one), and tab `id` closes. `target` comes to the front.
     func merge(_ id: UUID, into target: UUID, at edge: MergeEdge? = nil) {
         guard canMerge(id, into: target), let source = tabs[id], let into = tabs[target] else { return }
-        let index = switch edge {
-        case .leading: 0
-        case .trailing: into.count
-        case nil: into.focus + 1
-        }
+        let index =
+            switch edge {
+            case .leading: 0
+            case .trailing: into.count
+            case nil: into.focus + 1
+            }
         guard into.merge(source, at: index), strip.close(id) else { return }
         tabs[id] = nil
         strip.select(target)
@@ -154,7 +155,8 @@ final class WindowTabs {
     func drop(for id: UUID, at point: CGPoint) -> MergeDrop? {
         let frame = contentFrame
         guard id != selected, canMerge(id, into: selected), let source = tabs[id], let front = front, frame.width > 0,
-              frame.minY <= point.y, point.y <= frame.maxY else { return nil }
+            frame.minY <= point.y, point.y <= frame.maxY
+        else { return nil }
         let zone = min(Self.mergeZone, frame.width / 3)
         let edge: MergeEdge
         if point.x <= frame.minX + zone { edge = .leading } else if point.x >= frame.maxX - zone { edge = .trailing } else { return nil }
@@ -180,8 +182,9 @@ final class WindowTabs {
 
     private func settle(pressure: Bool = false) {
         left = left.filter { strip.tabs.contains($0.key) }
-        let kept = TabKeep.alive(selected: strip.selected, alive: alive.intersection(strip.tabs), left: left, now: now(), policy: policy,
-                                 pressure: pressure, playing: playing)
+        let kept = TabKeep.alive(
+            selected: strip.selected, alive: alive.intersection(strip.tabs), left: left, now: now(), policy: policy,
+            pressure: pressure, playing: playing)
         if kept != alive { alive = kept }
     }
 }
@@ -229,25 +232,33 @@ struct TabScreens: View {
                     // one in front: a note's text and preview page reflowing out of sight made each frame of a live
                     // resize wait on every kept tab. It takes the window's size again when it comes back.
                     let kept = front ? nil : sizes[id]
-                    PaneRow(workspace: workspace, panes: panes, front: front, openLink: openLink,
-                            play: { [tabs] pane, pause in tabs.play(id, pane: pane, pause: pause) },
-                            newTab: newTab)
-                        .onGeometryChange(for: CGSize.self, of: \.size) { sizes[id] = $0 }
-                        .frame(width: kept?.width, height: kept?.height, alignment: .topLeading)
-                        // The window's size whatever the screen inside: with no least size given, a screen behind
-                        // sized the stack to itself and pushed the one in front past the window's edge.
-                        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity,
-                               alignment: kept == nil ? .center : .topLeading)
-                        .opacity(front ? 1 : 0)
-                        .allowsHitTesting(front)
-                        .disabled(!front)
-                        .accessibilityHidden(!front)
-                        .zIndex(front ? 1 : 0)
+                    PaneRow(
+                        workspace: workspace, panes: panes, front: front, openLink: openLink,
+                        play: { [tabs] pane, pause in tabs.play(id, pane: pane, pause: pause) },
+                        newTab: newTab
+                    )
+                    .onGeometryChange(for: CGSize.self, of: \.size) { sizes[id] = $0 }
+                    .frame(width: kept?.width, height: kept?.height, alignment: .topLeading)
+                    // The window's size whatever the screen inside: with no least size given, a screen behind
+                    // sized the stack to itself and pushed the one in front past the window's edge.
+                    .frame(
+                        minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity,
+                        alignment: kept == nil ? .center : .topLeading
+                    )
+                    .opacity(front ? 1 : 0)
+                    .allowsHitTesting(front)
+                    .disabled(!front)
+                    .accessibilityHidden(!front)
+                    .zIndex(front ? 1 : 0)
                 }
             }
         }
         .onChange(of: tabs.alive) { _, alive in sizes.keep(alive) }
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { tabs.contentFrame = $0 }
+        .onGeometryChange(for: CGRect.self) {
+            $0.frame(in: .global)
+        } action: {
+            tabs.contentFrame = $0
+        }
         .overlay { MergeMark(tabs: tabs) }
     }
 }
@@ -300,7 +311,8 @@ extension EnvironmentValues {
     func other(_ id: UUID) -> TabFit.Other {
         let widths = others[id] ?? [:]
         let icon = TabBar.icon
-        return TabFit.Other(full: Double(widths[.full] ?? icon), icons: Double(widths[.icons] ?? icon), stacked: Double(widths[.stacked] ?? icon))
+        return TabFit.Other(
+            full: Double(widths[.full] ?? icon), icons: Double(widths[.icons] ?? icon), stacked: Double(widths[.stacked] ?? icon))
     }
 
     func keep(_ ids: Set<UUID>) { others = others.filter { ids.contains($0.key) } }
@@ -357,8 +369,10 @@ extension Workspace {
         switch Screen(entry) {
         case .course(let id): Crumb(title: course(id)?.title ?? "", symbol: course(id)?.file.course.icon, dot: accent(id).color)
         case .semester(let id):
-            { let semester = transcript.semesters.first { $0.id == id }
-              return Crumb(title: semester?.title ?? "", symbol: semester?.term == .credited ? "checkmark.seal" : "folder") }()
+            {
+                let semester = transcript.semesters.first { $0.id == id }
+                return Crumb(title: semester?.title ?? "", symbol: semester?.term == .credited ? "checkmark.seal" : "folder")
+            }()
         case .grades: Crumb(title: String(localized: .rootNavGrades), symbol: "chart.line.uptrend.xyaxis")
         case .requirements: Crumb(title: String(localized: .rootNavRequirements), symbol: "flag")
         case .people: Crumb(title: String(localized: .rootNavPeople), symbol: "person")
@@ -376,7 +390,8 @@ extension Workspace {
     func tabTitle(of entry: Navigator.Entry) -> String? {
         switch entry.link.kind {
         case .today: nil
-        case .session, .unit, .note, .material, .assignment, .exam, .problemSet, .person, .recording: itemName(of: entry) ?? placeCrumb(of: entry).title
+        case .session, .unit, .note, .material, .assignment, .exam, .problemSet, .person, .recording:
+            itemName(of: entry) ?? placeCrumb(of: entry).title
         // A card names only its page ("카드"), which says less than the course.
         case .grades, .requirements, .people, .codes, .settings, .whatsNew, .semester, .course, .card: placeCrumb(of: entry).title
         }
@@ -420,23 +435,30 @@ struct TabBar: View {
         #if os(iOS)
         // The symbol drawn into a bitmap of its own and the inked columns counted, as on the Mac.
         guard let image = UIImage(systemName: symbol, withConfiguration: UIImage.SymbolConfiguration(pointSize: size, weight: .regular)),
-              let cg = image.cgImage else { return size }
+            let cg = image.cgImage
+        else { return size }
         let width = cg.width, height = cg.height
         var pixels = [UInt8](repeating: 0, count: width * height * 4)
-        guard let context = CGContext(data: &pixels, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
-                                      space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        guard
+            let context = CGContext(
+                data: &pixels, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
         else { return size }
         context.draw(cg, in: CGRect(x: 0, y: 0, width: width, height: height))
         let inked = (0..<width).filter { x in (0..<height).contains { pixels[($0 * width + x) * 4 + 3] > 127 } }
         guard let first = inked.first, let last = inked.last else { return size }
         return CGFloat(last + 1 - first) / image.scale
         #else
-        guard let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
-            .withSymbolConfiguration(.init(pointSize: size, weight: .regular)) else { return size }
+        guard
+            let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
+                .withSymbolConfiguration(.init(pointSize: size, weight: .regular))
+        else { return size }
         let scale = 4
-        guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(image.size.width) * scale,
-                                         pixelsHigh: Int(image.size.height) * scale, bitsPerSample: 8, samplesPerPixel: 4,
-                                         hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)
+        guard
+            let rep = NSBitmapImageRep(
+                bitmapDataPlanes: nil, pixelsWide: Int(image.size.width) * scale,
+                pixelsHigh: Int(image.size.height) * scale, bitsPerSample: 8, samplesPerPixel: 4,
+                hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)
         else { return size }
         rep.size = image.size
         NSGraphicsContext.saveGraphicsState()
@@ -481,9 +503,17 @@ struct TabBar: View {
                 #if os(macOS) && (DEBUG || RESIZE_PROBE)
                 .background { if id == row.first { ResizeMarker(name: "firstTab") } }
                 #endif
-                .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.space)) } action: { frames[id] = $0 }
+                .onGeometryChange(for: CGRect.self) {
+                    $0.frame(in: .named(Self.space))
+                } action: {
+                    frames[id] = $0
+                }
                 #if DEBUG && os(macOS)
-                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { if id == tabs.selected { LayoutSnapshots.selectedTab = $0 } }
+                .onGeometryChange(for: CGRect.self) {
+                    $0.frame(in: .global)
+                } action: {
+                    if id == tabs.selected { LayoutSnapshots.selectedTab = $0 }
+                }
                 #endif
                 .offset(x: dragged?.id == id ? dragOffset : 0)
                 .zIndex(dragged?.id == id ? 1 : 0)
@@ -497,11 +527,15 @@ struct TabBar: View {
                 .help(Text(.tabsNewHelp))
                 .padding(.leading, placement.newTabSpacing - Self.gap)
                 #if os(macOS) && (DEBUG || RESIZE_PROBE)
-                .background { ResizeMarker(name: "newTab") }
+            .background { ResizeMarker(name: "newTab") }
                 #endif
         }
         .coordinateSpace(.named(Self.space))
-        .onGeometryChange(for: CGPoint.self) { $0.frame(in: .global).origin } action: { stripOrigin = $0 }
+        .onGeometryChange(for: CGPoint.self) {
+            $0.frame(in: .global).origin
+        } action: {
+            stripOrigin = $0
+        }
         .onChange(of: dragging) { _, now in if !now { tabs.drop = nil } }
         .background { measures(others) }
         .onChange(of: tabs.selected) { report() }
@@ -553,19 +587,23 @@ struct TabBar: View {
         HStack(spacing: 0) {
             ForEach(Segment.all(panes, workspace: workspace, playing: tabs.playingPanes)) { segment in
                 if segment.index > 0 { SegmentRule() }
-                TabSegment(mark: segment.mark, crumbs: segment.index == panes.focus ? crumbs : nil, crumbRoom: crumbRoom, iconOnly: compact,
-                           playing: segment.playing,
-                           select: { panes.press(pane: segment.id) }, close: { panes.close(pane: segment.id) },
-                           pause: { [tabs] in tabs.pause(pane: segment.id) })
-                    .contextMenu {
-                        if let i = panes.ids.firstIndex(of: segment.id) {
-                            PaneMenu(panes: panes, index: i) { [tabs] navigator, columns in tabs.open(navigator, columns: columns, fromLink: true) }
+                TabSegment(
+                    mark: segment.mark, crumbs: segment.index == panes.focus ? crumbs : nil, crumbRoom: crumbRoom, iconOnly: compact,
+                    playing: segment.playing,
+                    select: { panes.press(pane: segment.id) }, close: { panes.close(pane: segment.id) },
+                    pause: { [tabs] in tabs.pause(pane: segment.id) }
+                )
+                .contextMenu {
+                    if let i = panes.ids.firstIndex(of: segment.id) {
+                        PaneMenu(panes: panes, index: i) { [tabs] navigator, columns in
+                            tabs.open(navigator, columns: columns, fromLink: true)
                         }
-                        // A segment's menu stands in for the tab's, so a tab of panes, the one a layout is saved from,
-                        // has "배치 ▸" too.
-                        Divider()
-                        LayoutMenu(choices: workspace.layoutChoices(for: panes, save: { nameLayout(panes) }, manage: manageLayouts))
                     }
+                    // A segment's menu stands in for the tab's, so a tab of panes, the one a layout is saved from,
+                    // has "배치 ▸" too.
+                    Divider()
+                    LayoutMenu(choices: workspace.layoutChoices(for: panes, save: { nameLayout(panes) }, manage: manageLayouts))
+                }
             }
             if tabs.count > 1 { closeButton(tabs.selected).padding(.leading, Theme.Space.xxs) }
         }
@@ -585,14 +623,17 @@ struct TabBar: View {
 
         @MainActor static func all(_ panes: TabPanes, workspace: Workspace, playing: Set<UUID>) -> [Segment] {
             panes.ids.indices.map { i in
-                Segment(id: panes.ids[i], index: i, mark: workspace.paneMark(of: panes.navigators[i].current, trail: panes.trails[i]),
-                        playing: playing.contains(panes.ids[i]))
+                Segment(
+                    id: panes.ids[i], index: i, mark: workspace.paneMark(of: panes.navigators[i].current, trail: panes.trails[i]),
+                    playing: playing.contains(panes.ids[i]))
             }
         }
     }
 
     func closeButton(_ id: UUID) -> some View {
-        Button { tabs.close(id) } label: {
+        Button {
+            tabs.close(id)
+        } label: {
             Image(systemName: "xmark").font(Theme.Glyph.small)
                 .frame(width: Self.closeSize, height: Self.closeSize)
                 .contentShape(.circle)
@@ -616,7 +657,9 @@ struct TabBar: View {
                 .accessibilityLabel(name)
         } else {
             let playing = tabs.playing.contains(id)
-            Button { tabs.select(id) } label: {
+            Button {
+                tabs.select(id)
+            } label: {
                 label(entry, title: form == .full ? title : nil, playing: playing)
             }
             .buttonStyle(.pointing(.plain))
@@ -636,9 +679,15 @@ struct TabBar: View {
             let segments = Segment.all(panes, workspace: workspace, playing: tabs.playingPanes)
             HStack(spacing: 0) {
                 if form == .stacked {
-                    Button { tabs.select(id) } label: {
+                    Button {
+                        tabs.select(id)
+                    } label: {
                         HStack(spacing: Theme.Space.xxs) {
-                            if segments.contains(where: \.playing) { speakerIcon } else if let first = segments.first { PlaceIcon(place: first.mark) }
+                            if segments.contains(where: \.playing) {
+                                speakerIcon
+                            } else if let first = segments.first {
+                                PlaceIcon(place: first.mark)
+                            }
                             Text(.panesMoreCount(segments.count - 1)).font(Theme.Typeface.caption).monospacedDigit()
                         }
                         .contentShape(.rect)
@@ -649,22 +698,34 @@ struct TabBar: View {
                         if segment.index > 0 { SegmentRule() }
                         Group {
                             if segment.playing {
-                                Button { tabs.pause(pane: segment.id) } label: { speakerIcon.contentShape(.rect) }
-                                    .help(Text(.tabsPause))
-                                    .accessibilityLabel(Text(.tabsPause))
+                                Button {
+                                    tabs.pause(pane: segment.id)
+                                } label: {
+                                    speakerIcon.contentShape(.rect)
+                                }
+                                .help(Text(.tabsPause))
+                                .accessibilityLabel(Text(.tabsPause))
                             } else {
-                                Button { tabs.select(id) } label: { PlaceIcon(place: segment.mark).contentShape(.rect) }
-                                    .accessibilityLabel(segment.mark.title)
+                                Button {
+                                    tabs.select(id)
+                                } label: {
+                                    PlaceIcon(place: segment.mark).contentShape(.rect)
+                                }
+                                .accessibilityLabel(segment.mark.title)
                             }
                         }
                         .buttonStyle(.pointing(.plain))
                         .padding(.horizontal, Theme.Space.xs)
                     }
                     if form == .full, let preset = workspace.presetName(of: panes) {
-                        Button { tabs.select(id) } label: { CappedWidth(width: Theme.Size.tabName) { Text(preset).lineLimit(1) } }
-                            .buttonStyle(.pointing(.plain))
-                            .padding(.leading, Theme.Space.xxs)
-                            .padding(.trailing, Theme.Space.xs)
+                        Button {
+                            tabs.select(id)
+                        } label: {
+                            CappedWidth(width: Theme.Size.tabName) { Text(preset).lineLimit(1) }
+                        }
+                        .buttonStyle(.pointing(.plain))
+                        .padding(.leading, Theme.Space.xxs)
+                        .padding(.trailing, Theme.Space.xs)
                     }
                 }
             }
@@ -712,7 +773,9 @@ struct TabBar: View {
     var speakerIcon: some View { LineIcon(symbol: Self.speakerSymbol).foregroundStyle(Theme.Palette.chromeIcon) }
 
     func speaker(_ id: UUID) -> some View {
-        Button { tabs.pause(id) } label: {
+        Button {
+            tabs.pause(id)
+        } label: {
             Image(systemName: Self.speakerSymbol).font(Theme.Glyph.small)
                 .frame(width: Self.closeSize, height: Self.closeSize)
                 .contentShape(.circle)
@@ -795,20 +858,30 @@ struct TabBar: View {
     func measures(_ others: [UUID]) -> some View {
         ZStack {
             Breadcrumb(crumbs: crumbs, foldWidth: .infinity, maxWidth: .infinity).fixedSize()
-                .onGeometryChange(for: CGFloat.self, of: \.size.width) { sizes.trail = $0; report() }
+                .onGeometryChange(for: CGFloat.self, of: \.size.width) {
+                    sizes.trail = $0; report()
+                }
             front(crumbRoom: .infinity, compact: false).fixedSize()
-                .onGeometryChange(for: CGFloat.self, of: \.size.width) { sizes.front = $0; report() }
+                .onGeometryChange(for: CGFloat.self, of: \.size.width) {
+                    sizes.front = $0; report()
+                }
             front(crumbRoom: .infinity, compact: true).fixedSize()
-                .onGeometryChange(for: CGFloat.self, of: \.size.width) { sizes.compactFront = $0; report() }
+                .onGeometryChange(for: CGFloat.self, of: \.size.width) {
+                    sizes.compactFront = $0; report()
+                }
             ForEach(others, id: \.self) { id in
                 ForEach(TabForm.allCases, id: \.self) { form in
                     label(id, form: form).fixedSize()
-                        .onGeometryChange(for: CGFloat.self, of: \.size.width) { sizes.set($0, id, form); report() }
+                        .onGeometryChange(for: CGFloat.self, of: \.size.width) {
+                            sizes.set($0, id, form); report()
+                        }
                 }
             }
             // Two digits: the menu's width hardly changes with its count.
             moreLabel(max(others.count, 10)).fixedSize()
-                .onGeometryChange(for: CGFloat.self, of: \.size.width) { sizes.more = $0; report() }
+                .onGeometryChange(for: CGFloat.self, of: \.size.width) {
+                    sizes.more = $0; report()
+                }
         }
         .hidden()
         .allowsHitTesting(false)
@@ -851,8 +924,10 @@ struct TabBar: View {
         let others = row.filter { $0 != id }
         let before = others.filter { (frames[$0]?.midX ?? 0) < x }.count
         var rest = tabs.ids.filter { $0 != id }
-        let index: Int = if before < others.count { rest.firstIndex(of: others[before]) ?? 0 }
-            else { others.last.flatMap { rest.firstIndex(of: $0) }.map { $0 + 1 } ?? rest.count }
+        let index: Int =
+            if before < others.count { rest.firstIndex(of: others[before]) ?? 0 } else {
+                others.last.flatMap { rest.firstIndex(of: $0) }.map { $0 + 1 } ?? rest.count
+            }
         rest.insert(id, at: index)
         if rest != tabs.ids { tabs.move(id, to: index) }
     }
@@ -974,8 +1049,9 @@ private struct SegmentRule: View {
         var newTabSpacing: CGFloat
     }
 
-    private(set) var placement = Placement(lead: 0, fit: TabFit.Layout(iconsOnly: false, shown: 0, hidden: 0), trail: nil, width: 0,
-                                           newTabSpacing: TabBar.gap)
+    private(set) var placement = Placement(
+        lead: 0, fit: TabFit.Layout(iconsOnly: false, shown: 0, hidden: 0), trail: nil, width: 0,
+        newTabSpacing: TabBar.gap)
 
     /// Set as the window resizes, before the row lays out (`WindowWidth`): the tabs fit the new width in the same frame.
     /// Measured from the laid-out row instead, it would come a frame behind the window, and a strip too wide for the
@@ -1013,7 +1089,8 @@ private struct SegmentRule: View {
         // rounded up the strip could outgrow the row by one.
         let trail = TabFit.trail(room: space, front: m.front, others: m.others, layout: fit, gap: TabBar.gap, more: m.more)
             .map { $0.rounded(.down) }
-        let width = TabFit.width(front: m.front, others: m.others, layout: fit, trail: trail, gap: TabBar.gap, more: m.more)
+        let width =
+            TabFit.width(front: m.front, others: m.others, layout: fit, trail: trail, gap: TabBar.gap, more: m.more)
             + plus + Theme.Size.toolbarButton
         // Whole points wide with the lead, so the strip ends on a whole point and nothing after it sits between pixels.
         let whole = (lead + width).rounded(.down) - lead

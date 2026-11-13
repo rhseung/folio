@@ -49,8 +49,10 @@ public struct TableSource {
         var found: (first: Int, last: Int, column: Int)?
         func walk(_ node: Markup) {
             guard found == nil else { return }
-            if node is Markdown.Table, let range = node.range, let first = source(range.lowerBound.line), let last = source(range.upperBound.line),
-               first <= caretLine, caretLine <= last {
+            if node is Markdown.Table, let range = node.range, let first = source(range.lowerBound.line),
+                let last = source(range.upperBound.line),
+                first <= caretLine, caretLine <= last
+            {
                 // The column is in UTF-8 bytes of the protected line; what's before it is the same in the source.
                 let line = protectedLines[range.lowerBound.line - 1]
                 let bytes = min(range.lowerBound.column - 1, line.utf8.count)
@@ -72,10 +74,13 @@ public struct TableSource {
         let firstPrefix = text.substring(with: NSRange(location: first.location, length: min(found.column, first.length)))
         self.firstPrefix = firstPrefix
         let blockLines = Array(lines[found.first...last])
-        restPrefix = blockLines.count > 1 ? Self.prefix(of: text.substring(with: blockLines[1]), upTo: firstPrefix.utf16.count)
+        restPrefix =
+            blockLines.count > 1
+            ? Self.prefix(of: text.substring(with: blockLines[1]), upTo: firstPrefix.utf16.count)
             : String(firstPrefix.map { $0 == ">" || $0.isWhitespace ? $0 : " " })
         let contents = blockLines.enumerated().map { i, line -> (range: NSRange, cut: Int) in
-            let cut = i == 0 ? firstPrefix.utf16.count : Self.prefix(of: text.substring(with: line), upTo: firstPrefix.utf16.count).utf16.count
+            let cut =
+                i == 0 ? firstPrefix.utf16.count : Self.prefix(of: text.substring(with: line), upTo: firstPrefix.utf16.count).utf16.count
             return (line, min(cut, line.length))
         }
         self.text = text
@@ -90,8 +95,9 @@ public struct TableSource {
         func cells(_ split: [(text: String, range: NSRange)]) -> [String] {
             (0..<width).map { i in i < split.count ? split[i].text : "" }
         }
-        grid = TableGrid(alignments: (0..<width).map { i in i < delimiter.count ? Self.alignment(delimiter[i].text) : nil },
-                         rows: [cells(header)] + body.map(cells))
+        grid = TableGrid(
+            alignments: (0..<width).map { i in i < delimiter.count ? Self.alignment(delimiter[i].text) : nil },
+            rows: [cells(header)] + body.map(cells))
 
         // The delimiter row holds no cell; a caret on it is in the header.
         let line = caretLine - found.first
@@ -238,15 +244,17 @@ public struct TableSource {
         }
 
         cells.append(line(first, texts[0]))
-        _ = line(rest, (0..<grid.width).map { c in
-            let w = widths[c]
-            switch grid.alignments[c] {
-            case "left": return ":" + String(repeating: "-", count: w - 1)
-            case "right": return String(repeating: "-", count: w - 1) + ":"
-            case "center": return ":" + String(repeating: "-", count: w - 2) + ":"
-            default: return String(repeating: "-", count: w)
-            }
-        })
+        _ = line(
+            rest,
+            (0..<grid.width).map { c in
+                let w = widths[c]
+                switch grid.alignments[c] {
+                case "left": return ":" + String(repeating: "-", count: w - 1)
+                case "right": return String(repeating: "-", count: w - 1) + ":"
+                case "center": return ":" + String(repeating: "-", count: w - 2) + ":"
+                default: return String(repeating: "-", count: w)
+                }
+            })
         for row in texts.dropFirst() { cells.append(line(rest, row)) }
         return (out, cells)
     }
@@ -295,7 +303,8 @@ public enum DisplayWidth {
             let v = s.value
             if wide(v) { return 2 }
             if !(0x0300...0x036F).contains(v), !(0x200B...0x200F).contains(v), !(0xFE00...0xFE0F).contains(v),
-               !(0x1160...0x11FF).contains(v), s.properties.generalCategory != .nonspacingMark {
+                !(0x1160...0x11FF).contains(v), s.properties.generalCategory != .nonspacingMark
+            {
                 zero = false
             }
         }

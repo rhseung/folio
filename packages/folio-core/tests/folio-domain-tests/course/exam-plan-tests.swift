@@ -53,8 +53,11 @@ struct ExamPlanTests {
 
     @Test func todaysItemsAcrossCourses() {
         let today = LocalDate("2026-10-19")!
-        let early = exam("Quiz1", start: at, plan: [ExamPlanItem(day: today, title: "카드 풀기"), ExamPlanItem(day: LocalDate("2026-10-20")!, title: "내일")])
-        let late = exam("Midterm", start: at.addingTimeInterval(86400), plan: [ExamPlanItem(day: today, title: "족보"), ExamPlanItem(day: LocalDate("2026-10-18")!, title: "어제")])
+        let early = exam(
+            "Quiz1", start: at, plan: [ExamPlanItem(day: today, title: "카드 풀기"), ExamPlanItem(day: LocalDate("2026-10-20")!, title: "내일")])
+        let late = exam(
+            "Midterm", start: at.addingTimeInterval(86400),
+            plan: [ExamPlanItem(day: today, title: "족보"), ExamPlanItem(day: LocalDate("2026-10-18")!, title: "어제")])
         let one = CourseFile(course: Course(device: device, at: at, title: "그래프 이론"), exams: [late])
         let two = CourseFile(course: Course(device: device, at: at, title: "선형대수학"), exams: [early, exam("Final")])
         let items = ExamPlan.items(on: today, courses: [one, two])

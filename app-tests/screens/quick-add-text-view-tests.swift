@@ -14,11 +14,14 @@ struct QuickAddTextViewTests {
     }
 
     func make(_ box: Box, marks: [QuickAddMark]) -> (QuickAddTextView, QuickAddTextView.Coordinator, QuickAddNSTextView, NSWindow)? {
-        let field = QuickAddTextView(text: Binding(get: { box.text }, set: { box.text = $0 }), prompt: "", marks: marks) { box.submitted += 1 }
+        let field = QuickAddTextView(text: Binding(get: { box.text }, set: { box.text = $0 }), prompt: "", marks: marks) {
+            box.submitted += 1
+        }
         let coordinator = field.makeCoordinator()
         let scroll = field.makeView(coordinator)
         guard let view = scroll.documentView as? QuickAddNSTextView else { return nil }
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 100), styleMask: [.borderless], backing: .buffered, defer: false)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 100), styleMask: [.borderless], backing: .buffered, defer: false)
         scroll.frame = window.contentView!.bounds
         window.contentView!.addSubview(scroll)
         window.makeFirstResponder(view)

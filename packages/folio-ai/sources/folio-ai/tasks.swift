@@ -2,7 +2,8 @@ import FolioDomain
 import Foundation
 
 public enum ClaudeTask: String, Codable, Sendable, CaseIterable {
-    case chat, reviewNoteDraft, examSummaryDraft, quizCards, grading, classifyFile, extractAssignment, extractGradingPolicy, examPlan, widget, lectureSections
+    case chat, reviewNoteDraft, examSummaryDraft, quizCards, grading, classifyFile, extractAssignment, extractGradingPolicy, examPlan,
+        widget, lectureSections
 }
 
 /// Light jobs (file classification) on the small model, grading and proof review on the large one.
@@ -63,7 +64,10 @@ public struct ClaudeClient: Sendable {
     let configs: [ClaudeTask: TaskConfig]
     let onUsage: @Sendable (APIUsageEvent) -> Void
 
-    public init(provider: any ClaudeProvider, overrides: [ClaudeTask: TaskConfig] = [:], onUsage: @escaping @Sendable (APIUsageEvent) -> Void = { _ in }) {
+    public init(
+        provider: any ClaudeProvider, overrides: [ClaudeTask: TaskConfig] = [:],
+        onUsage: @escaping @Sendable (APIUsageEvent) -> Void = { _ in }
+    ) {
         self.provider = provider
         self.configs = overrides
         self.onUsage = onUsage
@@ -83,14 +87,18 @@ public struct ClaudeClient: Sendable {
     }
 
     /// Refusals and truncation throw instead of returning partial text.
-    public func text(_ task: ClaudeTask, system: [ContentBlock], messages: [Message],
-                     onEvent: (@Sendable (StreamEvent) -> Void)? = nil) async throws -> MessagesResponse {
+    public func text(
+        _ task: ClaudeTask, system: [ContentBlock], messages: [Message],
+        onEvent: (@Sendable (StreamEvent) -> Void)? = nil
+    ) async throws -> MessagesResponse {
         try await send(task, request(task, system: system, messages: messages), onEvent: onEvent)
     }
 
     /// A reply that doesn't decode is asked for once more, then reported.
-    public func structured<T: Decodable & Sendable>(_ task: ClaudeTask, as _: T.Type, schema: JSONValue,
-                                                    system: [ContentBlock], messages: [Message]) async throws -> T {
+    public func structured<T: Decodable & Sendable>(
+        _ task: ClaudeTask, as _: T.Type, schema: JSONValue,
+        system: [ContentBlock], messages: [Message]
+    ) async throws -> T {
         let req = request(task, system: system, messages: messages, schema: schema)
         var lastError = ""
         for _ in 0..<2 {
@@ -104,7 +112,9 @@ public struct ClaudeClient: Sendable {
         throw ClaudeError.invalidOutput(lastError)
     }
 
-    func send(_ task: ClaudeTask, _ request: MessagesRequest, onEvent: (@Sendable (StreamEvent) -> Void)? = nil) async throws -> MessagesResponse {
+    func send(_ task: ClaudeTask, _ request: MessagesRequest, onEvent: (@Sendable (StreamEvent) -> Void)? = nil) async throws
+        -> MessagesResponse
+    {
         let response = if let onEvent { try await provider.send(request, onEvent: onEvent) } else { try await provider.send(request) }
         onUsage(APIUsageEvent(task: task, model: response.model, usage: response.usage))
         switch response.stop_reason {

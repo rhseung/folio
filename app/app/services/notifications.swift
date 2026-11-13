@@ -1,6 +1,7 @@
 import FolioDomain
 import Foundation
 import UserNotifications
+
 #if os(macOS)
 import AppKit
 #else

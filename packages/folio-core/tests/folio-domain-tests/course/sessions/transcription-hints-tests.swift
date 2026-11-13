@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import FolioDomain
 
 struct TranscriptionHintsTests {
@@ -22,7 +23,9 @@ struct TranscriptionHintsTests {
     }
 
     @Test func anUnlinkedClassReadsItsWeeksLectures() {
-        let file = course(["Lectures/05-2_LR.pdf", "Lectures/05-1_Parsing.pdf", "Lectures/15_Review.pdf", "Lectures/05_notes.txt", "Syllabus/05_Plan.pdf"])
+        let file = course([
+            "Lectures/05-2_LR.pdf", "Lectures/05-1_Parsing.pdf", "Lectures/15_Review.pdf", "Lectures/05_notes.txt", "Syllabus/05_Plan.pdf",
+        ])
         let slides = file.lectureSlides(for: file.sessions[0])
         #expect(slides.source == .week)
         #expect(slides.pages.map(\.path) == ["Lectures/05-1_Parsing.pdf", "Lectures/05-2_LR.pdf"])
@@ -53,8 +56,11 @@ struct TranscriptionHintsTests {
         file.setMaterial(file.materials[1].id, unit: chapter.id, linked: true)
         let slides = file.lectureSlides(for: file.sessions[0])
         #expect(slides.source == .tagged)
-        #expect(slides.pages == [LecturePages(path: "Lectures/05_Handout.pdf", first: 2, last: 4, materialId: file.materials[0].id),
-                                 LecturePages(path: "Lectures/03 Syntax-analysis.pdf", materialId: file.materials[1].id)])
+        #expect(
+            slides.pages == [
+                LecturePages(path: "Lectures/05_Handout.pdf", first: 2, last: 4, materialId: file.materials[0].id),
+                LecturePages(path: "Lectures/03 Syntax-analysis.pdf", materialId: file.materials[1].id),
+            ])
     }
 
     @Test func unitsComeBeforeTheSlides() {
@@ -63,7 +69,8 @@ struct TranscriptionHintsTests {
         var child = Unit(device: device, at: now, title: "LR Parsing", order: 1, parentId: parent.id)
         child.sessionIds = [file.sessions[0].id]
         file.units = [parent, child]
-        let hints = file.transcriptionContext(for: file.sessions[0]).reading("lookahead, lookahead, syntax analysis, syntax analysis, LALR").hints(course: file.course.title)
+        let hints = file.transcriptionContext(for: file.sessions[0]).reading("lookahead, lookahead, syntax analysis, syntax analysis, LALR")
+            .hints(course: file.course.title)
         #expect(hints.title == "컴파일러")
         // A slide term the units already said, in another case, is not said twice.
         #expect(hints.terms == ["LR Parsing", "Syntax Analysis", "lookahead", "syntax", "analysis", "LALR"])
@@ -71,10 +78,10 @@ struct TranscriptionHintsTests {
 
     @Test func termsAreTheEnglishOnTheSlides() {
         let text = """
-        LR 파싱과 Shift-reduce conflict
-        shift-reduce conflict는 LALR 파서에서 생긴다. The parser uses a lookahead.
-        Left factoring 을 하면 top-down parser가 쓸 수 있다. left factoring 예시
-        """
+            LR 파싱과 Shift-reduce conflict
+            shift-reduce conflict는 LALR 파서에서 생긴다. The parser uses a lookahead.
+            Left factoring 을 하면 top-down parser가 쓸 수 있다. left factoring 예시
+            """
         let terms = LectureTerms.terms(in: text)
         #expect(terms.prefix(3).contains("Shift-reduce conflict") || terms.contains("shift-reduce conflict"))
         #expect(terms.contains("LR"))
@@ -166,7 +173,8 @@ struct TranscriptionHintsTests {
         let data = try JSONEncoder().encode(transcript)
 
         #expect(try JSONDecoder().decode(LectureTranscript.self, from: data) == transcript)
-        let newer = Data(#"{"schemaVersion":1,"locale":"ko-KR","lines":[],"context":{"source":"camera","slides":[],"topics":["LR"],"terms":[]}}"#.utf8)
+        let newer = Data(
+            #"{"schemaVersion":1,"locale":"ko-KR","lines":[],"context":{"source":"camera","slides":[],"topics":["LR"],"terms":[]}}"#.utf8)
         let read = try JSONDecoder().decode(LectureTranscript.self, from: newer)
         #expect(read.context?.source == nil && read.context?.topics == ["LR"])
         let old = Data(#"{"schemaVersion":1,"locale":"ko-KR","lines":[{"start":0,"end":1,"text":"a"}]}"#.utf8)

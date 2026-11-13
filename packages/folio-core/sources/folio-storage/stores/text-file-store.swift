@@ -3,7 +3,9 @@ import Foundation
 
 extension CourseStore {
     public func readText(_ coursePath: String) throws -> String {
-        guard let text = String(data: try CoordinatedFile.read(fileURL(coursePath)), encoding: .utf8) else { throw StorageError.notUTF8(coursePath) }
+        guard let text = String(data: try CoordinatedFile.read(fileURL(coursePath)), encoding: .utf8) else {
+            throw StorageError.notUTF8(coursePath)
+        }
         return text
     }
 

@@ -74,32 +74,42 @@ public enum InputGuide {
         let blocks = catalog.slash.filter { $0.id != menuItemID }
         let languages = catalog.fenceNames
         var out = [
-            Entry("menu.blocks", .menu, .phrase(.blocks), note: .list(blocks.map(\.title)), [.key("/"), .result(.phrase(.blockList))],
-                  keywords: blocks.flatMap { [$0.title] + $0.keywords }),
+            Entry(
+                "menu.blocks", .menu, .phrase(.blocks), note: .list(blocks.map(\.title)), [.key("/"), .result(.phrase(.blockList))],
+                keywords: blocks.flatMap { [$0.title] + $0.keywords }),
             Entry("menu.link", .menu, .phrase(.link), note: .phrase(.linkTargets), [.key("[["), .result(.phrase(.targetList))]),
-            Entry("menu.heading", .menu, .phrase(.headingLink),
-                  [.key("[[…#"), .result(.phrase(.headingList)), .key("[[…#^"), .result(.phrase(.blockList))]),
+            Entry(
+                "menu.heading", .menu, .phrase(.headingLink),
+                [.key("[[…#"), .result(.phrase(.headingList)), .key("[[…#^"), .result(.phrase(.blockList))]),
             Entry("menu.page", .menu, .phrase(.pageLink), note: .phrase(.lastPageFirst), [.key("[[…#page="), .result(.phrase(.pageList))]),
             Entry("menu.embed", .menu, .phrase(.embed), note: .phrase(.embedTargets), [.key("![["), .result(.phrase(.targetList))]),
-            Entry("menu.callout", .menu, .phrase(.calloutKind), note: .list(CalloutHeader.known), [.key("> [!"), .result(.phrase(.kindList))],
-                  keywords: CalloutHeader.known),
-            Entry("menu.language", .menu, .phrase(.codeLanguage), note: .list(languages), [.key("```"), .result(.phrase(.languageList))],
-                  keywords: languages),
+            Entry(
+                "menu.callout", .menu, .phrase(.calloutKind), note: .list(CalloutHeader.known),
+                [.key("> [!"), .result(.phrase(.kindList))],
+                keywords: CalloutHeader.known),
+            Entry(
+                "menu.language", .menu, .phrase(.codeLanguage), note: .list(languages), [.key("```"), .result(.phrase(.languageList))],
+                keywords: languages),
         ]
         // A bare `\` lists them all in either syntax (#392); AsciiMath takes the name in its place.
-        out.append(Entry("menu.symbols", .menu, .phrase(.mathSymbols), note: .phrase(.inMath), [.key("\\"), .result(.phrase(.symbolsByCategory))],
-                         keywords: catalog.tex ? TeXCommands.all.map(\.name) : AsciiMathSymbols.all.map(\.name)))
+        out.append(
+            Entry(
+                "menu.symbols", .menu, .phrase(.mathSymbols), note: .phrase(.inMath), [.key("\\"), .result(.phrase(.symbolsByCategory))],
+                keywords: catalog.tex ? TeXCommands.all.map(\.name) : AsciiMathSymbols.all.map(\.name)))
         if catalog.tex {
             out += [
-                Entry("menu.environment", .menu, .phrase(.texEnvironment), note: .phrase(.endWritten),
-                      [.key("\\begin{"), .result(.phrase(.environmentList))], keywords: TeXCommands.environments),
+                Entry(
+                    "menu.environment", .menu, .phrase(.texEnvironment), note: .phrase(.endWritten),
+                    [.key("\\begin{"), .result(.phrase(.environmentList))], keywords: TeXCommands.environments)
             ]
         } else if let sample = AsciiMathSymbols.all.first(where: { $0.name.count >= 4 }) {
             let typed = String(sample.name.prefix(2))
             // The typed letters can be a name of their own (`fr`); showing it back reads as an echo, not a result.
             let found = Completion.filter(AsciiMathSymbols.items, typed, prefixOnly: true).map(\.title).filter { $0 != typed }
-            out.append(Entry("menu.asciimath", .menu, .phrase(.asciiMathSymbol), note: .phrase(.fromTwoLetters),
-                             [.key(typed), .result(.list(found))], keywords: AsciiMathSymbols.all.map(\.name)))
+            out.append(
+                Entry(
+                    "menu.asciimath", .menu, .phrase(.asciiMathSymbol), note: .phrase(.fromTwoLetters),
+                    [.key(typed), .result(.list(found))], keywords: AsciiMathSymbols.all.map(\.name)))
         }
         return out
     }
@@ -110,11 +120,13 @@ public enum InputGuide {
             let written = shown(s.body)
             // A snippet that writes what a `/` block does goes by that block's name, as `mk` by 인라인 수식's.
             if !s.inMath, let block = catalog.slash.first(where: { $0.body == s.body }) {
-                return Entry("tab.snippet.\(i)", .tab, .named(block.title), note: .phrase(.snippet),
-                             [.key(s.trigger), .key(tab), .result(.code(written))], keywords: [s.trigger])
+                return Entry(
+                    "tab.snippet.\(i)", .tab, .named(block.title), note: .phrase(.snippet),
+                    [.key(s.trigger), .key(tab), .result(.code(written))], keywords: [s.trigger])
             }
-            return Entry("tab.snippet.\(i)", .tab, .code(written), note: .phrase(s.inMath ? .mathSnippet : .snippet),
-                         [.key(s.trigger), .key(tab)], keywords: [s.trigger])
+            return Entry(
+                "tab.snippet.\(i)", .tab, .code(written), note: .phrase(s.inMath ? .mathSnippet : .snippet),
+                [.key(s.trigger), .key(tab)], keywords: [s.trigger])
         }
         let slot = catalog.tex ? "\\frac{a}{…}" : "frac(a)(…)"
         return snippets + [
@@ -126,14 +138,18 @@ public enum InputGuide {
     static func autoEntries() -> [Entry] {
         let pair = SourceEditing.shownPairs.first ?? "("
         return [
-            Entry("auto.pairs", .auto, .phrase(.pairs), note: .code(SourceEditing.shownPairs.joined(separator: " ")),
-                  [.key(pair), .result(.code(closed(pair)))], keywords: SourceEditing.shownPairs),
-            Entry("auto.wrap", .auto, .phrase(.wrap), note: .code(SourceEditing.shownWraps.joined(separator: " ")),
-                  [.result(.phrase(.selection)), .key("$"), .result(.code("$…$"))], keywords: SourceEditing.shownWraps),
-            Entry("auto.list", .auto, .phrase(.listContinue), note: .code(SourceEditing.shownListMarks.joined(separator: " ")),
-                  [.key("↩"), .result(.phrase(.nextItem))], keywords: SourceEditing.shownListMarks),
-            Entry("auto.list-end", .auto, .phrase(.listEnd), note: .phrase(.nestedStepsOut),
-                  [.result(.phrase(.emptyItem)), .key("↩"), .result(.phrase(.listEnded))]),
+            Entry(
+                "auto.pairs", .auto, .phrase(.pairs), note: .code(SourceEditing.shownPairs.joined(separator: " ")),
+                [.key(pair), .result(.code(closed(pair)))], keywords: SourceEditing.shownPairs),
+            Entry(
+                "auto.wrap", .auto, .phrase(.wrap), note: .code(SourceEditing.shownWraps.joined(separator: " ")),
+                [.result(.phrase(.selection)), .key("$"), .result(.code("$…$"))], keywords: SourceEditing.shownWraps),
+            Entry(
+                "auto.list", .auto, .phrase(.listContinue), note: .code(SourceEditing.shownListMarks.joined(separator: " ")),
+                [.key("↩"), .result(.phrase(.nextItem))], keywords: SourceEditing.shownListMarks),
+            Entry(
+                "auto.list-end", .auto, .phrase(.listEnd), note: .phrase(.nestedStepsOut),
+                [.result(.phrase(.emptyItem)), .key("↩"), .result(.phrase(.listEnded))]),
         ]
     }
 

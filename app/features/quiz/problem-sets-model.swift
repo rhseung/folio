@@ -37,8 +37,9 @@ final class ProblemSetDraftModel {
     }
 
     func add() {
-        var set = ProblemSet(device: workspace.device, at: .now, title: trimmedTitle,
-                             problems: parsed.map { ProblemSet.Problem(number: $0, unitIds: unitIds) })
+        var set = ProblemSet(
+            device: workspace.device, at: .now, title: trimmedTitle,
+            problems: parsed.map { ProblemSet.Problem(number: $0, unitIds: unitIds) })
         set.materialId = problemId
         set.solutionMaterialId = solutionId
         workspace.run(ProblemSetSave(course: course.id, set: set))

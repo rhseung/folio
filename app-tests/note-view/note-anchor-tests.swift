@@ -3,6 +3,7 @@ import FolioDomain
 import Foundation
 import SwiftUI
 import Testing
+
 @testable import Folio
 
 /// A note opened by a link to a heading or block, in the write view: the caret goes to that line, and the line comes

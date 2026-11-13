@@ -32,11 +32,11 @@ private let view = "app/features/demo/demo-view.swift"
     @Test func readsAndModelsAndProseDoNotCount() {
         let files = [
             view: """
-                struct DemoView: View {
-                    // workspace.run(.save) once lived here
-                    var body: some View { Text("workspace.run(").id(workspace.notesRevision) }
-                }
-                """,
+            struct DemoView: View {
+                // workspace.run(.save) once lived here
+                var body: some View { Text("workspace.run(").id(workspace.notesRevision) }
+            }
+            """,
             "app/features/demo/demo-model.swift": "final class DemoModel { func save() { workspace.run(.save) } }",
         ]
         #expect(found(files, "view-workspace-call").isEmpty)
@@ -57,9 +57,10 @@ private let view = "app/features/demo/demo-view.swift"
                 }
             }
             """
-        #expect(found([view: source], "view-body-logic") == [
-            "body: .count(where", "body: .filter", "body: .sorted", "groups: .max(by", "groups: Dictionary(grouping",
-        ])
+        #expect(
+            found([view: source], "view-body-logic") == [
+                "body: .count(where", "body: .filter", "body: .sorted", "groups: .max(by", "groups: Dictionary(grouping",
+            ])
     }
 
     @Test func propertiesAndNonViewMembersDoNotCount() {
@@ -85,8 +86,9 @@ private let view = "app/features/demo/demo-view.swift"
                 }
             }
             """
-        #expect(found(["app/features/demo/demo-view.swift": source], "ui-string")
-            == ["\" items\"", "\"Open the file\"", "\"Save\"", "\"완료\""])
+        #expect(
+            found(["app/features/demo/demo-view.swift": source], "ui-string")
+                == ["\" items\"", "\"Open the file\"", "\"Save\"", "\"완료\""])
     }
 
     @Test func dataMarksDebugCodeAndPreviewsAreLeftOut() {
@@ -124,15 +126,16 @@ private let view = "app/features/demo/demo-view.swift"
         let files = [
             "packages/folio-ai/sources/folio-ai/panel.swift": "import SwiftUI",
             "packages/folio-core/sources/folio-domain/rule.swift": """
-                let manager = FileManager.default
-                let data = try Data(contentsOf: url)
-                try text.write(to: url, atomically: true, encoding: .utf8)
-                """,
+            let manager = FileManager.default
+            let data = try Data(contentsOf: url)
+            try text.write(to: url, atomically: true, encoding: .utf8)
+            """,
             "packages/folio-core/sources/folio-storage/store.swift": "let manager = FileManager.default",
         ]
-        #expect(found(files, "layer") == [
-            "disk: .write(to:", "disk: Data(contentsOf:", "disk: FileManager", "disk: atomically:", "import SwiftUI",
-        ])
+        #expect(
+            found(files, "layer") == [
+                "disk: .write(to:", "disk: Data(contentsOf:", "disk: FileManager", "disk: atomically:", "import SwiftUI",
+            ])
     }
 
     @Test func fileManagerInScreensButNotInDebugCode() {
@@ -179,11 +182,14 @@ private let view = "app/features/demo/demo-view.swift"
     @Test func newPlacesAndGonePlaces() {
         let code = Codebase(files: ["app/features/demo/demo.swift": "let a = \"가\"\nlet b = \"가\"\nlet c = \"나\""])
         let hits = Rules.all.filter { $0.name == "ui-string" }.flatMap { $0.hits(in: code) }
-        let report = Baseline.compare(hits, with: Baseline.entries(in: """
-            # header
-            ui-string\tapp/features/demo/demo.swift\t"가"
-            ui-string\tapp/features/demo/demo.swift\t"다"
-            """))
+        let report = Baseline.compare(
+            hits,
+            with: Baseline.entries(
+                in: """
+                    # header
+                    ui-string\tapp/features/demo/demo.swift\t"가"
+                    ui-string\tapp/features/demo/demo.swift\t"다"
+                    """))
         #expect(report.new.map { "\($0.line) \($0.key)" } == ["2 \"가\"", "3 \"나\""])
         #expect(report.gone == ["ui-string\tapp/features/demo/demo.swift\t\"다\""])
         #expect(Baseline.compare(hits, with: Baseline.entries(in: Baseline.render(hits))).passed)
@@ -206,9 +212,10 @@ private let view = "app/features/demo/demo-view.swift"
                 let tone = 0xFF8800
             }
             """
-        #expect(found([view: source], "design-value") == [
-            ".gray", ".green", ".red", ".system(size:", "0xFF8800", "Color(red:", "Color.blue", "cornerRadius: 8",
-        ])
+        #expect(
+            found([view: source], "design-value") == [
+                ".gray", ".green", ".red", ".system(size:", "0xFF8800", "Color(red:", "Color.blue", "cornerRadius: 8",
+            ])
         #expect(found(["app/design/theme.swift": "let tone = Color.red"], "design-value").isEmpty)
     }
 }
@@ -231,9 +238,10 @@ private let view = "app/features/demo/demo-view.swift"
                 }
             }
             """
-        #expect(found([view: source], "design-grid") == [
-            "CGFloat = 7", "padding(-3)", "padding(2.5)", "padding(5)", "size: 9", "spacing: 3",
-        ])
+        #expect(
+            found([view: source], "design-grid") == [
+                "CGFloat = 7", "padding(-3)", "padding(2.5)", "padding(5)", "size: 9", "spacing: 3",
+            ])
     }
 }
 
@@ -254,9 +262,10 @@ private let view = "app/features/demo/demo-view.swift"
             "app/app/services/local-folders.swift": "let folder = URL.applicationSupportDirectory",
             "app/features/demo/demo-note.swift": "// not URL.applicationSupportDirectory",
         ]
-        #expect(found(files, "local-folders") == [
-            "\"Library/Application Support\"", "NSSearchPathForDirectoriesInDomains", "applicationSupportDirectory",
-        ])
+        #expect(
+            found(files, "local-folders") == [
+                "\"Library/Application Support\"", "NSSearchPathForDirectoriesInDomains", "applicationSupportDirectory",
+            ])
     }
 }
 
@@ -279,23 +288,23 @@ private let view = "app/features/demo/demo-view.swift"
     @Test func aDefaultInASwitchOverAppLinkKinds() {
         let files = [
             "packages/folio-core/sources/folio-domain/app-link.swift": """
-                struct AppLink { enum Kind: String { case today, note, material } }
-                """,
+            struct AppLink { enum Kind: String { case today, note, material } }
+            """,
             "app/app/screen.swift": """
-                func screen(_ link: AppLink) {
-                    switch link.kind {
-                    case .note: break
-                    default: break
-                    }
-                    switch link.kind {
-                    case .today, .note, .material: break
-                    }
-                    switch item.kind {
-                    case .note, .heading: break
-                    default: break
-                    }
+            func screen(_ link: AppLink) {
+                switch link.kind {
+                case .note: break
+                default: break
                 }
-                """,
+                switch link.kind {
+                case .today, .note, .material: break
+                }
+                switch item.kind {
+                case .note, .heading: break
+                default: break
+                }
+            }
+            """,
         ]
         #expect(found(files, "kind-default") == ["switch link.kind default:"])
     }

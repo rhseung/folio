@@ -40,8 +40,11 @@ struct MenuRow: Identifiable {
         self.kind = kind
     }
 
-    init<C: ItemCommand>(_ command: C, _ title: LocalizedStringResource, _ symbol: String, role: ButtonRole? = nil, disabled: Bool = false, _ kind: Kind) {
-        self.init(id: command, group: command.group, title: String(localized: title), symbol: symbol, role: role, disabled: disabled, kind: kind)
+    init<C: ItemCommand>(
+        _ command: C, _ title: LocalizedStringResource, _ symbol: String, role: ButtonRole? = nil, disabled: Bool = false, _ kind: Kind
+    ) {
+        self.init(
+            id: command, group: command.group, title: String(localized: title), symbol: symbol, role: role, disabled: disabled, kind: kind)
     }
 
     static func remove<C: ItemCommand>(_ command: C, _ action: @escaping @MainActor () -> Void) -> MenuRow {
@@ -173,10 +176,16 @@ struct PageMenuButton<Items: View>: View {
 
     var body: some View {
         if inBar {
-            Menu { items } label: { Label(.menuMore, systemImage: "ellipsis") }
-                .help(Text(.menuMore))
+            Menu {
+                items
+            } label: {
+                Label(.menuMore, systemImage: "ellipsis")
+            }
+            .help(Text(.menuMore))
         } else {
-            Menu { items } label: {
+            Menu {
+                items
+            } label: {
                 Label(.menuMore, systemImage: "ellipsis").labelStyle(.iconOnly)
                     .foregroundStyle(Theme.Palette.textSecondary)
                     .frame(width: Theme.Size.toolbarButton, height: Theme.Size.toolbarButton)

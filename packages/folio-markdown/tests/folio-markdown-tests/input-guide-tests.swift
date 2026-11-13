@@ -1,6 +1,7 @@
-@testable import FolioMarkdown
 import Foundation
 import Testing
+
+@testable import FolioMarkdown
 
 /// The input guide and the `/` menu's shortcuts, read from the editor's own tables (#395).
 struct InputGuideTests {
@@ -84,8 +85,12 @@ struct InputGuideTests {
         #expect(entries.contains { $0.title == .code("frac(…)(…)") })
         #expect(entries.first { $0.id == "tab.slot" }?.steps.last == .result(.code("frac(a)(…)")))
         // The sample's typed letters really bring up the names shown.
-        if let row = entries.first(where: { $0.id == "menu.asciimath" }), case .key(let typed) = row.steps[0], case .result(.list(let names)) = row.steps[1] {
-            let found = Completion.items(for: CompletionQuery(kind: .asciiMath, text: typed, range: NSRange(), place: .text), catalog: ascii).map(\.title)
+        if let row = entries.first(where: { $0.id == "menu.asciimath" }), case .key(let typed) = row.steps[0],
+            case .result(.list(let names)) = row.steps[1]
+        {
+            let found = Completion.items(
+                for: CompletionQuery(kind: .asciiMath, text: typed, range: NSRange(), place: .text), catalog: ascii
+            ).map(\.title)
             #expect(!names.isEmpty && !names.contains(typed) && names.allSatisfy { found.contains($0) })
         } else {
             Issue.record("no AsciiMath row")
@@ -130,7 +135,8 @@ struct InputGuideTests {
         for opener in SourceEditing.shownPairs {
             var text = "", caret = 0
             for c in opener {
-                let edit = SourceEditing.typed(String(c), in: text as NSString, selection: NSRange(location: caret, length: 0))
+                let edit =
+                    SourceEditing.typed(String(c), in: text as NSString, selection: NSRange(location: caret, length: 0))
                     ?? SourceEditing.Edit(range: NSRange(location: caret, length: 0), text: String(c), caret: caret + 1)
                 text = edit.applied(to: text as NSString)
                 caret = edit.caret

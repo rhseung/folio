@@ -3,17 +3,22 @@ import SwiftSyntax
 // AGENTS.md "화면: 모델과 뷰": a view lays out what its model gives it.
 extension Rules {
     static var viewWorkspaceCall: Rule {
-        Rule(name: "view-workspace-call",
-             advice: "a view reads its model; put the call behind a model property or method (AGENTS.md \"화면: 모델과 뷰\")") { code in
+        Rule(
+            name: "view-workspace-call",
+            advice: "a view reads its model; put the call behind a model property or method (AGENTS.md \"화면: 모델과 뷰\")"
+        ) { code in
             let files = code.files(under: "app/features")
             let views = viewNames(files)
             var hits: [Hit] = []
             for file in files {
                 for call in file.nodes(FunctionCallExprSyntax.self) {
                     guard let member = call.calledExpression.as(MemberAccessExprSyntax.self), let base = member.base,
-                          let workspace = workspaceToken(base), inView(call, views) else { continue }
-                    hits.append(Hit("view-workspace-call", file, file.line(of: workspace),
-                                    "workspace.\(member.declName.baseName.text)("))
+                        let workspace = workspaceToken(base), inView(call, views)
+                    else { continue }
+                    hits.append(
+                        Hit(
+                            "view-workspace-call", file, file.line(of: workspace),
+                            "workspace.\(member.declName.baseName.text)("))
                 }
             }
             return hits
@@ -21,15 +26,18 @@ extension Rules {
     }
 
     static var viewBodyLogic: Rule {
-        Rule(name: "view-body-logic",
-             advice: "group, filter, sort and count in the model (or FolioDomain for a data rule) and give the view the result") { code in
+        Rule(
+            name: "view-body-logic",
+            advice: "group, filter, sort and count in the model (or FolioDomain for a data rule) and give the view the result"
+        ) { code in
             let files = code.files(under: "app/features")
             let views = viewNames(files)
             var hits: [Hit] = []
             for file in files {
                 for call in file.nodes(FunctionCallExprSyntax.self) {
                     guard let found = sortingOrCounting(call), let member = viewMember(around: call),
-                          inView(call, views) else { continue }
+                        inView(call, views)
+                    else { continue }
                     hits.append(Hit("view-body-logic", file, file.line(of: found.at), "\(member): \(found.what)"))
                 }
             }
@@ -60,7 +68,8 @@ extension Rules {
         while let ancestor = current {
             if let type = ancestor.as(StructDeclSyntax.self), views.contains(type.name.text) { return true }
             if let ext = ancestor.as(ExtensionDeclSyntax.self),
-               views.contains(ext.extendedType.trimmedDescription) || conformsToView(ext.inheritanceClause) {
+                views.contains(ext.extendedType.trimmedDescription) || conformsToView(ext.inheritanceClause)
+            {
                 return true
             }
             current = ancestor.parent
@@ -92,7 +101,8 @@ extension Rules {
             }
         }
         if let reference = call.calledExpression.as(DeclReferenceExprSyntax.self), reference.baseName.text == "Dictionary",
-           label == "grouping" {
+            label == "grouping"
+        {
             return ("Dictionary(grouping", reference.baseName)
         }
         return nil
@@ -108,7 +118,8 @@ extension Rules {
                 }
             }
             if let function = ancestor.as(FunctionDeclSyntax.self), function.body != nil,
-               isSomeView(function.signature.returnClause?.type) {
+                isSomeView(function.signature.returnClause?.type)
+            {
                 return function.name.text
             }
             current = ancestor.parent

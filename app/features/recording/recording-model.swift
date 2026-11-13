@@ -21,16 +21,21 @@ final class RecordingBarModel {
     var courseTitle: String { preparing ? String(localized: .recordingPreparing) : course?.title ?? recorder.title }
     /// Like a recent session in the course column: its rough note, else its review note, else the sessions list.
     var sessionLink: AppLink? {
-        guard let course, let id = recorder.recording?.sessionId, let session = course.file.sessions.first(where: { $0.id == id }) else { return nil }
+        guard let course, let id = recorder.recording?.sessionId, let session = course.file.sessions.first(where: { $0.id == id }) else {
+            return nil
+        }
         if let note = session.roughNoteId ?? session.reviewNoteId { return AppLink(.note, note) }
         return .course(course.id, page: .sessions)
     }
     var sessionName: String? {
-        guard let course, let id = recorder.recording?.sessionId, let session = course.file.sessions.first(where: { $0.id == id }) else { return nil }
+        guard let course, let id = recorder.recording?.sessionId, let session = course.file.sessions.first(where: { $0.id == id }) else {
+            return nil
+        }
         return course.file.title(of: session, calendar: workspace.calendar)
     }
     var line: String {
-        recorder.volatile.isEmpty ? (recorder.lines.last?.text ?? recorder.transcriptionNote ?? String(localized: .recordingListening)) : recorder.volatile
+        recorder.volatile.isEmpty
+            ? (recorder.lines.last?.text ?? recorder.transcriptionNote ?? String(localized: .recordingListening)) : recorder.volatile
     }
 
     var context: TranscriptionContext? { recorder.context }
@@ -80,11 +85,15 @@ final class RecordingPlayerModel {
 
     /// `11/2(월) 다시 듣기`: the class's day, which tells a course's recordings apart, as the crumb and a tab name it.
     static func name(of recording: Recording, in file: CourseFile, calendar: Calendar) -> String {
-        guard let session = recording.sessionId.flatMap({ id in file.sessions.first { $0.id == id } }) else { return String(localized: .recordingPage) }
+        guard let session = recording.sessionId.flatMap({ id in file.sessions.first { $0.id == id } }) else {
+            return String(localized: .recordingPage)
+        }
         return String(localized: .recordingPageNamed(file.day(of: session, calendar: calendar)))
     }
 
-    var name: String { courseFile.map { Self.name(of: recording, in: $0, calendar: workspace.calendar) } ?? String(localized: .recordingPage) }
+    var name: String {
+        courseFile.map { Self.name(of: recording, in: $0, calendar: workspace.calendar) } ?? String(localized: .recordingPage)
+    }
     /// What the class covered, as the sessions page titles it; a recording of no class goes by when it started.
     var title: String {
         if let courseFile, let session { return courseFile.title(of: session, calendar: workspace.calendar) }
@@ -120,7 +129,8 @@ final class RecordingPlayerModel {
     func lineIndex(at seconds: TimeInterval) -> Int? { transcript?.lineIndex(at: seconds) }
 
     var subtitle: String {
-        recording.startedAt.formatted(date: .abbreviated, time: .shortened) + " · " + RecordingTime.label(recording.hasAudio ? player.duration : recording.duration)
+        recording.startedAt.formatted(date: .abbreviated, time: .shortened) + " · "
+            + RecordingTime.label(recording.hasAudio ? player.duration : recording.duration)
     }
     var hasLines: Bool { !(transcript?.lines.isEmpty ?? true) }
     var current: Int? { transcript?.lineIndex(at: player.time) }
@@ -214,9 +224,14 @@ final class RecordingPlayerModel {
     /// The lecture page on screen as line `index` began, where it differs from the line before's: on every line,
     /// the same `p.12` down a whole slide's worth of sentences hid the turns. A search shows it on every line left.
     func page(at index: Int) -> PageVisit? {
-        guard let lines = transcript?.lines, lines.indices.contains(index), let visit = listed.visit(at: lines[index].start) else { return nil }
+        guard let lines = transcript?.lines, lines.indices.contains(index), let visit = listed.visit(at: lines[index].start) else {
+            return nil
+        }
         if query.isEmpty, index > 0, let before = listed.visit(at: lines[index - 1].start),
-           before.materialId == visit.materialId, before.page == visit.page { return nil }
+            before.materialId == visit.materialId, before.page == visit.page
+        {
+            return nil
+        }
         return visit
     }
 

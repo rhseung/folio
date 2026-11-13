@@ -1,6 +1,7 @@
-@testable import FolioMarkdown
 import Foundation
 import Testing
+
+@testable import FolioMarkdown
 
 struct MathSymbolsTests {
     let snippets = [Snippet(trigger: "//", body: "\\frac{$1}{$2}", inMath: true), Snippet(trigger: "mk", body: "$$1$", inMath: false)]
@@ -40,7 +41,8 @@ struct MathSymbolsTests {
         #expect(tex.first { $0.category == .greek }?.items.first?.title == "\\alpha")
         // Only math snippets, shown by what they write.
         let own = try #require(tex.first)
-        #expect(own.category == .snippets && own.items.map(\.title) == ["//"] && own.items[0].preview == "\\frac{a}{b}"
+        #expect(
+            own.category == .snippets && own.items.map(\.title) == ["//"] && own.items[0].preview == "\\frac{a}{b}"
                 && own.items[0].detail == "\\frac{}{}")
         #expect(MathSymbols.groups(tex: true, snippets: []).first?.category == .greek)
     }

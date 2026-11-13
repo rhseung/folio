@@ -39,7 +39,8 @@ struct NoteActionTests {
         let card = QuizCard(device: device, at: now, unitId: unit, type: .free, category: .definition, prompt: "p", answer: "a")
         let saved = try run(QuizCardSave(course: Self.graphTheory, cards: [card]))
         #expect(saved.changes.map(\.touchesQuizzes) == [true] && !saved.changes.contains(where: \.touchesNotes))
-        let answered = try run(QuizRecord(course: Self.graphTheory, attempt: QuizAttemptEvent(cardId: card.id, verdict: .wrong, grader: .self)))
+        let answered = try run(
+            QuizRecord(course: Self.graphTheory, attempt: QuizAttemptEvent(cardId: card.id, verdict: .wrong, grader: .self)))
         #expect(answered.changes.map(\.touchesQuizzes) == [true])
     }
 
@@ -262,8 +263,9 @@ struct NoteActionTests {
         let exam = UUID(), other = UUID()
         try run(ExamAdd(id: exam, course: Self.graphTheory, title: "모의고사"))
         try run(ExamAdd(id: other, course: Self.graphTheory, title: "기말"))
-        let id = try entryWithFrontmatter("kind: review\nexamId: \(other)\ntags: [type/exam, math/graph]\nmath: latex\n",
-                                          body: "\n# 기출\n", tags: ["mine", "type/exam"], exam: exam)
+        let id = try entryWithFrontmatter(
+            "kind: review\nexamId: \(other)\ntags: [type/exam, math/graph]\nmath: latex\n",
+            body: "\n# 기출\n", tags: ["mine", "type/exam"], exam: exam)
         let before = try entry(id)
         try run(NoteMigrate(course: Self.graphTheory))
         let merged = try entry(id)
@@ -292,7 +294,10 @@ struct NoteActionTests {
         try run(NoteAdd(id: UUID(), course: Self.graphTheory, title: "모음", body: "[[note:\(old.uuidString.lowercased())|기출]]\n"))
         let preview = ActionContext(gist: gist, device: device, now: now, dryRun: true)
         try NoteMigrate(course: Self.graphTheory).run(preview)
-        #expect(preview.notes == ["Notes/기출.md: frontmatter의 id \(old.uuidString) 대신 course.json 항목의 ID를 둡니다. 옛 ID를 가리키는 곳 1개(회차, 노트)는 손으로 고칩니다"])
+        #expect(
+            preview.notes == [
+                "Notes/기출.md: frontmatter의 id \(old.uuidString) 대신 course.json 항목의 ID를 둡니다. 옛 ID를 가리키는 곳 1개(회차, 노트)는 손으로 고칩니다"
+            ])
 
         try run(NoteMigrate(course: Self.graphTheory))
         #expect(try entry(id).id == id && !file().notes.contains { $0.id == old })
@@ -360,7 +365,9 @@ struct NoteActionTests {
         #expect(rough.hasSuffix(" Matchings"))
         let dry = ActionContext(gist: gist, device: device, now: now, dryRun: true)
         try NoteRetitleSessions(course: Self.graphTheory).run(dry)
-        #expect(dry.changes.filter { $0.kind == .moved }.count == 2 && dry.changes.contains { $0.kind == .changed && $0.path.hasSuffix("모음.md") })
+        #expect(
+            dry.changes.filter { $0.kind == .moved }.count == 2
+                && dry.changes.contains { $0.kind == .changed && $0.path.hasSuffix("모음.md") })
         #expect(try text("Notes/2주차-1.md") == before[0])
 
         let batch = try #require(try run(NoteRetitleSessions(course: Self.graphTheory)).made)
@@ -414,7 +421,8 @@ struct NoteActionTests {
 
         let dry = ActionContext(gist: gist, device: device, now: now, dryRun: true)
         try NoteMove(course: Self.graphTheory, note: "Notes/09-08(화) 매칭.md", to: "매칭 기초").run(dry)
-        #expect(dry.changes.contains(Change(.moved, "2026-3/EC4207 그래프 이론/Notes/09-08(화) 매칭.md", to: "2026-3/EC4207 그래프 이론/Notes/매칭 기초.md")))
+        #expect(
+            dry.changes.contains(Change(.moved, "2026-3/EC4207 그래프 이론/Notes/09-08(화) 매칭.md", to: "2026-3/EC4207 그래프 이론/Notes/매칭 기초.md")))
         #expect(try text("Notes/09-08(화) 매칭.md") == before && dry.made == nil)
 
         let ran = try run(NoteMove(course: Self.graphTheory, note: "Notes/09-08(화) 매칭.md", to: "매칭 기초.md"))
@@ -490,7 +498,8 @@ struct NoteActionTests {
         let batch = try #require(try run(NoteMove(course: Self.graphTheory, note: "Notes/증명.tex", to: "정리/귀류법")).made)
         #expect(try file().notes.first { $0.id == id }?.path == "Notes/정리/귀류법.tex")
         #expect(try text("Notes/정리/귀류법.tex").contains("\\section*{귀류법}"))
-        #expect(try text("Study/귀류법.pdf") == "%PDF mine" && !FileManager.default.fileExists(atPath: try store().fileURL("Study/증명.pdf").path))
+        #expect(
+            try text("Study/귀류법.pdf") == "%PDF mine" && !FileManager.default.fileExists(atPath: try store().fileURL("Study/증명.pdf").path))
         #expect(try file().materials.first { $0.id == material }?.path == "Study/귀류법.pdf")
         try build("Notes/정리/귀류법.tex", "%PDF again")
         #expect(try text("Study/귀류법.pdf") == "%PDF again")
@@ -594,7 +603,10 @@ struct NoteActionTests {
         let note = UUID()
         try run(NoteAdd(id: note, course: Self.graphTheory, title: "평면 그래프"))
         let start = ISO8601DateFormatter().date(from: "2026-10-26T01:00:00Z")!
-        try run(ImportCalendar(meetings: [CalendarMeeting(course: "EC4207 그래프 이론", start: start, end: start + 4500, room: "A229", topic: "평면 그래프")]))
+        try run(
+            ImportCalendar(meetings: [
+                CalendarMeeting(course: "EC4207 그래프 이론", start: start, end: start + 4500, room: "A229", topic: "평면 그래프")
+            ]))
         let s = try #require(try file().sessions.first { $0.reviewNoteId == note })
         #expect(try meta(note).kind == .review && meta(note).sessionId == s.id)
     }
@@ -602,12 +614,16 @@ struct NoteActionTests {
     /// Rewrites replace, `set` actions of `Patch` fields set what they name, and the rest only add, so they never
     /// stand in for an earlier proposal.
     @Test func proposalTargetsFollowWhatEachCommandWrites() {
-        #expect(Actions.targets[NoteWrite.command] == ProposalTarget(arguments: ["course", "note"], effect: .replaces(covers: [NoteEdit.command])))
+        #expect(
+            Actions.targets[NoteWrite.command]
+                == ProposalTarget(arguments: ["course", "note"], effect: .replaces(covers: [NoteEdit.command])))
         #expect(Actions.targets[ExamSet.command] == ProposalTarget(arguments: ["course", "exam"], effect: .sets))
         #expect(Actions.targets[NoteLink.command]?.effect == .sets)
         #expect(Actions.targets[MaterialWrite.command]?.effect == .replaces(covers: []))
-        for additive in [NoteEdit.command, NoteAdd.command, ExamAdd.command, SessionAdd.command, ScoreAdd.command, QuizRecord.command,
-                         ExamRemove.command, MaterialTrack.command, UnitLink.command] {
+        for additive in [
+            NoteEdit.command, NoteAdd.command, ExamAdd.command, SessionAdd.command, ScoreAdd.command, QuizRecord.command,
+            ExamRemove.command, MaterialTrack.command, UnitLink.command,
+        ] {
             #expect(Actions.targets[additive] == nil, "\(additive)")
         }
     }

@@ -61,7 +61,10 @@ public struct GradeComponent: Entity {
     /// scoring only; each still counts by its own weight.
     public var group: String?
 
-    public init(id: UUID = UUID(), device: DeviceID, at date: Date, name: String, weight: Double, order: Int = 0, aggregation: Aggregation = .sum, expectedCount: Int? = nil) {
+    public init(
+        id: UUID = UUID(), device: DeviceID, at date: Date, name: String, weight: Double, order: Int = 0, aggregation: Aggregation = .sum,
+        expectedCount: Int? = nil
+    ) {
         self.id = id
         self.createdAt = date
         self.updatedAt = date
@@ -92,7 +95,10 @@ public struct ScoreEntry: Entity {
     public var examId: UUID?
     public var excused: Bool
 
-    public init(id: UUID = UUID(), device: DeviceID, at date: Date, componentId: UUID, title: String, score: Double, max: Double, mean: Double? = nil, stdDev: Double? = nil, excused: Bool = false) {
+    public init(
+        id: UUID = UUID(), device: DeviceID, at date: Date, componentId: UUID, title: String, score: Double, max: Double,
+        mean: Double? = nil, stdDev: Double? = nil, excused: Bool = false
+    ) {
         self.id = id
         self.createdAt = date
         self.updatedAt = date
@@ -144,7 +150,10 @@ public struct GradePolicy: Codable, Sendable, Equatable {
     public static let defaultTopGradeRatio = 0.5
     public var effectiveTopGradeRatio: Double { topGradeRatio ?? Self.defaultTopGradeRatio }
 
-    public init(attendanceCap: [AttendanceCap] = [], minAttendanceRatio: Double? = nil, latePolicy: String? = nil, cutoffs: [GradeCutoff] = [], notes: String = "") {
+    public init(
+        attendanceCap: [AttendanceCap] = [], minAttendanceRatio: Double? = nil, latePolicy: String? = nil, cutoffs: [GradeCutoff] = [],
+        notes: String = ""
+    ) {
         self.attendanceCap = attendanceCap
         self.minAttendanceRatio = minAttendanceRatio
         self.latePolicy = latePolicy

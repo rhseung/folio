@@ -3,6 +3,7 @@ import FolioActions
 import FolioDomain
 import SwiftUI
 import Testing
+
 @testable import Folio
 
 /// The screens of tabs behind the front one: a kept tab comes back as it was left, and a dropped note tab has saved
@@ -29,7 +30,9 @@ struct TabScreensTests {
         .environment(workspace)
         host = NSHostingView(rootView: screens)
         // Wide enough for the note's side-by-side view.
-        window = NSWindow(contentRect: CGRect(x: -20_000, y: -20_000, width: 1200, height: 800), styleMask: [.borderless], backing: .buffered, defer: false)
+        window = NSWindow(
+            contentRect: CGRect(x: -20_000, y: -20_000, width: 1200, height: 800), styleMask: [.borderless], backing: .buffered,
+            defer: false)
         window.contentView = host
     }
 
@@ -62,8 +65,10 @@ struct TabScreensTests {
 
     func commandE() throws {
         // ⌘E, as the user presses it: the note's own key, which a screen kept behind must not take.
-        let key = try #require(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: .command, timestamp: 0, windowNumber: window.windowNumber,
-                                                context: nil, characters: "e", charactersIgnoringModifiers: "e", isARepeat: false, keyCode: 14))
+        let key = try #require(
+            NSEvent.keyEvent(
+                with: .keyDown, location: .zero, modifierFlags: .command, timestamp: 0, windowNumber: window.windowNumber,
+                context: nil, characters: "e", charactersIgnoringModifiers: "e", isARepeat: false, keyCode: 14))
         try #require(window.performKeyEquivalent(with: key))
     }
 
@@ -126,8 +131,10 @@ struct TabScreensTests {
         tabs.open(Navigator(Navigator.Entry(link: .place(.grades))))
         try await settle()
         // The note behind still has ⌘E; pressed now, it would switch a page no one sees.
-        let key = try #require(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: .command, timestamp: 0, windowNumber: window.windowNumber,
-                                                context: nil, characters: "e", charactersIgnoringModifiers: "e", isARepeat: false, keyCode: 14))
+        let key = try #require(
+            NSEvent.keyEvent(
+                with: .keyDown, location: .zero, modifierFlags: .command, timestamp: 0, windowNumber: window.windowNumber,
+                context: nil, characters: "e", charactersIgnoringModifiers: "e", isARepeat: false, keyCode: 14))
         _ = window.performKeyEquivalent(with: key)
         try await settle()
 

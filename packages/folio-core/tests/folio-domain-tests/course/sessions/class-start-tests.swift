@@ -57,14 +57,18 @@ struct ClassStartTests {
 
     @Test func theRecordingKeepsItsOwnTime() throws {
         let file = course()
-        let early = settings { $0.recording = .start; $0.recordingOffsetMinutes = -5 }
+        let early = settings {
+            $0.recording = .start; $0.recordingOffsetMinutes = -5
+        }
         #expect(starting([file], early, at: at(2, 10, 24)) == nil)
         let c = try #require(starting([file], early, at: at(2, 10, 25)))
         #expect(c.start == at(2, 10, 30))
         #expect(ClassStart.due(c, settings: early.classStart, now: at(2, 10, 25)) == [.recording])
         #expect(ClassStart.due(c, settings: early.classStart, now: at(2, 10, 30)) == [.open, .recording])
 
-        let late = settings { $0.recording = .ask; $0.recordingOffsetMinutes = 10 }
+        let late = settings {
+            $0.recording = .ask; $0.recordingOffsetMinutes = 10
+        }
         #expect(ClassStart.due(c, settings: late.classStart, now: at(2, 10, 30)) == [.open])
         #expect(ClassStart.due(c, settings: late.classStart, now: at(2, 10, 40)) == [.open, .recording])
 
@@ -144,7 +148,8 @@ struct ClassStartTests {
     @Test func noClassInAnExamWeek() {
         let file = course()
         // Week 8 of a fall term starting 9/1 holds midterms: 10/19-10/25.
-        let term = Semester(device: device, at: at(1, 9), year: 2026, term: .fall, start: LocalDate("2026-09-01"), end: LocalDate("2026-12-20"))
+        let term = Semester(
+            device: device, at: at(1, 9), year: 2026, term: .fall, start: LocalDate("2026-09-01"), end: LocalDate("2026-12-20"))
         let s = settings()
         let examMonday = calendar.date(from: DateComponents(year: 2026, month: 10, day: 19, hour: 10, minute: 40))!
         #expect(starting([file], s, at: examMonday, term: term) == nil)
@@ -172,8 +177,12 @@ struct ClassStartTests {
         file.sessions = [Session(device: device, at: at(1, 9), week: 10, date: at(2, 10, 30))]
         // Nothing set to start by itself: still the class the settings show the span for.
         let s = Settings()
-        #expect(ClassStart.next([ClassStart.Course(file: file, term: nil)], settings: s, now: at(2, 9), calendar: calendar)?.start == at(2, 10, 30))
-        #expect(ClassStart.next([ClassStart.Course(file: file, term: nil)], settings: s, now: at(2, 11), calendar: calendar)?.start == at(2, 10, 30))
+        #expect(
+            ClassStart.next([ClassStart.Course(file: file, term: nil)], settings: s, now: at(2, 9), calendar: calendar)?.start
+                == at(2, 10, 30))
+        #expect(
+            ClassStart.next([ClassStart.Course(file: file, term: nil)], settings: s, now: at(2, 11), calendar: calendar)?.start
+                == at(2, 10, 30))
     }
 
     @Test func theLinkedLecturesFromWhereTheLastClassStopped() throws {
@@ -182,8 +191,10 @@ struct ClassStartTests {
             Material(device: device, at: at(1, 9), path: $0, role: MaterialRole(path: $0), status: .classified)
         }
         let (flows, matchings, book) = (file.materials[0].id, file.materials[1].id, file.materials[2].id)
-        file.sessions = [Session(device: device, at: at(1, 9), week: 9, date: at(2, 10, 30) - 7 * 86_400),
-                         Session(device: device, at: at(1, 9), week: 10, date: at(2, 10, 30))]
+        file.sessions = [
+            Session(device: device, at: at(1, 9), week: 9, date: at(2, 10, 30) - 7 * 86_400),
+            Session(device: device, at: at(1, 9), week: 10, date: at(2, 10, 30)),
+        ]
         let (last, now) = (file.sessions[0], file.sessions[1])
         file.linkMaterial(matchings, session: last.id, firstPage: 1, lastPage: 12)
         // Flows through the class's unit, Matchings and the textbook directly.
@@ -266,15 +277,17 @@ struct ClassStartPropertyTests {
 
     /// Where the study day turns over never moves a class.
     @Test func theDayBoundaryNeverChangesTheClass() async {
-        await propertyCheck(input: Self.startMinute, Self.length, Self.minute, Gen.int(in: 0...(8 * 60))) { start, length, minute, boundary in
+        await propertyCheck(input: Self.startMinute, Self.length, Self.minute, Gen.int(in: 0...(8 * 60))) {
+            start, length, minute, boundary in
             var a = Settings()
             a.classStart.lecture = .open
             var b = a
             b.dayBoundaryMinutes = boundary
             let now = monday.addingTimeInterval(Double(minute * 60))
             let courses = [ClassStart.Course(file: file(start: start, length: length), term: nil)]
-            #expect(ClassStart.starting(courses, settings: a, now: now, calendar: calendar)
-                == ClassStart.starting(courses, settings: b, now: now, calendar: calendar))
+            #expect(
+                ClassStart.starting(courses, settings: a, now: now, calendar: calendar)
+                    == ClassStart.starting(courses, settings: b, now: now, calendar: calendar))
         }
     }
 

@@ -11,7 +11,9 @@ struct NoteEditSheet: View {
     }
 
     var body: some View {
-        SheetForm(title: String(localized: .notesEdit), confirm: String(localized: .commonSave), disabled: !model.canSave, note: model.message) {
+        SheetForm(
+            title: String(localized: .notesEdit), confirm: String(localized: .commonSave), disabled: !model.canSave, note: model.message
+        ) {
             FormRow(label: String(localized: .notesRenameField)) {
                 InlineField(String(localized: .notesRenameField), text: $model.name)
             }

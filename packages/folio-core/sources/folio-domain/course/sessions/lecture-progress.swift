@@ -69,7 +69,9 @@ public struct PageRange: Equatable, Sendable {
         // An empty range has no room yet: the page it is given decides it, and a taken page sets nothing.
         if first == nil, last == nil, let page {
             let file = Self.bounds(pages)
-            guard let around = Self.room(at: min(max(page, file.lowerBound), file.upperBound), besides: taken, pages: pages) else { return self }
+            guard let around = Self.room(at: min(max(page, file.lowerBound), file.upperBound), besides: taken, pages: pages) else {
+                return self
+            }
             bounds = around
         }
 
@@ -88,8 +90,14 @@ public struct PageRange: Equatable, Sendable {
         switch (first, last) {
         case (nil, nil):
             return moving(.first, to: page, pages: pages, besides: taken).moving(.last, to: page, pages: pages, besides: taken)
-        case let (f?, nil): return page >= f ? moving(.last, to: page, pages: pages, besides: taken) : PageRange(first: page, last: f).clamped(to: room(besides: taken, pages: pages))
-        case let (nil, l?): return page <= l ? moving(.first, to: page, pages: pages, besides: taken) : PageRange(first: l, last: page).clamped(to: room(besides: taken, pages: pages))
+        case let (f?, nil):
+            return page >= f
+                ? moving(.last, to: page, pages: pages, besides: taken)
+                : PageRange(first: page, last: f).clamped(to: room(besides: taken, pages: pages))
+        case let (nil, l?):
+            return page <= l
+                ? moving(.first, to: page, pages: pages, besides: taken)
+                : PageRange(first: l, last: page).clamped(to: room(besides: taken, pages: pages))
         case let (f?, l?): return moving(abs(page - f) <= abs(page - l) ? .first : .last, to: page, pages: pages, besides: taken)
         }
     }
@@ -194,8 +202,12 @@ extension CourseFile {
     /// Two classes naming the same pages of one lecture file, each pair once with the later class second. A page is
     /// taught once: the second time is a recap, and counting it twice would make the progress read further back than
     /// the class went. Cancelled classes taught nothing and never overlap.
-    public func progressOverlaps() -> [(material: UUID, earlier: (session: Session, pages: ClosedRange<Int>), later: (session: Session, pages: ClosedRange<Int>))] {
-        var out: [(material: UUID, earlier: (session: Session, pages: ClosedRange<Int>), later: (session: Session, pages: ClosedRange<Int>))] = []
+    public func progressOverlaps() -> [(
+        material: UUID, earlier: (session: Session, pages: ClosedRange<Int>), later: (session: Session, pages: ClosedRange<Int>)
+    )] {
+        var out:
+            [(material: UUID, earlier: (session: Session, pages: ClosedRange<Int>), later: (session: Session, pages: ClosedRange<Int>))] =
+                []
         for material in materials where material.role == .lecture {
             let covered = coverage(of: material.id).sorted { Session.inOrder($0.session, $1.session) }
             for (i, a) in covered.enumerated() {
@@ -307,7 +319,8 @@ extension CourseFile {
     func continuingFile(before session: Session, pageCounts: [UUID: Int]) -> UUID? {
         let earlier = sessions.filter { !$0.isCancelled && $0.id != session.id && Session.inOrder($0, session) }.sorted(by: Session.inOrder)
         guard let link = earlier.lazy.reversed().compactMap({ $0.materials.last { $0.pages != nil } }).first,
-              let end = link.pages?.upperBound else { return nil }
+            let end = link.pages?.upperBound
+        else { return nil }
         guard let count = pageCounts[link.materialId], end >= count else { return link.materialId }
 
         let lectures = lectureFiles
@@ -335,6 +348,7 @@ extension Recording {
 extension Session {
     /// `16–18쪽`, or `16쪽` for one page: how a class's pages of a file are written wherever they are shown.
     public static func pagesLabel(_ pages: ClosedRange<Int>) -> String {
-        pages.count == 1 ? String(localized: .sessionPage(pages.lowerBound)) : String(localized: .sessionPages(pages.lowerBound, pages.upperBound))
+        pages.count == 1
+            ? String(localized: .sessionPage(pages.lowerBound)) : String(localized: .sessionPages(pages.lowerBound, pages.upperBound))
     }
 }

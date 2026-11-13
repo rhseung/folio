@@ -36,14 +36,14 @@ private struct Sensitive: ViewModifier {
                         content.redacted(reason: .placeholder)
                     }
                 }
-                    .allowsHitTesting(false)
-                    .overlay { Color.clear.contentShape(.rect).onTapGesture { unlock() } }
-                    .pointingHand()
-                    .help(Text(.designUnlockHelp))
-                    .accessibilityElement()
-                    .accessibilityLabel(Text(.designLockedGrade))
-                    .accessibilityAddTraits(.isButton)
-                    .accessibilityAction { unlock() }
+                .allowsHitTesting(false)
+                .overlay { Color.clear.contentShape(.rect).onTapGesture { unlock() } }
+                .pointingHand()
+                .help(Text(.designUnlockHelp))
+                .accessibilityElement()
+                .accessibilityLabel(Text(.designLockedGrade))
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction { unlock() }
             case .block, nil:
                 content.hidden()
                     .overlay {
@@ -53,8 +53,12 @@ private struct Sensitive: ViewModifier {
                     }
                     .accessibilityHidden(true)
                     .overlay {
-                        Button { unlock() } label: { Label(.commonUnlockGrades, systemImage: "lock.fill") }
-                            .buttonStyle(.pointing(.glass))
+                        Button {
+                            unlock()
+                        } label: {
+                            Label(.commonUnlockGrades, systemImage: "lock.fill")
+                        }
+                        .buttonStyle(.pointing(.glass))
                     }
             }
         }

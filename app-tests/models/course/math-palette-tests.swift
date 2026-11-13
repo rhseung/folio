@@ -4,6 +4,7 @@ import FolioDomain
 import FolioMarkdown
 import Foundation
 import Testing
+
 @testable import Folio
 
 /// Every symbol of a formula without typing its name first (#392): a bare `\` opens the whole list in the edit view's

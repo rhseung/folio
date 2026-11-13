@@ -38,23 +38,31 @@ struct MaterialImportTests {
         let session = UUID()
         try run(SessionAdd(id: session, course: Self.course, date: now))
         let week = try #require(try file().sessions.first { $0.id == session }).week
-        try run(MaterialImport(course: Self.course, items: [
-            ImportItem(file: try download("Hall.pdf"), folder: "Lectures", session: session),
-            ImportItem(file: try download("Diestel.pdf"), folder: "Textbooks"),
-            // Already named for its week: kept, and still linked.
-            ImportItem(file: try download("05-2_König.pdf"), folder: "Lectures", session: session),
-        ]))
+        try run(
+            MaterialImport(
+                course: Self.course,
+                items: [
+                    ImportItem(file: try download("Hall.pdf"), folder: "Lectures", session: session),
+                    ImportItem(file: try download("Diestel.pdf"), folder: "Textbooks"),
+                    // Already named for its week: kept, and still linked.
+                    ImportItem(file: try download("05-2_König.pdf"), folder: "Lectures", session: session),
+                ]))
         let lecture = String(format: "Lectures/%02d_Hall.pdf", week)
         #expect(exists(lecture) && exists("Textbooks/Diestel.pdf") && exists("Lectures/05-2_König.pdf"))
         let f = try file()
-        let linked = Set(try #require(f.sessions.first { $0.id == session }).materials.compactMap { m in f.materials.first { $0.id == m.materialId }?.path })
+        let linked = Set(
+            try #require(f.sessions.first { $0.id == session }).materials.compactMap { m in
+                f.materials.first { $0.id == m.materialId }?.path
+            })
         #expect(linked == [lecture, "Lectures/05-2_König.pdf"])
     }
 
     /// The same name twice, or a name the folder holds, gets ` 2`, ` 3`, never an overwrite.
     @Test func sameNamesAreNumbered() throws {
         let first = try download("05_Matchings.pdf")
-        try run(MaterialImport(course: Self.course, items: [ImportItem(file: first, folder: "Lectures"), ImportItem(file: first, folder: "Lectures")]))
+        try run(
+            MaterialImport(
+                course: Self.course, items: [ImportItem(file: first, folder: "Lectures"), ImportItem(file: first, folder: "Lectures")]))
         #expect(exists("Lectures/05_Matchings 2.pdf") && exists("Lectures/05_Matchings 3.pdf"))
     }
 
@@ -62,13 +70,24 @@ struct MaterialImportTests {
     @Test func oneBlockedItemWritesNothing() throws {
         let good = try download("Notes.pdf")
         #expect(throws: ActionError.self) {
-            try run(MaterialImport(course: Self.course, items: [ImportItem(file: good, folder: "Study"), ImportItem(file: good, folder: "../Elsewhere")]))
+            try run(
+                MaterialImport(
+                    course: Self.course, items: [ImportItem(file: good, folder: "Study"), ImportItem(file: good, folder: "../Elsewhere")]))
         }
         #expect(throws: ActionError.self) {
-            try run(MaterialImport(course: Self.course, items: [ImportItem(file: good, folder: "Study"), ImportItem(file: good, folder: "Study", session: UUID())]))
+            try run(
+                MaterialImport(
+                    course: Self.course,
+                    items: [ImportItem(file: good, folder: "Study"), ImportItem(file: good, folder: "Study", session: UUID())]))
         }
         #expect(throws: ActionError.self) {
-            try run(MaterialImport(course: Self.course, items: [ImportItem(file: good, folder: "Study"), ImportItem(file: outside.appending(path: "gone.pdf").path, folder: "Study")]))
+            try run(
+                MaterialImport(
+                    course: Self.course,
+                    items: [
+                        ImportItem(file: good, folder: "Study"),
+                        ImportItem(file: outside.appending(path: "gone.pdf").path, folder: "Study"),
+                    ]))
         }
         #expect(!exists("Study/Notes.pdf"))
     }

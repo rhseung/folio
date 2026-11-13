@@ -48,21 +48,35 @@ struct LinkTarget: ParsableArguments {
         case .card:
             return try card(r)
         case .session:
-            return try item(r) { c, name in let s = try r.session(name, in: c); return (s.id, c.file.title(of: s, calendar: r.ctx.calendar)) }
+            return try item(r) { c, name in
+                let s = try r.session(name, in: c); return (s.id, c.file.title(of: s, calendar: r.ctx.calendar))
+            }
         case .unit:
-            return try item(r) { c, name in let u = try r.unit(name, in: c); return (u.id, u.title) }
+            return try item(r) { c, name in
+                let u = try r.unit(name, in: c); return (u.id, u.title)
+            }
         case .exam:
-            return try item(r) { c, name in let e = try r.exam(name, in: c); return (e.id, e.title) }
+            return try item(r) { c, name in
+                let e = try r.exam(name, in: c); return (e.id, e.title)
+            }
         case .assignment:
-            return try item(r) { c, name in let a = try r.assignment(name, in: c); return (a.id, a.title) }
+            return try item(r) { c, name in
+                let a = try r.assignment(name, in: c); return (a.id, a.title)
+            }
         case .problemSet:
-            return try item(r) { c, name in let p = try r.problemSet(name, in: c); return (p.id, p.title) }
+            return try item(r) { c, name in
+                let p = try r.problemSet(name, in: c); return (p.id, p.title)
+            }
         case .material:
-            return try item(r) { c, name in let m = try r.material(name, in: c); return (m.id, m.path) }
+            return try item(r) { c, name in
+                let m = try r.material(name, in: c); return (m.id, m.path)
+            }
         case .note:
             return try item(r) { c, name in try note(r, name, in: c) }
         case .recording:
-            return try item(r) { c, name in let rec = try r.recording(name, in: c); return (rec.id, (rec.file as NSString).lastPathComponent) }
+            return try item(r) { c, name in
+                let rec = try r.recording(name, in: c); return (rec.id, (rec.file as NSString).lastPathComponent)
+            }
         }
     }
 
@@ -70,7 +84,8 @@ struct LinkTarget: ParsableArguments {
     func item(_ r: Resolver, find: (CourseRef, String) throws -> (UUID, String)) throws -> Resolved {
         let (c, name) = try r.split(ref)
         let (id, title) = try find(c, name)
-        let anchor: AppLink.Anchor? = try page.map { .page($0) } ?? block.map { .block($0) } ?? heading.map { .heading($0) } ?? time.map(moment)
+        let anchor: AppLink.Anchor? =
+            try page.map { .page($0) } ?? block.map { .block($0) } ?? heading.map { .heading($0) } ?? time.map(moment)
         let link = AppLink(kind, id, anchor: anchor)
         if anchor != nil, link.anchor == nil { throw usage(.linkBadAnchor) }
         return done(link, title: "\(c.code)/\(title)")
@@ -88,8 +103,9 @@ struct LinkTarget: ParsableArguments {
         let file = try r.note(name, in: c)
         let path = c.store.coursePath(of: file.url) ?? file.url.lastPathComponent
         guard let id = file.meta.id else {
-            throw CLIError(exit: .notFound, message: String(localized: .linkNoteWithoutId(path)),
-                           hints: ["folio note adopt \(c.code) \"\(path)\""])
+            throw CLIError(
+                exit: .notFound, message: String(localized: .linkNoteWithoutId(path)),
+                hints: ["folio note adopt \(c.code) \"\(path)\""])
         }
         return (id, file.title)
     }
@@ -126,7 +142,8 @@ struct LinkTarget: ParsableArguments {
 }
 
 struct LinkCommand: ParsableCommand {
-    static let configuration = CommandConfiguration(commandName: "link", abstract: String(localized: .linkAbstract), discussion: String(localized: .linkDiscussion))
+    static let configuration = CommandConfiguration(
+        commandName: "link", abstract: String(localized: .linkAbstract), discussion: String(localized: .linkDiscussion))
     @OptionGroup var g: GlobalOptions
     @OptionGroup var target: LinkTarget
 
@@ -138,7 +155,8 @@ struct LinkCommand: ParsableCommand {
 }
 
 struct OpenCommand: ParsableCommand {
-    static let configuration = CommandConfiguration(commandName: "open", abstract: String(localized: .openAbstract), discussion: String(localized: .openDiscussion))
+    static let configuration = CommandConfiguration(
+        commandName: "open", abstract: String(localized: .openAbstract), discussion: String(localized: .openDiscussion))
     @OptionGroup var g: GlobalOptions
     @OptionGroup var target: LinkTarget
 
@@ -152,7 +170,9 @@ struct OpenCommand: ParsableCommand {
             p.arguments = [AppLink(string: resolved.link)?.url.absoluteString ?? resolved.link]
             try p.run()
             p.waitUntilExit()
-            guard p.terminationStatus == 0 else { throw CLIError(exit: .unexpected, message: String(localized: .openFailed(resolved.link))) }
+            guard p.terminationStatus == 0 else {
+                throw CLIError(exit: .unexpected, message: String(localized: .openFailed(resolved.link)))
+            }
         }
         if g.json { return try printJSON(resolved) }
         say(resolved.link)

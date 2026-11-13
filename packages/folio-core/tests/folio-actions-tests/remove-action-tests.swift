@@ -31,7 +31,9 @@ struct RemoveActionTests {
 
     // Only a unit note keeps units of its own; any other kind would drop them on the way in.
     func note(_ path: String, units: [UUID] = [], exam: UUID? = nil) -> NoteEntry {
-        NoteEntry(id: UUID(), device: device, at: now, path: path, meta: NoteMeta(kind: units.isEmpty ? .free : .unit, unitIds: units, examId: exam))
+        NoteEntry(
+            id: UUID(), device: device, at: now, path: path,
+            meta: NoteMeta(kind: units.isEmpty ? .free : .unit, unitIds: units, examId: exam))
     }
 
     func problems(_ title: String, units: [UUID]) -> ProblemSet {
@@ -81,8 +83,10 @@ struct RemoveActionTests {
             a.unitIds = [unit.id]
             f.assignments.append(a)
             var e = exam
-            e.plan = [ExamPlanItem(day: LocalDate(year: 2026, month: 12, day: 1)!, title: "트리 복습", target: .init(kind: .unit, id: unit.id)),
-                      ExamPlanItem(day: LocalDate(year: 2026, month: 12, day: 2)!, title: "트리 카드", target: .init(kind: .quiz, id: unit.id))]
+            e.plan = [
+                ExamPlanItem(day: LocalDate(year: 2026, month: 12, day: 1)!, title: "트리 복습", target: .init(kind: .unit, id: unit.id)),
+                ExamPlanItem(day: LocalDate(year: 2026, month: 12, day: 2)!, title: "트리 카드", target: .init(kind: .quiz, id: unit.id)),
+            ]
             f.exams.append(e)
         }
 
@@ -154,7 +158,9 @@ struct RemoveActionTests {
     @Test func removingAProblemSetClearsPlanItemsOnIt() throws {
         let set = problems("연습 2", units: [])
         var exam = Exam(device: device, at: now, title: "기말고사")
-        exam.plan = [ExamPlanItem(day: LocalDate(year: 2026, month: 12, day: 1)!, title: "연습 2 풀기", target: .init(kind: .problemSet, id: set.id))]
+        exam.plan = [
+            ExamPlanItem(day: LocalDate(year: 2026, month: 12, day: 1)!, title: "연습 2 풀기", target: .init(kind: .problemSet, id: set.id))
+        ]
         try edit { f in
             f.problemSets.append(set)
             f.exams.append(exam)

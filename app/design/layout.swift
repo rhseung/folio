@@ -355,17 +355,22 @@ struct BlockHeading: Layout {
 
         title.place(at: CGPoint(x: bounds.minX, y: bounds.minY), proposal: ProposedViewSize(width: p.titleWidth, height: nil))
         let actionBaseline = action.dimensions(in: .unspecified)[VerticalAlignment.firstTextBaseline]
-        action.place(at: CGPoint(x: bounds.maxX - actionSize.width, y: bounds.minY + max(0, baseline - actionBaseline)), proposal: .unspecified)
+        action.place(
+            at: CGPoint(x: bounds.maxX - actionSize.width, y: bounds.minY + max(0, baseline - actionBaseline)), proposal: .unspecified)
         let noteProposal = ProposedViewSize(width: p.oneLine ? note.sizeThatFits(.unspecified).width : bounds.width, height: nil)
         if p.oneLine {
             let noteBaseline = note.dimensions(in: noteProposal)[VerticalAlignment.firstTextBaseline]
-            note.place(at: CGPoint(x: bounds.minX + titleSize.width + spacing, y: bounds.minY + max(0, baseline - noteBaseline)), proposal: noteProposal)
+            note.place(
+                at: CGPoint(x: bounds.minX + titleSize.width + spacing, y: bounds.minY + max(0, baseline - noteBaseline)),
+                proposal: noteProposal)
         } else {
             note.place(at: CGPoint(x: bounds.minX, y: bounds.minY + p.lineHeight + lineSpacing), proposal: noteProposal)
         }
     }
 
-    private func plan(_ offered: CGFloat?, _ subviews: Subviews) -> (width: CGFloat, height: CGFloat, titleWidth: CGFloat, oneLine: Bool, lineHeight: CGFloat) {
+    private func plan(_ offered: CGFloat?, _ subviews: Subviews) -> (
+        width: CGFloat, height: CGFloat, titleWidth: CGFloat, oneLine: Bool, lineHeight: CGFloat
+    ) {
         let (title, note, action) = (subviews[0], subviews[1], subviews[2])
         let t = title.sizeThatFits(.unspecified), n = note.sizeThatFits(.unspecified), a = action.sizeThatFits(.unspecified)
         let hasNote = n.width > 0, hasAction = a.width > 0
@@ -376,7 +381,9 @@ struct BlockHeading: Layout {
         let room = width - (hasAction ? spacing + a.width : 0)
         let titleWidth = min(t.width, oneLine ? room - (hasNote ? spacing + n.width : 0) : room)
         let lineHeight = max(title.sizeThatFits(ProposedViewSize(width: max(titleWidth, 0), height: nil)).height, a.height)
-        let height = oneLine ? max(lineHeight, n.height) : lineHeight + lineSpacing + note.sizeThatFits(ProposedViewSize(width: width, height: nil)).height
+        let height =
+            oneLine
+            ? max(lineHeight, n.height) : lineHeight + lineSpacing + note.sizeThatFits(ProposedViewSize(width: width, height: nil)).height
         return (width, height, max(titleWidth, 0), oneLine, lineHeight)
     }
 }
@@ -481,20 +488,23 @@ struct FolderPart: Shape {
 
     /// Points per template unit and the stroke, per point of type size: found by fitting the drawn closed folder to the
     /// 160pt medium `folder` (2.05 canvas px a unit, a 13px stroke), which is not the small template scaled evenly.
-    static let unit: CGFloat = 2.05 / 160 // design: one-off, fitted to the folder symbol
-    static let stroke: CGFloat = 13 / 160 // design: one-off, fitted to the folder symbol
+    static let unit: CGFloat = 2.05 / 160  // design: one-off, fitted to the folder symbol
+    static let stroke: CGFloat = 13 / 160  // design: one-off, fitted to the folder symbol
     /// Sits at the middle of the symbol's image.
     static let middle = CGPoint(x: 53.54, y: -35.51)
-    static let left: CGFloat = 13.28, right: CGFloat = 93.8, bottom: CGFloat = -3.64, top: CGFloat = -60.4, tabTop: CGFloat = -67.38 // design: one-off, folder template units
+    static let left: CGFloat = 13.28, right: CGFloat = 93.8, bottom: CGFloat = -3.64  // design: one-off, folder template units
+    static let top: CGFloat = -60.4, tabTop: CGFloat = -67.38  // design: one-off, folder template units
     /// The bar inside the closed folder becomes the open front's top edge, which leans `lean` to the right.
-    static let bar: CGFloat = -48.7, barLeft: CGFloat = 25.2, barRight: CGFloat = 81.9 // design: one-off, folder template units
-    static let flapTop: CGFloat = -44, lean: CGFloat = 8, corner: CGFloat = 9 // design: one-off, folder template units
+    static let bar: CGFloat = -48.7, barLeft: CGFloat = 25.2, barRight: CGFloat = 81.9  // design: one-off, folder template units
+    static let flapTop: CGFloat = -44, lean: CGFloat = 8, corner: CGFloat = 9  // design: one-off, folder template units
     /// The open front's corners: rounded on top, and at the foot where it meets the back's side.
-    static let round: CGFloat = 6, foot: CGFloat = 7 // design: one-off, folder template units
+    static let round: CGFloat = 6, foot: CGFloat = 7  // design: one-off, folder template units
 
     func path(in rect: CGRect) -> Path {
         let u = Self.unit * Theme.Glyph.lineSize
-        func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: rect.midX + (x - Self.middle.x) * u, y: rect.midY + (y - Self.middle.y) * u) }
+        func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
+            CGPoint(x: rect.midX + (x - Self.middle.x) * u, y: rect.midY + (y - Self.middle.y) * u)
+        }
         func mix(_ a: CGFloat, _ b: CGFloat) -> CGFloat { a + (b - a) * t }
         let edgeY = mix(Self.bar, Self.flapTop)
         let tl = pt(Self.left + Self.lean * t, edgeY), tr = pt(Self.right + Self.lean * t, edgeY)
@@ -564,7 +574,9 @@ struct LineIcon: View {
 
     var body: some View {
         ZStack {
-            if filled || duotone, Self.hasFill(symbol) { glyph(symbol + ".fill").opacity(filled ? Theme.Opacity.innerFill : Theme.Opacity.duotone) }
+            if filled || duotone, Self.hasFill(symbol) {
+                glyph(symbol + ".fill").opacity(filled ? Theme.Opacity.innerFill : Theme.Opacity.duotone)
+            }
             glyph(symbol)
         }
     }
@@ -645,11 +657,13 @@ private struct OverflowFade: ViewModifier {
     func body(content: Content) -> some View {
         let vertical = axis == .vertical
         let (start, end): (Edge.Set, Edge.Set) = vertical ? (.top, .bottom) : (.leading, .trailing)
-        return content
+        return
+            content
             // Not .hidden: with scroll bars set to always show, that still reserved the bar's height below a row.
             .scrollIndicators(.never)
             .onScrollGeometryChange(for: Edge.Set.self) { g in
-                let (offset, visible, size) = vertical
+                let (offset, visible, size) =
+                    vertical
                     ? (g.visibleRect.minY, g.visibleRect.maxY, g.contentSize.height)
                     : (g.visibleRect.minX, g.visibleRect.maxX, g.contentSize.width)
                 var past = Edge.Set()

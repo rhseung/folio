@@ -70,7 +70,9 @@ final class NoteEditModel {
     var pdf: BuiltPDFMove? { relocates ? targetURL.flatMap { course.store.builtPDFMove(of: note, to: $0, in: course.file) } : nil }
 
     var pdfName: String? { pdf.map { $0.blocked ? $0.from : $0.to } }
-    var pdfDetail: String? { pdf.map { $0.blocked ? String(localized: .notesRenamePdfStays($0.to)) : String(localized: .notesRenamePdfFollows($0.from)) } }
+    var pdfDetail: String? {
+        pdf.map { $0.blocked ? String(localized: .notesRenamePdfStays($0.to)) : String(localized: .notesRenamePdfFollows($0.from)) }
+    }
 
     /// The syntax first: it is kept by the note's ID, which a move leaves as it is.
     func apply() -> Bool {

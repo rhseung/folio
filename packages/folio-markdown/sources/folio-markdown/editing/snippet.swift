@@ -44,7 +44,9 @@ public struct Snippet: Equatable, Sendable {
     /// are a command's name.
     public static func match(_ snippets: [Snippet], in text: NSString, caret: Int, place: SourcePlace) -> (Snippet, NSRange)? {
         guard !place.isCode else { return nil }
-        let candidates = snippets.filter { $0.inMath == place.isMath && !$0.trigger.isEmpty }.sorted { $0.trigger.utf16.count > $1.trigger.utf16.count }
+        let candidates = snippets.filter { $0.inMath == place.isMath && !$0.trigger.isEmpty }.sorted {
+            $0.trigger.utf16.count > $1.trigger.utf16.count
+        }
         for snippet in candidates {
             let n = snippet.trigger.utf16.count
             guard caret >= n, text.substring(with: NSRange(location: caret - n, length: n)) == snippet.trigger else { continue }
@@ -54,7 +56,10 @@ public struct Snippet: Equatable, Sendable {
                 let before = text.character(at: start - 1)
                 if before == 0x5C { continue }
                 if let first = snippet.trigger.unicodeScalars.first, CharacterSet.letters.contains(first),
-                   let scalar = Unicode.Scalar(before), CharacterSet.alphanumerics.contains(scalar) { continue }
+                    let scalar = Unicode.Scalar(before), CharacterSet.alphanumerics.contains(scalar)
+                {
+                    continue
+                }
             }
             return (snippet, NSRange(location: start, length: n))
         }

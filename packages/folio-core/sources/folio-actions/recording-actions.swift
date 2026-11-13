@@ -3,10 +3,11 @@ import FolioStorage
 import Foundation
 
 /// Bookmarks stay with the transcripts, and a recording with no transcript keeps its audio (`RecordingRetention`).
-@Action("recording trim", "지난 학기 녹음의 오디오를 휴지통으로 옮기고 받아쓰기는 남기기",
-        discussion: "받아쓰기가 없는 녹음은 오디오를 남긴다. 휴지통에서 되살릴 수 있다.", effect: .removes,
-        confirm: "{semester}의 녹음 오디오를 휴지통으로 옮깁니다. 받아쓰기는 남습니다.", done: "{semester}의 녹음 오디오를 휴지통으로 옮겼습니다",
-        examples: ["folio recording trim 2026-1 --dry-run"], phrases: ["녹음 용량", "녹음 정리", "오디오 지우기", "지난 학기 녹음"])
+@Action(
+    "recording trim", "지난 학기 녹음의 오디오를 휴지통으로 옮기고 받아쓰기는 남기기",
+    discussion: "받아쓰기가 없는 녹음은 오디오를 남긴다. 휴지통에서 되살릴 수 있다.", effect: .removes,
+    confirm: "{semester}의 녹음 오디오를 휴지통으로 옮깁니다. 받아쓰기는 남습니다.", done: "{semester}의 녹음 오디오를 휴지통으로 옮겼습니다",
+    examples: ["folio recording trim 2026-1 --dry-run"], phrases: ["녹음 용량", "녹음 정리", "오디오 지우기", "지난 학기 녹음"])
 public struct RecordingTrim {
     /// 학기. 2026-1 또는 "2026 spring"
     @Arg var semester: Semester.ID
@@ -45,11 +46,13 @@ public struct RecordingTrim {
 /// Renames recordings still named `3주차-1.m4a` after their class's day, as new ones are named (#325). The audio and
 /// its transcript move as one `moves.jsonl` batch (`made`); `cleanup undo` of it puts them back, and the entries follow
 /// both ways.
-@Action("recording retitle", "예전 이름(3주차-1)의 녹음 파일을 날짜 이름(11-03(화))으로 바꾸기. 받아쓰기 파일도 함께 바뀐다",
-        discussion: #"회차에 연결된 녹음 중 파일 이름이 아직 `3주차-1.m4a`, `3주차-1 2.m4a`인 것만 그 수업 날짜(`11-03(화).m4a`)로 바꾼다. 같은 날 녹음이 둘이면 뒤에 " 2"를 붙인다. 직접 지은 이름과 회차 없는 녹음은 그대로 둔다. 오디오와 받아쓰기(.transcript.json)는 moves.jsonl에 한 묶음으로 남고, folio cleanup undo로 함께 되돌린다. 실제 폴더에서는 folio backup create로 백업한 뒤 --dry-run으로 먼저 본다."#,
-        effect: .moves, confirm: "녹음 파일의 이름을 날짜로 바꿉니다.", done: "녹음 파일의 이름을 바꿨습니다",
-        examples: ["folio recording retitle --dry-run", "folio recording retitle EC4207"],
-        phrases: ["녹음 이름 날짜로", "예전 녹음 이름 바꾸기", "주차 이름 녹음"], undoable: true)
+@Action(
+    "recording retitle", "예전 이름(3주차-1)의 녹음 파일을 날짜 이름(11-03(화))으로 바꾸기. 받아쓰기 파일도 함께 바뀐다",
+    discussion:
+        #"회차에 연결된 녹음 중 파일 이름이 아직 `3주차-1.m4a`, `3주차-1 2.m4a`인 것만 그 수업 날짜(`11-03(화).m4a`)로 바꾼다. 같은 날 녹음이 둘이면 뒤에 " 2"를 붙인다. 직접 지은 이름과 회차 없는 녹음은 그대로 둔다. 오디오와 받아쓰기(.transcript.json)는 moves.jsonl에 한 묶음으로 남고, folio cleanup undo로 함께 되돌린다. 실제 폴더에서는 folio backup create로 백업한 뒤 --dry-run으로 먼저 본다."#,
+    effect: .moves, confirm: "녹음 파일의 이름을 날짜로 바꿉니다.", done: "녹음 파일의 이름을 바꿨습니다",
+    examples: ["folio recording retitle --dry-run", "folio recording retitle EC4207"],
+    phrases: ["녹음 이름 날짜로", "예전 녹음 이름 바꾸기", "주차 이름 녹음"], undoable: true)
 public struct RecordingRetitleLegacy {
     /// 과목. 빼면 모든 과목
     @Arg var course: Course.ID?
@@ -97,17 +100,21 @@ enum RecordingFiles {
     static func follow(_ moves: [PlannedMove], _ ctx: ActionContext) throws {
         for store in try ctx.gist.courseStores() {
             let prefix = ctx.relative(store.url) + "/"
-            let byPath = Dictionary(moves.filter { $0.from.hasPrefix(prefix) && $0.to.hasPrefix(prefix) }
-                .map { (String($0.from.dropFirst(prefix.count)), String($0.to.dropFirst(prefix.count))) }, uniquingKeysWith: { a, _ in a })
+            let byPath = Dictionary(
+                moves.filter { $0.from.hasPrefix(prefix) && $0.to.hasPrefix(prefix) }
+                    .map { (String($0.from.dropFirst(prefix.count)), String($0.to.dropFirst(prefix.count))) },
+                uniquingKeysWith: { a, _ in a })
             guard !byPath.isEmpty else { continue }
             let course = try store.load().model.course.id
             try ctx.edit(course) { f in
                 for i in f.recordings.indices {
                     let r = f.recordings[i]
-                    let file = byPath[r.file] ?? byPath[r.transcriptFile].flatMap { to in
-                        to.hasSuffix(Recording.transcriptSuffix)
-                            ? String(to.dropLast(Recording.transcriptSuffix.count)) + "." + (r.file as NSString).pathExtension : nil
-                    }
+                    let file =
+                        byPath[r.file]
+                        ?? byPath[r.transcriptFile].flatMap { to in
+                            to.hasSuffix(Recording.transcriptSuffix)
+                                ? String(to.dropLast(Recording.transcriptSuffix.count)) + "." + (r.file as NSString).pathExtension : nil
+                        }
                     guard let file, file != r.file else { continue }
                     f.recordings[i].file = file
                     f.recordings[i].touch(by: ctx.device, at: ctx.now)

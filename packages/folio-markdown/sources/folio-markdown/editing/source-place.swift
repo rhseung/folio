@@ -47,7 +47,10 @@ public enum SourcePlace: Equatable, Sendable {
             } else if let start = mathStart {
                 let closes = s.trimmingCharacters(in: .whitespaces).hasSuffix("$$")
                 if here {
-                    let end = closes ? content.location + (s as NSString).range(of: "$$", options: .backwards).location : SourceLines.blockEnd(text, after: line)
+                    let end =
+                        closes
+                        ? content.location + (s as NSString).range(of: "$$", options: .backwards).location
+                        : SourceLines.blockEnd(text, after: line)
                     if caret > end { return .text }
                     return .math(display: true, content: NSRange(location: start, length: max(0, end - start)))
                 }
@@ -63,7 +66,11 @@ public enum SourcePlace: Equatable, Sendable {
                 if here {
                     // `$|$`: an empty inline pair at the line's start, not a block.
                     guard caret >= bodyStart else { return inline(s, from: content.location, caret: caret) }
-                    guard closed else { return .math(display: true, content: NSRange(location: bodyStart, length: SourceLines.blockEnd(text, after: line) - bodyStart)) }
+                    guard closed else {
+                        return .math(
+                            display: true,
+                            content: NSRange(location: bodyStart, length: SourceLines.blockEnd(text, after: line) - bodyStart))
+                    }
                     let end = content.location + (s as NSString).range(of: "$$", options: .backwards).location
                     return caret <= end ? .math(display: true, content: NSRange(location: bodyStart, length: end - bodyStart)) : .text
                 }

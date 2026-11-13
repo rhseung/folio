@@ -1,5 +1,6 @@
 import AppKit
 import FolioDomain
+
 @testable import Folio
 
 /// Lays a note view out in a window that's never shown, and writes it to `FOLIO_NOTE_RENDER` as a PNG when set.
@@ -7,7 +8,8 @@ import FolioDomain
     static let fixtures = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appending(path: "fixtures")
 
     static func host(_ view: NSTextView, width: CGFloat = 900, dark: Bool = false) -> NSWindow {
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: width, height: 800), styleMask: [.borderless], backing: .buffered, defer: false)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: width, height: 800), styleMask: [.borderless], backing: .buffered, defer: false)
         window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
         let scroll = NoteScrollView(document: view)
         scroll.frame = window.contentView!.bounds
@@ -35,7 +37,8 @@ import FolioDomain
     /// Where the caret is drawn at `offset`, in the text container.
     static func caret(_ view: NSTextView, at offset: Int) -> CGRect? {
         guard let manager = view.textLayoutManager, let storage = view.textStorage,
-              let location = manager.location(manager.documentRange.location, offsetBy: offset) else { return nil }
+            let location = manager.location(manager.documentRange.location, offsetBy: offset)
+        else { return nil }
         var rect: CGRect?
         manager.enumerateTextSegments(in: NSTextRange(location: location), type: .selection, options: .rangeNotRequired) { _, r, _, _ in
             rect = r
@@ -47,8 +50,9 @@ import FolioDomain
     /// The laid-out line holding `offset`, not the paragraph's first: a paragraph wraps into several.
     static func line(_ view: NSTextView, at offset: Int) -> (fragment: NSTextLayoutFragment, line: NSTextLineFragment)? {
         guard let manager = view.textLayoutManager,
-              let location = manager.location(manager.documentRange.location, offsetBy: offset),
-              let fragment = manager.textLayoutFragment(for: location) else { return nil }
+            let location = manager.location(manager.documentRange.location, offsetBy: offset),
+            let fragment = manager.textLayoutFragment(for: location)
+        else { return nil }
         let inFragment = offset - manager.offset(from: manager.documentRange.location, to: fragment.rangeInElement.location)
         return fragment.textLineFragments.first { NSLocationInRange(inFragment, $0.characterRange) }.map { (fragment, $0) }
     }
@@ -56,7 +60,8 @@ import FolioDomain
     /// Where the text on the line holding `offset` is drawn, its font's ascender to its descender, in the text container.
     static func text(_ view: NSTextView, at offset: Int) -> ClosedRange<CGFloat>? {
         guard let (fragment, line) = Self.line(view, at: offset),
-              let font = view.textStorage?.attribute(.font, at: offset, effectiveRange: nil) as? NSFont else { return nil }
+            let font = view.textStorage?.attribute(.font, at: offset, effectiveRange: nil) as? NSFont
+        else { return nil }
         let baseline = fragment.layoutFragmentFrame.minY + line.typographicBounds.minY + line.glyphOrigin.y
         return (baseline - font.ascender)...(baseline - font.descender)
     }
@@ -74,8 +79,10 @@ import FolioDomain
     /// the `note-sheets` artifact: a folder of its own, so `mise run note-screens` doesn't take a sheet for a reference.
     static func sheet(_ rows: [(String, [NSBitmapImageRep])], columns: [String], dark: Bool, _ name: String) {
         let environment = ProcessInfo.processInfo.environment
-        guard let dir = environment["FOLIO_NOTE_RENDER"] ?? environment["FOLIO_NOTE_SCREENS"].flatMap({ $0.isEmpty ? nil : "\($0)/sheets" }),
-              let scale = rows.first?.1.first.map({ CGFloat($0.pixelsWide) / $0.size.width }) else { return }
+        guard
+            let dir = environment["FOLIO_NOTE_RENDER"] ?? environment["FOLIO_NOTE_SCREENS"].flatMap({ $0.isEmpty ? nil : "\($0)/sheets" }),
+            let scale = rows.first?.1.first.map({ CGFloat($0.pixelsWide) / $0.size.width })
+        else { return }
         try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
         let gap: CGFloat = 8, labelWidth: CGFloat = 112, titleHeight: CGFloat = 28, widest: CGFloat = 360
         let narrow = rows.filter { $0.1.allSatisfy { $0.size.width <= widest } }
@@ -97,9 +104,12 @@ import FolioDomain
             }
         }
         let size = CGSize(width: width, height: y)
-        guard let out = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(size.width * scale), pixelsHigh: Int(size.height * scale),
-                                         bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
-                                         bytesPerRow: 0, bitsPerPixel: 0) else { return }
+        guard
+            let out = NSBitmapImageRep(
+                bitmapDataPlanes: nil, pixelsWide: Int(size.width * scale), pixelsHigh: Int(size.height * scale),
+                bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
+                bytesPerRow: 0, bitsPerPixel: 0)
+        else { return }
         // Before the context is made: it takes the rep's points, and drew at one pixel a point otherwise.
         out.size = size
         guard let context = NSGraphicsContext(bitmapImageRep: out) else { return }
@@ -110,9 +120,12 @@ import FolioDomain
         NSAppearance(named: dark ? .darkAqua : .aqua)?.performAsCurrentDrawingAppearance {
             NoteLook.card.setFill()
             NSRect(origin: .zero, size: size).fill()
-            let type: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 12, weight: .semibold), .foregroundColor: NoteLook.text2]
+            let type: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(ofSize: 12, weight: .semibold), .foregroundColor: NoteLook.text2,
+            ]
             for (i, title) in columns.enumerated() {
-                (title as NSString).draw(at: flip(CGPoint(x: labelWidth + CGFloat(i) * (column + gap) + 12, y: gap), 16), withAttributes: type)
+                (title as NSString).draw(
+                    at: flip(CGPoint(x: labelWidth + CGFloat(i) * (column + gap) + 12, y: gap), 16), withAttributes: type)
             }
             for (label, at) in labels { (label as NSString).draw(at: flip(at, 16), withAttributes: type) }
             for (cell, at) in placed { cell.draw(in: NSRect(origin: flip(at, cell.size.height), size: cell.size)) }

@@ -17,7 +17,8 @@ struct SuggestedSessionRow: View {
         let today = workspace.isStudyToday(date)
         HStack(spacing: Theme.Space.m) {
             if showsCourse {
-                Text(date.formatted(date: .omitted, time: .shortened)).timeColumn().font(Theme.Typeface.caption).monospacedDigit().fixedSize()
+                Text(date.formatted(date: .omitted, time: .shortened)).timeColumn().font(Theme.Typeface.caption).monospacedDigit()
+                    .fixedSize()
                 CourseMark(workspace, item.courseId)
                 // Today's own list: the day goes without saying.
                 Text(workspace.course(item.courseId)?.title ?? "").lineLimit(1)
@@ -44,7 +45,10 @@ struct SuggestedSessionRow: View {
         .padding(.horizontal, Theme.Space.l)
         .padding(.vertical, Theme.Space.s)
         .frame(maxWidth: .infinity, minHeight: Theme.Size.rowHeight, alignment: .leading)
-        .overlay(RoundedRectangle(cornerRadius: Theme.Radius.card).strokeBorder(Theme.Palette.lineStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 4])))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.card).strokeBorder(
+                Theme.Palette.lineStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+        )
         .opacity(today ? 1 : 0.85)
         .contentShape(.rect)
         .contextMenu { SuggestedSessionItems(item: item, primary: true, openNote: openNote, editTimes: editTimes) }
@@ -64,15 +68,23 @@ struct SuggestedSessionActions: View {
     var body: some View {
         HStack(spacing: Theme.Space.s) {
             if menu.isToday(item) {
-                Button { if let id = menu.roughNote(item) { openNote(id) } } label: {
-                    if compact { Image(systemName: "square.and.pencil").accessibilityLabel(Text(.sessionsRoughNote)) } else { Text(.sessionsRoughNote) }
+                Button {
+                    if let id = menu.roughNote(item) { openNote(id) }
+                } label: {
+                    if compact {
+                        Image(systemName: "square.and.pencil").accessibilityLabel(Text(.sessionsRoughNote))
+                    } else {
+                        Text(.sessionsRoughNote)
+                    }
                 }
                 .buttonStyle(.prominent)
                 .help(Text(.sessionsRoughNoteHelp))
             } else {
                 Button(.sessionsMake) { menu.make(item) }.buttonStyle(.pointing(.bordered))
             }
-            Menu { SuggestedSessionItems(item: item, primary: false, openNote: openNote, editTimes: editTimes) } label: {
+            Menu {
+                SuggestedSessionItems(item: item, primary: false, openNote: openNote, editTimes: editTimes)
+            } label: {
                 Image(systemName: "ellipsis").foregroundStyle(Theme.Palette.textSecondary).frame(width: 24, height: 24).contentShape(.rect)
             }
             .menuStyle(.button)
@@ -88,6 +100,8 @@ extension View {
     // As wide as the widest time in the column's font: a fixed width truncated or wrapped `오후 1:00`.
     // Verbatim: it is a measuring sample of the formatted time, never shown.
     func timeColumn() -> some View {
-        ZStack(alignment: .leading) { Text(verbatim: "오후 12:00").hidden(); self }.lineLimit(1)
+        ZStack(alignment: .leading) {
+            Text(verbatim: "오후 12:00").hidden(); self
+        }.lineLimit(1)
     }
 }

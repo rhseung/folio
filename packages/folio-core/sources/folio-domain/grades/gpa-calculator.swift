@@ -24,7 +24,9 @@ public enum GPACalculator {
         public static let zero = Summary(totalCredits: 0, effectiveCredits: 0, gradePoints: 0)
 
         static func + (a: Self, b: Self) -> Self {
-            Summary(totalCredits: a.totalCredits + b.totalCredits, effectiveCredits: a.effectiveCredits + b.effectiveCredits, gradePoints: a.gradePoints + b.gradePoints)
+            Summary(
+                totalCredits: a.totalCredits + b.totalCredits, effectiveCredits: a.effectiveCredits + b.effectiveCredits,
+                gradePoints: a.gradePoints + b.gradePoints)
         }
     }
 
@@ -52,7 +54,8 @@ public enum GPACalculator {
 
     /// Credited terms (인정학기) add their hours to total credits only.
     public static func cumulative(semesters: [Semester], courses: [Course], catalog: Catalog) -> Summary {
-        var result = summary(of: courses.filter { c in semesters.contains { $0.id == c.semesterId && $0.term != .credited } }, catalog: catalog)
+        var result = summary(
+            of: courses.filter { c in semesters.contains { $0.id == c.semesterId && $0.term != .credited } }, catalog: catalog)
         result.totalCredits += semesters.filter { $0.term == .credited }.compactMap(\.creditedHours).reduce(0, +)
         return result
     }
@@ -68,9 +71,11 @@ public enum GPACalculator {
     /// GPA of one declared program (EC 주전공, AI 복수전공): courses in a category that belongs to it. A course marked as
     /// not counting toward a major stays out.
     public static func program(_ codeId: UUID, courses: [Course], catalog: Catalog) -> Summary {
-        summary(of: courses.filter { course in
-            course.countsTowardMajor != false && course.categoryIds.contains { catalog.category($0).flatMap(catalog.program(of:)) == codeId }
-        }, catalog: catalog)
+        summary(
+            of: courses.filter { course in
+                course.countsTowardMajor != false
+                    && course.categoryIds.contains { catalog.category($0).flatMap(catalog.program(of:)) == codeId }
+            }, catalog: catalog)
     }
 
     /// Credits a program still needs: the minimums of its top-level categories less the credits graded so far.
@@ -78,7 +83,8 @@ public enum GPACalculator {
     public static func programRemaining(_ codeId: UUID, courses: [Course], catalog: Catalog) -> Double {
         let credits = categoryCredits(courses: courses, catalog: catalog)
         return catalog.categories
-            .filter { c in catalog.program(of: c) == codeId && c.parentId.flatMap(catalog.category).flatMap(catalog.program(of:)) != codeId }
+            .filter { c in catalog.program(of: c) == codeId && c.parentId.flatMap(catalog.category).flatMap(catalog.program(of:)) != codeId
+            }
             .reduce(0) { $0 + max(0, ($1.minCredits ?? 0) - (credits[$1.id]?.earned ?? 0)) }
     }
 

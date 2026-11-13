@@ -63,9 +63,12 @@ final class ReviewModel {
         let lectures = Self.lectures(of: unit, in: course.file).map { m, page in
             Source(id: .lecture(m.id), title: (m.path as NSString).lastPathComponent, symbol: "doc.richtext", beside: true, page: page)
         }
-        sources = notes.map { n in
-            Source(id: .note(n.url), title: "\(n.meta.kind.label) · \(n.title)", symbol: n.meta.kind == .rough ? "pencil.line" : "doc.text", beside: n.meta.kind == .rough)
-        } + lectures
+        sources =
+            notes.map { n in
+                Source(
+                    id: .note(n.url), title: "\(n.meta.kind.label) · \(n.title)",
+                    symbol: n.meta.kind == .rough ? "pencil.line" : "doc.text", beside: n.meta.kind == .rough)
+            } + lectures
         main = (sources.first { !$0.beside } ?? sources.first)?.id
         side = nil
     }
@@ -80,7 +83,9 @@ final class ReviewModel {
                 return sessions.first { $0.id == id }
             }.first
             // A split lecture opens at the unit's own pages, not at the deck's first page.
-            let page = via?.materials.first { $0.materialId == item.material.id }?.firstPage ?? file.pages(of: unit.id, in: item.material.id)?.lowerBound
+            let page =
+                via?.materials.first { $0.materialId == item.material.id }?.firstPage
+                ?? file.pages(of: unit.id, in: item.material.id)?.lowerBound
             return (material: item.material, session: via, page: page)
         }
 
@@ -98,7 +103,8 @@ final class ReviewModel {
 
     /// What clicking the source's chip does; nil for the note in the main pane.
     func action(for source: Source) -> String? {
-        source.id == main ? nil
+        source.id == main
+            ? nil
             : String(localized: source.id == side ? .reviewSourceCloseSide : source.beside ? .reviewSourceOpenSide : .reviewSourceSwitch)
     }
 
@@ -116,9 +122,10 @@ final class ReviewModel {
     /// without a cycle has no day to show.
     func outcomes(now: Date) -> [ReviewResult: String] {
         let hasCycle = workspace.reviewStates(of: courseId, now: now)[unitId] != nil
-        return Dictionary(uniqueKeysWithValues: Self.results.map { result in
-            (result, nextReview(result: result, now: now)?.shortLabel ?? (hasCycle ? String(localized: .reviewDone) : " "))
-        })
+        return Dictionary(
+            uniqueKeysWithValues: Self.results.map { result in
+                (result, nextReview(result: result, now: now)?.shortLabel ?? (hasCycle ? String(localized: .reviewDone) : " "))
+            })
     }
 
     static let results: [ReviewResult] = [.again, .hard, .good, .easy]

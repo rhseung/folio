@@ -9,9 +9,11 @@ struct UnitCommand: ParsableCommand {
         subcommands: [List.self, Show.self] + GeneratedCommands.unit + [Move.self, Pages.self])
 
     struct List: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .unitListAbstract), discussion: String(localized: .unitListDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .unitListAbstract), discussion: String(localized: .unitListDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .unitListHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String = ""
+        @Argument(help: ArgumentHelp(String(localized: .unitListHelpCourse), valueName: "course"), completion: .custom(Complete.courses))
+        var course: String = ""
         @Option(help: ArgumentHelp(String(localized: .unitListHelpDepth), valueName: "depth")) var depth: Int?
         @Flag(help: ArgumentHelp(String(localized: .commonHelpLines))) var lines = false
 
@@ -27,16 +29,21 @@ struct UnitCommand: ParsableCommand {
             }
             courseHeader(c, catalog: try? r.ctx.catalog())
             for (i, item) in outline.enumerated() {
-                say(treePrefix(outline.map(\.depth), at: i) + item.unit.title + (item.unit.sessionIds.isEmpty ? "" : String(localized: .unitListSessionsIndented(item.unit.sessionIds.count)).styled(.dim)))
+                say(
+                    treePrefix(outline.map(\.depth), at: i) + item.unit.title
+                        + (item.unit.sessionIds.isEmpty
+                            ? "" : String(localized: .unitListSessionsIndented(item.unit.sessionIds.count)).styled(.dim)))
             }
             footer(outline.count)
         }
     }
 
     struct Show: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .unitShowAbstract), discussion: String(localized: .unitShowDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .unitShowAbstract), discussion: String(localized: .unitShowDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .unitShowHelpUnit), valueName: "unit"), completion: Complete.units) var unit: String = ""
+        @Argument(help: ArgumentHelp(String(localized: .unitShowHelpUnit), valueName: "unit"), completion: Complete.units) var unit:
+            String = ""
 
         func run() throws {
             let r = Resolver(try CLI.context(g))
@@ -46,14 +53,26 @@ struct UnitCommand: ParsableCommand {
             let f = c.file
             courseHeader(c, catalog: try? r.ctx.catalog())
             say(u.title.styled(.bold))
-            if let parent = u.parentId.flatMap({ id in f.units.first { $0.id == id } }) { say(String(localized: .unitShowParent(parent.title))) }
+            if let parent = u.parentId.flatMap({ id in f.units.first { $0.id == id } }) {
+                say(String(localized: .unitShowParent(parent.title)))
+            }
             let children = f.units.filter { $0.parentId == u.id }.sorted { $0.order < $1.order }
-            for (title, names) in [(String(localized: .unitShowChildren), children.map(\.title)),
-                                   (String(localized: .unitShowSessions), u.sessionIds.compactMap { id in f.sessions.first { $0.id == id }.map { f.reference(of: $0, calendar: r.ctx.calendar) } }),
-                                   (String(localized: .unitShowExams), u.examIds.compactMap { id in f.exams.first { $0.id == id }?.title }),
-                                   (String(localized: .unitShowPages), u.lecturePages.compactMap { p in
-                                       f.materials.first { $0.id == p.materialId }.map { "\(($0.path as NSString).lastPathComponent) p.\(p.firstPage)-\(p.lastPage)" }
-                                   })] where !names.isEmpty {
+            for (title, names) in [
+                (String(localized: .unitShowChildren), children.map(\.title)),
+                (
+                    String(localized: .unitShowSessions),
+                    u.sessionIds.compactMap { id in f.sessions.first { $0.id == id }.map { f.reference(of: $0, calendar: r.ctx.calendar) } }
+                ),
+                (String(localized: .unitShowExams), u.examIds.compactMap { id in f.exams.first { $0.id == id }?.title }),
+                (
+                    String(localized: .unitShowPages),
+                    u.lecturePages.compactMap { p in
+                        f.materials.first { $0.id == p.materialId }.map {
+                            "\(($0.path as NSString).lastPathComponent) p.\(p.firstPage)-\(p.lastPage)"
+                        }
+                    }
+                ),
+            ] where !names.isEmpty {
                 say("  \(title)")
                 for n in names { say("    \(n)") }
             }
@@ -61,16 +80,20 @@ struct UnitCommand: ParsableCommand {
     }
 
     struct Pages: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .unitPagesAbstract), subcommands: GeneratedCommands.unitPages)
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .unitPagesAbstract), subcommands: GeneratedCommands.unitPages)
     }
 
     struct Move: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .unitMoveAbstract), discussion: String(localized: .unitMoveDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .unitMoveAbstract), discussion: String(localized: .unitMoveDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .commonHelpUnit), valueName: "unit"), completion: Complete.units) var unit: String = ""
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpUnit), valueName: "unit"), completion: Complete.units) var unit: String =
+            ""
         @Flag(help: ArgumentHelp(String(localized: .unitMoveHelpUp))) var up = false
         @Flag(help: ArgumentHelp(String(localized: .unitMoveHelpDown))) var down = false
-        @Option(help: ArgumentHelp(String(localized: .unitMoveHelpParent), valueName: "unit"), completion: Complete.units) var parent: String?
+        @Option(help: ArgumentHelp(String(localized: .unitMoveHelpParent), valueName: "unit"), completion: Complete.units) var parent:
+            String?
         @Flag(help: ArgumentHelp(String(localized: .unitMoveHelpTop))) var top = false
 
         func run() throws {

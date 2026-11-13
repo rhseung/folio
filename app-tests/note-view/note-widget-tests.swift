@@ -3,6 +3,7 @@ import FolioDomain
 import Foundation
 import Testing
 import WebKit
+
 @testable import Folio
 
 /// Widgets in the preview: each runs its course's `.folio/widgets/<id>.html` in a frame of the note's page, cut off
@@ -37,7 +38,9 @@ struct NoteWidgetTests {
     static func value(_ rig: PreviewRig, _ expression: String) async throws -> Any? {
         let frame = try await Self.frame(rig)
         for _ in 0..<100 {
-            if try await rig.page.view.callAsyncJavaScript("return window.done === true", in: frame, contentWorld: .page) as? Bool == true { break }
+            if try await rig.page.view.callAsyncJavaScript("return window.done === true", in: frame, contentWorld: .page) as? Bool == true {
+                break
+            }
             try await Task.sleep(for: .milliseconds(50))
         }
         return try await rig.page.view.callAsyncJavaScript("return \(expression)", in: frame, contentWorld: .page)
@@ -50,7 +53,8 @@ struct NoteWidgetTests {
 
     /// The height of the first widget's frame on the note's page: what its style says and what it's drawn at.
     static func heights(_ rig: PreviewRig) async throws -> (styled: Double, drawn: Double) {
-        let read = "const f = document.querySelector('iframe.cb-widget'); return [parseFloat(f.style.height), f.getBoundingClientRect().height]"
+        let read =
+            "const f = document.querySelector('iframe.cb-widget'); return [parseFloat(f.style.height), f.getBoundingClientRect().height]"
         let both = try #require(try await rig.js(read) as? [Double])
         return (both[0], both[1])
     }
@@ -60,26 +64,33 @@ struct NoteWidgetTests {
         let (rig, id) = try Self.preview(widget: html) { "# Title\n\n" + Self.block($0, height: 240) + "\n\nAfter" }
         defer { rig.close() }
         await rig.settle()
-        #expect(try await rig.js("return document.querySelector('iframe.cb-widget').src.includes(id)", ["id": id.uuidString]) as? Bool == true)
+        #expect(
+            try await rig.js("return document.querySelector('iframe.cb-widget').src.includes(id)", ["id": id.uuidString]) as? Bool == true)
         #expect(try await Self.value(rig, "document.getElementById('b').textContent") as? String == "0")
         // The note's colors reach the page under the names note pages use.
         let accent = try await Self.value(rig, "getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()") as? String
         #expect(accent?.hasPrefix("#") == true)
         // The note's page can't reach into the widget's: the frame has an origin of its own.
-        #expect(try await rig.js("try { return document.querySelector('iframe.cb-widget').contentDocument === null } catch { return true }") as? Bool == true)
+        #expect(
+            try await rig.js("try { return document.querySelector('iframe.cb-widget').contentDocument === null } catch { return true }")
+                as? Bool == true)
     }
 
     /// The block takes the page's height in place, so scrolling the note never stops inside a short widget.
     @Test func theBlockFitsItsPage() async throws {
-        let (rig, _) = try Self.preview(widget: "<!doctype html><div style='height:300px'></div>") { "Before\n\n" + Self.block($0, height: 200) + "\n\nAfter" }
+        let (rig, _) = try Self.preview(widget: "<!doctype html><div style='height:300px'></div>") {
+            "Before\n\n" + Self.block($0, height: 200) + "\n\nAfter"
+        }
         defer { rig.close() }
         await rig.settle()
         let heights = try await Self.heights(rig)
         #expect(heights.styled == 300 && heights.drawn == 300)
-        let gap = try #require(try await rig.number("""
-            const f = document.querySelector('iframe.cb-widget'), after = [...document.querySelectorAll('p')].at(-1)
-            return after.getBoundingClientRect().top - f.getBoundingClientRect().bottom
-            """))
+        let gap = try #require(
+            try await rig.number(
+                """
+                const f = document.querySelector('iframe.cb-widget'), after = [...document.querySelectorAll('p')].at(-1)
+                return after.getBoundingClientRect().top - f.getBoundingClientRect().bottom
+                """))
         #expect(gap >= 0)
         // Shown again, the frame is kept with the height its page said.
         rig.show("Intro\n\n" + rig.text)
@@ -89,7 +100,9 @@ struct NoteWidgetTests {
 
     /// A page taller than the panel is drawn whole, so the note scrolls past it instead of stopping inside its frame.
     @Test func aLongPageIsDrawnWhole() async throws {
-        let (rig, _) = try Self.preview(widget: "<!doctype html><div style='height:6000px'></div><script>window.done = true</script>", height: 600) {
+        let (rig, _) = try Self.preview(
+            widget: "<!doctype html><div style='height:6000px'></div><script>window.done = true</script>", height: 600
+        ) {
             Self.block($0) + "\n\nAfter"
         }
         defer { rig.close() }
@@ -102,22 +115,22 @@ struct NoteWidgetTests {
 
     @Test func theWidgetCannotReachTheNetwork() async throws {
         let html = """
-        <!doctype html><script>
-        window.violations = 0
-        document.addEventListener('securitypolicyviolation', () => window.violations++)
-        // Frames the widget makes inherit its sandbox: it can't reach into them, and their own code runs without
-        // what the widget's page lost.
-        const blank = document.createElement('iframe')
-        document.documentElement.append(blank)
-        try { window.blankPeers = typeof blank.contentWindow.RTCPeerConnection } catch { window.blankPeers = 'unreachable' }
-        const written = document.createElement('iframe')
-        written.srcdoc = '<script>parent.postMessage(typeof RTCPeerConnection, "*")<\\/script>'
-        const loaded = new Promise(done => addEventListener('message', e => { window.writtenPeers = e.data; done() }))
-        document.documentElement.append(written)
-        const fetched = fetch('https://example.com/').then(() => window.fetched = 'loaded', () => window.fetched = 'blocked')
-        Promise.allSettled([fetched, loaded]).then(() => setTimeout(() => window.done = true, 50))
-        </script>
-        """
+            <!doctype html><script>
+            window.violations = 0
+            document.addEventListener('securitypolicyviolation', () => window.violations++)
+            // Frames the widget makes inherit its sandbox: it can't reach into them, and their own code runs without
+            // what the widget's page lost.
+            const blank = document.createElement('iframe')
+            document.documentElement.append(blank)
+            try { window.blankPeers = typeof blank.contentWindow.RTCPeerConnection } catch { window.blankPeers = 'unreachable' }
+            const written = document.createElement('iframe')
+            written.srcdoc = '<script>parent.postMessage(typeof RTCPeerConnection, "*")<\\/script>'
+            const loaded = new Promise(done => addEventListener('message', e => { window.writtenPeers = e.data; done() }))
+            document.documentElement.append(written)
+            const fetched = fetch('https://example.com/').then(() => window.fetched = 'loaded', () => window.fetched = 'blocked')
+            Promise.allSettled([fetched, loaded]).then(() => setTimeout(() => window.done = true, 50))
+            </script>
+            """
         let (rig, _) = try Self.preview(widget: html) { Self.block($0) }
         defer { rig.close() }
         await rig.settle()
@@ -172,9 +185,9 @@ struct NoteWidgetTests {
     /// a page sized by its frame, and gets all of its height.
     @Test func aPageThatGrowsTwiceGetsAllOfItsHeight() async throws {
         let html = """
-        <!doctype html><div id=d style='height:400px'></div>
-        <script>addEventListener('resize', () => { if (innerHeight > 300) d.style.height = '420px' })</script>
-        """
+            <!doctype html><div id=d style='height:400px'></div>
+            <script>addEventListener('resize', () => { if (innerHeight > 300) d.style.height = '420px' })</script>
+            """
         let (rig, _) = try Self.preview(widget: html) { Self.block($0, height: 200) }
         defer { rig.close() }
         await rig.settle()
@@ -248,7 +261,9 @@ struct NoteWidgetTests {
         defer { rig.close() }
         await rig.settle()
         #expect(try await rig.js("return document.querySelectorAll('iframe').length") as? Int == 0)
-        #expect(rig.page.widgets.frame(for: "<table><tr><td><div class=\"cb-widget\" data-widget=\"\(UUID())\"></div></td></tr></table>") == nil)
+        #expect(
+            rig.page.widgets.frame(for: "<table><tr><td><div class=\"cb-widget\" data-widget=\"\(UUID())\"></div></td></tr></table>") == nil
+        )
     }
 
     @Test func aBlockThatDoesNotDecodeShowsItsText() async throws {

@@ -38,7 +38,12 @@ struct MathPalette: View {
 
     // Eight categories are more than `Segmented` holds (2–4).
     var tabs: some View {
-        ChipTabs(selection: Binding { model.shown } set: { model.category = $0 }, options: model.categories.map { ($0, $0.label) })
+        ChipTabs(
+            selection: Binding {
+                model.shown
+            } set: {
+                model.category = $0
+            }, options: model.categories.map { ($0, $0.label) })
     }
 
     var grid: some View {
@@ -47,7 +52,9 @@ struct MathPalette: View {
             LazyVStack(alignment: .leading, spacing: Theme.Space.s) {
                 ForEach(sections, id: \.category) { section in
                     if model.searching { Caption(section.category.label).padding(.horizontal, Theme.Space.xs) }
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: MathPaletteCell.minWidth), spacing: Theme.Space.xs)], spacing: Theme.Space.xs) {
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: MathPaletteCell.minWidth), spacing: Theme.Space.xs)], spacing: Theme.Space.xs
+                    ) {
                         ForEach(section.items) { item in
                             MathPaletteCell(item: item) { model.pick(item) }
                         }
@@ -99,8 +106,10 @@ struct MathPaletteCell: View {
 
     @ViewBuilder var glyph: some View {
         if let formula = item.preview,
-           let picture = NoteMath.shared.picture(formula, syntax: item.previewAsciiMath ? .asciimath : .latex, display: false, size: NoteLook.body,
-                                                 dark: scheme == .dark) {
+            let picture = NoteMath.shared.picture(
+                formula, syntax: item.previewAsciiMath ? .asciimath : .latex, display: false, size: NoteLook.body,
+                dark: scheme == .dark)
+        {
             let fitted = picture.fitted(Self.glyphSlot)
             Image(platformImage: picture.image)
                 .resizable()

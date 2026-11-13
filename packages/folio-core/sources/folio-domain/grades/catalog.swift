@@ -8,7 +8,10 @@ public struct Catalog: Codable, Sendable, Equatable {
     public var people: [Person]
     public var handbooks: [Handbook]
 
-    public init(codes: [CourseCode] = [], categories: [Category] = [], letterGrades: [LetterGrade] = [], people: [Person] = [], handbooks: [Handbook] = []) {
+    public init(
+        codes: [CourseCode] = [], categories: [Category] = [], letterGrades: [LetterGrade] = [], people: [Person] = [],
+        handbooks: [Handbook] = []
+    ) {
         self.codes = codes
         self.categories = categories
         self.letterGrades = letterGrades
@@ -37,7 +40,8 @@ public struct Catalog: Codable, Sendable, Equatable {
         let declared = Set(programs.map(\.codeId))
         func applies(_ c: Category, depth: Int = 0) -> Bool {
             guard c.programId.map(declared.contains) ?? true else { return false }
-            guard depth < 16, let parent = c.parentId.flatMap(category) else { return true }  // depth guards a parent cycle in hand-edited JSON
+            // depth guards a parent cycle in hand-edited JSON
+            guard depth < 16, let parent = c.parentId.flatMap(category) else { return true }
             return applies(parent, depth: depth + 1)
         }
         var copy = self
@@ -84,7 +88,10 @@ public struct CourseCode: Entity {
     /// Which yearly handbook (학사편람) the code comes from.
     public var source: String
 
-    public init(id: UUID = UUID(), device: DeviceID, at date: Date, prefix: String, department: String = "", program: String = "", source: String = "") {
+    public init(
+        id: UUID = UUID(), device: DeviceID, at date: Date, prefix: String, department: String = "", program: String = "",
+        source: String = ""
+    ) {
         self.id = id
         self.createdAt = date
         self.updatedAt = date
@@ -120,8 +127,10 @@ public struct Category: Entity {
     /// minor (학사편람). The student picks which by putting a course in both; what goes past this is not counted here.
     public var maxSharedCredits: Double?
 
-    public init(id: UUID = UUID(), device: DeviceID, at date: Date, name: String, group: String = "", isMajor: Bool = false,
-                parentId: UUID? = nil, minCredits: Double? = nil, maxCredits: Double? = nil, minCount: Int? = nil, rule: String? = nil) {
+    public init(
+        id: UUID = UUID(), device: DeviceID, at date: Date, name: String, group: String = "", isMajor: Bool = false,
+        parentId: UUID? = nil, minCredits: Double? = nil, maxCredits: Double? = nil, minCount: Int? = nil, rule: String? = nil
+    ) {
         self.id = id
         self.createdAt = date
         self.updatedAt = date
@@ -161,7 +170,9 @@ public struct LetterGrade: Entity {
         modes.map { $0.contains(mode) } ?? (points == nil || mode != .passFail)
     }
 
-    public init(id: UUID = UUID(), device: DeviceID, at date: Date, symbol: String, points: Double?, countsInGpa: Bool, countsInCredits: Bool) {
+    public init(
+        id: UUID = UUID(), device: DeviceID, at date: Date, symbol: String, points: Double?, countsInGpa: Bool, countsInCredits: Bool
+    ) {
         self.id = id
         self.createdAt = date
         self.updatedAt = date
@@ -190,7 +201,10 @@ public struct Person: Entity {
     public var officeHours: String
     public var memo: String
 
-    public init(id: UUID = UUID(), device: DeviceID, at date: Date, name: String, email: String = "", role: PersonRole = .professor, office: String = "", officeHours: String = "", memo: String = "") {
+    public init(
+        id: UUID = UUID(), device: DeviceID, at date: Date, name: String, email: String = "", role: PersonRole = .professor,
+        office: String = "", officeHours: String = "", memo: String = ""
+    ) {
         self.id = id
         self.createdAt = date
         self.updatedAt = date

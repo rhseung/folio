@@ -22,7 +22,8 @@ final class InputGuideModel {
         #else
         let menus = false
         #endif
-        entries = InputGuide.entries(catalog: NoteAssist(settings: workspace.settings).catalog(syntax: syntax), menus: menus, tableMenu: menus)
+        entries = InputGuide.entries(
+            catalog: NoteAssist(settings: workspace.settings).catalog(syntax: syntax), menus: menus, tableMenu: menus)
     }
 
     /// The tabs: every section, then each one with something in it.

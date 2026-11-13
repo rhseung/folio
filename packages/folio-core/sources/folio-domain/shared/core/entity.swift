@@ -33,7 +33,7 @@ public struct LocalDate: Hashable, Comparable, Sendable, Codable, CustomStringCo
     public init?(_ string: String) {
         let parts = string.split(separator: "-").compactMap { Int($0) }
         guard parts.count == 3, let date = LocalDate(year: parts[0], month: parts[1], day: parts[2]),
-              date.description == string
+            date.description == string
         else { return nil }
         self = date
     }

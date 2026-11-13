@@ -1,7 +1,8 @@
 import FolioDomain
-@testable import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioStorage
 
 /// course.json v5 -> v6: a note's session moves to the session's pointer, and only topic notes keep units.
 struct NoteLinkMigrationTests {
@@ -16,7 +17,9 @@ struct NoteLinkMigrationTests {
         return .object(fields)
     }
     func note(_ n: Int, _ kind: String, session: Int? = nil) -> JSONValue {
-        var fields: [String: JSONValue] = ["id": .string(id(n).uuidString), "kind": .string(kind), "unitIds": .array([.string(unit.uuidString)])]
+        var fields: [String: JSONValue] = [
+            "id": .string(id(n).uuidString), "kind": .string(kind), "unitIds": .array([.string(unit.uuidString)]),
+        ]
         if let session { fields["sessionId"] = .string(id(session).uuidString) }
         return .object(fields)
     }
@@ -28,7 +31,9 @@ struct NoteLinkMigrationTests {
     }
 
     @Test func aNotesSessionMovesToTheSessionsFreeSlot() throws {
-        let r = try migrated(sessions: [session(1), session(2, review: 21)], notes: [note(10, "rough", session: 1), note(11, "review", session: 2), note(21, "review", session: 2)])
+        let r = try migrated(
+            sessions: [session(1), session(2, review: 21)],
+            notes: [note(10, "rough", session: 1), note(11, "review", session: 2), note(21, "review", session: 2)])
 
         // Session 2's review slot was taken by note 21, so note 11 comes out without a session rather than as a second one.
         #expect(r.sessions[0]["roughNoteId"] == .string(id(10).uuidString))
@@ -45,7 +50,8 @@ struct NoteLinkMigrationTests {
 
     /// The first pointer in the file keeps a note two slots claimed; the other lets go, with its draft mark.
     @Test func aSecondPointerAtANoteLetsGo() throws {
-        let r = try migrated(sessions: [session(1, review: 10), session(2, review: 10, draft: true), session(3, rough: 10)], notes: [note(10, "review")])
+        let r = try migrated(
+            sessions: [session(1, review: 10), session(2, review: 10, draft: true), session(3, rough: 10)], notes: [note(10, "review")])
         #expect(r.sessions[0]["reviewNoteId"] == .string(id(10).uuidString))
         #expect(r.sessions[1]["reviewNoteId"] == nil && r.sessions[1]["reviewNoteDraft"] == nil)
         #expect(r.sessions[2]["roughNoteId"] == nil)
@@ -54,7 +60,8 @@ struct NoteLinkMigrationTests {
     /// `import calendar` once took any unlinked note named after a class, a topic note too; it stays a topic note
     /// with its units, and the session lets go of it.
     @Test func aPointedTopicOrExamNoteKeepsItsKind() throws {
-        let r = try migrated(sessions: [session(1, review: 10, draft: true), session(2, rough: 11)], notes: [note(10, "topic"), note(11, "exam_summary")])
+        let r = try migrated(
+            sessions: [session(1, review: 10, draft: true), session(2, rough: 11)], notes: [note(10, "topic"), note(11, "exam_summary")])
         #expect(r.notes.map { $0["kind"] } == [.string("topic"), .string("exam_summary")])
         #expect(r.notes[0]["unitIds"] == .array([.string(unit.uuidString)]))
         #expect(r.sessions[0]["reviewNoteId"] == nil && r.sessions[0]["reviewNoteDraft"] == nil && r.sessions[1]["roughNoteId"] == nil)

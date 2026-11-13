@@ -51,8 +51,9 @@ final class Resolver {
 
     func semester(_ ref: String?) throws -> Semester {
         guard let ref else { return try currentSemester() }
-        return try pick(ref, semesters, what: "학기", names: { [$0.folder?.name ?? "", $0.source ?? "", "\($0.year) \($0.term.rawValue)"] },
-                 ref: { $0.folder?.name ?? $0.source ?? $0.id.uuidString })
+        return try pick(
+            ref, semesters, what: "학기", names: { [$0.folder?.name ?? "", $0.source ?? "", "\($0.year) \($0.term.rawValue)"] },
+            ref: { $0.folder?.name ?? $0.source ?? $0.id.uuidString })
     }
 
     func course(_ ref: String) throws -> CourseRef {
@@ -65,7 +66,8 @@ final class Resolver {
         if let course { return (try self.course(course), ref) }
         guard let slash = ref.firstIndex(of: "/") else {
             if ref.isEmpty || Picker.allowed, let c = try? self.course(ref) { return (c, "") }
-            throw CLIError(exit: .usage, message: String(localized: .resolveNeedCourse(ref)), hints: [String(localized: .resolveNeedCourseHint(ref))])
+            throw CLIError(
+                exit: .usage, message: String(localized: .resolveNeedCourse(ref)), hints: [String(localized: .resolveNeedCourseHint(ref))])
         }
         return (try self.course(String(ref[..<slash])), String(ref[ref.index(after: slash)...]))
     }
@@ -74,16 +76,20 @@ final class Resolver {
     /// day match the day together, so the error lists their references.
     func session(_ name: String, in c: CourseRef) throws -> Session {
         let f = c.file
-        return try pick(name, f.sessions, what: "회차", names: { f.references(of: $0, calendar: self.ctx.calendar) },
-                        ref: { "\(c.code)/\(f.reference(of: $0, calendar: self.ctx.calendar))" })
+        return try pick(
+            name, f.sessions, what: "회차", names: { f.references(of: $0, calendar: self.ctx.calendar) },
+            ref: { "\(c.code)/\(f.reference(of: $0, calendar: self.ctx.calendar))" })
     }
 
     /// By its class, as a session is (`11-03`), or by its file.
     func recording(_ name: String, in c: CourseRef) throws -> Recording {
         let f = c.file
-        let session = { (r: Recording) in r.sessionId.flatMap { id in f.sessions.first { $0.id == id } }.map { f.references(of: $0, calendar: self.ctx.calendar) } ?? [] }
-        return try pick(name, f.recordings, what: "녹음", names: { session($0) + [$0.file, ($0.file as NSString).lastPathComponent] },
-                        ref: { "\(c.code)/\(($0.file as NSString).lastPathComponent)" })
+        let session = { (r: Recording) in
+            r.sessionId.flatMap { id in f.sessions.first { $0.id == id } }.map { f.references(of: $0, calendar: self.ctx.calendar) } ?? []
+        }
+        return try pick(
+            name, f.recordings, what: "녹음", names: { session($0) + [$0.file, ($0.file as NSString).lastPathComponent] },
+            ref: { "\(c.code)/\(($0.file as NSString).lastPathComponent)" })
     }
 
     func exam(_ name: String, in c: CourseRef) throws -> Exam {
@@ -103,7 +109,9 @@ final class Resolver {
     }
 
     func material(_ name: String, in c: CourseRef) throws -> Material {
-        try pick(name, c.file.materials, what: "자료", names: { [$0.path, ($0.path as NSString).lastPathComponent] }, ref: { "\(c.code)/\($0.path)" })
+        try pick(
+            name, c.file.materials, what: "자료", names: { [$0.path, ($0.path as NSString).lastPathComponent] },
+            ref: { "\(c.code)/\($0.path)" })
     }
 
     func problemSet(_ name: String, in c: CourseRef) throws -> ProblemSet {
@@ -119,18 +127,21 @@ final class Resolver {
 
     // MARK: Matching
 
-    func pick<T: Identifiable>(_ ref: String, _ items: [T], what: String, names: (T) -> [String], ref label: (T) -> String) throws -> T where T.ID == UUID {
+    func pick<T: Identifiable>(_ ref: String, _ items: [T], what: String, names: (T) -> [String], ref label: (T) -> String) throws -> T
+    where T.ID == UUID {
         try pick(ref, items, what: what, id: { $0.id }, names: names, ref: label)
     }
 
     /// A UUID, then an exact name (ignoring case and spacing), then a name that contains it. More than one match is an
     /// error listing them, never a guess.
-    func pick<T>(_ ref: String, _ items: [T], what: String, id: (T) -> UUID?, names: (T) -> [String], ref label: (T) -> String) throws -> T {
+    func pick<T>(_ ref: String, _ items: [T], what: String, id: (T) -> UUID?, names: (T) -> [String], ref label: (T) -> String) throws -> T
+    {
         if ref.isEmpty {
             guard !items.isEmpty else { throw CLIError(exit: .notFound, message: String(localized: .resolveEmpty(what))) }
             if let chosen = Picker.choose(items.map(label), prompt: what) { return items[items.map(label).firstIndex(of: chosen)!] }
-            throw CLIError(exit: .usage, message: String(localized: .resolveNeed(what)), candidates: items.count <= 12 ? items.map(label) : [],
-                           hints: [String(localized: .resolvePickHint)])
+            throw CLIError(
+                exit: .usage, message: String(localized: .resolveNeed(what)), candidates: items.count <= 12 ? items.map(label) : [],
+                hints: [String(localized: .resolvePickHint)])
         }
         if let uuid = UUID(uuidString: ref) {
             if let hit = items.first(where: { id($0) == uuid }) { return hit }
@@ -140,9 +151,13 @@ final class Resolver {
         let exact = items.filter { names($0).contains { Self.normalized($0) == key } }
         let hits = exact.isEmpty ? items.filter { names($0).contains { !key.isEmpty && Self.normalized($0).contains(key) } } : exact
         if hits.count == 1 { return hits[0] }
-        if hits.count > 1, let chosen = Picker.choose(hits.map(label), prompt: what) { return hits[hits.map(label).firstIndex(of: chosen)!] }
+        if hits.count > 1, let chosen = Picker.choose(hits.map(label), prompt: what) {
+            return hits[hits.map(label).firstIndex(of: chosen)!]
+        }
         if hits.isEmpty {
-            throw CLIError(exit: .notFound, message: String(localized: .resolveNotFound(what, ref)), candidates: items.count <= 12 ? items.map(label) : [])
+            throw CLIError(
+                exit: .notFound, message: String(localized: .resolveNotFound(what, ref)),
+                candidates: items.count <= 12 ? items.map(label) : [])
         }
         throw CLIError(exit: .notFound, message: String(localized: .resolveAmbiguous(what, ref)), candidates: hits.map(label))
     }
@@ -182,7 +197,9 @@ enum Picker {
         run(lines, prompt: prompt, multi: true)
     }
 
-    static let previews = ["과목": "course", "학기": "semester", "회차": "session", "시험": "exam", "단원": "unit", "과제": "assignment", "노트": "note", "자료": "material"]
+    static let previews = [
+        "과목": "course", "학기": "semester", "회차": "session", "시험": "exam", "단원": "unit", "과제": "assignment", "노트": "note", "자료": "material",
+    ]
 
     static func run(_ lines: [String], prompt: String, multi: Bool) -> [String] {
         guard allowed else { return [] }
@@ -202,7 +219,8 @@ enum Picker {
         try? input.fileHandleForWriting.close()
         p.waitUntilExit()
         guard p.terminationStatus == 0 else { return [] }
-        let picked = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self).split(separator: "\n").map(String.init)
+        let picked = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self).split(separator: "\n").map(
+            String.init)
         return picked.filter(lines.contains)
     }
 }

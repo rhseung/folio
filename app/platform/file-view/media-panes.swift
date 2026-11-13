@@ -16,7 +16,8 @@ struct ImagePane: View {
                     .padding(Theme.Space.l)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if failed {
-                ContentUnavailableView(String(localized: .fileViewCannotRead), systemImage: "photo", description: Text(url.lastPathComponent))
+                ContentUnavailableView(
+                    String(localized: .fileViewCannotRead), systemImage: "photo", description: Text(url.lastPathComponent))
             } else {
                 ProgressView()
             }
@@ -57,15 +58,25 @@ struct AudioPane: View {
             Image(systemName: "waveform").font(Theme.Glyph.large).foregroundStyle(Theme.Palette.textTertiary)
             Text(name).font(Theme.Typeface.bodyStrong).lineLimit(2).multilineTextAlignment(.center)
             HStack(spacing: Theme.Space.m) {
-                Button { player.skip(-15) } label: { Image(systemName: "gobackward.15") }.help(Text(.recordingBack15))
-                Button { player.toggle() } label: {
+                Button {
+                    player.skip(-15)
+                } label: {
+                    Image(systemName: "gobackward.15")
+                }.help(Text(.recordingBack15))
+                Button {
+                    player.toggle()
+                } label: {
                     Image(systemName: player.playing ? "pause.circle.fill" : "play.circle.fill")
                         .font(Theme.Glyph.large).foregroundStyle(accent.color)
                         .contentTransition(.symbolEffect(.replace))
                 }
                 .keyboardShortcut(.space, modifiers: [])
                 .help(Text(player.playing ? .recordingPause : .recordingPlay))
-                Button { player.skip(15) } label: { Image(systemName: "goforward.15") }.help(Text(.recordingForward15))
+                Button {
+                    player.skip(15)
+                } label: {
+                    Image(systemName: "goforward.15")
+                }.help(Text(.recordingForward15))
                 Text("\(RecordingTime.label(player.time)) / \(RecordingTime.label(player.duration))")
                     .monospacedDigit().foregroundStyle(Theme.Palette.textSecondary)
             }
@@ -89,9 +100,11 @@ struct AudioPane: View {
             }
             .frame(maxHeight: .infinity)
             .contentShape(.rect)
-            .gesture(DragGesture(minimumDistance: 0).onChanged { g in
-                player.seek(Double(min(max(g.location.x / w, 0), 1)) * length)
-            })
+            .gesture(
+                DragGesture(minimumDistance: 0).onChanged { g in
+                    player.seek(Double(min(max(g.location.x / w, 0), 1)) * length)
+                }
+            )
             .pointingHand()
         }
     }

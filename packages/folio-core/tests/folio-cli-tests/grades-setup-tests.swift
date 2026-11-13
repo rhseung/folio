@@ -1,9 +1,10 @@
-@testable import FolioCLI
 import FolioActions
 import FolioDomain
 import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioCLI
 
 struct GradesSetupTests {
     let h = Harness()
@@ -18,13 +19,18 @@ struct GradesSetupTests {
 
     static let addComponent = ["component", "add", "EC4207", "과제", "--weight", "30", "--id", component.uuidString]
     static let addQuiz = ["component", "add", "EC4207", "퀴즈", "--weight", "20", "--id", quiz.uuidString]
-    static let addScore = ["score", "add", "EC4207", "--component", "과제", "--title", "HW1", "--score", "9", "--max", "10", "--id", score.uuidString]
+    static let addScore = [
+        "score", "add", "EC4207", "--component", "과제", "--title", "HW1", "--score", "9", "--max", "10", "--id", score.uuidString,
+    ]
 
     var catalog: Catalog {
         let at = Date(timeIntervalSince1970: 1_790_000_000)
-        return Catalog(codes: [CourseCode(id: Self.code, device: h.device, at: at, prefix: "EC")],
-                       letterGrades: [LetterGrade(id: Self.grade, device: h.device, at: at, symbol: "A+", points: 4.5, countsInGpa: true, countsInCredits: true)],
-                       people: [Person(id: Self.person, device: h.device, at: at, name: "김교수")])
+        return Catalog(
+            codes: [CourseCode(id: Self.code, device: h.device, at: at, prefix: "EC")],
+            letterGrades: [
+                LetterGrade(id: Self.grade, device: h.device, at: at, symbol: "A+", points: 4.5, countsInGpa: true, countsInCredits: true)
+            ],
+            people: [Person(id: Self.person, device: h.device, at: at, name: "김교수")])
     }
 
     /// A catalog file both copies load in setup, since course codes and grades are looked up by name.
@@ -57,12 +63,15 @@ struct GradesSetupTests {
     }
 
     @Test func semesterSet() throws {
-        try h.expectSame(["semester", "set", "2026-3", "--midterm-week", "8"]) { _ in SemesterSet(semester: Self.fall, midtermWeek: .set(8)) }
+        try h.expectSame(["semester", "set", "2026-3", "--midterm-week", "8"]) { _ in SemesterSet(semester: Self.fall, midtermWeek: .set(8))
+        }
     }
 
     static let credited = UUID(uuidString: "CED17ED0-0000-4000-8000-000000000001")!
     static let creditedCourse = UUID(uuidString: "CED17ED0-0000-4000-8000-000000000002")!
-    static let creditedSetup = [["semester", "add", "2024", "credited", "--source", "군 복무", "--credited-hours", "9", "--id", credited.uuidString]]
+    static let creditedSetup = [
+        ["semester", "add", "2024", "credited", "--source", "군 복무", "--credited-hours", "9", "--id", credited.uuidString]
+    ]
 
     @Test func creditedSemester() throws {
         let id = UUID()
@@ -86,7 +95,8 @@ struct GradesSetupTests {
         }
         let gist = try Harness.fixtureCopy()
         #expect(h.cli(["semester", "source", "영재고 AP", "영재고 AP 과정", "--yes"], gist: gist).code == 0)
-        #expect(FileManager.default.fileExists(atPath: gist.appending(path: "_Credited/영재고 AP 과정/GS1101 일반물리학 및 연습 I/.folio/course.json").path))
+        #expect(
+            FileManager.default.fileExists(atPath: gist.appending(path: "_Credited/영재고 AP 과정/GS1101 일반물리학 및 연습 I/.folio/course.json").path))
         #expect(try GISTStore(url: gist).courseStores().contains { $0.url.lastPathComponent == "GS1101 일반물리학 및 연습 I" })
     }
 
@@ -112,7 +122,10 @@ struct GradesSetupTests {
     }
 
     @Test func transcriptAddMakesFolder() throws {
-        let line = ["transcript", "add", "군 복무", "병영 독서", "--code", "EC", "--number", "1001", "--credits", "9", "--id", Self.creditedCourse.uuidString]
+        let line = [
+            "transcript", "add", "군 복무", "병영 독서", "--code", "EC", "--number", "1001", "--credits", "9", "--id",
+            Self.creditedCourse.uuidString,
+        ]
         let setup = [["catalog", "set", "--file", try catalogFile()]] + Self.creditedSetup
         try h.expectSame(line, setup: setup) { _ in
             TranscriptAdd(id: Self.creditedCourse, semester: Self.credited, title: "병영 독서", code: Self.code, number: "1001", credits: 9)
@@ -121,17 +134,21 @@ struct GradesSetupTests {
         for l in setup + [line] { #expect(h.cli(l, gist: gist).code == 0) }
         let course = try GISTStore(url: gist).courseStores().first { $0.url.lastPathComponent == "EC1001 병영 독서" }
         #expect(try course?.load().model.course.id == Self.creditedCourse)
-        #expect(course.map { (try? FileManager.default.contentsOfDirectory(atPath: $0.url.path)) == [".folio"] } == true)  // subfolders come when needed
+        // subfolders come when needed
+        #expect(course.map { (try? FileManager.default.contentsOfDirectory(atPath: $0.url.path)) == [".folio"] } == true)
     }
 
     func colloquium() -> Course {
-        Course(id: Self.creditedCourse, device: h.device, at: Date(timeIntervalSince1970: 1_790_000_000), semesterId: Self.fall, title: "콜로퀴움",
-               codes: [Self.code], number: "9331-01", credits: 1, gradingMode: .passFail)
+        Course(
+            id: Self.creditedCourse, device: h.device, at: Date(timeIntervalSince1970: 1_790_000_000), semesterId: Self.fall, title: "콜로퀴움",
+            codes: [Self.code], number: "9331-01", credits: 1, gradingMode: .passFail)
     }
 
     @Test func transcriptMove() throws {
-        try h.expectSame(["transcript", "move", "--yes"], setup: [["catalog", "set", "--file", try catalogFile()]],
-                         prepare: { try Harness.unfile(colloquium(), gist: $0) }) { _ in TranscriptMove() }
+        try h.expectSame(
+            ["transcript", "move", "--yes"], setup: [["catalog", "set", "--file", try catalogFile()]],
+            prepare: { try Harness.unfile(colloquium(), gist: $0) }
+        ) { _ in TranscriptMove() }
         let gist = try Harness.fixtureCopy()
         try Harness.unfile(colloquium(), gist: gist)
         #expect(h.cli(["catalog", "set", "--file", try catalogFile()], gist: gist).code == 0)
@@ -161,12 +178,17 @@ struct GradesSetupTests {
         let pass = LetterGrade(device: h.device, at: at, symbol: "S", points: nil, countsInGpa: false, countsInCredits: true)
         let major = FolioDomain.Category(device: h.device, at: at, name: "전공", group: "전공", isMajor: true, minCredits: 36)
         let basic = FolioDomain.Category(device: h.device, at: at, name: "기초", group: "기초", minCredits: 18)
-        try h.direct(CatalogSet(catalog: Catalog(codes: [ec, gs], categories: [major, basic], letterGrades: [aPlus, b0, pass])), gist: gist)
-        let spring = UUID(uuidString: "5E4F1A00-0000-4000-8000-000000000001")!, ap = UUID(uuidString: "5E4F1A00-0000-4000-8000-0000000000C1")!
-        func course(_ title: String, _ code: CourseCode, _ number: String, _ term: UUID, _ grade: LetterGrade, _ category: FolioDomain.Category,
-                    credits: Double = 3, mode: GradingMode = .relative) -> Course {
-            var c = Course(device: h.device, at: at, semesterId: term, title: title, codes: [code.id], number: number, categoryIds: [category.id],
-                           credits: credits, gradingMode: mode)
+        try h.direct(
+            CatalogSet(catalog: Catalog(codes: [ec, gs], categories: [major, basic], letterGrades: [aPlus, b0, pass])), gist: gist)
+        let spring = UUID(uuidString: "5E4F1A00-0000-4000-8000-000000000001")!,
+            ap = UUID(uuidString: "5E4F1A00-0000-4000-8000-0000000000C1")!
+        func course(
+            _ title: String, _ code: CourseCode, _ number: String, _ term: UUID, _ grade: LetterGrade, _ category: FolioDomain.Category,
+            credits: Double = 3, mode: GradingMode = .relative
+        ) -> Course {
+            var c = Course(
+                device: h.device, at: at, semesterId: term, title: title, codes: [code.id], number: number, categoryIds: [category.id],
+                credits: credits, gradingMode: mode)
             c.finalGrade = grade.id
             return c
         }
@@ -182,12 +204,14 @@ struct GradesSetupTests {
         func figures(_ courses: [Course]) throws -> [String] {
             let courses = courses.sorted { $0.id.uuidString < $1.id.uuidString }
             let semesters = try store.loadTranscript().model.semesters, catalog = try store.loadCatalog().model
-            return ["\(GPACalculator.cumulative(semesters: semesters, courses: courses, catalog: catalog))",
-                    "\(GPACalculator.major(courses: courses, catalog: catalog))",
-                    "\(semesters.map { GPACalculator.semester($0, courses: courses, catalog: catalog) })",
-                    "\(GPACalculator.graduation(semesters: semesters, courses: courses, catalog: catalog))",
-                    "\(GPACalculator.categoryCredits(courses: courses, catalog: catalog).sorted { $0.key.uuidString < $1.key.uuidString })",
-                    "\(RequirementAudit(courses: courses, semesters: semesters, catalog: catalog))"]
+            return [
+                "\(GPACalculator.cumulative(semesters: semesters, courses: courses, catalog: catalog))",
+                "\(GPACalculator.major(courses: courses, catalog: catalog))",
+                "\(semesters.map { GPACalculator.semester($0, courses: courses, catalog: catalog) })",
+                "\(GPACalculator.graduation(semesters: semesters, courses: courses, catalog: catalog))",
+                "\(GPACalculator.categoryCredits(courses: courses, catalog: catalog).sorted { $0.key.uuidString < $1.key.uuidString })",
+                "\(RequirementAudit(courses: courses, semesters: semesters, catalog: catalog))",
+            ]
         }
         let before = try figures(store.loadTranscript().model.unfiledCourses + store.allCourses())
         try h.direct(TranscriptMove(), gist: gist)
@@ -219,8 +243,10 @@ struct GradesSetupTests {
 
     @Test func courseAdd() throws {
         let id = UUID()
-        try h.expectSame(["course", "add", "EC", "4208-01", "네트워크", "--semester", "2026-3", "--id", id.uuidString],
-                         setup: [["catalog", "set", "--file", try catalogFile()]]) { _ in
+        try h.expectSame(
+            ["course", "add", "EC", "4208-01", "네트워크", "--semester", "2026-3", "--id", id.uuidString],
+            setup: [["catalog", "set", "--file", try catalogFile()]]
+        ) { _ in
             CourseAdd(id: id, code: Self.code, number: "4208-01", title: "네트워크", credits: 3, mode: .relative, semester: Self.fall)
         }
     }
@@ -228,26 +254,34 @@ struct GradesSetupTests {
     /// Left out, the semester is the one today falls in, for the command and the JSON input alike.
     @Test func courseAddInTheCurrentSemester() throws {
         let id = UUID()
-        try h.expectSame(["course", "add", "EC", "4208-01", "네트워크", "--id", id.uuidString],
-                         setup: [["catalog", "set", "--file", try catalogFile()]]) { _ in
+        try h.expectSame(
+            ["course", "add", "EC", "4208-01", "네트워크", "--id", id.uuidString],
+            setup: [["catalog", "set", "--file", try catalogFile()]]
+        ) { _ in
             CourseAdd(id: id, code: Self.code, number: "4208-01", title: "네트워크")
         }
         let gist = try Harness.fixtureCopy()
         #expect(h.cli(["catalog", "set", "--file", try catalogFile()], gist: gist).code == 0)
-        #expect(h.cli(["run", "course", "add", "--input", #"{"code":"EC","number":"4208-01","title":"네트워크","id":"\#(id)"}"#], gist: gist).code == 0)
+        #expect(
+            h.cli(["run", "course", "add", "--input", #"{"code":"EC","number":"4208-01","title":"네트워크","id":"\#(id)"}"#], gist: gist).code
+                == 0)
         #expect(try ActionContext(gist: GISTStore(url: gist), device: h.device).file(id).course.semesterId == Self.fall)
     }
 
     @Test func courseRename() throws {
-        try h.expectSame(["course", "rename", "EC4207", "--code", "EC", "--number", "4207-01", "--title", "그래프 이론과 응용", "--yes"],
-                         setup: [["catalog", "set", "--file", try catalogFile()]]) { _ in
+        try h.expectSame(
+            ["course", "rename", "EC4207", "--code", "EC", "--number", "4207-01", "--title", "그래프 이론과 응용", "--yes"],
+            setup: [["catalog", "set", "--file", try catalogFile()]]
+        ) { _ in
             CourseRename(course: gt, title: .set("그래프 이론과 응용"), codes: .set([Self.code]), number: .set("4207-01"))
         }
     }
 
     @Test func courseSet() throws {
-        try h.expectSame(["course", "set", "EC4207", "--credits", "4", "--grade", "A+", "--instructor", "김교수", "--sharing-approved", "true"],
-                         setup: [["catalog", "set", "--file", try catalogFile()]]) { _ in
+        try h.expectSame(
+            ["course", "set", "EC4207", "--credits", "4", "--grade", "A+", "--instructor", "김교수", "--sharing-approved", "true"],
+            setup: [["catalog", "set", "--file", try catalogFile()]]
+        ) { _ in
             CourseSet(course: gt, [.credits(4), .finalGrade(Self.grade), .instructors([Self.person]), .sharingApproved(true)])
         }
     }
@@ -314,7 +348,10 @@ struct GradesSetupTests {
     }
 
     @Test func scoreSet() throws {
-        try h.expectSame(["score", "set", "EC4207/HW1", "--value", "10", "--mean", "7.5", "--excused", "true"], setup: [Self.addComponent, Self.addScore]) { _ in
+        try h.expectSame(
+            ["score", "set", "EC4207/HW1", "--value", "10", "--mean", "7.5", "--excused", "true"],
+            setup: [Self.addComponent, Self.addScore]
+        ) { _ in
             ScoreSet(course: gt, score: Self.score, value: .set(10), mean: .set(7.5), excused: .set(true))
         }
     }
@@ -342,8 +379,10 @@ struct GradesSetupTests {
     @Test func listsAndShowsRun() throws {
         let gist = try Harness.fixtureCopy()
         for line in [Self.addComponent, Self.addScore] { #expect(h.cli(line, gist: gist).code == 0) }
-        for line in [["score", "list", "EC4207"], ["component", "list", "EC4207"], ["semester", "list"], ["semester", "show"],
-                     ["course", "list"], ["course", "show", "EC4207"], ["requirement", "show"], ["catalog", "show"], ["settings", "show"]] {
+        for line in [
+            ["score", "list", "EC4207"], ["component", "list", "EC4207"], ["semester", "list"], ["semester", "show"],
+            ["course", "list"], ["course", "show", "EC4207"], ["requirement", "show"], ["catalog", "show"], ["settings", "show"],
+        ] {
             let r = h.cli(line, gist: gist)
             #expect(r.code == 0, "\(line): \(r.err)")
         }

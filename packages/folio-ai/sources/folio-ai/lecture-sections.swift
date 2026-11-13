@@ -22,12 +22,15 @@ public struct LectureSectionDrafts: StructuredResult, Equatable {
 
     public var sections: [Draft]
 
-    public static let schema = Schema.object(["sections": Schema.array(Schema.object([
-        "title": Schema.string,
-        "firstPage": Schema.integer,
-        "unit": Schema.nullable(Schema.string),
-        "skip": Schema.boolean,
-    ]))])
+    public static let schema = Schema.object([
+        "sections": Schema.array(
+            Schema.object([
+                "title": Schema.string,
+                "firstPage": Schema.integer,
+                "unit": Schema.nullable(Schema.string),
+                "skip": Schema.boolean,
+            ]))
+    ])
 }
 
 /// One page as Claude reads it to split a lecture (#450): its title, the start of the rest of its text, and a small
@@ -116,21 +119,24 @@ extension ClaudeClient {
     /// The add sheet asks when the outline and slide titles say nothing, and both screens ask when the user presses "Claude로 나누기". Nil when the
     /// answer leaves nothing usable.
     public func lectureSections(file: String, pages: [LecturePage], units: [FolioDomain.Unit]) async throws -> LectureSplit? {
-        let system: [ContentBlock] = [.text("""
-        You split a university lecture's slides into the course's units. For each page you get its title (empty when \
-        it has none) and the start of the rest of its text. Some pages also come as a small picture after the text, \
-        labelled with its page number: pages with little text, pages that are mostly figures, and pages whose text \
-        repeats an earlier page's. You also get the course's unit outline. Read what the pages are about, not just \
-        their titles: a section starts where the lecture moves on to another topic of the size of a unit or a \
-        chapter's section, often at a divider or outline slide, not at every slide. A lecture usually has two to \
-        eight. A deck often shows its roadmap again before each part with that part highlighted; look at the picture \
-        to see which item is highlighted, and start a section there only when the highlight moves to another \
-        top-level item, not to a sub-item of the part already under way. When the course has units, split at the \
-        level of its most specific units. Give the sections in page order, each with the page it starts on and a \
-        short title in the slides' own words. Set "unit" to the exact title of the most specific course unit the \
-        section belongs to, or null when no unit fits. Never invent a unit title. Set "skip" to true for pages that \
-        belong to no unit, such as a title page, an appendix or extra slides at the end, and false otherwise.
-        """)]
+        let system: [ContentBlock] = [
+            .text(
+                """
+                You split a university lecture's slides into the course's units. For each page you get its title (empty when \
+                it has none) and the start of the rest of its text. Some pages also come as a small picture after the text, \
+                labelled with its page number: pages with little text, pages that are mostly figures, and pages whose text \
+                repeats an earlier page's. You also get the course's unit outline. Read what the pages are about, not just \
+                their titles: a section starts where the lecture moves on to another topic of the size of a unit or a \
+                chapter's section, often at a divider or outline slide, not at every slide. A lecture usually has two to \
+                eight. A deck often shows its roadmap again before each part with that part highlighted; look at the picture \
+                to see which item is highlighted, and start a section there only when the highlight moves to another \
+                top-level item, not to a sub-item of the part already under way. When the course has units, split at the \
+                level of its most specific units. Give the sections in page order, each with the page it starts on and a \
+                short title in the slides' own words. Set "unit" to the exact title of the most specific course unit the \
+                section belongs to, or null when no unit fits. Never invent a unit title. Set "skip" to true for pages that \
+                belong to no unit, such as a title page, an appendix or extra slides at the end, and false otherwise.
+                """)
+        ]
         let messages = [Message(role: .user, content: Self.lectureQuestion(file: file, pages: pages, units: units))]
         let drafts = try await run(.lectureSections, LectureSectionDrafts.self, system: system, messages: messages)
         return Self.split(drafts, pageCount: pages.count, units: units)
@@ -146,15 +152,18 @@ extension ClaudeClient {
             let picture = page.image == nil ? "" : " [picture below]"
             return "## \(i + 1): \(page.title ?? "")\(picture)" + (body.isEmpty ? "" : "\n" + body)
         }
-        var blocks: [ContentBlock] = [.text("""
-        <file>\(file)</file>
-        <units>
-        \(outline.isEmpty ? "(none)" : outline.joined(separator: "\n"))
-        </units>
-        <pages count="\(pages.count)">
-        \(lines.joined(separator: "\n"))
-        </pages>
-        """)]
+        var blocks: [ContentBlock] = [
+            .text(
+                """
+                <file>\(file)</file>
+                <units>
+                \(outline.isEmpty ? "(none)" : outline.joined(separator: "\n"))
+                </units>
+                <pages count="\(pages.count)">
+                \(lines.joined(separator: "\n"))
+                </pages>
+                """)
+        ]
 
         for (i, page) in pages.enumerated() {
             guard let image = page.image else { continue }
@@ -168,7 +177,12 @@ extension ClaudeClient {
     /// Claude skips goes to no unit, and every other section becomes a new unit of its title. Neighbors under the same
     /// unit, or both under none, are one section: a cut between them would only be a second range of the same unit.
     static func split(_ drafts: LectureSectionDrafts, pageCount: Int, units: [FolioDomain.Unit]) -> LectureSplit? {
-        let found = drafts.sections.map { (section: LectureSplit.Section(title: LectureReading.clean($0.title), firstPage: $0.firstPage, lastPage: $0.firstPage), draft: $0) }
+        let found = drafts.sections.map {
+            (
+                section: LectureSplit.Section(title: LectureReading.clean($0.title), firstPage: $0.firstPage, lastPage: $0.firstPage),
+                draft: $0
+            )
+        }
         guard var split = LectureSplit(found.map(\.section), pageCount: pageCount) else { return nil }
         // By id: tidying moves first pages and drops sections past the file.
         let drafted = Dictionary(keepingFirst: found.map { ($0.section.id, $0.draft) })

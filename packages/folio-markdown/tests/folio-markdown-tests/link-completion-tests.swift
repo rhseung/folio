@@ -1,6 +1,7 @@
-@testable import FolioMarkdown
 import Foundation
 import Testing
+
+@testable import FolioMarkdown
 
 struct LinkCompletionTests {
     func query(_ s: String) -> CompletionQuery? {
@@ -59,8 +60,9 @@ struct LinkCompletionTests {
     @Test func writesLinksByID() {
         let id = UUID(uuidString: "6F9619FF-8B86-D011-B42D-00CF4FC964FF")!
         #expect(WikiLink.written("note", id, alias: "매칭 [1] | 정리") == "[[note:6F9619FF-8B86-D011-B42D-00CF4FC964FF|매칭 1 정리]]")
-        #expect(WikiLink.written("material", id, fragment: "page=3", alias: "a.pdf", embed: true)
-            == "![[material:6F9619FF-8B86-D011-B42D-00CF4FC964FF#page=3|a.pdf]]")
+        #expect(
+            WikiLink.written("material", id, fragment: "page=3", alias: "a.pdf", embed: true)
+                == "![[material:6F9619FF-8B86-D011-B42D-00CF4FC964FF#page=3|a.pdf]]")
         // What it writes reads back as the same link.
         let back = WikiLink.all(in: WikiLink.written("note", id, fragment: "^blk", alias: "제목"))
         #expect(back.first?.noteID == id && back.first?.blockID == "blk" && back.first?.alias == "제목")
@@ -68,28 +70,29 @@ struct LinkCompletionTests {
     }
 
     @Test func listsHeadingsAndBlocks() {
-        let note = ParsedNote("""
-        ---
-        tags: [a]
-        ---
-        # 매칭
+        let note = ParsedNote(
+            """
+            ---
+            tags: [a]
+            ---
+            # 매칭
 
-        증가 경로가 없으면 최대다. ^max
+            증가 경로가 없으면 최대다. ^max
 
-        - 첫 항목
-          이어진 줄
-          - 아래 항목
-        - [ ] 할 일
+            - 첫 항목
+              이어진 줄
+              - 아래 항목
+            - [ ] 할 일
 
-        > [!definition] 매칭
-        > 이웃하지 않는 변
+            > [!definition] 매칭
+            > 이웃하지 않는 변
 
-        $$
-        x
-        $$
+            $$
+            x
+            $$
 
-        ## 예
-        """)
+            ## 예
+            """)
         #expect(note.headings.map(\.text) == ["매칭", "예"])
         #expect(note.headings.map(\.level) == [1, 2])
         let blocks = note.linkableBlocks
@@ -122,7 +125,7 @@ struct SeededGenerator: RandomNumberGenerator {
     var state: UInt64
     init(seed: UInt64) { state = seed }
     mutating func next() -> UInt64 {
-        state = state &* 6364136223846793005 &+ 1442695040888963407
+        state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
         return state
     }
 }

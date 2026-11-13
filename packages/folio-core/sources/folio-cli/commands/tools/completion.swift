@@ -11,7 +11,9 @@ struct CompletionCommand: ParsableCommand {
     @Argument(help: "zsh, bash, fish") var shell: String
 
     func run() throws {
-        guard let s = CompletionShell(rawValue: shell) else { throw CLIError(exit: .usage, message: String(localized: .completionUnknownShell)) }
+        guard let s = CompletionShell(rawValue: shell) else {
+            throw CLIError(exit: .usage, message: String(localized: .completionUnknownShell))
+        }
         say(Folio.completionScript(for: s))
     }
 }
@@ -61,7 +63,16 @@ enum Complete {
     }
 
     static let sessions = items { r, c in
-        c.file.sessions.map { s in (c.file.reference(of: s, calendar: r.ctx.calendar), joined(day(s.date, r), s.isCancelled ? String(localized: .completionCancelled) : joined(s.kind == .makeup ? String(localized: .completionMakeup) : "", c.file.subject(of: s) ?? ""))) }
+        c.file.sessions.map { s in
+            (
+                c.file.reference(of: s, calendar: r.ctx.calendar),
+                joined(
+                    day(s.date, r),
+                    s.isCancelled
+                        ? String(localized: .completionCancelled)
+                        : joined(s.kind == .makeup ? String(localized: .completionMakeup) : "", c.file.subject(of: s) ?? ""))
+            )
+        }
     }
     static let exams = items { r, c in c.file.exams.map { ($0.title, day($0.start, r)) } }
     static let units = items { _, c in c.file.units.map { ($0.title, "") } }
@@ -79,9 +90,12 @@ enum Complete {
 
     static func semesters(_ words: [String], _ index: Int, _ prefix: String) -> [String] {
         guard let r = resolver(words) else { return [] }
-        return described(r.semesters.compactMap { s in
-            s.folder.map { ($0.name, String(localized: .completionSemesterCourses(r.courses.filter { $0.course.semesterId == s.id }.count))) }
-        })
+        return described(
+            r.semesters.compactMap { s in
+                s.folder.map {
+                    ($0.name, String(localized: .completionSemesterCourses(r.courses.filter { $0.course.semesterId == s.id }.count)))
+                }
+            })
     }
 
     /// `--component 과제` names an item of the course given earlier on the line, so that course's items are offered.

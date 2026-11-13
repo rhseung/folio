@@ -19,12 +19,16 @@ struct PageTextTests {
     }
 
     @Test func titleIsTheLargestTypeAmongTheFirstLines() {
-        let lines: [(text: String, size: Double)] = [("4-12", 10), ("  Router architecture  ", 28), ("input ports", 18), ("switching", 18), ("A huge formula", 40)]
+        let lines: [(text: String, size: Double)] = [
+            ("4-12", 10), ("  Router architecture  ", 28), ("input ports", 18), ("switching", 18), ("A huge formula", 40),
+        ]
         #expect(PageText.title(lines) == "Router architecture")
     }
 
     @Test func figureOnlyLinesDoNotUseUpTheTitleLines() {
-        let lines: [(text: String, size: Double)] = [(fig, 40), ("\(fig) \(fig)", 40), (" ", 50), ("label", 12), ("label", 12), ("label", 12), ("label", 12), ("Middleboxes", 24)]
+        let lines: [(text: String, size: Double)] = [
+            (fig, 40), ("\(fig) \(fig)", 40), (" ", 50), ("label", 12), ("label", 12), ("label", 12), ("label", 12), ("Middleboxes", 24),
+        ]
         #expect(PageText.title(lines) == "label")
         let titled: [(text: String, size: Double)] = [(fig, 40), ("\(fig)\(fig)", 40), ("Middleboxes", 24), ("NAT", 14)]
         #expect(PageText.title(titled) == "Middleboxes")
@@ -36,10 +40,15 @@ struct PageTextTests {
     }
 
     @Test func cleanedTextHasNoFiguresOrBlankLines() async {
-        await propertyCheck(input: Gen.element(of: ["a", "b c", "\u{FFFC}", " ", "\n", "\t", "슬라이드"]).map { $0! }.array(of: 0...40)) { parts in
+        await propertyCheck(input: Gen.element(of: ["a", "b c", "\u{FFFC}", " ", "\n", "\t", "슬라이드"]).map { $0! }.array(of: 0...40)) {
+            parts in
             let cleaned = PageText.cleaned(parts.joined())
             #expect(!cleaned.contains(PageText.figure))
-            #expect(cleaned.isEmpty || cleaned.split(separator: "\n", omittingEmptySubsequences: false).allSatisfy { !$0.trimmingCharacters(in: .whitespaces).isEmpty })
+            #expect(
+                cleaned.isEmpty
+                    || cleaned.split(separator: "\n", omittingEmptySubsequences: false).allSatisfy {
+                        !$0.trimmingCharacters(in: .whitespaces).isEmpty
+                    })
             #expect(PageText.words(cleaned) == PageText.words(parts.joined()))
         }
     }
@@ -69,7 +78,8 @@ struct ReadingLimitTests {
     }
 
     @Test func servedNeverLeavesTheAskedPages() async {
-        await propertyCheck(input: Gen.int(in: 1...50), Gen.int(in: 0...60), Gen.int(in: 1...40), Gen.int(in: 0...500).array(of: 0...70)) { first, span, most, lengths in
+        await propertyCheck(input: Gen.int(in: 1...50), Gen.int(in: 0...60), Gen.int(in: 1...40), Gen.int(in: 0...500).array(of: 0...70)) {
+            first, span, most, lengths in
             let asked = first...(first + span)
             let served = ReadingLimit.served(asked, most: most, lengths: lengths, budget: 1000)
             #expect(served.lowerBound == asked.lowerBound && served.upperBound <= asked.upperBound)
@@ -84,12 +94,14 @@ struct ReadingLimitTests {
 }
 
 struct TranscriptWindowTests {
-    let transcript = LectureTranscript(locale: "ko-KR", lines: [
-        .init(start: 0, end: 5, text: "오늘은 매칭"),
-        .init(start: 5, end: 12, text: "홀의 정리를 본다"),
-        .init(start: 600, end: 610, text: "증명은 귀납법으로"),
-        .init(start: 1200, end: 1205, text: "다음 시간에"),
-    ])
+    let transcript = LectureTranscript(
+        locale: "ko-KR",
+        lines: [
+            .init(start: 0, end: 5, text: "오늘은 매칭"),
+            .init(start: 5, end: 12, text: "홀의 정리를 본다"),
+            .init(start: 600, end: 610, text: "증명은 귀납법으로"),
+            .init(start: 1200, end: 1205, text: "다음 시간에"),
+        ])
 
     @Test func aSpanKeepsTheLinesSaidInIt() {
         #expect(transcript.window(from: 600, to: 1200).lines.map(\.start) == [600])
@@ -113,10 +125,12 @@ struct TranscriptWindowTests {
     }
 
     @Test func readingOnFromAWholeSecondDoesNotRepeatTheLineBefore() {
-        let said = LectureTranscript(locale: "ko-KR", lines: [
-            .init(start: 120, end: 125.6, text: String(repeating: "가", count: 30)),
-            .init(start: 125.7, end: 130, text: "다음 줄"),
-        ])
+        let said = LectureTranscript(
+            locale: "ko-KR",
+            lines: [
+                .init(start: 120, end: 125.6, text: String(repeating: "가", count: 30)),
+                .init(start: 125.7, end: 130, text: "다음 줄"),
+            ])
         let cut = said.window(from: nil, to: nil, budget: 31)
         #expect(cut.lines.map(\.start) == [120] && cut.next == 125.7)
         // `next` goes out as 2:05, so the next read starts at 125 s.

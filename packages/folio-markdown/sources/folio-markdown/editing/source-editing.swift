@@ -56,12 +56,16 @@ public enum SourceEditing {
         // Enter on an empty `- ` or `> ` ends the list or quote with a blank line, so what's typed next is a paragraph of
         // its own; left touching the block, CommonMark would read it as part of the last item.
         if atEnd, line.wholeMatch(of: marker) != nil {
-            let next = NSMaxRange(full) < text.length ? text.substring(with: text.lineRange(for: NSRange(location: NSMaxRange(full), length: 0))) : ""
+            let next =
+                NSMaxRange(full) < text.length
+                ? text.substring(with: text.lineRange(for: NSRange(location: NSMaxRange(full), length: 0))) : ""
             if next.firstMatch(of: listLine) != nil { return nil }
             return Edit(range: content, text: "\n", caret: content.location + 1)
         }
         let head = line.utf16.count - (NSMaxRange(content) - caret)
-        if let m = line.prefixMatch(of: #/^([ \t]*)((?:>[ \t]?)*)([ \t]*)(?:([-*+])|(\d+)([.)]))([ \t]+)(\[[ xX]\][ \t]+)?/#), m.0.utf16.count <= head {
+        if let m = line.prefixMatch(of: #/^([ \t]*)((?:>[ \t]?)*)([ \t]*)(?:([-*+])|(\d+)([.)]))([ \t]+)(\[[ xX]\][ \t]+)?/#),
+            m.0.utf16.count <= head
+        {
             let mark = m.4.map(String.init) ?? "\((Int(m.5 ?? "0") ?? 0) + 1)\(m.6 ?? ".")"
             let insert = "\n" + m.1 + m.2 + m.3 + mark + m.7 + (m.8 == nil ? "" : "[ ] ")
             return renumbered(text, Edit(range: selection, text: insert, caret: caret + insert.utf16.count))
@@ -120,7 +124,9 @@ public enum SourceEditing {
         if !back, selection.length == 0, let (snippet, range) = Snippet.match(snippets, in: text, caret: selection.location, place: place) {
             return snippet.edit(replacing: range)
         }
-        if case .math(_, let content, _) = place, let slot = slot(text, from: selection.location, in: content, back: back, opener: asciiMath ? 0x28 : 0x7B) {
+        if case .math(_, let content, _) = place,
+            let slot = slot(text, from: selection.location, in: content, back: back, opener: asciiMath ? 0x28 : 0x7B)
+        {
             return Edit(range: NSRange(location: slot, length: 0), text: "", caret: slot)
         }
         // Lines in a code block are code: `1.` there is not a list to number again.
@@ -183,7 +189,9 @@ public enum SourceEditing {
         if selection.length > 0 {
             guard let close = (place == .text ? textWraps : wraps)[c] else { return nil }
             let inner = text.substring(with: selection)
-            return Edit(range: selection, text: typed + inner + String(utf16CodeUnits: [close], count: 1), caret: at + 1, selected: selection.length)
+            return Edit(
+                range: selection, text: typed + inner + String(utf16CodeUnits: [close], count: 1), caret: at + 1, selected: selection.length
+            )
         }
         let step = Edit(range: NSRange(location: at, length: 0), text: "", caret: at + 1)
         let opensBefore = next.map { isSpace($0) || before.contains($0) } ?? true
@@ -233,12 +241,13 @@ public enum SourceEditing {
         let at = selection.location
         guard selection.length == 0, at > 0, at < text.length else { return nil }
         let prev = text.character(at: at - 1), next = text.character(at: at)
-        let marks: Set<UInt16> = switch SourcePlace.at(at, in: text) {
-        case .text: [0x24, 0x60, 0x2A]
-        case .inlineCode: [0x60]
-        case .math: [0x24]
-        case .code: []
-        }
+        let marks: Set<UInt16> =
+            switch SourcePlace.at(at, in: text) {
+            case .text: [0x24, 0x60, 0x2A]
+            case .inlineCode: [0x60]
+            case .math: [0x24]
+            case .code: []
+            }
         guard pairs[prev] == next || (prev == next && marks.contains(prev)) else { return nil }
         return Edit(range: NSRange(location: at - 1, length: 2), text: "", caret: at - 1)
     }
@@ -273,10 +282,13 @@ public enum SourceEditing {
     public static func renumber(_ text: NSString, around range: NSRange) -> [(NSRange, String)] {
         let item = #/^([ \t]*)(?:(?:>[ \t]?)*)([ \t]*)(?:[-*+]|(\d+)([.)]))[ \t]/#
         var lines: [NSRange] = []
-        text.enumerateSubstrings(in: NSRange(location: 0, length: text.length), options: [.byLines, .substringNotRequired]) { _, line, _, _ in
+        text.enumerateSubstrings(in: NSRange(location: 0, length: text.length), options: [.byLines, .substringNotRequired]) {
+            _, line, _, _ in
             lines.append(line)
         }
-        guard let hit = lines.firstIndex(where: { NSLocationInRange(range.location, $0) || NSMaxRange($0) == range.location }) else { return [] }
+        guard let hit = lines.firstIndex(where: { NSLocationInRange(range.location, $0) || NSMaxRange($0) == range.location }) else {
+            return []
+        }
         // A fence ends the block too: a list right before or after a code block isn't numbered across it.
         let inList = { (i: Int) -> Bool in
             let s = text.substring(with: lines[i])
@@ -303,7 +315,9 @@ public enum SourceEditing {
             let delimiter = String(m.4 ?? ".")
             if let top = stack.last, top.indent == indent, let n = top.next, top.delimiter == delimiter {
                 let digitRange = NSRange(m.3!.startIndex..<m.3!.endIndex, in: s)
-                if Int(digits) != n { out.append((NSRange(location: lines[i].location + digitRange.location, length: digitRange.length), String(n))) }
+                if Int(digits) != n {
+                    out.append((NSRange(location: lines[i].location + digitRange.location, length: digitRange.length), String(n)))
+                }
                 stack[stack.count - 1].next = n + 1
             } else {
                 if let top = stack.last, top.indent == indent { stack.removeLast() }
@@ -324,7 +338,8 @@ public enum SourceEditing {
         let n = min(old.length, new.length)
         while a < n, old.character(at: a) == new.character(at: a) { a += 1 }
         while b < n - a, old.character(at: old.length - 1 - b) == new.character(at: new.length - 1 - b) { b += 1 }
-        return Edit(range: NSRange(location: a, length: old.length - a - b),
-                    text: new.substring(with: NSRange(location: a, length: new.length - a - b)), caret: caret)
+        return Edit(
+            range: NSRange(location: a, length: old.length - a - b),
+            text: new.substring(with: NSRange(location: a, length: new.length - a - b)), caret: caret)
     }
 }

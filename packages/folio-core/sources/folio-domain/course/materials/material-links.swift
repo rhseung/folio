@@ -19,7 +19,9 @@ extension CourseFile {
     /// Links a material to a session or changes its page range. The pages live in `Session.materials`;
     /// `Material.sessionIds` mirrors the link so either side can be read alone.
     public mutating func linkMaterial(_ material: UUID, session: UUID, firstPage: Int? = nil, lastPage: Int? = nil) {
-        guard let m = materials.firstIndex(where: { $0.id == material }), let s = sessions.firstIndex(where: { $0.id == session }) else { return }
+        guard let m = materials.firstIndex(where: { $0.id == material }), let s = sessions.firstIndex(where: { $0.id == session }) else {
+            return
+        }
         let link = SessionMaterial(materialId: material, firstPage: firstPage, lastPage: lastPage)
         if let i = sessions[s].materials.firstIndex(where: { $0.materialId == material }) {
             sessions[s].materials[i] = link
@@ -56,7 +58,9 @@ extension CourseFile {
 
     /// A refresh usually registered that file as a new material when the original went missing; that duplicate
     /// is dropped and everything that referred to it is moved here, so the user's links survive under the original ID.
-    public mutating func relinkMaterial(_ id: UUID, to path: String, hash: String?, size: Int64?, bookmark: Data?, device: DeviceID, now: Date) {
+    public mutating func relinkMaterial(
+        _ id: UUID, to path: String, hash: String?, size: Int64?, bookmark: Data?, device: DeviceID, now: Date
+    ) {
         guard materials.contains(where: { $0.id == id }) else { return }
         if let dup = materials.first(where: { $0.path == path && $0.id != id }) {
             merge(dup, into: id)

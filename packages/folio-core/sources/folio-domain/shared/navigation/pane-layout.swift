@@ -281,7 +281,8 @@ public struct PaneLayout: Hashable, Sendable {
 
     public func fit(room: Double, minWidth: Double, strip: Double, gap: Double) -> Fit {
         let folding = self.fold(room: room, minWidth: minWidth, strip: strip, gap: gap)
-        return Fit(fold: folding, widths: widths(room: room, fold: folding, minWidth: minWidth, strip: strip, gap: gap), gaps: folding.gaps(gap))
+        return Fit(
+            fold: folding, widths: widths(room: room, fold: folding, minWidth: minWidth, strip: strip, gap: gap), gaps: folding.gaps(gap))
     }
 
     /// Every pane stays in place while they fit, open ones at `minWidth` and the rest at `strip`, with `gap` between.
@@ -357,10 +358,12 @@ extension PaneLayout: Codable {
             guard let link = AppLink(string: text) else {
                 throw DecodingError.dataCorruptedError(forKey: .link, in: p, debugDescription: "Not a folio link: \(text)")
             }
-            panes.append(Pane(link: link, share: try p.decode(Double.self, forKey: .share),
-                              noteMode: try p.decodeIfPresent(NoteViewMode.self, forKey: .noteMode),
-                              collapsed: try p.decodeIfPresent(Bool.self, forKey: .collapsed) ?? false,
-                              pressed: try p.decode(Int.self, forKey: .pressed)))
+            panes.append(
+                Pane(
+                    link: link, share: try p.decode(Double.self, forKey: .share),
+                    noteMode: try p.decodeIfPresent(NoteViewMode.self, forKey: .noteMode),
+                    collapsed: try p.decodeIfPresent(Bool.self, forKey: .collapsed) ?? false,
+                    pressed: try p.decode(Int.self, forKey: .pressed)))
         }
 
         guard !panes.isEmpty, panes.allSatisfy({ $0.share > 0 && $0.share.isFinite }) else {
@@ -403,7 +406,7 @@ extension CourseFile {
         case .note: return sessions.first { $0.roughNoteId == id || $0.reviewNoteId == id }?.id
         case .recording: return recordings.first { $0.id == id }?.sessionId
         case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .semester, .course, .session, .unit,
-             .material, .assignment, .exam, .card, .problemSet, .person:
+            .material, .assignment, .exam, .card, .problemSet, .person:
             return nil
         }
     }
@@ -440,7 +443,8 @@ public struct PaneMemory: Codable, Hashable, Sendable {
     /// left on a wider screen too: the row folds what it has no room for.
     public func restoring(_ link: AppLink, session: UUID) -> PaneLayout? {
         guard var saved = layout(session: session),
-              let i = saved.panes.firstIndex(where: { $0.link.withoutAnchor == link.withoutAnchor }) else { return nil }
+            let i = saved.panes.firstIndex(where: { $0.link.withoutAnchor == link.withoutAnchor })
+        else { return nil }
         saved.open(link, in: i)
         saved.press(i)
         return saved.nilIfAlone
@@ -456,7 +460,8 @@ public struct PaneMemory: Codable, Hashable, Sendable {
     /// was opened.
     public func noteMode(note: UUID, session: UUID? = nil) -> NoteViewMode? {
         if let session, let layout = layout(session: session),
-           let pane = layout.panes.first(where: { $0.link.id == note }), let mode = pane.noteMode {
+            let pane = layout.panes.first(where: { $0.link.id == note }), let mode = pane.noteMode
+        {
             return mode
         }
         return noteModes[note.uuidString]?.value

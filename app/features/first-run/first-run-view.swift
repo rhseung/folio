@@ -56,7 +56,7 @@ struct FirstRunView: View {
                 .overlay { RoundedRectangle(cornerRadius: Theme.Radius.floating).strokeBorder(Theme.Palette.lineSoft) }
                 .padding([.trailing, .bottom], Theme.Size.panelInset)
                 #if os(macOS)
-                .padding(.top, Theme.Size.panelInset)
+            .padding(.top, Theme.Size.panelInset)
                 #endif
         }
         #if os(macOS)
@@ -75,7 +75,9 @@ struct FirstRunView: View {
         VStack(spacing: 0) {
             HStack {
                 if model.canGoBack {
-                    Button { model.back() } label: {
+                    Button {
+                        model.back()
+                    } label: {
                         Image(systemName: "chevron.left").frame(width: Theme.Size.touchTarget, height: Theme.Size.touchTarget)
                     }
                     .buttonStyle(.pointing(.plain))
@@ -138,7 +140,9 @@ struct FirstRunView: View {
     private func stepRow(_ step: FirstRunStep) -> some View {
         let done = model.isDone(step)
         let on = step == model.step
-        return Button { model.go(to: step) } label: {
+        return Button {
+            model.go(to: step)
+        } label: {
             HStack(spacing: Theme.Space.s) {
                 Image(systemName: done ? "checkmark" : step.symbol).frame(width: Theme.Size.tile)
                 Text(step.title).lineLimit(1)
@@ -192,7 +196,9 @@ struct FirstRunView: View {
     }
 
     private var primary: some View {
-        Button { model.proceed() } label: {
+        Button {
+            model.proceed()
+        } label: {
             Text(model.primaryTitle).frame(maxWidth: narrow ? .infinity : nil)
         }
         .buttonStyle(.prominent)
@@ -239,9 +245,15 @@ struct FirstRunView: View {
                 header(.firstRunAppName, .firstRunWelcomeSubtitle)
             }
             Card {
-                CardRow { icon("doc.text"); Text(.firstRunWelcomeMaterials).font(Theme.Typeface.bodyStrong) }
-                CardRow { icon("waveform"); Text(.firstRunWelcomeRecording).font(Theme.Typeface.bodyStrong) }
-                CardRow(last: true) { icon("arrow.trianglehead.2.clockwise"); Text(.firstRunWelcomeReview).font(Theme.Typeface.bodyStrong) }
+                CardRow {
+                    icon("doc.text"); Text(.firstRunWelcomeMaterials).font(Theme.Typeface.bodyStrong)
+                }
+                CardRow {
+                    icon("waveform"); Text(.firstRunWelcomeRecording).font(Theme.Typeface.bodyStrong)
+                }
+                CardRow(last: true) {
+                    icon("arrow.trianglehead.2.clockwise"); Text(.firstRunWelcomeReview).font(Theme.Typeface.bodyStrong)
+                }
             }
         }
     }
@@ -322,7 +334,9 @@ struct FirstRunView: View {
                         FormRow(label: String(localized: .firstRunSemester)) {
                             Menu {
                                 ForEach(model.semesters) { s in
-                                    Button { model.chosenSemester = s.id } label: {
+                                    Button {
+                                        model.chosenSemester = s.id
+                                    } label: {
                                         if s.id == semester.id { Label(s.title, systemImage: "checkmark") } else { Text(s.title) }
                                     }
                                 }
@@ -344,7 +358,9 @@ struct FirstRunView: View {
                             }
                         }
                         CardRow(last: true) {
-                            Button { addingCourse = true } label: {
+                            Button {
+                                addingCourse = true
+                            } label: {
                                 Label(String(localized: .firstRunAddCourse), systemImage: "plus").font(Theme.Typeface.bodyStrong)
                             }
                             .buttonStyle(.pointing(.plain))
@@ -359,7 +375,9 @@ struct FirstRunView: View {
             }
             Block(String(localized: .firstRunDay)) {
                 Card {
-                    FormRow(label: String(localized: .firstRunDayBoundary), detail: String(localized: .firstRunDayBoundaryDetail), last: true) {
+                    FormRow(
+                        label: String(localized: .firstRunDayBoundary), detail: String(localized: .firstRunDayBoundaryDetail), last: true
+                    ) {
                         TimeMenu(minute: Bindable(model.settings).settings.dayBoundaryMinutes, hours: 0...8)
                     }
                 }
@@ -381,7 +399,9 @@ struct FirstRunView: View {
             Card {
                 let all = SystemPermission.allCases
                 ForEach(Array(all.enumerated()), id: \.element) { i, permission in
-                    FormRow(label: String(localized: permission.title), detail: String(localized: permission.detail), last: i == all.count - 1) {
+                    FormRow(
+                        label: String(localized: permission.title), detail: String(localized: permission.detail), last: i == all.count - 1
+                    ) {
                         switch model.state(of: permission) {
                         case .allowed:
                             Label(String(localized: .firstRunAllowed), systemImage: "checkmark")
@@ -413,7 +433,9 @@ struct FirstRunView: View {
                 NoticeCard(title: String(localized: .firstRunMissingBanner), systemImage: "exclamationmark.triangle.fill") {
                     Button(.firstRunFindAgain) { model.findAgain() }
                 } rows: {
-                    CardRow(last: true) { icon("folder"); placeText(path) }
+                    CardRow(last: true) {
+                        icon("folder"); placeText(path)
+                    }
                 }
             case .downloading(let path, let done, let total):
                 let fraction = FolderAvailability.downloading(done: done, total: total).fraction
@@ -421,7 +443,9 @@ struct FirstRunView: View {
                 NoticeCard(title: String(localized: .firstRunDownloadingBanner), systemImage: "icloud.and.arrow.down", informs: true) {
                     Text(fraction, format: .percent.precision(.fractionLength(0))).monospacedDigit().foregroundStyle(Theme.Palette.info)
                 } rows: {
-                    CardRow { icon("folder"); placeText(path) }
+                    CardRow {
+                        icon("folder"); placeText(path)
+                    }
                     CardRow(last: true) {
                         VStack(alignment: .leading, spacing: Theme.Space.s) {
                             ProgressView(value: fraction)

@@ -31,12 +31,15 @@ struct RequirementsView: View {
             // What needs a decision sits up here with its own buttons, where it's seen, not in a list at the bottom.
             if !suggestions.isEmpty {
                 let refusals = model.acceptRefusals(suggestions)
-                NoticeCard(title: model.suggestionsTitle(suggestions.count), detail: String(localized: .requirementsSuggestionsDetail), trailing: {
-                    if suggestions.count > 1 {
-                        Button(.requirementsApplyAll) { model.accept(suggestions) }.buttonStyle(.ghost)
-                            .disabled(refusals.all != nil).help(refusals.all ?? "")
+                NoticeCard(
+                    title: model.suggestionsTitle(suggestions.count), detail: String(localized: .requirementsSuggestionsDetail),
+                    trailing: {
+                        if suggestions.count > 1 {
+                            Button(.requirementsApplyAll) { model.accept(suggestions) }.buttonStyle(.ghost)
+                                .disabled(refusals.all != nil).help(refusals.all ?? "")
+                        }
                     }
-                }) {
+                ) {
                     ForEach(Array(suggestions.enumerated()), id: \.element.id) { i, s in
                         let course = model.course(s.courseId)
                         let refusal = refusals.rows[s.courseId]
@@ -47,7 +50,8 @@ struct RequirementsView: View {
                             }
                             Spacer(minLength: Theme.Space.m)
                             Text(model.suggestionChange(s))
-                                .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(2).multilineTextAlignment(.trailing)
+                                .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(2)
+                                .multilineTextAlignment(.trailing)
                             Button(.requirementsApply) { model.accept([s]) }.buttonStyle(.ghost)
                                 .disabled(refusal != nil).help(refusal ?? "")
                         }
@@ -89,7 +93,10 @@ struct RequirementsView: View {
                 }
             }
             if !unassigned.isEmpty {
-                NoticeCard(title: model.unassignedTitle(unassigned.count), detail: String(localized: .requirementsUnassignedDetail), trailing: { EmptyView() }) {
+                NoticeCard(
+                    title: model.unassignedTitle(unassigned.count), detail: String(localized: .requirementsUnassignedDetail),
+                    trailing: { EmptyView() }
+                ) {
                     ForEach(Array(unassigned.enumerated()), id: \.element.id) { i, course in
                         CardRow(last: i == unassigned.count - 1) {
                             courseLabel(course, showsTaking: false)
@@ -112,8 +119,10 @@ struct RequirementsView: View {
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .top, spacing: Theme.Space.l) {
                     ForEach(columns.indices, id: \.self) { c in
-                        VStack(spacing: Theme.Space.l) { ForEach(columns[c], id: \.group) { groupCard($0, credits: credits, listed: listed) } }
-                            .frame(maxWidth: .infinity)
+                        VStack(spacing: Theme.Space.l) {
+                            ForEach(columns[c], id: \.group) { groupCard($0, credits: credits, listed: listed) }
+                        }
+                        .frame(maxWidth: .infinity)
                     }
                 }
                 .frame(minWidth: 720)
@@ -127,10 +136,15 @@ struct RequirementsView: View {
             }
         }
         .navigationTitle(.requirementsTitle)
-        .confirmationDialog(model.removing.map(RequirementsModel.removeTitle) ?? "", isPresented: Binding(get: { model.removing != nil }, set: { if !$0 { model.removing = nil } }),
-                            presenting: model.removing) { c in
+        .confirmationDialog(
+            model.removing.map(RequirementsModel.removeTitle) ?? "",
+            isPresented: Binding(get: { model.removing != nil }, set: { if !$0 { model.removing = nil } }),
+            presenting: model.removing
+        ) { c in
             Button(.commonDelete, role: .destructive) { RequirementsModel.remove(c, in: model.workspace) }
-        } message: { _ in Text(.requirementsRemoveMessage) }
+        } message: { _ in
+            Text(.requirementsRemoveMessage)
+        }
         .sheet(item: $model.editing) { RequirementSheet(workspace: model.workspace, category: $0) }
         .sheet(isPresented: $editingProfile) { ProfileSheet(workspace: model.workspace) }
         .confirming($model.pending)
@@ -159,12 +173,15 @@ struct RequirementsView: View {
                 if let header {
                     VStack(alignment: .leading, spacing: 0) {
                         toggle(header.category, listed[header.category.id] ?? []) {
-                            RequirementLine(category: header.category, credits: credits[header.category.id] ?? .init(), header: true,
-                                            title: card.group.isEmpty ? nil : card.group).contentShape(.rect)
+                            RequirementLine(
+                                category: header.category, credits: credits[header.category.id] ?? .init(), header: true,
+                                title: card.group.isEmpty ? nil : card.group
+                            ).contentShape(.rect)
                         }
                     }
                 } else {
-                    Text(RequirementsModel.groupTitle(card.group)).font(Theme.Typeface.figureSmall).frame(maxWidth: .infinity, alignment: .leading)
+                    Text(RequirementsModel.groupTitle(card.group)).font(Theme.Typeface.figureSmall).frame(
+                        maxWidth: .infinity, alignment: .leading)
                 }
             }
             .padding(.horizontal, Theme.Space.l)
@@ -188,13 +205,22 @@ struct RequirementsView: View {
     /// A press shows the courses behind the figure in a popover, so the cards keep their place; editing the requirement
     /// is in the popover and the right-click menu.
     func toggle(_ category: RequirementCategory, _ courses: [Course], @ViewBuilder label: () -> some View) -> some View {
-        Button { model.showing = category.id } label: { label() }
+        Button {
+            model.showing = category.id
+        } label: {
+            label()
+        }
         .buttonStyle(.pointing(.plain))
-        .popover(isPresented: Binding(get: { model.showing == category.id }, set: { if !$0, model.showing == category.id { model.showing = nil } }),
-                 arrowEdge: .bottom) { courseList(category, courses) }
+        .popover(
+            isPresented: Binding(
+                get: { model.showing == category.id }, set: { if !$0, model.showing == category.id { model.showing = nil } }),
+            arrowEdge: .bottom
+        ) { courseList(category, courses) }
         .contextMenu {
-            ItemMenu(source: RequirementMenuSource(show: { model.showing = category.id }, edit: { model.editing = category },
-                                                   remove: { model.removing = category }))
+            ItemMenu(
+                source: RequirementMenuSource(
+                    show: { model.showing = category.id }, edit: { model.editing = category },
+                    remove: { model.removing = category }))
         }
         .help(category.rule ?? String(localized: .requirementsShowCoursesHelp))
     }
@@ -207,17 +233,25 @@ struct RequirementsView: View {
                 VStack(alignment: .leading, spacing: Theme.Space.xs) {
                     if sorted.isEmpty { Text(.requirementsNoCourses).foregroundStyle(Theme.Palette.textTertiary) }
                     ForEach(sorted) { course in
-                        Button { model.showing = nil; openCourse(course) } label: { HStack(spacing: Theme.Space.s) {
-                            CourseMark(model.workspace, course.id, inline: true)
-                            Text(course.title).lineLimit(1)
-                            // Plain text, not a chip: a chip makes its row taller than the rest.
-                            if course.finalGrade == nil { Text(.gradesEnrolled).foregroundStyle(Theme.Palette.warning) }
-                            Spacer(minLength: Theme.Space.s)
-                            Text(model.listDetail(course))
-                                .foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()
-                        }.contentShape(.rect) }
+                        Button {
+                            model.showing = nil; openCourse(course)
+                        } label: {
+                            HStack(spacing: Theme.Space.s) {
+                                CourseMark(model.workspace, course.id, inline: true)
+                                Text(course.title).lineLimit(1)
+                                // Plain text, not a chip: a chip makes its row taller than the rest.
+                                if course.finalGrade == nil { Text(.gradesEnrolled).foregroundStyle(Theme.Palette.warning) }
+                                Spacer(minLength: Theme.Space.s)
+                                Text(model.listDetail(course))
+                                    .foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()
+                            }.contentShape(.rect)
+                        }
                         .buttonStyle(.pointing(.plain))
-                        .contextMenu { Button(.commonOpenCourse) { model.showing = nil; openCourse(course) } }
+                        .contextMenu {
+                            Button(.commonOpenCourse) {
+                                model.showing = nil; openCourse(course)
+                            }
+                        }
                     }
                 }
             }
@@ -226,7 +260,9 @@ struct RequirementsView: View {
             .frame(maxHeight: 320)
             .fixedSize(horizontal: false, vertical: true)
             // The sheet can't open over a popover still on screen, so the popover closes first.
-            Button(.requirementsEdit) { model.showing = nil; model.editing = category }.buttonStyle(.ghost).padding(.top, 2)
+            Button(.requirementsEdit) {
+                model.showing = nil; model.editing = category
+            }.buttonStyle(.ghost).padding(.top, 2)
         }
         .font(Theme.Typeface.caption)
         .padding(Theme.Space.m)
@@ -252,7 +288,9 @@ struct RequirementLine: View {
                         .font(header ? Theme.Typeface.figureSmall : Theme.Typeface.body)
                         .foregroundStyle(idle ? Theme.Palette.textTertiary : Theme.Palette.text)
                         .lineLimit(1)
-                    if let note = Self.note(category, s) { Text(note).font(Theme.Typeface.caption).foregroundStyle(s.over ? Theme.Palette.warning : Theme.Palette.textTertiary) }
+                    if let note = Self.note(category, s) {
+                        Text(note).font(Theme.Typeface.caption).foregroundStyle(s.over ? Theme.Palette.warning : Theme.Palette.textTertiary)
+                    }
                 }
                 Spacer(minLength: Theme.Space.s)
                 HStack(alignment: .firstTextBaseline, spacing: Theme.Space.xs) {
@@ -270,7 +308,9 @@ struct RequirementLine: View {
         }
     }
 
-    static func unit(_ s: RequirementStatus) -> String { String(localized: s.countsCourses ? .requirementsUnitCourses : .requirementsUnitCredits) }
+    static func unit(_ s: RequirementStatus) -> String {
+        String(localized: s.countsCourses ? .requirementsUnitCourses : .requirementsUnitCredits)
+    }
 
     /// `수강 중 4 · 4학점 남음`, `최대 18 초과`: what the figure alone doesn't say.
     static func note(_ category: RequirementCategory, _ s: RequirementStatus) -> String? {
@@ -303,8 +343,10 @@ struct ProgressRing: View {
             } else if let goal {
                 ZStack {
                     Circle().stroke(Theme.Palette.fill, lineWidth: 2.5)
-                    Circle().trim(from: 0, to: min(1, (done + taking) / goal)).stroke(Theme.Palette.textTertiary.opacity(0.45), lineWidth: 2.5)
-                    Circle().trim(from: 0, to: min(1, done / goal)).stroke(Theme.Palette.textSecondary, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                    Circle().trim(from: 0, to: min(1, (done + taking) / goal)).stroke(
+                        Theme.Palette.textTertiary.opacity(0.45), lineWidth: 2.5)
+                    Circle().trim(from: 0, to: min(1, done / goal)).stroke(
+                        Theme.Palette.textSecondary, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
                 }
                 .rotationEffect(.degrees(-90))
                 .padding(2)
@@ -330,7 +372,8 @@ struct CreditBar: View {
             let w = proxy.size.width
             ZStack(alignment: .leading) {
                 Capsule().fill(Theme.Palette.fill)
-                Capsule().fill(color.opacity(Theme.Opacity.projected)).frame(width: w * min(1, (credits.earned + credits.inProgress) / scale))
+                Capsule().fill(color.opacity(Theme.Opacity.projected)).frame(
+                    width: w * min(1, (credits.earned + credits.inProgress) / scale))
                 Capsule().fill(color).frame(width: w * min(1, credits.earned / scale))
             }
         }
@@ -348,39 +391,59 @@ struct RequirementSheet: View {
     }
 
     var body: some View {
-        SheetForm(title: model.title, confirm: String(localized: .commonSave), disabled: model.draft.name.isEmpty, carded: false, width: 560,
-                  deleteTitle: model.isNew ? nil : String(localized: .requirementsRemove), onDelete: { removing = true }) {
+        SheetForm(
+            title: model.title, confirm: String(localized: .commonSave), disabled: model.draft.name.isEmpty, carded: false, width: 560,
+            deleteTitle: model.isNew ? nil : String(localized: .requirementsRemove), onDelete: { removing = true }
+        ) {
             Block(String(localized: .requirementsFieldCategory)) {
                 Card {
-                    FormRow(label: String(localized: .requirementsFieldName)) { InlineField(String(localized: .requirementsFieldNameExample), text: $model.draft.name) }
+                    FormRow(label: String(localized: .requirementsFieldName)) {
+                        InlineField(String(localized: .requirementsFieldNameExample), text: $model.draft.name)
+                    }
                     FormRow(label: String(localized: .requirementsFieldGroup), detail: String(localized: .requirementsFieldGroupDetail)) {
                         InlineField(String(localized: .requirementsFieldGroupExample), text: $model.draft.group)
                     }
                     FormRow(label: String(localized: .requirementsFieldParent)) {
                         SearchSelect(selection: $model.draft.parentId, options: model.parentOptions)
                     }
-                    FormRow(label: String(localized: .requirementsFieldProgram), detail: String(localized: .requirementsFieldProgramDetail)) {
+                    FormRow(label: String(localized: .requirementsFieldProgram), detail: String(localized: .requirementsFieldProgramDetail))
+                    {
                         ChoiceMenu(selection: $model.draft.programId, options: model.programOptions)
                     }
-                    FormRow(label: String(localized: .requirementsFieldMajor), detail: String(localized: .requirementsFieldMajorDetail), last: true) { Switch(isOn: $model.draft.isMajor) }
+                    FormRow(
+                        label: String(localized: .requirementsFieldMajor), detail: String(localized: .requirementsFieldMajorDetail),
+                        last: true
+                    ) { Switch(isOn: $model.draft.isMajor) }
                 }
             }
             Block(String(localized: .requirementsCriteria), note: String(localized: .requirementsCriteriaNote)) {
                 Card {
-                    FormRow(label: String(localized: .requirementsFieldMinCredits)) { TextField(String(localized: .requirementsNone), value: $model.draft.minCredits, format: .number).pill(width: 72) }
-                    FormRow(label: String(localized: .requirementsFieldMaxCredits), detail: String(localized: .requirementsFieldMaxCreditsDetail)) {
+                    FormRow(label: String(localized: .requirementsFieldMinCredits)) {
+                        TextField(String(localized: .requirementsNone), value: $model.draft.minCredits, format: .number).pill(width: 72)
+                    }
+                    FormRow(
+                        label: String(localized: .requirementsFieldMaxCredits),
+                        detail: String(localized: .requirementsFieldMaxCreditsDetail)
+                    ) {
                         TextField(String(localized: .requirementsNone), value: $model.draft.maxCredits, format: .number).pill(width: 72)
                     }
-                    FormRow(label: String(localized: .requirementsFieldMinCount), detail: String(localized: .requirementsFieldMinCountDetail)) {
+                    FormRow(
+                        label: String(localized: .requirementsFieldMinCount), detail: String(localized: .requirementsFieldMinCountDetail)
+                    ) {
                         TextField(String(localized: .requirementsNone), value: $model.draft.minCount, format: .number).pill(width: 72)
                     }
-                    FormRow(label: String(localized: .requirementsFieldSharedCap), detail: String(localized: .requirementsFieldSharedCapDetail), last: true) {
-                        TextField(String(localized: .requirementsNone), value: $model.draft.maxSharedCredits, format: .number).pill(width: 72)
+                    FormRow(
+                        label: String(localized: .requirementsFieldSharedCap), detail: String(localized: .requirementsFieldSharedCapDetail),
+                        last: true
+                    ) {
+                        TextField(String(localized: .requirementsNone), value: $model.draft.maxSharedCredits, format: .number).pill(
+                            width: 72)
                     }
                 }
             }
-            FormTextArea(label: String(localized: .requirementsFieldRule),
-                         text: Binding(get: { model.draft.rule ?? "" }, set: { model.draft.rule = $0.isEmpty ? nil : $0 }))
+            FormTextArea(
+                label: String(localized: .requirementsFieldRule),
+                text: Binding(get: { model.draft.rule ?? "" }, set: { model.draft.rule = $0.isEmpty ? nil : $0 }))
         } onConfirm: {
             model.confirm()
             dismiss()
@@ -405,9 +468,10 @@ struct CategoryMenu: View {
     var course: Course?
 
     var body: some View {
-        SearchMultiSelect(selection: $selection,
-                          options: RequirementsModel.categoryOptions(workspace.requirementCatalog, selection: selection, course: course),
-                          placeholder: String(localized: .requirementsPickCategory))
+        SearchMultiSelect(
+            selection: $selection,
+            options: RequirementsModel.categoryOptions(workspace.requirementCatalog, selection: selection, course: course),
+            placeholder: String(localized: .requirementsPickCategory))
     }
 }
 
@@ -450,16 +514,21 @@ struct ProfileCard: View {
                 InlineField("name@gm.gist.ac.kr", text: $model.email)
             }
             FormRow(label: String(localized: .profileAdmissionYear)) {
-                TextField(String(localized: .profileAdmissionYearExample), value: Binding(get: { rule.admissionYear }, set: { y in model.update { $0.admissionYear = y } }),
-                          format: .number.grouping(.never))
-                    .pill(width: 72)
+                TextField(
+                    String(localized: .profileAdmissionYearExample),
+                    value: Binding(get: { rule.admissionYear }, set: { y in model.update { $0.admissionYear = y } }),
+                    format: .number.grouping(.never)
+                )
+                .pill(width: 72)
             }
             // By position: the same program listed twice would otherwise collide, and the kind menu already names it.
             ForEach(Array(rule.programs.enumerated()), id: \.offset) { i, p in
                 FormRow(label: String(localized: .profileProgram(i + 1))) {
-                    SearchSelect(selection: Binding(get: { p.codeId }, set: { id in model.update { $0.programs[i].codeId = id } }), options: options)
-                    ChoiceMenu(selection: Binding(get: { p.kind }, set: { k in model.update { $0.programs[i].kind = k } }),
-                               options: StudentProgram.Kind.allCases.map { ($0, $0.label) })
+                    SearchSelect(
+                        selection: Binding(get: { p.codeId }, set: { id in model.update { $0.programs[i].codeId = id } }), options: options)
+                    ChoiceMenu(
+                        selection: Binding(get: { p.kind }, set: { k in model.update { $0.programs[i].kind = k } }),
+                        options: StudentProgram.Kind.allCases.map { ($0, $0.label) })
                     Button(.profileRemoveProgram, systemImage: "minus.circle") { model.update { $0.programs.remove(at: i) } }
                         .buttonStyle(.ghostIcon)
                 }

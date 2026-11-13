@@ -75,16 +75,17 @@ struct GradeDisplayRulesTests {
         let score = ScoreEntry(device: device, at: now, componentId: results.id, title: "1", score: 8, max: 10)
 
         let lines = GradeLine.lines([quiz, materials, results, final, late], scores: [score])
-        #expect(lines == [
-            .component(quiz, indented: false),
-            .group("Reports", weight: 20, first: materials.id),
-            .component(materials, indented: true),
-            .component(results, indented: true),
-            .entry(score, indented: true),
-            .component(final, indented: false),
-            .group("Reports", weight: 5, first: late.id),
-            .component(late, indented: true),
-        ])
+        #expect(
+            lines == [
+                .component(quiz, indented: false),
+                .group("Reports", weight: 20, first: materials.id),
+                .component(materials, indented: true),
+                .component(results, indented: true),
+                .entry(score, indented: true),
+                .component(final, indented: false),
+                .group("Reports", weight: 5, first: late.id),
+                .component(late, indented: true),
+            ])
         // Two runs with the same name stay apart.
         #expect(Set(lines.map(\.id)).count == lines.count)
     }

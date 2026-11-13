@@ -1,7 +1,8 @@
-@testable import FolioMarkdown
-import Markdown
 import Foundation
+import Markdown
 import Testing
+
+@testable import FolioMarkdown
 
 struct FrontmatterTests {
     @Test func keepsUnknownLinesAndOrder() {
@@ -48,19 +49,23 @@ struct MathTests {
     func html(_ md: String) -> String { HTMLRenderer.render(markdown: md) }
 
     @Test func texSurvivesMarkdownEscapes() {
-        #expect(html("집합 $\\{x_1, x_2\\}$ 과 $a_1 * b_2$") ==
-            "<p>집합 <span class=\"math\">\\{x_1, x_2\\}</span> 과 <span class=\"math\">a_1 * b_2</span></p>\n")
+        #expect(
+            html("집합 $\\{x_1, x_2\\}$ 과 $a_1 * b_2$")
+                == "<p>집합 <span class=\"math\">\\{x_1, x_2\\}</span> 과 <span class=\"math\">a_1 * b_2</span></p>\n")
     }
 
     /// AsciiMath's quotes, `#`, bars and braces reach the page as written; the preview reads the span's text.
     @Test func asciiMathSurvivesMarkdown() {
-        #expect(html(##"$min{|F|: G - F " separates " x, y} = max{"# edge-disjoint " x,y- "paths"}$"##) ==
-            ##"<p><span class="math">min{|F|: G - F &quot; separates &quot; x, y} = max{&quot;# edge-disjoint &quot; x,y- &quot;paths&quot;}</span></p>"## + "\n")
+        #expect(
+            html(##"$min{|F|: G - F " separates " x, y} = max{"# edge-disjoint " x,y- "paths"}$"##)
+                == ##"<p><span class="math">min{|F|: G - F &quot; separates &quot; x, y} = max{&quot;# edge-disjoint &quot; x,y- &quot;paths&quot;}</span></p>"##
+                + "\n")
     }
 
     @Test func displayMathSpansLines() {
-        #expect(html("$$\n\\begin{aligned}\na &= b \\\\\nc &= d\n\\end{aligned}\n$$") ==
-            "<div class=\"math display\">\\begin{aligned}\na &amp;= b \\\\\nc &amp;= d\n\\end{aligned}</div>\n")
+        #expect(
+            html("$$\n\\begin{aligned}\na &= b \\\\\nc &= d\n\\end{aligned}\n$$")
+                == "<div class=\"math display\">\\begin{aligned}\na &amp;= b \\\\\nc &amp;= d\n\\end{aligned}</div>\n")
     }
 
     @Test func dollarsInCodeAndEscapesStayText() {
@@ -78,33 +83,38 @@ struct CalloutTests {
     func html(_ md: String) -> String { HTMLRenderer.render(markdown: md) }
 
     @Test func numbersPerTypeAndKeepsTextbookNumbers() {
-        let out = html("""
-        > [!definition] Graph
-        > A pair $(V, E)$.
+        let out = html(
+            """
+            > [!definition] Graph
+            > A pair $(V, E)$.
 
-        > [!theorem] Theorem 1.20 (König)
-        > Bipartite graphs...
+            > [!theorem] Theorem 1.20 (König)
+            > Bipartite graphs...
 
-        > [!definition] Matching
-        > A set of edges. ^def-matching
-        """)
+            > [!definition] Matching
+            > A set of edges. ^def-matching
+            """)
         #expect(out.contains("<span class=\"callout-label\">Definition 1</span> <span class=\"callout-title\">Graph</span>"))
         #expect(out.contains("<span class=\"callout-label\">Theorem 1.20</span> <span class=\"callout-title\">(König)</span>"))
-        #expect(out.contains("<details class=\"callout callout-definition\" id=\"^def-matching\" open><summary><span class=\"callout-label\">Definition 2</span>"))
+        #expect(
+            out.contains(
+                "<details class=\"callout callout-definition\" id=\"^def-matching\" open><summary><span class=\"callout-label\">Definition 2</span>"
+            ))
         #expect(!out.contains("^def-matching</p>"))
     }
 
     @Test func foldedAndAttachedProof() {
-        let out = html("""
-        > [!theorem] Euler
-        > Statement.
+        let out = html(
+            """
+            > [!theorem] Euler
+            > Statement.
 
-        > [!proof]
-        > Induction.
+            > [!proof]
+            > Induction.
 
-        > [!note]- Aside
-        > Hidden.
-        """)
+            > [!note]- Aside
+            > Hidden.
+            """)
         #expect(out.contains("<details class=\"callout callout-proof attached\">"))
         #expect(out.contains("<details class=\"callout callout-note\"><summary>"))
         #expect(out.contains("<details class=\"callout callout-theorem\" open>"))
@@ -139,7 +149,8 @@ struct CalloutTests {
 
 struct LinkTests {
     @Test func parsesEveryWikiLinkForm() {
-        let links = WikiLink.all(in: "[[Note]] [[Note#Heading|보기]] [[Note#^def-vs]] ![[Other#Sec]] [[material:6F1D2C4E-8A3B-4F5E-9C1D-2B7A8E0F3D41#page=12]]")
+        let links = WikiLink.all(
+            in: "[[Note]] [[Note#Heading|보기]] [[Note#^def-vs]] ![[Other#Sec]] [[material:6F1D2C4E-8A3B-4F5E-9C1D-2B7A8E0F3D41#page=12]]")
         #expect(links.count == 5)
         #expect(links[1].fragment == "Heading" && links[1].alias == "보기")
         #expect(links[2].blockID == "def-vs" && links[2].fragment == nil)
@@ -150,14 +161,16 @@ struct LinkTests {
     @Test func retargetingKeepsEachLinksParts() {
         let text = "[[7주차-2 정리]], [[7주차-2 정리#예시|예시]], ![[7주차-2 정리#^c1]], [[7주차-2 정리 2]], [[7주차-2]], [[ 7주차-2 정리 ]]"
         let out = WikiLink.retargeted(text, from: "7주차-2 정리", to: "10-14(화) 매칭 정리")
-        #expect(out == "[[10-14(화) 매칭 정리]], [[10-14(화) 매칭 정리#예시|예시]], ![[10-14(화) 매칭 정리#^c1]], [[7주차-2 정리 2]], [[7주차-2]], [[10-14(화) 매칭 정리]]")
+        #expect(
+            out == "[[10-14(화) 매칭 정리]], [[10-14(화) 매칭 정리#예시|예시]], ![[10-14(화) 매칭 정리#^c1]], [[7주차-2 정리 2]], [[7주차-2]], [[10-14(화) 매칭 정리]]")
         #expect(WikiLink.retargeted("[[Matching]]", from: "matching", to: "Flows") == "[[Flows]]")
         #expect(WikiLink.retargeted("[[material:ABC#page=3]] 그대로", from: "7주차-2", to: "x") == "[[material:ABC#page=3]] 그대로")
         // A table row's escaped bar stays escaped.
         #expect(WikiLink.retargeted("| [[7주차-2#예시\\|예시]] |", from: "7주차-2", to: "x") == "| [[x#예시\\|예시]] |")
         let id = UUID()
-        #expect(WikiLink.retitled("| [[note:\(id)\\|7주차-2]] | [[note:\(id)|7주차-2]]", note: id, from: "7주차-2", to: "새")
-            == "| [[note:\(id)\\|새]] | [[note:\(id)|새]]")
+        #expect(
+            WikiLink.retitled("| [[note:\(id)\\|7주차-2]] | [[note:\(id)|7주차-2]]", note: id, from: "7주차-2", to: "새")
+                == "| [[note:\(id)\\|새]] | [[note:\(id)|새]]")
     }
 
     @Test func rendersLinksButNotInsideCode() {
@@ -177,28 +190,39 @@ struct LinkTests {
 
     @Test func pipeTableRendersItsRows() {
         let out = HTMLRenderer.render(markdown: "| 기호 | 뜻 |\n| --- | --- |\n| a | 하나 |\n| b | 둘 |")
-        #expect(out.contains("<tbody><tr><td class=\"word\">a</td><td class=\"word\">하나</td></tr><tr><td class=\"word\">b</td><td class=\"word\">둘</td></tr></tbody>"))
+        #expect(
+            out.contains(
+                "<tbody><tr><td class=\"word\">a</td><td class=\"word\">하나</td></tr><tr><td class=\"word\">b</td><td class=\"word\">둘</td></tr></tbody>"
+            ))
     }
 
     /// A one-word cell keeps to one line: WebKit broke `10/26(월)` after `/` and `(` beside a long column.
     @Test func oneShortWordCellsKeepToOneLine() {
-        let out = HTMLRenderer.render(markdown: "| 날짜 | 다룬 것 |\n|---|---|\n| 10/26(월) | augmenting path로 최대 매칭 찾기 |\n| [[n\\|9주차-1]] | ExtraordinarilyLongUnbrokenName |")
+        let out = HTMLRenderer.render(
+            markdown:
+                "| 날짜 | 다룬 것 |\n|---|---|\n| 10/26(월) | augmenting path로 최대 매칭 찾기 |\n| [[n\\|9주차-1]] | ExtraordinarilyLongUnbrokenName |")
         #expect(out.contains("<th class=\"word\">날짜</th><th>다룬 것</th>"))
         #expect(out.contains("<td class=\"word\">10/26(월)</td><td>augmenting"))
-        #expect(out.contains("<td class=\"word\"><a class=\"wikilink\" href=\"folio://note/n\">9주차-1</a></td><td>ExtraordinarilyLongUnbrokenName</td>"))
+        #expect(
+            out.contains(
+                "<td class=\"word\"><a class=\"wikilink\" href=\"folio://note/n\">9주차-1</a></td><td>ExtraordinarilyLongUnbrokenName</td>"))
     }
 
     /// A link's `|` is not a cell's, as in Obsidian; link completion always writes one.
     @Test func linksInTableCellsStayWhole() {
         let id = "ED8DDEC6-86E0-4EF8-B163-9C3CF446C3C8"
-        let out = HTMLRenderer.render(markdown: """
-        | 날짜 | 슬라이드 |
-        |---|---|
-        | 10/26 | [[material:\(id)#page=1|26_week9.pdf p.1]]–[[material:\(id)#page=8|p.8]] |
-        | 10/28 | [[note:\(id)|정리]] |
-        | 11/2 | ![[note:\(id)#^b1|블록]] |
-        """)
-        #expect(out.contains("<td><a class=\"wikilink\" href=\"folio://material/\(id)#page=1\">26_week9.pdf p.1</a>–<a class=\"wikilink\" href=\"folio://material/\(id)#page=8\">p.8</a></td></tr>"))
+        let out = HTMLRenderer.render(
+            markdown: """
+                | 날짜 | 슬라이드 |
+                |---|---|
+                | 10/26 | [[material:\(id)#page=1|26_week9.pdf p.1]]–[[material:\(id)#page=8|p.8]] |
+                | 10/28 | [[note:\(id)|정리]] |
+                | 11/2 | ![[note:\(id)#^b1|블록]] |
+                """)
+        #expect(
+            out.contains(
+                "<td><a class=\"wikilink\" href=\"folio://material/\(id)#page=1\">26_week9.pdf p.1</a>–<a class=\"wikilink\" href=\"folio://material/\(id)#page=8\">p.8</a></td></tr>"
+            ))
         #expect(out.contains("<td class=\"word\"><a class=\"wikilink\" href=\"folio://note/\(id)\">정리</a></td></tr>"))
         #expect(out.contains("<td class=\"word\"><a class=\"embed\" href=\"folio://note/\(id)#^b1\">블록</a></td></tr>"))
         #expect(!out.contains("[["))
@@ -223,7 +247,8 @@ struct LinkTests {
     }
 
     @Test func imageWidthFollowsObsidianSyntax() {
-        #expect(HTMLRenderer.render(markdown: "![그래프|300](assets/g.png)") == "<p><img src=\"assets/g.png\" alt=\"그래프\" width=\"300\"></p>\n")
+        #expect(
+            HTMLRenderer.render(markdown: "![그래프|300](assets/g.png)") == "<p><img src=\"assets/g.png\" alt=\"그래프\" width=\"300\"></p>\n")
         #expect(HTMLRenderer.render(markdown: "![a|b](x.png)").contains("alt=\"a|b\">"))
     }
 
@@ -235,12 +260,12 @@ struct LinkTests {
 struct BlockTests {
     @Test func cbTableMergesAndRendersMarkdownCells() {
         let md = """
-        ```cb-table
-        {"columns":[{"width":120},{"align":"center"}],"headerColumn":true,
-         "rows":[{"header":true,"cells":[{"text":"비교","colspan":2}]},
-                 {"cells":[{"text":"BFS"},{"text":"- queue\\n- $O(V+E)$"}]}]}
-        ```
-        """
+            ```cb-table
+            {"columns":[{"width":120},{"align":"center"}],"headerColumn":true,
+             "rows":[{"header":true,"cells":[{"text":"비교","colspan":2}]},
+                     {"cells":[{"text":"BFS"},{"text":"- queue\\n- $O(V+E)$"}]}]}
+            ```
+            """
         let out = HTMLRenderer.render(markdown: md)
         #expect(out.contains("<th colspan=\"2\">"))
         #expect(out.contains("<col style=\"width:120px\">"))
@@ -322,10 +347,10 @@ struct TaskBoxTests {
 
 @Test func noteImagesFindsLinksAndEmbedsInOrderOnce() {
     let body = """
-    ![IMG_3182|400](assets/IMG_3182.JPG)
-    text ![[diagram.png|300]] and [a link](notes.md) ![web](https://x.org/a.png)
-    ![again](assets/IMG_3182.JPG) ![sp](assets/My%20Photo.heic) ![[other note]]
-    """
+        ![IMG_3182|400](assets/IMG_3182.JPG)
+        text ![[diagram.png|300]] and [a link](notes.md) ![web](https://x.org/a.png)
+        ![again](assets/IMG_3182.JPG) ![sp](assets/My%20Photo.heic) ![[other note]]
+        """
     #expect(NoteImages.references(in: body) == [.path("assets/IMG_3182.JPG"), .name("diagram.png"), .path("assets/My Photo.heic")])
 }
 

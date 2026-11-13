@@ -18,11 +18,13 @@ struct StripItemFrame<Content: View>: View {
         if case .tinted(let last) = item.mark {
             let first = item.lead != nil
             let r = Theme.Radius.strip
-            UnevenRoundedRectangle(topLeadingRadius: first ? r : 0, bottomLeadingRadius: last ? r : 0,
-                                   bottomTrailingRadius: last ? r : 0, topTrailingRadius: first ? r : 0)
-                .fill(accent.tint)
-                // Short of the gap under the last page, or under a folded header, so the next item stands apart.
-                .padding(.bottom, last ? Theme.Space.xs : 0)
+            UnevenRoundedRectangle(
+                topLeadingRadius: first ? r : 0, bottomLeadingRadius: last ? r : 0,
+                bottomTrailingRadius: last ? r : 0, topTrailingRadius: first ? r : 0
+            )
+            .fill(accent.tint)
+            // Short of the gap under the last page, or under a folded header, so the next item stands apart.
+            .padding(.bottom, last ? Theme.Space.xs : 0)
         }
     }
 }

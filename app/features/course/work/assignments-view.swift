@@ -42,7 +42,11 @@ struct AssignmentsView: View {
         }
         #if DEBUG && os(macOS)
         .onChange(of: SnapshotDriver.shared.editAssignmentMemo, initial: true) { _, memo in
-            model.editing = memo.flatMap { memo in model.course.file.assignments.first.map { var a = $0; a.memo = memo; return a } }
+            model.editing = memo.flatMap { memo in
+                model.course.file.assignments.first.map {
+                    var a = $0; a.memo = memo; return a
+                }
+            }
         }
         #endif
         .confirming($model.pending)
@@ -50,7 +54,11 @@ struct AssignmentsView: View {
 
     @ViewBuilder func statusItems(_ a: Assignment) -> some View {
         ForEach(AssignmentStatus.menuOrder, id: \.self) { s in
-            Button { model.setStatus(a, s) } label: { Label(s.label, systemImage: s == a.status ? "checkmark" : s.symbol) }
+            Button {
+                model.setStatus(a, s)
+            } label: {
+                Label(s.label, systemImage: s == a.status ? "checkmark" : s.symbol)
+            }
         }
     }
 
@@ -124,9 +132,11 @@ struct AssignmentSheet: View {
         let files = model.files
         let scored = model.targetComponents
         let store = model.course.store
-        SheetForm(title: model.sheetTitle, confirm: String(localized: .commonSave),
-                  disabled: model.title.isEmpty || model.invalid,
-                  carded: false, width: 560, deleteTitle: String(localized: .assignmentsDelete), onDelete: { model.delete { dismiss() } }) {
+        SheetForm(
+            title: model.sheetTitle, confirm: String(localized: .commonSave),
+            disabled: model.title.isEmpty || model.invalid,
+            carded: false, width: 560, deleteTitle: String(localized: .assignmentsDelete), onDelete: { model.delete { dismiss() } }
+        ) {
             Block(String(localized: .assignmentsSheetAssignment)) {
                 Card {
                     FormRow(label: String(localized: .assignmentsFieldTitle), detail: model.titleDetail) {
@@ -135,15 +145,21 @@ struct AssignmentSheet: View {
                     FormRow(label: String(localized: .assignmentsFieldDue)) {
                         if model.hasDue {
                             DateChip(date: $model.due)
-                            Button { model.hasDue = false } label: { Image(systemName: "xmark.circle.fill") }
-                                .buttonStyle(.pointing(.plain)).foregroundStyle(Theme.Palette.textTertiary).help(Text(.assignmentsClearDue))
+                            Button {
+                                model.hasDue = false
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                            }
+                            .buttonStyle(.pointing(.plain)).foregroundStyle(Theme.Palette.textTertiary).help(Text(.assignmentsClearDue))
                         } else {
                             Button(.assignmentsSetDue) { model.hasDue = true }.buttonStyle(.ghost)
                         }
                     }
                     FormRow(label: String(localized: .assignmentsFieldRepeat), detail: model.repeatDetail) {
                         Menu {
-                            RepeatMenuItems(selection: model.repeats, custom: model.customRepeat, pick: model.pickRepeat, customize: model.customizeRepeat)
+                            RepeatMenuItems(
+                                selection: model.repeats, custom: model.customRepeat, pick: model.pickRepeat,
+                                customize: model.customizeRepeat)
                         } label: {
                             ChipLabel(model.repeatLabel)
                         }
@@ -155,7 +171,8 @@ struct AssignmentSheet: View {
                         RepeatRuleRows(rule: $model.customRule, dueWeekday: model.dueWeekday)
                     }
                     FormRow(label: String(localized: .assignmentsStatus), last: true) {
-                        ChoiceMenu(selection: $model.status, options: [AssignmentStatus.todo, .doing, .submitted, .graded].map { ($0, $0.label) })
+                        ChoiceMenu(
+                            selection: $model.status, options: [AssignmentStatus.todo, .doing, .submitted, .graded].map { ($0, $0.label) })
                     }
                 }
             }
@@ -166,9 +183,15 @@ struct AssignmentSheet: View {
                     }
                     ForEach(Array(scored.enumerated()), id: \.element.id) { i, c in
                         FormRow(label: scored.count > 1 ? c.name : String(localized: .assignmentsScore), last: i == scored.count - 1) {
-                            TextField(String(localized: .assignmentsScore), text: Binding(get: { model.scores[c.id] ?? "" }, set: { model.scores[c.id] = $0 })).pill(width: 72)
+                            TextField(
+                                String(localized: .assignmentsScore),
+                                text: Binding(get: { model.scores[c.id] ?? "" }, set: { model.scores[c.id] = $0 })
+                            ).pill(width: 72)
                             Text("/").foregroundStyle(Theme.Palette.textTertiary)
-                            TextField(String(localized: .assignmentsMax), text: Binding(get: { model.maxes[c.id] ?? "" }, set: { model.maxes[c.id] = $0 })).pill(width: 72)
+                            TextField(
+                                String(localized: .assignmentsMax),
+                                text: Binding(get: { model.maxes[c.id] ?? "" }, set: { model.maxes[c.id] = $0 })
+                            ).pill(width: 72)
                         }
                     }
                 }
@@ -210,7 +233,9 @@ struct AssignmentSheet: View {
             if model.apply() { dismiss() }
         }
         .confirming($model.pending)
-        .confirmationDialog(String(localized: .assignmentsOpenUnsaved), isPresented: asking, titleVisibility: .visible, presenting: model.opening) { m in
+        .confirmationDialog(
+            String(localized: .assignmentsOpenUnsaved), isPresented: asking, titleVisibility: .visible, presenting: model.opening
+        ) { m in
             Button(.assignmentsOpenSave) { if model.saveAndOpen() { show(m.id) } }
             Button(.assignmentsOpenDiscard, role: .destructive) {
                 model.discardAndOpen()

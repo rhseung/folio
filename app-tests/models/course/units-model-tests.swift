@@ -2,6 +2,7 @@ import FolioActions
 import FolioDomain
 import Foundation
 import Testing
+
 @testable import Folio
 
 @MainActor
@@ -22,7 +23,8 @@ struct UnitsModelTests {
         model.remove(unit)
         let pending = try #require(model.pending)
         // The declaration's words, so the screen follows when the action's wording changes.
-        #expect(pending.question == workspace.confirmation(UnitRemove(course: graphTheory, unit: unit.id)) && pending.question.contains("'매칭'"))
+        #expect(
+            pending.question == workspace.confirmation(UnitRemove(course: graphTheory, unit: unit.id)) && pending.question.contains("'매칭'"))
         #expect(pending.refusal == nil)
         #expect(try file(workspace).units.count == 1)
         pending.perform()
@@ -35,7 +37,9 @@ struct UnitsModelTests {
         let unitId = try #require(workspace.run(UnitAdd(course: graphTheory, title: "매칭"))?.made)
         #expect(model.sessionsLine(try #require(try file(workspace).units.first), in: try file(workspace)) == "회차 없음")
         let ids = try (1...4).map { day in
-            try #require(workspace.run(SessionAdd(course: graphTheory, date: Calendar.current.date(byAdding: .day, value: -day * 7, to: .now)!))?.made)
+            try #require(
+                workspace.run(SessionAdd(course: graphTheory, date: Calendar.current.date(byAdding: .day, value: -day * 7, to: .now)!))?
+                    .made)
         }
         workspace.run(UnitLink(course: graphTheory, unit: unitId, sessions: ids))
         let f = try file(workspace)
@@ -71,7 +75,8 @@ struct UnitsModelTests {
         let workspace = try fixtureWorkspace()
         let model = UnitsModel(workspace: workspace, courseId: graphTheory)
         let unitId = try #require(workspace.run(UnitAdd(course: graphTheory, title: "매칭"))?.made)
-        let session = try #require(workspace.run(SessionAdd(course: graphTheory, date: Calendar.current.date(byAdding: .day, value: -1, to: .now)!))?.made)
+        let session = try #require(
+            workspace.run(SessionAdd(course: graphTheory, date: Calendar.current.date(byAdding: .day, value: -1, to: .now)!))?.made)
         workspace.run(UnitLink(course: graphTheory, unit: unitId, sessions: [session]))
         let note = try #require(workspace.run(SessionNote(course: graphTheory, session: session, kind: .review))?.made)
         model.loadNotes(try #require(try file(workspace).units.first))

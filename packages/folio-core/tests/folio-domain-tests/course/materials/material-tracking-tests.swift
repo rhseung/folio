@@ -25,7 +25,8 @@ struct MaterialTrackingTests {
             ScannedEntry(path: "Syllabus.pdf", size: 20),
             ScannedEntry(path: "Assignments/Project01/robot", isFolder: true),
         ]
-        let result = try MaterialTracking.reconcile([], with: scanned, io: io(hashes: ["Lectures/05_Matchings.pdf": "h1"]), device: device, now: t1)
+        let result = try MaterialTracking.reconcile(
+            [], with: scanned, io: io(hashes: ["Lectures/05_Matchings.pdf": "h1"]), device: device, now: t1)
 
         let lecture = try #require(result.first { $0.path == "Lectures/05_Matchings.pdf" })
         #expect(lecture.role == .lecture && lecture.status == .classified && lecture.hash == "h1" && lecture.createdAt == t1)
@@ -111,7 +112,8 @@ struct MaterialTrackingTests {
 
     @Test func aListShowsATexAndItsPDFAsOne() throws {
         let scanned: [ScannedEntry] = [
-            .init(path: "Study/Summary.tex"), .init(path: "Study/Summary.pdf"), .init(path: "Study/Other.pdf"), .init(path: "HW/Summary.pdf"),
+            .init(path: "Study/Summary.tex"), .init(path: "Study/Summary.pdf"), .init(path: "Study/Other.pdf"),
+            .init(path: "HW/Summary.pdf"),
         ]
         let result = try MaterialTracking.reconcile([], with: scanned, io: io(), device: device, now: t1)
         #expect(Set(result.withoutBuiltPDFs().map(\.path)) == ["Study/Summary.tex", "Study/Other.pdf", "HW/Summary.pdf"])

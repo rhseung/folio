@@ -18,8 +18,10 @@ struct NoteAssist: Equatable {
     /// Nil where the note isn't one of a course's, as in tests; links then get no candidates.
     var links: (any NoteLinkSource)?
 
-    init(snippets: [MathSnippet] = MathSnippet.defaults, asciiSnippets: [MathSnippet] = MathSnippet.asciiMathDefaults,
-         templates: [NoteKind: [String]] = [:], links: (any NoteLinkSource)? = nil) {
+    init(
+        snippets: [MathSnippet] = MathSnippet.defaults, asciiSnippets: [MathSnippet] = MathSnippet.asciiMathDefaults,
+        templates: [NoteKind: [String]] = [:], links: (any NoteLinkSource)? = nil
+    ) {
         self.snippets = snippets
         self.asciiSnippets = asciiSnippets
         self.templates = templates
@@ -41,7 +43,9 @@ struct NoteAssist: Equatable {
 
     /// The snippets outside formulas are the same in either syntax; inside them, each syntax has its own.
     func snippets(syntax: MathSyntax) -> [Snippet] {
-        let math = syntax == .latex ? snippets.filter(\.inMath) : asciiSnippets.map { MathSnippet(trigger: $0.trigger, body: $0.body, inMath: true) }
+        let math =
+            syntax == .latex
+            ? snippets.filter(\.inMath) : asciiSnippets.map { MathSnippet(trigger: $0.trigger, body: $0.body, inMath: true) }
         return (snippets.filter { !$0.inMath } + math).map { Snippet(trigger: $0.trigger, body: $0.body, inMath: $0.inMath) }
     }
 
@@ -49,7 +53,8 @@ struct NoteAssist: Equatable {
         let snippets = self.snippets(syntax: syntax)
         let other = self.snippets(syntax: syntax == .latex ? .asciimath : .latex).filter(\.inMath)
         // Each block with its fastest way in on the right (`##`, `mk ⇥`), so the menu teaches it (#395).
-        let blocks = SlashBlocks.items(templates: Self.templateKinds.compactMap { kind in templates[kind].flatMap { $0.isEmpty ? nil : (kind, $0) } })
+        let blocks = SlashBlocks.items(
+            templates: Self.templateKinds.compactMap { kind in templates[kind].flatMap { $0.isEmpty ? nil : (kind, $0) } })
         return CompletionCatalog(
             slash: InputGuide.annotated(blocks + [SlashBlocks.guide], snippets: snippets),
             languages: NoteScripts.languages + ["mermaid"],
@@ -62,8 +67,11 @@ struct NoteAssist: Equatable {
 /// Their bodies are markdown, and data; their names are the app's.
 @MainActor enum SlashBlocks {
     static func items(templates: [(NoteKind, [String])]) -> [CompletionItem] {
-        func item(_ id: String, _ title: String, _ symbol: String, _ keywords: String, _ body: String, block: Bool = true) -> CompletionItem {
-            CompletionItem(id: "slash.\(id)", title: title, symbol: symbol, keywords: keywords.split(separator: " ").map(String.init), body: body, block: block)
+        func item(_ id: String, _ title: String, _ symbol: String, _ keywords: String, _ body: String, block: Bool = true) -> CompletionItem
+        {
+            CompletionItem(
+                id: "slash.\(id)", title: title, symbol: symbol, keywords: keywords.split(separator: " ").map(String.init), body: body,
+                block: block)
         }
         let fence = "```"
         var out = [
@@ -81,8 +89,9 @@ struct NoteAssist: Equatable {
             // Left open at the fence: the language comes next, from its menu.
             item("code", String(localized: .notesAssistCode), "chevron.left.forwardslash.chevron.right", "code fence", fence),
             item("table", String(localized: .notesAssistTable), "tablecells", "table", "| $1 |  |\n| --- | --- |\n|  |  |"),
-            item("widget", String(localized: .notesAssistWidget), "square.on.square", "widget cb-widget",
-                 fence + "cb-widget\n{\"id\": \"$1\", \"height\": 320}\n" + fence),
+            item(
+                "widget", String(localized: .notesAssistWidget), "square.on.square", "widget cb-widget",
+                fence + "cb-widget\n{\"id\": \"$1\", \"height\": 320}\n" + fence),
             item("divider", String(localized: .notesAssistDivider), "minus", "divider rule hr", "---\n"),
             item("toc", String(localized: .notesAssistToc), "list.bullet.indent", "toc contents outline", "[TOC]\n"),
         ]
@@ -95,8 +104,9 @@ struct NoteAssist: Equatable {
 
     /// Last in the menu: the input guide, which taking puts nothing in but opens the guide (`SourceTextView`).
     static var guide: CompletionItem {
-        CompletionItem(id: InputGuide.menuItemID, title: String(localized: .notesGuideTitle), detail: "⌘/", symbol: "keyboard",
-                       keywords: ["help", "guide", "shortcut"], body: "")
+        CompletionItem(
+            id: InputGuide.menuItemID, title: String(localized: .notesGuideTitle), detail: "⌘/", symbol: "keyboard",
+            keywords: ["help", "guide", "shortcut"], body: "")
     }
 }
 
@@ -198,7 +208,9 @@ struct CompletionMenuView: View {
                 row(item, selected: i == menu.selected)
                     // The guide is not a block: a line sets it apart, over the row so the menu keeps its height.
                     .overlay(alignment: .top) {
-                        if item.id == InputGuide.menuItemID, i > 0 { Theme.Palette.lineSoft.frame(height: 1).padding(.horizontal, Theme.Space.s) }
+                        if item.id == InputGuide.menuItemID, i > 0 {
+                            Theme.Palette.lineSoft.frame(height: 1).padding(.horizontal, Theme.Space.s)
+                        }
                     }
                     .id(i)
                     .contentShape(.rect)
@@ -220,16 +232,20 @@ struct CompletionMenuView: View {
                 .lineLimit(1)
             Spacer(minLength: Theme.Space.s)
             if let formula = item.preview,
-               let picture = NoteMath.shared.picture(formula, syntax: item.previewAsciiMath ? .asciimath : .latex, display: false, size: NoteLook.body,
-                                                     dark: scheme == .dark) {
+                let picture = NoteMath.shared.picture(
+                    formula, syntax: item.previewAsciiMath ? .asciimath : .latex, display: false, size: NoteLook.body,
+                    dark: scheme == .dark)
+            {
                 let fitted = picture.fitted(Self.previewSlot)
                 Image(platformImage: picture.image)
                     .resizable()
                     .frame(width: fitted.width, height: fitted.height)
             } else if let detail = item.detail {
                 // A snippet's detail is what it writes; a link's is where the thing is, in words.
-                Text(detail.replacingOccurrences(of: "\n", with: " ")).font(Theme.Typeface.caption).monospaced(!CompletionMenu.late(menu.query))
-                    .foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
+                Text(detail.replacingOccurrences(of: "\n", with: " ")).font(Theme.Typeface.caption).monospaced(
+                    !CompletionMenu.late(menu.query)
+                )
+                .foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
             }
         }
         .padding(.horizontal, Theme.Space.s)

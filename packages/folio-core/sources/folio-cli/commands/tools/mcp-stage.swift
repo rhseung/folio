@@ -71,8 +71,10 @@ final class ProposalStage: @unchecked Sendable {
                 if case .string(let path)? = c["path"] { paths.insert(path) }
                 if case .string(let to)? = c["to"] { paths.insert(to) }
                 // `units/<id>`: an entry of a JSON file. A bare key (`course`) names no item.
-                if case .string(let item)? = c["item"], let id = item.split(separator: "/").last.map(String.init), UUID(uuidString: id) != nil,
-                   kind == "added" || kind == "changed" {
+                if case .string(let item)? = c["item"], let id = item.split(separator: "/").last.map(String.init),
+                    UUID(uuidString: id) != nil,
+                    kind == "added" || kind == "changed"
+                {
                     items[id] = items[id] == "added" ? "added" : kind
                 }
             }

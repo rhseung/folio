@@ -1,10 +1,11 @@
-@testable import FolioCLI
 import FolioActions
 import FolioDomain
 import FolioFixtures
 import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioCLI
 
 /// Runs CLI command lines in-process against copies of `Fixture.standard`, with the device and clock pinned so a
 /// command and the action it stands for leave byte-identical folders.
@@ -48,8 +49,10 @@ struct Harness {
 
     /// `action` may read the prepared copy (to look up ids the setup made).
     /// `prepare` writes into both copies what no command can make (a recording's audio and transcript).
-    func expectSame(_ args: [String], setup: [[String]] = [], prepare: (URL) throws -> Void = { _ in },
-                    _ action: (GISTStore) throws -> any Action, sourceLocation: SourceLocation = #_sourceLocation) throws {
+    func expectSame(
+        _ args: [String], setup: [[String]] = [], prepare: (URL) throws -> Void = { _ in },
+        _ action: (GISTStore) throws -> any Action, sourceLocation: SourceLocation = #_sourceLocation
+    ) throws {
         let (a, b) = (try Self.fixtureCopy(), try Self.fixtureCopy())
         try prepare(a)
         try prepare(b)

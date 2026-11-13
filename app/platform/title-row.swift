@@ -134,7 +134,9 @@ struct TrafficLights: NSViewRepresentable {
                     MainActor.assumeIsolated { self?.placeNowAndNextTurn() }
                 }
             }
-            let going: [(Notification.Name, Bool)] = [(NSWindow.willEnterFullScreenNotification, true), (NSWindow.willExitFullScreenNotification, false)]
+            let going: [(Notification.Name, Bool)] = [
+                (NSWindow.willEnterFullScreenNotification, true), (NSWindow.willExitFullScreenNotification, false),
+            ]
             windowObservers += going.map { name, full in
                 center.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
                     MainActor.assumeIsolated { self?.fullScreen(full) }
@@ -197,7 +199,8 @@ struct TrafficLights: NSViewRepresentable {
             frameObservers = buttons.map { button in
                 button.postsFrameChangedNotifications = true
                 // Not placed here, inside AppKit's pass, where the move doesn't hold (see above).
-                return NotificationCenter.default.addObserver(forName: NSView.frameDidChangeNotification, object: button, queue: nil) { [weak self] _ in
+                return NotificationCenter.default.addObserver(forName: NSView.frameDidChangeNotification, object: button, queue: nil) {
+                    [weak self] _ in
                     MainActor.assumeIsolated { self?.placeNextTurn() }
                 }
             }

@@ -1,9 +1,10 @@
-@testable import FolioCLI
 import FolioActions
 import FolioDomain
 import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioCLI
 
 /// Synthetic payloads only: the real exports are academic data and never enter the repo.
 struct ImportCommandTests {
@@ -24,7 +25,9 @@ struct ImportCommandTests {
 
     @Test func notion() throws {
         let fall = UUID(), ec = UUID()
-        let path = try payload("export.json", """
+        let path = try payload(
+            "export.json",
+            """
             {"semesters": [{"id": "\(fall)", "title": "2026 가을학기", "start": "2026-09-01"}],
              "grades": [], "categories": [], "people": [],
              "codes": [{"id": "\(ec)", "prefix": "EC", "department": "", "program": ""}],
@@ -46,7 +49,9 @@ struct ImportCommandTests {
     @Test func notes() throws {
         let note = UUID()
         _ = try payload("dump/\(Harness.graphTheory)/notes/a.md", "본문")
-        _ = try payload("dump/\(Harness.graphTheory)/index.json", """
+        _ = try payload(
+            "dump/\(Harness.graphTheory)/index.json",
+            """
             {"coursePageId": "\(Harness.graphTheory)", "title": "그래프 이론", "images": [], "scores": [],
              "notes": [{"id": "\(note)", "title": "7주차-2", "kind": "러프", "date": "2026-10-14", "file": "notes/a.md"},
                        {"id": "\(UUID())", "title": "숙제", "file": "notes/a.md"},
@@ -72,7 +77,9 @@ struct ImportCommandTests {
     }
 
     @Test func calendar() throws {
-        let path = try payload("meetings.json", """
+        let path = try payload(
+            "meetings.json",
+            """
             [{"course": "EC4207 그래프 이론", "start": "2026-10-26T01:00:00Z", "end": "2026-10-26T02:15:00Z",
               "room": "A229", "topic": "트리"}]
             """)
@@ -84,7 +91,9 @@ struct ImportCommandTests {
     }
 
     @Test func exams() throws {
-        let path = try payload("exams.json", """
+        let path = try payload(
+            "exams.json",
+            """
             [{"course": "EC4207 그래프 이론", "title": "중간고사", "start": "2026-10-20T11:00:00Z", "end": "2026-10-20T13:45:00Z",
               "location": "C104", "memo": ""},
              {"course": "XX0000 없음", "title": "기말고사", "start": "2026-12-16T00:00:00Z", "end": "2026-12-16T02:00:00Z",
@@ -131,9 +140,13 @@ struct ImportCommandTests {
             var ec = CourseCode(device: h.device, at: at, prefix: "EC")
             ec.id = UUID(uuidString: "C0DE0000-0000-4000-8000-000000000001")!
             try ctx.editCatalog { $0.codes.append(ec) }
-            try ctx.edit(Harness.graphTheory) { $0.course.codes = [ec.id]; $0.course.number = "4207" }
+            try ctx.edit(Harness.graphTheory) {
+                $0.course.codes = [ec.id]; $0.course.number = "4207"
+            }
         }
-        try h.expectSame(["requirement", "accept", "EC4207"], setup: setup, prepare: coded) { _ in RequirementAccept(courses: [Harness.graphTheory]) }
+        try h.expectSame(["requirement", "accept", "EC4207"], setup: setup, prepare: coded) { _ in
+            RequirementAccept(courses: [Harness.graphTheory])
+        }
 
         // Without a handbook row there is nothing to take, and nothing is written.
         let gist = try Harness.fixtureCopy()

@@ -13,8 +13,10 @@ struct WriteResult: Encodable {
 }
 
 @discardableResult
-func perform<A: Action>(_ action: A, _ options: GlobalOptions, ctx given: ActionContext? = nil, done: @autoclosure () -> String, confirm: String? = nil,
-                          read: JSONValue? = nil) throws -> ActionContext {
+func perform<A: Action>(
+    _ action: A, _ options: GlobalOptions, ctx given: ActionContext? = nil, done: @autoclosure () -> String, confirm: String? = nil,
+    read: JSONValue? = nil
+) throws -> ActionContext {
     if let confirm, !options.dryRun { try ask(confirm, options) }
     let ctx = try given ?? CLI.context(options)
     do {
@@ -28,7 +30,9 @@ func perform<A: Action>(_ action: A, _ options: GlobalOptions, ctx given: Action
         }
     }
     if options.json {
-        try printJSON(WriteResult(action: A.command, dryRun: options.dryRun, made: ctx.made, changes: ctx.changes.coalesced(), notes: ctx.notes, read: read))
+        try printJSON(
+            WriteResult(
+                action: A.command, dryRun: options.dryRun, made: ctx.made, changes: ctx.changes.coalesced(), notes: ctx.notes, read: read))
     } else {
         renderChanges(ctx.changes.coalesced(), done: done(), dryRun: options.dryRun, root: ctx.gist.url)
         for n in ctx.notes { say("  · \(n)".styled(.dim)) }
@@ -43,12 +47,13 @@ func renderChanges(_ changes: [Change], done: String, dryRun: Bool, root: URL) {
         return
     }
     for c in changes {
-        let mark = switch c.kind {
-        case .added: "+".styled(.green)
-        case .changed: "~".styled(.yellow)
-        case .removed: "-".styled(.red)
-        case .moved: "→".styled(.yellow)
-        }
+        let mark =
+            switch c.kind {
+            case .added: "+".styled(.green)
+            case .changed: "~".styled(.yellow)
+            case .removed: "-".styled(.red)
+            case .moved: "→".styled(.yellow)
+            }
         let path = c.path.link(root.appending(path: c.path))
         let item = c.item.map { " " + $0.styled(.dim) } ?? ""
         let to = c.to.map { " → \($0)" } ?? ""
@@ -76,7 +81,9 @@ func shown(_ v: JSONValue?) -> String {
 func ask(_ question: String, _ options: GlobalOptions) throws {
     guard !options.yes else { return }
     guard Style.isTerminal, isatty(STDIN_FILENO) == 1, !options.json else {
-        throw CLIError(exit: .needsConfirmation, message: String(localized: .performNeedsConfirmation(question)), hints: [String(localized: .performYesHint), String(localized: .performDryRunHint)])
+        throw CLIError(
+            exit: .needsConfirmation, message: String(localized: .performNeedsConfirmation(question)),
+            hints: [String(localized: .performYesHint), String(localized: .performDryRunHint)])
     }
     FileHandle.standardOutput.write(Data(String(localized: .performAsk(question)).utf8))
     guard let answer = readLine(), ["y", "yes", "ㅛ"].contains(answer.lowercased()) else {

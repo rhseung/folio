@@ -56,7 +56,8 @@ extension SourceFile {
         var current = node.parent
         while let ancestor = current {
             if let clause = ancestor.as(IfConfigClauseSyntax.self), clause.poundKeyword.tokenKind == .poundIf,
-               clause.condition?.trimmedDescription == "DEBUG" {
+                clause.condition?.trimmedDescription == "DEBUG"
+            {
                 return true
             }
             if let macro = ancestor.as(MacroExpansionDeclSyntax.self), macro.macroName.text == "Preview" { return true }

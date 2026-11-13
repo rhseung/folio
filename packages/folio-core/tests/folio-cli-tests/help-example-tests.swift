@@ -1,4 +1,3 @@
-@testable import FolioCLI
 import ArgumentParser
 import FolioActions
 import FolioDomain
@@ -6,6 +5,8 @@ import FolioFixtures
 import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioCLI
 
 /// Every example in the help runs on a `Fixture.standard` copy, writes as `--dry-run`.
 struct HelpExampleTests {
@@ -42,18 +43,25 @@ struct HelpExampleTests {
     /// The catalog and course codes the course examples need; the fixture has none.
     func prepare(_ gist: URL) throws {
         let ec = CourseCode(device: h.device, at: h.now, prefix: "EC"), gs = CourseCode(device: h.device, at: h.now, prefix: "GS")
-        let grades = [("A+", 4.5), ("A0", 4.0), ("B0", 3.0), ("F", 0)].map { LetterGrade(device: h.device, at: h.now, symbol: $0.0, points: $0.1, countsInGpa: true, countsInCredits: true) }
-        let catalog = Catalog(codes: [ec, gs], letterGrades: grades,
-                              people: [Person(device: h.device, at: h.now, name: "김교수")])
+        let grades = [("A+", 4.5), ("A0", 4.0), ("B0", 3.0), ("F", 0)].map {
+            LetterGrade(device: h.device, at: h.now, symbol: $0.0, points: $0.1, countsInGpa: true, countsInCredits: true)
+        }
+        let catalog = Catalog(
+            codes: [ec, gs], letterGrades: grades,
+            people: [Person(device: h.device, at: h.now, name: "김교수")])
         try h.direct(CatalogSet(catalog: catalog), gist: gist)
 
         // A course schema v1 left without a folder, for `transcript move`.
-        try Harness.unfile(Course(device: h.device, at: h.now, semesterId: UUID(uuidString: "5E4F1A00-0000-4000-8000-000000000003")!,
-                                  title: "콜로퀴움", codes: [gs.id], number: "9331-01", credits: 1, gradingMode: .passFail), gist: gist)
-        try h.direct(CourseRename(course: Harness.graphTheory, title: .set("그래프 이론"), codes: .set([ec.id]), number: .set("4207-01")), gist: gist)
+        try Harness.unfile(
+            Course(
+                device: h.device, at: h.now, semesterId: UUID(uuidString: "5E4F1A00-0000-4000-8000-000000000003")!,
+                title: "콜로퀴움", codes: [gs.id], number: "9331-01", credits: 1, gradingMode: .passFail), gist: gist)
+        try h.direct(
+            CourseRename(course: Harness.graphTheory, title: .set("그래프 이론"), codes: .set([ec.id]), number: .set("4207-01")), gist: gist)
         let folder = gist.appending(path: "2026-3/EC4207 그래프 이론")
         try "외부에서 쓴 노트\n".write(to: folder.appending(path: "Notes/외부.md"), atomically: true, encoding: .utf8)
-        try FileManager.default.copyItem(at: folder.appending(path: "Lectures/05_Matchings.pdf"), to: folder.appending(path: "Lectures/05_Matchings v2.pdf"))
+        try FileManager.default.copyItem(
+            at: folder.appending(path: "Lectures/05_Matchings.pdf"), to: folder.appending(path: "Lectures/05_Matchings v2.pdf"))
 
         // A deck PDFKit can open, for `material read`: the fixture's own PDFs are placeholders.
         try SampleLecture.write(to: folder.appending(path: "Lectures/06_Hall.pdf"))
@@ -68,7 +76,9 @@ struct HelpExampleTests {
         try FileManager.default.moveItem(at: backups.appending(path: "Folio-2026-10-28"), to: backups.appending(path: "Folio-2026-10-27"))
         for line in Self.world { #expect(h.cli(line, gist: gist).code == 0, "\(line): \(h.cli(line + ["--dry-run"], gist: gist).err)") }
         let matching = try #require(try h.file(GISTStore(url: gist)).units.first { $0.title == "매칭" })
-        let card = QuizCard(device: h.device, at: h.now, unitId: matching.id, type: .free, category: .definition, prompt: "최대 매칭의 정의", answer: "크기가 가장 큰 매칭")
+        let card = QuizCard(
+            device: h.device, at: h.now, unitId: matching.id, type: .free, category: .definition, prompt: "최대 매칭의 정의", answer: "크기가 가장 큰 매칭"
+        )
         try h.direct(QuizCardSave(course: Harness.graphTheory, cards: [card], movedFrom: nil), gist: gist)
 
         // A recording is the recorder's, not a command's, so it is written as the app writes it.
@@ -79,7 +89,8 @@ struct HelpExampleTests {
         try ctx.edit(Harness.graphTheory) { $0.recordings.append(recording) }
         let store = try ctx.store(Harness.graphTheory)
         try FileManager.default.createDirectory(at: store.recordingsURL, withIntermediateDirectories: true)
-        try store.saveTranscript(LectureTranscript(locale: "ko-KR", lines: [.init(start: 610, end: 620, text: "홀의 정리를 증명한다")]), of: recording)
+        try store.saveTranscript(
+            LectureTranscript(locale: "ko-KR", lines: [.init(start: 610, end: 620, text: "홀의 정리를 증명한다")]), of: recording)
     }
 
     static func examples(_ type: ParsableCommand.Type = Folio.self) -> [String] {
@@ -93,17 +104,23 @@ struct HelpExampleTests {
 
     /// Pipes, redirects, files read from or written to the user's disk, and ids made elsewhere can't run here.
     static func runnable(_ line: String) -> Bool {
-        line.hasPrefix("folio ") && !line.contains("|") && !line.contains(">") && !line.contains("<") && !line.contains("~/") && !line.contains("--file")
+        line.hasPrefix("folio ") && !line.contains("|") && !line.contains(">") && !line.contains("<") && !line.contains("~/")
+            && !line.contains("--file")
             && !line.contains("--out") && line.firstMatch(of: /[0-9A-F]{8}-[0-9A-F]{4}-/) == nil
     }
 
     static func words(_ line: String) -> [String] {
         var out: [String] = [], cur = "", quote: Character?
         for c in line {
-            if let q = quote { if c == q { quote = nil } else { cur.append(c) } }
-            else if c == "\"" || c == "'" { quote = c }
-            else if c == " " { if !cur.isEmpty { out.append(cur); cur = "" } }
-            else { cur.append(c) }
+            if let q = quote {
+                if c == q { quote = nil } else { cur.append(c) }
+            } else if c == "\"" || c == "'" {
+                quote = c
+            } else if c == " " {
+                if !cur.isEmpty { out.append(cur); cur = "" }
+            } else {
+                cur.append(c)
+            }
         }
         if !cur.isEmpty { out.append(cur) }
         return out
@@ -116,7 +133,9 @@ struct HelpExampleTests {
     /// The agent skill's examples are what agents copy, so they run too.
     @Test func skillExamplesRun() throws {
         var dir = URL(filePath: #filePath).deletingLastPathComponent()
-        while !FileManager.default.fileExists(atPath: dir.appending(path: ".claude/skills/folio/SKILL.md").path) { dir.deleteLastPathComponent() }
+        while !FileManager.default.fileExists(atPath: dir.appending(path: ".claude/skills/folio/SKILL.md").path) {
+            dir.deleteLastPathComponent()
+        }
         let text = try String(contentsOf: dir.appending(path: ".claude/skills/folio/SKILL.md"), encoding: .utf8)
         let examples = text.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }.filter { $0.hasPrefix("folio ") }
         #expect(examples.count > 10)

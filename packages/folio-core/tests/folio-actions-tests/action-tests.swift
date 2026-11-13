@@ -113,8 +113,9 @@ struct ActionTests {
         let reviews = try log.readAll().events(ReviewEvent.self).map(\.event)
         #expect(reviews.allSatisfy { $0.result == .skip })
         #expect(Dictionary(uniqueKeysWithValues: reviews.map { ($0.unitId, $0.seconds) }) == [a: 0, b: 90])
-        #expect(try log.readAll().events(StudySessionEvent.self).map(\.event)
-            == [StudySessionEvent(courseId: Self.graphTheory, start: now.addingTimeInterval(-90), end: now, screen: "review")])
+        #expect(
+            try log.readAll().events(StudySessionEvent.self).map(\.event)
+                == [StudySessionEvent(courseId: Self.graphTheory, start: now.addingTimeInterval(-90), end: now, screen: "review")])
 
         let both = [ReviewSkip.Target(course: Self.graphTheory, unit: a), .init(course: Self.graphTheory, unit: b)]
         #expect(throws: ActionError.self) { try run(ReviewSkip(units: both, start: now, end: now)) }
@@ -125,10 +126,15 @@ struct ActionTests {
     }
 
     @Test func aClassTimeLinkIsTrimmedAndABlankOneIsNone() throws {
-        try run(CourseSet(course: Self.graphTheory, [.schedule([
-            ClassTime(weekday: 1, startMinute: 600, endMinute: 675, link: " "),
-            ClassTime(weekday: 3, startMinute: 600, endMinute: 675, link: " https://zoom.us/j/1 "),
-        ])]))
+        try run(
+            CourseSet(
+                course: Self.graphTheory,
+                [
+                    .schedule([
+                        ClassTime(weekday: 1, startMinute: 600, endMinute: 675, link: " "),
+                        ClassTime(weekday: 3, startMinute: 600, endMinute: 675, link: " https://zoom.us/j/1 "),
+                    ])
+                ]))
         #expect(try file().course.schedule.map(\.link) == [nil, "https://zoom.us/j/1"])
     }
 
@@ -138,7 +144,9 @@ struct ActionTests {
         #expect(!ctx.changes.contains { $0.path.hasSuffix("/") })
         let exam = try #require(try file().exams.first { $0.id == ctx.made })
         #expect(exam.folder == "Quiz1")
-        #expect(!FileManager.default.fileExists(atPath: try ActionContext(gist: gist, device: device).store(Self.graphTheory).fileURL("Exams/Quiz1").path))
+        #expect(
+            !FileManager.default.fileExists(
+                atPath: try ActionContext(gist: gist, device: device).store(Self.graphTheory).fileURL("Exams/Quiz1").path))
     }
 
     @Test func aNoteChangedElsewhereIsNotOverwritten() throws {

@@ -9,8 +9,10 @@ struct ProgressSaveRow: View {
 
     var body: some View {
         let today = model.onlyToday
-        StripEditRow(kind: editing == nil ? .new : .held, range: model.selectionLabel, confirm: String(localized: .commonSave),
-                     canConfirm: model.canSave, refusal: model.refusal, cancel: { model.clear() }, commit: { model.commit() }) {
+        StripEditRow(
+            kind: editing == nil ? .new : .held, range: model.selectionLabel, confirm: String(localized: .commonSave),
+            canConfirm: model.canSave, refusal: model.refusal, cancel: { model.clear() }, commit: { model.commit() }
+        ) {
             Group {
                 if let editing {
                     Text(editing.title).font(Theme.Typeface.bodyStrong).foregroundStyle(Theme.Palette.text)
@@ -30,11 +32,13 @@ struct ProgressSaveRow: View {
 
     /// In the row, not only the header's menu: a touch screen has nothing that shows a long press opens one.
     private var removeButton: some View {
-        Button(role: .destructive) { withAnimation(Theme.Motion.quick) { model.remove() } } label: {
+        Button(role: .destructive) {
+            withAnimation(Theme.Motion.quick) { model.remove() }
+        } label: {
             Label(String(localized: .fileViewProgressRemove), systemImage: "link.badge.minus")
                 #if os(iOS)
-                .frame(minHeight: Theme.Size.touchTarget)
-                .contentShape(.rect)
+            .frame(minHeight: Theme.Size.touchTarget)
+            .contentShape(.rect)
                 #endif
         }
         .buttonStyle(.ghost)
@@ -44,7 +48,9 @@ struct ProgressSaveRow: View {
 
     /// Opens to the trailing side, over the page rather than the thumbnails the range was picked on.
     private var classMenu: some View {
-        Button { model.choosing = true } label: {
+        Button {
+            model.choosing = true
+        } label: {
             HStack(spacing: Theme.Space.xs) {
                 Text(model.chosenChoice?.day ?? String(localized: .fileViewProgressNoClass)).lineLimit(1)
                 Spacer(minLength: 0)

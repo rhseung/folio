@@ -1,38 +1,39 @@
-@testable import FolioMarkdown
 import Foundation
 import PropertyBased
 import Testing
 
+@testable import FolioMarkdown
+
 struct NoteOutlineTests {
     let text = """
-    ---
-    title: 매칭
-    ---
-    # 매칭
+        ---
+        title: 매칭
+        ---
+        # 매칭
 
-    ## 정의 ^def
+        ## 정의 ^def
 
-    ```python
-    # 주석은 제목이 아니다
-    ```
+        ```python
+        # 주석은 제목이 아니다
+        ```
 
-    $$
-    # x
-    $$
+        $$
+        # x
+        $$
 
-    > [!note] 콜아웃
-    > # 안쪽 제목
+        > [!note] 콜아웃
+        > # 안쪽 제목
 
-    ### **증강** 경로와 $M \\oplus P$
+        ### **증강** 경로와 $M \\oplus P$
 
-    #### 깊은 제목
+        #### 깊은 제목
 
-    ##### 더 깊은 제목
+        ##### 더 깊은 제목
 
-    ## [[note:6F1C1C4E-0000-0000-0000-000000000000|베르주]]의 정리[^1]
+        ## [[note:6F1C1C4E-0000-0000-0000-000000000000|베르주]]의 정리[^1]
 
-    [^1]: 각주
-    """
+        [^1]: 각주
+        """
 
     @Test func onlyTheBodysTopLevelHeadingsCount() {
         let outline = NoteOutline(text)
@@ -95,7 +96,10 @@ struct NoteOutlineTests {
 
     @Test func aTOCLineListsTheHeadingsAsLinks() {
         let html = HTMLRenderer.render(markdown: "# 제목\n\n[TOC]\n\n## 하나\n\n### 안쪽\n\n#### 깊은\n\n## 둘")
-        #expect(html.contains(##"<nav class="toc"><ul><li><a href="#제목">제목</a><ul><li><a href="#하나">하나</a><ul><li><a href="#안쪽">안쪽</a></li></ul></li><li><a href="#둘">둘</a></li></ul></li></ul></nav>"##))
+        #expect(
+            html.contains(
+                ##"<nav class="toc"><ul><li><a href="#제목">제목</a><ul><li><a href="#하나">하나</a><ul><li><a href="#안쪽">안쪽</a></li></ul></li><li><a href="#둘">둘</a></li></ul></li></ul></nav>"##
+            ))
         // The card's links go to the headings' own ids.
         #expect(html.contains(#"<h2 id="하나">"#))
         #expect(!html.contains("깊은</a>"))
@@ -166,7 +170,8 @@ struct NoteOutlineTests {
     }
 
     @Test func theMarkedHeadingIsAlwaysListed() async {
-        await propertyCheck(input: Gen.int(in: 1...6).array(of: 1...16), Gen.int(in: 0...20).array(of: 0...4), Gen.int(in: 0...60)) { levels, opened, top in
+        await propertyCheck(input: Gen.int(in: 1...6).array(of: 1...16), Gen.int(in: 0...20).array(of: 0...4), Gen.int(in: 0...60)) {
+            levels, opened, top in
             let outline = NoteOutline(levels.enumerated().map { "\(String(repeating: "#", count: $1)) 제목 \($0)\n" }.joined(separator: "\n"))
             let open = Set(opened.filter { $0 < levels.count })
             let shown = outline.shown(open: open)

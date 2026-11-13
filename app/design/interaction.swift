@@ -10,7 +10,7 @@ struct PointingButtonStyle<Base: PrimitiveButtonStyle>: PrimitiveButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         Button(configuration).buttonStyle(base)
             #if os(macOS)
-            .pointerStyle(isEnabled ? .link : nil)
+        .pointerStyle(isEnabled ? .link : nil)
             #endif
     }
 }
@@ -133,7 +133,9 @@ private struct FileDrop: ViewModifier {
                 let files = urls.filter(\.isFileURL)
                 if !files.isEmpty { perform(files) }
                 return !files.isEmpty
-            } isTargeted: { targeted = $0 }
+            } isTargeted: {
+                targeted = $0
+            }
     }
 }
 

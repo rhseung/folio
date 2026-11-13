@@ -98,7 +98,9 @@ extension LectureTranscript {
     /// still being spoken at `from` is in, so a moment from a link starts mid-sentence rather than after it. It has to
     /// run on a second past `from`: `next` is written in whole seconds, and a line that ended within the second before
     /// the cut would otherwise come back at the start of the next read, and a long one again and again.
-    public func window(from: TimeInterval?, to: TimeInterval?, budget: Int = ReadingLimit.transcript) -> (lines: [Line], next: TimeInterval?) {
+    public func window(from: TimeInterval?, to: TimeInterval?, budget: Int = ReadingLimit.transcript) -> (
+        lines: [Line], next: TimeInterval?
+    ) {
         let inside = lines.filter { line in
             (from.map { line.start >= $0 || line.end >= $0 + 1 } ?? true) && (to.map { line.start < $0 } ?? true)
         }

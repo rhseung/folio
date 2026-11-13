@@ -1,6 +1,7 @@
-@testable import FolioDomain
 import Foundation
 import Testing
+
+@testable import FolioDomain
 
 /// One breaking edit per declared rule: each must be the violation a save would refuse.
 struct RuleTests {
@@ -14,11 +15,12 @@ struct RuleTests {
     static var course: CourseFile {
         var exam = Exam(device: device, at: now, title: "중간고사", start: now, end: now.addingTimeInterval(3600))
         exam.plan = [ExamPlanItem(day: LocalDate(year: 2026, month: 10, day: 20)!, title: "트리 복습")]
-        return CourseFile(course: Course(device: device, at: now, title: "그래프 이론"), units: [unit], sessions: [session], exams: [exam],
-                          assignments: [Assignment(device: device, at: now, title: "HW1")], components: [component],
-                          scores: [ScoreEntry(device: device, at: now, componentId: component.id, title: "HW1", score: 8, max: 10)],
-                          attendance: [Attendance(device: device, at: now, sessionId: session.id, state: .present)],
-                          problemSets: [ProblemSet(device: device, at: now, title: "연습", problems: [.init(number: "1")])])
+        return CourseFile(
+            course: Course(device: device, at: now, title: "그래프 이론"), units: [unit], sessions: [session], exams: [exam],
+            assignments: [Assignment(device: device, at: now, title: "HW1")], components: [component],
+            scores: [ScoreEntry(device: device, at: now, componentId: component.id, title: "HW1", score: 8, max: 10)],
+            attendance: [Attendance(device: device, at: now, sessionId: session.id, state: .present)],
+            problemSets: [ProblemSet(device: device, at: now, title: "연습", problems: [.init(number: "1")])])
     }
 
     static let courseCases: [(String, @Sendable (inout CourseFile) -> Void)] = [
@@ -43,10 +45,13 @@ struct RuleTests {
         ("GradeComponent.weight", { $0.components[0].weight = -10 }),
         ("GradeComponent.count", { $0.components[0].aggregation = .bestOf(0) }),
         ("GradeComponent.expected", { $0.components[0].expectedCount = 0 }),
-        ("GradeComponent.single", { f in
-            f.components[0].aggregation = .single
-            f.scores.append(ScoreEntry(device: device, at: now, componentId: component.id, title: "HW2", score: 9, max: 10))
-        }),
+        (
+            "GradeComponent.single",
+            { f in
+                f.components[0].aggregation = .single
+                f.scores.append(ScoreEntry(device: device, at: now, componentId: component.id, title: "HW2", score: 9, max: 10))
+            }
+        ),
         ("ScoreEntry.max", { $0.scores[0].max = 0 }),
         ("ScoreEntry.examId", { $0.scores[0].examId = UUID() }),
         ("Attendance.cancelled", { $0.sessions[0].isCancelled = true }),
@@ -81,8 +86,9 @@ struct RuleTests {
     }
 
     @Test func semesterWeeksStayInTheTerm() {
-        var s = Semester(device: Self.device, at: Self.now, year: 2026, term: .fall,
-                         start: LocalDate(year: 2026, month: 9, day: 1), end: LocalDate(year: 2026, month: 12, day: 18))
+        var s = Semester(
+            device: Self.device, at: Self.now, year: 2026, term: .fall,
+            start: LocalDate(year: 2026, month: 9, day: 1), end: LocalDate(year: 2026, month: 12, day: 18))
         s.midtermWeek = 8
         #expect(Transcript(semesters: [s]).violations.isEmpty)
         s.finalWeek = 30
@@ -102,7 +108,9 @@ struct RuleTests {
 
     @Test func choiceAnswerIsAnOption() {
         let unit = UUID()
-        var card = QuizCard(device: Self.device, at: Self.now, unitId: unit, type: .choice, category: .concept, prompt: "?", options: ["a", "b"], answer: "a")
+        var card = QuizCard(
+            device: Self.device, at: Self.now, unitId: unit, type: .choice, category: .concept, prompt: "?", options: ["a", "b"],
+            answer: "a")
         #expect(QuizFile(unitId: unit, cards: [card]).violations.isEmpty)
         card.answer = "c"
         #expect(QuizFile(unitId: unit, cards: [card]).violations.map(\.rule.name) == ["QuizCard.answer"])

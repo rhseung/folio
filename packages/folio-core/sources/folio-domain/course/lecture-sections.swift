@@ -86,7 +86,8 @@ extension CourseFile {
     /// A class's pages in its first lecture file the units split: what its progress line draws as the section bar's
     /// small form instead of joining unit titles. Nil when no such file has a range for it.
     public func splitProgress(of session: Session) -> (material: UUID, pages: ClosedRange<Int>)? {
-        session.materials.lazy.compactMap { link in link.pages.flatMap { self.isSplit(link.materialId) ? (link.materialId, $0) : nil } }.first
+        session.materials.lazy.compactMap { link in link.pages.flatMap { self.isSplit(link.materialId) ? (link.materialId, $0) : nil } }
+            .first
     }
 
     /// The span of a unit's pages in `material`, first to last: a unit page's line for that file.
@@ -139,7 +140,10 @@ extension CourseFile {
             if !units.contains(where: { $0.id == cut.unit }) {
                 guard let title = cut.title?.trimmingCharacters(in: .whitespaces), !title.isEmpty else { continue }
                 let parent = cut.parent.flatMap { p in units.contains { $0.id == p } ? p : nil }
-                units.append(Unit(id: cut.unit, device: device, at: now, title: title, order: UnitTree.nextOrder(under: parent, in: units), parentId: parent))
+                units.append(
+                    Unit(
+                        id: cut.unit, device: device, at: now, title: title, order: UnitTree.nextOrder(under: parent, in: units),
+                        parentId: parent))
             }
             guard let u = units.firstIndex(where: { $0.id == cut.unit }) else { continue }
             units[u].lecturePages.append(UnitPages(materialId: material, firstPage: cut.firstPage, lastPage: cut.lastPage))
@@ -173,8 +177,10 @@ public struct LectureSplit: Equatable, Sendable {
         public var parent: UUID?
         public var match: Match?
 
-        public init(id: UUID = UUID(), title: String, firstPage: Int, lastPage: Int, unit: UUID? = nil, isNew: Bool = false,
-                    parent: UUID? = nil, match: Match? = nil) {
+        public init(
+            id: UUID = UUID(), title: String, firstPage: Int, lastPage: Int, unit: UUID? = nil, isNew: Bool = false,
+            parent: UUID? = nil, match: Match? = nil
+        ) {
             self.id = id
             self.title = title
             self.firstPage = firstPage
@@ -229,9 +235,12 @@ public struct LectureSplit: Equatable, Sendable {
             return
         }
         let titles = Dictionary(keepingFirst: file.units.map { ($0.id, $0.title) })
-        self.init(sections: zones.map { zone in
-            Section(title: zone.units.first.flatMap { titles[$0] } ?? "", firstPage: zone.firstPage, lastPage: zone.lastPage, unit: zone.units.first)
-        }, pageCount: pageCount)
+        self.init(
+            sections: zones.map { zone in
+                Section(
+                    title: zone.units.first.flatMap { titles[$0] } ?? "", firstPage: zone.firstPage, lastPage: zone.lastPage,
+                    unit: zone.units.first)
+            }, pageCount: pageCount)
     }
 
     private init(sections: [Section], pageCount: Int) {
@@ -359,7 +368,10 @@ public struct LectureSplit: Equatable, Sendable {
             if let last = out.last, last.unit == unit, last.lastPage + 1 == s.firstPage {
                 out[out.count - 1].lastPage = s.lastPage
             } else {
-                out.append(LectureCut(unit: unit, title: s.isNew ? title : nil, parent: s.isNew ? s.parent : nil, firstPage: s.firstPage, lastPage: s.lastPage))
+                out.append(
+                    LectureCut(
+                        unit: unit, title: s.isNew ? title : nil, parent: s.isNew ? s.parent : nil, firstPage: s.firstPage,
+                        lastPage: s.lastPage))
             }
         }
         return out

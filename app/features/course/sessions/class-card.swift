@@ -92,7 +92,9 @@ enum ClassCard {
         @ViewBuilder var items: Items
 
         var body: some View {
-            Menu { items } label: {
+            Menu {
+                items
+            } label: {
                 Image(systemName: "ellipsis").foregroundStyle(Theme.Palette.textSecondary)
                     .frame(width: ClassCard.menu, height: ClassCard.menu).contentShape(.circle)
             }
@@ -155,7 +157,8 @@ struct PlannedSessionCard: View {
         .background(Theme.Palette.card.opacity(Theme.Opacity.planned), in: .rect(cornerRadius: ClassCard.radius))
         .background(Theme.Palette.page, in: .rect(cornerRadius: ClassCard.radius))
         .overlay {
-            RoundedRectangle(cornerRadius: ClassCard.radius).strokeBorder(Theme.Palette.lineStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+            RoundedRectangle(cornerRadius: ClassCard.radius).strokeBorder(
+                Theme.Palette.lineStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
         }
         .contentShape(.rect)
         .contextMenu { SuggestedSessionItems(item: item, primary: true, openNote: openNote, editTimes: editTimes) }
@@ -172,13 +175,15 @@ struct ExamMarkerRow: View {
 
     var body: some View {
         HStack(spacing: Theme.Space.l) {
-            ClassCard.Tile(month: model.month(date), day: model.day(date), ink: Theme.Palette.danger, monthInk: Theme.Palette.danger,
-                           fill: Theme.Palette.danger.opacity(Theme.Opacity.tint))
+            ClassCard.Tile(
+                month: model.month(date), day: model.day(date), ink: Theme.Palette.danger, monthInk: Theme.Palette.danger,
+                fill: Theme.Palette.danger.opacity(Theme.Opacity.tint))
             HStack(spacing: Theme.Space.m) {
                 Image(systemName: "flag").font(Theme.Typeface.caption.weight(.semibold))
                 Text(exam.title).font(Theme.Typeface.bodyLarge.weight(.bold)).lineLimit(1).fixedSize()
                 Text(model.examLine(exam, date)).font(Theme.Typeface.caption).monospacedDigit().lineLimit(1)
-                Capsule().fill(Theme.Palette.danger.opacity(Theme.Opacity.toneEdge)).frame(minWidth: Theme.Space.xl, maxWidth: .infinity).frame(height: 2)
+                Capsule().fill(Theme.Palette.danger.opacity(Theme.Opacity.toneEdge)).frame(minWidth: Theme.Space.xl, maxWidth: .infinity)
+                    .frame(height: 2)
                 if let days = model.examDays(exam, now: model.workspace.now) {
                     Chip(days == 0 ? "D-day" : "D-\(days)", tone: .danger, solid: true)
                 }
@@ -209,7 +214,9 @@ struct ClassExamCard: ViewModifier {
                 card
                 content
                     // On the class's own shape, so its text casts none.
-                    .background { RoundedRectangle(cornerRadius: ClassCard.radius).fill(.clear).shadow(color: .black.opacity(0.06), radius: 3, y: -2) }
+                    .background {
+                        RoundedRectangle(cornerRadius: ClassCard.radius).fill(.clear).shadow(color: .black.opacity(0.06), radius: 3, y: -2)
+                    }
                     .padding(.top, -Self.tuck)
             }
             // Room above, so a tucked-in exam reads as its own class's and not the one before.

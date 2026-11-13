@@ -3,6 +3,7 @@ import FolioDomain
 import FolioStorage
 import Foundation
 import Testing
+
 @testable import Folio
 
 @MainActor
@@ -77,15 +78,19 @@ struct SessionSheetModelTests {
         let problems = try #require(file.materials.first { $0.path.hasSuffix("Problems.pdf") })
         workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: session, firstPage: 3, lastPage: 9))
         workspace.run(MaterialLinkSession(course: graphTheory, material: problems.id, session: session))
-        let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: session,
-                                     viewed: [SessionMaterial(materialId: slides.id, firstPage: 3, lastPage: 14)], recorded: true)
+        let model = SessionSheetModel(
+            workspace: workspace, course: graphTheory, session: session,
+            viewed: [SessionMaterial(materialId: slides.id, firstPage: 3, lastPage: 14)], recorded: true)
         #expect(model.rows.first { $0.id == slides.id } == .init(id: slides.id, included: true, first: 3, last: 9))
         #expect(model.rows.contains { $0.id == problems.id && !$0.included })
         #expect(model.refusal == nil && model.ranges.isEmpty)
         // Not from the recording: the class had its pages.
         #expect(model.note == nil)
         model.submit()
-        #expect(saved.materials == [SessionMaterial(materialId: slides.id, firstPage: 3, lastPage: 9), SessionMaterial(materialId: problems.id)])
+        #expect(
+            saved.materials == [
+                SessionMaterial(materialId: slides.id, firstPage: 3, lastPage: 9), SessionMaterial(materialId: problems.id),
+            ])
 
         // Checked, the whole-file row asks for its pages; a changed range is the only one written.
         let again = SessionSheetModel(workspace: workspace, course: graphTheory, session: session)
@@ -95,7 +100,10 @@ struct SessionSheetModelTests {
         again.setRange(slides.id, PageRange(first: 3, last: 12))
         #expect(again.ranges == [SessionMaterial(materialId: slides.id, firstPage: 3, lastPage: 12)])
         again.submit()
-        #expect(saved.materials == [SessionMaterial(materialId: slides.id, firstPage: 3, lastPage: 12), SessionMaterial(materialId: problems.id)])
+        #expect(
+            saved.materials == [
+                SessionMaterial(materialId: slides.id, firstPage: 3, lastPage: 12), SessionMaterial(materialId: problems.id),
+            ])
     }
 
     /// A row of a file the class links, checked when the sheet opened and unchecked, takes the link off with its
@@ -154,7 +162,9 @@ struct SessionSheetModelTests {
     @Test func theTodayCardListsTheClassUntilItIsWrappedUp() throws {
         let today = TodayModel(workspace: workspace)
         let now = workspace.now
-        let listed = file.classesToWrapUp(at: now, classMinutes: workspace.settings.classMinutes, calendar: workspace.calendar).contains { $0.id == session }
+        let listed = file.classesToWrapUp(at: now, classMinutes: workspace.settings.classMinutes, calendar: workspace.calendar).contains {
+            $0.id == session
+        }
         #expect(today.wrapUps(now: now).contains { $0.session.id == session } == listed)
         SessionSheetModel(workspace: workspace, course: graphTheory, session: session).submit()
         #expect(!today.wrapUps(now: now).contains { $0.session.id == session })

@@ -1,6 +1,7 @@
-@testable import FolioDomain
 import Foundation
 import Testing
+
+@testable import FolioDomain
 
 struct NotionImportTests {
     let device = UUID()
@@ -12,9 +13,12 @@ struct NotionImportTests {
         return folder("GIST", [folder("2026-3", [folder("EC4207 그래프 이론"), folder("GS2004 선형대수학"), folder("_Admin")])])
     }
 
-    func course(_ title: String, number: String, codes: [UUID], semester: UUID, credits: Double = 3, grade: UUID? = nil) -> NotionExport.CourseRow {
-        NotionExport.CourseRow(id: UUID(), title: title, titleEn: nil, number: number, credits: credits, mode: "상대평가", gradeId: grade,
-                               absoluteScore: nil, semesterId: semester, codeIds: codes)
+    func course(_ title: String, number: String, codes: [UUID], semester: UUID, credits: Double = 3, grade: UUID? = nil)
+        -> NotionExport.CourseRow
+    {
+        NotionExport.CourseRow(
+            id: UUID(), title: title, titleEn: nil, number: number, credits: credits, mode: "상대평가", gradeId: grade,
+            absoluteScore: nil, semesterId: semester, codeIds: codes)
     }
 
     var export: NotionExport {
@@ -22,16 +26,22 @@ struct NotionImportTests {
         linear.policy = .init(caps: [.init(absences: 6, grade: "B0"), .init(absences: 9, grade: "Z")], notes: "원문")
         linear.midterm = .init(start: Date(timeIntervalSince1970: 100), end: nil, location: "C104")
         var graph = course("그래프 이론", number: "4207-01", codes: [ec], semester: fall)
-        graph.components = [.init(id: UUID(), name: "Quiz", weight: 10, aggregation: .dropLowest(1), expectedCount: 5,
-                                  entries: [.init(id: UUID(), title: "Quiz 1", score: 35, max: 50)])]
+        graph.components = [
+            .init(
+                id: UUID(), name: "Quiz", weight: 10, aggregation: .dropLowest(1), expectedCount: 5,
+                entries: [.init(id: UUID(), title: "Quiz 1", score: 35, max: 50)])
+        ]
         return NotionExport(
             semesters: [
                 .init(id: fall, title: "2026 가을학기", start: LocalDate("2026-08-31"), end: nil),
                 .init(id: credited, title: "인정학기", start: nil, end: nil),
                 .init(id: UUID(), title: "학기명", start: nil, end: nil),
             ],
-            grades: [.init(id: aPlus, symbol: "A+", points: 4.5, countsInCredits: true), .init(id: b0, symbol: "B0", points: 3, countsInCredits: true),
-                     .init(id: s, symbol: "S", points: nil, countsInCredits: true)],
+            grades: [
+                .init(id: aPlus, symbol: "A+", points: 4.5, countsInCredits: true),
+                .init(id: b0, symbol: "B0", points: 3, countsInCredits: true),
+                .init(id: s, symbol: "S", points: nil, countsInCredits: true),
+            ],
             codes: [.init(id: ec, prefix: "EC", department: "", program: ""), .init(id: gs, prefix: "GS", department: "", program: "")],
             categories: [.init(id: UUID(), name: "전공선택", group: "전공", parentId: nil, minCredits: 33, maxCredits: 39)],
             people: [],
@@ -47,8 +57,11 @@ struct NotionImportTests {
     @Test func matchesFoldersBySemesterAndCode() throws {
         let result = NotionImporter.convert(export, gist: gist, device: device, now: now)
         // A course no folder matches gets a new one: credited ones under the term's source, named after the Notion row.
-        #expect(Set(result.courseFiles.keys) == ["2026-3/EC4207 그래프 이론", "2026-3/GS2004 선형대수학", "2026-3/GS9331 콜로퀴움",
-                                                 "_Credited/인정학기/GS1101 일반물리학 및 연습 I", "_Credited/인정학기/GS1499 SW 기초와 코딩"])
+        #expect(
+            Set(result.courseFiles.keys) == [
+                "2026-3/EC4207 그래프 이론", "2026-3/GS2004 선형대수학", "2026-3/GS9331 콜로퀴움",
+                "_Credited/인정학기/GS1101 일반물리학 및 연습 I", "_Credited/인정학기/GS1499 SW 기초와 코딩",
+            ])
         #expect(result.transcript.unfiledCourses.isEmpty)
 
         let graph = try #require(result.courseFiles["2026-3/EC4207 그래프 이론"])
@@ -91,8 +104,9 @@ struct NotionNotesImportTests {
         let review = note("7주차-2 정리", "복습", "2026-10-14")
         let topic = note("6. Projections", nil, "2026-04-01")
         let dump = NotionCourseDump(coursePageId: UUID(), title: "그래프 이론", notes: [review, rough, topic], scores: [], images: [])
-        let first = NotionNotesImporter.merge(dump, into: CourseFile(course: Course(device: device, at: now, title: "그래프 이론")),
-                                              existingNotes: [], calendar: calendar, device: device, now: now)
+        let first = NotionNotesImporter.merge(
+            dump, into: CourseFile(course: Course(device: device, at: now, title: "그래프 이론")),
+            existingNotes: [], calendar: calendar, device: device, now: now)
         #expect(first.sessionsAdded == 1)
         let session = first.file.sessions[0]
         // The only class known in week 7, so it is 7주차-1 here whatever Notion called it.
@@ -101,8 +115,9 @@ struct NotionNotesImportTests {
         #expect(first.notes.first { $0.id == topic.id }?.meta.kind == .unit)
         #expect(first.notes.first { $0.id == review.id }?.meta.sessionId == session.id)
 
-        let again = NotionNotesImporter.merge(dump, into: first.file, existingNotes: Set(first.notes.map(\.id)),
-                                              calendar: calendar, device: device, now: now)
+        let again = NotionNotesImporter.merge(
+            dump, into: first.file, existingNotes: Set(first.notes.map(\.id)),
+            calendar: calendar, device: device, now: now)
         #expect(again.sessionsAdded == 0 && again.notes.isEmpty && again.file.sessions.count == 1)
     }
 
@@ -132,8 +147,9 @@ struct NotionNotesImportTests {
         let second = note("7주차-2", nil, "2026-10-13")
         let first = note("7주차-1", nil, "2026-10-15")
         let dump = NotionCourseDump(coursePageId: UUID(), title: "그래프 이론", notes: [first, second], scores: [], images: [])
-        let r = NotionNotesImporter.merge(dump, into: CourseFile(course: Course(device: device, at: now, title: "그래프 이론")),
-                                          existingNotes: [], calendar: calendar, device: device, now: now)
+        let r = NotionNotesImporter.merge(
+            dump, into: CourseFile(course: Course(device: device, at: now, title: "그래프 이론")),
+            existingNotes: [], calendar: calendar, device: device, now: now)
         #expect(r.sessionsAdded == 2 && r.file.sessions.count == 2 && r.warnings.isEmpty)
         #expect(Set(r.notes.compactMap(\.meta.sessionId)) == Set(r.file.sessions.map(\.id)))
     }
@@ -142,8 +158,9 @@ struct NotionNotesImportTests {
     @Test func anImportedNoteThatWasUnlinkedStaysSo() {
         let rough = note("7주차-2", nil, "2026-10-14")
         let dump = NotionCourseDump(coursePageId: UUID(), title: "그래프 이론", notes: [rough], scores: [], images: [])
-        let first = NotionNotesImporter.merge(dump, into: CourseFile(course: Course(device: device, at: now, title: "그래프 이론")),
-                                              existingNotes: [], calendar: calendar, device: device, now: now)
+        let first = NotionNotesImporter.merge(
+            dump, into: CourseFile(course: Course(device: device, at: now, title: "그래프 이론")),
+            existingNotes: [], calendar: calendar, device: device, now: now)
         var file = first.file
         file.forgetNote(rough.id)
         let again = NotionNotesImporter.merge(dump, into: file, existingNotes: [rough.id], calendar: calendar, device: device, now: now)
@@ -181,8 +198,9 @@ struct NotionCleanupTests {
             NotionCourseDump.ScoreRow(id: UUID(), name: $0.0, weight: $0.1, score: nil, max: nil, parentId: nil)
         }
         let dump = NotionCourseDump(coursePageId: UUID(), title: "", notes: [], scores: rows, images: [])
-        let r = NotionNotesImporter.merge(dump, into: CourseFile(course: Course(device: UUID(), at: .now, title: "자료구조")),
-                                          existingNotes: [], calendar: .current, device: UUID(), now: .now)
+        let r = NotionNotesImporter.merge(
+            dump, into: CourseFile(course: Course(device: UUID(), at: .now, title: "자료구조")),
+            existingNotes: [], calendar: .current, device: UUID(), now: .now)
         #expect(r.file.components.map(\.weight) == [60, 20, 20])
     }
 }

@@ -53,7 +53,8 @@ public enum UnitImporter {
                         unknown.append(name)
                         continue
                     }
-                    guard let u = file.units.firstIndex(where: { $0.id == id }), !file.units[u].sessionIds.contains(file.sessions[s].id) else { continue }
+                    guard let u = file.units.firstIndex(where: { $0.id == id }), !file.units[u].sessionIds.contains(file.sessions[s].id)
+                    else { continue }
                     file.units[u].sessionIds.append(file.sessions[s].id)
                     file.units[u].touch(by: device, at: now)
                     if !file.sessions[s].unitIds.contains(id) {

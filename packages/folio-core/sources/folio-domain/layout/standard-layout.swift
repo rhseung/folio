@@ -35,10 +35,10 @@ public struct SemesterFolder: Hashable, Sendable {
     public init?(name: String) {
         let parts = name.split(separator: "-", omittingEmptySubsequences: false)
         guard parts.count == 2,
-              let year = Int(parts[0]), let number = Int(parts[1]),
-              let term = Term.allCases.first(where: { $0.folderNumber == number }),
-              let parsed = SemesterFolder(year: year, term: term),
-              parsed.name == name  // rejects non-canonical forms like `2026-03` or `+2026-3`
+            let year = Int(parts[0]), let number = Int(parts[1]),
+            let term = Term.allCases.first(where: { $0.folderNumber == number }),
+            let parsed = SemesterFolder(year: year, term: term),
+            parsed.name == name  // rejects non-canonical forms like `2026-03` or `+2026-3`
         else { return nil }
         self = parsed
     }
@@ -129,7 +129,10 @@ public enum StandardLayout {
     /// `<course>/.folio/widgets/<id>.html` for a note in `<course>/Notes`, at any depth below it.
     public static func widgetFile(_ id: UUID, noteFolder: URL) -> URL? {
         let parts = noteFolder.standardizedFileURL.pathComponents
-        guard let notes = parts.indices.first(where: { $0 > 0 && parts[$0] == CourseFolder.notes.rawValue && isCourseFolderName(parts[$0 - 1]) })
+        guard
+            let notes = parts.indices.first(where: {
+                $0 > 0 && parts[$0] == CourseFolder.notes.rawValue && isCourseFolderName(parts[$0 - 1])
+            })
         else { return nil }
         var course = noteFolder.standardizedFileURL
         for _ in notes..<parts.count { course.deleteLastPathComponent() }
@@ -143,7 +146,8 @@ public enum StandardLayout {
 
     /// A single folder name: not empty, no path separators, not hidden.
     public static func isCreditedSourceName(_ name: String) -> Bool {
-        !name.isEmpty && name == name.trimmingCharacters(in: .whitespaces) && !name.contains("/") && !name.contains(":") && !name.hasPrefix(".")
+        !name.isEmpty && name == name.trimmingCharacters(in: .whitespaces) && !name.contains("/") && !name.contains(":")
+            && !name.hasPrefix(".")
     }
 
     public enum NoteFolderProblem: Sendable, Equatable {
@@ -162,7 +166,9 @@ public enum StandardLayout {
         if name.isEmpty { return .empty }
         if name.contains("/") || name.contains(":") { return .nested }
         if name.hasPrefix(".") { return .hidden }
-        if [noteAssetsFolder, legacyNoteExportsFolder].contains(where: { $0.caseInsensitiveCompare(name) == .orderedSame }) { return .reserved }
+        if [noteAssetsFolder, legacyNoteExportsFolder].contains(where: { $0.caseInsensitiveCompare(name) == .orderedSame }) {
+            return .reserved
+        }
         return nil
     }
 
@@ -189,7 +195,8 @@ public enum StandardLayout {
     /// `<prefix><two digits>`, e.g. `HW03`, `Lab01`.
     public static func assignmentFolder(_ name: String, extraPrefixes: [String] = []) -> (prefix: String, number: Int)? {
         guard let match = name.wholeMatch(of: /([A-Za-z]+)(\d{2})/),
-              let number = Int(match.2) else { return nil }
+            let number = Int(match.2)
+        else { return nil }
         let prefix = String(match.1)
         let known = AssignmentKind.allCases.map(\.rawValue) + extraPrefixes
         return known.contains(prefix) ? (prefix, number) : nil

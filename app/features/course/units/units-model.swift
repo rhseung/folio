@@ -42,7 +42,8 @@ final class UnitsModel {
         for unit in course.file.units {
             let cards = (try? course.store.loadQuiz(unit: unit.id).model.cards) ?? []
             guard !cards.isEmpty else { continue }
-            result[unit.id] = QuizStats(cards: cards.count, openWrong: cards.filter { WrongFlow.isOpen(WrongFlow.status(attempts[$0.id] ?? [])) }.count)
+            result[unit.id] = QuizStats(
+                cards: cards.count, openWrong: cards.filter { WrongFlow.isOpen(WrongFlow.status(attempts[$0.id] ?? [])) }.count)
         }
         quiz = result
     }
@@ -52,21 +53,27 @@ final class UnitsModel {
     func subtitle(_ file: CourseFile, states: [UUID: ReviewState]) -> String {
         let due = states.values.filter { ($0.due.map { $0 <= today }) == true }.count
         let unlinked = file.sessionsNeedingUnits(at: workspace.now).count
-        return ([String(localized: .unitsCount(file.units.count)), String(localized: .unitsDueToday(due))]
-                + (unlinked == 0 ? [] : [String(localized: .unitsUnlinkedCount(unlinked))])).joined(separator: " · ")
+        return
+            ([String(localized: .unitsCount(file.units.count)), String(localized: .unitsDueToday(due))]
+            + (unlinked == 0 ? [] : [String(localized: .unitsUnlinkedCount(unlinked))])).joined(separator: " · ")
     }
 
     func exams(of unit: FolioDomain.Unit, in file: CourseFile) -> [Exam] { file.exams.filter { $0.scopeUnitIds.contains(unit.id) } }
 
     func sessionsLine(_ unit: FolioDomain.Unit, in file: CourseFile) -> String {
         let names = sessions(of: unit, in: file).map { file.day(of: $0, calendar: workspace.calendar) }
-        return names.isEmpty ? String(localized: .unitsNoSessions)
-            : names.count > 3 ? String(localized: .unitsSessionsMore(names.prefix(3).joined(separator: ", "), names.count - 3)) : names.joined(separator: ", ")
+        return names.isEmpty
+            ? String(localized: .unitsNoSessions)
+            : names.count > 3
+                ? String(localized: .unitsSessionsMore(names.prefix(3).joined(separator: ", "), names.count - 3))
+                : names.joined(separator: ", ")
     }
 
     func detail(_ unit: FolioDomain.Unit, state: ReviewState?, in file: CourseFile) -> String {
         var parts = [sessionsLine(unit, in: file)]
-        if let state, !state.settled { parts.append(String(localized: .unitsInterval(workspace.settings.review.interval(atStep: state.step)))) }
+        if let state, !state.settled {
+            parts.append(String(localized: .unitsInterval(workspace.settings.review.interval(atStep: state.step))))
+        }
         if let q = quiz[unit.id] {
             parts.append(String(localized: .unitsQuizCards(q.cards)))
             if q.openWrong > 0 { parts.append(String(localized: .unitsWrong(q.openWrong))) }
@@ -116,17 +123,26 @@ final class UnitsModel {
 
     func stats(_ unit: FolioDomain.Unit, state: ReviewState?, reviews: Int) -> [StatStrip.Item] {
         let review = workspace.settings.review
-        let next = state?.due.map { $0 < today ? String(localized: .unitsDaysLate($0.days(until: today))) : $0 == today ? String(localized: .unitsToday) : $0.shortLabel }
+        let next =
+            state?.due.map {
+                $0 < today
+                    ? String(localized: .unitsDaysLate($0.days(until: today)))
+                    : $0 == today ? String(localized: .unitsToday) : $0.shortLabel
+            }
             ?? (state?.settled == true ? String(localized: .unitsReviewDone) : "-")
         let q = quiz[unit.id]
         return [
-            .init(title: String(localized: .unitsNextReview), value: next, tone: (state?.due.map { $0 < today }) == true ? .danger : .plain),
-            .init(title: String(localized: .unitsIntervalTitle), value: state.map { String(localized: .unitsDays(review.interval(atStep: $0.step))) } ?? "-",
-                  detail: state.map { String(localized: .unitsStep($0.step + 1, review.intervals.count)) }),
+            .init(
+                title: String(localized: .unitsNextReview), value: next, tone: (state?.due.map { $0 < today }) == true ? .danger : .plain),
+            .init(
+                title: String(localized: .unitsIntervalTitle),
+                value: state.map { String(localized: .unitsDays(review.interval(atStep: $0.step))) } ?? "-",
+                detail: state.map { String(localized: .unitsStep($0.step + 1, review.intervals.count)) }),
             .init(title: String(localized: .unitsReviewsTitle), value: String(localized: .unitsTimes(reviews))),
-            .init(title: String(localized: .unitsQuiz), value: q.map { String(localized: .unitsCards($0.cards)) } ?? "-",
-                  detail: q.flatMap { $0.openWrong > 0 ? String(localized: .unitsWrong($0.openWrong)) : nil },
-                  tone: (q?.openWrong ?? 0) > 0 ? .warning : .plain),
+            .init(
+                title: String(localized: .unitsQuiz), value: q.map { String(localized: .unitsCards($0.cards)) } ?? "-",
+                detail: q.flatMap { $0.openWrong > 0 ? String(localized: .unitsWrong($0.openWrong)) : nil },
+                tone: (q?.openWrong ?? 0) > 0 ? .warning : .plain),
         ]
     }
 
@@ -163,7 +179,9 @@ final class UnitsModel {
                 return MaterialRow(material: m, detail: detail.joined(separator: " · "), own: own, pages: file.pages(of: unit.id, in: m.id))
             }
             .sorted { a, b in
-                let (x, y) = (roles.firstIndex { $0 == a.material.role } ?? roles.count, roles.firstIndex { $0 == b.material.role } ?? roles.count)
+                let (x, y) = (
+                    roles.firstIndex { $0 == a.material.role } ?? roles.count, roles.firstIndex { $0 == b.material.role } ?? roles.count
+                )
                 return x != y ? x < y : a.material.path.localizedStandardCompare(b.material.path) == .orderedAscending
             }
     }

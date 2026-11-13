@@ -179,7 +179,8 @@ final class FirstRunModel {
     /// 학기 n개, 과목 n개, or 빈 폴더: what the picked folder holds, under its path.
     var pickedSummary: [String] {
         switch picked?.kind {
-        case .gist(let semesters, let courses)?: [String(localized: .firstRunSemesterCount(semesters)), String(localized: .firstRunCourseCount(courses))]
+        case .gist(let semesters, let courses)?:
+            [String(localized: .firstRunSemesterCount(semesters)), String(localized: .firstRunCourseCount(courses))]
         case .empty?: [String(localized: .firstRunEmptyFolder)]
         default: []
         }

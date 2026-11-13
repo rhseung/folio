@@ -1,11 +1,12 @@
-import FolioActions
 import FolioAI
+import FolioActions
 import FolioDomain
 import FolioMarkdown
 import FolioStorage
 import Foundation
 import Observation
 import Synchronization
+
 #if os(macOS)
 import AppKit
 #else
@@ -69,8 +70,9 @@ final class ClaudeModel {
     var chat: Chat? { chats.first { $0.model.id == chatID }?.model }
 
     func built(_ course: LoadedCourse) -> BuiltContext {
-        let items = ContextBuilder.chatItems(course: course.file, rules: workspace.settings.noteRules, panes: panes, openNote: openNoteItem,
-                                             alsoOpen: alsoOpenItems, added: added, removed: removed, now: .now)
+        let items = ContextBuilder.chatItems(
+            course: course.file, rules: workspace.settings.noteRules, panes: panes, openNote: openNoteItem,
+            alsoOpen: alsoOpenItems, added: added, removed: removed, now: .now)
         return ContextBuilder.build(items, budgetTokens: ContextBuilder.chatBudgetTokens)
     }
 
@@ -79,7 +81,8 @@ final class ClaudeModel {
     }
 
     var chatOptions: [PickOption<UUID?>] {
-        [PickOption(id: UUID?.none, title: String(localized: .claudeNewChat))] + chats.map { PickOption(id: Optional($0.model.id), title: $0.model.title) }
+        [PickOption(id: UUID?.none, title: String(localized: .claudeNewChat))]
+            + chats.map { PickOption(id: Optional($0.model.id), title: $0.model.title) }
     }
 
     /// A message or a retry left from one chat doesn't belong under the next.
@@ -93,7 +96,9 @@ final class ClaudeModel {
     /// Readable files grouped by role in the materials page's order, unclassified last, so a file is found where that
     /// page shows it.
     func materials(_ course: LoadedCourse) -> [Material] {
-        let readable = course.file.materials.filter { !$0.isFolder && [.classified, .unclassified].contains($0.status) && CourseStore.canReadContext($0.path) }
+        let readable = course.file.materials.filter {
+            !$0.isFolder && [.classified, .unclassified].contains($0.status) && CourseStore.canReadContext($0.path)
+        }
         return MaterialRole.allCases.flatMap { role in readable.filter { $0.status == .classified && $0.role == role } }
             + readable.filter { $0.status != .classified || $0.role == nil }
     }
@@ -101,8 +106,10 @@ final class ClaudeModel {
     func addOptions(_ course: LoadedCourse) -> [PickOption<UUID>] {
         notes.compactMap { n in n.meta.id.map { PickOption(id: $0, title: n.title, section: String(localized: .claudeAddNotes)) } }
             + materials(course).map { m in
-                PickOption(id: m.id, title: (m.path as NSString).lastPathComponent, detail: m.path,
-                           section: m.status == .classified ? m.role?.label ?? String(localized: .claudeAddMaterials) : String(localized: .claudeAddUnclassified))
+                PickOption(
+                    id: m.id, title: (m.path as NSString).lastPathComponent, detail: m.path,
+                    section: m.status == .classified
+                        ? m.role?.label ?? String(localized: .claudeAddMaterials) : String(localized: .claudeAddUnclassified))
             }
     }
 
@@ -133,7 +140,8 @@ final class ClaudeModel {
         guard let note = try? course.store.note(id: id), let text = try? course.store.read(note) else { return nil }
         let body = Frontmatter.split(text).body
         let images = course.store.contextImages(of: note, body: body).map { ContextItem.Image(name: $0.name, data: $0.data) }
-        return ContextBuilder.note(id: id, title: note.title, path: course.store.notePath(of: note.url), body: body, images: images, open: open)
+        return ContextBuilder.note(
+            id: id, title: note.title, path: course.store.notePath(of: note.url), body: body, images: images, open: open)
     }
 
     func materialContext(_ material: Material, course: LoadedCourse) -> ContextItem? {
@@ -152,7 +160,11 @@ final class ClaudeModel {
     // MARK: Context
 
     func addContext(_ id: UUID, course: LoadedCourse) {
-        if let m = materials(course).first(where: { $0.id == id }) { add(materialContext(m, course: course)) } else { add(noteContext(id, course: course, open: false)) }
+        if let m = materials(course).first(where: { $0.id == id }) {
+            add(materialContext(m, course: course))
+        } else {
+            add(noteContext(id, course: course, open: false))
+        }
     }
 
     func add(_ item: ContextItem?) {
@@ -171,7 +183,9 @@ final class ClaudeModel {
         // Read again from disk: the note was read when it opened, and has likely been edited since.
         loadOpenNote(openNote, course: course)
         let context = built(course)
-        var doc = chats.first { $0.model.id == chatID } ?? StoredDocument(new: Chat(device: workspace.device, at: .now, title: String(question.prefix(40))))
+        var doc =
+            chats.first { $0.model.id == chatID }
+            ?? StoredDocument(new: Chat(device: workspace.device, at: .now, title: String(question.prefix(40))))
         doc.model.messages.append(ChatMessage(role: .user, text: question, at: .now, context: context.included.map(\.title)))
 
         // The question is kept in memory only until the answer arrives, so a failed request leaves no half-written chat.
@@ -242,10 +256,13 @@ final class ClaudeModel {
     /// `folio://action/<copy|insert|newnote|card|applyall>/<message ID>` and `folio://action/apply/<message ID>/<proposal>` from
     /// the answer's links. `openNote` is the note open beside the panel, which `insert` writes into through
     /// `insertIntoNote`; without one it makes a free note. `openUnit` is the unit the units page shows, where a card goes.
-    func handle(_ url: URL, course: LoadedCourse, openNote: UUID?, openUnit: UUID? = nil, insertIntoNote: (String) -> Void, showNote: (UUID) -> Void) {
+    func handle(
+        _ url: URL, course: LoadedCourse, openNote: UUID?, openUnit: UUID? = nil, insertIntoNote: (String) -> Void, showNote: (UUID) -> Void
+    ) {
         let parts = url.pathComponents
         guard parts.count >= 3, let id = UUID(uuidString: parts[2]),
-              let message = chat?.messages.first(where: { $0.id == id }) else { return }
+            let message = chat?.messages.first(where: { $0.id == id })
+        else { return }
 
         switch parts[1] {
         case "apply":
@@ -262,7 +279,9 @@ final class ClaudeModel {
             #endif
             status = String(localized: .claudeStatusCopied)
         case "newnote":
-            if let note = createNote(title: Self.noteTitle(message.text) ?? chat?.title ?? Self.answerTitle, body: message.text, course: course) {
+            if let note = createNote(
+                title: Self.noteTitle(message.text) ?? chat?.title ?? Self.answerTitle, body: message.text, course: course)
+            {
                 notes = Self.notes(course)
                 showNote(note)
                 status = String(localized: .claudeStatusNewNote)
@@ -278,7 +297,8 @@ final class ClaudeModel {
             }
         case "card":
             guard let unit = course.file.unitForNewCard(viewing: openUnit, note: openNote), let messages = chat?.messages,
-                  let i = messages.firstIndex(where: { $0.id == id }) else { break }
+                let i = messages.firstIndex(where: { $0.id == id })
+            else { break }
             // The question it answered is the card's prompt; the answer its model answer. Both stay editable in the sheet.
             var draft = CardDraft(unitId: unit)
             draft.prompt = messages[..<i].last { $0.role == .user }?.text ?? ""
@@ -294,7 +314,8 @@ final class ClaudeModel {
 
     /// The chat as the panel shows it, with the answer being written on top.
     func page(_ chat: Chat, cards: Bool) -> String {
-        Self.html(chat, partial: sending && answering == chatID ? partial : nil, cards: cards, superseded: superseded(chat), describe: describe)
+        Self.html(
+            chat, partial: sending && answering == chatID ? partial : nil, cards: cards, superseded: superseded(chat), describe: describe)
     }
 
     func superseded(_ chat: Chat) -> Set<ProposalRef> { chat.supersededProposals(targets: Actions.targets) }
@@ -313,8 +334,9 @@ final class ClaudeModel {
         let line: ProposalLine
         if let action = workspace.action(proposal) {
             let pending = proposal.applied != true
-            line = ProposalLine(text: workspace.summary(action), refusal: pending ? workspace.refusal(action) : nil,
-                                change: pending ? change(proposal) : nil)
+            line = ProposalLine(
+                text: workspace.summary(action), refusal: pending ? workspace.refusal(action) : nil,
+                change: pending ? change(proposal) : nil)
         } else {
             line = ProposalLine(text: proposal.command, refusal: String(localized: .claudeProposalUnknown))
         }
@@ -333,11 +355,15 @@ final class ClaudeModel {
         switch proposal.command {
         case NoteWrite.command:
             guard let text = string("text"), let course = string("course").flatMap(UUID.init(uuidString:)).flatMap(workspace.course),
-                  let path = string("note"), let note = course.store.note(at: path, in: course.file),
-                  let old = try? course.store.read(note) else { return nil }
+                let path = string("note"), let note = course.store.note(at: path, in: course.file),
+                let old = try? course.store.read(note)
+            else { return nil }
             return .rewrite(TextDiff.lines(from: old, to: text))
         case NoteEdit.command:
-            let replacements = proposal.input["replacements"].flatMap { try? JSONDecoder().decode([NoteEdit.Replacement].self, from: JSONEncoder().encode($0)) } ?? []
+            let replacements =
+                proposal.input["replacements"].flatMap {
+                    try? JSONDecoder().decode([NoteEdit.Replacement].self, from: JSONEncoder().encode($0))
+                } ?? []
             return .edit(replacements, append: string("append").flatMap { $0.isEmpty ? nil : $0 })
         case NoteFigureAdd.command, NoteFigureWrite.command:
             return string("svg").map(ProposalLine.Change.figure)
@@ -350,7 +376,8 @@ final class ClaudeModel {
     /// made on top of earlier proposals goes along when all of those do, since they are checked and run in order.
     static func offered(_ message: ChatMessage, superseded: Set<ProposalRef>, describe: (ActionProposal) -> ProposalLine) -> [Int] {
         var offered: [Int] = []
-        for (i, p) in (message.proposals ?? []).enumerated() where p.applied != true && !superseded.contains(ProposalRef(message: message.id, index: i)) {
+        for (i, p) in (message.proposals ?? []).enumerated()
+        where p.applied != true && !superseded.contains(ProposalRef(message: message.id, index: i)) {
             switch waiting(message, i, superseded: superseded, describe: describe) {
             case nil: if describe(p).refusal == nil { offered.append(i) }
             case .earlier(let before)?: if before.allSatisfy(offered.contains) { offered.append(i) }
@@ -361,8 +388,10 @@ final class ClaudeModel {
     }
 
     /// Whether the proposal at `index` waits on earlier proposals of its answer that aren't applied (`after`).
-    static func waiting(_ message: ChatMessage, _ index: Int, superseded: Set<ProposalRef>,
-                        describe: (ActionProposal) -> ProposalLine) -> ChatMessage.Waiting? {
+    static func waiting(
+        _ message: ChatMessage, _ index: Int, superseded: Set<ProposalRef>,
+        describe: (ActionProposal) -> ProposalLine
+    ) -> ChatMessage.Waiting? {
         let proposals = message.proposals ?? []
         return message.waiting(index) { j in
             superseded.contains(ProposalRef(message: message.id, index: j)) || describe(proposals[j]).refusal != nil
@@ -378,17 +407,21 @@ final class ClaudeModel {
     }
 
     func confirm(_ pending: PendingProposal, course: LoadedCourse) {
-        if let index = pending.index { apply(message: pending.message, index: index, course: course, confirmed: true) }
-        else { applyAll(message: pending.message, course: course, confirmed: true) }
+        if let index = pending.index {
+            apply(message: pending.message, index: index, course: course, confirmed: true)
+        } else {
+            applyAll(message: pending.message, course: course, confirmed: true)
+        }
     }
 
     /// Runs the proposal through the workspace like any button would, after the same confirmation a removal asks for.
     func apply(message: UUID, index: Int, course: LoadedCourse, confirmed: Bool) {
         guard var doc = chats.first(where: { $0.model.id == chatID }),
-              let m = doc.model.messages.firstIndex(where: { $0.id == message }),
-              let proposals = doc.model.messages[m].proposals, proposals.indices.contains(index),
-              case let proposal = proposals[index], proposal.applied != true,
-              let action = workspace.action(proposal) else { return }
+            let m = doc.model.messages.firstIndex(where: { $0.id == message }),
+            let proposals = doc.model.messages[m].proposals, proposals.indices.contains(index),
+            case let proposal = proposals[index], proposal.applied != true,
+            let action = workspace.action(proposal)
+        else { return }
 
         if let waiting = Self.waiting(doc.model.messages[m], index, superseded: superseded(doc.model), describe: describe) {
             workspace.error = Self.reason(waiting)
@@ -408,7 +441,8 @@ final class ClaudeModel {
     /// rest, as applying them one by one would.
     func applyAll(message: UUID, course: LoadedCourse, confirmed: Bool) {
         guard var doc = chats.first(where: { $0.model.id == chatID }),
-              let m = doc.model.messages.firstIndex(where: { $0.id == message }) else { return }
+            let m = doc.model.messages.firstIndex(where: { $0.id == message })
+        else { return }
         let picked = Self.offered(doc.model.messages[m], superseded: superseded(doc.model), describe: describe).compactMap { i in
             doc.model.messages[m].proposals.flatMap { workspace.action($0[i]) }.map { (index: i, action: $0) }
         }
@@ -496,7 +530,7 @@ final class ClaudeModel {
         return String(localized: .claudeToolReading(tool.replacing("_", with: " ")))
     }
 
-    static let answerTitle = "Claude 답변" // strings: data, written into the note file as its title
+    static let answerTitle = "Claude 답변"  // strings: data, written into the note file as its title
 
     /// The answer's first `# heading`, which names the note better than the question it answered.
     static func noteTitle(_ markdown: String) -> String? {
@@ -507,9 +541,11 @@ final class ClaudeModel {
         switch error as? ClaudeError {
         case .missingAPIKey: String(localized: .claudeErrorMissingKey)
         case .http(let status, let body):
-            status == 401 ? String(localized: .claudeErrorAuth)
+            status == 401
+                ? String(localized: .claudeErrorAuth)
                 // The CLI reports its own errors with no HTTP status; its message says more than a code would.
-                : status == 0 ? String(localized: .claudeErrorFailedBody(String(body.prefix(200)))) : String(localized: .claudeErrorHttp(status))
+                : status == 0
+                    ? String(localized: .claudeErrorFailedBody(String(body.prefix(200)))) : String(localized: .claudeErrorHttp(status))
         case .refused: String(localized: .claudeErrorRefused)
         case .truncated: String(localized: .claudeErrorTruncated)
         case .invalidOutput, nil: String(localized: .claudeErrorFailedBody(error.localizedDescription))
@@ -517,77 +553,89 @@ final class ClaudeModel {
     }
 
     /// The whole conversation as one page. `column-reverse` keeps the newest message in view without JavaScript.
-    static func html(_ chat: Chat, partial: String? = nil, cards: Bool = true, superseded: Set<ProposalRef> = [],
-                     describe: (ActionProposal) -> ProposalLine = { ProposalLine(text: $0.command) }) -> String {
+    static func html(
+        _ chat: Chat, partial: String? = nil, cards: Bool = true, superseded: Set<ProposalRef> = [],
+        describe: (ActionProposal) -> ProposalLine = { ProposalLine(text: $0.command) }
+    ) -> String {
         let writing = partial.map { #"<div class="msg assistant">\#(HTMLRenderer.render(answer: $0))</div>"# }
         let card = String(localized: .claudeAnswerCard)
-        let messages = (writing.map { [$0] } ?? []) + chat.messages.reversed().map { m in
-            let body = HTMLRenderer.render(answer: m.text)
-            switch m.role {
-            case .user:
-                return #"<div class="msg user">\#(body)</div>"#
-            case .assistant:
-                let cardLink = cards ? #"<a href="folio://action/card/\#(m.id)">\#(card)</a>"#
-                    : #"<span class="off" title="\#(String(localized: .claudeAnswerCardOff))">\#(card)</span>"#
-                // The return type is spelled out: left to inference, the literals become GRDB's `SQL` (its extensions
-                // leak in through FolioIndex), whose `joined()` then prints `SQL(elements: …)` into the chat.
-                let offered = Self.offered(m, superseded: superseded, describe: describe).count
-                let proposals = (m.proposals ?? []).enumerated().map { i, p -> String in
-                    var line = describe(p)
-                    let replaced = p.applied != true && superseded.contains(ProposalRef(message: m.id, index: i))
-                    // Its own dry run fails against the folder until the ones it builds on are applied; that, not the
-                    // missing item, is the reason to show.
-                    if p.applied != true, !replaced, let waiting = Self.waiting(m, i, superseded: superseded, describe: describe) {
-                        line.refusal = Self.reason(waiting)
-                    }
-                    let button = p.applied == true ? #"<span class="done">\#(String(localized: .claudeProposalApplied))</span>"#
-                        : replaced ? #"<span class="off">\#(String(localized: .claudeProposalSuperseded))</span>"#
-                        : line.refusal.map { _ in #"<span class="off">\#(String(localized: .claudeProposalUnavailable))</span>"# }
-                        ?? #"<a href="folio://action/apply/\#(m.id)/\#(i)">\#(String(localized: .claudeProposalApply))</a>"#
-                    // In the line, not a tooltip: a reason only shown on hover reads as a silent failure.
-                    let why = p.applied == true || replaced ? nil : line.refusal ?? p.failure
-                    let reason = why.map { #"<span class="why">\#(escape($0))</span>"# } ?? ""
-                    let change = replaced ? "" : line.change.map(changeHTML) ?? ""
-                    return #"<div class="proposal"><div class="row"><span>\#(escape(line.text))\#(reason)</span>\#(button)</div>\#(change)</div>"#
-                }.joined()
+        let messages =
+            (writing.map { [$0] } ?? [])
+            + chat.messages.reversed().map { m in
+                let body = HTMLRenderer.render(answer: m.text)
+                switch m.role {
+                case .user:
+                    return #"<div class="msg user">\#(body)</div>"#
+                case .assistant:
+                    let cardLink =
+                        cards
+                        ? #"<a href="folio://action/card/\#(m.id)">\#(card)</a>"#
+                        : #"<span class="off" title="\#(String(localized: .claudeAnswerCardOff))">\#(card)</span>"#
+                    // The return type is spelled out: left to inference, the literals become GRDB's `SQL` (its extensions
+                    // leak in through FolioIndex), whose `joined()` then prints `SQL(elements: …)` into the chat.
+                    let offered = Self.offered(m, superseded: superseded, describe: describe).count
+                    let proposals = (m.proposals ?? []).enumerated().map { i, p -> String in
+                        var line = describe(p)
+                        let replaced = p.applied != true && superseded.contains(ProposalRef(message: m.id, index: i))
+                        // Its own dry run fails against the folder until the ones it builds on are applied; that, not the
+                        // missing item, is the reason to show.
+                        if p.applied != true, !replaced, let waiting = Self.waiting(m, i, superseded: superseded, describe: describe) {
+                            line.refusal = Self.reason(waiting)
+                        }
+                        let button =
+                            p.applied == true
+                            ? #"<span class="done">\#(String(localized: .claudeProposalApplied))</span>"#
+                            : replaced
+                                ? #"<span class="off">\#(String(localized: .claudeProposalSuperseded))</span>"#
+                                : line.refusal.map { _ in #"<span class="off">\#(String(localized: .claudeProposalUnavailable))</span>"# }
+                                    ?? #"<a href="folio://action/apply/\#(m.id)/\#(i)">\#(String(localized: .claudeProposalApply))</a>"#
+                        // In the line, not a tooltip: a reason only shown on hover reads as a silent failure.
+                        let why = p.applied == true || replaced ? nil : line.refusal ?? p.failure
+                        let reason = why.map { #"<span class="why">\#(escape($0))</span>"# } ?? ""
+                        let change = replaced ? "" : line.change.map(changeHTML) ?? ""
+                        return
+                            #"<div class="proposal"><div class="row"><span>\#(escape(line.text))\#(reason)</span>\#(button)</div>\#(change)</div>"#
+                    }.joined()
 
-                // Only with two or more: for one, its own link is the same button.
-                let applyAll = offered < 2 ? ""
-                    : #"<div class="apply-all"><a href="folio://action/applyall/\#(m.id)">\#(String(localized: .claudeProposalApplyAll(offered)))</a></div>"#
-                return #"""
-                <div class="msg assistant">\#(body)\#(proposals)\#(applyAll)<div class="actions">\#
-                <a href="folio://action/copy/\#(m.id)">\#(String(localized: .claudeAnswerCopy))</a>\#
-                <a href="folio://action/insert/\#(m.id)">\#(String(localized: .claudeAnswerInsert))</a>\#
-                <a href="folio://action/newnote/\#(m.id)">\#(String(localized: .claudeAnswerNewNote))</a>\#
-                \#(cardLink)</div></div>
-                """#
+                    // Only with two or more: for one, its own link is the same button.
+                    let applyAll =
+                        offered < 2
+                        ? ""
+                        : #"<div class="apply-all"><a href="folio://action/applyall/\#(m.id)">\#(String(localized: .claudeProposalApplyAll(offered)))</a></div>"#
+                    return #"""
+                        <div class="msg assistant">\#(body)\#(proposals)\#(applyAll)<div class="actions">\#
+                        <a href="folio://action/copy/\#(m.id)">\#(String(localized: .claudeAnswerCopy))</a>\#
+                        <a href="folio://action/insert/\#(m.id)">\#(String(localized: .claudeAnswerInsert))</a>\#
+                        <a href="folio://action/newnote/\#(m.id)">\#(String(localized: .claudeAnswerNewNote))</a>\#
+                        \#(cardLink)</div></div>
+                        """#
+                }
             }
-        }
         return "<style>\(css)</style><div class=\"chat edge-fade\">\(messages.joined())</div>"
     }
 
     static let css = """
-    :root { font-size: 14px; } html, body.note { height: 100%; margin: 0; padding: 0; max-width: none; overflow: hidden; --body: 14px; }
-    .chat { box-sizing: border-box; height: 100vh; overflow-y: auto; display: flex; flex-direction: column-reverse; gap: 14px; padding: 14px 16px; }
-    .msg > :first-child { margin-top: 0; } .msg > :last-child { margin-bottom: 0; } .msg h1 { font-size: 19px; } .msg h2 { font-size: 16px; margin-top: 18px; }
-    .user { align-self: flex-end; max-width: 85%; padding: 8px 12px; border-radius: 14px; background: var(--fill); }
-    .actions { display: flex; gap: 14px; margin-top: 8px; font-size: 12px; } .actions .off { color: var(--text-3); cursor: default; }
-    .proposal { margin-top: 8px; padding: 8px 12px; border-radius: 12px; background: var(--fill); font-size: 13px; }
-    .proposal .row { display: flex; align-items: baseline; gap: 12px; }
-    .proposal .row > span:first-child { flex: 1; } .proposal .off, .proposal .done { color: var(--text-3); cursor: default; }
-    .proposal .why { display: block; margin-top: 4px; font-size: 12px; color: var(--text-3); }
-    .change { margin-top: 8px; } .change summary { font-size: 12px; color: var(--text-2); cursor: default; }
-    .diff { margin-top: 8px; padding: 4px 0; border-radius: 8px; background: var(--code-fill); overflow-x: auto;
-      font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
-    .diff .l { white-space: pre-wrap; padding: 0 8px 0 24px; text-indent: -16px; min-height: 18px; }
-    .diff .add { background: color-mix(in srgb, var(--c-example) 16%, transparent); }
-    .diff .del { background: color-mix(in srgb, var(--c-danger) 14%, transparent); }
-    .diff .skip, .diff .label { color: var(--text-3); font-family: -apple-system, sans-serif; }
-    .diff .gap { height: 8px; }
-    .apply-all { margin-top: 8px; font-size: 13px; text-align: right; }
-    .figure { margin-top: 8px; padding: 8px; border-radius: 8px; background: var(--card); box-shadow: inset 0 0 0 1px var(--line-soft); }
-    .figure img { display: block; max-width: 100%; max-height: 240px; margin: 0 auto; }
-    """
+        :root { font-size: 14px; } html, body.note { height: 100%; margin: 0; padding: 0; max-width: none; overflow: hidden; --body: 14px; }
+        .chat { box-sizing: border-box; height: 100vh; overflow-y: auto; display: flex; flex-direction: column-reverse; gap: 14px; padding: 14px 16px; }
+        .msg > :first-child { margin-top: 0; } .msg > :last-child { margin-bottom: 0; } .msg h1 { font-size: 19px; } .msg h2 { font-size: 16px; margin-top: 18px; }
+        .user { align-self: flex-end; max-width: 85%; padding: 8px 12px; border-radius: 14px; background: var(--fill); }
+        .actions { display: flex; gap: 14px; margin-top: 8px; font-size: 12px; } .actions .off { color: var(--text-3); cursor: default; }
+        .proposal { margin-top: 8px; padding: 8px 12px; border-radius: 12px; background: var(--fill); font-size: 13px; }
+        .proposal .row { display: flex; align-items: baseline; gap: 12px; }
+        .proposal .row > span:first-child { flex: 1; } .proposal .off, .proposal .done { color: var(--text-3); cursor: default; }
+        .proposal .why { display: block; margin-top: 4px; font-size: 12px; color: var(--text-3); }
+        .change { margin-top: 8px; } .change summary { font-size: 12px; color: var(--text-2); cursor: default; }
+        .diff { margin-top: 8px; padding: 4px 0; border-radius: 8px; background: var(--code-fill); overflow-x: auto;
+          font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+        .diff .l { white-space: pre-wrap; padding: 0 8px 0 24px; text-indent: -16px; min-height: 18px; }
+        .diff .add { background: color-mix(in srgb, var(--c-example) 16%, transparent); }
+        .diff .del { background: color-mix(in srgb, var(--c-danger) 14%, transparent); }
+        .diff .skip, .diff .label { color: var(--text-3); font-family: -apple-system, sans-serif; }
+        .diff .gap { height: 8px; }
+        .apply-all { margin-top: 8px; font-size: 13px; text-align: right; }
+        .figure { margin-top: 8px; padding: 8px; border-radius: 8px; background: var(--card); box-shadow: inset 0 0 0 1px var(--line-soft); }
+        .figure img { display: block; max-width: 100%; max-height: 240px; margin: 0 auto; }
+        """
 
     /// What a note proposal changes, folded shut so the answer stays readable; opened, the user approves what they
     /// read rather than a one-line summary.
@@ -628,14 +676,16 @@ final class ClaudeModel {
             }
         }
 
-        return #"<details class="change"><summary>\#(String(localized: .claudeProposalChanges(added, removed)))</summary><div class="diff">\#(rows.joined())</div></details>"#
+        return
+            #"<details class="change"><summary>\#(String(localized: .claudeProposalChanges(added, removed)))</summary><div class="diff">\#(rows.joined())</div></details>"#
     }
 
     /// The picture as the note would show it, on the note's card. An SVG in an `<img>` follows the page's appearance,
     /// so its dark rule shows when the panel is dark; it runs no script and loads nothing there.
     static func figureHTML(_ svg: String) -> String {
         let data = Data(svg.utf8).base64EncodedString()
-        return #"<details class="change" open><summary>\#(String(localized: .claudeProposalFigure))</summary><div class="figure"><img src="data:image/svg+xml;base64,\#(data)" alt=""></div></details>"#
+        return
+            #"<details class="change" open><summary>\#(String(localized: .claudeProposalFigure))</summary><div class="figure"><img src="data:image/svg+xml;base64,\#(data)" alt=""></div></details>"#
     }
 
     static func escape(_ text: String) -> String {

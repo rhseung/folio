@@ -105,8 +105,10 @@ public struct SyncTeX: Sendable, Equatable {
                     open.append(nil)
                     continue
                 }
-                let row = Row(tag: record.tag, line: record.line, x: scale(record.h, offset: xOffset), baseline: scale(record.v, offset: yOffset),
-                              width: scale(record.size[0], offset: 0), height: scale(record.size[1], offset: 0), depth: scale(record.size[2], offset: 0))
+                let row = Row(
+                    tag: record.tag, line: record.line, x: scale(record.h, offset: xOffset), baseline: scale(record.v, offset: yOffset),
+                    width: scale(record.size[0], offset: 0), height: scale(record.size[1], offset: 0),
+                    depth: scale(record.size[2], offset: 0))
                 // A row inside another row (an `\hbox`, a formula) is also a place on the outer one.
                 if let parent = open.last ?? nil { rows[parent].marks.append(Mark(tag: row.tag, line: row.line, x: row.x)) }
                 rows.append(row)
@@ -127,7 +129,8 @@ public struct SyncTeX: Sendable, Equatable {
     public func place(page: Int, x: Double, y: Double) -> Place? {
         guard let rows = pages[page]?.filter({ $0.area > 0 }), !rows.isEmpty else { return nil }
         let around = rows.filter { $0.contains(x: x, y: y) }
-        let row = around.min { $0.area < $1.area }
+        let row =
+            around.min { $0.area < $1.area }
             ?? rows.min { $0.distance(x: x, y: y) < $1.distance(x: x, y: y) }
         guard let row else { return nil }
 

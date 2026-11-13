@@ -17,7 +17,8 @@ import WebKit
         guard let file else { return }
         let count = environment["FOLIO_TAB_MEMORY_COUNT"].flatMap(Int.init) ?? 8
         let courses = workspace.currentCourses
-        let links: [(AppLink, UUID)] = environment["FOLIO_TAB_MEMORY_KIND"] == "course"
+        let links: [(AppLink, UUID)] =
+            environment["FOLIO_TAB_MEMORY_KIND"] == "course"
             ? courses.map { (AppLink.course($0.id), $0.id) }
             : courses.flatMap { c in c.file.notes.map { (AppLink(.note, $0.id), c.id) } }
         guard !links.isEmpty else { return }
@@ -52,9 +53,12 @@ import WebKit
 
     /// What the window holds: web views (note previews) and text views (note sources).
     static func webViews() -> String {
-        func count(_ view: NSView, _ kind: AnyClass) -> Int { (view.isKind(of: kind) ? 1 : 0) + view.subviews.reduce(0) { $0 + count($1, kind) } }
+        func count(_ view: NSView, _ kind: AnyClass) -> Int {
+            (view.isKind(of: kind) ? 1 : 0) + view.subviews.reduce(0) { $0 + count($1, kind) }
+        }
         let roots = NSApp.windows.compactMap(\.contentView)
-        return "\(roots.reduce(0) { $0 + count($1, WKWebView.self) }) text=\(roots.reduce(0) { $0 + count($1, NSTextView.self) }) all=\(roots.reduce(0) { $0 + count($1, NSView.self) })"
+        return
+            "\(roots.reduce(0) { $0 + count($1, WKWebView.self) }) text=\(roots.reduce(0) { $0 + count($1, NSTextView.self) }) all=\(roots.reduce(0) { $0 + count($1, NSView.self) })"
     }
 }
 #endif

@@ -16,12 +16,14 @@ extension FolderTree {
             self.init(name: url.lastPathComponent, content: .opaque(.codeProject))
             return
         }
-        let children = try urls
+        let children =
+            try urls
             .filter { !IndexRules.isIgnoredFile($0.lastPathComponent) }
             .map { try FolderTree(contentsOf: $0, depth: depth + 1) }
             .sorted { $0.name < $1.name }
         let tree = FolderTree(name: url.lastPathComponent, content: .folder(children))
-        self = depth >= IndexRules.firstCollapsibleDepth && tree.fileCount > IndexRules.maxIndexedFiles
+        self =
+            depth >= IndexRules.firstCollapsibleDepth && tree.fileCount > IndexRules.maxIndexedFiles
             ? FolderTree(name: url.lastPathComponent, content: .opaque(.tooManyFiles))
             : tree
     }

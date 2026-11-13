@@ -21,7 +21,8 @@ struct RecordingPage: View {
     private var recording: Recording { model.recording }
 
     init(workspace: Workspace, course: LoadedCourse, recording: Recording, place: AppLink, moved: @escaping (AppLink?) -> Void) {
-        _model = State(initialValue: RecordingPlayerModel(workspace: workspace, courseId: course.id, store: course.store, recording: recording))
+        _model = State(
+            initialValue: RecordingPlayerModel(workspace: workspace, courseId: course.id, store: course.store, recording: recording))
         self.place = place
         self.moved = moved
     }
@@ -38,7 +39,9 @@ struct RecordingPage: View {
                 if model.hasLines {
                     TextField(String(localized: .recordingSearch), text: $model.query).pill(width: 180)
                 }
-                PageMenuButton { ItemMenu(source: RecordingMenuSource(model: model, host: .own, remove: { deleting = true }, openLink: openLink)) }
+                PageMenuButton {
+                    ItemMenu(source: RecordingMenuSource(model: model, host: .own, remove: { deleting = true }, openLink: openLink))
+                }
             }
             if recording.hasAudio {
                 transport
@@ -129,7 +132,9 @@ struct RecordingPage: View {
         .onChange(of: place, initial: true) { _, link in model.follow(link) }
         .onChange(of: model.viewedLink) { _, link in moved(link) }
         .onChange(of: player.playing, initial: true) { _, playing in tabPlaying(playing ? { [player] in player.pause() } : nil) }
-        .onDisappear { player.stop(); tabPlaying(nil) }
+        .onDisappear {
+            player.stop(); tabPlaying(nil)
+        }
         // A finished job (or a cancelled one, which leaves the old transcript) has written what there is to show.
         .onChange(of: model.phase == nil) { _, done in if done { model.reloadTranscript() } }
     }
@@ -169,7 +174,9 @@ struct RecordingPage: View {
                 }
             }
             Block(title: String(localized: .recordingContextTitle), note: model.contextSummary) {
-                Button { withAnimation(Theme.Motion.standard) { showingContext.toggle() } } label: {
+                Button {
+                    withAnimation(Theme.Motion.standard) { showingContext.toggle() }
+                } label: {
                     Image(systemName: showingContext ? "chevron.up" : "chevron.down")
                 }
                 .buttonStyle(.ghost)
@@ -212,9 +219,11 @@ struct RecordingPage: View {
             ScrollView(.horizontal) {
                 HStack(spacing: Theme.Space.xs) {
                     ForEach(model.bookmarks, id: \.self) { mark in
-                        Button(RecordingTime.label(mark)) { model.jump(to: mark); hold() }
-                            .monospacedDigit().buttonStyle(.ghost)
-                            .help(Text(.recordingBookmarkJump))
+                        Button(RecordingTime.label(mark)) {
+                            model.jump(to: mark); hold()
+                        }
+                        .monospacedDigit().buttonStyle(.ghost)
+                        .help(Text(.recordingBookmarkJump))
                     }
                 }
             }
@@ -225,21 +234,33 @@ struct RecordingPage: View {
 
     var transport: some View {
         HStack(spacing: Theme.Space.m) {
-            Button { player.skip(-15) } label: { Image(systemName: "gobackward.15") }.help(Text(.recordingBack15))
-            Button { player.toggle(); hold() } label: {
+            Button {
+                player.skip(-15)
+            } label: {
+                Image(systemName: "gobackward.15")
+            }.help(Text(.recordingBack15))
+            Button {
+                player.toggle(); hold()
+            } label: {
                 Image(systemName: player.playing ? "pause.circle.fill" : "play.circle.fill")
-                    .font(.system(size: 34)).foregroundStyle(accent.color) // design: one-off, play is the player's one large control
+                    .font(.system(size: 34)).foregroundStyle(accent.color)  // design: one-off, play is the player's one large control
                     .contentTransition(.symbolEffect(.replace))
             }
             // Only while the page has the focus: a window-wide space bar would take the spaces typed in the search
             // field or the Claude panel over it.
             .keyboardShortcut(pageFocused || linesFocused ? KeyboardShortcut(.space, modifiers: []) : nil)
             .help(Text(player.playing ? .recordingPause : .recordingPlay))
-            Button { player.skip(15) } label: { Image(systemName: "goforward.15") }.help(Text(.recordingForward15))
-            Text(RecordingTime.label(player.time)).monospacedDigit().foregroundStyle(Theme.Palette.textSecondary).frame(width: 56, alignment: .trailing)
+            Button {
+                player.skip(15)
+            } label: {
+                Image(systemName: "goforward.15")
+            }.help(Text(.recordingForward15))
+            Text(RecordingTime.label(player.time)).monospacedDigit().foregroundStyle(Theme.Palette.textSecondary).frame(
+                width: 56, alignment: .trailing)
             track.frame(height: 20)
             Menu(String(format: "%gx", player.rate)) {
-                ForEach([1.0, 1.25, 1.5, 1.75, 2.0], id: \.self) { rate in Button(String(format: "%gx", rate)) { player.rate = Float(rate) } }
+                ForEach([1.0, 1.25, 1.5, 1.75, 2.0], id: \.self) { rate in Button(String(format: "%gx", rate)) { player.rate = Float(rate) }
+                }
             }
             .menuStyle(.button).buttonStyle(.borderless).pointingHand().fixedSize()
             .help(Text(.recordingRate))
@@ -260,14 +281,18 @@ struct RecordingPage: View {
                     Capsule().fill(Theme.Palette.warning).frame(width: 4, height: 12)
                         .offset(x: w * CGFloat(mark / length) - 2)
                 }
-                Circle().fill(.white).frame(width: 14, height: 14).shadow(color: .black.opacity(0.25), radius: 2, y: 1) // design: one-off, a slider knob stays white in both appearances, as in the system
+                Circle().fill(.white)  // design: one-off, a slider knob stays white in both appearances, as in the system
+                    .frame(width: 14, height: 14)  // design: one-off, the system slider knob's size
+                    .shadow(color: .black.opacity(0.25), radius: 2, y: 1)  // design: one-off, and its shadow
                     .offset(x: min(max(x - 7, 0), w - 14))
             }
             .frame(maxHeight: .infinity)
             .contentShape(.rect)
-            .gesture(DragGesture(minimumDistance: 0).onChanged { g in
-                player.seek(Double(min(max(g.location.x / w, 0), 1)) * length)
-            })
+            .gesture(
+                DragGesture(minimumDistance: 0).onChanged { g in
+                    player.seek(Double(min(max(g.location.x / w, 0), 1)) * length)
+                }
+            )
             .pointingHand()
         }
     }
@@ -276,7 +301,9 @@ struct RecordingPage: View {
     /// with every pick and Shift-click, losing the place being listened to while choosing what to copy.
     func row(_ index: Int, _ line: LectureTranscript.Line, playing: Bool, selected: Bool, bookmarked: Bool) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: Theme.Space.m) {
-            Button { model.jump(to: line.start); hold() } label: {
+            Button {
+                model.jump(to: line.start); hold()
+            } label: {
                 Text(RecordingTime.label(line.start)).font(Theme.Typeface.label).monospacedDigit()
                     .foregroundStyle(playing ? accent.ink : Theme.Palette.textTertiary).frame(width: 52, alignment: .leading)
                     .contentShape(.rect)

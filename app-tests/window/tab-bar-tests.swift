@@ -30,8 +30,9 @@ struct TabBarTests {
         }
         .environment(workspace)
         host = NSHostingView(rootView: view)
-        window = NSWindow(contentRect: CGRect(x: -20_000, y: -20_000, width: 1400, height: 800), styleMask: [.borderless], backing: .buffered,
-                          defer: false)
+        window = NSWindow(
+            contentRect: CGRect(x: -20_000, y: -20_000, width: 1400, height: 800), styleMask: [.borderless], backing: .buffered,
+            defer: false)
         window.contentView = host
     }
 

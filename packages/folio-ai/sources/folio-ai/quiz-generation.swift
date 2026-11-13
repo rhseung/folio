@@ -26,8 +26,9 @@ public struct QuizCardDrafts: StructuredResult, Equatable {
             var options = options
             if type == .trueFalse { options = QuizCard.trueFalseOptions }
             guard type != .choice && type != .trueFalse || options.contains(answer) else { return nil }
-            return QuizCard(device: device, at: date, unitId: unitId, type: type, category: CardCategory(rawValue: category) ?? .concept,
-                            prompt: prompt, options: type == .choice || type == .trueFalse ? options : [], answer: answer, rubric: rubric, source: .ai)
+            return QuizCard(
+                device: device, at: date, unitId: unitId, type: type, category: CardCategory(rawValue: category) ?? .concept,
+                prompt: prompt, options: type == .choice || type == .trueFalse ? options : [], answer: answer, rubric: rubric, source: .ai)
         }
     }
 
@@ -35,29 +36,38 @@ public struct QuizCardDrafts: StructuredResult, Equatable {
 
     static let types: [CardType] = [.free, .trueFalse, .choice, .fill, .proof]
 
-    public static let schema = Schema.object(["cards": Schema.array(Schema.object([
-        "type": Schema.enumeration(types.map(\.rawValue)),
-        "category": Schema.enumeration(CardCategory.allCases.map(\.rawValue)),
-        "prompt": Schema.string,
-        "options": Schema.array(Schema.string),
-        "answer": Schema.string,
-        "rubric": Schema.array(Schema.string),
-    ]))])
+    public static let schema = Schema.object([
+        "cards": Schema.array(
+            Schema.object([
+                "type": Schema.enumeration(types.map(\.rawValue)),
+                "category": Schema.enumeration(CardCategory.allCases.map(\.rawValue)),
+                "prompt": Schema.string,
+                "options": Schema.array(Schema.string),
+                "answer": Schema.string,
+                "rubric": Schema.array(Schema.string),
+            ]))
+    ])
 }
 
 extension ClaudeClient {
     /// `context` holds the course summary and the unit's notes; it goes through
     /// `ContextBuilder` so the summary is cached and the notes are cut to the budget.
-    public func makeCards(unitTitle: String, count: Int, type: CardType?, context: [ContextItem],
-                          budgetTokens: Int = 60_000) async throws -> [QuizCardDrafts.Draft] {
+    public func makeCards(
+        unitTitle: String, count: Int, type: CardType?, context: [ContextItem],
+        budgetTokens: Int = 60_000
+    ) async throws -> [QuizCardDrafts.Draft] {
         let built = ContextBuilder.build(context, budgetTokens: budgetTokens)
-        let system = built.system + [.text("""
-        You write quiz cards for a university student, from their own course notes. Each card tests one idea: a definition, \
-        a theorem's statement, a proof, a counterexample, a computation or a concept. Write prompts and answers in the \
-        language of the notes, math in LaTeX ($...$). The answer is a complete model answer. The rubric lists the elements \
-        an answer must contain to be correct, one short phrase each. For "choice" give 4 options and use the exact text \
-        of the correct option as the answer; for "true_false" the answer is "참" or "거짓" and options are empty.
-        """)]
+        let system =
+            built.system + [
+                .text(
+                    """
+                    You write quiz cards for a university student, from their own course notes. Each card tests one idea: a definition, \
+                    a theorem's statement, a proof, a counterexample, a computation or a concept. Write prompts and answers in the \
+                    language of the notes, math in LaTeX ($...$). The answer is a complete model answer. The rubric lists the elements \
+                    an answer must contain to be correct, one short phrase each. For "choice" give 4 options and use the exact text \
+                    of the correct option as the answer; for "true_false" the answer is "참" or "거짓" and options are empty.
+                    """)
+            ]
         let kind = type.map { " 유형은 모두 \($0.rawValue)." } ?? " 유형은 섞어서."
         let ask = ContentBlock.text("단원 \"\(unitTitle)\"에서 퀴즈 카드 \(count)장을 만들어 주세요.\(kind)")
         let messages = [Message(role: .user, content: built.userBlocks + [ask])]

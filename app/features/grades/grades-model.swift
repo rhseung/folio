@@ -52,19 +52,28 @@ final class GradesModel {
         let currentCredits = workspace.currentSemester.map { s in courses.filter { $0.semesterId == s.id }.map(\.credits).reduce(0, +) }
         let major = GPACalculator.major(courses: courses, catalog: catalog)
         return [
-            .init(title: String(localized: .gradesCumulativeGpa), value: Self.gpa(cumulative),
-                  detail: String(localized: .gradesEffectiveCredits(cumulative.effectiveCredits.formatted())), sensitive: true),
-        ] + (programs.isEmpty
-            ? [.init(title: String(localized: .gradesMajorGpa), value: Self.gpa(major), detail: Self.credits(major.effectiveCredits), sensitive: true)]
-            : programs.map { p in
-                let s = GPACalculator.program(p.codeId, courses: courses, catalog: catalog)
-                return .init(title: programGPA(p), value: Self.gpa(s), detail: Self.credits(s.effectiveCredits), sensitive: true)
-            }) + [
-            .init(title: String(localized: .gradesTotalCredits), value: cumulative.totalCredits.formatted(),
-                  detail: String(localized: .gradesTotalCreditsDetail)),
-            .init(title: workspace.currentSemester?.title ?? String(localized: .gradesThisSemester), value: currentCredits.map(Self.credits) ?? "-",
-                  detail: current?.gpa == nil ? String(localized: .gradesInProgress) : Self.gpa(current!), sensitive: current?.gpa != nil),
+            .init(
+                title: String(localized: .gradesCumulativeGpa), value: Self.gpa(cumulative),
+                detail: String(localized: .gradesEffectiveCredits(cumulative.effectiveCredits.formatted())), sensitive: true)
         ]
+            + (programs.isEmpty
+                ? [
+                    .init(
+                        title: String(localized: .gradesMajorGpa), value: Self.gpa(major), detail: Self.credits(major.effectiveCredits),
+                        sensitive: true)
+                ]
+                : programs.map { p in
+                    let s = GPACalculator.program(p.codeId, courses: courses, catalog: catalog)
+                    return .init(title: programGPA(p), value: Self.gpa(s), detail: Self.credits(s.effectiveCredits), sensitive: true)
+                }) + [
+                .init(
+                    title: String(localized: .gradesTotalCredits), value: cumulative.totalCredits.formatted(),
+                    detail: String(localized: .gradesTotalCreditsDetail)),
+                .init(
+                    title: workspace.currentSemester?.title ?? String(localized: .gradesThisSemester),
+                    value: currentCredits.map(Self.credits) ?? "-",
+                    detail: current?.gpa == nil ? String(localized: .gradesInProgress) : Self.gpa(current!), sensitive: current?.gpa != nil),
+            ]
     }
 
     func programGPA(_ p: StudentProgram) -> String { String(localized: .gradesProgramGpa(p.title(in: catalog))) }
@@ -78,8 +87,10 @@ final class GradesModel {
     /// Ungraded courses are still to be graded, so the default counts them as remaining.
     var remainingDefault: Double {
         targetProgram.map { GPACalculator.programRemaining($0, courses: courses, catalog: catalog) }
-            ?? max(0, workspace.transcript.graduation.totalCredits
-                - GPACalculator.graduation(semesters: semesters, courses: courses, catalog: workspace.requirementCatalog).counted)
+            ?? max(
+                0,
+                workspace.transcript.graduation.totalCredits
+                    - GPACalculator.graduation(semesters: semesters, courses: courses, catalog: workspace.requirementCatalog).counted)
     }
 
     var remaining: Double {
@@ -111,8 +122,9 @@ final class GradesModel {
             // A semester in progress has no graded credits yet; show what is being taken instead of 0. A credited
             // term's courses were taken elsewhere, so one still waiting for its grade isn't being taken.
             let enrolled = members.map(\.credits).reduce(0, +)
-            return SemesterRow(semester: s, summary: sum, members: members, enrolled: enrolled,
-                               inProgress: s.term != .credited && sum.gpa == nil && sum.totalCredits == 0 && enrolled > 0)
+            return SemesterRow(
+                semester: s, summary: sum, members: members, enrolled: enrolled,
+                inProgress: s.term != .credited && sum.gpa == nil && sum.totalCredits == 0 && enrolled > 0)
         }
     }
 
@@ -131,15 +143,20 @@ final class GradesModel {
 
     func resetPicks() { expected = [:] }
 
-    func courseDetail(_ c: Course) -> String { String(localized: .gradesSimulationCourseDetail(c.credits.formatted(), c.gradingMode.label)) }
+    func courseDetail(_ c: Course) -> String {
+        String(localized: .gradesSimulationCourseDetail(c.credits.formatted(), c.gradingMode.label))
+    }
 
     var simulatedTerm: GPACalculator.Summary? {
-        workspace.currentSemester.map { GPACalculator.semester($0, courses: GPACalculator.simulate(expected, courses: courses), catalog: catalog) }
+        workspace.currentSemester.map {
+            GPACalculator.semester($0, courses: GPACalculator.simulate(expected, courses: courses), catalog: catalog)
+        }
     }
 
     var simulatedTermDetail: String? {
         simulatedTerm.map {
-            $0.effectiveCredits > 0 ? String(localized: .gradesEffectiveCredits($0.effectiveCredits.formatted()))
+            $0.effectiveCredits > 0
+                ? String(localized: .gradesEffectiveCredits($0.effectiveCredits.formatted()))
                 : String(localized: .gradesSimulationPickToCompute)
         }
     }
@@ -161,7 +178,9 @@ final class GradesModel {
         let recorded = Self.points(GPACalculator.trend(semesters: semesters, courses: courses, catalog: catalog))
         guard !expected.isEmpty else { return recorded }
         let known = Dictionary(keepingFirst: recorded.map { ($0.id, $0.gpa) })
-        return Self.points(GPACalculator.trend(semesters: semesters, courses: GPACalculator.simulate(expected, courses: courses), catalog: catalog)).map { p in
+        return Self.points(
+            GPACalculator.trend(semesters: semesters, courses: GPACalculator.simulate(expected, courses: courses), catalog: catalog)
+        ).map { p in
             var p = p
             p.simulated = known[p.id].map { abs($0 - p.gpa) >= 0.0005 } ?? true
             return p
@@ -187,8 +206,11 @@ final class GradesModel {
     /// Hovered values go in the legend, not a tooltip in the plot, which always covered some of the marks.
     static func legendValue(_ points: [Point], series: Series, at label: String?) -> String {
         guard let p = points.first(where: { $0.label == label && $0.series == series }) else { return "" }
-        return [GPACalculator.label(p.gpa), p.credits > 0 ? "· " + credits(p.credits) : nil, p.simulated ? String(localized: .gradesTrendExpected) : nil]
-            .compactMap { $0 }.joined(separator: " ")
+        return [
+            GPACalculator.label(p.gpa), p.credits > 0 ? "· " + credits(p.credits) : nil,
+            p.simulated ? String(localized: .gradesTrendExpected) : nil,
+        ]
+        .compactMap { $0 }.joined(separator: " ")
     }
 
     static func gpa(_ s: GPACalculator.Summary) -> String { GPACalculator.label(s.gpa) }

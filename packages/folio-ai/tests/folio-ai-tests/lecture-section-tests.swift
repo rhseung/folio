@@ -7,10 +7,12 @@ struct LectureSectionTests {
     @Test func claudesSectionsTakeUnitsByExactTitleOnly() async throws {
         let device = UUID(), now = Date()
         let units = ["매칭", "Hall의 결혼 정리"].enumerated().map { FolioDomain.Unit(device: device, at: now, title: $1, order: $0 + 1) }
-        let reply = #"{"sections":[{"title":"Hall","firstPage":9,"unit":"Hall의 결혼 정리"},{"title":"Matchings","firstPage":2,"unit":"매칭"},{"title":"Berge","firstPage":14,"unit":"Berge 정리"}]}"#
+        let reply =
+            #"{"sections":[{"title":"Hall","firstPage":9,"unit":"Hall의 결혼 정리"},{"title":"Matchings","firstPage":2,"unit":"매칭"},{"title":"Berge","firstPage":14,"unit":"Berge 정리"}]}"#
         let fake = FakeProvider(responses: [FakeProvider.reply(reply)])
         let pages = (1...20).map { LecturePage(title: $0 % 3 == 0 ? nil : "p\($0)") }
-        let split = try #require(try await ClaudeClient(provider: fake).lectureSections(file: "05_Matchings.pdf", pages: pages, units: units))
+        let split = try #require(
+            try await ClaudeClient(provider: fake).lectureSections(file: "05_Matchings.pdf", pages: pages, units: units))
         #expect(split.sections.map(\.pages) == [1...8, 9...13, 14...20])
         #expect(split.sections[0].unit == units[0].id && split.sections[0].match == .claude)
         #expect(split.sections[1].unit == units[1].id)
@@ -18,7 +20,9 @@ struct LectureSectionTests {
         #expect(split.sections[2].isNew && split.sections[2].title == "Berge")
 
         let request = try #require(await fake.requests.first)
-        #expect(request.model == TaskConfig.defaults(for: .lectureSections).model && request.output_config?.format?.schema == LectureSectionDrafts.schema)
+        #expect(
+            request.model == TaskConfig.defaults(for: .lectureSections).model
+                && request.output_config?.format?.schema == LectureSectionDrafts.schema)
         guard case .text(let text, _)? = request.messages.first?.content.first else { Issue.record("text"); return }
         #expect(text.contains("- Hall의 결혼 정리") && text.contains("## 3: \n") && text.contains("## 20: p20"))
     }
@@ -31,7 +35,9 @@ struct LectureSectionTests {
             LecturePage(title: nil, body: "", image: picture),
             LecturePage(title: "IP addressing", body: "IP addressing CIDR subnets"),
         ]
-        let fake = FakeProvider(responses: [FakeProvider.reply(#"{"sections":[{"title":"Overview","firstPage":1,"unit":null},{"title":"IP","firstPage":3,"unit":null}]}"#)])
+        let fake = FakeProvider(responses: [
+            FakeProvider.reply(#"{"sections":[{"title":"Overview","firstPage":1,"unit":null},{"title":"IP","firstPage":3,"unit":null}]}"#)
+        ])
         let split = try #require(try await ClaudeClient(provider: fake).lectureSections(file: "Chapter_4.pdf", pages: pages, units: []))
         #expect(split.sections.map(\.pages) == [1...2, 3...3])
 
@@ -63,9 +69,14 @@ struct LectureSectionTests {
     /// a page full of text (Chapter 4's slide 84: 210 "words"), and it filled the excerpt.
     @Test func figuresAreNotWordsAndAPageOfThemIsPictured() {
         let figures = String(repeating: "\u{FFFC}\n", count: 60)
-        let diagram = figures + "1\n2\n0111\nvalues in arriving packet header\nGeneralized forwarding: match plus action\nReview: each router contains a forwarding table\n" + figures
+        let diagram =
+            figures
+            + "1\n2\n0111\nvalues in arriving packet header\nGeneralized forwarding: match plus action\nReview: each router contains a forwarding table\n"
+            + figures
         #expect(PageText.words(diagram) == 20 && PageText.figures(diagram) == 120)
-        #expect(LecturePage.excerpt(diagram, title: "Generalized forwarding: match plus action", limit: 40) == "1 2 0111 values in arriving packet…")
+        #expect(
+            LecturePage.excerpt(diagram, title: "Generalized forwarding: match plus action", limit: 40)
+                == "1 2 0111 values in arriving packet…")
         let prose = String(repeating: "word ", count: 40)
         #expect(LecturePage.pictured(texts: [prose, diagram], titles: [nil, "Generalized forwarding: match plus action"]) == [1])
     }
@@ -73,10 +84,13 @@ struct LectureSectionTests {
     /// A deck shows its roadmap again before each part, the same words with the part highlighted: only the picture
     /// tells the parts apart, so a page that repeats an earlier one goes as a picture.
     @Test func aRepeatedRoadmapIsPictured() {
-        let roadmap = "Network layer: data plane roadmap\nNetwork layer: overview\nWhat's inside a router\nIP: the Internet Protocol\nnetwork address translation\nIPv6\nMiddleboxes\nNetwork Layer: 4-"
+        let roadmap =
+            "Network layer: data plane roadmap\nNetwork layer: overview\nWhat's inside a router\nIP: the Internet Protocol\nnetwork address translation\nIPv6\nMiddleboxes\nNetwork Layer: 4-"
         // Each slide its own topic: slides that differ only in their numbers would count as repeats too.
-        let prose = ["forwarding", "prefixes", "switching", "buffers", "scheduling", "neutrality", "datagrams", "addressing", "subnets",
-                     "dhcp", "translation", "tunneling"].map { "This slide explains \($0) with an example and a short exercise for the class" }
+        let prose = [
+            "forwarding", "prefixes", "switching", "buffers", "scheduling", "neutrality", "datagrams", "addressing", "subnets",
+            "dhcp", "translation", "tunneling",
+        ].map { "This slide explains \($0) with an example and a short exercise for the class" }
         let texts = [roadmap + "3"] + prose[0..<6] + [roadmap + "41"] + prose[6...] + [roadmap + "67"]
         let titles = texts.map { _ in String?.none }
         #expect(LecturePage.pictured(texts: texts, titles: titles) == [7, 14])
@@ -88,10 +102,12 @@ struct LectureSectionTests {
         let layer = FolioDomain.Unit(device: device, at: now, title: "Network Layer", order: 1)
         let ip = FolioDomain.Unit(device: device, at: now, title: "IP", order: 1, parentId: layer.id)
         let router = FolioDomain.Unit(device: device, at: now, title: "Router", order: 2, parentId: layer.id)
-        let reply = #"{"sections":[{"title":"Router","firstPage":13,"unit":"Router","skip":false},{"title":"IP","firstPage":41,"unit":"IP","skip":false},{"title":"NAT","firstPage":67,"unit":"IP","skip":false},{"title":"Overview","firstPage":1,"unit":null,"skip":false},{"title":"Additional slides","firstPage":105,"unit":null,"skip":true}]}"#
+        let reply =
+            #"{"sections":[{"title":"Router","firstPage":13,"unit":"Router","skip":false},{"title":"IP","firstPage":41,"unit":"IP","skip":false},{"title":"NAT","firstPage":67,"unit":"IP","skip":false},{"title":"Overview","firstPage":1,"unit":null,"skip":false},{"title":"Additional slides","firstPage":105,"unit":null,"skip":true}]}"#
         let fake = FakeProvider(responses: [FakeProvider.reply(reply)])
         let pages = (1...107).map { LecturePage(title: "p\($0)") }
-        let split = try #require(try await ClaudeClient(provider: fake).lectureSections(file: "Chapter_4.pdf", pages: pages, units: [layer, ip, router]))
+        let split = try #require(
+            try await ClaudeClient(provider: fake).lectureSections(file: "Chapter_4.pdf", pages: pages, units: [layer, ip, router]))
         #expect(split.sections.map(\.pages) == [1...12, 13...40, 41...104, 105...107])
         #expect(split.sections[0].isNew && split.sections[1].unit == router.id && split.sections[2].unit == ip.id)
         #expect(split.sections[3].unit == nil && !split.sections[3].isNew)

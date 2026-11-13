@@ -1,6 +1,7 @@
-@testable import FolioDomain
 import Foundation
 import Testing
+
+@testable import FolioDomain
 
 private struct Group: Identifiable, Sendable, Equatable {
     var id = UUID()

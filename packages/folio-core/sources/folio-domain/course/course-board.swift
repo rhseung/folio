@@ -43,8 +43,10 @@ public enum NoteGroup: CaseIterable, Sendable {
         }
     }
 
-    public static func grouped<Note>(_ notes: [Note], meta: (Note) -> NoteMeta, title: (Note) -> String,
-                                     in file: CourseFile) -> [(group: NoteGroup, notes: [Note])] {
+    public static func grouped<Note>(
+        _ notes: [Note], meta: (Note) -> NoteMeta, title: (Note) -> String,
+        in file: CourseFile
+    ) -> [(group: NoteGroup, notes: [Note])] {
         allCases.compactMap { group in
             let members = notes.filter { NoteGroup(meta($0).kind) == group }
             return members.isEmpty ? nil : (group, group.sorted(members, meta: meta, title: title, in: file))

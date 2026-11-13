@@ -1,9 +1,10 @@
-@testable import FolioCLI
 import FolioActions
 import FolioDomain
 import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioCLI
 
 struct MaterialNoteStudyTests {
     let h = Harness()
@@ -31,8 +32,9 @@ struct MaterialNoteStudyTests {
     }
 
     func cardsFile() throws -> String {
-        let card = QuizCard(id: Self.card, device: h.device, at: h.now, unitId: Self.unit, type: .free, category: .definition,
-                            prompt: "최대 매칭의 정의", answer: "더 큰 매칭이 없는 매칭")
+        let card = QuizCard(
+            id: Self.card, device: h.device, at: h.now, unitId: Self.unit, type: .free, category: .definition,
+            prompt: "최대 매칭의 정의", answer: "더 큰 매칭이 없는 매칭")
         return try scratch("cards.json", String(decoding: try JSONEncoder.folio.encode([card]), as: UTF8.self))
     }
 
@@ -54,17 +56,26 @@ struct MaterialNoteStudyTests {
     }
 
     @Test func linkSession() throws {
-        try h.expectSame(["material", "link", "EC4207/05_Matchings.pdf", "10-28", "--pages", "3-12"], setup: [Self.track, SessionCommandTests.add]) { gist in
-            MaterialLinkSession(course: course, material: try material(gist, "05_Matchings.pdf"), session: SessionCommandTests.id, firstPage: 3, lastPage: 12)
+        try h.expectSame(
+            ["material", "link", "EC4207/05_Matchings.pdf", "10-28", "--pages", "3-12"], setup: [Self.track, SessionCommandTests.add]
+        ) { gist in
+            MaterialLinkSession(
+                course: course, material: try material(gist, "05_Matchings.pdf"), session: SessionCommandTests.id, firstPage: 3,
+                lastPage: 12)
         }
     }
 
     @Test func sessionProgress() throws {
-        try h.expectSame(["session", "progress", "EC4207/10-28", "05_Matchings.pdf:3-12", "Problems.pdf:7"], setup: [Self.track, SessionCommandTests.add]) { gist in
-            SessionProgress(course: course, session: SessionCommandTests.id, ranges: [
-                SessionMaterial(materialId: try material(gist, "05_Matchings.pdf"), firstPage: 3, lastPage: 12),
-                SessionMaterial(materialId: try material(gist, "Study/Problems.pdf"), firstPage: 7, lastPage: 7),
-            ])
+        try h.expectSame(
+            ["session", "progress", "EC4207/10-28", "05_Matchings.pdf:3-12", "Problems.pdf:7"],
+            setup: [Self.track, SessionCommandTests.add]
+        ) { gist in
+            SessionProgress(
+                course: course, session: SessionCommandTests.id,
+                ranges: [
+                    SessionMaterial(materialId: try material(gist, "05_Matchings.pdf"), firstPage: 3, lastPage: 12),
+                    SessionMaterial(materialId: try material(gist, "Study/Problems.pdf"), firstPage: 7, lastPage: 7),
+                ])
         }
         let gist = try Harness.fixtureCopy()
         for setup in [Self.track, SessionCommandTests.add] { _ = h.cli(setup, gist: gist) }
@@ -78,11 +89,14 @@ struct MaterialNoteStudyTests {
     }
 
     @Test func sessionWrapUp() throws {
-        try h.expectSame(["session", "wrap-up", "EC4207/10-28", "05_Matchings.pdf:3-12", "--unit", "매칭", "--attendance", "late"],
-                         setup: [Self.track, SessionCommandTests.add, Self.addUnit]) { gist in
-            SessionWrapUp(course: course, session: SessionCommandTests.id,
-                          ranges: [SessionMaterial(materialId: try material(gist, "05_Matchings.pdf"), firstPage: 3, lastPage: 12)],
-                          units: .set([Self.unit]), attendance: .set(.late))
+        try h.expectSame(
+            ["session", "wrap-up", "EC4207/10-28", "05_Matchings.pdf:3-12", "--unit", "매칭", "--attendance", "late"],
+            setup: [Self.track, SessionCommandTests.add, Self.addUnit]
+        ) { gist in
+            SessionWrapUp(
+                course: course, session: SessionCommandTests.id,
+                ranges: [SessionMaterial(materialId: try material(gist, "05_Matchings.pdf"), firstPage: 3, lastPage: 12)],
+                units: .set([Self.unit]), attendance: .set(.late))
         }
         let gist = try Harness.fixtureCopy()
         for setup in [Self.track, SessionCommandTests.add, Self.addUnit] { _ = h.cli(setup, gist: gist) }
@@ -110,9 +124,10 @@ struct MaterialNoteStudyTests {
         let linked = ["material", "link", "EC4207/05_Matchings.pdf", "10-28", "--pages", "3-12"]
         let setup = [Self.track, SessionCommandTests.add, linked]
         try h.expectSame(["session", "wrap-up", "EC4207/10-28", "Problems.pdf:7", "--unlink", "05_Matchings.pdf"], setup: setup) { gist in
-            SessionWrapUp(course: course, session: SessionCommandTests.id,
-                          ranges: [SessionMaterial(materialId: try material(gist, "Study/Problems.pdf"), firstPage: 7, lastPage: 7)],
-                          unlinked: [try material(gist, "05_Matchings.pdf")])
+            SessionWrapUp(
+                course: course, session: SessionCommandTests.id,
+                ranges: [SessionMaterial(materialId: try material(gist, "Study/Problems.pdf"), firstPage: 7, lastPage: 7)],
+                unlinked: [try material(gist, "05_Matchings.pdf")])
         }
         let gist = try Harness.fixtureCopy()
         for line in setup { _ = h.cli(line, gist: gist) }
@@ -159,25 +174,33 @@ struct MaterialNoteStudyTests {
     @Test func statusOfSeveralNeedsConfirmation() throws {
         let gist = try Harness.fixtureCopy()
         _ = h.cli(Self.track, gist: gist)
-        #expect(h.cli(["material", "status", "ignored", "EC4207/Seating.pdf", "Guideline.pdf"], gist: gist).code == Exit.needsConfirmation.rawValue)
+        #expect(
+            h.cli(["material", "status", "ignored", "EC4207/Seating.pdf", "Guideline.pdf"], gist: gist).code
+                == Exit.needsConfirmation.rawValue)
         try h.expectSame(["material", "status", "ignored", "EC4207/Seating.pdf", "Guideline.pdf", "--yes"], setup: [Self.track]) { gist in
-            MaterialStatusSet(course: course, status: .ignored, materials: [try material(gist, "Seating.pdf"), try material(gist, "Guideline.pdf")])
+            MaterialStatusSet(
+                course: course, status: .ignored, materials: [try material(gist, "Seating.pdf"), try material(gist, "Guideline.pdf")])
         }
     }
 
     @Test func kindOfSeveralNeedsConfirmation() throws {
         let gist = try Harness.fixtureCopy()
         _ = h.cli(Self.track, gist: gist)
-        #expect(h.cli(["material", "kind", "submission", "EC4207/Seating.pdf", "Guideline.pdf"], gist: gist).code == Exit.needsConfirmation.rawValue)
+        #expect(
+            h.cli(["material", "kind", "submission", "EC4207/Seating.pdf", "Guideline.pdf"], gist: gist).code
+                == Exit.needsConfirmation.rawValue)
         try h.expectSame(["material", "kind", "submission", "EC4207/Seating.pdf", "Guideline.pdf", "--yes"], setup: [Self.track]) { gist in
-            MaterialKindSet(course: course, kind: .submission, materials: [try material(gist, "Seating.pdf"), try material(gist, "Guideline.pdf")])
+            MaterialKindSet(
+                course: course, kind: .submission, materials: [try material(gist, "Seating.pdf"), try material(gist, "Guideline.pdf")])
         }
     }
 
     @Test func relink() throws {
         try h.expectSame(["material", "relink", "EC4207/Seating.pdf", "Exams/Midterm/Guideline.pdf"], setup: [Self.track]) { gist in
             let store = try ActionContext(gist: gist, device: h.device).store(course)
-            return MaterialRelink(course: course, material: try material(gist, "Seating.pdf"), file: store.url.appending(path: "Exams/Midterm/Guideline.pdf").path)
+            return MaterialRelink(
+                course: course, material: try material(gist, "Seating.pdf"),
+                file: store.url.appending(path: "Exams/Midterm/Guideline.pdf").path)
         }
     }
 
@@ -193,7 +216,9 @@ struct MaterialNoteStudyTests {
         let gist = try Harness.fixtureCopy()
         _ = h.cli(Self.track, gist: gist)
         let file = try scratch("Problems.tex", "x")
-        #expect(h.cli(["material", "write", "EC4207/Problems.tex", "--file", file, "--expect", "00"], gist: gist).code == Exit.conflict.rawValue)
+        #expect(
+            h.cli(["material", "write", "EC4207/Problems.tex", "--file", file, "--expect", "00"], gist: gist).code == Exit.conflict.rawValue
+        )
     }
 
     /// The file changes on another device after tracking; `material show --json` reads it again, so its hash still
@@ -203,7 +228,9 @@ struct MaterialNoteStudyTests {
         _ = h.cli(Self.track, gist: gist)
         let tex = gist.appending(path: "2026-3/EC4207 그래프 이론/Study/Problems.tex")
         try "% 다른 기기에서 고침\n".write(to: tex, atomically: true, encoding: .utf8)
-        let shown = try #require(try JSONSerialization.jsonObject(with: Data(h.cli(["material", "show", "EC4207/Problems.tex", "--json"], gist: gist).out.utf8)) as? [String: Any])
+        let shown = try #require(
+            try JSONSerialization.jsonObject(with: Data(h.cli(["material", "show", "EC4207/Problems.tex", "--json"], gist: gist).out.utf8))
+                as? [String: Any])
         #expect(shown["text"] as? String == "% 다른 기기에서 고침\n" && shown["path"] as? String == "Study/Problems.tex")
         let hash = try #require(shown["contentHash"] as? String)
         let file = try scratch("Problems.tex", "x")
@@ -215,17 +242,23 @@ struct MaterialNoteStudyTests {
     @Test func showReportsTheFormat() throws {
         let gist = try Harness.fixtureCopy()
         _ = h.cli(Self.track, gist: gist)
-        let pdf = try #require(try JSONSerialization.jsonObject(with: Data(h.cli(["material", "show", "EC4207/Seating.pdf", "--json"], gist: gist).out.utf8)) as? [String: Any])
+        let pdf = try #require(
+            try JSONSerialization.jsonObject(with: Data(h.cli(["material", "show", "EC4207/Seating.pdf", "--json"], gist: gist).out.utf8))
+                as? [String: Any])
         #expect(pdf["format"] as? String == "pdf" && pdf["text"] == nil)
-        let tex = try #require(try JSONSerialization.jsonObject(with: Data(h.cli(["material", "show", "EC4207/Problems.tex", "--json"], gist: gist).out.utf8)) as? [String: Any])
+        let tex = try #require(
+            try JSONSerialization.jsonObject(with: Data(h.cli(["material", "show", "EC4207/Problems.tex", "--json"], gist: gist).out.utf8))
+                as? [String: Any])
         #expect(tex["format"] as? String == "tex" && tex["text"] != nil)
         #expect(h.cli(["material", "show", "EC4207/Seating.pdf"], gist: gist).out.contains("pdf"))
     }
 
     @Test
     func buildTex() throws {
-        let write = ["material", "write", "EC4207/Problems.tex", "--file",
-                     try scratch("Problems.tex", "\\documentclass{article}\n\\begin{document}\nHi\n\\end{document}\n")]
+        let write = [
+            "material", "write", "EC4207/Problems.tex", "--file",
+            try scratch("Problems.tex", "\\documentclass{article}\n\\begin{document}\nHi\n\\end{document}\n"),
+        ]
         try h.expectSame(["material", "build", "EC4207/Problems.tex", "--overwrite"], setup: [Self.track, write]) { gist in
             MaterialBuild(course: course, material: try material(gist, "Problems.tex"), overwrite: true)
         }
@@ -239,8 +272,10 @@ struct MaterialNoteStudyTests {
 
     @Test func importCopiesAndLinks() throws {
         let file = try scratch("Coloring.pdf", "pdf")
-        try h.expectSame(["material", "import", "EC4207", file, "--folder", "Lectures", "--session", "10-28"],
-                         setup: [Self.track, SessionCommandTests.add]) { _ in
+        try h.expectSame(
+            ["material", "import", "EC4207", file, "--folder", "Lectures", "--session", "10-28"],
+            setup: [Self.track, SessionCommandTests.add]
+        ) { _ in
             MaterialImport(course: course, items: [ImportItem(file: file, folder: "Lectures", session: SessionCommandTests.id)])
         }
     }
@@ -248,7 +283,8 @@ struct MaterialNoteStudyTests {
     @Test func moveNeedsConfirmation() throws {
         let gist = try Harness.fixtureCopy()
         _ = h.cli(Self.track, gist: gist)
-        #expect(h.cli(["material", "mv", "EC4207/Seating.pdf", "Exams/Midterm/자리.pdf"], gist: gist).code == Exit.needsConfirmation.rawValue)
+        #expect(
+            h.cli(["material", "mv", "EC4207/Seating.pdf", "Exams/Midterm/자리.pdf"], gist: gist).code == Exit.needsConfirmation.rawValue)
         try h.expectSame(["material", "mv", "EC4207/Seating.pdf", "Exams/Midterm/자리.pdf", "--yes"], setup: [Self.track]) { gist in
             MaterialMove(course: course, material: try material(gist, "Seating.pdf"), to: "Exams/Midterm/자리.pdf")
         }
@@ -272,7 +308,9 @@ struct MaterialNoteStudyTests {
 
     @Test func cleanupApply() throws {
         let backup = FileManager.default.temporaryDirectory.appending(path: "folio-cli-backup-\(UUID().uuidString)").path
-        try h.expectSame(["cleanup", "apply", "--plan", try planFile(), "--backup", backup, "--yes"]) { _ in CleanupApply(moves: [Self.move]) }
+        try h.expectSame(["cleanup", "apply", "--plan", try planFile(), "--backup", backup, "--yes"]) { _ in
+            CleanupApply(moves: [Self.move])
+        }
         #expect(try FileManager.default.contentsOfDirectory(atPath: backup).count == 1)
     }
 
@@ -284,10 +322,11 @@ struct MaterialNoteStudyTests {
         let store = GISTStore(url: gist)
         let before = try material(store, "Exercises/Exercise 1.pdf")
         let ec = "2026-3/EC4207 그래프 이론"
-        try h.direct(CleanupApply(moves: [
-            PlannedMove(from: "\(ec)/Exercises/Exercise 1.pdf", to: "\(ec)/Study/Exercise 1.pdf", exam: "Midterm"),
-            PlannedMove(from: "\(ec)/Exams/Midterm/Seating.pdf", to: "\(ec)/Inherited/Seating.pdf", kind: .pastExam),
-        ]), gist: gist)
+        try h.direct(
+            CleanupApply(moves: [
+                PlannedMove(from: "\(ec)/Exercises/Exercise 1.pdf", to: "\(ec)/Study/Exercise 1.pdf", exam: "Midterm"),
+                PlannedMove(from: "\(ec)/Exams/Midterm/Seating.pdf", to: "\(ec)/Inherited/Seating.pdf", kind: .pastExam),
+            ]), gist: gist)
         let f = try h.file(store)
         let study = try #require(f.materials.first { $0.path == "Study/Exercise 1.pdf" })
         #expect(study.id == before && study.examIds == [Self.exam] && study.role == .study)
@@ -300,7 +339,8 @@ struct MaterialNoteStudyTests {
         _ = h.cli(Self.track, gist: gist)
         let ec = "2026-3/EC4207 그래프 이론"
         let ctx = ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now)
-        try CleanupApply(moves: [PlannedMove(from: "\(ec)/Exercises/Exercise 1.pdf", to: "\(ec)/Study/Exercise 1.pdf", exam: "Quiz9")]).run(ctx)
+        try CleanupApply(moves: [PlannedMove(from: "\(ec)/Exercises/Exercise 1.pdf", to: "\(ec)/Study/Exercise 1.pdf", exam: "Quiz9")]).run(
+            ctx)
         #expect(ctx.notes.contains { $0.contains("Study/Exercise 1.pdf") && $0.contains("Quiz9") })
         #expect(try h.file(GISTStore(url: gist)).materials.first { $0.path == "Study/Exercise 1.pdf" }?.examIds == [])
     }
@@ -346,10 +386,13 @@ struct MaterialNoteStudyTests {
     }
 
     @Test func noteEdit() throws {
-        try h.expectSame(["note", "edit", "EC4207/09-08", "--old", "Matching", "--new", "매칭", "--old", "pairwise", "--new", "서로",
-                          "--append", "질문"]) { _ in
-            NoteEdit(course: course, note: "Notes/09-08(화) 매칭.md",
-                     replacements: [.init(old: "Matching", new: "매칭"), .init(old: "pairwise", new: "서로")], append: "질문")
+        try h.expectSame([
+            "note", "edit", "EC4207/09-08", "--old", "Matching", "--new", "매칭", "--old", "pairwise", "--new", "서로",
+            "--append", "질문",
+        ]) { _ in
+            NoteEdit(
+                course: course, note: "Notes/09-08(화) 매칭.md",
+                replacements: [.init(old: "Matching", new: "매칭"), .init(old: "pairwise", new: "서로")], append: "질문")
         }
         let gist = try Harness.fixtureCopy()
         #expect(h.cli(["note", "edit", "EC4207/09-08", "--old", "Matching"], gist: gist).code == Exit.usage.rawValue)
@@ -373,7 +416,8 @@ struct MaterialNoteStudyTests {
         let tex = "\\documentclass{article}\n\\begin{document}\nHi\n\\end{document}\n"
         let id = UUID()
         let prepare = { (gist: URL) in
-            try NoteAdd(id: id, course: course, title: "증명", format: .tex).run(ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now))
+            try NoteAdd(id: id, course: course, title: "증명", format: .tex).run(
+                ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now))
             try drop(gist, "증명.tex", tex)
         }
         try h.expectSame(["note", "build", "EC4207/증명"], prepare: prepare) { _ in
@@ -390,22 +434,27 @@ struct MaterialNoteStudyTests {
 
     @Test func noteRetitle() throws {
         // The fixture's note as notes were named before #273.
-        let setup = [SessionCommandTests.add, ["note", "mv", "EC4207/09-08", "2주차-1", "--yes"],
-                     ["note", "link", "EC4207/2주차-1", "--kind", "rough", "--session", "10-28"]]
+        let setup = [
+            SessionCommandTests.add, ["note", "mv", "EC4207/09-08", "2주차-1", "--yes"],
+            ["note", "link", "EC4207/2주차-1", "--kind", "rough", "--session", "10-28"],
+        ]
         try h.expectSame(["note", "retitle", "EC4207", "--yes"], setup: setup) { _ in
             NoteRetitleSessions(course: course)
         }
     }
 
     @Test func noteLink() throws {
-        try h.expectSame(["note", "link", "EC4207/09-08", "--kind", "review", "--session", "10-28"], setup: [SessionCommandTests.add]) { _ in
+        try h.expectSame(["note", "link", "EC4207/09-08", "--kind", "review", "--session", "10-28"], setup: [SessionCommandTests.add]) {
+            _ in
             NoteLink(course: course, note: Self.noteID, kind: .review, session: SessionCommandTests.id)
         }
     }
 
     static let laterSession = UUID(uuidString: "A0000000-0000-4000-8000-000000000002")!
-    static let reviewSetup = [SessionCommandTests.add, ["session", "add", "EC4207", "--date", "2026-10-30 10:30", "--id", laterSession.uuidString],
-                              ["note", "link", "EC4207/09-08", "--kind", "review", "--session", "10-28"]]
+    static let reviewSetup = [
+        SessionCommandTests.add, ["session", "add", "EC4207", "--date", "2026-10-30 10:30", "--id", laterSession.uuidString],
+        ["note", "link", "EC4207/09-08", "--kind", "review", "--session", "10-28"],
+    ]
 
     @Test func noteLinkSessions() throws {
         try h.expectSame(["note", "link-sessions", "EC4207/09-08", "10-28", "10-30"], setup: Self.reviewSetup) { _ in
@@ -438,29 +487,41 @@ struct MaterialNoteStudyTests {
     @Test func quizAdd() throws {
         let file = try cardsFile()
         let cards = try JSONDecoder.folio.decode([QuizCard].self, from: Data(contentsOf: URL(filePath: file)))
-        try h.expectSame(["quiz", "add", "EC4207", "--file", file], setup: [Self.addUnit]) { _ in QuizCardSave(course: course, cards: cards) }
+        try h.expectSame(["quiz", "add", "EC4207", "--file", file], setup: [Self.addUnit]) { _ in QuizCardSave(course: course, cards: cards)
+        }
     }
 
     @Test func quizRemove() throws {
-        try h.expectSame(["quiz", "rm", "EC4207/매칭", Self.card.uuidString, "--yes"], setup: [Self.addUnit, ["quiz", "add", "EC4207", "--file", try cardsFile()]]) { _ in
+        try h.expectSame(
+            ["quiz", "rm", "EC4207/매칭", Self.card.uuidString, "--yes"],
+            setup: [Self.addUnit, ["quiz", "add", "EC4207", "--file", try cardsFile()]]
+        ) { _ in
             QuizCardRemove(course: course, unit: Self.unit, card: Self.card)
         }
     }
 
     @Test func quizRecord() throws {
-        try h.expectSame(["quiz", "record", "EC4207/매칭", "최대 매칭의 정의", "correct"], setup: [Self.addUnit, ["quiz", "add", "EC4207", "--file", try cardsFile()]]) { _ in
+        try h.expectSame(
+            ["quiz", "record", "EC4207/매칭", "최대 매칭의 정의", "correct"],
+            setup: [Self.addUnit, ["quiz", "add", "EC4207", "--file", try cardsFile()]]
+        ) { _ in
             QuizRecord(course: course, attempt: QuizAttemptEvent(cardId: Self.card, verdict: .correct, grader: .self))
         }
     }
 
     @Test func problemSetAdd() throws {
         try h.expectSame(Self.addSet) { _ in
-            ProblemSetSave(course: course, set: ProblemSet(id: Self.set, device: h.device, at: h.now, title: "Exercise 1", problems: [.init(number: "1"), .init(number: "3a")]))
+            ProblemSetSave(
+                course: course,
+                set: ProblemSet(
+                    id: Self.set, device: h.device, at: h.now, title: "Exercise 1", problems: [.init(number: "1"), .init(number: "3a")]))
         }
     }
 
     @Test func problemSetRemove() throws {
-        try h.expectSame(["problem-set", "rm", "EC4207/Exercise 1", "--yes"], setup: [Self.addSet]) { _ in ProblemSetRemove(course: course, set: Self.set) }
+        try h.expectSame(["problem-set", "rm", "EC4207/Exercise 1", "--yes"], setup: [Self.addSet]) { _ in
+            ProblemSetRemove(course: course, set: Self.set)
+        }
     }
 
     @Test func problemSetLink() throws {
@@ -478,8 +539,12 @@ struct MaterialNoteStudyTests {
     // MARK: Review
 
     @Test func reviewRecord() throws {
-        try h.expectSame(["review", "record", "EC4207/매칭", "good", "--start", "2026-10-28 20:00", "--end", "2026-10-28 20:40"], setup: [Self.addUnit]) { _ in
-            ReviewRecord(course: course, unit: Self.unit, result: .good, start: DateArg(argument: "2026-10-28 20:00")!.date, end: DateArg(argument: "2026-10-28 20:40")!.date)
+        try h.expectSame(
+            ["review", "record", "EC4207/매칭", "good", "--start", "2026-10-28 20:00", "--end", "2026-10-28 20:40"], setup: [Self.addUnit]
+        ) { _ in
+            ReviewRecord(
+                course: course, unit: Self.unit, result: .good, start: DateArg(argument: "2026-10-28 20:00")!.date,
+                end: DateArg(argument: "2026-10-28 20:40")!.date)
         }
     }
 
@@ -490,8 +555,12 @@ struct MaterialNoteStudyTests {
     }
 
     @Test func reviewSkipWithTheTimeOpen() throws {
-        try h.expectSame(["review", "skip", "EC4207/매칭", "--start", "2026-10-28 20:00", "--end", "2026-10-28 20:05"], setup: [Self.addUnit]) { _ in
-            ReviewSkip(units: [.init(course: course, unit: Self.unit)], start: DateArg(argument: "2026-10-28 20:00")!.date, end: DateArg(argument: "2026-10-28 20:05")!.date)
+        try h.expectSame(
+            ["review", "skip", "EC4207/매칭", "--start", "2026-10-28 20:00", "--end", "2026-10-28 20:05"], setup: [Self.addUnit]
+        ) { _ in
+            ReviewSkip(
+                units: [.init(course: course, unit: Self.unit)], start: DateArg(argument: "2026-10-28 20:00")!.date,
+                end: DateArg(argument: "2026-10-28 20:05")!.date)
         }
     }
 }

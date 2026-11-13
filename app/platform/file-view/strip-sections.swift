@@ -64,8 +64,10 @@ struct StripItem: Identifiable, Equatable {
     /// The column top to bottom: pages no section holds, each section's header with its pages when unfolded, the
     /// section being changed under its edit row, and a new range with its draft row over it, or under it when
     /// `draftBelow`.
-    static func column(pageCount: Int, sections: [StripSection], editing: UUID?, draft: ClosedRange<Int>?, draftBelow: Bool = false,
-                       isOpen: (StripSection) -> Bool) -> [StripItem] {
+    static func column(
+        pageCount: Int, sections: [StripSection], editing: UUID?, draft: ClosedRange<Int>?, draftBelow: Bool = false,
+        isOpen: (StripSection) -> Bool
+    ) -> [StripItem] {
         func run(_ pages: ClosedRange<Int>, lead: Lead, mark: (Int) -> Mark) -> [StripItem] {
             pages.map { StripItem(lead: $0 == pages.lowerBound ? lead : nil, page: $0, mark: mark($0)) }
         }
@@ -84,7 +86,9 @@ struct StripItem: Identifiable, Equatable {
                 page = s.pages.upperBound + 1
             } else if let draft, draft.lowerBound == page {
                 if draftBelow {
-                    items += draft.map { StripItem(lead: nil, page: $0, mark: .picked, trail: $0 == draft.upperBound ? .draft(draft) : nil) }
+                    items += draft.map {
+                        StripItem(lead: nil, page: $0, mark: .picked, trail: $0 == draft.upperBound ? .draft(draft) : nil)
+                    }
                 } else {
                     items += run(draft, lead: .draft(draft)) { _ in .picked }
                 }

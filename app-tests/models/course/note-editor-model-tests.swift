@@ -2,6 +2,7 @@ import FolioActions
 import FolioDomain
 import Foundation
 import Testing
+
 @testable import Folio
 
 /// The Claude panel, the CLI and other devices write the note that is open. The editor re-reads it when

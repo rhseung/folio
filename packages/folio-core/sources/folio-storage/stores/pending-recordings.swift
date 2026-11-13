@@ -33,8 +33,9 @@ public struct PendingRecordings: Sendable {
         let files = (try? FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)) ?? []
         return files.filter { $0.pathExtension == "json" }.compactMap { file in
             guard let data = try? Data(contentsOf: file),
-                  let pending = try? JSONFormat.decoder.decode(PendingRecording.self, from: data),
-                  FileManager.default.fileExists(atPath: audioURL(of: pending.recording.id).path) else { return nil }
+                let pending = try? JSONFormat.decoder.decode(PendingRecording.self, from: data),
+                FileManager.default.fileExists(atPath: audioURL(of: pending.recording.id).path)
+            else { return nil }
             return pending
         }
     }

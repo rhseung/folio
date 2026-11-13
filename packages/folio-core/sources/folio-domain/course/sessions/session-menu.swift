@@ -103,7 +103,8 @@ extension CourseFile {
 
     /// A class's menu at `now`, in menu order. Ahead and under way: joining, the rough note, recording. Once over: the
     /// notes, the review check and the recordings. Editing, sharing and deleting always.
-    public func commands(for session: Session, at now: Date, host: MenuHost, classMinutes: Int, calendar: Calendar) -> [SessionMenuCommand] {
+    public func commands(for session: Session, at now: Date, host: MenuHost, classMinutes: Int, calendar: Calendar) -> [SessionMenuCommand]
+    {
         var commands: [SessionMenuCommand] = []
         if host.opensItem { commands.append(.open) }
         let held = !session.isCancelled

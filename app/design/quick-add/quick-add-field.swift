@@ -25,7 +25,8 @@ struct ReadMarkRenderer: TextRenderer {
                     // No wider than the glyphs: the one space between a read word and the next is all the room
                     // there is, and a pill reaching into it touched the neighbor (or the next pill). Widening the gap
                     // itself would mean kerning the field's own text, which rewrites it under Korean composition.
-                    let shape = RoundedRectangle(cornerRadius: Theme.Radius.small).path(in: pill.rect.insetBy(dx: 0, dy: -QuickAddLine.overhang))
+                    let shape = RoundedRectangle(cornerRadius: Theme.Radius.small).path(
+                        in: pill.rect.insetBy(dx: 0, dy: -QuickAddLine.overhang))
                     context.fill(shape, with: .color(pill.mark.fill))
                 }
                 pill = nil
@@ -62,10 +63,14 @@ struct QuickAddField: View {
     /// fields (`Card`), since glass belongs only to the frame and what floats over it.
     private let floating: Bool
 
-    init(workspace: Workspace, fixedCourse: UUID? = nil, defaultCourse: UUID? = nil, showsEmptyChips: Bool = false,
-         focusOnAppear: Bool = false, floating: Bool = false) {
-        _model = State(initialValue: QuickAddModel(workspace: workspace, fixedCourse: fixedCourse, defaultCourse: defaultCourse,
-                                                   showsEmptyChips: showsEmptyChips))
+    init(
+        workspace: Workspace, fixedCourse: UUID? = nil, defaultCourse: UUID? = nil, showsEmptyChips: Bool = false,
+        focusOnAppear: Bool = false, floating: Bool = false
+    ) {
+        _model = State(
+            initialValue: QuickAddModel(
+                workspace: workspace, fixedCourse: fixedCourse, defaultCourse: defaultCourse,
+                showsEmptyChips: showsEmptyChips))
         self.focusOnAppear = focusOnAppear
         self.floating = floating
     }
@@ -88,9 +93,11 @@ struct QuickAddField: View {
                 // Wraps instead of running sideways, so every word it read keeps its pill in sight; past three lines
                 // it scrolls.
                 #if os(macOS)
-                QuickAddTextView(text: $model.text, prompt: String(localized: .quickAddPrompt), marks: textMarks(parsed),
-                                 focusOnAppear: focusOnAppear) { model.submit() }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                QuickAddTextView(
+                    text: $model.text, prompt: String(localized: .quickAddPrompt), marks: textMarks(parsed),
+                    focusOnAppear: focusOnAppear
+                ) { model.submit() }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 #else
                 TextField(String(localized: .quickAddPrompt), text: $model.text, axis: .vertical)
                     .lineLimit(1...3)
@@ -106,16 +113,32 @@ struct QuickAddField: View {
                         marks(parsed)
                             .frame(width: fieldSize.width, alignment: .leading)
                             .fixedSize(horizontal: false, vertical: true)
-                            .onGeometryChange(for: CGSize.self) { $0.size } action: { lineSize = $0 }
+                            .onGeometryChange(for: CGSize.self) {
+                                $0.size
+                            } action: {
+                                lineSize = $0
+                            }
                             .opacity(lineSize.height <= lineHeights.three + 1 ? 1 : 0)
                             .allowsHitTesting(false)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .onGeometryChange(for: CGSize.self) { $0.size } action: { fieldSize = $0 }
+                    .onGeometryChange(for: CGSize.self) {
+                        $0.size
+                    } action: {
+                        fieldSize = $0
+                    }
                     .background {
                         VStack {
-                            Text(verbatim: "A").onGeometryChange(for: CGFloat.self) { $0.size.height } action: { lineHeights.one = $0 }
-                            Text(verbatim: "A\nA\nA").onGeometryChange(for: CGFloat.self) { $0.size.height } action: { lineHeights.three = $0 }
+                            Text(verbatim: "A").onGeometryChange(for: CGFloat.self) {
+                                $0.size.height
+                            } action: {
+                                lineHeights.one = $0
+                            }
+                            Text(verbatim: "A\nA\nA").onGeometryChange(for: CGFloat.self) {
+                                $0.size.height
+                            } action: {
+                                lineHeights.three = $0
+                            }
                         }
                         .font(font)
                         .lineSpacing(QuickAddLine.spacing)
@@ -287,7 +310,9 @@ struct QuickAddChip: View {
     private func courseChip(_ id: UUID?) -> some View {
         Menu {
             ForEach(model.courses, id: \.id) { c in
-                Button { model.pickCourse(c.id) } label: {
+                Button {
+                    model.pickCourse(c.id)
+                } label: {
                     if c.id == id { Label(c.title, systemImage: "checkmark") } else { Text(c.title) }
                 }
             }
@@ -315,7 +340,9 @@ struct QuickAddChip: View {
     }
 
     private func dueChip(_ date: Date?) -> some View {
-        Button { pickingDue = true } label: {
+        Button {
+            pickingDue = true
+        } label: {
             if model.isDimmed(chip) {
                 dimmed("clock", .quickAddChipDue)
             } else {
@@ -327,12 +354,14 @@ struct QuickAddChip: View {
             VStack(alignment: .leading, spacing: Theme.Space.m) {
                 DatePanel(date: Binding(get: { date ?? model.newDue }, set: { model.pickDue($0) }))
                 Divider()
-                Toggle(String(localized: .quickAddRepeatToggle), isOn: Binding(
-                    get: { model.parsed?.repeats != nil },
-                    set: { on in
-                        if on, model.parsed?.due == nil { model.pickDue(model.newDue) }
-                        model.pickRepeats(on ? .weekly : nil)
-                    }))
+                Toggle(
+                    String(localized: .quickAddRepeatToggle),
+                    isOn: Binding(
+                        get: { model.parsed?.repeats != nil },
+                        set: { on in
+                            if on, model.parsed?.due == nil { model.pickDue(model.newDue) }
+                            model.pickRepeats(on ? .weekly : nil)
+                        }))
                 if date != nil {
                     Button(String(localized: .quickAddClearDue), role: .destructive) {
                         model.pickDue(nil)
@@ -354,7 +383,8 @@ struct QuickAddChip: View {
             if let date, let parsed = model.parsed, let text = model.due(parsed) {
                 Text(text)
                 if let left = model.left(date) {
-                    Text(left.text).foregroundStyle(left.overdue ? Theme.Palette.danger : Theme.Palette.readDueInk.opacity(Theme.Opacity.secondaryInk))
+                    Text(left.text).foregroundStyle(
+                        left.overdue ? Theme.Palette.danger : Theme.Palette.readDueInk.opacity(Theme.Opacity.secondaryInk))
                 }
             } else {
                 Text(.quickAddAddDue)
@@ -366,12 +396,14 @@ struct QuickAddChip: View {
 
     private func repeatsChip(_ repeats: AssignmentRepeat?) -> some View {
         Menu {
-            RepeatMenuItems(selection: repeats, custom: repeats.map { !AssignmentRepeat.presets.contains($0) } ?? false,
-                            pick: { model.pickRepeats($0) }, customize: {
-                                rule = repeats ?? .weekly
-                                if repeats == nil { model.pickRepeats(rule) }
-                                pickingRepeat = true
-                            })
+            RepeatMenuItems(
+                selection: repeats, custom: repeats.map { !AssignmentRepeat.presets.contains($0) } ?? false,
+                pick: { model.pickRepeats($0) },
+                customize: {
+                    rule = repeats ?? .weekly
+                    if repeats == nil { model.pickRepeats(rule) }
+                    pickingRepeat = true
+                })
         } label: {
             if model.isDimmed(chip) {
                 dimmed("repeat", .quickAddChipRepeat)
@@ -389,7 +421,12 @@ struct QuickAddChip: View {
         .fixedSize()
         .popover(isPresented: $pickingRepeat, arrowEdge: .bottom) {
             Card {
-                RepeatRuleRows(rule: Binding(get: { rule }, set: { rule = $0; model.pickRepeats($0) }), dueWeekday: model.dueWeekday, last: true)
+                RepeatRuleRows(
+                    rule: Binding(
+                        get: { rule },
+                        set: {
+                            rule = $0; model.pickRepeats($0)
+                        }), dueWeekday: model.dueWeekday, last: true)
             }
             .padding(Theme.Space.l)
             .frame(width: 360)
@@ -404,14 +441,18 @@ struct QuickAddChip: View {
         return Menu {
             Section(String(localized: .quickAddKind)) {
                 ForEach(AssignmentKind.allCases, id: \.self) { kind in
-                    Button { model.renumber(kind: kind, number: current?.number ?? 1) } label: {
+                    Button {
+                        model.renumber(kind: kind, number: current?.number ?? 1)
+                    } label: {
                         if kind == current?.kind { Label(kind.rawValue, systemImage: "checkmark") } else { Text(kind.rawValue) }
                     }
                 }
             }
             Menu(String(localized: .quickAddNumber)) {
                 ForEach(1...20, id: \.self) { n in
-                    Button { model.renumber(kind: current?.kind ?? .homework, number: n) } label: {
+                    Button {
+                        model.renumber(kind: current?.kind ?? .homework, number: n)
+                    } label: {
                         if n == current?.number { Label(String(n), systemImage: "checkmark") } else { Text(String(n)) }
                     }
                 }
@@ -452,9 +493,9 @@ struct QuickAddChip: View {
             .background(fill, in: .capsule)
             .contentShape(.capsule)
             #if os(iOS)
-            // The chip stays 28 tall, but a finger gets the 44pt the row's gap leaves around it.
-            .padding(.vertical, Theme.Space.s)
-            .contentShape(.rect)
+        // The chip stays 28 tall, but a finger gets the 44pt the row's gap leaves around it.
+        .padding(.vertical, Theme.Space.s)
+        .contentShape(.rect)
             #endif
     }
 }

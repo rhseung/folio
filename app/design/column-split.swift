@@ -285,7 +285,8 @@ struct ColumnSplit<Column: View, Content: View>: View {
     var panel: some View {
         let panelWidth = max(min(width, paneWidth - Theme.Space.s - Self.pageEdge), 0)
         let closing: @MainActor () -> Void = close
-        return column
+        return
+            column
             .environment(\.onGlass, true)
             .environment(\.columnFolded, false)
             .environment(\.columnButtons, buttons)
@@ -297,7 +298,9 @@ struct ColumnSplit<Column: View, Content: View>: View {
             .shadow(color: .black.opacity(0.18), radius: 24, y: 12)
             .padding([.top, .leading, .bottom], Theme.Space.s)
             // Esc, on the iPad's keyboard too; a hidden view's shortcut doesn't fire, a clear one's does.
-            .background { Button("", action: close).keyboardShortcut(.cancelAction).opacity(0).allowsHitTesting(false).accessibilityHidden(true) }
+            .background {
+                Button("", action: close).keyboardShortcut(.cancelAction).opacity(0).allowsHitTesting(false).accessibilityHidden(true)
+            }
             .transition(reduceMotion ? .opacity : .move(edge: .leading).combined(with: .opacity))
     }
 
@@ -374,6 +377,8 @@ struct ColumnPick<Label: View>: View {
         Button {
             action()
             closeColumn()
-        } label: { label }
+        } label: {
+            label
+        }
     }
 }

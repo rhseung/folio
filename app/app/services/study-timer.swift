@@ -1,6 +1,7 @@
 import FolioDomain
 import Observation
 import SwiftUI
+
 #if os(macOS)
 import AppKit
 #endif
@@ -111,7 +112,7 @@ private struct StudyTimeModifier: ViewModifier {
             .onAppear { StudyTracker.shared.enter(courseID, workspace: workspace) }
             .onDisappear { StudyTracker.shared.leave(courseID) }
             #if os(iOS)
-            .onChange(of: scenePhase) { _, phase in StudyTracker.shared.setActive(phase == .active) }
+        .onChange(of: scenePhase) { _, phase in StudyTracker.shared.setActive(phase == .active) }
             #endif
     }
 }
@@ -130,10 +131,13 @@ struct ManualTimerButton: View {
                 TimelineView(.periodic(from: manual.start, by: 1)) { context in
                     let elapsed = Int(context.date.timeIntervalSince(manual.start))
                     let other = manual.courseId == courseID ? "" : (workspace.course(manual.courseId)?.title ?? "") + " "
-                    Label("\(other)\(String(format: "%d:%02d:%02d", elapsed / 3600, elapsed / 60 % 60, elapsed % 60))", systemImage: "stop.fill")
-                        .monospacedDigit()
-                        .labelStyle(.titleAndIcon)
-                        .padding(.horizontal, Theme.Space.s)
+                    Label(
+                        "\(other)\(String(format: "%d:%02d:%02d", elapsed / 3600, elapsed / 60 % 60, elapsed % 60))",
+                        systemImage: "stop.fill"
+                    )
+                    .monospacedDigit()
+                    .labelStyle(.titleAndIcon)
+                    .padding(.horizontal, Theme.Space.s)
                 }
             }
             .help(Text(.timerStopHelp))

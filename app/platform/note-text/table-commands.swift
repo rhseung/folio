@@ -1,4 +1,5 @@
 import FolioMarkdown
+
 #if os(macOS)
 import AppKit
 #else
@@ -89,14 +90,15 @@ import UIKit
     }
 
     static func equivalent(_ key: Key) -> String {
-        let scalar: Int = switch key {
-        case .up: NSUpArrowFunctionKey
-        case .down: NSDownArrowFunctionKey
-        case .left: NSLeftArrowFunctionKey
-        case .right: NSRightArrowFunctionKey
-        case .enter: 0x0D
-        case .delete: 0x08
-        }
+        let scalar: Int =
+            switch key {
+            case .up: NSUpArrowFunctionKey
+            case .down: NSDownArrowFunctionKey
+            case .left: NSLeftArrowFunctionKey
+            case .right: NSRightArrowFunctionKey
+            case .enter: 0x0D
+            case .delete: 0x08
+            }
         return String(Character(UnicodeScalar(scalar)!))
     }
     #else
@@ -104,19 +106,21 @@ import UIKit
     static func keyCommands(action: Selector) -> [UIKeyCommand] {
         TableCommand.allCases.compactMap { command in
             guard let shortcut = shortcut(command) else { return nil }
-            let input = switch shortcut.key {
-            case .up: UIKeyCommand.inputUpArrow
-            case .down: UIKeyCommand.inputDownArrow
-            case .left: UIKeyCommand.inputLeftArrow
-            case .right: UIKeyCommand.inputRightArrow
-            case .enter: "\r"
-            case .delete: "\u{8}"
-            }
+            let input =
+                switch shortcut.key {
+                case .up: UIKeyCommand.inputUpArrow
+                case .down: UIKeyCommand.inputDownArrow
+                case .left: UIKeyCommand.inputLeftArrow
+                case .right: UIKeyCommand.inputRightArrow
+                case .enter: "\r"
+                case .delete: "\u{8}"
+                }
             var flags: UIKeyModifierFlags = [.command]
             if shortcut.shift { flags.insert(.shift) }
             if shortcut.option { flags.insert(.alternate) }
             if shortcut.control { flags.insert(.control) }
-            let key = UIKeyCommand(title: title(command), action: action, input: input, modifierFlags: flags, propertyList: command.rawValue)
+            let key = UIKeyCommand(
+                title: title(command), action: action, input: input, modifierFlags: flags, propertyList: command.rawValue)
             // Ahead of the text view's own keys, which ⌘ with the arrows would otherwise move the caret by.
             key.wantsPriorityOverSystemBehavior = true
             return key

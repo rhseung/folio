@@ -158,10 +158,12 @@ public enum TabFit {
     ///   - more: the menu of the tabs that don't fit.
     public static func layout(room: Double, front: Front, others: [Other], gap: Double, more: Double) -> Layout {
         let n = others.count
-        let steps = [Layout(iconsOnly: false, shown: n, hidden: 0),
-                     Layout(iconsOnly: true, shown: n, hidden: 0),
-                     Layout(iconsOnly: true, stacked: true, shown: n, hidden: 0),
-                     Layout(iconsOnly: true, stacked: true, compactFront: true, shown: n, hidden: 0)]
+        let steps = [
+            Layout(iconsOnly: false, shown: n, hidden: 0),
+            Layout(iconsOnly: true, shown: n, hidden: 0),
+            Layout(iconsOnly: true, stacked: true, shown: n, hidden: 0),
+            Layout(iconsOnly: true, stacked: true, compactFront: true, shown: n, hidden: 0),
+        ]
         for step in steps where front.width(compact: step.compactFront) + beside(others, layout: step, gap: gap, more: more) <= room {
             return step
         }
@@ -232,8 +234,10 @@ public enum TabKeep {
     ///   - left: when each tab last went behind another. A tab alive without one is treated as just left.
     ///   - playing: tabs playing a recording. Dropping one would stop what is being listened to, so they stay however
     ///     long or under whatever pressure, outside the `limit` the others share (#317).
-    public static func alive<ID: Hashable>(selected: ID, alive: Set<ID>, left: [ID: Date], now: Date, policy: Policy,
-                                          pressure: Bool = false, playing: Set<ID> = []) -> Set<ID> {
+    public static func alive<ID: Hashable>(
+        selected: ID, alive: Set<ID>, left: [ID: Date], now: Date, policy: Policy,
+        pressure: Bool = false, playing: Set<ID> = []
+    ) -> Set<ID> {
         let playing = playing.intersection(alive).union([selected])
         guard !pressure else { return playing }
         let behind = alive.subtracting(playing)

@@ -24,7 +24,7 @@ struct FolioApp: App {
         WindowGroup(id: Self.mainWindow, for: WindowRequest.self) { $request in
             RootView(request: request)
                 #if os(macOS)
-                .mainWindowFrame(firstRun: workspace.isInFirstRun)
+            .mainWindowFrame(firstRun: workspace.isInFirstRun)
                 #endif
                 .appServices()
                 .followsAppearance()
@@ -114,8 +114,10 @@ private struct OutlineCommands: Commands {
 
     var body: some Commands {
         CommandGroup(after: .sidebar) {
-            Button(outline?.shown == true ? String(localized: .notesOutlineHide) : String(localized: .notesOutlineShow)) { outline?.toggle() }
-                .disabled(outline == nil)
+            Button(outline?.shown == true ? String(localized: .notesOutlineHide) : String(localized: .notesOutlineShow)) {
+                outline?.toggle()
+            }
+            .disabled(outline == nil)
         }
     }
 }
@@ -160,7 +162,10 @@ private struct ColumnCommands: Commands {
 
     var body: some Commands {
         CommandGroup(after: .sidebar) {
-            Button(column.map { ColumnSplit<EmptyView, EmptyView>.label($0.kind, shown: $0.shown) } ?? String(localized: .designColumnShowSections)) {
+            Button(
+                column.map { ColumnSplit<EmptyView, EmptyView>.label($0.kind, shown: $0.shown) }
+                    ?? String(localized: .designColumnShowSections)
+            ) {
                 column?.toggle()
             }
             .keyboardShortcut("s", modifiers: [.command, .option])

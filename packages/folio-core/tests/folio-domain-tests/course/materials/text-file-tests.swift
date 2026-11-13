@@ -117,10 +117,11 @@ struct TexLogTests {
             warning: HW 1.tex:12: Overfull \\hbox (3.2pt too wide) in paragraph
             error: sections/a:b.tex:40: Missing $ inserted
             """
-        #expect(TexLog.issues(output) == [
-            TexIssue(.warning, file: "HW 1.tex", line: 12, message: "Overfull \\hbox (3.2pt too wide) in paragraph"),
-            TexIssue(.error, file: "sections/a:b.tex", line: 40, message: "Missing $ inserted"),
-        ])
+        #expect(
+            TexLog.issues(output) == [
+                TexIssue(.warning, file: "HW 1.tex", line: 12, message: "Overfull \\hbox (3.2pt too wide) in paragraph"),
+                TexIssue(.error, file: "sections/a:b.tex", line: 40, message: "Missing $ inserted"),
+            ])
     }
 
     @Test func withoutALocationTheFirstErrorStands() {
@@ -150,12 +151,13 @@ struct TexLogTests {
             warning: errors were issued by the TeX engine, but were ignored; use --print and/or --keep-logs for details.
             note: Writing `out/hw.pdf` (6.9 KiB)
             """
-        #expect(TexLog.issues(output) == [
-            TexIssue(.error, file: "hw.tex", line: 2, message: "LaTeX Error: File `nonexistentpkgxyz.sty' not found."),
-            TexIssue(.error, file: "hw.tex", line: 3, message: "Undefined control sequence"),
-            TexIssue(.error, file: "hw.tex", line: 2, message: "LaTeX Error: The package . failed to load."),
-            TexIssue(.error, file: "hw.tex", line: 5, message: "Missing $ inserted"),
-        ])
+        #expect(
+            TexLog.issues(output) == [
+                TexIssue(.error, file: "hw.tex", line: 2, message: "LaTeX Error: File `nonexistentpkgxyz.sty' not found."),
+                TexIssue(.error, file: "hw.tex", line: 3, message: "Undefined control sequence"),
+                TexIssue(.error, file: "hw.tex", line: 2, message: "LaTeX Error: The package . failed to load."),
+                TexIssue(.error, file: "hw.tex", line: 5, message: "Missing $ inserted"),
+            ])
     }
 
     /// Errors ignored without an `error:` line of their own still fail the build.
@@ -165,9 +167,11 @@ struct TexLogTests {
             warning: errors were issued by the TeX engine, but were ignored; use --print and/or --keep-logs for details.
             note: Writing `out/hw.pdf` (6.9 KiB)
             """
-        #expect(TexLog.issues(output) == [
-            TexIssue(.error, message: "errors were issued by the TeX engine, but were ignored; use --print and/or --keep-logs for details."),
-        ])
+        #expect(
+            TexLog.issues(output) == [
+                TexIssue(
+                    .error, message: "errors were issued by the TeX engine, but were ignored; use --print and/or --keep-logs for details.")
+            ])
     }
 
     @Test func aCleanBuildHasNoIssues() {

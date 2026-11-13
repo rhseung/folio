@@ -41,7 +41,8 @@ public struct NoteOutline: Equatable, Sendable {
             let line = body.lowerBound + offset
             let anchor = Self.anchor(of: h)
             guard !anchor.isEmpty else { return nil }
-            return Entry(level: h.level, title: Self.title(of: h), anchor: anchor, id: Self.id(of: h), line: line, location: starts[line - 1])
+            return Entry(
+                level: h.level, title: Self.title(of: h), anchor: anchor, id: Self.id(of: h), line: line, location: starts[line - 1])
         }
     }
 

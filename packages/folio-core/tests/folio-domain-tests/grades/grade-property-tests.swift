@@ -12,12 +12,14 @@ struct GradePropertyTests {
 
     let catalog: Catalog = {
         func grade(_ symbol: String, _ points: Double?, credits: Bool = true) -> LetterGrade {
-            LetterGrade(device: UUID(), at: Date(timeIntervalSince1970: 0), symbol: symbol, points: points,
-                        countsInGpa: points != nil, countsInCredits: credits)
+            LetterGrade(
+                device: UUID(), at: Date(timeIntervalSince1970: 0), symbol: symbol, points: points,
+                countsInGpa: points != nil, countsInCredits: credits)
         }
         return Catalog(letterGrades: [
             grade("A+", 4.5), grade("A0", 4), grade("B+", 3.5), grade("B0", 3), grade("C+", 2.5), grade("C0", 2),
-            grade("D0", 1), grade("F", 0, credits: false), grade("S", nil), grade("U", nil, credits: false), grade("W", nil, credits: false),
+            grade("D0", 1), grade("F", 0, credits: false), grade("S", nil), grade("U", nil, credits: false),
+            grade("W", nil, credits: false),
         ])
     }()
 
@@ -105,7 +107,8 @@ struct GradePropertyTests {
 
     func make(_ rows: [(Double, Int, Bool)], component: UUID) -> [ScoreEntry] {
         rows.map { share, max, excused in
-            ScoreEntry(device: device, at: now, componentId: component, title: "", score: share * Double(max), max: Double(max), excused: excused)
+            ScoreEntry(
+                device: device, at: now, componentId: component, title: "", score: share * Double(max), max: Double(max), excused: excused)
         }
     }
 
@@ -128,7 +131,9 @@ struct GradePropertyTests {
     @Test func excusedScoresDoNotCount() async {
         await propertyCheck(input: Self.entries, Self.aggregation) { rows, aggregation in
             let entries = make(rows, component: UUID())
-            #expect(GradeCalculator.ratio(of: entries, by: aggregation) == GradeCalculator.ratio(of: entries.filter { !$0.excused }, by: aggregation))
+            #expect(
+                GradeCalculator.ratio(of: entries, by: aggregation)
+                    == GradeCalculator.ratio(of: entries.filter { !$0.excused }, by: aggregation))
         }
     }
 

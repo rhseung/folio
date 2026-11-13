@@ -15,11 +15,11 @@ final class MarkerMacroTests: XCTestCase {
             }
             """,
             expandedSource: """
-            struct A {
-                var course: Course.ID
-                var done = true
-            }
-            """,
+                struct A {
+                    var course: Course.ID
+                    var done = true
+                }
+                """,
             macros: macros)
     }
 }

@@ -20,9 +20,11 @@ struct QuizCommand: ParsableCommand {
         subcommands: [List.self] + GeneratedCommands.quiz + [Record.self])
 
     struct List: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .quizListAbstract), discussion: String(localized: .quizListDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .quizListAbstract), discussion: String(localized: .quizListDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String = ""
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses))
+        var course: String = ""
         @Option(help: ArgumentHelp(String(localized: .quizListHelpUnit), valueName: "unit"), completion: Complete.units) var unit: String?
         @Flag(help: ArgumentHelp(String(localized: .commonHelpLines))) var lines = false
 
@@ -38,15 +40,22 @@ struct QuizCommand: ParsableCommand {
                 return
             }
             courseHeader(c, catalog: try? r.ctx.catalog())
-            var t = Table(header: [String(localized: .quizListHeaderUnit), String(localized: .quizListHeaderKind), String(localized: .quizListHeaderCategory), String(localized: .quizListHeaderPrompt)], shrink: [3])
-            for (u, cards) in decks { for card in cards { t.rows.append([u.title, card.type.rawValue, card.category.rawValue, card.prompt]) } }
+            var t = Table(
+                header: [
+                    String(localized: .quizListHeaderUnit), String(localized: .quizListHeaderKind),
+                    String(localized: .quizListHeaderCategory), String(localized: .quizListHeaderPrompt),
+                ], shrink: [3])
+            for (u, cards) in decks {
+                for card in cards { t.rows.append([u.title, card.type.rawValue, card.category.rawValue, card.prompt]) }
+            }
             t.print()
             footer(decks.map(\.1.count).reduce(0, +))
         }
     }
 
     struct Record: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .quizRecordAbstract), discussion: String(localized: .quizRecordDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .quizRecordAbstract), discussion: String(localized: .quizRecordDiscussion))
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp(String(localized: .commonHelpUnit), valueName: "unit"), completion: Complete.units) var unit: String
         @Argument(help: ArgumentHelp(String(localized: .commonHelpCard), valueName: "card")) var card: String
@@ -60,7 +69,9 @@ struct QuizCommand: ParsableCommand {
             let (c, name) = try r.split(unit)
             let u = try r.unit(name, in: c)
             let id = try r.card(card, unit: u, in: c).id
-            try perform(spec: QuizRecord(course: c.id, attempt: QuizAttemptEvent(cardId: id, answer: answer, verdict: verdict, grader: grader)), g, ctx: ctx)
+            try perform(
+                spec: QuizRecord(course: c.id, attempt: QuizAttemptEvent(cardId: id, answer: answer, verdict: verdict, grader: grader)), g,
+                ctx: ctx)
         }
     }
 }
@@ -71,9 +82,11 @@ struct ProblemSetCommand: ParsableCommand {
         subcommands: [List.self, Add.self, Record.self] + GeneratedCommands.problemSet)
 
     struct List: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .problemSetListAbstract), discussion: String(localized: .problemSetListDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .problemSetListAbstract), discussion: String(localized: .problemSetListDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String = ""
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses))
+        var course: String = ""
         @Flag(help: ArgumentHelp(String(localized: .commonHelpLines))) var lines = false
 
         func run() throws {
@@ -86,7 +99,8 @@ struct ProblemSetCommand: ParsableCommand {
                 return
             }
             courseHeader(c, catalog: try? r.ctx.catalog())
-            var t = Table(header: [String(localized: .problemSetListHeaderSet), String(localized: .problemSetListHeaderProblems)], shrink: [1])
+            var t = Table(
+                header: [String(localized: .problemSetListHeaderSet), String(localized: .problemSetListHeaderProblems)], shrink: [1])
             for s in sets { t.rows.append([s.title, s.problems.map(\.number).joined(separator: " ")]) }
             t.print()
             footer(sets.count)
@@ -94,25 +108,31 @@ struct ProblemSetCommand: ParsableCommand {
     }
 
     struct Add: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .problemSetAddAbstract), discussion: String(localized: .problemSetAddDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .problemSetAddAbstract), discussion: String(localized: .problemSetAddDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses))
+        var course: String
         @Argument(help: ArgumentHelp(String(localized: .problemSetAddHelpTitle), valueName: "title")) var title: String
-        @Option(parsing: .upToNextOption, help: ArgumentHelp(String(localized: .problemSetAddHelpProblems), valueName: "number")) var problems: [String] = []
+        @Option(parsing: .upToNextOption, help: ArgumentHelp(String(localized: .problemSetAddHelpProblems), valueName: "number"))
+        var problems: [String] = []
         @Option(help: .hidden) var id: UUID?
 
         func run() throws {
             let ctx = try CLI.context(g)
             let c = try Resolver(ctx).course(course)
-            let set = ProblemSet(id: id ?? UUID(), device: ctx.device, at: ctx.now, title: title, problems: problems.map { .init(number: $0) })
+            let set = ProblemSet(
+                id: id ?? UUID(), device: ctx.device, at: ctx.now, title: title, problems: problems.map { .init(number: $0) })
             try perform(spec: ProblemSetSave(course: c.id, set: set), g, ctx: ctx)
         }
     }
 
     struct Record: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .problemSetRecordAbstract), discussion: String(localized: .problemSetRecordDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .problemSetRecordAbstract), discussion: String(localized: .problemSetRecordDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .problemSetRecordHelpSet), valueName: "batch"), completion: Complete.problemSets) var set: String
+        @Argument(help: ArgumentHelp(String(localized: .problemSetRecordHelpSet), valueName: "batch"), completion: Complete.problemSets)
+        var set: String
         @Argument(help: ArgumentHelp(String(localized: .problemSetRecordHelpNumber), valueName: "number")) var number: String
         @Argument(help: ArgumentHelp(String(localized: .commonHelpVerdict))) var verdict: Verdict
 
@@ -121,8 +141,12 @@ struct ProblemSetCommand: ParsableCommand {
             let r = Resolver(ctx)
             let (c, name) = try r.split(set)
             let s = try r.problemSet(name, in: c)
-            guard s.problems.contains(where: { $0.number == number }) else { throw CLIError(exit: .notFound, message: String(localized: .problemSetRecordNotFound(number))) }
-            try perform(spec: ProblemRecord(course: c.id, attempt: ProblemAttemptEvent(problemSetId: s.id, number: number, verdict: verdict)), g, ctx: ctx)
+            guard s.problems.contains(where: { $0.number == number }) else {
+                throw CLIError(exit: .notFound, message: String(localized: .problemSetRecordNotFound(number)))
+            }
+            try perform(
+                spec: ProblemRecord(course: c.id, attempt: ProblemAttemptEvent(problemSetId: s.id, number: number, verdict: verdict)), g,
+                ctx: ctx)
         }
     }
 }
@@ -133,9 +157,11 @@ struct ReviewCommand: ParsableCommand {
         subcommands: GeneratedCommands.review + [Skip.self])
 
     struct Skip: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .reviewSkipAbstract), discussion: String(localized: .reviewSkipDiscussion))
+        static let configuration = CommandConfiguration(
+            abstract: String(localized: .reviewSkipAbstract), discussion: String(localized: .reviewSkipDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .reviewSkipHelpUnits), valueName: "unit"), completion: Complete.units) var units: [String]
+        @Argument(help: ArgumentHelp(String(localized: .reviewSkipHelpUnits), valueName: "unit"), completion: Complete.units) var units:
+            [String]
         @Option(help: ArgumentHelp(String(localized: .reviewSkipHelpStart), valueName: "date")) var start: DateArg?
         @Option(help: ArgumentHelp(String(localized: .reviewSkipHelpEnd), valueName: "date")) var end: DateArg?
 

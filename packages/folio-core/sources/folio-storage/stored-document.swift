@@ -50,9 +50,13 @@ extension CourseFile: StoredModel {
         for i in assignments.indices {
             guard case .string(let text)? = assignments[i]["repeats"] else { continue }
             // Only `weekly` was ever written; anything else is dropped rather than left for decoding to fail on.
-            assignments[i]["repeats"] = AssignmentRepeat(text: text).map { r in
-                .object(["every": .number(Double(r.every)), "unit": .string(r.unit.rawValue), "weekdays": .array(r.weekdays.map { .number(Double($0)) })])
-            } ?? nil
+            assignments[i]["repeats"] =
+                AssignmentRepeat(text: text).map { r in
+                    .object([
+                        "every": .number(Double(r.every)), "unit": .string(r.unit.rawValue),
+                        "weekdays": .array(r.weekdays.map { .number(Double($0)) }),
+                    ])
+                } ?? nil
         }
         raw["assignments"] = .array(assignments)
     }
@@ -71,10 +75,11 @@ extension CourseFile: StoredModel {
         var notes: [JSONValue] = if case .array(let a)? = raw["notes"] { a } else { [] }
         var kindOf: [UUID: String] = [:]
         let kept: Set<String> = [NoteKind.unit.rawValue, NoteKind.examSummary.rawValue]
-        let ownUnits = Set(notes.compactMap { n -> UUID? in
-            guard case .string(let kind)? = n["kind"], kept.contains(kind) else { return nil }
-            return id(n["id"])
-        })
+        let ownUnits = Set(
+            notes.compactMap { n -> UUID? in
+                guard case .string(let kind)? = n["kind"], kept.contains(kind) else { return nil }
+                return id(n["id"])
+            })
 
         for i in sessions.indices {
             for (key, kind) in slots {
@@ -89,8 +94,9 @@ extension CourseFile: StoredModel {
         }
         for n in notes.indices {
             guard let note = id(notes[n]["id"]), kindOf[note] == nil, let session = id(notes[n]["sessionId"]),
-                  case .string(let kind)? = notes[n]["kind"], let (key, _) = slots.first(where: { $0.1 == kind }),
-                  let s = sessions.firstIndex(where: { id($0["id"]) == session }), id(sessions[s][key]) == nil else { continue }
+                case .string(let kind)? = notes[n]["kind"], let (key, _) = slots.first(where: { $0.1 == kind }),
+                let s = sessions.firstIndex(where: { id($0["id"]) == session }), id(sessions[s][key]) == nil
+            else { continue }
             sessions[s][key] = .string(note.uuidString)
             kindOf[note] = kind
         }
@@ -131,12 +137,13 @@ extension CourseFile: StoredModel {
             let title = exams[i]["title"].flatMap { if case .string(let t) = $0 { t } else { nil } } ?? ""
             // The v3 rule: a title that is a standard folder name names the folder, else the kind does.
             let named = StandardLayout.isExamFolderName(title)
-            let byKind: String? = switch kind {
-            case .string("midterm"): StandardLayout.midtermFolder
-            case .string("final"): StandardLayout.finalFolder
-            case .string("quiz"): StandardLayout.quizFolderPrefix + "\(quizzes)"
-            default: nil
-            }
+            let byKind: String? =
+                switch kind {
+                case .string("midterm"): StandardLayout.midtermFolder
+                case .string("final"): StandardLayout.finalFolder
+                case .string("quiz"): StandardLayout.quizFolderPrefix + "\(quizzes)"
+                default: nil
+                }
             if let folder = named ? title : byKind {
                 exams[i]["folder"] = .string(folder)
                 if title.isEmpty { exams[i]["title"] = .string(folder) }
@@ -193,7 +200,8 @@ extension CourseFile: StoredModel {
         let topic = { (i: Int) -> String in if case .string(let t)? = sessions[i]["topic"] { t } else { "" } }
         // By number, then date, so a lab's unit takes its title from its first session.
         for lab in labs.map({ (session: file.sessions[$0.index], topic: topic($0.index), number: $0.number) })
-            .sorted(by: { ($0.number, $0.session.date) < ($1.number, $1.session.date) }) {
+            .sorted(by: { ($0.number, $0.session.date) < ($1.number, $1.session.date) })
+        {
             let s = lab.session
             file.linkLab(lab.number, session: s.id, experiment: lab.topic, id: derivedID(s.id), device: s.updatedBy, at: s.updatedAt)
         }

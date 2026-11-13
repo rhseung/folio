@@ -19,11 +19,12 @@ struct StripPage: View {
             .padding(.bottom, Theme.Space.s)
             .contentShape(.rect)
             #if os(macOS)
-            .gesture(TapGesture().modifiers(.shift).onEnded { pick(extend: true) }
+        .gesture(
+            TapGesture().modifiers(.shift).onEnded { pick(extend: true) }
                 .exclusively(before: TapGesture().onEnded { pick(extend: false) }))
             #else
-            .onTapGesture { pick(extend: ranging) }
-            .modifier(LongPressStart(start: start.map { start in { start(page) } }))
+        .onTapGesture { pick(extend: ranging) }
+        .modifier(LongPressStart(start: start.map { start in { start(page) } }))
             #endif
             .pointingHand()
     }

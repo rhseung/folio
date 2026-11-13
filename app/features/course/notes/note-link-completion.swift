@@ -68,19 +68,22 @@ import PDFKit
         if found.kind == .material, MaterialFormat(path: found.title) == .pdf {
             let body = WikiLink.written(link.kind.rawValue, found.id, fragment: "page=", alias: name)
             let caret = (body as NSString).range(of: "#page=").upperBound
-            return CompletionItem(id: "link.\(found.id)", title: found.title, detail: elsewhere, symbol: found.kind.symbol, body: body,
-                                  caret: caret, continues: true)
+            return CompletionItem(
+                id: "link.\(found.id)", title: found.title, detail: elsewhere, symbol: found.kind.symbol, body: body,
+                caret: caret, continues: true)
         }
         let body = WikiLink.written(link.kind.rawValue, found.id, alias: name)
-        return CompletionItem(id: "link.\(found.id)", title: found.title, detail: elsewhere, symbol: found.kind.symbol, body: body, caret: body.utf16.count)
+        return CompletionItem(
+            id: "link.\(found.id)", title: found.title, detail: elsewhere, symbol: found.kind.symbol, body: body, caret: body.utf16.count)
     }
 
     func headings(of link: LinkQuery, typed: String, text: String) -> [CompletionItem] {
         guard let (target, id, body) = resolve(link.target, text: text) else { return [] }
         let items = ParsedNote(body).headings.filter { WikiLink.linkable(heading: $0.text) }.enumerated().map { i, h in
             let written = WikiLink.written("note", id, fragment: h.text, alias: link.alias ?? target.title)
-            return CompletionItem(id: "heading.\(i)", title: h.text, detail: String(repeating: "#", count: h.level), symbol: "number",
-                                  body: written, caret: written.utf16.count)
+            return CompletionItem(
+                id: "heading.\(i)", title: h.text, detail: String(repeating: "#", count: h.level), symbol: "number",
+                body: written, caret: written.utf16.count)
         }
         return Completion.filter(items, typed)
     }
@@ -90,27 +93,32 @@ import PDFKit
         let items = ParsedNote(body).linkableBlocks.map { b in
             // A block without an ID gets one when picked (`take`); until then the link holds the line, which `take` reads.
             let written = WikiLink.written("note", id, fragment: "^" + (b.id ?? ""), alias: link.alias ?? target.title)
-            return CompletionItem(id: b.id.map { "block.\($0)" } ?? "\(Self.newBlock)\(b.line)", title: b.excerpt.isEmpty ? "^" + (b.id ?? "") : b.excerpt,
-                                  detail: b.id.map { "^" + $0 }, symbol: "text.quote", keywords: b.id.map { [$0] } ?? [],
-                                  body: written, caret: written.utf16.count)
+            return CompletionItem(
+                id: b.id.map { "block.\($0)" } ?? "\(Self.newBlock)\(b.line)", title: b.excerpt.isEmpty ? "^" + (b.id ?? "") : b.excerpt,
+                detail: b.id.map { "^" + $0 }, symbol: "text.quote", keywords: b.id.map { [$0] } ?? [],
+                body: written, caret: written.utf16.count)
         }
         return Completion.filter(items, typed)
     }
 
     func pages(of link: LinkQuery, typed: String) -> [CompletionItem] {
         guard let target = WikiLink.all(in: "[[\(link.target)]]").first, target.objectKind == "material", let id = target.objectID,
-              let holder = workspace.courses.first(where: { $0.file.materials.contains { $0.id == id } }),
-              let material = holder.file.materials.first(where: { $0.id == id }) else { return [] }
+            let holder = workspace.courses.first(where: { $0.file.materials.contains { $0.id == id } }),
+            let material = holder.file.materials.first(where: { $0.id == id })
+        else { return [] }
         // The viewer logs the page it was left at, 0-based.
-        let last = ((try? holder.store.log.readAll()) ?? []).events(MaterialViewEvent.self).last { $0.event.materialId == id }.map { $0.event.page + 1 }
+        let last = ((try? holder.store.log.readAll()) ?? []).events(MaterialViewEvent.self).last { $0.event.materialId == id }.map {
+            $0.event.page + 1
+        }
         // A file iCloud hasn't downloaded has no page count; its last page and the number typed still go.
         let count = PDFDocument(url: holder.store.fileURL(material.path))?.pageCount
         let name = link.alias ?? (material.path as NSString).lastPathComponent
         return LinkCandidates.pages(count: count, last: last, typed: typed).map { n in
             let written = WikiLink.written("material", id, fragment: "page=\(n)", alias: name)
-            return CompletionItem(id: "page.\(n)", title: String(localized: .notesAssistLinkPage(n)),
-                                  detail: n == last ? String(localized: .notesAssistLinkLastPage) : nil, symbol: "doc",
-                                  body: written, caret: written.utf16.count)
+            return CompletionItem(
+                id: "page.\(n)", title: String(localized: .notesAssistLinkPage(n)),
+                detail: n == last ? String(localized: .notesAssistLinkLastPage) : nil, symbol: "doc",
+                body: written, caret: written.utf16.count)
         }
     }
 
@@ -124,7 +132,8 @@ import PDFKit
             return (CompletionItem(id: item.id, title: item.title, body: written, caret: written.utf16.count), nil)
         }
         guard item.id.hasPrefix(Self.newBlock), let line = Int(item.id.dropFirst(Self.newBlock.count)),
-              let (target, id, body) = resolve(link.target, text: text) else { return (item, nil) }
+            let (target, id, body) = resolve(link.target, text: text)
+        else { return (item, nil) }
         let blockID = BlockID.make(avoiding: Set(ParsedNote(body).blockIDs))
         let written = WikiLink.written("note", id, fragment: "^" + blockID, alias: link.alias ?? target.title)
         let picked = CompletionItem(id: item.id, title: item.title, body: written, caret: written.utf16.count)

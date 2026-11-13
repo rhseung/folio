@@ -108,8 +108,9 @@ public enum GradeCalculator {
         let gapWeight = withGap.reduce(0) { $0 + weights[$1.componentId]! }
         let gap = gapWeight > 0 ? withGap.reduce(0) { $0 + weights[$1.componentId]! * $1.meanGap! } / gapWeight : nil
 
-        return CourseScore(components: results, secured: secured, projected: projected, z: z,
-                           zEstimated: withZ.contains { $0.zEstimated }, meanGap: gap, remainingWeight: remainingWeight)
+        return CourseScore(
+            components: results, secured: secured, projected: projected, z: z,
+            zEstimated: withZ.contains { $0.zEstimated }, meanGap: gap, remainingWeight: remainingWeight)
     }
 
     /// Average percent needed on everything still ungraded to finish at `target`. Nil when nothing remains.

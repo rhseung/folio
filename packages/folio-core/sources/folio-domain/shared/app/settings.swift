@@ -28,16 +28,18 @@ public struct Settings: Codable, Sendable, Equatable {
     public var panePresets: [PanePreset]
 
     public static let defaultNoteRules = """
-    - 정의는 전제, 조건, 결론 순서로 쓴다.
-    - 수학적 진술은 영어와 기호로, 설명은 한국어로 쓴다.
-    - display 수식은 하나씩 나눠 쓴다.
-    """
+        - 정의는 전제, 조건, 결론 순서로 쓴다.
+        - 수학적 진술은 영어와 기호로, 설명은 한국어로 쓴다.
+        - display 수식은 하나씩 나눠 쓴다.
+        """
 
-    public init(dayBoundaryMinutes: Int = 240, review: ReviewSettings = .init(), noteRules: String = Settings.defaultNoteRules,
-                notifications: NotificationSettings = .init(), backup: BackupSettings = .init(), noteTemplates: [String: [String]] = [:],
-                newNoteMath: MathSyntax = .asciimath, sidebar: SidebarOrder = .init(), classMinutes: Int = 75,
-                mathSnippets: [MathSnippet]? = nil, asciiMathSnippets: [MathSnippet]? = nil, classStart: ClassStartSettings = .init(),
-                panePresets: [PanePreset] = []) {
+    public init(
+        dayBoundaryMinutes: Int = 240, review: ReviewSettings = .init(), noteRules: String = Settings.defaultNoteRules,
+        notifications: NotificationSettings = .init(), backup: BackupSettings = .init(), noteTemplates: [String: [String]] = [:],
+        newNoteMath: MathSyntax = .asciimath, sidebar: SidebarOrder = .init(), classMinutes: Int = 75,
+        mathSnippets: [MathSnippet]? = nil, asciiMathSnippets: [MathSnippet]? = nil, classStart: ClassStartSettings = .init(),
+        panePresets: [PanePreset] = []
+    ) {
         self.dayBoundaryMinutes = dayBoundaryMinutes
         self.review = review
         self.noteRules = noteRules
@@ -84,7 +86,9 @@ public struct Settings: Codable, Sendable, Equatable {
 
     /// Blank headings are rows the editor keeps while they're being typed; a note never gets them.
     public func noteSections(for kind: NoteKind) -> [String] {
-        (noteTemplates[kind.rawValue] ?? NoteTemplate.defaultSections(for: kind)).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        (noteTemplates[kind.rawValue] ?? NoteTemplate.defaultSections(for: kind)).filter {
+            !$0.trimmingCharacters(in: .whitespaces).isEmpty
+        }
     }
 
     /// The study day `date` belongs to: work done at 02:00 counts for the previous day.
@@ -105,8 +109,10 @@ public struct ReviewSettings: Codable, Sendable, Equatable {
     public var cardsPerReview: Int
     public var weights: PriorityWeights
 
-    public init(intervals: [Int] = [1, 3, 7, 14, 30], settleAfterPasses: Int = 2, dailyLimit: Int? = nil,
-                examWindowDays: Int = 7, cardsPerReview: Int = 5, weights: PriorityWeights = .init()) {
+    public init(
+        intervals: [Int] = [1, 3, 7, 14, 30], settleAfterPasses: Int = 2, dailyLimit: Int? = nil,
+        examWindowDays: Int = 7, cardsPerReview: Int = 5, weights: PriorityWeights = .init()
+    ) {
         self.intervals = intervals
         self.settleAfterPasses = settleAfterPasses
         self.dailyLimit = dailyLimit
@@ -122,7 +128,9 @@ public struct ReviewSettings: Codable, Sendable, Equatable {
     /// under the intervals (`11/10 → 11/11 · 11/14 · …`).
     public func reviewDays(after day: LocalDate) -> [LocalDate] {
         var next = day
-        return intervals.map { next = next.adding(days: $0); return next }
+        return intervals.map {
+            next = next.adding(days: $0); return next
+        }
     }
 
     public init(from decoder: any Decoder) throws {

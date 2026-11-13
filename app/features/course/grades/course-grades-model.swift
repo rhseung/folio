@@ -18,7 +18,9 @@ final class CourseGradesModel {
         courseId = course
     }
 
-    func result(_ file: CourseFile) -> GradeCalculator.CourseScore { GradeCalculator.score(components: file.components, entries: file.scores) }
+    func result(_ file: CourseFile) -> GradeCalculator.CourseScore {
+        GradeCalculator.score(components: file.components, entries: file.scores)
+    }
 
     func components(_ file: CourseFile) -> [GradeComponent] { file.components.sorted { $0.order < $1.order } }
 
@@ -44,10 +46,13 @@ final class CourseGradesModel {
 
     func componentDetail(_ c: GradeComponent, in file: CourseFile) -> String {
         let counted = file.scores.filter { $0.componentId == c.id && !$0.excused }.count
-        return [c.aggregation.label, c.expectedCount.map { String(localized: .courseGradesCountOf(counted, $0)) }].compactMap { $0 }.joined(separator: " · ")
+        return [c.aggregation.label, c.expectedCount.map { String(localized: .courseGradesCountOf(counted, $0)) }].compactMap { $0 }.joined(
+            separator: " · ")
     }
 
-    static func ratioText(_ ratio: Double?) -> String { ratio.map { "\(($0 * 100).formatted(.number.precision(.fractionLength(0))))%" } ?? "—" }
+    static func ratioText(_ ratio: Double?) -> String {
+        ratio.map { "\(($0 * 100).formatted(.number.precision(.fractionLength(0))))%" } ?? "—"
+    }
 
     func canAdd(_ c: GradeComponent) -> Bool { workspace.can(ScoreAdd(course: courseId, component: c.id, score: 0, max: 100)) }
 
@@ -79,11 +84,14 @@ final class CourseGradesModel {
     func attendance(_ file: CourseFile) -> AttendanceSummary {
         let policy = file.policy
         let absences = GradeCalculator.absences(in: file.heldAttendance(at: workspace.now), policy: policy)
-        let detail = [policy.attendanceCap.isEmpty ? String(localized: .courseGradesNoCap) : capSummary(policy),
-                      policy.latesPerAbsence.map { String(localized: .courseGradesLatesPerAbsence($0)) }].compactMap { $0 }.joined(separator: " · ")
-        return AttendanceSummary(absences: absences, detail: detail, ratio: policy.minAttendanceRatio,
-                          cap: GradeCalculator.attendanceCap(absences: absences, policy: policy),
-                          next: GradeCalculator.nextCap(absences: absences, policy: policy))
+        let detail = [
+            policy.attendanceCap.isEmpty ? String(localized: .courseGradesNoCap) : capSummary(policy),
+            policy.latesPerAbsence.map { String(localized: .courseGradesLatesPerAbsence($0)) },
+        ].compactMap { $0 }.joined(separator: " · ")
+        return AttendanceSummary(
+            absences: absences, detail: detail, ratio: policy.minAttendanceRatio,
+            cap: GradeCalculator.attendanceCap(absences: absences, policy: policy),
+            next: GradeCalculator.nextCap(absences: absences, policy: policy))
     }
 
     func symbol(_ grade: UUID) -> String { workspace.catalog.grade(grade)?.symbol ?? "?" }
@@ -102,8 +110,13 @@ final class CourseGradesModel {
 
     /// What the remaining components must average for the target, as the panel words it.
     static func needText(_ need: Double?) -> String {
-        need.map { $0 > 100 ? String(localized: .courseGradesNeedImpossible) : $0 <= 0 ? String(localized: .courseGradesNeedSecured)
-            : String(localized: .courseGradesNeedPercent($0.oneDecimal)) } ?? String(localized: .courseGradesNeedNone)
+        need.map {
+            $0 > 100
+                ? String(localized: .courseGradesNeedImpossible)
+                : $0 <= 0
+                    ? String(localized: .courseGradesNeedSecured)
+                    : String(localized: .courseGradesNeedPercent($0.oneDecimal))
+        } ?? String(localized: .courseGradesNeedNone)
     }
 }
 

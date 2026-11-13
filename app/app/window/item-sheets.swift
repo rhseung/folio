@@ -155,8 +155,10 @@ struct ItemSheets: ViewModifier {
                 }
             }
             .confirming($pending)
-            .fileImporter(isPresented: Binding(get: { intake != nil }, set: { if !$0 { intake = nil } }),
-                          allowedContentTypes: [.item], allowsMultipleSelection: true) { [intake] result in
+            .fileImporter(
+                isPresented: Binding(get: { intake != nil }, set: { if !$0 { intake = nil } }),
+                allowedContentTypes: [.item], allowsMultipleSelection: true
+            ) { [intake] result in
                 if case .success(let urls) = result, let intake { workspace.importFiles(urls, into: intake.folder, course: intake.course) }
             }
     }

@@ -1,6 +1,7 @@
 import FolioDomain
 import FolioMarkdown
 import Testing
+
 @testable import Folio
 
 /// The input guide's sheet model (#395): tabs, search, and the snippets of the note's math syntax from settings.

@@ -1,9 +1,10 @@
-@testable import FolioCLI
 import FolioActions
 import FolioDomain
 import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioCLI
 
 /// `folio add`: the quick-add line read as the app reads it, then `assignment add`. The harness clock is Wednesday
 /// 2026-10-28 10:00, so `금` is 10/30.
@@ -112,7 +113,9 @@ struct QuickAddCommandTests {
     func tools(_ server: MCPServer, _ gist: URL) throws -> [String: JSONValue] {
         let m = MCPTests()
         guard case .array(let tools)? = try m.send(server, gist, "tools/list")["result"]?["tools"] else { return [:] }
-        return Dictionary(tools.compactMap { t -> (String, JSONValue)? in if case .string(let n)? = t["name"] { (n, t) } else { nil } }) { a, _ in a }
+        return Dictionary(tools.compactMap { t -> (String, JSONValue)? in if case .string(let n)? = t["name"] { (n, t) } else { nil } }) {
+            a, _ in a
+        }
     }
 
     /// Written by hand, but a write: marked so, and dry-run when asked, like the actions' tools.

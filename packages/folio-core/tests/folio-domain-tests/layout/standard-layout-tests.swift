@@ -1,5 +1,5 @@
-import Foundation
 import FolioDomain
+import Foundation
 import Testing
 
 struct StandardLayoutTests {
@@ -52,9 +52,12 @@ struct StandardLayoutTests {
     }
 
     /// A folder made for notes is one plain name in `Notes/`, never a folder whose files aren't notes, in any case.
-    @Test(arguments: [("정리", nil), ("  중간 대비 ", nil), ("assets 모음", nil), ("", .empty), ("   ", .empty),
-                      ("정리/증명", .nested), ("a:b", .nested), ("assets", .reserved), ("Assets", .reserved),
-                      ("EXPORTS", .reserved), (".숨김", .hidden), ("..", .hidden)] as [(String, StandardLayout.NoteFolderProblem?)])
+    @Test(
+        arguments: [
+            ("정리", nil), ("  중간 대비 ", nil), ("assets 모음", nil), ("", .empty), ("   ", .empty),
+            ("정리/증명", .nested), ("a:b", .nested), ("assets", .reserved), ("Assets", .reserved),
+            ("EXPORTS", .reserved), (".숨김", .hidden), ("..", .hidden),
+        ] as [(String, StandardLayout.NoteFolderProblem?)])
     func noteFolderNames(name: String, problem: StandardLayout.NoteFolderProblem?) {
         #expect(StandardLayout.noteFolderProblem(name) == problem)
     }

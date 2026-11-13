@@ -25,10 +25,11 @@ final class ExamsModel {
 
     func load() {
         let notes = (try? course.store.notes()) ?? []
-        self.notes = Dictionary(notes.compactMap { n in
-            guard n.meta.kind == .examSummary, let exam = n.meta.examId, let note = n.meta.id else { return nil }
-            return (exam, note)
-        }, uniquingKeysWith: { a, _ in a })
+        self.notes = Dictionary(
+            notes.compactMap { n in
+                guard n.meta.kind == .examSummary, let exam = n.meta.examId, let note = n.meta.id else { return nil }
+                return (exam, note)
+            }, uniquingKeysWith: { a, _ in a })
         done = workspace.donePlanItems(in: [course.id])
     }
 
@@ -42,8 +43,9 @@ final class ExamsModel {
 
     func subtitle(coming: Int, past: Int) -> String {
         if coming + past == 0 { return String(localized: .examsEmptySubtitle) }
-        return ([String(localized: coming == 0 ? .examsNoneComing : .examsComingCount(coming))]
-                + (past == 0 ? [] : [String(localized: .examsPastCount(past))])).joined(separator: " · ")
+        return
+            ([String(localized: coming == 0 ? .examsNoneComing : .examsComingCount(coming))]
+            + (past == 0 ? [] : [String(localized: .examsPastCount(past))])).joined(separator: " · ")
     }
 
     func reviewStates(now: Date) -> [UUID: ReviewState] { workspace.reviewStates(of: course.id, now: now) }
@@ -117,8 +119,9 @@ final class ExamsModel {
         let units = UnitTree.outline(course.file.units).map(\.unit).filter { exam.scopeUnitIds.contains($0.id) }
         let ids = Set(units.map(\.id))
         let tops = units.filter { $0.parentId.map { !ids.contains($0) } ?? true }
-        return Scope(units: units, tops: tops.map { u in (u, units.filter { $0.parentId == u.id }.count) },
-                     onTrack: units.filter { states[$0.id]?.isOnTrack(today: today) ?? false }.count)
+        return Scope(
+            units: units, tops: tops.map { u in (u, units.filter { $0.parentId == u.id }.count) },
+            onTrack: units.filter { states[$0.id]?.isOnTrack(today: today) ?? false }.count)
     }
 
     func scopeLine(_ exam: Exam, units: Int) -> String {
@@ -137,7 +140,8 @@ final class ExamsModel {
         let scoped = exam.scopeUnitIds.count
         let checked = exam.plan.filter { done.contains($0.id) }.count
         let files = fileCount(exam)
-        let facts = (component(of: exam).map { [$0] } ?? [])
+        let facts =
+            (component(of: exam).map { [$0] } ?? [])
             + (scoped > 0 ? [String(localized: .examsScopeUnits(scoped))] : exam.scopeText.isEmpty ? [] : [exam.scopeText])
             + (exam.location.isEmpty ? [] : [exam.location])
             + (files > 0 ? [String(localized: .examsFileCount(files))] : [])
@@ -165,7 +169,8 @@ final class ExamsModel {
     func plan(_ exam: Exam) -> [ExamPlanItem] { exam.plan.sorted { ($0.day, $0.title) < ($1.day, $1.title) } }
 
     func planLine(_ items: [ExamPlanItem]) -> String {
-        items.isEmpty ? String(localized: .examsPlanHint)
+        items.isEmpty
+            ? String(localized: .examsPlanHint)
             : String(localized: .examsPlanDone(items.filter { done.contains($0.id) }.count, items.count))
     }
 
@@ -186,13 +191,17 @@ final class ExamsModel {
         let outline = UnitTree.outline(course.file.units)
         let scoped = outline.filter { exam.scopeUnitIds.contains($0.unit.id) }
         return [PickOption(id: UUID?.none, title: String(localized: .examsPlanNoTarget))]
-            + (scoped.isEmpty ? outline : scoped).map { PickOption(id: Optional($0.unit.id), title: $0.unit.title, depth: scoped.isEmpty ? $0.depth : 0) }
+            + (scoped.isEmpty ? outline : scoped).map {
+                PickOption(id: Optional($0.unit.id), title: $0.unit.title, depth: scoped.isEmpty ? $0.depth : 0)
+            }
     }
 
     var firstPlanDay: Date { today.date(in: workspace.calendar) ?? workspace.now }
 
     func planItem(_ exam: Exam, title: String, day: Date, unit: UUID?) -> ExamPlanAdd {
-        ExamPlanAdd(course: course.id, exam: exam.id, title: title.trimmingCharacters(in: .whitespaces), day: LocalDate(day, in: workspace.calendar), unit: unit)
+        ExamPlanAdd(
+            course: course.id, exam: exam.id, title: title.trimmingCharacters(in: .whitespaces),
+            day: LocalDate(day, in: workspace.calendar), unit: unit)
     }
 
     func canAdd(_ item: ExamPlanAdd) -> Bool { workspace.can(item) }
@@ -274,12 +283,17 @@ final class ExamEditorModel {
     func apply() -> Bool {
         draft.title = draft.title.trimmingCharacters(in: .whitespaces)
         let d = draft
-        let saved = isNew
-            ? workspace.run(ExamAdd(id: d.id, course: course.id, title: d.title, start: d.start, end: d.end, location: d.location,
-                                    component: d.componentId, scope: d.scopeUnitIds, scopeText: d.scopeText, allowed: d.allowed, memo: d.memo))
-            : workspace.run(ExamSet(course: course.id, exam: d.id, title: .set(d.title), start: .set(d.start), end: .set(d.end),
-                                    location: .set(d.location), component: .set(d.componentId), scope: .set(d.scopeUnitIds),
-                                    scopeText: .set(d.scopeText), allowed: .set(d.allowed), memo: .set(d.memo)))
+        let saved =
+            isNew
+            ? workspace.run(
+                ExamAdd(
+                    id: d.id, course: course.id, title: d.title, start: d.start, end: d.end, location: d.location,
+                    component: d.componentId, scope: d.scopeUnitIds, scopeText: d.scopeText, allowed: d.allowed, memo: d.memo))
+            : workspace.run(
+                ExamSet(
+                    course: course.id, exam: d.id, title: .set(d.title), start: .set(d.start), end: .set(d.end),
+                    location: .set(d.location), component: .set(d.componentId), scope: .set(d.scopeUnitIds),
+                    scopeText: .set(d.scopeText), allowed: .set(d.allowed), memo: .set(d.memo)))
         return saved != nil
     }
 }

@@ -15,7 +15,9 @@ enum LayoutSnapshots {
     static var selectedTab: CGRect?
 
     static func run(tabs: WindowTabs, workspace: Workspace) async {
-        guard mode != nil, let directory = SnapshotDriver.directory, let window = NSApp.windows.first(where: { $0.isVisible }) else { return }
+        guard mode != nil, let directory = SnapshotDriver.directory, let window = NSApp.windows.first(where: { $0.isVisible }) else {
+            return
+        }
         // folio:not-an-action debug screenshots, outside the GIST folder
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         window.setContentSize(NSSize(width: SnapshotDriver.width, height: SnapshotDriver.height))
@@ -26,7 +28,9 @@ enum LayoutSnapshots {
             course.file.sessions.lazy.compactMap(\.materials.first).first.map { (course.id, $0) }
         }
         if case let (course, lecture)? = lectures.first, let panes = tabs.front,
-           let entry = workspace.entry(for: AppLink(.material, lecture.materialId, anchor: lecture.firstPage.map(AppLink.Anchor.page)), hint: course) {
+            let entry = workspace.entry(
+                for: AppLink(.material, lecture.materialId, anchor: lecture.firstPage.map(AppLink.Anchor.page)), hint: course)
+        {
             panes.focused.go(entry)
             workspace.apply(PanePreset(name: nil, slots: [.role(.lecture), .role(.quiz)], shares: [0.6, 0.4]), to: panes)
         } else {
@@ -60,8 +64,11 @@ enum LayoutSnapshots {
     static func tabMenu(in window: NSWindow) -> NSMenu? {
         guard let content = window.contentView else { return nil }
         let point = menuPoint(in: window)
-        guard let event = NSEvent.mouseEvent(with: .rightMouseDown, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
-                                             windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1) else { return nil }
+        guard
+            let event = NSEvent.mouseEvent(
+                with: .rightMouseDown, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1)
+        else { return nil }
         var view = content.hitTest(content.convert(point, from: nil))
         while let v = view {
             if let menu = v.menu(for: event) { return menu }
@@ -93,18 +100,21 @@ enum LayoutSnapshots {
     /// even of its own windows.
     static func shoot(_ name: String, in directory: URL) {
         let windows = NSApp.windows.filter(\.isVisible)
-        guard let window = windows.filter({ !$0.className.contains("Menu") && !$0.className.contains("Glass") })
+        guard
+            let window = windows.filter({ !$0.className.contains("Menu") && !$0.className.contains("Glass") })
                 .max(by: { $0.frame.width < $1.frame.width }),
-              let view = window.contentView?.superview, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds),
-              let context = NSGraphicsContext(bitmapImageRep: rep) else { return }
+            let view = window.contentView?.superview, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds),
+            let context = NSGraphicsContext(bitmapImageRep: rep)
+        else { return }
         view.cacheDisplay(in: view.bounds, to: rep)
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = context
         for menu in windows where menu.className.contains("Menu") {
             guard let content = menu.contentView, let drawn = content.bitmapImageRepForCachingDisplay(in: content.bounds) else { continue }
             content.cacheDisplay(in: content.bounds, to: drawn)
-            let frame = NSRect(origin: NSPoint(x: menu.frame.minX - window.frame.minX, y: menu.frame.minY - window.frame.minY),
-                               size: content.bounds.size)
+            let frame = NSRect(
+                origin: NSPoint(x: menu.frame.minX - window.frame.minX, y: menu.frame.minY - window.frame.minY),
+                size: content.bounds.size)
             let backing = NSBezierPath(roundedRect: frame, xRadius: Theme.Radius.floating, yRadius: Theme.Radius.floating)
             window.effectiveAppearance.performAsCurrentDrawingAppearance {
                 let shadow = NSShadow()

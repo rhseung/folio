@@ -35,9 +35,11 @@ public struct UnitReviewInput: Sendable {
     public var quizAccuracy: Double?
     public var openWrongCards: Int
 
-    public init(unitId: UUID, startDay: LocalDate, needsReviewNote: Bool = false, reviews: [(day: LocalDate, result: ReviewResult)] = [],
-                wrongCardDays: [LocalDate] = [], examDays: [LocalDate] = [], inExamPlan: Bool = false,
-                quizAccuracy: Double? = nil, openWrongCards: Int = 0) {
+    public init(
+        unitId: UUID, startDay: LocalDate, needsReviewNote: Bool = false, reviews: [(day: LocalDate, result: ReviewResult)] = [],
+        wrongCardDays: [LocalDate] = [], examDays: [LocalDate] = [], inExamPlan: Bool = false,
+        quizAccuracy: Double? = nil, openWrongCards: Int = 0
+    ) {
         self.unitId = unitId
         self.startDay = startDay
         self.needsReviewNote = needsReviewNote
@@ -78,7 +80,8 @@ public enum ReviewScheduler {
         var step = 0
         var passesAtLast = 0
         var settled = false
-        var due = input.needsReviewNote ? input.startDay : schedule(from: input.startDay, interval: steps[0], input: input, settings: settings)
+        var due =
+            input.needsReviewNote ? input.startDay : schedule(from: input.startDay, interval: steps[0], input: input, settings: settings)
 
         enum Happening { case review(ReviewResult), wrongCard }
         let timeline = (input.reviews.map { ($0.day, Happening.review($0.result)) } + input.wrongCardDays.map { ($0, Happening.wrongCard) })
@@ -89,12 +92,13 @@ public enum ReviewScheduler {
             switch happening {
             case .review(let result):
                 if step == last, result == .good || result == .easy { passesAtLast += 1 }
-                step = switch result {
-                case .again: 0
-                case .hard, .skip: step
-                case .good: min(step + 1, last)
-                case .easy: min(step + 2, last)
-                }
+                step =
+                    switch result {
+                    case .again: 0
+                    case .hard, .skip: step
+                    case .good: min(step + 1, last)
+                    case .easy: min(step + 2, last)
+                    }
                 if result == .again { passesAtLast = 0 }
                 if result == .skip { passesAtLast = max(passesAtLast, settings.settleAfterPasses) }
                 settled = passesAtLast >= settings.settleAfterPasses
@@ -109,7 +113,9 @@ public enum ReviewScheduler {
         }
 
         let writeNote = input.needsReviewNote && input.reviews.isEmpty
-        if settled && !input.inExamPlan { return ReviewState(unitId: input.unitId, step: step, due: nil, settled: true, writeNoteFirst: false) }
+        if settled && !input.inExamPlan {
+            return ReviewState(unitId: input.unitId, step: step, due: nil, settled: true, writeNoteFirst: false)
+        }
         return ReviewState(unitId: input.unitId, step: step, due: due, settled: settled, writeNoteFirst: writeNote)
     }
 
@@ -153,7 +159,9 @@ public enum ReviewScheduler {
                 priority += w.exam / Double(today.days(until: exam) + 1)
             }
             priority += w.quizMiss * (1 - (input.quizAccuracy ?? 1)) + w.openWrong * Double(input.openWrongCards)
-            return Item(unitId: state.unitId, due: due, overdueDays: overdue, priority: priority, writeNoteFirst: state.writeNoteFirst, deferred: nil)
+            return Item(
+                unitId: state.unitId, due: due, overdueDays: overdue, priority: priority, writeNoteFirst: state.writeNoteFirst,
+                deferred: nil)
         }
 
         items.sort { ($0.priority, $1.due) > ($1.priority, $0.due) }
@@ -165,8 +173,10 @@ public enum ReviewScheduler {
 
     /// Today's queue across `courses`, each with its review log. The daily limit spans all courses, so one course's
     /// list filters this queue rather than building its own.
-    public static func queue(courses: [(file: CourseFile, reviews: [(at: Date, event: ReviewEvent)])], settings: Settings,
-                             calendar: Calendar, now: Date) -> [ReviewEntry] {
+    public static func queue(
+        courses: [(file: CourseFile, reviews: [(at: Date, event: ReviewEvent)])], settings: Settings,
+        calendar: Calendar, now: Date
+    ) -> [ReviewEntry] {
         let today = settings.studyDay(of: now, calendar: calendar)
         var inputs: [UnitReviewInput] = []
         var owners: [UUID: (UUID, String)] = [:]
@@ -209,7 +219,9 @@ extension UnitReviewInput {
     /// Scheduler input for every unit of a course. A unit's cycle starts from its latest session; without a review
     /// note on that session, writing the note comes first.
     // shortcut: starts from the session day, not the review note's creation day; use the note file's creation date once notes record it.
-    public static func all(for file: CourseFile, reviews: [(at: Date, event: ReviewEvent)], settings: Settings, calendar: Calendar, now: Date) -> [UnitReviewInput] {
+    public static func all(
+        for file: CourseFile, reviews: [(at: Date, event: ReviewEvent)], settings: Settings, calendar: Calendar, now: Date
+    ) -> [UnitReviewInput] {
         guard file.course.reviews != false else { return [] }
         return file.units.compactMap { unit in
             let sessions = file.sessions.filter { unit.sessionIds.contains($0.id) && !$0.isCancelled && !$0.skipsReview && $0.date <= now }
@@ -220,7 +232,9 @@ extension UnitReviewInput {
                 unitId: unit.id,
                 startDay: settings.studyDay(of: last.date, calendar: calendar),
                 needsReviewNote: last.reviewNoteId == nil || last.reviewNoteUnfinished,
-                reviews: reviews.filter { $0.event.unitId == unit.id }.map { (settings.studyDay(of: $0.at, calendar: calendar), $0.event.result) },
+                reviews: reviews.filter { $0.event.unitId == unit.id }.map {
+                    (settings.studyDay(of: $0.at, calendar: calendar), $0.event.result)
+                },
                 examDays: examDays
             )
         }

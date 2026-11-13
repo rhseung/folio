@@ -3,6 +3,7 @@ import FolioDomain
 import FolioFixtures
 import SwiftUI
 import Testing
+
 @testable import Folio
 
 /// Every page and sheet for every scenario, light and dark, as PNGs in FOLIO_RENDER_DIR (mise run render). Skipped
@@ -25,7 +26,9 @@ struct ScreenRenders {
         (env[key].flatMap { $0.isEmpty ? nil : $0 } ?? fallback).split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
     }
 
-    nonisolated static let scenarios = Scenario.allCases.filter { s in list("FOLIO_RENDER_SCENARIOS", or: "").isEmpty || list("FOLIO_RENDER_SCENARIOS", or: "").contains(s.rawValue) }
+    nonisolated static let scenarios = Scenario.allCases.filter { s in
+        list("FOLIO_RENDER_SCENARIOS", or: "").isEmpty || list("FOLIO_RENDER_SCENARIOS", or: "").contains(s.rawValue)
+    }
 
     @Test(.enabled(if: folder != nil), arguments: scenarios)
     func screens(_ scenario: Scenario) async throws {
@@ -42,15 +45,19 @@ struct ScreenRenders {
             for page in pages {
                 for size in Self.sizes {
                     for scheme in [ColorScheme.light, .dark] {
-                        jobs.append(RenderJob(name: "\(page.name)-\(size.name)-\(scheme.label)", view: AnyView(page.view().environment(workspace)),
-                                              width: size.width, height: size.height, scheme: scheme))
+                        jobs.append(
+                            RenderJob(
+                                name: "\(page.name)-\(size.name)-\(scheme.label)", view: AnyView(page.view().environment(workspace)),
+                                width: size.width, height: size.height, scheme: scheme))
                     }
                 }
             }
             // Sheets and panels are drawn at their own size, as they open over the window.
             for sheet in sheets {
                 for scheme in [ColorScheme.light, .dark] {
-                    jobs.append(RenderJob(name: "\(sheet.name)-\(scheme.label)", view: AnyView(sheet.view().environment(workspace)), scheme: scheme))
+                    jobs.append(
+                        RenderJob(name: "\(sheet.name)-\(scheme.label)", view: AnyView(sheet.view().environment(workspace)), scheme: scheme)
+                    )
                 }
             }
             for (name, png) in try await renderOffscreen(jobs) {
@@ -71,9 +78,10 @@ struct ScreenRenders {
 
     func batches(_ workspace: Workspace) -> [Batch] {
         // Each page is drawn from its link, as a window draws it, so a course page needs no app-wide switch to show.
-        var plain = Batch(pages: ScreenCatalog.entries(workspace).map { name, entry in
-            (name, { AnyView(ScreenView(workspace: workspace, entry: entry)) })
-        })
+        var plain = Batch(
+            pages: ScreenCatalog.entries(workspace).map { name, entry in
+                (name, { AnyView(ScreenView(workspace: workspace, entry: entry)) })
+            })
         plain.sheets = FormSnapshots.forms(workspace).map { name, view in ("form-\(name)", { view }) }
         plain.sheets += MathSyntax.allCases.map { syntax in
             ("input-guide-\(syntax.rawValue)", { AnyView(InputGuideSheet(workspace: workspace, syntax: syntax)) })
@@ -82,16 +90,27 @@ struct ScreenRenders {
         // cannot draw, so the window snapshot (`FOLIO_SNAPSHOT_COLUMN=open`) shows that.
         let columns = ScreenCatalog.columns(workspace)
         let hidden = ColumnPrefs(collapsed: Set(ColumnKind.allCases))
-        var batches = [plain, Batch(pages: columns.map { name, entry in
-            ("column-hidden-\(name)", { AnyView(ScreenView(workspace: workspace, entry: entry).environment(\.columnPrefs, hidden)) })
-        })]
+        var batches = [
+            plain,
+            Batch(
+                pages: columns.map { name, entry in
+                    (
+                        "column-hidden-\(name)",
+                        { AnyView(ScreenView(workspace: workspace, entry: entry).environment(\.columnPrefs, hidden)) }
+                    )
+                }),
+        ]
         // The first run's steps at every width, the narrowest standing in for an iPhone, over the scenario's open folder.
-        batches.append(Batch(pages: FirstRunStep.allCases.map { step in
-            ("first-run-\(step.rawValue)", { AnyView(FirstRunView(workspace: workspace, step: step)) })
-        }))
+        batches.append(
+            Batch(
+                pages: FirstRunStep.allCases.map { step in
+                    ("first-run-\(step.rawValue)", { AnyView(FirstRunView(workspace: workspace, step: step)) })
+                }))
         for (name, query) in [("search-empty", ""), ("search", "매칭")] {
-            batches.append(Batch(setup: { SnapshotDriver.shared.searchQuery = query },
-                                 sheets: [(name, { AnyView(SearchPalette(workspace: workspace, close: {}, choose: { _, _ in })) })]))
+            batches.append(
+                Batch(
+                    setup: { SnapshotDriver.shared.searchQuery = query },
+                    sheets: [(name, { AnyView(SearchPalette(workspace: workspace, close: {}, choose: { _, _ in })) })]))
         }
         return batches
     }
@@ -118,7 +137,11 @@ struct ScreenRenders {
         let live = workspace.currentCourses.first { c in
             let model = SessionsModel(workspace: workspace, courseId: c.id)
             return c.file.sessions.contains { s in
-                model.isOngoing(s, end: s.expectedEnd(schedule: c.file.course.schedule, classMinutes: workspace.settings.classMinutes, calendar: workspace.calendar), now: now)
+                model.isOngoing(
+                    s,
+                    end: s.expectedEnd(
+                        schedule: c.file.course.schedule, classMinutes: workspace.settings.classMinutes, calendar: workspace.calendar),
+                    now: now)
             }
         }
         if let course = live ?? workspace.currentCourses.max(by: { $0.file.sessions.count < $1.file.sessions.count }) {
@@ -131,14 +154,16 @@ struct ScreenRenders {
         }
         // A course whose units split its slides (#321): its classes and a split unit draw the section strip.
         if let split = workspace.currentCourses.first(where: { c in c.file.lectureFiles.contains { c.file.isSplit($0.id) } }) {
-            entries.append(("lecture-sessions", Navigator.Entry(link: .course(split.id, page: CourseSection.sessions.page), course: split.id)))
+            entries.append(
+                ("lecture-sessions", Navigator.Entry(link: .course(split.id, page: CourseSection.sessions.page), course: split.id)))
             if let unit = split.file.units.first(where: { !$0.lecturePages.isEmpty }) {
                 entries.append(("lecture-unit", Navigator.Entry(link: AppLink(.unit, unit.id), course: split.id)))
             }
         }
         // Opened at a moment past the start, as a link from a note or a tab let go of does.
         if let held = workspace.currentCourses.first(where: { !$0.file.recordings.isEmpty }), let recording = held.file.recordings.first {
-            entries.append(("course-recording", Navigator.Entry(link: AppLink(.recording, recording.id, anchor: .time(1700)), course: held.id)))
+            entries.append(
+                ("course-recording", Navigator.Entry(link: AppLink(.recording, recording.id, anchor: .time(1700)), course: held.id)))
         }
         return entries
     }
@@ -150,7 +175,8 @@ struct ScreenRenders {
         if let course = workspace.currentCourses.first {
             entries.append(("course", Navigator.Entry(link: .course(course.id), course: course.id)))
             entries.append(("course-notes", Navigator.Entry(link: .course(course.id, page: CourseSection.notes.page), course: course.id)))
-            entries.append(("course-quiz", Navigator.Entry(link: .course(course.id, page: CourseSection.quizSolve.page), course: course.id)))
+            entries.append(
+                ("course-quiz", Navigator.Entry(link: .course(course.id, page: CourseSection.quizSolve.page), course: course.id)))
         }
         return entries
     }
@@ -197,7 +223,9 @@ private func withOffscreenWindows<T>(_ jobs: [RenderJob], _ body: ([(RenderJob, 
         let fitting = host.fittingSize
         let size = CGSize(width: job.width ?? fitting.width, height: job.height ?? (job.width == nil ? fitting.height : 900))
         // Fully transparent and far off screen: ordered in only because SwiftUI runs `.task` for views on screen.
-        let window = NSWindow(contentRect: CGRect(origin: CGPoint(x: -20_000, y: -20_000), size: size), styleMask: [.borderless], backing: .buffered, defer: false)
+        let window = NSWindow(
+            contentRect: CGRect(origin: CGPoint(x: -20_000, y: -20_000), size: size), styleMask: [.borderless], backing: .buffered,
+            defer: false)
         window.isReleasedWhenClosed = false
         window.appearance = NSAppearance(named: job.scheme == .dark ? .darkAqua : .aqua)
         window.alphaValue = 0
@@ -209,7 +237,11 @@ private func withOffscreenWindows<T>(_ jobs: [RenderJob], _ body: ([(RenderJob, 
 
     // Detached, not only closed: a view left alive keeps following the app-wide state the next batches set, and the
     // main actor slows with every one of them.
-    defer { open.forEach { $0.1.contentView = nil; $0.1.close() } }
+    defer {
+        open.forEach {
+            $0.1.contentView = nil; $0.1.close()
+        }
+    }
     try await settle()
 
     // Pages scroll, so a window grows by what its main scroll view hides to draw all of it. Content that loads late (the

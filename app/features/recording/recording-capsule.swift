@@ -47,9 +47,11 @@ struct RecordingCapsule<Idle: View>: View {
         .toolbarGroup()
         .background {
             if expanded {
-                RecordingFace(shape: Capsule(), accent: model.paused ? CourseAccent.gray : model.accent, recording: model.recording,
-                              level: model.recorder.level) { size in CGPoint(x: Self.dotCenter, y: size.height / 2) }
-                    .transition(.opacity)
+                RecordingFace(
+                    shape: Capsule(), accent: model.paused ? CourseAccent.gray : model.accent, recording: model.recording,
+                    level: model.recorder.level
+                ) { size in CGPoint(x: Self.dotCenter, y: size.height / 2) }
+                .transition(.opacity)
             }
         }
         .animation(Theme.Motion.pane, value: expanded)
@@ -89,7 +91,9 @@ struct RecordingCapsule<Idle: View>: View {
 
     var mark: some View {
         let count = model.recorder.bookmarks.count
-        return Button { model.recorder.bookmark() } label: {
+        return Button {
+            model.recorder.bookmark()
+        } label: {
             // Filled once marked, as on the card: an outline that only bounced looked as if the click did nothing.
             Label(String(localized: .recordingBookmarkHelp(count)), systemImage: count == 0 ? "bookmark" : "bookmark.fill")
                 .symbolEffect(.bounce, value: count)
@@ -125,7 +129,8 @@ private struct CapsuleIcon: View {
             .foregroundStyle(Theme.Palette.chromeIcon)
             .frame(width: Self.side, height: Self.side)
             .background {
-                Circle().fill(Theme.Palette.text).opacity(configuration.isPressed ? Theme.Opacity.pressed : hovering && isEnabled ? Theme.Opacity.hover : 0)
+                Circle().fill(Theme.Palette.text).opacity(
+                    configuration.isPressed ? Theme.Opacity.pressed : hovering && isEnabled ? Theme.Opacity.hover : 0)
             }
             .frame(height: Theme.Size.toolbarButton)
             .contentShape(.rect)

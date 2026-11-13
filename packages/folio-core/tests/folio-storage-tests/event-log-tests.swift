@@ -31,7 +31,8 @@ struct EventLogTests {
         let file = log.folder.appending(path: "\(device.uuidString).jsonl")
         let handle = try FileHandle(forWritingTo: file)
         try handle.seekToEnd()
-        let future = #"{"schemaVersion":1,"id":"E0000000-0000-4000-8000-000000000001","at":"1970-01-01T00:00:02.000Z","device":"\#(device.uuidString)","type":"from_the_future","data":{"x":1}}"#
+        let future =
+            #"{"schemaVersion":1,"id":"E0000000-0000-4000-8000-000000000001","at":"1970-01-01T00:00:02.000Z","device":"\#(device.uuidString)","type":"from_the_future","data":{"x":1}}"#
         try handle.write(contentsOf: Data((future + "\n{\"schemaVer").utf8))
         try handle.close()
 

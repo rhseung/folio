@@ -1,7 +1,8 @@
 import FolioDomain
-@testable import FolioStorage
 import Foundation
 import Testing
+
+@testable import FolioStorage
 
 /// course.json v4 -> v5: roles follow the folders split by origin, and every material gets an empty exam link list.
 struct RoleSplitMigrationTests {
@@ -12,7 +13,9 @@ struct RoleSplitMigrationTests {
     }
 
     @Test func rolesAreRenamedAndFilesStayPut() throws {
-        var raw: JSONValue = .object(["materials": .array([material("pastExam"), material("examPrep"), material("lecture"), material(nil)])])
+        var raw: JSONValue = .object([
+            "materials": .array([material("pastExam"), material("examPrep"), material("lecture"), material(nil)])
+        ])
         try CourseFile.splitRolesByOrigin(&raw)
         guard case .array(let materials)? = raw["materials"] else { Issue.record("no materials"); return }
         #expect(materials.map { $0["role"] } == [.string("inherited"), .string("exam"), .string("lecture"), nil])

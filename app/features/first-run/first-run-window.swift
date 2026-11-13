@@ -24,13 +24,17 @@ private struct MainWindowFrame: ViewModifier {
         // Bounded both ways, so the window's least size is this frame's own: with only a least size the hosting view
         // measured the whole window's content for it on every layout of a resize or a drag (#62).
         content
-            .frame(minWidth: firstRun ? small.width : least.width, maxWidth: firstRun ? small.width : .infinity,
-                   minHeight: firstRun ? small.height : least.height, maxHeight: firstRun ? small.height : .infinity)
-            .background(WindowReader { window in
-                host.window = window
-                titleBar = window.frame.height - window.contentLayoutRect.height
-                fit(window, animate: false)
-            })
+            .frame(
+                minWidth: firstRun ? small.width : least.width, maxWidth: firstRun ? small.width : .infinity,
+                minHeight: firstRun ? small.height : least.height, maxHeight: firstRun ? small.height : .infinity
+            )
+            .background(
+                WindowReader { window in
+                    host.window = window
+                    titleBar = window.frame.height - window.contentLayoutRect.height
+                    fit(window, animate: false)
+                }
+            )
             .onChange(of: firstRun) {
                 guard let window = host.window else { return }
                 fit(window, animate: true)
@@ -50,7 +54,11 @@ private struct MainWindowFrame: ViewModifier {
                 frame = centered(small, in: visible)
             } else {
                 guard window.frame.size == small else { return }
-                frame = before ?? centered(window.frameRect(forContentRect: NSRect(origin: .zero, size: WindowSize.opening(in: visible.size))).size, in: visible)
+                frame =
+                    before
+                    ?? centered(
+                        window.frameRect(forContentRect: NSRect(origin: .zero, size: WindowSize.opening(in: visible.size))).size,
+                        in: visible)
                 before = nil
             }
             window.setFrame(frame, display: true, animate: animate)
@@ -58,8 +66,9 @@ private struct MainWindowFrame: ViewModifier {
     }
 
     private func centered(_ size: CGSize, in visible: NSRect) -> NSRect {
-        NSRect(x: (visible.midX - size.width / 2).rounded(), y: (visible.midY - size.height / 2).rounded(),
-               width: size.width, height: size.height)
+        NSRect(
+            x: (visible.midX - size.width / 2).rounded(), y: (visible.midY - size.height / 2).rounded(),
+            width: size.width, height: size.height)
     }
 }
 #endif
