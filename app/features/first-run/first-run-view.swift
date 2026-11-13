@@ -94,7 +94,7 @@ struct FirstRunView: View {
             VStack(spacing: Theme.Space.m) {
                 if model.trouble == nil { dots }
                 primary.frame(maxWidth: .infinity)
-                if model.step.isOptional, model.trouble == nil {
+                if model.offersLater {
                     Button(.firstRunLater) { model.later() }.buttonStyle(.ghost)
                 }
             }
@@ -136,14 +136,14 @@ struct FirstRunView: View {
     }
 
     private func stepRow(_ step: FirstRunStep) -> some View {
-        let done = model.trouble == nil && step < model.step
+        let done = model.isDone(step)
         let on = step == model.step
         return Button { model.go(to: step) } label: {
             HStack(spacing: Theme.Space.s) {
                 Image(systemName: done ? "checkmark" : step.symbol).frame(width: Theme.Size.tile)
                 Text(step.title).lineLimit(1)
                 Spacer(minLength: Theme.Space.xs)
-                if step.isOptional, !done, model.trouble == nil {
+                if model.marksOptional(step) {
                     Text(.firstRunOptional).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                 }
             }
@@ -178,7 +178,7 @@ struct FirstRunView: View {
             }
             Theme.Palette.lineSoft.frame(height: 1)
             HStack(spacing: Theme.Space.s) {
-                if model.step.isOptional, model.trouble == nil {
+                if model.offersLater {
                     Button(.firstRunLater) { model.later() }.buttonStyle(.ghost)
                 }
                 Spacer()
@@ -192,9 +192,8 @@ struct FirstRunView: View {
     }
 
     private var primary: some View {
-        let title: LocalizedStringResource = model.trouble != nil ? .commonOpen : model.isLast ? .firstRunStart : .firstRunContinue
-        return Button { model.proceed() } label: {
-            Text(title).frame(maxWidth: narrow ? .infinity : nil)
+        Button { model.proceed() } label: {
+            Text(model.primaryTitle).frame(maxWidth: narrow ? .infinity : nil)
         }
         .buttonStyle(.prominent)
         .controlSize(.large)
@@ -262,8 +261,7 @@ struct FirstRunView: View {
         let on = model.start == start
         return VStack(spacing: 0) {
             Button {
-                model.start = start
-                if model.picked == nil || model.pickedProblem != nil { pickingFolder = true }
+                if model.choose(start) { pickingFolder = true }
             } label: {
                 HStack(spacing: Theme.Space.m) {
                     Image(systemName: start == .fresh ? "folder.badge.plus" : "folder")

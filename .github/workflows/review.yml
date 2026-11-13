@@ -26,7 +26,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
         run: |
-          files=$(gh pr diff "$PR" -R "$GITHUB_REPOSITORY" --name-only)
+          # Not `gh pr diff --name-only`: GitHub refuses the diff of a PR touching more than 300 files.
+          files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --jq '.[].filename')
           # Only prose meant for people: docs/, top-level *.md and .github/**/*.md. Other .md files are inputs, such as
           # test fixtures (app-tests/fixtures/all-markdown.md) or the generated skill copy, and get a review.
           if [ -n "$files" ] && ! grep -qvE '^docs/|^[^/]+\.md$|^\.github/.+\.md$' <<< "$files"; then
