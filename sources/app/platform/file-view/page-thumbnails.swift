@@ -7,18 +7,13 @@ import AppKit
 import UIKit
 #endif
 
-/// Small pictures of one PDF's pages, drawn as their rows come into view and kept while the file is open. The page
-/// strip and the split screen both read them, so a page drawn for one is there for the other.
-///
-/// Drawn off the main thread from a second `PDFDocument` of the same file: the one on screen belongs to its `PDFView`
-/// and the main actor, and PDFKit doesn't say one document may be read from two threads at once.
+// 같은 파일의 두 번째 `PDFDocument`로 main thread 밖에서 그린다. 화면의 문서는 `PDFView`와 main actor의 것이고, PDFKit은 한 문서를 두 thread에서 동시에 읽어도
+// 된다고 보장하지 않는다.
 @MainActor
 final class PageThumbnails {
-    /// The box a thumbnail is drawn into, in pixels: at least twice the largest box a row shows (a lecture's,
-    /// `Theme.Size.pageThumbnail`, 152×84), so it stays sharp on a Retina display. Grow it with that box: past half of
-    /// this, the pages come out soft.
+    // Retina 화면에서도 선명하도록, 행이 보이는 가장 큰 상자(렉처의 `Theme.Size.pageThumbnail`, 152x84)의 두 배 이상으로 둔다. 그 상자를 키우면 이 값도 키운다. 이 값의
+    // 절반을 넘으면 쪽이 흐리게 나온다.
     nonisolated static let pixels = CGSize(width: 320, height: 176)
-    /// Pages kept at most. A row costs about 200KB; a textbook of 500 pages kept whole would hold 100MB.
     private static let kept = 160
 
     private let renderer: PageRenderer
@@ -29,10 +24,8 @@ final class PageThumbnails {
         renderer = PageRenderer(url: url)
     }
 
-    /// 1-based, as the strip counts.
     func image(_ page: Int) async -> CGImage? {
         if let image = images[page] { return image }
-        // Asked twice while drawing (a row scrolled away and back), it is drawn once.
         let task = pending[page] ?? Task { [renderer] in await renderer.render(page) }
         pending[page] = task
         let image = await task.value?.image
@@ -41,8 +34,6 @@ final class PageThumbnails {
         return image
     }
 
-    /// Past the limit, the pages furthest from the one just drawn go first: those are the rows least likely to be
-    /// scrolled back to.
     private func keep(_ image: CGImage, for page: Int) {
         images[page] = image
         guard images.count > Self.kept else { return }
@@ -50,8 +41,6 @@ final class PageThumbnails {
     }
 }
 
-/// A drawn page handed from the renderer to the main actor. CGImage is immutable once made, but the SDK doesn't mark
-/// it `Sendable`.
 struct RenderedPage: @unchecked Sendable {
     let image: CGImage
 }

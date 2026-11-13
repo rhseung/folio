@@ -1,28 +1,21 @@
 import FolioDomain
 import SwiftUI
 
-/// A range is picked with ⇧-click on a Mac and a long press then taps on iPad (#147). The iPad also has a button over
-/// the pages that starts picking, since nothing shows that a long press does.
-///
-/// Drawn here rather than with PDFKit's `PDFThumbnailView`, which picks no more than one page on iPad and takes nothing
-/// laid over or beside its pages.
+// PDFKit의 `PDFThumbnailView`가 아니라 여기서 그린다. `PDFThumbnailView`는 iPad에서 한 쪽만 고를 수 있고, 쪽 위나 옆에 아무것도 놓을 수 없다. 길게 누르기가 된다는 것이
+// 화면에 보이지 않으므로, iPad에는 고르기를 시작하는 버튼도 쪽 위에 둔다.
 struct PageStrip: View {
     let controller: PDFController
     @State private var model: PageStripModel
     @Environment(\.accent) private var accent
 
-    /// Kept from the first view made: a later one, made as the screen redraws, is dropped.
     init(controller: PDFController, model: PageStripModel) {
         self.controller = controller
         _model = State(initialValue: model)
     }
 
     static let column: CGFloat = 128
-    /// A lecture file's column: its sections' tint reaches the column's margins and holds the pages `Space.s` in on
-    /// each side, the current page's wash just filling it.
     static let lectureColumn = Theme.Size.pageThumbnail.width + Theme.Space.s * 4
 
-    /// The box a page is fitted into: a lecture's, or what a plain column holds inside its margins.
     static func box(lecture: Bool) -> CGSize {
         lecture ? Theme.Size.pageThumbnail : CGSize(width: column - Theme.Space.s * 2, height: Theme.Size.pageThumbnail.height)
     }
@@ -47,7 +40,7 @@ struct PageStrip: View {
                 .onChange(of: controller.page, initial: true) { _, page in proxy.scrollTo(model.itemID(showing: page + 1)) }
                 .task(id: model.draftItemID) {
                     guard let id = model.draftItemID else { return }
-                    // After the row has moved: scrolled to at once, the column still had it at the range's other end.
+                    // 행이 움직인 뒤에 스크롤한다. 바로 스크롤하면 열이 그 행을 아직 범위의 반대쪽 끝에 두고 있었다.
                     try? await Task.sleep(for: .seconds(0.25))
                     withAnimation(Theme.Motion.quick) { proxy.scrollTo(id) }
                 }
@@ -89,8 +82,6 @@ struct PageStrip: View {
     }
 
     #if DEBUG && os(macOS)
-    /// After the row above the range is laid out, and by way of the page after it: scrolled to at once, the row pushed
-    /// the page below the strip's bottom edge, and scrolled to from above, it sat under the bottom's fade.
     private func go(to page: Int) {
         Task {
             try? await Task.sleep(for: .seconds(0.4))

@@ -3,17 +3,13 @@ import FolioStorage
 import PDFKit
 import SwiftUI
 
-/// A `.tex`, code or text file of the course, edited in place. A `.tex` is shown as a markdown note is: its source, its
-/// PDF (built with ⌘B) beside it, or the PDF alone, by the same switch.
 struct TextFileView: View {
     @State private var model: TextFileModel
     @State private var panes = NotePanes()
     @State private var wide = false
-    /// A page a link asked for, 0-based, in the built PDF; taken once the PDF has it.
+    // 0부터 센 쪽이다.
     @Binding private var requestedPage: Int?
-    /// The built PDF's page, for the window's link to this `.tex`, as `FileView` reports a PDF's.
     @Binding private var shownPage: Int?
-    /// A note's kind and links, for the same menu the markdown editor has.
     @State private var links: NoteEditorModel?
     @State private var controller: PDFController?
     @State private var renaming = false
@@ -41,7 +37,7 @@ struct TextFileView: View {
     var body: some View {
         VStack(spacing: 0) {
             bar
-            // One row whose columns come and go, so switching keeps the editor's caret and the PDF's page.
+            // 열만 나타났다 사라지는 행 하나로 두어야 보기를 바꿀 때 편집기의 캐럿과 PDF의 쪽이 유지된다.
             HStack(spacing: 0) {
                 if !model.isTex || shown != .read { source }
                 if model.isTex && shown == .split { Theme.Palette.lineSoft.frame(width: 1) }
@@ -55,7 +51,7 @@ struct TextFileView: View {
             wide = $0
         }
         .background(Theme.Palette.card)
-        // A `.tex` note renames from its name as a markdown note does; saved first, since the file is about to move.
+        // 파일을 곧 옮기므로 먼저 저장한다.
         .crumb(
             model.name, level: 2, symbol: model.isTex ? "doc.text" : "chevron.left.forwardslash.chevron.right",
             rename: links.map { _ in
@@ -79,7 +75,6 @@ struct TextFileView: View {
             showPDF()
             controller.go(to: page)
         }
-        // Saved a moment after typing stops, and whenever the file goes away, as notes are.
         .task(id: model.text) {
             guard model.dirty else { return }
             try? await Task.sleep(for: .seconds(1))
@@ -98,7 +93,6 @@ struct TextFileView: View {
         #if os(macOS)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in model.saveIfDirty() }
         #endif
-        // Edits save on their own; ⌘S is kept only for the habit, with no button of its own.
         .background {
             Button("") { model.saveNow(force: false) }.keyboardShortcut("s").opacity(0).allowsHitTesting(false).accessibilityHidden(true)
         }
@@ -133,10 +127,9 @@ struct TextFileView: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// The built PDF, or, before the first build, the build's state where the PDF will be.
     @ViewBuilder var pdf: some View {
         if let controller {
-            // `PDFKitView` keeps the view it was made with, so each build's controller needs a view of its own.
+            // `PDFKitView`는 처음 받은 뷰를 계속 쓰므로, 빌드마다 controller에 뷰를 따로 준다.
             PDFKitView(controller: controller).id(ObjectIdentifier(controller)).frame(maxWidth: .infinity)
                 #if os(macOS)
             .help(Text(.textFilePdfHelp))
@@ -150,7 +143,6 @@ struct TextFileView: View {
                 #if os(macOS)
                 Text(model.errors.isEmpty ? .textFileNoPdfBuild : .textFileNoPdfErrors)
                 #else
-                // An iPad without a keyboard has no ⌘B; the button below builds.
                 Text(model.errors.isEmpty ? .textFileNoPdfBuildPad : .textFileNoPdfErrors)
                 #endif
             } actions: {
@@ -164,7 +156,6 @@ struct TextFileView: View {
 
     var shown: NotePanes.Mode { panes.shown(wide: wide) }
 
-    /// A link to a page of this `.tex` is a page of its PDF, so the PDF comes into view if the source alone was.
     func showPDF() {
         if shown == .write { panes.choose(wide ? .split : .read) }
     }
@@ -209,7 +200,6 @@ struct TextFileView: View {
         return build
     }
 
-    /// Errors first; a click on one in this file puts the caret on its line.
     var issueList: some View {
         VStack(spacing: 0) {
             Theme.Palette.lineSoft.frame(height: 1)
@@ -241,14 +231,13 @@ struct TextFileView: View {
         }
     }
 
-    /// Reopened after each build at the page that was showing, so checking a fix doesn't start over at page one.
     func openPDF() {
         guard model.isTex, let url = model.pdfURL, let document = PDFDocument(url: url) else {
             controller = nil
             return
         }
         let requested = takeRequestedPage()
-        // After `rememberingPanes` has put back the remembered view, which runs on appear, before this task.
+        // `rememberingPanes`가 기억한 보기를 되돌린 뒤에 해야 한다. 그 작업은 appear에서 이 task보다 먼저 돈다.
         if requested != nil { showPDF() }
         controller = PDFController(document: document, page: requested ?? controller?.page ?? 0)
         #if os(macOS)

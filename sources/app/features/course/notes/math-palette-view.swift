@@ -2,11 +2,8 @@ import FolioDomain
 import FolioMarkdown
 import SwiftUI
 
-/// The popover of the note bar's f(x): the note's math syntax on top, as the button's menu had it, then, while the
-/// note is being written, every symbol of that syntax to put at the caret by touch or click (#392).
 struct MathPalette: View {
     @Bindable var model: MathPaletteModel
-    /// The read view has no caret, so it keeps only the syntax.
     let writing: Bool
 
     static let width: CGFloat = 400
@@ -25,7 +22,6 @@ struct MathPalette: View {
                 Theme.Palette.line.frame(height: 1)
                 VStack(alignment: .leading, spacing: Theme.Space.s) {
                     SearchField(prompt: String(localized: .notesMathSearch), text: $model.search)
-                    // A search looks through every category, so the tabs step aside while there is one.
                     if !model.searching { tabs }
                 }
                 .padding([.horizontal, .top], Theme.Space.m)
@@ -36,7 +32,7 @@ struct MathPalette: View {
         .font(Theme.Typeface.body)
     }
 
-    // Eight categories are more than `Segmented` holds (2–4).
+    // 분류가 여덟 개라서 `Segmented`(2-4개)에 들어가지 않는다.
     var tabs: some View {
         ChipTabs(
             selection: Binding {
@@ -69,7 +65,6 @@ struct MathPalette: View {
     }
 }
 
-/// A symbol as it looks, over the text that writes it.
 struct MathPaletteCell: View {
     let item: CompletionItem
     let pick: () -> Void
@@ -78,9 +73,7 @@ struct MathPaletteCell: View {
 
     static let minWidth: CGFloat = 80
     static let height: CGFloat = 64
-    /// A fraction's ink at the note's size (30pt) fits without shrinking; the caption still fits the cell's height.
     static let glyphHeight: CGFloat = 32
-    /// A symbol's ink fits the glyph's height; its transparent edge may run into the cell's padding.
     static let glyphSlot = CGSize(width: minWidth - 2 * Theme.Space.s, height: glyphHeight + 2 * NoteMath.edge(NoteLook.body))
 
     var body: some View {
@@ -99,7 +92,6 @@ struct MathPaletteCell: View {
         }
         .buttonStyle(.pointing(.plain))
         .onHover { hovering = $0 }
-        // A snippet's trigger is not what it writes; the tooltip says that.
         .help(item.detail ?? item.title)
         .accessibilityLabel(item.title)
     }
@@ -115,7 +107,6 @@ struct MathPaletteCell: View {
                 .resizable()
                 .frame(width: fitted.width, height: fitted.height)
         } else {
-            // Spacing and `\left` draw nothing of their own, and a symbol not drawn yet shows this until it is.
             Image(systemName: "square.dashed").font(Theme.Glyph.regular).foregroundStyle(Theme.Palette.textTertiary)
         }
     }

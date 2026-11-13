@@ -2,8 +2,6 @@ import FolioDomain
 import FolioMarkdown
 import SwiftUI
 
-/// 입력 안내 (#395): the edit view's typing help on one sheet, by situation, each row what to type and what it gives.
-/// Opened from 도움말 › 입력 안내 (⌘/), the `/` menu and the note bar.
 struct InputGuideSheet: View {
     @State private var model: InputGuideModel
     @Environment(\.dismiss) private var dismiss
@@ -63,7 +61,6 @@ struct InputGuideSheet: View {
     }
 }
 
-/// One thing the editor does: its name and a short note, then the keys and what they give, `[[` → 대상 목록.
 struct InputGuideRow: View {
     let entry: InputGuide.Entry
 
@@ -106,11 +103,9 @@ struct InputGuideRow: View {
 }
 
 extension EnvironmentValues {
-    /// Opens the input guide for a note of this math syntax; nil takes the syntax new notes get.
     @Entry var showInputGuide: @MainActor (MathSyntax?) -> Void = { _ in }
 }
 
 extension FocusedValues {
-    /// The window's way to open the input guide, for 도움말 › 입력 안내 when no note is being written.
     @Entry var showInputGuide: (@MainActor (MathSyntax?) -> Void)?
 }

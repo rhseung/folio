@@ -1,16 +1,12 @@
 import SwiftUI
 
-/// A page of the column, pressed as both columns take it: a press goes to the page; ⇧-press on a Mac, or a tap while
-/// a range is up on a touch screen, which has no ⇧ to hold, moves a range's end; a long press starts one.
 struct StripPage: View {
     let controller: PDFController
     let page: Int
     let picked: Bool
     let box: CGSize
-    /// A range is up: on a touch screen the next tap moves its end.
     let ranging: Bool
     let press: (_ page: Int, _ extend: Bool) -> Void
-    /// Nil where the long press opens the page's menu instead, which then holds the way in.
     let start: ((_ page: Int) -> Void)?
 
     var body: some View {
@@ -36,7 +32,7 @@ struct StripPage: View {
 }
 
 #if os(iOS)
-/// None at all where there's a menu: an empty long press would still race the menu's own.
+// 메뉴가 있는 곳에서는 아무것도 붙이지 않는다. 빈 길게 누르기도 메뉴의 길게 누르기와 경쟁하기 때문이다.
 private struct LongPressStart: ViewModifier {
     let start: (() -> Void)?
 

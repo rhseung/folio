@@ -4,21 +4,17 @@ import FolioStorage
 import Foundation
 import Observation
 
-/// Edits go to a local copy and are saved to settings.json once typing pauses.
 @MainActor @Observable
 final class SettingsModel {
     let workspace: Workspace
     var settings = FolioDomain.Settings()
-    /// Until the copy is filled from the workspace, saving would write defaults over the real file.
+    // 사본을 workspace에서 채우기 전에 저장하면 기본값이 실제 파일을 덮어쓴다.
     private var loaded = false
 
     var apiKey = ""
-    /// The saved key's last characters, so the row can say which key is saved without showing it.
     var keyHint = SettingsModel.hint(of: APIKeyStore.read())
     var replacingKey = false
     var usage: [MonthlyUsage] = []
-    /// The tab the window's link names. Starts at the one last chosen for a link that names none, though a window
-    /// never holds one: `Workspace.entry(for:)` fills it in.
     private(set) var tab: SettingsTab
 
     init(workspace: Workspace, tab: SettingsTab = .general) {
@@ -36,7 +32,7 @@ final class SettingsModel {
         loaded = true
     }
 
-    /// Another device's save arrived: start from it, or the next save would undo it.
+    // 다른 기기의 저장이 오면 그 값에서 다시 시작한다. 그러지 않으면 다음 저장이 그 변경을 되돌린다.
     func reloaded(_ new: FolioDomain.Settings) { settings = new }
 
     func saveAfterPause() async {
@@ -50,7 +46,7 @@ final class SettingsModel {
         if loaded, settings != workspace.settings { workspace.saveSettings(settings) }
     }
 
-    /// From the Info.plist, not FolioVersion: only the build knows its build number (the commit count).
+    // 빌드 번호(커밋 수)는 빌드만 알므로 FolioVersion이 아니라 Info.plist에서 읽는다.
     var version: String {
         let info = Bundle.main.infoDictionary ?? [:]
         return String(
@@ -64,8 +60,6 @@ final class SettingsModel {
 
     // MARK: Class start
 
-    /// What a class starts, as the chips show it. A chip turned off keeps its item's way (확인 후 시작, 열지 않음)
-    /// for when it comes back on.
     var classStartItems: Set<ClassStartSettings.Item> {
         get { Set(ClassStartSettings.Item.allCases.filter { isOn($0) }) }
         set { for item in ClassStartSettings.Item.allCases { setOn(newValue.contains(item), item) } }
@@ -99,13 +93,11 @@ final class SettingsModel {
     var startsSomething: Bool { !classStartItems.isEmpty }
     var opensPages: Bool { isOn(.roughNote) || isOn(.lecture) }
 
-    /// The class the recording span's real times are for: the one under way, or else the next.
     var referenceClass: StartingClass? {
         let courses = workspace.currentCourses.map { ClassStart.Course(file: $0.file, term: workspace.semester(of: $0.file.course)) }
         return ClassStart.next(courses, settings: settings, now: workspace.liveNow, calendar: workspace.calendar)
     }
 
-    /// `9:55 – 11:20`, or `9:55 – 직접 정지`: what the minutes before and after come to for a real class.
     var recordingSpanTimes: String? {
         guard let c = referenceClass else { return nil }
         let start = ClassStart.recordingStart(c, settings: settings.classStart)
@@ -132,7 +124,6 @@ final class SettingsModel {
         settings.classStart.setOff(off, for: course)
     }
 
-    /// 기본 설정, 전체 제외, or the items off: 녹음 · 렉처 제외.
     func exceptionLabel(_ course: UUID) -> String {
         let off = ClassStartSettings.Item.allCases.filter(settings.classStart.off(for: course).contains)
         if off.isEmpty { return String(localized: .settingsClassStartFollows) }
@@ -142,7 +133,6 @@ final class SettingsModel {
 
     // MARK: Pane layouts
 
-    /// The layouts a class's start can open its pages in: those with its lecture or note.
     var classStartPresets: [PanePreset] { settings.presets.filter(\.opensClass) }
 
     var classStartPreset: String {
@@ -150,7 +140,6 @@ final class SettingsModel {
         set { settings.classStart.preset = newValue == PanePreset.inClass.id ? nil : newValue }
     }
 
-    /// `노트 · 05_Matchings.pdf`: what each pane holds, a role by its kind and an address by what it opens.
     func summary(of preset: PanePreset) -> String {
         preset.slots.map { slot in
             switch slot {
@@ -176,7 +165,6 @@ final class SettingsModel {
         settings.panePresets.swapAt(i, i + offset)
     }
 
-    /// A class whose start opened the deleted layout goes back to "수업 중".
     func delete(_ id: String) {
         settings.panePresets.removeAll { $0.id == id }
         if settings.classStart.preset == id { settings.classStart.preset = nil }
@@ -184,7 +172,6 @@ final class SettingsModel {
 
     // MARK: Review
 
-    /// `11/10 → 11/11 · 11/14 · 11/21`: the days a unit studied today comes back.
     var reviewDays: String {
         let today = workspace.today
         let days = settings.review.reviewDays(after: today).map(Self.monthDay).joined(separator: " · ")
@@ -220,7 +207,7 @@ final class SettingsModel {
         refreshArchives()
     }
 
-    /// A backup inside the GIST folder would be backed up into itself and synced to every device.
+    // GIST 폴더 안의 백업은 자기 자신 안에 백업되고 모든 기기로 동기화된다.
     func pickBackupFolder(_ url: URL) {
         if let gist = workspace.gist, (url.standardizedFileURL.path + "/").hasPrefix(gist.url.standardizedFileURL.path + "/") {
             workspace.error = String(localized: .settingsBackupInsideGist)
@@ -238,7 +225,6 @@ final class SettingsModel {
 
     var keySaved: Bool { keyHint != nil }
 
-    /// Where Claude Code was found; nothing to say for the API key, whose row says it.
     #if os(macOS)
     func connectionDetail(subscription: Bool) -> String? {
         guard subscription else { return nil }
@@ -248,7 +234,6 @@ final class SettingsModel {
     func connectionWarns(subscription: Bool) -> Bool { subscription && CLIProvider.find() == nil }
     #endif
 
-    /// Only where the key is what Claude goes through: on Mac with Claude Code it isn't needed.
     func keyMissing(subscription: Bool) -> Bool {
         #if os(macOS)
         !keySaved && !subscription
@@ -271,7 +256,6 @@ final class SettingsModel {
         }
     }
 
-    /// `sk-ant-…7Qx2`: the prefix every key shares and the key's last four.
     static func hint(of key: String?) -> String? {
         guard let key, !key.isEmpty else { return nil }
         return "sk-ant-…" + key.suffix(4)
@@ -327,13 +311,12 @@ extension SettingsTab {
         }
     }
 
-    /// Tabs were stored by their Korean names before #416; a tab picked then still opens, or the one that took it over.
+    // 예전에는 탭을 한국어 이름으로 저장했으므로, 그때 고른 탭도 그 탭이나 그것을 넘겨받은 탭으로 연다.
     static let formerNames: [String: SettingsTab] = [  // strings: data, read back from settings
         "내 정보": .record, "평어": .record, "녹음": .classes, "일반": .general, "알림": .notifications, "백업": .backup,
         "노트": .notes, "Claude": .claude, "앱 정보": .about,
     ]
 
-    /// What a link without a tab (the sidebar, ⌘,) opens: the tab last picked.
     static var remembered: SettingsTab {
         guard let stored = UserDefaults.standard.string(forKey: storageKey) else { return .general }
         return SettingsTab(rawValue: stored) ?? formerNames[stored] ?? .general

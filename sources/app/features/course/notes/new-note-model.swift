@@ -3,7 +3,6 @@ import FolioDomain
 import Foundation
 import Observation
 
-/// The properties of a new note, asked for before the file exists, since neither format keeps them in the file.
 @MainActor @Observable
 final class NewNoteModel {
     let workspace: Workspace
@@ -13,8 +12,8 @@ final class NewNoteModel {
     var kind: NoteKind {
         didSet {
             guard kind != oldValue else { return }
-            // The picker shows nothing for a session it no longer lists, so keeping the id would link a session that
-            // already has this kind's note, taking it from that note.
+            // 선택기는 더는 나열하지 않는 회차에는 아무것도 보이지 않는다. 이 ID를 두면 이미 이 종류의 노트가 있는
+            // 회차를 연결해 그 노트에서 연결을 빼앗는다.
             if let sessionId, !sessionOptions.contains(where: { $0.id == sessionId }) { self.sessionId = nil }
             suggestTitle()
         }
@@ -24,7 +23,6 @@ final class NewNoteModel {
     }
     var examId: UUID?
     var unitIds: [UUID] = []
-    /// The title last filled in from the session, replaced while the user hasn't typed their own.
     private var suggested = ""
 
     init(workspace: Workspace, course: LoadedCourse, kind: NoteKind) {
@@ -51,7 +49,6 @@ final class NewNoteModel {
     var kindOptions: [(NoteKind, String)] { NoteKind.allCases.map { ($0, $0.label) } }
     var formatOptions: [(NoteFormat, String)] { NoteFormat.allCases.map { ($0, $0.label) } }
 
-    /// Sessions that don't have this kind's note yet, newest first; `note add` refuses the others.
     var sessionOptions: [PickOption<UUID?>] {
         let sessions = course.file.sessions.filter { [kind] in !$0.isCancelled && $0.note(of: kind) == nil }.sorted { $0.date > $1.date }
         return [PickOption(id: nil, title: String(localized: .commonNone))]
@@ -68,7 +65,6 @@ final class NewNoteModel {
     }
     func unitSubtree(_ id: UUID) -> Set<UUID> { UnitTree.subtree(of: id, in: course.file.units) }
 
-    /// A session's note is named the way `session note` names it, until the user types a title of their own.
     private func suggestTitle() {
         guard title == suggested else { return }
         let session = link == .session ? course.file.sessions.first { $0.id == sessionId } : nil

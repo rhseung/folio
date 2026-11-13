@@ -17,9 +17,7 @@ struct SearchPalette: View {
         self.choose = choose
     }
 
-    /// Results sit this far in from the card's edge; the field and the kinds line up with the rows inside it.
     static let inset = Theme.Space.s
-    /// The icon column: the magnifier and every result's tile.
     static let icon = Theme.Size.tile
     static let radius: CGFloat = Theme.Radius.floating + inset
 
@@ -28,7 +26,6 @@ struct SearchPalette: View {
         let flat = groups.flatMap(\.hits)
         VStack(spacing: 0) {
             HStack(spacing: Theme.Space.m) {
-                // In the results' icon column, so the query starts where the result titles do.
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 18, weight: .medium))  // design: one-off, sized to the palette field
                     .foregroundStyle(Theme.Palette.textTertiary)
@@ -63,7 +60,6 @@ struct SearchPalette: View {
             }
             .padding(.horizontal, Self.inset + Theme.Space.s)
             .padding(.vertical, Theme.Space.l + Theme.Space.xs)
-            // Untyped, the palette is the field alone, like Spotlight; the kinds come with something to narrow.
             if model.typed {
                 Theme.Palette.lineSoft.frame(height: 1)
                 kinds
@@ -92,22 +88,18 @@ struct SearchPalette: View {
                         }
                     }
                     .overflowFade(.vertical)
-                    // A ScrollView takes all the height it is offered; size it to its results so a short list stays short.
+                    // ScrollView는 받은 높이를 모두 차지하므로, 짧은 목록이 짧게 남도록 결과 높이에 맞춘다.
                     .frame(height: min(resultsHeight, 440))
                     .onChange(of: model.selected) { _, new in proxy.scrollTo(new) }
                 }
                 if !flat.isEmpty { footer }
             }
         }
-        // At most: on an iPhone or a narrow iPad window, the screen less its margins.
         .frame(maxWidth: 680)
-        // Opaque: the page behind must not read through the results. Rounder than other floating cards, and
-        // concentric with the selected row inside it (radius minus the results' inset).
         .background(Theme.Palette.card, in: .rect(cornerRadius: Self.radius))
         .glassEffect(.regular, in: .rect(cornerRadius: Self.radius))
         .shadow(color: .black.opacity(0.25), radius: 32, y: 16)
         .onChange(of: model.query) { model.refresh() }
-        // A click on a filter takes focus from the field, and with it the arrow keys and return.
         .onChange(of: model.kind) {
             model.refresh(); focused = true
         }
@@ -123,7 +115,6 @@ struct SearchPalette: View {
         }
     }
 
-    /// Loose chips, not `Segmented`: a gray track inside the floating card read as a second, heavier field.
     var kinds: some View {
         HStack(spacing: Theme.Space.xs) {
             ForEach([nil] + SearchKind.allCases.map(Optional.some), id: \.self) { (k: SearchKind?) in
@@ -223,8 +214,6 @@ struct SearchPalette: View {
         .contextMenu { menu(hit) }
     }
 
-    /// The result's own item menu, as anywhere else it shows (#403). A card, read from its unit's quiz file, opens and
-    /// shares. Whatever the menu opens, the palette steps aside for it.
     @ViewBuilder func menu(_ hit: SearchHit) -> some View {
         let item = hit.item
         Group {
@@ -266,7 +255,6 @@ struct SearchPalette: View {
                 }))
     }
 
-    /// The query's words picked out in `match`, so a long snippet shows at once why it was found.
     func marked(_ text: String, color: Color, match: Color) -> AttributedString {
         var result = AttributedString(text)
         result.foregroundColor = color

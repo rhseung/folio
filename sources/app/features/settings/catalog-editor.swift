@@ -7,8 +7,6 @@ struct CatalogEditor: View {
     var body: some View {
         let device = workspace.device
         CatalogEditing { $catalog in
-            // The flags under the rest of the row where the row doesn't fit, beside a course column at 720 and on an
-            // iPhone; one table for both, so the header and the rows always fold together.
             ViewThatFits(in: .horizontal) {
                 table($catalog.letterGrades, device: device, wide: true)
                 table($catalog.letterGrades, device: device, wide: false)
@@ -62,12 +60,11 @@ struct CatalogEditor: View {
     static let pointsWidth: CGFloat = 64
     static let flagsWidth: CGFloat = 156
 
-    /// In the order of `GradingMode.allCases`, so a file that lists the same modes in another order still matches its option.
+    // 같은 방식을 다른 순서로 적은 파일도 그 선택지와 맞도록 `GradingMode.allCases`의 순서로 바꾼다.
     static func canonical(_ modes: [GradingMode]?) -> [GradingMode]? {
         modes.map { m in GradingMode.allCases.filter(m.contains) }
     }
 
-    /// The fixed choices, plus the stored set when it is none of them, so the menu never shows an empty label.
     static func modeOptions(_ modes: [GradingMode]?) -> [([GradingMode]?, String)] {
         let fixed: [([GradingMode]?, String)] = [
             (nil, String(localized: .letterGradesModeAuto)), ([.relative, .absolute], String(localized: .letterGradesModeGraded)),
@@ -83,7 +80,7 @@ struct CatalogEditor: View {
     }
 }
 
-/// A copy of catalog.json saved once typing pauses; keys this app version doesn't know stay in the file.
+// 이 앱 버전이 모르는 키도 파일에 남는다.
 struct CatalogEditing<Content: View>: View {
     @Environment(Workspace.self) private var workspace
     @State private var catalog = Catalog()
@@ -96,7 +93,7 @@ struct CatalogEditing<Content: View>: View {
                 catalog = workspace.catalog
                 loaded = true
             }
-            // Another page or the settings window saved: start from that, or the next save would undo it.
+            // 다른 페이지나 설정 창이 저장하면 그 값에서 다시 시작한다. 그러지 않으면 다음 저장이 그 변경을 되돌린다.
             .onChange(of: workspace.catalog) { _, new in catalog = new }
             .task(id: catalog) {
                 guard loaded else { return }
@@ -104,7 +101,7 @@ struct CatalogEditing<Content: View>: View {
                 guard !Task.isCancelled, catalog != workspace.catalog else { return }
                 workspace.saveCatalog(catalog)
             }
-            // Closing right after a change cancels the wait above; save what was left.
+            // 변경 직후에 닫으면 위의 대기가 취소되므로 남은 것을 저장한다.
             .onDisappear { if loaded, catalog != workspace.catalog { workspace.saveCatalog(catalog) } }
     }
 }

@@ -12,7 +12,6 @@ final class SearchModel {
     struct KindGroup {
         let kind: SearchKind
         let hits: [SearchHit]
-        /// Hits of this kind beyond the ones shown.
         let more: Int
     }
 
@@ -27,15 +26,13 @@ final class SearchModel {
     var hits: [SearchHit] = []
     var selected = 0
     @ObservationIgnored private var searching: Task<Void, Never>?
-    /// Progress hops arrive as separate main-actor tasks and may land after the refresh returned; past that they're stale.
+    // 진행 알림은 따로따로 main actor task로 와서 refresh가 끝난 뒤에 닿을 수 있다. 그 뒤에 온 것은 낡은 값이다.
     @ObservationIgnored private var caughtUp = false
 
     init(workspace: Workspace) { self.workspace = workspace }
 
     var typed: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }
 
-    /// Kinds in the order their best hit ranks, each capped so one kind can't push the rest out of view;
-    /// with one kind chosen, all of it.
     var groups: [KindGroup] {
         var order: [SearchKind] = []
         var byKind: [SearchKind: [SearchHit]] = [:]
@@ -50,7 +47,6 @@ final class SearchModel {
         }
     }
 
-    /// The rows in the order the arrow keys walk them.
     var flat: [SearchHit] { groups.flatMap(\.hits) }
 
     var emptyMessage: String {
@@ -72,13 +68,11 @@ final class SearchModel {
         selected = min(max(selected + delta, 0), max(flat.count - 1, 0))
     }
 
-    /// What is already indexed answers at once; changed courses are read again behind it, then the results follow.
     func start() async {
         guard let gist = workspace.gist, let store = try? SearchStore.local(for: gist) else { return }
         index = store
         refresh()
 
-        // Each course read shows up in the results as it lands, not only at the end.
         await Task.detached {
             _ = try? store.refresh(gist) { done, total in
                 Task { @MainActor in
@@ -94,8 +88,8 @@ final class SearchModel {
         refresh(keepSelection: true)
     }
 
-    /// Searched once per change of the query or a filter, not per redraw: every keystroke and arrow press redraws.
-    /// Off the main actor, since a word shorter than three letters scans every PDF's text.
+    // 모든 키 입력과 화살표가 다시 그리므로, 다시 그릴 때마다가 아니라 검색어나 필터가 바뀔 때 한 번 찾는다. 세
+    // 글자보다 짧은 낱말은 모든 PDF의 글을 훑으므로 main actor 밖에서 찾는다.
     func refresh(keepSelection: Bool = false) {
         if !keepSelection { selected = 0 }
         guard let index else { return }
@@ -114,16 +108,13 @@ final class SearchModel {
         }
     }
 
-    /// The query's words, for picking them out in titles and snippets.
     var words: [String] {
         query.precomposedStringWithCanonicalMapping.split(whereSeparator: \.isWhitespace).map(String.init)
     }
 
-    /// A note's snippet without its markdown: `**bold**`, `[[link]]` and `![](assets/…)` read as noise in one line.
     static func plain(_ snippet: String) -> String {
         snippet
             .replacingOccurrences(of: #"!?\[([^\]]*)\]\([^)]*\)"#, with: "$1", options: .regularExpression)
-            // The tail of a link the snippet cut into: `…0](assets/x.png)`.
             .replacingOccurrences(of: #"\]\([^)\s]*\)"#, with: "", options: .regularExpression)
             .replacingOccurrences(of: #"\[\[([^\]|]*?)\\?(\|[^\]]*)?\]\]"#, with: "$1", options: .regularExpression)
             .replacingOccurrences(of: #"(^|\s)#{1,6}\s"#, with: "$1", options: .regularExpression)
@@ -138,7 +129,6 @@ extension SearchKind {
         case .material: String(localized: .searchKindMaterial)
         case .assignment: String(localized: .searchKindAssignment)
         case .exam: String(localized: .searchKindExam)
-        // Recitations and labs are sessions too; the course pages call them all 회차.
         case .session: String(localized: .searchKindSession)
         case .unit: String(localized: .searchKindUnit)
         case .quiz: String(localized: .searchKindQuiz)

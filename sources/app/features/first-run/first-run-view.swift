@@ -1,8 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// The first run in place of the window's pages (#453, 시안 "Folio 시안" › 첫 실행). The steps in a list beside a paper
-/// panel, as the window's sidebar and pages; one column with dots where that list leaves the panel too narrow.
 struct FirstRunView: View {
     @State private var model: FirstRunModel
     @State private var pickingFolder = false
@@ -46,7 +44,6 @@ struct FirstRunView: View {
 
     // MARK: Frames
 
-    /// The window's own frame: the step list on the window's material, the step on a paper panel.
     private var framed: some View {
         HStack(spacing: 0) {
             sidebar.frame(width: Theme.Size.sidebar)
@@ -60,7 +57,6 @@ struct FirstRunView: View {
                 #endif
         }
         #if os(macOS)
-        // As the window's shell: the hidden title bar's area belongs to the step list, its buttons at the row's middle.
         .ignoresSafeArea(.container, edges: .top)
         .background { TrafficLights(center: TitleRowEdges.lights) { _ in } }
         .background(Theme.Palette.frameTint.ignoresSafeArea())
@@ -70,7 +66,6 @@ struct FirstRunView: View {
         #endif
     }
 
-    /// One column at an iPhone's width: back at the top, the step's dots and its buttons at the bottom.
     private var column: some View {
         VStack(spacing: 0) {
             HStack {
@@ -268,7 +263,6 @@ struct FirstRunView: View {
         }
     }
 
-    /// A start to choose, which opens the folder picker. The chosen one shows the folder picked and what it holds.
     private func option(_ start: FolderStart, detail: LocalizedStringResource) -> some View {
         let on = model.start == start
         return VStack(spacing: 0) {
@@ -424,7 +418,6 @@ struct FirstRunView: View {
         }
     }
 
-    /// The remembered folder, or the one just picked, can't be opened yet: where it is, and the two ways on.
     private func reconnect(_ trouble: FolderTrouble) -> some View {
         VStack(alignment: .leading, spacing: Theme.Space.xl) {
             switch trouble {

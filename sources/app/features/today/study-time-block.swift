@@ -17,7 +17,6 @@ struct StudyTimeBlock: View {
                 EmptyCard(symbol: "clock", title: String(localized: .todayStudyEmpty))
             } else {
                 Card(padding: Theme.Space.xl) {
-                    // The chart beside the totals while it keeps a bar's width per day, else under them.
                     Fold(wideFrom: 480, spacing: Theme.Space.xxl, stackSpacing: Theme.Space.xl) {
                         totals(chart).frame(width: 200, alignment: .leading)
                         Chart {
@@ -34,7 +33,7 @@ struct StudyTimeBlock: View {
                             if let hovered, let tip = model.tooltip(hovered, in: chart) {
                                 RuleMark(x: .value(String(localized: .todayStudyAxisDay), hovered))
                                     .foregroundStyle(Theme.Palette.line.opacity(0))
-                                    // Kept inside the plot: above it, the card's own border is drawn over the tooltip.
+                                    // 도표 위에 두면 카드 테두리가 도움말 위에 그려지므로 도표 안에 둔다.
                                     .annotation(position: .top, overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
                                         tooltip(day: tip.day, total: tip.total, segments: tip.segments)
                                     }
@@ -66,7 +65,6 @@ struct StudyTimeBlock: View {
                                 }
                             }
                         }
-                        // The courses are named in the totals beside the chart, with their colors.
                         .chartLegend(.hidden)
                         .font(Theme.Typeface.caption)
                         .frame(height: 200)
@@ -74,7 +72,7 @@ struct StudyTimeBlock: View {
                 }
             }
         }
-        // The day too: after the day boundary the bars must shift by a day even when nothing new was logged.
+        // 하루 경계가 지나면 새 기록이 없어도 막대가 하루 옮겨 가야 하므로 날짜도 키에 넣는다.
         .task(id: "\(StudyTracker.shared.revision) \(chart.today)") { await model.load() }
     }
 
@@ -89,8 +87,6 @@ struct StudyTimeBlock: View {
                     String(localized: .todayStudyDays), String(localized: .todayStudyDayCount(chart.perDay.values.filter { $0 > 0 }.count)),
                     font: Theme.Typeface.figureSmall)
             }
-            // A grid, so the time column is as wide as its longest entry ("1시간 35분") on every row: each row's own
-            // width would give the bars tracks of different lengths, and a wrapped time read as two entries (#402).
             Grid(alignment: .leading, horizontalSpacing: Theme.Space.s, verticalSpacing: Theme.Space.s) {
                 ForEach(courses, id: \.course.id) { entry in
                     GridRow {

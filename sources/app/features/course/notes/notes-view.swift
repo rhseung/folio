@@ -39,7 +39,6 @@ struct NoteList: View {
                     .padding(Theme.Inset.listRow)
             }
             ForEach(parts) { part in
-                // One kind chosen in the filter is one section; its heading would only repeat the filter.
                 if parts.count > 1 {
                     Caption(String(localized: .notesSection(part.title, part.rows.count)))
                         .padding(.horizontal, Theme.Space.s).padding(.top, Theme.Space.m).padding(.bottom, Theme.Space.xxs)
@@ -47,7 +46,6 @@ struct NoteList: View {
                 ForEach(part.rows) { row($0) }
             }
         }
-        // The filter's kind is the likely one: a + under 단원 노트 makes a unit note.
         .sheet(isPresented: $model.adding) {
             NewNoteSheet(workspace: model.workspace, course: model.course, kind: model.filter ?? .free) { id in
                 model.reload()
@@ -55,7 +53,6 @@ struct NoteList: View {
             }
         }
         .confirming($model.pending)
-        // Notes made elsewhere (the Claude panel, a session's rough note) and links changed in the editor show up here too.
         .onChange(of: model.notesRevision) { model.reload() }
         .task(id: model.course.id) {
             model.reload()
@@ -135,7 +132,6 @@ struct NotesView: View {
 }
 
 struct NoteEditor: View {
-    /// From here the note panel can hold the source and the preview side by side.
     @State private var model: NoteEditorModel
     @Environment(\.accent) private var accent
     @Environment(\.scenePhase) private var scenePhase
@@ -151,7 +147,6 @@ struct NoteEditor: View {
     @State private var palette: MathPaletteModel
     @State private var showsMath = false
     @State private var outline = NoteOutlineModel()
-    /// The outline beside the note stays shown or hidden for every note on this device.
     @AppStorage("noteOutline") private var outlineOn = true
     @State private var outlinePopover = false
     @State private var outlineFit = NoteOutlineFit(width: 0)
@@ -187,8 +182,6 @@ struct NoteEditor: View {
                     }
                     .help(Text(.notesReviewDoneHelp))
                 }
-                // An icon like the bar's other items; the syntax in use is chosen on top of the palette and named in
-                // the tooltip.
                 Button {
                     palette.fence = writing ? outline.views.editor?.caretFence : nil
                     showsMath.toggle()
@@ -206,7 +199,6 @@ struct NoteEditor: View {
                             showsAssets ? accent.color : Theme.Palette.textSecondary)
                     }
                     .help(Text(.notesAssetsHelp))
-                    // The way by touch; on the Mac also 도움말 › 입력 안내 (⌘/) and the `/` menu.
                     Button {
                         showInputGuide(model.meta.math)
                     } label: {
@@ -224,7 +216,7 @@ struct NoteEditor: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
                 Theme.Palette.lineSoft.frame(height: 1)
             }
-            // One row whose columns come and go, so switching keeps the editor's caret and the preview's scroll.
+            // 열만 나타났다 사라지는 행 하나로 두어야 보기를 바꿀 때 편집기의 캐럿과 미리보기의 스크롤이 유지된다.
             HStack(spacing: 0) {
                 if shown != .read { editor }
                 if shown == .split { Theme.Palette.lineSoft.frame(width: 1) }
@@ -266,11 +258,10 @@ struct NoteEditor: View {
         #endif
         .background(Theme.Palette.card)
         .animation(Theme.Motion.standard, value: showsAssets)
-        // Edits save on their own; ⌘S is kept only for the habit, with no button of its own.
         .background {
             Button("") { model.saveNow(force: false) }.keyboardShortcut("s").opacity(0).allowsHitTesting(false).accessibilityHidden(true)
         }
-        // The note's name is the screen's title; clicking it renames the note. Saved first: the file is about to move.
+        // 파일을 곧 옮기므로 먼저 저장한다.
         .crumb(
             model.note.title, level: 2, symbol: "doc.text",
             rename: {
@@ -281,8 +272,8 @@ struct NoteEditor: View {
         .sheet(isPresented: $renaming) { NoteEditSheet(workspace: model.workspace, course: model.course, note: model.note, moves: moves) }
         .onAppear(perform: model.load)
         .rememberingPanes($panes, id: model.note.meta.id)
-        // Saved a moment after typing stops, and whenever the note goes away: switching notes or courses, closing the
-        // window or quitting would otherwise drop the edits.
+        // 타자가 멈춘 직후와 노트가 사라질 때 저장한다. 그러지 않으면 노트나 과목을 바꾸거나, 창을 닫거나, 앱을 끝낼 때
+        // 편집이 사라진다.
         .task(id: model.body) {
             guard model.dirty else { return }
             try? await Task.sleep(for: .seconds(1))
@@ -316,7 +307,6 @@ struct NoteEditor: View {
     var writing: Bool { shown != .read }
 
     var outlineDocked: Bool { outlineOn && !outline.isEmpty && outlineFit.docks(shown) }
-    /// Beside the note, the remembered choice; where there's no room for it, the popover.
     var outlineShown: Bool { outlineFit.docks(shown) ? outlineOn : outlinePopover }
 
     func toggleOutline() {
@@ -327,7 +317,6 @@ struct NoteEditor: View {
         }
     }
 
-    /// While the pane is focused, the menu bar's 목차 command works on this note's outline.
     func registerOutline() {
         guard let trail else { return }
         guard paneFocused, !outline.isEmpty else { return trail.clearOutline(owner: outlineOwner) }
@@ -371,7 +360,6 @@ struct NoteEditor: View {
     }
 }
 
-/// The note's kind and what it belongs to, one kind at a time. Shared by the markdown editor and a `.tex` note's view.
 struct NoteLinkMenu: View {
     let model: NoteEditorModel
 

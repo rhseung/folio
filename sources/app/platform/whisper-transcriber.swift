@@ -2,28 +2,23 @@ import AVFoundation
 import FolioDomain
 import Foundation
 import Observation
-// WhisperKit's classes are not Sendable yet; they are only ever touched inside the actor below.
+// WhisperKit의 클래스는 아직 Sendable이 아니다. 아래 actor 안에서만 다룬다.
 @preconcurrency import WhisperKit
 
-/// Whisper on this device, for lectures that mix Korean and English: one model hears both, where Apple's recognizer
-/// takes one language and turns English terms into Korean sounds. The model is downloaded once per device.
 actor WhisperTranscriber {
     static let shared = WhisperTranscriber()
-    /// Large v3 Turbo, compressed: Argmax's recommendation for accuracy on Mac and iPad, about 630MB.
     static let variant = "openai_whisper-large-v3-v20240930_626MB"
     static var base: URL { LocalFolders.applicationSupport("Whisper") }
     static var modelFolder: URL { base.appending(path: "models/argmaxinc/whisperkit-coreml/\(variant)", directoryHint: .isDirectory) }
 
     private var kit: WhisperKit?
-    // A transcription awaiting the decoder lets other calls into the actor, so deleting must check it is not mid-run.
+    // 디코더를 기다리는 받아쓰기는 actor에 다른 호출을 들여보내므로, 삭제는 실행 중이 아닌지 확인해야 한다.
     private var running = 0
     private var download: Task<URL, any Error>?
 
-    /// A second caller waits for the same download.
     func prepare(report: @escaping @Sendable (Double) -> Void) async throws -> URL {
         if await WhisperModel.shared.ready {
             if FileManager.default.fileExists(atPath: Self.modelFolder.path) { return Self.modelFolder }
-            // Removed outside the app: downloaded again rather than failing every load.
             await MainActor.run { WhisperModel.shared.finishDownload(ready: false) }
         }
         if let download { return try await download.value }
@@ -48,8 +43,8 @@ actor WhisperTranscriber {
         }
     }
 
-    /// Kept in Application Support rather than caches, which the system empties when space runs low and would cost a
-    /// 630MB download before the next lecture; but it can always be downloaded again, so it stays out of backups.
+    // 캐시가 아니라 Application Support에 둔다. 시스템은 공간이 부족하면 캐시를 비우고, 그러면 다음 강의 전에 630MB를 다시 내려받아야 한다. 다만 언제든 다시 내려받을 수 있으므로
+    // 백업에서는 뺀다.
     private static func excludeFromBackup() {
         var base = base
         var values = URLResourceValues()
@@ -57,8 +52,6 @@ actor WhisperTranscriber {
         try? base.setResourceValues(values)
     }
 
-    /// `running` and the busy flag it shows count until Whisper actually returns. A cancelled job comes off the queue at
-    /// once but holds the model until its current window is decoded.
     func transcribe(_ url: URL, hints: TranscriptionHints?, report: @escaping @Sendable (TranscriptionPhase) -> Void) async throws
         -> LectureTranscript
     {
@@ -89,7 +82,6 @@ actor WhisperTranscriber {
         report(.transcribing(0))
         let language = try await language(of: url, duration: duration, in: kit)
 
-        // Windows are decoded in parallel and report out of order, so progress is the furthest point heard yet.
         let furthest = Furthest()
         kit.segmentDiscoveryCallback = { segments in
             guard let end = segments.map(\.end).max() else { return }
@@ -98,18 +90,16 @@ actor WhisperTranscriber {
         defer { kit.segmentDiscoveryCallback = nil }
 
         let options = DecodingOptions(
-            // Fixed for the whole lecture: left to each 30-second window, a stretch of English terms flips it to English.
+            // 강의 전체에 하나로 고정한다. 30초 구간마다 정하게 두면 영어 용어가 이어지는 부분에서 영어로 바뀐다.
             task: .transcribe, language: language,
-            // Segment text otherwise carries <|ko|>-style tokens.
             skipSpecialTokens: true,
             promptTokens: hints.flatMap { promptTokens($0, in: kit) },
-            // Cuts the audio at silences, so a long quiet stretch doesn't make Whisper invent a sentence.
+            // 오디오를 침묵에서 자른다. 그래야 긴 침묵에서 Whisper가 문장을 지어내지 않는다.
             chunkingStrategy: .vad)
-        // A lecture read whole is several hundred megabytes of samples; streamed, a few.
         let results = try await kit.transcribe(
             audioPath: url.path, audioInputOptions: AudioInputOptions(audioLoadingMode: .incremental),
             decodeOptions: options)
-        // With silence chunking a cancelled run returns what it had instead of throwing.
+        // 침묵 단위로 자르면 취소한 실행이 오류를 던지지 않고 그때까지의 결과를 돌려준다.
         try Task.checkCancellation()
 
         let lines = results.flatMap(\.segments)
@@ -122,8 +112,6 @@ actor WhisperTranscriber {
         return LectureTranscript(locale: language == "en" ? "en-US" : "ko-KR", lines: lines)
     }
 
-    /// Korean or English, by three windows across the lecture: the opening minutes are often small talk or silence.
-    /// Korean when unsure, since a Korean lecture with English terms is the common case and Korean decoding keeps them.
     private func language(of url: URL, duration: Double, in kit: WhisperKit) async throws -> String {
         var english = 0, korean = 0
         for at in [0.2, 0.5, 0.8] {
@@ -138,8 +126,8 @@ actor WhisperTranscriber {
         return english > korean ? "en" : "ko"
     }
 
-    /// Whisper reads the prompt as what was said just before, so it writes the slides' terms in their own spelling.
-    /// It keeps the last 224 tokens of a prompt; the least telling terms go first to stay well under that.
+    // Whisper는 프롬프트를 바로 앞에서 한 말로 읽으므로, 슬라이드의 용어를 원래 철자로 적는다. Whisper는 프롬프트의 마지막 224 토큰만 남기므로, 그 한도에 여유 있게 들도록 덜 중요한 용어부터
+    // 뺀다.
     private func promptTokens(_ hints: TranscriptionHints, in kit: WhisperKit) -> [Int]? {
         guard let tokenizer = kit.tokenizer else { return nil }
         var count = hints.terms.count
@@ -150,9 +138,8 @@ actor WhisperTranscriber {
         }
     }
 
-    /// Whisper fills a pause with a line it saw often in training, the close of a video. Its scores rate it as sure as
-    /// the speech around it, and the segment's span takes in the end of that speech, so its loudness gives it away
-    /// neither; only the words do. A lecture's own lone "감사합니다." is lost with them.
+    // Whisper는 쉬는 구간을 학습 때 자주 본 문장, 즉 영상의 맺음말로 채운다. 그 점수는 주변 말소리만큼 확실하게 나오고, 세그먼트 구간이 앞 말소리의 끝을 포함하므로 소리 크기로도 가려낼 수 없다.
+    // 낱말로만 가려낼 수 있다. 그래서 강의에서 실제로 홀로 말한 "감사합니다."도 함께 사라진다.
     static func isFiller(_ text: String) -> Bool {
         let bare = text.lowercased().filter { $0.isLetter }
         return fillers.contains(bare)
@@ -166,9 +153,7 @@ actor WhisperTranscriber {
     private func load(report: @escaping @Sendable (TranscriptionPhase) -> Void) async throws -> WhisperKit {
         if let kit { return kit }
         let folder = try await prepare { report(.downloading($0)) }
-        // Core ML compiles the model for this chip on the first load, minutes on end; later loads take seconds.
         report(.preparing)
-        // The tokenizer comes from the network on the first load and is kept beside the model.
         let kit = try await WhisperKit(
             WhisperKitConfig(
                 modelFolder: folder.path, tokenizerFolder: Self.base, verbose: false,
@@ -177,7 +162,6 @@ actor WhisperTranscriber {
         return kit
     }
 
-    /// Settings disables deleting while `busy`; this refuses too, for a job that starts in between.
     func deleteModel() async {
         guard running == 0 else { return }
         download?.cancel()
@@ -199,24 +183,20 @@ private final class Furthest: @unchecked Sendable {
     }
 }
 
-/// Whether this device has the Whisper model, for settings and the player. Remembered rather than looked up: a
-/// download cut off halfway leaves a folder that looks the same.
+// 찾아보지 않고 기억해 둔다. 중간에 끊긴 다운로드도 같은 모양의 폴더를 남기기 때문이다.
 @MainActor @Observable
 final class WhisperModel {
     static let shared = WhisperModel()
     private static let readyKey = "folio.whisperModelReady"
 
     private(set) var ready = UserDefaults.standard.bool(forKey: readyKey)
-    /// 0...1 while the model downloads.
     fileprivate(set) var downloading: Double?
-    /// Whisper is transcribing with the model, which then can't be deleted.
     fileprivate(set) var busy = false
     private(set) var failure: String?
 
     fileprivate func finishDownload(ready: Bool) {
         self.ready = ready
         downloading = nil
-        // A failed download sets its reason after this, so success and deletion both clear an old one.
         failure = nil
         UserDefaults.standard.set(ready, forKey: Self.readyKey)
     }

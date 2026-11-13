@@ -15,7 +15,7 @@ struct TodayView: View {
     }
 
     var body: some View {
-        // Redrawn at each day boundary, so a page left open overnight turns to the new study day.
+        // 밤새 열어 둔 페이지가 새 공부일로 넘어가도록 하루 경계마다 다시 그린다.
         TimelineView(.periodic(from: model.nextDayStart, by: 86_400)) { _ in page(now: model.workspace.now) }
             .navigationTitle(.todayTitle)
     }
@@ -52,7 +52,6 @@ struct TodayView: View {
 
     // MARK: Wrap-up
 
-    /// Classes that ended with something missing. Only until the course's next class: past that, each class's menu.
     @ViewBuilder func wrapUpBlock(_ items: [TodayModel.WrapUp]) -> some View {
         if !items.isEmpty {
             Block(String(localized: .todayWrapUp), note: "\(items.count)") {
@@ -65,7 +64,6 @@ struct TodayView: View {
                                     Text(model.wrapUpName(item)).font(Theme.Typeface.bodyStrong).lineLimit(1)
                                     SessionKindChip(kind: item.session.kind).courseAccent(model.workspace.accent(item.courseId))
                                 }
-                                // Five chips don't fit a phone's row; the same words as one line do.
                                 ViewThatFits(in: .horizontal) {
                                     HStack(spacing: Theme.Space.xs) {
                                         ForEach(item.labels, id: \.self) { Chip($0) }
@@ -87,19 +85,16 @@ struct TodayView: View {
         }
     }
 
-    /// Two lists side by side from here: a deadline's chips need about half of it.
     static let pairWidth: CGFloat = 704
 
     // MARK: Exams and deadlines
 
-    /// Exams and deadlines side by side, the two things with a date on them. Both empty, they say so once.
     @ViewBuilder func agenda(_ summary: TodaySummary) -> some View {
         if summary.exams.isEmpty && summary.deadlines.isEmpty {
             EmptyCard(
                 symbol: "checkmark", tone: .success, title: String(localized: .todayAgendaEmpty),
                 detail: String(localized: .todayAgendaEmptyDetail(TodaySummary.examHorizon)))
         } else {
-            // Below this a half column cuts a course name off after a word.
             Fold(wideFrom: Self.pairWidth) {
                 examsBlock(summary).frame(maxWidth: .infinity, alignment: .topLeading)
                 deadlinesBlock(summary).frame(maxWidth: .infinity, alignment: .topLeading)
@@ -113,7 +108,6 @@ struct TodayView: View {
             if exams.isEmpty {
                 EmptyCard(symbol: "calendar", title: String(localized: .todayExamsEmpty), detail: String(localized: .todayExamsEmptyDetail))
             } else {
-                // The to-do list's row inset beside it, but without its rules.
                 Card {
                     ForEach(exams, id: \.exam.id) { examRow($0) }
                 }
@@ -159,12 +153,8 @@ struct TodayView: View {
                     detail: String(localized: .todayDeadlinesEmptyDetail))
             } else {
                 Card {
-                    // The card has no inset and every row the same one, so a tinted row fills to the card's edges and
-                    // its content sits in the middle of the band. Extra inset on the end rows pushed it off-centre.
                     VStack(spacing: 0) {
                         ForEach(shown) { row in
-                            // Full width, unlike `CardRow`'s rule from the text: a band's edge already spans the card,
-                            // and a rule starting 16pt in left a notch where it met one.
                             if row.id != shown.first?.id { Theme.Palette.lineSoft.frame(height: 1) }
                             deadlineRow(row)
                         }
@@ -192,13 +182,11 @@ struct TodayView: View {
                 if let tone {
                     Chip(row.due, tone: tone, solid: row.urgency == .urgent).monospacedDigit()
                 } else {
-                    // The chip's inset without its fill, so every row is as tall as one with a chip.
                     Text(row.due).font(Theme.Typeface.caption).monospacedDigit().foregroundStyle(Theme.Palette.textTertiary)
                         .fixedSize().padding(Theme.Inset.tag)
                 }
             }
             .padding(.horizontal, Theme.Space.l)
-            // 12, not `Inset.row`'s 10: inside a band the chip needs room above and below to read as centred.
             .padding(.vertical, Theme.Space.m)
             .background(tone.map { $0.fill.opacity(Theme.Opacity.toneRow) } ?? .clear)
             .contentShape(.rect)
@@ -209,11 +197,8 @@ struct TodayView: View {
 
     // MARK: Reviews
 
-    /// A class's review note comes first, then the units: writing the note is the day's review of that class,
-    /// and a unit linked to it waits on the note anyway.
     func reviewBlock(_ reviews: TodayModel.Reviews, today: LocalDate) -> some View {
         let left = reviews.left, done = reviews.doneToday
-        // A list title right under the progress line read as its caption; a step more keeps the line over both lists.
         return VStack(alignment: .leading, spacing: Theme.Space.l) {
             HStack(spacing: Theme.Space.m) {
                 Text(.todayReviews).font(Theme.Typeface.sectionTitle).foregroundStyle(Theme.Palette.textSecondary)
@@ -245,8 +230,6 @@ struct TodayView: View {
                         detail: String(localized: .todayReviewsEmptyDetail))
                 }
             } else {
-                // Two lists, like exams and deadlines above: writing a class's note and reviewing units are different
-                // jobs, and in one card their rows read as one kind of thing.
                 Fold(wideFrom: Self.pairWidth) {
                     notesList(reviews.notes, today: today).frame(maxWidth: .infinity, alignment: .topLeading)
                     unitsList(reviews.queue).frame(maxWidth: .infinity, alignment: .topLeading)
@@ -265,8 +248,6 @@ struct TodayView: View {
             .animation(Theme.Motion.settle, value: fraction)
     }
 
-    /// A group's name with the rule under it, as in the deadline list. 12pt from the rule to the first row sits
-    /// between the 6 above it and the 16 between rows; less sat the rows on the rule, more left the name hanging.
     func listGroupHeader<Label: View>(first: Bool, @ViewBuilder label: () -> Label) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) { label() }
@@ -312,8 +293,6 @@ struct TodayView: View {
     func noteRow(_ item: TodaySummary.SessionItem) -> some View {
         let accent = model.workspace.accent(item.courseId)
         let unfinished = item.session.reviewNoteUnfinished
-        // Finishing shows on hover only on the Mac, so the resting list reads as notes rather than as buttons. Touch has
-        // no hover, so the iPad shows it always, beside the unfinished mark it would otherwise replace.
         #if os(macOS)
         let hovering = hoveredNote == item.session.id
         let finishing = hovering, marked = unfinished && !hovering
@@ -325,7 +304,6 @@ struct TodayView: View {
                 if let id = model.reviewNote(of: item) { openNote(in: item.courseId)(id) }
             } label: {
                 HStack(spacing: Theme.Space.s) {
-                    // A document, not a circle: a circle is the to-do list's checkbox, and this row opens a note.
                     LineIcon(symbol: unfinished ? "doc.text" : "doc").foregroundStyle(accent.color)
                         .frame(width: Theme.Size.tile, height: Theme.Size.tile)
                     HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
@@ -343,7 +321,6 @@ struct TodayView: View {
                 Label(.todayNoteUnfinished, systemImage: "pencil").labelStyle(GhostLabelStyle())
                     .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.warning)
             }
-            // The menu's review check as a button, so the row and the menu say and do the same.
             if finishing,
                 let source = SessionMenu.source(
                     model.workspace, item.courseId, item.session.id, host: .elsewhere,
@@ -392,7 +369,6 @@ struct TodayView: View {
                             listMore(more) { model.expandedUnitGroups.insert(group.courseId) }
                         }
                     }
-                    // The fold link brings its own bottom margin.
                     if let last = groups.last, model.shownUnits(last).more == 0 { Color.clear.frame(height: Theme.Space.s) }
                 }
             }
@@ -400,7 +376,6 @@ struct TodayView: View {
     }
 
     func unitRow(_ entry: Workspace.ReviewEntry, number: Int, then rest: ArraySlice<Workspace.ReviewEntry>) -> some View {
-        // Waiting on its class's note: still openable, but dimmed and without the arrow that says "start here".
         let waiting = entry.item.writeNoteFirst
         return ReviewOpener(
             courseId: entry.courseId, unitId: entry.item.unitId,
@@ -408,7 +383,6 @@ struct TodayView: View {
         ) {
             HStack(spacing: Theme.Space.s) {
                 Text("\(number)").font(Theme.Typeface.caption).monospacedDigit().foregroundStyle(Theme.Palette.textTertiary)
-                    // The tile-high slot, as the note list's glyph: without it these rows came out shorter than theirs.
                     .frame(width: Theme.Size.tile, height: Theme.Size.tile)
                 Text(entry.unitTitle).lineLimit(1)
                 Spacer(minLength: Theme.Space.s)

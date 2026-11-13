@@ -23,8 +23,8 @@ struct QuizView: View {
         }
         .background(Theme.Palette.page)
         .task(id: course.id) { model.load(course) }
-        // Cards saved from the Claude panel or a proposal land while this page is open. The course is read fresh:
-        // the view's copy is a render behind the write that bumped the revision.
+        // Claude 패널이나 제안에서 저장한 카드가 이 페이지가 열려 있는 동안 들어온다. 뷰의 사본은 revision을 올린
+        // 쓰기보다 한 렌더 늦으므로 과목을 새로 읽는다.
         .onChange(of: model.workspace.quizRevision) { model.load(model.workspace.course(course.id) ?? course) }
         .onChange(of: section) { _, new in if new != .quizSolve { model.request = nil } }
         .sheet(item: $model.generating) { unit in
@@ -39,7 +39,6 @@ struct QuizView: View {
 }
 
 extension LoadedCourse {
-    /// Units in outline order. Sorting by `order` alone interleaves the subunits of different chapters, which number from 1 each.
     var outline: [(unit: FolioDomain.Unit, depth: Int)] { UnitTree.outline(file.units) }
 
     var unitOptions: [PickOption<UUID>] { outline.map { PickOption(id: $0.unit.id, title: $0.unit.title, depth: $0.depth) } }

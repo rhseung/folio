@@ -22,7 +22,7 @@ struct AssignmentsView: View {
                 Block(g.label, note: "\(items.count)") {
                     Card {
                         ForEach(Array(items.enumerated()), id: \.element.id) { i, a in
-                            // Not a Button: the status menu and the submit suggestion inside would lose their clicks to it.
+                            // Button으로 두면 안의 상태 메뉴와 제출 제안이 클릭을 빼앗긴다.
                             CardRow(last: i == items.count - 1) { row(a, now: now) }
                                 .linkTarget(a.id)
                                 .opens { model.editing = a }
@@ -34,7 +34,6 @@ struct AssignmentsView: View {
                 }
             }
         }
-        // The jump is taken here, outside the sheet, where the course screen's target is.
         .sheet(item: $model.editing) {
             AssignmentSheet(workspace: model.workspace, course: model.course, assignment: $0) { id, placement in
                 openLink(AppLink(.material, id), in: placement, course: model.course.id)
@@ -76,12 +75,11 @@ struct AssignmentsView: View {
         }
         .menuStyle(.button)
         .menuIndicator(.hidden)
-        // Plain, as ChoiceMenu: a borderless menu redraws its label image at the control's size and tint, ignoring the
-        // label's font and color.
+        // borderless 메뉴는 라벨 이미지를 컨트롤의 크기와 색으로 다시 그리고 라벨의 글꼴과 색을 무시하므로,
+        // ChoiceMenu처럼 plain으로 둔다.
         .buttonStyle(.plain).pointingHand()
         .fixedSize()
         .help(Text(.assignmentsStatusHelp(a.status.label)))
-        // The deadline in a fixed column, as the session list has its dates, so titles line up down the page.
         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
             Text(due.date).font(Theme.Typeface.bodyStrong).monospacedDigit()
                 .foregroundStyle(a.due == nil || done ? Theme.Palette.textTertiary : Theme.Palette.text)

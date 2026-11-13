@@ -3,23 +3,21 @@ import SwiftUI
 
 struct Page<Content: View, Backdrop: View>: View {
     var maxWidth: CGFloat = Theme.Size.pageMaxWidth
-    // Behind the content's top across the page's full width, scrolling away with it: Today's course wash.
     @ViewBuilder var backdrop: Backdrop
     @ViewBuilder var content: Content
-    // Not private: a private property would make the memberwise init private too.
+    // private으로 두지 않는다. private 속성이 있으면 memberwise init도 private이 된다.
     @Environment(\.linkFocus) var focus
     @Environment(\.pageGutter) var gutter
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                // Not a LazyVStack: a lazy stack moves its scroll offset to keep a visible block in place whenever the
-                // page's width changes under an animation (a course column docking or hiding), and the page jumped
-                // up and down for a quarter second, all the more where a narrower page stacks its blocks taller
-                // (2026-11-08 사용자). A page holds a few blocks, not a list.
+                // LazyVStack을 쓰지 않는다. lazy stack은 애니메이션 중에 페이지 폭이 바뀌면(과목 열이 붙거나 숨을 때)
+                // 보이는 블록을 제자리에 두려고 스크롤 위치를 옮기고, 그래서 페이지가 0.25초 동안 위아래로 흔들렸다.
+                // 좁은 페이지가 블록을 더 높게 쌓을수록 더 심했다. 페이지에는 블록이 몇 개뿐이고 긴 목록이 없다.
                 VStack(alignment: .leading, spacing: Theme.Space.section) { content }
-                    // The fade's hidden bars reach everything inside through the environment; a text area or sheet
-                    // on the page keeps its own.
+                    // 페이드가 숨긴 스크롤 막대 설정은 environment를 통해 안쪽 모든 것에 전달된다. 페이지 위의 텍스트
+                    // 영역과 시트가 자기 막대를 지키도록 여기서 되돌린다.
                     .scrollIndicators(.automatic)
                     .frame(maxWidth: maxWidth, alignment: .leading)
                     .padding(.horizontal, gutter)
@@ -31,8 +29,6 @@ struct Page<Content: View, Backdrop: View>: View {
                     .pageScrollWithoutBounce()
             }
             .overflowFade(.vertical)
-            // To the row a link named (`linkTarget`), a little below the top. Rows a page reads in after it appears
-            // (the exams' review state) aren't laid out on the first pass, so the scroll waits for one.
             .task(id: focus) {
                 guard let focus else { return }
                 try? await Task.sleep(for: .milliseconds(100))
@@ -40,7 +36,6 @@ struct Page<Content: View, Backdrop: View>: View {
             }
         }
         .background(Theme.Palette.page)
-        // No edge effect under the toolbar: on this flat paper it reads as a header band with a rule across the page.
         .scrollEdgeEffectHidden(true, for: .top)
         .foregroundStyle(Theme.Palette.text)
         .font(Theme.Typeface.body)
@@ -48,8 +43,6 @@ struct Page<Content: View, Backdrop: View>: View {
 }
 
 extension EnvironmentValues {
-    /// A page's side margin. The iPhone's screen sets a narrower one (#134): at 390pt across, the Mac's 32 on each side
-    /// left a sixth of the screen empty.
     @Entry var pageGutter: CGFloat = Theme.Space.xxl
 }
 
@@ -67,8 +60,6 @@ struct PageHeader<Chips: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.s) {
             HStack(spacing: Theme.Space.tight) { chips }
-            // One line, cut at its end: a title broken over lines at a pane's width read as two headings (#402). The
-            // subtitle is a summary of counts, which are never cut, so it may take a second line.
             Text(title).font(Theme.Typeface.pageTitle).lineLimit(1)
             if let subtitle { Text(subtitle).foregroundStyle(Theme.Palette.textTertiary) }
         }
@@ -81,19 +72,15 @@ extension PageHeader where Chips == EmptyView {
     }
 }
 
-/// The rule between a list column and its page. It runs up under the bandless toolbar with the column's background;
-/// one that stopped at the safe area left the border missing beside the column's top.
+// safe area에서 멈추면 열 위쪽 옆의 경계선이 빠졌으므로, 띠 없는 툴바 아래까지 열 배경과 함께 올린다.
 struct ColumnDivider: View {
     var body: some View { Theme.Palette.line.frame(width: 1).ignoresSafeArea() }
 }
 
 extension EnvironmentValues {
-    /// Set by the screen fit check only: pages that would clip what doesn't fit them push their window out instead.
     @Entry var revealsOverflow = false
 }
 
-/// One step of the window's breadcrumb. A step with an action goes back to it; the last step is where the window is,
-/// and one with `rename` (an open note) renames what is open when clicked, as a document's title does.
 struct Crumb {
     var title: String
     var symbol: String?
@@ -102,18 +89,14 @@ struct Crumb {
     var rename: (() -> Void)?
 }
 
-/// The steps pages below the window's own add to its breadcrumb: 1 a course's section, 2 what the section opened.
-/// One trail drawn by the window, not a toolbar item per page, so a long one can fold its middle away.
 @MainActor @Observable final class CrumbTrail {
     private var levels: [Int: (owner: UUID, crumb: Crumb)] = [:]
     var crumbs: [Crumb] { levels.keys.sorted().compactMap { levels[$0]?.crumb } }
 
     func set(_ crumb: Crumb, level: Int, owner: UUID) { levels[level] = (owner, crumb) }
-    /// Only the owner's own step: switching pages shows the new one before the old one has gone.
+    // 페이지를 바꾸면 새 페이지가 옛 페이지가 사라지기 전에 나타나므로, 자기가 둔 단계만 지운다.
     func clear(level: Int, owner: UUID) { if levels[level]?.owner == owner { levels[level] = nil } }
 
-    /// The pane's outermost list column, which the menu bar's 구역 열 command works on while the pane is focused (#62).
-    /// Here because this is what a pane's screen already tells its window while it is on screen.
     private(set) var column: ColumnCommand?
     @ObservationIgnored private var columnOwner: UUID?
 
@@ -128,7 +111,6 @@ struct Crumb {
         column = nil
     }
 
-    /// The open note's outline, which the menu bar's 목차 command shows and hides while the pane is focused (#387).
     private(set) var outline: OutlineCommand?
     @ObservationIgnored private var outlineOwner: UUID?
 
@@ -144,7 +126,6 @@ struct Crumb {
     }
 }
 
-/// The menu bar's 목차 보기·숨기기 for the note in the focused pane.
 struct OutlineCommand {
     var shown: Bool
     var toggle: @MainActor () -> Void
@@ -155,7 +136,6 @@ extension FocusedValues {
 }
 
 extension View {
-    /// Adds this page to the window's breadcrumb while it is on screen. There is no back button: the steps before go back.
     func crumb(_ title: String, level: Int, symbol: String? = nil, action: (() -> Void)? = nil, rename: (() -> Void)? = nil) -> some View {
         modifier(CrumbStep(title: title, level: level, symbol: symbol, action: action, rename: rename))
     }
@@ -181,14 +161,10 @@ private struct CrumbStep: ViewModifier {
     func register() { trail?.set(Crumb(title: title, symbol: symbol, action: action, rename: rename), level: level, owner: owner) }
 }
 
-/// The window's breadcrumb. Longer than `foldWidth`, it keeps the first and last steps and folds the middle into "…",
-/// which lists them in a popover: a growing trail pushed the centered search field aside. Folded, it truncates only
-/// past `maxWidth`, so a narrow window doesn't also cut the names it kept.
 struct Breadcrumb: View {
     let crumbs: [Crumb]
     let foldWidth: CGFloat
     let maxWidth: CGFloat
-    /// Below this the trail folds anyway and its last step truncates.
     static let minWidth: CGFloat = 160
     @State private var fullWidth: CGFloat = 0
     @State private var showsHidden = false
@@ -203,8 +179,6 @@ struct Breadcrumb: View {
                     .buttonStyle(.toolbar)
                     .help(Text(.designHiddenPath))
                     .popover(isPresented: $showsHidden, arrowEdge: .bottom) { hidden }
-                    // The 32pt button's own margin around the glyph already spaces it; the row's gap on top of that
-                    // left the slashes adrift.
                     .padding(.horizontal, -Theme.Space.s)
                 separator
                 step(last, at: crumbs.count - 1)
@@ -271,15 +245,12 @@ struct Breadcrumb: View {
     }
 }
 
-/// A page's own tools (a note's view mode, a PDF's zoom) in a slim row along the top of its pane, ruled off from
-/// the content. Not in the window toolbar: there they ran into the breadcrumb.
 struct PageBar<Leading: View, Trailing: View>: View {
     @ViewBuilder var leading: Leading
     @ViewBuilder var trailing: Trailing
     @Environment(\.columnButtons) private var columnButtons
 
     var body: some View {
-        // Under a folded column's buttons (#62) the bar is their row: as tall, centered on them, starting after them.
         let afterButtons = Theme.Space.s + CGFloat(columnButtons) * (Theme.Size.toolbarButton + Theme.Space.s)
         VStack(spacing: 0) {
             HStack(spacing: Theme.Space.xxs) {
@@ -287,7 +258,6 @@ struct PageBar<Leading: View, Trailing: View>: View {
                 Spacer(minLength: Theme.Space.s)
                 trailing
             }
-            // A bar is one line at any width: what doesn't fit folds into a ⋯ menu (`ViewThatFits`, DESIGN.md "한 줄").
             .lineLimit(1)
             .buttonStyle(.toolbar)
             .menuStyle(.button)
@@ -308,8 +278,6 @@ struct Block<Content: View, Trailing: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.s) {
-            // The heading never breaks: where the note doesn't fit beside the title it moves under it, so a count in
-            // the note isn't cut (#402). The title is cut only when it alone is too long; the action keeps its width.
             BlockHeading {
                 heading
                 if let note { noteText(note) } else { Color.clear.frame(width: 0, height: 0) }
@@ -325,18 +293,16 @@ extension Block {
         Text(title).font(Theme.Typeface.sectionTitle).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1)
     }
 
-    // In a stack even when empty or several views, so `BlockHeading` always gets one subview for it.
+    // `BlockHeading`이 늘 하위 뷰 하나를 받도록, 비었거나 여러 뷰여도 stack에 담는다.
     var action: some View { HStack(spacing: Theme.Space.s) { trailing }.font(Theme.Typeface.caption).lineLimit(1).fixedSize() }
 
-    // No line limit: beside the title it is given its own width and stays one line; under it, a sentence (the settings'
-    // notes) wraps as body text does.
     func noteText(_ note: String) -> some View {
         Text(note).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
     }
 }
 
-// A layout rather than `ViewThatFits`: inside a page's scroll view that grew the page's scroll height by the candidates
-// it didn't pick (#402).
+// `ViewThatFits`가 아니라 layout으로 만든다. 페이지 scroll view 안에서 `ViewThatFits`는 고르지 않은 후보만큼 페이지의
+// 스크롤 높이를 늘렸다.
 struct BlockHeading: Layout {
     var spacing: CGFloat = Theme.Space.s
     var lineSpacing: CGFloat = Theme.Space.xxs
@@ -375,7 +341,6 @@ struct BlockHeading: Layout {
         let t = title.sizeThatFits(.unspecified), n = note.sizeThatFits(.unspecified), a = action.sizeThatFits(.unspecified)
         let hasNote = n.width > 0, hasAction = a.width > 0
         let full = t.width + (hasNote ? spacing + n.width : 0) + (hasAction ? spacing + a.width : 0)
-        // An unbounded proposal (an ideal-size pass) gets the one-line width, not infinity.
         let width = offered.flatMap { $0.isFinite ? $0 : nil } ?? full
         let oneLine = !hasNote || full <= width
         let room = width - (hasAction ? spacing + a.width : 0)
@@ -401,15 +366,10 @@ extension View {
             .font(Theme.Typeface.body)
     }
 
-    /// Floating control on glass, the only place content-area glass is used. Already on glass (`onGlass`), it is a
-    /// washed field instead: glass over the frame's glass read as an opaque slab.
     func floatingGlass() -> some View { modifier(FloatingGlass()) }
 
-    /// A card or fill color behind a shape, turned into a wash of the text color on glass (`onGlass`): a solid
-    /// surface there floated apart from the material.
     func surface(_ color: Color, in shape: some Shape) -> some View { modifier(Surface(color: color, shape: shape)) }
 
-    /// A nil width fills the space offered, for text rather than a number.
     func pill(width: CGFloat? = 80, alignment: TextAlignment = .trailing) -> some View {
         textFieldStyle(.plain)
             .multilineTextAlignment(alignment)
@@ -422,8 +382,6 @@ extension View {
 }
 
 extension EnvironmentValues {
-    /// Set on what sits on glass rather than on the paper panel (the floating Claude panel). Shared surfaces read it
-    /// to wash instead of fill.
     @Entry var onGlass = false
 }
 
@@ -452,9 +410,8 @@ private struct FloatingGlass: ViewModifier {
     }
 }
 
-/// A term's folder, open or closed, and the front leaning back between the two, since SF Symbols has no open folder
-/// and one symbol can't turn into another. Closed it is the `folder` symbol: the outline is the stroke centerline of the
-/// symbol's design template (Regular-S), fitted to the medium symbol the sidebar draws (`FolderPart.unit`).
+// SF Symbols에는 열린 폴더가 없고 기호 하나를 다른 기호로 바꾸며 움직일 수 없으므로 직접 그린다. 닫힌 모양의 외곽선은
+// `folder` 기호 디자인 템플릿(Regular-S)의 획 중심선을 사이드바가 그리는 medium 기호에 맞춘 것이다.
 struct FolderIcon: View {
     var open: Bool
     var filled = false
@@ -474,9 +431,7 @@ struct FolderIcon: View {
     }
 }
 
-/// The folder at `t`, 0 closed to 1 open, in template units: y up is negative, the origin on the baseline.
 struct FolderPart: Shape {
-    /// `corners` rounds the open front's top corners. Closed, they would join the bar to the sides, so they fade.
     enum Kind { case outline, corners, fill }
     let kind: Kind
     var t: CGFloat
@@ -486,18 +441,15 @@ struct FolderPart: Shape {
         set { t = newValue }
     }
 
-    /// Points per template unit and the stroke, per point of type size: found by fitting the drawn closed folder to the
-    /// 160pt medium `folder` (2.05 canvas px a unit, a 13px stroke), which is not the small template scaled evenly.
+    // 그린 닫힌 폴더를 160pt medium `folder`(템플릿 단위당 2.05 캔버스 px, 13px 획)에 맞춰 찾은 값이다. 작은 템플릿을
+    // 고르게 키운 값과 다르다.
     static let unit: CGFloat = 2.05 / 160  // design: one-off, fitted to the folder symbol
     static let stroke: CGFloat = 13 / 160  // design: one-off, fitted to the folder symbol
-    /// Sits at the middle of the symbol's image.
     static let middle = CGPoint(x: 53.54, y: -35.51)
     static let left: CGFloat = 13.28, right: CGFloat = 93.8, bottom: CGFloat = -3.64  // design: one-off, folder template units
     static let top: CGFloat = -60.4, tabTop: CGFloat = -67.38  // design: one-off, folder template units
-    /// The bar inside the closed folder becomes the open front's top edge, which leans `lean` to the right.
     static let bar: CGFloat = -48.7, barLeft: CGFloat = 25.2, barRight: CGFloat = 81.9  // design: one-off, folder template units
     static let flapTop: CGFloat = -44, lean: CGFloat = 8, corner: CGFloat = 9  // design: one-off, folder template units
-    /// The open front's corners: rounded on top, and at the foot where it meets the back's side.
     static let round: CGFloat = 6, foot: CGFloat = 7  // design: one-off, folder template units
 
     func path(in rect: CGRect) -> Path {
@@ -523,8 +475,6 @@ struct FolderPart: Shape {
             p.addArc(tangent1End: tr, tangent2End: br, radius: r)
             return p
         }
-        // The back: up the left side, over the tab, along the top and down the right side to the front's edge. Open,
-        // its left side runs on down beside the leaning front.
         let backBottom = pt(Self.left, mix(Self.bar, Self.bottom - 12))
         p.move(to: backBottom)
         p.addArc(tangent1End: pt(Self.left, Self.tabTop), tangent2End: pt(33.5, Self.tabTop), radius: 8.5 * u)
@@ -536,7 +486,7 @@ struct FolderPart: Shape {
         case .corners:
             break
         case .fill:
-            // Both regions wound the same way, so where they meet is not cut out.
+            // 두 영역을 같은 방향으로 감아야 만나는 곳이 뚫리지 않는다.
             p.addLine(to: tl)
             p.addLine(to: backBottom)
             p.closeSubpath()
@@ -547,13 +497,10 @@ struct FolderPart: Shape {
             p.addArc(tangent1End: tl, tangent2End: tr, radius: r * t)
             p.closeSubpath()
         case .outline:
-            // The front's sides and bottom: standing in the body when closed, leaning back when open, where they stop
-            // short of the top corners for `corners` to round them.
             p.move(to: along(tl, bl, r * t))
             p.addArc(tangent1End: bl, tangent2End: br, radius: mix(Self.corner, Self.foot) * u)
             p.addArc(tangent1End: br, tangent2End: tr, radius: mix(Self.corner, 7) * u)
             p.addLine(to: along(tr, br, r * t))
-            // Its top edge: the bar, short of the sides, when closed.
             p.move(to: CGPoint(x: mix(pt(Self.barLeft, 0).x, tl.x + r), y: tl.y))
             p.addLine(to: CGPoint(x: mix(pt(Self.barRight, 0).x, tr.x - r), y: tr.y))
         }
@@ -564,12 +511,7 @@ struct FolderPart: Shape {
 struct LineIcon: View {
     let symbol: String
     var font: Font = Theme.Glyph.line
-    /// The chosen row's icon: the outline keeps its weight and its inside gets a faint fill of the same color. A solid
-    /// `.fill` symbol stood out as a block, white in dark, among the outlines. Open line symbols (#, a chart line) have
-    /// no inside and stay as they are.
     var filled = false
-    /// Every icon of a list given a fainter inside than the chosen one's (the sidebar): plain outlines all in white
-    /// read flat, and the chosen row still steps up from the rest.
     var duotone = false
 
     var body: some View {
@@ -581,7 +523,7 @@ struct LineIcon: View {
         }
     }
 
-    /// Asked first, since drawing a symbol that doesn't exist logs a warning on every render.
+    // 없는 기호를 그리면 렌더할 때마다 경고가 기록되므로 먼저 확인한다.
     static func hasFill(_ symbol: String) -> Bool {
         #if os(macOS)
         NSImage(systemSymbolName: symbol + ".fill", accessibilityDescription: nil) != nil
@@ -591,12 +533,11 @@ struct LineIcon: View {
     }
 
     func glyph(_ symbol: String) -> some View {
-        // One font size for every symbol, not each fitted into a square: fitting shrank wide symbols (the cap, two
-        // people) and so thinned their strokes next to square ones. The fixed frame keeps a wide or tall symbol from
-        // moving its row's text. The sidebar list scales its icons up a step (`imageScale(.large)`), so the scale is
-        // pinned too, or the sidebar's symbols came out a size above every other list's. The weight is pinned as well:
-        // a `.fontWeight` around it (a chosen row's semibold) applies on top of the font, so the breadcrumb's and a
-        // chosen row's symbols came out heavier than the sidebar's.
+        // 기호마다 정사각형에 맞추지 않고 모든 기호에 같은 글꼴 크기를 쓴다. 맞추면 넓은 기호(학사모, 두 사람)가 줄어
+        // 정사각형 기호 옆에서 획이 가늘어졌다. 고정 frame은 넓거나 높은 기호가 행의 글을 움직이지 않게 한다. 사이드바
+        // 목록은 아이콘을 한 단계 키우므로(`imageScale(.large)`) scale도 고정한다. 그러지 않으면 사이드바 기호가 다른
+        // 목록보다 한 크기 컸다. 굵기도 고정한다. 둘러싼 `.fontWeight`(고른 행의 semibold)는 글꼴 위에 더해져서, 위치
+        // 표시와 고른 행의 기호가 사이드바보다 굵게 나왔다.
         Image(systemName: symbol)
             .font(font)
             .fontWeight(.regular)
@@ -605,17 +546,14 @@ struct LineIcon: View {
     }
 }
 
-/// No colored tile: the window sidebar already uses tiles, and a second column of them read as a repeat.
 struct ColumnRow<Trailing: View>: View {
     let title: String
     let symbol: String
     let chosen: Bool
-    /// The chosen row's icon and fill: the course accent, or the plain fill outside a course.
     var tint: Color = Theme.Palette.text
     var fill: Color = Theme.Palette.fill
     @ViewBuilder var trailing: Trailing
 
-    /// For sub-rows that line up under the title.
     static var titleInset: CGFloat { Theme.Inset.listRow.leading + Theme.Size.tile + gap }
     static var gap: CGFloat { Theme.Space.s + 2 }
 
@@ -624,11 +562,8 @@ struct ColumnRow<Trailing: View>: View {
             LineIcon(symbol: symbol, filled: chosen).foregroundStyle(chosen ? tint : Theme.Palette.textSecondary)
             Text(title).lineLimit(1)
             Spacer(minLength: Theme.Space.s)
-            // A count or chip keeps its width; the name is cut instead.
             trailing.lineLimit(1).fixedSize()
         }
-        // Slimmer than a list row: the icon column is already tile-tall, and the list row's padding on top of it
-        // spaced the column wider than the window sidebar beside it.
         .padding(.horizontal, Theme.Inset.listRow.leading)
         .padding(.vertical, Theme.Space.xs)
         .foregroundStyle(Theme.Palette.text)
@@ -645,8 +580,8 @@ extension ColumnRow where Trailing == EmptyView {
 }
 
 extension View {
-    // In place of a scroll bar: an edge fades only while there is more past it, so a list at rest isn't faded.
-    // The mask also clips, which a Mac view otherwise doesn't (the sidebar's terms showed over the window buttons).
+    // 스크롤 막대 대신, 그 너머에 내용이 더 있을 때만 가장자리를 흐린다. mask는 잘라 내기도 하는데, Mac 뷰는 원래 잘라
+    // 내지 않는다(사이드바의 학기가 창 버튼 위로 보였다).
     func overflowFade(_ axis: Axis) -> some View { modifier(OverflowFade(axis: axis)) }
 }
 
@@ -659,7 +594,7 @@ private struct OverflowFade: ViewModifier {
         let (start, end): (Edge.Set, Edge.Set) = vertical ? (.top, .bottom) : (.leading, .trailing)
         return
             content
-            // Not .hidden: with scroll bars set to always show, that still reserved the bar's height below a row.
+            // `.hidden`을 쓰지 않는다. 스크롤 막대를 늘 보이도록 설정하면 `.hidden`도 행 아래에 막대 높이를 남겼다.
             .scrollIndicators(.never)
             .onScrollGeometryChange(for: Edge.Set.self) { g in
                 let (offset, visible, size) =
@@ -677,7 +612,7 @@ private struct OverflowFade: ViewModifier {
     }
 }
 
-// The Claude panel's web view fades its own scroller in the page (`.edge-fade` in note.css) with the same length.
+// Claude 패널의 web view는 페이지 안에서 자기 스크롤 영역을 같은 길이로 흐린다(note.css의 `.edge-fade`).
 private struct OverflowFadeMask: View {
     let axis: Axis
     let edges: Edge.Set
@@ -699,7 +634,6 @@ private struct OverflowFadeMask: View {
 
 struct FlowLayout: Layout {
     var spacing: CGFloat = 6
-    /// Each item on its row's middle rather than its top, for items of different heights (chips and a bare button).
     var centered = false
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
@@ -719,8 +653,6 @@ struct FlowLayout: Layout {
         }
     }
 
-    /// At most the row's width, so an item longer than a row wraps inside itself instead of running past the edge; an
-    /// item shorter than that still takes its own width.
     private func fit(_ width: CGFloat) -> ProposedViewSize {
         ProposedViewSize(width: width.isFinite ? width : nil, height: nil)
     }

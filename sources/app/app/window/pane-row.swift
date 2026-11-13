@@ -2,36 +2,24 @@ import FolioAI
 import FolioDomain
 import SwiftUI
 
-/// A tab's panes side by side (#62). Where the row is too narrow for every pane at `Size.paneMin`, a run of them stays
-/// in place and the rest fold into a bundle at either end, one strip each however many it holds (`PaneLayout.fold`,
-/// 2026-11-12 사용자); choosing a pane from a bundle slides the run to it. A pane folded by hand (칸 접기) is a hatched
-/// strip in its place until it is pressed. A folded pane's screen stays alive at the width it last had, so it opens as
-/// it was left.
 struct PaneRow: View {
     let workspace: Workspace
     let panes: TabPanes
-    /// The tab in front: only its panes take a press.
     let front: Bool
     let openLink: (Navigator) -> OpenLinkAction
-    /// A pane's screen saying it plays a recording (with how to pause it) or has stopped, by the pane's id: the tab
-    /// marks the playing pane's icon (`WindowTabs.play`).
     var play: (UUID, (@MainActor () -> Void)?) -> Void = { _, _ in }
-    /// Takes a pane out into a tab of its own, with the columns it had hidden.
     var newTab: ((Navigator, ColumnPrefs) -> Void)?
     @State private var sizes = PaneSizes()
     @State private var drag = PaneDrag()
-    /// Back to false however the drag ends: a drag the system cancels (the window losing the pointer) has no end.
     @GestureState private var dragging = false
     @State private var claude = false
     @State private var claudeAsk: ContextItem?
     @State private var inserts = PaneInserts()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// Between two panels: the same as between a panel and the window's edge.
     static let gap = Theme.Size.panelInset
     static let space = "panes"
 
-    /// Nil while no pane is in a course, where the tab has no Claude.
     var askClaude: (@MainActor (ContextItem) -> Void)? {
         guard panes.navigators.contains(where: { $0.current.course != nil }) else { return nil }
         return { item in
@@ -46,11 +34,11 @@ struct PaneRow: View {
         let fold = panes.fold
         let folded = fold.folded
         let gaps = fold.gaps(1)
-        // The panes go in built, so a drag redraws the stack alone: were the shares read here, every frame of it would
-        // run this body again, and each pane's screen with it for the closures it is handed anew (`openLink`).
+        // 칸들을 만든 채로 넘겨야 drag가 stack만 다시 그린다. 여기서 비율을 읽으면 drag의 frame마다 이 body가 다시 실행되고,
+        // 새로 넘기는 closure(`openLink`) 때문에 칸마다 화면도 다시 그려진다.
         LivePaneStack(panes: panes, drag: drag, fold: fold) {
-            // The pane's place found again from its ID: SwiftUI can run a closed pane's view once more with the place
-            // it had, past the end of the panes (as it did the tab bar's segments, 2026-11-08).
+            // 칸의 자리를 ID로 다시 찾는다. SwiftUI는 닫힌 칸의 뷰를 예전 자리로 한 번 더 실행할 수 있고, 그 자리는 칸 목록의 끝을
+            // 넘는다(탭 막대의 segment에서도 그랬다).
             ForEach(panes.ids, id: \.self) { id in
                 if let i = panes.ids.firstIndex(of: id) {
                     pane(i, id: id, look: fold.count == panes.count ? fold.look(i) : .open)
@@ -63,7 +51,6 @@ struct PaneRow: View {
         .coordinateSpace(.named(Self.space))
         .background { SessionLayoutSaver(workspace: workspace, panes: panes) }
         .onChange(of: dragging) { _, now in if !now { dropped() } }
-        // Over the panes, not in each: one Claude for the tab, which sees them all (#62).
         .overlay(alignment: .bottomTrailing) {
             WindowClaude(
                 workspace: workspace, panes: panes, folded: folded, shown: $claude, incoming: $claudeAsk, inserts: inserts,
@@ -72,13 +59,10 @@ struct PaneRow: View {
         #if DEBUG && os(macOS)
         .onChange(of: SnapshotDriver.shared.claudePanel, initial: true) { _, new in claude = new }
         #endif
-        // The tab turns the width into how many panes stay open, and is watched only when that changes.
         .onGeometryChange(for: CGFloat.self, of: \.size.width) { width in
             sizes.row = width
             panes.measure(width)
         }
-        // Pressing a strip opens it as another folds, together; a new or closed pane slides the others over. A pane
-        // folding because the window narrowed comes at once: it comes mid-resize, where a moving pane trails the edge.
         .animation(reduceMotion ? nil : Theme.Motion.pane, value: panes.focus)
         .animation(reduceMotion ? nil : Theme.Motion.pane, value: panes.collapsed)
         .animation(reduceMotion ? nil : Theme.Motion.pane, value: panes.ids)
@@ -87,7 +71,6 @@ struct PaneRow: View {
     @ViewBuilder func pane(_ i: Int, id: UUID, look: PaneLayout.Fold.Look) -> some View {
         let folded = look != .open
         let navigator = panes.navigators[i]
-        // Folded, the screen keeps the width it had open, so it isn't laid out again at the strip's.
         let kept = folded ? sizes.open[id] ?? Theme.Size.paneMin : nil
         ZStack(alignment: .topLeading) {
             PaneScreen(workspace: workspace, navigator: navigator)
@@ -129,14 +112,11 @@ struct PaneRow: View {
             ring: panes.count > 1 && i == panes.focus
                 ? navigator.current.course.map { workspace.accent($0).color } ?? Theme.Palette.chromeSelected : nil
         )
-        // In a bundle, drawn by its strip: the screen stays alive, unseen, for when it is chosen.
         .opacity(look == .hidden ? 0 : 1)
         .accessibilityHidden(look == .hidden)
         #if os(macOS)
         .background { PanePress(active: front && !folded) { panes.press(i) } }
         #else
-        // Only on an open pane: a bundle's strip lists its panes, and a tap pressing the pane it stands in for would
-        // move the run under the list.
         .simultaneousGesture(TapGesture().onEnded { panes.press(i) }, including: folded ? .subviews : .all)
         #endif
     }
@@ -153,8 +133,6 @@ struct PaneRow: View {
         .transition(.opacity)
     }
 
-    /// Dragged, it moves the boundary between the two panes beside it; not beside a strip, which has no width to give.
-    /// `shown`: false beside a pane in a bundle, where the row draws no gap, and nothing there takes a click.
     func divider(after d: Int, folded: Set<Int>, shown: Bool) -> some View {
         let enabled = !folded.contains(d) && !folded.contains(d + 1)
         return PaneDivider(enabled: enabled, front: front, even: panes.even)
@@ -162,8 +140,6 @@ struct PaneRow: View {
             #if os(macOS) && (DEBUG || RESIZE_PROBE)
         .background { if front && d == 0 { ResizeMarker(name: "divider") } }
             #endif
-            // The panes' own menus, for the two either side: nothing is laid over a pane to hold them. On the iPad a long
-            // press is how the panes are evened: a double tap on so thin a target was hard to hit and to find.
             .contextMenu {
                 Button(.panesEven, systemImage: "rectangle.split.3x1", action: panes.even)
                 Divider()
@@ -173,9 +149,8 @@ struct PaneRow: View {
                     }
                 }
             }
-            // Past a click's wobble, so a double click that moves a point or two is still a double click, and by how
-            // far it went rather than where it is, so the divider doesn't jump to the pointer from where it was caught in
-            // its margin.
+            // 클릭할 때의 흔들림을 넘을 때부터 drag로 본다. 그래야 한두 point 움직인 두 번 클릭도 두 번 클릭이 된다. 위치가 아니라
+            // 움직인 거리로 옮기므로, 여백을 잡았을 때 구분선이 포인터 위치로 건너뛰지 않는다.
             .gesture(
                 DragGesture(minimumDistance: Self.wobble, coordinateSpace: .named(Self.space))
                     .updating($dragging) { _, dragging, _ in dragging = true }
@@ -192,9 +167,8 @@ struct PaneRow: View {
 
     static let wobble: CGFloat = 4
 
-    /// The two panes beside the divider are laid out at every width it passes, as a browser's page follows a window's
-    /// edge (2026-11-08 사용자). The widths are drawn from `drag` alone until it ends: the tab hears of them once, when
-    /// it is dropped, so the drag lays out the stack and not the whole row with every screen's closures made anew.
+    // drag가 끝날 때까지 폭은 `drag`에서만 그린다. 탭은 놓을 때 한 번만 폭을 받으므로, drag는 행 전체가 아니라 stack만
+    // 배치하고 모든 화면의 closure를 새로 만들지 않는다.
     func dragged(_ d: Int, by translation: CGFloat, folded: Set<Int>) {
         if drag.from == nil {
             let widths = panes.layout.widths(
@@ -208,7 +182,7 @@ struct PaneRow: View {
         if live != drag.live { drag.live = live }
     }
 
-    /// A drag ends here twice, so the second call finds none under way and does nothing.
+    // drag는 여기서 두 번 끝나므로, 두 번째 호출은 진행 중인 drag가 없어 아무것도 하지 않는다.
     func dropped() {
         if let from = drag.from, let live = drag.live, live.panes.count == panes.count {
             let d = from.divider
@@ -223,7 +197,6 @@ struct PaneRow: View {
     struct Start {
         var divider: Int
         var layout: PaneLayout
-        /// The left pane's width and the two panes' together, as they were drawn when the drag began.
         var left: CGFloat
         var pair: CGFloat
     }
@@ -233,8 +206,8 @@ struct PaneRow: View {
 }
 
 #if os(macOS) && (DEBUG || RESIZE_PROBE)
-/// The first divider of the tab in front, for `ResizeProbe` to drag the way the gesture does: synthetic mouse events
-/// lose the drag whenever the real pointer moves.
+// 합성한 mouse event는 실제 포인터가 움직일 때마다 drag를 잃는다. 그래서 `ResizeProbe`가 gesture와 같은 길로 구분선을
+// 끈다.
 @MainActor final class PaneDragHook {
     static let shared = PaneDragHook()
     var row: PaneRow?
@@ -245,14 +218,11 @@ struct PaneRow: View {
 }
 #endif
 
-/// Each pane's width as it was last laid out open, and the row's. Not watched: they change every frame of a resize
-/// and are read only when a pane folds or a divider moves.
 @MainActor final class PaneSizes {
     var open: [UUID: CGFloat] = [:]
     var row: CGFloat = 0
 }
 
-/// Its own view, so only it watches a drag's widths.
 private struct LivePaneStack<Content: View>: View {
     let panes: TabPanes
     let drag: PaneDrag
@@ -260,10 +230,8 @@ private struct LivePaneStack<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
-        // A pane opened or closed under the drag ends it: its widths were for the panes there were.
         let live = drag.live.flatMap { $0.panes.count == panes.count ? $0 : nil }
         let glide = live == nil ? panes.glide.flatMap { $0.from.panes.count == panes.count ? $0 : nil } : nil
-        // Always in the timeline, paused but for a glide: put in only for one, the panes would be built anew.
         TimelineView(.animation(paused: glide == nil)) { context in
             PaneStack(
                 layout: live ?? panes.layout, shares: live?.shares ?? panes.shares, fold: fold,
@@ -273,14 +241,10 @@ private struct LivePaneStack<Content: View>: View {
     }
 }
 
-/// The widths are worked out here, in the same pass as the window's own size, rather than from a width measured into
-/// state a frame later.
 private struct PaneStack: Layout {
     let layout: PaneLayout
-    /// Only so a new share lays the row out again; `layout` has them.
     let shares: [Double]
     let fold: PaneLayout.Fold
-    /// A glide's start, and how far it has come from it to `layout`.
     var from: (layout: PaneLayout, fold: PaneLayout.Fold)?
     var progress = 1.0
 
@@ -296,8 +260,8 @@ private struct PaneStack: Layout {
         proposal.replacingUnspecifiedDimensions()
     }
 
-    // The row's own edges. Left to the default, a parent's question about an edge (a ZStack's) placed every pane and
-    // laid out its screen once more for the answer.
+    // 행의 가장자리를 직접 정한다. 기본값에 맡기면 상위 view(ZStack)가 가장자리를 물을 때마다 모든 칸을 배치하고 그 화면을
+    // 한 번 더 배치했다.
     func explicitAlignment(
         of guide: HorizontalAlignment, in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
     ) -> CGFloat? { nil }
@@ -323,9 +287,8 @@ private struct PaneStack: Layout {
     }
 }
 
-/// A pane's screen at a width of its own where the panel's isn't the one to lay it out at: its open width while it is
-/// a strip, so folding doesn't lay it out again, and its end width while a glide opens it, so it is laid out once and
-/// the panel's edge slides over it rather than widening it from a strip's width frame by frame.
+// strip일 때는 열린 폭을 써서 접어도 다시 배치하지 않는다. glide로 열릴 때는 끝 폭을 써서 한 번만 배치하고, 패널의
+// 가장자리가 그 위로 움직이게 한다. 그렇지 않으면 화면이 strip 폭에서 frame마다 넓어지며 다시 배치된다.
 private struct PaneScreenWidth: ViewModifier {
     let panes: TabPanes
     let index: Int
@@ -334,11 +297,9 @@ private struct PaneScreenWidth: ViewModifier {
 
     func body(content: Content) -> some View {
         let width = kept ?? opening
-        // At once: a press animates the row, and a screen animated to a new width animates its own layout with it.
         content.frame(width: width, alignment: .topLeading).animation(nil, value: width)
     }
 
-    // Read here rather than in the row, so a glide starting and ending redraws this frame alone.
     var opening: CGFloat? {
         guard let glide = panes.glide, glide.fold.folded.contains(index) else { return nil }
         guard !panes.folded.contains(index) else { return nil }
@@ -348,7 +309,6 @@ private struct PaneScreenWidth: ViewModifier {
     }
 }
 
-/// Its own view, so a move in one pane redraws only that pane.
 private struct PaneScreen: View {
     let workspace: Workspace
     let navigator: Navigator
@@ -356,11 +316,8 @@ private struct PaneScreen: View {
     var body: some View { ScreenView(workspace: workspace, entry: navigator.current) }
 }
 
-/// The gap between two panes, which takes a drag a little past its edges: at its own width it was hard to catch.
-/// Clicked twice on the Mac, it evens the panes.
 private struct PaneDivider: View {
     let enabled: Bool
-    /// In the tab in front: one behind sees no clicks.
     let front: Bool
     let even: @MainActor () -> Void
 
@@ -369,8 +326,8 @@ private struct PaneDivider: View {
         Color.clear
             .overlay {
                 Color.clear.frame(width: Theme.Space.m).contentShape(.rect).pointerStyle(enabled ? .columnResize : nil)
-                    // From the window's events like a pane's press, not a tap gesture: beside the divider's drag, a
-                    // second click is the drag's to take.
+                    // 칸의 누름처럼 tap gesture가 아니라 창의 event에서 받는다. 구분선의 drag 옆에서는 두 번째 클릭을 drag가 가져가기
+                    // 때문이다.
                     .background { PanePress(active: front, clicks: 2, press: even) }
             }
             .accessibilityHidden(true)
@@ -382,11 +339,9 @@ private struct PaneDivider: View {
     }
 }
 
-/// A folded pane, design A1 in #62.
 private struct PaneStrip: View {
     let mark: Crumb
     let page: Int?
-    /// Folded by hand ("칸 접기"): hatched, so it reads as put aside rather than out of room.
     var byHand = false
     let expand: () -> Void
     @State private var hovering = false
@@ -407,7 +362,6 @@ private struct PaneStrip: View {
             .background { if byHand { PaneHatch() } }
             .background(Theme.Palette.text.opacity(hovering ? Theme.Opacity.hover : 0))
             .overlay(alignment: .top) {
-                // Thicker than a rule: the panel's round corners take most of the strip's width at its top.
                 if let dot = mark.dot { dot.frame(height: Theme.Space.xs) }
             }
             .contentShape(.rect)
@@ -443,8 +397,6 @@ private struct PaneHatch: View {
     }
 }
 
-/// A bundle of two or more panes at the row's end (#62, 2026-11-12 사용자). Each listed row's menu is the pane's own
-/// strip menu, as is the strip's menu for each pane.
 private struct PaneBundle: View {
     struct Held: Identifiable {
         let index: Int
@@ -454,14 +406,11 @@ private struct PaneBundle: View {
 
     let panes: TabPanes
     let held: [Held]
-    /// At the row's trailing end, so the list opens toward the panes.
     let trailing: Bool
     var newTab: ((Navigator, ColumnPrefs) -> Void)?
     @State private var listing = false
     @State private var hovering = false
 
-    /// The list opens toward the panes. A Mac reads the edge as the bundle's side the popover stands on; an iPad as
-    /// the side its arrow points (UIKit's arrow direction), so the same edge put the list off the screen's edge there.
     private var listEdge: Edge {
         #if os(macOS)
         trailing ? .leading : .trailing
@@ -475,7 +424,6 @@ private struct PaneBundle: View {
             listing = true
         } label: {
             VStack(spacing: Theme.Space.s) {
-                // Overlapping, as a stack of cards: each icon a step down the last.
                 VStack(spacing: -Theme.Space.s) {
                     ForEach(held.prefix(3)) { PlaceIcon(place: $0.mark) }
                 }
@@ -532,8 +480,6 @@ private struct PaneBundle: View {
     }
 }
 
-/// A line of text turned to run down a narrow strip, as on a book's spine: laid out across the strip's height, then
-/// turned, so a long name is cut at the strip's end rather than its width.
 private struct Sideways: Layout {
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let size = subviews.first?.sizeThatFits(ProposedViewSize(width: proposal.height, height: proposal.width)) ?? .zero
@@ -553,7 +499,6 @@ struct PaneMenu: View {
     var newTab: ((Navigator, ColumnPrefs) -> Void)?
 
     var body: some View {
-        // 칸 접기 from a segment, a strip, or the divider beside it (2026-11-08 사용자); on a strip, opening it again.
         if panes.folded.contains(index) {
             Button(.panesUnfold, systemImage: "arrow.left.and.line.vertical.and.arrow.right") { panes.press(index) }
         } else {
@@ -580,7 +525,6 @@ struct PaneMenu: View {
 
 struct PlaceIcon: View {
     let place: Crumb
-    /// In place of the course's color, for a mark that steps back (a tab segment out of focus).
     var tint: Color?
 
     var body: some View {
@@ -593,11 +537,8 @@ struct PlaceIcon: View {
 }
 
 extension Workspace {
-    /// A pane's mark on its strip and its segment of the tab: the icon of what it shows (the last step its screen
-    /// added, a note's or a file's) in its course's color, and its short name.
     func paneMark(of entry: Navigator.Entry, trail: CrumbTrail?) -> Crumb {
         let place = placeCrumb(of: entry)
-        // A course's steps only while the course is shown: they clear as it goes.
         let steps = if case .course = Screen(entry) { trail?.crumbs ?? [] } else { [Crumb]() }
         let symbol = steps.last { $0.symbol != nil }?.symbol ?? place.symbol
         return Crumb(title: tabTitle(of: entry) ?? place.title, symbol: symbol, dot: place.dot)
@@ -611,11 +552,6 @@ extension AppLink.Anchor {
 }
 
 private extension View {
-    /// On the Mac each pane is a paper panel of its own on the frame, the focused one's edge a step stronger; the
-    /// iPad's split view detail is the paper already.
-    /// `ring`: the focused pane's hairline, when the tab has several.
-    /// A rounded panel on the frame, on the Mac and the iPad alike; the iPhone's screen is the page itself, edge to edge
-    /// (`barePanes`).
     func panePanel(ring: Color?) -> some View { modifier(PanePanel(ring: ring)) }
 }
 
@@ -629,25 +565,21 @@ private struct PanePanel: ViewModifier {
             .background(Theme.Palette.page, in: shape)
             .clipShape(shape)
             .overlay { if !bare { shape.strokeBorder(Theme.Palette.lineSoft) } }
-            // A hairline in the accent says which pane the toolbar and the keys act on, without dimming the others.
             .overlay { if let ring { shape.strokeBorder(ring, lineWidth: 1) } }
     }
 }
 
 extension EnvironmentValues {
-    /// Panes drawn without their panel: the iPhone, whose screen is one page from edge to edge (#134).
     @Entry var barePanes = false
 }
 
 #if os(macOS)
 import AppKit
 
-/// Presses the pane it lies under when a click lands anywhere in it, or the divider on a double click. A local event
-/// monitor, not a gesture: a note's text and preview page and a PDF take the click in AppKit before SwiftUI sees it.
-/// It never takes the click itself.
+// gesture가 아니라 local event monitor를 쓴다. 노트의 글, 미리보기 페이지, PDF는 SwiftUI보다 먼저 AppKit에서 클릭을
+// 받기 때문이다. 이 monitor는 클릭을 가져가지 않는다.
 struct PanePress: NSViewRepresentable {
     let active: Bool
-    /// The click of a run that presses it: 2 for the second of a double click.
     var clicks = 1
     let press: @MainActor () -> Void
 
@@ -680,7 +612,7 @@ struct PanePress: NSViewRepresentable {
             monitor = nil
             guard window != nil else { return }
             monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) { [weak self] event in
-                // Local monitors run on the main thread, with the event the app is handling there.
+                // local monitor는 앱이 처리하는 event와 함께 main thread에서 실행된다.
                 nonisolated(unsafe) let event = event
                 MainActor.assumeIsolated { self?.check(event) }
                 return event

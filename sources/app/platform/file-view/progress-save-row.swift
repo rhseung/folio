@@ -1,7 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// Saving is `material link`, the same action as the wrap-up's.
 struct ProgressSaveRow: View {
     @Bindable var model: PageStripModel
     let editing: StripSection?
@@ -30,7 +29,6 @@ struct ProgressSaveRow: View {
         }
     }
 
-    /// In the row, not only the header's menu: a touch screen has nothing that shows a long press opens one.
     private var removeButton: some View {
         Button(role: .destructive) {
             withAnimation(Theme.Motion.quick) { model.remove() }
@@ -46,7 +44,6 @@ struct ProgressSaveRow: View {
         .disabled(!model.canRemove)
     }
 
-    /// Opens to the trailing side, over the page rather than the thumbnails the range was picked on.
     private var classMenu: some View {
         Button {
             model.choosing = true

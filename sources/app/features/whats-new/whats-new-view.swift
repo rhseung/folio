@@ -1,14 +1,12 @@
 import FolioDomain
 import SwiftUI
 
-/// 새 기능 (#415): the page an update's sheet, 도움말 › 새 기능 and 설정 › 앱 정보 open.
 struct WhatsNewView: View {
     @State private var model: WhatsNewModel
 
     init(workspace: Workspace) { _model = State(initialValue: WhatsNewModel(workspace: workspace)) }
 
     var body: some View {
-        // Each part a block of the page, `section` apart: the tools, then every version.
         Page(maxWidth: 760) {
             PageHeader(title: String(localized: .whatsNewTitle), subtitle: model.subtitle)
             switch model.state {
@@ -60,7 +58,6 @@ struct WhatsNewView: View {
     }
 }
 
-/// One version: its heading, which opens and closes it, then its items.
 private struct ReleaseSection: View {
     let model: WhatsNewModel
     let release: PatchNotes.Release
@@ -89,12 +86,9 @@ private struct ReleaseSection: View {
     }
 }
 
-/// Items in one card, each after its kind's chip, on the page and in the sheet alike.
 struct PatchNoteList: View {
     let items: [PatchNotes.Item]
-    /// Past this height the rows scroll inside the card, the edge with more past it faded; nil grows with the rows.
     var maxHeight: CGFloat?
-    /// Before a row's link opens: the sheet closes itself first.
     var opening: () -> Void = {}
     @State private var rowsHeight: CGFloat = 0
 
@@ -111,7 +105,7 @@ struct PatchNoteList: View {
                 }
                 .scrollBounceBehavior(.basedOnSize)
                 .overflowFade(.vertical)
-                // A ScrollView takes all the height it is offered; sized to its rows, a short list stays short.
+                // ScrollView는 받은 높이를 모두 차지하므로, 짧은 목록이 짧게 남도록 행 높이에 맞춘다.
                 .frame(height: min(rowsHeight, maxHeight))
             } else {
                 rows
@@ -126,14 +120,12 @@ struct PatchNoteList: View {
     }
 }
 
-/// One item: its kind, its sentence and, when it names a place, 열기.
 struct PatchNoteRow: View {
     let item: PatchNotes.Item
     var opening: () -> Void = {}
     @Environment(\.openLink) private var openLink
 
     var body: some View {
-        // As wide as the widest kind's chip, so every row's sentence starts at one edge.
         ZStack(alignment: .leading) {
             ForEach(PatchNotes.Kind.allCases, id: \.self) { Chip($0.label, tone: $0.tone).hidden() }
             Chip(item.kind.label, tone: item.kind.tone)

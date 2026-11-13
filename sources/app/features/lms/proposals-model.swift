@@ -2,14 +2,10 @@ import FolioDomain
 import Foundation
 import Observation
 
-/// 제안함 (#132): what the LMS brought in, by LMS classroom, waiting to be added or dismissed. No classroom is tied to a
-/// course; each addition picks one. Nothing is written to a course until then.
 @MainActor @Observable
 final class ProposalsModel {
     let workspace: Workspace
-    /// Proposals being added: a file downloads first, and its row waits.
     private(set) var adding: Set<String> = []
-    /// Classrooms whose handled items are shown. Folded by default: the first sync alone marks a term's worth of posts.
     var showingHandled: Set<Int> = []
 
     init(workspace: Workspace) { self.workspace = workspace }
@@ -18,7 +14,6 @@ final class ProposalsModel {
     var sections: [LMSInbox.Section] { inbox.sections }
     var waiting: [LMSInbox.Section] { inbox.waiting }
 
-    /// The courses an item can go to: this term's, in the sidebar's order, or every course between terms.
     var targets: [(id: UUID, title: String)] {
         let current = workspace.currentCourses
         return (current.isEmpty ? workspace.courses : current).map { ($0.id, $0.title) }
@@ -26,7 +21,6 @@ final class ProposalsModel {
 
     var total: Int { inbox.proposals.count }
 
-    /// The earliest deadline among the proposed assignments, since that is what can be missed.
     var earliestDue: String? {
         let first = inbox.proposals.compactMap { p -> (Date, String)? in
             if case .assignment(let a) = p.item, let due = a.due { return (due, a.title) }
@@ -60,7 +54,6 @@ final class ProposalsModel {
         return false
     }
 
-    /// An assignment's deadline as Today's list shows it, with how near it is. The chip carries it, not the detail line.
     func due(_ p: LMSProposal) -> (text: String, urgency: DueUrgency)? {
         guard case .assignment(let a) = p.item, let due = a.due else { return nil }
         let calendar = workspace.calendar
@@ -68,7 +61,6 @@ final class ProposalsModel {
         return (DueUrgency.text(due, studyDays: days), DueUrgency(studyDays: days))
     }
 
-    /// What a row is: the name it gets in `Lectures`, a notice's date and author.
     func detail(_ p: LMSProposal) -> String {
         switch p.item {
         case .assignment:
@@ -92,12 +84,10 @@ final class ProposalsModel {
 
     func addable(_ section: LMSInbox.Section) -> [LMSProposal] { section.proposals.filter(canAdd) }
 
-    /// A classroom left with only hidden items counts for nothing, so its header shows no number.
     func count(_ section: LMSInbox.Section) -> String? { section.proposals.isEmpty ? nil : "\(section.proposals.count)" }
 
     func isLast(_ p: LMSProposal, in section: LMSInbox.Section) -> Bool { section.handled.isEmpty && p.id == section.proposals.last?.id }
 
-    /// A file that can be added says enough in its row; an assignment's page has the submission details the row leaves out.
     func showsOpen(_ p: LMSProposal) -> Bool { !canAdd(p) || p.key.kind == .assignment }
 
     func isAdding(_ proposals: [LMSProposal]) -> Bool { !adding.isDisjoint(with: proposals.map(\.id)) }

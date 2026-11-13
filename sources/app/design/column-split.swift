@@ -1,28 +1,19 @@
 import SwiftUI
 
-/// Which list column a `ColumnSplit` holds. Hiding one by hand is remembered for its kind, in the pane it was hidden
-/// in (`ColumnPrefs`, #62).
 enum ColumnKind: String, CaseIterable {
     case courseSections, settingsTabs, people, quizScope
 
-    /// A column of a few fixed sections, rather than a list that grows: the menu names it 구역 열, not 목록 열.
     var holdsSections: Bool { self == .courseSections || self == .settingsTabs }
 }
 
-/// How a list column beside a page folds where both don't fit (#43, #62): a column of fixed sections leaves the page
-/// alone; a list that grows (people, a quiz's scope) is the page while there is nothing to show beside it.
 enum ColumnFold: Equatable {
     case sections
     case list(showingPage: Bool)
 }
 
-/// Where a list column is, from the room beside it and the person's choice (#62). The column docks beside the page
-/// only where the page keeps `ColumnSplit.pageRoom` and it isn't hidden by hand; otherwise it is folded, and the button
-/// at the page's corner brings it back.
 struct ColumnFit: Equatable {
     var roomy: Bool
     var collapsed: Bool
-    /// A growing list with no page to show beside it.
     var nothingBeside = false
 
     init(roomy: Bool, collapsed: Bool, fold: ColumnFold = .sections) {
@@ -32,30 +23,23 @@ struct ColumnFit: Equatable {
     }
 
     var docked: Bool { roomy && !collapsed }
-    /// Folded for want of room with nothing beside it: the list is the page, and no button is needed to reach it.
-    /// Hidden by hand where it fits, the page shows its empty state and the button brings the list back.
     var listAlone: Bool { !roomy && nothingBeside }
     var showsPage: Bool { !listAlone }
 
     enum Show: Equatable { case dock, overlay }
-    /// Showing a folded column again, by its button or the menu: back beside the page where it fits, so the choice to
-    /// hide it is undone; over the page for the moment where it doesn't, the choice kept.
     var show: Show { roomy ? .dock : .overlay }
 }
 
-/// The list columns hidden by hand in one pane (2026-11-10 사용자): each tab, and each pane of a split, keeps its own,
-/// so hiding the course column in one leaves the others as they were. Nested splits in a pane share its prefs.
 @MainActor @Observable final class ColumnPrefs {
     private(set) var collapsed: Set<ColumnKind>
     @ObservationIgnored private let memory: ColumnMemory?
 
-    /// Without a memory the choice stays in this pane: renders and tests, which mustn't change what new panes start as.
+    // 렌더와 테스트가 새 칸의 시작 상태를 바꾸면 안 되므로, 기억할 곳이 없으면 이 칸 안에서만 기억한다.
     init(collapsed: Set<ColumnKind> = [], memory: ColumnMemory? = nil) {
         self.collapsed = collapsed
         self.memory = memory
     }
 
-    /// For what draws a screen outside a tab's panes (renders, previews).
     static let loose = ColumnMemory.shared.newPane()
 
     func isCollapsed(_ kind: ColumnKind) -> Bool { collapsed.contains(kind) }
@@ -66,11 +50,9 @@ struct ColumnFit: Equatable {
     }
 }
 
-/// The last choice made in any pane, which a new tab or pane starts from: on this device, a choice about the screen
-/// and not GIST data, so in `UserDefaults` rather than `settings.json`.
 @MainActor final class ColumnMemory {
-    /// A test host, a window-snapshot run or a resize probe shares the installed app's bundle ID, so its defaults are
-    /// the user's: a column they hid would change what is measured or drawn, and one the run hides would stay hidden.
+    // 테스트 호스트, 창 스냅숏 실행, 크기 측정 실행은 설치된 앱과 bundle ID가 같아서 defaults도 사용자의 것을 쓴다.
+    // 그러면 사용자가 숨긴 열이 측정이나 그림을 바꾸고, 실행이 숨긴 열은 사용자에게 계속 숨겨진다.
     static let shared = ColumnMemory(defaults: isolated ? nil : .standard)
     private static var isolated: Bool {
         #if DEBUG && os(macOS)
@@ -84,7 +66,6 @@ struct ColumnFit: Equatable {
     private let defaults: UserDefaults?
     private(set) var last: Set<ColumnKind>
 
-    /// Nil defaults keep the last choice in memory only.
     init(defaults: UserDefaults?, collapsed: Set<ColumnKind> = []) {
         self.defaults = defaults
         last = defaults.map { d in Set(ColumnKind.allCases.filter { d.bool(forKey: Self.key($0)) }) } ?? collapsed
@@ -99,8 +80,7 @@ struct ColumnFit: Equatable {
 
     func newPane() -> ColumnPrefs { ColumnPrefs(collapsed: last, memory: self) }
 
-    /// A pane brought into a new window (`WindowRequest.columns`) keeps what it had hidden; nil is a new pane. Raw
-    /// names, so a kind a later build drops is skipped rather than failing the whole request, and the window with it.
+    // 나중 빌드가 없앤 종류가 있어도 요청 전체와 창이 실패하지 않도록, 원래 이름으로 받아 모르는 종류만 건너뛴다.
     func pane(_ kinds: [String]?) -> ColumnPrefs {
         guard let kinds else { return newPane() }
         return ColumnPrefs(collapsed: Set(kinds.compactMap(ColumnKind.init(rawValue:))), memory: self)
@@ -108,15 +88,11 @@ struct ColumnFit: Equatable {
 }
 
 extension ColumnPrefs {
-    /// For `WindowRequest.columns`.
     var names: [String] { collapsed.map(\.rawValue).sorted() }
 }
 
-/// The menu bar's 구역 열 보기·숨기기 for the focused pane's outermost column, which the pane's screen leaves in its
-/// `CrumbTrail` while it is on screen.
 struct ColumnCommand {
     var kind: ColumnKind
-    /// Beside the page, or open over it.
     var shown: Bool
     var toggle: @MainActor () -> Void
 }
@@ -125,31 +101,21 @@ extension FocusedValues {
     @Entry var columnCommand: ColumnCommand?
 }
 
-/// The labels of the column buttons on screen, for the screen fit check to find them.
 struct ColumnButtonLabels: PreferenceKey {
     static let defaultValue: [String] = []
     static func reduce(value: inout [String], nextValue: () -> [String]) { value += nextValue() }
 }
 
 extension EnvironmentValues {
-    /// Inside a `ColumnSplit` whose column isn't docked beside the page: what each held for the other now has to be in it.
     @Entry var columnFolded = false
-    /// How many column buttons sit along the top-leading corner of this view: what starts there clears their row
-    /// (`clearOfColumnButtons(inset:)`). Nested splits (a quiz's scope in a folded course) line theirs up after.
     @Entry var columnButtons = 0
-    /// Closes the folded column open over the page, for a row picked in it that leaves the window's place as it was.
     @Entry var closeColumn: @MainActor () -> Void = {}
-    /// The pane's own (`TabPanes.columns`).
     @Entry var columnPrefs: ColumnPrefs?
-    /// Set by an outer `ColumnSplit` on what it holds: only the outermost column answers the menu bar.
     @Entry var insideColumnSplit = false
-    /// False in a pane of several that isn't focused, which leaves the menu bar's column command to the focused one.
     @Entry var paneFocused = true
 }
 
 extension View {
-    /// For what starts at the top-leading corner under the column buttons: pushed down so the row of buttons clears it,
-    /// `inset` being how far down it already starts. Nothing changes where no button sits over it.
     func clearOfColumnButtons(inset: CGFloat) -> some View { modifier(ClearOfColumnButtons(inset: inset)) }
 
     func columnBackground() -> some View { modifier(ColumnBackground()) }
@@ -168,14 +134,10 @@ private struct ColumnBackground: ViewModifier {
     @Environment(\.onGlass) private var onGlass
 
     func body(content: Content) -> some View {
-        // Up under the window's top row like the divider beside it.
         content.background { if !onGlass { Theme.Palette.window.ignoresSafeArea() } }
     }
 }
 
-/// A list column, its divider and a page (#43). The column docks beside the page where the page keeps `pageRoom` and
-/// it isn't hidden by hand; otherwise a button at the page's top-leading corner slides the same column over the page
-/// on glass, or docks it back where it fits (#62). The same button on the docked column hides it.
 struct ColumnSplit<Column: View, Content: View>: View {
     let kind: ColumnKind
     var width: CGFloat = Theme.Size.courseColumn
@@ -190,28 +152,22 @@ struct ColumnSplit<Column: View, Content: View>: View {
     @Environment(\.paneFocused) private var paneFocused
     @Environment(CrumbTrail.self) private var trail: CrumbTrail?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    // Measured, unlike `Fold`: the side-by-side form can't push a pane out (the page goes down to nothing), so its
-    // first pass at the old width costs nothing, and only the width the page is left decides.
     @State private var roomy = true
     @State private var paneWidth: CGFloat = 0
     @State private var opened = false
     @State private var owner = UUID()
 
-    /// What a page needs beside the column; less, and the column folds.
     static var pageRoom: CGFloat { 440 }
     static var buttonRow: CGFloat { Theme.Size.toolbarButton + Theme.Space.s * 2 }
-    /// How much of the pane the open column leaves uncovered at its trailing side, to click back to the page.
     static var pageEdge: CGFloat { buttonRow }
 
     var prefs: ColumnPrefs { givenPrefs ?? .loose }
     var fit: ColumnFit { ColumnFit(roomy: roomy, collapsed: prefs.isCollapsed(kind), fold: fold) }
     var buttons: Int { outerButtons + 1 }
 
-    /// Over the page: only while folded, so a column that docks or becomes the page is never left open.
     var open: Bool {
         var asked = opened
         #if DEBUG && os(macOS)
-        // Window snapshots and renders draw it open, as its button would (`FOLIO_SNAPSHOT_COLUMN=open`).
         asked = asked || SnapshotDriver.shared.columnOpen
         #endif
         return asked && !fit.docked && !fit.listAlone
@@ -225,19 +181,17 @@ struct ColumnSplit<Column: View, Content: View>: View {
                     .frame(width: fit.docked ? width : nil)
                     .frame(maxWidth: fit.docked ? nil : .infinity, maxHeight: .infinity)
                     .environment(\.columnFolded, !fit.docked)
-                    // Alone, the list has no button of its own: the page it stands in for is what one would bring back.
                     .environment(\.columnButtons, fit.docked ? buttons : outerButtons)
                     .transition(.move(edge: .leading))
             }
             if fit.docked { ColumnDivider() }
             if fit.showsPage {
                 content
-                    // minWidth 0: a page's fixed-width rows must never set the column's minimum. When that
-                    // minimum plus a side column exceeds the window, AppKit loops on constraints and kills the
-                    // app. A fit check lifts it to see the page overflow, which this otherwise clips.
+                    // minWidth를 0으로 두어 본문의 고정 폭 행이 열의 최소 폭을 정하지 못하게 한다. 그 최소 폭과 옆 열의
+                    // 합이 창보다 크면 AppKit이 constraint 계산을 반복하다 앱이 종료된다. 화면 맞춤 검사는 이 제한을
+                    // 풀어, 평소에는 잘리는 본문의 넘침을 본다.
                     .frame(minWidth: revealsOverflow ? nil : 0, maxWidth: .infinity, maxHeight: .infinity)
                     .environment(\.columnFolded, !fit.docked)
-                    // Beside a docked column the buttons sit over the column, not the page.
                     .environment(\.columnButtons, fit.docked ? 0 : buttons)
                     .accessibilityHidden(open)
             }
@@ -250,10 +204,8 @@ struct ColumnSplit<Column: View, Content: View>: View {
             paneWidth = w
             roomy = w >= width + 1 + Self.pageRoom
         }
-        // Room again, or a docked column: nothing is left over the page.
         .onChange(of: fit.docked) { _, docked in if docked { opened = false } }
         .onChange(of: fit.listAlone) { _, alone in if alone { opened = false } }
-        // A row picked in the open column moves the window, which is where every pick goes (`\.openLink`).
         .onChange(of: place) { close() }
         .onChange(of: registration, initial: true) { _, _ in register() }
         .onDisappear { trail?.clearColumn(owner: owner) }
@@ -272,7 +224,6 @@ struct ColumnSplit<Column: View, Content: View>: View {
         .animation(Theme.Motion.standard, value: open)
     }
 
-    /// Dims the page and takes the click that closes the column, which a click on the page would otherwise act on.
     var scrim: some View {
         Color.black.opacity(Theme.Opacity.scrim)
             .contentShape(.rect)
@@ -297,7 +248,7 @@ struct ColumnSplit<Column: View, Content: View>: View {
             .floatingGlass()
             .shadow(color: .black.opacity(0.18), radius: 24, y: 12)
             .padding([.top, .leading, .bottom], Theme.Space.s)
-            // Esc, on the iPad's keyboard too; a hidden view's shortcut doesn't fire, a clear one's does.
+            // iPad 키보드에서도 Esc로 닫는다. 숨긴 뷰의 단축키는 동작하지 않고, 투명한 뷰의 단축키는 동작한다.
             .background {
                 Button("", action: close).keyboardShortcut(.cancelAction).opacity(0).allowsHitTesting(false).accessibilityHidden(true)
             }
@@ -330,8 +281,6 @@ struct ColumnSplit<Column: View, Content: View>: View {
         }
     }
 
-    /// The button and the menu bar's command: hides a docked column by hand, closes it open over the page, and
-    /// otherwise shows it as `ColumnFit.show` says.
     func toggle() {
         let fit = fit
         withAnimation(reduceMotion ? nil : Theme.Motion.standard) {
@@ -355,7 +304,6 @@ struct ColumnSplit<Column: View, Content: View>: View {
         withAnimation(reduceMotion ? nil : Theme.Motion.standard) { opened = false }
     }
 
-    /// What the menu bar's command shows, which changes with the column.
     var registration: [Bool] { [nested, paneFocused, fit.docked || open, fit.listAlone] }
 
     func register() {
@@ -365,9 +313,7 @@ struct ColumnSplit<Column: View, Content: View>: View {
     }
 }
 
-/// A row of a list column, or a button in it that finishes with the column (a quiz's start): picking it also closes the
-/// column where it is open over the page, even when the pick leaves the window where it was. Its own view, so it
-/// reads the `closeColumn` the open column is given, which the screen that draws the column doesn't see.
+// 열을 그리는 화면은 열린 열에 주어진 `closeColumn`을 보지 못하므로, 그 값을 읽도록 별도 뷰로 둔다.
 struct ColumnPick<Label: View>: View {
     let action: () -> Void
     @ViewBuilder var label: Label

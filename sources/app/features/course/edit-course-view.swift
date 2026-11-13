@@ -3,7 +3,6 @@ import FolioDomain
 import FolioStorage
 import SwiftUI
 
-/// Edits course.json. The folder name follows the title, main code and number, so saving a change to those renames it.
 struct EditCourseSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var model: EditCourseModel
@@ -23,7 +22,6 @@ struct EditCourseSheet: View {
                     FormRow(label: String(localized: .courseEditName)) {
                         InlineField(String(localized: .courseEditNameExample), text: $model.title)
                     }
-                    // Prefix and number side by side, as the course reads: GS2004-02.
                     FormRow(label: String(localized: .courseEditCode), detail: model.codeDetail) {
                         CodesMenu(codes: $model.codes)
                         TextField("2004-02", text: $model.number).pill(width: 100)
@@ -77,7 +75,6 @@ struct EditCourseSheet: View {
     }
 }
 
-/// Only the presets are offered, so every course keeps the palette's tested contrast and follows it when it changes.
 struct CourseColorSwatches: View {
     @Binding var token: String
 
@@ -88,7 +85,6 @@ struct CourseColorSwatches: View {
     ]
 
     var body: some View {
-        // A #RRGGBB saved before shows on the preset it now reads as.
         let chosen = token.isEmpty ? nil : CourseColor.token(token, position: 0)
         HStack(spacing: Theme.Space.xs) {
             ForEach(CourseAccent.presets, id: \.name) { preset in
@@ -112,7 +108,6 @@ struct CourseColorSwatches: View {
     }
 }
 
-/// The next lecture is suggested from these.
 struct ClassTimesBlock: View {
     @Binding var schedule: [ClassTime]
 
@@ -149,8 +144,6 @@ struct ClassTimesBlock: View {
     }
 }
 
-/// A class time's meeting link, for a course held online every week. In a popover, since most slots have none and the
-/// row has no room for a second field.
 struct ClassLinkButton: View {
     @Binding var link: String?
     @State private var open = false
@@ -176,7 +169,6 @@ struct ClassLinkButton: View {
     }
 }
 
-/// Only the class times, for the sessions page.
 struct ClassTimesSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var model: EditCourseModel
@@ -186,7 +178,6 @@ struct ClassTimesSheet: View {
     }
 
     var body: some View {
-        // The course as the heading: the block below already says 수업 시간, and twice in a row read as a mistake.
         SheetForm(
             title: model.course.title, confirm: String(localized: .commonSave), disabled: model.timesNote != nil,
             note: model.timesNote, carded: false, width: 600
@@ -199,7 +190,6 @@ struct ClassTimesSheet: View {
     }
 }
 
-/// Credits as a typed number; half credits exist, so a fixed menu of whole numbers won't do.
 struct CreditsField: View {
     @Binding var credits: Double?
 
@@ -211,7 +201,6 @@ struct CreditsField: View {
     }
 }
 
-/// Cross-listed codes in order; the first is the main code.
 struct CodesMenu: View {
     @Environment(Workspace.self) private var workspace
     @Binding var codes: [UUID]

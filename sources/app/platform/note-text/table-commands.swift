@@ -6,11 +6,6 @@ import AppKit
 import UIKit
 #endif
 
-/// Only names and symbols live here: the keys and groups are `TableCommand`'s, which the input guide reads too; what
-/// each one does to the source is `TableEditing`'s.
-///
-/// The keys act only with the caret in a table, so outside one they stay the text view's and the app's. None of them is
-/// taken elsewhere in the note screen (⌘S, ⌘E, ⌘K, ⌘/, ⌘[ and ⌘] are).
 @MainActor enum TableCommands {
     typealias Key = TableShortcut.Key
     typealias Shortcut = TableShortcut
@@ -53,7 +48,7 @@ import UIKit
     static func command(for shortcut: Shortcut) -> TableCommand? { TableCommand.command(for: shortcut) }
 
     #if os(macOS)
-    /// Taken by key code, so the Korean input source doesn't change them.
+    // 한국어 입력 소스에서도 바뀌지 않도록 키 코드로 받는다.
     static func shortcut(of event: NSEvent) -> Shortcut? {
         let keys: [UInt16: Key] = [126: .up, 125: .down, 123: .left, 124: .right, 36: .enter, 76: .enter, 51: .delete]
         let flags = event.modifierFlags.intersection([.command, .shift, .option, .control])
@@ -61,8 +56,6 @@ import UIKit
         return Shortcut(key: key, shift: flags.contains(.shift), option: flags.contains(.option), control: flags.contains(.control))
     }
 
-    /// The table's commands as a submenu, each one off where it can't be done (a move past the edge, deleting the
-    /// last row or column).
     static func menu(for table: TableSource, run: @escaping @MainActor (SourceEditing.Edit) -> Void) -> NSMenuItem {
         let menu = NSMenu()
         menu.autoenablesItems = false
@@ -102,7 +95,6 @@ import UIKit
         return String(Character(UnicodeScalar(scalar)!))
     }
     #else
-    /// Hardware keyboard shortcuts on the iPad, the same keys as on the Mac. Its menu waits for the iPad's edit menu (#31).
     static func keyCommands(action: Selector) -> [UIKeyCommand] {
         TableCommand.allCases.compactMap { command in
             guard let shortcut = shortcut(command) else { return nil }
@@ -121,7 +113,7 @@ import UIKit
             if shortcut.control { flags.insert(.control) }
             let key = UIKeyCommand(
                 title: title(command), action: action, input: input, modifierFlags: flags, propertyList: command.rawValue)
-            // Ahead of the text view's own keys, which ⌘ with the arrows would otherwise move the caret by.
+            // 텍스트 뷰의 키보다 먼저 받는다. 그러지 않으면 ⌘와 화살표가 캐럿을 옮긴다.
             key.wantsPriorityOverSystemBehavior = true
             return key
         }

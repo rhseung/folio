@@ -1,8 +1,6 @@
 import Foundation
 import Observation
 
-/// Recordings being transcribed from their audio, one after another. Kept by the workspace so a job goes on after
-/// the player that started it closes.
 @MainActor @Observable
 final class TranscriptionQueue {
     private(set) var phases: [UUID: TranscriptionPhase] = [:]
@@ -11,8 +9,6 @@ final class TranscriptionQueue {
 
     func phase(of id: UUID) -> TranscriptionPhase? { phases[id] }
 
-    /// `work` gets a way to report its progress; it throws `CancellationError` when cancelled. Asking again for a
-    /// recording already queued does nothing.
     func run(
         _ id: UUID, failed: @escaping @MainActor (any Error) -> Void,
         _ work: @escaping @Sendable (@escaping @Sendable (TranscriptionPhase) -> Void) async throws -> Void
@@ -45,7 +41,7 @@ final class TranscriptionQueue {
         finish(id, job.token)
     }
 
-    // The token keeps a late report or the end of a cancelled job from touching a newer job for the same recording.
+    // token이 있어야 늦게 온 보고나 취소된 작업의 끝이 같은 녹음의 새 작업을 바꾸지 않는다.
     private func update(_ id: UUID, _ token: UUID, _ phase: TranscriptionPhase) {
         guard jobs[id]?.token == token else { return }
         phases[id] = phase

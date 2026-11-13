@@ -6,19 +6,12 @@ import Foundation
 import Observation
 import PDFKit
 
-/// The add sheet: one row per incoming file with where it lands, under what name, and for which class. Each row opens
-/// on `MaterialIntake.guess`; menus change one row, or every selected row when the menu's row is among them.
-/// A lecture PDF is read for its units as it comes in (#321), and the sections the user keeps are written with it.
 @MainActor @Observable
 final class ImportPlaceModel {
-    /// A lecture row's proposed split into units, from reading to what the user approves.
     indirect enum Sections: Equatable {
         case reading(done: Int, total: Int)
-        /// `source` is nil once split by hand from nothing found.
         case proposed(LectureSplit, source: LectureSource?)
-        /// Read, but nothing said where the units begin.
         case nothing(pageCount: Int)
-        /// Put off: the file comes in unsplit. What was proposed is kept, to take back.
         case later(Sections)
     }
 
@@ -29,17 +22,13 @@ final class ImportPlaceModel {
     let places: [String]
     private(set) var rows: [Row]
     private(set) var selection: Set<Int> = []
-    /// Where a ⇧ range starts and where ↑↓ move from.
     private var anchor = 0
     private var cursor = 0
-    /// What each folder holds, read once: nothing else writes there while the sheet is open.
     private let held: [String: Set<String>]
     private(set) var sections: [Int: Sections] = [:]
-    /// Rows whose sections are shown under them. One file opens on them; a batch keeps each to its summary line.
     private(set) var opened: Set<Int> = []
     private let find: Find
     @ObservationIgnored private var reads: [Int: Task<Void, Never>] = [:]
-    /// Rows Claude is reading for "Claude로 나누기" (#450), and why the last ask of a row came to nothing.
     private(set) var asking: Set<Int> = []
     private(set) var claudeFailures: [Int: String] = [:]
     @ObservationIgnored private let claude: LectureClaude
@@ -58,7 +47,6 @@ final class ImportPlaceModel {
         var places: [String]
         var id: String { label }
         var isLecture: Bool { places == [CourseFolder.lectures.rawValue] }
-        /// Assignments and exams name which one even when there is one, so the choice reads plainly.
         var perItem: Bool { places[0].contains("/") }
     }
 
@@ -86,7 +74,7 @@ final class ImportPlaceModel {
         for task in asks.values { task.cancel() }
     }
 
-    /// The page count and shape `guess` reads. Files from outside the sandbox open only inside their scope.
+    // 샌드박스 밖의 파일은 그 scope 안에서만 열린다.
     private static func incoming(_ url: URL) -> IncomingFile {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
@@ -94,7 +82,7 @@ final class ImportPlaceModel {
             return IncomingFile(name: url.lastPathComponent)
         }
         let box = first.bounds(for: .mediaBox)
-        // A page turned 90° shows its long side across, whatever its box says.
+        // 90도 돌린 쪽은 box와 상관없이 긴 변이 가로로 보인다.
         let turned = first.rotation % 180 != 0
         return IncomingFile(name: url.lastPathComponent, pages: pdf.pageCount, landscape: (box.width > box.height) != turned)
     }
@@ -107,7 +95,6 @@ final class ImportPlaceModel {
 
     var confirmTitle: String { String(localized: many ? .materialsImportConfirmMany(rows.count) : .materialsImportConfirm) }
 
-    /// The keys a Mac picks and fills rows with. A touch screen gets no line: the rows show what is picked.
     var hint: String? {
         guard many else { return String(localized: .materialsImportNote) }
         #if os(macOS)
@@ -119,8 +106,6 @@ final class ImportPlaceModel {
 
     // MARK: Kinds and sessions
 
-    /// Places by kind label, in the order first met: `과제` → `Assignments/HW00`, `Assignments/HW01`, … The order is also
-    /// the number key for each.
     var kinds: [Kind] {
         var result: [Kind] = []
         for p in [CourseFolder.lectures.rawValue] + places {
@@ -143,12 +128,10 @@ final class ImportPlaceModel {
         return kind.perItem ? "\(kind.label) \((row.folder as NSString).lastPathComponent)" : kind.label
     }
 
-    /// Newest first: a file is almost always for a recent class.
     var sessions: [Session] { course.file.sessions.filter { !$0.isCancelled }.sorted(by: Session.inOrder).reversed() }
 
     func sessionTitle(_ s: Session) -> String { course.file.title(of: s, calendar: workspace.calendar) }
 
-    /// `11/6(목) · 오늘` for today's class, which is the one a file is most often for; any other by its title.
     func sessionLabel(_ row: Row) -> String {
         guard let s = row.session.flatMap({ id in sessions.first { $0.id == id } }) else {
             return String(localized: .materialsImportNoSession)
@@ -162,7 +145,6 @@ final class ImportPlaceModel {
         return s.date > workspace.now ? String(localized: .materialsImportUpcoming) : nil
     }
 
-    /// The ✦ reasons: only while the row still holds what was guessed.
     func kindWhy(_ row: Row) -> String? {
         guard row.folder == row.guess.folder, let why = row.guess.why else { return nil }
         return String(localized: .materialsImportGuessed(why.text))
@@ -175,7 +157,7 @@ final class ImportPlaceModel {
 
     // MARK: Destinations
 
-    /// Each row's folder and final name, planned together so two files of one name don't both claim it.
+    // 같은 이름의 두 파일이 한 이름을 함께 차지하지 않도록 모든 행을 함께 계획한다.
     var placements: [MaterialIntake.Placement] {
         MaterialIntake.plan(
             rows.map { row in (row.url.lastPathComponent, row.folder, isLecture(row) ? session(row) : nil) },
@@ -184,7 +166,6 @@ final class ImportPlaceModel {
 
     private func session(_ row: Row) -> Session? { row.session.flatMap { id in course.file.sessions.first { $0.id == id } } }
 
-    /// Why the name differs from the file's own, for the destination's tooltip.
     func nameNote(_ p: MaterialIntake.Placement) -> String? {
         if let suffix = p.suffix { return String(localized: .materialsImportNumbered(suffix.trimmingCharacters(in: .whitespaces))) }
         if let prefix = p.prefix { return String(localized: .materialsImportWeekPrefix(prefix)) }
@@ -193,11 +174,8 @@ final class ImportPlaceModel {
 
     // MARK: Changing rows
 
-    /// The rows a menu on `row` changes: every selected row when it is one of several selected, else that row alone.
     func targets(_ row: Row) -> [Int] { selection.contains(row.id) && selection.count > 1 ? selection.sorted() : [row.id] }
 
-    /// A kind with several folders keeps a row's folder when it is already one of them, else takes the newest: the latest
-    /// assignment or exam is the likely one. A row turned into a lecture takes its guessed class, or the latest.
     func setFolder(_ folder: String, for ids: [Int]) {
         for i in ids {
             rows[i].folder = folder
@@ -223,7 +201,6 @@ final class ImportPlaceModel {
 
     // MARK: Selecting
 
-    /// A click: alone it picks the row, ⇧ widens from the last pick, ⌘ adds or takes away one row.
     func click(_ id: Int, extend: Bool = false, toggle: Bool = false) {
         guard many else { return }
         if toggle {
@@ -238,8 +215,6 @@ final class ImportPlaceModel {
         cursor = id
     }
 
-    /// A touch screen's pick of several under way: a long press started it on a row, and a tap adds a row or takes
-    /// one away, as ⌘-click does with a pointer. Taking the last one away ends it.
     private(set) var picking = false
 
     func hold(_ id: Int) {
@@ -253,14 +228,12 @@ final class ImportPlaceModel {
         if selection.isEmpty { picking = false }
     }
 
-    /// ↑↓: the next row, or with ⇧ the range from the anchor to it.
     func step(_ by: Int, extend: Bool) {
         guard many else { return }
         let next = selection.isEmpty ? (by > 0 ? 0 : rows.count - 1) : min(max(cursor + by, 0), rows.count - 1)
         if extend && !selection.isEmpty { click(next, extend: true) } else { click(next) }
     }
 
-    /// 1–9: the kind of that number for the selected rows, or for the only row.
     @discardableResult
     func applyKind(number: Int) -> Bool {
         let kinds = kinds
@@ -272,8 +245,6 @@ final class ImportPlaceModel {
 
     // MARK: Sections
 
-    /// A lecture PDF is read once, the first time it is a lecture; one turned into something else keeps what was read
-    /// in case it turns back.
     private func readSections(_ id: Int) {
         let row = rows[id]
         guard isLecture(row), sections[id] == nil, reads[id] == nil, row.url.pathExtension.lowercased() == "pdf" else { return }
@@ -299,7 +270,6 @@ final class ImportPlaceModel {
         }
     }
 
-    /// Only a lecture's sections show: a row turned into an assignment keeps them out of sight, and out of the import.
     func sections(of row: Row) -> Sections? { isLecture(row) ? sections[row.id] : nil }
 
     func toggleOpen(_ id: Int) {
@@ -316,12 +286,10 @@ final class ImportPlaceModel {
         sections[id] = .proposed(split, source: source)
     }
 
-    /// From nothing found, the whole file as one zone to cut.
     func splitByHand(_ id: Int) {
         guard case .nothing(let count) = sections[id] else { return }
         sections[id] = .proposed(LectureSplit(pageCount: count), source: nil)
         opened.insert(id)
-        // Claude's failure was about the proposal the user has now set aside.
         claudeFailures[id] = nil
     }
 
@@ -341,19 +309,15 @@ final class ImportPlaceModel {
 
     // MARK: Claude (#450)
 
-    /// Whether the automatic read goes to Claude once every page is read.
     private var claudeOn: Bool { claude.off() == nil }
 
-    /// Only a row Claude gave no split: past that the user adjusts the split by hand (2026-11-12 사용자).
     func canRetryClaude(_ id: Int) -> Bool {
         guard !asking.contains(id), claudeFailures[id] != nil, case .nothing? = sections[id] else { return false }
         return true
     }
 
-    /// While it asks again too, with its spinner.
     func showsRetry(_ id: Int) -> Bool { asking.contains(id) || canRetryClaude(id) }
 
-    /// Claude's reading again. The sheet's own button still writes it.
     func retryClaude(_ id: Int) {
         guard canRetryClaude(id), isLecture(rows[id]) else { return }
         let url = rows[id].url, units = course.file.units
@@ -364,7 +328,6 @@ final class ImportPlaceModel {
             guard let self, !Task.isCancelled else { return }
             self.asking.remove(id)
             self.asks[id] = nil
-            // Split by hand or put off meanwhile: the user's choice stands.
             if case .nothing? = self.sections[id] { self.take(found, for: id) }
         }
     }
@@ -381,7 +344,6 @@ final class ImportPlaceModel {
     func sectionsLine(_ row: Row) -> String? {
         if asking.contains(row.id), isLecture(row) { return String(localized: .lectureClaudeReading) }
         switch sections(of: row) {
-        // Every page read and still reading: Claude has them now.
         case .reading(let done, let total) where total > 0 && done == total && claudeOn:
             return String(localized: .lectureClaudeReading)
         case .reading(let done, let total):
@@ -397,7 +359,6 @@ final class ImportPlaceModel {
                 case .claude: String(localized: .materialsImportSectionsFromClaude)
                 }
             return "\(count) · \(from)"
-        // Claude's reason, not the outline's and titles': they weren't read when Claude was.
         case .nothing: return claudeFailures[row.id] ?? String(localized: .materialsImportSectionsNone)
         case .later: return String(localized: .materialsImportSectionsLater)
         case nil: return nil
@@ -405,7 +366,6 @@ final class ImportPlaceModel {
     }
 
     #if DEBUG
-    /// Sets a row's sections at once, as the form renders need: they draw before a read would finish.
     func show(_ state: Sections, for id: Int) {
         reads[id]?.cancel()
         reads[id] = nil
@@ -413,7 +373,6 @@ final class ImportPlaceModel {
     }
     #endif
 
-    /// What approving writes for a row: nothing for a row put off, still being read, or no longer a lecture.
     func cuts(_ row: Row) -> [LectureCut]? {
         guard case .proposed(let split, _)? = sections(of: row) else { return nil }
         let cuts = split.cuts

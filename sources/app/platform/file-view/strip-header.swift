@@ -1,7 +1,6 @@
 import SwiftUI
 
 enum StripMetrics {
-    /// A header's row: a finger's height on a touch screen, where it is what a range is changed from.
     #if os(iOS)
     static let header: CGFloat = Theme.Size.touchTarget
     #else
@@ -9,12 +8,9 @@ enum StripMetrics {
     #endif
 }
 
-/// A section's one-line header: the fold chevron in the course's colour where it is tinted, then the title and range,
-/// which change its range when pressed. The pointer lights the part that does, so a first look finds it.
 struct StripHeader: View {
     let section: StripSection
     let open: Bool
-    /// Just saved: lit a moment so the eye finds where the row went.
     var lit = false
     let help: Text
     let toggle: () -> Void
@@ -67,8 +63,6 @@ struct StripHeader: View {
 }
 
 private extension View {
-    /// On a touch screen the chevron's press reaches out over the column's margin to its edge, the one side with
-    /// nothing else to press.
     @ViewBuilder func chevronReach() -> some View {
         #if os(iOS)
         padding(.leading, Theme.Space.s).contentShape(.rect).padding(.leading, -Theme.Space.s)

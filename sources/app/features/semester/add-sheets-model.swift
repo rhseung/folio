@@ -16,7 +16,6 @@ final class AddSemesterModel {
 
     init(workspace: Workspace) {
         self.workspace = workspace
-        // Opens on the term after the newest one, which is the one usually being added.
         if let newest = workspace.semesters.first {
             let i = Self.terms.firstIndex(of: newest.term) ?? 0
             (year, term) = i + 1 < Self.terms.count ? (newest.year, Self.terms[i + 1]) : (newest.year + 1, Self.terms[0])

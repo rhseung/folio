@@ -7,12 +7,6 @@ import AppKit
 import UIKit
 #endif
 
-/// Debug-only (`FOLIO_PANE_BUNDLES=<folder>` with a fake `FOLIO_GIST`): the pictures of #62's side bundles, without any
-/// input. A tab gets five panes and is pressed so the panes without room fold into one bundle, then a bundle at either
-/// end, then a one-pane bundle beside a bigger one whose list is opened; a second tab of three panes has its middle
-/// one folded by hand. Each step is drawn into the folder as `<step>.png` with what every pane shows in `panes.txt`,
-/// and the app quits. On a Mac the window is `FOLIO_SNAPSHOT_WIDTH` wide (the hand-folded step 1280, so two panes
-/// stay open beside the strip); on an iPad it is the simulator's.
 @MainActor enum PaneBundleProbe {
     static let folder = ProcessInfo.processInfo.environment["FOLIO_PANE_BUNDLES"].map { URL(filePath: $0, directoryHint: .isDirectory) }
 
@@ -37,8 +31,8 @@ import UIKit
         #if os(macOS)
         let second = AppLink(.material, course.file.lectureFiles[0].id)
         #else
-        // A PDF pane crashes the iPad as it opens: SteadyPDFView reads PDFKit's document from a frame UIKit sets
-        // before PDFView is ready.
+        // PDF 칸을 열면 iPad 앱이 비정상 종료된다. `SteadyPDFView`가 `PDFView`가 준비되기 전에 UIKit이 정한 frame에서
+        // PDFKit의 문서를 읽기 때문이다.
         let second = AppLink.course(course.id, page: .materials)
         #endif
         let links: [AppLink] = [
@@ -97,9 +91,8 @@ import UIKit
         window.center()
     }
 
-    /// The window, with an open popover's content drawn at its place on a plain backing: `cacheDisplay` draws the
-    /// popover's glass as a black box with a coloured rim, and an app without screen recording access can't have the
-    /// window server draw it.
+    // `cacheDisplay`는 popover의 glass를 테두리 있는 검은 상자로 그리고, 화면 기록 권한이 없는 앱은 window server에
+    // 그려 달라고 할 수 없다. 그래서 popover의 내용을 단색 배경 위에 직접 그린다.
     static func capture(_ url: URL) {
         let windows = NSApp.windows.filter(\.isVisible)
         guard let window = windows.first(where: { $0.sheetParent == nil && !$0.className.contains("Popover") }),
@@ -139,7 +132,6 @@ import UIKit
         try? rep.representation(using: .png, properties: [:])?.write(to: url)
     }
     #else
-    /// The key window with what it presents (a popover is in the same window), as the screen shows it.
     static func capture(_ url: URL) {
         guard
             let window = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).flatMap(\.windows).first(
@@ -154,7 +146,6 @@ import UIKit
     #endif
 }
 
-/// Opens the list of the bundle at the row's trailing end, as a click on it would.
 @MainActor @Observable final class PaneBundleHook {
     static let shared = PaneBundleHook()
     var listing = false

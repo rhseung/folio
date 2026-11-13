@@ -4,18 +4,14 @@ import FolioDomain
 import FolioStorage
 import SwiftUI
 
-/// A file's menu, the same in the materials list, on its page's `⋯`, an exam's or a unit's files and search (#403).
 @MainActor
 struct MaterialMenuSource: ItemMenuSource {
     let workspace: Workspace
     let courseId: UUID
     let material: FolioDomain.Material
     let host: MenuHost
-    /// The materials page's undo, which the menu's moves land in.
     var moves: MoveUndo?
-    /// The materials page's file picker for a missing file; elsewhere the row opens that page, where the file is shown missing.
     var relink: (@MainActor () -> Void)?
-    /// The materials page asks with the file's path; elsewhere `material untrack` asks as it declares.
     var untrack: (@MainActor () -> Void)?
     let openLink: OpenLinkAction
     let sheets: ItemSheetsAction
@@ -104,7 +100,6 @@ struct MaterialMenuSource: ItemMenuSource {
         #endif
     }
 
-    /// The standard places of the course folder it may go, each exam's folder among them. Read when the menu is drawn.
     private var moveLeaves: [MenuRow.Leaf] {
         guard let course else { return [] }
         let folders = (try? course.store.assignmentFolders()) ?? []
@@ -135,7 +130,6 @@ struct MaterialMenuSource: ItemMenuSource {
     }
 }
 
-/// For `.contextMenu` and a file's `⋯`.
 struct MaterialMenu: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.openLink) private var openLink

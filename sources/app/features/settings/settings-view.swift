@@ -3,8 +3,7 @@ import FolioDomain
 import FolioStorage
 import SwiftUI
 
-/// One tab for each thing a student comes to change (#416), in three runs down the column: what is set once, what
-/// changes over a term, and the app and what it connects to. The raw value is the tab's name in `folio://settings/…`.
+// raw value가 `folio://settings/<탭>` 주소의 탭 이름이다.
 enum SettingsTab: String, CaseIterable, Identifiable {
     case general, record, classes = "class", notes, review, notifications, claude, lms, backup, about
     var id: Self { self }
@@ -39,7 +38,6 @@ extension EnvironmentValues {
 }
 
 extension FocusedValues {
-    /// The window's way to open settings, for the ⌘, menu item.
     @Entry var showSettings: (@MainActor (SettingsTab?) -> Void)?
 }
 
@@ -53,15 +51,13 @@ struct SettingsView: View {
 
     var tab: SettingsTab { model.tab }
 
-    /// A step in the window's history, like a course's sections. Remembered only when picked, so a link or a step
-    /// back to a tab doesn't change what the sidebar opens next.
+    // 고를 때만 기억해야, 링크나 뒤로 가기로 탭에 와도 사이드바가 다음에 여는 탭이 바뀌지 않는다.
     func pick(_ t: SettingsTab) {
         remembered = t
         openLink(.settings(t.page))
     }
 
     var body: some View {
-        // A column of sections beside the page, like a course's column, instead of a separate window with tabs.
         ColumnSplit(kind: .settingsTabs) {
             SettingsColumn(tab: tab, pick: pick)
         } content: {
@@ -69,14 +65,13 @@ struct SettingsView: View {
                 PageHeader(title: tab.label)
                 content(tab)
             }
-            // Each section starts at its top, not at the scroll position of the one before.
             .id(tab)
         }
         .onChange(of: place, initial: true) { _, entry in if let entry { model.follow(entry.link) } }
         .onAppear(perform: model.load)
         .onChange(of: model.workspace.settings) { _, new in model.reloaded(new) }
         .task(id: model.settings) { await model.saveAfterPause() }
-        // Closing right after a change cancels the wait above; save what was left.
+        // 변경 직후에 닫으면 위의 대기가 취소되므로 남은 것을 저장한다.
         .onDisappear(perform: model.saveNow)
     }
 
@@ -98,7 +93,7 @@ struct SettingsView: View {
     }
 }
 
-/// Its own view, so the column open over the page reads the `closeColumn` given there.
+// 그 자리에서 준 `closeColumn`을 페이지 위에 연 열이 읽도록 따로 뷰로 둔다.
 private struct SettingsColumn: View {
     let tab: SettingsTab
     let pick: (SettingsTab) -> Void
@@ -170,9 +165,6 @@ private struct GeneralSettings: View {
     }
 }
 
-/// 칸 배치 (#62, 2026-11-11 사용자, 시안 3-C): the layout a class's start opens, and every layout to choose from in a
-/// tab's "배치 ▸", the built-in ones fixed first and the user's after them to rename, reorder and delete. Choosing and
-/// saving happen in the tab's menu, where the panes are.
 private struct PaneLayoutSettings: View {
     @Bindable var model: SettingsModel
     @State private var renaming: PanePreset?
@@ -249,7 +241,6 @@ private struct PaneLayoutSettings: View {
     }
 }
 
-/// The panes side by side at their widths, small: how the layout splits the window.
 private struct LayoutGlyph: View {
     let shares: [Double]
 
@@ -271,7 +262,6 @@ private struct LayoutGlyph: View {
     }
 }
 
-/// No block title: the page header already says 복습.
 private struct ReviewSettingsForm: View {
     @Bindable var model: SettingsModel
     @State private var details = false
@@ -311,7 +301,6 @@ private struct ReviewSettingsForm: View {
     }
 }
 
-/// 앱 정보 (#415): the version, and the page of what each release changed. Automatic updates (#414) join this tab.
 private struct AboutSettings: View {
     let model: SettingsModel
     @Environment(\.openLink) private var openLink
@@ -452,7 +441,6 @@ private struct BackupSettingsForm: View {
 private struct NoteSettingsForm: View {
     @Bindable var model: SettingsModel
     @State private var open: Set<NoteKind> = []
-    /// Nil until picked: the list for the math new notes get comes first.
     @State private var snippets: MathSyntax?
 
     static let kinds: [NoteKind] = [.review, .examSummary, .unit]
@@ -471,7 +459,7 @@ private struct NoteSettingsForm: View {
                         isOpen: Binding(get: { open.contains(kind) }, set: { if $0 { open.insert(kind) } else { open.remove(kind) } }),
                         last: last
                     ) {
-                        // The raw list, blanks included, so a row just added stays until it's typed into.
+                        // 방금 더한 행이 입력할 때까지 남도록 빈 칸까지 담은 목록 그대로 쓴다.
                         HeadingRows(
                             lines: Binding(
                                 get: { model.settings.noteTemplates[kind.rawValue] ?? NoteTemplate.defaultSections(for: kind) },
@@ -492,7 +480,7 @@ private struct NoteSettingsForm: View {
                     options: [(.latex, MathSyntax.latex.label), (.asciimath, MathSyntax.asciimath.label)], compact: true)
             }
         ) {
-            // Stored only once changed, so a note editor keeps getting the app's defaults until then.
+            // 바꾸기 전까지 노트 편집기가 앱 기본값을 계속 받도록, 바꾼 뒤에만 저장한다.
             switch shown {
             case .latex:
                 SnippetList(
@@ -540,12 +528,10 @@ private struct ClaudeSettings: View {
                 }
             }
         }
-        // Read once per visit: it parses every course's log file.
         .task(model.loadUsage)
     }
 }
 
-/// How Claude is reached and the API key, which settings and the first run's Claude step both show.
 struct ClaudeConnectionCard: View {
     @Bindable var model: SettingsModel
     @AppStorage(Workspace.subscriptionKey) private var subscription = true
@@ -589,7 +575,6 @@ struct Switch: View {
     }
 }
 
-/// A whole number to scrub, for settings.json's counts.
 struct IntScrub: View {
     @Binding var value: Int
     let range: ClosedRange<Int>
@@ -602,7 +587,6 @@ struct IntScrub: View {
     }
 }
 
-/// Stored sorted, without repeats, and never empty.
 struct IntListField: View {
     @Binding var values: [Int]
     let unit: String
@@ -611,7 +595,6 @@ struct IntListField: View {
     @State private var draft = 1
 
     var body: some View {
-        // Wrapping, not a row: five intervals and the add button ran past an iPhone's width.
         FlowLayout(spacing: Theme.Space.tight, centered: true) {
             ForEach(values, id: \.self) { v in
                 HStack(spacing: Theme.Space.xs) {
@@ -629,7 +612,6 @@ struct IntListField: View {
                 .chip()
                 .fixedSize()
                 .contextMenu {
-                    // Never empty: the last value stays, as its × does.
                     Button(.commonRemove, role: .destructive) { values.removeAll { $0 == v } }.disabled(values.count < 2)
                 }
             }
@@ -664,7 +646,6 @@ struct IntListField: View {
 struct SnippetList: View {
     @Binding var snippets: [MathSnippet]
     var defaults = MathSnippet.defaults
-    /// Whether each snippet says if it expands in text or in formulas; AsciiMath's are all formula snippets.
     var placed = true
 
     var body: some View {
@@ -710,7 +691,7 @@ struct SnippetList: View {
         }
     }
 
-    /// Guarded: a removed row can still be asked for its value once while the list redraws.
+    // 목록을 다시 그리는 동안 지운 행에 값을 한 번 더 물을 수 있으므로 인덱스를 확인한다.
     func field<T>(_ i: Int, _ key: WritableKeyPath<MathSnippet, T>) -> Binding<T> {
         Binding(
             get: {
@@ -720,7 +701,6 @@ struct SnippetList: View {
     }
 }
 
-/// A template's headings as rows of the card they open in; `last` when nothing follows them there.
 struct HeadingRows: View {
     @Binding var lines: [String]
     var last = false
@@ -729,7 +709,7 @@ struct HeadingRows: View {
         ForEach(lines.indices, id: \.self) { i in
             CardRow {
                 Text("\(i + 1)").monospacedDigit().foregroundStyle(Theme.Palette.textTertiary).frame(width: 18, alignment: .trailing)
-                // Guarded: a removed row can still be asked for its text once while the list redraws.
+                // 목록을 다시 그리는 동안 지운 행에 글을 한 번 더 물을 수 있으므로 인덱스를 확인한다.
                 TextField(
                     String(localized: .settingsHeading),
                     text: Binding(

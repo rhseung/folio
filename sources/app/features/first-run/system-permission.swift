@@ -6,16 +6,14 @@ import UserNotifications
 import UIKit
 #endif
 
-/// What the app asks the system for. Calendar isn't here: the app reads no calendar yet (the exam import goes through a
-/// file), and asking for access it never uses would be refused by review and by the student.
+// 앱은 아직 캘린더를 읽지 않는다(시험 가져오기는 파일로 한다). 쓰지 않는 권한을 요청하면 심사에서 거절되고 학생도
+// 거절하므로, 캘린더는 여기 없다.
 enum SystemPermission: CaseIterable, Hashable {
     case notifications, microphone
 
     enum State: Equatable {
-        /// Not asked yet: 허용 asks.
         case unknown
         case allowed
-        /// Turned down: only the system's settings can turn it on now.
         case denied
     }
 
@@ -46,7 +44,6 @@ enum SystemPermission: CaseIterable, Hashable {
         return await state()
     }
 
-    /// The system settings page that turns it back on.
     @MainActor var settingsURL: URL? {
         #if os(macOS)
         switch self {

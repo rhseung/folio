@@ -14,7 +14,6 @@ extension Workspace {
         return String(localized: .lmsLastSync(lmsTime(at)))
     }
 
-    /// Today and this year leave out what they repeat: "오후 2:40", "11월 20일 (금) 23:59".
     func lmsTime(_ date: Date) -> String {
         if calendar.isDate(date, inSameDayAs: now) { return date.formatted(date: .omitted, time: .shortened) }
         let sameYear = calendar.component(.year, from: date) == calendar.component(.year, from: now)
@@ -23,8 +22,8 @@ extension Workspace {
         return date.formatted(day.hour().minute())
     }
 
-    /// A classroom seen for the first time gets its files and notices of now marked handled, so a new term doesn't
-    /// propose hundreds of old posts; its open assignments are still proposed.
+    // 처음 보는 강의실은 지금 있는 자료와 공지를 숨긴다. 그래야 새 학기에 오래된 글 수백 개를 제안하지 않는다. 남은 과제는
+    // 계속 제안한다.
     func syncLMS() async {
         guard let snapshot = await lms.sync() else { return }
         let new = settings.lms.unseen(in: snapshot).map(\.id)
@@ -32,8 +31,6 @@ extension Workspace {
         run(LMSSeen(classrooms: new, items: new.flatMap(snapshot.current(in:)).map(\.description)))
     }
 
-    /// Files are downloaded before the one action that takes them all; one the LMS only shows in its viewer is left
-    /// out and stays proposed, now marked so.
     func accept(_ proposals: [LMSProposal], into course: UUID) async {
         var items: [LMSAcceptItem] = []
         for p in proposals {

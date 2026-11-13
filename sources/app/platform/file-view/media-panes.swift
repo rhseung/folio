@@ -1,7 +1,6 @@
 import AVFoundation
 import SwiftUI
 
-/// A smaller image stays at its own size rather than blown up to the pane.
 struct ImagePane: View {
     let url: URL
     @State private var image: Image?
@@ -25,7 +24,6 @@ struct ImagePane: View {
         .task(id: url) { await load() }
     }
 
-    /// Decoded off the main thread: a phone photo is tens of megapixels.
     func load() async {
         let url = url
         let decoded = await Task.detached { () -> (PlatformImage, CGSize)? in
@@ -45,8 +43,7 @@ struct ImagePane: View {
     }
 }
 
-/// An audio file under its name, played by the recording player's `AudioPlayback`. AVKit's `VideoPlayer` is not
-/// used: in the Mac app its view class failed to load and took the app down.
+// AVKit의 `VideoPlayer`는 쓰지 않는다. Mac 앱에서 그 뷰 클래스를 불러오지 못해 앱이 비정상적으로 종료되었다.
 struct AudioPane: View {
     let url: URL
     let name: String

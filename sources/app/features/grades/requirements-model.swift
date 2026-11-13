@@ -12,7 +12,6 @@ final class RequirementsModel {
     var editing: RequirementCategory?
     var removing: RequirementCategory?
     var pending: PendingAction?
-    /// The category whose courses are showing in a popover.
     var showing: UUID?
 
     init(workspace: Workspace) { self.workspace = workspace }
@@ -72,7 +71,6 @@ final class RequirementsModel {
 
     func unassignedTitle(_ count: Int) -> String { String(localized: .requirementsUnassignedTitle(count)) }
 
-    /// `2026 봄학기 · 3학점 · 수강 중`; an unassigned course leaves out whether it is being taken.
     func courseDetail(_ course: Course, showsTaking: Bool = true) -> String {
         [
             workspace.semester(of: course)?.title, GradesModel.credits(course.credits),
@@ -105,7 +103,6 @@ final class RequirementsModel {
                 title: String(localized: .requirementsGpa), value: GPACalculator.label(gpa),
                 detail: String(localized: .requirementsMinGpa(String(format: "%.1f", rule.minGPA))),
                 tone: (gpa ?? 0) >= rule.minGPA ? .plain : .danger, sensitive: true),
-            // A detail on every item keeps the figures on one line across the strip.
             .init(
                 title: String(localized: .requirementsUnassigned), value: "\(unassigned)",
                 detail: String(localized: unassigned == 0 ? .requirementsUnassignedNone : .requirementsUnassignedHint),
@@ -118,7 +115,6 @@ final class RequirementsModel {
         return Category.groups(catalog.categories).map { group in (group, tree.filter { $0.group == group }) }
     }
 
-    /// Largest first so the long 기초‧교양 card anchors a column and the small ones fill the other.
     var columns: [[GroupCard]] { Self.balance(cards.sorted { $0.rows.count > $1.rows.count }, by: \.rows.count) }
 
     static func balance<T>(_ items: [T], by weight: (T) -> Int) -> [[T]] {
@@ -127,13 +123,11 @@ final class RequirementsModel {
         for item in items {
             let c = heights[0] <= heights[1] ? 0 : 1
             columns[c].append(item)
-            heights[c] += weight(item) + 2  // a card's header and padding weigh about two rows
+            heights[c] += weight(item) + 2  // 카드의 머리와 여백이 두 줄쯤의 무게다.
         }
         return columns
     }
 
-    /// A group's total is its lone top-level category (전공 → 전공학점) or the one named like it (기초‧교양), so every
-    /// card that has one leads with it and its bar.
     static func header(of card: GroupCard) -> CategoryTreeRow? {
         let roots = card.rows.filter { $0.depth == 0 }
         return roots.count == 1 ? roots[0] : roots.first { $0.category.name == card.group }
@@ -141,7 +135,6 @@ final class RequirementsModel {
 
     static func groupTitle(_ group: String) -> String { group.isEmpty ? String(localized: .requirementsGroupOther) : group }
 
-    /// Shown whenever a handbook is loaded, so the feature stays visible after every course is classified.
     var showsHandbookNote: Bool { !catalog.handbooks.isEmpty && audit.suggestions.isEmpty }
 
     var handbookNote: String {
@@ -161,7 +154,7 @@ final class RequirementsModel {
 
     func setCategories(_ courseId: UUID, _ ids: [UUID]) { workspace.run(CourseSet(course: courseId, [.categories(ids)])) }
 
-    /// One action for all of them, so a course the handbook can't place stops the rest before any is written.
+    // 핸드북이 어느 과목을 놓지 못하면 아무것도 쓰기 전에 나머지도 멈추도록 액션 하나로 한다.
     func accept(_ suggestions: [HandbookClassifier.Suggestion]) {
         pending = workspace.ask(RequirementAccept(courses: suggestions.map(\.courseId)))
     }
@@ -171,8 +164,8 @@ final class RequirementsModel {
         var rows: [UUID: String] = [:]
     }
 
-    /// One dry run covers every row, since a course that goes through with the rest goes through alone. Only when
-    /// that is refused does each row get its own, to find which one is blocked.
+    // 나머지와 함께 통과하는 과목은 혼자서도 통과하므로 dry run 하나로 모든 행을 본다. 그것이 거절될 때만 어느 행이
+    // 막혔는지 찾으려고 행마다 따로 돌린다.
     func acceptRefusals(_ suggestions: [HandbookClassifier.Suggestion]) -> AcceptRefusals {
         guard let all = workspace.refusal(RequirementAccept(courses: suggestions.map(\.courseId))) else { return AcceptRefusals() }
         var rows: [UUID: String] = [:]
@@ -188,7 +181,6 @@ final class RequirementsModel {
 
     static func removeTitle(_ category: RequirementCategory) -> String { String(localized: .requirementsRemoveConfirm(category.name)) }
 
-    /// Its children move up to the top level rather than going with it.
     static func remove(_ category: RequirementCategory, in workspace: Workspace) {
         var catalog = workspace.catalog
         catalog.categories.removeAll { $0.id == category.id }
@@ -196,7 +188,6 @@ final class RequirementsModel {
         workspace.saveCatalog(catalog)
     }
 
-    /// Only a pick that makes it worse is blocked, so a course already listed wrong can still be moved elsewhere.
     static func categoryOptions(_ catalog: Catalog, selection: [UUID], course: Course?) -> [PickOption<UUID>] {
         let already = course.map { GPACalculator.blocksSharing($0, categoryIds: selection, catalog: catalog) } ?? true
         return Category.tree(catalog.categories).map {
@@ -211,7 +202,6 @@ final class RequirementsModel {
     }
 }
 
-/// The requirement sheet's draft, saved into catalog.json only on confirm.
 @MainActor @Observable
 final class RequirementEditModel {
     let workspace: Workspace
@@ -259,12 +249,11 @@ final class RequirementEditModel {
     func remove() { RequirementsModel.remove(draft, in: workspace) }
 }
 
-/// 내 정보: transcript.json's graduation profile, saved as it changes.
 @MainActor @Observable
 final class ProfileModel {
     let workspace: Workspace
     var email = ""
-    /// Until the draft is filled from the transcript, saving would clear the stored mail.
+    // 초안을 transcript에서 채우기 전에 저장하면 저장된 메일이 지워진다.
     private var loaded = false
 
     init(workspace: Workspace) { self.workspace = workspace }
@@ -290,7 +279,6 @@ final class ProfileModel {
                 programs: .changed(old.programs, r.programs)))
     }
 
-    /// The first program declared is the major; any after it starts as a double major.
     func addProgram(_ codeId: UUID) {
         update { $0.programs.append(.init(codeId: codeId, kind: $0.programs.contains { $0.kind == .major } ? .doubleMajor : .major)) }
     }
@@ -309,7 +297,6 @@ final class ProfileModel {
 }
 
 extension StudentProgram {
-    /// `EC 주전공`, `AI 복수전공`.
     func title(in catalog: Catalog) -> String {
         (catalog.codes.first { $0.id == codeId }?.prefix ?? "?") + " " + kind.label
     }

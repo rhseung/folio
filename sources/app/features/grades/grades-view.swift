@@ -20,7 +20,6 @@ struct GradesView: View {
 
             UnfiledCoursesNotice(workspace: model.workspace)
 
-            // The goal keeps its width; the trend beside it needs room for a few semesters' bars.
             Fold(wideFrom: 620, spacing: Theme.Space.l + 2, stackSpacing: Theme.Space.section) {
                 Block(String(localized: .gradesTrend)) {
                     Card(padding: Theme.Space.l) {
@@ -28,7 +27,6 @@ struct GradesView: View {
                     }
                     .sensitive(.block)
                 }
-                // First to the room: beside it the goal keeps only its minimum, stacked both fill the page.
                 .frame(maxWidth: .infinity)
                 .layoutPriority(1)
 
@@ -77,7 +75,6 @@ struct GradesView: View {
                                         .font(Theme.Glyph.small)
                                         .foregroundStyle(Theme.Palette.textTertiary)
                                         .rotationEffect(.degrees(open ? 90 : 0))
-                                    // The chip under the name where both don't fit: beside it, the name broke a letter a line.
                                     ViewThatFits(in: .horizontal) {
                                         HStack(spacing: Theme.Space.s) {
                                             Text(s.title).fontWeight(.semibold)
@@ -129,7 +126,6 @@ struct GradesView: View {
                 .sensitive(.block)
             }
 
-            // The record first, then the what-if: picks here redraw the trend above as a dashed continuation.
             simulation(cumulative: cumulative)
         }
         .navigationTitle(.gradesTitle)
@@ -191,13 +187,10 @@ struct GradesView: View {
         }
     }
 
-    /// Semester GPA as bars as wide as their credits and the running cumulative GPA as a line: same scale, so one axis, told apart by mark and hue.
-    /// Values show on hover; a fixed label on the line sat over the bars and read as a bar's value.
     func trend(_ points: [GradesModel.Point]) -> some View {
         let semester = points.filter { $0.series == .semester }
         let cumulative = points.filter { $0.series == .cumulative }
         let low = GradesModel.floor(points)
-        // Equal bars made a 3-credit summer look as heavy as an 18-credit term; width follows credits instead.
         let widest = semester.map(\.credits).max() ?? 0
         func width(_ p: GradesModel.Point) -> MarkDimension { .ratio(widest > 0 ? max(0.08, 0.6 * p.credits / widest) : 0.4) }
         func value(_ series: GradesModel.Series) -> some View {
@@ -237,9 +230,8 @@ struct GradesView: View {
 
             Chart {
                 ForEach(semester) { p in
-                    // Fades toward the floor so the bar reads by its top edge, not as a solid block.
                     let c = Theme.Series.one.opacity((hovered == nil || hovered == p.label ? 1 : 0.45) * (p.simulated ? 0.4 : 1))
-                    // An opaque base under the fade, or the cumulative fill shows through half of the end bars.
+                    // 흐려지는 막대 아래에 불투명한 바탕을 깐다. 그러지 않으면 끝 막대의 절반에 누적 채움이 비친다.
                     BarMark(x: .value(termLabel, p.label), yStart: .value("GPA", low), yEnd: .value("GPA", p.gpa), width: width(p))
                         .foregroundStyle(Theme.Palette.card)
                         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 6, topTrailingRadius: 6))
@@ -296,14 +288,11 @@ struct GradesView: View {
         }
     }
 
-    /// A right-aligned number column, shared by the header, semester and course rows so they line up.
     func column(_ text: String, strong: Bool = false, muted: Bool = false) -> some View {
         Text(text)
             .fontWeight(strong ? .semibold : nil)
             .foregroundStyle(muted ? Theme.Palette.textTertiary : Theme.Palette.text)
             .monospacedDigit()
-            // As wide as "4.000" needs and no wider: on an iPhone three 64pt columns left a term in class too little room
-            // for its name and its chip.
             .frame(width: 56, alignment: .trailing)
     }
 }

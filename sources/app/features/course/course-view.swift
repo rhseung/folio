@@ -38,7 +38,8 @@ struct CourseView: View {
                             model.moved(id.map { AppLink(.unit, $0) })
                         }
                     case .notes: CourseNotesPage(model: model, course: course)
-                    // One branch for every quiz page, so the quiz model and a pending solve request survive switching pages.
+                    // 퀴즈 페이지를 옮겨 다녀도 퀴즈 모델과 대기 중인 풀기 요청이 남도록, 모든 퀴즈 페이지를 한 갈래로
+                    // 둔다.
                     case .quizSolve, .quizCards, .quizStats, .quizProblems:
                         QuizView(workspace: model.workspace, course: course, section: $model.section)
                     case .materials: MaterialsView(workspace: workspace, course: course, place: model.place, moved: model.moved)
@@ -48,12 +49,11 @@ struct CourseView: View {
                     }
                 }
                 .environment(\.linkFocus, model.focus)
-                // A new identity drops what the page opened (a file, a unit), which is all its section crumb asks for.
+                // identity를 새로 주면 페이지가 연 파일이나 단원이 닫힌다. 구역 crumb이 바라는 동작은 그것뿐이다.
                 .id(pageReset)
                 .paperList()
             }
-            // On the split, not the column: folded, the column is gone and the section still heads the trail.
-            // Back to the section's first screen from a file or unit opened in it.
+            // 열이 아니라 split에 단다. 접으면 열은 사라지지만 구역은 여전히 위치 표시의 맨 앞에 있어야 한다.
             .crumb(model.section.title, level: 1, symbol: model.section.tab.symbol) {
                 model.resetPage()
                 pageReset += 1
@@ -62,17 +62,14 @@ struct CourseView: View {
             .navigationTitle(course.title)
             .navigationSubtitle(model.section.title)
             .studyTime(course: model.courseId)
-            // The window's link drives the page, and the page's own moves go back into the window's history.
             .onChange(of: place, initial: true) { _, entry in if let entry { model.follow(entry) } }
             .onChange(of: model.place) { _, link in openLink(link, course: model.courseId) }
-            // An answer the window's Claude puts into this pane's note (`WindowClaude`).
             .onChange(of: paneInsert?.text) { _, text in
                 guard let text else { return }
                 model.noteInsert = text
                 paneInsert?.text = nil
             }
             #if DEBUG && os(macOS)
-            // The focused pane's only: the course beside it in a snapshot keeps its own page.
             .onChange(of: SnapshotDriver.shared.section, initial: true) { _, new in if let new, paneFocused { model.section = new } }
             #endif
         } else {
@@ -92,8 +89,6 @@ struct CourseColumn: View {
         let recent = model.recent(file)
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Space.l + 2) {
-                // Code and name only; credits, grading and professors are on the overview page.
-                // Laid out like a ColumnRow, the dot in the icon column, so the title and the rows below share their edges.
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                     Text(course.codeLine(model.workspace)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                         .lineLimit(1)
@@ -185,8 +180,6 @@ struct CourseColumn: View {
     }
 }
 
-/// Folded, the notes section is the column's list until a note is opened: the list grows with the course, so with
-/// nothing open it is the page, and the column open over the page lists the notes too.
 struct CourseNotesPage: View {
     @Bindable var model: CourseModel
     let course: LoadedCourse
@@ -223,7 +216,6 @@ struct CourseOverview: View {
         let reviews = model.reviews(now: now)
         let suggested = model.suggested(course, now: now)
         let unclassified = model.unclassified(file)
-        // Two columns that each run as long as their own blocks; a grid row made the short week card as tall as the units.
         let layout =
             wide
             ? AnyLayout(HStackLayout(alignment: .top, spacing: Theme.Space.xl))
@@ -291,13 +283,12 @@ struct CourseOverview: View {
                             VStack(spacing: 0) {
                                 Text(s.date.formatted(.dateTime.weekday(.abbreviated))).font(Theme.Typeface.label.weight(.regular))
                                     .foregroundStyle(Theme.Palette.textTertiary)
-                                // The bare number: Korean's day format adds 일, which overflowed the 34pt column.
+                                // 숫자만 쓴다. 한국어 날짜 형식은 `일`을 붙여 34pt 열을 넘었다.
                                 Text(verbatim: "\(model.day(of: s.date))").font(Theme.Typeface.figureMedium).foregroundStyle(
                                     s.date > now ? accent.ink : Theme.Palette.text)
                             }
                             .frame(width: 34)
                             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                                // 휴강 is the line under it; a makeup still has its review to tell there.
                                 HStack(spacing: Theme.Space.s) {
                                     Text(model.recentTitle(s, in: file)).font(Theme.Typeface.bodyStrong).lineLimit(1)
                                         .strikethrough(s.isCancelled)
@@ -314,7 +305,6 @@ struct CourseOverview: View {
                 }
                 .opens { model.section = .sessions }
             }
-            // The class the timetable says comes next, before it is made: starting its note makes it, as on Today.
             if let next { SuggestedSessionRow(item: next, openNote: model.show(note:)) }
         }
     }
@@ -408,7 +398,6 @@ struct CourseOverview: View {
                                 font: Theme.Typeface.figureCompact)
                         }
                         .sensitive()
-                        // Names live in the segment tooltips and on the grades page; listed here they swamp the card.
                         WeightBar(components: file.components)
                     }
                 }
@@ -443,7 +432,6 @@ struct WeightBar: View {
 extension LoadedCourse {
     func codeLine(_ workspace: Workspace) -> String {
         let c = file.course
-        // `GS2004-02`: the prefix, the course number and the section, written once.
         let prefix = c.codes.first.flatMap { id in workspace.catalog.codes.first { $0.id == id }?.prefix } ?? ""
         return prefix + c.number
     }

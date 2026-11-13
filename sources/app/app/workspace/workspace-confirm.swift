@@ -1,12 +1,9 @@
 import FolioActions
 import SwiftUI
 
-/// An action held until the user answers the question its declaration asks. A screen model keeps one in `pending` and
-/// the view shows it with `.confirming(_:)`, so every screen asks the same words the CLI and the Claude panel ask.
 struct PendingAction: Identifiable {
     let id = UUID()
     let question: String
-    /// Set when the action would be refused: the user hears why instead of agreeing to something that then fails.
     let refusal: String?
     let button: LocalizedStringResource
     let role: ButtonRole?
@@ -14,8 +11,6 @@ struct PendingAction: Identifiable {
 }
 
 extension Workspace {
-    /// Runs the action now when its declaration asks nothing for it, and returns nil. Otherwise nothing runs yet and
-    /// the returned value runs it once the user agrees. `done` gets what it wrote either way.
     func ask<A: Action>(
         _ action: A, button: LocalizedStringResource? = nil,
         then done: @escaping @MainActor (ActionContext) -> Void = { _ in }

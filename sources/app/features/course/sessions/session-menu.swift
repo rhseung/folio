@@ -2,9 +2,6 @@ import FolioActions
 import FolioDomain
 import SwiftUI
 
-/// A saved class's menu, the same on every screen (#403): rows come from `CourseFile.commands(for:at:host:)`, so what
-/// the class has and the time of day decide them, and the window shows its sheet and confirmations, so editing and
-/// deleting work from Today, the ribbon and search too.
 @MainActor
 struct SessionMenuSource: ItemMenuSource {
     let workspace: Workspace
@@ -89,7 +86,6 @@ struct SessionMenuSource: ItemMenuSource {
         }
     }
 
-    /// The note, made from its template the first time.
     private func open(_ kind: NoteKind) {
         if let id = workspace.note(kind, of: session.id, in: courseId) { openNote(id) }
     }
@@ -100,7 +96,6 @@ struct SessionMenuSource: ItemMenuSource {
         RecordingTime.label(file?.recordings.first { $0.id == id }?.duration ?? 0)
     }
 
-    /// One flag, the one the check names: skipping review without a note, finishing it with one.
     func setReview(_ review: ClassReview) {
         workspace.run(
             SessionSet(
@@ -110,8 +105,6 @@ struct SessionMenuSource: ItemMenuSource {
     }
 }
 
-/// The menu of a saved class, for `.contextMenu` and a `⋯` button. `host` says where it is shown: the class's own
-/// screen leaves "열기" out, and a unit's page adds the row that unlinks it from that unit.
 struct SessionMenu: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.openURL) private var openURL
@@ -130,7 +123,6 @@ struct SessionMenu: View {
         }
     }
 
-    /// Minute by minute (`liveNow`), so a menu opened as a class ends offers what follows it.
     @MainActor static func source(
         _ workspace: Workspace, _ courseId: UUID, _ sessionId: UUID, host: MenuHost, openNote: @escaping (UUID) -> Void,
         openLink: OpenLinkAction, openURL: OpenURLAction, sheets: ItemSheetsAction
@@ -142,9 +134,6 @@ struct SessionMenu: View {
     }
 }
 
-/// A class the timetable holds but no session stands for yet. Anything done to it makes the session first, so a 휴강
-/// or an absence known weeks ahead has something to hang on. With `primary`, led by the row's own button, for the
-/// row's context menu.
 struct SuggestedSessionItems: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.openURL) private var openURL
@@ -178,7 +167,6 @@ struct SuggestedSessionItems: View {
         Divider()
         Button(.sessionsCancelled, systemImage: "calendar.badge.minus") { model.make(item, kind: .cancelled) }
         Divider()
-        // The class's one sheet, adding it at this slot: nothing is saved until it is.
         Button(.commonEditEllipsis, systemImage: "pencil") {
             sheets.present(.session(SessionSheetRequest(course: item.courseId, start: item.suggestion.date)))
         }

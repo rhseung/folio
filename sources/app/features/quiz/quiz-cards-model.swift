@@ -4,7 +4,6 @@ import FolioDomain
 import Foundation
 import Observation
 
-/// `original` is nil for a new one.
 struct CardDraft: Identifiable {
     var id = UUID()
     var original: QuizCard?
@@ -128,7 +127,6 @@ final class GenerateCardsModel {
         if kept.contains(card.id) { kept.remove(card.id) } else { kept.insert(card.id) }
     }
 
-    /// True once the picked cards are saved and the sheet can close.
     func confirm() -> Bool {
         if candidates.isEmpty {
             make()
@@ -164,7 +162,7 @@ final class GenerateCardsModel {
         return workspace.run(QuizCardSave(course: course.id, cards: picked)) != nil
     }
 
-    /// The titles are what Claude reads, not UI, so they stay as written.
+    // 제목은 화면 문구가 아니라 Claude가 읽는 값이므로 쓴 그대로 둔다.
     private func cardContext() -> [ContextItem] {
         [ContextBuilder.courseSummary(course.file, now: .now)]
             + workspace.notes(for: unit, in: course.id).compactMap { note in

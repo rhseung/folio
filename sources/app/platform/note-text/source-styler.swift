@@ -9,22 +9,14 @@ import UIKit
 #endif
 
 extension NSAttributedString.Key {
-    /// A link's destination, opened on ⌘-click.
     static let noteHref = NSAttributedString.Key("folio.href")
-    /// A wikilink's target note, opened on ⌘-click.
     static let noteWiki = NSAttributedString.Key("folio.wiki")
-    /// A task's box, ticked by a click: `[ ]` in the source, the checkbox in the read view. The value is whether it's done.
     static let noteTask = NSAttributedString.Key("folio.task")
-    /// Inline math's TeX, on its whole `$…$`, for the bubble that shows it rendered.
     static let noteMath = NSAttributedString.Key("folio.math")
-    /// A math block's TeX, on all its lines, and an image link's source, on the link: shown in the same bubble.
     static let noteMathBlock = NSAttributedString.Key("folio.math-block")
-    /// The syntax a math fence chose (`MathSyntax`'s raw value), on its body's lines; a block without it is in the note's.
     static let noteMathSyntax = NSAttributedString.Key("folio.math-syntax")
     static let noteImage = NSAttributedString.Key("folio.image")
-    /// Lines of a fenced code block, where Enter is only a line break.
     static let noteCode = NSAttributedString.Key("folio.code")
-    /// How tall the caret stands on the paragraph's lines: its text's, not the whole fixed line's.
     static let noteCaret = NSAttributedString.Key("folio.caret")
 }
 
@@ -38,33 +30,25 @@ extension MathSyntax {
 }
 
 extension NSAttributedString {
-    /// The syntax a math fence chose for the block at `index`, or nil where the note's applies.
     func mathFence(at index: Int) -> MathSyntax? {
         guard index < length else { return nil }
         return (attribute(.noteMathSyntax, at: index, effectiveRange: nil) as? String).flatMap(MathSyntax.init(rawValue:))
     }
 }
 
-/// Styles the note's markdown source in place: marks stay in the text, dimmed, and the text after them takes fonts,
-/// weights and colors, never spacing, so every line starts at the same x and the caret walks the raw text.
-/// Pictures, rendered math and the boxes of callouts and code are the preview's (#267): drawn in the edit view, they
-/// made its lines and padding differ from the text's and brought the same layout bugs twice. Math and images float
-/// only in a bubble by the caret, over the text.
 @MainActor struct SourceStyler {
     var accent: CourseAccent
     var syntax: MathSyntax
     var baseURL: URL?
     var dark: Bool
 
-    // Font parts, resolved into one font per run at the end, since a run can be bold, in a heading and dimmed at once.
     private static let heading = NSAttributedString.Key("folio.s.heading")
     private static let weight = NSAttributedString.Key("folio.s.weight")
     private static let italic = NSAttributedString.Key("folio.s.italic")
     private static let mono = NSAttributedString.Key("folio.s.mono")
     private static let mark = NSAttributedString.Key("folio.s.mark")
 
-    /// Styles the text apart and sets only the paragraphs that came out different: setting all of it would make
-    /// TextKit throw away the layout of the whole note on every key, and guess again at the heights above the screen.
+    // 따로 스타일을 입힌 뒤 결과가 달라진 문단만 바꾼다. 전체를 바꾸면 TextKit이 키를 누를 때마다 노트 전체의 배치를 버리고 화면 위쪽의 높이를 다시 추정한다.
     func style(_ storage: NSTextStorage) {
         let fresh = styled(storage.string)
         let ns = storage.string as NSString
@@ -119,7 +103,6 @@ extension NSAttributedString {
                 ])
             w.marks.append(NSRange(location: r.location, length: open))
             w.marks.append(NSRange(location: NSMaxRange(r) - 2, length: 2))
-            // An ID is for Folio to find the note by, not to read: it and the `|` before the name go with the brackets.
             if WikiLink(m).noteID != nil {
                 w.marks.append(NSRange(m.2.startIndex..<m.2.endIndex, in: text))
                 if let alias = m.5 {
@@ -129,8 +112,6 @@ extension NSAttributedString {
                 }
             }
         }
-        // A bare address, which the preview links and ⌘-click opens, reads as a link here too; one that is already a
-        // link's target is left to that link.
         for (r, link) in AppLink.links(in: text) where !w.inCode(r, orTable: false) && !math.covers(r) {
             let taken =
                 storage.attribute(.noteWiki, at: r.location, effectiveRange: nil) != nil
@@ -215,7 +196,6 @@ extension NSAttributedString {
         }
     }
 
-    /// The line with its line break, which carries the paragraph's attributes.
     static func withBreak(_ line: NSRange, in storage: NSMutableAttributedString) -> NSRange {
         NSRange(location: line.location, length: min(line.length + 1, storage.length - line.location))
     }
@@ -243,7 +223,6 @@ extension NSAttributedString {
             storage.addAttributes(attributes, range: range)
         }
 
-        /// A table is drawn as written, in the code font, but its links still read and open as links.
         var tables: [NSRange] = []
 
         func inCode(_ r: NSRange, orTable: Bool = true) -> Bool {
@@ -358,7 +337,6 @@ extension NSAttributedString {
             {
                 w.marks.append(last)
             }
-            // A math fence's body is drawn as math below, not as code.
             if let language = block.language, MathFence.syntax(language) == nil, lines.count > 2 {
                 let body = NSRange(location: lines[1].location, length: NSMaxRange(lines[lines.count - 2]) - lines[1].location)
                 for token in NoteScripts.highlight(w.text.substring(with: body), language: language) {
@@ -384,7 +362,7 @@ extension NSAttributedString {
     }
 }
 
-/// Converts swift-markdown's source locations (lines, and columns in UTF-8 bytes) to UTF-16 offsets.
+// swift-markdown의 원문 위치는 줄과 UTF-8 바이트 단위의 열이므로 UTF-16 오프셋으로 바꾼다.
 private struct Columns {
     let lines: [Substring]
     let starts: [Int]
@@ -409,15 +387,12 @@ private struct Columns {
     }
 }
 
-/// Where math is in the source, read as `MathProtection` reads it, so the source and the read view agree. A math
-/// fence's body is a block too, in the syntax the fence chose (`MathFence`).
 struct MathScan {
     struct Inline { let range: NSRange; let tex: String }
     struct Block {
         let lines: ClosedRange<Int>
         let tex: String
         let ranges: [NSRange]
-        /// The math fence's syntax; nil for a `$$` block, which is in the note's.
         var syntax: MathSyntax?
     }
 
@@ -473,7 +448,6 @@ struct MathScan {
             }
             scanInline(line, at: lines[i].location)
         }
-        // A fence left open runs to the end, as the markdown parser reads it.
         if fence != nil { closeFenced(last: lines.count - 1) }
         blocks += fencedBlocks
     }
@@ -510,7 +484,7 @@ struct MathScan {
         }
     }
 
-    /// The text with math blanked out (same length), so the markdown parser reads no emphasis or escapes inside TeX.
+    // 마크다운 파서가 TeX 안의 강조나 이스케이프를 읽지 않도록, 수식을 같은 길이의 빈칸으로 지운 텍스트를 넘긴다.
     func masked(_ text: String) -> String {
         let out = NSMutableString(string: text)
         for r in inline.map(\.range) + blocks.flatMap(\.ranges) {
@@ -524,7 +498,6 @@ struct MathScan {
     }
 }
 
-/// Read again only when the file's modification date changes, so an edited picture shows without reopening the note.
 @MainActor enum NoteImages {
     private static var cache: [URL: (date: Date?, image: PlatformImage)] = [:]
 
@@ -548,10 +521,8 @@ struct MathScan {
     }
 }
 
-/// One line height per paragraph, from its tallest font and the line gap, so a code span or a dimmed mark doesn't
-/// shift its line and every line of the paragraph is the same. TextKit 2 sits the text on the bottom of a line this tall
-/// and leaves the gap above it, with nothing drawn in it; the caret it reports is the whole line, so `caret` cuts it to
-/// the text. With `lineSpacing` alone the caret on an empty line stood a gap taller than on a line with text.
+// 문단마다 가장 큰 글꼴과 줄 간격으로 줄 높이 하나를 정한다. 그래야 코드 구간이나 흐린 기호가 줄을 밀지 않고 문단의 모든 줄 높이가 같다. TextKit 2는 이 높이의 줄 바닥에 텍스트를 놓고 위쪽 간격은
+// 비워 둔다. TextKit 2가 알리는 캐럿은 줄 전체 높이이므로 `caret`이 텍스트 높이로 자른다. `lineSpacing`만 쓰면 빈 줄의 캐럿이 텍스트가 있는 줄보다 간격만큼 더 길었다.
 @MainActor enum NoteLines {
     static func fix(_ text: NSMutableAttributedString) {
         let ns = text.string as NSString
@@ -579,7 +550,6 @@ struct MathScan {
         }
     }
 
-    /// The caret over the text at the bottom of its line, not the whole line.
     static func caret(_ rect: CGRect, at offset: Int, in text: NSAttributedString) -> CGRect {
         let height =
             afterLastBreak(offset, in: text)
@@ -589,14 +559,10 @@ struct MathScan {
         return CGRect(x: rect.minX, y: rect.maxY - height, width: rect.width, height: height)
     }
 
-    /// Whether `offset` is on the empty line after the note's last line break, or in an empty note: a line with no
-    /// character of its own, so reading the character before took the line above's, and after a heading the caret
-    /// stood as tall as the heading on a line that isn't one.
     static func afterLastBreak(_ offset: Int, in text: NSAttributedString) -> Bool {
         offset >= text.length && (text.length == 0 || (text.string as NSString).character(at: text.length - 1) == 0x0A)
     }
 
-    /// A body paragraph's attributes, for that line: what's typed on it is body text until the styler says otherwise.
     static var bodyLine: [NSAttributedString.Key: Any] {
         let line = NSMutableAttributedString(
             string: "\n",
@@ -608,8 +574,7 @@ struct MathScan {
     }
 }
 
-/// Whether two stylings of the same text look the same. Each styling makes its own colors, which aren't equal as
-/// objects, so they're compared by what they draw.
+// 스타일링마다 색 객체를 새로 만들어 객체로는 같지 않으므로, 그리는 결과로 비교한다.
 enum NoteAttributes {
     static func same(_ a: NSAttributedString, _ b: NSAttributedString, in range: NSRange) -> Bool {
         var i = range.location

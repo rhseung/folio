@@ -7,9 +7,7 @@ struct GradeSteps: View {
     }
 
     @Binding var selection: UUID?
-    /// Lowest first.
     let stops: [Stop]
-    /// Off the scale (W in a letter-graded course): small buttons before the track.
     var extras: [Stop] = []
     @State private var before: UUID??
 
@@ -38,7 +36,6 @@ struct GradeSteps: View {
                 .frame(width: 30, alignment: .leading)
                 .contentTransition(.numericText())
         }
-        // Its own size: in a narrow row the off-scale buttons were squeezed before the row's label gave way.
         .fixedSize()
         .animation(Theme.Motion.quick, value: selection)
         .sensoryFeedback(.levelChange, trigger: selection)
@@ -83,7 +80,6 @@ struct GradeSteps: View {
                     selection = stops[stop(at: g.location.x)].id
                 }
                 .onEnded { g in
-                    // A press on the stop already picked, without dragging, clears the grade.
                     if abs(g.translation.width) < 4, before == .some(stops[stop(at: g.location.x)].id) { selection = nil }
                     before = nil
                 }
@@ -105,8 +101,6 @@ struct GradeSteps: View {
 }
 
 extension GradeSteps {
-    /// Grades best first, as the catalog lists them: those with points make the track, the rest stand apart unless
-    /// nothing has points (S/U), where all of them do.
     init(selection: Binding<UUID?>, grades: [(id: UUID, symbol: String, scored: Bool)]) {
         let scored = grades.filter(\.scored)
         let track = scored.isEmpty ? grades : scored

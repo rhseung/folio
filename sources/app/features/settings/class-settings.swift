@@ -1,8 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// 수업 (#416): what a class starts by itself (#391), the courses that differ, the class length and the transcription
-/// of what was recorded.
 struct ClassSettings: View {
     @Bindable var model: SettingsModel
 
@@ -51,8 +49,6 @@ struct ClassSettings: View {
     }
 }
 
-/// The picture first, then what starts and how, then the rarely changed values folded under 세부. Rows for an item
-/// that is off are gone rather than dimmed: nothing they set would happen.
 private struct ClassStartCard: View {
     @Bindable var model: SettingsModel
     @State private var details = false
@@ -138,9 +134,6 @@ private struct ClassStartCard: View {
     }
 }
 
-/// `[5] 분 전 ~ 끝나고 [5] 분 후`, both from the class's own start and end. The fields hold the minutes alone and
-/// the words around them turn with the sign, so a drag left is always earlier: 5분 후, 0분 후, 1분 전, 6분 전.
-/// 0 stays a field (`0분 후`) rather than becoming 정각, which would leave nothing to drag.
 private struct RecordingSpanRow: View {
     @Bindable var model: SettingsModel
     var last = false
@@ -148,7 +141,6 @@ private struct RecordingSpanRow: View {
     var body: some View {
         let s = model.settings.classStart
         FormRow(label: String(localized: .settingsClassStartSpan), detail: model.recordingSpanTimes, last: last) {
-            // Wrapping: the whole span is wider than a pane's or an iPhone's row.
             FlowLayout(spacing: Theme.Space.s, centered: true) {
                 HStack(spacing: Theme.Space.xs) {
                     minutes(Binding(get: { s.recordingOffsetMinutes }, set: { model.settings.classStart.recordingOffsetMinutes = $0 }))
@@ -183,7 +175,6 @@ private struct RecordingSpanRow: View {
     }
 }
 
-/// The 배치 tiles: a window's tab row and its panes, the new tab's in the accent.
 private struct LayoutSketch: View {
     let openIn: ClassStartSettings.OpenIn
 
@@ -207,8 +198,6 @@ private struct LayoutSketch: View {
     }
 }
 
-/// A small window showing what the class start does: the tab it opens, the panes in it, the recording's mark and
-/// the notification. Only shown, never pressed.
 private struct ClassStartPicture: View {
     let items: Set<ClassStartSettings.Item>
     let settings: ClassStartSettings
@@ -222,7 +211,6 @@ private struct ClassStartPicture: View {
     var panes: [Pane] {
         let lectures = items.contains(.lecture) ? (0..<(settings.allLectures ? 2 : 1)).map(Pane.lecture) : []
         guard opensPages else { return [.today] }
-        // 지금 탭: the rough note where the student is, the lectures beside it.
         if settings.openIn == .currentTab { return Array(([items.contains(.roughNote) ? .note : .today] + lectures).prefix(3)) }
         return Array((lectures + (items.contains(.roughNote) ? [.note] : [])).prefix(3))
     }
@@ -371,7 +359,7 @@ private struct ClassStartPicture: View {
     }
 }
 
-/// This device's choices, not settings.json's: the Whisper model is downloaded per device.
+// Whisper 모델은 기기마다 내려받으므로 settings.json이 아니라 이 기기의 선택이다.
 private struct TranscriptionSettings: View {
     @AppStorage(TranscriptionEngine.storageKey) private var engine: TranscriptionEngine = .standard
     private var whisper: WhisperModel { .shared }

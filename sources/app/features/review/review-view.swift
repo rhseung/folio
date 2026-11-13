@@ -6,7 +6,6 @@ struct ReviewOpener<Label: View>: View {
     @Environment(Workspace.self) private var workspace
     let courseId: UUID
     let unitId: UUID
-    /// Units to slide in after this one, as in Today's queue.
     var then: [ReviewView.Item] = []
     @ViewBuilder var label: Label
     @State private var open = false
@@ -104,7 +103,6 @@ struct ReviewView: View {
                 .help(Text(.reviewTimerHelp))
                 Button(.commonClose) { dismiss() }.keyboardShortcut(.cancelAction)
             }
-            // One chip per source, so a lecture is a click away without leaving the review note.
             if model.sources.count > 1 {
                 ScrollView(.horizontal) {
                     HStack(spacing: Theme.Space.s) {
@@ -151,7 +149,7 @@ struct ReviewView: View {
                 .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.s)
                 Theme.Palette.lineSoft.frame(height: 1)
             }
-            // Keyed by source: the PDF view keeps its first document, so another file needs a new view.
+            // PDF 뷰는 처음 받은 문서를 계속 쓰고 다른 파일에는 새 뷰가 필요하므로, source를 키로 쓴다.
             SourcePane(model: model, source: source, note: model.note(for: source), course: course).id(source.id)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -206,9 +204,6 @@ struct ReviewView: View {
     }
 }
 
-/// A note or a lecture, in the file view every other place shows files with: a markdown note in the reader, a `.tex`
-/// note in the editor and PDF the notes tab opens, a lecture at its class's first page (the file's first without one).
-/// Reading it here leaves the materials tab's resume page alone.
 private struct SourcePane: View {
     let model: ReviewModel
     let source: ReviewView.Source
@@ -238,7 +233,7 @@ private struct SourcePane: View {
                 FileView(workspace: model.workspace, course: course, material: id, requestedPage: $page, remembersPage: false)
             }
         }
-        // The window's breadcrumb behind the sheet keeps its own steps, and its Claude panel would open behind it.
+        // 시트 뒤에 있는 창의 위치 표시는 자기 걸음을 유지하고, 그 Claude 패널은 시트 뒤에 열리게 된다.
         .environment(nil as CrumbTrail?)
         .environment(\.askClaude, nil)
     }

@@ -1,7 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// Replaces the stock pop-up button.
 struct ChoiceMenu<Value: Hashable>: View {
     struct Option: Hashable {
         let value: Value
@@ -40,7 +39,6 @@ struct ChipLabel: View {
 
     var body: some View {
         HStack(spacing: Theme.Space.tight) {
-            // Its own width up to 240, then truncated: a long title must not widen the row it sits in.
             Text(text).lineLimit(1).frame(maxWidth: 240, alignment: .leading).fixedSize()
             Image(systemName: "chevron.up.chevron.down")
                 .font(Theme.Glyph.small)
@@ -54,24 +52,18 @@ struct PickOption<ID: Hashable>: Identifiable {
     let id: ID
     let title: String
     var detail: String?
-    /// Consecutive options with the same section get one heading.
     var section: String?
     var depth = 0
-    /// Can't be picked, only unpicked; `detail` should say why.
     var disabled = false
 }
 
-/// For lists that grow with the user's data (codes, people, units, files). Fixed short enums stay on ChoiceMenu.
 struct SearchPicker<ID: Hashable, Label: View>: View {
     let options: [PickOption<ID>]
     var isSelected: (ID) -> Bool = { _ in false }
     let pick: (ID) -> Void
-    /// Multiple choice keeps the popover open after a pick.
     var multiple = false
     var prompt = String(localized: .commonSearch)
-    /// For a label that should shrink and truncate with its row instead of holding its full width.
     var flexible = false
-    /// Offered when the query names no option, so one row both picks and makes (a class's units, #403).
     var create: ((String) -> Void)?
     var createTitle: (String) -> String = { $0 }
     @ViewBuilder let label: Label
@@ -86,7 +78,6 @@ struct SearchPicker<ID: Hashable, Label: View>: View {
         return options.filter { o in [o.title, o.detail, o.section].contains { $0?.localizedCaseInsensitiveContains(q) == true } }
     }
 
-    /// The query, when it can be made: no option already has that title.
     var creatable: String? {
         let q = query.trimmingCharacters(in: .whitespaces)
         guard create != nil, !q.isEmpty, !options.contains(where: { $0.title.caseInsensitiveCompare(q) == .orderedSame }) else {
@@ -211,7 +202,6 @@ struct SearchPicker<ID: Hashable, Label: View>: View {
         .buttonStyle(.pointing(.plain))
     }
 
-    /// With nothing else to pick, Return makes it, so the row shows as the one Return reaches.
     private var rowsEmpty: Bool { filtered.isEmpty }
 
     func make(_ title: String) {
@@ -227,7 +217,7 @@ struct SearchPicker<ID: Hashable, Label: View>: View {
     }
 
     func choose(_ id: ID) {
-        // Return on the highlighted row reaches here without the button, so the disabled check repeats.
+        // 강조한 행에서 Return을 누르면 버튼을 거치지 않고 여기로 오므로, disabled 검사를 한 번 더 한다.
         if options.first(where: { $0.id == id })?.disabled == true, !isSelected(id) { return }
         pick(id)
         if !multiple { open = false }
@@ -250,9 +240,7 @@ struct SearchMultiSelect<Value: Hashable>: View {
     @Binding var selection: [Value]
     let options: [PickOption<Value>]
     var placeholder = String(localized: .designPick)
-    /// The chip text; defaults to the picked titles.
     var summary: String?
-    /// For a tree: what picking or unpicking an option takes along with it, itself included.
     var subtree: ((Value) -> Set<Value>)?
 
     var body: some View {
@@ -263,13 +251,11 @@ struct SearchMultiSelect<Value: Hashable>: View {
                 if selection.contains(id) {
                     selection.removeAll { group.contains($0) }
                 } else {
-                    // Outline order, so the chip names the chapter rather than whichever section came first in the set.
                     selection += options.map(\.id).filter { group.contains($0) && !selection.contains($0) }
                 }
             }, multiple: true
         ) {
             let titles = selection.compactMap { id in options.first { $0.id == id }?.title }
-            // The count, then one title (cut off first when long): every title joined pushed a form row, and the sheet with it, past its width.
             ChipLabel(
                 summary ?? titles.first.map { titles.count > 1 ? String(localized: .designPickedMany(titles.count, $0)) : $0 }
                     ?? placeholder)
@@ -280,11 +266,8 @@ struct SearchMultiSelect<Value: Hashable>: View {
 struct Segmented<Value: Hashable>: View {
     @Binding var selection: Value
     let options: [(Value, String)]
-    /// Line icons drawn in place of the labels, one per option; the label stays as the spoken name and the tooltip.
     var symbols: [String] = []
-    /// For a bar of tools: washes of the text color instead of solid fills, and a track as tall as the bar's buttons.
     var compact = false
-    /// A label's own color, where each option stands for a kind drawn in that color elsewhere (patch notes' chips).
     var inks: [Color?] = []
     @Environment(\.onGlass) private var onGlass
 
@@ -325,8 +308,6 @@ struct Segmented<Value: Hashable>: View {
     func labelColor(_ chosen: Bool) -> Color { chosen ? Theme.Palette.text : Theme.Palette.textSecondary }
 }
 
-/// Things each turned on or off by pressing it, any number of them, none included: what a class starts by itself
-/// (녹음 · 러프 노트 · 렉처). `Segmented` is for one of several.
 struct ToggleChips<Value: Hashable>: View {
     struct Option {
         let value: Value
@@ -350,7 +331,8 @@ struct ToggleChips<Value: Hashable>: View {
                         Text(option.label).lineLimit(1)
                     }
                     .fontWeight(on ? .semibold : .regular)
-                    // `card` on the solid fill, not `onFill`: dark mode's light blue leaves white under 3:1.
+                    // 채운 배경에서는 `onFill`이 아니라 `card` 색을 쓴다. 다크 모드의 밝은 파랑 위에서 흰 글자는 대비가
+                    // 3:1보다 낮다.
                     .foregroundStyle(on ? Theme.Palette.card : Theme.Palette.textSecondary)
                     .padding(Theme.Inset.toggle)
                     .background(on ? Theme.Palette.info : Theme.Palette.fill, in: .capsule)
@@ -364,8 +346,6 @@ struct ToggleChips<Value: Hashable>: View {
     }
 }
 
-/// Two to four options drawn as small pictures of what each does, the name under each: where a word alone doesn't say
-/// how the result looks (수업 시작의 배치).
 struct PictureChoice<Value: Hashable, Picture: View>: View {
     @Binding var selection: Value
     let options: [(Value, String)]
@@ -407,7 +387,6 @@ struct PictureChoice<Value: Hashable, Picture: View>: View {
     static var picture: CGSize { CGSize(width: 44, height: 28) }
 }
 
-/// Nothing is typed, so every value it can hold is a real time.
 struct TimeMenu: View {
     @Binding var minute: Int
     var hours: ClosedRange<Int> = 0...23
@@ -436,12 +415,10 @@ struct TimeMenu: View {
         }
     }
 
-    /// Every clock time follows the system's 12- or 24-hour setting, as `.formatted(time: .shortened)` elsewhere does.
     static func label(_ m: Int) -> String {
         Calendar.current.date(bySettingHour: m / 60 % 24, minute: m % 60, second: 0, of: .now)!.formatted(date: .omitted, time: .shortened)
     }
 
-    /// `오후 1:00~2:15`: the system's own interval form, which names 오후 once and keeps a row's time on one line.
     static func range(_ start: Int, _ end: Int) -> String {
         let at = { (m: Int) in Calendar.current.date(bySettingHour: m / 60 % 24, minute: m % 60, second: 0, of: .now)! }
         return end > start ? (at(start)..<at(end)).formatted(date: .omitted, time: .shortened) : label(start)
@@ -449,7 +426,6 @@ struct TimeMenu: View {
 
     static var uses12Hour: Bool { DateFormatter.dateFormat(fromTemplate: "j", options: 0, locale: .current)?.contains("a") ?? false }
 
-    /// The hour half of the chip in the same clock as `label`: `오후 1` or `13`.
     static func hourLabel(_ h: Int) -> String {
         guard uses12Hour else { return String(format: "%02d", h) }
         return "\(h < 12 ? Calendar.current.amSymbol : Calendar.current.pmSymbol) \(h % 12 == 0 ? 12 : h % 12)"
@@ -473,7 +449,6 @@ private struct TimePart: View {
                         let base = start ?? value
                         start = base
                         let steps = Int((g.translation.width / ScrubField.pointsPerStep).rounded())
-                        // From the nearest allowed value, wrapping like a clock face: after the last comes the first.
                         let i = values.indices.min { abs(values[$0] - base) < abs(values[$1] - base) } ?? 0
                         value = values[((i + steps) % values.count + values.count) % values.count]
                     }
@@ -484,12 +459,10 @@ private struct TimePart: View {
         .pointerStyle(.columnResize)
             #endif
             .help(Text(.designDragOrPickHelp))
-            // Only while scrubbing: the chip stays live behind an open dial, and the dial gives its own.
             .sensoryFeedback(.selection, trigger: value) { _, _ in start != nil }
     }
 }
 
-/// The 24-hour clock puts 12–23 on an inner ring, so either clock is one turn of the hand.
 private struct TimeDial: View {
     enum Mode: Hashable, Identifiable {
         case hour, minute
@@ -501,14 +474,12 @@ private struct TimeDial: View {
     @State var mode: Mode
     let close: () -> Void
     @Environment(\.accent) private var accent
-    /// Whether this press landed on a mark the menu allows; only then does releasing it move on.
     @State private var picked = false
 
     static let diameter: CGFloat = 224
     static let cell: CGFloat = 32
     static let outer = diameter / 2 - cell / 2 - Theme.Space.xs
     static let inner = outer - cell - Theme.Space.xs
-    /// Presses inside this reach set nothing: the hub has no mark, and its angle is noise.
     static let hub = inner - cell / 2
 
     private var hour: Int { minute / 60 }
@@ -533,8 +504,6 @@ private struct TimeDial: View {
             .font(Theme.Typeface.figure)
             Spacer(minLength: 0)
             if twelve {
-                // A toggle only when both halves hold an hour the menu allows; the day boundary (0–8) just names its
-                // half, or its 12 would read as noon.
                 if hours.contains(where: { $0 < 12 }), hours.contains(where: { $0 >= 12 }) {
                     Segmented(
                         selection: Binding(get: { hour >= 12 }, set: { pm in setHour(hour % 12 + (pm ? 12 : 0)) }),
@@ -575,7 +544,6 @@ private struct TimeDial: View {
         let center = CGPoint(x: Self.diameter / 2, y: Self.diameter / 2)
         let marks = marks
         let chosen = marks.first { $0.value == selected }
-        // Off the 5-minute marks (a time from a file) the hand still points at the exact minute, with no mark lit.
         let handAngle = chosen?.angle ?? Double(minute % 60) * 6
         let handRadius = chosen?.radius ?? Self.outer
         let tip = Self.point(handAngle, handRadius, center)
@@ -623,7 +591,6 @@ private struct TimeDial: View {
         #endif
     }
 
-    /// No button for a dimmed hour: pressing it does nothing.
     private static func traits(allowed: Bool, selected: Bool) -> AccessibilityTraits {
         var traits: AccessibilityTraits = []
         if allowed { traits.formUnion(.isButton) }
@@ -652,7 +619,6 @@ private struct TimeDial: View {
         }
     }
 
-    /// False for an hour outside `hours`, which leaves the time as it was.
     @discardableResult
     private func set(_ value: Int) -> Bool {
         if mode == .minute {
@@ -665,7 +631,6 @@ private struct TimeDial: View {
     }
 
     private func setHour(_ h: Int) {
-        // The other half may lack this hour; the nearest one the menu allows stands in.
         let h = hours.contains(h) ? h : hours.min { abs($0 - h) < abs($1 - h) }!
         minute = h * 60 + minute % 60
     }
@@ -701,7 +666,6 @@ struct DatePanel: View {
     @Environment(Workspace.self) private var workspace
     @Binding var date: Date
     var showsTime = true
-    /// After a day is picked, for a date-only chip that closes then.
     var picked: () -> Void = {}
 
     static let presets = [9 * 60, 12 * 60, 18 * 60, 23 * 60 + 59]
@@ -724,8 +688,6 @@ struct DatePanel: View {
                     Spacer()
                     TimeMenu(minute: Binding(get: { minuteOfDay }, set: { setMinute($0) }))
                 }
-                // The four times run wider than the 280pt popover: in one row they squeezed into "오전 9…" or broke
-                // "오전" from "9:00". Each keeps its own width and the last ones take a second row.
                 FlowLayout(spacing: Theme.Space.tight) {
                     ForEach(Self.presets, id: \.self) { m in
                         Button(TimeMenu.label(m)) { setMinute(m) }
@@ -753,7 +715,6 @@ struct DatePanel: View {
     }
 }
 
-/// Always six rows so the popover keeps its size between months.
 struct MonthCalendar: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.accent) private var accent
@@ -829,8 +790,6 @@ extension View {
     }
 }
 
-/// More views to switch between than `Segmented` holds (2–4): a row of caption chips that wraps, each fully named,
-/// the one picked in the accent's tint. Scrolled sideways, the last ones would hide.
 struct ChipTabs<Value: Hashable>: View {
     @Binding var selection: Value
     let options: [(Value, String)]
@@ -880,15 +839,12 @@ struct SearchField: View {
     }
 }
 
-/// A `TextEditor` as tall as its text, from `lines.lowerBound` lines up to `lines.upperBound`, past which it scrolls.
-/// Not `TextField(axis: .vertical)`: on the Mac its Return ends the field instead of breaking the line, and options
-/// and rules are written one per line. Not a drag handle either: a touch has nothing to drag it with.
+// `TextField(axis: .vertical)`를 쓰지 않는다. Mac에서는 그 Return이 줄을 바꾸지 않고 입력을 끝내는데, 선택지와 규칙은
+// 한 줄에 하나씩 쓰기 때문이다. 드래그 손잡이도 쓰지 않는데, 터치로는 끌 수단이 없기 때문이다.
 struct GrowingTextEditor: View {
     @Binding var text: String
-    /// A point size, not a `Font`: the height is measured with the platform font.
     var size: CGFloat = Theme.Typeface.bodySize
     var lines: ClosedRange<Int> = 3...12
-    /// The most it may grow to in a sheet, whose rows fit the window: fewer lines than `lines` allows there.
     var room: CGFloat?
     @State private var width: CGFloat = 0
 
@@ -897,9 +853,9 @@ struct GrowingTextEditor: View {
         TextEditor(text: $text)
             .font(.system(size: size))
             .scrollContentBackground(.hidden)
-            // Only once it scrolls. A text input keeps its bar then (a fading scroll area around it hides it for
-            // everything inside), but the Mac's editor keeps a bar's width free for it, wrapping its text narrower than
-            // the width measured here: the box came out a line short.
+            // 스크롤할 때만 막대를 보인다. 그때는 텍스트 입력이 막대를 지켜야 한다(둘러싼 페이드 스크롤 영역이 안쪽
+            // 전체의 막대를 숨긴다). 그런데 Mac 편집기는 막대 폭만큼 자리를 비워 두고 여기서 잰 폭보다 좁게 줄바꿈해서,
+            // 늘 보이면 상자가 한 줄 모자랐다.
             .scrollIndicators(height.scrolls ? .automatic : .never)
             .frame(height: height.points)
             .onGeometryChange(for: CGFloat.self) {
@@ -909,8 +865,8 @@ struct GrowingTextEditor: View {
             }
     }
 
-    /// Laid out by TextKit as the editor's text view lays it out. A hidden SwiftUI `Text` broke a long URL at other
-    /// places than the editor did, a line short, and the last line scrolled out of a box that should have held it.
+    // 편집기의 text view와 같은 방식으로 TextKit에 배치시킨다. 숨긴 SwiftUI `Text`로 재면 긴 URL을 편집기와 다른
+    // 자리에서 끊어 한 줄이 모자랐고, 상자에 들어가야 할 마지막 줄이 스크롤되어 밀려났다.
     static func height(of text: String, size: CGFloat, width: CGFloat, lines: ClosedRange<Int>, room: CGFloat? = nil) -> (
         points: CGFloat, scrolls: Bool
     ) {
@@ -924,21 +880,19 @@ struct GrowingTextEditor: View {
         var used = line * CGFloat(lines.lowerBound)
         if width > 0 {
             let storage = NSTextStorage(string: text, attributes: [.font: font])
-            // The container's default line padding is the editor's too.
             let container = NSTextContainer(size: CGSize(width: width, height: .greatestFiniteMagnitude))
             layout.addTextContainer(container)
             storage.addLayoutManager(layout)
             layout.ensureLayout(for: container)
-            // The used rect counts a trailing newline's empty line, where the editor's caret sits.
+            // used rect는 끝 줄바꿈 뒤의 빈 줄까지 센다. 편집기의 캐럿이 그 줄에 놓인다.
             used = layout.usedRect(for: container).height
         }
-        // Whole lines that fit the room, never under the minimum.
         let fit = room.map { Int(($0 - 2 * inset) / line) } ?? lines.upperBound
         let cap = line * CGFloat(max(lines.lowerBound, min(lines.upperBound, fit)))
         return (min(max(used, line * CGFloat(lines.lowerBound)), cap).rounded(.up) + 2 * inset, used > cap)
     }
 
-    // UITextView keeps its text 8pt from its top and bottom edges; the Mac's text view sets it at the edges.
+    // UITextView는 글을 위아래 가장자리에서 8pt 띄우고, Mac의 text view는 가장자리에 붙인다.
     #if os(iOS)
     private static let inset: CGFloat = 8
     #else
@@ -947,8 +901,8 @@ struct GrowingTextEditor: View {
 }
 
 extension Binding {
-    /// An array element that survives its removal: a removed row's controls still read their binding while they go away,
-    /// and a plain `$array[i]` then reads past the end and crashes.
+    // 지운 행의 컨트롤은 사라지는 동안에도 바인딩을 읽는다. 그때 그냥 `$array[i]`를 쓰면 배열 끝을 넘어 읽어 앱이
+    // 종료되므로, 지운 뒤에도 남는 바인딩을 준다.
     func element<E: Identifiable>(id: E.ID, fallback: E) -> Binding<E> where Value == [E] {
         Binding<E>(
             get: { wrappedValue.first { $0.id == id } ?? fallback },
@@ -963,18 +917,12 @@ extension Binding {
 }
 
 extension View {
-    /// A field on the window frame or a glass sidebar (the search field, a PDF's find): a wash of the text color with
-    /// an edge, as tall as the toolbar's buttons. A solid field stood alone on the material.
     func toolbarField() -> some View {
         padding(.horizontal, Theme.Space.m)
             .frame(height: Theme.Size.toolbarButton)
             .toolbarSurface()
     }
 
-    /// Toolbar buttons that belong together, held in one capsule like the search field: loose on the frame, plain
-    /// glyphs read as stray marks beside it. As tall as the field, the buttons' own height: padded above and below,
-    /// the groups stood taller than the field and the toolbar row clipped their edges. No side padding either, so the
-    /// buttons' inset hover sits as far from every edge.
     func toolbarGroup() -> some View {
         frame(height: Theme.Size.toolbarButton).toolbarSurface()
     }

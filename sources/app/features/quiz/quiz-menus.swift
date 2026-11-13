@@ -2,13 +2,11 @@ import FolioActions
 import FolioDomain
 import SwiftUI
 
-/// A card's menu, the same in the cards list, the statistics and search (#403).
 @MainActor
 struct CardMenuSource: ItemMenuSource {
     let workspace: Workspace
     let courseId: UUID
     let card: QuizCard
-    /// On the statistics screen: drilling the card's unit's wrong answers.
     var solveWrong: (() -> Void)?
     let sheets: ItemSheetsAction
 
@@ -40,7 +38,6 @@ struct CardMenu: View {
     }
 }
 
-/// A problem set's menu, on its block's `⋯` and a right-click on it. The set has no sheet of its own to edit.
 @MainActor
 struct ProblemSetMenuSource: ItemMenuSource {
     let workspace: Workspace
@@ -89,13 +86,10 @@ struct ProblemSetMenu: View {
     }
 }
 
-/// One problem's menu: its page of the sheet, recording an attempt, and the units it belongs to. The cell's popover
-/// records attempts too; the menu is the way to the rest.
 @MainActor
 struct ProblemMenuSource: ItemMenuSource {
     let problem: ProblemSet.Problem
     let units: [FolioDomain.Unit]
-    /// What a correct answer is called now: resolving, on a problem still open.
     let correct: String
     let openSheet: (() -> Void)?
     let mark: (Verdict) -> Void

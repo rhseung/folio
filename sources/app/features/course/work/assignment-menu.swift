@@ -3,8 +3,6 @@ import FolioDomain
 import FolioStorage
 import SwiftUI
 
-/// An assignment's menu, the same on the assignments page, Today's deadlines and search (#403). The row's status icon
-/// is a shortcut to its 상태 ▸.
 @MainActor
 struct AssignmentMenuSource: ItemMenuSource {
     let workspace: Workspace
@@ -58,11 +56,9 @@ struct AssignmentMenuSource: ItemMenuSource {
 }
 
 extension AssignmentStatus {
-    /// The way an assignment goes, which the status menus list it in.
     static let menuOrder: [AssignmentStatus] = [.todo, .doing, .submitted, .graded]
 }
 
-/// For `.contextMenu` and the status icon's menu.
 struct AssignmentMenu: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.openLink) private var openLink

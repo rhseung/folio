@@ -18,7 +18,6 @@ final class StudyTimeModel {
         var seconds: TimeInterval
     }
 
-    /// One course's part of a day's bar, already stacked: `start` and `end` in the chart's unit.
     struct Segment: Identifiable {
         var id: String { "\(day)-\(courseId)" }
         let day: String
@@ -32,7 +31,6 @@ final class StudyTimeModel {
     struct Chart {
         var today: LocalDate
         var days: [LocalDate]
-        /// Only the courses with time logged, in the term's order, so the legend lists no empty course.
         var courses: [LoadedCourse]
         var total: TimeInterval
         var perDay: [LocalDate: TimeInterval]
@@ -45,11 +43,9 @@ final class StudyTimeModel {
         let days = (0..<Self.days).map { today.adding(days: $0 - Self.days + 1) }
         let courses = workspace.currentCourses.filter { c in bars.contains { $0.courseId == c.id } }
         let perDay = Dictionary(grouping: bars, by: \.day).mapValues { $0.map(\.seconds).reduce(0, +) }
-        // Minutes until a day passes two hours, so a light fortnight reads 10분, 20분 rather than 0.15h.
         let inHours = (perDay.values.max() ?? 0) >= 2 * 3600
         let unit: Double = inHours ? 3600 : 60
         let top = (perDay.values.max() ?? 0) / unit
-        // A sliver of card between stacked courses, so neighbouring colors don't run together.
         let gap = top * 0.012
         let segments = days.flatMap { day -> [Segment] in
             var y = 0.0
@@ -67,12 +63,10 @@ final class StudyTimeModel {
             inHours: inHours, segments: segments)
     }
 
-    /// Each logged course's fortnight, most first.
     func perCourse(_ chart: Chart) -> [(course: LoadedCourse, seconds: TimeInterval)] {
         chart.courses.map { c in (c, bars.filter { $0.courseId == c.id }.map(\.seconds).reduce(0, +)) }.sorted { $0.seconds > $1.seconds }
     }
 
-    /// The hovered column's title and total, or nil when nothing was logged that day.
     func tooltip(_ hovered: String, in chart: Chart) -> (day: String, total: TimeInterval, segments: [Segment])? {
         guard let seconds = chart.perDay.first(where: { Self.label($0.key, today: chart.today) == hovered })?.value else { return nil }
         let date = chart.days.first { Self.label($0, today: chart.today) == hovered }

@@ -5,9 +5,6 @@ import SwiftUI
 import Quartz
 #endif
 
-/// Quick Look inside the pane, for the formats Folio doesn't draw itself (slides, documents, spreadsheets). In the
-/// pane rather than the sheet `quickLookPreview` opens, so the file sits where every other file does: under the
-/// window's breadcrumb, with back and forward around it.
 struct QuickLookPane {
     let url: URL
 }
@@ -25,7 +22,7 @@ extension QuickLookPane: NSViewRepresentable {
         if (view.previewItem as? NSURL) as URL? != url { view.previewItem = url as NSURL }
     }
 
-    /// A preview view left open keeps its generator's process running.
+    // preview view를 열어 두면 그 생성기의 프로세스가 계속 돈다.
     static func dismantleNSView(_ view: QLPreviewView, coordinator: ()) { view.close() }
 }
 #else

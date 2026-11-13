@@ -3,7 +3,7 @@ import FolioDomain
 import Foundation
 import Observation
 
-/// Numbers are kept as typed text so a half-typed value (`8.`) stays in the field instead of snapping back.
+// 반쯤 입력한 값(`8.`)이 되돌아가지 않도록 숫자를 입력한 글 그대로 둔다.
 @MainActor @Observable
 final class ScoreEntryModel {
     let workspace: Workspace
@@ -35,7 +35,6 @@ final class ScoreEntryModel {
         source = entry.source
     }
 
-    // One already scored in this component can't be picked: the assignment sheet shows one score per component.
     var sourceOptions: [PickOption<ScoreSource>] {
         let file = course.file
         let assignments = String(localized: .scoreSheetSourceAssignments), exams = String(localized: .scoreSheetSourceExams)
@@ -49,7 +48,6 @@ final class ScoreEntryModel {
             }
     }
 
-    /// An untitled score takes the name of what it was given for.
     func pick(_ s: ScoreSource) {
         source = s
         if title.trimmingCharacters(in: .whitespaces).isEmpty, let name = course.file.title(of: s) { title = name }
@@ -70,7 +68,6 @@ final class ScoreEntryModel {
         Double(score) != nil && (Double(max) ?? 0) > 0 && (mean.isEmpty || Double(mean) != nil) && (stdDev.isEmpty || Double(stdDev) != nil)
     }
 
-    /// A single score is one by definition, so it needs no title of its own.
     var hasTitle: Bool { course.file.components.first { $0.id == componentId }?.aggregation != .single }
 
     var componentOptions: [(UUID, String)] { course.file.components.sorted { $0.order < $1.order }.map { ($0.id, $0.name) } }
@@ -82,7 +79,6 @@ final class ScoreEntryModel {
         return z.map(\.sigmas) ?? gap.map { String(localized: .scoreSheetGapNoStdDev($0.points)) } ?? String(localized: .scoreSheetMeanHint)
     }
 
-    /// False when the action was refused, so the sheet stays open.
     func confirm() -> Bool {
         guard let s = Double(score), let m = Double(max) else { return false }
         let saved =
@@ -135,7 +131,6 @@ final class ComponentModel {
 
     var invalid: Bool { name.trimmingCharacters(in: .whitespaces).isEmpty || weight < 0 || (expectedCount ?? 1) < 1 }
 
-    /// How many scores the rule drops or keeps; nil for rules without a count.
     var count: Int? {
         switch aggregation {
         case .dropLowest(let n), .bestOf(let n): n
@@ -177,13 +172,11 @@ final class ComponentModel {
         return saved != nil
     }
 
-    /// Its scores go with it; assignments and exams that fed it stay, unlinked.
     func remove(then done: @escaping @MainActor () -> Void) {
         pending = workspace.ask(ComponentRemove(course: course.id, component: component.id)) { _ in done() }
     }
 }
 
-/// Percents are typed as text and stored as fractions; an empty field means the rule is unset.
 @MainActor @Observable
 final class PolicyModel {
     let workspace: Workspace
@@ -220,19 +213,16 @@ final class PolicyModel {
         return badRatio || badShare || badLates
     }
 
-    /// A new cap starts one absence past the highest at the lowest grade, the usual next step.
     func addCap() {
         guard let lowest = grades.last else { return }
         caps.append(AttendanceCap(absences: (caps.map(\.absences).max() ?? 5) + 1, maxGrade: lowest.id))
     }
 
-    /// Guards the index: a row's field can still write for a moment after its cap was removed.
     func cap(_ i: Int) -> AttendanceCap { caps.indices.contains(i) ? caps[i] : AttendanceCap(absences: 0, maxGrade: UUID()) }
 
     func setCap(_ i: Int, _ cap: AttendanceCap) { if caps.indices.contains(i) { caps[i] = cap } }
 
     func confirm() -> Bool {
-        // Every field the sheet shows; the cutoffs it doesn't show stay as they are.
         workspace.run(
             PolicySet(
                 course: course.id, minAttendanceRatio: .set(Double(ratio).map { $0 / 100 }), latePolicy: .set(late.isEmpty ? nil : late),

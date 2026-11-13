@@ -11,7 +11,7 @@ struct UnitsView: View {
 
     init(workspace: Workspace, course: LoadedCourse, place: AppLink, opened: @escaping (UUID?) -> Void) {
         let model = UnitsModel(workspace: workspace, courseId: course.id)
-        // Set before the first report below, which would otherwise tell the window the list is shown.
+        // 아래의 첫 보고보다 먼저 정해야 한다. 그러지 않으면 창에 목록이 보인다고 알린다.
         if place.kind == .unit { model.openUnit = place.id }
         _model = State(initialValue: model)
         self.course = course
@@ -29,9 +29,8 @@ struct UnitsView: View {
         }
         .task(id: course.file.units.map(\.id)) { model.loadQuiz(course) }
         .onChange(of: model.workspace.quizRevision) { model.loadQuiz(model.workspace.course(course.id) ?? course) }
-        // Initial too: the page starts on its list, and the unit it had open last time is gone with its model.
+        // 페이지는 목록에서 시작하고 지난번에 연 단원은 모델과 함께 사라졌으므로 initial로도 부른다.
         .onChange(of: model.openUnit, initial: true) { _, id in opened(id) }
-        // Back and forward move between a unit and the list too.
         .onChange(of: place) { _, link in
             if link.kind == .unit { model.openUnit = link.id } else if link.kind == .course { model.openUnit = nil }
         }
@@ -43,8 +42,6 @@ struct UnitsView: View {
         #endif
     }
 
-    /// A chapter (a top-level unit with units under it) heads its own block; top-level units without children
-    /// share a plain card, so a flat outline still reads as one list.
     struct Chapter: Identifiable {
         var root: FolioDomain.Unit?
         var rows: [(unit: FolioDomain.Unit, depth: Int)] = []
@@ -115,7 +112,6 @@ struct UnitsView: View {
         }
     }
 
-    /// Exam chips only where they differ from the chapter's, so a chapter all in the midterm says it once.
     func rows(_ rows: [(unit: FolioDomain.Unit, depth: Int)], states: [UUID: ReviewState], today: LocalDate, inheritedExams: Set<UUID>)
         -> some View
     {
@@ -146,12 +142,10 @@ struct UnitsView: View {
         }
     }
 
-    /// The unit's one menu (#403). The list keeps the units in their order, so it moves them too.
     func menu(_ unit: FolioDomain.Unit) -> some View {
         UnitMenu(courseId: course.id, unitId: unit.id, host: .list)
     }
 
-    /// Held classes no unit covers, newest first: linking one here starts its unit's review from that class.
     func unlinkedCard(_ sessions: [Session]) -> some View {
         let shown = sessions.prefix(6)
         return NoticeCard(
@@ -205,7 +199,6 @@ extension LocalDate {
     }
 }
 
-/// Renaming, moving and deleting the unit come last, since they are rare.
 struct UnitDetail: View {
     @Environment(\.accent) private var accent
     @Environment(\.openLink) private var openLink
@@ -319,7 +312,6 @@ struct UnitDetail: View {
                     if file.exams.isEmpty {
                         EmptyLine(String(localized: .unitsExamsEmpty)).padding(.horizontal, Theme.Space.xs)
                     } else {
-                        // Wraps: a course with weekly quizzes has more exams than one line holds.
                         FlowLayout(spacing: Theme.Space.s) {
                             ForEach(model.examsByDate(file)) { exam in
                                 let on = exam.scopeUnitIds.contains(unit.id)
@@ -403,14 +395,10 @@ struct UnitDetail: View {
         #endif
     }
 
-    /// Date, then what the class covered as the sessions page titles it, then the rough and review notes in the sessions
-    /// page's fixed slots, so both pages read alike.
     @ViewBuilder func sessionRow(_ s: Session) -> some View {
         let file = course.file
         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
             Text(s.date.formatted(.dateTime.month().day())).font(Theme.Typeface.bodyStrong).monospacedDigit()
-            // 보강 under the date, not as a chip by the title: at phone width the row had no room left for one.
-            // The title's strikethrough already says 휴강.
             HStack(spacing: Theme.Space.xs) {
                 Text(s.date.formatted(.dateTime.weekday())).foregroundStyle(Theme.Palette.textTertiary)
                 if s.kind == .makeup { Text(.sessionsMakeup).fontWeight(.semibold).foregroundStyle(accent.ink) }

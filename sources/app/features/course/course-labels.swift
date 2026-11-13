@@ -40,7 +40,6 @@ extension MaterialRole {
     }
 }
 
-/// The names of what a past class still lacks, for the sessions notice and Today's wrap-up card.
 extension WrapUpItem {
     var label: String {
         switch self {

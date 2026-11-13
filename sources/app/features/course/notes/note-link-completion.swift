@@ -6,9 +6,6 @@ import FolioStorage
 import Foundation
 import PDFKit
 
-/// Link completion for one note's edit view (#31): what `[[`, `#`, `#^` and `#page=` offer, from the search index for
-/// targets and from the files for headings, blocks and pages. Links go in by ID (#35). What shows in which order is
-/// `LinkCandidates`'s; how the link reads, FolioMarkdown's.
 @MainActor final class NoteLinkCompletion: NoteLinkSource {
     let workspace: Workspace
     let courseId: UUID
@@ -18,7 +15,6 @@ import PDFKit
     private var refreshedAt: Date?
     private var listed: (revision: Int, notes: [UUID: [NoteFile]]) = (-1, [:])
 
-    /// `index` stands in for this device's index, read up to date already; tests give one in memory.
     init(workspace: Workspace, course: UUID, note: NoteFile, index: SearchStore? = nil) {
         self.workspace = workspace
         courseId = course
@@ -41,7 +37,6 @@ import PDFKit
         }
     }
 
-    /// What the search index finds for what's typed, this course's first; nothing typed, this course's notes.
     func targets(_ typed: String, alias: String?) async -> [CompletionItem] {
         guard let index = openIndex() else { return [] }
         let course = courseId
@@ -64,7 +59,6 @@ import PDFKit
         let link = AppLink(found)
         let name = alias ?? found.title
         let elsewhere = found.courseId == courseId ? nil : workspace.course(found.courseId)?.title
-        // A PDF's link goes on to its page, which the menu that opens there picks.
         if found.kind == .material, MaterialFormat(path: found.title) == .pdf {
             let body = WikiLink.written(link.kind.rawValue, found.id, fragment: "page=", alias: name)
             let caret = (body as NSString).range(of: "#page=").upperBound
@@ -91,7 +85,7 @@ import PDFKit
     func blocks(of link: LinkQuery, typed: String, text: String) -> [CompletionItem] {
         guard let (target, id, body) = resolve(link.target, text: text) else { return [] }
         let items = ParsedNote(body).linkableBlocks.map { b in
-            // A block without an ID gets one when picked (`take`); until then the link holds the line, which `take` reads.
+            // ID 없는 블록은 고를 때(`take`) ID를 받는다. 그때까지 링크는 그 줄을 담고, `take`가 그 줄을 읽는다.
             let written = WikiLink.written("note", id, fragment: "^" + (b.id ?? ""), alias: link.alias ?? target.title)
             return CompletionItem(
                 id: b.id.map { "block.\($0)" } ?? "\(Self.newBlock)\(b.line)", title: b.excerpt.isEmpty ? "^" + (b.id ?? "") : b.excerpt,
@@ -106,11 +100,10 @@ import PDFKit
             let holder = workspace.courses.first(where: { $0.file.materials.contains { $0.id == id } }),
             let material = holder.file.materials.first(where: { $0.id == id })
         else { return [] }
-        // The viewer logs the page it was left at, 0-based.
+        // 뷰어는 마지막 쪽을 0부터 세어 기록한다.
         let last = ((try? holder.store.log.readAll()) ?? []).events(MaterialViewEvent.self).last { $0.event.materialId == id }.map {
             $0.event.page + 1
         }
-        // A file iCloud hasn't downloaded has no page count; its last page and the number typed still go.
         let count = PDFDocument(url: holder.store.fileURL(material.path))?.pageCount
         let name = link.alias ?? (material.path as NSString).lastPathComponent
         return LinkCandidates.pages(count: count, last: last, typed: typed).map { n in
@@ -140,8 +133,6 @@ import PDFKit
         if target.url.standardizedFileURL == note.url.standardizedFileURL {
             return ParsedNote.blockTag(in: text, line: line, id: blockID).map { (picked, $0) }
         }
-        // Another note's file gets the ID, through the action every note write goes through, refused if the file
-        // changed since it was read here.
         guard let holder = holder(of: target), let tag = ParsedNote.blockTag(in: body, line: line, id: blockID) else { return nil }
         let path = holder.store.notePath(of: target.url)
         do {
@@ -158,8 +149,6 @@ import PDFKit
     static let newNote = "link.new"
     static let newBlock = "block.new."
 
-    /// The note a link names, its ID, and its text: by ID in any course, this course's first, or by title in this
-    /// course. The note being written is read from the editor, which may be ahead of its file.
     func resolve(_ target: String, text: String) -> (note: NoteFile, id: UUID, text: String)? {
         let link = WikiLink.all(in: "[[\(target)]]").first
         let found: NoteFile?
@@ -176,8 +165,8 @@ import PDFKit
         return (found, id, body)
     }
 
-    /// Listed once per `notesRevision` rather than on every key typed: listing walks the course's Notes folder, which
-    /// on a large iCloud folder is slow enough to stall typing. Every note action and folder reload moves the revision.
+    // 노트 목록은 Notes 폴더를 훑는데, 큰 iCloud 폴더에서는 입력이 멈출 만큼 느리다. 그래서 키마다 읽지 않고
+    // `notesRevision`마다 한 번 읽는다. 모든 노트 액션과 폴더 다시 읽기가 이 값을 올린다.
     func notes(of course: LoadedCourse) -> [NoteFile] {
         if listed.revision != workspace.notesRevision { listed = (workspace.notesRevision, [:]) }
         if let cached = listed.notes[course.id] { return cached }
@@ -190,8 +179,6 @@ import PDFKit
         workspace.courses.first { note.url.standardizedFileURL.path.hasPrefix($0.store.url.standardizedFileURL.path + "/") }
     }
 
-    /// The index answers at once with what it has; courses changed since it was last read are read again behind it,
-    /// at most every few seconds, so a note made a moment ago shows up from the next key on.
     func openIndex() -> SearchStore? {
         guard let gist = workspace.gist else { return nil }
         if index == nil { index = try? SearchStore.local(for: gist) }

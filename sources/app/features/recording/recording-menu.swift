@@ -1,8 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// A recording's menu, on its page's `⋯` (#403). The page's buttons stay for what is done while listening; the menu
-/// holds every row, so a narrow pane that folds the buttons to icons still names them.
 @MainActor
 struct RecordingMenuSource: ItemMenuSource {
     let model: RecordingPlayerModel

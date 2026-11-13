@@ -11,12 +11,10 @@ final class NoteListModel {
     let workspace: Workspace
     private let initial: LoadedCourse
     private(set) var notes: [NoteFile] = []
-    /// Read with the notes, not in each row's menu, which every redraw of the list builds.
     private(set) var folders: [String] = []
     var filter: NoteKind?
     var adding = false
     var pending: PendingAction?
-    /// The notes section's, shared with the open note: its sheet and menus move a note too.
     let moves: MoveUndo
 
     init(workspace: Workspace, course: LoadedCourse, moves: MoveUndo = MoveUndo()) {
@@ -56,13 +54,11 @@ final class NoteListModel {
     }
 
     private static func detail(of note: NoteFile, in group: NoteGroup, file: CourseFile, calendar: Calendar) -> String? {
-        // A note moved in from an old folder has no ID until opened; it says so instead of a kind it doesn't have yet.
         guard note.meta.id != nil else { return String(localized: .notesNeedsId) }
 
         let meta = note.meta
         switch group {
         case .classes:
-            // A review note covering several classes names the range it covers.
             let sessions = file.sessions(pointingAt: meta.id)
             let covered =
                 sessions.count > 1
@@ -86,7 +82,6 @@ final class NoteListModel {
     func open(_ note: NoteFile) -> UUID? {
         if let id = note.meta.id { return id }
         guard let id = workspace.noteId(of: note, in: course) else { return nil }
-        // The row's note was read before it had an entry, and would still show it as needing one.
         reload()
         return id
     }
@@ -122,9 +117,8 @@ final class NotesModel {
     func note(_ id: UUID?) -> NoteFile? { id.flatMap { try? course.store.note(id: $0) } }
 }
 
-/// The notes a note's preview draws in its embeds and block references' previews and names in its links: by title in
-/// its course, or by ID in any course (`[[note:<ID>]]`). A title is found as `Workspace.noteId(titled:in:)` opens it.
-/// Read once for each `revision` (the workspace's `notesRevision`), not on every keystroke the preview redraws for.
+// 키를 누를 때마다 미리보기가 다시 그리므로, 노트는 그때마다가 아니라 `revision`(workspace의 `notesRevision`)마다 한 번
+// 읽는다.
 final class NoteEmbedSource {
     private let store: CourseStore
     private let others: [CourseStore]
@@ -133,11 +127,8 @@ final class NoteEmbedSource {
     private var notes: [NoteFile]?
     private var elsewhere: [NoteFile]?
     private var texts: [URL: String] = [:]
-    /// The note's text as the editor has it, which may not be saved yet: a reference to its own block shows that.
     private var current: String?
 
-    /// The name of what a link into the app points at (`Workspace.name(of:)`), which the preview shows on a link
-    /// without its own and a pasted address is written with.
     let name: (AppLink) -> String?
 
     init(store: CourseStore, others: [CourseStore] = [], own: URL?, name: @escaping (AppLink) -> String? = { _ in nil }) {
@@ -148,7 +139,6 @@ final class NoteEmbedSource {
     }
 
     @MainActor convenience init(workspace: Workspace, course: LoadedCourse, own: URL?) {
-        // The preview and the editor read it on the main actor, where the workspace is.
         self.init(store: course.store, others: workspace.courses.filter { $0.id != course.id }.map(\.store), own: own) {
             [weak workspace] link in
             MainActor.assumeIsolated { workspace?.name(of: link) }
@@ -179,8 +169,6 @@ final class NoteEmbedSource {
         return notes?.linked(title)
     }
 
-    /// The course's own notes first; the others are listed only for an ID that isn't here, which a link copied from
-    /// another course's note has.
     private func noteFile(id: UUID) -> NoteFile? {
         if notes == nil { notes = (try? store.notes()) ?? [] }
         if let found = notes?.first(where: { $0.meta.id == id }) { return found }
@@ -200,8 +188,8 @@ final class NoteEmbedSource {
     }
 }
 
-/// The note's own frontmatter (tags, aliases) is kept aside and written back unchanged; Folio's properties are in
-/// course.json and change through `note link`.
+// 노트 자신의 frontmatter(태그, 별칭)는 따로 두었다가 그대로 다시 쓴다. Folio의 속성은 course.json에 있고 `note link`로
+// 바뀐다.
 @MainActor @Observable
 final class NoteEditorModel {
     let workspace: Workspace
@@ -211,17 +199,14 @@ final class NoteEditorModel {
     var meta = NoteMeta()
     var body = ""
     private var saved = ""
-    /// Loading a note sets the picker too, which must not count as choosing a syntax.
+    // 노트를 불러오면 선택기도 바뀌는데, 그것을 문법을 고른 것으로 세면 안 된다.
     private var savedMath = MathSyntax.latex
-    /// Set to insert at the editor's cursor; the editor clears it once inserted.
     var pendingInsert: String?
-    /// A symbol picked in the math palette, for the editor to put at its cursor and clear.
     var pendingMath: CompletionItem?
     private(set) var assets: [URL] = []
-    /// Bumped when a pasted or dropped image lands in `assets/`, which the tray doesn't see happen.
     private(set) var assetsRevision = 0
-    /// The file as last read or written here. A save finding something else on disk was changed elsewhere (another
-    /// device, the CLI) and asks before overwriting it.
+    // 여기서 마지막으로 읽거나 쓴 내용이다. 저장할 때 디스크가 이와 다르면 다른 곳(다른 기기, CLI)에서 바뀐 것이므로
+    // 덮어쓰기 전에 묻는다.
     private var onDisk = ""
     var conflict = false
 
@@ -244,7 +229,6 @@ final class NoteEditorModel {
     var notesRevision: Int { workspace.notesRevision }
     var assist: NoteAssist { NoteAssist(settings: workspace.settings, links: links) }
 
-    /// The note a `[[제목]]` in this one names, as a link the window opens.
     func link(titled title: String) -> AppLink? { workspace.noteId(titled: title, in: course).map { AppLink(.note, $0) } }
 
     func load() {
@@ -257,13 +241,12 @@ final class NoteEditorModel {
 
     func reloadMeta() {
         let current = (course.stored(note) ?? note).meta
-        // Every write to any note lands here; the bar and the preview redraw only when this note's links moved.
         if current != meta { meta = current }
         savedMath = meta.math
     }
 
-    /// After a write elsewhere (`notesRevision`). The editor's own save left `onDisk` as the file is, so it reads
-    /// nothing again; unsaved edits are never replaced and ask as a refused save would.
+    // 편집기 자신의 저장은 `onDisk`를 파일과 같게 두므로 다시 읽지 않는다. 저장하지 않은 편집은 바꾸지 않고, 거절된
+    // 저장처럼 묻는다.
     func refresh() {
         reloadMeta()
         guard let disk = try? store.read(note), disk != onDisk else { return }
@@ -293,7 +276,7 @@ final class NoteEditorModel {
 
     func saveIfDirty() { if dirty { saveNow(force: false) } }
 
-    /// Writes a task box ticked in the preview over its line, if it still holds what the page showed.
+    // 그 줄이 페이지가 보였던 내용을 아직 담고 있을 때만 쓴다.
     func replaceLines(_ from: Int, _ to: Int, _ old: String, _ new: String) -> Bool {
         var lines = body.components(separatedBy: "\n")
         guard from >= 1, from <= to, to <= lines.count, lines[(from - 1)...(to - 1)].joined(separator: "\n") == old else { return false }
@@ -306,7 +289,6 @@ final class NoteEditorModel {
 
     // MARK: Review
 
-    /// Where the writing happens, so finishing it is one click here rather than a trip back to Today.
     var unfinishedReview: Session? {
         guard let id = meta.id, let session = course.file.sessions.first(where: { $0.reviewNoteId == id }), session.reviewNoteUnfinished
         else { return nil }
@@ -317,7 +299,6 @@ final class NoteEditorModel {
 
     // MARK: Links
 
-    /// A session whose note of this kind is another note can't take this one (`NoteLink` refuses it), so it isn't offered.
     func linkSessions(_ kind: NoteKind) -> [Session] {
         course.file.sessions.filter { s in
             !s.isCancelled && s.date <= workspace.now && s.note(of: kind).map { $0 == meta.id } ?? true
@@ -353,8 +334,6 @@ final class NoteEditorModel {
 
     func isLinked(_ s: Session, as kind: NoteKind) -> Bool { meta.kind == kind && linkedSessions.contains { $0.id == s.id } }
 
-    /// A review note covers every class reviewed in it, so picking a class adds it or takes it off again; a rough note,
-    /// or a note becoming a review note, moves to the class picked.
     func pick(_ session: UUID, as kind: NoteKind) {
         guard let id = meta.id else { return }
         guard kind == .review, meta.kind == .review else { return relink(kind, session: session) }
@@ -366,7 +345,6 @@ final class NoteEditorModel {
         meta.sessionIds = linkedSessions.map(\.id)
     }
 
-    /// One kind at a time: becoming another kind lets go of the session or exam the old one belonged to.
     func relink(_ kind: NoteKind, session: UUID? = nil, exam: UUID? = nil) {
         guard meta.id != nil else { return }
         meta.kind = kind
@@ -376,7 +354,6 @@ final class NoteEditorModel {
     }
 
     func toggleUnit(_ unit: UUID) {
-        // The units another kind shows are its session's or exam's, not the note's own, so a new unit note starts empty.
         if meta.kind != .unit {
             meta.unitIds = []
             relink(.unit)
@@ -388,7 +365,6 @@ final class NoteEditorModel {
     private func saveLinks() {
         guard let id = meta.id else { return }
         let ran = workspace.run(NoteLink(course: course.id, note: id, meta: meta))
-        // A refused link leaves the file as it was; the label would otherwise show a kind the note doesn't have.
         if ran == nil, let saved = course.stored(note) { meta = saved.meta }
     }
 
@@ -401,7 +377,6 @@ final class NoteEditorModel {
         return isImage ? "![\(name)](\(encoded))" : "[\(file.lastPathComponent)](\(encoded))"
     }
 
-    /// How a dragged asset is written from where the note sits, e.g. `assets/a.png` or `../assets/a.png`.
     func assetLink(_ file: URL) -> String { Self.markdown(for: file, path: store.link(to: "assets/" + file.lastPathComponent, from: note)) }
 
     func reloadAssets() { assets = store.noteAssets() }
@@ -410,7 +385,7 @@ final class NoteEditorModel {
         let store = store
         workspace.perform {
             for url in urls where url.isFileURL {
-                // Files handed over from outside the sandbox stay readable only inside this scope.
+                // 샌드박스 밖에서 넘겨받은 파일은 이 scope 안에서만 읽을 수 있다.
                 let scoped = url.startAccessingSecurityScopedResource()
                 defer { if scoped { url.stopAccessingSecurityScopedResource() } }
                 try store.addNoteAsset(url)

@@ -5,7 +5,6 @@ import FolioStorage
 import Foundation
 import Observation
 
-/// Unclassified files come first with the cleanup's suggested place; nothing moves until approved.
 @MainActor @Observable
 final class MaterialsModel {
     let workspace: Workspace
@@ -14,10 +13,9 @@ final class MaterialsModel {
     let moves: MoveUndo
     private var assignmentFolders: [String] = []
     var viewing: UUID? { didSet { if viewing != oldValue { shownPage = nil } } }
-    /// The 0-based page a link asked the viewer for, taken once by it.
+    // 0부터 센 쪽이다.
     var requestedPage: Int?
-    /// The 0-based page the viewer is on, which the window's link carries, so back, forward and a tab moved to its own
-    /// window come back to it.
+    // 0부터 센 쪽이다.
     var shownPage: Int?
     var linking: UUID?
     var relinking: UUID?
@@ -25,24 +23,20 @@ final class MaterialsModel {
     var incoming: [URL] = []
     var newName = ""
     var pending: PendingAction?
-    /// Folder paths opened in the tree; folders start closed so a course with many reports stays short.
     var opened: Set<String> = []
     var creatingFile = false
-    /// Where the new-file sheet starts; nil picks the newest assignment's folder.
     var newFileFolder: String?
 
-    /// `moves`: the materials page's, when its file is edited from a sheet the window shows.
     init(workspace: Workspace, course: LoadedCourse, moves: MoveUndo = MoveUndo()) {
         self.workspace = workspace
         initial = course
         self.moves = moves
     }
 
-    /// Looked up each time, so a saved change shows without the page being handed the course again.
+    // 저장한 변경이 페이지에 과목을 다시 넘기지 않아도 보이도록 매번 찾는다.
     var course: LoadedCourse { workspace.course(initial.id) ?? initial }
     var materials: [FolioDomain.Material] { course.file.materials }
     var viewed: FolioDomain.Material? { viewing.flatMap { id in materials.first { $0.id == id } } }
-    /// What the page shows, as a link: the file open, at its page once the viewer has one.
     var viewedLink: AppLink? { viewing.map { AppLink(.material, $0, anchor: shownPage.map { .page($0 + 1) }) } }
 
     func load() async {
@@ -66,13 +60,11 @@ final class MaterialsModel {
         var count: Int
         var note: String
         var rows: [TreeRow]
-        /// The PDFs this section shows through their `.tex` rows (#109), by the `.tex`.
         var pdfs: [UUID: FolioDomain.Material]
     }
 
     func sections() -> [Section] {
         MaterialRole.allCases.compactMap { role in
-            // A missing file that was never classified still needs a row to be re-pointed or dropped.
             let all = materials.filter {
                 $0.role == role && $0.status == .classified || ($0.role ?? .other) == role && $0.status == .missing
             }
@@ -106,18 +98,15 @@ final class MaterialsModel {
         if opened.contains(folder.path) { opened.remove(folder.path) } else { opened.insert(folder.path) }
     }
 
-    /// Standard folders by hand, with each exam's prep folder; `Lectures` is offered with a session where it is needed.
     var places: [String] {
         let exams = course.file.exams.compactMap { MaterialIntake.folder(of: $0) }
         return Array((MaterialIntake.places(assignmentFolders: assignmentFolders) + exams).uniqued())
     }
 
-    /// Lectures stays in: an unclassified file keeps its name, and a lecture already named by week is common.
     var relocations: [String] { [CourseFolder.lectures.rawValue] + places }
 
     func moveTargets(_ m: FolioDomain.Material) -> [String] { relocations.filter { $0 != dir(m.path) } }
 
-    /// A `.tex` row's line carries its hidden PDF's links too, since the PDF has no row of its own to show them.
     func linkLine(_ m: FolioDomain.Material, pdf: FolioDomain.Material?) -> String {
         let own = linkLine(m)
         guard let pdf else { return own }
@@ -152,7 +141,6 @@ final class MaterialsModel {
     }
 
     #if DEBUG
-    /// Fixtures ship without tracked files, so the snapshot driver registers them to have a file to show.
     func trackFixtureFiles() {
         if materials.isEmpty { workspace.run(MaterialTrack(course: course.id)) }
     }
@@ -170,7 +158,6 @@ final class MaterialsModel {
         creatingFile = true
     }
 
-    /// Straight into the editor; its folders stay open behind it for when the editor closes.
     func created(_ id: UUID) {
         guard let m = materials.first(where: { $0.id == id }) else { return }
         var folder = dir(m.path)
@@ -184,7 +171,7 @@ final class MaterialsModel {
     func untrack(_ m: FolioDomain.Material) { workspace.run(MaterialUntrack(course: course.id, material: m.id)) }
     func ignore(_ ids: [UUID]) { pending = workspace.ask(MaterialStatusSet(course: course.id, status: .ignored, materials: ids)) }
 
-    /// A folder's name is all name: a project called `robot.v2` has no extension to keep.
+    // 폴더 이름은 전체가 이름이다. `robot.v2`라는 프로젝트에는 지킬 확장자가 없다.
     private func kept(_ m: FolioDomain.Material) -> String { m.isFolder ? "" : (m.path as NSString).pathExtension }
 
     func startRenaming(_ m: FolioDomain.Material) {
@@ -197,7 +184,6 @@ final class MaterialsModel {
         return String(localized: ext.isEmpty ? .materialsRenameMessagePlain : .materialsRenameMessage(ext))
     }
 
-    /// The file name `newName` gives, with its extension kept; nil while it is empty or the same.
     func renamed(_ m: FolioDomain.Material) -> String? {
         let ext = kept(m)
         let base = newName.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "/", with: "-")
@@ -207,7 +193,6 @@ final class MaterialsModel {
 
     func rename(_ m: FolioDomain.Material) {
         guard let name = renamed(m) else { return }
-        // The sheet shows the new name, so pressing it is the approval; asking again would ask twice.
         moves.keep(
             workspace.run(MaterialMove(course: course.id, material: m.id, to: (dir(m.path) as NSString).appendingPathComponent(name))))
     }
@@ -219,27 +204,23 @@ final class MaterialsModel {
 
     func relink(to file: URL) {
         guard let id = relinking else { return }
-        // Files picked on iPadOS are security-scoped; reading the hash needs access.
+        // iPadOS에서 고른 파일은 security-scoped라서 해시를 읽으려면 접근 권한이 필요하다.
         let scoped = file.startAccessingSecurityScopedResource()
         defer { if scoped { file.stopAccessingSecurityScopedResource() } }
         workspace.run(MaterialRelink(course: course.id, material: id, file: file.path(percentEncoded: false)))
     }
 
-    /// The file a link names, to open, with the page it asks for kept for the viewer. A link to the section itself
-    /// closes the file shown, as going back from it does.
     func follow(_ link: AppLink) -> FolioDomain.Material? {
         guard link.kind == .material else {
             if link.kind == .course { viewing = nil }
             return nil
         }
         guard let m = materials.first(where: { $0.id == link.id }) else { return nil }
-        // The page the viewer reported comes back as the window's link: going to it again would jump to the page's
-        // top from wherever it was scrolled.
+        // 뷰어가 알린 쪽은 창의 링크로 돌아온다. 그 쪽으로 다시 가면 스크롤한 자리에서 페이지 맨 위로 뛴다.
         if case .page(let n) = link.anchor, viewing != m.id || shownPage != n - 1 { requestedPage = n - 1 }
         return m
     }
 
-    /// Every file opens here, in the renderer its format picks (`FileView`); a folder opens in Finder (by the view).
     func open(_ m: FolioDomain.Material) {
         if !m.isFolder { viewing = m.id }
     }
@@ -252,19 +233,16 @@ final class MaterialsModel {
         course.file.linkableSessions { $0.materials.contains { $0.materialId == material } }
     }
 
-    /// Outline order: `order` counts among siblings only, so sorting by it alone interleaves chapters and their units.
+    // `order`는 형제 사이에서만 세므로, 그것만으로 정렬하면 장과 그 단원이 섞인다.
     var units: [(unit: FolioDomain.Unit, depth: Int)] { UnitTree.outline(course.file.units) }
 
     func unitIds(of material: UUID) -> [UUID] { materials.first { $0.id == material }?.unitIds ?? [] }
 
-    /// Units the file reaches only through one of their classes: shown as such, not as a link to undo.
     func unitsViaSessions(of material: UUID) -> Set<UUID> {
         guard let m = materials.first(where: { $0.id == material }) else { return [] }
         return Set(course.file.units(of: m).filter { !$0.routes.contains(.direct) && !$0.routes.contains(.pages) }.map(\.unit.id))
     }
 
-    /// A unit's pages of the split file, shown beside its unlinked row: the split puts the file there, not a link to
-    /// undo here.
     func splitPages(of material: UUID, unit: UUID) -> String? {
         course.file.pages(of: unit, in: material).map { String(localized: .materialsLinksUnitPages($0.lowerBound, $0.upperBound)) }
     }
@@ -277,7 +255,6 @@ final class MaterialsModel {
 
     func sessionTitle(_ s: Session) -> String { course.file.title(of: s, calendar: workspace.calendar) }
 
-    /// A lecture newly linked to a class starts where the end-of-class prompt would: after the last class's pages.
     func link(_ material: UUID, session: UUID, linked: Bool) {
         let s = course.file.sessions.first { $0.id == session }
         let start =
@@ -306,8 +283,7 @@ final class MaterialsModel {
             MaterialLinkSession(course: course.id, material: material, session: session, firstPage: range.first, lastPage: range.last))
     }
 
-    /// PDF page counts read so far, which bound the page fields. Read when the links open, not for the whole list:
-    /// each read may download the file from iCloud.
+    // 읽을 때마다 iCloud에서 파일을 내려받을 수 있으므로, 목록 전체가 아니라 링크를 열 때 읽는다.
     private(set) var pageCounts: [UUID: Int] = [:]
 
     func loadPageCount(_ material: UUID) async {
@@ -335,15 +311,13 @@ final class MaterialsModel {
 
     // MARK: Unclassified inbox
 
-    /// The course folder relative to the GIST root, with a trailing slash.
     var prefix: String {
         guard let gist = workspace.gist else { return "" }
         let root = gist.url.standardizedFileURL.path
         return String(course.store.url.standardizedFileURL.path.dropFirst(root.count + 1)) + "/"
     }
 
-    /// The one-time cleanup's moves for files still left in this course, including the ones it was unsure about.
-    /// Reading the whole GIST tree is slow, so this runs off the main actor.
+    // GIST 폴더 전체를 읽는 일은 느려서 main actor 밖에서 돌린다.
     private func cleanupSuggestions() async -> [PlannedMove] {
         guard let gist = workspace.gist, workspace.course(initial.id) != nil else { return [] }
         let prefix = self.prefix, url = gist.url, file = course.file
@@ -356,7 +330,6 @@ final class MaterialsModel {
     }
 
     struct Inbox {
-        /// One per source folder, target folder and reason, so a folder of seven files is one decision.
         var groups: [[PlannedMove]]
         var orphans: [FolioDomain.Material]
     }
@@ -387,7 +360,6 @@ final class MaterialsModel {
         approve(sources.map { PlannedMove(from: $0, to: "\(prefix)\(place)/\(($0 as NSString).lastPathComponent)") })
     }
 
-    /// Moves files only after the user approved this exact move; the batch goes to `moves.jsonl` so it can be undone.
     func approve(_ moves: [PlannedMove]) {
         self.moves.keep(workspace.run(CleanupApply(moves: moves, course: course.id)))
         Task { await load() }

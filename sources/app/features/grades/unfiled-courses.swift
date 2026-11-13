@@ -2,8 +2,6 @@ import FolioActions
 import FolioDomain
 import SwiftUI
 
-/// Courses schema v1 kept in transcript.json without a folder. They count nowhere until moved, so the notice stays
-/// until the user moves them; a credited term without a source refuses, and the refusal says so.
 @MainActor @Observable
 final class UnfiledCoursesModel {
     let workspace: Workspace

@@ -50,7 +50,6 @@ struct ExamsView: View {
         #endif
         .confirming($model.pending)
         .task(id: model.course.id) { model.load() }
-        // A summary made from a menu elsewhere (Today, search) renames the card's button.
         .onChange(of: model.workspace.notesRevision) { model.load() }
     }
 
@@ -64,7 +63,6 @@ struct ExamsView: View {
                     VStack(alignment: .leading, spacing: Theme.Space.xs) {
                         HStack(spacing: Theme.Space.m) {
                             fact("mappin.and.ellipse", exam.location, empty: String(localized: .examsNoLocation))
-                            // Empty means not entered yet, not that nothing is allowed.
                             if !exam.allowed.isEmpty { fact("doc.text", exam.allowed, empty: "") }
                         }
                         if !exam.memo.isEmpty {
@@ -110,7 +108,6 @@ struct ExamsView: View {
         }
     }
 
-    /// Date over weekday and time, in a fixed column as the session list has.
     func when(_ exam: Exam, muted: Bool) -> some View {
         let when = model.when(exam)
         return VStack(alignment: .leading, spacing: Theme.Space.xxs) {
@@ -201,7 +198,6 @@ struct ExamsView: View {
         if let id = model.openSummary(exam) { openLink(AppLink(.note, id), course: model.course.id) }
     }
 
-    /// The ⋯ menu and the right-click menu: the exam's one menu (#403), told the summary the page has read.
     func actions(_ exam: Exam) -> some View {
         ExamMenu(courseId: model.course.id, examId: exam.id, host: .own, summary: .some(model.notes[exam.id]))
     }
@@ -226,7 +222,6 @@ struct ExamsView: View {
     }
 }
 
-/// The new item's day, title and unit are typed per card, so they stay with the card rather than the page's model.
 struct ExamPlanCard: View {
     let model: ExamsModel
     let exam: Exam

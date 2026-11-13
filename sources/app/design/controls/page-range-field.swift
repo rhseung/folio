@@ -1,38 +1,27 @@
 import FolioDomain
 import SwiftUI
 
-/// The numbers float over the handles only while one is dragged, pointed at, keyed or tapped; nothing under the bar
-/// repeats them, so the row stays as tall as a form row. Every change goes through `PageRange` (`moving`, `tapping`,
-/// `shifted`), so the range stays within the file and in order during a drag as much as after.
-///
-/// A lecture split into units (#321) draws its zones as named tiles instead of the thin rail (the section bar, e2).
 struct PageRangeField: View {
-    /// Pages another class took through the file.
     struct Taught: Identifiable {
         let id: UUID
         let pages: ClosedRange<Int>
         let label: String
-        /// A lecture file's page is one class's (`Session.progressOverlap`), so the range stops at it; a textbook is
-        /// read over and over.
         var wall = false
     }
 
-    /// A zone of the file by the units holding it (#321); an empty title is pages no unit takes.
     struct Section: Equatable {
         let title: String
         let pages: ClosedRange<Int>
     }
 
     let range: PageRange
-    /// The file's page count; nil while it isn't read yet.
     let pages: Int?
     var taught: [Taught] = []
     var seen: ClosedRange<Int>?
     private var taken: [ClosedRange<Int>] { taught.filter(\.wall).map(\.pages) }
     var sections: [Section] = []
     var compact = false
-    /// Once a drag lets go, or at once for a tap, a key or a typed page: every step of a scrub would otherwise be a
-    /// write.
+    // 드래그를 놓을 때 부르고, 탭이나 키, 쪽 입력이면 바로 부른다. 그러지 않으면 드래그의 모든 걸음이 쓰기가 된다.
     let set: (PageRange) -> Void
 
     @Environment(\.accent) private var accent
@@ -48,17 +37,11 @@ struct PageRangeField: View {
     @State private var typed: Int?
     @State private var ticks = 0
     @State private var bumps = 0
-    /// A sheet hands its first control focus as it opens; the ring waits for a key so it marks only keyboard use.
     @State private var keyed = false
-    /// The numbers over the handles, kept up a moment after the pointer leaves so it can reach them to type.
     @State private var pillsUp = false
     @State private var pillHover = false
-    /// The end whose handle was tapped, not dragged: its number stays up until focus leaves it, so a finger with no
-    /// pointer to hover can reach it to type.
     @State private var pinned: PageRange.End?
     @State private var pressed: PageRange.End?
-    /// A press on pages another class took or on a unit's tile, shown as the pointer's tip would: a finger has no
-    /// pointer to rest, so the day or the unit shows while it is down and a moment after.
     @State private var pressTip: Int?
     @FocusState private var focused: PageRange.End?
     @FocusState private var typingFocused: Bool
@@ -68,26 +51,17 @@ struct PageRangeField: View {
         case span(from: PageRange, at: CGFloat)
     }
 
-    /// Room left and right of the bar for a handle at either end.
     private static let inset: CGFloat = 12
     private static let bar: CGFloat = 8
-    /// The field's height, and the bar's middle 20pt above its bottom: the room above the bar is the numbers'. Floated
-    /// further up, over the row's padding, they covered the divider and the row above, or the card's top edge.
     private static let height: CGFloat = 48
     private static let barMiddle: CGFloat = 28
-    /// The numbers stand this far above the bar: a 16pt pill ending 2pt above a grabbed handle, 6pt inside the row's
-    /// top edge.
     private static let pillRise: CGFloat = 24
     private static let pillHeight: CGFloat = 16
-    /// The bar's row, taller than the bar so it is easy to grab: a finger's width on a touch screen.
     #if os(iOS)
     private static let hitRow: CGFloat = 44
     #else
     private static let hitRow: CGFloat = 24
     #endif
-    /// The recording's dotted line, this far under the bar's middle, and the height of its press target. On a touch
-    /// screen the line and the bar each take a finger's width and overlap, so the nearer one takes a press: the line's
-    /// target runs from halfway between the two down to the field's taller bottom.
     private static let seenDrop: CGFloat = 16
     #if os(iOS)
     private static let seenRow: CGFloat = 44
@@ -95,7 +69,6 @@ struct PageRangeField: View {
     #else
     private static let seenRow: CGFloat = 12
     #endif
-    /// Closer than this, the two pills would overlap and read as one: they merge.
     private static let mergeBelow: CGFloat = 56
     #if os(iOS)
     private static let grabReach: CGFloat = 22
@@ -104,24 +77,17 @@ struct PageRangeField: View {
     #endif
     private static let spring = Animation.spring(duration: 0.32, bounce: 0.35)
     private static let zone: CGFloat = 20
-    /// How far a zone's name keeps from a handle's middle: half the handle, and 8pt.
     private static let handleClear: CGFloat = 14
-    /// A handle this close to a zone edge stands in the gap between two tiles, 4pt into each, so a name keeps only 4pt
-    /// from it: the full clearance there truncated the names of the very units the range picked.
     private static let onEdge: CGFloat = 2
     private static let edgeClear: CGFloat = 10
-    /// Narrower than this, a name would be a letter and an ellipsis; the tile goes without.
     private static let minLabel: CGFloat = 24
-    /// Within this much of a zone's edge, a dragged end settles on it.
     private static let snap: CGFloat = 0.75  // design: one-off, a fraction of a page, not a distance on screen
 
     private var zoned: Bool { !sections.isEmpty }
-    /// The edges between zones, as page counts before them: where the ends settle and the firm haptic is.
     private var zoneEdges: Set<Int> { Set(sections.flatMap { [$0.pages.lowerBound - 1, $0.pages.upperBound] }) }
 
     private var shown: PageRange { draft ?? range }
 
-    /// Pages the bar spans. Until the count is read, a little past what is known so the end can still be dragged on.
     private var extent: Int {
         if let pages { return max(pages, 1) }
         let ends: [Int?] = [shown.first, shown.last, seen?.upperBound]
@@ -153,14 +119,12 @@ struct PageRangeField: View {
                 }
             }
             .sensoryFeedback(.selection, trigger: ticks)
-            // Firmer where the drag stops giving or starts pushing: the file's first or last page, or the other end.
             .sensoryFeedback(.alignment, trigger: bumps)
     }
 
     // MARK: Geometry
 
     private func unit(_ w: CGFloat) -> CGFloat { max(w - 2 * Self.inset, 1) / CGFloat(extent) }
-    /// Where the edge after `pages` pages sits: the start's handle is at its page's left edge, the end's at its right.
     private func x(_ edge: Int, _ w: CGFloat) -> CGFloat { Self.inset + CGFloat(edge) * unit(w) }
     private func edge(at x: CGFloat, _ w: CGFloat) -> CGFloat { (x - Self.inset) / unit(w) }
     private func page(at x: CGFloat, _ w: CGFloat) -> Int { min(max(Int(edge(at: x, w).rounded(.down)) + 1, 1), extent) }
@@ -235,7 +199,6 @@ struct PageRangeField: View {
         .frame(width: w, height: fieldHeight)
     }
 
-    /// The bar's press target, cut where the dotted line's begins on a touch screen.
     private var barRow: (mid: CGFloat, height: CGFloat) {
         let top = barY - Self.hitRow / 2
         var bottom = barY + Self.hitRow / 2
@@ -253,7 +216,6 @@ struct PageRangeField: View {
         context.fill(
             Capsule().path(in: CGRect(x: Self.inset, y: top, width: w - 2 * Self.inset, height: Self.bar)),
             with: .color(Theme.Palette.fill))
-        // A 1pt gap on each side, so two classes that meet still read as two.
         for t in taught where t.pages.lowerBound <= n {
             let upper = min(t.pages.upperBound, n)
             let rect = CGRect(
@@ -262,7 +224,6 @@ struct PageRangeField: View {
             context.fill(Capsule().path(in: rect), with: .color(Theme.Palette.text.opacity(Theme.Opacity.projected)))
         }
         let strong = Set(sections.flatMap { [$0.pages.lowerBound - 1, $0.pages.upperBound] })
-        // Page ticks only while there is room for them; every fifth and every section edge always.
         let everyPage = u >= 4
         for i in 1..<n where everyPage || i % 5 == 0 || strong.contains(i) {
             let major = i % 5 == 0 || strong.contains(i)
@@ -273,7 +234,6 @@ struct PageRangeField: View {
         }
     }
 
-    /// The zones as grey tiles; pages other classes took lie on them as a faint wash, so the names stay readable.
     private func zones(_ context: GraphicsContext, width w: CGFloat) {
         let n = extent, top = barY - Self.zone / 2
         var tiles: [Path] = []
@@ -283,15 +243,12 @@ struct PageRangeField: View {
             tiles.append(
                 Path(roundedRect: CGRect(x: lo, y: top, width: max(hi - lo, 1), height: Self.zone), cornerRadius: Theme.Radius.tile))
         }
-        // Until the count is read the bar runs past the last zone, so an end can still be dragged on: those pages are
-        // a zone no unit takes.
         if let last = sections.last?.pages.upperBound, last < n {
             let rect = CGRect(x: x(last, w) + 2, y: top, width: max(x(n, w) - x(last, w) - 2, 1), height: Self.zone)
             tiles.append(Path(roundedRect: rect, cornerRadius: Theme.Radius.tile))
         }
         for tile in tiles {
             context.fill(tile, with: .color(Theme.Palette.fill))
-            // Clipped to the tile: a wash with corners of its own read as one more tile.
             var inside = context
             inside.clip(to: tile)
             for t in taught where t.pages.lowerBound <= n {
@@ -303,8 +260,6 @@ struct PageRangeField: View {
         }
     }
 
-    /// The zones' names over the tiles, the ones the range reaches in the course ink. Each sits in the widest stretch
-    /// of its tile that no handle is near, and truncates there: a name under a handle was the bar's clutter.
     private func zoneLabels(_ r: PageRange, handles: [CGFloat], width w: CGFloat) -> some View {
         let picked = r.first.flatMap { f in r.last.map { f...$0 } }
         return ForEach(Array(sections.enumerated()), id: \.offset) { _, section in
@@ -354,7 +309,6 @@ struct PageRangeField: View {
     private func handle(_ end: PageRange.End, x hx: CGFloat) -> some View {
         let scale: CGFloat = grabbedEnd == end ? 1.3 : hovered == end ? 1.15 : 1
         let value = shown[end]
-        // The only handle while an end is missing wears the course color: the row's cue, with no sentence under it.
         let lone = shown.lone == end
         return Capsule()
             .fill(Color.white)
@@ -442,8 +396,6 @@ struct PageRangeField: View {
         }
     }
 
-    /// On a touch screen the finger covers the tile under the end it drags, so the pill names that unit instead of the
-    /// range's length, which its numbers already give; a pointer sees the tile.
     private func draggedZone(_ r: PageRange) -> String? {
         #if os(iOS)
         guard zoned, let end = grabbedEnd, let page = r[end] else { return nil }
@@ -462,8 +414,8 @@ struct PageRangeField: View {
             .padding(.horizontal, Theme.Space.s)
             .frame(height: Self.pillHeight)
             .fixedSize()
-            // Drawn as one flattened shape with the shadow outside it: left to the layers, the hairline capsule came out
-            // with straight cut ends at the pill's sides.
+            // 그림자를 밖에 둔 하나의 평평한 모양으로 그린다. 레이어에 맡기면 가는 테두리 캡슐의 양 끝이 직선으로 잘려
+            // 나왔다.
             .background {
                 Capsule().fill(Theme.Palette.card)
                     .overlay(Capsule().strokeBorder(Theme.Palette.lineStrong, lineWidth: 0.5))
@@ -494,8 +446,9 @@ struct PageRangeField: View {
                 .padding(.horizontal, Theme.Space.xxs)
                 .fingerReach()
                 .onTapGesture {
-                    // Both numbers share one focus, so leaving the other one for this never blurs it: what was typed
-                    // there is kept here or it's lost. Its push may move this end, hence the committed range's value.
+                    // 두 숫자는 포커스 하나를 함께 쓰므로, 다른 숫자에서 이 숫자로 옮겨도 blur가 일어나지 않는다.
+                    // 그래서 거기에 입력한 값을 여기서 반영하지 않으면 잃는다. 그 값이 이 끝을 밀 수 있으므로 반영한
+                    // 범위의 값을 쓴다.
                     let now = commitTyped()
                     typed = now[end] ?? value
                     typing = end
@@ -528,20 +481,16 @@ struct PageRangeField: View {
 
     // MARK: Below the bar
 
-    /// The pages seen while recording as a dotted line under them; pressing it takes them as the range. A line rather
-    /// than a labelled box: the box and its words sat against the bar, and the tooltip says the rest.
     private func seenLine(_ seen: ClosedRange<Int>, width w: CGFloat) -> some View {
         let lo = x(seen.lowerBound - 1, w), hi = x(min(seen.upperBound, extent), w)
         let applied = shown.first == seen.lowerBound && shown.last == seen.upperBound
         let take = { apply(PageRange(first: seen.lowerBound, last: seen.upperBound).fitted(besides: taken, pages: pages)) }
         let lineY = barY + Self.seenDrop
-        // The target's top: on a touch screen halfway up to the bar, whose target it meets there.
         #if os(iOS)
         let top = barY + Self.seenDrop / 2, bottom = lineY + Self.seenRow / 2
         #else
         let top = lineY - Self.seenRow / 2, bottom = lineY + Self.seenRow / 2
         #endif
-        // Wide enough for a finger even over a page or two.
         let width: CGFloat = max(hi - lo, 1), reach: CGFloat = max(width, Self.finger)
         let line = dotted(from: (reach - width) / 2, to: (reach + width) / 2, y: lineY - top, applied: applied)
             .frame(width: reach, height: bottom - top)
@@ -549,7 +498,6 @@ struct PageRangeField: View {
         return Button(action: take) { line }
             .buttonStyle(.pointing(.plain))
             .help(Text(.designPageRangeSeenHelp))
-            // The tooltip's meaning, for a finger: a long press names the line before it is taken.
             .contextMenu { seenMenu(seen, take: take) }
             .accessibilityLabel(Text(.designPageRangeSeenShort(seen.lowerBound, seen.upperBound)))
             .position(x: (lo + hi) / 2, y: (top + bottom) / 2)
@@ -590,14 +538,11 @@ struct PageRangeField: View {
                     let e = edge(at: g.location.x, w)
                     let settled = settle(e)
                     let p = end == .first ? Int(settled.rounded()) + 1 : Int(settled.rounded())
-                    // The only handle on the bar opens the range toward the pointer, as a tap there would: it is the
-                    // one thing in sight to grab, and moving it instead left the missing end unset.
                     let next =
                         from.lone == end
                         ? from.tapping(page(at: g.location.x, w), pages: pages, besides: taken)
                         : from.moving(end, to: min(max(p, 1), extent), pages: pages, besides: taken)
                     change(to: next, end: end)
-                    // Past the file's first or last page the handle gives a little, less the further it goes.
                     let (lo, hi): (CGFloat, CGFloat) = end == .first ? (0, CGFloat(extent - 1)) : (1, CGFloat(extent))
                     rubber = stretch((e < lo ? e - lo : e > hi ? e - hi : 0) * u)
                 case let .span(from, at):
@@ -631,8 +576,6 @@ struct PageRangeField: View {
             }
     }
 
-    /// A dragged end near a zone edge lands on it, unless ⌥ asks for single pages. iPad has no ⌥ to hold, so it always
-    /// settles: the typed number is there for a page off an edge.
     private func settle(_ e: CGFloat) -> CGFloat {
         guard zoned else { return e }
         #if os(macOS)
@@ -644,8 +587,6 @@ struct PageRangeField: View {
         return CGFloat(near)
     }
 
-    /// A press on a handle takes that end, on the range the whole of it; anywhere else on the bar is a tap there,
-    /// whose moved end the drag then carries on.
     private func begin(at px: CGFloat, width w: CGFloat) {
         let r = shown
         pressTip = nil
@@ -661,7 +602,6 @@ struct PageRangeField: View {
             pressTip = taught.contains { $0.pages.contains(p) } || sections.contains { $0.pages.contains(p) && !$0.title.isEmpty } ? p : nil
             #endif
             let next = r.tapping(p, pages: pages, besides: taken)
-            // The end that landed on the tapped page; a first tap sets both, and the drag goes on with the end.
             let end: PageRange.End = next.last == p ? .last : .first
             withAnimation(Self.spring) { draft = next }
             feel(from: r, to: next, end: end)
@@ -713,7 +653,6 @@ struct PageRangeField: View {
             range.lone == end
             ? range.tapping(value + step, pages: pages, besides: taken) : range.moving(end, to: value + step, pages: pages, besides: taken)
         guard next != range else {
-            // At the file's edge: the handle leans out and springs back.
             bumps += 1
             withAnimation(.easeOut(duration: 0.08)) {
                 rubber = step > 0 ? 4 : -4; grab = .end(end, from: range)
@@ -743,7 +682,6 @@ struct PageRangeField: View {
 }
 
 extension PageRangeField.Taught {
-    /// Every other class's pages through `material`, named by its day.
     static func list(_ file: CourseFile, material: UUID, besides session: UUID, calendar: Calendar) -> [Self] {
         let lecture = file.materials.first { $0.id == material }?.role == .lecture
         return file.pagesTaught(in: material, besides: session).map {
@@ -753,8 +691,6 @@ extension PageRangeField.Taught {
 }
 
 private extension View {
-    /// A number in a 16pt pill is a speck under a finger: on a touch screen its press reaches up and out to 44pt,
-    /// though not down, where the handle under the pill is grabbed.
     @ViewBuilder func fingerReach() -> some View {
         #if os(iOS)
         padding(.horizontal, Theme.Space.m).padding(.top, 28)
@@ -767,6 +703,5 @@ private extension View {
 }
 
 extension EnvironmentValues {
-    /// Draws the numbers over the handles as a drag shows them, for window snapshots of a bar mid-drag.
     @Entry var pageRangeNumbersShown = false
 }

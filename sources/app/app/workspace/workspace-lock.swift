@@ -3,13 +3,12 @@ import LocalAuthentication
 import SwiftUI
 
 extension Workspace {
-    /// Grades lock again this long after unlocking, so a Mac left open does not keep them on show.
     static let gradeUnlockDuration: Duration = .seconds(GradeLock.unlockSeconds)
 
     func unlockGrades() async {
         let context = LAContext()
         var error: NSError?
-        // With no password set on the device there is nothing to check against; locking would only shut the owner out.
+        // 기기에 암호가 없으면 확인할 대상이 없고, 잠그면 주인만 막힌다.
         guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) else { gradesUnlocked = true; return }
         gradesUnlocked =
             (try? await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: String(localized: .workspaceUnlockReason)))

@@ -2,15 +2,14 @@ import FolioDomain
 import Foundation
 import Observation
 
-/// Where the releases come from: GitHub in the app, a fixed list in tests, previews and renders.
 protocol ReleaseFeed: Sendable {
     func releases() async throws -> [PatchNotes.Release]
 }
 
-/// The public repository's releases, without a token. Online only (#415): the notes aren't bundled, so a PR body edited
-/// after its merge still reaches the app through its release.
+// 토큰 없이 공개 저장소의 릴리스를 읽는다. 노트를 앱에 묶지 않으므로, 머지한 뒤 고친 PR 본문도 릴리스를 거쳐 앱에
+// 닿는다.
 struct GitHubReleases: ReleaseFeed {
-    // One page: a hundred releases is years of them. Past that the oldest drop off the page, never the newest.
+    // 백 개면 몇 년 치 릴리스다. 그보다 많으면 가장 새것이 아니라 가장 오래된 것이 페이지에서 빠진다.
     static let url = URL(string: "https://api.github.com/repos/rhseung/folio/releases?per_page=100")!
 
     func releases() async throws -> [PatchNotes.Release] {
@@ -33,39 +32,34 @@ struct ReleaseList: ReleaseFeed {
     }
 }
 
-/// The releases, asked for once a launch, and the sheet an update brings (`WhatsNewPrompt`). App-wide, so one sheet
-/// shows however many windows are open.
 @MainActor @Observable
 final class ReleaseNotes {
     private(set) var feed: PatchNotes.Feed = .notLoaded
     private(set) var loading = false
-    /// The sheet waiting for a window to take it.
     var ask: PatchNotes.Summary?
-    /// Set when a window takes the sheet, so the minute's next check doesn't bring it again before it is closed.
+    // 창이 시트를 가져갈 때 정해야, 닫기 전에 다음 분의 확인이 시트를 다시 띄우지 않는다.
     private var shown = false
     let current: PatchNotes.Version
     @ObservationIgnored private let source: any ReleaseFeed
     @ObservationIgnored private let defaults: UserDefaults
-    /// Off in debug builds and in tests, previews and renders. A debug build shares the installed app's defaults (one
-    /// bundle ID), and one built after a version bump would mark that version seen before its release was out: the
-    /// installed app would then never show it.
+    // 디버그 빌드는 설치한 앱과 기본값을 함께 쓴다(같은 bundle ID). 버전을 올린 뒤 빌드한 디버그 앱은 릴리스가 나오기
+    // 전에 그 버전을 본 것으로 표시하고, 설치한 앱은 그 버전을 영영 보이지 않게 된다.
     @ObservationIgnored let prompts: Bool
 
-    /// Per device, not in GIST's settings.json: what this device has shown is no fact about the student's data.
     static let seenKey = "folio.patchNotesSeen"
 
     init(
         source: (any ReleaseFeed)? = nil, defaults: UserDefaults = .standard, current: PatchNotes.Version = ReleaseNotes.appVersion,
         prompts: Bool = ReleaseNotes.promptsByDefault
     ) {
-        // Nothing reaches GitHub from a test or a render unless it hands over a feed.
+        // 테스트나 렌더는 피드를 넘기지 않는 한 GitHub에 닿지 않는다.
         self.source = source ?? (LocalFolders.isIsolated() ? ReleaseList(list: []) as any ReleaseFeed : GitHubReleases())
         self.defaults = defaults
         self.current = current
         self.prompts = prompts
     }
 
-    /// From the Info.plist, which `mise run generate` fills from `FolioVersion`.
+    // `mise run generate`가 `FolioVersion`에서 Info.plist를 채운다.
     nonisolated static var appVersion: PatchNotes.Version {
         (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String).flatMap(PatchNotes.Version.init)
             ?? PatchNotes.Version(FolioVersion.marketing) ?? PatchNotes.Version(0, 0, 0)
@@ -87,7 +81,6 @@ final class ReleaseNotes {
         defaults.set(current.description, forKey: Self.seenKey)
     }
 
-    /// Once a launch: a failure waits for the next one (or the page's 다시 시도), not for the next minute.
     func load() async {
         guard feed == .notLoaded else { return }
         await reload()
@@ -104,7 +97,6 @@ final class ReleaseNotes {
         }
     }
 
-    /// At launch and as the minute turns. `busy`: a class or a recording under way, which a sheet would cover.
     func check(busy: Bool) async {
         guard prompts, !shown, ask == nil else { return }
         var step = PatchNotes.step(seen: seen, current: current, feed: feed, busy: busy)
@@ -119,7 +111,6 @@ final class ReleaseNotes {
         }
     }
 
-    /// A window shows the sheet; the others leave it.
     func take() -> PatchNotes.Summary? {
         guard let ask else { return nil }
         self.ask = nil
@@ -127,7 +118,6 @@ final class ReleaseNotes {
         return ask
     }
 
-    /// The releases this app's version has, newest first; nil until loaded or when GitHub couldn't be reached.
     var history: [PatchNotes.Release]? {
         guard case .loaded(let all) = feed else { return nil }
         return PatchNotes.history(all, upTo: current)
@@ -137,7 +127,6 @@ final class ReleaseNotes {
 }
 
 extension Workspace {
-    /// A class under way or a recording: the moment the update's sheet would get in the way.
     var updateSheetWaits: Bool {
         recorder.isActive || classStartAsk != nil || ongoingClass(at: liveNow) != nil
     }
@@ -145,8 +134,6 @@ extension Workspace {
 
 #if DEBUG
 extension ReleaseList {
-    /// What previews and renders show: three releases written as the release script writes them, read the way GitHub's
-    /// would be.
     static let sample: [PatchNotes.Release] = [
         PatchNotes.Release(
             version: PatchNotes.Version(0, 3, 0), date: Date(timeIntervalSince1970: 1_794_193_200),

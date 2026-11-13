@@ -3,16 +3,13 @@ import Observation
 import PDFKit
 import SwiftUI
 
-/// Owns one PDFKit view so SwiftUI buttons (zoom, find, page) can drive it; SwiftUI has no PDF view of its own.
 @MainActor @Observable
 final class PDFController {
     #if DEBUG
-    // `FOLIO_PLAIN_PDF` draws PDFKit's own view, for the window snapshots of what `SteadyPDFView` fixes (#62).
     @ObservationIgnored let view: PDFView = ProcessInfo.processInfo.environment["FOLIO_PLAIN_PDF"] != nil ? PDFView() : SteadyPDFView()
     #else
     @ObservationIgnored let view: PDFView = SteadyPDFView()
     #endif
-    /// 0-based, follows scrolling.
     private(set) var page = 0
     let pageCount: Int
     private(set) var matches: [PDFSelection] = []
@@ -42,37 +39,31 @@ final class PDFController {
         if let observer { NotificationCenter.default.removeObserver(observer) }
     }
 
-    /// Also kept as the page, for a view not yet in the hierarchy: PDFKit ignores `go(to:)` before layout, and the
-    /// `restore()` that follows would otherwise go back to the page it had.
+    // 뷰가 아직 뷰 계층에 없을 때를 위해 쪽 번호로도 남긴다. PDFKit은 배치 전의 `go(to:)`를 무시하고, 그 뒤에 오는 `restore()`가 원래 쪽으로 되돌리기 때문이다.
     func go(to index: Int) {
         guard let target = view.document?.page(at: index) else { return }
         page = min(max(index, 0), max(pageCount - 1, 0))
         view.go(to: target)
     }
 
-    /// Jumps to the remembered page once the view has a size; before layout PDFKit ignores `go(to:)`.
     func restore() {
         let target = page
         DispatchQueue.main.async { [self] in go(to: target) }
     }
 
     #if os(macOS)
-    /// Shows the pages on the theme's dark paper without touching the file (`DarkPaper`). PDFKit draws the gaps
-    /// between pages through the same filter, so their color goes in as what the filter turns into the dark line.
-    /// Mac only: UIKit layers take no Core Image filters, so on iPad the pages keep their printed white.
+    // 파일을 건드리지 않고 테마의 다크 종이 위에 쪽을 보인다(`DarkPaper`). PDFKit은 쪽 사이의 틈도 같은 필터로 그리므로, 틈의 색에는 필터를 거쳐 다크 구분선이 되는 색을 넣는다. Mac
+    // 전용이다. UIKit layer는 Core Image 필터를 받지 않으므로 iPad에서는 쪽이 인쇄한 흰색 그대로 남는다.
     func darken(_ on: Bool) {
         guard on != !view.contentFilters.isEmpty else { return }
         view.wantsLayer = true
         view.layerUsesCoreImageFilters = true
-        // An inverted drop shadow glows around each page.
         view.pageShadowsEnabled = !on
         view.contentFilters = on ? DarkPaper.theme.filters : []
         if on { lightBackground = view.backgroundColor }
         view.backgroundColor = on ? DarkPaper.theme.source(of: Swatch.lineSoft.dark) : lightBackground ?? view.backgroundColor
     }
 
-    /// ⌘-click, the TeX editors' way back to the source. A plain click stays PDFKit's, for selecting text and following
-    /// links. Mac only: only a Mac builds the PDF, so only a Mac has the data that says where a point came from.
     func onCommandClick(_ handler: @escaping @MainActor (_ page: Int, _ point: CGPoint) -> Void) {
         commandClick = CommandClick(view: view, handler: handler)
     }
@@ -82,7 +73,6 @@ final class PDFController {
     func zoomOut() { view.zoomOut(nil) }
     func fit() { view.autoScales = true }
 
-    /// Synchronous, so it runs on submit, not per keystroke.
     func find(_ text: String) {
         matches = text.isEmpty ? [] : view.document?.findString(text, withOptions: [.caseInsensitive, .diacriticInsensitive]) ?? []
         view.highlightedSelections = matches
@@ -104,11 +94,9 @@ final class PDFController {
 }
 
 #if os(macOS)
-/// Reports a ⌘-click as a page index and a point in PDF points from that page's top-left corner, where TeX measures.
-///
-/// Watched as a local event monitor rather than a gesture recognizer: recognizers on a PDFView never sent their action
-/// for a ⌘-press, as PDFKit tracks the press itself. Taken on the press and not passed on, so PDFKit doesn't also treat
-/// it as a ⌘-click that extends the selection; a press without ⌘, or outside this view, goes through untouched.
+// 쪽 번호와 그 쪽 왼쪽 위 기준의 PDF point로 알린다. TeX가 그 기준으로 잰다. gesture recognizer가 아니라 local event monitor로 받는다. PDFKit이 누르기를 직접
+// 추적하므로, PDFView에 붙인 recognizer는 ⌘ 누르기에 action을 보내지 않았다. 누를 때 받아서 넘기지 않으므로 PDFKit이 이를 선택을 넓히는 ⌘ 클릭으로 처리하지 않는다. ⌘ 없는 누르기와
+// 이 뷰 밖의 누르기는 그대로 지나간다.
 @MainActor
 private final class CommandClick {
     private var monitor: Any?
@@ -118,7 +106,6 @@ private final class CommandClick {
             let taken = MainActor.assumeIsolated {
                 guard let view, event.modifierFlags.contains(.command), let window = view.window, event.window === window,
                     let document = view.document,
-                    // The press must land on the PDF itself, not on a popover or sheet over it.
                     window.contentView?.hitTest(event.locationInWindow)?.isDescendant(of: view) == true
                 else { return false }
                 let location = view.convert(event.locationInWindow, from: nil)
@@ -137,15 +124,11 @@ private final class CommandClick {
     }
 }
 
-/// Dark mode for a PDF, as one color matrix: each color's lightness flips while its hue stays (red stays red), and
-/// white paper and black type land on the theme's dark card and ink instead of pure black and white.
-///
-/// The flip is `v + (1 - 2·luma(v))` on every channel. Built from luma alone, it moves a color along the gray axis,
-/// keeping its chroma; it is also its own inverse, which `source(of:)` uses to find what input gives a wanted output.
-/// Layer filters run in linear light, so the matrix is wrapped in tone curves and works on sRGB values, where the token
-/// hex values are, and where a flipped mid gray still looks mid gray.
+// PDF의 다크 모드를 색 행렬 하나로 만든다. 색마다 색상은 그대로 두고 밝기만 뒤집으며(빨강은 빨강으로 남는다), 흰 종이와 검은 글자는 순수한 검정과 흰색 대신 테마의 다크 카드와 잉크 색이 된다. 뒤집기는
+// 모든 채널에 `v + (1 - 2 luma(v))`이다. luma만으로 만들었으므로 색을 회색 축 방향으로만 옮겨 채도를 지킨다. 또 자기 자신의 역함수라서, `source(of:)`가 원하는 출력을 내는 입력을
+// 이것으로 구한다. layer 필터는 선형 광도에서 돌므로 행렬을 tone curve로 감싸 sRGB 값에서 동작하게 한다. 토큰의 hex 값이 sRGB이고, sRGB에서는 뒤집은 중간 회색이 여전히 중간 회색으로
+// 보인다.
 struct DarkPaper {
-    // Rec. 601 luma, the weights a hue rotation keeps fixed.
     static let luma = SIMD3<Double>(0.299, 0.587, 0.114)
     static let theme = DarkPaper(paper: Swatch.card.dark, ink: Swatch.text.dark)
 
@@ -168,13 +151,11 @@ struct DarkPaper {
         paper + (ink - paper) * Self.flip(v)
     }
 
-    /// The color that comes out as `hex` once filtered.
     func source(of hex: UInt32) -> NSColor {
         let v = Self.flip((Self.rgb(hex) - paper) / (ink - paper))
         return NSColor(srgbRed: v.x, green: v.y, blue: v.z, alpha: 1)
     }
 
-    /// Row `i` of the matrix: (ink − paper)ᵢ times the flip's row, offset by inkᵢ (the flip of black is all ones).
     var filters: [CIFilter] {
         let scale = ink - paper
         func row(_ i: Int) -> CIVector {
@@ -189,8 +170,6 @@ struct DarkPaper {
         matrix.setValue(row(2), forKey: "inputBVector")
         matrix.setValue(CIVector(x: 0, y: 0, z: 0, w: 1), forKey: "inputAVector")
         matrix.setValue(CIVector(x: ink.x, y: ink.y, z: ink.z, w: 0), forKey: "inputBiasVector")
-        // A saturated color flips past white (pure red to 1.4, 0.4, 0.4 before the paper and ink range); clamped, it stays a
-        // light red.
         return [
             CIFilter(name: "CILinearToSRGBToneCurve")!, matrix, CIFilter(name: "CIColorClamp")!, CIFilter(name: "CISRGBToneCurveToLinear")!,
         ]
@@ -198,15 +177,11 @@ struct DarkPaper {
 }
 #endif
 
-/// A PDF view that stays on the spot it shows when it changes width: two panes merging, a divider dragged, the window
-/// resized (#62, #408). Left to PDFKit, a narrower view scaled its pages down about the scroll offset, not the page,
-/// and the next page came up in its place (1/2 became 2/2). The spot is held in page space, where it stays the same
-/// at any scale, so going back to it after the pages are scaled again shows the same place.
 final class SteadyPDFView: PDFView {
     private var held: PDFDestination?
     private var letGo: DispatchWorkItem?
-    // UIKit sets the frame from inside `init(frame:)`, before PDFView has made what `document` reads, and reading it
-    // there crashed the iPad on every PDF.
+    // UIKit은 PDFView가 `document`에 필요한 것을 만들기 전에 `init(frame:)` 안에서 frame을 정한다. 그때 `document`를 읽으면 iPad에서 모든 PDF가 비정상적으로
+    // 종료되었다.
     private var made = false
 
     override init(frame: CGRect) {
@@ -219,11 +194,8 @@ final class SteadyPDFView: PDFView {
         made = true
     }
 
-    /// Taken once, before the first of a run of width changes (a divider dragged frame by frame), and let go only once
-    /// the width has stayed put for a beat. Taken again at each frame, the spot came from pages PDFKit had already
-    /// scaled about the scroll offset, and the drift added up: a dragged divider moved page 6 to page 9. Every change
-    /// counts, however small: panes gliding into place nudge the width by a fraction of a point for a second, and
-    /// those added up too.
+    // 연달아 일어나는 폭 변경(구분선을 프레임마다 끄는 경우)의 처음에 한 번 잡고, 폭이 잠시 그대로 있은 뒤에야 놓는다. 프레임마다 다시 잡으면 PDFKit이 이미 스크롤 오프셋 기준으로 줄인 쪽에서 자리를
+    // 읽어 오차가 쌓였고, 구분선을 끌면 6쪽이 9쪽으로 갔다. 아무리 작은 변경도 센다. 칸이 제자리로 미끄러지는 동안 폭이 1초 동안 1pt보다 작게 바뀌는데, 이것도 쌓였다.
     private func hold(newWidth: CGFloat) {
         guard made, document != nil, newWidth > 0, newWidth != bounds.width else { return }
         if held == nil {
@@ -231,7 +203,7 @@ final class SteadyPDFView: PDFView {
             held = spot
         }
         letGo?.cancel()
-        // Past the layout pass, since PDFKit may scale the pages to the new width after it.
+        // PDFKit은 배치 단계가 끝난 뒤에 쪽을 새 폭에 맞춰 줄일 수 있으므로, 그 뒤에 놓는다.
         let work = DispatchWorkItem { [weak self] in self?.release() }
         letGo = work
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.settling, execute: work)
@@ -239,8 +211,6 @@ final class SteadyPDFView: PDFView {
 
     static let settling: TimeInterval = 0.2
 
-    /// `keep`: go there now and again once the run is over, for a layout pass that may come before the pages are
-    /// scaled.
     private func release(keep: Bool = false) {
         guard let spot = held else { return }
         if !keep { forget() }
@@ -253,8 +223,6 @@ final class SteadyPDFView: PDFView {
         letGo = nil
     }
 
-    // A move asked for (the page the view opens at, a page picked in the strip, a found word, a link) is where to be
-    // instead: a spot held from before it would take the view back.
     override func go(to page: PDFPage) {
         forget()
         super.go(to: page)
@@ -267,8 +235,6 @@ final class SteadyPDFView: PDFView {
         waitForWidth(destination)
     }
 
-    // A pane opening goes to its page before it has a width; the first width then scaled the pages about the scroll
-    // offset like any other, and the page slid by one.
     private func waitForWidth(_ spot: PDFDestination) {
         if bounds.width == 0 { held = spot }
     }

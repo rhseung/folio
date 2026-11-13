@@ -5,8 +5,6 @@ import SwiftUI
 import AppKit
 #endif
 
-/// The sheet the first launch after an update shows once (#415), when a version since the last look brings a new
-/// feature: everything those versions brought, and the page for all of it.
 struct UpdateSheet: View {
     let summary: PatchNotes.Summary
     let calendar: Calendar
@@ -15,7 +13,6 @@ struct UpdateSheet: View {
 
     static let width: CGFloat = 460
     static let mark: CGFloat = 44
-    /// About six rows; a row cut at the bottom edge, under the fade, says the list goes on.
     static let listHeight: CGFloat = 264
 
     var body: some View {
@@ -62,8 +59,6 @@ struct UpdateSheet: View {
     }
 }
 
-/// Every window checks as the minute turns and as a class or a recording ends; one window shows the sheet: the one in
-/// front, or the first to see it while the app is behind, as a class's start does (`ClassStartPrompt`).
 struct WhatsNewPrompt: ViewModifier {
     let workspace: Workspace
     let open: @MainActor (AppLink) -> Void
@@ -84,10 +79,9 @@ struct WhatsNewPrompt: ViewModifier {
             }
             .onChange(of: workspace.releaseNotes.ask) { take() }
             #if os(macOS)
-        // A window opened at launch is active only after the first check, which then had no window to take it.
+        // 실행할 때 연 창은 첫 확인 뒤에야 active가 되므로, 그때는 시트를 가져갈 창이 없었다.
         .onChange(of: active) { take() }
             #endif
-            // However it closes (확인, 모두 보기, a row's 열기, Esc, a swipe on the iPad), the update is seen.
             .sheet(
                 isPresented: Binding(get: { showing != nil }, set: { if !$0 { showing = nil } }),
                 onDismiss: { workspace.releaseNotes.markSeen() }

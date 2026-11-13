@@ -6,7 +6,6 @@ struct ScrubField: View {
     let step: Double
     var fractionLength = 0
     var width: CGFloat = 80
-    /// Shows and takes the size alone, the words beside it saying which way (`[5] 분 전`): typing keeps the sign.
     var magnitude = false
     @State private var start: Double?
     @State private var typing = false
@@ -50,7 +49,6 @@ struct ScrubField: View {
                             start = base
                             let steps = (g.translation.width / Self.pointsPerStep).rounded()
                             let next = min(max(base + steps * step, range.lowerBound), range.upperBound)
-                            // Snapped to the step so float drift never shows as 4.299999.
                             value = (next / step).rounded() * step
                         }
                         .onEnded { _ in start = nil }

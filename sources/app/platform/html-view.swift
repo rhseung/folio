@@ -2,17 +2,11 @@ import FolioDomain
 import SwiftUI
 import WebKit
 
-/// Shows rendered HTML in the Claude panel. The page's own JavaScript is off: answers are content, not code. Math is
-/// typeset by the bundled reader script, which runs in the app's separate script world. Notes use `NotePreview`.
 struct HTMLView {
     let body: String
-    /// The note's folder, so `assets/…` images resolve.
     var baseURL: URL?
-    /// How `$…$` in this note is written: `latex` or `asciimath`.
     var mathSyntax = "latex"
-    /// Called with a note title when a `[[wikilink]]` or a link to a `.md` file is clicked.
     var openNote: (String) -> Void = { _ in }
-    /// Called with `folio://action/…` links, which a page uses for buttons since JavaScript is off.
     var onAction: (URL) -> Void = { _ in }
 
     func head(accent: CourseAccent) -> String {
@@ -51,7 +45,7 @@ struct HTMLView {
         coordinator.openLink = openLink
         let page = page(accent: accent)
         guard coordinator.loaded != page else { return }
-        // Reloading would blank the page and lose its scroll on every keystroke.
+        // 다시 불러오면 키를 누를 때마다 페이지가 비고 스크롤 위치를 잃는다.
         if coordinator.ready, let loaded = coordinator.loaded, loaded.hasPrefix(head(accent: accent)) {
             coordinator.loaded = page
             view.callAsyncJavaScript("window.folioReader?.update(html)", arguments: ["html": body], in: nil, in: .defaultClient)
@@ -63,7 +57,6 @@ struct HTMLView {
         view.loadHTMLString(page, baseURL: LocalFileScheme.base(for: baseURL))
     }
 
-    /// Keeps clicks out of the web view: app and note links open in the app, the rest in the app they belong to.
     @MainActor final class Coordinator: NSObject, WKNavigationDelegate {
         var openNote: (String) -> Void = { _ in }
         var onAction: (URL) -> Void = { _ in }
@@ -80,8 +73,6 @@ struct HTMLView {
             return .cancel
         }
 
-        /// The panel's own buttons here; every other link as a note's link opens, so an answer's `folio://exam/…`,
-        /// `[[note:<ID>]]`, `obsidian:` and `mailto:` go where they would from the note itself.
         func open(_ url: URL) {
             if AppLink.isAction(url) { return onAction(url) }
             if url.scheme == LocalFileScheme.scheme {

@@ -9,7 +9,7 @@ extension Workspace {
         let pending = pendingRecordings
         var started: UUID?
         do {
-            // Names of recordings still being compressed are taken too, though their audio isn't in the folder yet.
+            // 아직 압축 중인 녹음의 오디오는 폴더에 없지만, 그 이름도 이미 쓴 것으로 본다.
             let file = try course.store.newRecordingFile(
                 named: course.file.recordingName(of: session, calendar: calendar), reserved: course.file.recordings.map(\.file))
             let recording = Recording(device: device, at: .now, sessionId: session.id, file: file)
@@ -25,7 +25,6 @@ extension Workspace {
                 recording, at: pending.audioURL(of: recording.id), course: course.id,
                 title: "\(course.file.course.title) · \(course.file.title(of: session, calendar: calendar))",
                 locale: captionLocale(of: course))
-            // Listed from the start, so the session shows it is being recorded.
             editRecordings(course.id) { $0.append(recording) }
             await tellCaptions()
         } catch {
@@ -34,8 +33,6 @@ extension Workspace {
         }
     }
 
-    /// Reads the slides for the recording under way and gives the captions what they say. The PDFs may have to
-    /// download first, so this runs after recording has started, never before.
     func tellCaptions() async {
         guard let id = recorder.current, let course = recorder.courseId.flatMap(course), let snapshot = recorder.snapshot,
             let session = course.file.sessions.first(where: { $0.id == snapshot.sessionId })
@@ -45,7 +42,6 @@ extension Workspace {
         await recorder.use(context, hints: context.hints(course: file.course.title), for: id, telling: telling)
     }
 
-    /// Again only when the slides or units would now be others: reading the PDFs takes a while.
     func retellCaptionsIfChanged() {
         guard let course = recorder.courseId.flatMap(course), let snapshot = recorder.snapshot,
             let session = course.file.sessions.first(where: { $0.id == snapshot.sessionId })
@@ -55,8 +51,6 @@ extension Workspace {
         Task { await tellCaptions() }
     }
 
-    /// A page of a lecture file came on screen in the app (nil: the file closed). Kept with the recording when it is
-    /// of the course being recorded; turning to a page past what the captions were told tells them again.
     func showing(page: Int?, of material: FolioDomain.Material, course: UUID) {
         guard recorder.courseId == course, recorder.isActive, material.role == .lecture else { return }
         recorder.show(material.id, page: page)
@@ -64,9 +58,8 @@ extension Workspace {
         if let id = recorder.current, let visit = recorder.pages.last, visit.page != nil { retellAfterDwell(on: visit, recording: id) }
     }
 
-    /// A page counts once it has stayed `pageDwell`, so at the turn itself the captions can't be told it yet: without
-    /// a second look they would always be a page behind, and a class kept on one page would never reach them. Waits
-    /// on the audio's clock, which stops while paused.
+    // 쪽은 `pageDwell`만큼 머물러야 세므로, 넘기는 순간에는 자막에 알릴 수 없다. 다시 확인하지 않으면 자막은 늘 한 쪽
+    // 뒤처지고, 한 쪽에 머문 수업은 끝내 자막에 닿지 않는다. 일시 정지하면 멈추는 오디오의 시계로 기다린다.
     private func retellAfterDwell(on visit: PageVisit, recording id: UUID) {
         Task {
             while recorder.current == id, recorder.pages.last == visit {
@@ -77,7 +70,7 @@ extension Workspace {
         }
     }
 
-    /// The entry goes first: a file left behind by a failed delete is harmless, an entry pointing at nothing is not.
+    // 기록을 먼저 지운다. 삭제에 실패해 남은 파일은 해가 없지만, 없는 파일을 가리키는 기록은 문제를 만든다.
     func deleteRecording(_ recording: Recording, course id: UUID) {
         guard let course = course(id), recorder.current != recording.id, !finishingRecordings.contains(recording.id) else { return }
         transcriptions.cancel(recording.id)
@@ -86,16 +79,15 @@ extension Workspace {
     }
 
     func stopRecording() async {
-        // Stopped first, whatever happens to the course: the microphone must not stay on.
+        // 과목에 무슨 일이 있어도 먼저 멈춘다. 마이크가 켜진 채 남으면 안 된다.
         guard let id = recorder.courseId, let (recording, captions) = await recorder.stop() else { return }
         askWrapUp(after: recording, course: id)
         if let course = course(id) { perform { try course.store.saveTranscript(captions, of: recording) } }
         await finishRecording(PendingRecording(courseId: id, recording: recording))
     }
 
-    /// Recordings left on this device by a quit or a crash. The one being recorded is not among them. Each is tried
-    /// once per launch: every reload asks (a course can arrive by sync later), and a failure would show its dialog again
-    /// on every file change.
+    // 실행마다 한 번만 시도한다. 다시 읽을 때마다 묻고(과목이 나중에 동기화로 올 수 있다), 실패하면 파일이 바뀔 때마다
+    // 대화상자가 다시 뜨기 때문이다.
     func recoverRecordings() {
         for pending in pendingRecordings.all() where pending.recording.id != recorder.current && course(pending.courseId) != nil {
             guard recoveryTried.insert(pending.recording.id).inserted else { continue }
@@ -103,12 +95,9 @@ extension Workspace {
         }
     }
 
-    /// Compresses the audio into the course folder and lists it with its length. On failure the audio stays on this
-    /// device and is tried again at the next launch.
     private func finishRecording(_ pending: PendingRecording) async {
         let id = pending.recording.id
         guard let course = course(pending.courseId), finishingRecordings.insert(id).inserted else { return }
-        // Here rather than only in recovery, so one that failed right after stopping isn't tried again on a reload.
         recoveryTried.insert(id)
         defer { finishingRecordings.remove(id) }
         let local = pendingRecordings
@@ -119,7 +108,6 @@ extension Workspace {
             }.value
             let path = try course.store.installRecording(from: local.compressedURL(of: id), as: recording.file)
             if path != recording.file {
-                // shortcut: the transcript is copied under the new name and the old one is left; only two devices recording the same session collide.
                 let transcript = course.store.transcript(of: recording)
                 recording.file = path
                 if let transcript { try? course.store.saveTranscript(transcript, of: recording) }
@@ -130,10 +118,10 @@ extension Workspace {
             local.remove(id)
             await retellFinished(recording, in: course)
 
-            // The pages seen aren't linked to the session here: the progress prompt is the one writer of its range,
-            // and a prompt dismissed unsaved must leave it empty so opening it again starts after the last class.
-            // Captions missing (the language model was still downloading, or a crash) are made from the audio now;
-            // Whisper redoes them all, since it hears Korean and English together where the captions take one language.
+            // 본 쪽을 여기서 회차에 연결하지 않는다. 진도 시트가 그 범위를 쓰는 유일한 곳이고, 저장하지 않고 닫은 시트는 범위를
+            // 비워 두어야 다시 열 때 지난 수업 다음부터 시작한다. 자막이 빠졌으면(언어 모델을 아직 내려받는 중이었거나 비정상
+            // 종료) 지금 오디오로 만든다. Whisper는 한국어와 영어를 함께 듣고 자막은 한 언어만 받으므로, Whisper는 전부 다시
+            // 만든다.
             let heard = course.store.transcript(of: recording)?.reaches(recording.duration) == true
             if !heard || TranscriptionEngine.preferred == .whisper { transcribe(recording, course: course.id, asked: false) }
         } catch {
@@ -141,10 +129,9 @@ extension Workspace {
         }
     }
 
-    /// The captions were told the context at the last page turn, before the page then on screen had stayed long enough
-    /// to count, and a quit or a crash saves that same context. Made again from the whole recording, here where a stop
-    /// and a recovery both pass, it is what the player compares the course with; left as it was, the player would
-    /// say the materials changed when nothing had.
+    // 자막은 마지막으로 쪽을 넘길 때 맥락을 받았고, 그때 화면의 쪽은 아직 셀 만큼 머물지 않았다. 앱 종료나 비정상 종료도
+    // 같은 맥락을 저장한다. player는 이 값을 과목과 비교하므로, 멈춤과 복구가 모두 지나는 여기서 녹음 전체로 다시 만든다.
+    // 그대로 두면 아무것도 바뀌지 않았는데 player가 자료가 바뀌었다고 보인다.
     private func retellFinished(_ recording: Recording, in course: LoadedCourse) async {
         guard var transcript = course.store.transcript(of: recording),
             let session = course.file.sessions.first(where: { $0.id == recording.sessionId })
@@ -156,22 +143,15 @@ extension Workspace {
         perform { try store.saveTranscript(transcript, of: recording) }
     }
 
-    /// Replaces the transcript with one made from the whole audio. Goes on after the player closes; a recording
-    /// already queued is not queued again. Unless someone `asked`, the Whisper model is used only if it is already
-    /// here, and Apple's recognizer does without it.
     func transcribe(_ recording: Recording, course id: UUID, engine: TranscriptionEngine = .preferred, asked: Bool = true) {
         guard let course = course(id), recording.hasAudio else { return }
         let mayDownload = asked || WhisperModel.shared.ready
         let engine = engine == .whisper && !mayDownload ? .apple : engine
-        // Captions already there are better than a redo by the same recognizer.
         if !asked, engine == .apple, course.store.transcript(of: recording)?.reaches(recording.duration) == true { return }
         let store = course.store
-        // Only Apple's recognizer needs it. A crash before the first caption leaves no transcript to say what the
-        // captions listened for, but they chose it the same way.
         let locale = store.transcript(of: recording).map { Locale(identifier: $0.locale) } ?? captionLocale(of: course)
         let file = course.file
         let session = file.sessions.first { $0.id == recording.sessionId }
-        // The listed one has the pages the recording kept; the caller's copy may be from before it finished.
         let recording = file.recordings.first { $0.id == recording.id } ?? recording
         let copy = URL.cachesDirectory.appending(
             path: "Folio/Transcribing/\(recording.id.uuidString).\((recording.file as NSString).pathExtension)")
@@ -188,7 +168,6 @@ extension Workspace {
             var transcript = try await engine.transcribe(
                 copy, locale: locale, hints: context?.hints(course: file.course.title), mayDownload: mayDownload, report: report)
             transcript.context = context
-            // Deleted meanwhile: saving now would leave a transcript with no recording.
             try Task.checkCancellation()
             guard transcript.replaces(store.transcript(of: recording)) else { return }
             // folio:not-an-action a transcript is the recording's output, like the captions saved while recording
@@ -196,13 +175,13 @@ extension Workspace {
         }
     }
 
-    /// Captions take one language, so they follow the course's last transcript, which Whisper heard for itself.
+    // 자막은 한 언어만 받으므로, Whisper가 스스로 언어를 들은 과목의 마지막 받아쓰기를 따른다.
     private func captionLocale(of course: LoadedCourse) -> Locale {
         let latest = course.file.recordings.sorted { $0.createdAt > $1.createdAt }.lazy.compactMap { course.store.transcript(of: $0) }.first
         return Locale(identifier: latest?.locale ?? "ko-KR")
     }
 
-    /// Recording is not an action, so its list is the one place the app writes course.json itself.
+    // 녹음은 액션이 아니므로, 이 목록이 앱이 course.json을 직접 쓰는 유일한 곳이다.
     private func editRecordings(_ course: UUID, _ change: (inout [Recording]) -> Void) {
         guard let gist else { return }
         let ctx = ActionContext(

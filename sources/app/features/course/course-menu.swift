@@ -1,7 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// A course's menu, the same on its sidebar row, the semester page's card and its own page's `⋯` (#403).
 @MainActor
 struct CourseMenuSource: ItemMenuSource {
     let workspace: Workspace
@@ -12,7 +11,6 @@ struct CourseMenuSource: ItemMenuSource {
 
     private var course: LoadedCourse? { workspace.course(courseId) }
 
-    /// Among the sidebar's courses of its term, in the order the sidebar keeps.
     private var siblings: (semester: Semester, ids: [UUID])? {
         guard let course, let semester = workspace.semester(of: course.file.course) else { return nil }
         return (semester, workspace.sidebarCourses(in: semester).map(\.id))
@@ -55,7 +53,6 @@ struct CourseMenuSource: ItemMenuSource {
         }
     }
 
-    /// As the list's drag does: the destination is the gap the course lands before.
     private func move(by offset: Int) {
         guard let siblings, let i = siblings.ids.firstIndex(of: courseId) else { return }
         workspace.moveSidebarCourses(in: siblings.semester, from: [i], to: offset < 0 ? i - 1 : i + 2)
@@ -74,14 +71,11 @@ struct CourseMenu: View {
     }
 }
 
-/// A term's page is its editor, so its menu has no 편집….
 @MainActor
 struct SemesterMenuSource: ItemMenuSource {
     let semesterId: UUID
     let host: MenuHost
-    /// Where the screen can add a course to this term.
     var addCourse: (@MainActor () -> Void)?
-    /// The sidebar's fold: whether the term shows its courses now, and the way to flip it. Nil without courses.
     var folded: Bool?
     var fold: (@MainActor () -> Void)?
     let openLink: OpenLinkAction

@@ -6,7 +6,6 @@ import PDFKit
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Kept apart from the link, so any link opens in any of them.
 enum LinkPlacement: CaseIterable {
     case here
     case beside
@@ -32,8 +31,6 @@ enum LinkPlacement: CaseIterable {
     }
 }
 
-/// Screens call this instead of choosing a destination themselves, so every
-/// way of moving lands in the window's one history. `course` names where the target likely is; it is only a hint.
 struct OpenLinkAction {
     var handler: @MainActor (AppLink, LinkPlacement, UUID?) -> Void = { _, _, _ in }
 
@@ -44,13 +41,11 @@ struct OpenLinkAction {
 
 extension EnvironmentValues {
     @Entry var openLink = OpenLinkAction()
-    /// What the window shows, for the screen drawing it to follow.
     @Entry var place: Navigator.Entry?
 }
 
 @MainActor @Observable
 final class Navigator {
-    /// The course is worked out once when the link is opened rather than on every redraw.
     struct Entry: Equatable, Sendable, Codable {
         var link: AppLink
         var course: UUID?
@@ -62,7 +57,6 @@ final class Navigator {
         history = LinkHistory(start)
     }
 
-    /// A tab moved to a window of its own goes on from where it was, back and forward included.
     init(history: LinkHistory<Entry>) {
         self.history = history
     }
@@ -71,8 +65,6 @@ final class Navigator {
 
     var screen: Screen { Screen(current) }
 
-    /// The same target with another page or heading takes the step it is on rather than a new one: a PDF opened at
-    /// one page and then another is still one visit.
     func go(_ entry: Entry) {
         if entry.link.withoutAnchor == current.link.withoutAnchor, entry.course == current.course {
             history.replace(entry)
@@ -84,31 +76,23 @@ final class Navigator {
     func back(_ steps: Int = 1) { history.goBack(steps) }
     func forward(_ steps: Int = 1) { history.goForward(steps) }
 
-    /// Nearest first, for the list a held button shows.
     var backList: [Entry] { history.back.reversed() }
     var forwardList: [Entry] { history.forward }
 
-    /// Where a `folio://` link from outside the app (a calendar note, Obsidian, `folio open`) opens, `age` after this
-    /// window was made: in a new tab of the window in front, so the page it shows stays as it was. A window made a moment ago that
-    /// hasn't moved is the one the system made to receive the link, there being none open, and shows it itself; a tab
-    /// would leave an empty Today behind it.
     func outsidePlacement(windowAge age: TimeInterval) -> LinkPlacement {
         let untouched = !history.canGoBack && !history.canGoForward && current == Entry(link: .place(.today))
         return untouched && age < Self.freshWindow ? .here : .tab
     }
 
-    /// The system shows a window it makes for a link and hands it the link within a moment; nobody follows a link
-    /// from another app that soon after opening a window themselves.
+    // 시스템은 링크를 받으려고 만든 창을 보이고 곧바로 링크를 넘긴다. 사람이 창을 직접 연 뒤 이렇게 빨리 다른 앱의 링크를
+    // 따라가지는 않는다.
     static let freshWindow: TimeInterval = 2
 }
 
 extension Workspace {
-    /// Where a link points, or nil when nothing it names is here (a deleted exam, a link from another GIST folder).
-    /// Looked for where its kind lives (`AppLink.Kind.home`), so a new kind is found as soon as it says where that is.
     func entry(for link: AppLink, hint: UUID? = nil) -> Navigator.Entry? {
         switch link.kind.home {
         case .app:
-            // Settings' tab is filled in here, so every step in a history names its tab and going back to one shows that tab.
             return Navigator.Entry(link: link.kind == .settings ? .settings(link.settingsPage ?? SettingsTab.remembered.page) : link)
         case .transcript:
             return transcript.semesters.contains { $0.id == link.id } ? Navigator.Entry(link: link) : nil
@@ -117,13 +101,11 @@ extension Workspace {
         case .quiz:
             return course(holdingCard: link.id, hint: hint).map { Navigator.Entry(link: link, course: $0) }
         case .course:
-            // The hint first: the course a screen links from usually holds what it links to.
             let files = (hint.flatMap(course).map { [$0] } ?? []) + courses
             return link.course(in: files.map(\.file)).map { Navigator.Entry(link: link, course: $0) }
         }
     }
 
-    /// Cards live in each unit's quiz file, read only here, on a click.
     private func course(holdingCard id: UUID?, hint: UUID?) -> UUID? {
         guard let id else { return nil }
         let ordered = (hint.flatMap(course).map { [$0] } ?? []) + courses.filter { $0.id != hint }
@@ -154,13 +136,10 @@ extension Workspace {
                 separator: " · ")
         case .semester: return transcript.semesters.first { $0.id == link.id }?.title ?? ""
         case .person: return item ?? String(localized: .rootNavPeople)
-        // A course's item whose course is gone: the address, as its screen says it can't be found.
         case .course, .session, .unit, .note, .material, .assignment, .exam, .problemSet, .card, .recording: return link.string
         }
     }
 
-    /// What a step shows inside its screen: a course's section, or the session, note, file, exam or card it opened, or
-    /// a person. Nil for the screen itself.
     func itemName(of entry: Navigator.Entry) -> String? {
         let link = entry.link
         let file = entry.course.flatMap(course)?.file
@@ -180,14 +159,11 @@ extension Workspace {
             return file.flatMap { f in
                 f.recordings.first { $0.id == link.id }.map { RecordingPlayerModel.name(of: $0, in: f, calendar: calendar) }
             }
-        // A card's prompt is a sentence in a quiz file read only on a click; the page it is on names it well enough.
         case .card: return file.map { _ in CourseSection.quizCards.title }
         }
     }
 
-    /// Nil when nothing here has it (deleted, or from another GIST folder).
     func name(of link: AppLink) -> String? {
-        // A place is named as it is written, not with the settings tab opening it would fill in.
         guard let entry = link.kind.isPlace ? Navigator.Entry(link: link) : entry(for: link) else { return nil }
         return link.kind == .course ? title(of: entry) : itemName(of: entry) ?? title(of: entry)
     }
@@ -210,9 +186,6 @@ extension AppLink {
         return [name, part].compactMap { $0 }.joined(separator: " › ")
     }
 
-    /// What pasting this address into a note writes: the link as link completion writes it, by kind and ID with the
-    /// item's name (`[[material:<ID>#page=2|05_Matchings.pdf]]`). A place or a course's page has no `<kind>:<ID>`
-    /// form and goes between the brackets as its address, which the note reads the same way.
     func noteLink(named name: String?) -> String {
         let fragment: String?? =
             switch anchor {
@@ -234,7 +207,6 @@ extension AppLink.Anchor {
         if case .block = self { true } else { false }
     }
 
-    /// For the editor's caret; nil when the note has none.
     func location(in text: String) -> Int? {
         switch self {
         case .heading(let heading): ParsedNote.location(in: text, heading: heading, block: nil)
@@ -281,11 +253,10 @@ extension CourseSection {
     }
 }
 
-/// Where a click on a link written in a note, a file or a Claude answer goes, from every view that shows one.
 @MainActor enum NoteLinks {
     static func open(_ href: String, base: URL?, in placement: LinkPlacement = .here, openNote: (String) -> Void, openLink: OpenLinkAction)
     {
-        // A web view hands its links over as URLs, with a block's `^` escaped, which only the URL reading takes back.
+        // web view는 링크를 URL로 넘기면서 블록의 `^`를 escape하고, 이 escape는 URL로 읽을 때만 풀린다.
         if let link = URL(string: href).flatMap(AppLink.init(url:)) ?? AppLink(string: href) {
             openLink(link, in: placement)
             return
@@ -294,7 +265,6 @@ extension CourseSection {
             let url = URL(string: href, relativeTo: base)
                 ?? URL(string: href.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed) ?? "")
         else { return }
-        // `[[노트 제목]]` written by hand names a note by its title; a link by ID (`[[note:<ID>]]`) is an app link above.
         if let title = AppLink.noteTitle(url) { return openNote(title) }
         switch url.scheme {
         case "file" where url.pathExtension == "md":
@@ -310,11 +280,9 @@ extension CourseSection {
         }
     }
 
-    /// Whether `href` is something the app opens itself, which can then also open in a tab or a window.
     static func isAppLink(_ href: String) -> Bool { AppLink(string: href) != nil }
 }
 
-/// Puts a link on the clipboard: as a URL for apps that take one, and as text, which a note turns into a link.
 @MainActor func copyLink(_ link: AppLink) {
     #if os(macOS)
     let board = NSPasteboard.general
@@ -326,9 +294,6 @@ extension CourseSection {
     #endif
 }
 
-/// "여기서 열기 · 옆 칸에서 열기 · 새 탭에서 열기 · 새 창에서 열기 · 링크 복사", the same in every item's and link's menu.
-/// A row whose menu leads with its own actions takes the openings and the link as one 공유 ▸ submenu, after a divider
-/// (`trailing`), as item menus do (#403).
 struct LinkMenu: View {
     let link: AppLink
     var course: UUID?
@@ -356,21 +321,18 @@ struct LinkMenu: View {
         }
     }
 
-    /// Without more windows (an iPad set to one), here and the pane beside are left.
     static func placements(multipleWindows: Bool) -> [LinkPlacement] {
         multipleWindows ? LinkPlacement.allCases : [.here, .beside]
     }
 }
 
-/// A PDF's link annotations: a `folio://` link (a `\href` in a built `.tex`, a link in a slide) opens in the app,
-/// anything else as PDFKit would. Clicks that jump back to the source (SyncTeX) are not links and don't come here.
 @MainActor final class PDFLinks: NSObject, PDFViewDelegate {
     private var opener: OpenLinkAction
     private static var key = 0
 
     private init(opener: OpenLinkAction) { self.opener = opener }
 
-    /// The view holds its delegate weakly, so the delegate is kept on the view itself.
+    // `PDFView`는 delegate를 weak로 들고 있으므로, delegate를 view 자체에 붙여 둔다.
     static func attach(to view: PDFView, opener: OpenLinkAction) {
         if let links = objc_getAssociatedObject(view, &key) as? PDFLinks {
             links.opener = opener

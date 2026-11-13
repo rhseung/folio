@@ -1,7 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// The study day's classes laid out on an hour axis, with the time now and today's deadlines on it.
 struct DayRibbonCard: View {
     let model: TodayModel
     let summary: TodaySummary
@@ -13,15 +12,14 @@ struct DayRibbonCard: View {
 
     static let label: CGFloat = 16
     static let track: CGFloat = 48
-    /// The width a time on the axis or a flag is laid out in, centred on its spot or held in from an edge.
     static let labelWidth: CGFloat = 80
 
     var body: some View {
         let ribbon = model.ribbon(classes, on: summary.studyDay)
         Block(String(localized: .todayClasses), note: model.ribbonNote(classes, summary: summary)) {
             Card(padding: Theme.Space.l) {
-                // Measured beside the canvas, not with a GeometryReader around it: a GeometryReader's closure is not
-                // run again when the time changes, so the now line read in it stood still.
+                // GeometryReader로 감싸지 않고 캔버스 옆에서 잰다. GeometryReader의 closure는 시각이 바뀌어도 다시 돌지
+                // 않아서, 그 안에서 읽은 지금 선이 멈춰 있었다.
                 canvas(ribbon, width: width, now: model.workspace.liveNow)
                     .frame(maxWidth: .infinity, alignment: .topLeading)
                     .frame(height: Self.label * 2 + Self.track + Theme.Space.xs * 2, alignment: .top)
@@ -47,12 +45,10 @@ struct DayRibbonCard: View {
             ForEach(classes) { item in
                 let left = x(item.start), right = x(item.end)
                 block(item, now: now)
-                    // A hair of paper between back-to-back classes.
                     .frame(width: max(Theme.Space.s, right - left - Theme.Space.xxs), height: Self.track)
                     .offset(x: left, y: trackTop)
             }
             ForEach(dues) { due in
-                // The time reads leftward from the flag, so a midnight deadline stays inside the card.
                 flag(due.date, items: due.items)
                     .frame(width: labelWidth, alignment: .trailing)
                     .offset(x: x(due.date) - labelWidth + Theme.Space.s, y: 0)
@@ -62,7 +58,6 @@ struct DayRibbonCard: View {
                 Theme.Palette.text.frame(width: Theme.Space.xxs, height: Self.track + Theme.Space.s)
                     .clipShape(.capsule)
                     .offset(x: at - Theme.Space.xxs / 2, y: trackTop - Theme.Space.xs)
-                // A flag's time takes the label row near it; the line alone still says where now is.
                 if !dues.contains(where: { abs(x($0.date) - at) < labelWidth }) {
                     Text(model.time(now)).font(Theme.Typeface.label).monospacedDigit().fixedSize()
                         .frame(width: labelWidth, alignment: .center)
@@ -77,8 +72,8 @@ struct DayRibbonCard: View {
                     .offset(x: first ? at : last ? at - labelWidth : at - labelWidth / 2, y: trackTop + Self.track + Theme.Space.xs)
             }
         }
-        // As wide as it is given, never as wide as it was drawn: `width` is measured from this frame, so a fixed width
-        // held a width the card once had and kept a narrowed pane from shrinking it.
+        // `width`를 이 frame에서 재므로, 그린 폭이 아니라 받은 폭만큼 넓게 둔다. 고정 폭은 카드가 예전에 가졌던 폭을
+        // 붙잡아 좁아진 칸이 카드를 줄이지 못했다.
         .frame(minWidth: 0, maxWidth: .infinity, alignment: .topLeading)
     }
 
@@ -86,11 +81,8 @@ struct DayRibbonCard: View {
         let accent = model.workspace.accent(item.courseId)
         let ongoing = now >= item.start && now < item.end, ended = now >= item.end
         let shape = RoundedRectangle(cornerRadius: Theme.Radius.control)
-        // One line each, cut short: a block is an hour and a bit wide, and the full name is in the tooltip.
         let label = VStack(alignment: .leading, spacing: Theme.Space.xxs) {
             Text(model.title(item.courseId)).font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(accent.ink)
-            // The axis below already says 오전 or 오후; with it the time no longer fits an hour-wide block.
-            // 보강 after the time, not a chip: a chip's inset doesn't fit an hour-wide block.
             HStack(spacing: Theme.Space.xxs) {
                 Text(item.start.formatted(.dateTime.hour(.defaultDigits(amPM: .omitted)).minute())).monospacedDigit().foregroundStyle(
                     Theme.Palette.textSecondary)
@@ -111,12 +103,10 @@ struct DayRibbonCard: View {
         }
         .clipShape(shape)
         .opacity(ended ? Theme.Opacity.ended : 1)
-        // Unfaded paper under a faded block, so the track line behind it does not show through.
         .background(Theme.Palette.card, in: shape)
         .contentShape(shape)
         .help(model.ribbonHelp(item))
         if let suggested = item.suggested {
-            // Not made yet: what starting it needs sits in a popover, as on the class's own row elsewhere.
             Button {
                 opened = item.id
             } label: {
@@ -154,8 +144,6 @@ struct DayRibbonCard: View {
         }
     }
 
-    /// The block's full course, unit and time, which it cuts short and leaves to the tooltip: touch has no tooltip, so
-    /// pressing and holding shows them over the menu. The Mac's menu has no preview.
     func preview(_ item: TodayModel.RibbonClass) -> some View {
         VStack(alignment: .leading, spacing: Theme.Space.xs) {
             HStack(spacing: Theme.Space.s) {
@@ -184,7 +172,6 @@ struct DayRibbonCard: View {
         .foregroundStyle(Theme.Palette.danger)
         .fixedSize()
         .contentShape(TouchTarget())
-        // Several due together pick which to open: opening the first hid the rest from anyone without the tooltip.
         if items.count > 1 {
             Menu {
                 ForEach(items, id: \.assignment.id) { item in

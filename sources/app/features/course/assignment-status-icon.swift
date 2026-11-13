@@ -18,8 +18,6 @@ extension AssignmentStatus {
         }
     }
 
-    /// The circle a todo app draws: empty, half full, checked, then the seal once a score is back.
-    /// `AssignmentStatusIcon` draws doing itself; this symbol is for menus.
     var symbol: String {
         switch self {
         case .todo: "circle"
@@ -38,12 +36,11 @@ struct AssignmentStatusIcon: View {
     var size: CGFloat = 20
 
     var body: some View {
-        // The half-done ring's measurements are for 20pt; they scale with the symbol.
         let k = size / 20
         Group {
             if status == .doing {
-                // circle.lefthalf.filled runs the fill into the ring and reads as a blot; a gap keeps it a ring that is half done.
-                // 20 and 1.7 are SF `circle` at 20pt, measured, so it lines up with the other states' symbols.
+                // `circle.lefthalf.filled`는 채움이 고리까지 번져 얼룩처럼 보이므로, 틈을 두어 반쯤 찬 고리로 그린다.
+                // 20과 1.7은 20pt SF `circle`을 잰 값이라 다른 상태의 기호와 맞는다.
                 ZStack {
                     Circle().strokeBorder(lineWidth: 1.7 * k)
                     HalfDisc(round: k).fill()
@@ -61,8 +58,8 @@ struct AssignmentStatusIcon: View {
     }
 }
 
-/// The right half of the rect's circle, drawn `round` short on every side so a round-joined stroke of twice that
-/// brings it back to full size with soft corners. Rounding by shrinking only the flat side would push the shape right.
+// 사방을 `round`만큼 줄여 그리고, 그 두 배 굵기의 둥근 이음 선으로 원래 크기와 둥근 모서리를 되찾는다. 평평한 쪽만 줄여
+// 둥글리면 모양이 오른쪽으로 밀린다.
 private struct HalfDisc: Shape {
     let round: CGFloat
 

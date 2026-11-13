@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// A course's icon from subject symbols grouped by field, searchable by Korean words, or none for the default book.
 struct CourseIconPicker: View {
     @Binding var icon: String?
     let color: Color
@@ -36,20 +35,16 @@ struct CourseIconPanel: View {
 
     struct Subject {
         let title: String
-        /// Symbol name, then the words it is found by.
         let symbols: [(String, String)]
     }
 
     static let columns = 8
-    /// The cells' gap leaves room for each one's 44pt touch target (`TouchTarget`) without taking its neighbour's taps;
-    /// a pointer aims finer, so the Mac keeps the tighter grid.
     #if os(iOS)
     static let gap = Theme.Size.touchTarget - Theme.Size.toolbarButton
     #else
     static let gap = Theme.Space.xs
     #endif
 
-    // SF Symbols has no public catalog or Korean search terms, so the subject subset and its words live here.
     static let groups = [  // strings: data, matched against what the user types
         Subject(title: String(localized: .iconPickerFieldBasic), symbols: [(CourseMark.defaultIcon, "기본 책")]),
         Subject(
@@ -187,7 +182,6 @@ struct CourseIconPanel: View {
             ]),
     ]
 
-    /// Groups still showing for the query: a matching group title keeps the whole group, otherwise only matching symbols.
     var shown: [Subject] {
         let words = query.split(separator: " ").map(String.init)
         guard !words.isEmpty else { return Self.groups }
@@ -238,7 +232,6 @@ struct CourseIconPanel: View {
                 .onAppear { if let icon { proxy.scrollTo(icon, anchor: .center) } }
                 .overflowFade(.vertical)
             }
-            // Fixed so the popover doesn't jump in size as the search narrows the grid.
             .frame(height: 340)
         }
         .frame(width: cell * CGFloat(Self.columns) + Self.gap * CGFloat(Self.columns - 1) + Theme.Space.m * 2)
@@ -250,7 +243,7 @@ struct CourseIconPanel: View {
     }
 
     func cell(_ symbol: String, name: String) -> some View {
-        // The default cell stands for no icon, so a course left on the default keeps following CourseMark.defaultIcon.
+        // 기본 칸은 아이콘 없음을 뜻한다. 그래야 기본값에 둔 과목이 계속 `CourseMark.defaultIcon`을 따른다.
         let value = symbol == CourseMark.defaultIcon ? nil : symbol
         let chosen = value == icon
         return Button {

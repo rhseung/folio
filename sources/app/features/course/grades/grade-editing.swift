@@ -14,7 +14,6 @@ struct ScoreEntrySheet: View {
             title: model.sheetTitle, confirm: model.confirmTitle, disabled: !model.valid,
             deleteTitle: model.isNew ? nil : String(localized: .scoreSheetRemove), onDelete: { model.remove { dismiss() } }
         ) {
-            // A new score is added from its component's tile, which already picked the component.
             if !model.isNew {
                 FormRow(label: String(localized: .scoreSheetComponent)) {
                     ChoiceMenu(selection: $model.componentId, options: model.componentOptions)
@@ -87,7 +86,6 @@ struct ComponentSheet: View {
                     ChoiceMenu(selection: $model.countValue, options: model.countOptions)
                 }
             }
-            // A single score is one by definition, so a count there would only contradict it.
             if model.aggregation != .single {
                 FormRow(
                     label: String(localized: .componentSheetExpectedCount), detail: String(localized: .componentSheetExpectedCountDetail),

@@ -6,25 +6,16 @@ struct MarkdownEditor {
     @Binding var text: String
     var baseURL: URL?
     var math: MathSyntax
-    /// Set to insert at the cursor; cleared once inserted.
     @Binding var insert: String?
-    /// Saves a dropped or pasted file and returns the markdown that links it, or nil when it couldn't be saved.
     var saveFile: (String, Data) -> String?
     var openNote: (String) -> Void
-    /// The editor's top line and how far into it the view is scrolled, for a preview to follow.
     var onScroll: @MainActor (Int, Double) -> Void = { _, _ in }
     var assist = NoteAssist()
-    /// Where a link opened the note at: the caret goes to that heading or block once for each new one.
     var anchor: AppLink.Anchor?
-    /// The notes block references' cards draw from, as the preview's; without it references show none.
     var embeds: NoteEmbedSource?
-    /// The workspace's `notesRevision`.
     var revision = 0
-    /// Set to put a symbol picked in the math palette at the cursor; cleared once inserted.
     var insertMath: Binding<CompletionItem?> = .constant(nil)
-    /// Opens the input guide for this note (#395): the `/` menu's last item and 도움말 › 입력 안내 come here.
     var openGuide: @MainActor () -> Void = {}
-    /// The screen's handle on this view, for the outline beside it.
     var views: NoteViews?
 
     @MainActor func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -32,7 +23,6 @@ struct MarkdownEditor {
     @MainActor final class Coordinator: NSObject {
         var parent: MarkdownEditor
         weak var view: SourceTextView?
-        /// Set while SwiftUI updates the view: an edit made then is the binding's own text coming in.
         var updating = false
         var revealed: AppLink.Anchor?
 
@@ -62,18 +52,14 @@ struct MarkdownEditor {
         view.configure(accent: accent, syntax: math, dark: dark)
         view.setAssist(assist, syntax: math)
         #if os(macOS)
-        // The iPad's card comes on a long press, left for later (#35).
         view.cards = embeds
         view.cardsRevision = revision
         #endif
 
-        // The binding hasn't the syllable being composed yet, so swapping the text in then would delete it under the
-        // input method, which then types each next jamo over a gap.
+        // 바인딩에는 아직 조합 중인 음절이 없다. 이때 텍스트를 바꾸면 입력기가 조합하던 음절이 지워지고, 입력기는 그다음 자모부터 빈칸을 사이에 두고 입력한다.
         if view.string != text, !view.hasMarkedText() { view.replace(with: text) }
-        // Not before the note's text has come in: the model loads it after the view is made, and an anchor looked for
-        // in the empty text would be given up on.
-        // Cleared with no anchor, as the preview does: back to the note without one and forward to the anchor again
-        // moves the caret again.
+        // 노트 텍스트가 들어오기 전에는 앵커를 찾지 않는다. 모델은 뷰를 만든 뒤에 텍스트를 읽으므로, 빈 텍스트에서 찾으면 앵커를 찾지 못하고 포기한다. 미리보기처럼 앵커가 없으면 기록을 지운다. 그래야
+        // 앵커 없이 노트로 돌아왔다가 다시 앵커로 앞으로 갈 때 캐럿이 다시 움직인다.
         if anchor == nil { coordinator.revealed = nil }
         if let anchor, anchor != coordinator.revealed, !text.isEmpty, view.string == text {
             coordinator.revealed = anchor
@@ -84,9 +70,8 @@ struct MarkdownEditor {
         afterUpdate(insertMath) { view.insertMath($0) }
     }
 
-    /// Puts in what a binding holds once the update is over: an edit made during it doesn't reach `text` (`updating`),
-    /// and the update that clearing the binding sets off would swap the text back (#399). Checked again there, so an
-    /// update run twice before it inserts once.
+    // 바인딩 값은 갱신이 끝난 뒤에 넣는다. 갱신 중에 한 편집은 `text`에 닿지 않고(`updating`), 바인딩을 비우면서 생기는 갱신이 텍스트를 되돌리기 때문이다. 넣을 때 값을 다시 확인하므로,
+    // 넣기 전에 갱신이 두 번 돌아도 한 번만 넣는다.
     @MainActor private func afterUpdate<Value>(_ binding: Binding<Value?>, _ put: @escaping @MainActor (Value) -> Void) {
         guard binding.wrappedValue != nil else { return }
         DispatchQueue.main.async {
@@ -97,15 +82,10 @@ struct MarkdownEditor {
     }
 }
 
-/// Room past the note's end: the editor's last line comes up to the middle of the screen, since one writes at the end.
-/// The preview has room of its own (sources/web/src/note.css), to bring its last block up to the top.
 enum NoteOverscroll {
     static func bottom(_ height: CGFloat) -> CGFloat { (height / 2).rounded() }
 }
 
-/// A `folio://` address pasted into a note goes in as a link to what it names, as link completion writes one (#43):
-/// `[[material:<ID>#page=2|05_Matchings.pdf]]`. Nil pastes it as text: it is something else, or it lands inside a
-/// link being written (whose target it then is), code or math.
 func pastedNoteLink(_ pasted: String?, into text: String, at caret: Int, name: (AppLink) -> String?) -> String? {
     guard let pasted = pasted?.trimmingCharacters(in: .whitespacesAndNewlines), let link = AppLink(string: pasted),
         WikiLink.pastesAsLink(in: text as NSString, at: caret)
@@ -153,14 +133,12 @@ final class NoteScrollView: NSScrollView {
         documentView = document
         contentView.postsBoundsChangedNotifications = true
         automaticallyAdjustsContentInsets = false
-        // The text view sets the I-beam only over itself, and the room past the note's end lies outside it.
         documentCursor = .iBeam
     }
 
     required init?(coder: NSCoder) { fatalError() }
 
     #if DEBUG
-    // For the tests: a wheel made in the app reaches the note's scroll, which leaves such a wheel unscrolled.
     private(set) var wheels = 0
 
     override func scrollWheel(with event: NSEvent) {
@@ -169,10 +147,9 @@ final class NoteScrollView: NSScrollView {
     }
     #endif
 
-    // Every click over the note is routed here, whatever AppKit's own hit test gave: with a plain clip view the scroll
-    // view took clicks over its document itself, and with `NoteClipView` it hands back the deepest view instead. A view
-    // the note puts over its text (the preview bubble) takes no clicks. The room past the note's end is the clip
-    // view's, under no part of the note; a click there went nowhere, so the note takes it and puts the caret at its end.
+    // 노트 위의 모든 클릭은 AppKit의 hit test 결과와 상관없이 여기로 보낸다. 기본 clip view에서는 scroll view가 문서 위의 클릭을 직접 가져갔고, `NoteClipView`에서는
+    // 가장 깊은 뷰를 돌려준다. 노트가 텍스트 위에 올린 뷰(미리보기 말풍선)는 클릭을 받지 않는다. 노트 끝 아래의 여백은 노트의 어느 부분에도 속하지 않는 clip view의 영역이라 클릭이 아무 데도 가지
+    // 않았으므로, 노트가 받아 캐럿을 끝에 둔다.
     override func hitTest(_ point: NSPoint) -> NSView? {
         let hit = super.hitTest(point)
         guard let hit, let document = documentView, hit === self || hit === contentView || hit.isDescendant(of: document) else {
@@ -182,9 +159,8 @@ final class NoteScrollView: NSScrollView {
     }
 }
 
-/// The room past the note's end, as more document to scroll through. As a bottom content inset it was a strip the clip
-/// view leaves to the scroll view: clicks there went to the scroll view's background, even over text, and a note just
-/// opened was drawn only down to it, so the lower half of the screen stayed blank until a scroll and never took a click.
+// 노트 끝 아래의 여백을 스크롤할 문서로 더한다. bottom content inset으로 두면 clip view가 scroll view에 남기는 띠가 되어, 텍스트 위의 클릭도 scroll view의 배경으로
+// 갔다. 또 방금 연 노트가 그 띠 위까지만 그려져서, 스크롤하기 전까지 화면 아래 절반이 비고 클릭도 받지 않았다.
 final class NoteClipView: NSClipView {
     override var documentRect: NSRect {
         var rect = super.documentRect
@@ -195,18 +171,13 @@ final class NoteClipView: NSClipView {
     }
 }
 
-/// It draws only styled text, as TextKit lays it out.
-///
-/// The system text views, not a package such as STTextView: that one is AppKit-first with its UIKit port still young,
-/// and Hangul composition, which the system views get right and `NoteHangulTests` guard, is where editors break.
 class NoteTextView: NSTextView {
     private let content = NSTextContentStorage()
     var baseURL: URL?
     var openNote: (String) -> Void = { _ in }
     var linkOpener = OpenLinkAction()
-    /// Names what a pasted `folio://` address points at (`NoteEmbedSource.name`).
     var linkName: (AppLink) -> String? = { _ in nil }
-    /// The note's shortcuts, taken by key code so the Korean input source doesn't change them.
+    // 한국어 입력 소스에서도 단축키가 바뀌지 않도록 키 코드로 받는다.
     var shortcut: ((Character) -> Bool)?
     private var caretObserver: NSObjectProtocol?
     static let letters: [UInt16: Character] = [11: "b", 34: "i", 14: "e"]
@@ -239,7 +210,6 @@ class NoteTextView: NSTextView {
 
     override init(frame: NSRect, textContainer: NSTextContainer?) { fatalError() }
 
-    /// The text column's width, which the bubble's pictures fit.
     var columnWidth: CGFloat { max(120, min(NoteLook.measure, bounds.width) - 2 * NoteLook.margin) }
 
     var column: ClosedRange<CGFloat> { textContainerOrigin.x...(textContainerOrigin.x + columnWidth) }
@@ -259,8 +229,8 @@ class NoteTextView: NSTextView {
 
     func columnChanged() {}
 
-    // AppKit sizes its `NSTextInsertionIndicator` to the whole line, more than once per move and with no hook, so it's
-    // refitted whenever its frame changes.
+    // AppKit은 `NSTextInsertionIndicator`의 크기를 줄 전체 높이로 정하고, 캐럿이 한 번 움직일 때 여러 번 다시 정하며, 이를 막을 훅이 없다. 그래서 frame이 바뀔 때마다
+    // 크기를 다시 맞춘다.
     override func didAddSubview(_ subview: NSView) {
         super.didAddSubview(subview)
         guard let indicator = subview as? NSTextInsertionIndicator else { return }
@@ -291,7 +261,6 @@ class NoteTextView: NSTextView {
         return i == NSNotFound || i >= storage.length ? nil : i
     }
 
-    /// ⌘-click opens a link; a plain click places the caret, as anywhere else in the text.
     func openLink(at i: Int, event: NSEvent) -> Bool {
         guard event.modifierFlags.contains(.command), let storage = textStorage else { return false }
         let attributes = storage.attributes(at: i, effectiveRange: nil)
@@ -303,7 +272,6 @@ class NoteTextView: NSTextView {
             NoteLinks.open(href, base: baseURL, openNote: openNote, openLink: linkOpener)
             return true
         }
-        // A bare folio:// address, which markdown doesn't make a link of.
         if let found = AppLink.link(in: storage.string, at: i) {
             linkOpener(found)
             return true
@@ -311,9 +279,6 @@ class NoteTextView: NSTextView {
         return false
     }
 
-    /// The wikilink the character at `i` is in. The attribute holds the target alone, so the link (with the page or
-    /// block of `[[material:…#page=12]]`) is read from the line; and from the line rather than the attribute's run,
-    /// since the brackets and an ID are styled apart from the name and the run under the pointer is only part of it.
     func wikiLink(at i: Int) -> (link: WikiLink, range: NSRange)? {
         guard let storage = textStorage, i < storage.length, storage.attribute(.noteWiki, at: i, effectiveRange: nil) is String else {
             return nil
@@ -327,7 +292,6 @@ class NoteTextView: NSTextView {
         return (WikiLink(m), NSRange(location: line.location + r.location, length: r.length))
     }
 
-    /// The first line of the view's top and how far into it the view is scrolled.
     func topLine(lineStarts: [Int]) -> (line: Int, frac: Double) {
         guard let manager = textLayoutManager else { return (1, 0) }
         let y = max(0, visibleRect.minY - textContainerOrigin.y)
@@ -340,8 +304,8 @@ class NoteTextView: NSTextView {
 
     // MARK: Keeping the place
 
-    // TextKit 2 guesses the height of text it hasn't laid out, so after the text or its look changes the same scroll
-    // offset shows other text. Every change notes where a line stood on screen and puts it back there afterwards.
+    // TextKit 2는 아직 배치하지 않은 텍스트의 높이를 추정하므로, 텍스트나 모양이 바뀐 뒤에는 같은 스크롤 오프셋에 다른 텍스트가 보인다. 그래서 바뀔 때마다 한 줄이 화면의 어디에 있었는지 적어 두고,
+    // 바뀐 뒤에 그 자리로 되돌린다.
 
     var firstVisible: Int? {
         guard let manager = textLayoutManager,
@@ -350,7 +314,6 @@ class NoteTextView: NSTextView {
         return manager.offset(from: manager.documentRange.location, to: fragment.rangeInElement.location)
     }
 
-    /// How far below the top of the screen the line holding `index` starts.
     func screenY(of index: Int) -> CGFloat? {
         guard let length = textStorage?.length, length > 0, let top = textLayoutManager?.top(of: max(0, min(index, length - 1))) else {
             return nil
@@ -358,7 +321,6 @@ class NoteTextView: NSTextView {
         return top + textContainerOrigin.y - visibleRect.minY
     }
 
-    /// Scrolls so the line holding `index` starts `y` below the top of the screen.
     func place(_ index: Int, at y: CGFloat) {
         guard let scroll = enclosingScrollView, let length = textStorage?.length, length > 0,
             let top = textLayoutManager?.top(of: max(0, min(index, length - 1)))
@@ -371,8 +333,6 @@ class NoteTextView: NSTextView {
         scroll.reflectScrolledClipView(clip)
     }
 
-    /// What to hold still through a change at `range`: the change itself while it's on screen, else the top line, moved
-    /// by what the change adds or takes above it.
     func hold(_ range: NSRange, delta: Int) -> (index: Int, y: CGFloat)? {
         if let y = screenY(of: range.location), y >= 0, y < visibleRect.height { return (range.location, y) }
         guard let first = firstVisible, let y = screenY(of: first) else { return nil }
@@ -397,19 +357,11 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     private var assisting: (NoteAssist, MathSyntax)?
     private(set) var menuHost: NSHostingView<AnyView>?
     private var accent = CourseAccent.gray
-    /// Where a link opened the note at, kept until the view is on screen and sized: placed before, the line lands
-    /// wherever TextKit's first height estimate put it.
     private var revealing: Int?
-    /// The line a link put on screen, held there until the user scrolls, clicks or types. Anything that lays the lines
-    /// above out again (the scroller coming in narrows the column, the look changing restyles the text) moves them
-    /// under a scroll left as it was, and the line slid off the screen.
     private var keeping: Int?
-    /// The notes a block reference's card draws from, as the preview's do; without it references show no card.
     var cards: NoteEmbedSource?
-    /// The workspace's `notesRevision`, so a card shows the other note as it is now.
     var cardsRevision = 0
     private(set) var card: ReferenceCardPage?
-    /// The block reference the pointer rests on, and the wait before its card shows.
     private var hovered: NSRange?
     private var hovering: Task<Void, Never>?
     private var hoverArea: NSTrackingArea?
@@ -428,7 +380,6 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         updateHint()
     }
 
-    /// Puts the caret at `location` and its line near the top of the screen, as the preview shows a heading or block.
     func reveal(_ location: Int) {
         revealing = location
         DispatchQueue.main.async { [weak self] in self?.runReveal() }
@@ -456,9 +407,8 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         DispatchQueue.main.async { [weak self] in self?.placeKept() }
     }
 
-    // The viewport is laid out again here: placing only scrolls, and the lines drawn stayed where the old layout had
-    // them. Laying it out corrects TextKit's guess at the height of what's below, which can move the scroll in turn, so
-    // the line is placed again until it stays.
+    // 여기서 viewport를 다시 배치한다. 자리를 잡는 일은 스크롤만 하므로, 그려진 줄은 이전 배치의 자리에 남아 있었다. 다시 배치하면 TextKit이 아래쪽 높이를 고쳐 잡고 그 때문에 스크롤이 다시
+    // 움직일 수 있으므로, 줄이 멈출 때까지 다시 둔다.
     private func placeKept() {
         guard let keeping else { return }
         for _ in 0..<4 {
@@ -468,9 +418,8 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         }
     }
 
-    // The window sends a wheel to the view under the pointer, and over the note that's this one, the bubble's
-    // scroller included (`NoteScrollView.hitTest`): left to go on up to the note, a sideways swipe over a formula that
-    // scrolls in its bubble went nowhere. Where a swipe starts decides where all of it goes, as AppKit latches one.
+    // 창은 휠 이벤트를 포인터 아래의 뷰로 보내는데, 노트 위에서는 말풍선의 스크롤 막대를 포함해 이 뷰가 받는다(`NoteScrollView.hitTest`). 노트로 올라가게 두면 말풍선에서 스크롤되는 수식
+    // 위의 가로 스와이프가 아무 데도 가지 않았다. AppKit은 스와이프 하나를 한 뷰에 고정하므로, 스와이프가 시작한 곳이 그 스와이프 전체가 갈 곳을 정한다.
     override func scrollWheel(with event: NSEvent) {
         let starts = event.phase.contains(.began) || event.phase.contains(.mayBegin) || (event.phase.isEmpty && event.momentumPhase.isEmpty)
         if starts {
@@ -485,13 +434,11 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
 
     private var wheelsBubble = false
 
-    /// The note's own scroll, which the bubble passes a wheel that's mostly up or down on to.
     func scrollNote(with event: NSEvent) {
         keeping = nil
         super.scrollWheel(with: event)
     }
 
-    // An event made in the app has no window, and its location is on the screen.
     private func wheelPoint(_ event: NSEvent) -> NSPoint {
         guard event.window == nil, let window else { return convert(event.locationInWindow, from: nil) }
         return convert(window.convertPoint(fromScreen: event.locationInWindow), from: nil)
@@ -503,8 +450,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         super.keyDown(with: event)
     }
 
-    /// Everything shown comes from styling the text as it now stands, after every change, composing ones included; a
-    /// change left unstyled even for a moment shows in plain text's 12-point font.
+    // 조합 중인 편집을 포함해 모든 변경 뒤에 스타일을 입힌다. 잠깐이라도 스타일 없이 두면 일반 텍스트의 12pt 글꼴로 보인다.
     func restyle() {
         guard let styler, let storage = textStorage else { return }
         styler.style(storage)
@@ -532,11 +478,10 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         updateHint()
     }
 
-    /// What's typed next looks like the text around it until it's styled; a plain-text view would use its own font.
     private func matchTyping() {
         guard let storage = textStorage else { return }
         let caret = min(selectedRange().location, storage.length)
-        // The text before is the line above's, a heading's after `# 제목⏎`, which would lay this line out heading-tall.
+        // 앞의 텍스트는 윗줄의 것이고 `# 제목` 뒤에서 줄을 바꾸면 제목의 속성이라, 그대로 두면 이 줄을 제목 높이로 배치한다.
         if NoteLines.afterLastBreak(caret, in: storage) {
             typingAttributes = NoteLines.bodyLine
             return
@@ -549,15 +494,12 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         typingAttributes = typing
     }
 
-    /// A note opened: its text without an undo step.
     func load(_ text: String) {
         string = text
         undoManager?.removeAllActions(withTarget: self)
         restyle()
     }
 
-    /// Text changed outside the editor (typed in the read view): only the changed span is swapped, so the editor keeps
-    /// its scroll, caret and undo history.
     func replace(with text: String) {
         let old = Array(string.utf16), new = Array(text.utf16)
         var a = 0, b = 0
@@ -586,7 +528,6 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     }
 
     func apply(_ edit: SourceEditing.Edit, reveal: Bool = true) {
-        // Stepping over a closer changes no text, and an empty change would still be an undo step.
         if edit.range.length > 0 || !edit.text.isEmpty {
             guard shouldChangeText(in: edit.range, replacementString: edit.text) else { return }
             textStorage?.replaceCharacters(in: edit.range, with: edit.text)
@@ -598,8 +539,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
 
     func textDidChange(_ notification: Notification) { onChange() }
 
-    // A syllable ended without a keystroke (a click elsewhere, another app) changes no text, so nothing else hands it
-    // to the binding.
+    // 키 입력 없이 끝난 음절(다른 곳을 클릭하거나 다른 앱으로 간 경우)은 텍스트를 바꾸지 않으므로, 여기가 아니면 그 음절을 바인딩에 넘기는 곳이 없다.
     override func unmarkText() {
         super.unmarkText()
         onChange()
@@ -625,7 +565,6 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
                 let top = self.topLine(lineStarts: self.lineStarts)
                 self.onScroll(top.line, top.frac)
                 self.placeMenu()
-                // The link moves away from the pointer resting on it.
                 self.hideCard()
             }
         }
@@ -651,8 +590,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         apply(SourceEditing.tab(string as NSString, selectedRange(), back: true, catalog: catalog))
     }
 
-    // Nothing here acts while a syllable is being composed: the input method owns those keys, and a pair closed or a
-    // menu item taken under it would split the syllable or eat the key that finishes it.
+    // 음절을 조합하는 동안에는 여기서 아무것도 하지 않는다. 그 키는 입력기의 것이고, 조합 중에 짝 기호를 닫거나 메뉴 항목을 고르면 음절이 갈라지거나 음절을 끝내는 키를 삼킨다.
 
     override func insertText(_ text: Any, replacementRange: NSRange) {
         let typed = (text as? String) ?? (text as? NSAttributedString)?.string
@@ -711,14 +649,10 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         completion.arrived = { [weak self] in self?.placeMenu() }
     }
 
-    /// The syntax of the math fence the caret is in, which the math palette's symbols follow; nil where the note's applies.
     var caretFence: MathSyntax? {
         SourcePlace.at(selectedRange().location, in: string as NSString).fence.map { MathSyntax($0) }
     }
 
-    /// 편집 › 수식 기호 목록: types the `\` that lists every symbol and math snippet of the note's syntax, so the menu is
-    /// the one typing it opens and Esc leaves the `\` as typing does. Only in a formula; elsewhere it beeps, as a menu
-    /// command that can't act here does.
     @objc func showMathSymbols(_ sender: Any?) {
         let selection = selectedRange()
         guard !hasMarkedText(), selection.length == 0, SourcePlace.typing(at: selection.location, in: string as NSString).isMath else {
@@ -727,8 +661,6 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         insertText("\\", replacementRange: selection)
     }
 
-    /// Opens, narrows or closes the menu for the text at the caret. Only typing opens it; a caret moved elsewhere
-    /// keeps it only while it is still on the same kind of thing.
     func refreshCompletion(opening: Bool) {
         guard !hasMarkedText() else { return }
         let selection = selectedRange()
@@ -736,7 +668,6 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
             opening || completion.query.map({ Self.sameKind($0.kind, query.kind) }) == true
         {
             let items = Completion.items(for: query, catalog: catalog)
-            // A link's candidates all come late, from the app.
             if items.isEmpty, completion.more == nil || !CompletionMenu.late(query) {
                 completion.hide()
             } else {
@@ -745,12 +676,10 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         } else {
             completion.hide()
         }
-        // The menu and a card would both float by the line; the menu, being typed into, wins.
         if completion.visible { hideCard() }
         placeMenu()
     }
 
-    /// A link's parts are one kind of thing to keep the menu on, whatever is typed in them.
     static func sameKind(_ a: CompletionQuery.Kind, _ b: CompletionQuery.Kind) -> Bool {
         if case .link = a, case .link = b { return true }
         return a == b
@@ -768,7 +697,6 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         if CompletionMenu.late(query), let links = assisting?.0.links {
             guard let taken = links.take(item, for: query, text: string) else { return placeMenu() }
             item = taken.item
-            // The ID a block of this very note gets goes in first; the link moves along when it was after the block.
             if let own = taken.own {
                 apply(own, reveal: false)
                 if own.range.location <= query.range.location { query = query.shifted(by: own.text.utf16.count - own.range.length) }
@@ -776,13 +704,9 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         }
         apply(Completion.edit(accepting: item, for: query, in: string as NSString))
         window?.makeFirstResponder(self)
-        // A block left open (`> [!`, a fence) opens the menu for what comes next in it, as a file's link does at its
-        // page; anything else would reopen the menu it just closed, as `\alpha` is still a command being typed.
         if query.kind == .slash || item.continues { refreshCompletion(opening: true) } else { placeMenu() }
     }
 
-    /// Under the line being completed, or over it where the screen ends first, in the scroll view so the menu isn't
-    /// clipped to the text column.
     func placeMenu() {
         guard completion.visible, let query = completion.query, let scroll = enclosingScrollView, let window else {
             menuHost?.isHidden = true
@@ -810,13 +734,10 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         host.isHidden = false
     }
 
-    /// 도움말 › 입력 안내 (⌘/), sent here while this note is being written, so the guide shows its math syntax.
     @objc func showInputGuide(_ sender: Any?) { openGuide() }
 
     // MARK: Tables
 
-    /// A table key acts only with the caret in a table, where it is taken even when it can't be done (a move past the
-    /// edge): falling through, ⌘ and an arrow would move the caret to the line's end instead.
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         if window?.firstResponder === self, !hasMarkedText(), let shortcut = TableCommands.shortcut(of: event),
             let command = TableCommands.command(for: shortcut),
@@ -828,8 +749,6 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         return super.performKeyEquivalent(with: event)
     }
 
-    /// With the caret in a table, its commands come first. A right-click outside the selection puts the caret there
-    /// first, so the commands act on the cell clicked.
     override func menu(for event: NSEvent) -> NSMenu? {
         let menu = super.menu(for: event)
         if let i = characterIndex(at: convert(event.locationInWindow, from: nil)), !NSLocationInRange(i, selectedRange()) {
@@ -850,7 +769,6 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     override func mouseDown(with event: NSEvent) {
         keeping = nil
         hideCard()
-        // A click moves the caret where it's meant to go, under the bubble too, which mustn't stay over it.
         bubble?.hovered = false
         let point = convert(event.locationInWindow, from: nil)
         if let i = characterIndex(at: point) {
@@ -860,7 +778,6 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         super.mouseDown(with: event)
     }
 
-    /// Ticks the task box at `i`, leaving the caret, and the screen, where they were.
     func toggleTask(at i: Int) -> Bool {
         var box = NSRange()
         guard let done = textStorage?.attribute(.noteTask, at: i, effectiveRange: &box) as? Bool, box.length == 3 else { return false }
@@ -893,7 +810,6 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         hideCard()
     }
 
-    // A syllable being composed is the input method's: a card over it would cover the candidates it lists.
     override func setMarkedText(_ string: Any, selectedRange: NSRange, replacementRange: NSRange) {
         hideCard()
         super.setMarkedText(string, selectedRange: selectedRange, replacementRange: replacementRange)
@@ -905,8 +821,6 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         super.viewWillMove(toWindow: newWindow)
     }
 
-    /// The pointer resting on a block reference shows its card after a moment, as in the preview; moving onto other
-    /// text takes it away. Never while a syllable is composed or the completion menu is open.
     func hover(at point: NSPoint) {
         let found = reference(at: point)
         if let found, found.range == hovered { return }
@@ -927,8 +841,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         card?.hide()
     }
 
-    /// The block reference under the point. `characterIndex` gives the nearest character, also past a line's end or
-    /// beside the column, so the point must be on that character's own box.
+    // `characterIndex`는 줄 끝 너머나 열 옆에서도 가장 가까운 글자를 돌려주므로, 점이 그 글자의 상자 안에 있는지 확인해야 한다.
     private func reference(at point: NSPoint) -> (link: WikiLink, range: NSRange)? {
         guard let window, let i = characterIndex(at: point), let found = wikiLink(at: i), found.link.blockID != nil else { return nil }
         let box = convert(
@@ -952,8 +865,6 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         }
     }
 
-    /// Under the link, or over it where the screen ends first, in the scroll view so the card isn't clipped to the
-    /// text column, as the completion menu is placed.
     private func placeCard(_ page: ReferenceCardPage, range: NSRange, size: CGSize) {
         guard let scroll = enclosingScrollView, let window else { return }
         let rect = { (i: Int) in
@@ -987,15 +898,12 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
 
     override func becomeFirstResponder() -> Bool {
         defer { DispatchQueue.main.async { [weak self] in self?.updateHint() } }
-        // The math page may have left with another editor's window; the one being typed in shows the math now.
         NoteMath.shared.host(in: self)
         return super.becomeFirstResponder()
     }
 
     var hintShown: Bool { hint.map { !$0.isHidden } ?? false }
 
-    /// "/ 블록 삽입" after the caret on an empty line (#395). A label over the text, not text: the input method, undo
-    /// and the saved note never see it. A syllable being composed is in the text, so the line isn't empty and it goes.
     func updateHint() {
         let caret = selectedRange()
         guard window?.firstResponder === self, !hasMarkedText(), let window,
@@ -1023,18 +931,15 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         var line = convert(
             window.convertFromScreen(firstRect(forCharacterRange: NSRange(location: caret.location, length: 0), actualRange: nil)),
             from: nil)
-        // An empty note has no line laid out yet: its first line starts at the column's corner.
         if line.height < 1 {
             line = NSRect(
                 x: textContainerOrigin.x + (textContainer?.lineFragmentPadding ?? 0), y: textContainerOrigin.y, width: 0,
                 height: size.height)
         }
-        // On the line's baseline side, where the caret is drawn (`NoteLines.caret`); just past the caret.
         label.frame = NSRect(x: line.minX + Theme.Space.xs, y: line.maxY - size.height, width: size.width, height: size.height)
         label.isHidden = false
     }
 
-    /// With the caret in math or an image link, its rendering floats by the source, over the text, which keeps its place.
     func updateBubble() {
         let caret = selectedRange()
         var found: Rendering?
@@ -1042,11 +947,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
             found = rendering(at: caret.location, in: storage)
         }
         if let kept = bubble {
-            // A formula that scrolls stays under the pointer while the caret goes elsewhere, or it couldn't be scrolled
-            // to its end; it goes when the pointer leaves (`PreviewBubble.onLeave`). One that doesn't scroll has
-            // nothing to keep it for, and kept it covered the line the caret went to.
             if kept.scrolls, kept.hovered, found == nil || found?.image === kept.picture.image { return }
-            // The same picture keeps its view, and where it's scrolled to follows the caret.
             if let found, found.image === kept.picture.image, found.size == kept.picture.frame.size,
                 let origin = bubbleOrigin(kept.frame.size, found.span)
             {
@@ -1059,10 +960,6 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         bubble = nil
 
         guard let found else { return }
-        // At its own size: a formula wider than the column scrolls sideways in the bubble, as it does in the preview,
-        // since shrunk to fit it was too small to read. A picture is already cut to a preview's size. The picture shows
-        // as wide as the column, with the padding past it on either side: as wide as the view, the bubble ran into the
-        // window's edge and its scroller.
         let room = columnWidth
         let scale = found.math ? 1 : min(1, room / max(1, found.size.width))
         let view = PreviewBubble(
@@ -1076,8 +973,6 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         bubble = view
     }
 
-    /// By the source at `span`: the formula starting where its source does, the padding reaching out to the left of it,
-    /// within the column and that padding, under the source, or over it when the screen ends first; never pushing the text.
     private func bubbleOrigin(_ size: CGSize, _ span: NSRange) -> NSPoint? {
         guard let window, let storage = textStorage, NSMaxRange(span) <= storage.length, span.length > 0 else { return nil }
         let text = storage.string as NSString
@@ -1091,13 +986,10 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         let x = max(
             column.lowerBound - PreviewBubble.pad, min(first.minX - PreviewBubble.pad, column.upperBound + PreviewBubble.pad - size.width))
         let under = last.maxY + 4, over = first.minY - 4 - size.height
-        // In whole points: the scroller's clip view aligns itself to the screen's pixels, and off them it shifted the
-        // picture by the fraction.
+        // 정수 포인트에 둔다. 스크롤 막대의 clip view는 화면 픽셀에 맞춰 정렬하므로, 소수점 위치에서는 그림이 그만큼 밀렸다.
         return NSPoint(x: x.rounded(), y: (under + size.height <= visibleRect.maxY || over < visibleRect.minY ? under : over).rounded())
     }
 
-    /// What the bubble shows: its picture, the source it's for, and how far into that source the caret is, which a
-    /// formula wider than the bubble is scrolled to. In a block, also how far in the caret's line starts.
     private struct Rendering {
         let image: NSImage
         let size: CGSize
@@ -1107,7 +999,6 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         var line: CGFloat?
     }
 
-    /// The math is drawn after the caret came to it (`NoteMath`), and the caret may have moved on by then.
     private func redrawBubble() { updateBubble() }
 
     override func viewDidMoveToWindow() {
@@ -1115,7 +1006,6 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         if window != nil { NoteMath.shared.host(in: self, warm: true) }
     }
 
-    /// What the caret is in: inline math or an image link it's past the start of, or any line of a math block.
     private func rendering(at caret: Int, in storage: NSTextStorage) -> Rendering? {
         guard let styler, storage.length > 0 else { return nil }
         let at = { (span: NSRange) in CGFloat(caret - span.location) / CGFloat(max(1, span.length)) }
@@ -1134,7 +1024,6 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
                 caret > span.location,
                 let image = NoteImages.load(source, base: baseURL)
             {
-                // A preview, not the picture at its size: big enough to tell what it is, small enough to keep the note in view.
                 let natural = image.size
                 let scale = min(1, min(columnWidth, 480) / max(1, natural.width), 320 / max(1, natural.height))
                 return Rendering(
@@ -1155,9 +1044,6 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         return nil
     }
 
-    /// How far into a math block's formula `offset` in its source is, and the start of the line it's on, counted in
-    /// the characters that draw: the `$$` lines and the line breaks draw nothing, and counted they put the caret on a
-    /// block's second line well off where that line's part of the formula is.
     static func blockPlace(in source: String, at offset: Int) -> (caret: CGFloat, line: CGFloat) {
         let text = source as NSString
         var skip = IndexSet()
@@ -1234,7 +1120,6 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         return insertFiles(from: board, at: at)
     }
 
-    /// Files go to `Notes/assets` and their links in here; read as text, a dropped image became its path.
     private func insertFiles(from board: NSPasteboard, at index: Int) -> Bool {
         if let urls = board.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL], !urls.isEmpty {
             let links = urls.compactMap { url in (try? Data(contentsOf: url)).flatMap { saveFile(url.lastPathComponent, $0) } }
@@ -1261,32 +1146,25 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     }
 }
 
-/// The empty line's hint, which a click goes through to the line under it.
 final class HintLabel: NSTextField {
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }
 
 final class PreviewBubble: NSView {
-    /// The same on every side: a formula's picture is its ink (`NoteMath`), so this is all the room around it.
     static let pad = Theme.Space.m
-    // Well past the padding, so it fades the formula itself and reads as more of it that way.
     static let fade = 2 * Theme.Space.xl
 
     let picture: NSImageView
     let scroller: BubbleScroller
     let leading = EdgeFade(leading: true), trailing = EdgeFade(leading: false)
-    /// Whether the pointer moved onto it, which keeps one that scrolls while the caret goes elsewhere
-    /// (`SourceTextView.updateBubble`). Not a pointer it merely came up under: typing on, that held it over the text.
     var hovered = false
     var onLeave: (() -> Void)?
     let scrolls: Bool
 
-    /// At most `width` wide; a wider picture scrolls in it.
     init(image: NSImage, size: CGSize, width: CGFloat) {
         let pad = Self.pad, border: CGFloat = 1
         let whole = CGSize(width: size.width + 2 * pad, height: size.height + 2 * pad)
         let shown = CGSize(width: min(whole.width, max(width, 2 * pad)), height: whole.height)
-        // Inside the border, so neither the picture scrolling by nor the fades over it cover it.
         let inner = NSRect(origin: .zero, size: shown).insetBy(dx: border, dy: border)
         picture = NSImageView(frame: NSRect(origin: CGPoint(x: pad - border, y: pad - border), size: size))
         scroller = BubbleScroller(frame: inner)
@@ -1331,9 +1209,6 @@ final class PreviewBubble: NSView {
 
     required init?(coder: NSCoder) { fatalError() }
 
-    /// Scrolls to the part of the picture `fraction` of the way across it, the caret's place in the source, centered
-    /// where the picture's ends allow. A block's caret `line` shows from its start, just past the fade, when the caret
-    /// shows with it: centered on the caret, a block opened on its second line showed the end of the first.
     func reveal(_ fraction: CGFloat, line: CGFloat? = nil) {
         guard scrolls, let document = scroller.documentView else { return }
         let visible = scroller.bounds.width
@@ -1351,13 +1226,10 @@ final class PreviewBubble: NSView {
         trailing.isHidden = !scrolls || x >= end - 0.5
     }
 
-    // It covers the lines under the source it shows; a click there is meant for them, and taken here it went nowhere.
-    // Over a picture that scrolls, the scroller takes the wheel, and passes a click on (`BubbleScroller`).
     override func hitTest(_ point: NSPoint) -> NSView? {
         scrolls && frame.contains(point) ? scroller : nil
     }
 
-    // Always active: tracked only in the key window, a pointer leaving while another was key left it held.
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         trackingAreas.forEach(removeTrackingArea)
@@ -1366,7 +1238,6 @@ final class PreviewBubble: NSView {
                 rect: .zero, options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect], owner: self, userInfo: nil))
     }
 
-    // Moving within it counts too: shown under the pointer, it gets no `mouseEntered`.
     override func mouseEntered(with event: NSEvent) { hovered = true }
     override func mouseMoved(with event: NSEvent) { hovered = true }
     override func mouseExited(with event: NSEvent) { left() }
@@ -1379,8 +1250,7 @@ final class PreviewBubble: NSView {
 
     override var wantsUpdateLayer: Bool { true }
 
-    // A layer holds fixed CGColors. Resolved here, under the view's own appearance, they follow a theme change;
-    // resolved at init they took whatever appearance was current then, so a light window got a dark bubble.
+    // layer는 고정된 CGColor를 쥔다. 여기서 뷰 자신의 appearance로 풀어야 테마가 바뀔 때 따라간다. init에서 풀면 그때의 appearance를 따라서, 라이트 창에 다크 말풍선이 떴다.
     override func updateLayer() {
         effectiveAppearance.performAsCurrentDrawingAppearance {
             layer?.backgroundColor = NoteLook.card.cgColor
@@ -1389,13 +1259,10 @@ final class PreviewBubble: NSView {
     }
 }
 
-/// The bubble's sideways scroll. A wheel or swipe that's mostly up or down is the note's, not lost on a bubble that
-/// can't go that way; a click goes on up to the text under it.
 final class BubbleScroller: NSScrollView {
     override func scrollWheel(with event: NSEvent) {
         if abs(event.scrollingDeltaY) > abs(event.scrollingDeltaX) {
-            // Straight to the note's scroll: up the responder chain it came back to the editor, which hands a wheel
-            // over the bubble to this.
+            // 노트의 스크롤로 바로 보낸다. responder chain으로 올리면 편집 보기로 돌아가고, 편집 보기는 말풍선 위의 휠을 다시 이 뷰로 넘긴다.
             if let note = superview?.superview as? SourceTextView {
                 note.scrollNote(with: event)
             } else {
@@ -1403,10 +1270,9 @@ final class BubbleScroller: NSScrollView {
             }
             return
         }
-        // Scrolled without the pointer moving first, it's still the pointer's.
         (superview as? PreviewBubble)?.hovered = true
-        // Moved here by the swipe's own amount rather than by `NSScrollView`'s handling, which, nested in the note's
-        // scroll view and handed the swipe by the editor, left the formula where it was. A wheel's step is a line.
+        // `NSScrollView`가 처리하게 두지 않고 스와이프의 양만큼 직접 옮긴다. 노트의 scroll view 안에 들어 있고 편집 보기가 스와이프를 넘겨주는 상황에서는 `NSScrollView`가
+        // 수식을 그대로 두었다. 휠 한 칸은 한 줄이다.
         guard let document = documentView else { return }
         let dx = event.hasPreciseScrollingDeltas ? event.scrollingDeltaX : event.scrollingDeltaX * NoteLook.body
         let end = max(0, document.frame.width - contentView.bounds.width)
@@ -1468,7 +1334,6 @@ class NoteTextView: UITextView {
     var baseURL: URL?
     var openNote: (String) -> Void = { _ in }
     var linkOpener = OpenLinkAction()
-    /// Names what a pasted `folio://` address points at (`NoteEmbedSource.name`).
     var linkName: (AppLink) -> String? = { _ in nil }
     private var column: CGFloat = 0
 
@@ -1481,7 +1346,7 @@ class NoteTextView: UITextView {
         super.init(frame: .zero, textContainer: container)
         backgroundColor = .clear
         alwaysBounceVertical = true
-        // The room past the note's end is a content inset, and UIKit would shorten the indicator by it too.
+        // 노트 끝 아래의 여백은 content inset이라, 그대로 두면 UIKit이 스크롤 표시기도 그만큼 줄인다.
         automaticallyAdjustsScrollIndicatorInsets = false
         verticalScrollIndicatorInsets = .zero
         autocorrectionType = .no
@@ -1544,8 +1409,6 @@ class NoteTextView: UITextView {
     }
 }
 
-/// shortcut: on the iPad, pasted or dropped pictures, ⌘-click links, ticking a task by its box and the bubble that shows
-/// math and images rendered are Mac-only for now; add them when the iPad is used for writing.
 final class SourceTextView: NoteTextView, UITextViewDelegate {
     var onChange: () -> Void = {}
     var openGuide: @MainActor () -> Void = {}
@@ -1562,8 +1425,6 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
         delegate = self
     }
 
-    // Nothing shows math on the iPad yet (the bubble and the completion menu are the Mac's), but when it does it draws
-    // it the Mac's way, in this view's window.
     override func didMoveToWindow() {
         super.didMoveToWindow()
         if window != nil { NoteMath.shared.host(in: self) }
@@ -1579,8 +1440,6 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
         if changed { restyle() }
     }
 
-    /// Scrolls the line holding `location` near the top and puts the selection there, without taking focus: on the
-    /// iPad that would bring up the keyboard over the note just opened.
     func reveal(_ location: Int) {
         revealing = location
         setNeedsLayout()
@@ -1597,8 +1456,6 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
         setContentOffset(CGPoint(x: 0, y: min(bottom, max(0, top + textContainerInset.top - NoteLook.margin))), animated: false)
     }
 
-    /// The completion menu, and so link completion, is Mac-only for now (#31); pairs, lists and snippets on Tab work
-    /// here too.
     func setAssist(_ assist: NoteAssist, syntax: MathSyntax) {
         if let assisting, assisting.0 == assist, assisting.1 == syntax { return }
         assisting = (assist, syntax)
@@ -1641,8 +1498,6 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
         becomeFirstResponder()
     }
 
-    /// Without taking focus, unlike `insertAtCaret`: the keyboard would come up over the palette still open for the
-    /// next symbol.
     func insertMath(_ item: CompletionItem) {
         apply(MathSymbols.insertion(item, in: string as NSString, selection: selectedRange))
     }
@@ -1693,21 +1548,18 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
         return true
     }
 
-    // As on the Mac (`matchTyping`): UIKit takes the attributes before the caret, a heading's on the line after one at
-    // the note's end.
     func textViewDidChangeSelection(_ textView: UITextView) {
         guard markedTextRange == nil, NoteLines.afterLastBreak(selectedRange.location, in: textStorage) else { return }
         typingAttributes = NoteLines.bodyLine
     }
 
-    // UIKit drops the composition if the marked text's attributes change under it.
+    // 표시된 텍스트(marked text)의 속성이 바뀌면 UIKit이 조합을 버린다.
     func textViewDidChange(_ textView: UITextView) {
         if markedTextRange == nil { restyle() }
         onChange()
     }
 
-    // A syllable ended without a keystroke (a tap elsewhere, the app leaving) changes no text, so no
-    // `textViewDidChange` styles it or hands it to the binding.
+    // 키 입력 없이 끝난 음절(다른 곳을 탭하거나 앱을 떠난 경우)은 텍스트를 바꾸지 않으므로, `textViewDidChange`가 그 음절에 스타일을 입히거나 바인딩에 넘기지 않는다.
     override func unmarkText() {
         super.unmarkText()
         restyle()
@@ -1725,12 +1577,8 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
         (super.keyCommands ?? []) + TableCommands.keyCommands(action: #selector(runTableCommand(_:)))
     }
 
-    /// 도움말 › 입력 안내 (⌘/ on a keyboard), sent here while this note is being written, so the guide shows its math
-    /// syntax. The note bar's button is the way by touch. No empty-line hint here: it points at the `/` menu, which the
-    /// iPad doesn't have yet (#31).
     @objc func showInputGuide(_ sender: Any?) { openGuide() }
 
-    /// A table key outside a table, or one that can't be done there, is left to the text view.
     override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
         guard action == #selector(runTableCommand(_:)) else { return super.canPerformAction(action, withSender: sender) }
         return markedTextRange == nil && tableEdit(sender) != nil
@@ -1748,7 +1596,6 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
 #endif
 
 extension NSTextLayoutManager {
-    /// The top of the line holding character `index`, laid out as far as there.
     func top(of index: Int) -> CGFloat? {
         guard let location = location(documentRange.location, offsetBy: index) else { return nil }
         ensureLayout(for: NSTextRange(location: documentRange.location, end: location) ?? documentRange)

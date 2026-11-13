@@ -16,15 +16,12 @@ struct StatStrip: View {
         let value: String
         var detail: String?
         var tone: Tone = .plain
-        /// A grade: hidden while grades are locked, the title staying.
         var sensitive = false
         var action: (() -> Void)?
     }
 
     let items: [Item]
 
-    /// The width an item needs before its figure is cut short: narrower than this for all of them, the strip folds into
-    /// rows of two. Pinned rather than measured from the text, so a long value doesn't fold a strip in a full window.
     static let itemRoom: CGFloat = 128
 
     var body: some View {
@@ -57,7 +54,6 @@ struct StatStrip: View {
                     .sensitive(item.sensitive ? .inline : nil)
                 }
                 .padding(Theme.Inset.stat)
-                // Top-aligned at full height, so an item without a detail line doesn't sink below its neighbors.
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .opens(item.action)
             }
@@ -82,7 +78,6 @@ enum Tone {
     @MainActor var fill: Color {
         switch self {
         case .plain, .accent: Theme.Palette.fill
-        // As the session tag and the quiz's grades already tinted it: on the plain gray a fix read as one more gray chip.
         case .success: Theme.Palette.success.opacity(Theme.Opacity.tint)
         case .warning: Theme.Palette.warningFill
         case .danger: Theme.Palette.dangerFill
@@ -91,7 +86,6 @@ enum Tone {
     }
 }
 
-/// `.accent` takes the course color from the environment.
 struct Chip: View {
     @Environment(\.accent) private var accent
     let text: String
@@ -107,11 +101,11 @@ struct Chip: View {
     var body: some View {
         Text(text)
             .font(Theme.Typeface.caption.weight(tone == .plain && !solid ? .regular : .semibold))
-            // On a solid chip the card color, not `onFill`: the dark tones are light, and white on them fell under 3:1.
+            // 채운 칩에서는 `onFill`이 아니라 카드 색을 쓴다. 다크 모드의 진한 톤은 밝아서 흰 글자의 대비가 3:1보다
+            // 낮았다.
             .foregroundStyle(
                 solid ? Theme.Palette.card : tone == .accent ? accent.ink : tone == .plain ? Theme.Palette.textSecondary : tone.foreground
             )
-            // A squeezed row wrapped the label a letter per line; the text beside the chip gives way instead.
             .lineLimit(1)
             .fixedSize()
             .padding(Theme.Inset.tag)
@@ -119,7 +113,6 @@ struct Chip: View {
     }
 }
 
-/// A person's initial on a color fixed by their id, so a long list of names reads at a glance.
 struct Avatar: View {
     let name: String
     let id: UUID
@@ -137,15 +130,12 @@ struct Avatar: View {
     }
 }
 
-/// A course where it stands for itself (sidebar, course column, breadcrumb): its symbol in its color, the book unless
-/// one was picked. Rows that only tag an item with its course keep the plain dot.
 struct CourseMark: View {
     let icon: String?
     let color: Color
     var font: Font = Theme.Glyph.line
     var filled = false
     var duotone = false
-    // Within a line of text the symbol takes the text's size; the icon column's 22pt square would gap the line.
     var inline = false
 
     static let defaultIcon = "book.closed"

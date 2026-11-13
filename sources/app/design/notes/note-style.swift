@@ -1,8 +1,7 @@
 import Foundation
 
-/// Theme colors and `NoteLook`'s sizes as CSS variables for note pages (sources/web/src/note.css names no color of its own and
-/// takes the column, type sizes and gaps from these), plus the bundled stylesheet and scripts built into resources/web
-/// by `mise run build-web` (Xcode copies them to the bundle root).
+// sources/web/src/note.css는 자기 색을 두지 않고, 열 폭과 글자 크기와 간격을 이 변수에서 받는다. 번들 stylesheet와
+// script는 `mise run build-web`이 resources/web에 만들고, Xcode가 번들 루트로 복사한다.
 enum NoteStyle {
     static func variables(accent: CourseAccent) -> String {
         func block(_ pick: (UInt32, UInt32) -> UInt32) -> String {
@@ -10,7 +9,6 @@ enum NoteStyle {
                 ("text", .text), ("text-2", .textSecondary), ("text-3", .textTertiary), ("line", .line),
                 ("line-soft", .lineSoft), ("fill", .fill), ("code-fill", .codeFill), ("card", .card),
             ]
-            // Callout kinds borrow the course presets, so a theorem is violet in every course.
             let presets = Dictionary(uniqueKeysWithValues: CourseAccent.presets.map { ($0.name, $0.accent) })
             let callouts: [(String, CourseAccent)] = [
                 ("c-definition", presets["blue"]!), ("c-theorem", presets["violet"]!), ("c-example", presets["green"]!),
@@ -36,9 +34,7 @@ enum NoteStyle {
                 ("break-dot", NoteLook.breakDot), ("break-pitch", NoteLook.breakDotPitch), ("break-space", NoteLook.breakSpace),
             ] + NoteLook.headingSizes.enumerated().map { ("h\($0.offset + 1)", $0.element) }
             + [("fade", Theme.Space.xl)]
-            // The preview's picture viewer: its pill buttons (a finger's width on a touch screen), their gap and glass.
             + [("control", Theme.Size.toolbarButton), ("touch", Theme.Size.fab), ("gap", Theme.Space.s), ("glass-blur", Theme.Space.l)]
-        // The page's words are the app's, from the string catalog; the CSS has none of its own.
         let label = String(localized: .notesOutlineTitle).replacing("\\", with: "\\\\").replacing("\"", with: "\\\"")
         return ":root{" + values.map { String(format: "--%@:%gpx;", $0.0, Double($0.1)) }.joined()
             + String(format: "--scrim:rgb(0 0 0 / %g);", Theme.Opacity.figureScrim) + "--toc-label:\"\(label)\";}"

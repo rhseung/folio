@@ -1,10 +1,7 @@
 import SwiftUI
 
-/// The note's headings, indented by level, the one being read marked. Tapping one goes there; beside a folded heading a
-/// chevron opens the deeper ones under it. The same list stands beside the note and in the bar button's popover.
 struct NoteOutlineList: View {
     let model: NoteOutlineModel
-    /// After a jump: the popover closes, the column stays.
     var picked: () -> Void = {}
     @Environment(\.accent) private var accent
 

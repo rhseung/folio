@@ -2,25 +2,20 @@ import FolioDomain
 import FolioStorage
 import WebKit
 
-/// `cb-widget` blocks in the note preview: each runs its course's `.folio/widgets/<id>.html` in a frame of the note's
-/// page. Widgets are written by Claude or pasted in, so they're treated as untrusted code: the frame is sandboxed to an
-/// origin of its own (it can't reach the note's page or navigate it), its policy lets it run only its own inline code
-/// and load nothing, nothing is kept between runs, and it can't go to another page.
+// 위젯은 Claude가 쓰거나 사용자가 붙여 넣은 것이라 신뢰할 수 없는 코드로 다룬다. frame은 자기만의 origin으로 sandbox되어 노트 페이지에 닿거나 페이지를 이동시키지 못한다. 보안 정책은 자기
+// 인라인 코드만 돌리고 아무것도 불러오지 못하게 하며, 실행 사이에 아무것도 남지 않고, 다른 페이지로 가지 못한다.
 @MainActor final class NoteWidgets {
     let files = WidgetFiles()
-    /// Called with a frame's key and the height its page needs.
     var resized: (String, CGFloat) -> Void = { _, _ in }
     private var accent = CourseAccent.gray
     private var used: [UUID: Int] = [:]
     private var keys: Set<String> = []
     private var sizers: [String: WidgetSizer] = [:]
-    /// The frame each widget last reported from, so tests can look inside it.
     private(set) var frames: [String: WKFrameInfo] = [:]
 
     init(scripts: WKUserContentController) {
         scripts.addUserScript(WKUserScript(source: NoteWidget.noPeersScript, injectionTime: .atDocumentStart, forMainFrameOnly: false))
         scripts.addUserScript(WKUserScript(source: Self.themeScript, injectionTime: .atDocumentStart, forMainFrameOnly: false))
-        // In a world of its own, so the widget's code can neither see nor fake the reports.
         scripts.addUserScript(WKUserScript(source: Self.sizeScript, injectionTime: .atDocumentEnd, forMainFrameOnly: false, in: Self.world))
         scripts.add(Reports(self), contentWorld: Self.world, name: Reports.name)
     }
@@ -42,35 +37,28 @@ import WebKit
         end()
     }
 
-    /// Every widget shown has said how tall its page is.
     var settled: Bool { keys.allSatisfy { sizers[$0]?.height != nil } }
 
-    /// The frame for a top-level widget block, or nil for any other block. A widget in a table cell stays the inert
-    /// placeholder `HTMLRenderer` makes: a cell is no place to run one.
     func frame(for html: String) -> String? {
         guard
             let m = html.wholeMatch(of: /<div class="cb-widget" data-widget="([0-9A-Fa-f-]{36})"(?: style="height:(-?\d+)px")?><\/div>\n?/),
             let id = UUID(uuidString: String(m.1))
         else { return nil }
-        // The same widget may be placed twice in a note, and each place runs on its own.
         let n = used[id, default: 0]
         used[id] = n + 1
-        // A rewritten file makes a new frame, which starts the widget anew; an unchanged one keeps running.
         let file = files.folder.flatMap { StandardLayout.widgetFile(id, noteFolder: $0) }
         let stamp = file.flatMap { LocalFile.modified($0) }.map { String(Int($0.timeIntervalSince1970 * 1000)) } ?? "none"
         let key = "\(id.uuidString)-\(n)-\(stamp)"
         keys.insert(key)
-        // A block with no height would hide its frame, and a hidden page never says how tall it is. The height its
-        // page said is kept by the preview's script, not written here: the frame's HTML has to stay the same for the
-        // preview to keep it, and the widget running, when the note is shown again.
+        // 높이가 없는 블록은 frame을 숨기고, 숨은 페이지는 높이를 알리지 않는다. 페이지가 알린 높이는 여기 쓰지 않고 미리보기의 스크립트가 남긴다. 노트를 다시 보일 때 미리보기가 frame을 그대로
+        // 두고 위젯이 계속 돌려면 frame의 HTML이 같아야 하기 때문이다.
         let height = max(m.2.flatMap { Int($0) } ?? 320, 16)
         if sizers[key] == nil { sizers[key] = WidgetSizer() }
         var url = URLComponents()
         url.scheme = WidgetFiles.scheme
         url.host = "widget"
         url.path = "/" + id.uuidString
-        // Every character but letters and digits escaped: `+`, `&` and `=` left as they are would split the theme apart,
-        // and the address goes into an attribute as it is.
+        // 글자와 숫자 외의 모든 문자를 이스케이프한다. `+`, `&`, `=`를 그대로 두면 테마 값이 갈라지고, 주소는 그대로 속성에 들어간다.
         let encode = { (s: String) in s.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? "" }
         url.percentEncodedQueryItems = [
             URLQueryItem(name: "k", value: encode(key)), URLQueryItem(name: "t", value: encode(Self.themeCSS(accent))),
@@ -90,7 +78,6 @@ import WebKit
 
     private static let world = WKContentWorld.world(name: "folio-widget")
 
-    /// Holds the widgets weakly: the content controller keeps its handlers, and the page keeps the controller.
     private final class Reports: NSObject, WKScriptMessageHandler {
         static let name = "size"
         weak var widgets: NoteWidgets?
@@ -104,7 +91,7 @@ import WebKit
         }
     }
 
-    /// The root element's own box, not `scrollHeight`, which is never less than the frame and so could only grow.
+    // `scrollHeight`가 아니라 루트 요소의 상자를 잰다. `scrollHeight`는 frame보다 작아지지 않아서 커지기만 한다.
     private static let sizeScript = """
         if (location.protocol === '\(WidgetFiles.scheme):') {
           const html = document.documentElement, k = new URLSearchParams(location.search).get('k')
@@ -113,8 +100,7 @@ import WebKit
         }
         """
 
-    /// The note's colors under the names note pages use, before the widget's own styles. In a block: a top-level name
-    /// here would clash with the same name declared by the widget's own script.
+    // 위젯의 스타일보다 먼저 노트 페이지가 쓰는 이름으로 노트 색을 넣는다. 블록 안에 두는 이유는 최상위 이름이 위젯 스크립트가 선언한 같은 이름과 충돌하기 때문이다.
     private static let themeScript = """
         if (location.protocol === '\(WidgetFiles.scheme):') {
           const t = new URLSearchParams(location.search).get('t')
@@ -122,7 +108,6 @@ import WebKit
         }
         """
 
-    /// A page that starts out like the note: `:where` keeps these below anything the widget sets itself.
     static func themeCSS(_ accent: CourseAccent) -> String {
         NoteStyle.variables(accent: accent)
             + ":root{color-scheme:light dark}"
@@ -131,22 +116,16 @@ import WebKit
 
 }
 
-/// Follows what a widget's page says about its height. A page sized by its frame (`100vh`, `50vh`,
-/// `calc(600px - 100vh)`) changes by the same share of every change of the frame, so following it would never settle;
-/// it keeps the height it was first shown at. Content that grows again while the frame follows it (a font, an image, a
-/// chart drawn a frame later) changes by amounts of its own, so one change of both isn't enough to tell.
+// frame 크기를 따르는 페이지(`100vh`, `50vh`, `calc(600px - 100vh)`)는 frame이 바뀔 때마다 같은 비율로 바뀌므로, 따라가면 끝나지 않는다. 그런 페이지는 처음 보인 높이를
+// 유지한다. frame이 따라가는 동안 다시 커지는 내용(글꼴, 그림, 한 프레임 늦게 그린 차트)은 제 나름의 양만큼 바뀌므로, 둘이 한 번 함께 바뀐 것만으로는 구분할 수 없다.
 struct WidgetSizer {
     private(set) var height: CGFloat?
     private var last: (page: Double, view: Double)?
-    /// The frame's height at the first report, which is the height written in the block.
     private var start: Double?
-    /// How much the page changed for each point the frame did, the last time both changed.
     private var share: Double?
     private var followsView = false
 
-    /// The frame's new height, or nil when it stays.
     mutating func report(page: Double, view: Double) -> CGFloat? {
-        // Before the frame is laid out it has no height, and a page sized by it would report none.
         guard view >= 1, !followsView else { return nil }
         defer { last = (page, view) }
         let start = start ?? view
@@ -177,11 +156,8 @@ struct WidgetSizer {
 @MainActor final class WidgetFiles: NSObject, WKURLSchemeHandler {
     static let scheme = "folio-widget"
 
-    /// The note's folder, which names the course whose widgets are served.
     var folder: URL?
 
-    /// A frame's policy loads nothing from outside, but a blank frame sent elsewhere would carry whatever is in its
-    /// address out; so every frame stays on a widget's page or blank.
     static func allows(_ url: URL) -> Bool {
         url.scheme == "about" || (url.scheme == scheme && url.host == "widget")
     }
@@ -196,7 +172,6 @@ struct WidgetSizer {
         let key = ObjectIdentifier(task as AnyObject)
         running.insert(key)
         Task {
-            // Read as `LocalFileScheme` reads pictures, off the main thread.
             let read = if let file { await LocalFileScheme.read(file) } else { Data?.none }
             guard running.remove(key) != nil else { return }
             let data = NoteWidget.withPolicy(read ?? Self.notice(file))

@@ -1,7 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// Their page is their editor (#403), so deleting asks on that page.
 @MainActor
 struct PersonMenuSource: ItemMenuSource {
     let person: Person
@@ -23,7 +22,6 @@ struct PersonMenuSource: ItemMenuSource {
     }
 }
 
-/// Editing is the tile's popover; a code a course still uses can't go.
 @MainActor
 struct CodeMenuSource: ItemMenuSource {
     let edit: @MainActor () -> Void

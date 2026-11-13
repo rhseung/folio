@@ -5,16 +5,12 @@ import Foundation
 import AppKit
 #endif
 
-/// Debug-only ways to see the first run on a folder that is already open (a fixture's, `FOLIO_GIST`), whose steps
-/// would otherwise never show.
 @MainActor
 enum FirstRunDebug {
     private static let environment = ProcessInfo.processInfo.environment
-    /// `FOLIO_FIRST_RUN_STEP`: a step's name (`term`), or `missing` or `downloading` for a remembered folder that can't
-    /// be opened. For the iPad simulator, whose screen is captured from outside (`SIMCTL_CHILD_FOLIO_FIRST_RUN_STEP`).
+    // `FOLIO_FIRST_RUN_STEP`은 단계 이름(`term`)이거나, 열 수 없는 기억한 폴더를 뜻하는 `missing`, `downloading`이다.
+    // iPad 시뮬레이터는 화면을 밖에서 찍으므로 `SIMCTL_CHILD_FOLIO_FIRST_RUN_STEP`로 넘긴다.
     static let step = environment["FOLIO_FIRST_RUN_STEP"]
-    /// `FOLIO_SNAPSHOT_FIRST_RUN` with `FOLIO_SNAPSHOT_DIR`, on the Mac: every step in turn drawn into
-    /// `first-run-<step>.png`, then the app quits.
     static let walks = environment["FOLIO_SNAPSHOT_FIRST_RUN"] != nil
 
     nonisolated static var requested: Bool {
@@ -25,7 +21,6 @@ enum FirstRunDebug {
     static let names = FirstRunStep.allCases.map(\.rawValue) + ["missing", "downloading"]
 
     static func show(_ name: String, in model: FirstRunModel) {
-        // A made-up place: the picture shows how a path reads, not this Mac's folders.
         let place = "~/Library/Mobile Documents/com~apple~CloudDocs/GIST"
         switch name {
         case "missing": model.debugTrouble = .missing(path: place)
@@ -40,7 +35,6 @@ enum FirstRunDebug {
         if let step { show(step, in: model) }
         #if os(macOS)
         guard walks, let directory = SnapshotDriver.directory else { return }
-        // The window keeps the first run's own size (`MainWindowFrame`), not the snapshot size the other walks set.
         // folio:not-an-action debug screenshots, outside the GIST folder
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         for name in names {

@@ -3,12 +3,6 @@ import AppKit
 import FolioDomain
 import SwiftUI
 
-/// Shows a class's layout coming back and a lecture keeping its page as its pane narrows (#62), without any input.
-/// With `FOLIO_PANE_SESSION=<folder>` and a fake `FOLIO_GIST` (`busyDay`, whose lecture PDF has pages), the window
-/// opens a class's note, puts the lecture beside it at page 6, opens the note again in a new tab, then opens a third
-/// pane beside, drawing each step into the folder and writing what every pane shows to `panes.txt`, and quits.
-/// `FOLIO_PANE_SESSION_BEFORE=1` forgets the layout before the note is opened again, as a device that never saved it
-/// would; `FOLIO_PLAIN_PDF=1` draws PDFKit's own view in place of `SteadyPDFView`.
 @MainActor enum PaneSessionProbe {
     static let environment = ProcessInfo.processInfo.environment
     static let folder = environment["FOLIO_PANE_SESSION"].map { URL(filePath: $0, directoryHint: .isDirectory) }
@@ -61,7 +55,6 @@ import SwiftUI
         if environment["FOLIO_PANE_SESSION_BEFORE"] != nil { memory?.forget() }
         openTab(AppLink(.note, noteID))
         await shoot("3-reopened")
-        // The divider dragged right a frame at a time, as a hand would, so the lecture's width changes every frame.
         if PaneDragHook.shared.row != nil {
             for step in 1...12 {
                 PaneDragHook.shared.move(by: CGFloat(step) * 16)

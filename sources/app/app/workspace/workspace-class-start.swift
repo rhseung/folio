@@ -12,21 +12,15 @@ struct ClassStartOpening: Equatable {
     var placement: LinkPlacement
 }
 
-/// What a window does for a class that has just started: the pages to open, whether to come forward, and whether to
-/// ask before recording. Every window watches the same one and the first that takes it clears it
-/// (`ClassStartPrompt`), so a class opens once however many windows there are.
 struct ClassStartAsk: Identifiable, Equatable {
     let id = UUID()
     let course: UUID
     let session: UUID
     var opens: [ClassStartOpening] = []
-    /// The rough note and the lectures together, for a new tab of their own (`ClassStartSettings.OpenIn.splitTab`).
     var split: PaneLayout?
     var front = false
     var asksRecording = false
-    /// When a recording started for the class stops by itself.
     var stopAt: Date?
-    /// `그래프 이론 · 11/2(월)`, as the recording names the class.
     var title = ""
 
     var opensPages: Bool { !opens.isEmpty || split != nil }
@@ -37,7 +31,6 @@ struct ClassStartStep: Equatable {
     var records = false
 }
 
-/// A recording the class started, which stops `at` unless it was stopped first.
 struct ClassRecordingStop: Equatable {
     var recording: UUID
     var at: Date
@@ -56,8 +49,6 @@ extension LinkPlacement {
 }
 
 extension Workspace {
-    /// Every window calls this as the minute turns and when it opens, so a class is caught up on whenever the app was
-    /// opened during it. Each step of a class is done once (`classStartDone`), and only while the class runs.
     func classStartTick(at now: Date) {
         stopClassRecordingIfDue(at: now)
         guard let step = classStartStep(at: now, recorderBusy: recorder.isActive) else { return }
@@ -67,8 +58,6 @@ extension Workspace {
         if !step.ask.front { NotificationScheduler.classStarted(step.ask.title, recording: step.records) }
     }
 
-    /// Writes what the class's due steps need (its session, its rough note) and says what is left to do. Separate
-    /// from the recorder and the windows, so a test runs it on a fixture at a pinned time.
     func classStartStep(at now: Date, recorderBusy: Bool) -> ClassStartStep? {
         guard gist != nil else { return nil }
         let setting = settings.classStart
@@ -78,8 +67,8 @@ extension Workspace {
         let due = ClassStart.due(c, settings: setting, now: now).subtracting(done)
         guard !due.isEmpty else { return nil }
 
-        // Marked before anything runs: a step that fails is reported once, not again every minute. Not the recording
-        // while another runs (the class before, kept on until its stop time): it starts the minute that one ends.
+        // 실행하기 전에 표시한다. 그래야 실패한 단계를 매분 다시 보고하지 않고 한 번만 보고한다. 다른 녹음(종료 시각까지
+        // 이어지는 앞 수업의 녹음)이 돌고 있으면 녹음은 표시하지 않고, 그 녹음이 끝나는 분에 시작한다.
         classStartDone[c.key] = done.union(recorderBusy ? due.subtracting([.recording]) : due)
         guard let id = c.sessionId ?? run(SessionAdd(course: c.courseId, date: c.start))?.made,
             let loaded = course(c.courseId), let session = loaded.file.sessions.first(where: { $0.id == id })
@@ -92,7 +81,6 @@ extension Workspace {
 
         if due.contains(.open) {
             let pages = classStartPages(for: session, in: loaded.id)
-            // The class's own lectures and note where the settings open them, its review note and the quiz as they are.
             var links = PanePreset.links(session: session, course: loaded.id)
             links[.lecture] = pages.lectures
             links[.classNote] = pages.note.map { [$0] } ?? []
@@ -103,8 +91,8 @@ extension Workspace {
             }
         }
 
-        // A recording under way is never cut short, and a class recorded already (then stopped, or on another
-        // device) isn't recorded again because the app opened during it.
+        // 진행 중인 녹음은 중간에 끊지 않는다. 이미 녹음한 수업(그 뒤 멈췄거나 다른 기기에서 녹음한 수업)은 수업 중에 앱을
+        // 열었다고 다시 녹음하지 않는다.
         if due.contains(.recording), !recorderBusy, !loaded.file.recordings.contains(where: { $0.sessionId == id }) {
             switch setting.recording {
             case .start: step.records = true
@@ -115,8 +103,6 @@ extension Workspace {
         return step
     }
 
-    /// The class's rough note (made first when the settings say so) and its lectures, each when the settings turn it
-    /// on.
     func classStartPages(for session: Session, in courseId: UUID) -> (note: AppLink?, lectures: [AppLink]) {
         let setting = settings.classStart
         var pages: (note: AppLink?, lectures: [AppLink]) = (nil, [])
@@ -132,8 +118,6 @@ extension Workspace {
         return pages
     }
 
-    /// The pages where the settings put each, and the class itself in front unless the note took that place. In
-    /// placement order, so a pane beside opens beside what is then in front.
     func classStartOpenings(_ pages: (note: AppLink?, lectures: [AppLink]), session: Session) -> [ClassStartOpening] {
         let setting = settings.classStart
         var opens: [ClassStartOpening] = []
@@ -145,13 +129,10 @@ extension Workspace {
         return LinkPlacement.allCases.flatMap { place in opens.filter { $0.placement == place } }
     }
 
-    /// What a window opens of `ask`, showing `entry` in front: nothing while it shows another class (its session, its
-    /// notes, its recording), which the student chose to look at.
     func classStartOpenings(_ ask: ClassStartAsk, showing entry: Navigator.Entry) -> [ClassStartOpening] {
         leavesAlone(ask, showing: entry) ? [] : ask.opens
     }
 
-    /// The tab of the class's pages side by side, under the same rule as `classStartOpenings`.
     func classStartSplit(_ ask: ClassStartAsk, showing entry: Navigator.Entry) -> PaneLayout? {
         leavesAlone(ask, showing: entry) ? nil : ask.split
     }
@@ -166,8 +147,6 @@ extension Workspace {
         return entry.link.kind == .session ? entry.link.id : file.session(holding: entry.link)
     }
 
-    /// From the prompt, too, once the student said yes. The microphone's refusal is the recorder's error, shown as
-    /// any other.
     func recordClass(_ ask: ClassStartAsk) {
         guard !recorder.isActive, let loaded = course(ask.course), let session = loaded.file.sessions.first(where: { $0.id == ask.session })
         else { return }
@@ -177,7 +156,7 @@ extension Workspace {
         }
     }
 
-    /// Only the recording the class started, and only while it is the one running: one started by hand runs on.
+    // 직접 시작한 녹음은 계속 돌아야 하므로, 수업이 시작한 녹음이 지금 돌고 있을 때만 멈춘다.
     private func stopClassRecordingIfDue(at now: Date) {
         guard let stop = classRecordingStop else { return }
         if recorder.current != stop.recording {
@@ -190,12 +169,9 @@ extension Workspace {
     }
 }
 
-/// Runs the class-start check in every window and shows its part in one: the window in front, or the first to see it
-/// while the app is behind.
 struct ClassStartPrompt: ViewModifier {
     let workspace: Workspace
     let open: @MainActor (ClassStartOpening) -> Void
-    /// A new tab of panes, focused as the layout is, the class's course for links that need one.
     let openSplit: @MainActor (PaneLayout, UUID) -> Void
     let showing: @MainActor () -> Navigator.Entry
     let bringForward: @MainActor () -> Void
@@ -210,7 +186,7 @@ struct ClassStartPrompt: ViewModifier {
             .onChange(of: workspace.liveNow, initial: true) { workspace.classStartTick(at: workspace.liveNow) }
             .onChange(of: workspace.classStartAsk) { take() }
             #if os(macOS)
-        // A window opened at launch is active only after its first check, which then had no window to take it.
+        // 실행할 때 열린 창은 첫 검사가 끝난 뒤에야 active가 되고, 그 검사 때는 값을 받을 창이 없었다.
         .onChange(of: active) { take() }
             #endif
             .alert(
@@ -232,7 +208,6 @@ struct ClassStartPrompt: ViewModifier {
         workspace.classStartAsk = nil
         let shown = showing()
         for opening in workspace.classStartOpenings(ask, showing: shown) { open(opening) }
-        // The class laid out as it was last left on this device, if it was, in place of the preset (#62).
         if let split = workspace.classStartSplit(ask, showing: shown) {
             openSplit(paneMemory?.memory.starting(session: ask.session) ?? split, ask.course)
         }

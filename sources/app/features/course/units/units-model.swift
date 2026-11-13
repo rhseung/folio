@@ -4,8 +4,6 @@ import FolioStorage
 import Foundation
 import Observation
 
-/// The units list and the unit opened from it. Review states are worked out when the page draws; quiz counts and a
-/// unit's notes are read from disk, so they are loaded when what they depend on changes.
 @MainActor @Observable
 final class UnitsModel {
     struct QuizStats: Equatable {
@@ -19,7 +17,6 @@ final class UnitsModel {
     var openUnit: UUID?
     var pending: PendingAction?
     private(set) var quiz: [UUID: QuizStats] = [:]
-    /// The open unit's rename field, saved when it is submitted or the unit closes.
     var name = ""
     private(set) var notes: [NoteFile] = []
 
@@ -111,7 +108,6 @@ final class UnitsModel {
 
     func loadNotes(_ unit: FolioDomain.Unit) { notes = workspace.notes(for: unit, in: courseId) }
 
-    /// Rough and review notes already sit in their class's row.
     func otherNotes(_ unit: FolioDomain.Unit, in file: CourseFile) -> [NoteFile] {
         let classNotes = Set(sessions(of: unit, in: file).flatMap { [$0.roughNoteId, $0.reviewNoteId].compactMap { $0 } })
         return notes.filter { $0.meta.id.map(classNotes.contains) != true }
@@ -159,13 +155,10 @@ final class UnitsModel {
     struct MaterialRow {
         var material: FolioDomain.Material
         var detail: String
-        /// Linked to the unit or holding its pages; otherwise it only comes through a class.
         var own: Bool
-        /// The unit's pages of a split lecture (#321), drawn as the section strip.
         var pages: ClosedRange<Int>? = nil
     }
 
-    /// The files that belong with the unit (`CourseFile.routes(of:to:)`), by role as on the materials page.
     func materials(_ unit: FolioDomain.Unit, in file: CourseFile) -> [MaterialRow] {
         let roles = MaterialRole.allCases
         return file.materials(of: .unit(unit.id))
@@ -186,7 +179,6 @@ final class UnitsModel {
             }
     }
 
-    /// Every tracked file, the linked ones marked, for the 자료 연결 picker.
     func materialMenu(_ unit: FolioDomain.Unit, in file: CourseFile) -> [(id: UUID, label: String, on: Bool)] {
         file.materials
             .filter { $0.status != .ignored && $0.status != .missing }
@@ -217,7 +209,6 @@ final class UnitsModel {
         workspace.run(UnitMove(course: courseId, unit: unit.id, target: .parent(parent)))
     }
 
-    /// A class in a unit's list goes by its other units: the page already names this one.
     func classTitle(_ s: Session, besides unit: FolioDomain.Unit, in file: CourseFile) -> String? { file.subject(of: s, besides: unit.id) }
 
     func linkMenu(_ unit: FolioDomain.Unit, in file: CourseFile) -> [(id: UUID, label: String, on: Bool)] {

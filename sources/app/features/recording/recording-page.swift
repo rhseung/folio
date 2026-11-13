@@ -3,9 +3,6 @@ import FolioDomain
 import FolioStorage
 import SwiftUI
 
-/// A class's recording to listen to, with its transcript, as a page of the course's sessions: an hour of listening
-/// beside the slides and notes is no sheet's work (#317). Its address follows playback (`#t=12:30`), so the window
-/// keeps the place through back and forward, a tab let go of opens where it was, and the link can be copied.
 struct RecordingPage: View {
     @Environment(\.accent) private var accent
     @State private var model: RecordingPlayerModel
@@ -63,7 +60,6 @@ struct RecordingPage: View {
                             }
                             .padding(Theme.Space.s)
                         }
-                        // Picking a line focuses the list so ⌘A and ⌘C reach it.
                         .focusable(interactions: .edit)
                         .focusEffectDisabled()
                         .focused($linesFocused)
@@ -73,7 +69,6 @@ struct RecordingPage: View {
                             guard let i, model.query.isEmpty, player.playing else { return }
                             withAnimation(Theme.Motion.settle) { proxy.scrollTo(i, anchor: .center) }
                         }
-                        // Opened at a moment, the transcript starts at the line being said then.
                         .task(id: model.seekedTo) {
                             guard let line = model.seekedTo.flatMap(model.lineIndex) else { return }
                             try? await Task.sleep(for: .milliseconds(100))
@@ -90,13 +85,11 @@ struct RecordingPage: View {
                     }
                 }
             }
-            // The transcript takes the page's height; without lines the card is a row and the rest stays up top.
             .frame(maxHeight: model.hasLines ? .infinity : nil, alignment: .top)
             if model.ranging {
                 PickingLine(text: String(localized: .recordingPickingRange)) { model.endRange() }
             }
             if model.showsContext { contextBlock }
-            // Words where they fit, the symbols alone in a narrow pane.
             ViewThatFits(in: .horizontal) {
                 actions
                 actions.labelStyle(.iconOnly)
@@ -107,17 +100,16 @@ struct RecordingPage: View {
         .padding(.horizontal, Theme.Space.xxl)
         .padding(.top, Theme.Space.xl)
         .clearOfColumnButtons(inset: Theme.Space.xl)
-        // As `Page` leaves it, so the Claude button over the corner doesn't sit on the delete button.
         .padding(.bottom, Theme.Space.xxl * 2)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        // Holds the focus the space bar needs, which a sheet had from its window and a page has to take.
+        // 스페이스 바에 필요한 초점을 잡는다. 시트는 창에서 초점을 받았지만 페이지는 직접 잡아야 한다.
         .focusable(interactions: .edit)
         .focusEffectDisabled()
         .focused($pageFocused)
         .defaultFocus($pageFocused, true)
         .font(Theme.Typeface.body)
         .crumb(model.name, level: 2, symbol: "waveform")
-        // On the page, not the button: the actions are drawn twice for `ViewThatFits`.
+        // `ViewThatFits` 때문에 동작이 두 번 그려지므로 버튼이 아니라 페이지에 단다.
         .confirmationDialog(String(localized: .recordingRemoveConfirm), isPresented: $deleting) {
             Button(.recordingRemoveAction, role: .destructive) {
                 model.remove()
@@ -127,19 +119,16 @@ struct RecordingPage: View {
             Text(.recordingRemoveMessage)
         }
         .task { await model.loadContext() }
-        // The window's link seeks the player; the player's moments go back as the window's link, in place of the step
-        // it is on (`Navigator.go`), so listening adds no history.
         .onChange(of: place, initial: true) { _, link in model.follow(link) }
         .onChange(of: model.viewedLink) { _, link in moved(link) }
         .onChange(of: player.playing, initial: true) { _, playing in tabPlaying(playing ? { [player] in player.pause() } : nil) }
         .onDisappear {
             player.stop(); tabPlaying(nil)
         }
-        // A finished job (or a cancelled one, which leaves the old transcript) has written what there is to show.
         .onChange(of: model.phase == nil) { _, done in if done { model.reloadTranscript() } }
     }
 
-    /// A click on a control keeps the space bar on the player; a button takes no focus of its own on the Mac.
+    // Mac에서 버튼은 초점을 받지 않으므로, 컨트롤을 클릭해도 스페이스 바가 플레이어에 남게 한다.
     func hold() {
         if !linesFocused { pageFocused = true }
     }
@@ -149,7 +138,6 @@ struct RecordingPage: View {
             Button(model.copyLabel, systemImage: "doc.on.doc") { writePasteboard(model.copiedText) }.disabled(!model.canCopy)
                 .help(Text(.recordingCopyHelp))
             if model.hasLines {
-                // ⌘A's button, for a screen with no keyboard.
                 Button(.recordingSelectAll, systemImage: "checklist") { model.selectAll() }.disabled(model.allSelected)
             }
             if model.hasLines && recording.hasAudio {
@@ -165,7 +153,6 @@ struct RecordingPage: View {
         .buttonStyle(.ghost)
     }
 
-    /// Folded to one line under the transcript: it explains the transcript, it isn't what the player is for.
     var contextBlock: some View {
         VStack(alignment: .leading, spacing: Theme.Space.s) {
             if model.contextChanged {
@@ -212,7 +199,6 @@ struct RecordingPage: View {
         }
     }
 
-    /// Marks made while recording, as places to jump to: without a transcript the track's ticks were the only sign of them.
     var bookmarkStrip: some View {
         HStack(spacing: Theme.Space.s) {
             Label(.recordingBookmarks, systemImage: "bookmark.fill").labelStyle(.iconOnly).foregroundStyle(Theme.Palette.warning)
@@ -246,8 +232,8 @@ struct RecordingPage: View {
                     .font(.system(size: 34)).foregroundStyle(accent.color)  // design: one-off, play is the player's one large control
                     .contentTransition(.symbolEffect(.replace))
             }
-            // Only while the page has the focus: a window-wide space bar would take the spaces typed in the search
-            // field or the Claude panel over it.
+            // 페이지에 초점이 있을 때만 단다. 창 전체의 스페이스 바는 검색 칸이나 그 위의 Claude 패널에 친 공백을
+            // 가져간다.
             .keyboardShortcut(pageFocused || linesFocused ? KeyboardShortcut(.space, modifiers: []) : nil)
             .help(Text(player.playing ? .recordingPause : .recordingPlay))
             Button {
@@ -268,7 +254,7 @@ struct RecordingPage: View {
         .buttonStyle(.ghost)
     }
 
-    /// The marks live inside this fixed-height frame: in a stack beside the bar, their GeometryReader took all the height.
+    // 표시를 이 고정 높이 frame 안에 둔다. 바 옆의 stack에 두면 GeometryReader가 높이를 모두 가져갔다.
     var track: some View {
         GeometryReader { geo in
             let w = geo.size.width
@@ -297,8 +283,6 @@ struct RecordingPage: View {
         }
     }
 
-    /// Clicking the line picks it for copying and the time jumps there. A click that also jumped would move playback
-    /// with every pick and Shift-click, losing the place being listened to while choosing what to copy.
     func row(_ index: Int, _ line: LectureTranscript.Line, playing: Bool, selected: Bool, bookmarked: Bool) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: Theme.Space.m) {
             Button {
@@ -310,14 +294,11 @@ struct RecordingPage: View {
             }
             .buttonStyle(.pointing(.plain))
             .help(Text(.recordingLinePlay))
-            // With the audio gone there is nothing to seek to; the line can still be picked and copied.
             .allowsHitTesting(recording.hasAudio)
-            // The pick covers the row but the time, whose press jumps instead.
             HStack(alignment: .firstTextBaseline, spacing: Theme.Space.m) {
                 Text(line.text).foregroundStyle(playing || selected ? Theme.Palette.text : Theme.Palette.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if let visit = model.page(at: index) {
-                    // Beside the replay, which keeps playing: the slides are what the class was saying it over.
                     Button(model.pageLabel(visit)) {
                         openLink(model.pageLink(visit), in: .beside, course: model.courseId)
                     }
@@ -339,17 +320,13 @@ struct RecordingPage: View {
             .accessibilityAddTraits(selected ? .isSelected : [])
         }
         .padding(.leading, Theme.Inset.listRow.leading)
-        // The pick wins over the playing tint: otherwise picking the playing line would show no change. The playing
-        // line still keeps its accent time.
         .background(selected ? Theme.Palette.fill : playing ? accent.tint : .clear, in: .rect(cornerRadius: Theme.Radius.control))
         .animation(Theme.Motion.standard, value: playing)
     }
 }
 
 private extension View {
-    /// ⌘A (`"a"`) or ⌘C (`"c"`) on the focused lines; `nil` leaves the command off. A button shortcut on the Mac
-    /// would take the key from the search field even while it is being typed in, so there it goes through the
-    /// responder chain as the Edit menu's command.
+    // Mac에서 버튼 단축키는 검색 칸에 입력하는 중에도 키를 가져가므로, Edit 메뉴의 명령처럼 responder chain으로 보낸다.
     func onLineCommand(_ key: KeyEquivalent, _ action: (() -> Void)?) -> some View {
         #if os(macOS)
         onCommand(key == "a" ? #selector(NSText.selectAll(_:)) : #selector(NSText.copy(_:)), perform: action)
@@ -381,7 +358,6 @@ final class AudioPlayback {
     @ObservationIgnored private var player: AVAudioPlayer?
     @ObservationIgnored private var clock: Task<Void, Never>?
 
-    /// `expected`: the length the recording kept, shown while the audio can't be read (still downloading from iCloud).
     func load(_ url: URL, expected: TimeInterval = 0) {
         player = try? AVAudioPlayer(contentsOf: url)
         player?.enableRate = true

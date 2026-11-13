@@ -5,7 +5,6 @@ import FolioStorage
 import Foundation
 
 extension Workspace {
-    /// The Mac answers through the user's Claude Code subscription unless settings pick the API key; the iPad can't run it.
     var usesSubscription: Bool {
         #if os(macOS)
         UserDefaults.standard.object(forKey: Self.subscriptionKey) as? Bool ?? true
@@ -17,8 +16,8 @@ extension Workspace {
 
     var claudeReady: Bool {
         _ = claudeRevision
-        // A test host or a preview never reaches this Mac's own Claude: adding a lecture now asks it straight away, and
-        // a test would then wait on, pay for and depend on a real answer. Tests give a fake provider instead.
+        // 테스트 host나 미리보기는 이 Mac의 Claude에 닿으면 안 된다. 지금은 렉처를 더하면 바로 Claude에 묻는데, 그러면 테스트가
+        // 실제 답을 기다리고 비용을 내고 그 답에 기대게 된다. 테스트는 가짜 프로바이더를 준다.
         guard !LocalFolders.isIsolated() else { return false }
         #if os(macOS)
         if usesSubscription { return CLIProvider.find() != nil }
@@ -26,14 +25,13 @@ extension Workspace {
         return !(APIKeyStore.read() ?? "").isEmpty
     }
 
-    /// `folioTools` gives the chat Folio's actions as proposals; only the subscription's CLI can run the `folio` server.
     func claude(for course: LoadedCourse, folioTools: Bool = false) -> ClaudeClient {
         #if os(macOS)
         if usesSubscription, let executable = CLIProvider.find() {
             let tools =
                 folioTools
                 ? CLIProvider.findFolio().flatMap { folio in gist.map { CLIProvider.FolioTools(executable: folio, gist: $0.url) } } : nil
-            // Covered by the subscription, so these calls stay out of the API usage and cost log.
+            // 구독으로 처리하는 호출이므로 API 사용량과 비용 기록에 넣지 않는다.
             return ClaudeClient(provider: CLIProvider(executable: executable, workingDirectory: course.store.url, folio: tools))
         }
         #endif
@@ -43,7 +41,6 @@ extension Workspace {
         }
     }
 
-    /// A proposal's input already holds UUIDs, so no name lookup is needed.
     func action(_ proposal: ActionProposal) -> (any Action)? {
         guard let type = Actions.all.first(where: { $0.command == proposal.command }) else { return nil }
         return try? Self.decode(type, proposal.input)

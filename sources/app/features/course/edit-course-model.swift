@@ -3,7 +3,6 @@ import FolioDomain
 import Foundation
 import Observation
 
-/// The draft of course.json behind the edit sheet and the class-times sheet.
 @MainActor @Observable
 final class EditCourseModel {
     let workspace: Workspace
@@ -39,7 +38,6 @@ final class EditCourseModel {
         schedule = c.schedule
     }
 
-    /// The course as the form now has it, for what its codes and approval let it share.
     var draft: Course {
         var c = course.file.course
         c.codes = codes
@@ -49,7 +47,6 @@ final class EditCourseModel {
 
     var folder: String? { workspace.folderName(title: title, codes: codes, number: number) }
 
-    /// Nil while the credits field is empty: there is no number to save yet.
     private var update: CourseSet? {
         credits.map {
             CourseSet(
@@ -61,12 +58,10 @@ final class EditCourseModel {
         }
     }
 
-    /// Why the domain's rules refuse the draft, tried before saving rather than spelled out again here.
     private var refusal: String? { update.flatMap { workspace.refusal($0) } }
 
     var canSave: Bool { update != nil && folder != nil && refusal == nil }
 
-    /// The folder name follows the title, main code and number, so saving a change to those renames it.
     var note: String? {
         guard let folder else { return String(localized: .courseEditNeedsFolder) }
         if let refusal { return refusal }

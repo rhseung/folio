@@ -5,8 +5,6 @@ import FolioFixtures
 import PDFKit
 import SwiftUI
 
-/// Debug-only: draws every editing sheet on its own into `form-<name>.png`, so the forms can be compared side by side.
-/// The offscreen renders in tests/unit/app draw the same list.
 enum FormSnapshots {
     @MainActor static func forms(_ workspace: Workspace) -> [(String, AnyView)] {
         guard let course = workspace.currentCourses.first(where: { !$0.file.exams.isEmpty }) ?? workspace.currentCourses.first,
@@ -72,7 +70,6 @@ enum FormSnapshots {
             ),
             ("material-new", AnyView(NewMaterialFileSheet(workspace: workspace, course: course, folder: nil) { _ in })),
         ]
-        // The memo grows with its text: empty, one line, a long unbroken URL among a few lines, and past the cap.
         let assignment = file.assignments.first ?? Assignment(device: device, at: .now, title: "HW01")
         let url = "https://lms.example.ac.kr/course/view.php?id=104729&section=assignment-submission-guidelines-and-rubric-2026-fall"
         let steps = { (n: Int) in (1...n).map { "\($0). 문제 \($0)의 풀이 과정을 빠짐없이 적는다" }.joined(separator: "\n") }
@@ -85,7 +82,6 @@ enum FormSnapshots {
             forms.append(
                 ("assignment-memo-\(name)", AnyView(AssignmentSheet(workspace: workspace, course: course, assignment: a) { _, _ in })))
         }
-        // A preset repeat, and one edited by its parts (#410).
         for (name, rule) in [("weekly", AssignmentRepeat.weekly), ("custom", AssignmentRepeat(every: 2, .week, weekdays: [1, 3]))] {
             var a = assignment
             a.repeats = rule
@@ -133,7 +129,6 @@ enum FormSnapshots {
         return forms
     }
 
-    /// Each other kind's menu as its list shows it (the sidebar for a course and a term), drawn like `sessionMenus`.
     @MainActor static func itemMenus(_ workspace: Workspace) -> [(String, AnyView)] {
         let link = OpenLinkAction(), sheets = ItemSheetsAction()
         var forms: [(String, AnyView)] = []
@@ -186,7 +181,6 @@ enum FormSnapshots {
         return forms
     }
 
-    /// A class's menu after it and ahead of it, on its own page, drawn from the rows the menu shows (`MenuPicture`).
     @MainActor static func sessionMenus(_ workspace: Workspace) -> [(String, AnyView)] {
         let now = workspace.now
         var forms: [(String, AnyView)] = []
@@ -203,7 +197,6 @@ enum FormSnapshots {
                     openLink: OpenLinkAction(), openURL: OpenURLAction { _ in .handled }, sheets: ItemSheetsAction())
                 forms.append((name, AnyView(MenuPicture(rows: source.commands.map(source.row)))))
             }
-            // Ahead of a class the sheet leads with its time; picked as 휴강, it has nothing else.
             if let ahead, !forms.contains(where: { $0.0 == "session-ahead" }) {
                 forms.append(
                     (
@@ -218,12 +211,10 @@ enum FormSnapshots {
         return forms
     }
 
-    /// A class's sheet as a stopped recording or Today's card asks for it.
     @MainActor static func wrapUp(_ workspace: Workspace, _ course: UUID, _ session: UUID) -> SessionSheet {
         SessionSheet(workspace: workspace, request: SessionSheetRequest(course: course, session: session, asked: true))
     }
 
-    /// The wrap-up of a class with nothing yet and of the class with the most, in a course with lecture files.
     @MainActor static func wrapUps(_ workspace: Workspace) -> [(String, AnyView)] {
         guard let course = workspace.currentCourses.first(where: { !$0.file.lectureFiles.isEmpty }) else { return [] }
         let file = course.file
@@ -232,7 +223,6 @@ enum FormSnapshots {
         if let empty = held.last(where: { $0.gaps == WrapUpItem.allCases.count }) {
             forms.append(("class-wrap-up-empty", AnyView(wrapUp(workspace, course.id, empty.session.id))))
         }
-        // The toolbar's quick-add mid-typing, as its popover lays it out: the deadline's pill and what will be saved.
         forms.append(
             (
                 "quick-add-typing",
@@ -250,7 +240,6 @@ enum FormSnapshots {
                             .environment(\.pageRangeNumbersShown, true))
                 ))
         }
-        // The same bar, compact, in the popover that links a split lecture file to its classes.
         if let lecture = file.lectureFiles.first(where: { !PageRangeField.Section.list(file, material: $0.id, pageCount: nil).isEmpty }) {
             forms.append(
                 (
@@ -263,8 +252,6 @@ enum FormSnapshots {
         return forms
     }
 
-    /// A course whose slides its units split (#321): the add sheet proposing the next deck's units, the split screen
-    /// on a drawn deck, and the progress sheet's bar over the zones.
     @MainActor static func lectureSections(_ workspace: Workspace, places: [String]) -> [(String, AnyView)] {
         guard let course = workspace.currentCourses.first(where: { c in c.file.lectureFiles.contains { c.file.isSplit($0.id) } }),
             let slides = course.file.lectureFiles.first(where: { course.file.isSplit($0.id) })
@@ -273,7 +260,6 @@ enum FormSnapshots {
         let accent = workspace.accent(course.id)
         var forms: [(String, AnyView)] = []
 
-        // A stand-in Claude, so the picture doesn't hang on what this Mac has set up.
         let claude = LectureClaude(off: { nil }, ask: { _, _ in .nothing })
         let model = ImportPlaceModel(
             workspace: workspace, course: course, files: [URL(filePath: "/tmp/06_Matchings in general graphs.pdf")],
@@ -347,8 +333,8 @@ enum FormSnapshots {
     @MainActor static func capture(_ workspace: Workspace, into directory: URL) async {
         for (name, view) in forms(workspace) {
             let host = NSHostingView(rootView: view.environment(workspace).snapshotKey())
-            // Sized here, once the sheet has loaded: left to the hosting view, a sheet whose text grows after it
-            // appears (a memo loaded in onAppear) kept the window's first height and squeezed the text area.
+            // 시트를 불러온 뒤에 여기서 크기를 정한다. hosting view에 맡기면 onAppear에서 메모를 읽어 글이 길어진 시트가 창의
+            // 첫 높이를 유지해 글 칸이 좁아졌다.
             host.sizingOptions = []
             let window = NSWindow(
                 contentRect: NSRect(origin: .zero, size: host.fittingSize), styleMask: [.titled], backing: .buffered, defer: false)
@@ -368,9 +354,6 @@ enum FormSnapshots {
     }
 }
 
-/// Debug-only: an item menu's rows as a picture. The system draws a context menu in a window of its own, which neither
-/// the offscreen renders nor the window snapshots capture, so this is how a render shows which rows stand and where
-/// the dividers fall. The rows are the menu's own; only the frame is drawn here.
 struct MenuPicture: View {
     let rows: [MenuRow]
 

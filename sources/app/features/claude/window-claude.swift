@@ -2,9 +2,6 @@ import FolioAI
 import FolioDomain
 import SwiftUI
 
-/// The tab's one Claude (#62): a button at the content's corner and the panel it opens, over all the tab's panes
-/// rather than one in each. It answers in the focused pane's course (else the first open pane's in a course) and
-/// sees every pane the tab shows.
 struct WindowClaude: View {
     let workspace: Workspace
     let panes: TabPanes
@@ -16,7 +13,6 @@ struct WindowClaude: View {
     @State private var width = Theme.Size.claudePanel
     @State private var dragBase: CGFloat?
 
-    /// Past this the panel stops growing with the window: a full-height panel read as a sidebar laid over the page.
     static let maxHeight: CGFloat = 720
 
     var body: some View {
@@ -32,13 +28,13 @@ struct WindowClaude: View {
                     ) { id in
                         openLink(panes.focused)(AppLink(.note, id), course: target.course)
                     }
-                    // A panel per course: the one panel kept across a focus move took the context added in one course
-                    // (`added`, `removed`) into the next one's chat.
+                    // 과목마다 패널을 따로 둔다. 초점을 옮겨도 패널 하나를 유지하면 한 과목에서 더한 맥락(`added`,
+                    // `removed`)이 다음 과목의 대화로 넘어갔다.
                     .id(target.course)
-                    // Inside the glass, controls wash instead of standing on it as solid fills. Set inside
-                    // `floatingGlass()`, which would otherwise draw a wash instead of the glass itself.
+                    // 유리 안에서는 컨트롤을 단색 채움이 아니라 옅은 색으로 그린다. `floatingGlass()` 안에서 설정해야
+                    // 하고, 밖에서 설정하면 유리 대신 옅은 색을 그린다.
                     .environment(\.onGlass, true)
-                    // At most this wide, narrower when the panes are: a fixed width ran past a narrow window's edge.
+                    // 고정 폭은 좁은 창의 가장자리를 넘었으므로, 칸들이 좁으면 이보다 좁게 둔다.
                     .frame(maxWidth: width, maxHeight: Self.maxHeight)
                     .floatingGlass()
                     .shadow(color: .black.opacity(0.18), radius: 24, y: 12)
@@ -66,8 +62,7 @@ struct WindowClaude: View {
         }
     }
 
-    /// The panel's leading edge. A finger needs 44pt, which stands mostly outside the panel so its first words and
-    /// field still take a press.
+    // 손가락에는 44pt가 필요하다. 그 대부분을 패널 밖에 두어야 패널의 첫 글자와 입력 칸이 계속 누름을 받는다.
     var resizeHandle: some View {
         #if os(iOS)
         let reach: CGFloat = 44, inside = Theme.Space.s
@@ -89,7 +84,6 @@ struct WindowClaude: View {
                     .onEnded { _ in dragBase = nil })
     }
 
-    /// What the panel answers about: a course, the note it writes into and the notes and unit it reads.
     struct Target: Equatable {
         var course: UUID
         var note: UUID?
@@ -98,7 +92,6 @@ struct WindowClaude: View {
         var unit: UUID?
     }
 
-    /// The focused pane first, then the open ones left to right; a folded pane's screen isn't in view.
     static func order(panes: TabPanes, folded: Set<Int>) -> [Int] {
         [panes.focus] + panes.ids.indices.filter { $0 != panes.focus && !folded.contains($0) }
     }
@@ -130,12 +123,10 @@ struct WindowClaude: View {
     }
 }
 
-/// An answer's text on its way to the note a pane shows: the pane's course screen takes it (`noteInsert`).
 @MainActor @Observable final class PaneInsert {
     var text: String?
 }
 
-/// One `PaneInsert` for each pane, made as first asked for. Not watched: the panes watch their own.
 @MainActor final class PaneInserts {
     private var boxes: [UUID: PaneInsert] = [:]
 
@@ -148,6 +139,5 @@ struct WindowClaude: View {
 }
 
 extension EnvironmentValues {
-    /// Where the window's Claude puts text for the note this pane shows.
     @Entry var paneInsert: PaneInsert?
 }

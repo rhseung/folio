@@ -4,23 +4,21 @@ import SwiftUI
 struct FolioApp: App {
     @State private var workspace = Workspace()
     @State private var paneMemory = Self.hostingTests ? nil : PaneMemoryStore.forThisRun()
-    /// Under tests the app is only their host: no window of its own and no focus taken from what the user is doing.
     private static let hostingTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
     static let mainWindow = "main"
 
     init() {
         #if os(macOS)
         if Self.hostingTests { NSApplication.shared.setActivationPolicy(.prohibited) }
-        // The window draws its tabs in its toolbar row (`TabBar`); AppKit's tab bar would add a row of its own and a
-        // second kind of tab, and its menu items with it.
+        // 창은 툴바 줄에 탭을 직접 그린다(`TabBar`). AppKit의 탭 막대를 켜면 줄이 하나 더 생기고, 다른 종류의 탭과 그 메뉴
+        // 항목도 함께 생긴다.
         NSWindow.allowsAutomaticWindowTabbing = false
         #endif
     }
 
     var body: some Scene {
-        // The id names the saved window frame. Without it the name is the content's type, which holds the addresses of
-        // private types and so changes with every build: each new build forgot the window and opened it afresh.
-        // A window opened by a link carries the link; the first window, and one opened from the menu, carries none.
+        // id가 저장된 창 frame의 이름이 된다. id가 없으면 내용의 타입 이름을 쓰는데, 이 이름에는 private 타입의 주소가
+        // 들어 있어 빌드할 때마다 바뀐다. 그래서 새로 빌드할 때마다 창의 위치와 크기를 잊고 처음 크기로 열었다.
         WindowGroup(id: Self.mainWindow, for: WindowRequest.self) { $request in
             RootView(request: request)
                 #if os(macOS)
@@ -34,15 +32,11 @@ struct FolioApp: App {
         }
         .defaultSize(Theme.Size.windowIdeal)
         #if os(macOS)
-        // Only a window with nothing saved. A saved frame bigger than its screen AppKit already cuts to the screen.
         .defaultWindowPlacement { _, context in
             WindowPlacement(.center, size: WindowSize.opening(in: context.defaultDisplay.visibleRect.size))
         }
         .defaultLaunchBehavior(Self.hostingTests ? .suppressed : .automatic)
-        // The window's size follows the content's both ways, so the first run's fixed frame is a window that can't be
-        // resized or zoomed, and the app's frame has no upper bound.
         .windowResizability(.contentSize)
-        // No title bar or toolbar: the window draws its own 48pt top row (`TitleRow`), a height no toolbar has (#62).
         .windowStyle(.hiddenTitleBar)
         #endif
         .commands {
@@ -61,7 +55,6 @@ struct FolioApp: App {
     }
 }
 
-/// ⌘, opens the settings page in the main window; settings are a page there, not a window of their own.
 private struct SettingsCommands: Commands {
     @FocusedValue(\.showSettings) private var showSettings
 
@@ -74,7 +67,6 @@ private struct SettingsCommands: Commands {
     }
 }
 
-/// 도움말 › 새 기능 (#415): the page of what each release changed, in the window in front. No key: it is opened rarely.
 private struct WhatsNewCommands: Commands {
     @FocusedValue(\.openPlace) private var openPlace
 
@@ -86,9 +78,6 @@ private struct WhatsNewCommands: Commands {
     }
 }
 
-/// 도움말 › 입력 안내 (⌘/, #395): sent down the responder chain to the note being written, which opens the guide for
-/// its math syntax; with none, the window opens it for the syntax new notes get. ⌘/ is taken by nothing else in the
-/// app or the system (⇧⌘/ is the system's help search).
 private struct InputGuideCommands: Commands {
     @FocusedValue(\.showInputGuide) private var show
 
@@ -107,8 +96,6 @@ private struct InputGuideCommands: Commands {
     }
 }
 
-/// 보기 › 목차 보기·숨기기 for the note in the focused pane, as the note's bar button does (#387). No key yet: keys
-/// come with the table of them (#116).
 private struct OutlineCommands: Commands {
     @FocusedValue(\.outlineCommand) private var outline
 
@@ -122,8 +109,6 @@ private struct OutlineCommands: Commands {
     }
 }
 
-/// 보기 › 칸 폭 맞추기, as a divider's double click (Mac) or long press (iPad) does, and 칸 접기 for the focused pane,
-/// as its menu does (2026-11-08 사용자). No keys yet: keys come with the table of them (#116).
 private struct PaneCommands: Commands {
     @FocusedValue(\.frontPanes) private var panes
     @FocusedValue(\.layoutChoices) private var layouts
@@ -140,10 +125,6 @@ private struct PaneCommands: Commands {
 }
 
 #if os(macOS)
-/// 편집 › 수식 기호 목록: the menu typing `\` in a formula opens, with every symbol of the note's syntax, sent down the
-/// responder chain to the note being written, which beeps when its caret is in no formula (#392). No key: ⌃Space is
-/// the input source switch (2026-11-09 사용자), and `\` itself is the key. Not on the iPad, which has no completion
-/// menu yet (#31); its path to every symbol is the palette under the note bar's f(x).
 private struct MathCommands: Commands {
     var body: some Commands {
         CommandGroup(after: .textEditing) {
@@ -155,8 +136,6 @@ private struct MathCommands: Commands {
 }
 #endif
 
-/// 보기 › 구역 열 보기·숨기기 (⌥⌘S) for the focused pane's list column, beside the sidebar's ⌃⌘S: hides a docked
-/// column by hand, and shows a folded one again, docked where it fits and over the page where it doesn't (#62).
 private struct ColumnCommands: Commands {
     @FocusedValue(\.columnCommand) private var column
 

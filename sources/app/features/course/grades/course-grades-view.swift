@@ -70,7 +70,6 @@ struct CourseGradesView: View {
 
             let late = model.latePolicy(file)
             if late != nil || !file.policy.notes.isEmpty {
-                // Only what the components and the policy can't express belongs here; it never enters the calculation.
                 Block(String(localized: .courseGradesOtherRules), note: String(localized: .courseGradesOtherRulesNote)) {
                     Card {
                         if let late {
@@ -94,7 +93,6 @@ struct CourseGradesView: View {
         .sheet(isPresented: $editingPolicy) { PolicySheet(workspace: model.workspace, course: course) }
     }
 
-    /// The meter, percent, weight and add columns, fixed so they line up down the card; score rows end under the percent.
     static let meterWidth: CGFloat = 88
     static let ratioWidth: CGFloat = 48
     static let weightWidth: CGFloat = 56
@@ -130,7 +128,7 @@ struct CourseGradesView: View {
                 .disabled(!canAdd)
                 .help(Text(.courseGradesAddScoreTo(c.name)))
         }
-        // Not a Button: the add button inside would never get its clicks.
+        // Button으로 두면 안의 추가 버튼이 클릭을 받지 못한다.
         .opens { model.editingComponent = c }
         .help(Text(.courseGradesEditComponentHelp(c.name)))
         .contextMenu {
@@ -199,8 +197,6 @@ struct ScorePanel: View {
     @Environment(\.accent) private var accent
     let result: GradeCalculator.CourseScore
     @Binding var target: Double
-    /// The A share of a relatively graded course. Its cutoffs aren't known, so it is aimed at by place against the
-    /// mean, not by a score.
     var relative: Double?
 
     var body: some View {
@@ -226,7 +222,6 @@ struct ScorePanel: View {
                 }
             }
             if let relative {
-                // A relative grade is a place in the class, so the class curve replaces the 0-100 bar.
                 StandingCurve(z: result.z, estimated: result.zEstimated, gap: result.meanGap, share: relative)
             } else {
                 scoreBar
@@ -252,7 +247,6 @@ struct ScorePanel: View {
                 }
             }
             .frame(height: 12)
-            // A legend with the bar's own marks, so each color says what it is; the scale ends sit under the bar's ends.
             HStack(spacing: Theme.Space.l) {
                 Text("0").foregroundStyle(Theme.Palette.textTertiary)
                 HStack(spacing: Theme.Space.tight) {
@@ -279,13 +273,11 @@ struct ScorePanel: View {
 struct StandingCurve: View {
     @Environment(\.accent) private var accent
     let z: Double?
-    /// The z leans on a spread borrowed from the course's other scores, as a score gave a mean but no standard deviation.
     var estimated = false
-    /// Weighted gap from the class mean, all there is when no score has a standard deviation.
     var gap: Double?
     let share: Double
 
-    /// z from -3 to 3: past that the curve is flat, and a mark beyond it is drawn at the edge.
+    // z는 -3부터 3까지 그린다. 그 밖에서는 곡선이 평평하고, 넘는 표시는 가장자리에 그린다.
     static let span = 3.0
 
     var body: some View {
@@ -295,7 +287,6 @@ struct StandingCurve: View {
             GeometryReader { proxy in
                 let w = proxy.size.width, h = proxy.size.height
                 let x = { (t: Double) in w * (min(max(t, -Self.span), Self.span) + Self.span) / (2 * Self.span) }
-                // The peak stops short of the top, leaving room for the mark's label over it.
                 let y = { (t: Double) in h - (h - 26) * exp(-t * t / 2) }
                 let top = Path { p in
                     for i in 0...120 {
@@ -312,8 +303,6 @@ struct StandingCurve: View {
                 }
                 let split = x(cut)
                 ZStack(alignment: .topLeading) {
-                    // Each side fades to clear toward the baseline; the A side is the stronger tint, so it reads as
-                    // its own region without a hard block of color.
                     area.fill(
                         LinearGradient(colors: [accent.color.opacity(0.22), accent.color.opacity(0)], startPoint: .top, endPoint: .bottom)
                     )
@@ -334,7 +323,6 @@ struct StandingCurve: View {
                     Rectangle().fill(Theme.Palette.line).frame(width: w, height: 1).offset(y: h - 1)
                     if let s {
                         let mx = x(s.z), my = y(s.z)
-                        // The rule runs from the label row at the top, so the label never sits on the curve however far out the mark is.
                         Path { p in
                             p.move(to: CGPoint(x: mx, y: 18)); p.addLine(to: CGPoint(x: mx, y: h))
                         }
@@ -342,7 +330,6 @@ struct StandingCurve: View {
                         Circle().fill(Theme.Palette.text).frame(width: 10, height: 10)
                             .overlay(Circle().strokeBorder(Theme.Palette.card, lineWidth: 2))
                             .offset(x: mx - 5, y: my - 5)
-                        // The label sits on the side with room, so a place near either end stays inside the card.
                         HStack(spacing: 0) {
                             if mx > w * 0.7 { Spacer(minLength: 0) } else { Color.clear.frame(width: max(mx - 8, 0), height: 0) }
                             Text(
@@ -373,7 +360,6 @@ struct StandingCurve: View {
                     Text(s.inTopGrade ? .courseGradesStandingInA : .courseGradesStandingOutA).fontWeight(.semibold)
                         .foregroundStyle(s.inTopGrade ? accent.ink : Theme.Palette.warning)
                 } else if let gap {
-                    // Without any standard deviation the place can't be drawn, but the side of the mean can still settle it.
                     let inA = GradeCalculator.inTopGrade(meanGap: gap, topGradeRatio: share)
                     Text(gap >= 0 ? .courseGradesStandingAboveMean : .courseGradesStandingBelowMean).foregroundStyle(
                         Theme.Palette.textSecondary)
@@ -401,7 +387,6 @@ struct StandingCurve: View {
     }
 }
 
-/// Only the grades page shows components, so its sheet stays the page's.
 @MainActor
 struct ComponentMenuSource: ItemMenuSource {
     let model: CourseGradesModel
@@ -423,7 +408,6 @@ struct ComponentMenuSource: ItemMenuSource {
     }
 }
 
-/// A score's menu: whether it counts, as a check row, then its sheet.
 @MainActor
 struct ScoreMenuSource: ItemMenuSource {
     let model: CourseGradesModel

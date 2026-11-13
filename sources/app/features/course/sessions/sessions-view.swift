@@ -2,9 +2,6 @@ import FolioActions
 import FolioDomain
 import SwiftUI
 
-/// Sessions are made as classes happen. Each week lists its classes as cards: a saved session solid, a class only the
-/// timetable knows of an empty dashed slot, and doing something to one (a 휴강, an absence) makes it a session. Anything
-/// off the schedule is added by hand.
 struct SessionsView: View {
     @Environment(\.accent) private var accent
     @Environment(\.openLink) private var openLink
@@ -40,9 +37,9 @@ struct SessionsView: View {
             if !left.isEmpty { leftUnwrappedCard(left, file: file) }
             if !model.untouched.isEmpty { untouchedCard }
 
-            // Lazy, so a narrower or wider pane lays out only the cards in view: a term's weeks of cards laid out at
-            // every width of a divider's drag kept it near 30 frames a second (#62). The headers and cards go in
-            // flat, each its own item, so a link can scroll to a card no one has scrolled to yet (`linkTarget`).
+            // Lazy로 두어 칸 폭이 바뀔 때 보이는 카드만 배치한다. 구분선을 끄는 동안 폭마다 한 학기의 카드를 모두
+            // 배치하면 초당 30프레임 근처에 머물렀다. 머리와 카드는 각각 항목으로 평평하게 넣어야, 아직 스크롤하지 않은
+            // 카드로도 링크가 스크롤할 수 있다(`linkTarget`).
             let weeks = model.weeks(file)
             LazyVStack(alignment: .leading, spacing: 0) {
                 ForEach(weeks) { week in
@@ -61,7 +58,7 @@ struct SessionsView: View {
                 workspace: model.workspace, request: SessionSheetRequest(course: course.id, session: run.current, asked: true),
                 step: model.step(of: run), saved: model.wrappedUpOne
             )
-            // A new sheet model for each class: the one before's answers must not carry over.
+            // 이전 수업의 답이 넘어오면 안 되므로 수업마다 시트 모델을 새로 만든다.
             .id(run.current)
         }
         .task(id: file.sessions) { model.loadUntouched(course) }
@@ -72,7 +69,7 @@ struct SessionsView: View {
         HStack(spacing: Theme.Space.s) {
             Text(.sessionsWeek(week.number)).font(Theme.Typeface.sectionTitle)
                 .foregroundStyle(week.thisWeek ? accent.ink : Theme.Palette.textSecondary)
-                // The accent color is the only visible mark, so VoiceOver needs the word.
+                // 강조색만 눈에 보이는 표시라서 VoiceOver에는 낱말이 필요하다.
                 .accessibilityValue(week.thisWeek ? String(localized: .sessionsThisWeek) : "")
             Text(week.range).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()
             if week.examWeek {
@@ -82,7 +79,6 @@ struct SessionsView: View {
         .frame(minHeight: 24)
     }
 
-    /// `top`: the room above it, inside the `.id` a link scrolls to.
     @ViewBuilder func row(_ row: SessionsModel.TimelineRow, file: CourseFile, top: CGFloat) -> some View {
         switch row.item {
         case .week, .month:
@@ -97,7 +93,7 @@ struct SessionsView: View {
             .linkTarget(session.id)
             .fileDrop { model.importFiles($0, into: session) }
             .padding(.top, top)
-            // Outermost, where the lazy stack finds it before the card is built.
+            // lazy stack이 카드를 만들기 전에 찾을 수 있도록 가장 바깥에 둔다.
             .id(session.id)
         case .planned(_, let exams):
             if let item = row.planned {
@@ -108,8 +104,6 @@ struct SessionsView: View {
         }
     }
 
-    /// Shown only while the course has no weekly times. They are a course property, edited with the rest of the
-    /// course; here they only suggest sessions.
     var schedule: some View {
         Card {
             CardRow(last: true) {
@@ -153,7 +147,6 @@ struct SessionsView: View {
         }
     }
 
-    /// Left over from when whole terms were made ahead; deleted only once the user agrees.
     var untouchedCard: some View {
         let shown = model.untouchedShown
         return NoticeCard(

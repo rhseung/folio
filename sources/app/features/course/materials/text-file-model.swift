@@ -4,8 +4,6 @@ import FolioStorage
 import Foundation
 import Observation
 
-/// One text file of a course open for editing, and for a `.tex` its PDF: beside a material, where `note build` puts a
-/// note's.
 @MainActor @Observable
 final class TextFileModel {
     enum Source {
@@ -17,8 +15,8 @@ final class TextFileModel {
     private let initial: LoadedCourse
     let source: Source
     var text = ""
-    /// The file as last read or written here. A save finding something else on disk was changed elsewhere (another
-    /// device, the CLI) and asks before overwriting it.
+    // 여기서 마지막으로 읽거나 쓴 내용이다. 저장할 때 디스크가 이와 다르면 다른 곳(다른 기기, CLI)에서 바뀐 것이므로
+    // 덮어쓰기 전에 묻는다.
     private var onDisk = ""
     private(set) var loaded = false
     private(set) var unreadable = false
@@ -26,9 +24,8 @@ final class TextFileModel {
     var reveal: Int?
     private(set) var building = false
     private(set) var issues: [TexIssue] = []
-    /// Bumped after a build so the preview reopens the PDF, which keeps its name.
+    // PDF는 이름이 그대로이므로, 빌드한 뒤 이 값을 올려야 미리보기가 PDF를 다시 연다.
     private(set) var pdfRevision = 0
-    /// A build that would replace a PDF Folio didn't make, held until the user says to.
     private var held: URL?
     var asksToReplace = false
 
@@ -50,7 +47,6 @@ final class TextFileModel {
         }
     }
 
-    /// What `PaneMemory` keeps this file's view under: a `.tex` opens the way it was left, as a markdown note does.
     var paneId: UUID? {
         switch source {
         case let .material(id): id
@@ -63,9 +59,7 @@ final class TextFileModel {
     var isTex: Bool { format == .tex }
     var dirty: Bool { loaded && text != onDisk }
 
-    /// The tracked PDF beside this source, or where a first build will put it. A note's goes where `note build` puts
-    /// it, which depends on its kind; the link menu on this screen can change that after the note was opened, so the
-    /// entry is read again rather than taken from `source`.
+    // 이 화면의 링크 메뉴가 노트를 연 뒤 그 위치를 바꿀 수 있으므로, `source`에서 받지 않고 항목을 다시 읽는다.
     var pdfPath: String {
         switch source {
         case let .material(id):
@@ -87,8 +81,8 @@ final class TextFileModel {
     var errors: [TexIssue] { issues.filter { $0.severity == .error } }
     var shownIssues: [TexIssue] { errors + issues.filter { $0.severity == .warning } }
 
-    /// A file that can't be read (not downloaded yet, gone, not UTF-8) leaves the editor closed: an empty editor would
-    /// look like an empty file, and saving it would replace the real one.
+    // 읽을 수 없는 파일(아직 내려받지 않았거나, 없거나, UTF-8이 아닌 파일)이면 편집기를 닫아 둔다. 빈 편집기는 빈
+    // 파일처럼 보이고, 저장하면 실제 파일을 덮어쓴다.
     func load() {
         do {
             onDisk = try course.store.readText(path)
@@ -101,14 +95,13 @@ final class TextFileModel {
         }
     }
 
-    /// A material written elsewhere in the app moves only its hash in course.json; a note, or anything written outside
-    /// the app (another device, the CLI), moves `notesRevision`.
+    // 앱 안의 다른 곳에서 쓴 자료는 course.json의 해시만 바꾸고, 노트나 앱 밖(다른 기기, CLI)에서 쓴 파일은
+    // `notesRevision`을 바꾼다.
     var outsideRevision: String {
         let hash = if case let .material(id) = source { course.file.materials.first { $0.id == id }?.hash } else { String?.none }
         return "\(workspace.notesRevision) \(hash ?? "")"
     }
 
-    /// As the note editor does: this screen's own save left `onDisk` as the file is, and unsaved edits ask instead.
     func refresh() {
         guard loaded, let disk = try? course.store.readText(path), disk != onDisk else { return }
         if dirty {
@@ -140,8 +133,7 @@ final class TextFileModel {
 
     func saveIfDirty() { if dirty { saveNow(force: false) } }
 
-    /// Saves first, so the PDF shows what's on screen. Tectonic runs off the main thread; the action then only places
-    /// the PDF it made.
+    // PDF가 화면의 내용을 보이도록 먼저 저장한다. Tectonic은 main thread 밖에서 돌고, 액션은 만든 PDF를 놓기만 한다.
     func build() async {
         guard canBuild else { return }
         saveIfDirty()
@@ -167,8 +159,8 @@ final class TextFileModel {
     }
 
     #if os(macOS)
-    /// A ⌘-click on the PDF (page 0-based, point from the page's top-left corner) puts the caret on the line that wrote
-    /// there. Only this file's lines: an `\input` file is not open here.
+    // 쪽은 0부터 세고, 점은 쪽의 왼쪽 위 모서리에서 잰다. `\input` 파일은 여기 열려 있지 않으므로 이 파일의 줄만
+    // 다룬다.
     func showSource(page: Int, at point: CGPoint) {
         guard isTex, let shown = pdfURL, let sync = TexEngine.syncTeX(for: fileURL, showing: shown),
             let place = sync.place(page: page + 1, x: point.x, y: point.y),
@@ -200,8 +192,8 @@ final class TextFileModel {
         }
     }
 
-    /// Only problems in this file can be shown; an `\input` file's line means nothing here. Tectonic runs in the
-    /// document's folder and names files from there, so `sections/Problems.tex` is another file with the same name.
+    // Tectonic은 문서 폴더에서 돌고 거기서부터 파일 이름을 적으므로, `sections/Problems.tex`는 이름이 같은 다른
+    // 파일이다. `\input` 파일의 줄 번호는 여기서 뜻이 없다.
     func isHere(_ issue: TexIssue) -> Bool {
         guard let file = issue.file, issue.line != nil else { return false }
         let relative = file.hasPrefix("./") ? String(file.dropFirst(2)) : file

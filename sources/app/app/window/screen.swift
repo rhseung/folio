@@ -1,14 +1,10 @@
 import FolioDomain
 import SwiftUI
 
-/// The screen a link is drawn on. A window picks its screen here and nowhere else, and so will a pane (#62): the
-/// switch over the link's kind has no default, so a new kind of link doesn't compile until it has a screen.
 enum Screen: Hashable {
     case today, grades, requirements, people, codes, settings, whatsNew, proposals
     case semester(UUID)
-    /// Everything a course holds opens in the course, which follows the link to its section and item.
     case course(UUID)
-    /// The link names nothing in this folder any more (a course deleted since it was opened).
     case missing
 
     init(_ entry: Navigator.Entry) {
@@ -28,7 +24,6 @@ enum Screen: Hashable {
         }
     }
 
-    /// The screen's own link, which the sidebar row for it opens.
     var link: AppLink? {
         switch self {
         case .today: .place(.today)
@@ -46,9 +41,6 @@ enum Screen: Hashable {
     }
 }
 
-/// Draws one link, whatever holds it: the window's panel now, a pane with #62, an iPhone's whole screen (#134). A
-/// screen gets the workspace and its link and nothing from the window around it: it opens other links through
-/// `\.openLink`, takes the width it is given, and keeps its own tools in its own `PageBar`.
 struct ScreenView: View {
     let workspace: Workspace
     let entry: Navigator.Entry

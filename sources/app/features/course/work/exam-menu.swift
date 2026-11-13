@@ -3,15 +3,12 @@ import FolioDomain
 import FolioStorage
 import SwiftUI
 
-/// An exam's menu, the same on its card, the past list, Today, the semester page and search (#403).
 @MainActor
 struct ExamMenuSource: ItemMenuSource {
     let workspace: Workspace
     let courseId: UUID
     let exam: Exam
     let host: MenuHost
-    /// The summary note when the screen already knows it (the exams page reads them once); nil reads the notes folder
-    /// when the menu is drawn.
     var summary: UUID?? = nil
     let openLink: OpenLinkAction
     let sheets: ItemSheetsAction
@@ -48,13 +45,11 @@ struct ExamMenuSource: ItemMenuSource {
         return workspace.examSummary(of: exam.id, in: courseId) != nil
     }
 
-    /// Made from its template the first time, as the card's button does.
     private func openSummary() {
         if let id = workspace.run(ExamSummary(course: courseId, exam: exam.id))?.made { openLink(AppLink(.note, id), course: courseId) }
     }
 }
 
-/// For `.contextMenu` and a `⋯` button.
 struct ExamMenu: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.openLink) private var openLink
@@ -75,14 +70,12 @@ struct ExamMenu: View {
 }
 
 extension Workspace {
-    /// Read from the notes folder, so only when a menu is drawn rather than for every row.
     func examSummary(of exam: UUID, in courseId: UUID) -> UUID? {
         let notes = (try? course(courseId)?.store.notes()) ?? []
         return notes.first { $0.meta.kind == .examSummary && $0.meta.examId == exam }?.meta.id
     }
 }
 
-/// A plan item's menu: checking it done and deleting it, on the exam's card and on Today.
 struct PlanItemMenu: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.itemSheets) private var sheets

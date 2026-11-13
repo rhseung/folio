@@ -3,11 +3,7 @@ import FolioMarkdown
 import SwiftUI
 
 @MainActor protocol NoteLinkSource: AnyObject {
-    /// `text` is the note as the editor has it, which may be ahead of the file.
     func candidates(for query: CompletionQuery, text: String) async -> [CompletionItem]
-    /// Does what a candidate needs before it goes in (a note made, an ID given to a block) and returns what to put in,
-    /// with an edit to make first to the note's own text when it is the note whose block gets the ID; nil when it
-    /// couldn't be done, and nothing goes in.
     func take(_ item: CompletionItem, for query: CompletionQuery, text: String) -> (item: CompletionItem, own: SourceEditing.Edit?)?
 }
 
@@ -15,7 +11,6 @@ struct NoteAssist: Equatable {
     var snippets: [MathSnippet] = MathSnippet.defaults
     var asciiSnippets: [MathSnippet] = MathSnippet.asciiMathDefaults
     var templates: [NoteKind: [String]] = [:]
-    /// Nil where the note isn't one of a course's, as in tests; links then get no candidates.
     var links: (any NoteLinkSource)?
 
     init(
@@ -41,7 +36,6 @@ struct NoteAssist: Equatable {
 
     static let templateKinds: [NoteKind] = [.review, .examSummary, .unit]
 
-    /// The snippets outside formulas are the same in either syntax; inside them, each syntax has its own.
     func snippets(syntax: MathSyntax) -> [Snippet] {
         let math =
             syntax == .latex
@@ -52,7 +46,6 @@ struct NoteAssist: Equatable {
     @MainActor func catalog(syntax: MathSyntax) -> CompletionCatalog {
         let snippets = self.snippets(syntax: syntax)
         let other = self.snippets(syntax: syntax == .latex ? .asciimath : .latex).filter(\.inMath)
-        // Each block with its fastest way in on the right (`##`, `mk ⇥`), so the menu teaches it (#395).
         let blocks = SlashBlocks.items(
             templates: Self.templateKinds.compactMap { kind in templates[kind].flatMap { $0.isEmpty ? nil : (kind, $0) } })
         return CompletionCatalog(
@@ -64,7 +57,6 @@ struct NoteAssist: Equatable {
     }
 }
 
-/// Their bodies are markdown, and data; their names are the app's.
 @MainActor enum SlashBlocks {
     static func items(templates: [(NoteKind, [String])]) -> [CompletionItem] {
         func item(_ id: String, _ title: String, _ symbol: String, _ keywords: String, _ body: String, block: Bool = true) -> CompletionItem
@@ -82,11 +74,9 @@ struct NoteAssist: Equatable {
             item("numbers", String(localized: .notesAssistNumbers), "list.number", "list numbered ordered", "1. "),
             item("tasks", String(localized: .notesAssistTasks), "checklist", "todo task checkbox", "- [ ] "),
             item("quote", String(localized: .notesAssistQuote), "text.quote", "quote blockquote", "> "),
-            // Left open at `[!`: the callout's type comes next, from the menu that opens there.
             item("callout", String(localized: .notesAssistCallout), "exclamationmark.bubble", "callout admonition", "> [!"),
             item("math", String(localized: .notesAssistMath), "function", "math equation latex display", "$$\n$1\n$$"),
             item("inline-math", String(localized: .notesAssistInlineMath), "x.squareroot", "math inline", "$$1$", block: false),
-            // Left open at the fence: the language comes next, from its menu.
             item("code", String(localized: .notesAssistCode), "chevron.left.forwardslash.chevron.right", "code fence", fence),
             item("table", String(localized: .notesAssistTable), "tablecells", "table", "| $1 |  |\n| --- | --- |\n|  |  |"),
             item(
@@ -102,7 +92,6 @@ struct NoteAssist: Equatable {
         return out
     }
 
-    /// Last in the menu: the input guide, which taking puts nothing in but opens the guide (`SourceTextView`).
     static var guide: CompletionItem {
         CompletionItem(
             id: InputGuide.menuItemID, title: String(localized: .notesGuideTitle), detail: "⌘/", symbol: "keyboard",
@@ -110,8 +99,6 @@ struct NoteAssist: Equatable {
     }
 }
 
-/// Every completion in the edit view goes through it; candidates found later (a search the app runs) are added by
-/// `more` when they arrive, and `arrived` tells the view to fit the menu to them.
 @MainActor @Observable final class CompletionMenu {
     private(set) var query: CompletionQuery?
     private(set) var items: [CompletionItem] = []
@@ -123,10 +110,7 @@ struct NoteAssist: Equatable {
     var visible: Bool { query != nil && !items.isEmpty }
     var current: CompletionItem? { items.indices.contains(selected) ? items[selected] : nil }
 
-    /// A query whose candidates all come late (a link's) keeps the rows of the query it narrows until they come, so
-    /// the menu doesn't blink empty on every key.
     func show(_ query: CompletionQuery, _ items: [CompletionItem]) {
-        // The pick stays while the same query narrows; a new one starts at the top.
         let same = self.query.map { query.continues($0) } ?? false
         let picked = same ? current?.id : nil
         let waits = items.isEmpty && more != nil && Self.late(query)
@@ -149,7 +133,6 @@ struct NoteAssist: Equatable {
         }
     }
 
-    /// Queries the text alone has no candidates for.
     static func late(_ query: CompletionQuery?) -> Bool {
         if case .link = query?.kind { true } else { false }
     }
@@ -167,7 +150,6 @@ struct NoteAssist: Equatable {
     }
 }
 
-/// The menu floating by the caret, on glass like everything that floats (docs/DESIGN.md "창 구조").
 struct CompletionMenuView: View {
     let menu: CompletionMenu
     var pick: (Int) -> Void
@@ -179,7 +161,6 @@ struct CompletionMenuView: View {
     static let headerHeight: CGFloat = 24
     static let maxRows = 8
     static let inset = Theme.Space.xs
-    /// A preview's ink fits the row; its transparent edge may run past it.
     static let previewSlot = CGSize(width: width / 3, height: rowHeight + 2 * NoteMath.edge(NoteLook.body))
 
     static func height(rows: Int) -> CGFloat { CGFloat(min(rows, maxRows)) * rowHeight + 2 * inset }
@@ -195,7 +176,6 @@ struct CompletionMenuView: View {
     }
 
     var rows: some View {
-        // A bare `\` lists every symbol of the formula, browsed category by category; once narrowed, best first.
         let sections = menu.query.map { $0.kind == .texCommand && $0.text.isEmpty } ?? false
         let items = menu.items
         return VStack(spacing: 0) {
@@ -206,7 +186,6 @@ struct CompletionMenuView: View {
                         .padding(.horizontal, Theme.Space.s)
                 }
                 row(item, selected: i == menu.selected)
-                    // The guide is not a block: a line sets it apart, over the row so the menu keeps its height.
                     .overlay(alignment: .top) {
                         if item.id == InputGuide.menuItemID, i > 0 {
                             Theme.Palette.lineSoft.frame(height: 1).padding(.horizontal, Theme.Space.s)
@@ -241,7 +220,6 @@ struct CompletionMenuView: View {
                     .resizable()
                     .frame(width: fitted.width, height: fitted.height)
             } else if let detail = item.detail {
-                // A snippet's detail is what it writes; a link's is where the thing is, in words.
                 Text(detail.replacingOccurrences(of: "\n", with: " ")).font(Theme.Typeface.caption).monospaced(
                     !CompletionMenu.late(menu.query)
                 )
@@ -250,11 +228,9 @@ struct CompletionMenuView: View {
         }
         .padding(.horizontal, Theme.Space.s)
         .frame(height: Self.rowHeight)
-        // Concentric with the menu: its corner less the inset the rows sit in.
         .background(selected ? accent.tint : .clear, in: .rect(cornerRadius: Theme.Radius.floating - Self.inset))
     }
 
-    /// For candidates that bring no symbol of their own: what kind of thing they are.
     var symbol: String {
         switch menu.query?.kind {
         case .callout: "exclamationmark.bubble"

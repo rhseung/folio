@@ -1,22 +1,16 @@
 import FolioDomain
 import SwiftUI
 
-/// The note editor's markdown styling and shortcuts would misread `.tex`, code and text files, so this is a separate,
-/// plain text view.
 struct SourceFileEditor {
     @Binding var text: String
-    /// The highlighter's language name; nil leaves the text uncolored.
     var language: String?
-    /// Set to put the caret on a 1-based line; cleared once it's there.
     @Binding var reveal: Int?
-    /// False for a file no action writes (one outside any course): shown, selectable, never saved.
     var editable = true
 
     @MainActor func makeCoordinator() -> Coordinator { Coordinator(self) }
 
     @MainActor final class Coordinator: NSObject {
         var parent: SourceFileEditor
-        /// Set while SwiftUI updates the view: an edit made then is the binding's own text coming in.
         var updating = false
 
         init(_ parent: SourceFileEditor) { self.parent = parent }
@@ -26,14 +20,12 @@ struct SourceFileEditor {
         }
     }
 
-    /// The binding gets the text only once a syllable is done, so the text isn't swapped in while one is composed:
-    /// that would delete it under the input method, which then types each next jamo over a gap.
+    // 바인딩은 음절이 끝나야 텍스트를 받으므로, 조합 중에는 텍스트를 바꿔 넣지 않는다. 바꿔 넣으면 입력기가 조합하던 음절이 지워지고, 입력기는 그다음 자모부터 빈칸을 사이에 두고 입력한다.
     static func swaps(_ shown: String, for text: String, composing: Bool) -> Bool { shown != text && !composing }
 
     static var font: PlatformFont { NoteLook.font(NoteLook.codeSize, mono: true) }
 
-    /// Recolors the whole file. Highlighting only the edited line would miscolor a TeX environment or a block comment
-    /// that the edit opens or closes further down.
+    // 파일 전체에 다시 색을 입힌다. 고친 줄만 칠하면, 그 편집이 아래쪽에서 열거나 닫는 TeX 환경이나 블록 주석의 색이 틀린다.
     @MainActor static func color(_ storage: NSTextStorage, language: String?) {
         let all = NSRange(location: 0, length: storage.length)
         storage.beginEditing()
@@ -50,7 +42,6 @@ struct SourceFileEditor {
         storage.endEditing()
     }
 
-    /// The text range of a 1-based line, empty at its start.
     static func start(ofLine line: Int, in string: String) -> NSRange {
         let ns = string as NSString
         var location = 0
@@ -147,8 +138,6 @@ final class SourceFileTextView: NSTextView {
     var unmarked: () -> Void = {}
     var linkOpener = OpenLinkAction()
 
-    /// ⌘-click on a `folio://` address written anywhere in the file (`\href{folio://…}`, a comment) opens it, as in the
-    /// note editor; a plain click places the caret.
     override func mouseDown(with event: NSEvent) {
         if event.modifierFlags.contains(.command), let window, textStorage?.length ?? 0 > 0 {
             let i = characterIndex(for: window.convertPoint(toScreen: event.locationInWindow))
@@ -163,15 +152,13 @@ final class SourceFileTextView: NSTextView {
         return true
     }
 
-    // A syllable ended without a keystroke (a click elsewhere, another app) changes no text, so no `textDidChange`
-    // colors it or hands it to the binding.
     override func unmarkText() {
         super.unmarkText()
         unmarked()
     }
 }
 
-/// Numbers each line of the file, not each wrapped row, since that is what TeX's errors count.
+// TeX 오류는 화면에서 줄바꿈된 행이 아니라 파일의 줄을 세므로, 파일의 줄마다 번호를 붙인다.
 final class LineNumberGutter: NSRulerView {
     private weak var textView: NSTextView?
     private var observers: [NSObjectProtocol] = []
@@ -180,11 +167,10 @@ final class LineNumberGutter: NSRulerView {
         self.textView = textView
         super.init(scrollView: textView.enclosingScrollView, orientation: .verticalRuler)
         clientView = textView
-        // Views stopped clipping by default in macOS 14; the viewport lays out lines above the visible ones, and
-        // their numbers would otherwise land on the page bar.
+        // macOS 14부터 뷰가 기본으로 잘라 내지 않는다. viewport는 보이는 줄 위의 줄도 배치하므로, 잘라 내지 않으면 그 번호가 페이지 막대 위에 놓인다.
         clipsToBounds = true
         let center = NotificationCenter.default
-        // A ruler isn't redrawn on its own when the text changes or the layout settles after a resize.
+        // ruler는 텍스트가 바뀌거나 크기를 바꾼 뒤 배치가 끝나도 저절로 다시 그려지지 않는다.
         for name in [NSText.didChangeNotification, NSView.frameDidChangeNotification] {
             observers.append(
                 center.addObserver(forName: name, object: textView, queue: .main) { [weak self] _ in
@@ -210,7 +196,6 @@ final class LineNumberGutter: NSRulerView {
         needsDisplay = true
     }
 
-    // No ruler background or baseline: the gutter sits on the editor's own card.
     override func draw(_ dirtyRect: NSRect) {
         drawHashMarksAndLabels(in: dirtyRect)
     }
@@ -221,7 +206,6 @@ final class LineNumberGutter: NSRulerView {
         else { return }
         let string = textView.string as NSString
         let first = content.offset(from: content.documentRange.location, to: viewport.location)
-        // The viewport starts at a paragraph, so every line before it ends with a newline inside this range.
         var line = 1
         string.enumerateSubstrings(in: NSRange(location: 0, length: min(first, string.length)), options: [.byLines, .substringNotRequired])
         { _, _, _, _ in line += 1 }
@@ -305,8 +289,6 @@ extension SourceFileEditor.Coordinator: UITextViewDelegate {
 final class SourceFileTextView: UITextView {
     var unmarked: () -> Void = {}
 
-    // A syllable ended without a keystroke (a tap elsewhere, the app leaving) changes no text, so no
-    // `textViewDidChange` colors it or hands it to the binding.
     override func unmarkText() {
         super.unmarkText()
         unmarked()

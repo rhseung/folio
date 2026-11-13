@@ -3,7 +3,7 @@ import FolioDomain
 import Foundation
 import Observation
 
-/// Takes the course's file from the view on each draw: the loaded course is a value the workspace replaces on every save.
+// 불러온 과목은 저장할 때마다 workspace가 바꾸는 값이므로, 그릴 때마다 뷰에서 과목 파일을 받는다.
 @MainActor @Observable
 final class CourseGradesModel {
     let workspace: Workspace
@@ -36,7 +36,6 @@ final class CourseGradesModel {
             + (file.components.isEmpty || total == 100 ? "" : String(localized: .courseGradesWeightNot100))
     }
 
-    /// A relatively graded course is aimed at by place, with the A share standing in for a target score.
     func relative(_ file: CourseFile) -> Double? { file.course.gradingMode == .relative ? file.policy.effectiveTopGradeRatio : nil }
 
     func addComponent(_ file: CourseFile) {
@@ -64,7 +63,7 @@ final class CourseGradesModel {
         workspace.run(ScoreSet(course: courseId, score: entry.id, excused: .set(excused)))
     }
 
-    /// Swaps a component with its neighbor and renumbers all, since imported components may share one `order`.
+    // 가져온 구성 요소는 `order`가 겹칠 수 있으므로, 이웃과 바꾼 뒤 모두 번호를 다시 매긴다.
     func move(_ id: UUID, by delta: Int) { workspace.run(ComponentMove(course: courseId, component: id, by: delta)) }
 
     func remove(_ c: GradeComponent) { pending = workspace.ask(ComponentRemove(course: courseId, component: c.id)) }
@@ -108,7 +107,6 @@ final class CourseGradesModel {
 
     func latePolicy(_ file: CourseFile) -> String? { file.policy.latePolicy.flatMap { $0.isEmpty ? nil : $0 } }
 
-    /// What the remaining components must average for the target, as the panel words it.
     static func needText(_ need: Double?) -> String {
         need.map {
             $0 > 100
@@ -133,13 +131,11 @@ extension Aggregation {
 }
 
 extension Double {
-    /// A z score the way grades are talked about: `평균 +2.5σ`, `평균 -0.7σ`, or `평균` when it rounds to zero.
     var sigmas: String {
         let r = (self * 10).rounded() / 10
         return r == 0 ? String(localized: .courseGradesMean) : String(localized: .courseGradesSigmas(String(format: "%+.1f", r)))
     }
 
-    /// A gap from the class mean in points, for a score whose standard deviation wasn't published: `평균 +8점`.
     var points: String {
         let r = (self * 10).rounded() / 10
         return r == 0 ? String(localized: .courseGradesMean) : String(localized: .courseGradesPointsGap((r > 0 ? "+" : "") + r.formatted()))

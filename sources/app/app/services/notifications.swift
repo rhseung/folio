@@ -10,9 +10,8 @@ import UIKit
 
 @MainActor
 enum NotificationScheduler {
-    /// Attendance warnings fire right away, so the ones already shown are remembered per device.
     static let sentKey = "notifications.sentAttendance"
-    /// macOS and iPadOS keep at most 64 pending requests per app.
+    // macOS와 iPadOS는 앱마다 대기 중인 요청을 최대 64개까지 둔다.
     static let pendingLimit = 60
 
     static func reschedule(_ workspace: Workspace) async {
@@ -41,7 +40,6 @@ enum NotificationScheduler {
         UserDefaults.standard.set(Array(sent), forKey: sentKey)
     }
 
-    /// Told at once and only while the app is behind: in front, the class it just opened says so itself.
     static func classStarted(_ title: String, recording: Bool) {
         #if os(macOS)
         guard !NSApplication.shared.isActive else { return }

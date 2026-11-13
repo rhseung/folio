@@ -17,8 +17,7 @@ struct SolveRequest: Equatable {
     var order: QuizOrder = .unitOrder
 }
 
-/// The course's cards and attempts, read once and re-read after each write so every tab shows the same numbers.
-/// The course comes from the view on each call: kept here, it went stale after every write that reloads it.
+// 과목은 호출마다 뷰에서 받는다. 여기에 두면 과목을 다시 불러오는 쓰기마다 낡은 값이 되었다.
 @MainActor @Observable
 final class QuizModel {
     let workspace: Workspace
@@ -27,7 +26,7 @@ final class QuizModel {
     var problemAttempts: [Attempt<ProblemAttemptEvent>] = []
     private(set) var history: [UUID: AttemptHistory] = [:]
     private(set) var problemHistory: [String: AttemptHistory] = [:]
-    /// A request is for the solve screen it opens; kept, it restarted that deck whenever 풀기 was chosen again.
+    // 요청은 그것이 여는 풀기 화면을 위한 것이다. 남겨 두면 풀기를 다시 고를 때마다 그 덱이 다시 시작했다.
     var request: SolveRequest?
     var generating: FolioDomain.Unit?
     var editing: CardDraft?
@@ -112,7 +111,6 @@ final class QuizModel {
         var byCategory: [CardCategory: WrongTally]
         var due: [QuizCard]
         var solvedToday: Int
-        /// Only units with cards: forty rows of zeros buried the few that mean something.
         var shownUnits: [FolioDomain.Unit] { units.filter { byUnit[$0.id] != nil } }
         var categories: [CardCategory] { CardCategory.allCases.filter { byCategory[$0] != nil } }
     }
@@ -152,7 +150,6 @@ final class QuizModel {
             label: String(localized: .quizStatsWrongOf(units.first { $0.id == unit }?.title ?? "")))
     }
 
-    /// The last fourteen study days, oldest first, with the attempts on each (problems included).
     func dailyCounts(today: LocalDate) -> [(day: LocalDate, count: Int)] {
         let counts = Dictionary((attempts.map(\.day) + problemAttempts.map(\.day)).map { ($0, 1) }, uniquingKeysWith: +)
         return (0..<14).reversed().map { today.adding(days: -$0) }.map { ($0, counts[$0] ?? 0) }

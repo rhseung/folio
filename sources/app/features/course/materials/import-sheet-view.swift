@@ -2,7 +2,6 @@ import FolioDomain
 import QuickLookThumbnailing
 import SwiftUI
 
-/// The add sheet: one calm row per file with where it lands, and quiet menus for what it is and which class it is for.
 struct ImportPlaceSheet: View {
     @State private var model: ImportPlaceModel
     @Environment(\.dismiss) private var dismiss
@@ -13,7 +12,6 @@ struct ImportPlaceSheet: View {
     }
 
     #if DEBUG
-    /// A model set up beforehand: the form renders show a proposal without reading a file.
     init(model: ImportPlaceModel) {
         _model = State(initialValue: model)
     }
@@ -40,7 +38,6 @@ struct ImportPlaceSheet: View {
                     if row.id < model.rows.count - 1 { Theme.Palette.lineSoft.frame(height: 1).padding(.leading, Theme.Space.l) }
                 }
             }
-            // The chosen row's fill reaches the card's rounded ends.
             .clipShape(.rect(cornerRadius: Theme.Radius.card))
             .focusable()
             .focusEffectDisabled()
@@ -60,7 +57,6 @@ struct ImportPlaceSheet: View {
         .onAppear { listFocused = true }
     }
 
-    /// Room for a long file name beside both menus: the sheet is a list to read, not a form to fill.
     static let width: CGFloat = 640
 }
 
@@ -76,9 +72,6 @@ private struct ImportRow: View {
             FileThumbnail(url: row.url)
             VStack(alignment: .leading, spacing: Theme.Space.xs) {
                 Text(row.url.lastPathComponent).lineLimit(1).truncationMode(.middle)
-                // The folder and the week Folio adds always show; only the file's own name gives way, in its middle,
-                // so the ` 2` and the extension stay too. Pressed, it shows the path whole and why the name changed:
-                // a tooltip alone never shows on a touch screen.
                 Button {
                     showingPath = true
                 } label: {
@@ -105,7 +98,6 @@ private struct ImportRow: View {
         .background(selected ? Theme.Palette.fill : .clear)
     }
 
-    /// A thumbnail, two lines of text and the row's padding.
     static let height: CGFloat = 64
 
     @Environment(\.accent) private var accent
@@ -124,8 +116,6 @@ private struct ImportRow: View {
 
     private static let pathWidth: CGFloat = 400
 
-    /// The folder in the quiet mono of a path, and only what Folio adds to the name in color: the week in front, the
-    /// number past a name the folder holds.
     private var destinationHead: AttributedString {
         var out = AttributedString(placement.folder + "/")
         out.foregroundColor = Theme.Palette.textTertiary
@@ -196,7 +186,6 @@ private struct ImportRow: View {
         .help(model.sessionWhy(row) ?? String(localized: .materialsImportSession))
     }
 
-    /// The ✦'s reason at the top of its menu, where a touch screen, which shows no tooltip, can read it.
     @ViewBuilder private func why(_ text: String?) -> some View {
         if let text {
             Text(text)
@@ -213,14 +202,11 @@ private struct ImportRow: View {
     }
 }
 
-/// A lecture row's proposed units (#321): a line saying what was found, and under it, when opened, the section bar
-/// and its rows to fix before the file comes in. Nothing is written until the sheet's own button.
 private struct ImportSections: View {
     let model: ImportPlaceModel
     let row: ImportPlaceModel.Row
     @Environment(\.accent) private var accent
 
-    /// Under the row's name, past its thumbnail.
     static let indent = Theme.Space.l + FileThumbnail.size.width + Theme.Space.m
 
     var body: some View {
@@ -271,14 +257,11 @@ private struct ImportSections: View {
         .animation(Theme.Motion.quick, value: open)
     }
 
-    /// Why Claude gave no split is the summary line before it.
     private var claude: some View {
         ClaudeSplitButton(asking: model.asking.contains(row.id)) { model.retryClaude(row.id) }
     }
 }
 
-/// A menu's current value as quiet text, a ⌃⌄ after it, and a ✦ in front when Folio guessed it. The pill shows only
-/// under the pointer: a row of grey chips per file read as a form to fill.
 private struct QuietMenuLabel: View {
     let text: String
     let guessed: Bool
@@ -299,12 +282,9 @@ private struct QuietMenuLabel: View {
         .onHover { hovering = $0 }
     }
 
-    /// A long session title truncates rather than taking the room the destination path needs: the day reads first
-    /// and the menu itself lists whole titles.
     static let sessionText: CGFloat = 136
 }
 
-/// The file's first page, as Finder would show it; a document glyph until it is drawn, or where none can be.
 private struct FileThumbnail: View {
     let url: URL
     @State private var image: Image?

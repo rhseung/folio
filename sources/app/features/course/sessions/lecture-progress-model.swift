@@ -2,7 +2,6 @@ import FolioDomain
 import Foundation
 import Observation
 
-/// One lecture file's progress: which classes went through which pages, and what no class has reached yet.
 @MainActor @Observable
 final class LectureProgressModel {
     struct Row: Identifiable, Equatable {
@@ -10,7 +9,6 @@ final class LectureProgressModel {
         let firstPage: Int
         let lastPage: Int
         let pages: String
-        /// Empty for pages no class has reached.
         let classes: [Class]
     }
 
@@ -51,7 +49,6 @@ final class LectureProgressModel {
         }
     }
 
-    /// `40쪽 중 28쪽 나감`, or without a count only how many pages classes went through.
     var summary: String? {
         let covered = rows.filter { !$0.classes.isEmpty }.reduce(0) { $0 + $1.lastPage - $1.firstPage + 1 }
         guard covered > 0 || pageCount != nil else { return nil }
@@ -59,7 +56,6 @@ final class LectureProgressModel {
         return String(localized: .materialsProgressCovered(covered))
     }
 
-    /// Classes that used the file without saying which pages.
     var unranged: String? {
         guard let file else { return nil }
         let days = file.unrangedSessions(of: materialId).map { file.day(of: $0, calendar: workspace.calendar) }

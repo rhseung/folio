@@ -1,11 +1,8 @@
 import FolioDomain
 import SwiftUI
 
-/// How the quick add line sets its rows, shared by the Mac's text view and the iPad's field and its mirror, so the
-/// pills land where the words are.
+// Mac의 text view, iPad의 field와 그 mirror가 이 값을 함께 써야 알약이 글자 자리에 놓인다.
 enum QuickAddLine {
-    /// Between wrapped rows: room for a pill to reach `overhang` above and below its row and still leave 4pt to the
-    /// pill on the next row. At the font's own spacing the two pills touched.
     static let spacing: CGFloat = 6
     static let overhang: CGFloat = 1
 }
@@ -14,17 +11,16 @@ struct ReadMark: TextAttribute {
     var fill: Color
 }
 
-/// Draws only rounded pills behind runs marked `ReadMark`; the glyphs come from the field on top.
 struct ReadMarkRenderer: TextRenderer {
     func draw(layout: Text.Layout, in context: inout GraphicsContext) {
         for line in layout {
-            // Korean and digits come from different fonts, so one phrase spans several runs; they join into one pill.
+            // 한글과 숫자는 다른 글꼴에서 오므로 한 구절이 run 여러 개에 걸친다. 이 run들을 알약 하나로 합친다.
             var pill: (rect: CGRect, mark: ReadMark)?
             func flush() {
                 if let pill {
-                    // No wider than the glyphs: the one space between a read word and the next is all the room
-                    // there is, and a pill reaching into it touched the neighbor (or the next pill). Widening the gap
-                    // itself would mean kerning the field's own text, which rewrites it under Korean composition.
+                    // 글리프보다 넓히지 않는다. 읽은 낱말과 다음 낱말 사이의 공백 하나가 자리의 전부라서, 그 안으로
+                    // 들어간 알약이 이웃 낱말이나 다음 알약에 닿았다. 간격 자체를 넓히려면 필드의 글에 kerning을 줘야
+                    // 하는데, 그러면 한글 조합 중에 글이 다시 쓰인다.
                     let shape = RoundedRectangle(cornerRadius: Theme.Radius.small).path(
                         in: pill.rect.insetBy(dx: 0, dy: -QuickAddLine.overhang))
                     context.fill(shape, with: .color(pill.mark.fill))
@@ -49,18 +45,14 @@ struct ReadMarkRenderer: TextRenderer {
     }
 }
 
-/// Today, the toolbar's popover and the assignments screen share it, so the line reads the same wherever it is typed.
 struct QuickAddField: View {
     @State private var model: QuickAddModel
     @State private var fieldSize = CGSize.zero
     @State private var lineSize = CGSize.zero
-    /// One and three lines of the field's font: the field's least and most height.
     @State private var lineHeights = (one: CGFloat(0), three: CGFloat(0))
     @Environment(\.quickAddTypedSample) private var typedSample
 
     private let focusOnAppear: Bool
-    /// In the toolbar's popover, a floating thing, the field is glass; on the page it is paper like the page's other
-    /// fields (`Card`), since glass belongs only to the frame and what floats over it.
     private let floating: Bool
 
     init(
@@ -76,9 +68,6 @@ struct QuickAddField: View {
     }
 
     private let font = Theme.Typeface.bodyLarge
-    /// Inside the field, as inside a card's padded field (the memo): at less, a pill on the first word sat against the
-    /// field's wall. The Mac's text view keeps `QuickAddTextView.room` before the first letter for a pill there, so
-    /// the letters start at the same inset on both.
     private let inset = Theme.Space.l
     #if os(macOS)
     private let leading = Theme.Space.l - QuickAddTextView.room
@@ -90,8 +79,6 @@ struct QuickAddField: View {
         let parsed = model.parsed
         VStack(alignment: .leading, spacing: Theme.Space.m) {
             Group {
-                // Wraps instead of running sideways, so every word it read keeps its pill in sight; past three lines
-                // it scrolls.
                 #if os(macOS)
                 QuickAddTextView(
                     text: $model.text, prompt: String(localized: .quickAddPrompt), marks: textMarks(parsed),
@@ -104,11 +91,11 @@ struct QuickAddField: View {
                     .textFieldStyle(.plain)
                     .font(font)
                     .lineSpacing(QuickAddLine.spacing)
-                    // The height comes from the mirror: a field being edited does not tell SwiftUI it grew when the
-                    // line is set from code (a chip's pick), and keeps one line while three show.
+                    // 높이는 mirror에서 잰다. 편집 중인 필드는 코드에서 줄을 바꾸면(칩에서 고르면) 커진 것을 SwiftUI에
+                    // 알리지 않아, 세 줄이 보이는데도 한 줄 높이를 유지한다.
                     .frame(height: lineHeights.one == 0 ? nil : min(max(lineSize.height, lineHeights.one), lineHeights.three))
-                    // The marks are drawn behind the field instead of styling its text: rewriting the text while
-                    // typing breaks Korean composition and eats characters.
+                    // 필드의 글에 스타일을 주지 않고 필드 뒤에 표시를 그린다. 입력 중에 글을 다시 쓰면 한글 조합이
+                    // 깨지고 글자가 사라진다.
                     .background(alignment: .topLeading) {
                         marks(parsed)
                             .frame(width: fieldSize.width, alignment: .leading)
@@ -145,11 +132,8 @@ struct QuickAddField: View {
                         .fixedSize()
                         .hidden()
                     }
-                    // The keyboard's Return is the touch path to add.
                     .submitLabel(.done)
                     .onSubmit { model.submit() }
-                    // A field that wraps takes Return as a new line rather than a submit: a line ending in one is
-                    // the Return key, and lines pasted in join into the one line.
                     .onChange(of: model.text) { _, text in
                         guard text.contains(where: \.isNewline) else { return }
                         let returned = text.last?.isNewline == true
@@ -165,8 +149,6 @@ struct QuickAddField: View {
             .modifier(QuickAddSurface(floating: floating))
             let chips = model.chips
             if !chips.isEmpty {
-                // Each chip's icon under the field's first letter, and across the field's width: indented further
-                // the row read as cut in and wrapped a chip early.
                 FlowLayout(spacing: Theme.Space.s, centered: true) {
                     ForEach(chips, id: \.kind) { chip in QuickAddChip(model: model, chip: chip) }
                 }
@@ -180,7 +162,6 @@ struct QuickAddField: View {
             sample = sample ?? SnapshotDriver.shared.quickAddText
             #endif
             guard let sample, model.text.isEmpty else { return }
-            // Word by word, as it is typed.
             try? await Task.sleep(for: .seconds(0.3))
             for word in sample.split(separator: " ", omittingEmptySubsequences: false) {
                 model.text += (model.text.isEmpty ? "" : " ") + word
@@ -209,8 +190,6 @@ struct QuickAddField: View {
     }
     #endif
 
-    /// A word's pill color. The course's comes from what will be saved, not from the word: a course picked on the chip
-    /// recolors the word, and with the course cleared the word has no pill.
     private func fill(_ field: QuickAdd.Span.Field, _ parsed: QuickAdd) -> Color? {
         switch field {
         case .due: Theme.Palette.readDue
@@ -219,7 +198,6 @@ struct QuickAddField: View {
         }
     }
 
-    /// The line laid out again under the field, invisible, so `ReadMarkRenderer` can draw a pill behind each word read.
     private func marks(_ parsed: QuickAdd?) -> some View {
         let text = model.text
         var ranges: [(Range<String.Index>, ReadMark)] = []
@@ -238,9 +216,8 @@ struct QuickAddField: View {
         return mirror.font(font).lineSpacing(QuickAddLine.spacing).textRenderer(ReadMarkRenderer())
     }
 
-    /// The field breaks a Korean line between any two letters while `Text` keeps Korean words whole, so on a wrapped
-    /// line the pills would land a word off. A zero-width space between Hangul letters lets the mirror break as the
-    /// field does.
+    // 필드는 한글 줄을 아무 두 글자 사이에서나 끊지만 `Text`는 한글 낱말을 통째로 둔다. 그러면 줄바꿈된 줄에서 알약이
+    // 한 낱말씩 어긋나므로, 한글 글자 사이에 zero-width space를 넣어 mirror가 필드처럼 끊게 한다.
     static func breakable(_ s: Substring) -> String {
         var out = ""
         var previous: Character?
@@ -272,14 +249,12 @@ private extension Character {
     var isHangul: Bool { unicodeScalars.first.map { (0xAC00...0xD7A3).contains($0.value) } ?? false }
 }
 
-/// Each chip is a button or menu, so a tap opens it as a click does.
 struct QuickAddChip: View {
     static let inset = Theme.Space.m
     let model: QuickAddModel
     let chip: QuickAddModel.Chip
     @State private var pickingDue = false
     @State private var pickingRepeat = false
-    /// What the rule popover edits; each change is written into the line, which may read it slightly differently.
     @State private var rule = AssignmentRepeat.weekly
 
     var body: some View {
@@ -372,7 +347,7 @@ struct QuickAddChip: View {
             }
             .padding(Theme.Space.l)
             .frame(width: 280)
-            // A popover proposes the height it opened with: picking a first date adds the clear button under it.
+            // popover는 열릴 때의 높이를 제안하므로, 첫 날짜를 골라 아래에 지우기 버튼이 생기면 높이가 모자란다.
             .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -430,8 +405,8 @@ struct QuickAddChip: View {
             }
             .padding(Theme.Space.l)
             .frame(width: 360)
-            // A popover proposes the height it last took: switching to 개월 and back to 주 squeezed the weekday row
-            // into the shorter height, and the rows spilled over the card's edges.
+            // popover는 마지막에 받은 높이를 제안한다. 개월로 바꿨다가 주로 돌아오면 요일 줄이 더 낮은 높이에 눌려 행이
+            // 카드 가장자리 밖으로 넘쳤다.
             .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -474,8 +449,6 @@ struct QuickAddChip: View {
         .fixedSize()
     }
 
-    /// A chip with nothing read yet: what the line can read, in a quiet wash of the text color that reads the same on
-    /// the paper card and the popover's glass. Still a button, so a value can be picked by touch.
     private func dimmed(_ icon: String, _ title: LocalizedStringResource) -> some View {
         label(fill: Theme.Palette.text.opacity(Theme.Opacity.wash)) {
             Image(systemName: icon)
@@ -493,7 +466,6 @@ struct QuickAddChip: View {
             .background(fill, in: .capsule)
             .contentShape(.capsule)
             #if os(iOS)
-        // The chip stays 28 tall, but a finger gets the 44pt the row's gap leaves around it.
         .padding(.vertical, Theme.Space.s)
         .contentShape(.rect)
             #endif
@@ -501,6 +473,5 @@ struct QuickAddChip: View {
 }
 
 extension EnvironmentValues {
-    /// A line already typed into the field, for window snapshots of it mid-typing.
     @Entry var quickAddTypedSample: String?
 }

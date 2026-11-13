@@ -2,10 +2,7 @@ import FolioActions
 import FolioDomain
 import SwiftUI
 
-/// One action of a session row: an icon and a short word, all in one plain style. Whether it exists, is offered or is
-/// missing shows only in the icon and color, and the fixed width keeps each kind in one column down the page.
 struct SessionSlot: View {
-    // Fits an icon and two letters (and caption-sized 복습 없음) with little to spare, so neighbors sit close.
     static let width: CGFloat = 56
     static var empty: some View { Color.clear.frame(width: width, height: 1) }
 
@@ -13,7 +10,6 @@ struct SessionSlot: View {
     let symbol: String
     var tint: Color = Theme.Palette.textSecondary
     let help: String
-    /// Off for the recording, which sits leftmost and lines up with nothing.
     var fixed = true
     let action: () -> Void
 
@@ -34,18 +30,15 @@ struct SessionSlot: View {
             .buttonStyle(.ghost)
             .tint(tint)
             .help(help)
-            // Trailing, so the spare room falls between slots and every gap reads the same.
             .frame(width: fixed ? Self.width : nil, alignment: .trailing)
     }
 }
 
-/// The rough and review note slots, shared by the sessions page and a unit's classes so both read alike.
 struct SessionNoteSlots: View {
     @Environment(\.accent) private var accent
     @Environment(Workspace.self) private var workspace
     let file: CourseFile
     let session: Session
-    /// Today's class offers its rough note before it exists.
     var offersRough = false
     let openNote: (UUID) -> Void
     let create: (NoteKind) -> Void
@@ -65,7 +58,6 @@ struct SessionNoteSlots: View {
                 SessionSlot.empty
             }
             if let id = session.reviewNoteId {
-                // Made but not written yet: still in the missing note's warning color.
                 if session.reviewNoteUnfinished {
                     SessionSlot(
                         String(localized: .sessionsSlotReview), symbol: "square.and.pencil", tint: Theme.Palette.warning,

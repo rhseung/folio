@@ -12,85 +12,61 @@ struct LoadedCourse: Identifiable {
     var title: String { file.course.title }
 }
 
-/// Everything the screens show, read from the GIST folder through Storage. Views never touch the file system.
 @MainActor @Observable
 final class Workspace {
     private(set) var gist: GISTStore?
     private(set) var transcript = Transcript()
     private(set) var catalog = Catalog()
-    /// False while catalog.json fails to read: saving the catalog then would replace the file with what is shown.
+    // catalog.json을 읽지 못한 동안 목록을 저장하면 파일이 화면에 보이는 값으로 바뀐다.
     private(set) var catalogLoaded = true
     private(set) var settings = Settings()
     private(set) var courses: [LoadedCourse] = []
     private(set) var reviewEvents: [UUID: [LoggedEvent]] = [:]
     var error: String?
-    /// The first run (#453) shows in place of the window's pages: on a device that has never opened a folder, or when
-    /// asked for again from settings.
     var showsFirstRun = false
-    /// Why the folder this device remembers isn't open. The first run's folder step reports it.
     var folderTrouble: FolderTrouble?
     @ObservationIgnored var folderWait: Task<Void, Never>?
-    /// Bumped when the Claude connection setting or the API key changes. Neither lives in observed state (UserDefaults,
-    /// the keychain), so views reading `claudeReady` would otherwise keep a stale answer.
+    // 연결 설정과 API key는 관찰되지 않는 곳(UserDefaults, keychain)에 있으므로, 이 값을 올리지 않으면 `claudeReady`를 읽는
+    // 뷰가 낡은 답을 유지한다.
     var claudeRevision = 0
-    /// Bumped whenever a write touches a note or a card file, from any screen, the Claude panel or outside the app.
-    /// Note and card lists read their files from disk, which observing `courses` alone would not catch.
+    // 노트와 카드 목록은 디스크에서 파일을 읽으므로 `courses`만 관찰해서는 바뀐 것을 알 수 없다.
     private(set) var notesRevision = 0
     private(set) var quizRevision = 0
-    /// Bumped by every reload and every action the app runs, so anything worked out from the folder (a dry run, a
-    /// note's text) knows when to work it out again. A note file written by an action changes nothing else observed.
     private(set) var dataRevision = 0
-    /// Grades stay hidden until the device owner unlocks them; never saved, so every launch starts locked.
     var gradesUnlocked = false
     @ObservationIgnored var gradeRelock: Task<Void, Never>?
-    /// One lecture recording at a time, kept here so it continues while the user moves around the app.
     let recorder = LectureRecorder()
-    /// Recordings being compressed into their course folder; each runs once even when a reload asks again.
     var finishingRecordings = Set<UUID>()
-    /// The class whose recording just stopped, until a window asks how far it went.
     var wrapUpAsk: ClassWrapUpAsk?
-    /// The class that just started, until a window opens it (`ClassStartPrompt`).
     var classStartAsk: ClassStartAsk?
-    /// Each class's steps done, by `StartingClass.key`. Only for this run of the app: one opened again during the
-    /// class goes to it again, and its recording is guarded by the recordings the class already has.
     @ObservationIgnored var classStartDone: [String: Set<ClassStart.Step>] = [:]
     @ObservationIgnored var classRecordingStop: ClassRecordingStop?
-    /// A lecture whose split screen was asked for from elsewhere (the wrap-up sheet's "단원으로 나누기"); the file view
-    /// that opens it takes it.
     var splitAsk: UUID?
     @ObservationIgnored var recoveryTried = Set<UUID>()
-    /// Lazy so tests, previews and renders can give a folder of their own before the first use; one that forgets
-    /// stops there (`LocalFolders`) instead of recovering this Mac's unfinished recordings into a fixture.
+    // 테스트, 미리보기, 렌더가 처음 쓰기 전에 자기 폴더를 줄 수 있도록 lazy로 둔다. 주지 않으면 이 Mac의 끝나지 않은 녹음을
+    // 픽스처로 복구하지 않고 그 자리에서 멈춘다(`LocalFolders`).
     @ObservationIgnored lazy var pendingRecordings = PendingRecordings(url: LocalFolders.applicationSupport("Recording", perGIST: true))
     let transcriptions = TranscriptionQueue()
-    /// What each release changed, from GitHub, and the sheet an update brings (#415). A test hands it a feed of its own.
     var releaseNotes = ReleaseNotes()
-    /// The LMS as last read; what was decided about it is in `settings.lms` (#132).
     var lms = LMSConnection()
     @ObservationIgnored private var watcher: GISTWatcher?
     @ObservationIgnored private var lastOwnWrite = Date.distantPast
     @ObservationIgnored private var pendingReload: Task<Void, Never>?
 
     let device = LocalDevice.id()
-    /// Set with `pinnedNow` by previews and offscreen renders: a scenario is built in its own time zone, and read in
-    /// another (CI runs in UTC) its moment lands on a different study day.
     var calendar = Calendar.current
-    /// Set by previews and offscreen renders, so a scenario's day doesn't follow the real clock.
     var pinnedNow: Date?
     var now: Date { pinnedNow ?? .now }
     let clock = LiveClock()
-    /// `now` on the shared minute clock: a view that reads it is redrawn as the minute turns. Kept apart from `now`,
-    /// which every page reads when it draws, so those pages don't all redraw each minute.
+    // 모든 페이지가 그릴 때 읽는 `now`와 분리해야 그 페이지들이 분마다 다시 그려지지 않는다.
     var liveNow: Date { pinnedNow ?? clock.now }
 
     static let bookmarkKey = "folio.gistBookmark"
-    /// The folder as a plain path for the folio command, which can't resolve this app's bookmark without a sandbox warning.
     static let pathKey = "folio.gistPath"
-    /// Lets a development run point at a fixture copy instead of the real folder.
     nonisolated static let environmentKey = "FOLIO_GIST"
 
     init() {
-        // The test host and Xcode previews must never open the saved folder: that is the real GIST folder.
+        // 테스트 host와 Xcode 미리보기는 저장된 폴더를 열면 안 된다. 그 폴더는 실제 GIST 폴더다.
         let env = ProcessInfo.processInfo.environment
         if LocalFolders.isIsolated(env) { return }
         if let path = env[Self.environmentKey] {
@@ -105,15 +81,14 @@ final class Workspace {
         #endif
     }
 
-    /// Whether this run may change the folder the device remembers. A test, a preview or a fixture run (`FOLIO_GIST`)
-    /// opens folders of its own, and writing one down would have the next real launch open a fixture.
+    // 테스트, 미리보기, 픽스처 실행(`FOLIO_GIST`)은 자기 폴더를 연다. 그 폴더를 기억하면 다음 실제 실행이 픽스처를 연다.
     nonisolated static var remembersFolders: Bool {
         let env = ProcessInfo.processInfo.environment
         return !LocalFolders.isIsolated(env) && env[environmentKey] == nil
     }
 
     func open(_ url: URL, remember: Bool = true) {
-        // Access stays open for the app's lifetime; iPadOS requires it for folders picked in Files.
+        // 앱이 실행되는 동안 접근을 계속 연다. iPadOS는 Files에서 고른 폴더에 이를 요구한다.
         _ = url.startAccessingSecurityScopedResource()
         if Self.remembersFolders {
             if remember, let data = try? url.bookmarkData() {
@@ -129,8 +104,8 @@ final class Workspace {
         reload()
     }
 
-    /// Reads everything again shortly after files change outside the app, once per burst (an iCloud sync touches many).
-    /// The app's own writes come back through the presenter too; they are already shown, so those are skipped.
+    // iCloud 동기화는 많은 파일을 건드리므로 한 묶음마다 한 번만 다시 읽는다. 앱 자신의 쓰기도 presenter로 돌아오지만 이미
+    // 보이고 있으므로 건너뛴다.
     private func changedOutside() {
         guard Date.now.timeIntervalSince(lastOwnWrite) > 2 else { return }
         pendingReload?.cancel()
@@ -141,8 +116,8 @@ final class Workspace {
         }
     }
 
-    /// Each file loads on its own: one that fails keeps what was shown before and is reported, instead of hiding
-    /// every course or standing in as an empty file that the next save would write over the real one.
+    // 파일마다 따로 읽는다. 실패한 파일은 전에 보이던 값을 유지하고 보고된다. 그렇지 않으면 모든 과목이 사라지거나, 빈
+    // 파일로 대신 읽혀 다음 저장이 실제 파일을 덮어쓴다.
     func reload() {
         guard let gist else { return }
         var problems: [String] = []
@@ -176,9 +151,7 @@ final class Workspace {
                 (c.id, (try? c.store.log.readAll().filter { $0.type == ReviewEvent.type }) ?? [])
             })
 
-        // Never cleared here: callers reload right after a failed save, whose message must stay up.
         if !problems.isEmpty { error = String(localized: .workspaceUnreadableFiles) + "\n" + problems.joined(separator: "\n") }
-        // A reload follows writes the app can't see into (an iCloud sync, the folio command), so every list re-reads.
         notesRevision += 1
         quizRevision += 1
         dataRevision += 1
@@ -191,14 +164,12 @@ final class Workspace {
         transcript.semesters.first { $0.id == course.semesterId }
     }
 
-    /// Regular semesters, newest first. Empty ones are listed too, so a newly added term shows up.
     var semesters: [Semester] {
         transcript.semesters
             .filter { $0.term != .credited }
             .sorted { $0.order > $1.order }
     }
 
-    /// The latest semester that has started (or the earliest upcoming one if none has).
     var currentSemester: Semester? { semesters.current(on: LocalDate(now, in: calendar)) }
 
     var currentCourses: [LoadedCourse] { currentSemester.map { courses(in: $0) } ?? [] }
@@ -207,8 +178,6 @@ final class Workspace {
         courses.filter { $0.file.course.semesterId == semester.id }.sorted { $0.title < $1.title }
     }
 
-    /// The order the user dragged the term's courses into. Colors and every other list keep `courses(in:)`, so moving a
-    /// course in the sidebar doesn't recolor the ones without a color of their own.
     func sidebarCourses(in semester: Semester) -> [LoadedCourse] {
         let byId = Dictionary(courses(in: semester).map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         return SidebarOrder.arrange(courses(in: semester).map(\.id), by: settings.sidebar.courses).compactMap { byId[$0] }
@@ -241,14 +210,12 @@ final class Workspace {
 
     // MARK: Semesters and courses
 
-    /// `<main code><number> <title>`; nil when the codes are empty or the name breaks the naming rule.
     func folderName(title: String, codes: [UUID], number: String) -> String? {
         try? CourseRename.folderName(title: title, codes: codes, number: number, catalog: catalog)
     }
 
     // MARK: Checks
 
-    /// A dry run against what the app shows, so a button follows the action's own rules rather than a copy in the view.
     private func checkContext() -> ActionContext? {
         guard let gist else { return nil }
         let ctx = ActionContext(
@@ -258,7 +225,6 @@ final class Workspace {
         return ctx
     }
 
-    /// Why the action would be refused, or nil when it would go through. Nothing is written.
     func refusal(_ action: some Action) -> String? {
         guard let ctx = checkContext() else { return String(localized: .workspaceNoGist) }
         do {
@@ -269,10 +235,8 @@ final class Workspace {
         }
     }
 
-    /// The first of `actions` that would be refused when they run one after another, and why; nil when all would go
-    /// through. They share one dry run, so each is checked against course.json as the ones before it leave it. A
-    /// note's text is not carried over: a dry run writes no file, so an edit after a rewrite of the same note is
-    /// checked against the text on disk.
+    // 같은 dry run을 함께 쓰므로 각 액션은 앞의 액션이 남긴 course.json으로 검사된다. 노트의 글은 이어지지 않는다. dry run은
+    // 파일을 쓰지 않으므로, 같은 노트를 다시 쓴 뒤의 편집은 디스크의 글로 검사된다.
     func refusal(_ actions: [any Action]) -> (index: Int, reason: String)? {
         guard let ctx = checkContext() else { return actions.isEmpty ? nil : (0, String(localized: .workspaceNoGist)) }
         for (i, action) in actions.enumerated() {
@@ -281,10 +245,6 @@ final class Workspace {
         return nil
     }
 
-    /// `refusal(_:)` for changes made on top of each other, such as a note's edit after the note is made: they run for
-    /// real, one after another, in a staged copy of the folder that the original never sees, so each finds the files
-    /// the ones before it write. Cloning every file costs more than a dry run, so this is only for a list that one
-    /// refuses.
     func stagedRefusal(_ actions: [any Action]) -> (index: Int, reason: String)? {
         guard let gist else { return actions.isEmpty ? nil : (0, String(localized: .workspaceNoGist)) }
         let copy: StagedFolder
@@ -295,8 +255,8 @@ final class Workspace {
             let gist = GISTStore(url: copy.url)
             let ctx = ActionContext(gist: gist, device: device, now: now, calendar: calendar)
             for (i, action) in actions.enumerated() {
-                // A backup or an import writes outside the folder, past the copy's fence: only a dry run, on a context
-                // of its own that reads what the ones before it wrote into the copy.
+                // 백업과 가져오기는 폴더 밖에 쓰고, 사본은 그런 쓰기를 막는다. 그래서 dry run만 하고, 앞의 액션이 사본에 쓴 것을 읽는
+                // 별도의 context에서 돌린다.
                 let staged = ActionProposal.stages(type(of: action).command)
                 do {
                     try action.run(staged ? ctx : ActionContext(gist: gist, device: device, now: now, calendar: calendar, dryRun: true))
@@ -308,13 +268,11 @@ final class Workspace {
 
     func can(_ action: some Action) -> Bool { refusal(action) == nil }
 
-    /// The question to ask before running the action, as the CLI asks it; nil when it runs without asking.
     func confirmation<A: Action>(_ action: A) -> String? {
         guard A.spec.asks(action), let text = A.spec.confirm, let ctx = checkContext() else { return nil }
         return A.spec.render(text, action, ctx: ctx)
     }
 
-    /// What running it would do, in the words the CLI prints after it runs.
     func summary<A: Action>(_ action: A) -> String {
         guard let ctx = checkContext() else { return A.spec.summary }
         return A.spec.render(A.spec.done, action, ctx: ctx)
@@ -322,7 +280,6 @@ final class Workspace {
 
     // MARK: Writes (only from explicit user actions)
 
-    /// Runs an action the way the CLI does, then shows what it changed. A failure goes to the error banner.
     @discardableResult
     func run(_ action: some Action) -> ActionContext? {
         do { return try runThrowing(action) } catch {
@@ -336,7 +293,6 @@ final class Workspace {
         let ctx = ActionContext(
             gist: gist, device: device, now: now, calendar: calendar,
             courses: Dictionary(courses.map { ($0.id, $0.store) }, uniquingKeysWith: { a, _ in a }))
-        // Shown even when the action fails halfway: what it already wrote is on disk.
         defer { show(ctx) }
         try action.run(ctx)
         return ctx

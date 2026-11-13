@@ -2,7 +2,6 @@ import FolioDomain
 import Foundation
 import Observation
 
-/// Today's items from every current course's exam plans.
 @MainActor @Observable
 final class ExamPlanTodayModel {
     let workspace: Workspace
@@ -26,7 +25,6 @@ final class ExamPlanTodayModel {
 
     func load() { done = workspace.donePlanItems(in: courseIds) }
 
-    /// Checking one appends a `plan_check` event; course.json only holds the items.
     func toggle(_ entry: ExamPlan.DayItem) {
         let new = !isDone(entry)
         workspace.setPlanItem(entry.item.id, done: new, course: entry.courseId)

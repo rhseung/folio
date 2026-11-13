@@ -3,14 +3,13 @@ import FolioLMS
 import Foundation
 import Observation
 
-/// Where LMS pages come from: the school's LMS in the app, a fixed snapshot in tests, previews and renders.
 protocol LMSSource: Sendable {
     func verify(_ login: LMSCredentials) async throws
     func read() async throws -> LMSSnapshot
     func download(_ file: LMSFile, into folder: URL) async throws -> URL?
 }
 
-/// Where the login is kept: iCloud Keychain in the app, memory elsewhere, so no test reads or writes the real item.
+// 앱에서는 iCloud 키체인에, 그 밖에서는 메모리에 둔다. 그래야 어떤 테스트도 실제 항목을 읽거나 쓰지 않는다.
 protocol LMSLogins: Sendable {
     func read() -> LMSCredentials?
     func save(_ login: LMSCredentials) throws
@@ -33,7 +32,6 @@ final class MemoryLogins: LMSLogins, @unchecked Sendable {
     func remove() { lock.withLock { login = nil } }
 }
 
-/// The school's LMS through one web session, logging in again with the saved login when it ends.
 struct LiveLMS: LMSSource {
     let client: LMSClient
 
@@ -54,15 +52,12 @@ struct FixedLMS: LMSSource {
     func download(_ file: LMSFile, into folder: URL) throws -> URL? { nil }
 }
 
-/// The LMS as this device last read it. App-wide like `ReleaseNotes`: one sync however many windows are open. What
-/// was read is kept in memory only; what was decided about it (classrooms seen, items handled) is in settings.json.
 @MainActor @Observable
 final class LMSConnection {
     enum Status: Equatable {
         case off
         case idle
         case syncing
-        /// The saved login was refused or is gone: the settings tab asks to connect again.
         case needsLogin
         case failed(String)
     }
@@ -70,14 +65,13 @@ final class LMSConnection {
     private(set) var status: Status
     private(set) var username: String?
     private(set) var snapshot: LMSSnapshot?
-    /// Files the LMS shows only in its viewer, found when adding one was tried.
     private(set) var viewerOnly: Set<Int> = []
     @ObservationIgnored private var source: any LMSSource
     @ObservationIgnored private let logins: any LMSLogins
     @ObservationIgnored private let live: Bool
 
     init(source: (any LMSSource)? = nil, logins: (any LMSLogins)? = nil) {
-        // Nothing reaches the LMS or the keychain from a test or a render unless it hands them over.
+        // 테스트나 렌더는 직접 넘기지 않는 한 LMS와 키체인에 닿지 않는다.
         let isolated = LocalFolders.isIsolated()
         self.logins = logins ?? (isolated ? MemoryLogins() : KeychainLogins())
         self.source = source ?? (isolated ? FixedLMS(snapshot: LMSSnapshot(at: .distantPast)) : Self.live(self.logins))
@@ -90,13 +84,12 @@ final class LMSConnection {
 
     var isConnected: Bool { username != nil }
 
-    /// Tries the login before keeping it, so a typo is told at once instead of at the next sync.
     func connect(username: String, password: String) async throws {
         let login = LMSCredentials(username: username.trimmingCharacters(in: .whitespaces), password: password)
         try await source.verify(login)
         // folio:not-an-action the LMS login goes to the keychain
         try logins.save(login)
-        // A new session: the old one may have been refused, and refusing stops it for good.
+        // LMS가 거절하면 그 세션은 다시 쓸 수 없으므로, 이전 세션 대신 새 세션을 만든다.
         if live { source = Self.live(logins) }
         self.username = login.username
         status = .idle
@@ -110,7 +103,6 @@ final class LMSConnection {
         status = .off
     }
 
-    /// The snapshot read, or nil when nothing was (not connected, already syncing, or failed: `status` says which).
     func sync() async -> LMSSnapshot? {
         guard isConnected, status != .syncing else { return nil }
         status = .syncing
@@ -125,8 +117,6 @@ final class LMSConnection {
         }
     }
 
-    /// The file downloaded into a folder of its own under the name `Lectures` gives it, or nil when the LMS shows it
-    /// only in its viewer.
     func download(_ file: LMSFile) async throws -> URL? {
         let folder = try LMSDownloads.folder()
         guard let got = try await source.download(file, into: folder) else {

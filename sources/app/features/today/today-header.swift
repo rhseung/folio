@@ -8,7 +8,6 @@ struct TodayHeader: View {
     let reviews: TodayModel.Reviews
 
     var body: some View {
-        // The counts include ended classes, so the line moves on as the day does.
         let now = model.workspace.liveNow
         ViewThatFits(in: .horizontal) {
             HStack(alignment: .bottom, spacing: Theme.Space.xl) {
@@ -21,7 +20,6 @@ struct TodayHeader: View {
                 week
             }
         }
-        // The page's own gaps fit block to block; the date sits apart from the day below it, as in the mockup.
         .padding(.top, Theme.Space.l)
         .padding(.bottom, Theme.Space.m)
     }
@@ -30,7 +28,6 @@ struct TodayHeader: View {
         VStack(alignment: .leading, spacing: Theme.Space.s) {
             Text(model.heading(summary, now: now)).font(Theme.Typeface.pageTitle)
             let pieces = model.summaryLine(classes: classes, summary: summary, reviews: reviews, now: now)
-            // One count a line where the line doesn't fit: cut short, it dropped the counts at its end.
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: Theme.Space.m) {
                     ForEach(Array(pieces.enumerated()), id: \.offset) { i, piece in
@@ -46,11 +43,10 @@ struct TodayHeader: View {
             .foregroundStyle(Theme.Palette.textSecondary)
             .lineLimit(1)
         }
-        // Only its height: fixed in width too, the counts line could never fold and pushed a narrow pane out.
+        // 높이만 고정한다. 폭까지 고정하면 개수 줄이 접히지 못해 좁은 칸을 밀어냈다.
         .fixedSize(horizontal: false, vertical: true)
     }
 
-    /// The bold runs of a count line in full text color, or danger when the count needs doing today.
     static func counts(_ text: AttributedString, urgent: Bool) -> AttributedString {
         var text = text
         for run in text.runs where run.inlinePresentationIntent?.contains(.stronglyEmphasized) == true {

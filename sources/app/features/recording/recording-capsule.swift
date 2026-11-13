@@ -1,18 +1,9 @@
 import FolioDomain
 import SwiftUI
 
-/// The recorder's place in the toolbar, a group of its own after the search field (#62, 2026-11-11 사용자): a round
-/// mic while nothing records, widening where it stands into the course's capsule once a class records with the
-/// sidebar's card folded away. Kept out of the other buttons' group: inside it, starting moved the button out of the
-/// group, and the time sat among them unnoticed.
-///
-/// The capsule holds only what a class needs a hand for: the time, which pauses (not stops: ending a lecture by a
-/// slip is the costly mistake), and the mark. Paused, it goes gray and offers the stop, the one way to end it here.
 struct RecordingCapsule<Idle: View>: View {
     @State private var model: RecordingBarModel
     let expanded: Bool
-    /// When set, the time opens this rather than pausing, and the capsule holds the time alone: the iPad's toolbar
-    /// buttons are too small to share, so its card opens in a popover instead.
     let openCard: (() -> Void)?
     @ViewBuilder let idle: Idle
 
@@ -29,8 +20,6 @@ struct RecordingCapsule<Idle: View>: View {
                 time
                 if openCard == nil {
                     divider
-                    // The marks sit a little further from the round end than from the rule: the end's curve eats
-                    // into the room, and measured evenly the mark looked pushed against it (2026-11-11 사용자).
                     HStack(spacing: Theme.Space.xs) {
                         mark
                         if model.paused { stop.transition(.opacity.combined(with: .scale(scale: 0.6))) }
@@ -58,7 +47,6 @@ struct RecordingCapsule<Idle: View>: View {
         .animation(Theme.Motion.pane, value: model.paused)
     }
 
-    // From the capsule's leading edge to the dot's middle: the time's padding, half the dot.
     static var dotCenter: CGFloat { Theme.Space.m + Theme.Size.dot / 2 }
 
     var time: some View {
@@ -94,7 +82,6 @@ struct RecordingCapsule<Idle: View>: View {
         return Button {
             model.recorder.bookmark()
         } label: {
-            // Filled once marked, as on the card: an outline that only bounced looked as if the click did nothing.
             Label(String(localized: .recordingBookmarkHelp(count)), systemImage: count == 0 ? "bookmark" : "bookmark.fill")
                 .symbolEffect(.bounce, value: count)
                 .contentTransition(.symbolEffect(.replace))
@@ -110,8 +97,6 @@ struct RecordingCapsule<Idle: View>: View {
     }
 }
 
-/// The capsule's mark and stop: the time's size, not a toolbar button's, so they don't loom over the digits, and a
-/// circle to hover that fits the capsule's height.
 private struct CapsuleIconStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         CapsuleIcon(configuration: configuration)

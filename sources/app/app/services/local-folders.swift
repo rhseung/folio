@@ -1,11 +1,9 @@
 import CryptoKit
 import Foundation
 
-/// This device's own folders under Application Support/Folio, the only way the app reaches them.
-///
-/// Tests, previews and `mise run render` share this Mac's real folders when they ask the system for them, and a run
-/// on a fixture would then recover, move or delete the user's unfinished lecture recordings. In those runs asking
-/// stops the process with the folder's name, so a missing override shows up at once instead of touching real files.
+// 테스트, 미리보기, `mise run render`가 시스템에 폴더를 물으면 이 Mac의 실제 폴더를 받는다. 그러면 픽스처로 돌린
+// 실행이 사용자의 끝나지 않은 강의 녹음을 복구하거나 옮기거나 지울 수 있다. 그래서 이런 실행에서 폴더를 물으면 폴더
+// 이름과 함께 process를 멈춘다. 그래야 빠뜨린 override가 실제 파일을 건드리기 전에 바로 드러난다.
 enum LocalFolders {
     struct RealFolderInIsolatedRun: Error, CustomStringConvertible {
         let name: String
@@ -14,15 +12,13 @@ enum LocalFolders {
         }
     }
 
-    /// A test host (xcodebuild sets this for Swift Testing too) or an Xcode preview: never the user's own run.
     static func isIsolated(_ environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
         environment["XCTestConfigurationFilePath"] != nil || environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
     }
 
-    /// `perGIST` folders hold data about the courses of one GIST folder. An app run on a fixture (`FOLIO_GIST`, the
-    /// window snapshots included) gets them in a temporary folder of its own: fixture course IDs are fixed, so with
-    /// the real folder a fixture run's leftovers would stay there forever, and the next fixture run would recover a
-    /// real lecture into a throwaway folder and delete it here.
+    // 픽스처의 과목 ID는 고정되어 있다. 그래서 실제 폴더를 쓰면 픽스처 실행이 남긴 파일이 그곳에 계속 남고, 다음 픽스처
+    // 실행이 실제 강의 녹음을 임시 폴더로 복구한 뒤 여기서 지운다. 따라서 픽스처로 돌린 앱(`FOLIO_GIST`, 창 스냅숏 포함)은
+    // `perGIST` 폴더를 자기 임시 폴더에 둔다.
     static func url(_ name: String, perGIST: Bool = false, environment: [String: String] = ProcessInfo.processInfo.environment) throws
         -> URL
     {

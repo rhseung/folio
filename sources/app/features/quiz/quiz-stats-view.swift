@@ -11,7 +11,6 @@ struct QuizStatsView: View {
         let today = model.workspace.today
         Page {
             PageHeader(title: String(localized: .quizStatsTitle), subtitle: String(localized: .quizStatsSubtitle))
-            // No detail lines: one item with a second line sat its value higher than the rest of the strip.
             StatStrip(items: [
                 .init(title: String(localized: .quizStatsAccuracy), value: stats.total.accuracyText),
                 .init(title: String(localized: .quizStatsAttempted), value: "\(stats.total.attempted) / \(stats.total.items)"),
@@ -44,7 +43,6 @@ struct QuizStatsView: View {
                             }
                             Spacer(minLength: Theme.Space.m)
                             Chip(chip.text, tone: chip.tone)
-                            // The menu's own row, so the button and the menu say the same thing.
                             Button(.quizStatsSolveUnitWrong) { solve(model.solveWrong(of: card.unitId, units: stats.units)) }
                                 .buttonStyle(.ghost)
                         }
@@ -85,11 +83,9 @@ struct QuizStatsView: View {
     }
 }
 
-/// A group's tally in fixed columns, so figures line up down the card.
 struct TallyRow: View {
     let title: String
     let tally: WrongTally
-    /// "N장" for cards, "N문제" for problems.
     let items: (Int) -> LocalizedStringResource
     let last: Bool
 

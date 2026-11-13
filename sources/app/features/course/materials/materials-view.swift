@@ -19,7 +19,6 @@ struct MaterialsView: View {
     var body: some View {
         Group {
             if let m = model.viewed {
-                // Another file starts over: page, zoom, search and unsaved text belong to the old one.
                 FileView(
                     workspace: model.workspace, course: model.course, material: m.id, requestedPage: $model.requestedPage,
                     shownPage: $model.shownPage
@@ -47,7 +46,7 @@ struct MaterialsView: View {
         .sheet(isPresented: Binding(get: { !model.incoming.isEmpty }, set: { if !$0 { model.incoming = [] } })) {
             ImportPlaceSheet(workspace: model.workspace, course: model.course, files: model.incoming, places: model.places)
         }
-        // By item, so the sheet keeps its file while it slides away after `linking` clears.
+        // `linking`이 비워진 뒤 시트가 닫히는 동안에도 파일을 유지하도록 item으로 띄운다.
         .sheet(item: Binding(get: { model.linking.map(LinkedFile.init) }, set: { model.linking = $0?.id })) { file in
             MaterialLinksEditor(model: model, materialId: file.id)
         }
@@ -55,14 +54,12 @@ struct MaterialsView: View {
             NewMaterialFileSheet(workspace: model.workspace, course: model.course, folder: model.newFileFolder) { model.created($0) }
         }
         .confirming($model.pending)
-        // The window's place opens a file, at a page if the link names one; back to the section closes it.
         .onChange(of: place, initial: true) { _, link in
             if let m = model.follow(link), !m.isFolder { open(m) }
         }
         .onChange(of: model.viewedLink) { _, link in moved(link) }
         #if DEBUG && os(macOS)
         .onChange(of: SnapshotDriver.shared.openFile, initial: true) { old, ext in
-            // Nothing asked for yet: the file a link opened stays open.
             guard ext != nil || old != nil else { return }
             if ext != nil { model.trackFixtureFiles() }
             model.viewing = ext.flatMap { ext in
@@ -97,7 +94,7 @@ struct MaterialsView: View {
                     .help(Text(.materialsTrackHelp))
                 UndoMoveButton(moves: model.moves) { model.undo() }
             }
-            // On the header row, not the page: two file importers on one view leave only the last one working.
+            // 한 뷰에 file importer를 둘 두면 마지막 것만 동작하므로, 페이지가 아니라 머리 행에 단다.
             .fileImporter(isPresented: $picking, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
                 if case .success(let urls) = result { model.incoming = urls }
             }
@@ -112,7 +109,6 @@ struct MaterialsView: View {
                                 switch row {
                                 case .folder(let folder, let depth): folderRow(folder, depth: depth)
                                 case .file(let m, let name, let depth):
-                                    // One stack, so the indent moves the row once rather than padding each of its parts.
                                     HStack(spacing: Theme.Space.m) { fileRow(m, name: name, pdf: section.pdfs[m.id]) }
                                         .padding(.leading, CGFloat(depth) * Self.indent)
                                 }
@@ -144,7 +140,6 @@ struct MaterialsView: View {
         model.open(m)
     }
 
-    /// The chevron and its gap, so a folder's files line up under its folder icon.
     static let indent: CGFloat = 14 + Theme.Space.m
 
     func folderRow(_ folder: PathTree<FolioDomain.Material>, depth: Int) -> some View {
@@ -187,7 +182,6 @@ struct MaterialsView: View {
         #endif
     }
 
-    /// A `.tex` row's menu opens its PDF too; the PDF's own menu is on its page's `⋯`.
     func menu(_ m: FolioDomain.Material) -> some View {
         MaterialMenu(
             courseId: model.course.id, materialId: m.id, host: .list, moves: model.moves,
@@ -210,17 +204,15 @@ struct MaterialsView: View {
             Button(.materialsRelink) { model.relinking = m.id }.buttonStyle(.ghost)
             Button(.materialsUntrack) { model.disconnecting = m }.buttonStyle(.ghost).tint(Theme.Palette.danger)
         } else {
-            // The list shows a `.tex` and its PDF as one row (#109); the PDF opens from here.
             if let pdf {
                 Button(.materialsPairedPdf) { model.open(pdf) }.buttonStyle(.ghost).help(Text(.materialsOpenPdf))
             }
             #if os(macOS)
             Button(m.isFolder ? "Finder" : String(localized: .materialsOpen)) { open(m) }.buttonStyle(.ghost)
             #else
-            // iPadOS has no Finder to hand a folder to.
+            // iPadOS에는 폴더를 넘길 Finder가 없다.
             if !m.isFolder { Button(.materialsOpen) { open(m) }.buttonStyle(.ghost) }
             #endif
-            // Also here, not only on a long press, so a touch finds it.
             Menu {
                 menu(m)
             } label: {
@@ -304,8 +296,6 @@ private struct LinkedFile: Identifiable {
     let id: UUID
 }
 
-/// A file's one sheet (#403): its name, then what it is linked to. The links write as they are toggled; the name waits
-/// for its button, since the sheet shows the new name first and pressing it is the approval.
 struct MaterialLinksEditor: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var model: MaterialsModel
@@ -314,7 +304,6 @@ struct MaterialLinksEditor: View {
     static let width: CGFloat = 560
 
     var body: some View {
-        // Every row writes as it is toggled, so there is nothing to cancel.
         SheetForm(
             title: model.linksTitle(materialId), confirm: String(localized: .commonDone), carded: false, width: Self.width,
             cancellable: false
@@ -361,8 +350,6 @@ struct MaterialLinksEditor: View {
                             let link = s.materials.first { $0.materialId == materialId }
                             CardRow(last: i == sessions.count - 1) {
                                 CheckCircle(on: link != nil) { model.link(materialId, session: s.id, linked: link == nil) }
-                                // First to the room the page bar's least width leaves, so a long title shortens instead
-                                // of pushing the row past the sheet's edge, which an even share with the bar did.
                                 Text(model.sessionTitle(s)).lineLimit(1).layoutPriority(1)
                                 Spacer(minLength: Theme.Space.s)
                                 if let link {

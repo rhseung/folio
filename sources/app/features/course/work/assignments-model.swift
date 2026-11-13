@@ -15,7 +15,7 @@ final class AssignmentsModel {
         initial = course
     }
 
-    /// Looked up each time, so a saved change shows without the page being handed the course again.
+    // 저장한 변경이 페이지에 과목을 다시 넘기지 않아도 보이도록 매번 찾는다.
     var course: LoadedCourse { workspace.course(initial.id) ?? initial }
 
     var subtitle: String {
@@ -45,7 +45,6 @@ final class AssignmentsModel {
         var files: [FolioDomain.Material]
         var problems: Int
         var submissions: Int
-        /// A group-scored assignment has one entry per component; the row shows their total.
         var score: String?
         var component: String?
         var suggestsSubmitted: Bool
@@ -106,7 +105,6 @@ enum ScoreTarget: Hashable {
     case none, component(UUID), group(String)
 }
 
-/// Edits one assignment on a draft; nothing is saved until confirmed.
 @MainActor @Observable
 final class AssignmentSheetModel {
     let workspace: Workspace
@@ -118,10 +116,8 @@ final class AssignmentSheetModel {
     var due = Date.now
     var status: AssignmentStatus = .todo
     var repeats: AssignmentRepeat?
-    /// The rule shows its parts to edit: it matches no preset, or "직접 설정" was picked.
     var customRepeat = false
     private(set) var target = ScoreTarget.none
-    /// Typed score and max per component, so switching the target keeps what was typed.
     var scores: [UUID: String] = [:]
     var maxes: [UUID: String] = [:]
     var memo = ""
@@ -143,7 +139,6 @@ final class AssignmentSheetModel {
         }
     }
 
-    /// The files are found by the folder the title names, so a title naming another folder loses them here.
     var titleDetail: String? {
         let renamed = AssignmentFiles.path(of: Assignment(device: workspace.device, at: .now, title: title))
         return renamed == folder || files.isEmpty ? nil : String(localized: .assignmentsRenamedFolder(renamed))
@@ -165,7 +160,6 @@ final class AssignmentSheetModel {
         customRepeat = false
     }
 
-    /// Starts from the rule there is, or a week on the deadline's day.
     func customizeRepeat() {
         if repeats == nil { repeats = .weekly }
         customRepeat = true
@@ -186,7 +180,6 @@ final class AssignmentSheetModel {
         }
     }
 
-    // A group heads its components, indented under it, so picking the whole group or one part reads as a tree.
     var targetOptions: [PickOption<ScoreTarget>] {
         var options = [PickOption(id: ScoreTarget.none, title: String(localized: .assignmentsNoTarget))]
         var seen = Set<String>()
@@ -203,7 +196,6 @@ final class AssignmentSheetModel {
         return options
     }
 
-    /// A component without a typed max takes the one its last score had, as a weekly report is out of the same points.
     func pick(_ t: ScoreTarget) {
         target = t
         for c in targetComponents where (maxes[c.id] ?? "").isEmpty {
@@ -241,25 +233,20 @@ final class AssignmentSheetModel {
             memo: memo)
     }
 
-    /// The fields as `load()` filled them; any difference is an edit that closing the sheet would lose.
     private var loaded: Draft?
 
     var edited: Bool { loaded.map { $0 != draft } ?? false }
 
     enum Opening: Equatable {
-        /// A code project folder, in Finder, with the sheet left open.
         case elsewhere(URL)
-        /// Nothing to lose: the sheet closes and the file opens in the materials tab under it.
         case materials(UUID)
-        /// The sheet holds edits, so it stays, and the file opens in a window of its own.
         case window(UUID)
-        /// The sheet holds edits and no other window can open; `opening` waits for the user to save, drop them, or stay.
         case asks
     }
 
     var opening: FolioDomain.Material?
 
-    /// iPadOS has nowhere to open a folder.
+    // iPadOS에는 폴더를 열 곳이 없다.
     func opens(_ m: FolioDomain.Material) -> Bool {
         #if os(macOS)
         true
@@ -268,9 +255,6 @@ final class AssignmentSheetModel {
         #endif
     }
 
-    /// A file opens in the materials tab (`FileView`); a folder opens in Finder, with the sheet left open. A sheet is
-    /// short work (#317): one with nothing typed in it gives way to the file, one holding edits keeps them.
-    /// `windows`: whether another window can open, as the iPad's can't for the sheet's link.
     func open(_ m: FolioDomain.Material, windows: Bool) -> Opening {
         guard !m.isFolder else { return .elsewhere(course.store.fileURL(m.path)) }
         guard edited else { return .materials(m.id) }
@@ -279,7 +263,6 @@ final class AssignmentSheetModel {
         return .asks
     }
 
-    /// False when saving failed (the workspace shows why); the sheet then stays, edits and all.
     func saveAndOpen() -> Bool {
         opening = nil
         return apply()
@@ -299,7 +282,7 @@ final class AssignmentSheetModel {
         m.kind ?? AssignmentFiles.guessKind(fileName: (m.path as NSString).lastPathComponent)
     }
 
-    // Saved at once like an added file, not on confirm: the file is already in the folder whatever the sheet does.
+    // 파일은 시트와 상관없이 이미 폴더에 있으므로, 확인할 때가 아니라 바로 저장한다.
     func setKind(_ m: FolioDomain.Material, _ kind: MaterialKind) {
         pending = workspace.ask(MaterialKindSet(course: course.id, kind: kind, materials: [m.id]))
     }
@@ -313,7 +296,6 @@ final class AssignmentSheetModel {
         var componentId: UUID?, group: String?
         if case .component(let id) = target { componentId = id }
         if case .group(let g) = target { group = g }
-        // Every field, as the sheet shows them all; the action drops the scores of a target the sheet moved away from.
         return workspace.run(
             AssignmentSave(
                 course: course.id, assignment: assignment.id, title: .set(title), due: .set(hasDue ? due : nil),

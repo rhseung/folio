@@ -38,8 +38,6 @@ struct PeopleView: View {
             }
         }
         .navigationTitle(.peopleTitle)
-        // The window's link is the selection, so picking a person, from the column beside the page or open over it, is
-        // a step in the window's history, and stepping back to the list clears it.
         .onChange(of: place, initial: true) { _, entry in
             guard let entry else { return }
             if entry.link.kind == .person, let id = entry.link.id { model.selection = id }
@@ -53,7 +51,6 @@ struct PeopleView: View {
         return VStack(alignment: .leading, spacing: Theme.Space.m) {
             HStack {
                 SearchField(prompt: String(localized: .peopleSearch), text: $model.query)
-                // Shows the new person's page, which the window's link doesn't name until it is saved.
                 ColumnPick {
                     model.add(to: &catalog.wrappedValue)
                 } label: {

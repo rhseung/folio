@@ -4,12 +4,9 @@ import FolioStorage
 import SwiftUI
 
 extension EnvironmentValues {
-    /// Opens the course's Claude panel with this item added to its context. Nil outside a course, where there is no
-    /// panel to ask, so a view hides its "ask Claude" control rather than offering one that does nothing.
     @Entry var askClaude: (@MainActor (ContextItem) -> Void)?
 }
 
-/// Nothing leaves the device until the user presses send.
 struct ClaudePanel: View {
     @State private var model: ClaudeModel
     @Environment(\.accent) private var accent
@@ -17,10 +14,8 @@ struct ClaudePanel: View {
     let course: LoadedCourse
     let openNote: UUID?
     var alsoOpen: [UUID] = []
-    /// The tab's panes, when it has several (`ContextBuilder.panes`).
     var panes: ContextItem?
     let openUnit: UUID?
-    /// Context asked for from elsewhere (`askClaude`), taken into the panel's own list once it arrives.
     @Binding var incoming: ContextItem?
     let insertIntoNote: (String) -> Void
     let showNote: (UUID) -> Void
@@ -110,7 +105,6 @@ struct ClaudePanel: View {
                 }
             }
             .overflowFade(.vertical)
-            // About six rows; past that the list scrolls instead of squeezing the conversation below it.
             .frame(maxHeight: 200)
             .fixedSize(horizontal: false, vertical: true)
             if !model.removed.isEmpty {
@@ -212,7 +206,7 @@ struct ClaudePanel: View {
     }
 }
 
-/// Keeps its own text so typing doesn't re-render the conversation.
+// 입력할 때마다 대화가 다시 그려지지 않도록 글을 자기 상태로 둔다.
 struct ChatComposer: View {
     let enabled: Bool
     let sending: Bool
@@ -223,8 +217,8 @@ struct ChatComposer: View {
     var question: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     var body: some View {
-        // Last baseline, so longer text grows upward with the button kept by its last line. The button's center sits
-        // 4.5pt above that baseline, the middle of a 13pt Hangul line; on its own image bottom the text hung 2-3pt low.
+        // 마지막 baseline에 맞추므로 긴 글은 위로 자라고 버튼은 마지막 줄 옆에 남는다. 버튼의 중심은 그 baseline보다
+        // 4.5pt 위, 즉 13pt 한글 줄의 가운데에 있다. 이미지의 아래 끝에 맞추면 글이 2-3pt 아래로 처졌다.
         HStack(alignment: .lastTextBaseline, spacing: Theme.Space.s) {
             TextField(String(localized: enabled ? .claudeAsk : .claudeAskDisabled), text: $text, axis: .vertical)
                 .textFieldStyle(.plain)

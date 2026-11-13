@@ -1,7 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// How a transcription context reads, for the sidebar card's transcript and the player alike.
 enum TranscriptionContextText {
     static func pages(_ slides: LecturePages) -> String {
         let name = (slides.path as NSString).lastPathComponent
@@ -16,7 +15,6 @@ enum TranscriptionContextText {
         return range.map { "\(name) \($0)" } ?? name
     }
 
-    /// Without slides it says what was used instead, in plain gray: a class with no units can be meant that way.
     static func summary(_ context: TranscriptionContext) -> String {
         guard let first = context.slides.first else { return fallback(context) }
         let slides =
@@ -42,10 +40,8 @@ enum TranscriptionContextText {
     }
 }
 
-/// The slides, topics and terms of a context as rows of a `Card`. `link` leads to where lecture files are linked.
 struct TranscriptionContextRows: View {
     let context: TranscriptionContext
-    /// Whether the terms have been read; until then the row says so instead of "none".
     var termsRead = true
     var link: (() -> Void)?
 

@@ -4,7 +4,6 @@ import FolioStorage
 import Foundation
 
 extension CourseStore {
-    /// Notes-relative, as `note mv` and the folder menu name places: "" for Notes/ itself.
     func notesPath(of url: URL) -> String? {
         let prefix = CourseFolder.notes.rawValue + "/"
         return coursePath(of: url).flatMap { $0.hasPrefix(prefix) ? String($0.dropFirst(prefix.count)) : nil }
@@ -25,8 +24,8 @@ extension CourseStore {
 }
 
 extension LoadedCourse {
-    /// The note as course.json has it now. A `NoteFile` is read once, and the bar's link menu, the Claude panel or the
-    /// CLI may have linked it since: writing its old links back would undo theirs.
+    // `NoteFile`은 한 번 읽은 값이다. 그 뒤 링크 메뉴, Claude 패널, CLI가 링크를 걸었을 수 있으므로, 예전 링크를 다시
+    // 쓰면 그 변경을 지운다.
     func stored(_ note: NoteFile) -> NoteFile? {
         store.note(at: store.notePath(of: note.url), in: file)
     }
@@ -40,7 +39,6 @@ extension NoteLink {
 }
 
 extension Workspace {
-    /// Asks with the name the note will have there, ` 2` included, since that is what the user approves.
     func askMove(
         _ note: NoteFile, into folder: String, course: LoadedCourse,
         then done: @escaping @MainActor (ActionContext) -> Void
@@ -53,15 +51,12 @@ extension Workspace {
         return ask(NoteMove(course: course.id, note: source, to: target), then: done)
     }
 
-    /// One moved in from an old folder has no ID until it is adopted, which every way of opening it does first.
     func noteId(of note: NoteFile, in course: LoadedCourse) -> UUID? {
         if let id = note.meta.id { return id }
         guard let path = course.store.coursePath(of: note.url) else { return nil }
         return run(NoteAdopt(course: course.id, note: path))?.made
     }
 
-    /// A note's `[[제목]]` link, as the preview finds the note it draws (`NoteEmbedSource`). Adopted here too: the
-    /// preview draws the link whole, so the link must open it.
     func noteId(titled title: String, in course: LoadedCourse) -> UUID? {
         ((try? course.store.notes()) ?? []).linked(title).flatMap { noteId(of: $0, in: course) }
     }

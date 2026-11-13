@@ -3,15 +3,9 @@ import AppKit
 import FolioDomain
 import SwiftUI
 
-/// Debug-only (`FOLIO_SNAPSHOT_LAYOUTS` with `FOLIO_SNAPSHOT_DIR`): the walk behind #62's pictures of "배치 ▸" and the
-/// toolbar's recorder. A class's lecture opens beside the quiz; then the tab's own menu and its "배치 ▸" pop up as a
-/// right click would show them, and 설정 › 일반, each drawn into `<step>.png` with the menus' own windows. No event
-/// reaches the screen: the menu is asked of the tab's view in-process.
-/// `FOLIO_SNAPSHOT_LAYOUTS=window` stops after the first step (the recorder's pictures, one launch per state).
 @MainActor
 enum LayoutSnapshots {
     static let mode = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_LAYOUTS"]
-    /// The tab in front, across the window from its top-left corner, set by the tab row.
     static var selectedTab: CGRect?
 
     static func run(tabs: WindowTabs, workspace: Workspace) async {
@@ -23,7 +17,6 @@ enum LayoutSnapshots {
         window.setContentSize(NSSize(width: SnapshotDriver.width, height: SnapshotDriver.height))
         window.center()
         for _ in 0..<20 where workspace.currentCourses.isEmpty { try? await Task.sleep(for: .seconds(0.5)) }
-        // A class's lecture and the course's quiz, saved as a layout of the user's: the menu then has one to tick.
         let lectures = workspace.currentCourses.lazy.compactMap { course -> (UUID, SessionMaterial)? in
             course.file.sessions.lazy.compactMap(\.materials.first).first.map { (course.id, $0) }
         }
@@ -79,8 +72,8 @@ enum LayoutSnapshots {
 
     static func pop(_ menu: NSMenu, at point: NSPoint, in window: NSWindow, step name: String, directory: URL) async {
         let started = Date()
-        // The menu tracks the run loop in its own mode, where no task runs: a timer in `.common` mode takes the picture
-        // and ends it.
+        // 메뉴는 run loop를 자기 모드로 돌리고, 그 모드에서는 task가 실행되지 않는다. 그래서 `.common` 모드의 timer가
+        // 그림을 찍고 메뉴를 닫는다.
         nonisolated(unsafe) let held = menu
         let timer = Timer(timeInterval: 0.25, repeats: true) { timer in
             guard Date().timeIntervalSince(started) > 0.8 else { return }
@@ -95,9 +88,6 @@ enum LayoutSnapshots {
         try? await Task.sleep(for: .milliseconds(500))
     }
 
-    /// The window as `SnapshotDriver` draws it, with any menu open over it drawn in at its place on a plain menu
-    /// backing: the window server would draw the menu's glass too, but not for an app without screen recording access,
-    /// even of its own windows.
     static func shoot(_ name: String, in directory: URL) {
         let windows = NSApp.windows.filter(\.isVisible)
         guard

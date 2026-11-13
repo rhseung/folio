@@ -4,8 +4,6 @@ import FolioStorage
 import Foundation
 import Observation
 
-/// Moving a note into a new folder of Notes/. The sheet shows where the note lands, ` 2` included, and that the folder
-/// is made; that is the approval, so moving runs `note mv` without asking again, as the rename sheet does.
 @MainActor @Observable
 final class NoteFolderModel {
     let workspace: Workspace
@@ -25,7 +23,6 @@ final class NoteFolderModel {
     var folder: String { name.trimmingCharacters(in: .whitespaces) }
     var problem: StandardLayout.NoteFolderProblem? { StandardLayout.noteFolderProblem(name) }
 
-    /// With the name `note mv` will give, ` 2` included.
     var target: String? {
         guard problem == nil else { return nil }
         let store = course.store
@@ -45,7 +42,7 @@ final class NoteFolderModel {
         }
         guard let target, !isHere else { return String(localized: .notesFolderHere) }
         let path = CourseFolder.notes.rawValue + "/" + target
-        // A folder already there (in any case: the volume ignores it) takes the note as it is.
+        // 볼륨이 대소문자를 구분하지 않으므로, 대소문자만 다른 폴더도 이미 있는 폴더로 본다.
         let exists = course.store.noteFolders().contains { $0.caseInsensitiveCompare(folder) == .orderedSame }
         return exists
             ? String(localized: .notesFolderInto(path))

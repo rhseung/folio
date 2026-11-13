@@ -2,7 +2,6 @@ import FolioDomain
 import Foundation
 import Observation
 
-/// The courses each person taught are found from the courses' instructorIds, never stored on the person.
 @MainActor @Observable
 final class PeopleModel {
     let workspace: Workspace
@@ -12,7 +11,6 @@ final class PeopleModel {
 
     init(workspace: Workspace) { self.workspace = workspace }
 
-    /// A chosen person removed elsewhere (another device's save) falls back to the first instead of an empty page.
     func shown(in catalog: Catalog) -> UUID? {
         selection.flatMap { id in catalog.people.contains { $0.id == id } ? id : nil }
             ?? catalog.people.min(by: Self.listOrder)?.id
@@ -52,7 +50,6 @@ final class PeopleModel {
         return String(localized: n == 0 ? .peopleRemoveNoCourses : .peopleRemoveCourses(n))
     }
 
-    /// A course kept only in the transcript has no folder, so it has no page to open.
     func opens(_ course: UUID) -> Bool { workspace.course(course) != nil }
 
     func add(to catalog: inout Catalog) {

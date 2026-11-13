@@ -32,7 +32,6 @@ final class FileViewModel {
         case image(URL)
         case audio(URL)
         case quickLook(URL)
-        /// Quick Look has no view of this format either.
         case unsupported
     }
 
@@ -40,10 +39,7 @@ final class FileViewModel {
     private let initial: LoadedCourse?
     let subject: Subject
     private(set) var loaded: Loaded = .loading
-    /// The page the PDF was opened at, so leaving it there isn't logged as a new view.
     private var openedAt = 0
-    /// Off where a PDF is looked at for something else (a review's source): the materials tab resumes where the user
-    /// last read, not where a review happened to open it.
     let remembersPage: Bool
 
     init(workspace: Workspace, course: LoadedCourse?, subject: Subject, remembersPage: Bool = true) {
@@ -71,7 +67,6 @@ final class FileViewModel {
     var name: String { url.lastPathComponent }
     var format: MaterialFormat { MaterialFormat(path: url.path) }
 
-    /// A tracked text file or a `.tex` note is edited in place (`TextFileView`); any other text is only shown.
     var editsInPlace: Bool {
         guard format.renderer == .source, course != nil else { return false }
         switch subject {
@@ -85,17 +80,11 @@ final class FileViewModel {
 
     var splitting: LectureSplit?
     private(set) var splitNote: String?
-    /// The outline and titles being read as the screen opens: Claude waits until they are.
     private(set) var readingSplit = false
     private(set) var askingClaude = false
-    /// Claude was asked and gave no split: the one time the screen offers Claude again. Otherwise the user adjusts what
-    /// is there by hand (2026-11-12 사용자).
     private(set) var claudeFailed = false
-    /// Tests give a stand-in.
     @ObservationIgnored lazy var lectureClaude: LectureClaude? = course.map { LectureClaude.of(workspace, course: $0) }
-    /// Tests give a stand-in for the first reading of a file not split yet.
     @ObservationIgnored var findSplit: (@MainActor (URL, [FolioDomain.Unit]) async -> LectureFinding)?
-    /// Bumped by each read and each ask, so an answer that comes after a newer one is dropped.
     @ObservationIgnored private var splitRead = 0
 
     var canSplit: Bool {
@@ -103,8 +92,6 @@ final class FileViewModel {
         return course.file.lectureFiles.contains { $0.id == m.id }
     }
 
-    /// The course's split when it has one; otherwise the same proposal the add sheet makes, read again, so a proposal
-    /// put off there is never lost.
     func startSplit(_ controller: PDFController) async {
         guard let m = material, let course, canSplit else { return }
         let file = course.file
@@ -134,11 +121,9 @@ final class FileViewModel {
         readingSplit = false
         askingClaude = false
 
-        // Left alone while it was read: a cut made meanwhile is the user's and stays.
         guard let current = splitting, current.sections.count == 1, current.sections[0].unit == nil else { return }
         switch found {
         case .found(let split, _):
-            // Found sections need no line saying so: each row's ✦ marks what was matched, and its tooltip says how.
             splitting = split
             splitNote = nil
         case .nothing, .unreadable:
@@ -151,7 +136,6 @@ final class FileViewModel {
 
     var canRetryClaude: Bool { claudeFailed && splitting != nil && !readingSplit && !askingClaude }
 
-    /// Still only a proposal: nothing is written until "저장".
     func retryClaude() async {
         guard canRetryClaude, let claude = lectureClaude else { return }
         splitRead += 1
@@ -177,7 +161,6 @@ final class FileViewModel {
 
     var splitAsk: UUID? { workspace.splitAsk }
 
-    /// The progress sheet asks for a file's split screen before the file is open, so it is taken once the PDF is.
     func takeSplitAsk(_ controller: PDFController?) {
         guard let ask = workspace.splitAsk, ask == material?.id, let controller else { return }
         workspace.splitAsk = nil
@@ -193,7 +176,6 @@ final class FileViewModel {
         claudeFailed = false
     }
 
-    /// A note is the app's own document: it has no other app to go to.
     var opensElsewhere: Bool {
         if case .note = subject { return false }
         return true
@@ -211,7 +193,7 @@ final class FileViewModel {
 
     // MARK: Loading
 
-    /// Downloads an iCloud placeholder first: every renderer reads the file itself.
+    // 모든 렌더러가 파일을 직접 읽으므로 iCloud 자리표시자를 먼저 내려받는다.
     func load(page requested: Int?) async {
         guard let file = await download() else {
             loaded = .failed
@@ -260,10 +242,8 @@ final class FileViewModel {
         return LocalFile.read(file).flatMap { String(data: $0, encoding: .utf8) }
     }
 
-    /// Quick Look has no call that says whether it can show a file. A type no app on the device declares (`hwp`
-    /// without Hancom) it can't; for the rest, a file it can show it can also draw small, so a thumbnail that fails
-    /// (not the file's icon, which every file has) means its preview would be only that icon too. A thumbnail that
-    /// takes long is left to the preview to settle, rather than keeping the pane on a spinner.
+    // Quick Look에는 파일을 보일 수 있는지 알려 주는 호출이 없다. 기기의 어느 앱도 선언하지 않은 형식(한컴 오피스가 없을 때의 `hwp`)은 보이지 못한다. 그 밖의 형식은 보일 수 있으면 작게도
+    // 그릴 수 있으므로, 썸네일이 실패하면(모든 파일에 있는 파일 아이콘은 제외) 미리보기도 아이콘뿐이다. 썸네일이 오래 걸리면 칸을 로딩 표시로 붙잡아 두지 않고 미리보기에 판단을 맡긴다.
     nonisolated static func quickLookShows(_ url: URL) async -> Bool {
         guard let type = UTType(filenameExtension: url.pathExtension), !type.isDynamic else { return false }
         return await withTaskGroup(of: Bool.self) { group in
@@ -289,11 +269,9 @@ final class FileViewModel {
         return .latex
     }
 
-    /// Kept, not made on each read: the source holds the notes it read until the notes revision changes, and a new one
-    /// per body would read every linked note again.
+    // 읽을 때마다 만들지 않고 남겨 둔다. 이 소스는 노트 리비전이 바뀔 때까지 읽은 노트를 쥐고 있으므로, 본문마다 새로 만들면 연결된 노트를 모두 다시 읽는다.
     @ObservationIgnored private var embedSource: (url: URL, source: NoteEmbedSource)?
 
-    /// A note's embeds come from its course; a markdown file elsewhere shows only the links.
     var embeds: NoteEmbedSource? {
         guard let course else { return nil }
         let url = url
@@ -309,12 +287,10 @@ final class FileViewModel {
 
     // MARK: PDF
 
-    /// The strip cuts a lecture's pages into its classes' progress; a file no course tracks has none.
     func pageStrip(pageCount: Int) -> PageStripModel {
         PageStripModel(workspace: workspace, course: course?.id, material: material?.id, pageCount: pageCount)
     }
 
-    /// The page this file was last left at, on any device.
     private func lastPage() -> Int? {
         guard let m = material, let course else { return nil }
         return ((try? course.store.log.readAll()) ?? []).events(MaterialViewEvent.self).last { $0.event.materialId == m.id }?.event.page
@@ -330,12 +306,10 @@ final class FileViewModel {
         workspace.showing(page: nil, of: m, course: course.id)
     }
 
-    /// `page` is 0-based; the link names it 1-based, as `#page=N` does everywhere.
     func pageLink(_ page: Int) -> AppLink? {
         material.map { AppLink(.material, $0.id, anchor: .page(page + 1)) }
     }
 
-    /// Nil off a course material: the panel belongs to a course.
     func pageContext(_ page: Int, in controller: PDFController) -> ContextItem? {
         guard let m = material, let pdfPage = controller.view.document?.page(at: page) else { return nil }
         let name = "\((m.path as NSString).lastPathComponent) p\(page + 1).jpg"
@@ -344,7 +318,6 @@ final class FileViewModel {
             image: Self.jpeg(of: pdfPage).map { ContextItem.Image(name: name, data: $0) })
     }
 
-    /// 1568px on the long edge, as the panel sends a note's pictures: Claude scales anything larger down to that.
     private static func jpeg(of page: PDFPage) -> Data? {
         let bounds = page.bounds(for: .mediaBox)
         let scale = 1568 / max(bounds.width, bounds.height, 1)
@@ -359,7 +332,6 @@ final class FileViewModel {
 
     var recording: UUID? { workspace.recorder.capturing }
 
-    /// `page` is 0-based. While a class is recorded, the lecture pages it goes through are kept with the recording.
     func showing(_ page: Int) {
         guard let m = material, let course else { return }
         workspace.showing(page: page + 1, of: m, course: course.id)

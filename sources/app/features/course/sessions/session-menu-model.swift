@@ -2,9 +2,6 @@ import FolioActions
 import FolioDomain
 import Foundation
 
-/// What a class's card and a timetable slot's menu do, for every screen that shows one: the sessions page, the course
-/// overview, Today's list and ribbon. A saved class's menu is `SessionMenuSource`. A struct over the workspace, so a row
-/// can make one for its own course without keeping state.
 @MainActor
 struct SessionMenuModel {
     let workspace: Workspace
@@ -19,7 +16,6 @@ struct SessionMenuModel {
 
     // MARK: A saved session
 
-    /// The note, made from its template the first time.
     func note(_ kind: NoteKind, of session: Session) -> UUID? {
         workspace.note(kind, of: session.id, in: courseId)
     }
@@ -38,7 +34,7 @@ struct SessionMenuModel {
 
     func link(of item: Workspace.SuggestedSession) -> URL? { item.suggestion.link.flatMap(OnlineLink.url) }
 
-    /// One action, so an attendance the course refuses leaves no session made for it.
+    // 과목이 출결을 거절할 때 회차만 만들어지지 않도록 액션 하나로 한다.
     @discardableResult
     func make(_ item: Workspace.SuggestedSession, kind: Session.Kind = .lecture, attendance: AttendanceState? = nil) -> Session? {
         guard let id = workspace.run(SessionAdd(course: courseId, date: item.suggestion.date, kind: kind, attendance: attendance))?.made
@@ -60,7 +56,6 @@ struct SessionMenuModel {
 }
 
 extension Session.Kind {
-    /// The sheet offers the kinds in this order.
     static var options: [(Session.Kind, String)] {
         [
             (.lecture, String(localized: .sessionsLecture)), (.cancelled, String(localized: .sessionsCancelled)),

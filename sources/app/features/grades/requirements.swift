@@ -28,7 +28,6 @@ struct RequirementsView: View {
                     .buttonStyle(.ghost)
             }
 
-            // What needs a decision sits up here with its own buttons, where it's seen, not in a list at the bottom.
             if !suggestions.isEmpty {
                 let refusals = model.acceptRefusals(suggestions)
                 NoticeCard(
@@ -115,7 +114,6 @@ struct RequirementsView: View {
             }
             let cards = model.cards
             let columns = model.columns
-            // Two columns keep each card narrow; ViewThatFits drops to one when the window is too narrow for both.
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .top, spacing: Theme.Space.l) {
                     ForEach(columns.indices, id: \.self) { c in
@@ -162,8 +160,6 @@ struct RequirementsView: View {
         CategoryMenu(selection: Binding(get: { course.categoryIds }, set: { model.setCategories(course.id, $0) }), course: course)
     }
 
-    /// One card per group. A top-level category named like its group (기초‧교양) becomes the card's header, the only row
-    /// with a bar; the rest show a figure and a small ring, so a card reads at a glance instead of as a stack of bars.
     func groupCard(_ card: RequirementsModel.GroupCard, credits: [UUID: CategoryCredits], listed: [UUID: [Course]]) -> some View {
         let header = RequirementsModel.header(of: card)
         let body = card.rows.filter { $0.category.id != header?.category.id }
@@ -202,8 +198,6 @@ struct RequirementsView: View {
         }
     }
 
-    /// A press shows the courses behind the figure in a popover, so the cards keep their place; editing the requirement
-    /// is in the popover and the right-click menu.
     func toggle(_ category: RequirementCategory, _ courses: [Course], @ViewBuilder label: () -> some View) -> some View {
         Button {
             model.showing = category.id
@@ -239,7 +233,6 @@ struct RequirementsView: View {
                             HStack(spacing: Theme.Space.s) {
                                 CourseMark(model.workspace, course.id, inline: true)
                                 Text(course.title).lineLimit(1)
-                                // Plain text, not a chip: a chip makes its row taller than the rest.
                                 if course.finalGrade == nil { Text(.gradesEnrolled).foregroundStyle(Theme.Palette.warning) }
                                 Spacer(minLength: Theme.Space.s)
                                 Text(model.listDetail(course))
@@ -259,7 +252,7 @@ struct RequirementsView: View {
             .overflowFade(.vertical)
             .frame(maxHeight: 320)
             .fixedSize(horizontal: false, vertical: true)
-            // The sheet can't open over a popover still on screen, so the popover closes first.
+            // popover가 화면에 있는 동안에는 시트를 열 수 없으므로 popover를 먼저 닫는다.
             Button(.requirementsEdit) {
                 model.showing = nil; model.editing = category
             }.buttonStyle(.ghost).padding(.top, 2)
@@ -273,9 +266,7 @@ struct RequirementsView: View {
 struct RequirementLine: View {
     let category: RequirementCategory
     let credits: CategoryCredits
-    /// The card's top row: larger type and a bar under it.
     let header: Bool
-    /// Shown instead of the name, for a category heading its group's card.
     var title: String?
 
     var body: some View {
@@ -312,7 +303,6 @@ struct RequirementLine: View {
         String(localized: s.countsCourses ? .requirementsUnitCourses : .requirementsUnitCredits)
     }
 
-    /// `수강 중 4 · 4학점 남음`, `최대 18 초과`: what the figure alone doesn't say.
     static func note(_ category: RequirementCategory, _ s: RequirementStatus) -> String? {
         var parts: [String] = []
         if s.taking > 0 { parts.append(String(localized: .requirementsTaking(s.taking.formatted()))) }
@@ -459,12 +449,10 @@ struct RequirementSheet: View {
     }
 }
 
-/// Categories a course counts toward; a course may sit in several (e.g. 전공선택 and a minor).
 struct CategoryMenu: View {
-    // Read from the environment: the course editor builds this menu with no workspace of its own to pass.
+    // 과목 편집기가 넘길 workspace 없이 이 메뉴를 만들므로 environment에서 읽는다.
     @Environment(Workspace.self) private var workspace
     @Binding var selection: [UUID]
-    /// Given, a category that would count it toward two programs it may not share between (학사편람) can't be picked.
     var course: Course?
 
     var body: some View {
@@ -475,7 +463,6 @@ struct CategoryMenu: View {
     }
 }
 
-/// 내 정보, also a Settings tab. Set once and summarized in the page subtitle, so it opens from the header too.
 struct ProfileSheet: View {
     @Environment(\.dismiss) private var dismiss
     let workspace: Workspace
@@ -521,7 +508,7 @@ struct ProfileCard: View {
                 )
                 .pill(width: 72)
             }
-            // By position: the same program listed twice would otherwise collide, and the kind menu already names it.
+            // 같은 과정이 두 번 나열되면 충돌하므로 위치로 구분한다.
             ForEach(Array(rule.programs.enumerated()), id: \.offset) { i, p in
                 FormRow(label: String(localized: .profileProgram(i + 1))) {
                     SearchSelect(
@@ -542,7 +529,7 @@ struct ProfileCard: View {
             }
         }
         .onAppear { model.load() }
-        // Typing pauses before saving, as in Settings: each save rewrites transcript.json.
+        // 저장할 때마다 transcript.json을 다시 쓰므로, 설정처럼 입력이 멈춘 뒤 저장한다.
         .task(id: model.email) {
             try? await Task.sleep(for: .milliseconds(600))
             guard !Task.isCancelled else { return }

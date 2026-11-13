@@ -3,8 +3,6 @@ import Foundation
 import Observation
 import SwiftUI
 
-/// The last move a screen made (`material mv`, `note mv`, an approved cleanup), until its undo button takes it back
-/// with `cleanup undo`. One for the materials page and one for the notes section, whose list and open note both move.
 @MainActor @Observable
 final class MoveUndo {
     private(set) var batch: UUID?
@@ -13,7 +11,7 @@ final class MoveUndo {
         if let batch = ran?.made { self.batch = batch }
     }
 
-    /// Asked first, as `cleanup undo` declares; the course is tracked again after, so a moved file's entry follows it back.
+    // 되돌린 뒤 과목을 다시 추적해야 옮긴 파일의 항목이 파일을 따라 돌아온다.
     func undo(_ workspace: Workspace, course: UUID, then done: @escaping @MainActor () -> Void = {}) -> PendingAction? {
         guard let batch else { return nil }
         return workspace.ask(CleanupUndo(batch: batch, course: course)) { [weak self] _ in

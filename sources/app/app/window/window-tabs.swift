@@ -1,11 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// One window's tabs, each a layout of panes with their own histories (`TabPanes`, #62). The window draws them in its
-/// toolbar row itself rather than as AppKit window tabs, whose bar took a row of its own over the frame.
-///
-/// The screens of the most recent tabs stay alive behind the one in front (`alive`, chosen by `TabKeep`), so going back
-/// to one finds it as it was left; the others are drawn again from their address.
 @MainActor @Observable
 final class WindowTabs {
     private(set) var strip: TabStrip<UUID> {
@@ -15,23 +10,15 @@ final class WindowTabs {
         }
     }
     private var tabs: [UUID: TabPanes]
-    /// The tabs whose screens are alive, the one in front among them.
     private(set) var alive: Set<UUID>
-    /// When each tab last went behind another.
     @ObservationIgnored private var left: [UUID: Date] = [:]
-    /// The tabs playing a recording. `TabKeep` keeps them alive: dropping the screen would stop the audio.
     private(set) var playing: Set<UUID> = []
-    /// The panes playing, which the strip marks, each with how to pause it.
     private(set) var playingPanes: Set<UUID> = []
     @ObservationIgnored private var pauses: [UUID: @MainActor () -> Void] = [:]
-    /// Closing the last tab closes the window, which the window hands over once it has one.
     @ObservationIgnored var closeWindow: @MainActor () -> Void = {}
     @ObservationIgnored var now: @MainActor () -> Date = { .now }
     @ObservationIgnored var policy = WindowTabs.keep
-    /// Where the panes of the tab in front are across the window, for a tab dragged onto their edge (`TabBar`). Not
-    /// watched: it changes with every frame of a resize, and only a drag reads it.
     @ObservationIgnored var contentFrame: CGRect = .zero
-    /// Where a dragged tab would join the tab in front if let go now, which the panes mark.
     var drop: MergeDrop?
 
     enum MergeEdge: Equatable {
@@ -40,13 +27,11 @@ final class WindowTabs {
 
     struct MergeDrop: Equatable {
         var edge: MergeEdge
-        /// Of the row, what the joining panes would take (`PaneLayout.merge`).
         var share: Double
     }
 
-    /// How many screens wait behind the front tab and for how long. A note tab costs most: its preview's page runs in a
-    /// WebKit process of its own, about 80MB for a usual note and 270MB for a long one with math and diagrams, against
-    /// 10MB for a course page (measured with `TabMemoryProbe`; the numbers are in #304).
+    // 노트 탭이 가장 비싸다. 미리보기 페이지가 별도의 WebKit process에서 돌아 보통 노트는 약 80MB, 수식과 그림이 많은 긴
+    // 노트는 270MB를 쓰고, 과목 페이지는 10MB를 쓴다(`TabMemoryProbe`로 쟀다).
     static let keep = TabKeep.Policy(limit: 3, idle: 30 * 60)
 
     convenience init(_ first: Navigator) { self.init(TabPanes(first)) }
@@ -61,19 +46,14 @@ final class WindowTabs {
     var selected: UUID { strip.selected }
     var ids: [UUID] { strip.tabs }
     var count: Int { strip.tabs.count }
-    /// The focused pane's history in the tab in front.
     var current: Navigator { tabs[strip.selected]?.focused ?? Navigator() }
     var front: TabPanes? { tabs[strip.selected] }
 
     func panes(_ id: UUID) -> TabPanes? { tabs[id] }
-    /// The focused pane's history in a tab.
     func navigator(_ id: UUID) -> Navigator? { tabs[id]?.focused }
-    /// The focused pane's breadcrumb steps, which its screen sets while alive. With one trail for the window, a screen
-    /// kept behind would keep its steps in the front tab's trail.
     func trail(_ id: UUID) -> CrumbTrail? { tabs[id]?.focusedTrail }
     func panes(holding navigator: Navigator) -> TabPanes? { tabs.values.first { $0.index(of: navigator) != nil } }
 
-    /// `fromLink`: beside the tab in front rather than last.
     func open(_ navigator: Navigator = Navigator(), columns: ColumnPrefs? = nil, fromLink: Bool = false) {
         open(TabPanes(navigator, columns: columns), fromLink: fromLink)
     }
@@ -97,7 +77,6 @@ final class WindowTabs {
 
     func closeSelected() { close(selected) }
 
-    /// A pane's screen saying it plays (with how to pause it) or has stopped (nil); without a pane, the tab's first.
     func play(_ id: UUID, pane: UUID? = nil, pause: (@MainActor () -> Void)?) {
         if let pane = pane ?? tabs[id]?.ids.first {
             pauses[pane] = pause
@@ -107,7 +86,6 @@ final class WindowTabs {
         settlePlaying()
     }
 
-    /// From the tabs still open: a closed tab's screen says it stopped only once the tab is gone.
     private func settlePlaying() {
         let open = Set(strip.tabs.flatMap { tabs[$0]?.ids ?? [] })
         let panes = playingPanes.intersection(open)
@@ -116,7 +94,6 @@ final class WindowTabs {
         if tabs != playing { playing = tabs }
     }
 
-    /// Every pane of the tab that plays.
     func pause(_ id: UUID) {
         for pane in tabs[id]?.ids ?? [] where playingPanes.contains(pane) { pauses[pane]?() }
     }
@@ -128,13 +105,10 @@ final class WindowTabs {
         tabs = tabs.filter { $0.key == id }
     }
 
-    /// Whether tab `id` can join `target` ("옆 칸으로 합치기"): any other tab, however many panes either has.
     func canMerge(_ id: UUID, into target: UUID) -> Bool {
         id != target && tabs[id] != nil && tabs[target] != nil
     }
 
-    /// "옆 칸으로 합치기" (2026-11-09 사용자): tab `id`'s panes join `target`'s, with their histories, at `edge` (nil:
-    /// right of its focused pane, as "옆 칸에 열기" opens one), and tab `id` closes. `target` comes to the front.
     func merge(_ id: UUID, into target: UUID, at edge: MergeEdge? = nil) {
         guard canMerge(id, into: target), let source = tabs[id], let into = tabs[target] else { return }
         let index =
@@ -146,12 +120,9 @@ final class WindowTabs {
         guard into.merge(source, at: index), strip.close(id) else { return }
         tabs[id] = nil
         strip.select(target)
-        // Its panes took new IDs here, and their screens are drawn anew: the old IDs' marks go.
         settlePlaying()
     }
 
-    /// Where tab `id`, dragged to `point` across the window, would join the tab in front: within `mergeZone` of the
-    /// panes' leading or trailing edge, below their top. Nil for the tab in front itself.
     func drop(for id: UUID, at point: CGPoint) -> MergeDrop? {
         let frame = contentFrame
         guard id != selected, canMerge(id, into: selected), let source = tabs[id], let front = front, frame.width > 0,
@@ -163,21 +134,16 @@ final class WindowTabs {
         return MergeDrop(edge: edge, share: Double(source.count) / Double(source.count + front.count))
     }
 
-    /// How far in from the panes' edge a dragged tab joins them: wide enough to find without aiming, narrow enough to
-    /// leave the middle for letting go without joining.
     static let mergeZone = Theme.Size.paneMin / 2
 
-    /// Takes a tab out for a window of its own; nil for the last one, which is the window already.
     func take(_ id: UUID) -> TabPanes? {
         guard count > 1, let panes = tabs[id], strip.close(id) else { return nil }
         tabs[id] = nil
         return panes
     }
 
-    /// Lets go of the screens that have waited behind too long; the window calls it as the minutes pass.
     func tick() { settle() }
 
-    /// The system is short of memory: only the tab in front keeps its screen.
     func dropBackground() { settle(pressure: true) }
 
     private func settle(pressure: Bool = false) {
@@ -189,13 +155,11 @@ final class WindowTabs {
     }
 }
 
-/// The screens of the tabs kept alive, stacked. Only the one in front shows and takes the pointer and the keys: a kept
-/// screen's ⌘S or ⌘E, or the zoom keys of a file it shows, would otherwise act on a page no one sees. Each pane's
-/// screen keeps its own breadcrumb steps and moves its own pane when it opens a link.
+// 앞의 화면만 보이고 포인터와 키를 받는다. 그렇지 않으면 살려 둔 화면의 ⌘S나 ⌘E, 그 화면이 보이는 파일의 확대 키가
+// 보이지 않는 페이지에 작용한다.
 struct TabScreens: View {
     let tabs: WindowTabs
     let workspace: Workspace
-    /// For the pane whose history this is.
     let openLink: (Navigator) -> OpenLinkAction
     @State private var sizes = ScreenSizes()
     #if os(iOS)
@@ -204,9 +168,6 @@ struct TabScreens: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     #endif
 
-    /// "새 탭으로 옮기기" from a pane's menu: a tab of its own, its history with it. The iPhone's frame has no tab
-    /// strip, so there it goes to a window of its own, and nowhere where the system allows only one; a tab there would
-    /// be one with no bar to find it by.
     var newTab: ((Navigator, ColumnPrefs) -> Void)? {
         let here: (Navigator, ColumnPrefs) -> Void = { [tabs] navigator, columns in tabs.open(navigator, columns: columns, fromLink: true) }
         #if os(macOS)
@@ -224,13 +185,9 @@ struct TabScreens: View {
 
     var body: some View {
         ZStack {
-            // In the strip's order, so a screen keeps its place in the stack, and its state, as others come and go.
             ForEach(tabs.ids.filter { tabs.alive.contains($0) }, id: \.self) { id in
                 if let panes = tabs.panes(id) {
                     let front = id == tabs.selected
-                    // A screen behind keeps the size it last had in front, so resizing the window lays out only the
-                    // one in front: a note's text and preview page reflowing out of sight made each frame of a live
-                    // resize wait on every kept tab. It takes the window's size again when it comes back.
                     let kept = front ? nil : sizes[id]
                     PaneRow(
                         workspace: workspace, panes: panes, front: front, openLink: openLink,
@@ -239,8 +196,8 @@ struct TabScreens: View {
                     )
                     .onGeometryChange(for: CGSize.self, of: \.size) { sizes[id] = $0 }
                     .frame(width: kept?.width, height: kept?.height, alignment: .topLeading)
-                    // The window's size whatever the screen inside: with no least size given, a screen behind
-                    // sized the stack to itself and pushed the one in front past the window's edge.
+                    // 안의 화면과 상관없이 창 크기를 준다. 최소 크기가 없으면 뒤의 화면이 stack을 자기 크기로 정해 앞의 화면을 창 밖으로
+                    // 밀어냈다.
                     .frame(
                         minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity,
                         alignment: kept == nil ? .center : .topLeading
@@ -263,8 +220,6 @@ struct TabScreens: View {
     }
 }
 
-/// Where a tab dragged onto the panes' edge would join them: the room its panes would take, in the accent, as the
-/// focused pane's ring is. Only the iPad lacks it, having no tabs to drag.
 private struct MergeMark: View {
     let tabs: WindowTabs
 
@@ -287,14 +242,10 @@ private struct MergeMark: View {
 }
 
 extension EnvironmentValues {
-    /// Where a screen says it is playing a recording, so its tab is kept and its pane marked behind the front one.
     @Entry var tabPlaying: @MainActor ((@MainActor () -> Void)?) -> Void = { _ in }
 }
 
-/// The tabs at each width they can take, as `TabBar` measures them. Not observed: nothing draws from them, they only
-/// feed `ToolbarRow`.
 @MainActor final class TabSizes {
-    /// The tab in front's trail alone, then its whole capsule with its other segments named and as icons.
     var trail: CGFloat = 0
     var front: CGFloat = 0
     var compactFront: CGFloat = 0
@@ -307,7 +258,6 @@ extension EnvironmentValues {
 
     func set(_ width: CGFloat, _ id: UUID, _ form: TabForm) { others[id, default: [:]][form] = width }
 
-    /// Until measured, an icon.
     func other(_ id: UUID) -> TabFit.Other {
         let widths = others[id] ?? [:]
         let icon = TabBar.icon
@@ -318,8 +268,6 @@ extension EnvironmentValues {
     func keep(_ ids: Set<UUID>) { others = others.filter { ids.contains($0.key) } }
 }
 
-/// The size each kept screen was last laid out at. Not observed: it changes every frame of a resize, which would redraw
-/// the stack each frame; it is read only when a screen goes behind.
 @MainActor final class ScreenSizes {
     private var sizes: [UUID: CGSize] = [:]
 
@@ -331,13 +279,12 @@ extension EnvironmentValues {
     func keep(_ ids: Set<UUID>) { sizes = sizes.filter { ids.contains($0.key) } }
 }
 
-/// The system running short of memory, one notification on the Mac and the iPad alike.
 enum MemoryPressure {
     #if os(macOS)
     static let warning = Notification.Name("FolioMemoryPressure")
     @MainActor private static var source: DispatchSourceMemoryPressure?
 
-    /// Once, for the app's life: the Mac has no memory warning of its own to listen to.
+    // Mac에는 따로 들을 memory warning이 없다.
     @MainActor static func start() {
         guard source == nil else { return }
         let pressure = DispatchSource.makeMemoryPressureSource(eventMask: [.warning, .critical], queue: .main)
@@ -356,15 +303,11 @@ enum MemoryPressure {
 }
 
 extension FocusedValues {
-    /// The key window's tabs, for the menu bar's tab commands.
     @Entry var windowTabs: WindowTabs?
-    /// The key window's tab in front, for 보기 › 칸 폭 맞추기.
     @Entry var frontPanes: TabPanes?
 }
 
 extension Workspace {
-    /// The screen a step is on with the sidebar's icon and name for it: the head of the window's breadcrumb, and the
-    /// mark on a tab.
     func placeCrumb(of entry: Navigator.Entry) -> Crumb {
         switch Screen(entry) {
         case .course(let id): Crumb(title: course(id)?.title ?? "", symbol: course(id)?.file.course.icon, dot: accent(id).color)
@@ -380,62 +323,46 @@ extension Workspace {
         case .settings: Crumb(title: String(localized: .rootNavSettings), symbol: "gearshape")
         case .whatsNew: Crumb(title: String(localized: .whatsNewTitle), symbol: "sparkles")
         case .proposals: Crumb(title: String(localized: .rootNavProposals), symbol: "tray")
-        // The address itself, as the page says it can't be found: not today's, which the page no longer shows.
         case .missing: Crumb(title: entry.link.string, symbol: "questionmark.folder")
         case .today: Crumb(title: String(localized: .rootNavToday), symbol: "house")
         }
     }
 
-    /// The name on a tab behind the one in front: the session, note, file or person it shows, else its screen's name.
-    /// A course's section alone ("노트") says less than the course. Nil for Today, whose house says it.
     func tabTitle(of entry: Navigator.Entry) -> String? {
         switch entry.link.kind {
         case .today: nil
         case .session, .unit, .note, .material, .assignment, .exam, .problemSet, .person, .recording:
             itemName(of: entry) ?? placeCrumb(of: entry).title
-        // A card names only its page ("카드"), which says less than the course.
         case .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals, .semester, .course, .card:
             placeCrumb(of: entry).title
         }
     }
 }
 
-/// The window's tabs in its toolbar row: the tab in front is the breadcrumb of where its focused pane is, with a close
-/// button; a tab of several panes is one capsule with a segment for each (B2 in #62). The others are their icons and a
-/// short name, then icons alone, then a menu, as the row runs out (`TabFit`). A + at the end opens Today in a new tab.
 struct TabBar: View {
     let tabs: WindowTabs
     let workspace: Workspace
-    /// The focused pane's whole trail: its screen, then what the screen added.
     let crumbs: [Crumb]
-    /// Where the row has room for the tabs, worked out there as the window resizes.
     let toolbar: ToolbarRow
     let moveToWindow: (UUID) -> Void
-    /// "지금 배치 저장…": asks for the name the tab's panes are saved under.
     var nameLayout: (TabPanes) -> Void = { _ in }
-    /// "배치 관리…": the settings where the user's layouts are named, ordered and deleted.
     var manageLayouts: () -> Void = {}
     @State private var sizes = TabSizes()
     @State private var frames: [UUID: CGRect] = [:]
     @State private var dragged: (id: UUID, start: CGFloat)?
     @State private var dragOffset: CGFloat = 0
-    /// The strip's origin across the window, which a drag's points are measured from: the panes' edge it may be
-    /// dragged onto is measured across the window too.
     @State private var stripOrigin: CGPoint = .zero
-    /// Back to false however a tab's drag ends: one the system cuts short has no end to clear the merge mark.
     @GestureState private var dragging = false
 
     static let gap = Theme.Space.s
     static let icon = Theme.Size.toolbarButton
     static let plus = "plus"
-    /// The new-tab glyph's ink, which sets it one gap after the last capsule (`TabFit.newTabSpacing`). Not its image's
-    /// width: that has the symbol's side bearings in it, 2 points a side, and the + still sat further off than the
-    /// capsules from each other.
+    // image의 폭이 아니라 실제로 칠한 폭을 쓴다. image 폭에는 기호의 side bearing이 양쪽 2point씩 들어 있어, +가 capsule
+    // 사이의 간격보다 더 멀리 놓였다.
     static let plusInk = inkWidth(of: plus, size: Theme.Glyph.toolbarSize)
 
     static func inkWidth(of symbol: String, size: CGFloat) -> CGFloat {
         #if os(iOS)
-        // The symbol drawn into a bitmap of its own and the inked columns counted, as on the Mac.
         guard let image = UIImage(systemName: symbol, withConfiguration: UIImage.SymbolConfiguration(pointSize: size, weight: .regular)),
             let cg = image.cgImage
         else { return size }
@@ -477,9 +404,9 @@ struct TabBar: View {
 
     var body: some View {
         let others = tabs.ids.filter { $0 != tabs.selected }
-        // Changes only as the fit or the front tab's trail does, not with every width the window passes through: a
-        // redraw of the tabs on every frame of a live resize is work the frame can't spare (in the AppKit toolbar,
-        // which rebuilt its items' menu form each time, it held the window to a few frames a second).
+        // 맞춤이나 앞 탭의 trail이 바뀔 때만 바뀌고, 창이 지나는 모든 폭마다 바뀌지는 않는다. live resize의 frame마다 탭을
+        // 다시 그리는 비용은 frame이 감당하지 못한다(항목의 메뉴 형태를 매번 다시 만들던 AppKit 툴바에서는 창이 초당 몇
+        // frame으로 떨어졌다).
         let placement = toolbar.placement
         let fit = placement.fit
         let shown = Array(others.prefix(fit.shown))
@@ -489,8 +416,6 @@ struct TabBar: View {
             ForEach(row, id: \.self) { id in
                 Group {
                     if id == tabs.selected {
-                        // Its own width while it fits: offered the row, the trail's frame would take all of it, and
-                        // held to its measured width a fraction short, it cut the course's name.
                         if let trail = placement.trail {
                             front(crumbRoom: trail, compact: fit.compactFront)
                                 .frame(width: trail + CGFloat(toolbar.measures.front.chrome(compact: fit.compactFront)))
@@ -498,7 +423,6 @@ struct TabBar: View {
                             front(crumbRoom: .infinity, compact: fit.compactFront).fixedSize()
                         }
                     } else {
-                        // At their measured width: `TabFit` already made room, and squeezed they'd cut their names.
                         tab(id, form: TabForm(fit)).fixedSize()
                     }
                 }
@@ -548,18 +472,14 @@ struct TabBar: View {
             frames = frames.filter { open.contains($0.key) }
         }
         .animation(Theme.Motion.standard, value: tabs.ids)
-        // A new fit (names to icons, into the menu) comes at once, not animated: it comes mid-resize, and animated the
-        // strip slid in from the width it had, the first tab off the panel's edge by as much for a quarter second.
-        // Never wider than the row leaves it: wider, the strip runs under the search field and the buttons.
         .frame(width: placement.width, alignment: .leading)
         .padding(.leading, placement.lead)
     }
 
     static let space = "tabs"
 
-    /// Tells the row what the tabs take, straight from the measures: state set in a measure's callback reached the
-    /// body late or not at all, and the row held the front tab to a width it had long outgrown, running the strip
-    /// over the search field.
+    // 잰 값에서 바로 알린다. 재는 callback에서 설정한 state는 body에 늦게 닿거나 닿지 않았고, 줄이 앞 탭을 오래전 폭에 묶어
+    // strip이 검색 칸 위로 넘어갔다.
     func report() {
         let others = tabs.ids.filter { $0 != tabs.selected }
         let measures = ToolbarRow.Measures(front: sizes.frontFit, others: others.map(sizes.other), more: sizes.more)
@@ -574,7 +494,6 @@ struct TabBar: View {
         } else {
             HStack(spacing: Theme.Space.xs) {
                 Breadcrumb(crumbs: crumbs, foldWidth: crumbRoom, maxWidth: crumbRoom)
-                // Not on a lone tab: there it would close the window, which the window's own button already does.
                 if tabs.count > 1 { closeButton(tabs.selected) }
             }
             .padding(.leading, Theme.Space.m)
@@ -584,7 +503,6 @@ struct TabBar: View {
         }
     }
 
-    /// The close button at the end closes the tab; each segment's own × closes its pane.
     func joined(_ panes: TabPanes, crumbRoom: CGFloat, compact: Bool) -> some View {
         HStack(spacing: 0) {
             ForEach(Segment.all(panes, workspace: workspace, playing: tabs.playingPanes)) { segment in
@@ -601,8 +519,6 @@ struct TabBar: View {
                             tabs.open(navigator, columns: columns, fromLink: true)
                         }
                     }
-                    // A segment's menu stands in for the tab's, so a tab of panes, the one a layout is saved from,
-                    // has "배치 ▸" too.
                     Divider()
                     LayoutMenu(choices: workspace.layoutChoices(for: panes, save: { nameLayout(panes) }, manage: manageLayouts))
                 }
@@ -614,9 +530,8 @@ struct TabBar: View {
         .tabSurface(front: true)
     }
 
-    /// One pane as the tab bar draws it, read from the panes before `ForEach` gets it. Not its place to read them by
-    /// inside: as a pane closed, SwiftUI ran the segment it had once more with the place it had then, past the end of
-    /// the panes, and the app crashed (2026-11-08).
+    // 뷰 안에서 자리로 칸을 읽지 않는다. 칸이 닫힐 때 SwiftUI가 그 segment를 예전 자리로 한 번 더 실행했고, 그 자리가 칸
+    // 목록의 끝을 넘어 앱이 비정상 종료되었다. 그래서 `ForEach`에 넘기기 전에 칸에서 읽는다.
     struct Segment: Identifiable {
         let id: UUID
         let index: Int
@@ -651,8 +566,6 @@ struct TabBar: View {
         let title = workspace.tabTitle(of: entry)
         let name = tabs.panes(id).flatMap(workspace.presetName(of:)) ?? title ?? workspace.placeCrumb(of: entry).title
         if let panes = tabs.panes(id), panes.count > 1 {
-            // Not one button: the playing pane's speaker is a button of its own, and inside the tab's label it would
-            // select the tab.
             label(id, form: form)
                 .help(name)
                 .accessibilityElement(children: .contain)
@@ -665,17 +578,13 @@ struct TabBar: View {
                 label(entry, title: form == .full ? title : nil, playing: playing)
             }
             .buttonStyle(.pointing(.plain))
-            // Its own button over the room the label leaves it: a button inside the tab's label would select the tab.
+            // 탭의 label 안에 둔 버튼은 탭을 고르므로, label이 남긴 자리 위에 별도의 버튼으로 둔다.
             .overlay(alignment: .trailing) { if playing && form == .full { speaker(id) } }
             .help(name)
             .accessibilityLabel(name)
         }
     }
 
-    /// A tab behind the front one. One pane: its icon, and its name unless it has none or the row is short. Several:
-    /// their icons joined, with the preset's name the layout is, or the first icon and "+n" (`TabFit`'s step 2). The
-    /// playing pane's icon is a speaker that pauses it; stacked into one icon, the tab shows the speaker there and
-    /// selects, as a tab of one pane does at an icon.
     @ViewBuilder func label(_ id: UUID, form: TabForm) -> some View {
         if let panes = tabs.panes(id), panes.count > 1 {
             let segments = Segment.all(panes, workspace: workspace, playing: tabs.playingPanes)
@@ -737,7 +646,6 @@ struct TabBar: View {
             .frame(height: Theme.Size.toolbarButton)
             .tabSurface(front: false)
             .contentShape(.capsule)
-            // The room between the icons selects the tab too; the buttons in it take their own presses first.
             .onTapGesture { tabs.select(id) }
         } else {
             let entry = tabs.navigator(id)?.current ?? Navigator.Entry(link: .place(.today))
@@ -745,8 +653,6 @@ struct TabBar: View {
         }
     }
 
-    /// Playing a recording, it leaves room at its end for the speaker, set as the front tab sets its close button, or
-    /// shows the speaker in place of its icon when the row is short.
     @ViewBuilder func label(_ entry: Navigator.Entry, title: String?, playing: Bool = false) -> some View {
         let place = workspace.placeCrumb(of: entry)
         Group {
@@ -789,8 +695,6 @@ struct TabBar: View {
         .accessibilityLabel(Text(.tabsPause))
     }
 
-    /// A tab as a menu names it: the preset its panes are, else what its focused pane shows; with that pane's icon, or
-    /// the speaker while it plays.
     func menuItem(_ id: UUID) -> (name: String, symbol: String) {
         let entry = tabs.navigator(id)?.current ?? Navigator.Entry(link: .place(.today))
         let place = workspace.placeCrumb(of: entry)
@@ -808,8 +712,8 @@ struct TabBar: View {
             moreLabel(hidden.count)
         }
         .menuStyle(.button)
-        // Plain, not `.pointing(.plain)`: a custom style turns the menu back into a pop-up button, whose own margins
-        // drew the capsule wider than measured and set it further from its neighbors than they are from each other.
+        // `.pointing(.plain)`이 아니라 plain을 쓴다. custom style은 메뉴를 pop-up button으로 되돌리고, 그 여백 때문에 capsule이
+        // 잰 폭보다 넓게, 이웃과도 더 멀리 그려졌다.
         .buttonStyle(.plain)
         .pointingHand()
         .menuIndicator(.hidden)
@@ -818,7 +722,6 @@ struct TabBar: View {
         .accessibilityLabel(Text(.tabsMore(hidden.count)))
     }
 
-    /// "+n" alone: the room it leaves goes to the tabs. Its hover and VoiceOver say what it holds.
     func moreLabel(_ n: Int) -> some View {
         Text(.tabsMoreCount(n))
             .monospacedDigit()
@@ -842,8 +745,6 @@ struct TabBar: View {
         }
     }
 
-    /// "옆 칸으로 합치기 ▸": every other tab, whose panes join this one's right of its focused pane. The menu's way to
-    /// what dragging a tab onto the panes' edge does.
     func mergeMenu(into id: UUID) -> some View {
         let others = tabs.ids.filter { $0 != id }
         return Menu(String(localized: .tabsMerge)) {
@@ -855,8 +756,6 @@ struct TabBar: View {
         .disabled(others.isEmpty)
     }
 
-    /// What every tab would take at each width it can have, drawn once out of sight: a tab drawn as an icon can't tell
-    /// how wide its name would make it.
     func measures(_ others: [UUID]) -> some View {
         ZStack {
             Breadcrumb(crumbs: crumbs, foldWidth: .infinity, maxWidth: .infinity).fixedSize()
@@ -879,7 +778,6 @@ struct TabBar: View {
                         }
                 }
             }
-            // Two digits: the menu's width hardly changes with its count.
             moreLabel(max(others.count, 10)).fixedSize()
                 .onGeometryChange(for: CGFloat.self, of: \.size.width) {
                     sizes.more = $0; report()
@@ -890,9 +788,6 @@ struct TabBar: View {
         .accessibilityHidden(true)
     }
 
-    /// Drags a tab along the row; passing a neighbor's middle swaps them, as in Safari. Down onto the leading or
-    /// trailing edge of the panes, it joins the tab in front there when let go ("옆 칸으로 합치기", 2026-11-09 사용자),
-    /// the room it would take marked meanwhile (`MergeMark`). Out of the window is #305's.
     func drag(_ id: UUID, row: [UUID]) -> some Gesture {
         DragGesture(minimumDistance: Theme.Space.xs, coordinateSpace: .named(Self.space))
             .updating($dragging) { _, state, _ in state = true }
@@ -902,14 +797,11 @@ struct TabBar: View {
                 let point = across(value.location)
                 let drop = tabs.drop(for: id, at: point)
                 if drop != tabs.drop { tabs.drop = drop }
-                // Over the panes the tab is on its way to join them, not to another place in the row.
                 let content = tabs.contentFrame
                 if content.isEmpty || point.y < content.minY { reorder(id, row: row, to: value.location.x) }
-                // The tab follows the pointer from where it was picked up, whatever place the row now gives it.
                 dragOffset = value.translation.width - ((frames[id]?.minX ?? frame.minX) - (dragged?.start ?? frame.minX))
             }
             .onEnded { value in
-                // From where it was let go rather than the mark, which `dragging` may have cleared already.
                 let drop = tabs.drop(for: id, at: across(value.location))
                 tabs.drop = nil
                 if let drop { tabs.merge(id, into: tabs.selected, at: drop.edge) }
@@ -935,7 +827,6 @@ struct TabBar: View {
     }
 }
 
-/// How a tab behind the front one is drawn, by `TabFit`'s steps.
 enum TabForm: CaseIterable {
     case full, icons, stacked
 
@@ -944,14 +835,11 @@ enum TabForm: CaseIterable {
     }
 }
 
-/// The × that closes the pane keeps its place when hidden, so the tab doesn't change width as the pointer passes.
 private struct TabSegment: View {
     let mark: Crumb
-    /// The breadcrumb, on the focused segment only.
     let crumbs: [Crumb]?
     let crumbRoom: CGFloat
     let iconOnly: Bool
-    /// The pane plays a recording: its icon slot is a speaker that pauses it.
     let playing: Bool
     let select: () -> Void
     let close: () -> Void
@@ -963,9 +851,6 @@ private struct TabSegment: View {
 
     var body: some View {
         HStack(spacing: Theme.Space.xxs) {
-            // The focused segment is told by its ink alone, no capsule of its own: a capsule inside the tab's capsule
-            // inside the row made three boxes and left the inner one 3pt to spare (#62). Fading in place as the focus
-            // moves: the segments change their ink, they don't slide.
             if let crumbs {
                 HStack(spacing: Theme.Space.s) {
                     if playing { speakerButton.foregroundStyle(mark.dot ?? Theme.Palette.chromeSelected) }
@@ -1010,7 +895,6 @@ private struct TabSegment: View {
         .onHover { hovering = $0 }
     }
 
-    /// Gray on a segment behind, in the course's color on the focused one, like the icon it stands in for.
     var speakerButton: some View {
         Button(action: pause) {
             LineIcon(symbol: TabBar.speakerSymbol).contentShape(.rect)
@@ -1029,9 +913,8 @@ private struct SegmentRule: View {
     }
 }
 
-/// Where the title row's items sit across the window (`TitleRow`), and so where the tabs between them go and how many
-/// fit. Only `placement` is watched: what it is worked out from changes with every frame of a live resize, and as the
-/// root view's state it redrew the sidebar, every kept tab's screen and the tabs on each one.
+// `placement`만 관찰한다. 이 값을 계산하는 재료는 live resize의 frame마다 바뀌고, root view의 state로 두었을 때는
+// 사이드바, 살려 둔 모든 탭의 화면, 탭을 frame마다 다시 그렸다.
 @MainActor @Observable final class ToolbarRow {
     struct Measures: Equatable {
         var front = TabFit.Front(trail: 0, chrome: 0)
@@ -1040,14 +923,10 @@ private struct SegmentRule: View {
     }
 
     struct Placement: Equatable {
-        /// From the back and forward buttons to the first tab.
         var lead: CGFloat
         var fit: TabFit.Layout
-        /// The width the front tab's trail is held to; nil while it fits at its own (`TabFit.trail`).
         var trail: CGFloat?
-        /// The strip's whole width, the + included.
         var width: CGFloat
-        /// Before the new-tab button (`TabFit.newTabSpacing`).
         var newTabSpacing: CGFloat
     }
 
@@ -1055,16 +934,11 @@ private struct SegmentRule: View {
         lead: 0, fit: TabFit.Layout(iconsOnly: false, shown: 0, hidden: 0), trail: nil, width: 0,
         newTabSpacing: TabBar.gap)
 
-    /// Set as the window resizes, before the row lays out (`WindowWidth`): the tabs fit the new width in the same frame.
-    /// Measured from the laid-out row instead, it would come a frame behind the window, and a strip too wide for the
-    /// row ran the first tab off the panel's edge.
+    // 창이 resize되는 동안 줄이 배치되기 전에 설정되므로(`WindowWidth`) 탭이 같은 frame에 새 폭에 맞는다. 배치된 줄에서
+    // 재면 창보다 한 frame 늦고, 줄보다 넓은 strip이 첫 탭을 패널 가장자리 밖으로 밀어냈다.
     @ObservationIgnored var windowWidth: CGFloat = 1200 { didSet { settle() } }
-    /// Where the row puts its first item (the sidebar button), across the window (`TitleRowEdges.lead`).
     @ObservationIgnored var leadingX = TitleRowEdges.lead(fullScreen: false) { didSet { settle() } }
-    /// The search field and the buttons after it, measured. They widen without the window (a course's timer, a
-    /// recording's clock), taking their room from the tabs.
     @ObservationIgnored var trailingWidth = ToolbarRow.trailingEstimate { didSet { settle() } }
-    /// The content panel's leading edge across the window, where the first tab's capsule lines up.
     @ObservationIgnored var panelEdge: CGFloat = Theme.Size.sidebar { didSet { settle() } }
     @ObservationIgnored var measures = Measures() { didSet { settle() } }
 
@@ -1072,11 +946,8 @@ private struct SegmentRule: View {
 
     var historyEnd: CGFloat { leadingX + Theme.Size.toolbarButton + RootView.historyGap + HistoryButtons.width }
 
-    /// From the back and forward buttons over to the panel's edge; with the sidebar folded the edge is under the
-    /// buttons, and the tabs keep a gap after them instead.
     var lead: CGFloat { TabFit.lead(panelEdge: panelEdge, after: historyEnd, gap: Theme.Space.s) }
 
-    /// From the tabs' start to the search field, less a gap before it: the tabs, the menu and the +.
     var room: CGFloat {
         let end = windowWidth - trailingWidth - TitleRowEdges.trailing
         return end - historyEnd - lead - Theme.Space.s
@@ -1087,26 +958,21 @@ private struct SegmentRule: View {
         let plus = CGFloat(TabFit.newTabSpacing(gap: TabBar.gap, button: Theme.Size.toolbarButton, glyph: TabBar.plusInk))
         let space = room - Theme.Size.toolbarButton - plus
         let fit = TabFit.layout(room: space, front: m.front, others: m.others, gap: TabBar.gap, more: m.more)
-        // Whole points, down: a held trail follows the width anyway, fractions would only redraw it more often, and
-        // rounded up the strip could outgrow the row by one.
+        // point 단위로 내린다. 고정한 trail은 어차피 폭을 따르므로 소수점은 더 자주 다시 그리게 할 뿐이고, 올리면 strip이 줄보다
+        // 1point 커질 수 있다.
         let trail = TabFit.trail(room: space, front: m.front, others: m.others, layout: fit, gap: TabBar.gap, more: m.more)
             .map { $0.rounded(.down) }
         let width =
             TabFit.width(front: m.front, others: m.others, layout: fit, trail: trail, gap: TabBar.gap, more: m.more)
             + plus + Theme.Size.toolbarButton
-        // Whole points wide with the lead, so the strip ends on a whole point and nothing after it sits between pixels.
         let whole = (lead + width).rounded(.down) - lead
         let new = Placement(lead: lead, fit: fit, trail: trail.map { CGFloat($0) }, width: whole, newTabSpacing: plus)
         if new != placement { placement = new }
     }
 
-    /// The search field and five buttons, until they are measured. Not zero: the tabs would take the whole row for the
-    /// first frame and run over the search field.
     static let trailingEstimate = Theme.Size.searchField + Theme.Space.s + Theme.Size.toolbarButton * 5 + Theme.Space.xxs * 4
 }
 
-/// A short name: its own width up to `width`, cut there. Not `frame(maxWidth:)`, which under `fixedSize` lets the
-/// text run at full length past the frame.
 private struct CappedWidth: Layout {
     let width: CGFloat
 
@@ -1120,7 +986,6 @@ private struct CappedWidth: Layout {
 }
 
 private extension View {
-    /// The front tab stands out from the frame as a picked choice does; the others are washed like the search field.
     func tabSurface(front: Bool) -> some View {
         background(Theme.Palette.text.opacity(front ? Theme.Opacity.tint : Theme.Opacity.wash), in: .capsule)
             .overlay { Capsule().strokeBorder(Theme.Palette.text.opacity(Theme.Opacity.edge)) }

@@ -6,11 +6,10 @@ import Speech
 import UIKit
 #endif
 
-/// One microphone tap feeds both the audio file and the transcriber, so transcript times line up with the file even
-/// across pauses.
 @MainActor @Observable
 final class LectureRecorder {
-    /// `stopping` lasts the seconds the transcriber takes to finish; a second stop then appended the last words twice.
+    // `stopping`은 받아쓰기가 끝날 때까지 몇 초 이어진다. 이 상태가 없을 때는 그사이 다시 멈추면 마지막 말이 두 번
+    // 붙었다.
     enum State { case idle, preparing, recording, paused, stopping }
 
     private(set) var state = State.idle
@@ -20,18 +19,15 @@ final class LectureRecorder {
     private(set) var elapsed: TimeInterval = 0
     private(set) var level: Float = 0
     private(set) var lines: [LectureTranscript.Line] = []
-    /// Words heard but not settled yet; they settle into `lines`.
     private(set) var volatile = ""
     private(set) var bookmarks: [TimeInterval] = []
-    /// Lecture pages on screen in the app while recording.
     private(set) var pages: [PageVisit] = []
-    /// What the captions were last told; also what the sidebar card's transcript shows.
     private(set) var context: TranscriptionContext?
     private(set) var locale = Locale(identifier: "ko-KR")
     private(set) var transcriptionNote: String?
 
-    /// A new engine for each start, resume and device change: a long-lived one kept the format of the microphone it
-    /// first saw (AirPods at 24 kHz) after the hardware went back to 48 kHz, and tapping it recorded nothing or crashed.
+    // 시작, 재개, 장치 변경마다 engine을 새로 만든다. 오래 쓴 engine은 처음 본 마이크의 형식(AirPods의 24kHz)을
+    // 하드웨어가 48kHz로 돌아간 뒤에도 유지했고, 그 engine에 tap을 걸면 아무것도 녹음되지 않거나 앱이 비정상 종료되었다.
     @ObservationIgnored private var engine: AVAudioEngine?
     @ObservationIgnored private var engineObserver: NSObjectProtocol?
     @ObservationIgnored private var heardBuffers = 0
@@ -42,31 +38,24 @@ final class LectureRecorder {
     @ObservationIgnored private var clockTask: Task<Void, Never>?
     @ObservationIgnored private var lastTranscriptSave = Date.distantPast
     @ObservationIgnored var saveTranscript: (Recording, LectureTranscript) -> Void = { _, _ in }
-    /// Keeps the bookmarks beside the audio, so a crash doesn't lose them.
     @ObservationIgnored var saveProgress: (Recording) -> Void = { _ in }
     @ObservationIgnored private var lastRestart = Date.distantPast
 
     var isActive: Bool { state != .idle }
-    /// `recording` outlives the recording, so the sidebar card keeps its course and session while it slides away;
-    /// asking it instead once read a finished recording as still under way, and deleting it was refused.
-    /// It names the new recording from the moment it starts preparing: recovery took the new one's empty file for a
-    /// crash's leftover and moved it into the course folder, and the lecture went on into a deleted file.
+    // `recording`은 녹음이 끝난 뒤에도 남아, 사이드바 카드가 사라지는 동안 과목과 회차를 계속 보인다. 그 값으로 판단하던
+    // 때는 끝난 녹음을 진행 중으로 읽어 삭제가 거절되었다. 이 값은 준비를 시작한 순간부터 새 녹음을 가리킨다. 그렇지 않을
+    // 때는 복구가 새 녹음의 빈 파일을 비정상 종료가 남긴 파일로 보고 과목 폴더로 옮겼고, 강의는 삭제된 파일에 계속
+    // 녹음되었다.
     var current: UUID? { isActive ? recording?.id : nil }
 
-    /// Progress is saved only once the microphone runs: while preparing there is nothing to keep, and a start that
-    /// fails leaves no recording to save into.
     private var running: Bool { state == .recording || state == .paused }
-    /// The recording that pages and bookmarks go to. Unlike `current` it comes on only once the course is set, so a
-    /// page already open when recording starts is told when it can be kept.
     var capturing: UUID? { running ? recording?.id : nil }
 
-    /// Starts recording into `file`, an uncompressed CAF on this device: unlike AAC, it stays readable up to the last
-    /// buffer if the app dies mid-lecture. Transcription is best effort; the audio never waits on it.
+    // 이 기기에 압축하지 않은 CAF로 녹음한다. AAC와 달리 녹음 중에 앱이 종료되어도 마지막 buffer까지 읽을 수 있다.
+    // 받아쓰기는 가능한 만큼만 하고, 오디오는 받아쓰기를 기다리지 않는다.
     func start(_ recording: Recording, at file: URL, course: UUID, title: String, locale: Locale) async throws {
         guard state == .idle else { return }
         state = .preparing
-        // Set before the first wait, which can take seconds: the card would otherwise show the last lecture's time,
-        // bookmarks and captions while it prepares.
         self.recording = recording
         courseId = course
         self.title = title
@@ -100,8 +89,8 @@ final class LectureRecorder {
                 analyzerInput = continuation
             }
 
-            // The microphone's format is read only now, after the waits above: the device can change during them,
-            // and a tap in a format read before that raises an Objective-C exception, which ends the app.
+            // 마이크 형식은 위의 대기가 끝난 지금 읽는다. 대기 중에 장치가 바뀔 수 있고, 그 전에 읽은 형식으로 tap을 걸면
+            // Objective-C 예외가 나서 앱이 종료된다.
             guard let (engine, input) = Self.tappableEngine(),
                 let fileFormat = AVAudioFormat(standardFormatWithSampleRate: input.sampleRate, channels: 1)
             else {
@@ -129,7 +118,6 @@ final class LectureRecorder {
             self.locale = transcription?.2 ?? locale
             state = .recording
             #if os(iOS)
-            // A lecture is long; an auto-locked iPad stops the microphone.
             UIApplication.shared.isIdleTimerDisabled = true
             #endif
             if let (transcriber, _, _) = transcription {
@@ -150,8 +138,8 @@ final class LectureRecorder {
                         self.heardBuffers = buffers
                         self.lastHeard = .now
                     }
-                    // Backs up the configuration change notice: an interruption or sleep can stop the engine without
-                    // one, and a tap made while a change was pending runs on without a sound.
+                    // configuration change 알림을 보완한다. 중단이나 잠자기는 알림 없이 engine을 멈출 수 있고, 변경이 대기 중일 때 건
+                    // tap은 소리 없이 계속 돈다.
                     let now = Date.now
                     if self.state == .recording,
                         MicrophoneTap.restartDue(
@@ -175,7 +163,6 @@ final class LectureRecorder {
         case downloading, unsupported
     }
 
-    /// Captions only; when they can't run, the transcript is made from the audio once the recording stops.
     private static func transcriber(for locale: Locale) async -> Transcription {
         guard SpeechTranscriber.isAvailable, let supported = await SpeechTranscriber.supportedLocale(equivalentTo: locale) else {
             return .unsupported
@@ -185,7 +172,6 @@ final class LectureRecorder {
             attributeOptions: [.audioTimeRange])
         do {
             if let request = try await SpeechAssets.request(for: transcriber, locale: supported) {
-                // Downloading can take minutes, which a lecture that is starting doesn't have; it's ready for the next one.
                 Task.detached { try? await request.downloadAndInstall() }
                 return .downloading
             }
@@ -196,8 +182,8 @@ final class LectureRecorder {
         return .ready(transcriber, format, supported)
     }
 
-    /// An engine whose input node runs at the hardware's rate, so it can be tapped. A fresh engine can still read the
-    /// old rate while a device change is under way; a second one is tried once, and then the caller tries again later.
+    // 장치가 바뀌는 중에는 새 engine도 이전 rate를 읽을 수 있다. 그래서 한 번 더 만들어 보고, 그래도 안 되면 호출한 쪽이
+    // 나중에 다시 시도한다.
     private static func tappableEngine() -> (AVAudioEngine, AVAudioFormat)? {
         for _ in 0..<2 {
             let engine = AVAudioEngine()
@@ -212,7 +198,6 @@ final class LectureRecorder {
         return nil
     }
 
-    /// `format` must come from `tappableEngine` just before, with no wait in between.
     private func run(_ engine: AVAudioEngine, tapping format: AVAudioFormat, into sink: AudioSink) throws {
         self.engine = engine
         engineObserver = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main) {
@@ -224,15 +209,13 @@ final class LectureRecorder {
         try engine.start()
     }
 
-    /// The engine stops itself when the input device or its format changes (AirPods connecting, a dock); the new
-    /// device can run at another rate, so it is tapped on a new engine. A paused recording gets one when it resumes.
     private func engineChanged() {
         guard state == .recording || state == .preparing else { return }
         restartEngine()
     }
 
-    /// A start can install the tap and run the engine with no sound ever reaching it ("Failed to create tap, config
-    /// change pending!"); a lecture recorded that way stayed silent to the end, so the start fails instead.
+    // 시작할 때 tap을 걸고 engine을 돌려도 소리가 들어오지 않을 수 있다("Failed to create tap, config change pending!").
+    // 그렇게 녹음한 강의는 끝까지 무음이었으므로, 이때는 시작을 실패로 처리한다.
     private func waitForSignal(_ sink: AudioSink) async throws {
         for attempt in 0..<2 {
             let deadline = ContinuousClock.now + .seconds(MicrophoneTap.stall)
@@ -250,7 +233,6 @@ final class LectureRecorder {
         guard let sink else { return false }
         lastRestart = .now
         retireEngine()
-        // No microphone right now; the clock tries again shortly.
         guard let (engine, input) = Self.tappableEngine(), sink.retarget(input) else { return false }
         do {
             try run(engine, tapping: input, into: sink)
@@ -273,8 +255,6 @@ final class LectureRecorder {
         state = .recording
     }
 
-    /// The recording as it stands, for saving progress: `recording` holds only what it started with. Its length is the
-    /// audio so far, which is where the page on screen now stops counting; left at 0 it never would.
     var snapshot: Recording? {
         guard running, var recording else { return nil }
         recording.duration = elapsed
@@ -289,7 +269,6 @@ final class LectureRecorder {
         if let snapshot { saveProgress(snapshot) }
     }
 
-    /// `page` (1-based) of a lecture file came on screen, or with nil the file closed.
     func show(_ material: UUID, page: Int?) {
         guard let snapshot, let visit = snapshot.visit(material, page: page, at: elapsed) else { return }
         pages.append(visit)
@@ -314,7 +293,6 @@ final class LectureRecorder {
         return (recording, transcript)
     }
 
-    /// For quitting: the audio stays where it is and moves into the course folder at the next launch.
     func stopNow() {
         guard isActive else { return }
         stopEngine()
@@ -328,7 +306,6 @@ final class LectureRecorder {
     }
 
     #if DEBUG
-    /// For window snapshots (`FOLIO_SNAPSHOT_RECORDING`): the card as it looks mid-lecture, with no microphone or file.
     func stage(_ recording: Recording, course: UUID, title: String, paused: Bool = false, level: Float = 0.6) {
         courseId = course
         self.recording = recording
@@ -351,7 +328,6 @@ final class LectureRecorder {
             volatile = ""
             guard !text.isEmpty else { return }
             lines.append(.init(start: result.range.start.seconds, end: result.range.end.seconds, text: text))
-            // Saved as lines settle (at most every few seconds), so a crash keeps what was said.
             if let recording, Date.now.timeIntervalSince(lastTranscriptSave) > 5 {
                 lastTranscriptSave = .now
                 saveTranscript(recording, LectureTranscript(locale: locale.identifier, lines: lines, context: context))
@@ -361,8 +337,6 @@ final class LectureRecorder {
         }
     }
 
-    /// Given once recording runs, and again when the pages on screen change: the slides are read from the course
-    /// folder, which may first have to download. Kept without captions too, to show what the transcript will hear.
     func use(_ context: TranscriptionContext, hints: TranscriptionHints, for recording: UUID, telling: Int) async {
         guard current == recording, telling == tellings else { return }
         self.context = context
@@ -370,8 +344,8 @@ final class LectureRecorder {
         try? await analyzer.setContext(SpeechAssets.context(hints))
     }
 
-    /// Numbers each reading of the slides. A download can make an earlier reading finish after a later one, and its
-    /// narrower pages would then overwrite what the captions were told.
+    // 내려받기 때문에 앞선 읽기가 뒤의 읽기보다 늦게 끝날 수 있고, 그러면 범위가 좁은 쪽이 자막에 준 값을 덮어쓴다.
+    // 그래서 읽기마다 번호를 매긴다.
     func telling() -> Int {
         tellings += 1
         return tellings
@@ -379,9 +353,9 @@ final class LectureRecorder {
 
     @ObservationIgnored private var tellings = 0
 
-    /// The clock stops first. It restarts an engine it finds stopped, and stopping awaits the transcriber for seconds:
-    /// it put the microphone back on with a fresh tap, and the next recording's tap on the same bus crashed the app.
-    /// The clock also brought the level down, so it goes to zero here, or the card would glow on through those seconds.
+    // 시계를 먼저 멈춘다. 시계는 멈춘 engine을 보면 다시 켜고, 멈추기는 받아쓰기를 몇 초 기다린다. 그사이 시계가 새 tap으로
+    // 마이크를 다시 켰고, 같은 bus에 다음 녹음이 tap을 걸면 앱이 비정상 종료되었다. 시계가 음량도 낮췄으므로 여기서 0으로
+    // 두어야 그 몇 초 동안 카드가 빛나지 않는다.
     private func stopEngine() {
         clockTask?.cancel()
         clockTask = nil
@@ -426,7 +400,6 @@ enum RecorderError: LocalizedError {
 }
 
 extension LectureRecorder {
-    /// Slow for a long lecture, so it runs off the main actor.
     nonisolated static func compress(_ source: URL, to target: URL) throws -> TimeInterval {
         let input = try AVAudioFile(forReading: source)
         let format = input.processingFormat
@@ -442,14 +415,14 @@ extension LectureRecorder {
             guard buffer.frameLength > 0 else { break }
             try output.write(from: buffer)
         }
-        // AAC is playable only once closed; it writes its index then.
+        // AAC는 닫을 때 색인을 쓰므로, 닫은 뒤에야 재생할 수 있다.
         output.close()
         return Double(input.length) / format.sampleRate
     }
 }
 
-/// Runs on the audio thread: converts each microphone buffer to mono for the file and to the transcriber's format.
-/// Not actor-isolated on purpose; a main-actor tap block would trap when the audio thread calls it.
+// audio thread에서 실행되므로 일부러 actor에 격리하지 않는다. main actor의 tap block은 audio thread가 부르면 trap이
+// 난다.
 private final class AudioSink: @unchecked Sendable {
     private let lock = NSLock()
     private var file: AVAudioFile?
@@ -476,7 +449,6 @@ private final class AudioSink: @unchecked Sendable {
         self.analyzer = analyzer
     }
 
-    /// A new microphone can have another sample rate; the file and the transcriber keep theirs.
     func retarget(_ input: AVAudioFormat) -> Bool {
         lock.withLock {
             guard let converter = AVAudioConverter(from: input, to: fileFormat) else { return false }
@@ -487,10 +459,7 @@ private final class AudioSink: @unchecked Sendable {
     }
 
     var seconds: TimeInterval { lock.withLock { Double(frames) / fileFormat.sampleRate } }
-    /// Buffers the tap has delivered; counted even when converting fails, so it tells a dead tap from a bad converter.
     var buffers: Int { lock.withLock { received } }
-    /// The mean loudness since the last call, in dB: the clock asks every 200 ms, and the last 85 ms buffer alone swung
-    /// with each syllable.
     func takeDecibels() -> Float {
         lock.withLock {
             defer { energy = 0; energyFrames = 0 }
@@ -548,10 +517,9 @@ private final class AudioSink: @unchecked Sendable {
     }
 }
 
-/// Whether the microphone can be tapped, and when a running recording needs a new engine. The input node can't convert
-/// sample rates: tapping it while it still reads another rate than the hardware either records nothing ("config change
-/// pending") or raises an Objective-C exception (`installTapOnBus` "Format mismatch: input hw 48000 Hz, client 24000 Hz"),
-/// which Swift can't catch and which ends the app.
+// input node는 sample rate를 변환하지 못한다. 하드웨어와 다른 rate를 읽는 동안 tap을 걸면 아무것도 녹음되지
+// 않거나("config change pending") Objective-C 예외가 난다(`installTapOnBus` "Format mismatch: input hw 48000 Hz,
+// client 24000 Hz"). Swift는 이 예외를 잡지 못하므로 앱이 종료된다.
 enum MicrophoneTap {
     struct Stream: Equatable {
         var sampleRate: Double
@@ -560,10 +528,7 @@ enum MicrophoneTap {
 
     enum Plan: Equatable { case tap, rebuild, noInput }
 
-    /// How long a running engine may go without a buffer before it is rebuilt; the tap delivers one every ~85 ms,
-    /// silence included.
     static let stall: TimeInterval = 2
-    /// Time a new engine gets to start before it is judged.
     static let settle: TimeInterval = 1
 
     static func plan(hardware: Stream, node: Stream) -> Plan {
@@ -571,7 +536,6 @@ enum MicrophoneTap {
         return node.sampleRate == hardware.sampleRate && node.channels > 0 ? .tap : .rebuild
     }
 
-    /// `sinceHeard` counts from the last buffer or the last restart, whichever is later.
     static func restartDue(running: Bool, sinceHeard: TimeInterval, sinceRestart: TimeInterval) -> Bool {
         sinceRestart > settle && (!running || sinceHeard > stall)
     }
@@ -583,10 +547,9 @@ extension MicrophoneTap.Stream {
     }
 }
 
-/// Loudness as the recording card shows it, 0...1. The range is a class as a laptop on the desk hears it, measured on a
-/// recorded lecture over one-second windows: -57 dB is the room between sentences (10th percentile), -42 dB the lecturer
-/// speaking up (95th). The old -55...-5 dB range kept a whole class under a third of the scale, so the meter and the
-/// card's glow hardly moved; a voice close to the microphone now just fills it.
+// 범위는 책상 위 노트북이 듣는 수업 소리를 기준으로, 녹음한 강의를 1초 단위로 잰 값이다. -57dB는 문장 사이의 교실
+// 소리(10번째 백분위수)이고, -42dB는 강의자가 목소리를 높일 때(95번째 백분위수)다. 예전의 -55dB에서 -5dB까지의
+// 범위에서는 수업 전체가 눈금의 3분의 1 아래에 머물러, 미터와 카드의 빛이 거의 움직이지 않았다.
 enum LectureLoudness {
     static let quiet: Float = -57
     static let loud: Float = -42

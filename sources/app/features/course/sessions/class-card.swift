@@ -31,8 +31,6 @@ enum ClassCard {
         }
     }
 
-    /// The capsule a card's trailing row is made of. A state nothing opens (recording now, minutes left) is a bare tag,
-    /// and `Pill` wraps the same tag in a button, so the row keeps one height and font whichever it holds.
     struct Tag: View {
         @Environment(\.accent) private var accent
         let title: String
@@ -44,7 +42,6 @@ enum ClassCard {
                 if let symbol { Image(systemName: symbol) }
                 Text(title)
             }
-            // Fixed-width digits so a countdown ticking each minute doesn't jiggle the row.
             .font(Theme.Typeface.label.monospacedDigit())
             .foregroundStyle(foreground)
             .padding(.horizontal, Theme.Space.s)
@@ -107,8 +104,6 @@ enum ClassCard {
     }
 }
 
-/// A class the schedule still holds, not saved: an empty dashed slot. Its menu makes the session first, so a 휴강 or an
-/// absence known weeks ahead has something to hang on; on its day it offers the same one-click start a session does.
 struct PlannedSessionCard: View {
     @Environment(\.accent) private var accent
     @Environment(Workspace.self) private var workspace
@@ -153,7 +148,6 @@ struct PlannedSessionCard: View {
         .padding(.leading, Theme.Space.l)
         .padding(.trailing, Theme.Space.m)
         .frame(minHeight: 60)
-        // Half the card's white over the page, but opaque, so an exam card tucked in behind doesn't show through.
         .background(Theme.Palette.card.opacity(Theme.Opacity.planned), in: .rect(cornerRadius: ClassCard.radius))
         .background(Theme.Palette.page, in: .rect(cornerRadius: ClassCard.radius))
         .overlay {
@@ -166,8 +160,6 @@ struct PlannedSessionCard: View {
     }
 }
 
-/// An exam outside class time, at its own date: in red whether taken or not, with how far off while it is ahead.
-/// A score is a grade and stays on the grades page.
 struct ExamMarkerRow: View {
     let model: SessionsModel
     let exam: Exam
@@ -197,13 +189,10 @@ struct ExamMarkerRow: View {
     }
 }
 
-/// Exams held in the class's time, as a card tucked in behind the class with only its top line showing. The class
-/// stays the row: the exam is something that happens in it.
 struct ClassExamCard: ViewModifier {
     let model: SessionsModel
     let exams: [Exam]
     let now: Date
-    /// How far the card runs on under the class, so it reads as behind it rather than above it.
     static let tuck: CGFloat = 8
 
     func body(content: Content) -> some View {
@@ -213,13 +202,11 @@ struct ClassExamCard: ViewModifier {
             VStack(spacing: 0) {
                 card
                 content
-                    // On the class's own shape, so its text casts none.
                     .background {
                         RoundedRectangle(cornerRadius: ClassCard.radius).fill(.clear).shadow(color: .black.opacity(0.06), radius: 3, y: -2)
                     }
                     .padding(.top, -Self.tuck)
             }
-            // Room above, so a tucked-in exam reads as its own class's and not the one before.
             .padding(.top, Theme.Space.s)
         }
     }
@@ -251,7 +238,6 @@ struct ClassExamCard: ViewModifier {
             UnevenRoundedRectangle(topLeadingRadius: ClassCard.radius, topTrailingRadius: ClassCard.radius)
                 .strokeBorder(Theme.Palette.danger.opacity(Theme.Opacity.toneEdge), lineWidth: 1)
         }
-        // Narrower than the class, as a card further back would be.
         .padding(.horizontal, Theme.Space.m)
     }
 }

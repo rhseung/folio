@@ -2,13 +2,11 @@ import FolioDomain
 import PDFKit
 import SwiftUI
 
-/// The split screen (#321). Saving writes the whole split in one `material split`.
 struct LectureSplitPane: View {
     let controller: PDFController
     @Binding var split: LectureSplit
     let units: [FolioDomain.Unit]
     let note: String?
-    /// Only once Claude has given no split (#450).
     var claude: ClaudeSplitButton?
     let save: () -> Void
     let cancel: () -> Void
@@ -28,7 +26,6 @@ struct LectureSplitPane: View {
             guard let edit, split.sections.indices.contains(edit.section) else { return }
             strip.edit(split.sections[edit.section].id, in: split)
             strip.extend(to: edit.page, in: &split)
-            // Up to the section's first page from past its end, so its edit row lands at the top with its pages under it.
             guard let i = strip.index(in: split) else { return }
             let first = split.sections[i].firstPage, last = split.sections[i].lastPage
             Task {
@@ -40,8 +37,6 @@ struct LectureSplitPane: View {
         #endif
     }
 
-    /// Cancel and save on the title's line. The Claude button floats over the pane's bottom corner and takes no room
-    /// in it, so the main actions stay out of that corner rather than the pane making way for it.
     private var panel: some View {
         VStack(alignment: .leading, spacing: Theme.Space.l) {
             HStack(spacing: Theme.Space.s) {
@@ -50,7 +45,6 @@ struct LectureSplitPane: View {
                 Button(String(localized: .commonCancel), action: cancel).buttonStyle(.ghost).keyboardShortcut(.cancelAction)
                 Button(String(localized: .commonSave), action: save).buttonStyle(.prominent).keyboardShortcut(.defaultAction)
             }
-            // Ends where the bar and rows under it end, not nearer the pane's edge: the column's content edge is one line.
             .padding(.horizontal, Theme.Space.l)
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Space.m) {
@@ -68,7 +62,6 @@ struct LectureSplitPane: View {
         .padding(.vertical, Theme.Space.l)
     }
 
-    /// The section picked on the bar and in the rows is the one the column is changing.
     private var selected: Binding<Int?> {
         Binding(
             get: { strip.index(in: split) },
@@ -79,7 +72,6 @@ struct LectureSplitPane: View {
 
     static let panel: CGFloat = 400
 
-    /// What a section reads as: its unit's title, a new unit's name, what the file calls it, or "이름 없는 구역".
     private func name(_ i: Int) -> String {
         let s = split.sections[i]
         let unit = s.unit.flatMap { u in s.isNew ? s.title : units.first { $0.id == u }?.title ?? s.title } ?? ""
@@ -105,7 +97,7 @@ private struct SplitThumbnails: View {
                             page(item)
                         }
                         .id(item.id)
-                        // Each page over the next: a gap's touch target reaches down into the next page's top.
+                        // 쪽마다 다음 쪽 위에 놓는다. 틈의 터치 영역이 다음 쪽의 위쪽까지 내려가기 때문이다.
                         .zIndex(-Double(n))
                     }
                 }
@@ -156,8 +148,6 @@ private struct SplitThumbnails: View {
             .overlay(alignment: .bottom) {
                 if page < split.pageCount { gap(after: page) }
             }
-            // The long press opens this menu rather than starting a change: the gaps are thin to aim at with a
-            // finger, so the cut and the join are here too.
             .contextMenu { menu(page) }
         }
     }
@@ -198,8 +188,6 @@ private struct Gap: View {
 
     var body: some View {
         ZStack {
-            // Only under the pointer: the next section's header already marks where a section ends. A touch screen
-            // has no pointer, so its cuts show a small pair of scissors throughout.
             if hovering {
                 Rectangle()
                     .fill(boundary ? accent.color : Theme.Palette.textTertiary)
@@ -218,8 +206,6 @@ private struct Gap: View {
         }
         .frame(maxWidth: .infinity)
         .frame(height: Theme.Space.s)
-        // A finger's 44pt across a cut, over the blank under one page's number and above the next page. A join stays
-        // thin: there the next section's header takes the press, and the page's menu joins.
         .contentShape(TouchTarget(side: boundary ? 0 : Theme.Size.touchTarget))
         .onHover { hovering = $0 }
         .onTapGesture(perform: action)
@@ -228,9 +214,6 @@ private struct Gap: View {
     }
 }
 
-/// "Claude로 다시 나누기" on the split screen and in the add sheet (#450), shown only after Claude gave no split: past
-/// that the user adjusts the split by hand, and asking Claude the same question again would only repeat its answer.
-/// Its split replaces what is shown, still unsaved.
 struct ClaudeSplitButton: View {
     let asking: Bool
     let retry: () -> Void

@@ -2,7 +2,6 @@ import FolioDomain
 import SwiftUI
 
 extension PageRangeField.Section {
-    /// A lecture file's zones (#321), each named by its first unit; pages no unit takes are a section without a title.
     static func list(_ file: CourseFile, material: UUID, pageCount: Int?) -> [Self] {
         let titles = Dictionary(file.units.map { ($0.id, $0.title) }, uniquingKeysWith: { a, _ in a })
         return file.lectureZones(of: material, pageCount: pageCount).map { zone in
@@ -11,10 +10,8 @@ extension PageRangeField.Section {
     }
 }
 
-/// Nothing on it is pressed; the line it sits on is.
 struct SectionStrip: View {
     let sections: [PageRangeField.Section]
-    /// The file's page count, or the last page a section reaches.
     let pages: Int
     let range: ClosedRange<Int>?
     var width: CGFloat = 72
@@ -26,7 +23,6 @@ struct SectionStrip: View {
             let n = CGFloat(max(pages, 1))
             func x(_ edge: Int) -> CGFloat { CGFloat(edge) / n * size.width }
             for (i, s) in sections.enumerated() where s.pages.lowerBound <= pages {
-                // A 1pt gap between neighbors, none at the file's ends.
                 let lo = x(s.pages.lowerBound - 1) + (i == 0 ? 0 : 0.5)
                 let hi = x(min(s.pages.upperBound, pages)) - (i == sections.count - 1 ? 0 : 0.5)
                 let rect = CGRect(x: lo, y: 0, width: max(hi - lo, 1), height: size.height)
@@ -52,7 +48,6 @@ struct SectionProgress: View {
     let file: CourseFile
     let material: UUID
     let range: ClosedRange<Int>
-    /// Off where the line already names the units (a class row titled by them).
     var labeled = true
 
     var body: some View {
@@ -66,17 +61,11 @@ struct SectionProgress: View {
     }
 }
 
-/// The add sheet's proposal and the file view's split screen both edit a `LectureSplit` through this (#321). Every
-/// change goes through the split's own edits (`moveBoundary`, `split(at:)`, `merge`), so the sections always cover the
-/// file in order.
 struct SectionEditor: View {
     @Binding var split: LectureSplit
     let units: [FolioDomain.Unit]
-    /// The page the split screen shows, marked on the bar.
     var page: Int?
-    /// The section picked, when the screen shares it (the split screen's thumbnails change the one picked here).
     var selected: Binding<Int?>?
-    /// A section picked, for the split screen to show its first page.
     var pick: (Int) -> Void = { _ in }
 
     @State private var own: Int?
@@ -102,7 +91,6 @@ struct SectionEditor: View {
         .onChange(of: split.sections.count) { _, count in if let s = selected.wrappedValue, s >= count { selected.wrappedValue = nil } }
     }
 
-    /// What a zone reads as: its unit's title, a new unit's name, or nothing for pages left out.
     func label(_ i: Int) -> String {
         guard split.sections.indices.contains(i) else { return "" }
         let s = split.sections[i]
@@ -128,10 +116,8 @@ struct SectionBar: View {
     @State private var bumps = 0
 
     static let tile: CGFloat = 28
-    /// Room above the tiles for the page bubble a dragged boundary carries.
     static let bubbleRow: CGFloat = 20
     private static let gap: CGFloat = 4
-    /// How far from a boundary a press takes it: a finger needs 44pt across, a pointer much less.
     #if os(macOS)
     private static let reach: CGFloat = 6
     #else
@@ -250,7 +236,6 @@ struct SectionBar: View {
             let r = rect(i, w)
             let path = shape(i).path(in: r)
             if s.unit == nil {
-                // Pages left out: hatched, so they read as on purpose rather than as a zone not filled in yet.
                 context.fill(path, with: .color(Theme.Palette.fill))
                 var hatch = Path()
                 var hx = r.minX - r.height
@@ -286,8 +271,6 @@ struct SectionBar: View {
         }
     }
 
-    /// The name and, where there's room, the pages. A zone too narrow for both cuts its name short on one line, and the
-    /// tile's tooltip has it whole: wrapped in the Canvas, a name filled the tile two lines tall.
     @ViewBuilder private func text(_ i: Int, width: CGFloat) -> some View {
         let room = width - 2 * Theme.Space.s
         if room > 12, split.sections.indices.contains(i) {
@@ -299,7 +282,6 @@ struct SectionBar: View {
                 HStack(spacing: Theme.Space.xs) {
                     title; pages
                 }.fixedSize()
-                // Pages cut short read as other pages: left out, as on a zone too narrow for anything.
                 if name.isEmpty { pages.fixedSize(); Color.clear } else { title.lineLimit(1).truncationMode(.tail) }
             }
             .frame(width: room, alignment: .leading)
@@ -309,8 +291,6 @@ struct SectionBar: View {
         }
     }
 
-    /// The boundaries showing a grip: the one under the pointer or being dragged, and on a touch screen, with no
-    /// pointer to show one, both ends of the picked zone.
     private var grips: [Int] {
         var out = Set([dragging ?? hoverBoundary].compactMap(\.self))
         #if os(iOS)
@@ -341,7 +321,6 @@ struct SectionBar: View {
                 let was = split.sections[b].lastPage
                 let landed = split.moveBoundary(after: b, to: target)
                 if landed != was {
-                    // Firmer where the zone can't give any more: a side keeps at least one page.
                     if landed != target { bumps += 1 } else { ticks += 1 }
                 }
             }
@@ -350,8 +329,6 @@ struct SectionBar: View {
                     dragging = nil
                     moved = false
                 }
-                // A press that didn't move picks the zone, even beside a boundary: on a touch screen the reach of
-                // a narrow zone's two boundaries can cover all of it.
                 guard !moved else { return }
                 let i = split.section(at: page(at: g.location.x, w))
                 selected = i
@@ -360,8 +337,8 @@ struct SectionBar: View {
     }
 }
 
-/// A row holds its zone's id, not its place: a merge, or the screen closing, shrinks the split while the row is drawn
-/// once more, and a row reading its old place ran past the end (#179). Each edit finds the place as it runs.
+// 행은 자리가 아니라 구간의 id를 가진다. 합치기나 화면 닫기로 나누기가 줄어든 뒤에도 행이 한 번 더 그려지는데, 옛
+// 자리를 읽은 행은 배열 끝을 넘었다. 그래서 편집마다 실행할 때 자리를 찾는다.
 private struct SectionRow: View {
     @Binding var split: LectureSplit
     let id: LectureSplit.Section.ID
@@ -392,7 +369,6 @@ private struct SectionRow: View {
         }
     }
 
-    /// The bar's double click, for a screen where a double tap on a thin zone is no way to aim: the page is typed.
     private func cut() {
         guard let index, let page = Int(cutPage.trimmingCharacters(in: .whitespaces)),
             split.sections[index].pages.contains(page)
@@ -413,7 +389,6 @@ private struct SectionRow: View {
         .background(selected ? Theme.Palette.fill : .clear, in: .rect(cornerRadius: Theme.Radius.control))
     }
 
-    /// On the zone where it stands when the edit runs; once it's gone, nothing.
     private func edit(_ change: (Int) -> Void) {
         if let index { change(index) }
     }
@@ -435,7 +410,6 @@ private struct SectionRow: View {
 
     private func unitMenu(_ section: LectureSplit.Section, at index: Int) -> some View {
         Menu {
-            // The ✦'s reason, which a touch screen shows no tooltip for.
             if section.match != nil {
                 Text(matchHelp(section))
                 Divider()

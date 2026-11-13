@@ -1,19 +1,16 @@
 import FolioDomain
 import SwiftUI
 
-/// A window a link asked for. It carries an ID of its own: SwiftUI brings forward a window already showing the same
-/// value instead of opening another, and asking twice for one link should give two.
+// SwiftUI는 같은 값을 보이는 창이 이미 있으면 새로 열지 않고 그 창을 앞으로 가져온다. 같은 링크를 두 번 요청하면 창이
+// 두 개 열려야 하므로 요청마다 ID를 둔다.
 struct WindowRequest: Codable, Hashable {
     var id = UUID()
     var link: AppLink
     var course: UUID?
-    /// A tab moved out to this window brings where it has been.
     var history: LinkHistory<Navigator.Entry>?
-    /// A tab of several panes moved out brings each pane's history, their widths and the focused one.
     var panes: [LinkHistory<Navigator.Entry>]?
     var shares: [Double]?
     var focus: Int?
-    /// The list columns each pane had hidden (`ColumnPrefs.names`), in the order of `panes`, or the one of `history`.
     var columns: [[String]]?
 
     static func == (a: Self, b: Self) -> Bool { a.id == b.id }
@@ -21,13 +18,10 @@ struct WindowRequest: Codable, Hashable {
 }
 
 extension FocusedValues {
-    /// The key window's history, for the menu bar's back and forward.
     @Entry var navigator: Navigator?
-    /// Opens a link in the window in front, for menu items that go to a page (도움말 › 새 기능).
     @Entry var openPlace: (@MainActor (AppLink) -> Void)?
 }
 
-/// A click steps once; holding the button lists the places it would step through.
 struct HistoryButtons: View {
     let navigator: Navigator
     let title: (Navigator.Entry) -> String
@@ -61,8 +55,6 @@ struct HistoryButtons: View {
     }
 }
 
-/// ⌘[ and ⌘] in the menu bar, for the window in front, as in Finder's 이동 menu; on the Mac, moving between the
-/// window's tabs too.
 struct NavigationCommands: Commands {
     @FocusedValue(\.navigator) private var navigator
     #if os(macOS)
@@ -104,8 +96,6 @@ struct NavigationCommands: Commands {
 import AppKit
 import WebKit
 
-/// ⌘T and ⌘W work on the window's own tabs, as in Safari: the window's close moves to ⇧⌘W, and ⌘W on the last tab
-/// closes the window.
 struct TabCommands: Commands {
     @FocusedValue(\.windowTabs) private var tabs
 
@@ -115,10 +105,9 @@ struct TabCommands: Commands {
                 .keyboardShortcut("t")
                 .disabled(tabs == nil)
         }
-        // Replaces the system's 닫기 (⌘W), which would close the whole window before the tab's command saw the key.
+        // 시스템의 닫기(⌘W)를 바꾼다. 그대로 두면 탭 명령이 키를 받기 전에 창 전체가 닫힌다.
         CommandGroup(replacing: .saveItem) {
             Button(.tabsClose) {
-                // Not while a sheet is up: the tab would close under it, sheet and all.
                 guard NSApp.keyWindow?.sheetParent == nil else { return }
                 if let tabs { tabs.closeSelected() } else { NSApp.keyWindow?.performClose(nil) }
             }
@@ -129,8 +118,6 @@ struct TabCommands: Commands {
     }
 }
 
-/// The window's width, told as the window resizes and before it lays out again: what is fitted to it moves in the same
-/// frame as the window. Measured from the laid-out content instead, it arrived after the title row had laid out.
 struct WindowWidth: NSViewRepresentable {
     let changed: @MainActor (CGFloat) -> Void
 
@@ -155,8 +142,8 @@ struct WindowWidth: NSViewRepresentable {
             if let observer { NotificationCenter.default.removeObserver(observer) }
             observer = nil
             guard let window else { return }
-            // No queue: run while the window posts it, inside the frame change and before the window lays out. On a
-            // queue it would wait for the next turn.
+            // queue 없이 등록해야 창이 알림을 보내는 frame 변경 안에서, 창이 배치되기 전에 실행된다. queue를 주면 다음 차례까지
+            // 기다린다.
             observer = NotificationCenter.default.addObserver(forName: NSWindow.didResizeNotification, object: window, queue: nil) {
                 [weak self] _ in
                 MainActor.assumeIsolated {
@@ -164,13 +151,11 @@ struct WindowWidth: NSViewRepresentable {
                     self.changed(window.frame.width)
                 }
             }
-            // Joining the window happens while SwiftUI updates its views, which mustn't change what they read.
             Task { @MainActor [weak self] in self?.changed(window.frame.width) }
         }
     }
 }
 
-/// Weak: the window owns the view.
 @MainActor final class WindowHost {
     weak var window: NSWindow?
 }
@@ -197,10 +182,9 @@ struct WindowReader: NSViewRepresentable {
     }
 }
 
-/// A two-finger swipe on the trackpad goes back or forward, as in Safari and Finder. Only where nothing under the
-/// pointer scrolls sideways itself: a wide PDF or a table would otherwise lose its own horizontal scroll. A web view
-/// (the note preview, the Claude panel) scrolls its wide tables and code inside the page, out of AppKit's sight, so
-/// over one the swipe is left to it.
+// 포인터 아래에 옆으로 스크롤하는 것이 없을 때만 동작한다. 그렇지 않으면 넓은 PDF나 표가 가로 스크롤을 잃는다. web
+// view(노트 미리보기, Claude 패널)는 넓은 표와 코드를 페이지 안에서 스크롤해 AppKit이 알 수 없으므로, web view
+// 위에서는 swipe를 web view에 맡긴다.
 struct SwipeNavigation: NSViewRepresentable {
     let back: @MainActor () -> Void
     let forward: @MainActor () -> Void
@@ -229,7 +213,6 @@ struct SwipeNavigation: NSViewRepresentable {
             stop()
             guard window != nil else { return }
             monitor = NSEvent.addLocalMonitorForEvents(matching: [.scrollWheel, .swipe]) { [weak self] event in
-                // Local monitors run on the main thread, with the event the app is handling there.
                 nonisolated(unsafe) let event = event
                 let consumed = MainActor.assumeIsolated { self?.consumes(event) ?? false }
                 return consumed ? nil : event
@@ -245,7 +228,6 @@ struct SwipeNavigation: NSViewRepresentable {
 
         private func consumes(_ event: NSEvent) -> Bool {
             guard event.window === window else { return false }
-            // "Swipe between pages" set to three fingers sends a swipe; to two, the scroll that starts one.
             if event.type == .swipe {
                 if event.deltaX > 0 { back() } else if event.deltaX < 0 { forward() }
                 return true

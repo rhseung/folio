@@ -21,34 +21,26 @@ final class ClaudeModel {
     var notes: [NoteFile] = []
     var openNoteItem: ContextItem?
     var alsoOpenItems: [ContextItem] = []
-    /// The tab's panes, which the window's one panel serves (`ContextBuilder.panes`).
     var panes: ContextItem?
     var added: [ContextItem] = []
     var removed: Set<String> = []
     var sending = false
     var status: String?
     var failed: String?
-    /// The answer's current message only: an answer that reads with tools comes as several, and the ones before the
-    /// last lead up to tool calls rather than answer.
     var partial: String?
-    /// The tool the answer called last, until it writes again.
     var tool: String?
-    /// Its input so far, which says what `action_run` runs.
     var toolInput = ""
     var stopped = false
-    /// The chat that answer belongs to: switching chats mid-answer must not show it under another conversation.
+    // 답하는 도중에 대화를 바꾸면 그 답이 다른 대화 아래에 보이면 안 된다.
     var answering: UUID?
     var openNote: UUID?
     private var answer: Task<Void, Never>?
-    /// Tests answer through a fake provider; the app asks the workspace.
     private let client: ((LoadedCourse) -> ClaudeClient)?
     var cardDraft: CardDraft?
-    /// A proposed change that removes or moves, waiting on the panel's confirmation.
     var confirming: PendingProposal?
 
     struct PendingProposal: Identifiable {
         var message: UUID
-        /// Nil for all of the answer's proposals at once.
         var index: Int?
         var question: String
         var id: String { "\(message)/\(index.map(String.init) ?? "all")" }
@@ -85,7 +77,6 @@ final class ClaudeModel {
             + chats.map { PickOption(id: Optional($0.model.id), title: $0.model.title) }
     }
 
-    /// A message or a retry left from one chat doesn't belong under the next.
     func select(_ id: UUID?) {
         chatID = id
         status = nil
@@ -93,8 +84,6 @@ final class ClaudeModel {
         stopped = false
     }
 
-    /// Readable files grouped by role in the materials page's order, unclassified last, so a file is found where that
-    /// page shows it.
     func materials(_ course: LoadedCourse) -> [Material] {
         let readable = course.file.materials.filter {
             !$0.isFolder && [.classified, .unclassified].contains($0.status) && CourseStore.canReadContext($0.path)
@@ -131,7 +120,6 @@ final class ClaudeModel {
         ((try? course.store.notes()) ?? []).filter { $0.meta.id != nil }
     }
 
-    /// The note an answer's `[[제목]]` names, found in the course as a note's own title link is.
     func noteId(titled title: String, course: LoadedCourse) -> UUID? {
         ((try? course.store.notes()) ?? []).linked(title)?.meta.id
     }
@@ -180,7 +168,7 @@ final class ClaudeModel {
 
     func send(_ question: String, course: LoadedCourse) {
         guard hasKey, !sending else { return }
-        // Read again from disk: the note was read when it opened, and has likely been edited since.
+        // 노트는 열 때 읽었고 그 뒤에 고쳤을 가능성이 크므로 디스크에서 다시 읽는다.
         loadOpenNote(openNote, course: course)
         let context = built(course)
         var doc =
@@ -188,7 +176,7 @@ final class ClaudeModel {
             ?? StoredDocument(new: Chat(device: workspace.device, at: .now, title: String(question.prefix(40))))
         doc.model.messages.append(ChatMessage(role: .user, text: question, at: .now, context: context.included.map(\.title)))
 
-        // The question is kept in memory only until the answer arrives, so a failed request leaves no half-written chat.
+        // 실패한 요청이 쓰다 만 대화를 남기지 않도록, 질문은 답이 올 때까지 메모리에만 둔다.
         replace(doc)
         chatID = doc.model.id
         answering = doc.model.id
@@ -204,7 +192,7 @@ final class ClaudeModel {
         let stream = AnswerStream()
         answer = Task {
             var doc = doc
-            // Shown every half second rather than per piece: each update reloads the conversation's page.
+            // 조각마다 갱신하면 그때마다 대화 페이지를 다시 불러오므로, 0.5초마다 보인다.
             let ticker = Task { @MainActor in
                 while !Task.isCancelled {
                     try? await Task.sleep(for: .milliseconds(500))
@@ -226,14 +214,13 @@ final class ClaudeModel {
             } catch {
                 doc.model.messages.removeLast()
                 failed = question
-                // The API provider reports a cancelled request as a URL error, not a CancellationError.
+                // API 프로바이더는 취소된 요청을 `CancellationError`가 아니라 URL 오류로 알린다.
                 stopped = Task.isCancelled
                 status = stopped ? String(localized: .claudeStatusStopped) : Self.message(for: error)
             }
 
             if doc.model.messages.isEmpty {
                 chats.removeAll { $0.model.id == doc.model.id }
-                // Otherwise the picker points at a chat that no longer exists and shows a blank label.
                 if chatID == doc.model.id { chatID = nil }
             } else {
                 replace(doc)
@@ -244,8 +231,6 @@ final class ClaudeModel {
         }
     }
 
-    /// Ends the request, and with it the `claude` process. The question goes back to the resend button, and the chat
-    /// keeps no half of it.
     func stop() { answer?.cancel() }
 
     func replace(_ doc: StoredDocument<Chat>) {
@@ -253,9 +238,6 @@ final class ClaudeModel {
         chats.insert(doc, at: 0)
     }
 
-    /// `folio://action/<copy|insert|newnote|card|applyall>/<message ID>` and `folio://action/apply/<message ID>/<proposal>` from
-    /// the answer's links. `openNote` is the note open beside the panel, which `insert` writes into through
-    /// `insertIntoNote`; without one it makes a free note. `openUnit` is the unit the units page shows, where a card goes.
     func handle(
         _ url: URL, course: LoadedCourse, openNote: UUID?, openUnit: UUID? = nil, insertIntoNote: (String) -> Void, showNote: (UUID) -> Void
     ) {
@@ -299,7 +281,6 @@ final class ClaudeModel {
             guard let unit = course.file.unitForNewCard(viewing: openUnit, note: openNote), let messages = chat?.messages,
                 let i = messages.firstIndex(where: { $0.id == id })
             else { break }
-            // The question it answered is the card's prompt; the answer its model answer. Both stay editable in the sheet.
             var draft = CardDraft(unitId: unit)
             draft.prompt = messages[..<i].last { $0.role == .user }?.text ?? ""
             draft.answer = message.text
@@ -312,7 +293,6 @@ final class ClaudeModel {
 
     // MARK: Proposals
 
-    /// The chat as the panel shows it, with the answer being written on top.
     func page(_ chat: Chat, cards: Bool) -> String {
         Self.html(
             chat, partial: sending && answering == chatID ? partial : nil, cards: cards, superseded: superseded(chat), describe: describe)
@@ -320,9 +300,8 @@ final class ClaudeModel {
 
     func superseded(_ chat: Chat) -> Set<ProposalRef> { chat.supersededProposals(targets: Actions.targets) }
 
-    /// The proposal's line in the answer: what it would do, why it can't when the folder no longer allows it, and
-    /// what it changes in a note. Each is a dry run, and the page is drawn again twice a second while an answer is
-    /// written, so lines are kept until the folder changes.
+    // 줄마다 dry run을 돌리고, 답을 쓰는 동안 페이지를 1초에 두 번 다시 그린다. 그래서 폴더가 바뀔 때까지 계산한 줄을
+    // 다시 쓴다.
     func describe(_ proposal: ActionProposal) -> ProposalLine {
         if linesRevision != workspace.dataRevision {
             lines = [:]
@@ -346,10 +325,9 @@ final class ClaudeModel {
 
     @ObservationIgnored private var lines: [ActionProposal: ProposalLine] = [:]
     @ObservationIgnored private var linesRevision = -1
-    /// How many lines were worked out rather than reused; tests read it.
     @ObservationIgnored private(set) var described = 0
 
-    /// Read from the proposal's input: the action's fields are internal to FolioActions.
+    // 액션의 필드는 FolioActions 안에서만 보이므로 제안의 입력에서 읽는다.
     func change(_ proposal: ActionProposal) -> ProposalLine.Change? {
         func string(_ key: String) -> String? { if case .string(let s)? = proposal.input[key] { s } else { nil } }
         switch proposal.command {
@@ -372,8 +350,6 @@ final class ClaudeModel {
         }
     }
 
-    /// The proposals "apply all" runs: those still offered, in the answer's order. The page counts the same ones. One
-    /// made on top of earlier proposals goes along when all of those do, since they are checked and run in order.
     static func offered(_ message: ChatMessage, superseded: Set<ProposalRef>, describe: (ActionProposal) -> ProposalLine) -> [Int] {
         var offered: [Int] = []
         for (i, p) in (message.proposals ?? []).enumerated()
@@ -387,7 +363,6 @@ final class ClaudeModel {
         return offered
     }
 
-    /// Whether the proposal at `index` waits on earlier proposals of its answer that aren't applied (`after`).
     static func waiting(
         _ message: ChatMessage, _ index: Int, superseded: Set<ProposalRef>,
         describe: (ActionProposal) -> ProposalLine
@@ -398,7 +373,6 @@ final class ClaudeModel {
         }
     }
 
-    /// The line's reason for one that waits; `1, 2` names the earlier proposals as the panel numbers them.
     static func reason(_ waiting: ChatMessage.Waiting) -> String {
         switch waiting {
         case .earlier(let before): String(localized: .claudeProposalWaiting(before.map { String($0 + 1) }.joined(separator: ", ")))
@@ -414,7 +388,6 @@ final class ClaudeModel {
         }
     }
 
-    /// Runs the proposal through the workspace like any button would, after the same confirmation a removal asks for.
     func apply(message: UUID, index: Int, course: LoadedCourse, confirmed: Bool) {
         guard var doc = chats.first(where: { $0.model.id == chatID }),
             let m = doc.model.messages.firstIndex(where: { $0.id == message }),
@@ -436,9 +409,6 @@ final class ClaudeModel {
         save(doc, course: course)
     }
 
-    /// Every proposal of the answer still offered, after one question for all that ask. All are checked in order
-    /// before any is written, so one refused leaves the folder as it was; one that fails while running stops the
-    /// rest, as applying them one by one would.
     func applyAll(message: UUID, course: LoadedCourse, confirmed: Bool) {
         guard var doc = chats.first(where: { $0.model.id == chatID }),
             let m = doc.model.messages.firstIndex(where: { $0.id == message })
@@ -448,8 +418,8 @@ final class ClaudeModel {
         }
         guard !picked.isEmpty else { return }
 
-        // A plain dry run carries course.json from one to the next but writes no file, so a proposal made on top of a
-        // note the answer makes first is checked again in a staged copy, where the note is there.
+        // 일반 dry run은 course.json을 다음 제안으로 넘기지만 파일은 쓰지 않는다. 그래서 답이 먼저 만드는 노트 위에
+        // 쌓인 제안은 그 노트가 있는 staged copy에서 다시 검사한다.
         let actions = picked.map(\.action)
         var refusal = workspace.refusal(actions)
         if refusal != nil, picked.contains(where: { doc.model.messages[m].proposals?[$0.index].after?.isEmpty == false }) {
@@ -479,7 +449,6 @@ final class ClaudeModel {
         save(doc, course: course)
     }
 
-    /// Records the outcome on the proposal; true when it went through.
     private func run(_ action: any Action, at index: Int, of message: Int, in doc: inout StoredDocument<Chat>) -> Bool {
         do {
             _ = try workspace.runThrowing(action)
@@ -487,7 +456,6 @@ final class ClaudeModel {
             doc.model.messages[message].proposals?[index].failure = nil
             return true
         } catch {
-            // Saved with the chat, so the panel keeps showing why and the next question tells Claude.
             doc.model.messages[message].proposals?[index].failure = "\(error)"
             workspace.error = "\(error)"
             return false
@@ -503,26 +471,22 @@ final class ClaudeModel {
         replace(doc)
     }
 
-    /// A free note holding `text`, for an answer saved while no note is open.
     func createNote(title: String, body: String, course: LoadedCourse) -> UUID? {
         workspace.run(NoteAdd(course: course.id, title: title, body: body))?.made
     }
 
     // MARK: Helpers
 
-    /// `mcp__folio__note_show` reads as `note show`. A write only makes a proposal in the panel's server, which the line
-    /// says, so the user doesn't wait for a change that won't happen until they apply it.
     static func toolLabel(_ name: String, input: String = "") -> String {
         let prefix = "mcp__folio__"
         var tool = name.hasPrefix(prefix) ? String(name.dropFirst(prefix.count)) : name
-        // The server's two tools for actions the panel doesn't list (`MCPServer.generalTools` in folio-cli).
         if tool == "action_search" { return String(localized: .claudeToolSearching) }
         if tool == "action_run" {
-            // The input streams in after the name, so the command shows once its `action` has arrived whole.
+            // 입력은 이름 뒤에 스트림으로 들어오므로, `action` 값이 다 도착한 뒤에 명령을 보인다.
             guard let match = input.firstMatch(of: /"action"\s*:\s*"([^"\\]+)"/) else { return String(localized: .claudeToolChoosing) }
             tool = String(match.1).replacing(/^folio\s+/, with: "")
         }
-        // The MCP server's naming (`MCPServer.name` in folio-cli, which the app doesn't link).
+        // MCP 서버의 이름 규칙을 따른다(folio-cli의 `MCPServer.name`). 앱은 folio-cli를 링크하지 않는다.
         let named = tool.replacing(" --", with: "_").replacing(" ", with: "_")
         if let write = Actions.all.first(where: { $0.command.replacing(" --", with: "_").replacing(" ", with: "_") == named }) {
             return String(localized: .claudeToolProposing(write.command))
@@ -532,7 +496,6 @@ final class ClaudeModel {
 
     static let answerTitle = "Claude 답변"  // strings: data, written into the note file as its title
 
-    /// The answer's first `# heading`, which names the note better than the question it answered.
     static func noteTitle(_ markdown: String) -> String? {
         markdown.split(separator: "\n").first { $0.hasPrefix("# ") }.map { $0.dropFirst(2).trimmingCharacters(in: .whitespaces) }
     }
@@ -543,7 +506,6 @@ final class ClaudeModel {
         case .http(let status, let body):
             status == 401
                 ? String(localized: .claudeErrorAuth)
-                // The CLI reports its own errors with no HTTP status; its message says more than a code would.
                 : status == 0
                     ? String(localized: .claudeErrorFailedBody(String(body.prefix(200)))) : String(localized: .claudeErrorHttp(status))
         case .refused: String(localized: .claudeErrorRefused)
@@ -552,7 +514,6 @@ final class ClaudeModel {
         }
     }
 
-    /// The whole conversation as one page. `column-reverse` keeps the newest message in view without JavaScript.
     static func html(
         _ chat: Chat, partial: String? = nil, cards: Bool = true, superseded: Set<ProposalRef> = [],
         describe: (ActionProposal) -> ProposalLine = { ProposalLine(text: $0.command) }
@@ -571,14 +532,12 @@ final class ClaudeModel {
                         cards
                         ? #"<a href="folio://action/card/\#(m.id)">\#(card)</a>"#
                         : #"<span class="off" title="\#(String(localized: .claudeAnswerCardOff))">\#(card)</span>"#
-                    // The return type is spelled out: left to inference, the literals become GRDB's `SQL` (its extensions
-                    // leak in through FolioIndex), whose `joined()` then prints `SQL(elements: …)` into the chat.
+                    // 반환 타입을 적어 둔다. 추론에 맡기면 리터럴이 GRDB의 `SQL`이 되고(FolioIndex를 거쳐 그 확장이
+                    // 들어온다), 그 `joined()`가 대화에 `SQL(elements: ...)`를 찍는다.
                     let offered = Self.offered(m, superseded: superseded, describe: describe).count
                     let proposals = (m.proposals ?? []).enumerated().map { i, p -> String in
                         var line = describe(p)
                         let replaced = p.applied != true && superseded.contains(ProposalRef(message: m.id, index: i))
-                        // Its own dry run fails against the folder until the ones it builds on are applied; that, not the
-                        // missing item, is the reason to show.
                         if p.applied != true, !replaced, let waiting = Self.waiting(m, i, superseded: superseded, describe: describe) {
                             line.refusal = Self.reason(waiting)
                         }
@@ -589,7 +548,6 @@ final class ClaudeModel {
                                 ? #"<span class="off">\#(String(localized: .claudeProposalSuperseded))</span>"#
                                 : line.refusal.map { _ in #"<span class="off">\#(String(localized: .claudeProposalUnavailable))</span>"# }
                                     ?? #"<a href="folio://action/apply/\#(m.id)/\#(i)">\#(String(localized: .claudeProposalApply))</a>"#
-                        // In the line, not a tooltip: a reason only shown on hover reads as a silent failure.
                         let why = p.applied == true || replaced ? nil : line.refusal ?? p.failure
                         let reason = why.map { #"<span class="why">\#(escape($0))</span>"# } ?? ""
                         let change = replaced ? "" : line.change.map(changeHTML) ?? ""
@@ -597,7 +555,6 @@ final class ClaudeModel {
                             #"<div class="proposal"><div class="row"><span>\#(escape(line.text))\#(reason)</span>\#(button)</div>\#(change)</div>"#
                     }.joined()
 
-                    // Only with two or more: for one, its own link is the same button.
                     let applyAll =
                         offered < 2
                         ? ""
@@ -637,8 +594,6 @@ final class ClaudeModel {
         .figure img { display: block; max-width: 100%; max-height: 240px; margin: 0 auto; }
         """
 
-    /// What a note proposal changes, folded shut so the answer stays readable; opened, the user approves what they
-    /// read rather than a one-line summary.
     static func changeHTML(_ change: ProposalLine.Change) -> String {
         func row(_ kind: String, _ sign: String, _ text: String) -> String { #"<div class="l \#(kind)">\#(sign) \#(escape(text))</div>"# }
         var rows: [String] = []
@@ -680,8 +635,8 @@ final class ClaudeModel {
             #"<details class="change"><summary>\#(String(localized: .claudeProposalChanges(added, removed)))</summary><div class="diff">\#(rows.joined())</div></details>"#
     }
 
-    /// The picture as the note would show it, on the note's card. An SVG in an `<img>` follows the page's appearance,
-    /// so its dark rule shows when the panel is dark; it runs no script and loads nothing there.
+    // `<img>` 안의 SVG는 페이지의 모양을 따르므로 패널이 다크일 때 다크 규칙이 보인다. 그 안에서는 스크립트를 돌리지
+    // 않고 아무것도 불러오지 않는다.
     static func figureHTML(_ svg: String) -> String {
         let data = Data(svg.utf8).base64EncodedString()
         return
@@ -696,21 +651,16 @@ final class ClaudeModel {
 
 struct ProposalLine: Equatable {
     var text: String
-    /// Why it can't be applied now; nil when it can, or once it is applied.
     var refusal: String?
-    /// What it does to a note, while it is not applied.
     var change: Change?
 
     enum Change: Equatable {
-        /// The whole note written again, against the note on disk.
         case rewrite([TextDiff.Line])
         case edit([NoteEdit.Replacement], append: String?)
-        /// A note figure written new or again: the SVG it would be.
         case figure(String)
     }
 }
 
-/// Collects an answer's pieces off the main actor; the panel reads the state so far on its own schedule.
 final class AnswerStream: Sendable {
     struct State: Sendable, Equatable {
         var text: String?
@@ -725,7 +675,6 @@ final class AnswerStream: Sendable {
     func take(_ event: StreamEvent) {
         state.withLock { s in
             switch event {
-            // A new message starts over: the text before it led up to a tool call, and only the last message is kept.
             case .turn: s.text = nil
             case .text(let piece): s.text = (s.text ?? "") + piece; s.tool = nil
             case .tool(let name): s.tool = name; s.toolInput = ""

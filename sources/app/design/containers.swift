@@ -3,7 +3,6 @@ import SwiftUI
 
 struct Card<Content: View>: View {
     var padding: CGFloat = 0
-    /// For rows with a wash of their own (an open `DisclosureRow` last in the card), which would square off its corners.
     var clipped = false
     @ViewBuilder var content: Content
 
@@ -11,28 +10,23 @@ struct Card<Content: View>: View {
         let rows = VStack(alignment: .leading, spacing: 0) { content }
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-        // Only when asked: clipping every card cut what a row draws past its edge.
+        // 요청할 때만 자른다. 모든 카드를 자르면 행이 가장자리 밖에 그리는 것이 잘렸다.
         Group { if clipped { rows.clipShape(.rect(cornerRadius: Theme.Radius.card)) } else { rows } }
             .surface(Theme.Palette.card, in: .rect(cornerRadius: Theme.Radius.card))
             .overlay(RoundedRectangle(cornerRadius: Theme.Radius.card).strokeBorder(Theme.Palette.lineSoft))
     }
 }
 
-/// A banner heading a `Card` that holds the rows it's about, so the decision is made where it's announced.
-/// Rows are `CardRow`s; without rows it is the banner alone.
 struct NoticeCard<Trailing: View, Rows: View>: View {
     let title: String
     var detail: String?
     var systemImage = "exclamationmark.bubble.fill"
-    /// News rather than a problem (a folder still coming down from iCloud): the banner in blue, not amber.
     var informs = false
     @ViewBuilder var trailing: Trailing
     @ViewBuilder var rows: Rows
 
     var body: some View {
         Card {
-            // The title stays on one line with its count whole: where the button doesn't fit beside it, the button
-            // moves under the words (#402). The detail is a sentence and wraps; its width doesn't decide the fit.
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: Theme.Space.m) {
                     words(detailIdeal: 0)
@@ -44,7 +38,6 @@ struct NoticeCard<Trailing: View, Rows: View>: View {
                     action.padding(.leading, Theme.Space.m + Theme.Size.tile)
                 }
             }
-            // A row's padding and height, so the banner is never slimmer than an empty card beside it.
             .padding(Theme.Inset.row)
             .frame(maxWidth: .infinity, minHeight: Theme.Size.rowHeight, alignment: .leading)
             .background(informs ? Theme.Palette.infoFill : Theme.Palette.warningBanner, in: .rect(cornerRadius: Theme.Radius.card))
@@ -97,9 +90,7 @@ struct CardRow<Content: View>: View {
 struct FormRow<Control: View>: View {
     let label: String
     var detail: String?
-    /// A value this device keeps for itself (its appearance, its Whisper model) rather than settings.json.
     var device = false
-    /// The detail is a problem to fix (Claude Code not found), not a fact about the value.
     var warns = false
     var last = false
     @ViewBuilder var control: Control
@@ -124,7 +115,6 @@ struct FormRow<Control: View>: View {
     }
 }
 
-/// "이 기기" beside a row's name: the value isn't shared with the student's other devices.
 struct DeviceTag: View {
     var body: some View {
         Text(.designThisDevice)
@@ -134,13 +124,10 @@ struct DeviceTag: View {
             .padding(.horizontal, Theme.Space.tight)
             .padding(.vertical, Theme.Space.xxs)
             .overlay(Capsule().strokeBorder(Theme.Palette.line))
-            // After the padding: a narrow row would otherwise squeeze the outline inside the text.
             .fixedSize()
     }
 }
 
-/// A row in a `Card` that folds the rows under it: values a student rarely changes (수업 시작과 복습의 세부, 노트의
-/// 소제목). The rows sit indented on a faint wash, so they read as this row's and not as the card's next rows.
 struct DisclosureRow<Rows: View>: View {
     let label: String
     @Binding var isOpen: Bool
@@ -173,39 +160,32 @@ struct DisclosureRow<Rows: View>: View {
     }
 }
 
-/// A row's name and its control side by side, or the control under the name when the row is too narrow for both: in
-/// a pane or on an iPhone a fixed-width control (a grade track) otherwise squeezed the name to nothing.
 struct FoldingRow<Title: View, Control: View>: View {
-    /// What the name keeps beside the control before the control moves under it.
     static var labelRoom: CGFloat { 120 }
 
     @ViewBuilder var title: Title
     @ViewBuilder var control: Control
 
     var body: some View {
-        // ViewThatFits goes by ideal widths; the name's is its whole line, which would fold a row with a long
-        // detail even in a full window. Its ideal is pinned to the room it needs, so only the control's width counts.
+        // `ViewThatFits`는 ideal 폭으로 판단하는데, 이름의 ideal 폭은 한 줄 전체라서 설명이 긴 행은 넓은 창에서도
+        // 접혔다. 그래서 이름의 ideal 폭을 필요한 폭으로 고정해 컨트롤의 폭만 판단에 들어가게 한다.
         ViewThatFits(in: .horizontal) {
             HStack(spacing: Theme.Space.m) {
-                // Not stretched: a stretched name took the room a control's own text (색's "자동") needed.
                 title.frame(idealWidth: Self.labelRoom, alignment: .leading)
                 Spacer(minLength: Theme.Space.m)
                 control
             }
             VStack(alignment: .leading, spacing: Theme.Space.s) {
                 title.frame(maxWidth: .infinity, alignment: .leading)
-                // Still a row: a control of several parts (a field, its unit and a switch) put each on a line of its own.
                 HStack(spacing: Theme.Space.m) { control }
             }
         }
     }
 }
 
-/// Side by side from `wideFrom` points up, one under the other below it: how blocks that share a row fold in a pane
-/// or on an iPhone. Not a width measured into a flag: a flag starts wide, and its first, side-by-side pass pushed a
-/// narrow pane out by the pair's minimum width.
+// 폭을 재서 플래그로 두지 않는다. 플래그는 넓은 상태로 시작하므로, 처음 나란히 그릴 때 두 블록의 최소 폭만큼 좁은 칸을
+// 밀어냈다.
 struct Fold<Content: View>: View {
-    /// At least what the blocks need side by side, so they never squeeze past their own minimums.
     let wideFrom: CGFloat
     var spacing: CGFloat = Theme.Space.xl
     var stackSpacing: CGFloat = Theme.Space.section
@@ -213,7 +193,6 @@ struct Fold<Content: View>: View {
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
-            // The pair's ideal width is pinned to `wideFrom`: left to the blocks, whole lines of text decided instead.
             HStack(alignment: .top, spacing: spacing) { content }
                 .frame(idealWidth: wideFrom)
             VStack(alignment: .leading, spacing: stackSpacing) { content }
@@ -221,14 +200,12 @@ struct Fold<Content: View>: View {
     }
 }
 
-/// Never put it inside another card: a tall editor among single-line rows breaks their rhythm.
 struct FormTextArea: View {
     let label: String
     var detail: String?
     @Binding var text: String
     @Environment(\.textAreaRoom) private var textAreaRoom
 
-    /// The label's line above the card and the card's padding, which share the sheet's room with the editor.
     private static var around: CGFloat { Theme.Space.l + Theme.Space.s + 2 * Theme.Space.m }
 
     var body: some View {
@@ -263,25 +240,18 @@ struct SheetForm<Rows: View>: View {
     let confirm: String
     var disabled = false
     var note: String?
-    /// False when the rows bring their own grouped cards, for a form with sections.
     var carded = true
     var width: CGFloat = 460
-    /// A destructive button at the footer's leading end, in every sheet that deletes; the sheet asks to confirm.
     var deleteTitle: String?
     var onDelete: (() -> Void)?
     var mark: CourseMark?
-    /// For a sheet that comes back later (a class's wrap-up), "나중에" rather than "취소".
     var cancel: String?
-    /// Where a run through several sheets is, at the title's trailing end.
     var step: String?
-    /// False for a sheet whose rows write as they change (a file's links): nothing is left to cancel, so the one button
-    /// closes it and Esc does the same.
     var cancellable = true
     @ViewBuilder var rows: Rows
     let onConfirm: () -> Void
     @Environment(\.sheetRoom) private var room
     @State private var rowsHeight: CGFloat = 0
-    /// The title, note, buttons and padding around the rows: all the sheet holds that stays put.
     @State private var chrome: CGFloat = 0
 
     var body: some View {
@@ -295,7 +265,6 @@ struct SheetForm<Rows: View>: View {
                 }
             }
             if let room {
-                // In the window's content area at most: past it the rows scroll between a fixed title and buttons.
                 let viewport = max(room - chrome, Self.leastRows)
                 ScrollView {
                     form.onGeometryChange(for: CGFloat.self) {
@@ -306,7 +275,6 @@ struct SheetForm<Rows: View>: View {
                 }
                 .scrollBounceBehavior(.basedOnSize)
                 .overflowFade(.vertical)
-                // Ideal at the rows' own height so a sheet takes it; under a smaller offer (an iPad's sheet) it gives way.
                 .frame(minHeight: 0, idealHeight: min(rowsHeight, viewport), maxHeight: min(rowsHeight, viewport))
                 .environment(\.textAreaRoom, viewport)
             } else {
@@ -348,18 +316,14 @@ struct SheetForm<Rows: View>: View {
 
     private var shown: CGFloat { room.map { min(rowsHeight, max($0 - chrome, Self.leastRows)) } ?? rowsHeight }
 
-    /// Rows left on screen however low the window: a few lines' worth to scroll through.
     private static var leastRows: CGFloat { Theme.Size.rowHeight * 3 }
 }
 
 extension EnvironmentValues {
-    /// The window's content area's height (below its toolbar), the most a sheet may take. Nil where nothing measured it.
     @Entry var sheetRoom: CGFloat?
-    /// The height a sheet's scrolling rows show, which a growing text area stays inside.
     @Entry var textAreaRoom: CGFloat?
 }
 
-/// Shorter than the block it stands for, so an empty column beside a full one doesn't hold open a tall hole.
 struct EmptyCard: View {
     let symbol: String
     var tone: Tone = .plain

@@ -12,7 +12,6 @@ final class CodesModel {
 
     init(workspace: Workspace) { self.workspace = workspace }
 
-    /// Which courses use each code, so a tile can show them and a used code can't be removed.
     var users: [UUID: [UUID]] {
         Dictionary(grouping: workspace.allCourses.flatMap { c in c.codes.map { (code: $0, course: c.id) } }, by: \.code)
             .mapValues { $0.map(\.course) }
@@ -26,7 +25,6 @@ final class CodesModel {
         catalog.codes.filter { $0.program == program && matches($0) }.sorted { $0.prefix < $1.prefix }
     }
 
-    /// While searching, a program with no match is hidden rather than shown empty.
     func showsProgram(_ program: String, in catalog: Catalog) -> Bool { query.isEmpty || !shown(program, in: catalog).isEmpty }
 
     func hasNoMatch(in catalog: Catalog) -> Bool { !query.isEmpty && !catalog.codes.contains(where: matches) }
@@ -42,14 +40,12 @@ final class CodesModel {
         catalog.codes.removeAll { $0.id == id }
     }
 
-    /// Why the code can't be removed (a course still uses it), or nil.
     func removal(_ id: UUID) -> String? {
         var c = workspace.catalog
         c.codes.removeAll { $0.id == id }
         return workspace.refusal(CatalogSet(catalog: c))
     }
 
-    /// A code added and left blank goes away with its editor, instead of staying in catalog.json as an empty tile.
     func closeEditor(_ id: UUID, catalog: inout Catalog) {
         guard editing == id else { return }
         editing = nil
@@ -60,7 +56,6 @@ final class CodesModel {
         }
     }
 
-    /// Newest term first, the way the sidebar lists semesters.
     func courses(using ids: [UUID]) -> [Course] {
         workspace.allCourses.filter { ids.contains($0.id) }
             .sorted { (workspace.semester(of: $0)?.order ?? 0, $1.title) > (workspace.semester(of: $1)?.order ?? 0, $0.title) }

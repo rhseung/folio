@@ -3,37 +3,28 @@ import FolioDomain
 import FolioStorage
 import SwiftUI
 
-/// A note's menu, the same in the notes list, on the open note's `⋯` and in search (#403).
 @MainActor
 struct NoteMenuSource: ItemMenuSource {
     let workspace: Workspace
     let courseId: UUID
     let note: NoteFile
     let host: MenuHost
-    /// The notes section's undo, which the menu's moves land in.
     var moves: MoveUndo?
-    /// The list's own way in, which first gives an ID to a note moved in from an old folder.
     var open: (@MainActor () -> Void)?
-    /// On the open `.tex` note: building its PDF, which the page runs.
     var build: (@MainActor () -> Void)?
-    /// Off while a build runs or TeX isn't installed.
     var canBuild = true
-    /// After the note went to the trash: the list lets go of it.
     var removed: (@MainActor () -> Void)?
-    /// On the open note: its edits written first, since the file is about to move.
     var save: (@MainActor () -> Void)?
     let openLink: OpenLinkAction
     let sheets: ItemSheetsAction
 
     private var course: LoadedCourse? { workspace.course(courseId) }
 
-    /// The material `note build` wrote, when the course tracks it.
     private var builtPDF: UUID? {
         guard let course, let path = course.store.builtPDF(of: note, in: course.file) else { return nil }
         return course.file.materials.first { $0.path == path }?.id
     }
 
-    /// The latest class this note reviews: its 작성 완료 is the one the note's bar finishes.
     private var reviewed: Session? {
         guard let id = note.meta.id else { return nil }
         return course?.file.sessions.filter { $0.reviewNoteId == id }.max { $0.date < $1.date }
@@ -47,7 +38,6 @@ struct NoteMenuSource: ItemMenuSource {
         #endif
         let review = reviewed.flatMap { course?.file.review(of: $0) }
         let all = NoteMenuCommand.commands(host: host, builtPDF: builtPDF != nil, builds: build != nil, review: review, finder: finder)
-        // A note with no ID yet has no link to share.
         return note.meta.id == nil ? all.filter { $0 != .share } : all
     }
 
@@ -90,7 +80,6 @@ struct NoteMenuSource: ItemMenuSource {
         }
     }
 
-    /// The other folders of Notes/, then a new one: shown with no folder yet too, since that is where the first comes from.
     private var moveLeaves: [MenuRow.Leaf] {
         guard let course else { return [] }
         return course.store.noteMoveTargets(for: note).map { folder in
@@ -107,7 +96,6 @@ struct NoteMenuSource: ItemMenuSource {
     }
 }
 
-/// For `.contextMenu` and the open note's `⋯`.
 struct NoteMenu: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.openLink) private var openLink

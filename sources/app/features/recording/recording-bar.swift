@@ -1,8 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// The recording under way, at the foot of the sidebar: the sidebar is on every page, and a bar floating over the
-/// content hid what was under it for the whole class.
 struct RecordingBar: View {
     @State private var model: RecordingBarModel
     @State private var showingTranscript = false
@@ -41,12 +39,9 @@ struct RecordingBar: View {
                 Spacer(minLength: Theme.Space.xs)
                 Text(RecordingTime.label(recorder.elapsed))
                     .font(Theme.Typeface.figureSmall)
-                    // Red while it records, gray while paused: the card's color is the course's, so the state needs its own.
                     .foregroundStyle(model.paused ? Theme.Palette.textSecondary : Theme.Palette.danger)
                     .contentTransition(.numericText())
             }
-            // Two lines kept whether one or two are heard: a card changing height with every sentence moved the
-            // sidebar's terms up and down under the pointer.
             Text(model.line)
                 .font(Theme.Typeface.caption)
                 .foregroundStyle(
@@ -59,7 +54,6 @@ struct RecordingBar: View {
             HStack(spacing: Theme.Space.m) {
                 LevelMeter(level: model.recording ? recorder.level : 0)
                 Spacer(minLength: 0)
-                // Filled with a count once marked: an outline that only bounced looked as if the click did nothing.
                 Button {
                     recorder.bookmark()
                 } label: {
@@ -78,7 +72,6 @@ struct RecordingBar: View {
                 Button {
                     model.toggle()
                 } label: {
-                    // Only a pause offers to resume; starting and stopping keep the pause glyph, switched off.
                     Image(systemName: model.paused ? "record.circle" : "pause.fill").contentTransition(.symbolEffect(.replace))
                 }
                 .help(Text(model.paused ? .recordingResume : .recordingPause))
@@ -96,7 +89,6 @@ struct RecordingBar: View {
                     Image(systemName: "text.quote")
                 }
                 .help(Text(showingTranscript ? .recordingCollapse : .recordingExpand))
-                // Beside the sidebar, not inside it: the transcript wants a reading width the sidebar doesn't have.
                 .popover(isPresented: $showingTranscript, arrowEdge: .trailing) {
                     TranscriptFeed(model: model) { link in
                         showingTranscript = false
@@ -106,13 +98,9 @@ struct RecordingBar: View {
                 }
             }
             .buttonStyle(.ghost)
-            // One color for every button, the sidebar's own: blue buttons beside a red stop read as two kinds of control,
-            // and the accent stood out among the sidebar's gray icons. The red time already says it is recording.
             .tint(Theme.Palette.chromeIcon)
         }
         .padding(Theme.Space.m)
-        // Paused, the card goes gray and its words fade, like a control switched off; the buttons keep their color, since
-        // resume and stop are what the card is for then.
         .background {
             RecordingFace(
                 shape: RoundedRectangle(cornerRadius: Theme.Radius.floating), accent: model.paused ? CourseAccent.gray : model.accent,
@@ -123,17 +111,11 @@ struct RecordingBar: View {
     }
 }
 
-/// The course's tint and edge, like the 지금 수업 card on 오늘: the course's color without another icon or dot in a
-/// sidebar already full of them. A tint, not a fill, since the sidebar is glass.
-///
-/// While it records, a glow swells from `origin` (the card's level meter, the toolbar capsule's dot) as the lecturer
-/// speaks and settles in a pause: a whole-card fade on a fixed beat read as blinking, not listening.
 struct RecordingFace<Outline: InsettableShape>: View {
     let shape: Outline
     let accent: CourseAccent
     let recording: Bool
     let level: Float
-    /// Where the glow swells from, in the face's own size.
     var origin: (CGSize) -> CGPoint = { CGPoint(x: 0, y: $0.height) }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -144,8 +126,8 @@ struct RecordingFace<Outline: InsettableShape>: View {
             shape.strokeBorder(accent.color.opacity(Theme.Opacity.innerFill))
             GeometryReader { proxy in
                 let reach = max(proxy.size.width, proxy.size.height)
-                // A circle around the origin, not a gradient filling the card: shrunk below the card's height, the
-                // card-sized fill showed its top edge as a line across the glow.
+                // 카드를 채우는 gradient 대신 원점 주위의 원을 쓴다. 카드 높이보다 줄면 카드 크기의 채움은 윗변이 빛을
+                // 가로지르는 선으로 보였다.
                 Circle()
                     .fill(
                         RadialGradient(
@@ -154,16 +136,14 @@ struct RecordingFace<Outline: InsettableShape>: View {
                     )
                     .frame(width: reach * 2, height: reach * 2)
                     .position(origin(proxy.size))
-                    // Scaled from the origin, not the radius changed: SwiftUI eases a scale between level samples,
-                    // where a new gradient radius jumps.
+                    // 반지름을 바꾸지 않고 원점에서 scale 한다. SwiftUI는 레벨 샘플 사이의 scale을 부드럽게 잇지만
+                    // gradient 반지름은 건너뛴다.
                     .scaleEffect(reduceMotion ? 1 : 0.5 + 1.1 * voice, anchor: Self.anchor(origin(proxy.size), in: proxy.size))
-                    // Square root: the size already grows with the voice, and a linear fade on top of it left a
-                    // speaking voice barely brighter than silence.
                     .opacity(Double(voice).squareRoot())
             }
             .clipShape(shape)
         }
-        // Eased, not sprung: the level comes five times a second, and a spring overshot each sample into a flicker.
+        // 레벨이 1초에 다섯 번 오고 spring은 샘플마다 넘쳐서 깜박였으므로, easing으로 둔다.
         .animation(Theme.Motion.pane, value: voice)
     }
 
@@ -183,11 +163,9 @@ private struct TranscriptFeed: View {
             Theme.Palette.lineSoft.frame(height: 1)
             feed
         }
-        // Links made since the captions were told (from this popover's own link, say) reach them now.
         .onAppear { model.retellCaptionsIfChanged() }
     }
 
-    /// One line above the captions, so the card itself stays as it is: what the captions were told, opened on a click.
     @ViewBuilder var context: some View {
         Button {
             withAnimation(Theme.Motion.standard) { showingContext.toggle() }
@@ -254,7 +232,6 @@ private struct LevelMeter: View {
     let level: Float
 
     var body: some View {
-        // No taller than the buttons' glyphs beside it, at its loudest: a taller meter read as the row's one big control.
         HStack(alignment: .center, spacing: Theme.Space.xxs) {
             ForEach(0..<5, id: \.self) { i in
                 let lit = Float(i) / 5 < level

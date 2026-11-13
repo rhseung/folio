@@ -1,17 +1,13 @@
 import SwiftUI
 
 extension EnvironmentValues {
-    /// Set at the root from the workspace's lock, so design components can hide grades without knowing the workspace.
     @Entry var gradesLocked = false
     @Entry var unlockGrades: @MainActor () -> Void = {}
 }
 
 enum SensitiveStyle {
-    /// A figure: placeholder bars, and a press on them unlocks.
     case inline
-    /// A control such as the grade track: drawn as an empty bar.
     case control
-    /// A whole card: drawn empty, with an unlock button over it.
     case block
 }
 
@@ -24,8 +20,8 @@ private struct Sensitive: ViewModifier {
         if !locked || style == nil {
             content
         } else {
-            // Only text can be redacted, and a blur keeps a chart's shape or a slider's position readable, so anything
-            // beyond text keeps its size and is not drawn at all.
+            // redact할 수 있는 것은 글뿐이고, blur는 차트의 모양이나 슬라이더의 위치를 알아볼 수 있게 남긴다. 그래서
+            // 글이 아닌 것은 크기만 지키고 아예 그리지 않는다.
             switch style {
             case .inline, .control:
                 Group {
@@ -66,6 +62,5 @@ private struct Sensitive: ViewModifier {
 }
 
 extension View {
-    /// Hides grade content while grades are locked; nil leaves it shown.
     func sensitive(_ style: SensitiveStyle? = .inline) -> some View { modifier(Sensitive(style: style)) }
 }

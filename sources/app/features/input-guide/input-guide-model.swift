@@ -3,20 +3,15 @@ import FolioMarkdown
 import Foundation
 import Observation
 
-/// The input guide (#395): the edit view's typing help by situation, read from the tables the editor reads with the
-/// snippets of `syntax` from settings, narrowed by a tab and a search.
 @MainActor @Observable
 final class InputGuideModel {
     let syntax: MathSyntax
-    /// Nil is every section.
     var section: InputGuide.Section?
     var search = ""
     private let entries: [InputGuide.Entry]
 
     init(workspace: Workspace, syntax: MathSyntax) {
         self.syntax = syntax
-        // The iPad has no completion menu yet, nor a table menu (#31): it is left out rather than shown as keys that
-        // do nothing there.
         #if os(macOS)
         let menus = true
         #else
@@ -26,7 +21,6 @@ final class InputGuideModel {
             catalog: NoteAssist(settings: workspace.settings).catalog(syntax: syntax), menus: menus, tableMenu: menus)
     }
 
-    /// The tabs: every section, then each one with something in it.
     var tabs: [(InputGuide.Section?, String)] {
         [(nil, String(localized: .notesGuideAll))] + InputGuide.grouped(entries).map { (Optional($0.section), $0.section.label) }
     }

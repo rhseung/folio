@@ -9,8 +9,6 @@ import AppKit
 import UIKit
 #endif
 
-/// Code colors come from npm packages (resources/web/native.js), run in JavaScriptCore with no page, so the code
-/// languages stay the ones notes always had.
 @MainActor enum NoteScripts {
     private static let helpers: JSValue? = {
         guard let context = JSContext() else { return nil }
@@ -21,7 +19,6 @@ import UIKit
     static let languages: [String] =
         helpers?.objectForKeyedSubscript("languages").call(withArguments: [])?.toArray()?.compactMap { $0 as? String } ?? []
 
-    /// Token spans in UTF-16 offsets of `code`, with the highlighter's classes.
     static func highlight(_ code: String, language: String) -> [(range: NSRange, classes: String)] {
         guard let flat = helpers?.objectForKeyedSubscript("highlight").call(withArguments: [code, language])?.toArray() else { return [] }
         return stride(from: 0, to: flat.count - 2, by: 3).compactMap { i in
@@ -31,20 +28,13 @@ import UIKit
     }
 }
 
-/// Math for the edit view's bubble and the completion menu, drawn by the preview's own KaTeX and note stylesheet in a
-/// page nobody sees and kept as pictures. SwiftMath drew it before, and about a fifth of the commands the menu offers
-/// (`\underbrace`, `\boldsymbol`, `align`, …) failed or came out otherwise than in the preview (#389): with one
-/// renderer a formula looks the same in both views, or fails in both.
-///
-/// Drawing is asynchronous: `picture` returns what is drawn and starts what isn't, and `drawn` changes when it lands,
-/// so a SwiftUI view that asked draws again, and `ready` lets an AppKit view ask again.
+// 편집 보기의 말풍선과 자동 완성 메뉴의 수식은 미리보기의 KaTeX와 노트 스타일시트로 보이지 않는 페이지에서 그려 그림으로 남긴다. 예전에는 SwiftMath로 그렸는데, 메뉴가 내놓는 명령의 약 5분의
+// 1(`\underbrace`, `\boldsymbol`, `align` 등)이 실패하거나 미리보기와 다르게 나왔다. 렌더러가 하나이면 수식은 두 보기에서 같게 보이거나, 두 보기에서 함께 실패한다.
 @MainActor @Observable final class NoteMath {
     struct Picture {
         let image: PlatformImage
         let size: CGSize
 
-        /// Its size in a slot: scaled down evenly to fit, never up. A resizable picture framed to the slot's height but
-        /// its own width came out squashed, every formula in the completion menu flattened.
         func fitted(_ slot: CGSize) -> CGSize {
             guard size.width > 0, size.height > 0 else { return size }
             let scale = min(1, slot.width / size.width, slot.height / size.height)
@@ -52,14 +42,10 @@ import UIKit
         }
     }
 
-    /// The transparent room an untrimmed picture keeps around KaTeX's boxes, on each side, in points. A slot can let
-    /// it reach past its edge: only the ink needs to fit, and counting the room shrank every symbol.
     nonisolated static func edge(_ size: CGFloat) -> CGFloat { ceil(size * 0.25) }
 
     static let shared = NoteMath()
 
-    /// How far past KaTeX's boxes a trimmed picture's snapshot reaches, in ems, before it's cut to its ink: a glyph's
-    /// ink runs past its box (an italic f, a slanted integral) by less than one. A test draws with more to see nothing's cut.
     private let room: CGFloat
 
     init(room: CGFloat = 1) {
@@ -67,7 +53,6 @@ import UIKit
     }
 
     private(set) var drawn = 0
-    /// From the page being made to its first picture, and the last picture's own time; for the PR and the tests.
     @ObservationIgnored private(set) var firstPicture: Duration?
     @ObservationIgnored private(set) var lastPicture: Duration?
 
@@ -91,9 +76,8 @@ import UIKit
         let trim: Bool
     }
 
-    /// The page draws only while it is in a window on screen, so the view that shows math (the edit view) carries it.
-    /// It is made on the first formula asked for, or now with `warm`, so the first bubble needn't wait for a web process.
-    /// A view whose window isn't on screen yet (a window being opened, a test's) doesn't take it from one that is.
+    // 페이지는 화면에 보이는 창 안에 있을 때만 그리므로, 수식을 보이는 뷰(편집 보기)가 페이지를 가진다. 첫 말풍선이 웹 프로세스를 기다리지 않도록 처음 요청한 수식에서, 또는 `warm`이면 바로 만든다.
+    // 창이 아직 화면에 없는 뷰(열리는 중인 창, 테스트의 창)는 화면에 있는 뷰에서 페이지를 가져가지 않는다.
     func host(in view: PlatformView, warm: Bool = false) {
         if warm, page == nil { _ = make() }
         if let host, host !== view, Self.shows(host), !Self.shows(view) {
@@ -113,9 +97,6 @@ import UIKit
         #endif
     }
 
-    /// `trim` cuts the picture to its ink, for the bubble, which pads it evenly. Untrimmed it keeps KaTeX's boxes, the
-    /// line box and strut: the palette and the completion menu center a symbol in its cell, and only the boxes keep
-    /// `\ldots` under `\cdots`, `.` under `\cdot` and `,` under `'`.
     func picture(
         _ source: String, syntax: MathSyntax, display: Bool, size: CGFloat, dark: Bool, trim: Bool = false,
         ready: (() -> Void)? = nil
@@ -155,7 +136,6 @@ import UIKit
                 job.source, syntax: job.syntax, display: job.display, size: job.size, dark: job.dark,
                 room: job.trim ? room : nil)
             guard current == turn else { return }
-            // Only what KaTeX can't read is given up on; a page that ended or a snapshot that failed is asked again.
             switch result {
             case .picture(let picture): cache[job.key] = picture
             case .unreadable: failed.insert(job.key)
@@ -166,8 +146,8 @@ import UIKit
             if firstPicture == nil, let made { firstPicture = now - made }
             finish(job)
         }
-        // A page that stopped answering mustn't hold every formula after it; this one is asked again next time. Not
-        // while the page is still loading, which on a cold start is the most of the first picture's wait.
+        // 응답하지 않는 페이지가 그 뒤의 모든 수식을 붙잡으면 안 되므로, 이 수식은 다음에 다시 요청한다. 페이지가 아직 불러오는 중일 때는 그러지 않는다. 처음 시작할 때 첫 그림을 기다리는 시간의
+        // 대부분이 그 불러오기이기 때문이다.
         Task {
             repeat { try? await Task.sleep(for: .seconds(5)) } while current == turn && !page.loaded
             guard current == turn else { return }
@@ -186,7 +166,6 @@ import UIKit
 
 @MainActor private final class MathPage: NSObject, WKNavigationDelegate {
     let web: WKWebView
-    /// One point of the hosting view, clipping the page: the page lays out and draws, and nothing of it shows.
     private let frame: PlatformView
     private var loading: WKNavigation?
     private(set) var loaded = false
@@ -208,8 +187,7 @@ import UIKit
 
         #if os(macOS)
         web.setValue(false, forKey: "drawsBackground")
-        // WebKit stops drawing a page whose window it judges covered, and an editor window often partly is; this page
-        // is never seen, and a picture asked for would wait until the window came forward.
+        // WebKit은 창이 가려졌다고 판단하면 페이지를 그리지 않는데, 편집기 창은 자주 일부가 가려진다. 이 페이지는 어차피 보이지 않으므로, 그대로 두면 요청한 그림이 창이 앞으로 올 때까지 기다린다.
         let setter = Selector(("_setWindowOcclusionDetectionEnabled:"))
         if web.responds(to: setter), let method = class_getInstanceMethod(type(of: web), setter) {
             typealias Set = @convention(c) (AnyObject, Selector, Bool) -> Void
@@ -236,11 +214,9 @@ import UIKit
         loading = web.loadHTMLString(page, baseURL: nil)
     }
 
-    /// Wide enough that a long formula stays on one line, as the bubble shrinks it to fit rather than wrapping it.
+    // 말풍선은 긴 수식을 줄바꿈하지 않고 줄여서 맞추므로, 긴 수식도 한 줄에 놓이도록 충분히 넓게 둔다.
     private static let canvas = CGSize(width: 2400, height: 800)
 
-    // The page is as wide as its formula, with room around it for the snapshot's (`NoteMath.room`): a snapshot past the
-    // page's edge is cut there, and an ink running into it would be too.
     private static let css =
         "html,body{background:transparent!important}body.note{margin:0;padding:4em;max-width:none;width:max-content}"
         + "body.note>.math.display{margin:0;overflow:visible}"
@@ -255,13 +231,11 @@ import UIKit
         #endif
     }
 
-    // The web process can be ended by the system; the next formula would wait on a page that no longer runs.
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         loaded = false
         load()
     }
 
-    // Loading a string hardly fails, but if it did every formula would wait on the page for good.
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: any Error) {
         if navigation === loading { load() }
     }
@@ -274,9 +248,8 @@ import UIKit
         guard navigation === loading else { return }
         let finished = navigation
         Task {
-            // Every KaTeX font before the first formula. A font loads when a formula first needs it, and
-            // `document.fonts.ready` was seen settled while it still loaded: a big delimiter's (KaTeX_Size1) came out
-            // blank, and that picture was kept.
+            // 첫 수식 전에 KaTeX 글꼴을 모두 불러온다. 글꼴은 수식이 처음 필요로 할 때 불러오는데, 글꼴이 아직 불러오는 중에도 `document.fonts.ready`가 끝난 것으로 보였다.
+            // 그래서 큰 구분 기호(KaTeX_Size1)가 빈 그림으로 나왔고, 그 그림이 그대로 남았다.
             _ = try? await web.callAsyncJavaScript(
                 "await Promise.all([...document.fonts].map(f => f.load().catch(() => null)))",
                 arguments: [:], in: nil, contentWorld: .defaultClient)
@@ -290,19 +263,17 @@ import UIKit
 
     enum Drawn {
         case picture(NoteMath.Picture)
-        /// KaTeX can't read it; drawing it again gives the same.
         case unreadable
         case failed
     }
 
-    /// With `room`, the snapshot reaches that many ems past the boxes and is cut to its ink; without, it's the boxes.
     func draw(_ source: String, syntax: MathSyntax, display: Bool, size: CGFloat, dark: Bool, room: CGFloat?) async -> Drawn {
         if !loaded { await withCheckedContinuation { onLoad.append($0) } }
         let escaped = source.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;").replacingOccurrences(
             of: ">", with: "&gt;")
         let html = display ? "<div class=\"math display\">\(escaped)</div>" : "<span class=\"math\">\(escaped)</span>"
-        // Every part's box, not only KaTeX's outer one: a tall accent or a limit reaches past it. Not the MathML copy
-        // for screen readers, which KaTeX hides in a 1px box its contents run far out of.
+        // KaTeX의 바깥 상자만이 아니라 모든 부분의 상자를 본다. 높은 악센트나 극한은 바깥 상자 밖으로 나간다. 스크린 리더용 MathML 사본은 빼는데, KaTeX가 이를 1px 상자에 숨기고 내용은
+        // 그 상자 밖으로 멀리 나가기 때문이다.
         let script = """
             const root = document.documentElement, body = document.body;
             root.style.setProperty("--text", color);
@@ -337,8 +308,6 @@ import UIKit
         }
         guard let found = answer as? [NSNumber], found.count == 4 else { return .unreadable }
         let ink = CGRect(x: found[0].doubleValue, y: found[1].doubleValue, width: found[2].doubleValue, height: found[3].doubleValue)
-        // Untrimmed, glyphs still reach a little past their boxes, so a quarter em of room around them; in whole
-        // points either way, so the picture isn't stretched into its bounds.
         let margin = room.map { ceil(size * $0) } ?? NoteMath.edge(size)
         let rect = CGRect(x: floor(ink.minX) - margin, y: floor(ink.minY) - margin, width: 0, height: 0)
             .union(CGRect(x: ceil(ink.maxX) + margin, y: ceil(ink.maxY) + margin, width: 0, height: 0))
@@ -347,18 +316,14 @@ import UIKit
 
         let snapshot = WKSnapshotConfiguration()
         snapshot.rect = rect
-        // The page is drawn afresh for the picture; waiting for the screen would wait on a window that may not show.
+        // 그림을 위해 페이지를 새로 그린다. 화면 갱신을 기다리면 보이지 않을 수도 있는 창을 기다리게 된다.
         snapshot.afterScreenUpdates = false
         guard let image = try? await web.takeSnapshot(configuration: snapshot) else { return .failed }
         let taken = NoteMath.Picture(image: image, size: rect.size)
         guard room != nil else { return .picture(taken) }
-        // Spacing or `\left.` alone has no ink; its picture stays as it was taken, empty.
         return .picture(Self.inked(image, size: rect.size) ?? taken)
     }
 
-    /// The picture cut to the pixels its ink covers, in whole points so it isn't stretched into its frame. KaTeX's
-    /// boxes aren't its ink: the line box and the strut reach over and under it, and a picture cut to them had more
-    /// room at the top than the sides, which the bubble's even padding then added to.
     private static func inked(_ image: PlatformImage, size: CGSize) -> NoteMath.Picture? {
         #if os(macOS)
         guard let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
@@ -380,7 +345,6 @@ import UIKit
         }
         guard drawn else { return nil }
 
-        // The page is transparent, so any alpha is ink, its antialiased edge included. Rows run from the top.
         var minX = w, minY = h, maxX = -1, maxY = -1
         for y in 0..<h {
             let row = y * w
@@ -407,7 +371,6 @@ import UIKit
     }
 }
 
-/// Over the text's first point; a click there is meant for the text.
 private final class MathFrame: PlatformView {
     #if os(macOS)
     override func hitTest(_ point: NSPoint) -> NSView? { nil }

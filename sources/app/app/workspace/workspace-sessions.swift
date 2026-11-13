@@ -7,7 +7,6 @@ extension Workspace {
     struct SuggestedSession: Identifiable {
         var courseId: UUID
         var suggestion: SessionPlanner.Suggestion
-        /// The session it would be, unsaved: its week places it on the timeline.
         var draft: Session
         var id: UUID { courseId }
     }
@@ -16,7 +15,6 @@ extension Workspace {
         plan(for: course, now: now, days: 8).first
     }
 
-    /// Every class left in the term that no session stands for yet, for marking ahead (a 휴강 two weeks off).
     func plannedSessions(for course: LoadedCourse, now: Date) -> [SuggestedSession] {
         plan(for: course, now: now, days: nil)
     }
@@ -38,7 +36,6 @@ extension Workspace {
         currentCourses.compactMap { suggestedSession(for: $0, now: now) }
     }
 
-    /// The session's rough or review note, created from its template the first time.
     func note(_ kind: NoteKind, of sessionId: UUID, in courseId: UUID) -> UUID? {
         run(SessionNote(course: courseId, session: sessionId, kind: kind))?.made
     }

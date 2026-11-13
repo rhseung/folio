@@ -2,14 +2,9 @@ import FolioDomain
 import FolioStorage
 import SwiftUI
 
-/// Every place that shows a file goes through this (#179): the materials page (and with it every `folio://material`
-/// link from assignments, problem sets, exams, units and search), the review's sources, and a semester's `_Admin` files.
 struct FileView: View {
     @State private var model: FileViewModel
-    /// 0-based; taken once the PDF has it.
     @Binding private var requestedPage: Int?
-    /// 0-based, for the window's link (`folio://material/<ID>#page=N`), so back, forward and a tab moved to its own
-    /// window come back to it.
     @Binding private var shownPage: Int?
     @State private var thumbnails = true
     @State private var query = ""
@@ -31,7 +26,6 @@ struct FileView: View {
         _shownPage = .constant(nil)
     }
 
-    /// A file no course tracks: shown only, never written.
     init(workspace: Workspace, url: URL) {
         _model = State(initialValue: FileViewModel(workspace: workspace, course: nil, subject: .file(url)))
         _requestedPage = .constant(nil)
@@ -40,7 +34,6 @@ struct FileView: View {
 
     var body: some View {
         if model.editsInPlace, let course = model.course {
-            // The editor brings its own bar, crumb and saving.
             switch model.subject {
             case .material(let id):
                 TextFileView(workspace: model.workspace, course: course, material: id, requestedPage: $requestedPage, shownPage: $shownPage)
@@ -61,15 +54,12 @@ struct FileView: View {
         .background(Theme.Palette.card)
         .crumb(model.name, level: 2, symbol: model.symbol)
         .task(id: model.url) { await model.load(page: takeRequestedPage()) }
-        // While a class is being recorded, the pages it goes through are kept with the recording.
         .onChange(of: pdf?.page) { _, page in
             guard let page else { return }
             model.showing(page)
             shownPage = page
         }
-        // A page already open when recording starts doesn't change, so it is told then.
         .onChange(of: model.recording) { _, recording in if recording != nil, let page = pdf?.page { model.showing(page) } }
-        // Another link to this file at another page, while it is open.
         .onChange(of: requestedPage) { _, page in
             if page != nil, let pdf, let page = takeRequestedPage() { pdf.go(to: page) }
         }
@@ -120,15 +110,12 @@ struct FileView: View {
 
     var isPDF: Bool { pdf != nil }
 
-    /// Page and zoom lead; search and opening elsewhere trail, as in Preview. Where the pane is too narrow for every
-    /// tool, zoom, split, link and Claude fold into one ⋯ menu; the thumbnails, the page count and the search stay out.
     var bar: some View {
         ViewThatFits(in: .horizontal) {
             barRow(folded: false)
             barRow(folded: true)
         }
-        // Zoom's keys whichever row is shown: a folded menu's items don't take keys while it is closed, and the two
-        // rows would otherwise claim the same keys twice.
+        // 보이는 줄과 상관없이 확대 키를 여기 둔다. 접힌 메뉴의 항목은 닫혀 있는 동안 키를 받지 않고, 두 줄에 두면 같은 키를 두 번 차지한다.
         .background {
             if let c = pdf {
                 Group {
@@ -145,11 +132,9 @@ struct FileView: View {
         PageBar {
             if let c = pdf {
                 if model.splitting == nil {
-                    // Not `sidebar.leading`: the course column's button beside it is that glyph (#402).
                     Button(.materialsViewerThumbnails, systemImage: "sidebar.squares.left") { thumbnails.toggle() }.help(
                         Text(.materialsViewerThumbnails))
                 }
-                // Its own width always: squeezed, the count broke a digit per line (#402).
                 Text("\(c.page + 1) / \(c.pageCount)").monospacedDigit().foregroundStyle(Theme.Palette.textSecondary)
                     .fixedSize().padding(.horizontal, Theme.Space.xs)
                 if !folded { zoomButtons(c) }
@@ -199,7 +184,6 @@ struct FileView: View {
         }
     }
 
-    /// Measures its full width when the bar picks a row, and gives way down to `minWidth` only in the folded one.
     func search(_ c: PDFController) -> some View {
         HStack(spacing: Theme.Space.xs) {
             Image(systemName: "magnifyingglass").foregroundStyle(Theme.Palette.textTertiary)
@@ -239,9 +223,8 @@ struct PDFContent: View {
 
     var body: some View {
         if let shown = model.splitting, let course = model.course {
-            // Closing leaves the screen's views drawn once more through this binding: they read the split as it was
-            // shown, and a write after closing doesn't open it again. A stand-in split here had one zone, and a row
-            // still holding the third ran off its end (#179).
+            // 닫을 때 화면의 뷰는 이 바인딩으로 한 번 더 그려진다. 뷰는 보이던 나누기를 읽고, 닫은 뒤의 쓰기는 화면을 다시 열지 않는다. 여기에 임시 나누기를 두면 구역이 하나뿐이라, 아직 셋째
+            // 구역을 쥔 행이 끝을 넘어갔다.
             LectureSplitPane(
                 controller: controller,
                 split: Binding(
@@ -261,8 +244,6 @@ struct PDFContent: View {
     }
 }
 
-/// The way out to another app, for what Folio only shows: the file's default app on a Mac, the share sheet on iPad,
-/// which has no default app to hand a file to.
 struct OpenElsewhereButton: View {
     let url: URL
     var prominent = false

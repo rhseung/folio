@@ -7,20 +7,13 @@ final class CourseModel {
     let workspace: Workspace
     var pending: PendingAction?
     let courseId: UUID
-    /// Every change of section or note is a move the window's history keeps (`place`), unless it came from following
-    /// the history itself.
     var section: CourseSection = .overview { didSet { if section != oldValue { settle() } } }
     var openNote: UUID? { didSet { if openNote != oldValue { settle() } } }
-    /// The heading or block the open note was linked at, for the preview to scroll to.
     private(set) var noteAnchor: AppLink.Anchor?
-    /// The unit the units page has open, reported by it, so a card made in the Claude panel goes there.
     var openUnit: UUID?
-    /// Where the page is, as a link: the section, or what is open in it. The view hands each new one to the window.
     private(set) var place: AppLink
     private var following = false
-    /// An answer the Claude panel puts at the end of the open note; the editor takes it and clears it.
     var noteInsert: String?
-    /// The notes section's last move, made from the list or the open note's name, which the list offers to undo.
     let noteMoves = MoveUndo()
 
     init(workspace: Workspace, courseId: UUID) {
@@ -31,7 +24,6 @@ final class CourseModel {
 
     var course: LoadedCourse? { workspace.course(courseId) }
 
-    /// The replay the sessions page shows in place of its list: a recording's address is a page of the sessions.
     var openRecording: Recording? {
         guard section == .sessions, place.kind == .recording else { return nil }
         return course?.file.recordings.first { $0.id == place.id }
@@ -43,8 +35,6 @@ final class CourseModel {
         section = .notes
     }
 
-    /// Shows what the window's link names. A material or a unit opens on its own page, which reads `place`; an item
-    /// of a list page (a session, an exam) is the page's `focus`.
     func follow(_ entry: Navigator.Entry) {
         guard entry.course == courseId, entry.link != place else { return }
         let link = entry.link
@@ -67,17 +57,14 @@ final class CourseModel {
         case .card: section = .quizCards
         case .problemSet: section = .quizProblems
         case .recording: section = .sessions
-        // Not in a course: `Screen` never hands these to one.
         case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals, .semester, .person: break
         }
     }
 
-    /// The item a list page scrolls to and marks (`.linkTarget`): what the window's link named, until the page moves on.
     var focus: UUID? {
         guard let id = place.id else { return nil }
         switch place.kind {
         case .session, .assignment, .exam, .card, .problemSet: return id
-        // A note, a file, a unit and a recording open on a page of their own; the rest are no item of a page.
         case .note, .material, .unit, .recording, .course, .today, .grades, .requirements, .people, .codes, .settings, .whatsNew,
             .proposals, .semester,
             .person:
@@ -85,24 +72,20 @@ final class CourseModel {
         }
     }
 
-    /// A page opened something of its own (a file, a unit) or closed it, which is a move too. The same file at
-    /// another page takes the place over, and the window keeps it on the step it is on (`Navigator.go`).
     func moved(_ link: AppLink?) {
         guard !following else { return }
         guard let link else { return settle() }
-        // A file reported before its viewer is on a page keeps the page the link opened it at.
+        // 뷰어가 쪽을 알리기 전에 알린 파일은 링크가 연 쪽을 유지해야 한다.
         if link.anchor == nil, link == place.withoutAnchor { return }
         if link != place { place = link }
     }
 
-    /// The section's first screen again, for its crumb: what the section had open is closed.
     func resetPage() {
         settle()
     }
 
     private func settle() {
         guard !following else { return }
-        // A note picked by hand opens at its top, not at the heading the last link pointed to.
         noteAnchor = nil
         if section == .notes, let openNote {
             place = AppLink(.note, openNote)
@@ -129,7 +112,6 @@ final class CourseModel {
         return String(localized: file.needsReviewNote(session, at: workspace.now) ? .courseReviewNoteMissing : .courseReviewNotNeeded)
     }
 
-    /// What a tab's row shows on its right: a count, a warning, or the projected score once grades are unlocked.
     func trailing(_ tab: CourseTab, file: CourseFile) -> (text: String, warning: Bool)? {
         switch tab {
         case .classes where !file.sessions.isEmpty: return (String(localized: .courseSessionCount(file.sessions.count)), false)
@@ -159,7 +141,6 @@ final class CourseModel {
 
     func credits(_ course: Course) -> String { String(localized: .courseCredits(course.credits.formatted())) }
 
-    /// `월·수 13:00–14:15 자연과학동 203`: days sharing a time and room are written once.
     static func scheduleLine(_ schedule: [ClassTime]) -> String? {
         var groups: [(key: String, days: [String])] = []
         for slot in schedule.sorted(by: { ($0.weekday, $0.startMinute) < ($1.weekday, $1.startMinute) }) {
@@ -170,7 +151,7 @@ final class CourseModel {
         return groups.isEmpty ? nil : groups.map { $0.days.joined(separator: "·") + " " + $0.key }.joined(separator: ", ")
     }
 
-    /// Monday-based like the app's weeks; the calendar's own week can start on Sunday.
+    // 캘린더의 주는 일요일에 시작할 수 있으므로, 앱의 주처럼 월요일 기준으로 센다.
     func thisWeek(now: Date) -> DateInterval {
         let start = workspace.calendar.startOfWeek(containing: now)
         return DateInterval(start: start, end: workspace.calendar.date(byAdding: .day, value: 7, to: start) ?? start)
@@ -181,7 +162,6 @@ final class CourseModel {
         return file.sessions.filter { week.contains($0.date) }.sorted { $0.date < $1.date }
     }
 
-    /// The class the timetable says comes next this week, before it is made.
     func weekSuggestion(_ suggested: Workspace.SuggestedSession?, now: Date) -> Workspace.SuggestedSession? {
         suggested.flatMap { thisWeek(now: now).contains($0.suggestion.date) ? $0 : nil }
     }
@@ -204,7 +184,6 @@ final class CourseModel {
             ? nil : String(localized: .courseAssignmentsNote(file.assignments.count, file.assignments.count - openAssignments(file).count))
     }
 
-    /// A glance, not the list: the units due first, then the ones taught most recently.
     func glanceUnits(_ file: CourseFile, reviews: [Workspace.ReviewEntry]) -> [FolioDomain.Unit] {
         let due = reviews.compactMap { r in file.units.first { $0.id == r.item.unitId } }
         let covered = UnitTree.outline(file.units).map(\.unit).filter { u in !u.sessionIds.isEmpty && !due.contains { $0.id == u.id } }
@@ -213,8 +192,6 @@ final class CourseModel {
 
     func stats(_ file: CourseFile, reviews: [Workspace.ReviewEntry], suggested: Workspace.SuggestedSession?, now: Date) -> [StatStrip.Item]
     {
-        // A class the timetable promises counts before it is made; without it a course that makes sessions as it goes
-        // never showed a next class.
         let made: (date: Date, subject: String?)? = file.sessions.filter { $0.date > now && !$0.isCancelled }.min { $0.date < $1.date }
             .map { (date: $0.date, subject: file.subject(of: $0)) }
         let planned: (date: Date, subject: String?)? = suggested.flatMap {
@@ -228,7 +205,6 @@ final class CourseModel {
 
         var items: [StatStrip.Item] = []
         if let next = nextClass {
-            // The weekday rides in the detail: with it the date was cut off in a narrow window.
             items.append(
                 .init(
                     title: String(localized: .courseNextClass), value: next.date.formatted(.dateTime.month().day()),
@@ -254,7 +230,6 @@ final class CourseModel {
             .init(
                 title: String(localized: .courseNearestDue), value: nextDue?.0.title ?? "-",
                 detail: nextDue?.1.formatted(.dateTime.month().day().weekday().hour().minute())))
-        // Each figure opens the page it sums up, in the order appended above.
         for (i, target) in [CourseSection.sessions, .exams, .units, .assignments].enumerated() {
             items[i].action = { [weak self] in self?.section = target }
         }

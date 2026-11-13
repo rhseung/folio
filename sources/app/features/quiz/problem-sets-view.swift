@@ -81,7 +81,6 @@ struct ProblemSetsView: View {
         .contextMenu { ProblemSetMenu(courseId: course.id, set: set) }
     }
 
-    /// In the materials page's file view, through the window's history like any other move.
     func open(_ m: FolioDomain.Material) {
         openLink(AppLink(.material, m.id), course: course.id)
     }
@@ -142,7 +141,6 @@ struct ProblemCell: View {
                     ? (Theme.Palette.fill, Theme.Palette.textSecondary)
                     : (Theme.Palette.success.opacity(Theme.Opacity.tint), Theme.Palette.success)
             }
-        // A correct answer on an open problem is what resolves it; the button says so.
         let correct = WrongFlow.isOpen(status) ? String(localized: .quizProblemsResolve) : Verdict.correct.label
         Button {
             open = true

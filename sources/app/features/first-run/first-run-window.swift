@@ -3,26 +3,23 @@ import AppKit
 import SwiftUI
 
 extension View {
-    /// The first run is a small landing window of its own size, as in the mockup; the app is a large resizable one.
     func mainWindowFrame(firstRun: Bool) -> some View { modifier(MainWindowFrame(firstRun: firstRun)) }
 }
 
 private struct MainWindowFrame: ViewModifier {
     let firstRun: Bool
     @State private var host = WindowHost()
-    /// The window's frame before the first run shrank it, to go back to: the saved frame on a first launch, the frame
-    /// it had when the first run was opened again from settings.
     @State private var before: NSRect?
-    /// The system title bar's height. The first run draws under it, but the window counts it outside the content, so
-    /// the content is this much shorter than the window the mockup gives.
+    // 시스템 타이틀 바의 높이다. 첫 실행은 그 아래까지 그리지만 창은 그것을 내용 밖으로 세므로, 내용은 시안의 창보다
+    // 이만큼 짧다.
     @State private var titleBar: CGFloat = 0
 
     func body(content: Content) -> some View {
         let small = CGSize(width: Theme.Size.firstRunWindow.width, height: Theme.Size.firstRunWindow.height - titleBar)
         let least = Theme.Size.windowMin
-        // One frame whose bounds change, not two branches: a branch would rebuild the root view and lose its tabs.
-        // Bounded both ways, so the window's least size is this frame's own: with only a least size the hosting view
-        // measured the whole window's content for it on every layout of a resize or a drag (#62).
+        // 두 갈래가 아니라 bounds만 바뀌는 frame 하나로 둔다. 갈래를 두면 root view를 다시 만들어 탭을 잃는다. 양쪽으로
+        // 제한해 창의 최소 크기가 이 frame의 것이 되게 한다. 최소 크기만 두면 hosting view가 크기 조절이나 끌기의
+        // 배치마다 창 전체의 내용을 쟀다.
         content
             .frame(
                 minWidth: firstRun ? small.width : least.width, maxWidth: firstRun ? small.width : .infinity,
@@ -42,7 +39,7 @@ private struct MainWindowFrame: ViewModifier {
     }
 
     private func fit(_ window: NSWindow, animate: Bool) {
-        // After SwiftUI has applied the new bounds to the window, which would otherwise hold it at the old ones.
+        // SwiftUI가 새 bounds를 창에 적용한 뒤에 해야 한다. 그러지 않으면 창이 이전 bounds를 유지한다.
         DispatchQueue.main.async {
             guard !window.styleMask.contains(.fullScreen), let screen = window.screen ?? NSScreen.main else { return }
             let visible = screen.visibleFrame

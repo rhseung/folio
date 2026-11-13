@@ -3,27 +3,18 @@ import FolioStorage
 import Foundation
 import Observation
 
-/// The first run (#453, 안 B): 소개, 자료 폴더, then four steps that can wait for settings. With a remembered folder
-/// that can't be opened it is the folder step alone, to connect it again (`trouble`).
 @MainActor @Observable
 final class FirstRunModel {
     let workspace: Workspace
     var step: FirstRunStep
     var start = FolderStart.existing
-    /// The folder picked on the folder step, opened only when the step is left with 계속.
     private(set) var picked: Picked?
-    /// Holds the day boundary and the API key, saved through the same paths as settings.
     let settings: SettingsModel
-    /// The semester the term step lists courses of; nil follows the workspace's current one.
     var chosenSemester: UUID?
     private(set) var permissions: [SystemPermission: SystemPermission.State] = [:]
-    /// The picked folder is still coming down from iCloud: the folder step shows its download in place of the choice.
     private(set) var waiting = false
-    /// Started to connect a lost folder again. Kept apart from `trouble`, which clears once a folder it waited for opens.
     private var reconnecting = false
     #if DEBUG
-    /// Shown in place of the workspace's own trouble by the debug walk (`FirstRunDebug`), which has a folder open.
-    /// Nothing is picked yet then, as when the remembered folder is really gone.
     var debugTrouble: FolderTrouble? {
         didSet {
             guard debugTrouble != nil else { return }
@@ -36,7 +27,6 @@ final class FirstRunModel {
 
     struct Picked: Equatable {
         let url: URL
-        /// nil where the folder couldn't be read.
         let kind: FolderKind?
     }
 
@@ -49,7 +39,6 @@ final class FirstRunModel {
             start = picked?.kind?.start ?? .existing
         }
         settings.load()
-        // A lost folder is the folder step alone, whatever step was asked for.
         if trouble != nil {
             self.step = .folder
             reconnecting = true
@@ -58,7 +47,6 @@ final class FirstRunModel {
 
     // MARK: Steps
 
-    /// The remembered folder that couldn't be opened, while none is: the run is then only about that folder.
     var trouble: FolderTrouble? {
         #if DEBUG
         if let debugTrouble { return debugTrouble }
@@ -96,7 +84,6 @@ final class FirstRunModel {
 
     func isDone(_ step: FirstRunStep) -> Bool { trouble == nil && step < self.step }
 
-    /// Reconnecting a lost folder can't be put off, so it offers no 나중에 and marks nothing optional.
     var offersLater: Bool { step.isOptional && trouble == nil }
 
     func marksOptional(_ step: FirstRunStep) -> Bool { step.isOptional && trouble == nil && !isDone(step) }
@@ -105,7 +92,6 @@ final class FirstRunModel {
         trouble != nil ? .commonOpen : isLast ? .firstRunStart : .firstRunContinue
     }
 
-    /// 계속 (시작 on the last step, 열기 when connecting a folder again).
     func proceed() {
         if step == .folder {
             guard canContinue, let picked else { return }
@@ -114,7 +100,6 @@ final class FirstRunModel {
                 settings.load()
             }
             waiting = false
-            // A lost folder reconnected is the whole job; an empty one picked instead still needs its term.
             if reconnecting {
                 reconnecting = false
                 if start == .existing { return finish() }
@@ -125,7 +110,6 @@ final class FirstRunModel {
         advance()
     }
 
-    /// 나중에: the step is left as it is, to be done in settings.
     func later() {
         guard step.isOptional else { return }
         advance()
@@ -137,20 +121,16 @@ final class FirstRunModel {
         entered()
     }
 
-    /// Nothing is saved here: each step saves as it changes, and the settings copy may predate the folder now open.
     func finish() {
         workspace.finishFirstRun()
     }
 
-    /// The folder is open by the term step: its settings are read again from it, or the day boundary would show and
-    /// save the defaults the model started with.
     private func entered() {
         if step == .term { settings.load() }
     }
 
     // MARK: Folder
 
-    /// Picks how to start; true when the folder picker should open, as no usable folder is picked yet.
     func choose(_ start: FolderStart) -> Bool {
         self.start = start
         return picked == nil || pickedProblem != nil
@@ -164,7 +144,6 @@ final class FirstRunModel {
         _ = url.startAccessingSecurityScopedResource()
         let kind = try? FolderKind(FolderProbe.outline(of: url))
         picked = Picked(url: url, kind: kind)
-        // The folder says what it is: a GIST folder picked from 새로 시작 opens as one rather than being refused.
         if let fits = kind?.start { start = fits }
     }
 
@@ -176,7 +155,6 @@ final class FirstRunModel {
         return kind.problem(for: start).map(Self.message)
     }
 
-    /// 학기 n개, 과목 n개, or 빈 폴더: what the picked folder holds, under its path.
     var pickedSummary: [String] {
         switch picked?.kind {
         case .gist(let semesters, let courses)?:

@@ -4,7 +4,6 @@ import FolioDomain
 import Foundation
 import Observation
 
-/// One solving round: the scope picked in the left pane, the deck built from it and the answer being graded.
 @MainActor @Observable
 final class QuizSolveModel {
     let quiz: QuizModel
@@ -12,8 +11,8 @@ final class QuizSolveModel {
 
     enum Grading: Hashable { case claude, mine }
 
-    /// A graded answer not yet written to the log. It is written when the user moves on, so a changed verdict
-    /// becomes one attempt marked as overridden instead of two.
+    // 판정한 답은 사용자가 다음으로 넘어갈 때 기록한다. 그래야 판정을 바꿔도 시도 두 개가 아니라 바뀐 것으로 표시된
+    // 시도 하나가 된다.
     struct Pending {
         var cardId: UUID
         var answer: String
@@ -32,7 +31,6 @@ final class QuizSolveModel {
     var deck: [QuizCard] = []
     var index = 0
     var started = false
-    /// Counts starts, so a restart over the same deck still reads as one.
     private(set) var runs = 0
     var round: [Verdict] = []
     var answer = ""
@@ -67,7 +65,6 @@ final class QuizSolveModel {
         var examCards: Int
         var reviewUnits: Set<UUID>
         var reviewCards: Int
-        /// Only units with cards can be picked; the rest are counted and sent to the cards screen.
         var groups: [(title: String?, units: [FolioDomain.Unit])]
         var withCards: Set<UUID>
         var empty: Int

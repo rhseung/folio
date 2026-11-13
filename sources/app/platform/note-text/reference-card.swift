@@ -4,9 +4,6 @@ import FolioMarkdown
 import SwiftUI
 import WebKit
 
-/// The block is drawn by the preview's renderer and stylesheet in a small page, so math and pictures look the same as
-/// in the preview's card (#284). It takes no clicks: it's a glance, like the math bubble, and the preview's card is the
-/// one whose links are clicked.
 @MainActor final class ReferenceCardPage: NSObject, WKNavigationDelegate {
     let host: ReferenceCardHost
     private let files = LocalFileScheme()
@@ -32,8 +29,6 @@ import WebKit
         host.isHidden = true
     }
 
-    /// Lays the card out `width` wide, off screen, and calls `done` with its height once its math is typeset. A block
-    /// taller than `maxHeight` fades out at the bottom.
     func load(
         _ card: HTMLRenderer.ReferenceCard, math: String, accent: CourseAccent, baseURL: URL?, width: CGFloat, maxHeight: CGFloat,
         done: @escaping (CGFloat) -> Void
@@ -41,7 +36,7 @@ import WebKit
         hide()
         loaded = done
         tallest = maxHeight
-        // Barely high while it loads, so the page's height is its content's, not the view's.
+        // 불러오는 동안 높이를 아주 낮게 두어, 페이지 높이가 뷰가 아니라 내용의 높이가 되게 한다.
         host.resize(CGSize(width: width, height: Theme.Space.xxs))
         files.root = LocalFileScheme.root(for: baseURL)
         let page =
@@ -62,7 +57,6 @@ import WebKit
         loaded = nil
         let tallest = tallest
         Task {
-            // The card takes no scroll, unlike the preview's, so a cut block says there is more by fading out.
             let measure =
                 "const h = Math.ceil(document.body.getBoundingClientRect().height); "
                 + "document.documentElement.classList.toggle('cut', h > tallest); return h"
@@ -72,7 +66,6 @@ import WebKit
         }
     }
 
-    // The note page's own padding is for a column; the card has the preview card's (`.ref-popover` in note.css).
     private static let css =
         "html{overflow:hidden}body.note{margin:0;padding:\(Int(Theme.Space.m))px \(Int(Theme.Space.l))px;max-width:none}"
         + "body.note>:first-child{margin-top:0}body.note>:last-child{margin-bottom:0}"
@@ -102,7 +95,6 @@ final class ReferenceCardHost: NSView {
         web.frame = bounds
     }
 
-    // It covers the lines under the link; a click there is meant for them.
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }
 

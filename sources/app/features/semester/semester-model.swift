@@ -24,7 +24,6 @@ final class SemesterModel {
 
     // MARK: Credited source
 
-    /// The draft of a credited term's source, which names its `_Credited/<source>` folder.
     var source = ""
 
     func loadSource() { source = semester?.source ?? "" }
@@ -52,7 +51,6 @@ final class SemesterModel {
 
     // MARK: Recording audio
 
-    /// A finished semester's recordings whose audio can go (`RecordingRetention`), by course.
     struct AudioNotice {
         struct Item: Identifiable {
             let course: LoadedCourse
@@ -61,26 +59,24 @@ final class SemesterModel {
             var id: UUID { course.id }
         }
         let items: [Item]
-        /// Recordings with no transcript, whose audio stays.
         let kept: Int
         var count: Int { items.map(\.count).reduce(0, +) }
         var bytes: Int64 { items.map(\.bytes).reduce(0, +) }
     }
 
-    /// Read once when the page opens, not on every draw: it opens each recording's transcript.
     private(set) var audio: AudioNotice?
 
     func refreshAudio() async {
-        // The calendar date, as `RecordingTrim` uses, not the study day: past midnight but before the day boundary the
-        // card would otherwise stay hidden while the action already allows the trim.
+        // `RecordingTrim`처럼 공부일이 아니라 달력 날짜를 쓴다. 공부일을 쓰면 자정 뒤 하루 경계 전에는 액션이 이미
+        // 정리를 허락하는데 카드는 숨는다.
         guard let s = semester, s.isOver(on: LocalDate(workspace.now, in: workspace.calendar), among: workspace.transcript.semesters) else {
             audio = nil; return
         }
         let courses = courses(in: s)
         let shelf = courses.map { ($0.store, $0.file.recordings.filter(\.hasAudio)) }
 
-        // Off the main actor: telling whether a recording has lines decodes its whole transcript, and a semester holds
-        // dozens of 75-minute ones, which froze the page as it opened.
+        // 녹음에 줄이 있는지 알려면 받아쓰기 전체를 디코딩해야 하고, 학기에는 75분짜리가 수십 개라서 페이지가 열리며
+        // 멈췄다. 그래서 main actor 밖에서 센다.
         let tallies = await Task.detached {
             shelf.map { store, withAudio in
                 let trimmable = RecordingRetention.trimmable(withAudio) { store.transcript(of: $0)?.lines.isEmpty == false }
@@ -114,7 +110,6 @@ final class SemesterModel {
 
     func isCurrent(_ s: Semester) -> Bool { s.isRunning(on: workspace.today) }
 
-    /// The ISO weekday the timetable marks, while the semester is running.
     func markedWeekday(_ s: Semester) -> Int? {
         isCurrent(s) ? workspace.today.date(in: workspace.calendar).map { workspace.calendar.isoWeekday(of: $0) } : nil
     }
@@ -155,7 +150,6 @@ final class SemesterModel {
         ([course.codeLine(workspace)] + course.factChips(workspace)).filter { !$0.isEmpty }.joined(separator: " · ")
     }
 
-    /// Every dated exam of the term, soonest first.
     func exams(of courses: [LoadedCourse]) -> [ExamItem] {
         courses.flatMap { c in c.file.exams.compactMap { e in e.start.map { ExamItem(course: c, exam: e, start: $0) } } }.sorted {
             $0.start < $1.start
@@ -172,7 +166,6 @@ final class SemesterModel {
         workspace.run(CourseSet(course: course.id, [.finalGrade(grade)]))
     }
 
-    /// Every week of the term labelled with its Monday; past the term's end only as far as a default exam week reaches.
     func weekOptions(_ s: Semester, fallback: Int?) -> [(Int?, String)] {
         let calendar = workspace.calendar
         let anchor = s.start?.date(in: calendar)
@@ -205,11 +198,8 @@ final class SemesterModel {
     }
 }
 
-/// The week as a time grid: which weekdays get a column and which hours the rows span.
-/// Takes plain courses so a record without a folder (a colloquium) sits beside the folder courses.
 struct TimetableLayout {
     let slots: [(course: Course, time: ClassTime)]
-    /// Monday to Friday, and Saturday and Sunday only when a class falls on them.
     let days: [Int]
     let first: Int
     let last: Int

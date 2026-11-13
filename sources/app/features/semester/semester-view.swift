@@ -8,7 +8,6 @@ struct SemesterView: View {
     @State private var addingCourse = false
     @State private var confirmingTrim = false
     @State private var confirmingSource = false
-    /// An `_Admin` file shown over the page. These files belong to no course and have no ID, so no app link names them.
     @State private var viewingFile: AdminFile?
 
     init(workspace: Workspace, semesterID: UUID) {
@@ -55,7 +54,6 @@ struct SemesterView: View {
                     }
                 }
 
-                // A credited term is only a record of transferred credits: no dates, classes or exams.
                 if semester.term == .credited { sourceBlock }
                 if semester.term != .credited {
                     Block(String(localized: .semesterTimetable)) {
@@ -64,7 +62,6 @@ struct SemesterView: View {
                         }
                     }
 
-                    // Short lists of equal weight, side by side when there's room, as on Today.
                     Fold(wideFrom: 704, stackSpacing: Theme.Space.xl) {
                         examsBlock(courses).frame(maxWidth: .infinity, alignment: .topLeading)
                         Block(String(localized: .semesterPeriod)) {
@@ -141,7 +138,6 @@ struct SemesterView: View {
 
     func open(_ course: Course) { openCourse(course.id) }
 
-    /// Saving renames `_Credited/<source>` once courses are in it, so it asks first.
     var sourceBlock: some View {
         Block(String(localized: .semesterSource), note: String(localized: .semesterSourceNote)) {
             Card {
@@ -164,7 +160,6 @@ struct SemesterView: View {
         openLink(.course(course, page: .exams), course: course)
     }
 
-    /// Offered once the semester is over; the audio goes only once the user agrees, and only to the Trash.
     func audioCard(_ audio: SemesterModel.AudioNotice) -> some View {
         NoticeCard(
             title: String(localized: .semesterAudioTitle(audio.count, audio.bytes.formatted(.byteCount(style: .file)))),
@@ -217,7 +212,6 @@ struct SemesterView: View {
                             Text(.commonEnded).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                         }
                     }
-                    // Past exams stay for reference but step back behind the coming ones.
                     .opacity(start > now ? 1 : 0.6)
                     .opens { showExams(item.course.id) }
                     .contextMenu { ExamMenu(courseId: item.course.id, examId: item.exam.id) }
@@ -229,7 +223,6 @@ struct SemesterView: View {
     @ViewBuilder func gradeMenu(_ course: Course) -> some View {
         let grades = model.grades(for: course)
         let selection = Binding(get: { course.finalGrade }, set: { model.setFinalGrade($0, of: course) })
-        // A track reads as a scale; S/U has none, so it steps through its few symbols instead.
         if grades.contains(where: { $0.points != nil }) {
             GradeSteps(selection: selection, grades: grades.map { ($0.id, $0.symbol, $0.points != nil) })
                 .sensitive(.control)
@@ -265,12 +258,9 @@ struct SemesterView: View {
     }
 }
 
-/// The week as a time grid: a column per weekday (Saturday and Sunday only when used), each class placed at its hour
-/// and as tall as it lasts, so free periods and back-to-back classes read at a glance.
 struct Timetable<Menu: View>: View {
     let model: SemesterModel
     let layout: TimetableLayout
-    /// The ISO weekday to mark, while the semester is running.
     var today: Int?
     let open: (Course) -> Void
     @ViewBuilder let menu: (Course) -> Menu
@@ -323,7 +313,7 @@ struct Timetable<Menu: View>: View {
         }
     }
 
-    // shortcut: two classes at the same time on one day draw over each other; split the column if that ever happens.
+    // shortcut: 같은 날 같은 시각의 수업 둘은 서로 겹쳐 그려진다. 그런 일이 생기면 열을 나눈다.
     func column(_ slots: [(course: Course, time: ClassTime)], first: Int, height: CGFloat) -> some View {
         ZStack(alignment: .top) {
             Color.clear
@@ -404,7 +394,6 @@ struct AddCourseSheet: View {
             FormRow(label: String(localized: .semesterAddCourseName)) {
                 InlineField(String(localized: .semesterAddCourseNameExample), text: $model.title)
             }
-            // Prefix and number side by side, as in 과목 편집 and as the course reads: GS2004-02.
             FormRow(label: String(localized: .semesterAddCourseCode)) {
                 SearchSelect(
                     selection: $model.codeId,
@@ -427,7 +416,6 @@ struct AddCourseSheet: View {
     }
 }
 
-/// A semester's `_Admin` file over the page, in the file view every other file opens in.
 private struct AdminFileSheet: View {
     let workspace: Workspace
     let url: URL

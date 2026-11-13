@@ -7,27 +7,21 @@ struct QuickAddMark: Equatable {
     var fill: Color
 }
 
-/// The quick add line on the Mac: an AppKit text view, so a word the line read can get room on both sides (kerning)
-/// for its pill to fill while a full space still parts it from its neighbor. A SwiftUI field takes only plain text,
-/// and a pill wider than its word ran into the next one. The kerning is set only between syllables (`swaps`), as in
-/// `SourceFileEditor`: changing the text under the input method breaks Korean composition.
+// AppKit 텍스트 뷰를 쓴다. 그래야 읽은 낱말 양옆에 알약이 채울 자리(kerning)를 주면서도, 이웃 낱말과는 온전한 공백으로 떨어뜨릴 수 있다. SwiftUI 입력란은 일반 텍스트만 받아서, 낱말보다
+// 넓은 알약이 다음 낱말에 닿았다. `SourceFileEditor`처럼 kerning은 음절 사이에서만 정한다(`swaps`). 입력기 아래에서 텍스트를 바꾸면 한글 조합이 깨지기 때문이다.
 struct QuickAddTextView {
     @Binding var text: String
     var prompt: String
     var marks: [QuickAddMark]
-    /// Takes the keyboard when it appears, as in the toolbar's popover.
     var focusOnAppear = false
     var submit: () -> Void
 
-    /// Room each read word gets on either side, and how far its pill reaches into it: equal, so the pill has this
-    /// much inside its edge and the space beyond it stays whole.
     static let room: CGFloat = 4
     static let maxLines = 3
     static var font: NSFont { .systemFont(ofSize: Theme.Typeface.bodyLargeSize) }
     static var base: [NSAttributedString.Key: Any] {
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineSpacing = QuickAddLine.spacing
-        // Korean wraps between words as in the rest of the app, not mid-word as AppKit's default does.
         paragraph.lineBreakStrategy = .hangulWordPriority
         return [.font: font, .foregroundColor: NSColor(Theme.Palette.text), .paragraphStyle: paragraph]
     }
@@ -36,7 +30,6 @@ struct QuickAddTextView {
 
     @MainActor final class Coordinator: NSObject {
         var parent: QuickAddTextView
-        /// Set while SwiftUI updates the view: an edit made then is the binding's own text coming in.
         var updating = false
 
         init(_ parent: QuickAddTextView) { self.parent = parent }
@@ -47,11 +40,8 @@ struct QuickAddTextView {
         }
     }
 
-    /// The binding's text replaces the view's only once a syllable is done, so it isn't swapped in while one is composed.
     static func swaps(_ shown: String, for text: String, composing: Bool) -> Bool { shown != text && !composing }
 
-    /// The plain look over the whole line, then the room around each read word: kerning on the letter before it
-    /// (the space) and on its own last letter.
     @MainActor static func style(_ view: QuickAddNSTextView, marks: [QuickAddMark]) {
         view.marks = marks
         view.needsDisplay = true
@@ -66,7 +56,7 @@ struct QuickAddTextView {
             storage.addAttribute(.kern, value: room, range: NSRange(location: NSMaxRange(mark.range) - 1, length: 1))
         }
         storage.endEditing()
-        // A letter typed after a read word would carry its kerning until the line is read again.
+        // 읽은 낱말 뒤에 입력한 글자는 줄을 다시 읽을 때까지 그 kerning을 지니게 된다.
         view.typingAttributes = base
     }
 }
@@ -91,9 +81,7 @@ extension QuickAddTextView: NSViewRepresentable {
         view.isContinuousSpellCheckingEnabled = false
         view.isGrammarCheckingEnabled = false
         view.smartInsertDeleteEnabled = false
-        // The first row's pill reaches above the text, and the last row's below it.
         view.textContainerInset = NSSize(width: 0, height: QuickAddLine.overhang)
-        // The room a pill needs before a word at the line's start, which would otherwise be cut off at the edge.
         view.textContainer?.lineFragmentPadding = Self.room
         view.textContainer?.widthTracksTextView = true
         view.isHorizontallyResizable = false
@@ -136,7 +124,6 @@ extension QuickAddTextView: NSViewRepresentable {
         if view.marks != marks || !view.hasMarkedText() { Self.style(view, marks: marks) }
     }
 
-    /// As tall as its lines up to three; past that it scrolls.
     func sizeThatFits(_ proposal: ProposedViewSize, nsView scroll: NSScrollView, context: Context) -> CGSize? {
         guard let view = scroll.documentView as? NSTextView, let layout = view.layoutManager, let container = view.textContainer else {
             return nil
@@ -145,7 +132,6 @@ extension QuickAddTextView: NSViewRepresentable {
         container.containerSize = NSSize(width: width, height: .greatestFiniteMagnitude)
         layout.ensureLayout(for: container)
         let line = layout.defaultLineHeight(for: Self.font)
-        // TextKit puts the spacing after every row but the last, so three rows are three lines and two spacings.
         let most = line * CGFloat(Self.maxLines) + QuickAddLine.spacing * CGFloat(Self.maxLines - 1)
         let used = layout.usedRect(for: container).height
         return CGSize(width: width, height: ceil(min(max(used, line), most)) + QuickAddLine.overhang * 2)
@@ -158,7 +144,6 @@ extension QuickAddTextView.Coordinator: NSTextViewDelegate {
         settled(view)
     }
 
-    /// Return adds; Tab moves on. The line is one line that wraps, so neither goes into it.
     func textView(_ textView: NSTextView, doCommandBy selector: Selector) -> Bool {
         switch selector {
         case #selector(NSResponder.insertNewline(_:)), #selector(NSResponder.insertLineBreak(_:)),
@@ -171,7 +156,7 @@ extension QuickAddTextView.Coordinator: NSTextViewDelegate {
         case #selector(NSResponder.insertBacktab(_:)):
             textView.window?.selectPreviousKeyView(nil)
             return true
-        // Escape closes the popover as it does from a field; a text view would open its word completion list instead.
+        // Escape는 입력란에서처럼 popover를 닫는다. 그대로 두면 텍스트 뷰가 낱말 자동 완성 목록을 연다.
         case #selector(NSResponder.cancelOperation(_:)), #selector(NSResponder.complete(_:)):
             return textView.nextResponder?.tryToPerform(#selector(NSResponder.cancelOperation(_:)), with: nil) ?? false
         default:
@@ -179,7 +164,6 @@ extension QuickAddTextView.Coordinator: NSTextViewDelegate {
         }
     }
 
-    /// Pasted lines join into the one line.
     func textView(_ textView: NSTextView, shouldChangeTextIn range: NSRange, replacementString text: String?) -> Bool {
         guard let text, text.contains(where: \.isNewline) else { return true }
         let joined = text.split(whereSeparator: \.isNewline).joined(separator: " ")
@@ -193,8 +177,6 @@ final class QuickAddNSTextView: NSTextView {
     var prompt = ""
     var unmarked: () -> Void = {}
 
-    // A syllable ended without a keystroke (a click elsewhere, another app) changes no text, so no `textDidChange`
-    // hands it to the binding.
     override func unmarkText() {
         super.unmarkText()
         unmarked()
@@ -203,7 +185,6 @@ final class QuickAddNSTextView: NSTextView {
     override func drawBackground(in rect: NSRect) {
         super.drawBackground(in: rect)
         guard let layout = layoutManager, let container = textContainer, let storage = textStorage else { return }
-        // While a syllable is composed the marks were read from the text before it, so only those ahead of it hold.
         let limit = hasMarkedText() ? markedRange().location : storage.length
         let room = QuickAddTextView.room
         let height = layout.defaultLineHeight(for: QuickAddTextView.font)
@@ -211,12 +192,9 @@ final class QuickAddNSTextView: NSTextView {
         for mark in marks where mark.range.length > 0 && NSMaxRange(mark.range) <= limit {
             let glyphs = layout.glyphRange(forCharacterRange: mark.range, actualCharacterRange: nil)
             layout.enumerateEnclosingRects(forGlyphRange: glyphs, withinSelectedGlyphRange: none, in: container) { line, _ in
-                // The line's rect ends after the last letter's kerning; the pill reaches `room` past each edge of the
-                // letters, which is as far as the kerning on either side.
                 var pill = line.offsetBy(dx: self.textContainerOrigin.x, dy: self.textContainerOrigin.y)
                 pill.origin.x -= room
                 pill.size.width += room
-                // A row's rect takes in the spacing below it; the pill covers only the letters' line.
                 pill.size.height = min(pill.height, height) + QuickAddLine.overhang * 2
                 pill.origin.y -= QuickAddLine.overhang
                 let path = NSBezierPath(roundedRect: pill, xRadius: Theme.Radius.small, yRadius: Theme.Radius.small)

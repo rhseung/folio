@@ -7,15 +7,14 @@ import FolioStorage
 import Foundation
 
 extension Workspace {
-    /// A fresh copy of the scenario with the clock pinned to its moment, for previews and offscreen renders.
     static func scenario(_ scenario: Scenario) throws -> Workspace {
         let url = try scenario.copyToTemp()
-        // With FOLIO_GIST set, open() leaves the remembered folder alone, so a preview never repoints the real app or `folio`.
         setenv(environmentKey, url.path(percentEncoded: false), 1)
         let workspace = Workspace()
         workspace.pinnedNow = scenario.now
         workspace.calendar = Scenario.calendar
-        // Before opening, whose reload recovers leftovers: left unset, the first use stops the run (LocalFolders).
+        // `open()`이 다시 읽으면서 남은 녹음을 복구하므로 그 전에 설정한다. 설정하지 않으면 처음 쓸 때 실행이
+        // 멈춘다(`LocalFolders`).
         workspace.pendingRecordings = PendingRecordings(
             url: URL.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory))
         workspace.open(url, remember: false)
@@ -24,7 +23,6 @@ extension Workspace {
         let lms = LMSSnapshot.sample(at: scenario.now)
         workspace.lms = LMSConnection(
             source: FixedLMS(snapshot: lms), logins: MemoryLogins(LMSCredentials(username: "20260000", password: "-")))
-        // Known already, so the proposals show; only the older posts are marked, as a first sync marks them.
         workspace.run(LMSSeen(classrooms: lms.classrooms.map(\.id), items: LMSSnapshot.sampleHandled))
         return workspace
     }
@@ -33,7 +31,6 @@ extension Workspace {
 extension LMSSnapshot {
     static let sampleHandled = ["file:139100", "file:139101", "notice:23300"]
 
-    /// Made-up classrooms for previews and renders: two of one course, one that is no course, one with nothing new.
     static func sample(at now: Date) -> LMSSnapshot {
         let day: TimeInterval = 86_400
         return LMSSnapshot(

@@ -2,19 +2,14 @@ import FolioDomain
 import FolioStorage
 import SwiftUI
 
-/// A sheet an item menu opens. Shown by the window rather than the row that asked, so every place that shows an item
-/// (Today, the ribbon, search) can edit and delete it, not only the item's own screen.
 enum ItemSheet: Identifiable {
     case session(SessionSheetRequest)
     case exam(course: UUID, exam: UUID)
     case assignment(course: UUID, assignment: UUID)
     case review(course: UUID, unit: UUID)
-    /// A card to edit, or a new one in a unit.
     case card(course: UUID, draft: CardDraft)
-    /// Cards made by Claude for a unit.
     case generateCards(course: UUID, unit: UUID)
     case note(NoteSheetRequest)
-    /// 옮기기 ▸ 새 폴더….
     case noteFolder(NoteSheetRequest)
     case material(MaterialSheetRequest)
     case course(UUID)
@@ -31,8 +26,6 @@ enum ItemSheet: Identifiable {
     }
 }
 
-/// A note by its file: one moved in from an old folder has no ID until it is opened. `moves` is the notes section's
-/// undo, which a rename from its list or its open note lands in.
 struct NoteSheetRequest {
     let id = UUID()
     let course: UUID
@@ -43,11 +36,9 @@ struct NoteSheetRequest {
 struct MaterialSheetRequest {
     let course: UUID
     let material: UUID
-    /// The materials page's undo, which a rename from it lands in.
     var moves: MoveUndo?
 }
 
-/// The file's sheet, with a materials model of its own, since the window shows it from anywhere.
 struct MaterialSheet: View {
     @State private var model: MaterialsModel
     let material: UUID
@@ -60,15 +51,12 @@ struct MaterialSheet: View {
     var body: some View { MaterialLinksEditor(model: model, materialId: material) }
 }
 
-/// Files picked to go into a course folder, as dropping them there does.
 struct FileIntake: Identifiable, Equatable {
     let id = UUID()
     let course: UUID
-    /// Course-relative.
     let folder: String
 }
 
-/// What an item menu asks of its window: a sheet, a confirmation (`Workspace.ask`), or files to add.
 struct ItemSheetsAction {
     var present: @MainActor (ItemSheet) -> Void = { _ in }
     var confirm: @MainActor (PendingAction?) -> Void = { _ in }
@@ -79,11 +67,9 @@ extension EnvironmentValues {
     @Entry var itemSheets = ItemSheetsAction()
 }
 
-/// Shows, per window, the sheets and confirmations item menus ask for, and the class sheet a stopped recording asks
-/// for. Every window watches the recorder's ask; the first that takes it clears it, so two windows don't both ask.
+// 모든 창이 녹음기의 요청을 지켜보고, 처음 받은 창이 요청을 지운다. 그래야 두 창이 함께 묻지 않는다.
 struct ItemSheets: ViewModifier {
     let workspace: Workspace
-    /// Set inside this modifier's content, so the sheet, attached outside it, is given it again.
     let openLink: OpenLinkAction
     @State private var shown: ItemSheet?
     @State private var pending: PendingAction?
@@ -95,19 +81,17 @@ struct ItemSheets: ViewModifier {
     func body(content: Content) -> some View {
         content
             .environment(\.itemSheets, ItemSheetsAction(present: { shown = $0 }, confirm: { pending = $0 }, addFiles: { intake = $0 }))
-            // Again for what is laid over the window (the search palette), which sits outside where the window sets it.
+            // 창 위에 놓이는 것(검색 팔레트)은 창이 값을 설정하는 곳 밖에 있으므로 다시 넘긴다.
             .environment(\.openLink, openLink)
             .onChange(of: workspace.wrapUpAsk) { _, ask in
                 guard let ask, workspace.wrapUpAsk == ask else { return }
                 let request = SessionSheetRequest(course: ask.course, session: ask.session, viewed: ask.viewed, recorded: true, asked: true)
                 #if os(macOS)
-                // The stop button was in the key window.
                 guard active else { return }
                 workspace.wrapUpAsk = nil
                 shown = .session(request)
                 #else
                 workspace.wrapUpAsk = nil
-                // The recording card's popover is still going away; a sheet asked for meanwhile is dropped.
                 Task {
                     try? await Task.sleep(for: .milliseconds(400))
                     shown = .session(request)

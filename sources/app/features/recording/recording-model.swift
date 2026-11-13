@@ -13,13 +13,11 @@ final class RecordingBarModel {
     var recording: Bool { recorder.state == .recording }
     var preparing: Bool { recorder.state == .preparing }
     var paused: Bool { recorder.state == .paused }
-    /// Pause and stop wait while the recorder starts or finishes.
     var settling: Bool { preparing || recorder.state == .stopping }
     var recentLines: [LectureTranscript.Line] { Array(recorder.lines.suffix(40)) }
     var course: LoadedCourse? { recorder.courseId.flatMap { workspace.course($0) } }
     var accent: CourseAccent { recorder.courseId.map { workspace.accent($0) } ?? CourseAccent.gray }
     var courseTitle: String { preparing ? String(localized: .recordingPreparing) : course?.title ?? recorder.title }
-    /// Like a recent session in the course column: its rough note, else its review note, else the sessions list.
     var sessionLink: AppLink? {
         guard let course, let id = recorder.recording?.sessionId, let session = course.file.sessions.first(where: { $0.id == id }) else {
             return nil
@@ -42,7 +40,6 @@ final class RecordingBarModel {
     var contextSummary: String {
         context.map(TranscriptionContextText.summary) ?? String(localized: .recordingContextReading)
     }
-    /// Where lecture files are linked to sessions: the course's files.
     var materialsLink: AppLink? { course.map { .course($0.id, page: .materials) } }
     func retellCaptionsIfChanged() { workspace.retellCaptionsIfChanged() }
 
@@ -68,8 +65,8 @@ final class RecordingPlayerModel {
         self.courseId = courseId
         self.store = store
         self.recording = recording
-        // Read before the page draws, not in `load`: whether there are lines sets its layout, which would otherwise
-        // jump once it is up.
+        // 줄이 있는지가 배치를 정하므로 `load`가 아니라 페이지를 그리기 전에 읽는다. 그러지 않으면 페이지가 뜬 뒤
+        // 배치가 한 번 뛴다.
         transcript = store.transcript(of: recording)
     }
 
@@ -83,7 +80,6 @@ final class RecordingPlayerModel {
 
     // MARK: Address
 
-    /// `11/2(월) 다시 듣기`: the class's day, which tells a course's recordings apart, as the crumb and a tab name it.
     static func name(of recording: Recording, in file: CourseFile, calendar: Calendar) -> String {
         guard let session = recording.sessionId.flatMap({ id in file.sessions.first { $0.id == id } }) else {
             return String(localized: .recordingPage)
@@ -94,14 +90,13 @@ final class RecordingPlayerModel {
     var name: String {
         courseFile.map { Self.name(of: recording, in: $0, calendar: workspace.calendar) } ?? String(localized: .recordingPage)
     }
-    /// What the class covered, as the sessions page titles it; a recording of no class goes by when it started.
     var title: String {
         if let courseFile, let session { return courseFile.title(of: session, calendar: workspace.calendar) }
         return recording.startedAt.formatted(date: .abbreviated, time: .shortened)
     }
 
-    /// The moment the address names, in whole seconds and, while playing, in steps of five: each step redraws the
-    /// window around the page, and a tab let go of reopens within a few seconds of where it was.
+    // 재생 중에는 5초 단위로 바꾼다. 바뀔 때마다 페이지 둘레의 창을 다시 그리고, 놓은 탭은 몇 초 안의 자리에서 다시
+    // 열리면 충분하다.
     var moment: Int {
         let t = Int(player.time)
         return player.playing ? t / 5 * 5 : t
@@ -109,11 +104,9 @@ final class RecordingPlayerModel {
 
     var viewedLink: AppLink { AppLink(.recording, recording.id, anchor: .time(moment)) }
 
-    /// Where a link opened the player, for the transcript to show that line.
     private(set) var seekedTo: TimeInterval?
 
-    /// A moment the page reported comes back as the window's link; seeking to it again would pull playback back to
-    /// the last step.
+    // 페이지가 알린 순간은 창의 링크로 돌아온다. 그 순간으로 다시 이동하면 재생이 마지막 단계로 끌려간다.
     func follow(_ link: AppLink) {
         load()
         guard link.kind == .recording, link.id == recording.id, case .time(let t) = link.anchor, t != moment else { return }
@@ -135,10 +128,8 @@ final class RecordingPlayerModel {
     var hasLines: Bool { !(transcript?.lines.isEmpty ?? true) }
     var current: Int? { transcript?.lineIndex(at: player.time) }
 
-    /// A line keeps its index in the whole transcript even when a search hides others: the index is its scroll anchor.
+    // 검색이 다른 줄을 숨겨도 줄은 전체 받아쓰기의 인덱스를 유지한다. 그 인덱스가 스크롤 anchor다.
     var shownLines: [(index: Int, line: LectureTranscript.Line, bookmarked: Bool)] {
-        // A mark between two sentences goes on the one before it, as the line playing at that moment; matched by each
-        // line's own span, a mark in a pause showed nowhere.
         let marked = Set(recording.bookmarks.compactMap { transcript?.lineIndex(at: $0) })
         return (transcript?.lines ?? []).enumerated()
             .filter { query.isEmpty || $0.element.text.localizedCaseInsensitiveContains(query) }
@@ -147,12 +138,10 @@ final class RecordingPlayerModel {
 
     // MARK: Selection
 
-    /// Transcript indices, like `shownLines`, so a search narrowing the list keeps what was picked before it.
+    // 검색이 목록을 줄여도 그 전에 고른 것이 남도록 받아쓰기 인덱스로 둔다.
     private(set) var selected: Set<Int> = []
     private var anchor: Int?
 
-    /// A plain pick starts over from that line; extending covers the shown lines between the anchor and it, so the
-    /// range is what the reader sees between the two clicks even while a search hides lines in between.
     func select(_ index: Int, extending: Bool) {
         guard extending, let anchor else {
             selected = [index]
@@ -171,8 +160,6 @@ final class RecordingPlayerModel {
 
     var allSelected: Bool { shownLines.allSatisfy { selected.contains($0.index) } }
 
-    /// A touch screen's range under way: a long press started it on a line, and a tap moves its other end, as ⇧-click
-    /// does with a pointer.
     private(set) var ranging = false
 
     func hold(_ index: Int) {
@@ -183,12 +170,10 @@ final class RecordingPlayerModel {
     func endRange() { ranging = false }
 
     var canCopy: Bool { !selected.isEmpty }
-    /// The menu's 받아쓰기 복사: every line, whatever is picked.
     var transcriptText: String { transcript?.text ?? "" }
     var copyLabel: String {
         selected.isEmpty ? String(localized: .recordingCopy) : String(localized: .recordingCopyLines(selected.count))
     }
-    /// In transcript order, whichever order the lines were picked in, and in the transcript's own text form.
     var copiedText: String {
         guard let transcript else { return "" }
         let lines = selected.sorted().filter(transcript.lines.indices.contains).map { transcript.lines[$0] }
@@ -196,7 +181,6 @@ final class RecordingPlayerModel {
     }
 
     var phase: TranscriptionPhase? { workspace.transcriptions.phase(of: recording.id) }
-    /// Still being recorded or moved into the course folder, there is no audio in place to read or delete yet.
     private var settling: Bool { workspace.recorder.current == recording.id || workspace.finishingRecordings.contains(recording.id) }
     var canTranscribe: Bool { recording.hasAudio && phase == nil && !settling }
     var removalRefusal: String? { settling ? String(localized: .recordingRemoveBusy) : nil }
@@ -221,8 +205,6 @@ final class RecordingPlayerModel {
 
     // MARK: Lecture pages
 
-    /// The lecture page on screen as line `index` began, where it differs from the line before's: on every line,
-    /// the same `p.12` down a whole slide's worth of sentences hid the turns. A search shows it on every line left.
     func page(at index: Int) -> PageVisit? {
         guard let lines = transcript?.lines, lines.indices.contains(index), let visit = listed.visit(at: lines[index].start) else {
             return nil
@@ -246,30 +228,25 @@ final class RecordingPlayerModel {
 
     // MARK: Transcription context
 
-    /// Made from the course as it is, terms read from the slides; only for a transcript that kept no context.
     private(set) var readContext: TranscriptionContext?
     private var courseFile: CourseFile? { workspace.course(courseId)?.file }
-    /// The listed one has the pages kept while recording; the copy this player opened with may predate them.
+    // 녹음하는 동안 남긴 쪽은 목록의 녹음에 있다. 이 플레이어가 연 사본은 그보다 오래되었을 수 있다.
     private var listed: Recording { courseFile?.recordings.first { $0.id == recording.id } ?? recording }
     private var session: Session? { courseFile?.sessions.first { $0.id == recording.sessionId } }
-    /// The course's links now, terms left out: what a transcription started now would be told.
     private var linkedContext: TranscriptionContext? {
         guard let file = courseFile, let session else { return nil }
         return file.transcriptionContext(for: session, recording: listed)
     }
 
-    /// Only a recording of a session has slides and units to be told about.
     var showsContext: Bool { session != nil }
     var usedContext: TranscriptionContext? { transcript?.context }
     var shownContext: TranscriptionContext? { usedContext ?? readContext ?? linkedContext }
     var contextTermsRead: Bool { usedContext != nil || readContext != nil }
     var contextSummary: String { shownContext.map(TranscriptionContextText.summary) ?? "" }
-    /// Said when what is shown is not what the transcript was told.
     var contextNote: String? {
         guard usedContext == nil else { return nil }
         return String(localized: hasLines ? .recordingContextUnrecorded : .recordingContextUpcoming)
     }
-    /// The slides or units linked since would tell a new transcription something else.
     var contextChanged: Bool {
         guard hasLines, let used = usedContext, let now = linkedContext else { return false }
         return used.differs(from: now)
@@ -286,7 +263,7 @@ final class RecordingPlayerModel {
     func cancelTranscription() { workspace.transcriptions.cancel(recording.id) }
     func reloadTranscript() {
         transcript = store.transcript(of: recording)
-        // A new transcription splits the audio into other lines; the old indices would pick unrelated text.
+        // 새 받아쓰기는 소리를 다른 줄로 나누므로, 이전 인덱스는 상관없는 글을 고르게 된다.
         selected = []
         anchor = nil
         ranging = false

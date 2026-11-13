@@ -3,9 +3,7 @@ import FolioStorage
 import Foundation
 
 enum FolderTrouble: Equatable {
-    /// Gone, moved, or on a drive that isn't connected. `path` is where it last was.
     case missing(path: String)
-    /// In iCloud but not on this device yet: the app opens it on its own once its files are here.
     case downloading(path: String, done: Int, total: Int)
 
     var path: String {
@@ -16,7 +14,6 @@ enum FolderTrouble: Equatable {
 }
 
 extension Workspace {
-    /// Opens the remembered folder only once it can be read.
     func openRemembered() {
         let shown = UserDefaults.standard.string(forKey: Self.pathKey) ?? ""
         var stale = false
@@ -30,9 +27,7 @@ extension Workspace {
         openWhenHere(url, remember: stale)
     }
 
-    /// Opens `url` now if the files it opens with are on this device, or once iCloud has brought them; false while it
-    /// waits or the folder is gone (`folderTrouble` says which). Opening one still in iCloud would read empty files in
-    /// place of the real ones, which the next save would write over.
+    // 아직 iCloud에 있는 폴더를 열면 실제 파일 대신 빈 파일을 읽고, 다음 저장이 실제 파일을 덮어쓴다.
     @discardableResult
     func openWhenHere(_ url: URL, remember: Bool = true) -> Bool {
         let path = url.path(percentEncoded: false)
@@ -49,7 +44,6 @@ extension Workspace {
         return false
     }
 
-    /// Gives up on a folder `openWhenHere` is waiting for.
     func stopWaiting() {
         folderWait?.cancel()
         folderTrouble = nil
@@ -71,7 +65,6 @@ extension Workspace {
         }
     }
 
-    /// No folder is open yet, or the first run was asked for again from settings.
     var isInFirstRun: Bool { gist == nil || showsFirstRun }
 
     func finishFirstRun() {

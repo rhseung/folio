@@ -3,7 +3,6 @@ import SwiftUI
 
 struct RepeatMenuItems: View {
     let selection: AssignmentRepeat?
-    /// The rule is edited by its parts rather than picked: one no preset matches, or "직접 설정" picked.
     let custom: Bool
     let pick: (AssignmentRepeat?) -> Void
     let customize: () -> Void
@@ -24,7 +23,6 @@ struct RepeatMenuItems: View {
     }
 }
 
-/// With no weekdays the rule falls on the deadline's, so that one shows as picked and picking only it again stores none.
 struct RepeatRuleRows: View {
     @Binding var rule: AssignmentRepeat
     let dueWeekday: Int?
@@ -56,7 +54,6 @@ struct RepeatRuleRows: View {
     }
 }
 
-/// At least one stays on: a weekly rule falls on some day.
 struct WeekdayToggles: View {
     @Binding var selection: Set<Int>
     @Environment(\.accent) private var accent
@@ -72,7 +69,6 @@ struct WeekdayToggles: View {
                         .font(Theme.Typeface.caption.weight(on ? .semibold : .regular))
                         .foregroundStyle(on ? Theme.Palette.onFill : Theme.Palette.textSecondary)
                         .frame(width: 28, height: 28)  // design: one-off, a one-letter day in a round toggle
-                        // Filled, not tinted: beside the neighbors' gray a tint barely showed which days were on.
                         .background(on ? accent.fill : Theme.Palette.fill, in: .circle)
                         .contentShape(TouchTarget())
                 }

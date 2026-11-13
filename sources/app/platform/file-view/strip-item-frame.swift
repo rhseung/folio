@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// The pieces of a section's tint meet square and round only at its header's top and under its last page, so an
-/// unfolded section reads as one surface from its header down.
-/// Every page sits in the column's middle, so crossing into or out of a section moves no thumbnail sideways.
 struct StripItemFrame<Content: View>: View {
     let item: StripItem
     @ViewBuilder var content: Content
@@ -23,7 +20,6 @@ struct StripItemFrame<Content: View>: View {
                 bottomTrailingRadius: last ? r : 0, topTrailingRadius: first ? r : 0
             )
             .fill(accent.tint)
-            // Short of the gap under the last page, or under a folded header, so the next item stands apart.
             .padding(.bottom, last ? Theme.Space.xs : 0)
         }
     }

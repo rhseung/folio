@@ -2,14 +2,11 @@ import FolioActions
 import FolioDomain
 import SwiftUI
 
-/// The lecture the schedule says is under way or next, not made yet: a dashed row. Starting its rough note or a
-/// recording makes the session first; 휴강 saves it cancelled, so the suggestion moves to the next lecture.
 struct SuggestedSessionRow: View {
     @Environment(Workspace.self) private var workspace
     let item: Workspace.SuggestedSession
     var showsCourse = false
     let openNote: (UUID) -> Void
-    /// On the sessions page, where a wrong suggestion is the cue that the class times changed.
     var editTimes: (() -> Void)?
 
     var body: some View {
@@ -20,7 +17,6 @@ struct SuggestedSessionRow: View {
                 Text(date.formatted(date: .omitted, time: .shortened)).timeColumn().font(Theme.Typeface.caption).monospacedDigit()
                     .fixedSize()
                 CourseMark(workspace, item.courseId)
-                // Today's own list: the day goes without saying.
                 Text(workspace.course(item.courseId)?.title ?? "").lineLimit(1)
                     .help(Text(.sessionsSuggested))
             } else {
@@ -32,7 +28,6 @@ struct SuggestedSessionRow: View {
                 .frame(width: 96, alignment: .leading)
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                     Text(.sessionsLecture).font(Theme.Typeface.bodyStrong)
-                    // The day is beside it already.
                     if !item.suggestion.room.isEmpty {
                         Text(item.suggestion.room).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                     }
@@ -58,7 +53,6 @@ struct SuggestedSessionRow: View {
 struct SuggestedSessionActions: View {
     @Environment(Workspace.self) private var workspace
     let item: Workspace.SuggestedSession
-    /// In Today's narrow column the note button is an icon.
     var compact = false
     let openNote: (UUID) -> Void
     var editTimes: (() -> Void)?
@@ -97,8 +91,8 @@ struct SuggestedSessionActions: View {
 }
 
 extension View {
-    // As wide as the widest time in the column's font: a fixed width truncated or wrapped `오후 1:00`.
-    // Verbatim: it is a measuring sample of the formatted time, never shown.
+    // 열의 글꼴로 가장 넓은 시각만큼 폭을 잡는다. 고정 폭은 `오후 1:00`을 자르거나 줄을 바꿨다. 화면에 보이지 않는
+    // 측정용 견본이라 verbatim으로 쓴다.
     func timeColumn() -> some View {
         ZStack(alignment: .leading) {
             Text(verbatim: "오후 12:00").hidden(); self

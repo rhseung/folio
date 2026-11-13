@@ -4,7 +4,6 @@ import SwiftUI
 import AppKit
 #endif
 
-/// Kept per device in user defaults: settings.json is shared by every device.
 enum Appearance: String, CaseIterable {
     case system, light, dark
     static let storageKey = "appearance"
@@ -35,9 +34,8 @@ private struct AppearanceFollower: ViewModifier {
 
     func body(content: Content) -> some View {
         #if os(macOS)
-        // NSApp.appearance rather than preferredColorScheme: it also reaches the Settings window, sheets and menus.
+        // `preferredColorScheme`이 아니라 `NSApp.appearance`를 쓴다. 이 값은 설정 창, 시트, 메뉴에도 적용된다.
         content.onChange(of: appearance, initial: true) { _, a in
-            // Left alone when it already follows the system: assigning nil drops a launch-time appearance override.
             guard a != .system || NSApp.appearance != nil else { return }
             NSApp.appearance =
                 switch a {

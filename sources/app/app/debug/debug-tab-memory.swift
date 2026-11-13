@@ -4,11 +4,6 @@ import FolioDomain
 import SwiftUI
 import WebKit
 
-/// Opens tabs one by one with every screen kept, for measuring what a kept tab costs (`WindowTabs.keep`). With
-/// `FOLIO_TAB_MEMORY=<file>` and a fake `FOLIO_GIST`, the window opens `FOLIO_TAB_MEMORY_COUNT` tabs of
-/// `FOLIO_TAB_MEMORY_KIND` (`note`: a note in the side-by-side view, `course`: a course's overview), writes a line
-/// to the file as each has settled, then lets go of every tab behind and quits. Something outside reads the app's
-/// and its web processes' footprints at each line: a note preview's page lives in a WebKit process of its own.
 @MainActor enum TabMemoryProbe {
     static let environment = ProcessInfo.processInfo.environment
     static let file = environment["FOLIO_TAB_MEMORY"].map { URL(filePath: $0) }
@@ -37,7 +32,6 @@ import WebKit
             try? await Task.sleep(for: .seconds(5))
             mark("\(i) alive=\(tabs.alive.count) webviews=\(webViews())")
         }
-        // Back through every tab, as a reader going over them again: a kept page comes back into the window.
         for id in tabs.ids {
             tabs.select(id)
             try? await Task.sleep(for: .seconds(2))
@@ -51,7 +45,6 @@ import WebKit
         NSApp.terminate(nil)
     }
 
-    /// What the window holds: web views (note previews) and text views (note sources).
     static func webViews() -> String {
         func count(_ view: NSView, _ kind: AnyClass) -> Int {
             (view.isKind(of: kind) ? 1 : 0) + view.subviews.reduce(0) { $0 + count($1, kind) }

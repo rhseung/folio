@@ -3,27 +3,18 @@ import FolioMarkdown
 import SwiftUI
 import WebKit
 
-/// Read only: task boxes tick and callouts fold, and everything else is changed in the edit view.
 struct NotePreview {
     var text: String
     var baseURL: URL?
     var math: MathSyntax = .latex
     var openNote: (String) -> Void = { _ in }
-    /// Scrolled to once for each new one.
     var anchor: AppLink.Anchor?
     var noteLink: AppLink?
-    /// Writes a ticked box back: its line in `text`, what the line should still hold, and its new text. False when the
-    /// line no longer holds it. Without it boxes don't tick.
     var edit: (@MainActor (_ from: Int, _ to: Int, _ old: String, _ new: String) -> Bool)?
-    /// Set beside the editor: the preview follows the editor's scroll.
     var link: PreviewLink?
-    /// What ⌘E does while the preview has the keyboard. The web view would otherwise take the key for itself.
     var toggleMode: (@MainActor () -> Void)?
-    /// The notes embeds and block references draw; without it they show only their links.
     var embeds: NoteEmbedSource?
-    /// The workspace's `notesRevision`: when another note changes, what this one embeds is drawn again.
     var revision = 0
-    /// The screen's handle on this view, for the outline beside it.
     var views: NoteViews?
 
     @MainActor final class Coordinator {
@@ -32,8 +23,7 @@ struct NotePreview {
 
     @MainActor func makeCoordinator() -> Coordinator { Coordinator() }
 
-    /// `enabled` false: a tab kept behind the one in front, whose page must not take ⌘E (the web view sees the key
-    /// before SwiftUI's disabled buttons would refuse it).
+    // `enabled`가 false이면 앞 탭 뒤에 남겨 둔 탭이므로, 이 페이지가 ⌘E를 받으면 안 된다. 웹 뷰는 SwiftUI의 비활성 버튼이 거절하기 전에 키를 먼저 받는다.
     @MainActor func update(
         _ page: NotePreviewPage, accent: CourseAccent, dark: Bool, openLink: OpenLinkAction = OpenLinkAction(), enabled: Bool = true
     ) {
@@ -88,7 +78,6 @@ extension NotePreview: UIViewRepresentable {
 }
 #endif
 
-/// Not observed state: going through SwiftUI would render the note again on every step of a scroll.
 @MainActor final class PreviewLink {
     weak var page: NotePreviewPage?
     private(set) var last: (line: Int, frac: Double)?
@@ -104,8 +93,7 @@ extension NotePreview: UIViewRepresentable {
     }
 }
 
-/// Pages are kept and handed out again (`take`, `recycle`): a new web view starts a web process and parses the bundled
-/// scripts, which made opening a note slow.
+// 페이지는 남겨 두었다가 다시 쓴다(`take`, `recycle`). 새 웹 뷰는 웹 프로세스를 띄우고 번들 스크립트를 다시 파싱하므로 노트를 여는 일이 느렸다.
 @MainActor final class NotePreviewPage: NSObject, WKNavigationDelegate {
     let view: PreviewWebView
     private let files = LocalFileScheme()
@@ -115,12 +103,8 @@ extension NotePreview: UIViewRepresentable {
     var openLink = OpenLinkAction()
     var noteLink: AppLink?
     var embeds: NoteEmbedSource?
-    /// What the pointer was on when the page's menu was asked for: a link, which the menu's own items open, and the
-    /// heading or block, which they link to.
     fileprivate(set) var menuHref: String?
     fileprivate(set) var menuAnchor: AppLink.Anchor?
-    /// The heading or block the text selection starts in: on a touch screen a long press selects, and the edit menu it
-    /// opens links to them as the pointer's menu does.
     fileprivate(set) var selectionAnchor: AppLink.Anchor?
     private var revealed: AppLink.Anchor?
     private var revealing: AppLink.Anchor?
@@ -131,18 +115,13 @@ extension NotePreview: UIViewRepresentable {
     weak var link: PreviewLink?
     weak var views: NoteViews?
 
-    /// The page holds the stylesheet and scripts but no note until `show`: `ready` once it has loaded.
     private(set) var ready = false
-    /// What the page was last asked to show, and whether it has finished showing it.
     private var shown: Shown?
     private var wanted: Shown?
     private(set) var rendering = false
-    /// Lines of `text` above the body, which block lines and ticks are counted from.
     private var offset = 0
     private var lines: [Substring] = []
-    /// Set by a tick here, so the note coming back with it doesn't scroll the page to the editor.
     private var ticked = false
-    /// A scroll to follow the editor, held while the last one runs: the editor sends one per frame.
     private var following: (line: Int, frac: Double)?
     private var followRunning = false
 
@@ -158,13 +137,11 @@ extension NotePreview: UIViewRepresentable {
     // MARK: Pool
 
     private static var idle: [NotePreviewPage] = []
-    /// One page kept ready beyond those open, so the next note opens without waiting for a web process.
     private static let spare = 1
 
     static func take() -> NotePreviewPage {
         let page = idle.popLast() ?? NotePreviewPage()
         if idle.count < spare {
-            // After this update, so the note being opened isn't held up by the spare.
             Task { @MainActor in if idle.count < spare { idle.append(NotePreviewPage()) } }
         }
         return page
@@ -192,7 +169,6 @@ extension NotePreview: UIViewRepresentable {
             shown = nil
             view.callAsyncJavaScript("window.folioPreview?.reset()", arguments: [:], in: nil, in: .defaultClient)
         }
-        // Kept only up to two idle pages: a split screen of notes closing at once shouldn't keep every web process.
         if Self.idle.count < Self.spare + 1, !Self.idle.contains(self) { Self.idle.append(self) }
     }
 
@@ -202,7 +178,6 @@ extension NotePreview: UIViewRepresentable {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .nonPersistent()
         config.preferences.javaScriptCanOpenWindowsAutomatically = false
-        // Widgets run their own code in frames; the note itself has none, and the page's policy forbids any.
         config.defaultWebpagePreferences.allowsContentJavaScript = true
         let scripts = config.userContentController
         scripts.addUserScript(
@@ -232,8 +207,6 @@ extension NotePreview: UIViewRepresentable {
 
     static let shellURL = URL(string: "\(LocalFileScheme.scheme)://local/")!
 
-    /// Images resolve against `base`, which `show` points at the note's folder. The page may run no script of its own
-    /// and load nothing but the note's files and its widgets.
     private static func shell(theme: String) -> String {
         let policy = [
             "default-src 'none'", "script-src 'none'", "style-src 'unsafe-inline'", "font-src data:",
@@ -244,7 +217,6 @@ extension NotePreview: UIViewRepresentable {
             + "<body class=\"note preview\"\(figureLabels)></body></html>"
     }
 
-    /// The picture viewer's button names (sources/web/src/figures.js), which the page has no catalog to look up.
     private static var figureLabels: String {
         let labels: [(String, LocalizedStringResource)] = [
             ("close", .notesFigureClose), ("previous", .notesFigurePrevious), ("next", .notesFigureNext),
@@ -309,19 +281,16 @@ extension NotePreview: UIViewRepresentable {
                 "window.folioPreview?.show(blocks, options)", arguments: ["blocks": blocks, "options": options],
                 contentWorld: .defaultClient)
             rendering = false
-            // Beside the editor the page follows it, except right after a tick here, which leaves the editor still.
             if ticked { ticked = false } else { link?.refollow() }
             runReveal()
             render()
         }
     }
 
-    /// The page has the note it was last given, with every widget's height known: what tests wait for.
     var settled: Bool { ready && !rendering && wanted == shown && !followRunning && widgets.settled }
 
     // MARK: Showing a heading or block
 
-    /// The same anchor again leaves the scroll alone.
     func reveal(_ anchor: AppLink.Anchor?) {
         guard anchor != revealed else { return }
         revealed = anchor
@@ -366,7 +335,6 @@ extension NotePreview: UIViewRepresentable {
         }
     }
 
-    /// Puts the block written on `line` (of the note's text) at the top, as the editor puts a line it reveals.
     func jump(line: Int) {
         Task {
             _ = try? await view.callAsyncJavaScript(
@@ -377,7 +345,7 @@ extension NotePreview: UIViewRepresentable {
 
     // MARK: Messages from the page
 
-    /// Holds the page weakly: the content controller keeps its handlers, and the page keeps the controller.
+    // 페이지를 약하게 참조한다. content controller가 처리기를 붙잡고 페이지가 controller를 붙잡으므로, 강하게 참조하면 순환이 생긴다.
     private final class Messages: NSObject, WKScriptMessageHandler {
         static let name = "folioPreview"
         weak var page: NotePreviewPage?
@@ -385,7 +353,6 @@ extension NotePreview: UIViewRepresentable {
 
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
             guard let body = message.body as? [String: Any], message.frameInfo.isMainFrame else { return }
-            // Boxes carry their line in the note's body, below any frontmatter.
             if body["type"] as? String == "task", let line = body["line"] as? Int, let page { page.tick(line: page.offset + line) }
             let anchor = (body["block"] as? String).map(AppLink.Anchor.block) ?? (body["heading"] as? String).map(AppLink.Anchor.heading)
             if body["type"] as? String == "menu" {
@@ -413,15 +380,14 @@ extension NotePreview: UIViewRepresentable {
         if following != nil { runFollow() }
     }
 
-    /// A crashed web process leaves a blank view; the page is loaded and shown again.
+    // 웹 프로세스가 비정상적으로 종료되면 뷰가 빈 화면으로 남으므로, 페이지를 다시 불러와 보인다.
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { load() }
 
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
         guard let url = action.request.url, let frame = action.targetFrame else { return .cancel }
-        // A widget's frame stays on its page or blank: anywhere else, its address could carry data out.
+        // 위젯의 frame은 자기 페이지나 빈 페이지에만 머문다. 다른 주소로 가면 그 주소에 데이터를 실어 내보낼 수 있다.
         guard frame.isMainFrame else { return WidgetFiles.allows(url) ? .allow : .cancel }
         if action.navigationType == .linkActivated {
-            // Only the note's own links: a widget may not send the note anywhere.
             if (action.sourceFrame as WKFrameInfo?)?.isMainFrame ?? true { await open(url) }
             return .cancel
         }
@@ -434,7 +400,6 @@ extension NotePreview: UIViewRepresentable {
 
     private func open(_ url: URL) async {
         if url.scheme == LocalFileScheme.scheme, let fragment = url.fragment, url.pathExtension != "md" {
-            // A link to a block or heading on this page.
             _ = try? await view.callAsyncJavaScript(
                 "document.getElementById(id)?.scrollIntoView()", arguments: ["id": fragment.removingPercentEncoding ?? fragment],
                 contentWorld: .defaultClient)
@@ -451,7 +416,6 @@ extension NotePreview: UIViewRepresentable {
 #if os(macOS)
 final class PreviewWebView: WKWebView {
     var toggleMode: (@MainActor () -> Void)?
-    /// For tests, which find the view in SwiftUI's and reach the page through it.
     weak var page: NotePreviewPage?
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
@@ -464,7 +428,6 @@ final class PreviewWebView: WKWebView {
         return super.performKeyEquivalent(with: event)
     }
 
-    /// The page is the app's, not a site: going back or reloading would leave it blank, and links open only by a click.
     override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
         let dropped: Set<String> = [
             "WKMenuItemIdentifierReload", "WKMenuItemIdentifierGoBack", "WKMenuItemIdentifierGoForward",
@@ -484,7 +447,6 @@ final class PreviewWebView: WKWebView {
         super.willOpenMenu(menu, with: event)
     }
 
-    /// A link into the app gets the same items as an item's menu, in place of WebKit's open and copy.
     private func addLinkItems(_ menu: NSMenu, _ link: AppLink) {
         let webKit: Set<String> = ["WKMenuItemIdentifierOpenLink", "WKMenuItemIdentifierCopyLink"]
         for item in menu.items where webKit.contains(item.identifier?.rawValue ?? "") { menu.removeItem(item) }
@@ -514,12 +476,10 @@ final class PreviewWebView: WKWebView {
 #else
 final class PreviewWebView: WKWebView {
     var toggleMode: (@MainActor () -> Void)?
-    /// For tests, which find the view in SwiftUI's and reach the page through it.
     weak var page: NotePreviewPage?
 
-    /// A long press on a heading or block selects its words rather than opening a context menu (WebKit asks its
-    /// delegate for one only on links and pictures), so the link to it goes first in the edit menu that opens, as the
-    /// Mac's right-click menu has it.
+    // WebKit은 링크와 그림에서만 delegate에 context menu를 묻는다. 제목이나 블록을 길게 누르면 메뉴 대신 낱말이 선택되므로, Mac의 오른쪽 클릭 메뉴처럼 그때 열리는 편집 메뉴의 맨
+    // 앞에 그곳의 링크를 넣는다.
     override func buildMenu(with builder: any UIMenuBuilder) {
         super.buildMenu(with: builder)
         guard builder.system == .context, let action = Self.anchorAction(page) else { return }
@@ -537,7 +497,6 @@ final class PreviewWebView: WKWebView {
 }
 
 extension NotePreviewPage: WKUIDelegate {
-    /// A link into the app gets the same items as an item's menu; any other link keeps WebKit's.
     func webView(_ webView: WKWebView, contextMenuConfigurationFor element: WKContextMenuElementInfo) async -> UIContextMenuConfiguration? {
         guard let url = element.linkURL, let link = AppLink(url: url) else { return nil }
         let placements = LinkMenu.placements(multipleWindows: UIApplication.shared.supportsMultipleScenes)

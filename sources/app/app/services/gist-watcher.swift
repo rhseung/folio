@@ -1,7 +1,7 @@
 import Foundation
 
-/// Tells the workspace when data files in the GIST folder change outside the app: the `folio` CLI, or another
-/// device through iCloud. Both write through NSFileCoordinator, which is what reaches a file presenter.
+// `folio` CLI와 iCloud를 거친 다른 기기는 모두 `NSFileCoordinator`로 쓰고, file presenter에는 그렇게 쓴 변경만
+// 전달된다.
 final class GISTWatcher: NSObject, NSFilePresenter, @unchecked Sendable {
     let presentedItemURL: URL?
     let presentedItemOperationQueue: OperationQueue = {
@@ -21,7 +21,6 @@ final class GISTWatcher: NSObject, NSFilePresenter, @unchecked Sendable {
     func stop() { NSFileCoordinator.removeFilePresenter(self) }
 
     func presentedSubitemDidChange(at url: URL) {
-        // Notes have the editor's own conflict check; the JSON files and logs feed every screen.
         guard ["json", "jsonl"].contains(url.pathExtension) else { return }
         changed()
     }

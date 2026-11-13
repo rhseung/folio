@@ -1,8 +1,6 @@
 import SwiftUI
 
 #if os(iOS)
-/// A touch screen's visible way into picking a range, over the pages: a long press does the same, but nothing says so
-/// there, and the Mac's ⇧-click has no finger to match. While it is on, a line says what the next tap does.
 struct ProgressPickBar: View {
     let model: PageStripModel
     @Environment(\.accent) private var accent

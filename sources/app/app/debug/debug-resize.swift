@@ -4,24 +4,9 @@ import FolioDomain
 import QuartzCore
 import SwiftUI
 
-/// Drags the window's width from the screen's full width down to the window's least and back, a frame at a time, and
-/// writes by width band how long each frame took, whether the search field was pushed off the window's edge
-/// or the tabs ran into it, and how far the leading items (the sidebar button, back, the first tab) moved from where
-/// they sat at rest: what a live resize costs with the tabs open (#310).
-///
-/// With `FOLIO_RESIZE_PROBE=<file>` and a fake `FOLIO_GIST`, the window opens `FOLIO_RESIZE_TABS` tabs (notes and
-/// courses in turn), puts `FOLIO_RESIZE_FRONT` (`note`, `course` or `today`) in front with `FOLIO_RESIZE_PANES` panes
-/// (a lecture file and a quiz beside it), sweeps `FOLIO_RESIZE_LEGS` times
-/// (each one way), writes the table and quits. `FOLIO_RESIZE_BESIDE` (`pdf`, `quiz`, `session`, `note`, `overview`, by
-/// commas) picks the panes beside the one in front instead, in that tab alone. With `FOLIO_RESIZE_DRAG=1` the window
-/// keeps its size and the first divider is dragged instead, `FOLIO_RESIZE_SPAN` points either way of where it rests,
-/// through what the divider's gesture calls (`PaneDragHook`); the "width" bands are then the pointer's x. The sidebar
-/// follows the `sidebarOpen` default, which `-sidebarOpen NO` on the command line folds without writing it. A debug build has it; for timings that say something about the app,
-/// build Release with `SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) RESIZE_PROBE'`.
 @MainActor final class ResizeProbe: NSObject {
     static let environment = ProcessInfo.processInfo.environment
     static let file = environment["FOLIO_RESIZE_PROBE"].map { URL(filePath: $0) }
-    /// The views `ResizeMarker` marks, by name, in every window; the probe reads the one in its own.
     static var marked: [String: NSHashTable<NSView>] = [:]
     static let leading = ["sidebar", "back", "firstTab"]
 
@@ -29,12 +14,9 @@ import SwiftUI
         var width: CGFloat
         var interval: CFTimeInterval
         var setFrame: CFTimeInterval
-        /// How far each leading item was from where it sat at rest.
         var moved: [String: CGFloat]
         var overflowed: Bool
-        /// The tabs' + ran past the search field's start.
         var overlapped: Bool
-        /// Where each leading item was, and how many marked views of it the window held.
         var at: [String: (x: CGFloat, count: Int)]
     }
 
@@ -51,7 +33,6 @@ import SwiftUI
     private var leg = 0
     private var frame = 0
     private var done: CheckedContinuation<Void, Never>?
-    /// Dragging a divider: where it rested, and how far either way the pointer goes.
     private var drag: (rest: CGFloat, least: CGFloat, most: CGFloat)?
     private weak var divider: NSView?
     private var note = ""
@@ -95,15 +76,12 @@ import SwiftUI
                 try? await Task.sleep(for: .seconds(2))
             }
         }
-        // 1 is Today, the window's own first tab; 2 a note, 3 a course.
         let number =
             switch environment["FOLIO_RESIZE_FRONT"] {
             case "today": 1
             case "course": 3
             default: 2
             }
-        // `FOLIO_RESIZE_PANES` panes in the tab in front (#62), a lecture file and a course's quiz beside it, what a
-        // class's layout holds; and in the course tab behind it, so the row has a tab of several panes behind.
         let panes = environment["FOLIO_RESIZE_PANES"].flatMap(Int.init) ?? 1
         if let beside = environment["FOLIO_RESIZE_BESIDE"], let course = courses.first {
             let session = course.file.sessions.first { $0.roughNoteId != nil && !$0.materials.isEmpty } ?? course.file.sessions.first
@@ -137,7 +115,6 @@ import SwiftUI
         try? await Task.sleep(for: .seconds(3))
         let screen = window.screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         let least = max(window.minSize.width, window.frameRect(forContentRect: NSRect(origin: .zero, size: window.contentMinSize)).width)
-        // `FOLIO_RESIZE_WIDTH` for a window narrower than the screen.
         let wide = environment["FOLIO_RESIZE_WIDTH"].flatMap(Double.init).map { min(CGFloat($0), screen.width) } ?? screen.width
         window.setFrame(NSRect(x: screen.minX, y: screen.minY, width: wide, height: min(900, screen.height)), display: true)
         try? await Task.sleep(for: .seconds(2))
@@ -166,7 +143,6 @@ import SwiftUI
         NSApp.terminate(nil)
     }
 
-    /// Where the marked view in this window starts across it; nil when none is in the window or it is hidden.
     private func x(of name: String) -> CGFloat? {
         Self.marked[name]?.allObjects.first { $0.window === window && !$0.isHiddenOrHasHiddenAncestor }.map {
             $0.convert(NSPoint.zero, to: nil).x
@@ -192,12 +168,10 @@ import SwiftUI
         if let last { shoot(last.width) }
         let now = CACurrentMediaTime()
         if let last {
-            // What the last frame put on screen.
             var moved: [String: CGFloat] = [:]
             for name in Self.leading {
                 if let x = x(of: name), let at = rest[name] { moved[name] = x - at }
             }
-            // The search field out of the window, or off its edge.
             let overflowed = x(of: "trailing").map { $0 >= window.frame.width } ?? true
             let overlapped = x(of: "trailing").flatMap { trailing in end(of: "newTab").map { $0 > trailing + 0.5 } } ?? false
             var at: [String: (x: CGFloat, count: Int)] = [:]
@@ -234,7 +208,6 @@ import SwiftUI
         last = (now, width, CACurrentMediaTime() - begin)
     }
 
-    /// Takes the first divider of the tab in front. No input is sent: the window needn't be in front.
     private func grab() -> Bool {
         let dividers = Self.marked["divider"]?.allObjects.filter { $0.window === window && !$0.isHiddenOrHasHiddenAncestor } ?? []
         note =
@@ -251,11 +224,6 @@ import SwiftUI
         return true
     }
 
-    /// With `FOLIO_RESIZE_ACT` (`even`, `collapse` or `unfold`) and `FOLIO_RESIZE_SHOTS=<folder>`: drags the first
-    /// divider `FOLIO_RESIZE_SPAN` points left so the panes differ, then evens them, folds the right pane by hand, or
-    /// folds and opens it again, shooting the window as fast as it can for a while after: what the move looks like
-    /// part way (the first shot is the frame before). `menu` opens the right pane's segment menu instead, and
-    /// `strip-menu` the menu of its strip once folded, without a click (`menu(at:)`).
     private func act(_ act: String, folder: String) async {
         guard let row = PaneDragHook.shared.row, let drag else { return }
         PaneDragHook.shared.move(by: drag.least - drag.rest)
@@ -291,14 +259,6 @@ import SwiftUI
         capture("\(folder)/\(act)-rest.png")
     }
 
-    /// With `FOLIO_RESIZE_RECORD=<folder>`, a course page put through moves that change its width while a recorder
-    /// outside the app films the window (a ScreenCaptureKit stream of its window): `screencapture` per frame holds the
-    /// main thread and can't keep up with a 0.25s move. `FOLIO_RESIZE_COURSE` (part of a title, else the first course)
-    /// is opened at `FOLIO_RESIZE_PAGE` (a `CoursePage`, else the overview) in a tab of its own, or beside Today with
-    /// `FOLIO_RESIZE_BESIDE=overview`, in a window `FOLIO_RESIZE_WIDTH` by `FOLIO_RESIZE_HEIGHT`. The probe writes
-    /// `<folder>/ready`, waits for the recorder to write `<folder>/recording`, then runs `FOLIO_RESIZE_ACT` by commas,
-    /// a second and a half apart: `column` (the focused pane's column button), `wide` (the first divider dragged
-    /// `FOLIO_RESIZE_SPAN` points left), `even`, `tab` (the page again in a new tab).
     private static func record(
         in folder: String, window: NSWindow, workspace: Workspace, openTab: ((AppLink, UUID) -> Void)?,
         front: (Int) -> Void, openBeside: (AppLink, UUID) -> Void, frontPanes: () -> TabPanes?
@@ -343,13 +303,9 @@ import SwiftUI
             }
             try? await Task.sleep(for: .milliseconds(1500))
         }
-        // Past the recorder's end: a window gone mid-recording stalls it.
         try? await Task.sleep(for: .seconds(3))
     }
 
-    /// Opens the menu a right click at `point` (the window's own coordinates) would, and holds it open for 6 seconds
-    /// for `screencapture -l` to shoot from outside: a menu is a window of its own, which the app can't draw itself,
-    /// and the app may not shoot the screen.
     private func menu(at point: NSPoint) {
         guard
             let event = NSEvent.mouseEvent(
@@ -361,17 +317,13 @@ import SwiftUI
         while let v = view, v.menu(for: event) == nil { view = v.superview }
         guard let view, let menu = view.menu(for: event) else { return note += " no menu" }
         note += " menu \(menu.items.map(\.title))"
-        // On the run loop's common modes: a menu tracks in its own mode, where the main queue waits.
+        // 메뉴는 자기 run loop 모드에서 동작하고, 그동안 main queue는 기다린다. 그래서 run loop의 common 모드에서 실행한다.
         nonisolated(unsafe) let held = menu
         let close = Timer(timeInterval: 6, repeats: false) { _ in MainActor.assumeIsolated { held.cancelTracking() } }
         RunLoop.main.add(close, forMode: .common)
         NSMenu.popUpContextMenu(menu, with: event, for: view)
     }
 
-    /// With `FOLIO_RESIZE_SHOTS=<folder>`, every third frame of the first leg as the window showed it, its buttons
-    /// and all (`cacheDisplay` leaves them out): the frames a person sees mid-drag. Taken at the next tick, once the
-    /// frame is on screen, with the main thread held: `waitUntilExit` runs the run loop, which drew later frames and
-    /// let the row catch up before the shot. It slows those frames, so the table of such a run says little.
     private func shoot(_ shown: CGFloat) {
         guard leg == 0, let folder = Self.environment["FOLIO_RESIZE_SHOTS"] else { return }
         frame += 1
@@ -385,7 +337,6 @@ import SwiftUI
         capture.arguments = ["-x", "-o", "-l\(window.windowNumber)", path]
         try? capture.run()
         while capture.isRunning { usleep(2000) }
-        // Without screen recording allowed, drawn by the window instead, its buttons and glass left out.
         guard !FileManager.default.fileExists(atPath: path), let view = window.contentView?.superview,
             let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds)
         else { return }
@@ -394,7 +345,6 @@ import SwiftUI
         try? rep.representation(using: .png, properties: [:])?.write(to: URL(filePath: path))
     }
 
-    /// Frame by frame, for a band the table flags: the width, then each item's x and how many of it the window held.
     private func trace() -> String {
         frames.map { f in
             "\(Int(f.width))\t"
@@ -414,7 +364,6 @@ import SwiftUI
         func line(_ name: String, _ frames: [Frame]) -> String {
             let intervals = frames.map(\.interval)
             let total = intervals.reduce(0, +)
-            // Hitch time: how far each frame ran past one refresh and a half, per second of resizing (Apple's ms/s).
             let hitch = intervals.reduce(0) { $0 + max(0, $1 - refresh * 1.5) } / max(total, 1e-9)
             var out =
                 "\(name)\tframes=\(frames.count)\tfps=\(String(format: "%.1f", Double(frames.count) / max(total, 1e-9)))"
@@ -441,8 +390,6 @@ import SwiftUI
     }
 }
 
-/// Marks a view for the probe: `firstTab`, `sidebar`, `back`, `newTab` (the tabs' +) or `trailing` (the search
-/// field's item).
 struct ResizeMarker: NSViewRepresentable {
     let name: String
 

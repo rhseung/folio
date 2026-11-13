@@ -13,8 +13,6 @@ struct StripDot: View {
     }
 }
 
-/// The range takes a line of its own: the column is too narrow for "11/4(수) 오늘 19–21쪽" on one. Tinted and ringed
-/// in the course's colour: the tint alone read as one more section beside a section's own.
 struct StripEditRow<Title: View, Extra: View>: View {
     let kind: StripSection.Kind
     let range: String?
@@ -62,7 +60,6 @@ struct StripEditRow<Title: View, Extra: View>: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        // Its dot under the headers' chevrons.
         .padding(Theme.Space.s)
         .background(accent.tint, in: .rect(cornerRadius: Theme.Radius.strip))
         .overlay(RoundedRectangle(cornerRadius: Theme.Radius.strip).strokeBorder(accent.color, lineWidth: 1))

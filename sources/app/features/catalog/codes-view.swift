@@ -74,7 +74,6 @@ private struct CodeTile: View {
     let courses: [UUID]
 
     var body: some View {
-        // A code my courses use takes the first one's color; the rest stay quiet.
         let accent = courses.first.map { workspace.accent($0) }
         VStack(alignment: .leading, spacing: Theme.Space.xs) {
             HStack(alignment: .center) {
@@ -138,14 +137,12 @@ struct CodeEditor: View {
                         }
                     }
                     .overflowFade(.vertical)
-                    // GS alone has a dozen and more; past about eight rows the list scrolls instead of growing the popover.
                     .frame(maxHeight: 240)
                     .fixedSize(horizontal: false, vertical: true)
                 }
                 Divider()
             }
             Grid(alignment: .leading, horizontalSpacing: Theme.Space.m, verticalSpacing: Theme.Space.s) {
-                // Each field is as wide as what goes in it: a prefix is two or three letters, a department name is long.
                 GridRow {
                     Text(.codesFieldPrefix)
                     TextField("EC", text: $code.prefix).pill(width: 64, alignment: .leading)  // strings: data, a code prefix

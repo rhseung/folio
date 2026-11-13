@@ -102,7 +102,6 @@ struct CardEditorSheet: View {
                 FormRow(label: String(localized: .quizUnit)) {
                     SearchSelect(selection: $model.draft.unitId, options: model.unitOptions(units))
                 }
-                // "유형" is the category, as the solve filter and the statistics call it.
                 FormRow(label: String(localized: .quizCategory)) {
                     ChoiceMenu(selection: $model.draft.category, options: CardCategory.allCases.map { ($0, $0.label) })
                 }

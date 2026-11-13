@@ -5,97 +5,51 @@ import Observation
 import SwiftUI
 import WebKit
 
-/// Debug-only: with `FOLIO_SNAPSHOT_DIR` set, the app walks through its screens, draws its own window into
-/// PNGs there and quits. Lets screens be checked without screen-recording permission.
 @MainActor @Observable
 final class SnapshotDriver {
     static let shared = SnapshotDriver()
     static let directory = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_DIR"].map { URL(filePath: $0) }
-    /// On this step (e.g. `course-notes`), web views are also drawn into `<step>-web-<n>.png`: `cacheDisplay` leaves
-    /// them blank.
     static let webStep = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_WEB"]
-    /// Steps to linger on (`course-sessions,settings-general`), so the real window (its buttons and glass too, which
-    /// cacheDisplay leaves out) can be captured.
     static let holdSteps = Set((ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_HOLD"] ?? "").split(separator: ",").map(String.init))
-    /// Shows the recording card in the sidebar as if a lecture were being recorded, without the microphone: `paused`
-    /// shows it paused, a number (`0.3`) at that level.
     static let recording = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_RECORDING"] != nil
     static let recordingPaused = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_RECORDING"] == "paused"
     static let recordingLevel = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_RECORDING"].flatMap(Float.init) ?? 0.6
-    /// A narrower window (e.g. `1100`) to catch labels that wrap or truncate once the columns squeeze.
     static let width = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_WIDTH"].flatMap(Double.init) ?? 1440
-    /// A lower window (e.g. `600`) to see sheets keep inside its content area and scroll their rows.
     static let height = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_HEIGHT"].flatMap(Double.init) ?? 900
-    /// How many tabs the window opens before the walk (`4`), to see the title row's tabs share and give up the row.
     static let tabs = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_TABS"].flatMap(Int.init) ?? 1
-    /// How many panes the first two tabs hold (`2`, `3`), a lecture file and a quiz beside the page the walk moves (#62).
     static let panes = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_PANES"].flatMap(Int.init) ?? 1
-    /// A note (its ID) to open, whose preview's first app link is then clicked as a user would, drawing where it went
-    /// (`link-note-before`, `link-note`).
     static let noteLink = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_NOTE_LINK"].flatMap(UUID.init(uuidString:))
-    /// `courses`: the first tab holds two courses side by side, the walk moving the left one and the second course's
-    /// overview beside it, so both fold their section columns (#62).
     static let coursePanes = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_PANES"] == "courses"
-    /// Only the page strip of a lecture with classes' pages (#147), or of the first lecture when no class has any: its
-    /// sections, a class's range changed, a range picked, the class menu, the range saved and then removed, as
-    /// `strip-*.png`. Set to `from-to` (`19-21`) for the range picked; `21-19` picks it upwards.
     static let strip = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_STRIP"]
-    /// The page a section's range is changed from and the page its end goes to (`16-19`), for `strip-edit`.
     static let stripEdit = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_STRIP_EDIT"]
-    /// The moment the strip walk is drawn at (`2026-11-04T10:00:00+09:00`), so today's class is the one a fixture's
-    /// copy was given.
     static let stripNow = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_STRIP_NOW"].flatMap { try? Date($0, strategy: .iso8601) }
-    /// Only the quick-add line (#116): a long line typed on Today and a course's assignments, then the toolbar's popover
-    /// opened on a course page empty, typed and long, as `quick-add-*.png`.
     static let quickAdd = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_QUICK_ADD"] != nil
-    /// Only the split screen of a split lecture (#321): as it opens, then with a section's pages being changed from
-    /// the thumbnails, as `split-*.png`. Set to `section-page` (`1-9`): the section whose header is pressed and the
-    /// page ⇧-clicked after.
     static let split = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_SPLIT"]
-    /// Only a formula's symbols (#392): the menu a bare `\` opens in a note, then the f(x) palette, as `math-*.png`.
     static let math = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_MATH"] != nil
-    /// The open note's outline (#387) in its popover where the panel has no room beside the note: `popover`.
     static let outline = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_OUTLINE"]
 
     var section: CourseSection?
-    /// Inside the units section: `detail` opens the first unit, `review` also opens its review sheet.
     var unitStep: String?
-    /// Opens the Claude inspector on course screens. `cacheDisplay` can't draw inspectors, so no capture step uses it yet.
     var claudePanel = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_CLAUDE"] != nil
-    /// Extra screens drawn outside the main window (the forms), run just before quitting.
     @ObservationIgnored var extraCaptures: ((URL) async -> Void)?
     var editCourse = false
     var editExam = false
-    /// Opens the first assignment's sheet with this memo in place of its own (`course-assignment-edit`).
     var editAssignmentMemo: String?
-    /// The extension of the classified file the materials page opens, one renderer at a time (`FileView`).
     var openFile: String?
-    /// Set by the materials page when it found a file for `openFile`.
     var materialsOpenFile = false
-    /// Opens the links sheet of a lecture file on the materials page, as its row's menu would.
     var linkFile = false
-    /// Asks Claude about the open PDF's page, as its button would.
     var askPage = false
-    /// The view an open `.tex` switches to, as its bar's switch would.
     var texMode: NoteViewMode?
     var searchQuery: String?
-    /// Opens every folded list column over its page (`FOLIO_SNAPSHOT_COLUMN=open`), as its corner button would.
     var columnOpen = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_COLUMN"] == "open"
-    /// What the open PDF's page strip does next, as a click on it would.
     var strip: StripStep?
-    /// The line a quick-add field starts typed with when it appears, and whether the toolbar's popover is open.
     var quickAddText: String?
     var quickAddOpen = false
-    /// Opens the deadline chip's calendar as the field appears.
     var quickAddDueOpen = false
-    /// Opens the repeat chip's rule popover as the field appears, as "직접 설정…" in its menu would.
     var quickAddRepeatOpen = false
-    /// The course the course chip picks once the sample line is typed, as a click in its menu would.
     var quickAddPick: UUID?
-    /// Opens the f(x) palette of the open note, as its button would.
     var mathPaletteOpen = false
 
-    /// The split screen's section to take up from its header and the page its edge goes to, as clicks would.
     var splitEdit: SplitEdit?
 
     struct SplitEdit: Equatable {
@@ -112,15 +66,12 @@ final class SnapshotDriver {
         case remove(Int)
     }
 
-    /// `links` are opened by their address at the end, each drawn as its step: what a click on such a link shows.
     func run(select: (Screen) -> Void, open: (AppLink) -> Void, courses: [UUID], semester: UUID?, links: [(String, AppLink)]) async {
-        // The first run's walk (`FirstRunDebug`) keeps the window at its own small size and quits when done.
         guard let directory = Self.directory, !FirstRunDebug.walks else { return }
         // folio:not-an-action debug screenshots, outside the GIST folder
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         if let window = NSApp.windows.first(where: { $0.isVisible }) {
             window.setContentSize(NSSize(width: Self.width, height: Self.height))
-            // On screen for the hold step's capture; a restored frame can leave it off every display.
             window.center()
         }
 
@@ -150,7 +101,6 @@ final class SnapshotDriver {
                 try? await Task.sleep(for: .seconds(1.5))
                 capture(to: directory.appending(path: "course-units-\(step).png"))
             }
-            // An open sheet keeps the app from terminating.
             unitStep = nil
             try? await Task.sleep(for: .seconds(1))
 
@@ -179,7 +129,6 @@ final class SnapshotDriver {
             try? await Task.sleep(for: .seconds(1))
 
             section = .materials
-            // A format the fixture lacks leaves the list on screen and gets no picture.
             for ext in ["pdf", "tex", "md", "py", "png", "m4a", "docx", "hwp"] {
                 openFile = ext
                 try? await Task.sleep(for: .seconds(2.5))
@@ -192,13 +141,11 @@ final class SnapshotDriver {
                     try? await Task.sleep(for: .seconds(2))
                     capture(to: directory.appending(path: "course-materials-pdf-ask.png"))
                     askPage = false
-                    // Toggled, so the course view hears it close even when the panel was never asked open.
                     claudePanel = true
                     try? await Task.sleep(for: .seconds(0.3))
                     claudePanel = false
                 }
                 if materialsOpenFile, ext == "tex" {
-                    // Split first, so it is also what the `.tex` is left remembering.
                     for mode in [NoteViewMode.read, .write, .split] {
                         texMode = mode
                         try? await Task.sleep(for: .seconds(1.5))
@@ -214,13 +161,12 @@ final class SnapshotDriver {
             try? await Task.sleep(for: .seconds(2))
             capture(to: directory.appending(path: "course-materials-links.png"))
             if Self.holdSteps.contains("course-materials-links") { try? await Task.sleep(for: .seconds(6)) }
-            // An open sheet keeps the app from terminating.
             linkFile = false
             try? await Task.sleep(for: .seconds(1))
             searchQuery = ""
             try? await Task.sleep(for: .seconds(1))
             capture(to: directory.appending(path: "search-empty.png"))
-            // Closed in between: the palette reads the query once, when it opens.
+            // 팔레트는 열 때 한 번만 질의를 읽으므로 사이에 닫는다.
             searchQuery = nil
             try? await Task.sleep(for: .seconds(0.5))
             searchQuery = "matching"
@@ -228,7 +174,6 @@ final class SnapshotDriver {
             capture(to: directory.appending(path: "search.png"))
             searchQuery = nil
         }
-        // Nil, so a course screen made for a link doesn't take the walk's last section over the link's.
         section = nil
         for (name, link) in links {
             open(link)
@@ -245,7 +190,6 @@ final class SnapshotDriver {
             try? await Task.sleep(for: .seconds(2))
             capture(to: directory.appending(path: "link-note.png"))
         }
-        // The panel's first app link, clicked as a user would, from a course with a chat (`FOLIO_SNAPSHOT_CLAUDE`).
         if claudePanel, let first = courses.first {
             select(.course(first))
             try? await Task.sleep(for: .seconds(2))
@@ -266,14 +210,11 @@ final class SnapshotDriver {
         NSApp.terminate(nil)
     }
 
-    /// The strip walk (`FOLIO_SNAPSHOT_STRIP`): opens `lecture` and steps through picking and saving a range.
     func runStrip(open: (AppLink) -> Void, lecture: AppLink) async {
         guard let directory = Self.directory else { return }
         // folio:not-an-action debug screenshots, outside the GIST folder
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         if let window = NSApp.windows.first(where: { $0.isVisible }) {
-            // No taller than the screen: the strip scrolls a page to its bottom edge, which was off a short screen and
-            // out of the picture.
             let room = (window.screen ?? NSScreen.main)?.visibleFrame.height ?? 900
             window.setFrame(NSRect(origin: window.frame.origin, size: NSSize(width: Self.width, height: min(900, room))), display: true)
             window.center()
@@ -285,7 +226,6 @@ final class SnapshotDriver {
         let range = pair(Self.strip, (19, 21)), edit = pair(Self.stripEdit, (16, 19))
         open(lecture)
         try? await Task.sleep(for: .seconds(3))
-        // Glass and popovers draw only on screen: a `<step>.ready` file tells a script outside to capture the screen then.
         func shot(_ name: String) async {
             capture(to: directory.appending(path: "\(name).png"), popovers: true)
             guard ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_STRIP_SCREEN"] != nil else { return }
@@ -299,7 +239,7 @@ final class SnapshotDriver {
         ]
         for (name, step) in steps {
             strip = step
-            // The section just saved is lit for 1.6 seconds: drawn sooner, it still is.
+            // 방금 저장한 구획은 1.6초 동안 강조되므로, 0.6초 뒤에 찍으면 강조된 모습이 찍힌다.
             try? await Task.sleep(for: .seconds(step == .save ? 0.6 : 2))
             await shot(name)
         }
@@ -307,7 +247,6 @@ final class SnapshotDriver {
         NSApp.terminate(nil)
     }
 
-    /// The quick-add walk (`FOLIO_SNAPSHOT_QUICK_ADD`). `named` is the course's word for a line typed off its pages.
     func runQuickAdd(open: (AppLink) -> Void, course: UUID, other: UUID?, named: String) async {
         guard let directory = Self.directory else { return }
         // folio:not-an-action debug screenshots, outside the GIST folder
@@ -316,8 +255,6 @@ final class SnapshotDriver {
             window.setContentSize(NSSize(width: Self.width, height: Self.height))
             window.center()
         }
-        // Glass and popovers draw only on screen: with `screen`, a `<step>.ready` file tells a script outside to capture
-        // the window's area then.
         func shot(_ name: String, popovers: Bool = false) async {
             capture(to: directory.appending(path: "\(name).png"), popovers: popovers)
             guard ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_QUICK_ADD"] == "screen" else { return }
@@ -326,7 +263,6 @@ final class SnapshotDriver {
             try? await Task.sleep(for: .seconds(3))
         }
         let long = "Lab3 보고서 초안과 실험 데이터 정리, 그래프와 오차 분석, 참고 문헌 목록과 부록 표까지 모두 끝내고 조원 검토 받은 뒤 제출하기 다음 주 수요일 오후 6시까지"
-        // Away first: a page already shown keeps the field it laid out before the line was set.
         open(.course(course))
         section = .overview
         try? await Task.sleep(for: .seconds(1.5))
@@ -338,8 +274,6 @@ final class SnapshotDriver {
             open(.course(course))
             try? await Task.sleep(for: .seconds(1))
         }
-        // The toolbar's popover off a course's pages: every chip dimmed on the empty line, lit as the line reads them,
-        // then another course picked on the chip, which rewrites the line's course word.
         quickAddText = nil
         open(.place(.today))
         try? await Task.sleep(for: .seconds(3))
@@ -363,7 +297,6 @@ final class SnapshotDriver {
         await shot("quick-add-assignments-long")
         section = .overview
         try? await Task.sleep(for: .seconds(1.5))
-        // The popover is 440 wide: a long course name, a deadline, the repeat and a folder run onto a second chip row.
         let steps: [(String, String?, Bool)] = [
             ("empty", nil, false), ("short", "HW5 금 23:59", false),
             ("long", "Lab3 보고서 초안과 실험 데이터 정리, 그래프와 오차 분석까지 끝내고 제출 다음 주 수요일 오후 6시까지", false),
@@ -386,8 +319,6 @@ final class SnapshotDriver {
         NSApp.terminate(nil)
     }
 
-    /// The math walk (`FOLIO_SNAPSHOT_MATH`): types `\` into a formula at the end of `note` as keys would, then opens
-    /// the palette.
     func runMath(open: (AppLink) -> Void, note: AppLink) async {
         guard let directory = Self.directory else { return }
         // folio:not-an-action debug screenshots, outside the GIST folder
@@ -395,8 +326,6 @@ final class SnapshotDriver {
         let window = NSApp.windows.first { $0.isVisible }
         window?.setContentSize(NSSize(width: Self.width, height: 900))
         window?.center()
-        // The popover's glass draws only on screen: with `screen`, a `<step>.ready` file tells a script outside to
-        // capture the window's area then.
         func shot(_ name: String, popovers: Bool = false) async {
             capture(to: directory.appending(path: "\(name).png"), popovers: popovers)
             guard ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_MATH"] == "screen" else { return }
@@ -406,7 +335,6 @@ final class SnapshotDriver {
         }
         open(note)
         func editors(in view: NSView) -> [SourceTextView] { (view as? SourceTextView).map { [$0] } ?? view.subviews.flatMap(editors) }
-        // A first launch takes longer to lay the note out.
         var found: SourceTextView?
         for _ in 0..<20 where found == nil {
             try? await Task.sleep(for: .seconds(0.5))
@@ -429,7 +357,6 @@ final class SnapshotDriver {
         NSApp.terminate(nil)
     }
 
-    /// The split walk (`FOLIO_SNAPSHOT_SPLIT`): opens `lecture`'s split screen, then changes a section from its header.
     func runSplit(open: (AppLink) -> Void, lecture: AppLink, ask: () -> Void) async {
         guard let directory = Self.directory else { return }
         // folio:not-an-action debug screenshots, outside the GIST folder
@@ -472,7 +399,7 @@ final class SnapshotDriver {
         }
     }
 
-    /// Pages run no script of their own; this runs in the app's world, where the panel's reader script runs.
+    // 페이지는 자기 script를 실행하지 않는다. 이 코드는 패널의 reader script가 도는 앱의 content world에서 실행한다.
     func clickAppLink() async {
         func webViews(in view: NSView) -> [WKWebView] { (view as? WKWebView).map { [$0] } ?? view.subviews.flatMap(webViews) }
         guard let root = NSApp.windows.first(where: { $0.isVisible })?.contentView else { return }
@@ -486,7 +413,6 @@ final class SnapshotDriver {
         }
     }
 
-    // The whole of the tallest scroll view's content, past the window's bottom: Today's lower blocks.
     func captureScrolled(to url: URL) {
         func scrollViews(in view: NSView) -> [NSScrollView] {
             ((view as? NSScrollView).map { [$0] } ?? []) + view.subviews.flatMap(scrollViews)
@@ -500,11 +426,8 @@ final class SnapshotDriver {
         try? rep.representation(using: .png, properties: [:])?.write(to: url)
     }
 
-    /// `popovers` also draws the app's popovers over the window where they stand: each is a window of its own, which
-    /// drawing the main window leaves out.
     func capture(to url: URL, popovers: Bool = false) {
         let window = NSApp.windows.first { $0.isVisible && $0.sheetParent == nil && !$0.isPopover }
-        // The main window's frame view, so the window's buttons are in the picture too; a sheet is its content alone.
         guard let window, let view = window.attachedSheet?.contentView ?? window.contentView?.superview,
             let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds)
         else { return }
@@ -533,8 +456,6 @@ extension NSWindow {
 }
 
 extension View {
-    /// Drawn as in a key window (`FOLIO_SNAPSHOT_KEY`). The walk's windows are rarely key, since the Mac is in use
-    /// while it runs, and a window that isn't draws its prominent buttons grey, a look they never have in use.
     @ViewBuilder func snapshotKey() -> some View {
         if ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_KEY"] != nil {
             environment(\.controlActiveState, .key)

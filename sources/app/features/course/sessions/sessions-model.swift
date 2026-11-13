@@ -4,8 +4,6 @@ import FolioStorage
 import Foundation
 import Observation
 
-/// The sessions page and its rows. Times are judged against `now` when the page draws, not on a timer, except a
-/// row's own under-way state, which its `LiveTime` passes in.
 @MainActor @Observable
 final class SessionsModel {
     var pending: PendingAction?
@@ -31,7 +29,6 @@ final class SessionsModel {
             + (missing > 0 ? [String(localized: .sessionsMissingNotes(missing))] : [])).joined(separator: " · ")
     }
 
-    /// `다음 시험 Quiz2 D-9`, in red after the subtitle: the one thing on the page with a deadline.
     func nextExam(_ file: CourseFile, now: Date? = nil) -> String? {
         let now = now ?? workspace.now
         guard let exam = file.exams.filter({ ($0.start ?? .distantPast) > now }).min(by: { $0.start! < $1.start! }),
@@ -46,7 +43,6 @@ final class SessionsModel {
 
     struct TimelineRow: Identifiable {
         let item: SessionTimeline.Item
-        /// For a planned class, what its menu acts on.
         var planned: Workspace.SuggestedSession?
         var id: String { item.id }
     }
@@ -61,8 +57,6 @@ final class SessionsModel {
         var id: String { "week-\(start.timeIntervalSinceReferenceDate)" }
     }
 
-    /// The timeline cut into its weeks. An exam in a week with no class still gets the week it falls in, numbered from
-    /// the term's start like the classes are.
     func weeks(_ file: CourseFile, now: Date? = nil) -> [Week] {
         let now = now ?? workspace.now
         let plan = plan(now: now)
@@ -102,15 +96,12 @@ final class SessionsModel {
         return weeks
     }
 
-    /// `10월 19일 – 25일`, or `10월 26일 – 11월 1일` across a month.
     func range(from start: Date) -> String {
         let end = calendar.date(byAdding: .day, value: 6, to: start) ?? start
         let sameMonth = calendar.component(.month, from: start) == calendar.component(.month, from: end)
         return start.formatted(.dateTime.month().day()) + " – " + end.formatted(sameMonth ? .dateTime.day() : .dateTime.month().day())
     }
 
-    /// `화요일 오전 10:30 – 11:45`: the month and day are on the tile beside it. A date-only session (imported from
-    /// Notion, stored at midnight) gives the weekday alone.
     func dayLine(_ date: Date, end: Date?) -> String {
         let weekday = date.formatted(.dateTime.weekday(.wide))
         let time = calendar.dateComponents([.hour, .minute], from: date)
@@ -127,7 +118,6 @@ final class SessionsModel {
         calendar.component(.hour, from: date) * 60 + calendar.component(.minute, from: date)
     }
 
-    /// `화 오전 10:30`, under the date on a suggested class's row.
     static func weekdayTime(_ date: Date, in calendar: Calendar) -> String {
         date.formatted(.dateTime.weekday()) + " " + TimeMenu.label(minute(of: date, in: calendar))
     }
@@ -139,7 +129,6 @@ final class SessionsModel {
     func month(_ date: Date) -> String { String(localized: .sessionsMonth(calendar.component(.month, from: date))) }
     func day(_ date: Date) -> String { String(calendar.component(.day, from: date)) }
 
-    /// A planned class's second line: no session yet, so where it meets stands in for what it covered.
     func plannedLine(_ item: Workspace.SuggestedSession) -> String {
         ([dayLine(item.suggestion.date, end: item.suggestion.end)] + (item.suggestion.room.isEmpty ? [] : [item.suggestion.room])).joined(
             separator: " · ")
@@ -149,8 +138,6 @@ final class SessionsModel {
         exam.start.map { clock($0, end: exam.end) }
     }
 
-    /// Days left only while the exam is ahead. A past one keeps its red but says nothing more: its score is a grade
-    /// and stays on the grades page.
     func examDays(_ exam: Exam, now: Date) -> Int? {
         exam.start.flatMap { $0 > now ? max(workspace.days(to: $0), 0) : nil }
     }
@@ -159,8 +146,6 @@ final class SessionsModel {
 
     func link(of session: Session, in file: CourseFile) -> URL? { session.link(schedule: file.course.schedule, calendar: calendar) }
 
-    /// The join button stands out only around the class: from the study day it falls on until it ends. Before and
-    /// after, the link stays in the menu.
     func offersJoin(_ session: Session, in file: CourseFile, now: Date) -> Bool {
         !session.isCancelled && isToday(session.date)
             && now < session.expectedEnd(schedule: file.course.schedule, classMinutes: workspace.settings.classMinutes, calendar: calendar)
@@ -172,11 +157,9 @@ final class SessionsModel {
 
     // MARK: Sessions made ahead
 
-    /// Sessions made ahead when the app filled whole terms that nothing has used yet; listed for the user to delete.
-    /// Reads the course's notes from disk, so the view loads it when the sessions change, not on every redraw.
     func loadUntouched(_ course: LoadedCourse, now: Date? = nil) {
         let now = now ?? workspace.now
-        // Unreadable notes might point at any of them, so none is offered then.
+        // 읽지 못한 노트가 어느 회차든 가리킬 수 있으므로 그때는 아무것도 제시하지 않는다.
         guard let notes = try? course.store.notes() else { untouched = []; return }
         untouched = course.file.untouchedFutureSessions(now: now, notedSessions: Set(notes.flatMap(\.meta.sessionIds)))
     }
@@ -190,8 +173,7 @@ final class SessionsModel {
 
     // MARK: Classes left unwrapped
 
-    /// A run through the classes left unwrapped, one sheet after another. The list is fixed when it starts, so the
-    /// count in the sheet doesn't shift as each one saved drops out of the notice.
+    // 시작할 때 목록을 고정해야 저장한 회차가 알림에서 빠져도 시트의 개수가 바뀌지 않는다.
     struct WrapUpRun: Identifiable {
         let id = UUID()
         let sessions: [UUID]
@@ -201,7 +183,6 @@ final class SessionsModel {
 
     var wrapUpRun: WrapUpRun?
 
-    /// Only the current term's courses: an old term's gaps are past mattering.
     private func isCurrent(_ file: CourseFile) -> Bool { file.course.semesterId == workspace.currentSemester?.id }
 
     func leftUnwrapped(_ file: CourseFile, now: Date? = nil) -> [Session] {
@@ -238,7 +219,6 @@ final class SessionsModel {
     struct CardTiming {
         let expectedEnd: Date
         let live: Bool
-        /// The share of the class gone, which fills the card from the left; nil when it isn't under way.
         let progress: Double?
         let offersStart: Bool
     }
@@ -263,7 +243,6 @@ final class SessionsModel {
         String(localized: .sessionsMinutesLeft(Int(end.timeIntervalSince(now) / 60) + 1))
     }
 
-    /// Only a class missed or late: present is the rule and says nothing.
     func lateMark(_ session: Session, in file: CourseFile) -> StepToggle<AttendanceState>.Option? {
         let attendance = menu.attendance(of: session)
         return session.isCancelled || attendance == .present ? nil : AttendanceState.steps.first { $0.value == attendance }
@@ -271,18 +250,14 @@ final class SessionsModel {
 
     func isToday(_ date: Date) -> Bool { workspace.isStudyToday(date) }
 
-    /// What the class covered, else just 수업, drawn quieter: the tile carries the date, which names the class.
     func title(of session: Session, in file: CourseFile) -> String { file.subject(of: session) ?? String(localized: .sessionsClass) }
 
-    /// The title is the units when there are any, so the units picker beside it shrinks to its icon.
     func hasSubject(_ session: Session, in file: CourseFile) -> Bool { file.subject(of: session) != nil }
 
     enum Review: Equatable {
         case done(UUID), writing(UUID), missing
     }
 
-    /// The review as the card's pill says it, from the class's `ClassReview`; nil when there is nothing to say (ahead,
-    /// cancelled, or a class that needs none).
     func review(of session: Session, in file: CourseFile, now: Date) -> Review? {
         switch (file.review(of: session), session.reviewNoteId) {
         case (.written?, let id?): .done(id)
@@ -296,16 +271,13 @@ final class SessionsModel {
         String(localized: count > 1 ? .sessionsRecordingCount(count) : .sessionsRecordingShort)
     }
 
-    /// Once the class has begun: before it there is nothing to wrap up.
     func offersWrapUp(_ session: Session) -> Bool { !session.isCancelled && session.date <= workspace.now }
 
     // MARK: A session's actions
 
-    /// What the card's buttons and a timetable slot's menu do; a saved class's menu is `SessionMenuSource`.
     var menu: SessionMenuModel { SessionMenuModel(workspace: workspace, courseId: courseId) }
 }
 
-/// What `SessionUnitsButton` shows.
 struct SessionUnits {
     let file: CourseFile
     let session: Session
@@ -329,7 +301,6 @@ struct SessionUnits {
 
     var label: String { shown.isEmpty ? String(localized: missing ? .sessionsUnitsNeeded : .sessionsUnitsLink) : titles }
 
-    // The label truncates on a narrow row, so the tooltip carries every title.
     var help: String {
         missing
             ? String(localized: .sessionsUnitsMissingHelp)
@@ -338,6 +309,5 @@ struct SessionUnits {
                 : shown.map(\.title).joined(separator: "\n")
     }
 
-    // Read only where a row draws the strip, not for every card.
     var progress: (material: UUID, pages: ClosedRange<Int>)? { file.splitProgress(of: session) }
 }

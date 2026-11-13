@@ -2,23 +2,16 @@ import FolioDomain
 import Foundation
 import Observation
 
-/// The 새 기능 page (`folio://whats-new`): every release this app's version has, the running one open, filtered by
-/// kind and by words.
 @MainActor @Observable
 final class WhatsNewModel {
     let workspace: Workspace
     var query = ""
-    /// Nil shows every kind.
     var kind: PatchNotes.Kind?
-    /// Versions opened or closed by hand: the running one starts open, the rest closed.
     private var toggled: Set<PatchNotes.Version> = []
-    /// The page's width, measured. Zero until then, so a first frame never runs past the side.
     var width: CGFloat = 0
 
-    /// The search field at a useful width beside the kinds.
     static let wideFrom: CGFloat = 560
 
-    /// Narrow, the search field takes its own line with the kinds under it.
     var narrow: Bool { width < Self.wideFrom }
 
     init(workspace: Workspace) {
@@ -44,7 +37,6 @@ final class WhatsNewModel {
 
     var searching: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }
 
-    /// While searching every version with a match is open, so a match is never hidden in a closed one.
     func isOpen(_ release: PatchNotes.Release) -> Bool {
         searching || (release.version == notes.current) != toggled.contains(release.version)
     }
@@ -85,11 +77,8 @@ final class WhatsNewModel {
 }
 
 extension PatchNotes.Kind {
-    /// As commits name it, untranslated (2026-11-10 사용자).
     var label: String { rawValue }
 
-    /// Three hues told apart at a glance wherever a kind shows: its chips, the sheet's counts and the kind filter. Not the
-    /// accent, which an app page draws gray.
     var tone: Tone {
         switch self {
         case .feat: .info
@@ -100,7 +89,6 @@ extension PatchNotes.Kind {
 }
 
 extension PatchNotes.Summary {
-    /// `Folio 0.3.0 · 11월 9일`, or for several versions at once `Folio 0.3.0 · 0.1.0 이후 업데이트 3번`.
     func subtitle(calendar: Calendar) -> String {
         let version = latest.version.description
         if releases.count > 1 { return String(localized: .whatsNewSheetSeveral(version, since.description, releases.count)) }

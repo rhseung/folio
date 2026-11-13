@@ -2,8 +2,6 @@ import FolioDomain
 import FolioLMS
 import SwiftUI
 
-/// 설정 › LMS (#132, 시안 "LMS · 설정"): the login only. No classroom is tied to a course here; each proposal picks one
-/// when it is added.
 @MainActor @Observable
 final class LMSSettingsModel {
     let workspace: Workspace
@@ -90,7 +88,6 @@ struct LMSSettingsForm: View {
     }
 }
 
-/// The password goes to the keychain only after the LMS took it, so a typo is told here and not at the next sync.
 private struct LMSConnectSheet: View {
     let lms: LMSConnection
     @State var username: String

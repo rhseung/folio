@@ -21,7 +21,6 @@ struct DdayChip: View {
             .foregroundStyle(color)
             .padding(Theme.Inset.tag)
             .background(color.opacity(Theme.Opacity.tint), in: .capsule)
-            // The last three days pulse once on appearing, so the nearest exam catches the eye.
             .phaseAnimator([false, true], trigger: days <= 3) { chip, lit in
                 chip.scaleEffect(lit && days <= 3 ? 1.06 : 1)
             } animation: { _ in
@@ -30,7 +29,6 @@ struct DdayChip: View {
     }
 }
 
-// Today's deadlines and the 제안함's deadline chip both read this, so a deadline reads the same before and after it is added.
 extension DueUrgency {
     static func text(_ due: Date, studyDays days: Int) -> String {
         let time = due.formatted(date: .omitted, time: .shortened)

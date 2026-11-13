@@ -6,12 +6,10 @@ import Observation
 final class GradesModel {
     let workspace: Workspace
     var target = 4.3
-    /// Nil targets cumulative GPA; otherwise the program whose GPA is the goal.
     var targetProgram: UUID? { didSet { if targetProgram != oldValue { remainingCredits = nil } } }
-    /// Typed by the user; nil uses what is still left toward graduation or the program.
     var remainingCredits: Double?
     var expanded: UUID?
-    /// Picked grades for the what-if; a nil value means "ungraded" and differs from no pick.
+    // nil 값은 "미정"을 뜻하며 고르지 않은 것과 다르다.
     var expected: [UUID: UUID?] = [:]
 
     init(workspace: Workspace) { self.workspace = workspace }
@@ -23,9 +21,7 @@ final class GradesModel {
         let label: String
         let series: Series
         let gpa: Double
-        /// Credits behind a semester point, so its bar's width shows its weight in the cumulative GPA.
         var credits: Double = 0
-        /// Comes from the picks in the simulation, not from recorded grades.
         var simulated = false
     }
 
@@ -84,7 +80,6 @@ final class GradesModel {
         targetProgram.map { GPACalculator.program($0, courses: courses, catalog: catalog) } ?? cumulative
     }
 
-    /// Ungraded courses are still to be graded, so the default counts them as remaining.
     var remainingDefault: Double {
         targetProgram.map { GPACalculator.programRemaining($0, courses: courses, catalog: catalog) }
             ?? max(
@@ -119,8 +114,6 @@ final class GradesModel {
         semesters.reversed().map { s in
             let sum = GPACalculator.semester(s, courses: courses, catalog: catalog)
             let members = courses.filter { $0.semesterId == s.id }.sorted { $0.title < $1.title }
-            // A semester in progress has no graded credits yet; show what is being taken instead of 0. A credited
-            // term's courses were taken elsewhere, so one still waiting for its grade isn't being taken.
             let enrolled = members.map(\.credits).reduce(0, +)
             return SemesterRow(
                 semester: s, summary: sum, members: members, enrolled: enrolled,
@@ -138,7 +131,7 @@ final class GradesModel {
 
     func pick(_ course: Course) -> UUID? { expected[course.id] ?? course.finalGrade }
 
-    // `.some` keeps a picked "미정": assigning plain nil would remove the pick instead.
+    // `.some`으로 넣어야 고른 "미정"이 남는다. 그냥 nil을 넣으면 고른 것이 지워진다.
     func setPick(_ grade: UUID?, for course: Course) { expected[course.id] = .some(grade) }
 
     func resetPicks() { expected = [:] }
@@ -165,7 +158,6 @@ final class GradesModel {
         GPACalculator.cumulative(semesters: semesters, courses: GPACalculator.simulate(expected, courses: courses), catalog: catalog)
     }
 
-    /// The change the picks make to the cumulative GPA, nil when it rounds away.
     var simulatedChange: Double? {
         guard let now = cumulative.gpa, let then = simulatedTotal.gpa, abs(then - now) >= 0.0005 else { return nil }
         return then - now
@@ -173,7 +165,6 @@ final class GradesModel {
 
     // MARK: Trend
 
-    /// With picks in the simulation, points those picks change are swapped for simulated ones.
     var points: [Point] {
         let recorded = Self.points(GPACalculator.trend(semesters: semesters, courses: courses, catalog: catalog))
         guard !expected.isEmpty else { return recorded }
@@ -195,15 +186,12 @@ final class GradesModel {
         }
     }
 
-    /// Bars start at a floor below the lowest value, not 0, so 3.8 against 4.3 is still readable.
     static func floor(_ points: [Point]) -> Double { max(0, ((points.map(\.gpa).min() ?? 3.5) * 2).rounded(.down) / 2 - 0.5) }
 
-    /// The dashed line starts at the last recorded point so the what-if reads as a continuation.
     static func dashed(_ cumulative: [Point]) -> [Point] {
         cumulative.firstIndex(where: \.simulated).map { Array(cumulative[max(0, $0 - 1)...]) } ?? []
     }
 
-    /// Hovered values go in the legend, not a tooltip in the plot, which always covered some of the marks.
     static func legendValue(_ points: [Point], series: Series, at label: String?) -> String {
         guard let p = points.first(where: { $0.label == label && $0.series == series }) else { return "" }
         return [
@@ -219,6 +207,5 @@ final class GradesModel {
 }
 
 extension Semester {
-    /// The title is data from the domain; only its trailing word is dropped for the chart's axis.
     var shortTitle: String { title.replacingOccurrences(of: "학기", with: "") }
 }

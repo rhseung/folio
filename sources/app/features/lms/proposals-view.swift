@@ -1,8 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// 제안함 (#132, 시안 "LMS · 제안함"). Hidden items stay folded under each classroom so a dismissal made by mistake can
-/// be taken back.
 struct ProposalsView: View {
     @State private var model: ProposalsModel
 
@@ -65,7 +63,6 @@ private struct SectionActions: View {
     }
 }
 
-/// Which course an item goes to is picked each time: a classroom can be two of one course's, or no course at all.
 private struct TargetCourseMenu<More: View>: View {
     let model: ProposalsModel
     let label: String
@@ -102,7 +99,6 @@ extension TargetCourseMenu where More == EmptyView {
     }
 }
 
-/// The buttons sit beside the title where they fit and fold under it where they don't (a phone's width).
 private struct ProposalRow: View {
     let model: ProposalsModel
     let proposal: LMSProposal
@@ -187,8 +183,6 @@ private struct HandledRow: View {
     }
 }
 
-/// Today's list's chip, so a deadline reads the same before and after it is added: filled on the last day, toned within
-/// the week, plain past it.
 private struct DueChip: View {
     let text: String
     let urgency: DueUrgency
@@ -202,9 +196,6 @@ private struct DueChip: View {
     }
 }
 
-/// 제안함's buttons are filled capsules, not the app's ghost text (#132, decided for this screen only): a row of three
-/// tinted words read as one blue line, and a blue add was too loud again. All gray; the one add per row is set apart by
-/// darker, bolder words.
 private struct SoftButtonStyle: ButtonStyle {
     var strong = false
     var iconOnly = false

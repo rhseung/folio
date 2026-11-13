@@ -8,13 +8,9 @@ import AppKit
 import UIKit
 #endif
 
-// The one clock the live parts of the app (Today's ribbon, header and wash, the sidebar's class under way, a session
-// row's under-way state) draw against. Each used to run its own TimelineView, and they disagreed: the ribbon read the
-// time inside a GeometryReader, whose closure a tick does not run again, so its now line stayed put while the wash
-// beside it had moved on. A view that reads `now` here is redrawn by observation instead, wherever it reads it.
-//
-// Ticks on the minute, since every time these views show is in minutes, and again whenever the time may have jumped:
-// the app coming back to the front, the Mac waking, the clock or time zone changing.
+// 각 뷰가 TimelineView를 따로 돌리면 시각이 서로 어긋난다. GeometryReader의 closure는 tick이 다시 실행하지 않아,
+// ribbon의 지금 선은 멈춘 채 옆의 wash만 움직였다. 이 시계의 `now`를 읽는 뷰는 observation으로 다시 그려진다. 앱이
+// 앞으로 오거나 Mac이 깨어나거나 시계나 시간대가 바뀌면 시각이 건너뛸 수 있으므로 그때도 tick한다.
 @MainActor @Observable
 final class LiveClock {
     private(set) var now: Date
@@ -33,7 +29,6 @@ final class LiveClock {
 
     func refresh(at date: Date = .now) { now = date }
 
-    /// The start of the minute after `date`, when a time shown in minutes next changes.
     nonisolated static func nextMinute(after date: Date) -> Date {
         Date(timeIntervalSinceReferenceDate: ((date.timeIntervalSinceReferenceDate / 60).rounded(.down) + 1) * 60)
     }
@@ -41,7 +36,7 @@ final class LiveClock {
     private func start() {
         ticker = Task { [weak self] in
             while !Task.isCancelled {
-                // From the wall clock each time, so a late wake-up doesn't push the next tick off the minute.
+                // 매번 벽시계에서 계산해야 늦게 깨어나도 다음 tick이 분의 시작에서 밀리지 않는다.
                 let wait = Self.nextMinute(after: .now).timeIntervalSinceNow
                 try? await Task.sleep(for: .seconds(wait), tolerance: .milliseconds(200))
                 guard let self else { return }
@@ -68,7 +63,6 @@ final class LiveClock {
     }
 }
 
-/// Hands its content the live time where a screen needs it in one part only, so the rest isn't redrawn each minute.
 struct LiveTime<Content: View>: View {
     let workspace: Workspace
     @ViewBuilder let content: (Date) -> Content

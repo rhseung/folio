@@ -12,20 +12,17 @@ typealias PlatformImage = UIImage
 typealias PlatformView = UIView
 #endif
 
-/// Type, colors and spacing of the notes: the edit view (app/platform/note-text) uses them as they are, and the pages
-/// (the preview, the Claude panel) get them as CSS variables through `NoteStyle`.
+// 편집 보기(app/platform/note-text)는 이 값을 그대로 쓰고, 페이지(미리보기, Claude 패널)는 `NoteStyle`을 거쳐 CSS
+// 변수로 받는다.
 enum NoteLook {
     static let body: CGFloat = 16
-    /// Leading near 1.78 at the body size.
     static let lineSpacing: CGFloat = 10
-    /// The text column, margins included.
     static let measure: CGFloat = 720
     static let margin: CGFloat = 40
     static let paragraphGap: CGFloat = 14
     static let blockGap: CGFloat = 20
     static let listIndent: CGFloat = 24
     static let radius: CGFloat = 12
-    /// The preview draws `---` as three dots, not a line. At a middle dot's size in the faintest gray they disappeared.
     static let breakDot: CGFloat = 4
     static let breakDotPitch: CGFloat = 16
     static let breakSpace: CGFloat = 32
@@ -41,11 +38,9 @@ enum NoteLook {
         #endif
     }
 
-    /// Monospaced type at the same size looks a size or two larger (its letters are a third wider), so the write
-    /// view sets it smaller to read as the body does, as GitHub and Notion do.
+    // 같은 크기의 고정폭 글꼴은 글자 폭이 3분의 1 넓어 한두 크기 커 보인다. 그래서 편집 보기는 GitHub와 Notion처럼 더
+    // 작게 써서 본문과 같은 크기로 읽히게 한다.
     static let monoScale = CGFloat(7) / 8
-    // Every level but the last two is larger than the body, so each still reads as a heading against it; five and six
-    // keep the body size and stand out by weight, six also by gray.
     static let headingSizes: [CGFloat] = [30, 24, 20, 18, 16, 16]
     static let headingWeights: [PlatformFont.Weight] = [.heavy, .bold, .bold, .semibold, .semibold, .semibold]
     static let codeSize = CGFloat(13.5)
@@ -66,7 +61,6 @@ enum NoteLook {
         return (a.native, a.inkNative)
     }
 
-    /// Callout kinds borrow the course presets, so a theorem is violet in every course.
     static func callout(_ type: String) -> PlatformColor {
         switch type {
         case "definition", "info", "note", "abstract": preset("blue").accent
@@ -78,10 +72,10 @@ enum NoteLook {
         }
     }
 
-    /// Code colors by the highlighter's `tok-*` classes (resources/web/native.js).
+    // 하이라이터의 `tok-*` class(resources/web/native.js)에 따라 색을 정한다.
     static func token(_ classes: String) -> (color: PlatformColor, italic: Bool)? {
         let set = Set(classes.split(separator: " ").map(String.init))
-        // A token carries several classes (a called method is a property and a function), so the first match wins.
+        // 토큰 하나에 class가 여럿 붙으므로(호출한 메서드는 property이면서 function이다) 처음 맞는 것을 쓴다.
         for (names, color, italic) in tokenColors where !set.isDisjoint(with: names) { return (color, italic) }
         return nil
     }

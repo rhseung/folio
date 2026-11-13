@@ -24,7 +24,6 @@ struct InfoBlocks: View {
                     if people.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .courseInfoNoPeople)) } }
                     ForEach(Array(people.enumerated()), id: \.element.id) { i, p in
                         CardRow(last: i == people.count - 1) {
-                            // The name and its details open the person; the address beside them still writes mail.
                             Button {
                                 openLink(AppLink(.person, p.id))
                             } label: {
@@ -89,7 +88,6 @@ struct InfoBlocks: View {
             }
         }
         .onAppear { model.memo = c.memo }
-        // A memo saved elsewhere (another device, the sync) replaces the shown one unless it is being edited here.
         .onChange(of: c.memo) { old, new in if model.memo == old { model.memo = new } }
     }
 }

@@ -17,7 +17,6 @@ final class ReviewModel {
         let id: Kind
         let title: String
         let symbol: String
-        /// Rough notes and lectures are references: they open beside the review note instead of replacing it.
         let beside: Bool
         var page: Int?
     }
@@ -73,8 +72,6 @@ final class ReviewModel {
         side = nil
     }
 
-    /// The unit's PDFs as the units page lists them: its classes' files in class order, opening at the first class's
-    /// page range, then the files linked to the unit alone or split into it.
     static func lectures(of unit: FolioDomain.Unit, in file: CourseFile) -> [(material: FolioDomain.Material, page: Int?)] {
         let sessions = file.sessions
         let items = file.materials(of: .unit(unit.id)).filter { $0.material.isPDF && $0.material.status != .ignored }.map { item in
@@ -82,7 +79,6 @@ final class ReviewModel {
                 guard case .session(let id) = route else { return nil }
                 return sessions.first { $0.id == id }
             }.first
-            // A split lecture opens at the unit's own pages, not at the deck's first page.
             let page =
                 via?.materials.first { $0.materialId == item.material.id }?.firstPage
                 ?? file.pages(of: unit.id, in: item.material.id)?.lowerBound
@@ -101,7 +97,6 @@ final class ReviewModel {
 
     func isShown(_ source: Source) -> Bool { source.id == main || source.id == side }
 
-    /// What clicking the source's chip does; nil for the note in the main pane.
     func action(for source: Source) -> String? {
         source.id == main
             ? nil
@@ -118,8 +113,6 @@ final class ReviewModel {
         return String(format: "%d:%02d", s / 60, s % 60)
     }
 
-    /// Under each result, the day it would set. A unit with a cycle but no next day settles with that result; one
-    /// without a cycle has no day to show.
     func outcomes(now: Date) -> [ReviewResult: String] {
         let hasCycle = workspace.reviewStates(of: courseId, now: now)[unitId] != nil
         return Dictionary(
@@ -130,7 +123,6 @@ final class ReviewModel {
 
     static let results: [ReviewResult] = [.again, .hard, .good, .easy]
 
-    /// The next review day if the unit were finished now with `result`. Runs the real scheduler, so exam limits apply.
     func nextReview(result: ReviewResult, now: Date) -> LocalDate? {
         guard let course = workspace.course(courseId) else { return nil }
         let extra = [(at: now, event: ReviewEvent(unitId: unitId, result: result, seconds: 0))]
@@ -139,7 +131,6 @@ final class ReviewModel {
             .flatMap { ReviewScheduler.state(of: $0, settings: workspace.settings.review, today: today).due }
     }
 
-    /// A skip goes through the same action as the lists' skip; the time the unit was open still counts as study.
     func record(_ result: ReviewResult) {
         if result == .skip {
             workspace.run(ReviewSkip(units: [.init(course: courseId, unit: unitId)], start: started, end: .now))

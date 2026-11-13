@@ -1,9 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// "배치 ▸" (#62, 2026-11-11 사용자, 시안 3-C): the built-in layouts, then the user's, the tab's own checked; then
-/// saving the tab's panes as a layout, and the settings where the user's are named and ordered. In a tab's menu on
-/// the Mac (a long press by touch), and in 보기 on both, the iPad's way to it: its windows are its tabs.
 struct LayoutChoices {
     struct Choice: Identifiable {
         let preset: PanePreset
@@ -51,7 +48,6 @@ struct LayoutMenu: View {
         }
     }
 
-    // A toggle, so the menu checks the tab's own layout; choosing it again lays the panes out afresh.
     func item(_ choice: LayoutChoices.Choice) -> some View {
         Toggle(isOn: Binding(get: { choice.chosen }, set: { _ in choices.apply(choice.preset) })) {
             Label(choice.preset.title, systemImage: choice.preset.symbol)
@@ -60,7 +56,6 @@ struct LayoutMenu: View {
     }
 }
 
-/// The name a layout is saved under, asked once "지금 배치 저장…" is chosen.
 struct LayoutNaming: ViewModifier {
     let workspace: Workspace
     @Binding var panes: TabPanes?
@@ -86,6 +81,5 @@ struct LayoutNaming: ViewModifier {
 }
 
 extension FocusedValues {
-    /// The key window's "배치 ▸", for 보기.
     @Entry var layoutChoices: LayoutChoices?
 }

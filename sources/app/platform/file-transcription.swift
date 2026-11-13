@@ -2,7 +2,6 @@ import AVFoundation
 import FolioDomain
 import Speech
 
-/// What turns a finished recording into text. Per device, not in settings.json: the Whisper model lives on this device.
 enum TranscriptionEngine: String, CaseIterable, Identifiable {
     case apple, whisper
     var id: Self { self }
@@ -14,8 +13,6 @@ enum TranscriptionEngine: String, CaseIterable, Identifiable {
 
     static let standard = TranscriptionEngine.whisper
 
-    /// `locale` is a guess (the live captions' language) that only Apple's recognizer needs; Whisper listens for itself.
-    /// Without `mayDownload` Whisper stands in only if its model is here: 630MB is downloaded when someone asked.
     func transcribe(
         _ url: URL, locale: Locale, hints: TranscriptionHints?, mayDownload: Bool,
         report: @escaping @Sendable (TranscriptionPhase) -> Void
@@ -25,7 +22,6 @@ enum TranscriptionEngine: String, CaseIterable, Identifiable {
             do {
                 return try await AppleFileTranscriber.transcribe(url, locale: locale, hints: hints, report: report)
             } catch TranscriptionError.localeUnsupported where mayDownload {
-                // A recording must never be left without a transcript; Whisper hears every language Folio records in.
                 return try await WhisperTranscriber.shared.transcribe(url, hints: hints, report: report)
             }
         case .whisper:
@@ -35,10 +31,9 @@ enum TranscriptionEngine: String, CaseIterable, Identifiable {
 }
 
 enum TranscriptionPhase: Equatable, Sendable {
-    /// Behind another recording: one model at a time, since Whisper's alone takes a gigabyte of memory.
+    // Whisper 하나가 메모리를 1GB 차지하므로 모델은 한 번에 하나만 돌린다.
     case waiting
     case downloading(Double)
-    /// Loading a downloaded model, which the first time on a device takes minutes.
     case preparing
     case transcribing(Double)
 }
@@ -54,8 +49,6 @@ enum TranscriptionError: LocalizedError {
     }
 }
 
-/// The same recognizer as the live captions, run over the whole file. Unlike a lecture that is starting, this can wait
-/// for the language model to download.
 enum AppleFileTranscriber {
     static func transcribe(_ url: URL, locale: Locale, hints: TranscriptionHints?, report: @escaping @Sendable (TranscriptionPhase) -> Void)
         async throws -> LectureTranscript
@@ -114,23 +107,20 @@ enum AppleFileTranscriber {
 }
 
 enum SpeechAssets {
-    /// What still has to download before `transcriber` runs, or nil when it is ready. An app sees a language model only
-    /// after reserving its locale, even one another app already installed; until then its status reads as not
-    /// installed and asking to install it returns nothing, which once read as "this language can't be transcribed".
+    // 앱은 locale을 예약해야 언어 모델을 볼 수 있다. 다른 앱이 이미 설치한 모델도 같다. 예약하기 전에는 상태가 미설치로 읽히고 설치를 요청해도 아무것도 돌아오지 않는데, 예전에는 이를 "이 언어는
+    // 받아쓸 수 없다"로 읽었다.
     static func request(for transcriber: SpeechTranscriber, locale: Locale) async throws -> AssetInstallationRequest? {
         try await reserve(locale)
         guard await AssetInventory.status(forModules: [transcriber]) != .installed else { return nil }
         return try await AssetInventory.assetInstallationRequest(supporting: [transcriber])
     }
 
-    /// The slides' terms, which the recognizer then prefers over words that sound alike.
     static func context(_ hints: TranscriptionHints) -> AnalysisContext {
         let context = AnalysisContext()
         context.contextualStrings[.general] = hints.terms
         return context
     }
 
-    /// An app holds a few locales at most; the one needed now takes the place of another.
     private static func reserve(_ locale: Locale) async throws {
         let reserved = await AssetInventory.reservedLocales
         if reserved.contains(where: { $0.identifier(.bcp47) == locale.identifier(.bcp47) }) { return }

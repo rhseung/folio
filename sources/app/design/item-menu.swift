@@ -2,23 +2,20 @@ import FolioDomain
 import SwiftUI
 
 struct MenuRow: Identifiable {
-    /// A row inside a submenu. Plain actions only, so a menu goes one level deep at most: on iPad a submenu replaces
-    /// the menu it opened from, and a second level loses the way back.
+    // iPad에서는 하위 메뉴가 그 메뉴를 연 메뉴를 대체하고, 두 단계가 되면 돌아갈 길이 없어진다. 그래서 하위 메뉴 행은
+    // 일반 동작만 받아 메뉴가 한 단계까지만 깊어진다.
     struct Leaf: Identifiable {
         let id: AnyHashable
         let title: String
         let symbol: String
-        /// A value of a state submenu (상태 ▸), checked while it holds. Nil for a plain action.
         var checked: Bool? = nil
         let action: @MainActor () -> Void
     }
 
     enum Kind {
         case action(@MainActor () -> Void)
-        /// A state the row names, checked while it holds; picking it flips it.
         case check(Bool, @MainActor (Bool) -> Void)
         case submenu([Leaf])
-        /// 공유 ▸: the other places the item opens in, then copying its link.
         case share(AppLink, course: UUID?)
     }
 
@@ -68,15 +65,12 @@ struct MenuRow: Identifiable {
     }
 }
 
-/// Nothing on iPadOS, whose menus don't offer it.
 @MainActor func revealInFinder(_ url: URL) {
     #if os(macOS)
     NSWorkspace.shared.activateFileViewerSelecting([url])
     #endif
 }
 
-/// An item kind's menu: which commands the data allows (from `FolioDomain`, in menu order) and how each is drawn and
-/// done. Every place that shows the item reads the same source, so no screen can drop or reorder a row.
 @MainActor protocol ItemMenuSource {
     associatedtype Command: ItemCommand
     var commands: [Command] { get }
@@ -95,8 +89,6 @@ struct ItemMenu<Source: ItemMenuSource>: View {
     }
 }
 
-/// A screen's own button for a command, drawn from the same row as the menu: a button exists only while its menu row
-/// does, and both say the same thing.
 struct ItemButton<Source: ItemMenuSource>: View {
     let source: Source
     let command: Source.Command
@@ -130,7 +122,7 @@ struct MenuRowView: View {
             Menu {
                 ForEach(leaves) { leaf in
                     if let checked = leaf.checked {
-                        // A Toggle, so iPad's menu draws its checkmark as the Mac's does.
+                        // iPad 메뉴도 Mac처럼 체크 표시를 그리도록 `Toggle`로 둔다.
                         Toggle(isOn: Binding(get: { checked }, set: { _ in leaf.action() })) { Label(leaf.title, systemImage: leaf.symbol) }
                     } else {
                         Button(leaf.title, systemImage: leaf.symbol) { leaf.action() }
@@ -146,8 +138,6 @@ struct MenuRowView: View {
     }
 }
 
-/// Where else an item opens, and its link, under one row at the same place in every menu (#403). Opening here is the
-/// menu's own "열기", so it isn't repeated.
 struct ShareMenu: View {
     let link: AppLink
     var course: UUID?
@@ -167,9 +157,6 @@ struct ShareMenu: View {
     }
 }
 
-/// The `⋯` of a page that shows one item (a note, a file, a unit, a recording, a course), at the end of its bar or
-/// header: the item's own menu, always shown so a touch finds what a right-click would (#403). In a `PageBar` it takes
-/// the bar's button style like the bar's other items.
 struct PageMenuButton<Items: View>: View {
     var inBar = false
     @ViewBuilder var items: Items

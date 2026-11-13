@@ -6,14 +6,10 @@ import SwiftUI
 import AppKit
 #endif
 
-/// Records study time: automatically while a course screen is in front and the user is
-/// active, and by hand with the manual timer for study done away from the app. Each finished span becomes one
-/// `study_session` event in that course's device log.
 @MainActor @Observable
 final class StudyTracker {
     static let shared = StudyTracker()
 
-    /// Bumped after each write so the today chart reloads.
     private(set) var revision = 0
     private(set) var manual: (courseId: UUID, start: Date)?
 
@@ -24,7 +20,6 @@ final class StudyTracker {
 
     private init() {
         #if os(macOS)
-        // Local monitors see only events sent to this app, which is what "the user is active here" means.
         NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .leftMouseDown, .rightMouseDown, .scrollWheel, .mouseMoved]) { event in
             MainActor.assumeIsolated { StudyTracker.shared.input() }
             return event
@@ -117,7 +112,6 @@ private struct StudyTimeModifier: ViewModifier {
     }
 }
 
-/// While it runs for another course, it shows that one so it can be stopped.
 struct ManualTimerButton: View {
     @Environment(Workspace.self) private var workspace
     let courseID: UUID

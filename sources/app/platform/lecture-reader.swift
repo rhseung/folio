@@ -4,30 +4,23 @@ import FolioStorage
 import Foundation
 import PDFKit
 
-/// Where a lecture's proposed sections came from, in the order they are tried (#321).
 enum LectureSource: Equatable, Sendable {
     case outline, titles, claude
 }
 
 enum LectureFinding: Equatable, Sendable {
     case found(LectureSplit, LectureSource)
-    /// Read, but nothing said where the units begin: the user splits by hand from one section.
     case nothing(pageCount: Int)
     case unreadable
-    /// Claude was asked and gave no split: the line saying why. The user splits by hand or asks again.
     case failed(String, pageCount: Int)
 }
 
-/// What "Claude로 나누기" came back with (#450).
 enum ClaudeFinding: Equatable, Sendable {
     case found(LectureSplit)
-    /// Claude answered, but with nothing that splits the file.
     case nothing
     case unreadable
-    /// Why the request failed, in the user's words.
     case failed(String)
 
-    /// The line a screen shows for anything but a split.
     var message: String? {
         switch self {
         case .found: nil
@@ -38,9 +31,7 @@ enum ClaudeFinding: Equatable, Sendable {
     }
 }
 
-/// The two screens' way to Claude: whether it can be asked, and asking it. Tests give a stand-in.
 struct LectureClaude {
-    /// Why the button is off; nil once Claude is set up. Read each time, as settings can connect it meanwhile.
     var off: @MainActor () -> String?
     var ask: @MainActor (URL, [FolioDomain.Unit]) async -> ClaudeFinding
 
@@ -54,22 +45,14 @@ struct LectureClaude {
     }
 }
 
-/// Reads a lecture PDF for its sections. With Claude set up, Claude alone reads them: it gets each page's title, the
-/// start of its text and, for a page with little text, its picture (#450). The outline and the slide titles are only
-/// for a Mac without Claude, as they guess where a deck's own words would tell Claude better (2026-11-12 사용자).
-/// Matching to units by name happens here too, so every caller proposes the same thing. Nothing is written: the
-/// result is a proposal the add sheet or the split screen shows.
 enum LectureReader {
     struct Read: Sendable {
         var pageCount: Int
         var outline: [LectureReading.Bookmark]
-        /// Empty when the outline already split the file and the pages weren't asked for: they aren't read then.
         var pages: [LectureReading.Page]
-        /// Each page's whole text, in step with `pages`.
         var texts: [String]
     }
 
-    /// `progress` gets pages read and the page count, on the main actor.
     static func find(
         _ url: URL, units: [FolioDomain.Unit], claude: ClaudeClient?,
         progress: @escaping @MainActor (Int, Int) -> Void = { _, _ in }
@@ -81,7 +64,6 @@ enum LectureReader {
         }
 
         if let claude {
-            // A failed or empty answer is not passed on to the titles: their guess would then look like Claude's.
             let finding = await ask(claude, read: read, url: url, units: units)
             if case .found(let split) = finding { return .found(split, .claude) }
             return .failed(finding.message ?? "", pageCount: read.pageCount)
@@ -99,7 +81,6 @@ enum LectureReader {
         return .nothing(pageCount: read.pageCount)
     }
 
-    /// Straight to Claude, whatever the outline and titles would say: the user asked for its reading.
     static func askClaude(_ url: URL, units: [FolioDomain.Unit], claude: ClaudeClient) async -> ClaudeFinding {
         guard let read = await Task.detached(operation: { read(url, everyPage: true, progress: { _, _ in }) }).value else {
             return .unreadable
@@ -109,7 +90,6 @@ enum LectureReader {
 
     private static func ask(_ claude: ClaudeClient, read: Read, url: URL, units: [FolioDomain.Unit]) async -> ClaudeFinding {
         let pictured = LecturePage.pictured(texts: read.texts, titles: read.pages.map(\.title))
-        // A deck with no titles and nothing to picture gives Claude nothing to read.
         guard read.pages.contains(where: { $0.title != nil }) || !pictured.isEmpty else { return .nothing }
         let pictures = await Task.detached(operation: { Self.pictures(url, pages: pictured) }).value
         let pages = read.pages.indices.map { LecturePage(title: read.pages[$0].title, body: read.texts[$0], image: pictures[$0]) }
@@ -121,9 +101,7 @@ enum LectureReader {
         }
     }
 
-    /// Opens the file inside its security scope: the add sheet's files come from outside the sandbox, and
-    /// `PDFPages.open` reads through the file coordinator, which needs the scope too. `everyPage` reads the pages
-    /// even when the outline splits the file, for Claude.
+    // 파일을 security scope 안에서 연다. 추가 시트의 파일은 sandbox 밖에서 오고, `PDFPages.open`은 file coordinator로 읽는데 이것도 scope가 필요하다.
     nonisolated static func read(_ url: URL, everyPage: Bool, progress: @Sendable (Int, Int) -> Void) -> Read? {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
@@ -135,7 +113,7 @@ enum LectureReader {
         }
         var pages: [LectureReading.Page] = [], texts: [String] = []
         for i in 0..<count {
-            // The whole text, figures and all: `LecturePage.pictured` counts them, and the cleaned text has none.
+            // `LecturePage.pictured`가 그림을 세는데 정리한 텍스트에는 그림이 없으므로, 그림을 포함한 원래 텍스트를 읽는다.
             let raw = pdf.page(at: i)?.attributedString ?? NSAttributedString()
             let text = PDFPages.text(of: raw, number: i + 1)
             pages.append(LectureReading.Page(title: text.title, words: text.words))
@@ -145,7 +123,6 @@ enum LectureReader {
         return Read(pageCount: count, outline: outline, pages: pages, texts: texts)
     }
 
-    /// Small JPEGs of the given 0-based pages, keyed by page.
     nonisolated static func pictures(_ url: URL, pages: [Int]) -> [Int: Data] {
         guard !pages.isEmpty else { return [:] }
         let scoped = url.startAccessingSecurityScopedResource()

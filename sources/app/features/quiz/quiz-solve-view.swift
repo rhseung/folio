@@ -14,10 +14,6 @@ struct QuizSolveView: View {
     }
 
     var body: some View {
-        // Two panes, not three: the card's history and the round tally sit under the card, so the card keeps its width
-        // when the Claude inspector opens. The pane and divider run up under the toolbar like the course column.
-        // Not a step in the window's history: the pane and the cards are one screen, and the scope isn't an address.
-        // Folded, the pane is the page until a round starts, and after that opens over the cards from the corner button.
         ColumnSplit(kind: .quizScope, width: 250, fold: .list(showingPage: model.started)) {
             scopePane
         } content: {
@@ -26,7 +22,7 @@ struct QuizSolveView: View {
         .scrollEdgeEffectHidden(true, for: .top)
         .onAppear { model.prepare(course) }
         #if DEBUG && os(macOS)
-        // After the cards load: started from onAppear, the snapshot showed an empty deck while the pane counted cards.
+        // 카드를 불러온 뒤에 시작해야 한다. onAppear에서 시작하면 칸은 카드를 세는데 스냅숏은 빈 덱을 보였다.
         .onChange(of: model.quiz.cards.count, initial: true) { _, n in
             if SnapshotDriver.directory != nil, !model.started, n > 0 {
                 model.order = .wrongFirst; model.start(label: String(localized: .quizSolvePickedScope), course: course)
@@ -120,7 +116,6 @@ struct QuizSolveView: View {
             .clearOfColumnButtons(inset: Theme.Space.l)
         }
         .overflowFade(.vertical)
-        // The start button stays in view: below forty units it was a scroll away from every choice it starts.
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(alignment: .leading, spacing: Theme.Space.s) {
                 Text(model.footer(pane))
@@ -176,7 +171,6 @@ struct QuizSolveView: View {
                 Meter(value: tally.progress, height: 4).padding(.leading, 22)
             }
             .padding(.horizontal, Theme.Space.s).padding(.vertical, Theme.Space.s)
-            // The check carries the choice; tinting every chosen row (all of them, by default) made one solid slab.
             .background { if on { Color.clear.surface(Theme.Palette.card, in: .rect(cornerRadius: Theme.Radius.control)) } }
             .contentShape(.rect)
         }
@@ -230,7 +224,6 @@ struct QuizSolveView: View {
     }
 
     @ViewBuilder var finished: some View {
-        // A shortcut can start a scope with no cards, and 끝내기 can come before any answer: neither solved anything.
         if model.round.isEmpty {
             ContentUnavailableView {
                 Label(model.finishedTitle, systemImage: "rectangle.stack")
@@ -453,7 +446,6 @@ struct QuizSolveView: View {
     }
 }
 
-/// Math stays as TeX until KaTeX is bundled.
 func markdown(_ text: String) -> AttributedString {
     (try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(text)
 }

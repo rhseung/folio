@@ -1,8 +1,8 @@
 import FolioDomain
 import SwiftUI
 
-/// The pointing hand over anything clickable on Mac. Wraps the base style, so `.plain` or `.borderless` keep their look;
-/// set once at the root for unstyled buttons and around every explicit `.buttonStyle`, which would otherwise replace it.
+// 기본 스타일을 감싸므로 `.plain`이나 `.borderless`는 모양을 지킨다. 명시한 `.buttonStyle`은 이 스타일을 대체하므로,
+// 루트에 한 번 두고 명시한 `.buttonStyle`마다 다시 감싼다.
 struct PointingButtonStyle<Base: PrimitiveButtonStyle>: PrimitiveButtonStyle {
     let base: Base
     @Environment(\.isEnabled) private var isEnabled
@@ -19,13 +19,12 @@ extension PrimitiveButtonStyle {
     static func pointing<Base: PrimitiveButtonStyle>(_ base: Base) -> Self where Self == PointingButtonStyle<Base> { .init(base: base) }
 }
 
-/// The course's colour is set here, not by the tint around it: a course tints its pages with its ink, pale in dark,
-/// and a sheet doesn't take the tint of the view it opens from, only the `accent` it is handed.
+// 과목은 페이지를 자기 잉크 색(다크 모드에서는 옅은 색)으로 tint하고, 시트는 연 뷰의 tint를 받지 않고 넘겨받은
+// `accent`만 받는다. 그래서 과목 색은 둘러싼 tint가 아니라 여기서 정한다.
 struct ProminentButtonStyle: PrimitiveButtonStyle {
     @Environment(\.accent) private var accent
 
     func makeBody(configuration: Configuration) -> some View {
-        // `.gray` is the accent where no course is in view.
         Button(configuration).buttonStyle(.pointing(.borderedProminent))
             .tint(accent == .gray ? Color.accentColor : accent.fill)
     }
@@ -35,8 +34,7 @@ extension PrimitiveButtonStyle where Self == ProminentButtonStyle {
     static var prominent: ProminentButtonStyle { .init() }
 }
 
-/// A small control's hit area grown to `side` on each side around what is drawn, without moving it or its neighbours. Only
-/// on touch: a pointer aims finer, and on the Mac the wider area would take clicks meant for the views beside it.
+// 터치에서만 넓힌다. 포인터는 더 정밀하게 가리키고, Mac에서 넓은 영역은 옆 뷰를 노린 클릭을 가져갔다.
 struct TouchTarget: Shape {
     var side: CGFloat = Theme.Size.touchTarget
 
@@ -50,7 +48,7 @@ struct TouchTarget: Shape {
 }
 
 extension View {
-    /// The pointing hand for menus: a custom button style on a `.button`-style menu turns it back into a pop-up.
+    // `.button` 스타일 메뉴에 사용자 정의 button style을 주면 pop-up으로 돌아가므로, 메뉴의 손가락 포인터는 따로 둔다.
     func pointingHand() -> some View {
         #if os(macOS)
         pointerStyle(.link)
@@ -59,7 +57,6 @@ extension View {
         #endif
     }
 
-    /// Clicking anywhere in the container runs `action`; buttons inside it keep their own clicks.
     func opens(_ action: (() -> Void)?) -> some View {
         #if os(macOS)
         contentShape(.rect).onTapGesture { action?() }.pointerStyle(action == nil ? nil : .link)
@@ -70,13 +67,10 @@ extension View {
 }
 
 extension EnvironmentValues {
-    /// The item of a list page the window's link names (an exam, a session): `Page` scrolls to it and its row is marked.
     @Entry var linkFocus: UUID?
 }
 
 extension View {
-    /// A row a link can name. While the window's link names it, it is marked as chosen, and edged in the course color
-    /// for a moment when the link arrives, so the eye finds it after the scroll.
     func linkTarget(_ id: UUID) -> some View { modifier(LinkTarget(id: id)) }
 }
 
@@ -110,7 +104,8 @@ extension View {
     func fileDrop(_ perform: @escaping ([URL]) -> Void) -> some View { modifier(FileDrop(perform: perform)) }
 
     func fileDrag(_ url: URL) -> some View {
-        // shortcut: an iCloud placeholder that isn't downloaded yet drags as nothing; download first if that bites.
+        // shortcut: 아직 내려받지 않은 iCloud placeholder는 끌어도 아무것도 전달되지 않는다. 문제가 되면 먼저
+        // 내려받는다.
         onDrag { NSItemProvider(contentsOf: url) ?? NSItemProvider() }
     }
 }
@@ -139,14 +134,9 @@ private struct FileDrop: ViewModifier {
     }
 }
 
-/// What a press on a row of a list that picks several rows means: the row alone, the rows from the last pick to it,
-/// or that row added or taken away.
 enum PickPress { case only, range, toggle }
 
 extension View {
-    /// A press on a row of a list that picks several. On a Mac ⇧ widens and ⌘ adds or takes away. A touch screen has
-    /// no keys to hold: a long press starts picking (`hold`), and while `picking` a tap means `touch`. A hardware
-    /// keyboard's ⇧ and ⌘ still work on an iPad. The transcript's lines and the add sheet's rows both pick this way.
     func picks(picking: Bool, touch: PickPress, hold: @escaping () -> Void, _ press: @escaping (PickPress) -> Void) -> some View {
         modifier(Picks(picking: picking, touch: touch, hold: hold, press: press))
     }
@@ -160,8 +150,8 @@ private struct Picks: ViewModifier {
 
     #if os(macOS)
     func body(content: Content) -> some View {
-        // The click's own flags: the keyboard's live state (`NSEvent.modifierFlags`) misses a key the click carries
-        // but no key holds, as from Accessibility or a scripted click.
+        // 클릭 이벤트 자신의 flags를 읽는다. 키보드의 현재 상태(`NSEvent.modifierFlags`)는 손쉬운 사용이나 스크립트
+        // 클릭처럼 키를 누르지 않고 클릭에 실린 키를 놓친다.
         content.contentShape(.rect).onTapGesture {
             let flags = NSApp.currentEvent?.modifierFlags ?? NSEvent.modifierFlags
             press(flags.contains(.shift) ? .range : flags.contains(.command) ? .toggle : .only)
@@ -173,7 +163,7 @@ private struct Picks: ViewModifier {
 
     func body(content: Content) -> some View {
         content.contentShape(.rect)
-            // SwiftUI's tap: UIKit's, which carries the keys, would also fire beside the buttons and menus in the row.
+            // SwiftUI의 탭을 쓴다. 키를 함께 전하는 UIKit의 탭은 행 안의 버튼과 메뉴 옆에서도 발동한다.
             .onTapGesture {
                 let flags = keys.flags
                 press(flags.contains(.shift) ? .range : flags.contains(.command) ? .toggle : picking ? touch : .only)
@@ -189,8 +179,8 @@ private struct Picks: ViewModifier {
 }
 
 #if os(iOS)
-/// The hardware keyboard's keys held as the last touch began. SwiftUI's tap carries no modifier keys and its
-/// `onModifierKeysChanged` is Mac-only, so a recognizer reads them off the touch's event.
+// SwiftUI의 탭은 수정 키를 전하지 않고 `onModifierKeysChanged`는 Mac에서만 동작하므로, recognizer가 터치 이벤트에서
+// 키를 읽는다.
 @MainActor private final class HeldKeys {
     var flags: UIKeyModifierFlags = []
 }
@@ -200,7 +190,7 @@ private struct KeyProbe: UIGestureRecognizerRepresentable {
 
     func makeUIGestureRecognizer(context: Context) -> Probe { Probe(keys: keys) }
 
-    /// Reads the keys and fails at once, so it never holds back or cancels the touch for anything else.
+    // 다른 제스처의 터치를 붙잡거나 취소하지 않도록, 키만 읽고 바로 실패한다.
     final class Probe: UIGestureRecognizer {
         let keys: HeldKeys
 

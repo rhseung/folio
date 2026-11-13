@@ -2,20 +2,17 @@ import FolioMarkdown
 import Foundation
 import Observation
 
-/// The outline beside a note (#387): its headings, the one being read, and the deep ones opened. Which lines are
-/// headings and how they fold is `NoteOutline`'s; this keeps what the screen does with it.
 @MainActor @Observable
 final class NoteOutlineModel {
     let views = NoteViews()
     private(set) var outline = NoteOutline(entries: [])
-    /// The heading the reader is in.
     private(set) var current: Int?
-    /// Deep headings opened under these, by the heading's anchor: indices move as headings are written above.
+    // 제목 위에 글을 쓰면 인덱스가 바뀌므로 제목의 anchor로 기억한다.
     private var open: Set<String> = []
     @ObservationIgnored private var top = 1
     @ObservationIgnored private var text: String?
-    /// Until then a scroll doesn't move the mark: a jump to a heading near the end can't bring it to the top, and the
-    /// scroll it makes would mark the heading above.
+    // 끝 근처의 제목으로 뛰면 그 제목을 맨 위로 올릴 수 없고, 그때 생긴 스크롤이 위의 제목을 표시하게 된다. 그래서 이
+    // 시각까지는 스크롤해도 표시를 옮기지 않는다.
     @ObservationIgnored private var held: Date?
     private let now: () -> Date
 
@@ -28,7 +25,6 @@ final class NoteOutlineModel {
         let index: Int
         let title: String
         let indent: Int
-        /// Deep headings fold under it, and whether they are open.
         let folds: Bool
         let open: Bool
         let marked: Bool
@@ -86,10 +82,7 @@ final class NoteOutlineModel {
     }
 }
 
-/// Where the outline goes: beside the note when the panel has room for it and what it shows, else in the bar
-/// button's popover.
 struct NoteOutlineFit: Equatable {
-    /// Room beside the source and the preview side by side, and beside one of them.
     var besideSplit: Bool
     var besideOne: Bool
 

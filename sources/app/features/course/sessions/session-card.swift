@@ -2,9 +2,6 @@ import FolioActions
 import FolioDomain
 import SwiftUI
 
-/// A saved class: the date tile, what it covered and its attendance, then its recording and review note as pills.
-/// Under way it fills from the left as the class goes; on its day it offers joining, recording and the rough note in
-/// one click. Everything else lives in the ⋯ menu.
 struct SessionCard: View {
     @Environment(\.accent) private var accent
     let model: SessionsModel
@@ -18,7 +15,6 @@ struct SessionCard: View {
     @State private var showsGaps = false
     @State private var editAfterGaps = false
 
-    /// The day line and its units, which the pills must leave beside them.
     static let linesRoom: CGFloat = 240
 
     var body: some View {
@@ -35,9 +31,9 @@ struct SessionCard: View {
                     fill: live ? accent.tint : Theme.Palette.page
                 )
                 .opacity(fade)
-                // The pills under the lines where both don't fit: beside them on an iPhone, the units picker broke a
-                // letter a line and the row ran out of its card. The lines' ideal is pinned, so a long title in a full
-                // window truncates as before rather than folding the row.
+                // 둘이 다 들어가지 않으면 알약을 줄 아래로 내린다. iPhone에서 나란히 두면 단원 선택기가 한 줄에 한
+                // 글자씩 끊기고 행이 카드 밖으로 나갔다. 줄의 ideal 크기를 고정해 두어, 넓은 창에서 긴 제목은 행을 접지
+                // 않고 예전처럼 잘린다.
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: Theme.Space.l) {
                         lines(file, live: live).frame(idealWidth: Self.linesRoom).opacity(fade)
@@ -57,7 +53,6 @@ struct SessionCard: View {
         .padding(.trailing, Theme.Space.m)
         .frame(minHeight: 60)
         .background {
-            // The class's elapsed share fills the card from the left with a hard edge, standing in for a progress bar.
             GeometryReader { proxy in
                 Theme.Palette.card.overlay(alignment: .leading) {
                     if let progress = timing.progress { accent.tint.frame(width: proxy.size.width * progress) }
@@ -81,13 +76,12 @@ struct SessionCard: View {
                 Text(model.title(of: session, in: file)).font(Theme.Typeface.bodyStrong).lineLimit(1).truncationMode(.tail)
                     .foregroundStyle(model.hasSubject(session, in: file) ? Theme.Palette.text : Theme.Palette.textTertiary)
                     .help(file.title(of: session, calendar: model.calendar))
-                    // The accent border and tile are the only visible mark, so VoiceOver needs the word.
+                    // 강조색 테두리와 타일만 눈에 보이는 표시라서 VoiceOver에는 낱말이 필요하다.
                     .accessibilityValue(live ? String(localized: .sessionsNow) : "")
                 SessionKindChip(kind: session.kind)
                 if let late { Chip(late.label, tone: late.value == .late ? .warning : late.value == .absent ? .danger : .plain) }
                 let gaps = model.leftGaps(session, in: file, now: now)
                 if !gaps.isEmpty {
-                    // What is missing opens on a press too, not only in the tooltip, which touch never shows.
                     Button {
                         showsGaps = true
                     } label: {
@@ -111,7 +105,6 @@ struct SessionCard: View {
             }
             .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
         }
-        // Takes the room the pills leave, so the title and units truncate before anything else moves.
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -135,8 +128,6 @@ struct SessionCard: View {
         }
         .padding(Theme.Space.l)
         .presentationCompactAdaptation(.popover)
-        // The sheet waits for the popover to be gone: opened in the same update, the iPad still presents the popover
-        // from this card and drops the sheet.
         .onDisappear {
             if editAfterGaps {
                 editAfterGaps = false
@@ -166,7 +157,6 @@ struct SessionCard: View {
                 ClassCard.Pill(
                     title: String(localized: .sessionsReviewWriting), tone: .warning, help: String(localized: .sessionsSlotReviewDraftHelp)
                 ) { openNote(id) }
-            // Not owed until the class ends: under way, the card's own buttons start the notes.
             case .missing where !live:
                 ClassCard.Pill(
                     title: String(localized: .sessionsReviewMissing), tone: .danger, help: String(localized: .sessionsSlotReviewMakeHelp)
@@ -181,7 +171,6 @@ struct SessionCard: View {
     }
 
     func actions(_ file: CourseFile) -> some View {
-        // Under the lines where they fit, from the card's edge where they don't: indented on an iPhone they ran past it.
         ViewThatFits(in: .horizontal) {
             HStack(spacing: Theme.Space.s) { actionButtons(file) }.padding(.leading, ClassCard.tile + Theme.Space.l)
             HStack(spacing: Theme.Space.s) { actionButtons(file) }
@@ -201,7 +190,6 @@ struct SessionCard: View {
         .buttonStyle(.pointing(.bordered))
     }
 
-    /// On its own screen: no "열기", which is where the menu already is.
     var menuItems: some View {
         SessionMenu(courseId: course.id, sessionId: session.id, host: .own, openNote: openNote)
     }

@@ -32,12 +32,11 @@ private struct AppServices: ViewModifier {
         content
             .task(id: inputs) {
                 guard workspace.gist != nil, !workspace.runsOnFixture else { return }
-                // Edits come in bursts (typing in a field saves often); wait for them to settle.
                 try? await Task.sleep(for: .seconds(2))
                 guard !Task.isCancelled else { return }
                 await NotificationScheduler.reschedule(workspace)
             }
-            // Every half hour: the LMS serves the whole school, so no faster.
+            // LMS는 학교 전체가 쓰므로 30분보다 자주 읽지 않는다.
             .task(id: LMSInputs(gist: workspace.gist?.url, connected: workspace.lms.isConnected)) {
                 guard workspace.gist != nil, !workspace.runsOnFixture, workspace.lms.isConnected else { return }
                 while !Task.isCancelled {

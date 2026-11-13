@@ -2,7 +2,6 @@ import FolioActions
 import FolioDomain
 import SwiftUI
 
-/// A unit's menu, the same in the units list, on the unit's page, the course overview, Today's reviews and search (#403).
 @MainActor
 struct UnitMenuSource: ItemMenuSource {
     let workspace: Workspace
@@ -57,7 +56,6 @@ struct UnitMenuSource: ItemMenuSource {
     }
 }
 
-/// For `.contextMenu` and the unit page's `⋯`.
 struct UnitMenu: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.openLink) private var openLink
