@@ -227,6 +227,7 @@ Me/GIST/
 - 옵시디언 볼트: `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Brain`. Folio는 이 볼트를 읽거나 쓰지 않고, `obsidian://` 링크로만 참조한다.
 - 개발과 테스트 중에는 실제 GIST 폴더에 쓰지 않는다. 테스트는 `FolioFixtures`의 가짜 폴더를 임시 디렉터리에 써서 쓴다. 앱이나 CLI를 가짜 폴더로 돌릴 때는 `mise run fixture -- <폴더>`로 만든다.
 - 실제 폴더를 대상으로 처음 실행하기 전에 사용자에게 알리고, 백업이 있는지 확인한다.
+- 앱이 여는 폴더는 기기마다 기억한다(`Workspace.bookmarkKey`). 기억한 폴더가 없으면 첫 실행 화면(#453)이 뜨고, 기억한 폴더가 없어졌거나 iCloud에서 아직 내려받지 않았으면 그 폴더를 열지 않고 첫 실행의 자료 폴더 단계로 다시 연결하게 한다(`FolderProbe.availability`). 테스트, 미리보기, `FOLIO_GIST` 실행은 기억한 폴더를 바꾸지 않는다(`Workspace.remembersFolders`). 테스트 호스트가 앱 자신이라 `UserDefaults.standard`가 실제 앱의 것이기 때문이다.
 
 ## 테스트 기준
 
