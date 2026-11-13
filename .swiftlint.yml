@@ -26,6 +26,8 @@ disabled_rules:
   - statement_position
   - switch_case_alignment
   - vertical_parameter_alignment
+  # swift-format moves a closure's parameters to the next line when the call fills the line.
+  - closure_parameter_position
 
 opt_in_rules:
   - private_swiftui_state

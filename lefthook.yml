@@ -1,12 +1,21 @@
 # Checks before each commit, on what the commit changes. `mise run hooks` installs them; the same checks run in
 # `mise run test` and CI, so a commit that skips them still meets them there.
 pre-commit:
-  parallel: true
+  # In order: SwiftLint reads the files swift-format has just rewritten.
+  piped: true
   commands:
+    swift-format:
+      priority: 1
+      glob: "*.swift"
+      # stage_fixed adds the whole file back, so a file staged in part goes in whole once formatted.
+      run: mise exec -- scripts/swift-format.sh format {staged_files}
+      stage_fixed: true
     swiftlint:
+      priority: 2
       glob: "*.swift"
       run: mise exec -- swiftlint lint --quiet --strict --force-exclude --baseline .swiftlint-baseline.json {staged_files}
     folio-lint:
+      priority: 3
       glob: "*.swift"
       # Reads the whole codebase in about two seconds once built: a rule like app-direction needs every file.
       run: mise run check-code
