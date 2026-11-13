@@ -62,7 +62,6 @@ struct RecordingTests {
         #expect(!spring.isOver(on: day(6, 19), among: [spring, fall]))
         #expect(spring.isOver(on: day(6, 20), among: [spring, fall]))
 
-        // No end date: over only once a later semester has begun.
         spring.end = nil
         #expect(!spring.isOver(on: day(8, 31), among: [spring, fall]))
         #expect(spring.isOver(on: day(9, 1), among: [spring, fall]))

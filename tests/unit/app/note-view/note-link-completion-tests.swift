@@ -8,7 +8,6 @@ import Testing
 
 @testable import Folio
 
-/// Link completion's candidates from the fixture folder, and what taking one writes (#31).
 @MainActor
 struct NoteLinkCompletionTests {
     let workspace: Workspace
@@ -28,7 +27,6 @@ struct NoteLinkCompletionTests {
 
     init() throws {
         workspace = try fixtureWorkspace()
-        // The fixture's files aren't tracked until asked.
         workspace.run(MaterialTrack(course: graphTheory))
         other = try #require(workspace.run(NoteAdd(course: graphTheory, title: "매칭 정리", body: Self.otherText))?.made)
         let ownID = try #require(workspace.run(NoteAdd(course: graphTheory, title: "지금 노트", body: "# 지금\n"))?.made)
@@ -49,12 +47,10 @@ struct NoteLinkCompletionTests {
         let items = await links.candidates(for: try query("[[매칭|]]"), text: "")
         let note = try #require(items.first { $0.title == "매칭 정리" })
         #expect(note.body == "[[note:\(other.uuidString)|매칭 정리]]" && note.symbol == "doc.text")
-        // The note being written isn't offered, and a PDF's link goes on to its page.
         #expect(!items.contains { $0.title == "지금 노트" })
         let pdf = try #require(await links.candidates(for: try query("[[Matchings|]]"), text: "").first { $0.title == "05_Matchings.pdf" })
         #expect(pdf.continues && pdf.body.hasPrefix("[[material:") && pdf.body.hasSuffix("#page=|05_Matchings.pdf]]"))
         #expect((pdf.body as NSString).substring(to: pdf.caret ?? 0).hasSuffix("#page="))
-        // Nothing typed: this course's notes.
         let start = await links.candidates(for: try query("[[|]]"), text: "")
         #expect(start.contains { $0.title == "매칭 정리" } && start.allSatisfy { $0.symbol == "doc.text" })
     }
@@ -83,7 +79,6 @@ struct NoteLinkCompletionTests {
         let items = await links.candidates(for: try query("[[매칭 정리#쾨|]]"), text: "")
         #expect(items.map(\.title) == ["쾨니그 정리"])
         #expect(items.first?.body == "[[note:\(other.uuidString)#쾨니그 정리|매칭 정리]]")
-        // By ID, keeping the name already written.
         let byID = await links.candidates(for: try query("[[note:\(other.uuidString)#||내 이름]]"), text: "")
         #expect(byID.map(\.body) == ["[[note:\(other.uuidString)#매칭|내 이름]]", "[[note:\(other.uuidString)#쾨니그 정리|내 이름]]"])
     }
@@ -103,7 +98,6 @@ struct NoteLinkCompletionTests {
         #expect(workspace.notesRevision > revision)
     }
 
-    /// The note being written gets the ID in the editor, which saves it with everything else typed.
     @Test func aBlockOfThisNoteGetsItsIDInTheEditor() async throws {
         let text = "# 지금\n\n앞 문단\n\n[[지금 노트#^]]"
         let q = try query("# 지금\n\n앞 문단\n\n[[지금 노트#^|]]")
@@ -120,7 +114,6 @@ struct NoteLinkCompletionTests {
         let material = try #require(course.file.materials.first { $0.path.hasSuffix("05_Matchings.pdf") })
         try course.store.log.append(MaterialViewEvent(materialId: material.id, page: 6), device: workspace.device, at: .now)
         let items = await links.candidates(for: try query("[[material:\(material.id.uuidString)#page=|]]"), text: "")
-        // The fixture's PDF is a placeholder with no pages to count, so the last page seen is all there is.
         #expect(items.first?.body == "[[material:\(material.id.uuidString)#page=7|05_Matchings.pdf]]")
         #expect(items.first?.detail == String(localized: .notesAssistLinkLastPage))
     }

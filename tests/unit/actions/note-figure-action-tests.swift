@@ -35,7 +35,6 @@ struct NoteFigureActionTests {
         #expect(ctx.changes.allSatisfy { $0.touchesNotes })
     }
 
-    /// Another note may show the picture already there.
     @Test func aTakenNameIsLeftAsItIs() throws {
         try store.writeText("Notes/assets/graph.svg", text: "원래")
         #expect(throws: ActionError.self) { try run(NoteFigureAdd(course: Self.course, name: "graph.svg", svg: Self.svg)) }
@@ -78,7 +77,6 @@ struct NoteFigureActionTests {
         #expect(ctx.made == Self.widget)
         #expect(try store.readText(NoteWidget.path(Self.widget)) == "<p>x</p>")
 
-        // An open note draws its widgets again only when its notes change.
         #expect(ctx.changes.allSatisfy { $0.touchesNotes })
         #expect(throws: ActionError.self) { try run(NoteWidgetAdd(course: Self.course, id: Self.widget, html: "<p>y</p>")) }
         #expect(throws: ActionError.self) {

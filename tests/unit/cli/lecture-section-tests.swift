@@ -6,7 +6,6 @@ import Testing
 
 @testable import FolioCLI
 
-/// A lecture's sections on its units (#321): `unit pages` and `material split`.
 struct LectureSectionCommandTests {
     let h = Harness()
     let course = Harness.graphTheory
@@ -65,7 +64,6 @@ struct LectureSectionCommandTests {
         for line in [Self.track, Self.addKonig] { _ = h.cli(line, gist: gist) }
         #expect(h.cli(["material", "split", "EC4207/05_Matchings.pdf", "5-8"], gist: gist).code == Exit.usage.rawValue)
 
-        // A backward cut is refused before anything is written, the new unit included.
         #expect(h.cli(["material", "split", "EC4207/05_Matchings.pdf", "1-4:매칭", "9-5:König"], gist: gist).code != 0)
         #expect(try h.file(GISTStore(url: gist)).units.map(\.title) == ["König"])
     }

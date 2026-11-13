@@ -4,7 +4,6 @@ import Testing
 
 @testable import FolioStorage
 
-/// course.json v6 -> v7: the one repeat `"weekly"` becomes a rule of interval, unit and weekdays.
 struct RepeatMigrationTests {
     @Test func weeklyBecomesOneWeekAndOtherFieldsStay() throws {
         let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)

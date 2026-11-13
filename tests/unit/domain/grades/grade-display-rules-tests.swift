@@ -2,7 +2,7 @@ import FolioDomain
 import Foundation
 import Testing
 
-/// Made-up grades only: the repository is public.
+// 저장소가 공개이므로 지어낸 성적만 쓴다.
 struct GradeDisplayRulesTests {
     let device = UUID()
     let now = Date(timeIntervalSince1970: 0)
@@ -24,7 +24,7 @@ struct GradeDisplayRulesTests {
 
         let trend = GPACalculator.trend(semesters: [fall, credited, spring, summer], courses: courses, catalog: catalog)
         #expect(trend.map(\.semester.id) == [fall.id, spring.id])
-        // Fall: (12 + 9) / 6. Spring alone: 8 / 2; through spring: (21 + 8) / 8, the credited hours adding no GPA.
+        // 가을은 (12 + 9) / 6이고, 봄만은 8 / 2, 봄까지는 (21 + 8) / 8이다. 인정 학점은 GPA에 더하지 않는다.
         #expect(trend.map(\.gpa) == [3.5, 4])
         #expect(trend.map(\.credits) == [6, 2])
         #expect(trend.map(\.cumulative) == [3.5, 3.625])
@@ -41,7 +41,6 @@ struct GradeDisplayRulesTests {
         #expect(rows.map(\.depth) == [0, 0, 1, 2])
         #expect(rows.map(\.group) == ["기초", "전공", "전공", "전공"])
 
-        // Groups come only from categories without a parent field, not from ones whose parent is missing.
         #expect(Category.groups([deep, orphan, required, major]) == ["전공"])
     }
 
@@ -86,7 +85,6 @@ struct GradeDisplayRulesTests {
                 .group("Reports", weight: 5, first: late.id),
                 .component(late, indented: true),
             ])
-        // Two runs with the same name stay apart.
         #expect(Set(lines.map(\.id)).count == lines.count)
     }
 }

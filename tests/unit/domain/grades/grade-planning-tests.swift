@@ -21,7 +21,7 @@ struct GradePlanningTests {
             categories: [major, required, science],
             letterGrades: [
                 grade("A+", 4.5), grade("A0", 4), grade("B0", 3), grade("F", 0, credits: false), grade("S", nil),
-                grade("W", nil, graduation: false),  // W counts toward total credits but earns none
+                grade("W", nil, graduation: false),
             ])
     }()
 
@@ -30,7 +30,6 @@ struct GradePlanningTests {
 
     // MARK: Simulation
 
-    /// A term in progress; picking its grades gives the same totals as grading it.
     @Test func simulatingATermGradesIt() {
         let fall = Semester(device: device, at: now, year: 2025, term: .fall)
         let spring = Semester(device: device, at: now, year: 2026, term: .spring)
@@ -48,7 +47,7 @@ struct GradePlanningTests {
         #expect(s.effectiveCredits == 15)
         #expect(String(format: "%.3f", s.gpa!) == "3.800")
 
-        // Cumulative: (57 + 3 × 3) / 18.
+        // 누적 GPA는 (57 + 3 × 3) / 18이다.
         let total = GPACalculator.cumulative(semesters: [fall, spring], courses: simulated, catalog: catalog)
         #expect(total.totalCredits == 21)
         #expect(total.effectiveCredits == 18)
@@ -62,7 +61,6 @@ struct GradePlanningTests {
         let open = Course(device: device, at: now, semesterId: term.id, title: "open", credits: 3)
         let courses = [graded, open]
 
-        // An explicit nil clears a recorded grade; a course left out keeps it.
         let cleared = GPACalculator.simulate([graded.id: nil, open.id: grade("B0")], courses: courses)
         #expect(GPACalculator.semester(term, courses: cleared, catalog: catalog).gpa == 3)
         let kept = GPACalculator.simulate([open.id: grade("A+")], courses: courses)
@@ -81,10 +79,10 @@ struct GradePlanningTests {
             course(3, "A+", ["전공필수"]),
             course(3, "B0", ["전공"]),
             course(3, nil, ["전공필수"]),
-            course(3, "F", ["전공필수"]),  // failed: no credits
+            course(3, "F", ["전공필수"]),  // 낙제했으므로 학점이 없다.
             course(1, "S", ["기초과학"]),
-            course(3, "A0", ["전공", "전공필수"]),  // listed under both: counts once toward 전공
-            course(3, "W", ["전공필수"]),  // withdrawn: in the semester total, not in requirements
+            course(3, "A0", ["전공", "전공필수"]),  // 두 분류에 모두 있어도 전공에는 한 번만 센다.
+            course(3, "W", ["전공필수"]),  // 철회한 과목은 학기 합계에는 들고 요건에는 들지 않는다.
         ]
         let credits = GPACalculator.categoryCredits(courses: courses, catalog: catalog)
 
@@ -92,13 +90,12 @@ struct GradePlanningTests {
         #expect(credits[category("전공")] == CategoryCredits(earned: 9, inProgress: 3, passed: 3, taking: 1))
         #expect(credits[category("기초과학")] == CategoryCredits(earned: 1, inProgress: 0, passed: 1, taking: 0))
 
-        // The course lists follow the same rule: the failed course is in neither, the double-listed one appears once.
         let listed = GPACalculator.categoryCourses(courses: courses, catalog: catalog)
         #expect(listed[category("전공필수")]?.map(\.id) == [courses[0], courses[2], courses[5]].map(\.id))
         #expect(listed[category("전공")]?.count == 4)
     }
 
-    /// GIST counts at most 42 major credits toward the 130 unless 심화전공 is declared (2026 학사편람 p.33).
+    // 심화전공을 선언하지 않으면 GIST는 130학점 중 전공 학점을 최대 42학점까지만 센다(2026 학사편람 p.33).
     @Test func majorCreditsPastTheCapDoNotCountTowardGraduation() {
         var catalog = catalog
         let major = catalog.categories.firstIndex { $0.name == "전공" }!
@@ -116,12 +113,10 @@ struct GradePlanningTests {
         courses.append(withdrawn)
         let p = GPACalculator.graduation(semesters: [credited, term], courses: courses, catalog: catalog)
 
-        // 45 major credits earned, 3 over the cap; the child's own cap would be ignored.
         #expect(p.earned == 54 && p.counted == 51 && p.inProgress == 3)
     }
 }
 
-/// A double major gets its own GPA and remaining credits; a child category belongs to its parent's program.
 @Test func programGPAAndRemainingCredits() {
     let (d, t) = (UUID(), Date(timeIntervalSince1970: 0))
     let ec = UUID(), ai = UUID()
@@ -142,12 +137,11 @@ struct GradePlanningTests {
 
     #expect(GPACalculator.program(ec, courses: courses, catalog: catalog).gpa == 3.75)
     #expect(GPACalculator.program(ai, courses: courses, catalog: catalog).gpa == 4.5)
-    #expect(GPACalculator.programRemaining(ec, courses: courses, catalog: catalog) == 30)  // the child's minimum is inside the parent's
-    #expect(GPACalculator.programRemaining(ai, courses: courses, catalog: catalog) == 27)  // the ungraded course is still to come
+    #expect(GPACalculator.programRemaining(ec, courses: courses, catalog: catalog) == 30)
+    #expect(GPACalculator.programRemaining(ai, courses: courses, catalog: catalog) == 27)
 }
 
 struct LetterGradeModeTests {
-    /// An S/U course picks from S, U, W; a letter course doesn't offer S once S is marked S/U-only.
     @Test func gradesFollowTheCoursesMode() {
         func grade(_ symbol: String, _ points: Double?, _ modes: [GradingMode]? = nil) -> LetterGrade {
             var g = LetterGrade(device: UUID(), at: .now, symbol: symbol, points: points, countsInGpa: points != nil, countsInCredits: true)
@@ -164,8 +158,7 @@ struct LetterGradeModeTests {
     }
 }
 
-/// 학사편람 2025 p.8: a double major shares at most 9 credits with the major; the student picks which by listing a
-/// course under both, and what goes past the cap comes off the double major, graded credits first.
+// 학사편람 2025 p.8에 따르면 복수전공은 주전공과 최대 9학점을 공유한다. 학생은 과목을 두 분류에 함께 넣어 고르고, 상한을 넘는 학점은 성적이 있는 학점부터 복수전공에서 뺀다.
 @Test func doubleMajorSharesAtMostItsCapWithTheMajor() {
     let (d, t) = (UUID(), Date(timeIntervalSince1970: 0))
     let a = LetterGrade(device: d, at: t, symbol: "A0", points: 4, countsInGpa: true, countsInCredits: true)
@@ -185,19 +178,18 @@ struct LetterGradeModeTests {
         return c
     }
     let courses = [
-        course([required, double]), course([major, double]), course([major, double], credits: 4),  // 10 shared, graded
-        course([major, double], graded: false),  // 3 more, in progress
-        course([double]), course([double, common]),  // not shared with another program
+        course([required, double]), course([major, double]), course([major, double], credits: 4),  // 공유하는 10학점이며 성적이 있다.
+        course([major, double], graded: false),
+        course([double]), course([double, common]),
     ]
     let credits = GPACalculator.categoryCredits(courses: courses, catalog: catalog)
 
-    // 13 shared against 9: graded 10 lose 1, in-progress 3 lose the other 3.
+    // 공유 13학점이 상한 9학점을 넘으므로, 성적이 있는 10학점에서 1을, 수강 중인 3학점에서 3을 뺀다.
     #expect(credits[double.id] == CategoryCredits(earned: 15, inProgress: 0, passed: 5, taking: 1))
     #expect(credits[major.id] == CategoryCredits(earned: 10, inProgress: 3, passed: 3, taking: 1))
     let shared = GPACalculator.shared(courses: courses, catalog: catalog)
     #expect(shared.count == 1 && shared[0].courses.map(\.id) == courses[0..<4].map(\.id) && shared[0].isOver)
 
-    // Within the cap nothing changes; a minor's cap of 0 takes every shared credit off it.
     let within = GPACalculator.categoryCredits(courses: Array(courses[0..<2]), catalog: catalog)
     #expect(within[double.id]?.earned == 6 && within[major.id]?.earned == 6)
 
@@ -211,7 +203,6 @@ struct LetterGradeModeTests {
 @Test func onlySharedCodeOrApprovedCoursesCountTowardBothPrograms() {
     let (d, t) = (UUID(), Date(timeIntervalSince1970: 0))
     let a = LetterGrade(device: d, at: t, symbol: "A0", points: 4, countsInGpa: true, countsInCredits: true)
-    // A second AI code, as another handbook year adds: matching is by prefix, not id.
     let ec = CourseCode(device: d, at: t, prefix: "EC"), ai = CourseCode(device: d, at: t, prefix: "AI"),
         ai2 = CourseCode(device: d, at: t, prefix: "AI")
     var major = Category(device: d, at: t, name: "전공학점", isMajor: true)

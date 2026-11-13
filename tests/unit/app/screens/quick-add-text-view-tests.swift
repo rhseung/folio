@@ -4,8 +4,6 @@ import SwiftUI
 import Testing
 @testable import Folio
 
-/// The Mac's quick add line, which gives the words it read room by kerning: Hangul typed into it as the input method
-/// types it stays whole, and the room comes only once a syllable is done.
 @MainActor @Suite(.serialized)
 struct QuickAddTextViewTests {
     final class Box {
@@ -31,7 +29,6 @@ struct QuickAddTextViewTests {
     @Test func aSyllableBeingComposedSurvivesTheRoomAroundReadWords() throws {
         let box = Box()
         box.text = "HW5 금"
-        // `금` read as the deadline.
         let marks = [QuickAddMark(range: NSRange(location: 4, length: 1), fill: .blue)]
         let (field, coordinator, view, _) = try #require(make(box, marks: marks))
         let kern = { (i: Int) in view.textStorage?.attribute(.kern, at: i, effectiveRange: nil) as? CGFloat }
@@ -46,7 +43,6 @@ struct QuickAddTextViewTests {
         view.setMarkedText("보", selectedRange: NSRange(location: 1, length: 0), replacementRange: none)
         field.update(view, coordinator)
         #expect(view.string == "HW5 금 보" && view.hasMarkedText())
-        // The binding keeps the text before the syllable until it is done.
         #expect(box.text == "HW5 금 ")
         view.insertText("보", replacementRange: none)
         view.setMarkedText("ㄱ", selectedRange: NSRange(location: 1, length: 0), replacementRange: none)
@@ -54,7 +50,6 @@ struct QuickAddTextViewTests {
         #expect(view.string == "HW5 금 보ㄱ")
         view.unmarkText()
         #expect(box.text == "HW5 금 보ㄱ" && !view.hasMarkedText())
-        // A letter typed after the read word does not keep its room.
         #expect(kern(6) == nil)
     }
 

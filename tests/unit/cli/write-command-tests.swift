@@ -50,7 +50,6 @@ struct WriteCommandTests {
             SettingsSet(field: "review.intervals", value: .array([1.0, 2, 4].map { .number($0) }))
         }
 
-        // The whole file, as the app's settings screen sends it, writes the same.
         try h.expectSame(["settings", "set", "review.intervals", "[1, 2, 4]"]) { gist in
             var s = try ActionContext(gist: gist, device: h.device).settings()
             s.review.intervals = [1, 2, 4]
@@ -61,7 +60,6 @@ struct WriteCommandTests {
         #expect(h.cli(["settings", "set", "dayBoundaryMinutes", "새벽"], gist: gist).code == 2)
     }
 
-    /// One setting changed by its key path leaves every other setting, including one changed just before.
     @Test func settingsFieldKeepsTheOthers() throws {
         let gist = try Harness.fixtureCopy()
         #expect(h.cli(["settings", "set", "dayBoundaryMinutes", "300"], gist: gist).code == 0)
@@ -121,7 +119,6 @@ struct WriteCommandTests {
         let gist = try Harness.fixtureCopy()
         for line in [lab, report, U.addHW] { _ = h.cli(line, gist: gist) }
 
-        // One component's score leaves the other's: an agent setting 재료 must not wipe 고찰.
         for line in [
             ["assignment", "set", "EC4207/HW 3", "--group", "실험", "--score", "재료:8/10", "--score", "고찰:7/10"],
             ["assignment", "set", "EC4207/HW 3", "--score", "재료:9/10"],
@@ -135,7 +132,6 @@ struct WriteCommandTests {
         }
         #expect(try scores() == [G.component: 9, G.quiz: 7])
 
-        // The JSON input's whole list replaces them all.
         #expect(
             h.cli(
                 [
@@ -151,7 +147,6 @@ struct WriteCommandTests {
         #expect(h.cli(["assignment", "set", "EC4207/HW 3", "--group", "없는 묶음"], gist: gist).code == 3)
     }
 
-    /// Retargeting drops the old target's score, as the sheet does; a score moved elsewhere on the grades page stays.
     @Test func assignmentRetargetDropsTheOldTargetsScore() throws {
         let lab = ["component", "add", "EC4207", "실험", "--weight", "10", "--id", G.quiz.uuidString]
         let extra = UUID(uuidString: "B0000000-0000-4000-8000-0000000000EE")!
@@ -243,7 +238,6 @@ struct WriteCommandTests {
             #expect(r.code == 2, "\(args): \(r.err)")
         }
 
-        // A bare item still points at the missing course rather than guessing one.
         #expect(h.cli(["exam", "show", "중간고사"], gist: gist).code == 2)
     }
 }

@@ -7,14 +7,6 @@ import WebKit
 
 @testable import Folio
 
-/// A note view as the app hosts it: `MarkdownEditor` or `NotePreview` in SwiftUI, in a window that's never shown.
-///
-/// The note-view checks (`NoteScreenTests`, `NoteLayoutTests`, `NoteClickGridTests`, `NoteHangulTests`) see the views
-/// only through this: what's drawn, which view a point hits, where the caret goes, how far the page scrolls. This is
-/// the one file that knows the edit view is a TextKit 2 text view in an `NSScrollView` and the preview a web view.
-/// A new edit view (as #267 made) changes this file and the reference pictures, and keeps the checks.
-///
-/// Points are in the panel, from its top left, one pixel a point.
 @MainActor final class NoteBench {
     enum Kind: String, CaseIterable, Sendable {
         case edit, preview
@@ -25,11 +17,8 @@ import WebKit
         init(_ text: String) { self.text = text }
     }
 
-    /// Changed to have SwiftUI update the note view, as any change around it in the app does (a save, the preview
-    /// scrolling beside it).
     @Observable final class Pulse {
         var count = 0
-        /// The heading or block the window's place points at, which moves with back and forward.
         var anchor: AppLink.Anchor?
     }
 
@@ -42,14 +31,12 @@ import WebKit
         @State private var insert: String?
 
         var body: some View {
-            // Read here so a new text or pulse updates the view, as the note screen's model does.
             let note = text.wrappedValue
             let count = pulse.count
             let anchor = pulse.anchor
             Group {
                 switch kind {
                 case .edit:
-                    // `saveFile` names the update it came with, so `update()` can tell SwiftUI handed it to the view.
                     MarkdownEditor(
                         text: text, baseURL: baseURL, math: .latex, insert: $insert, saveFile: { _, _ in "update \(count)" },
                         openNote: { _ in },
@@ -97,7 +84,6 @@ import WebKit
 
     var size: CGSize { host.bounds.size }
 
-    /// Set as following a link to another heading of the same note, or going back to it without one, does.
     var anchor: AppLink.Anchor? {
         get { pulse.anchor }
         set { pulse.anchor = newValue }
@@ -111,10 +97,8 @@ import WebKit
     }
 
     static let allMarkdown = fixture("all-markdown")
-    /// Taller than the panel at either width, with a picture, a widget and blocks that scroll sideways.
     static let longNote = fixture("long-note")
 
-    /// A course's `Notes` folder holding the fixtures' pictures and the widgets the notes name, so they're drawn.
     static let notes: URL = {
         let fixtures = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appending(path: "fixtures")
         let notes = FileManager.default.temporaryDirectory.appending(path: "note-bench-\(UUID().uuidString)")
@@ -152,12 +136,11 @@ import WebKit
         return find(host)
     }
 
-    /// The preview is drawn in its own process, so what it shows is read while settling and kept for `snapshot`.
+    // 미리보기는 별도 프로세스에서 그리므로, 보이는 화면을 settle 중에 읽어 `snapshot`용으로 둔다.
     private var shown: (pixels: Pixels, scrollY: CGFloat)?
 
     // MARK: Settling
 
-    /// Lets SwiftUI place the view and the view draw, until what's drawn stops changing (or a few seconds pass).
     func settle() async {
         if kind == .preview { return await settlePreview() }
         var last: Pixels?
@@ -178,7 +161,6 @@ import WebKit
             host.layoutSubtreeIfNeeded()
             window.displayIfNeeded()
             try? await Task.sleep(for: .milliseconds(50))
-            // The page has the note, and every widget's frame the height its page said.
             guard let web = preview, round >= 2, round >= 50 || web.page?.settled == true else { continue }
             guard let now = await previewShot(web) else { continue }
             shown = now
@@ -187,8 +169,7 @@ import WebKit
         }
     }
 
-    /// What the page shows, without the scroller where one always shows. A snapshot taken without waiting for the
-    /// screen: the window is never shown, so the screen never updates.
+    // 창을 화면에 보이지 않으므로 화면이 갱신되지 않는다. 그래서 화면을 기다리지 않고 스냅숏을 찍는다.
     private func previewShot(_ web: PreviewWebView) async -> (pixels: Pixels, scrollY: CGFloat)? {
         let read = "return [document.documentElement.clientWidth, innerHeight, scrollY]"
         guard let box = try? await web.callAsyncJavaScript(read, contentWorld: .defaultClient) as? [Double], box.count == 3,
@@ -207,7 +188,7 @@ import WebKit
         return pixels.map { ($0, CGFloat(box[2])) }
     }
 
-    /// The snapshot at one pixel a point whatever the screen, so CI and a Retina Mac make pictures of the same size.
+    // CI와 Retina Mac이 같은 크기의 그림을 만들도록, 화면과 상관없이 1pt를 1픽셀로 찍는다.
     nonisolated private static func pixels(_ image: NSImage, width: Int, height: Int, page: CGColor) -> Pixels? {
         guard
             let context = CGContext(
@@ -232,7 +213,6 @@ import WebKit
 
     // MARK: Pictures
 
-    /// What the panel shows, without its scrollers, which come and go.
     func snapshot() -> Pixels {
         if kind == .preview { return shown?.pixels ?? blank }
         guard let clip = scrollView?.contentView, clip.bounds.width >= 1, clip.bounds.height >= 1,
@@ -241,9 +221,9 @@ import WebKit
                 bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .calibratedRGB,
                 bytesPerRow: 0, bitsPerPixel: 0)?.retagging(with: .sRGB)
         else { return blank }
-        // One pixel a point whatever the screen, so CI and a Retina Mac make pictures of the same size.
+        // CI와 Retina Mac이 같은 크기의 그림을 만들도록, 화면과 상관없이 1pt를 1픽셀로 찍는다.
         rep.size = clip.bounds.size
-        // The caret blinks, so what's drawn would never settle with it.
+        // 캐럿이 깜빡이므로, 캐럿까지 그리면 그림이 안정되지 않는다.
         let carets = textView?.subviews.filter { $0 is NSTextInsertionIndicator && !$0.isHidden } ?? []
         for caret in carets { caret.isHidden = true }
         clip.cacheDisplay(in: clip.bounds, to: rep)
@@ -252,10 +232,8 @@ import WebKit
         return Pixels(image, page: pageColor)
     }
 
-    /// The whole note, the panel grown to its height.
     func wholeNote() async -> Pixels {
         if kind == .preview {
-            // Down to the last block and the page's own room below it, not the room it keeps to scroll past the end.
             let read = "const last = document.body.lastElementChild; return last ? last.getBoundingClientRect().bottom + scrollY + 96 : 0"
             guard let web = preview, let bottom = try? await web.callAsyncJavaScript(read, contentWorld: .defaultClient) as? Double else {
                 return blank
@@ -294,7 +272,6 @@ import WebKit
         await settle()
     }
 
-    /// Scrolls without waiting for the view to draw.
     func jump(to y: CGFloat) {
         if kind == .preview {
             preview?.callAsyncJavaScript("scrollTo(0, y)", arguments: ["y": y], in: nil, in: .defaultClient)
@@ -306,9 +283,7 @@ import WebKit
         scroll.reflectScrolledClipView(clip)
     }
 
-    /// As far down as the page goes. TextKit guesses the height of text it hasn't laid out and corrects it as the end
-    /// comes into view, and the preview's widgets take their height as they load, so this goes on until a scroll to
-    /// the end stays where it is.
+    // TextKit은 배치하지 않은 글의 높이를 추정했다가 끝이 보이면 고치고, 미리보기의 위젯은 불러오면서 높이가 정해진다. 그래서 끝으로 스크롤한 위치가 그대로 남을 때까지 되풀이한다.
     func scrollToEnd() async {
         for _ in 0..<10 {
             let before = scrollY
@@ -320,7 +295,6 @@ import WebKit
     // MARK: Pointer
 
     enum Hit: Equatable {
-        /// The note, or what it shows at that point and handles itself: a widget, a block that scrolls sideways.
         case note
         case scroller
         case other(String)
@@ -333,19 +307,16 @@ import WebKit
     func hit(at p: CGPoint) -> Hit {
         guard let view = hitView(at: p) else { return .other("nothing") }
         if kind == .preview {
-            // The page handles every point of itself: its widgets, its sideways scrolling and its scroller.
             guard let web = preview else { return .other("no note view") }
             return view === web || view.isDescendant(of: web) ? .note : .other(String(describing: type(of: view)))
         }
         guard let note = textView, let scroll = scrollView else { return .other("no note view") }
         if view === note || view.isDescendant(of: note) { return .note }
-        // `NoteScrollView` takes some clicks over the note itself and hands them on to it.
         if view === scroll || view === scroll.contentView { return .note }
         if view is NSScroller, view.superview === scroll { return .scroller }
         return .other(String(describing: type(of: view)))
     }
 
-    /// A plain click as the window delivers it: to the view under the point, with the button already up.
     func click(at p: CGPoint) {
         let point = windowPoint(p)
         guard let view = hitView(at: p),
@@ -358,18 +329,16 @@ import WebKit
         else { return }
         window.postEvent(up, atStart: true)
         view.mouseDown(with: down)
-        // Whatever the view didn't take stays queued for the next click otherwise.
+        // 뷰가 받지 않은 이벤트는 그대로 두면 다음 클릭까지 큐에 남는다.
         while let left = window.nextEvent(matching: .leftMouseUp, until: .distantPast, inMode: .default, dequeue: true) { _ = left }
     }
 
     // MARK: Text input
 
-    /// The edit view's text, as the input method and the window see it; nil in the preview, which takes no typing.
     var input: (NSView & NSTextInputClient)? { kind == .edit ? textView : nil }
 
     var text: String { input?.attributedString?().string ?? "" }
 
-    /// The caret's place in the text and where it's drawn, in the panel.
     var caret: (location: Int, rect: CGRect)? {
         guard let input else { return nil }
         let selection = input.selectedRange()
@@ -377,7 +346,6 @@ import WebKit
         return (selection.location, rect(of: selection))
     }
 
-    /// Where the input method would put its window for `range`, in the panel.
     func rect(of range: NSRange) -> CGRect {
         guard let input else { return .null }
         let screen = input.firstRect(forCharacterRange: range, actualRange: nil)
@@ -387,7 +355,6 @@ import WebKit
 
     func selectAll() { perform(#selector(NSText.selectAll(_:))) }
 
-    /// The caret at `location` with the page left where it is; moving it by key scrolls to it.
     func placeCaret(at location: Int) {
         guard kind == .edit else { return }
         textView?.setSelectedRange(NSRange(location: location, length: 0))

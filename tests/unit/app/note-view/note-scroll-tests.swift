@@ -4,14 +4,11 @@ import Testing
 
 @testable import Folio
 
-/// Changing the text or its look must not move what's on screen: TextKit 2 guesses the height of text it hasn't laid out,
-/// so a note with tall pictures above the screen jumps unless every change puts its line back where it was.
+// TextKit 2는 아직 배치하지 않은 글의 높이를 추정한다. 그래서 화면 위쪽에 큰 그림이 있는 노트는 변경할 때마다 줄을 제자리에 돌려놓지 않으면 화면이 튄다.
 @MainActor @Suite(.serialized)
 struct NoteScrollTests {
-    /// Paragraphs with inline math, each with a display equation drawn under it, so the guessed heights are off.
     static let filler = (1...30).map { "문단 \($0) 본문 $a_{\($0)}$ 입니다.\n\n$$\n\\sum_{k=1}^{\($0)} k^2\n$$\n" }.joined(separator: "\n")
 
-    /// A view in a window shorter than the note, laid out to its end so it scrolls.
     static func host(_ view: NSTextView) -> NSWindow {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 900, height: 400), styleMask: [.borderless], backing: .buffered, defer: false)
@@ -22,13 +19,11 @@ struct NoteScrollTests {
         return window
     }
 
-    /// As in the app, only what's on screen is laid out; the rest is TextKit's guess.
     static func fit(_ view: NSTextView) {
         view.textLayoutManager?.textViewportLayoutController.layoutViewport()
         view.setFrameSize(NSSize(width: 900, height: 8000))
     }
 
-    /// Brings character `i` on screen the way the text view does for a caret.
     static func reveal(_ view: NSTextView, _ i: Int) {
         let clip = view.enclosingScrollView!.contentView
         clip.scroll(to: NSPoint(x: 0, y: 2500))
@@ -37,7 +32,6 @@ struct NoteScrollTests {
         view.scrollRangeToVisible(NSRange(location: i, length: 0))
     }
 
-    /// Where the line holding `i` is drawn on screen, from the layout TextKit has, without laying out more.
     static func shown(_ view: NSTextView, _ i: Int) -> CGFloat? {
         guard let manager = view.textLayoutManager, let clip = view.enclosingScrollView?.contentView,
             let location = manager.location(manager.documentRange.location, offsetBy: i)
@@ -84,14 +78,12 @@ struct NoteScrollTests {
         #expect(view.selectedRange().location == 0)
     }
 
-    /// The view's frame cut to the note as laid out, as the app's is, instead of `fit`'s room to spare.
     static func trim(_ view: NSTextView) {
         guard let manager = view.textLayoutManager else { return }
         manager.ensureLayout(for: manager.documentRange)
         view.setFrameSize(NSSize(width: 900, height: manager.usageBoundsForTextContainer.height + 2 * view.textContainerInset.height))
     }
 
-    /// One writes at the note's end, so the editor scrolls its last line up to the middle of the screen, not the bottom.
     @Test func theEditorScrollsItsLastLineToTheMiddle() throws {
         let text = Self.filler + "\n끝 줄"
         let (view, _) = Self.source(text)
@@ -108,7 +100,7 @@ struct NoteScrollTests {
         let window = Self.host(view)
         view.setFrameSize(NSSize(width: 900, height: 2000))
         let scroll = try #require(view.enclosingScrollView)
-        // Shown whatever the machine's scroller setting, which hid it on CI and left its frame empty.
+        // 기기의 스크롤 막대 설정과 상관없이 보이게 한다. CI에서는 스크롤 막대가 숨겨져 frame이 비어 있었다.
         scroll.autohidesScrollers = false
         scroll.tile()
         let scroller = try #require(scroll.verticalScroller)
@@ -117,15 +109,13 @@ struct NoteScrollTests {
     }
 }
 
-/// The room past the note's end was a bottom content inset, and a long note's lower half on screen lay over it: a note
-/// just opened was drawn only above it, and the clip view left clicks there to the scroll view's background.
+// 노트 끝 뒤의 공간을 아래쪽 content inset으로 두었더니, 화면에 보이는 긴 노트의 아래쪽 절반이 그 inset 위에 놓였다. 그래서 막 연 노트는 inset 위쪽만 그려졌고, clip view는 그
+// 자리의 클릭을 scroll view의 배경으로 넘겼다.
 @MainActor @Suite(.serialized)
 struct NoteLowerHalfTests {
-    /// A long note just opened, laid out the way the window does it rather than by hand.
     static func opened() -> (SourceTextView, NSWindow) {
         let view = SourceTextView()
         view.delegate = view
-        // As `MarkdownEditor` does: the note goes into a view with no size yet, which SwiftUI sizes afterwards.
         let scroll = NoteScrollView(document: view)
         view.load(NoteScrollTests.filler)
         view.configure(accent: CourseAccent.presets[0].accent, syntax: .latex, dark: false)
@@ -139,12 +129,11 @@ struct NoteLowerHalfTests {
         return (view, window)
     }
 
-    /// The share of the scroll view's lower half that has ink in it, as the window draws it.
     static func inkBelowTheMiddle(_ scroll: NSView) throws -> Double {
         let rep = try #require(scroll.bitmapImageRepForCachingDisplay(in: scroll.bounds))
         scroll.cacheDisplay(in: scroll.bounds, to: rep)
         var inked = 0, total = 0
-        // Bitmap rows run top down; the lower half is the second half of them.
+        // 비트맵의 행은 위에서 아래로 이어지므로, 아래쪽 절반은 행의 뒤쪽 절반이다.
         for y in stride(from: rep.pixelsHigh / 2 + 8, to: rep.pixelsHigh - 8, by: 2) {
             for x in stride(from: 0, to: rep.pixelsWide, by: 4) {
                 total += 1
@@ -175,11 +164,8 @@ struct NoteLowerHalfTests {
     }
 }
 
-/// The room past the note's end has no text view under it: a click there, below the middle of the editor, went to the
-/// scroll view and left the caret where it was.
 @MainActor @Suite(.serialized)
 struct NoteRoomPastTheEndTests {
-    /// A click as the window gives it: to the view under the point, with the button already up.
     static func click(_ window: NSWindow, at point: NSPoint) {
         guard
             let down = NSEvent.mouseEvent(
@@ -193,11 +179,9 @@ struct NoteRoomPastTheEndTests {
         window.contentView?.hitTest(point)?.mouseDown(with: down)
     }
 
-    /// Clicks below a short note, left, middle and right, near the window's bottom.
     static func clicksBelow(_ view: NSTextView, in window: NSWindow) {
         NoteScrollTests.trim(view)
         view.enclosingScrollView?.tile()
-        // The pointer turned to an arrow there too; the clip view shows its document cursor where the note doesn't reach.
         #expect(view.enclosingScrollView?.contentView.documentCursor === NSCursor.iBeam)
         let below = NSPoint(x: 0, y: 60)
         #expect(view.convert(below, from: nil).y > view.bounds.maxY, "the point should be past the note's end")

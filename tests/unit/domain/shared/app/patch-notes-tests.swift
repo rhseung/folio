@@ -36,9 +36,7 @@ struct PatchNotesTests {
                 Item(kind: .feat, text: "수업 시작 자동 실행", link: .settings(.classes)),
                 Item(kind: .change, text: "빠른 추가 칩이 처음부터 흐리게 보임", link: .place(.today)),
                 Item(kind: .fix, text: "수식 말풍선 위와 오른쪽 여백"),
-                // A note is somebody's own: the link goes, the sentence stays.
                 Item(kind: .fix, text: "회차 노트의 링크"),
-                // A release groups its lines under `### fix`; the section goes on past it.
                 Item(kind: .fix, text: "소제목 뒤의 항목"),
             ])
     }
@@ -102,7 +100,6 @@ struct PatchNotesTests {
     @Test func firstLaunchAndNoUpdateShowNothing() {
         #expect(PatchNotes.step(seen: nil, current: V(0, 3, 0), feed: .notLoaded, busy: false) == .markSeen)
         #expect(PatchNotes.step(seen: V(0, 3, 0), current: V(0, 3, 0), feed: .notLoaded, busy: false) == .nothing)
-        // An older app opened after a newer one.
         #expect(PatchNotes.step(seen: V(0, 4, 0), current: V(0, 3, 0), feed: .notLoaded, busy: false) == .nothing)
     }
 
@@ -122,7 +119,6 @@ struct PatchNotesTests {
 
     @Test func aClassOrARecordingPutsTheSheetOff() {
         #expect(PatchNotes.step(seen: V(0, 2, 1), current: V(0, 3, 0), feed: .loaded(Self.feed), busy: true) == .wait)
-        // Nothing to show is settled at once, class or not.
         #expect(PatchNotes.step(seen: V(0, 3, 0), current: V(0, 3, 1), feed: .loaded(Self.feed), busy: true) == .markSeen)
     }
 
@@ -161,7 +157,6 @@ struct PatchNotesTests {
     // MARK: Properties
 
     static let kind = Gen.element(of: PatchNotes.Kind.allCases).map { $0! }
-    /// Hangul, Latin, digits and punctuation, brackets included, on one line.
     static let text = Gen.oneOf(Gen.character(in: "가"..."힣"), Gen.character(in: " "..."~")).string(of: 0...24)
     static let places: [AppLink?] =
         [nil]
@@ -171,7 +166,6 @@ struct PatchNotesTests {
     static let link = Gen.element(of: Self.places).map { $0 ?? nil }
     static let version = zip(Gen.int(in: 0...2), Gen.int(in: 0...3), Gen.int(in: 0...3)).map { V($0, $1, $2) }
     static let releases = zip(Self.version, Self.kind.array(of: 0...5)).array(of: 0...8).map { rows -> [PatchNotes.Release] in
-        // One release per version, as tags are.
         var seen = Set<V>()
         return rows.compactMap { v, kinds in
             guard seen.insert(v).inserted else { return nil }
@@ -204,7 +198,6 @@ struct PatchNotesTests {
             #expect(s.releases.allSatisfy { seen < $0.version && $0.version <= current })
             #expect(s.releases.contains { $0.hasNewFeature })
             #expect(s.items.first?.kind == .feat)
-            // Every item of every unseen version, once, kind by kind.
             #expect(s.items.count == s.releases.reduce(0) { $0 + $1.items.count })
             #expect(s.items == PatchNotes.ordered(s.items))
         }

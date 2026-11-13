@@ -4,7 +4,6 @@ import Testing
 
 @testable import Folio
 
-/// The input guide's sheet model (#395): tabs, search, and the snippets of the note's math syntax from settings.
 @MainActor
 struct InputGuideModelTests {
     @Test func tabsNarrowAndSearchLooksInTheTab() throws {
@@ -22,7 +21,6 @@ struct InputGuideModelTests {
         #expect(model.shown.isEmpty)
     }
 
-    /// The snippets are the settings' for the note's syntax, so an AsciiMath note shows AsciiMath's.
     @Test func snippetsFollowTheNotesSyntax() throws {
         let workspace = try fixtureWorkspace()
         let tex = InputGuideModel(workspace: workspace, syntax: .latex)
@@ -31,7 +29,6 @@ struct InputGuideModelTests {
         let asciiTitles = ascii.shown.flatMap(\.entries).map(\.title)
         #expect(texTitles.contains(.code("\\frac{…}{…}")) && !texTitles.contains(.code("frac(…)(…)")))
         #expect(asciiTitles.contains(.code("frac(…)(…)")) && !asciiTitles.contains(.code("\\frac{…}{…}")))
-        // `mk` goes by the `/` block it writes, in the app's language.
         #expect(texTitles.contains(.named(String(localized: .notesAssistInlineMath))))
         #expect(InputGuideModel.words(.phrase(.blocks)) == String(localized: .notesGuideBlocks))
     }

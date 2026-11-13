@@ -4,8 +4,6 @@ import Testing
 
 @testable import Folio
 
-/// Random typing in the write view. After every key, what's shown must be what styling the same text from scratch gives,
-/// so no edit path (Enter's list rules, Tab, composing Hangul, deleting) can leave stale or default attributes behind.
 @MainActor @Suite(.serialized)
 struct NoteTypingTests {
     struct SplitMix: RandomNumberGenerator {
@@ -22,8 +20,7 @@ struct NoteTypingTests {
     static let starts = ["", "- 하나", "## 제목\n본문", "> 인용", "1. 첫째\n2. 둘째", "본문 **굵게** 끝"]
     static let pieces = ["가", "나", "a", " ", "- ", "# ", "## ", "**", "`", "> ", "1. ", "[ ] ", "-", "=", "$"]
 
-    /// Per character: the font, color and line box it's drawn with. Font names differ where Hangul falls back to
-    /// another font, and each accent color is a new dynamic color, so both are compared by what's drawn.
+    // 한글이 다른 글꼴로 대체되는 자리에서는 글꼴 이름이 달라지고, 강조색은 매번 새 dynamic color이므로, 둘 다 그려진 모양으로 비교한다.
     static func look(_ original: NSAttributedString) -> [String] {
         let text = NSMutableAttributedString(attributedString: original)
         text.fixAttributes(in: NSRange(location: 0, length: text.length))
@@ -57,7 +54,6 @@ struct NoteTypingTests {
             case 2: view.insertBacktab(nil); keys.append("⇤")
             case 3: view.deleteBackward(nil); keys.append("⌫")
             case 4:
-                // Hangul as the input method types it: composed, recomposed, then committed.
                 view.setMarkedText(
                     "ㅎ", selectedRange: NSRange(location: 1, length: 0), replacementRange: NSRange(location: NSNotFound, length: 0))
                 view.setMarkedText(

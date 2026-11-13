@@ -15,7 +15,6 @@ struct AppLinkTests {
         #expect(AppLink(.problemSet, id).string.hasPrefix("folio://problem-set/"))
     }
 
-    /// A recording's address carries where it is playing, written as the player shows it.
     @Test func aRecordingKeepsItsMoment() {
         #expect(AppLink(.recording, id, anchor: .time(750)).string.hasSuffix("#t=12:30"))
         #expect(AppLink(.recording, id, anchor: .time(3723)).string.hasSuffix("#t=1:02:03"))
@@ -27,7 +26,6 @@ struct AppLinkTests {
         #expect(AppLink(string: r + "#t=") == AppLink(.recording, id))
         #expect(AppLink(string: r + "#t=12:30")?.withoutAnchor == AppLink(.recording, id))
 
-        // A moment means nothing to a note, and a note's heading that reads like one stays a heading.
         #expect(AppLink(string: "folio://note/\(id.uuidString)#t=1:00") == AppLink(.note, id, anchor: .heading("t=1:00")))
         let heading = AppLink(.note, id, anchor: .heading("t=1:00"))
         #expect(AppLink(string: heading.string) == heading)
@@ -37,14 +35,13 @@ struct AppLinkTests {
         let link = AppLink(.note, id, anchor: .heading("매칭 (정의)"))
         #expect(!link.string.contains(" ") && !link.string.contains("(") && !link.string.contains(")"))
         #expect(AppLink(string: link.string) == link)
-        // A heading that reads like a block or a page stays a heading.
         for heading in ["^x", "page=3", "100%", "a#b"] {
             let l = AppLink(.note, id, anchor: .heading(heading))
             #expect(AppLink(string: l.string)?.anchor == .heading(heading))
         }
     }
 
-    /// Foundation escapes a block's `^` in the URL; the block comes back a block, not a heading.
+    // Foundation은 URL에서 블록의 `^`를 escape한다. 그래도 블록은 제목이 아니라 블록으로 돌아와야 한다.
     @Test func aBlockSurvivesTheURL() throws {
         let link = AppLink(.note, UUID(), anchor: .block("proof"))
         #expect(link.url.absoluteString.hasSuffix("#%5Eproof"))
@@ -54,7 +51,6 @@ struct AppLinkTests {
     }
 
     @Test func readsWhatTheNotePreviewHandsIt() {
-        // The renderer writes a wiki link's heading raw; a lower-case ID is still the ID.
         let raw = "folio://note/\(id.uuidString.lowercased())#정의 1"
         #expect(AppLink(string: raw) == AppLink(.note, id, anchor: .heading("정의 1")))
         #expect(AppLink(string: "FOLIO://Material/\(id.uuidString)#page=3") == AppLink(.material, id, anchor: .page(3)))
@@ -68,12 +64,10 @@ struct AppLinkTests {
         #expect(AppLink(string: "folio://Settings/Review") == .settings(.review))
         #expect(AppLink(string: "folio://settings/class#x") == .settings(.classes))
 
-        // Another tab is another step in a window's history.
         #expect(AppLink.settings(.claude).withoutAnchor != AppLink.settings(.general).withoutAnchor)
         #expect(AppLink.settings(.claude).with(.heading("x")) == .settings(.claude))
         #expect(AppLink(string: "folio://settings/nowhere") == nil)
 
-        // Tabs #416 merged: old links open the tab that took them over, and are written by its name.
         #expect(AppLink(string: "folio://settings/profile") == .settings(.record))
         #expect(AppLink(string: "folio://Settings/Letters") == .settings(.record))
         #expect(AppLink(string: "folio://settings/recording")?.string == "folio://settings/class")
@@ -88,8 +82,6 @@ struct AppLinkTests {
         #expect(AppLink(string: "folio://note/\(id.uuidString)#^not a block") == AppLink(.note, id))
     }
 
-    /// Each kind's facts agree with how its links are read and written: an anchor survives only on a kind that takes
-    /// it, a page only on a kind that has pages, and only places go without an ID.
     @Test func eachKindsFactsShapeItsLinks() {
         let anchors: [AppLink.Anchor] = [.page(2), .block("b-1"), .heading("정의"), .time(90)]
         for kind in AppLink.Kind.allCases {
@@ -109,7 +101,6 @@ struct AppLinkTests {
         #expect(AppLink(string: "folio://settings/claude") != nil && AppLink.Kind.settings.hasPages)
     }
 
-    /// The Claude panel's buttons share the scheme; none of them may read as something to open.
     @Test func theActionHostIsNoKind() throws {
         #expect(AppLink.Kind(rawValue: AppLink.actionHost) == nil)
         let button = try #require(URL(string: "folio://action/copy/\(id.uuidString)"))
@@ -140,13 +131,11 @@ struct AppLinkTests {
         let link = AppLink(.material, id, anchor: .page(4))
         let tex = "See \\href{\(link.string)}{the slides} and folio://grades."
 
-        // The sentence's full stop isn't part of the address; a heading's last character is.
         #expect(AppLink.links(in: tex).map(\.link) == [link, .place(.grades)])
         #expect((tex as NSString).substring(with: AppLink.links(in: tex)[1].range) == "folio://grades")
         #expect(AppLink.links(in: "folio://exam/\(id.uuidString)!").map(\.link) == [AppLink(.exam, id)])
         #expect(AppLink.links(in: "folio://note/\(id.uuidString)#Intro.").map(\.link) == [AppLink(.note, id, anchor: .heading("Intro."))])
 
-        // A page, time or block is still one at the end of a sentence.
         #expect(
             AppLink.links(in: "범위는 folio://material/\(id.uuidString)#page=12.").map(\.link) == [AppLink(.material, id, anchor: .page(12))])
         #expect(
@@ -158,7 +147,7 @@ struct AppLinkTests {
         let md = "[슬라이드](\(link.string)) 한글 folio://today"
         #expect(AppLink.links(in: md).map(\.link) == [link, .place(.today)])
 
-        // Offsets count UTF-16 units, as text views do: the Hangul before the link shifts it by one unit each.
+        // offset은 텍스트 뷰처럼 UTF-16 단위로 센다. 링크 앞의 한글은 글자마다 한 단위씩 링크를 민다.
         let range = AppLink.links(in: md)[0].range
         #expect((md as NSString).substring(with: range) == link.string)
     }
@@ -189,7 +178,6 @@ struct AppLinkTests {
         a.problemSets.append(set)
         #expect(AppLink(.problemSet, set.id).course(in: [b, a]) == a.course.id)
 
-        // What lives outside a course is never found in one, even by an ID a course happens to use.
         for kind in AppLink.Kind.allCases where !kind.isPlace && kind.home != .course {
             #expect(AppLink(kind, a.course.id).course(in: [a, b]) == nil, "\(kind)")
         }
@@ -202,7 +190,6 @@ struct AppLinkTests {
     }
 }
 
-/// What any link must keep, whatever it points at.
 struct AppLinkPropertyTests {
     static let kind = Gen.element(of: AppLink.Kind.allCases).map { $0! }
     static let page = Gen.element(of: AppLink.CoursePage.allCases).map { $0! }
@@ -215,7 +202,6 @@ struct AppLinkPropertyTests {
                 bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]
             ))
     }
-    /// Hangul, Latin, digits, the characters links stop at, and the ones that mean block or page.
     static let text = Gen.oneOf(Gen.character(in: "가"..."힣"), Gen.character(in: " "..."~")).string(of: 0...12)
     static let anchor = Gen.int(in: 0...4).map { i -> Int in i }
 
@@ -230,7 +216,6 @@ struct AppLinkPropertyTests {
             switch choice {
             case 1: .page(n)
             case 2: .block(text.filter { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-") })
-            // A heading starting with `^` would read as a block from a URL (see `init(url:)`).
             case 3: .heading(text.hasPrefix("^") ? "x" + text : text)
             case 4: .time(n * 37)
             default: nil

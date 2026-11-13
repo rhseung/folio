@@ -51,7 +51,6 @@ struct StandardLayoutTests {
         #expect(StandardLayout.assignmentFolder("Quiz01", extraPrefixes: ["Quiz"]) != nil)
     }
 
-    /// A folder made for notes is one plain name in `Notes/`, never a folder whose files aren't notes, in any case.
     @Test(
         arguments: [
             ("정리", nil), ("  중간 대비 ", nil), ("assets 모음", nil), ("", .empty), ("   ", .empty),

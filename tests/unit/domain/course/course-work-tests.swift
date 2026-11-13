@@ -21,7 +21,7 @@ struct CourseWorkTests {
 
     // MARK: Sessions
 
-    // Mon/Wed 13:00-14:15. 2026-10-26 is a Monday.
+    // 월수 13:00부터 14:15까지이고, 2026-10-26은 월요일이다.
     var monWed: [ClassTime] {
         [ClassTime(weekday: 1, startMinute: 780, endMinute: 855, room: "203"), ClassTime(weekday: 3, startMinute: 780, endMinute: 855)]
     }
@@ -44,7 +44,7 @@ struct CourseWorkTests {
         #expect(s?.date == date("2026-11-02 13:00"))
     }
 
-    /// 2026 fall starts Monday 8/31, so 10/19 opens week 8, the default midterm week.
+    // 2026년 가을학기는 8/31 월요일에 시작하므로, 10/19가 기본 중간고사 주인 8주차의 시작이다.
     @Test func examWeeksHoldNoLectures() {
         let fall = Semester(device: device, at: .now, year: 2026, term: .fall, start: LocalDate("2026-08-31"), end: LocalDate("2026-12-18"))
         #expect(fall.examWeeks == [8, 16])
@@ -53,7 +53,6 @@ struct CourseWorkTests {
             now: date("2026-10-19 09:00"), calendar: calendar)
         #expect(skipped?.date == date("2026-10-26 13:00"))
 
-        // An exam held in class time is part of that class, so the class still comes.
         let held = SessionPlanner.suggestion(
             schedule: monWed, sessions: [], from: fall.start, to: fall.end, examWeeks: fall.examWeeks,
             now: date("2026-10-26 09:00"), calendar: calendar)
@@ -70,7 +69,6 @@ struct CourseWorkTests {
         #expect(before?.date == date("2026-10-28 13:00"))
     }
 
-    /// A 휴강 two weeks off needs a class to mark: the plan runs to the term's end, past the classes already made.
     @Test func plannedClassesRunToTheTermsEnd() {
         var cancelled = Session(device: device, at: .now, week: 11, date: date("2026-11-09 13:00"))
         cancelled.isCancelled = true
@@ -83,7 +81,6 @@ struct CourseWorkTests {
             plan.map(\.date)
                 == ["2026-11-11 13:00", "2026-11-16 13:00", "2026-11-18 13:00", "2026-11-23 13:00", "2026-11-25 13:00"].map(date))
 
-        // Without an end, the coming week only, as the suggestion always did.
         let open = SessionPlanner.planned(
             schedule: monWed, sessions: [], from: nil, to: nil, now: date("2026-11-03 09:00"), calendar: calendar)
         #expect(open.map(\.date) == ["2026-11-04 13:00", "2026-11-09 13:00"].map(date))
@@ -92,14 +89,12 @@ struct CourseWorkTests {
                 schedule: monWed, sessions: [made], from: nil, to: nil, now: date("2026-11-03 09:00"), calendar: calendar)?.date
                 == date("2026-11-09 13:00"))
 
-        // A hand-edited term whose start is after its end plans nothing instead of running on.
         let flipped = SessionPlanner.planned(
             schedule: monWed, sessions: [], from: LocalDate("2026-12-01"), to: LocalDate("2026-11-25"),
             now: date("2026-11-03 09:00"), calendar: calendar)
         #expect(flipped.isEmpty)
     }
 
-    /// The class began late, or came in from a calendar event a few minutes off the slot: still that class.
     @Test func aSessionInsideTheSlotStandsForIt() {
         let late = Session(device: device, at: .now, week: 10, date: date("2026-11-04 13:30"))
         let makeup = Session(device: device, at: .now, week: 11, date: date("2026-11-09 18:00"))
@@ -118,7 +113,7 @@ struct CourseWorkTests {
     }
 
     @Test func newSessionsCountWeeksFromTheTermStart() {
-        // Term starts Wednesday 2026-09-02: that week is 1, so 2026-10-26 is 9주차.
+        // 학기가 2026-09-02 수요일에 시작하므로 그 주가 1주차이고, 2026-10-26은 9주차다.
         let first = SessionPlanner.session(
             at: date("2026-10-26 13:00"), sessions: [], termStart: LocalDate("2026-09-02"),
             calendar: calendar, device: device, now: .now)
@@ -133,7 +128,6 @@ struct CourseWorkTests {
         let all = [first, recitation, second]
         #expect(all.map(\.week) == [9, 9, 9])
 
-        // Without a term start, weeks count from the earliest session.
         let later = SessionPlanner.session(
             at: date("2026-11-02 13:00"), sessions: all, termStart: nil, calendar: calendar, device: device, now: .now)
         #expect(later.week == 2)
@@ -157,7 +151,6 @@ struct CourseWorkTests {
         #expect(file.untouchedFutureSessions(now: now, notedSessions: [noted.id]).map(\.id) == [empty.id])
     }
 
-    /// One kind at a time. Clearing 휴강 leaves a lecture, and clearing it on a makeup leaves the makeup.
     @Test func aSessionHasOneKind() {
         var s = Session(device: device, at: .now, week: 9, date: date("2026-10-26 13:00"))
         #expect(s.kind == .lecture && !s.isCancelled)
@@ -172,8 +165,6 @@ struct CourseWorkTests {
         #expect(s.kind == .lecture)
     }
 
-    /// A makeup is held like a lecture: its attendance counts, it owes a review note and is asked to be wrapped up.
-    /// The same class as a 휴강 does none of these.
     @Test func aMakeupCountsAsALecture() {
         let now = date("2026-10-28 20:00")
         var makeup = Session(device: device, at: .now, week: 9, date: date("2026-10-27 21:00"))
@@ -190,7 +181,6 @@ struct CourseWorkTests {
         }
     }
 
-    /// A past session can be deleted too, as long as nothing points at it.
     @Test func onlyAnUnlinkedSessionIsDeletable() {
         let held = Session(device: device, at: .now, week: 8, date: date("2026-10-19 13:00"))
         let attended = Session(device: device, at: .now, week: 8, date: date("2026-10-21 13:00"))
@@ -222,7 +212,6 @@ struct CourseWorkTests {
         #expect(file.sessions.map(\.roughNoteId) == [nil, nil])
         #expect(file.sessions.map(\.reviewNoteId) == [kept, nil])
 
-        // Linked as b's review note, it replaces b's and leaves a, where it was the rough note.
         file.sessions[0].roughNoteId = gone
         file.linkNote(gone, to: b.id, as: .review)
         #expect(file.sessions.map(\.roughNoteId) == [nil, nil])
@@ -240,7 +229,6 @@ struct CourseWorkTests {
     }
 
     @Test func aClassWithNoEndRunsTheCoursesUsualLengthElseTheSettings() {
-        // A chemistry lab meets for two hours: a makeup off the timetable runs two hours too.
         let lab = [
             ClassTime(weekday: 2, startMinute: 13 * 60, endMinute: 15 * 60),
             ClassTime(weekday: 4, startMinute: 13 * 60, endMinute: 15 * 60),
@@ -254,7 +242,6 @@ struct CourseWorkTests {
 
         let makeup = Session(device: device, at: .now, week: 10, date: date("2026-11-04 19:00"))
         #expect(makeup.expectedEnd(schedule: lab, classMinutes: 75, calendar: calendar) == date("2026-11-04 21:00"))
-        // No class times at all, as at a school abroad before they're entered: the settings say.
         #expect(makeup.expectedEnd(schedule: [], classMinutes: 80, calendar: calendar) == date("2026-11-04 20:20"))
     }
 
@@ -264,7 +251,6 @@ struct CourseWorkTests {
         makeup.setEnd(date("2026-11-04 22:15"), schedule: [slot], calendar: calendar)
         #expect(makeup.end(schedule: [slot], calendar: calendar) == date("2026-11-04 22:15"))
 
-        // The slot already says when a Monday 13:00 class ends, so changing the class times later still moves it.
         var monday = Session(device: device, at: .now, week: 9, date: date("2026-10-26 13:00"))
         monday.setEnd(date("2026-10-26 14:15"), schedule: [slot], calendar: calendar)
         #expect(monday.end == nil)
@@ -312,7 +298,6 @@ struct CourseWorkTests {
         #expect(file.linkableSessions { $0.id == cancelled.id }.map(\.id) == [held.id, cancelled.id])
     }
 
-    /// The deepest units, as many as are linked; the day alone without one.
     @Test func titleIsTheDayAndTheClassUnits() {
         let s = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
         var file = CourseFile(course: courses[0], sessions: [s])
@@ -330,7 +315,6 @@ struct CourseWorkTests {
         file.units.append(other)
         #expect(file.title(of: s, calendar: calendar) == "11/3(화): 습관 · 몰입")
 
-        // The page of a unit already names it, so its list leaves it out.
         #expect(file.subject(of: s, besides: child.id) == "몰입")
         #expect(file.subject(of: s, besides: parent.id) == "습관 · 몰입")
     }
@@ -349,7 +333,6 @@ struct CourseWorkTests {
         #expect(file.noteTitle(for: s, kind: .review, calendar: calendar) == "11-05(목) Reliable data transfer 정리")
     }
 
-    /// A class whose units are titled `title`, the only way to give it a subject now.
     func covering(_ title: String, at day: String = "2026-11-03 10:30") -> (Session, CourseFile) {
         let s = Session(device: device, at: .now, week: 10, date: date(day))
         var u = Unit(device: device, at: .now, title: title, order: 1)
@@ -372,7 +355,6 @@ struct CourseWorkTests {
         #expect(unbroken == "11-03(화) " + String(repeating: "가", count: 60))
     }
 
-    /// A cut that ends on `and`, `of a` or an open `(` reads as a broken name, so those go too.
     @Test func aCutSubjectLeavesNothingHanging() {
         let title = { (unit: String) in
             let (s, file) = covering(unit)
@@ -386,7 +368,6 @@ struct CourseWorkTests {
                 == "11-03(화) Walk, Trail, Path, Cycle and Bipartite Graphs")
     }
 
-    /// Units are kept whole, as many as fit, rather than the last one cut midway.
     @Test func aSubjectOfUnitsKeepsWholeUnits() {
         let s = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
         var file = CourseFile(course: courses[0], sessions: [s])
@@ -400,14 +381,12 @@ struct CourseWorkTests {
             file.noteTitle(for: s, kind: .rough, calendar: calendar) == "11-03(화) Minimum Degree Two Forces a Cycle · Eulerian Circuits")
     }
 
-    /// The name is the day the class was held, as its title is, not the study day the 4 a.m. boundary would give.
     @Test func aLateClassIsNamedByItsCalendarDay() {
         let s = Session(device: device, at: .now, week: 10, date: date("2026-11-06 01:00"))
         let file = CourseFile(course: courses[0], sessions: [s])
         #expect(file.noteTitle(for: s, kind: .rough, calendar: calendar) == "11-06(금)")
     }
 
-    /// Only names `session note` gave before #273 change; a title the user chose, or a note no session points at, stays.
     @Test func oldSessionNoteNamesAreRetitled() {
         var s = Session(device: device, at: .now, week: 10, date: date("2026-11-05 10:30"))
         var t = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
@@ -422,7 +401,7 @@ struct CourseWorkTests {
         let entry = { (id: UUID, path: String, kind: NoteKind) in
             NoteEntry(id: id, device: device, at: .now, path: path, meta: NoteMeta(id: id, kind: kind))
         }
-        // macOS file names come back decomposed; the name still reads as `10주차-2`.
+        // macOS의 파일 이름은 분해된 형태로 돌아오지만, 이름은 여전히 `10주차-2`로 읽혀야 한다.
         file.notes = [
             entry(rough, "Notes/10주차-2.md", .rough), entry(review, "Notes/10주차-1 정리 2.md", .review),
             entry(mine, "Notes/TCP 필기.md", .rough), entry(loose, "Notes/3주차-1.md", .rough),
@@ -451,7 +430,6 @@ struct CourseWorkTests {
         #expect(retitled.contains("\\section*{11-05(목) A\\_B}") && !retitled.contains("10주차-2"))
     }
 
-    /// A note's pictures and file links are relative to its folder, so moving it rewrites them to reach the same files.
     @Test func movingANoteKeepsItsRelativeLinks() {
         let md = """
             ![그림](assets/a%20b.png) [슬라이드](../Lectures/05_Matchings.pdf#page=3) ![](<assets/c d.png>)
@@ -483,7 +461,6 @@ struct CourseWorkTests {
         let c = Session(device: device, at: .now, week: 11, date: date("2026-11-10 10:30"))
         var file = CourseFile(course: courses[0], sessions: [a, b, c])
 
-        // Within its week; its own end moves with it.
         file.reschedule(b.id, to: date("2026-11-05 20:00"), termStart: start, calendar: calendar)
         #expect(file.sessions[1].week == 10 && file.reference(of: file.sessions[1], calendar: calendar) == "11-05")
         #expect(file.sessions[1].end == date("2026-11-05 21:15"))
@@ -491,7 +468,6 @@ struct CourseWorkTests {
         #expect(file.week(of: date("2026-11-12 20:00"), moving: b.id, termStart: start, calendar: calendar) == 11)
         file.reschedule(b.id, to: date("2026-11-12 20:00"), termStart: start, calendar: calendar)
         #expect(file.sessions[1].week == 11 && file.reference(of: file.sessions[1], calendar: calendar) == "11-12")
-        // Moved before the class that week, it leaves the other class's reference as it was.
         file.reschedule(b.id, to: date("2026-11-09 20:00"), termStart: start, calendar: calendar)
         #expect(
             file.reference(of: file.sessions[1], calendar: calendar) == "11-09"
@@ -513,8 +489,6 @@ struct CourseWorkTests {
         #expect(rules(s).isDisjoint(with: ["Session.time", "Session.link"]))
     }
 
-    /// The session holds a note's link alone: it names a note of its slot's kind, and no rough note has two sessions.
-    /// A review note may cover several.
     @Test func aRoughNoteHasOneSession() {
         var s = Session(device: device, at: .now, week: 10, date: date("2026-11-04 21:00"))
         var other = Session(device: device, at: .now, week: 11, date: date("2026-11-11 21:00"))
@@ -555,7 +529,7 @@ struct CourseWorkTests {
     }
 
     @Test func parsesCourseTitleAndWeekday() {
-        let now = date("2026-10-22 15:00")  // Thursday
+        let now = date("2026-10-22 15:00")  // 목요일이다.
         let r = QuickAdd.parse("선대 HW5 금 23:59", courses: courses, now: now, calendar: calendar)
         #expect(r.courseId == courses[0].id)
         #expect(r.title == "HW5")
@@ -564,7 +538,7 @@ struct CourseWorkTests {
     }
 
     @Test func weeklyAssignmentsParseAndContinueOnceHandedIn() {
-        let now = date("2026-10-26 12:00")  // Monday
+        let now = date("2026-10-26 12:00")
         let line = "보고서 제출 매주 금요일 23:59"
         let r = QuickAdd.parse(line, courses: [], now: now, calendar: calendar)
         #expect(r.title == "보고서 제출" && r.repeats == .weekly && r.due == date("2026-10-30 23:59"))
@@ -575,20 +549,19 @@ struct CourseWorkTests {
         var file = CourseFile(course: courses[0], assignments: [first])
         let end = date("2026-11-06 23:59")
         file.continueRepeating(first.id, until: end, calendar: calendar, device: device, now: now)
-        #expect(file.assignments.count == 1)  // still open
+        #expect(file.assignments.count == 1)
         file.assignments[0].status = .submitted
         file.continueRepeating(first.id, until: end, calendar: calendar, device: device, now: now)
         file.continueRepeating(first.id, until: end, calendar: calendar, device: device, now: now)
         #expect(file.assignments.map(\.due) == [date("2026-10-30 23:59"), date("2026-11-06 23:59")])
         #expect(file.assignments[1].repeats == .weekly && file.assignments[1].status == .todo)
-        // Past the term's end nothing more is made.
         file.assignments[1].status = .submitted
         file.continueRepeating(file.assignments[1].id, until: end, calendar: calendar, device: device, now: now)
         #expect(file.assignments.count == 2)
     }
 
     @Test func sameWeekdayAfterTheTimeMeansNextWeek() {
-        let now = date("2026-10-23 23:59")  // Friday, deadline time reached
+        let now = date("2026-10-23 23:59")
         #expect(QuickAdd.parse("HW5 금", courses: [], now: now, calendar: calendar).due == date("2026-10-30 23:59"))
         #expect(
             QuickAdd.parse("HW5 금 23:59", courses: [], now: date("2026-10-23 12:00"), calendar: calendar).due == date("2026-10-23 23:59"))
@@ -606,7 +579,7 @@ struct CourseWorkTests {
         #expect(fixed.courseId == courses[1].id && fixed.title == "퀴즈 준비" && fixed.due == nil)
     }
 
-    /// Phrases only Apple's detector reads. It works against the real clock, so expectations are relative to it.
+    // Apple의 인식기만 읽는 표현이다. 인식기는 실제 시계로 동작하므로 기대값은 실제 시계를 기준으로 한다.
     @Test func koreanPhrasesFromTheDetector() {
         let now = Date.now
         func due(_ line: String) -> Date? { QuickAdd.parse(line, courses: [], now: now, calendar: calendar).due }
@@ -633,12 +606,11 @@ struct CourseWorkTests {
         let now = date("2026-10-22 15:00")
         let r = QuickAdd.parse("내일 7시 선형대수학에다 HW5", courses: courses, now: now, calendar: calendar)
         #expect(r.courseId == courses[0].id && r.title == "HW5" && r.due == date("2026-10-23 19:00"))
-        // Past the first word, a short or numbered word is the title, not an abbreviation.
         #expect(QuickAdd.parse("보고서 선 HW5", courses: courses, now: now, calendar: calendar).courseId == nil)
     }
 
     @Test func deadlineWordsKeepTheirKoreanEndingsOutOfTheTitle() {
-        let now = date("2026-10-22 15:00")  // Thursday
+        let now = date("2026-10-22 15:00")
         func read(_ line: String) -> QuickAdd {
             QuickAdd.parse(line, courses: [], fixedCourse: courses[1].id, now: now, calendar: calendar)
         }
@@ -654,11 +626,9 @@ struct CourseWorkTests {
         let line = "HW4 금요일까지"
         #expect(read(line).dueRanges.map { String(line[$0]) } == ["금요일까지"])
 
-        // Only after a deadline are they its words; on their own they are the title's.
         #expect(read("마감 정리").title == "마감 정리" && read("마감 정리").due == nil)
     }
 
-    /// Titles go in as typed: a leading `과제` is part of the title, not a label to drop.
     @Test func aLeadingKindWordStaysInTheTitle() {
         let now = date("2026-10-22 15:00")
         let r = QuickAdd.parse("과제 3 금", courses: [], fixedCourse: courses[1].id, now: now, calendar: calendar)
@@ -674,7 +644,6 @@ struct CourseWorkTests {
         #expect(CourseFile.deadline(date("2026-11-03 09:05"), calendar: calendar, locale: h12) == "11/3(화) 오전 9:05")
     }
 
-    /// The course the window shows fills in only when the line names none.
     @Test func theShownCourseIsTheDefaultUntilTheLineNamesAnother() {
         let now = date("2026-10-22 15:00")
         let shown = QuickAdd.parse("HW5 금", courses: courses, codes: [gsCode], defaultCourse: courses[0].id, now: now, calendar: calendar)
@@ -771,7 +740,7 @@ struct AssignmentFilesTests {
         func at(_ day: Int, _ hour: Int) -> Date { calendar.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour))! }
         func urgency(_ due: Date) -> DueUrgency { DueUrgency(due: due, now: at(29, 2), settings: settings, calendar: calendar) }
 
-        // At 02:00 on the 29th the study day is still the 28th.
+        // 29일 02:00의 공부일은 아직 28일이다.
         #expect(settings.studyDays(from: at(29, 2), until: at(29, 3), calendar: calendar) == 0)
         #expect(settings.studyDays(from: at(29, 2), until: at(29, 5), calendar: calendar) == 1)
         #expect(urgency(at(29, 3)) == .urgent)

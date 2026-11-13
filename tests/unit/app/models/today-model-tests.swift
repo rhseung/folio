@@ -21,7 +21,7 @@ struct TodayModelTests {
         let model = TodayModel(workspace: workspace)
         let c = workspace.calendar
         func at(_ day: Int, _ hour: Int) -> Date { c.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour))! }
-        let today = workspace.settings.studyDay(of: at(28, 20), calendar: c)  // a Wednesday
+        let today = workspace.settings.studyDay(of: at(28, 20), calendar: c)
         let dates = [at(26, 10), at(27, 10), at(28, 9), at(28, 13)]
         let ids = try dates.map { try #require(workspace.run(SessionAdd(course: graphTheory, date: $0))?.made) }
         let items = model.summary(now: at(28, 20)).missingReviewNotes.filter { ids.contains($0.session.id) }
@@ -59,7 +59,6 @@ struct TodayModelTests {
         let other = try #require(workspace.run(UnitAdd(course: graphTheory, title: "채색"))?.made)
         #expect(workspace.skipReviews([(graphTheory, unit)]) == nil)
         let pending = try #require(workspace.skipReviews([(graphTheory, unit), (graphTheory, other)]))
-        // A list of course-and-unit pairs is told by its count, as the CLI tells it.
         #expect(pending.question.hasPrefix("단원 ") && pending.question.hasSuffix("의 복습을 건너뜁니다.") && pending.role == nil)
     }
 
@@ -69,7 +68,7 @@ struct TodayModelTests {
         let c = workspace.calendar
         func at(_ day: Int, _ hour: Int) -> Date { c.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour))! }
         let now = at(28, 12)
-        // C is six days out, the last one still "soon"; D, a week out, is the first given as a date.
+        // C는 6일 뒤라서 마지막 "곧"이고, 1주 뒤인 D가 처음으로 날짜로 표시된다.
         let dues = [("A", at(28, 20)), ("B", at(29, 23)), ("C", at(34, 9)), ("D", at(35, 9)), ("E", at(39, 12)), ("F", at(40, 9))]
         for (title, due) in dues { workspace.run(AssignmentAdd(course: graphTheory, title: title, due: due)) }
         let summary = model.summary(now: now)
@@ -82,7 +81,6 @@ struct TodayModelTests {
         #expect(rows[2].due == "6일 후")
         #expect(rows[3].due == at(35, 9).formatted(.dateTime.month().day().weekday()))
 
-        // Six fit; a seventh folds behind the button until it is pressed.
         #expect(model.shownDeadlines(rows).more == 0)
         workspace.run(AssignmentAdd(course: graphTheory, title: "G", due: at(41, 9)))
         let seven = model.deadlineRows(
@@ -104,7 +102,7 @@ struct TodayModelTests {
         let c = workspace.calendar
         func at(_ day: Int, _ hour: Int) -> Date { c.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour))! }
         #expect(workspace.settings.dayBoundaryMinutes == 4 * 60)
-        // At 02:00 on the 29th the study day is still the 28th: 03:00 falls before the boundary, 05:00 after it.
+        // 29일 02:00의 공부일은 아직 28일이므로, 03:00은 경계 전이고 05:00은 경계 뒤다.
         let dues = [("before", at(29, 3)), ("after", at(29, 5)), ("nextNight", at(30, 2)), ("third", at(30, 5))]
         for (title, due) in dues { workspace.run(AssignmentAdd(course: graphTheory, title: title, due: due)) }
         let summary = model.summary(now: at(29, 2))
@@ -132,7 +130,7 @@ struct TodayModelTests {
     @Test func theWeekStripRunsMondayToSundayAroundTheStudyDay() throws {
         let workspace = try fixtureWorkspace()
         let model = TodayModel(workspace: workspace)
-        let day = LocalDate(year: 2026, month: 10, day: 30)!  // a Friday
+        let day = LocalDate(year: 2026, month: 10, day: 30)!
         let week = model.week(around: day)
         #expect(week.map(\.day.day) == [26, 27, 28, 29, 30, 31, 1])
         #expect(week.filter(\.isToday).map(\.day) == [day])
@@ -144,7 +142,7 @@ struct TodayModelTests {
         func at(_ hour: Int, _ minute: Int = 0) -> Date {
             c.date(from: DateComponents(year: 2026, month: 10, day: 29, hour: hour, minute: minute))!
         }
-        workspace.pinnedNow = at(20)  // a Thursday in the fall term, past its midterm week
+        workspace.pinnedNow = at(20)  // 가을학기의 목요일이며, 중간고사 주가 지났다.
         let id = UUID()
         let code = addCode("GS", to: workspace)
         workspace.run(TranscriptAdd(id: id, semester: fallTerm, title: "콜로퀴움", code: code, number: "9331", credits: 0))
@@ -154,7 +152,6 @@ struct TodayModelTests {
 
         let ribbon = model.ribbonClasses(model.summary(now: at(20)), now: at(20)).filter { $0.courseId == id }
         #expect(ribbon.map(\.start) == [at(21)] && ribbon.first?.sessionId == nil)
-        // A planned class has no name yet; its tooltip skips the empty part instead of doubling the dot.
         let help = model.ribbonHelp(try #require(ribbon.first))
         #expect(help.hasPrefix(model.title(id) + " · ") && !help.contains(" ·  · ") && help.components(separatedBy: " · ").count == 2)
         #expect(model.nextClass(after: at(20))?.courseId == id)
@@ -170,7 +167,6 @@ struct TodayModelTests {
         let c = workspace.calendar
         func at(_ hour: Int) -> Date { c.date(byAdding: .hour, value: hour, to: c.startOfDay(for: .now))! }
         for (course, hour) in [(other, 9), (graphTheory, 13), (other, 15)] { workspace.run(SessionAdd(course: course, date: at(hour))) }
-        // The fixture's own timetable may add other courses to the day; only these two's order is pinned here.
         let wash = model.washCourses(model.summary(now: at(12)), now: at(12))
         #expect(wash.filter { [other, graphTheory].contains($0) } == [other, graphTheory])
         #expect(Set(wash).count == wash.count)
@@ -222,13 +218,12 @@ struct QuickAddModelTests {
         model.renumber(kind: .lab, number: 3)
         #expect(model.text == "보고서 Lab3 매주 금 그래프 이론" && model.chips.last == .folder("Lab03"))
 
-        // A chip keeps its identity as its value changes, so an open deadline popover stays open while a date is picked.
+        // 값이 바뀌어도 칩의 identity가 유지되어야, 날짜를 고르는 동안 열린 마감 popover가 닫히지 않는다.
         let kinds = model.chips.map(\.kind)
         model.pickDue(model.newDue)
         #expect(model.chips.map(\.kind) == kinds)
         #expect(model.parsed?.due == model.newDue && model.parsed?.repeats == .weekly)
 
-        // Another rule is written in the line's words and shown by its own name.
         model.pickRepeats(.biweekly)
         #expect(model.text.contains("격주") && model.chips[2] == .repeats(.biweekly))
         model.pickRepeats(AssignmentRepeat(.week, weekdays: [1, 3]))
@@ -239,8 +234,6 @@ struct QuickAddModelTests {
         #expect(model.chips == [.course(graphTheory), .due(nil), .folder("Lab03")])
     }
 
-    /// Choosing another course on its chip rewrites the course's words, so the line never says one course while the
-    /// chip says another.
     @Test func aPickedCourseReplacesTheTypedOne() throws {
         let workspace = try fixtureWorkspace()
         let model = QuickAddModel(workspace: workspace, showsEmptyChips: true)
@@ -250,13 +243,10 @@ struct QuickAddModelTests {
         #expect(model.text == "\(other.title) HW7 금")
         #expect(model.parsed?.courseId == other.id && model.parsed?.title == "HW7")
 
-        // Typing on reads the course from the line, as there is nothing else to hold it.
         model.text = "그래프 HW7 금"
         #expect(model.parsed?.courseId == graphTheory)
     }
 
-    /// On Today and in the toolbar's popover every chip stands from the start, dimmed, and lights up once the line
-    /// reads it; a dimmed chip still picks a value.
     @Test func emptyChipsStandDimmedUntilRead() throws {
         let workspace = try fixtureWorkspace()
         let model = QuickAddModel(workspace: workspace, showsEmptyChips: true)
@@ -272,12 +262,10 @@ struct QuickAddModelTests {
         model.renumber(kind: .homework, number: 2)
         #expect(model.text == "매주 HW2")
 
-        // The assignments screen shows only what was read.
         let plain = QuickAddModel(workspace: workspace, fixedCourse: graphTheory)
         #expect(plain.chips.isEmpty)
     }
 
-    /// Return adds only a line with a course and a title; anything else stays as typed.
     @Test func returnAddsOnlyALineItCanSave() throws {
         let workspace = try fixtureWorkspace()
         let model = QuickAddModel(workspace: workspace)

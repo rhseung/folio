@@ -6,7 +6,6 @@ import Testing
 
 @testable import FolioCLI
 
-/// Rules the app keeps by hiding controls, held by the actions so `folio` and `folio run` can't break them either.
 struct ActionSafetyTests {
     let h = Harness()
     typealias G = GradesSetupTests
@@ -116,7 +115,6 @@ struct ActionSafetyTests {
         #expect(r.err.contains("휴강한 회차"))
     }
 
-    /// A makeup is held like a lecture: turning a class into one keeps its attendance.
     @Test func aMakeupKeepsItsAttendance() throws {
         let gist = try Harness.fixtureCopy()
         settled(

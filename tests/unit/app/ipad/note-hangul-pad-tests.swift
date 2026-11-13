@@ -4,8 +4,6 @@ import Testing
 import UIKit
 @testable import Folio
 
-/// Hangul typed into the iPad's edit view, with SwiftUI updating the view between keys: the syllable being composed
-/// stays whole, and every finished one reaches the note. The Mac's `NoteHangulTests` does the same, saving too.
 @MainActor @Suite(.serialized)
 struct NoteHangulPadTests {
     @Observable final class Note {
@@ -24,7 +22,6 @@ struct NoteHangulPadTests {
 
         var body: some View {
             let count = pulse.count
-            // `saveFile` names the update it came with, so a step can tell SwiftUI handed it to the view.
             MarkdownEditor(
                 text: Binding(get: { note.text }, set: { note.text = $0 }), baseURL: nil, math: .latex, insert: $insert,
                 saveFile: { _, _ in "update \(count)" }, openNote: { _ in }
@@ -35,11 +32,8 @@ struct NoteHangulPadTests {
 
     enum Key: CustomStringConvertible {
         case compose(String)
-        /// The syllable is done: the marked one becomes `s`, then text.
         case commit(String)
-        /// Typed with nothing composing.
         case plain(String)
-        /// The syllable ends without a key: a tap elsewhere, the app leaving.
         case leave
 
         var description: String {
@@ -52,7 +46,6 @@ struct NoteHangulPadTests {
         }
     }
 
-    /// 하나 한글다, jamo by jamo. ㅏ after 한 moves its ㄴ on to the next syllable.
     static let keys: [Key] = [
         .compose("ㅎ"), .compose("하"), .compose("한"), .commit("하"), .compose("나"), .commit("나"), .plain(" "),
         .compose("ㅎ"), .compose("하"), .compose("한"), .commit("한"), .compose("ㄱ"), .compose("그"), .compose("글"), .commit("글"),

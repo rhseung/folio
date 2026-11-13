@@ -5,7 +5,6 @@ import Testing
 
 @testable import Folio
 
-/// The units page, the materials list, review and the exam card read the same links (`CourseFile.routes(of:to:)`).
 @MainActor
 struct MaterialLinksModelTests {
     let workspace: Workspace
@@ -25,7 +24,6 @@ struct MaterialLinksModelTests {
     func material(_ path: String) throws -> FolioDomain.Material { try #require(file.materials.first { $0.path == path }) }
     func theUnit() throws -> FolioDomain.Unit { try #require(file.units.first { $0.id == unit }) }
 
-    /// The list shows `Study/Problems.pdf` only through `Problems.tex` (#109), so that row is where its links show.
     @Test func aTexRowCarriesItsHiddenPDFsLinks() throws {
         let tex = try material("Study/Problems.tex")
         let pdf = try material("Study/Problems.pdf")
@@ -82,7 +80,6 @@ struct MaterialLinksModelTests {
         let model = ExamsModel(workspace: workspace, course: try #require(workspace.course(graphTheory)))
         let theExam = { try #require(self.file.exams.first { $0.id == exam }) }
         let study = try material("Study/Problems.pdf")
-        // The folder's own files belong already, so the picker leaves them out.
         #expect(try !model.materialMenu(theExam()).contains { $0.label.hasPrefix("Exams/Midterm/") })
         #expect(try model.fileCount(theExam()) == 2 && model.linkedMaterials(theExam()).isEmpty)
         model.toggle(material: study.id, in: try theExam())

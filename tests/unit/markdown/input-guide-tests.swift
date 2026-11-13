@@ -3,7 +3,6 @@ import Testing
 
 @testable import FolioMarkdown
 
-/// The input guide and the `/` menu's shortcuts, read from the editor's own tables (#395).
 struct InputGuideTests {
     static let slash = [
         CompletionItem(id: "slash.h2", title: "제목 2", keywords: ["heading"], body: "## ", block: true),
@@ -24,7 +23,6 @@ struct InputGuideTests {
     ]
     static let catalog = CompletionCatalog(slash: slash, languages: ["python", "swift"], snippets: snippets, tex: true)
 
-    /// Words as a test reads them: a phrase by its name.
     static func words(_ w: InputGuide.Words) -> String {
         switch w {
         case .phrase(let p): p.rawValue
@@ -43,10 +41,8 @@ struct InputGuideTests {
         #expect(shown["slash.math"] == "dm ⇥")
         #expect(shown["slash.code"] == "```")
         #expect(shown["slash.divider"] == "---")
-        // Nothing short to type for a table; the guide's own item keeps its key.
         #expect(shown["slash.table"] == .some(nil))
         #expect(shown[InputGuide.menuItemID] == "⌘/")
-        // Without the snippet, the block's own markdown has a caret mark in it and so no shortcut.
         #expect(InputGuide.shortcut(for: Self.slash[4], snippets: []) == nil)
     }
 
@@ -59,7 +55,6 @@ struct InputGuideTests {
         let frac = try #require(entries.first { $0.keywords == ["//"] })
         #expect(frac.title == .code("\\frac{…}{…}") && frac.note == .phrase(.mathSnippet) && frac.steps == [.key("//"), .key("⇥")])
 
-        // A snippet added in settings is in the guide too.
         var more = Self.catalog
         more.snippets.append(Snippet(trigger: "iff", body: "\\iff", inMath: true))
         #expect(InputGuide.entries(catalog: more).contains { $0.title == .code("\\iff") && $0.steps.first == .key("iff") })
@@ -84,7 +79,6 @@ struct InputGuideTests {
         #expect(entries.first { $0.id == "menu.symbols" }?.steps.first == .key("\\"))
         #expect(entries.contains { $0.title == .code("frac(…)(…)") })
         #expect(entries.first { $0.id == "tab.slot" }?.steps.last == .result(.code("frac(a)(…)")))
-        // The sample's typed letters really bring up the names shown.
         if let row = entries.first(where: { $0.id == "menu.asciimath" }), case .key(let typed) = row.steps[0],
             case .result(.list(let names)) = row.steps[1]
         {
@@ -130,7 +124,6 @@ struct InputGuideTests {
         #expect(InputGuide.grouped(InputGuide.filter(entries, "python", words: Self.words)).map(\.section) == [.menu])
     }
 
-    /// The pairs, wraps and list marks the guide shows are what typing does.
     @Test func theAutoRowsSayWhatTypingDoes() {
         for opener in SourceEditing.shownPairs {
             var text = "", caret = 0

@@ -4,8 +4,8 @@ import Testing
 import UIKit
 @testable import Folio
 
-/// UIKit sets a view's frame from inside `init(frame:)`, and `SteadyPDFView` read the PDF view's `document` there, before
-/// PDFKit had made it: every PDF the iPad opened crashed the app.
+// UIKit은 `init(frame:)` 안에서 뷰의 frame을 정한다. `SteadyPDFView`가 그 자리에서 PDFKit이 아직 만들지 않은 PDF 뷰의 `document`를 읽어서, iPad가 여는
+// 모든 PDF에서 앱이 충돌했다.
 @MainActor
 struct PDFPadTests {
     @Test func opensAPDFAndKeepsItAcrossWidths() throws {

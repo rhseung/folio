@@ -6,8 +6,6 @@ import Testing
 
 @testable import Folio
 
-/// The screens of tabs behind the front one: a kept tab comes back as it was left, and a dropped note tab has saved
-/// what was typed in it.
 @MainActor @Suite(.serialized)
 struct TabScreensTests {
     let workspace: Workspace
@@ -29,7 +27,6 @@ struct TabScreensTests {
         }
         .environment(workspace)
         host = NSHostingView(rootView: screens)
-        // Wide enough for the note's side-by-side view.
         window = NSWindow(
             contentRect: CGRect(x: -20_000, y: -20_000, width: 1200, height: 800), styleMask: [.borderless], backing: .buffered,
             defer: false)
@@ -64,7 +61,6 @@ struct TabScreensTests {
     }
 
     func commandE() throws {
-        // ⌘E, as the user presses it: the note's own key, which a screen kept behind must not take.
         let key = try #require(
             NSEvent.keyEvent(
                 with: .keyDown, location: .zero, modifierFlags: .command, timestamp: 0, windowNumber: window.windowNumber,
@@ -80,7 +76,6 @@ struct TabScreensTests {
         scroll.reflectScrolledClipView(scroll.contentView)
 
         try await away()
-        // The same source view, where it was left.
         #expect(views(NoteTextView.self).first === editor)
         #expect(scroll.contentView.bounds.origin.y == 600)
     }
@@ -93,19 +88,15 @@ struct TabScreensTests {
         tabs.open(Navigator(Navigator.Entry(link: .place(.grades))))
         try await settle()
 
-        // Behind, the note keeps its size: its text doesn't reflow out of sight on every frame of a resize (#310).
         window.setContentSize(NSSize(width: 1500, height: 900))
         try await settle()
         #expect(scroll.frame.size == before)
 
-        // In front again, it takes the window's.
         tabs.select(number: 1)
         try await settle()
         #expect(views(NoteTextView.self).first === editor)
         #expect(scroll.frame.width > before.width)
 
-        // Narrower than the grades screen behind it was left at, the window still holds the note in front: a screen
-        // behind sized the stack to itself and pushed the one in front past the window's edge.
         window.setContentSize(NSSize(width: 1250, height: 900))
         try await settle()
         let content = try #require(window.contentView)
@@ -114,14 +105,12 @@ struct TabScreensTests {
 
     @Test func aKeptTabKeepsItsViewMode() async throws {
         try await settle(2)
-        // Reading only, as ⌘E or the bar's 미리보기 leaves it.
         try commandE()
         try await settle()
         #expect(views(NoteTextView.self).isEmpty)
         let preview = try #require(views(PreviewWebView.self).first)
 
         try await away()
-        // Still reading, the same page.
         #expect(views(NoteTextView.self).isEmpty)
         #expect(views(PreviewWebView.self).first === preview)
     }
@@ -130,7 +119,6 @@ struct TabScreensTests {
         try await settle(2)
         tabs.open(Navigator(Navigator.Entry(link: .place(.grades))))
         try await settle()
-        // The note behind still has ⌘E; pressed now, it would switch a page no one sees.
         let key = try #require(
             NSEvent.keyEvent(
                 with: .keyDown, location: .zero, modifierFlags: .command, timestamp: 0, windowNumber: window.windowNumber,
@@ -150,7 +138,7 @@ struct TabScreensTests {
         editor.setSelectedRange(NSRange(location: (editor.string as NSString).length, length: 0))
         editor.insertText("방금 쓴 줄", replacementRange: editor.selectedRange())
         try await settle(0.1)
-        // Typed less than the second the editor waits before saving.
+        // 편집기가 저장하기 전에 기다리는 1초보다 짧은 사이에 입력했다.
         #expect(try !onDisk.contains("방금 쓴 줄"))
 
         tabs.open(Navigator(Navigator.Entry(link: .place(.grades))))
@@ -161,7 +149,6 @@ struct TabScreensTests {
         #expect(views(NoteTextView.self).isEmpty)
         #expect(try onDisk.contains("방금 쓴 줄"))
 
-        // In front again, drawn from its address, with the text from the file.
         tabs.select(number: 1)
         try await settle(2)
         #expect(views(NoteTextView.self).first?.string.contains("방금 쓴 줄") == true)

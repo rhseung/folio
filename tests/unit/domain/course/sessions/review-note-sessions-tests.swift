@@ -3,8 +3,6 @@ import Foundation
 import PropertyBased
 import Testing
 
-/// One review note covering several classes caught up on at once (#146). Each session points at the note, so a note's
-/// sessions are read back from them; a rough note stays with one class.
 struct ReviewNoteSessionsTests {
     let device = UUID()
     let start = Date(timeIntervalSince1970: 1_790_000_000)
@@ -14,7 +12,7 @@ struct ReviewNoteSessionsTests {
         return c
     }()
 
-    /// Two classes a week from week 9, one day apart, so index order is date order.
+    // 9주차부터 일주일 간격으로 하루 차이의 수업이 두 개씩 있어서, index 순서가 날짜 순서와 같다.
     func sessions(_ count: Int) -> [Session] {
         (0..<count).map { Session(device: device, at: start, week: 9 + $0 / 2, date: start.addingTimeInterval(Double($0) * 86_400)) }
     }
@@ -52,7 +50,6 @@ struct ReviewNoteSessionsTests {
         #expect(f.sessions(pointingAt: nil).isEmpty)
     }
 
-    /// A rough note is taken during one class: linking it elsewhere moves it, and two sessions holding it break a rule.
     @Test func aRoughNoteStaysWithOneSession() {
         let s = sessions(2), note = UUID()
         var f = file(s, notes: [(note, .rough)])
@@ -63,21 +60,17 @@ struct ReviewNoteSessionsTests {
         #expect(violations(f).contains("NoteEntry.session"))
     }
 
-    /// A note turned into a review note leaves the class it was the rough note of, then gathers classes.
     @Test func becomingAReviewNoteLeavesTheRoughSlot() {
         let s = sessions(2), note = UUID()
         var f = file(s, notes: [(note, .review)])
         f.linkNote(note, to: s[0].id, as: .rough)
         f.linkNote(note, to: s[1].id, as: .review)
         #expect(f.sessions.map(\.roughNoteId) == [nil, nil] && f.sessions.map(\.reviewNoteId) == [nil, note])
-        // No session, or another kind, lets go of every class.
         f.linkNote(note, to: s[0].id, as: .review)
         f.linkNote(note, to: nil, as: .review)
         #expect(f.sessions(pointingAt: note).isEmpty)
     }
 
-    /// The note is written once, so the classes it covers are unfinished or written together, and each leaves the
-    /// "no review note" list together.
     @Test func theClassesOfANoteFinishTogether() {
         let s = sessions(3), note = UUID()
         let now = start.addingTimeInterval(10 * 86_400)
@@ -93,12 +86,10 @@ struct ReviewNoteSessionsTests {
         f.setReviewNoteUnfinished(note, false)
         #expect(f.sessions.map { f.needsReviewNote($0, at: now) } == [false, false, true])
 
-        // Linked again, a class keeps its own mark rather than the note's.
         f.linkNote(note, to: s[1].id, as: .review)
         #expect(!f.sessions[1].reviewNoteUnfinished)
     }
 
-    /// Every unit taught in the covered classes asks for no review note first, whichever class it was last taught in.
     @Test func theSchedulerSeesTheSharedNoteOnEachClass() {
         let s = sessions(2), note = UUID()
         let now = start.addingTimeInterval(10 * 86_400)
@@ -126,12 +117,9 @@ struct ReviewNoteSessionsTests {
     static let picks = Gen.int(in: 0...1).array(of: 1...8)
     static let order = Gen.int(in: 0...1_000).array(of: 8...8)
 
-    /// Whatever order the classes are added in, the note reads them back in date order, and taking one off or
-    /// deleting the note leaves no stray link.
     @Test func linkingInAnyOrderReadsBackInDateOrder() async {
         await propertyCheck(input: Self.picks, Self.order) { picks, order in
             let s = sessions(picks.count), note = UUID(), other = UUID()
-            // Stored out of date order, as sessions added later for earlier classes are.
             var f = file(s.indices.sorted { order[$0] < order[$1] }.map { s[$0] }, notes: [(note, .review), (other, .review)])
             let chosen = s.indices.filter { picks[$0] == 1 }
             for i in chosen.sorted(by: { order[$0] > order[$1] }) { f.linkNote(note, to: s[i].id, as: .review) }

@@ -6,7 +6,6 @@ import Testing
 
 @testable import FolioCLI
 
-/// `folio link` and `folio open` name their target the way every other command does and print its `folio://` link.
 struct LinkCommandTests {
     let h = Harness()
 
@@ -41,7 +40,6 @@ struct LinkCommandTests {
         #expect(AppLink(string: material.out)?.anchor == .page(12))
     }
 
-    /// Each kind is looked up as itself: a kind the lookup forgot fell through to the notes and printed a note's ID.
     @Test func eachKindLinksAsItself() throws {
         let gist = try Harness.fixtureCopy()
         #expect(h.cli(["exam", "add", "EC4207", "중간고사"], gist: gist).code == 0)
@@ -61,7 +59,6 @@ struct LinkCommandTests {
         #expect(h.cli(["link", "note", "EC4207/매칭 정리", "--page", "2"], gist: gist).code == Exit.usage.rawValue)
     }
 
-    /// A recording is named by its class, as its file is, and its link carries a moment written as the player shows it.
     @Test func aRecordingLinkCarriesItsMoment() throws {
         let gist = try Harness.fixtureCopy()
         #expect(h.cli(["session", "add", "EC4207", "--date", "2026-10-20 10:30"], gist: gist).code == 0)

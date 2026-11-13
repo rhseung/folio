@@ -3,9 +3,6 @@ import Foundation
 import PropertyBased
 import Testing
 
-/// Properties every input must keep, checked on random courses and scores. They can't say what the right GPA is, only
-/// what no right answer breaks, so the hand-worked examples in GradingTests stay the anchor. A failure prints the seed;
-/// `@Test(.fixedSeed(...))` replays it.
 struct GradePropertyTests {
     let device = UUID()
     let now = Date(timeIntervalSince1970: 0)
@@ -23,8 +20,7 @@ struct GradePropertyTests {
         ])
     }()
 
-    // Whole credits and half-point grades keep every sum exact in binary, so results compare with ==.
-    // A grade index past the catalog means the course is still ungraded.
+    // 정수 학점과 0.5 단위 성적은 이진수에서 모든 합을 정확히 유지하므로, 결과를 ==로 비교한다. catalog를 넘는 성적 index는 아직 성적이 없는 과목이다.
     static let course = zip(Gen.int(in: 0...4), Gen.int(in: 0...11))
     static let courses = course.array(of: 0...10)
 
@@ -100,7 +96,6 @@ struct GradePropertyTests {
 
     // MARK: Course scores
 
-    // (score, max, excused); the score never passes its max.
     static let entry = zip(Gen.double(in: 0...1), Gen.int(in: 0...100), Gen.bool(0.1))
     static let entries = entry.array(of: 0...12)
     static let aggregation = Gen.int(in: 0...4).map { i -> Aggregation in [.sum, .mean, .single, .dropLowest(2), .bestOf(3)][i] }
@@ -137,7 +132,6 @@ struct GradePropertyTests {
         }
     }
 
-    // Up to three components, each with a weight, a known or unknown count of scores, and its scores.
     static let component = zip(Gen.int(in: 0...50), Gen.int(in: 1...10).optional(), Self.aggregation, Self.entries)
     static let components = component.array(of: 1...3)
 

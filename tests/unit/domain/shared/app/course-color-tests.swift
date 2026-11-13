@@ -22,28 +22,27 @@ struct CourseColorTests {
     }
 
     @Test func savedHexReadsAsTheNearestPreset() {
-        #expect(CourseColor.token("#2F7FE0", position: 0) == "blue")  // the old blue preset
-        #expect(CourseColor.token("#1B2A6B", position: 0) == "blue")  // dark navy, not violet
-        #expect(CourseColor.token("#C4473A", position: 0) == "red")  // the old red preset
+        #expect(CourseColor.token("#2F7FE0", position: 0) == "blue")
+        #expect(CourseColor.token("#1B2A6B", position: 0) == "blue")
+        #expect(CourseColor.token("#C4473A", position: 0) == "red")
         #expect(CourseColor.token("#FFD000", position: 0) == "orange")
-        #expect(CourseColor.token("#zzzzzz", position: 1) == "blue")  // not hex: falls back by position
+        #expect(CourseColor.token("#zzzzzz", position: 1) == "blue")
     }
 
     @Test func savedGrayHexReadsAsGraphite() {
         #expect(CourseColor.token("#7F7F7F", position: 0) == "graphite")
-        #expect(CourseColor.token("#706C66", position: 0) == "graphite")  // the old neutral's own value
+        #expect(CourseColor.token("#706C66", position: 0) == "graphite")
         #expect(CourseColor.token("#4A4A4A", position: 0) == "graphite")
         #expect(CourseColor.token("#B0B0B0", position: 0) == "graphite")
         #expect(CourseColor.token("#8A8A8A", position: 0) == "graphite")
-        #expect(CourseColor.token("#6B7B8C", position: 0) == "graphite")  // slate gray
-        #expect(CourseColor.token("#7A6E64", position: 0) == "graphite")  // warm taupe
+        #expect(CourseColor.token("#6B7B8C", position: 0) == "graphite")
+        #expect(CourseColor.token("#7A6E64", position: 0) == "graphite")
     }
 
-    // A muted color must still read as its hue, not as the neutral.
     @Test func mutedColorsKeepTheirHue() {
         #expect(CourseColor.token("#8A8A3C", position: 0) == "olive")
-        #expect(CourseColor.token("#4F7A6A", position: 0) == "green")  // gray-green
-        #expect(CourseColor.token("#5A6E9A", position: 0) != "graphite")  // slate blue
+        #expect(CourseColor.token("#4F7A6A", position: 0) == "green")
+        #expect(CourseColor.token("#5A6E9A", position: 0) != "graphite")
     }
 
     @Test func everyColoredPresetHasAnAnchor() {

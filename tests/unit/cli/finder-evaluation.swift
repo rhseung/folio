@@ -4,19 +4,12 @@ import Testing
 
 @testable import FolioCLI
 
-/// `folio help <자연어>` measured on fixed requests. Prints top-1, top-3 and MRR; run with `swift test --filter
-/// FinderEvaluation` after changing phrases or synonyms, with FOLIO_EVAL_MODEL=1 to add the on-device rerank. The scores assert nothing, so a worse run never fails CI.
-/// Chosen over the old hand-weighted matcher (held-out top-1 22%), BM25 alone (17%) and with synonyms only (30%);
-/// the on-device rerank adds about 14 points but costs ~0.8 s and needs Apple Intelligence, so it stays here.
 struct FinderEvaluation {
-    /// Requests and the commands that answer them. Mixed on purpose: the synonym table's own words, paraphrases,
-    /// casual speech, English words, and typos.
     static let cases: [(String, [String])] = [
         ("과제 마감 바꾸기", ["assignment set"]), ("할 일 추가", ["assignment add", "exam plan add"]), ("결석 표시", ["attendance set"]),
         ("노트 만들어 줘", ["note add", "session note"]), ("중간고사 범위 넣기", ["exam scope"]), ("점수 기록", ["score add"]),
         ("카드 지우기", ["quiz rm"]), ("백업 되돌리기", ["backup restore"]), ("단원 순서 바꾸기", ["unit move"]),
         ("과제 제출했어", ["assignment status"]), ("회차 휴강", ["session set"]),
-        // Paraphrase and casual speech.
         ("숙제 언제까지야", ["assignment show", "assignment list"]), ("HW3 기한 연장됐어", ["assignment set"]),
         ("오늘 뭐 해야 돼", ["today"]), ("이번 학기 학점", ["transcript show", "gpa"]), ("내 평점 얼마야", ["gpa"]),
         ("졸업까지 몇 학점 남았지", ["requirement show"]), ("오늘 수업 빠졌어", ["attendance set"]), ("지각했어", ["attendance set"]),
@@ -30,11 +23,9 @@ struct FinderEvaluation {
         ("폴더 정리", ["cleanup plan"]), ("폴더 구조 검사", ["check"]), ("노션에서 가져오기", ["import notion"]),
         ("캘린더 시험 일정 가져오기", ["import exams"]), ("하루 시작 시간 설정", ["settings set"]), ("성적 보이게 해줘", ["unlock"]),
         ("단원 이름 바꾸기", ["unit set"]), ("강의 회차 목록", ["session list"]),
-        // English words and typos.
         ("score 고치기", ["score set"]), ("assignment 지워", ["assignment rm"]), ("과재 추가", ["assignment add"]), ("슈업 목록", ["session list"]),
     ]
 
-    /// Written after `Finder.phrases`, in words chosen to differ from them, so phrases fitted to `cases` can't flatter a method here.
     static let heldOut: [(String, [String])] = [
         ("레포트 내는 날 미뤄졌어", ["assignment set"]), ("과제 다 냈음", ["assignment status"]), ("어제 수업 못 감", ["attendance set"]),
         ("다음 주 월요일 보충수업 잡혔어", ["session add"]), ("이번 주 목요일 수업 없대", ["session set"]), ("중간 범위가 3장까지래", ["exam scope"]),
@@ -48,8 +39,6 @@ struct FinderEvaluation {
 
     typealias Method = (String) async throws -> [String]
 
-    /// Written before the second round of phrase work and kept out of it: its failures are never read to fit phrases,
-    /// so its score is the honest one. Add a fresh set before the next round rather than tuning to this one.
     static let fresh: [(String, [String])] = [
         ("수학 숙제 하나 더 생겼어", ["assignment add"]), ("HW2 채점 끝났대", ["assignment status"]),
         ("출석 처리 잘못됐어 출석으로 바꿔", ["attendance set"]), ("3주차 2번째 수업 지워", ["session rm"]), ("이번 수업 필기 열어줘", ["session note"]),
@@ -66,7 +55,7 @@ struct FinderEvaluation {
         let shipped: Method = { Finder.find($0, limit: 10).map { $0.command.replacing("folio ", with: "") } }
         var methods: [(String, Method)] = [("BM25+이럴 때 (folio help)", shipped)]
 
-        // A model call per request takes a minute and a half in all, too slow for every test run.
+        // 요청마다 모델을 부르면 모두 합쳐 1분 30초가 걸려서, 테스트를 돌릴 때마다 실행하기에는 느리다.
         if ProcessInfo.processInfo.environment["FOLIO_EVAL_MODEL"] != nil, SystemLanguageModel.default.isAvailable {
             methods.append(("+기기 안 모델 재정렬", Rerank(Finder.entries(), first: shipped).search))
         }
@@ -103,8 +92,6 @@ struct FinderEvaluation {
     }
 }
 
-/// Apple's on-device model reorders the first method's top ten; it can only pick among them, so a command the first
-/// method missed stays missed. Greedy sampling, so a run is repeatable.
 struct Rerank {
     let abstracts: [String: String]
     let first: FinderEvaluation.Method

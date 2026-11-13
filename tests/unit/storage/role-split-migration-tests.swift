@@ -4,7 +4,6 @@ import Testing
 
 @testable import FolioStorage
 
-/// course.json v4 -> v5: roles follow the folders split by origin, and every material gets an empty exam link list.
 struct RoleSplitMigrationTests {
     func material(_ role: String?) -> JSONValue {
         var fields: [String: JSONValue] = ["path": .string("Exams/Past/x.pdf"), "futureMaterialField": .string("keep me")]
@@ -21,11 +20,10 @@ struct RoleSplitMigrationTests {
         #expect(materials.map { $0["role"] } == [.string("inherited"), .string("exam"), .string("lecture"), nil])
         #expect(materials.allSatisfy { $0["examIds"] == .array([]) && $0["futureMaterialField"] == .string("keep me") })
 
-        // The kind is left for the cleanup plan, where marking a file as a past exam is shown before it happens.
         #expect(materials.allSatisfy { $0["kind"] == nil && $0["path"] == .string("Exams/Past/x.pdf") })
     }
 
-    /// Migrations before v5 decode the whole file, so a v4 material must still read.
+    // v5 전의 마이그레이션은 파일 전체를 디코딩하므로, v4 자료도 여전히 읽혀야 한다.
     @Test func aV4MaterialStillDecodes() throws {
         let json = #"""
             {"createdAt":"2026-03-02T09:00:00.000Z","id":"A0000000-0000-4000-8000-000000000001","isFolder":false,

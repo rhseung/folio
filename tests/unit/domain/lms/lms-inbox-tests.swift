@@ -10,8 +10,6 @@ struct LMSInboxTests {
         CourseFile(course: Course(device: device, at: now, title: title), assignments: assignments)
     }
 
-    /// Sections are the LMS classrooms by their own names, in the dashboard's order, two of one course and one that is
-    /// no course alike. A classroom not seen before proposes nothing until the sync marked what it held.
     @Test func sectionsAreKnownClassroomsByTheirOwnNames() {
         let snapshot = LMSSnapshot(
             at: now,
@@ -35,7 +33,6 @@ struct LMSInboxTests {
     @Test func assignmentsAreProposedWhileTheyCanStillBeDone() {
         var added = Assignment(device: device, at: now, title: "HW3", source: .lms)
         added.lmsId = 104
-        // Added to some course from another classroom's proposal: still not proposed again.
         let other = course("선형대수학", assignments: [added])
         var settings = LMSSettings(known: [1])
         settings.mark([105, 107, 108].map { LMSKey(kind: .assignment, id: $0) }, handled: true)
@@ -54,8 +51,6 @@ struct LMSInboxTests {
             ])
         let inbox = LMSInbox.build(snapshot, settings: settings, courses: [course("그래프 이론"), other], now: now)
         #expect(inbox.proposals.map(\.id) == ["assignment:100", "assignment:101", "assignment:106"])
-        // The added one says where it went and the dismissed one can come back; a deadline that passed is neither.
-        // One dismissed and then past or handed in stays in view, but taking the mark back would show it nowhere.
         let handled = inbox.sections[0].handled
         #expect(handled.map(\.id) == ["assignment:104", "assignment:105", "assignment:107", "assignment:108"])
         #expect(handled.map(\.course) == [other.course.id, nil, nil, nil])
@@ -80,8 +75,6 @@ struct LMSInboxTests {
             ])
     }
 
-    /// Every item of a classroom stays in view, handled ones too, so a dismissal made by mistake can be taken back. Those
-    /// with something new come first; one with only handled items follows, and is no count anywhere.
     @Test func classroomsWithOnlyHandledItemsFollowAndCountForNothing() {
         let snapshot = LMSSnapshot(
             at: now, classrooms: [.init(id: 1, title: "다 본 강의실"), .init(id: 2, title: "새 글"), .init(id: 3, title: "빈 강의실")],

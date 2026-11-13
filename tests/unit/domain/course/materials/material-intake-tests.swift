@@ -3,7 +3,6 @@ import Foundation
 import PropertyBased
 import Testing
 
-/// Where the add sheet opens each file, and the names it shows before anything is copied.
 struct MaterialIntakeTests {
     static let calendar: Calendar = {
         var c = Calendar(identifier: .gregorian)
@@ -11,7 +10,7 @@ struct MaterialIntakeTests {
         return c
     }()
     static let device = UUID()
-    /// Thursday 2026-10-01 14:00 in Seoul.
+    // 서울 기준 2026-10-01 목요일 14:00이다.
     static let now = calendar.date(from: DateComponents(year: 2026, month: 10, day: 1, hour: 14))!
     static let places = MaterialIntake.places(assignmentFolders: ["HW01", "HW02", "HW03", "Lab02"]) + ["Exams/중간고사", "Exams/기말고사"]
 
@@ -22,7 +21,7 @@ struct MaterialIntakeTests {
         return s
     }
 
-    /// 4주차 Tue/Thu, 5주차 Tue, and a class tonight (10/1 is day 31 of September counted on).
+    // 4주차 화목, 5주차 화, 오늘 밤 수업이다(10/1은 9월부터 세면 31일째).
     static let sessions = [
         session(week: 4, day: 22), session(week: 4, day: 24), session(week: 5, day: 29), session(week: 5, day: 31, hour: 19),
         session(week: 6, day: 36),
@@ -30,7 +29,6 @@ struct MaterialIntakeTests {
 
     static func day(_ month: Int, _ day: Int) -> Date { calendar.date(from: DateComponents(year: 2026, month: month, day: day, hour: 10))! }
 
-    /// Added final first, as when both are set up at the start of term: the order they are stored in says nothing.
     static let exams = [
         Exam(device: device, at: now, title: "기말고사", start: day(12, 15), folder: "기말고사"),
         Exam(device: device, at: now, title: "중간고사", start: day(10, 20), folder: "중간고사"),
@@ -49,20 +47,16 @@ struct MaterialIntakeTests {
         let g = guess("04_Trees.pdf")
         #expect(g.folder == "Lectures" && g.why == .named("04_"))
 
-        // The later of week 4's classes, both past.
         #expect(g.session == Self.sessions[1].id && g.sessionWhy == .week(4))
         let lecture = guess("GT_Lecture 5 - Matchings.pdf")
         #expect(lecture.why == .named("Lecture 5") && lecture.session == Self.sessions[3].id)
         #expect(guess("6주차 흐름.pdf").why == .named("6주차"))
 
-        // A week with no class yet takes its first.
         #expect(guess("6주차 흐름.pdf").session == Self.sessions[4].id)
 
-        // A week without a class gets none rather than today's, whose week would go in front of the name.
         #expect(guess("09_Coloring.pdf").session == nil && guess("09_Coloring.pdf").sessionWhy == nil)
     }
 
-    /// Slides often come before the class: tonight's class is today's, not tomorrow's or last Tuesday's.
     @Test func slidesWithoutAWeekGoToTodaysClass() {
         let g = guess("Matchings.pdf", pages: 24, landscape: true)
         #expect(g.folder == "Lectures" && g.why == .slides(pages: 24))
@@ -73,14 +67,12 @@ struct MaterialIntakeTests {
         #expect(guess("HW3.pdf") == IntakeGuess(folder: "Assignments/HW03", why: .named("HW3")))
         #expect(guess("gt_hw_2_solution.pdf").folder == "Assignments/HW02")
 
-        // The report is the student's; the manual is the professor's handout for that class, so it is a lecture file.
         #expect(guess("Lab 2 report.pdf").folder == "Assignments/Lab02")
         #expect(
             guess("Lab 2 manual.pdf")
                 == IntakeGuess(folder: "Lectures", why: .named("manual"), session: Self.sessions[3].id, sessionWhy: .today))
         #expect(guess("실험 안내 3.pdf").folder == "Lectures")
 
-        // No HW09 folder to put it in: the sheet can't make one, so the name says nothing.
         #expect(guess("HW9.pdf").folder == "Lectures" && guess("HW9.pdf").why == nil)
         #expect(guess("2024 중간고사 기출.pdf") == IntakeGuess(folder: "Inherited", why: .named("기출")))
         #expect(guess("GT_Syllabus_2026.pdf").folder == "Syllabus")
@@ -88,13 +80,10 @@ struct MaterialIntakeTests {
         #expect(guess("기말 자리 배치.pdf").folder == "Exams/기말고사")
     }
 
-    /// A notice that names no exam goes to the next one by date, not the one added last.
     @Test func anUnnamedExamNoticeGoesToTheNextExam() {
         #expect(guess("seating.pdf").folder == "Exams/중간고사")
         #expect(guess("seating.pdf", now: Self.day(11, 2)).folder == "Exams/기말고사")
-        // Both past: the latest.
         #expect(guess("시험 안내.pdf", now: Self.day(12, 20)).folder == "Exams/기말고사")
-        // Without dates nothing says which is coming, so no guess.
         let undated = Self.exams.map {
             var e = $0; e.start = nil; return e
         }
@@ -108,7 +97,7 @@ struct MaterialIntakeTests {
         #expect(guess("scan.pdf", pages: 3).why == nil)
     }
 
-    /// The previous study day still holds until the day boundary: at 03:00 the class of the evening before is "today".
+    // 하루 경계 전까지는 전 공부일이 이어지므로, 03:00에는 전날 저녁 수업이 "오늘"이다.
     @Test func todayFollowsTheDayBoundary() {
         let evening = Self.calendar.date(from: DateComponents(year: 2026, month: 10, day: 1, hour: 21))!
         let tonight = [Session(device: Self.device, at: evening, week: 5, date: evening)]

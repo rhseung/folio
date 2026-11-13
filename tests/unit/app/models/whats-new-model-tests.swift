@@ -19,7 +19,6 @@ struct WhatsNewModelTests {
         PatchNotes.Release(version: V(0, 2, 0), items: [PatchNotes.Item(kind: .feat, text: "창 탭", link: .place(.today))]),
     ]
 
-    /// A store of its own, so no test reads or writes the app's real defaults.
     func defaults() throws -> UserDefaults {
         let name = "folio.tests.\(UUID().uuidString)"
         let d = try #require(UserDefaults(suiteName: name))
@@ -38,7 +37,6 @@ struct WhatsNewModelTests {
         await n.check(busy: false)
         #expect(n.ask == nil)
         #expect(n.seen == V(0, 3, 0))
-        // Nothing needed the releases.
         #expect(n.feed == .notLoaded)
     }
 
@@ -52,11 +50,9 @@ struct WhatsNewModelTests {
         #expect(n.take() == ask)
         #expect(n.take() == nil)
 
-        // Taken but not yet closed: the next minute's check doesn't bring it again.
         await n.check(busy: false)
         #expect(n.ask == nil)
 
-        // Closing marks it seen, for the next launch too.
         n.markSeen()
         let next = ReleaseNotes(source: ReleaseList(list: Self.releases), defaults: d, current: V(0, 3, 0), prompts: true)
         await next.check(busy: false)
@@ -111,7 +107,6 @@ struct WhatsNewModelTests {
         #expect(model.state == .loading)
         await model.load()
         guard case .releases(let shown) = model.state else { Issue.record("\(model.state)"); return }
-        // 0.3.0 is for a newer app.
         #expect(shown.map(\.version) == [V(0, 2, 1), V(0, 2, 0)])
         #expect(model.isOpen(shown[0]) && !model.isOpen(shown[1]))
 
@@ -134,7 +129,6 @@ struct WhatsNewModelTests {
         #expect(model.noMatch == "‘창’에 맞는 항목 없음 (fix)")
     }
 
-    /// An iPhone puts the kinds under the search field; a pane or a window keeps them beside it.
     @Test func narrowPutsTheKindsUnderTheSearch() throws {
         let model = try makeModel()
         #expect(model.narrow)
@@ -146,7 +140,6 @@ struct WhatsNewModelTests {
         }
     }
 
-    /// Each kind its own hue, so feat and change are not two grays.
     @Test func everyKindHasItsOwnTone() {
         let tones = PatchNotes.Kind.allCases.map(\.tone)
         #expect(Set(tones.map { "\($0)" }).count == tones.count)

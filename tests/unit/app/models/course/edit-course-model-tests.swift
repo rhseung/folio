@@ -22,7 +22,6 @@ struct EditCourseModelTests {
         let model = try model()
         #expect(model.timesNote == nil)
         model.schedule = [ClassTime(weekday: 1, startMinute: 11 * 60, endMinute: 10 * 60)]
-        // The domain's schedule rule refuses it; the sheet only passes the reason on.
         #expect(model.timesNote?.contains("끝은 시작보다 늦어야 합니다") == true)
     }
 

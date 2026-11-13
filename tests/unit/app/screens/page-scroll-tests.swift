@@ -4,12 +4,11 @@ import Testing
 
 @testable import Folio
 
-/// A page doesn't stretch past its ends: the bounce pulled its backdrop off the panel's top edge.
 @MainActor @Suite(.serialized)
 struct PageScrollTests {
     @Observable final class Rows { var count = 40 }
 
-    // Reads `rows` in its body, so a change redraws the page; read where the host is built, it was a fixed value.
+    // `rows`를 body에서 읽어야 값이 바뀔 때 페이지를 다시 그린다. host를 만드는 곳에서 읽었을 때에는 고정된 값이 되었다.
     struct Rig: View {
         let rows: Rows
         var body: some View { Page { ForEach(0..<rows.count, id: \.self) { Text("줄 \($0)") } } }
@@ -37,7 +36,6 @@ struct PageScrollTests {
         #expect(scroll.verticalScrollElasticity == .none)
         #expect(scroll.horizontalScrollElasticity == .none)
 
-        // It stays off when SwiftUI redraws the page for new content.
         let height = try #require(scroll.documentView).frame.height
         rows.count = 80
         try await Self.settle(host)

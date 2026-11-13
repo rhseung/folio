@@ -3,12 +3,10 @@ import Testing
 
 @testable import FolioMarkdown
 
-/// `[[note:<ID>…|이름]]`: a note named by its ID, found by the app however its file is named now.
 struct NoteIDLinkTests {
     let matching = UUID(uuidString: "6F1D2C4E-8A3B-4F5E-9C1D-2B7A8E0F3D41")!
     let gone = UUID(uuidString: "0B7A8E0F-3D41-4F5E-9C1D-6F1D2C4E8A3B")!
 
-    /// Notes by ID, with their titles, as the app finds them in its courses.
     func page(_ text: String, _ notes: [UUID: (title: String, text: String)]) -> String {
         let embeds = NoteEmbeds(
             key: "Host", labels: .init(missing: "MISSING", loop: "LOOP", tooDeep: "DEEP"),
@@ -33,7 +31,6 @@ struct NoteIDLinkTests {
         #expect(html.contains("<a class=\"wikilink\" href=\"folio://note/\(matching.uuidString)\">매칭 정리</a>"), "\(html)")
     }
 
-    /// Without a name of its own the link shows the note's title as it is now.
     @Test func aLinkWithoutANameShowsTheTitle() {
         let html = page("[[note:\(matching.uuidString)#정의]]", [matching: ("R&D 매칭", "")])
         #expect(html.contains(">R&amp;D 매칭 › 정의</a>"), "\(html)")
@@ -42,7 +39,6 @@ struct NoteIDLinkTests {
     @Test func aLinkToNoNoteIsBroken() {
         let html = page("[[note:\(gone.uuidString)|옛 노트]]", [:])
         #expect(html.contains("<a class=\"wikilink missing\" href=\"folio://note/\(gone.uuidString)\">옛 노트</a>"), "\(html)")
-        // Without notes to look in (the Claude panel, PDF export) nothing can tell, and the link is drawn as written.
         let plain = HTMLRenderer.render(markdown: "[[note:\(gone.uuidString)|옛 노트]]")
         #expect(plain.contains("<a class=\"wikilink\" href="), "\(plain)")
     }
@@ -61,8 +57,6 @@ struct NoteIDLinkTests {
         #expect(html.contains("<template class=\"ref-preview\"><p>짝짓기</p>\n</template>"), "\(html)")
     }
 
-    /// A block ID is written in the text after the block, so it goes where the block goes: moved within its note the
-    /// block is still found; moved to another note, the link still names the first and finds nothing.
     @Test func aBlockFollowsMovesWithinItsNoteOnly() {
         let link = "[[note:\(matching.uuidString)#^c1|정의]]\n\n![[note:\(matching.uuidString)#^c1]]"
         let before = page(link, [matching: ("매칭", "# 앞\n\n짝짓기 ^c1\n\n# 뒤")])
@@ -88,9 +82,7 @@ struct NoteIDLinkTests {
     }
 }
 
-/// `[[제목]]` written by hand: a title no note has is drawn broken, as a link by ID to no note is.
 struct MissingTitleLinkTests {
-    /// The titles the course's notes have, as the app finds a link's note to open it.
     func page(_ text: String, titles: Set<String>) -> String {
         let embeds = NoteEmbeds(
             key: "Host", labels: .init(missing: "MISSING", loop: "LOOP", tooDeep: "DEEP"),
@@ -109,7 +101,6 @@ struct MissingTitleLinkTests {
         #expect(
             html.contains("<a class=\"wikilink missing\" href=\"folio://note/%EC%97%86%EB%8A%94%20%EB%85%B8%ED%8A%B8#정의\">없는 노트 › 정의</a>"),
             "\(html)")
-        // The title is looked for as written, not as the page escapes it.
         #expect(html.contains(">R&amp;D</a>") && !html.contains("missing\" href=\"folio://note/R"), "\(html)")
     }
 
@@ -120,14 +111,12 @@ struct MissingTitleLinkTests {
         #expect(html.contains("<a class=\"embed-title\" href=\"folio://note/%EB%A7%A4%EC%B9%AD#^c1\">"), "\(html)")
     }
 
-    /// Files and other app objects are not notes: `![[그림.png]]` and `[[material:…]]` stay as they were.
     @Test func filesAndObjectsAreLeftAlone() {
         let html = page("![[그림.png]] [[slides.pdf]] [[material:\(UUID().uuidString)#page=3]] [[v1.2]]", titles: [])
         #expect(html.components(separatedBy: "missing").count == 2, "\(html)")
         #expect(html.contains("<a class=\"wikilink missing\" href=\"folio://note/v1.2\">v1.2</a>"), "\(html)")
     }
 
-    /// Without notes to look in (the Claude panel, PDF export) nothing can tell, and every link is drawn whole.
     @Test func withoutNotesNoLinkIsBroken() {
         #expect(!HTMLRenderer.render(markdown: "[[없음]] ![[없음]]").contains("missing"))
     }

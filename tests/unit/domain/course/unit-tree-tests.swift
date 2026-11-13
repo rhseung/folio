@@ -108,7 +108,7 @@ struct NoteUnitTests {
     let now = Date(timeIntervalSince1970: 0)
 
     @Test func aNoteBelongsToItsLinkedUnitThenItsSessionsThenItsExams() {
-        // `later` comes first in the array but second in the outline, so a fallback by array order would pick it.
+        // `later`는 배열에서 먼저지만 목차에서는 둘째이므로, 배열 순서로 대신 고르면 이것을 고른다.
         let later = Unit(device: device, at: now, title: "B", order: 2), first = Unit(device: device, at: now, title: "A", order: 1)
         var bySession = Unit(device: device, at: now, title: "C", order: 3)
         var session = Session(device: device, at: now, week: 2, date: now)

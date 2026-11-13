@@ -5,7 +5,6 @@ import FolioStorage
 import Foundation
 import Testing
 
-/// A removal settles every pointer at the removed item, so the save that follows has nothing new to refuse.
 struct RemoveActionTests {
     static let course = UUID(uuidString: "C0000000-0000-4000-8000-000000000002")!
     let device = UUID()
@@ -29,7 +28,6 @@ struct RemoveActionTests {
         try store.save(doc)
     }
 
-    // Only a unit note keeps units of its own; any other kind would drop them on the way in.
     func note(_ path: String, units: [UUID] = [], exam: UUID? = nil) -> NoteEntry {
         NoteEntry(
             id: UUID(), device: device, at: now, path: path,
@@ -40,7 +38,6 @@ struct RemoveActionTests {
         ProblemSet(device: device, at: now, title: title, problems: [.init(number: "1", unitIds: units), .init(number: "2")])
     }
 
-    /// Tracks the fixture's files and hangs one of them on a session, a problem set and an assignment.
     func linkedMaterial() throws -> UUID {
         try run(MaterialTrack(course: Self.course))
         let session = UUID()
@@ -105,7 +102,6 @@ struct RemoveActionTests {
         #expect(plan.allSatisfy { $0.target == nil })
     }
 
-    /// A class note reads its units from its session, so it loses the unit when the session does.
     @Test func aSessionNoteKeepsItsUnitsUntilTheUnitGoes() throws {
         let session = UUID()
         let unit = Unit(device: device, at: now, title: "매칭", order: 90)

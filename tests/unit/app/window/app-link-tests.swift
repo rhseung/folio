@@ -6,7 +6,6 @@ import Testing
 
 @testable import Folio
 
-/// One window's history: every way of moving goes through `go`, and the same item at another page is one step.
 @MainActor
 struct NavigatorTests {
     @Test func movesBackAndForwardThroughWhereTheWindowWas() {
@@ -22,7 +21,6 @@ struct NavigatorTests {
         #expect(navigator.forwardList.map(\.link) == [.course(graphTheory), .place(.grades)])
         navigator.forward()
         #expect(navigator.screen == .course(graphTheory))
-        // A new move drops what was ahead, as in a browser.
         navigator.go(Navigator.Entry(link: .place(.people)))
         #expect(navigator.forwardList.isEmpty)
     }
@@ -37,7 +35,6 @@ struct NavigatorTests {
         #expect(navigator.screen == .course(graphTheory))
     }
 
-    /// Listening moves a replay's address every few seconds; none of it is a step to go back through.
     @Test func anotherMomentOfTheSameRecordingIsTheSameStep() {
         let navigator = Navigator()
         let replay = AppLink(.recording, UUID())
@@ -50,7 +47,6 @@ struct NavigatorTests {
     @Test func aLinkFromOutsideOpensInANewTabUnlessTheWindowWasMadeForIt() {
         let fresh = Navigator()
         #expect(fresh.outsidePlacement(windowAge: 0.3) == .here)
-        // The same Today, but a window the user has had open for a while: what it shows stays.
         #expect(fresh.outsidePlacement(windowAge: Navigator.freshWindow + 1) == .tab)
         let moved = Navigator()
         moved.go(Navigator.Entry(link: .place(.grades)))
@@ -75,7 +71,6 @@ struct NavigatorTests {
     }
 }
 
-/// Where a link points in the open folder, worked out once when it is opened.
 @MainActor
 struct WorkspaceLinkTests {
     @Test func findsTheCourseThatHoldsWhatALinkNames() throws {
@@ -84,7 +79,6 @@ struct WorkspaceLinkTests {
         #expect(workspace.entry(for: AppLink(.exam, exam))?.course == graphTheory)
         #expect(workspace.entry(for: .course(graphTheory, page: .units))?.course == graphTheory)
         #expect(workspace.entry(for: .place(.grades)) == Navigator.Entry(link: .place(.grades)))
-        // Gone or from another folder: nothing to open.
         #expect(workspace.entry(for: AppLink(.exam, UUID())) == nil)
         #expect(workspace.entry(for: AppLink(.semester, UUID())) == nil)
     }
@@ -117,7 +111,6 @@ struct WorkspaceLinkTests {
         #expect(workspace.title(of: Navigator.Entry(link: .settings(.claude))) == "\(String(localized: .rootNavSettings)) · Claude")
     }
 
-    /// A link in a note without a name of its own shows what it points at, as the app names it (#347).
     @Test func aLinkIsNamedWithItsPage() throws {
         let workspace = try fixtureWorkspace()
         workspace.run(MaterialTrack(course: graphTheory))
@@ -131,7 +124,6 @@ struct WorkspaceLinkTests {
         #expect(workspace.name(of: .course(graphTheory, page: .units))?.hasPrefix(course.title) == true)
         #expect(workspace.name(of: AppLink(.exam, UUID())) == nil)
 
-        // The preview shows it, whether the link is written by kind and ID or as the copied address.
         let embeds = NoteEmbedSource(workspace: workspace, course: course, own: nil).embeds(revision: 0, text: "")
         for written in ["[[\(page.string)]]", "[[material:\(material.id.uuidString)#page=2]]"] {
             let html = HTMLRenderer.blocks(ParsedNote(written), embeds: embeds).map(\.html).joined()
@@ -139,7 +131,6 @@ struct WorkspaceLinkTests {
         }
     }
 
-    /// A pasted address goes in as link completion writes a link, unless it lands where it is a link's target or text.
     @Test func aPastedAddressBecomesALinkToWhatItNames() {
         let id = UUID()
         let named = { (link: AppLink) -> String? in link.kind == .material ? "05_Matchings.pdf" : nil }
@@ -151,25 +142,21 @@ struct WorkspaceLinkTests {
         #expect(
             pastedNoteLink(AppLink(.recording, id, anchor: .time(750)).string, into: "", at: 0, name: named)
                 == "[[recording:\(id.uuidString)#t=12:30]]")
-        // No `<kind>:<ID>` form: the address goes between the brackets.
         #expect(
             pastedNoteLink(AppLink.course(id, page: .units).string, into: "", at: 0, name: { _ in "그래프 이론 · 단원" })
                 == "[[folio://course/\(id.uuidString)/units|그래프 이론 · 단원]]")
         #expect(pastedNoteLink(AppLink.settings(.claude).string, into: "", at: 0, name: { _ in nil }) == "[[folio://settings/claude]]")
-        // A heading `|` or `#` would cut short stays escaped in the address.
         let odd = AppLink(.note, id, anchor: .heading("A|B"))
         #expect(pastedNoteLink(odd.string, into: "", at: 0, name: { _ in nil }) == "[[\(odd.string)]]")
-        // Inside a link being written, code, or not an address: pasted as it is.
         #expect(pastedNoteLink(page.string, into: "[[]]", at: 2, name: named) == nil)
         #expect(pastedNoteLink(page.string, into: "`a`", at: 2, name: named) == nil)
         #expect(pastedNoteLink("folio://nowhere", into: "", at: 0, name: named) == nil)
         #expect(pastedNoteLink("https://example.com", into: "", at: 0, name: named) == nil)
     }
 
-    /// The address wins: a link naming a tab opens it, and only one naming none (the sidebar, ⌘,) takes the last picked.
     @Test func aSettingsLinkWithoutATabOpensTheOneLastPicked() throws {
         let workspace = try fixtureWorkspace()
-        // The test host shares the app's defaults: the user's last tab is put back.
+        // 테스트 호스트가 앱의 defaults를 함께 쓰므로, 사용자가 마지막으로 고른 탭을 되돌려 놓는다.
         let saved = UserDefaults.standard.string(forKey: SettingsTab.storageKey)
         defer { UserDefaults.standard.set(saved, forKey: SettingsTab.storageKey) }
         UserDefaults.standard.set(SettingsTab.backup.rawValue, forKey: SettingsTab.storageKey)
@@ -178,7 +165,6 @@ struct WorkspaceLinkTests {
     }
 }
 
-/// Every course page and settings tab has a link of its own and comes back from it.
 struct CoursePageLinkTests {
     @Test func everySectionRoundTripsThroughItsPage() {
         for section in CourseSection.allCases {
@@ -191,7 +177,6 @@ struct CoursePageLinkTests {
     }
 }
 
-/// The Claude panel's page opens links as a note does; only its own buttons stay with it.
 @MainActor
 struct ClaudePanelLinkTests {
     final class Opened {

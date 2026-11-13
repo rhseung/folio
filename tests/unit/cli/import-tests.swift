@@ -6,7 +6,7 @@ import Testing
 
 @testable import FolioCLI
 
-/// Synthetic payloads only: the real exports are academic data and never enter the repo.
+// 실제 내보내기 파일은 학업 데이터라서 저장소에 넣지 않으므로, 지어낸 내용만 쓴다.
 struct ImportCommandTests {
     let h = Harness()
     let dir: URL
@@ -35,7 +35,6 @@ struct ImportCommandTests {
                           "semesterId": "\(fall)", "codeIds": ["\(ec)"]}]}
             """)
 
-        // The fixture already has transcript.json, which the import must never overwrite.
         let (a, b) = (try Harness.fixtureCopy(), try Harness.fixtureCopy())
         #expect(h.cli(["import", "notion", path], gist: a).code == Exit.rule.rawValue)
         for gist in [a, b] { try FileManager.default.removeItem(at: GISTStore(url: gist).transcriptURL) }
@@ -45,7 +44,6 @@ struct ImportCommandTests {
         try expectSameFiles(a, b)
     }
 
-    /// Two pages titled "숙제" get names apart before either file exists, so a dry run passes and shows where they go.
     @Test func notes() throws {
         let note = UUID()
         _ = try payload("dump/\(Harness.graphTheory)/notes/a.md", "본문")
@@ -68,7 +66,6 @@ struct ImportCommandTests {
         let notes = try ActionContext(gist: GISTStore(url: gist), device: UUID()).file(Harness.graphTheory).notes.map(\.path)
         #expect(notes.contains("Notes/숙제.md") && notes.contains("Notes/숙제 2.md"))
 
-        // A note deleted in Finder keeps its entry; importing again leaves both alone instead of adding it twice.
         try FileManager.default.removeItem(at: gist.appending(path: "2026-3/EC4207 그래프 이론/Notes/7주차-2.md"))
         let again = h.cli(["import", "notes", folder], gist: gist)
         #expect(again.code == 0, "\(again.err)")
@@ -133,7 +130,6 @@ struct ImportCommandTests {
         let path = try payload("handbook.json", #"{"year": 2026, "source": "2026 학사편람", "areas": {"EC4207": "전공선택"}}"#)
         let setup = [["import", "requirements", req], ["import", "handbook", path]]
 
-        // The fixture's courses carry no codes, and the handbook finds a course by its code.
         let coded: (URL) throws -> Void = { url in
             let at = Date(timeIntervalSince1970: 1_790_000_000)
             let ctx = ActionContext(gist: GISTStore(url: url), device: h.device, now: at)
@@ -148,7 +144,6 @@ struct ImportCommandTests {
             RequirementAccept(courses: [Harness.graphTheory])
         }
 
-        // Without a handbook row there is nothing to take, and nothing is written.
         let gist = try Harness.fixtureCopy()
         try coded(gist)
         _ = h.cli(["import", "requirements", req], gist: gist)

@@ -3,7 +3,6 @@ import SwiftSyntaxMacros
 import SwiftSyntaxMacrosTestSupport
 import XCTest
 
-// The mistakes @Action turns into compile errors. What it generates is checked by the actions that use it.
 final class ActionMacroTests: XCTestCase {
     let macros: [String: Macro.Type] = ["Action": ActionMacro.self]
 

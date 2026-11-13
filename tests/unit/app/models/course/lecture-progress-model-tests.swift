@@ -6,7 +6,6 @@ import Testing
 
 @testable import Folio
 
-/// Two classes of graph theory a week apart, with the matchings slides tracked.
 @MainActor
 struct LectureProgressModelTests {
     let workspace: Workspace
@@ -36,25 +35,20 @@ struct LectureProgressModelTests {
         let ask = try #require(workspace.wrapUpAsk)
         #expect(ask.session == session && ask.viewed == [SessionMaterial(materialId: slides.id, firstPage: 6, lastPage: 11)])
 
-        // As the app opens it: a stopped recording's prompt is the wrap-up, though the class hasn't reached its end.
         let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: session, viewed: ask.viewed, recorded: true)
         #expect(model.rows == [.init(id: slides.id, first: 7, last: 11)])
         #expect(model.seen(slides.id) == 6...11)
         #expect(model.refusal == nil && model.note == nil)
         model.submit()
         #expect(links(session) == [SessionMaterial(materialId: slides.id, firstPage: 7, lastPage: 11)])
-        // Saved before its end and before the recording reached course.json, it is still the wrap-up.
         #expect(!file.recordings.contains { $0.sessionId == session })
         #expect(file.sessions.first { $0.id == session }?.isWrappedUp == true)
     }
 
-    /// A recording without a class has nothing to wrap up. A course without lecture files still has units and a
-    /// note to ask about; a class wrapped up with nothing missing isn't asked again.
     @Test func aRecordingAsksUnlessItsClassHasNothingLeft() throws {
         workspace.askWrapUp(
             after: Recording(device: workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a"), course: graphTheory)
         #expect(workspace.wrapUpAsk == nil)
-        // Linear algebra's files aren't tracked in the fixture, so it has no lecture files yet.
         let linearAlgebra = UUID(uuidString: "C0000000-0000-4000-8000-000000000001")!
         let other = try #require(workspace.run(SessionAdd(course: linearAlgebra, date: .now.addingTimeInterval(-200 * 86_400)))?.made)
         let recording = Recording(device: workspace.device, at: .now, sessionId: other, file: "Recordings/a.m4a")
@@ -72,7 +66,6 @@ struct LectureProgressModelTests {
     @Test func aKeptFileNeedsBothPagesAndOnlyKeptFilesAreSaved() throws {
         let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: session)
         #expect(model.rows.isEmpty)
-        // The rest of the wrap-up can be saved without any progress.
         #expect(model.refusal == nil)
         #expect(model.addable.map(\.id) == [slides.id])
         model.add(slides.id)
@@ -88,8 +81,6 @@ struct LectureProgressModelTests {
         #expect(links(session) == [SessionMaterial(materialId: slides.id, firstPage: 2, lastPage: 4)])
     }
 
-    /// The prompt is the one writer of a class's progress: dismissed unsaved, the class stays without pages, and
-    /// opening it again from the class's menu fills the same pages from the recording, not the recording's first.
     @Test func aPromptDismissedAndOpenedAgainStartsAfterTheLastClass() throws {
         workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: earlier, firstPage: 1, lastPage: 6))
         let recording = Recording(
@@ -116,7 +107,6 @@ struct LectureProgressModelTests {
 
     @Test func aLectureLinkedToAClassStartsAfterTheLastOne() throws {
         let materials = MaterialsModel(workspace: workspace, course: try #require(workspace.course(graphTheory)))
-        // No class has reached the file: linked without pages, the whole file.
         materials.link(slides.id, session: earlier, linked: true)
         #expect(links(earlier) == [SessionMaterial(materialId: slides.id)])
         materials.setPages(slides.id, session: earlier, PageRange(first: 1, last: 8))
@@ -137,7 +127,6 @@ struct LectureProgressModelTests {
         let days = [earlier, session].map { id in file.day(of: file.sessions.first { $0.id == id }!, calendar: workspace.calendar) }
         #expect(model.rows.map(\.pages) == ["p.1–3", "p.4–5"])
         #expect(model.rows.map { $0.classes.map(\.day) } == days.map { [$0] })
-        // A class's day opens that class.
         #expect(model.rows.map { $0.classes.map(\.link) } == [[AppLink(.session, earlier)], [AppLink(.session, session)]])
         #expect(model.summary == String(localized: .materialsProgressCovered(5)))
         #expect(model.unranged == nil)
@@ -168,7 +157,6 @@ struct LectureProgressModelTests {
         #expect((0..<3).map { model.page(at: $0)?.page } == [4, nil, 6])
         #expect(model.pageLabel(try #require(model.page(at: 2))) == "p.6")
         #expect(model.pageLink(try #require(model.page(at: 2))) == AppLink(.material, slides.id, anchor: .page(6)))
-        // A search leaves lines out, so each one left says its page.
         model.query = "경로"
         #expect(model.page(at: 1)?.page == 4)
     }

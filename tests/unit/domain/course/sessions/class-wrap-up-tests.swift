@@ -15,7 +15,6 @@ struct ClassWrapUpTests {
         calendar.date(from: DateComponents(year: 2026, month: 11, day: day, hour: hour, minute: minute))!
     }
 
-    /// Mondays and Wednesdays 10:30–11:45, one lecture file, and the class of Monday 11/2.
     func course(lectures: Bool = true) -> CourseFile {
         var file = CourseFile(course: Course(device: device, at: at(1, 9), title: "그래프 이론"))
         file.course.schedule = [
@@ -33,7 +32,6 @@ struct ClassWrapUpTests {
     @Test func anEmptyClassMissesEverythingInAskingOrder() {
         let f = course()
         #expect(f.wrapUpGaps(of: f.sessions[0]) == [.progress, .units, .note, .attendance])
-        // No lecture file, no progress to ask about.
         let g = course(lectures: false)
         #expect(g.wrapUpGaps(of: g.sessions[0]) == [.units, .note, .attendance])
     }
@@ -42,7 +40,6 @@ struct ClassWrapUpTests {
         var f = course()
         let s = f.sessions[0].id
 
-        // A link without pages names the file but not how far the class went.
         f.linkMaterial(f.materials[0].id, session: s)
         #expect(f.wrapUpGaps(of: f.sessions[0]).first == .progress)
 
@@ -52,7 +49,6 @@ struct ClassWrapUpTests {
         f.toggle(session: s, unit: unit.id)
         #expect(f.wrapUpGaps(of: f.sessions[0]) == [.note, .attendance])
 
-        // A review note is a written-up class too.
         f.sessions[0].reviewNoteId = UUID()
         #expect(f.wrapUpGaps(of: f.sessions[0]) == [.attendance])
     }
@@ -81,7 +77,6 @@ struct ClassWrapUpTests {
         #expect(!asked(at(2, 11, 44)))
         #expect(asked(at(2, 11, 45)))
 
-        // Over the night and the 4 a.m. day boundary: still the same class until Wednesday's starts.
         #expect(asked(at(3, 3, 59)))
         #expect(asked(at(3, 4, 0)))
         #expect(asked(at(4, 10, 29)))
@@ -98,7 +93,6 @@ struct ClassWrapUpTests {
         #expect(f.nextClassStart(after: mine, calendar: calendar) == at(9, 10, 30))
         #expect(f.classesToWrapUp(at: at(5, 12), classMinutes: 75, calendar: calendar).map(\.id) == [mine.id])
 
-        // A makeup on Thursday evening is the next class instead.
         f.sessions.append(Session(device: device, at: at(1, 9), week: 10, date: at(5, 19)))
         #expect(f.nextClassStart(after: mine, calendar: calendar) == at(5, 19))
         #expect(f.classesToWrapUp(at: at(5, 19), classMinutes: 75, calendar: calendar).isEmpty)
@@ -125,7 +119,6 @@ struct ClassWrapUpTests {
         #expect(f.classesToWrapUp(at: now, classMinutes: 75, calendar: calendar).isEmpty)
     }
 
-    /// Any moment of the week: asked exactly from the class's end (11:45 Monday) to Wednesday's start (10:30).
     @Test func askedExactlyWithinTheWindow() async {
         let f = course()
         let end = at(2, 11, 45), next = at(4, 10, 30)
@@ -143,7 +136,6 @@ struct ClassWrapUpTests {
         var f = course()
         let monday = f.sessions[0]
 
-        // Last week's Monday wrapped up, Wednesday cancelled and a makeup that evening never wrapped up.
         var wrapped = Session(device: device, at: at(1, 9), week: 9, date: at(2, 10, 30).addingTimeInterval(-7 * 86400))
         wrapped.isWrappedUp = true
         var cancelled = Session(device: device, at: at(1, 9), week: 9, date: at(4, 10, 30).addingTimeInterval(-7 * 86400))
@@ -153,7 +145,6 @@ struct ClassWrapUpTests {
         f.sessions = [today, monday, wrapped, cancelled, lastWeek]
         #expect(f.unwrappedPastSessions(at: at(4, 12), settings: settings, calendar: calendar).map(\.id) == [lastWeek.id, monday.id])
 
-        // A class with nothing missing is done without a wrap-up.
         let s = monday.id
         f.linkMaterial(f.materials[0].id, session: s, firstPage: 1, lastPage: 4)
         let unit = FolioDomain.Unit(device: device, at: at(1, 9), title: "매칭", order: 0, parentId: nil)
@@ -164,8 +155,6 @@ struct ClassWrapUpTests {
         #expect(f.unwrappedPastSessions(at: at(4, 12), settings: settings, calendar: calendar).map(\.id) == [lastWeek.id])
     }
 
-    /// A class late at night, or past midnight, belongs to the study day it began on: it is left over once the
-    /// 4 a.m. boundary after it passes, never before.
     @Test func leftOverExactlyFromTheNextStudyDay() async {
         let settings = Settings()
         var f = course()
@@ -197,14 +186,12 @@ struct ClassWrapUpTests {
 
         #expect(f.classNoteChoices.map(\.id) == [new.id, free.id, old.id])
 
-        // Linked to this class, it is this class's and no longer a choice.
         f.linkNote(new.id, to: f.sessions[0].id, as: .rough)
         #expect(f.classNoteChoices.map(\.id) == [free.id, old.id])
     }
 
     // MARK: The plain form (2026-11-08)
 
-    /// Every row shows what the class has, so a save leaves alone what it was opened with.
     @Test func aSaveWritesOnlyTheRangesTheClassDoesNotHave() {
         let (a, b, c) = (UUID(), UUID(), UUID())
         var session = course().sessions[0]
@@ -219,8 +206,6 @@ struct ClassWrapUpTests {
         #expect(session.changedRanges([same, SessionMaterial(materialId: b)]).isEmpty)
     }
 
-    /// Unchecking a row drops the class's link only when the row started checked: a file linked whole starts
-    /// unchecked to be kept as it is, and a suggested file the class doesn't link has no link to drop.
     @Test func anUncheckedRowDropsOnlyALinkThatStartedChecked() {
         let (a, b, c) = (UUID(), UUID(), UUID())
         var session = course().sessions[0]
@@ -231,22 +216,16 @@ struct ClassWrapUpTests {
         #expect(session.droppedLinks(started: [c], kept: []).isEmpty)
     }
 
-    /// A file linked whole stays so unless asked: checked without an end it would hold the save.
     @Test func aWholeFileLinkStartsUncheckedUnlessSuggestedWhole() {
         let (a, b) = (UUID(), UUID())
         var session = course().sessions[0]
         session.materials = [SessionMaterial(materialId: a)]
         #expect(!session.wrapUpChecks(SessionMaterial(materialId: a, firstPage: 5), wrappingUp: true))
         #expect(!session.wrapUpChecks(SessionMaterial(materialId: a), wrappingUp: true))
-        // A recording saw where the class went: both ends are known, so it is asked.
         #expect(session.wrapUpChecks(SessionMaterial(materialId: a, firstPage: 5, lastPage: 9), wrappingUp: true))
-        // A new suggestion is checked even with an end missing: picking it is the question.
         #expect(session.wrapUpChecks(SessionMaterial(materialId: b, firstPage: 5), wrappingUp: true))
     }
 
-    /// Until the class is wrapped up, the sheet is opened to link units or a note ahead (2026-11-10): a suggestion
-    /// starts unchecked so it neither holds that save nor writes pages the class is still going through. The pages
-    /// the class has saved are its own and stay checked.
     @Test func aSuggestionStartsCheckedOnlyWhileWrappingUp() {
         let (a, b) = (UUID(), UUID())
         var session = course().sessions[0]
@@ -263,8 +242,6 @@ struct ClassWrapUpTests {
         #expect(session.wrapUpChecks(own, wrappingUp: false) && session.wrapUpChecks(own, wrappingUp: true))
     }
 
-    /// The class (10:30–11:45) is wrapped up from its end on, by the clock rather than the study day, or once a
-    /// recording of it has stopped.
     @Test func aClassIsWrappedUpFromItsEndOrItsRecording() {
         var f = course()
         let wrapping = { (f: CourseFile, now: Date, recorded: Bool) in
@@ -274,12 +251,10 @@ struct ClassWrapUpTests {
         #expect(!wrapping(f, at(2, 11, 44), false))
         #expect(wrapping(f, at(2, 11, 45), false))
 
-        // A recording just stopped, saved or not.
         #expect(wrapping(f, at(2, 11), true))
         f.recordings = [Recording(device: device, at: at(2, 11), sessionId: f.sessions[0].id, file: "Recordings/a.m4a")]
         #expect(wrapping(f, at(2, 11), false))
 
-        // A class with its own end ends there, not at the slot's.
         f.recordings = []
         f.sessions[0].end = at(2, 11)
         #expect(!wrapping(f, at(2, 10, 59), false))

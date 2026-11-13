@@ -25,8 +25,6 @@ struct ChatTests {
         #expect(ContextBuilder.chatItems(course: file, rules: "r", openNote: nil, added: [], removed: [], now: now).count == 2)
     }
 
-    /// One panel for the window's panes: it says which pane is focused before the notes they show, and a folded
-    /// pane only by its address.
     @Test func thePanesComeFocusedFirstBeforeTheirNotes() throws {
         let file = CourseFile(course: Course(device: device, at: now, title: "그래프 이론"))
         let lecture = UUID(), note = UUID(), quiz = UUID()
@@ -48,7 +46,6 @@ struct ChatTests {
             course: file, rules: "r", panes: item, openNote: open, alsoOpen: [other, open], added: [],
             removed: [], now: now)
         #expect(items.map(\.id) == ["course:\(file.course.id)", "rules", "panes", open.id, other.id])
-        // A lone pane is what its note already says.
         #expect(ContextBuilder.panes([.init(address: "folio://note/\(note)", shows: "노트", focused: true)]) == nil)
     }
 
@@ -59,7 +56,6 @@ struct ChatTests {
         #expect(page.id == "material:Lectures/05_Matchings.pdf#page=3" && page.tier == .focus)
         #expect(page.text.contains("ID: \(id.uuidString)") && page.text.contains("쪽: 3") && page.text.hasSuffix("Hall's theorem"))
         #expect(page.images == [image])
-        // Another page of the same file is another item, so asking about both keeps both.
         #expect(ContextBuilder.materialPage(id: id, path: "Lectures/05_Matchings.pdf", page: 4, text: "", image: nil).id != page.id)
     }
 
@@ -82,7 +78,6 @@ struct ChatTests {
         #expect(r.model == TaskConfig.defaults(for: .chat).model)
         #expect(r.messages.map(\.role) == [.user, .assistant, .user])
         #expect(r.messages[0].content == [.text("첫 질문")])
-        // The path and ID tell Claude which file is open, which the title alone left it to guess.
         #expect(
             r.messages[2].content == [
                 .text("<열린 노트: 3주차>\n경로: Notes/09-15(월) 고유값 정리.md\nID: \(noteID.uuidString)\n\n본문\n</열린 노트: 3주차>"),
@@ -94,7 +89,6 @@ struct ChatTests {
         #expect(cache && stable.contains("과목: 선형대수학") && stable.contains("규칙"))
     }
 
-    /// The next question carries what became of each proposed change, so Claude doesn't have to guess.
     @Test func historyTellsWhatBecameOfEachProposal() async throws {
         let long = String(repeating: "가", count: 500)
         let proposals = [
@@ -124,7 +118,6 @@ struct ChatTests {
         #expect(ClaudeClient.history(ChatMessage(role: .assistant, text: "그냥 답", at: now)) == "그냥 답")
     }
 
-    /// A proposal a later answer replaced reads as such, so Claude doesn't ask the user to approve the older one.
     @Test func historySaysWhichProposalsWereSuperseded() async throws {
         let first = ActionProposal(
             command: "note write", input: .object(["course": .string("c"), "note": .string("Notes/a.md"), "text": .string("1")]))
@@ -170,7 +163,7 @@ struct ChatTests {
         #expect(months.map(\.month) == [11, 10])
         #expect(months[0] == MonthlyUsage(year: 2026, month: 11, requests: 1, inputTokens: 7, outputTokens: 3, cost: 0))
         #expect(months[1].requests == 2 && months[1].inputTokens == 26_000 && months[1].outputTokens == 1_000)
-        // (1,000×4 + 500×20 + 2,000×4×1.25 + 10,000×0.2) / 1M = 0.026 per request
+        // (1,000×4 + 500×20 + 2,000×4×1.25 + 10,000×0.2) / 1M = 요청당 0.026이다.
         #expect(abs(months[1].cost - 0.052) < 1e-12)
     }
 }

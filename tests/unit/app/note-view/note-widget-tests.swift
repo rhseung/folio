@@ -6,11 +6,8 @@ import WebKit
 
 @testable import Folio
 
-/// Widgets in the preview: each runs its course's `.folio/widgets/<id>.html` in a frame of the note's page, cut off
-/// from the network and from the note.
 @MainActor @Suite(.serialized, .timeLimit(.minutes(2)))
 struct NoteWidgetTests {
-    /// A course folder with one widget, and the preview showing a note in its `Notes`.
     static func preview(widget html: String?, height: CGFloat = 600, note: (UUID) -> String) throws -> (PreviewRig, UUID) {
         let course = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString).appending(path: "EC4207 그래프 이론")
         let notes = course.appending(path: CourseFolder.notes.rawValue)
@@ -28,13 +25,11 @@ struct NoteWidgetTests {
         "```cb-widget\n{\"id\": \"\(id.uuidString)\", \"height\": \(height)}\n```"
     }
 
-    /// The first widget's frame, once its page has said how tall it is.
     static func frame(_ rig: PreviewRig) async throws -> WKFrameInfo {
         for _ in 0..<100 where rig.page.widgets.frames.isEmpty { try await Task.sleep(for: .milliseconds(50)) }
         return try #require(rig.page.widgets.frames.values.first)
     }
 
-    /// Waits for the widget's page to set `window.done`, then reads `expression` there.
     static func value(_ rig: PreviewRig, _ expression: String) async throws -> Any? {
         let frame = try await Self.frame(rig)
         for _ in 0..<100 {
@@ -51,7 +46,6 @@ struct NoteWidgetTests {
         return try await rig.page.view.callAsyncJavaScript("return document.body.textContent", in: frame, contentWorld: .page) as? String
     }
 
-    /// The height of the first widget's frame on the note's page: what its style says and what it's drawn at.
     static func heights(_ rig: PreviewRig) async throws -> (styled: Double, drawn: Double) {
         let read =
             "const f = document.querySelector('iframe.cb-widget'); return [parseFloat(f.style.height), f.getBoundingClientRect().height]"
@@ -67,16 +61,13 @@ struct NoteWidgetTests {
         #expect(
             try await rig.js("return document.querySelector('iframe.cb-widget').src.includes(id)", ["id": id.uuidString]) as? Bool == true)
         #expect(try await Self.value(rig, "document.getElementById('b').textContent") as? String == "0")
-        // The note's colors reach the page under the names note pages use.
         let accent = try await Self.value(rig, "getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()") as? String
         #expect(accent?.hasPrefix("#") == true)
-        // The note's page can't reach into the widget's: the frame has an origin of its own.
         #expect(
             try await rig.js("try { return document.querySelector('iframe.cb-widget').contentDocument === null } catch { return true }")
                 as? Bool == true)
     }
 
-    /// The block takes the page's height in place, so scrolling the note never stops inside a short widget.
     @Test func theBlockFitsItsPage() async throws {
         let (rig, _) = try Self.preview(widget: "<!doctype html><div style='height:300px'></div>") {
             "Before\n\n" + Self.block($0, height: 200) + "\n\nAfter"
@@ -92,13 +83,11 @@ struct NoteWidgetTests {
                 return after.getBoundingClientRect().top - f.getBoundingClientRect().bottom
                 """))
         #expect(gap >= 0)
-        // Shown again, the frame is kept with the height its page said.
         rig.show("Intro\n\n" + rig.text)
         await rig.settle()
         #expect(try await Self.heights(rig).styled == 300)
     }
 
-    /// A page taller than the panel is drawn whole, so the note scrolls past it instead of stopping inside its frame.
     @Test func aLongPageIsDrawnWhole() async throws {
         let (rig, _) = try Self.preview(
             widget: "<!doctype html><div style='height:6000px'></div><script>window.done = true</script>", height: 600
@@ -141,7 +130,7 @@ struct NoteWidgetTests {
         #expect(try await Self.value(rig, "window.writtenPeers") as? String == "undefined")
     }
 
-    /// A frame sent anywhere but a widget's page or blank is stopped: its address would carry data out.
+    // frame의 주소에 데이터를 실어 내보낼 수 있으므로, 위젯 페이지나 빈 페이지가 아닌 곳으로 가는 frame은 막는다.
     @Test func framesStayOnAWidgetOrBlank() throws {
         let page = try #require(URL(string: "\(WidgetFiles.scheme)://widget/\(UUID().uuidString)?k=a"))
         #expect(WidgetFiles.allows(page))
@@ -152,7 +141,6 @@ struct NoteWidgetTests {
         #expect(!WidgetFiles.allows(try #require(URL(string: "\(WidgetFiles.scheme)://elsewhere/x"))))
     }
 
-    /// A widget can't send the note's page anywhere: a link it follows at the top is dropped.
     @Test func aWidgetCannotMoveTheNote() async throws {
         let html = "<!doctype html><script>try { top.location = 'https://example.com/' } catch {} window.done = true</script>"
         let (rig, _) = try Self.preview(widget: html) { "# Title\n\n" + Self.block($0) }
@@ -160,14 +148,12 @@ struct NoteWidgetTests {
         await rig.settle()
         _ = try await Self.value(rig, "1")
         try await Task.sleep(for: .milliseconds(200))
-        // A page recycled from a note that followed a footnote keeps that anchor in its address; only a move counts.
         var address = try #require(rig.page.view.url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false) })
         address.fragment = nil
         #expect(address.url == NotePreviewPage.shellURL)
         #expect(try await rig.js("return document.querySelector('h1')?.textContent") as? String == "Title")
     }
 
-    /// A page sized by its frame, taller or shorter than it, takes the block's height instead of chasing the frame.
     @Test(arguments: [
         "<div style='height:100vh'></div><div style='height:16px'></div>", "<div style='height:50vh'></div>",
         "<div style='height:calc(600px - 100vh)'></div>", "<div style='height:200vh'></div>",
@@ -181,8 +167,6 @@ struct NoteWidgetTests {
         #expect(heights.styled == 200, "\(heights)")
     }
 
-    /// Content that grows again while the block is following it (a font, an image, a chart drawn a frame later) isn't
-    /// a page sized by its frame, and gets all of its height.
     @Test func aPageThatGrowsTwiceGetsAllOfItsHeight() async throws {
         let html = """
             <!doctype html><div id=d style='height:400px'></div>
@@ -196,7 +180,6 @@ struct NoteWidgetTests {
         #expect(heights.styled == 420, "\(heights)")
     }
 
-    /// A block written with no height still shows, so its page can say how tall it is.
     @Test(arguments: [0, -40])
     func aBlockWithNoHeightStillShows(height: Int) async throws {
         let (rig, _) = try Self.preview(widget: "<!doctype html><div style='height:100px'></div>") { Self.block($0, height: height) }
@@ -251,7 +234,6 @@ struct NoteWidgetTests {
         #expect(try await Self.text(rig) == String(localized: .notesWidgetNoCourse))
     }
 
-    /// A widget in a table cell stays an inert placeholder: a cell is no place to run one.
     @Test func aWidgetInATableCellDoesNotRun() async throws {
         let (rig, _) = try Self.preview(widget: "<p>x") { id in
             let table = ["rows": [["cells": [["text": "```cb-widget\n{\"id\": \"\(id)\"}\n```"]]]]]
@@ -275,7 +257,6 @@ struct NoteWidgetTests {
     }
 }
 
-/// How a widget's frame follows what its page says about its height.
 @MainActor struct WidgetSizerTests {
     @Test func followsContent() {
         var sizer = WidgetSizer()
@@ -290,7 +271,7 @@ struct NoteWidgetTests {
         #expect(sizer.report(page: 120, view: 200) == 120)
     }
 
-    /// `100vh`: the page changes by every change of the frame, so it keeps the height it started at.
+    // `100vh` 페이지는 frame이 바뀔 때마다 함께 바뀌므로, 처음 높이를 유지해야 한다.
     @Test func aPageSizedByItsFrameKeepsItsStart() {
         var sizer = WidgetSizer()
         #expect(sizer.report(page: 216, view: 200) == 216)

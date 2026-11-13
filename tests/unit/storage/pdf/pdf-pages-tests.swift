@@ -23,7 +23,6 @@ struct PDFPagesTests {
         #expect(slide.title == "Definitions")
         #expect(slide.text.contains("Slide 2, point 1"))
 
-        // Three body lines of about eleven words, the title not counted.
         #expect(slide.words > 20)
         #expect(!slide.text.contains(PageText.figure) && !slide.text.contains("\n\n"))
     }
@@ -56,7 +55,6 @@ struct PDFPagesTests {
         #expect(found.map(\.written) == [written, "board.png", "../../secret.png", "assets/none.png"])
         #expect(found.map(\.path) == ["Notes/assets/board.png", "Notes/assets/board.png", nil, nil])
 
-        // Not an image: nothing to shrink, and a path out of the course reads nothing.
         #expect(store.pictureJPEG("Notes/assets/board.png") == nil)
         #expect(store.pictureJPEG("../secret.png") == nil)
     }

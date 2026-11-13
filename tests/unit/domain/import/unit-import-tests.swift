@@ -15,8 +15,6 @@ struct UnitImportTests {
         calendar.date(from: DateComponents(year: 2026, month: month, day: day, hour: hour, minute: 30))!
     }
 
-    /// Units link to sessions on both sides, an existing unit keeps its ID, and a second run changes nothing. Sessions
-    /// are named as the command line names them; the old `2주차-1` names nothing.
     @Test func addsUnitsLinksSessionsAndIsIdempotent() {
         let s1 = Session(device: device, at: now, week: 2, date: day(9, 8))
         let s2 = Session(device: device, at: now, week: 3, date: day(9, 15))
@@ -39,7 +37,6 @@ struct UnitImportTests {
         #expect(again.added.isEmpty && again.linked.isEmpty)
     }
 
-    /// A day with two classes names neither, so nothing is linked by guess; the start picks one.
     @Test func aDayWithTwoClassesNeedsTheTime() {
         let lecture = Session(device: device, at: now, week: 2, date: day(9, 8))
         let lab = Session(device: device, at: now, week: 2, date: day(9, 8, 14))
@@ -55,7 +52,6 @@ struct ExamScopeTests {
     let device = UUID()
     let now = Date(timeIntervalSince1970: 1_000_000)
 
-    /// Everything taught before the midterm is its scope: covered sections bring their chapter; later and cancelled classes don't count.
     @Test func midtermScopeIsWhatWasTaughtBeforeIt() {
         let before = Session(device: device, at: now, week: 2, date: now - 86_400)
         var cancelled = Session(device: device, at: now, week: 3, date: now - 3600)

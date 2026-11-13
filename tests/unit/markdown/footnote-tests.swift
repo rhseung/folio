@@ -20,7 +20,6 @@ struct FootnoteTests {
                 </ol></section>
 
                 """))
-        // The definitions are drawn only in the list; the paragraph after them stays.
         #expect(!out.contains("[^"))
         #expect(out.contains("<p>끝 문단</p>"))
     }
@@ -73,7 +72,6 @@ struct FootnoteTests {
         #expect(blocks.map(\.lines) == [1...1, 3...3, 5...5, 5...5])
         #expect(blocks[2].html.isEmpty)
         #expect(blocks[3].html.hasPrefix("<section class=\"footnotes\">"))
-        // Defined above a block that comes after it on the page, the list follows nothing.
         let early = HTMLRenderer.blocks(ParsedNote("본문[^1]\n\n[^1]: 각주\n\n끝"))
         #expect(early.last?.lines == nil)
     }

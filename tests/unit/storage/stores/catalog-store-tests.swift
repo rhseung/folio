@@ -11,7 +11,6 @@ struct CatalogStoreTests {
         let category = Category(device: UUID(), at: Date(timeIntervalSince1970: 0), name: "전공필수", group: "전공", minCredits: 18)
         try gist.save(StoredDocument(new: Catalog(categories: [category])))
 
-        // Fields a newer app version might have written.
         var raw = try JSONFormat.decoder.decode(JSONValue.self, from: Data(contentsOf: gist.catalogURL))
         raw["futureTopLevel"] = .string("keep")
         guard case .array(var items)? = raw["categories"] else { Issue.record("no categories"); return }

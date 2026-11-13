@@ -37,11 +37,9 @@ struct CourseStoreTests {
         let before = try refreshed(store).model.materials
         let fm = FileManager.default
 
-        // Moved: the bookmark still resolves.
         let lecture = try #require(before.first { $0.path == "Lectures/05_Matchings.pdf" })
         try fm.moveItem(at: store.url.appending(path: lecture.path), to: store.url.appending(path: "Exercises/05_Matchings.pdf"))
 
-        // Replaced by an identical copy under a new name: only the hash matches.
         let syllabus = try #require(before.first { $0.path == "Syllabus/Syllabus.pdf" })
         let syllabusURL = store.url.appending(path: syllabus.path)
         let copy = store.url.appending(path: "Syllabus/OT.pdf")

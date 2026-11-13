@@ -5,8 +5,6 @@ import SwiftUI
 import Testing
 @testable import Folio
 
-/// Closing a pane of the tab in front (#62) with the tab bar and the panes drawn. A segment of the tab going away was
-/// drawn once more with the place it had, reading past the end of the panes, and the app crashed (2026-11-08).
 @MainActor @Suite(.serialized)
 struct TabBarTests {
     let workspace: Workspace
@@ -101,7 +99,6 @@ struct TabBarTests {
         #expect(panes.close(pane: gone))
         let left = panes.ids
         let focus = panes.focus
-        // A press or a close from what drew the closed pane changes nothing, not the pane now in its place.
         #expect(!panes.close(pane: gone))
         panes.press(pane: gone)
         #expect(panes.ids == left && panes.focus == focus)

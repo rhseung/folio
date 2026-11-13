@@ -3,7 +3,6 @@ import Testing
 
 @testable import FolioMarkdown
 
-/// `[[folio://…]]` and a bare `folio://…`: an address from "링크 복사" pasted into a note (#347).
 struct AddressLinkTests {
     let id = UUID(uuidString: "6F1D2C4E-8A3B-4F5E-9C1D-2B7A8E0F3D41")!
 
@@ -32,7 +31,6 @@ struct AddressLinkTests {
         #expect(block.noteID == id && block.blockID == "c1" && block.href == "folio://note/\(id.uuidString)#^c1")
     }
 
-    /// A place or a course's page has no `<kind>:<ID>` form, but its address is still a link into the app, never a title.
     @Test func anAddressWithoutAnObjectIsStillAnAppLink() {
         for written in ["folio://settings/claude", "folio://today", "folio://course/\(id.uuidString)/units"] {
             let link = WikiLink.all(in: "[[\(written)]]")[0]
@@ -45,13 +43,10 @@ struct AddressLinkTests {
         let href = "folio://material/\(id.uuidString)#page=2"
         let html = page("[[\(href)]]", names: [href: "05_Matchings.pdf › 2쪽"])
         #expect(html.contains("<a class=\"wikilink\" href=\"\(href)\">05_Matchings.pdf › 2쪽</a>"), "\(html)")
-        // Its own name wins, as for any link.
         #expect(page("[[\(href)|슬라이드]]", names: [href: "05_Matchings.pdf › 2쪽"]).contains(">슬라이드</a>"))
-        // Written by kind and ID, the same.
         #expect(page("[[material:\(id.uuidString)#page=2]]", names: [href: "05_Matchings.pdf › 2쪽"]).contains(">05_Matchings.pdf › 2쪽</a>"))
     }
 
-    /// Unnamed (another folder's file), it shows what is written, but it isn't a broken note link.
     @Test func anUnnamedAddressShowsItselfAndIsNotBroken() {
         let html = page("[[folio://material/\(id.uuidString)#page=2]]")
         #expect(
@@ -70,7 +65,6 @@ struct AddressLinkTests {
         #expect(!html.contains("<b>") && html.contains("&quot;&gt;&lt;b&gt;"), "\(html)")
     }
 
-    /// Inside a link being written the address is its target, and in code or math it is text.
     @Test func aPastedAddressIsALinkOnlyWhereALinkCanStand() {
         func pastes(_ before: String, _ after: String = "") -> Bool {
             WikiLink.pastesAsLink(in: (before + after) as NSString, at: (before as NSString).length)

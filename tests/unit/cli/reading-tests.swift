@@ -9,7 +9,6 @@ import UniformTypeIdentifiers
 
 @testable import FolioCLI
 
-/// The panel's reading tools (#85): a PDF's pages, a recording's transcript, a note's pictures.
 struct ReadingTests {
     let h = Harness()
     static let recording = UUID(uuidString: "A0000000-0000-4000-8000-0000000000D1")!
@@ -18,7 +17,6 @@ struct ReadingTests {
         try ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now).store(Harness.graphTheory)
     }
 
-    /// A real deck (the fixture's own PDFs are placeholders PDFKit can't open), tracked as a material.
     func withDeck() throws -> URL {
         let gist = try Harness.fixtureCopy()
         try SampleLecture.write(to: try course(gist).fileURL("Lectures/06_Hall.pdf"))
@@ -73,7 +71,6 @@ struct ReadingTests {
         #expect(int(shown["last"]) == ReadingLimit.images)
         #expect(string(shown["next"]) == "\(ReadingLimit.images + 1)-\(2 * ReadingLimit.images)")
 
-        // At a terminal without --out the pictures go nowhere, and it says how to get them.
         #expect(r.err.contains("--out"))
     }
 
@@ -160,7 +157,6 @@ struct ReadingTests {
         return png as Data
     }
 
-    /// The fixture's note with a board photo and a picture the course doesn't have.
     func withPicture() throws -> URL {
         let gist = try Harness.fixtureCopy()
         let store = try course(gist)
@@ -222,7 +218,6 @@ struct ReadingTests {
         let pictures = try images(blocks)
         #expect(pictures.count == 2 && pictures.allSatisfy { isJPEG($0, edge: ReadingLimit.imageEdge) })
 
-        // Each picture follows a line naming it, and the page list names it the same way.
         let labels = blocks.indices.dropLast().filter { blocks[$0 + 1]["type"] == .string("image") }.compactMap {
             string(blocks[$0]["text"])
         }

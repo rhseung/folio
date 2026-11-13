@@ -4,8 +4,6 @@ import Testing
 import UIKit
 @testable import Folio
 
-/// The iPad's side of the Mac's `NoteSourceTests.theCaretUnderAHeadingIsABodyCaret`: UIKit asks the view for its caret
-/// rather than drawing the whole line, so it's checked here too.
 @MainActor @Suite(.serialized)
 struct NoteCaretPadTests {
     @Test(arguments: ["본문\n# 11-10(화)\n", "본문\n# 11-10(화)\n\n끝"])

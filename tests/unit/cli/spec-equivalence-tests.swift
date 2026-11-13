@@ -6,14 +6,10 @@ import Testing
 
 @testable import FolioCLI
 
-/// Every example of an action declared with `@Action` runs three ways on the same prepared folder: as the command,
-/// as `run --input` with the input the command built, and as the decoded action itself. All three must leave the
-/// same files, so the generated command, `run` and the action can't drift apart.
 struct SpecEquivalenceTests {
     let h = Harness()
 
-    // It writes beside the backup folder, which the three copies share, so the second run finds the first's folder;
-    // today-backup-tests checks it against the action instead.
+    // 이 명령은 백업 폴더 옆에 쓰는데 세 사본이 그 폴더를 함께 쓰므로, 두 번째 실행이 첫 실행의 폴더를 찾는다. 그래서 today-backup-tests가 대신 액션과 비교한다.
     static let outsideGIST: Set<String> = ["backup restore"]
 
     static let examples: [(String, String)] = Actions.all.filter { $0.spec.generated && !outsideGIST.contains($0.command) }
@@ -21,9 +17,6 @@ struct SpecEquivalenceTests {
             type.spec.examples.filter(HelpExampleTests.runnable).map { (type.command, $0.replacing(/\s{2,}\S.*$/, with: "")) }
         }
 
-    // Preparing runs two dozen commands, and every example starts from the same prepared folder, so it is prepared
-    // once and copied. The copy takes the backup folder along and points the settings at it: examples running side by
-    // side must not write into one backup folder.
     static let prepared = Result {
         let gist = try Harness.fixtureCopy()
         try HelpExampleTests().prepare(gist)

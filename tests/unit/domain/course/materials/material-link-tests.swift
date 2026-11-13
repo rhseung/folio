@@ -19,7 +19,7 @@ struct MaterialLinkTests {
         let m = f.materials[0].id
         f.linkMaterial(m, session: f.sessions[0].id, firstPage: 3, lastPage: 10)
         f.linkMaterial(m, session: f.sessions[1].id)
-        f.linkMaterial(m, session: f.sessions[0].id, firstPage: 4, lastPage: 12)  // updates, doesn't duplicate
+        f.linkMaterial(m, session: f.sessions[0].id, firstPage: 4, lastPage: 12)
         f.setMaterial(m, unit: f.units[0].id, linked: true)
 
         let decoded = try JSONDecoder().decode(CourseFile.self, from: JSONEncoder().encode(f))

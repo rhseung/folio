@@ -13,7 +13,6 @@ struct DayBoundaryTests {
         calendar.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour, minute: minute))!
     }
 
-    /// AGENTS.md: check just before and just after the 04:00 boundary.
     @Test func streakCountsBackFromTodayOrYesterday() {
         let today = LocalDate(year: 2026, month: 10, day: 24)!
         let days: Set<LocalDate> = [today.adding(days: -1), today.adding(days: -2), today.adding(days: -4)]
@@ -47,15 +46,15 @@ struct DayBoundaryTests {
 
     @Test func reviewDaysAddUpTheIntervals() {
         let days = ReviewSettings().reviewDays(after: LocalDate("2026-11-10")!)
-        // 1 · 3 · 7 · 14 · 30 days after the one before, across the month and the year.
+        // 앞 복습에서 1, 3, 7, 14, 30일 뒤이며, 달과 해를 넘긴다.
         #expect(days.map(\.description) == ["2026-11-11", "2026-11-14", "2026-11-21", "2026-12-05", "2027-01-04"])
     }
 
     @Test func studyTimeMergesOverlapsAndUsesStudyDay() {
         let course = UUID()
         let sessions = [
-            StudySessionEvent(courseId: course, start: at(23, 1, 0), end: at(23, 2, 0), screen: "note"),  // Mac
-            StudySessionEvent(courseId: course, start: at(23, 1, 30), end: at(23, 2, 30), screen: "ink"),  // iPad, overlaps
+            StudySessionEvent(courseId: course, start: at(23, 1, 0), end: at(23, 2, 0), screen: "note"),
+            StudySessionEvent(courseId: course, start: at(23, 1, 30), end: at(23, 2, 30), screen: "ink"),
             StudySessionEvent(courseId: course, start: at(23, 10, 0), end: at(23, 10, 30), screen: "quiz"),
         ]
         let perDay = StudyTime.perDay(sessions, settings: Settings(), calendar: calendar)
@@ -88,7 +87,7 @@ struct ReviewSchedulerTests {
     }
 
     @Test func resultsMoveTheStep() {
-        // good: 1 → 3 days; easy skips a step; hard repeats; again resets to 1 day.
+        // good은 1일 간격을 3일로 늘리고, easy는 한 단계를 건너뛰며, hard는 같은 간격을 되풀이하고, again은 1일로 되돌린다.
         #expect(state([("2026-10-02", .good)]).due == d("2026-10-05"))
         #expect(state([("2026-10-02", .easy)]).due == d("2026-10-09"))
         #expect(state([("2026-10-02", .good), ("2026-10-05", .hard)]).due == d("2026-10-08"))
@@ -119,10 +118,9 @@ struct ReviewSchedulerTests {
     }
 
     @Test func examLimitsIntervals() {
-        // Six days before the exam (inside the 7-day window) a 14-day interval is capped to half the days left.
+        // 시험 6일 전(7일 구간 안)에는 14일 간격을 남은 날의 절반으로 줄인다.
         let s = state([("2026-10-02", .easy), ("2026-10-14", .good)], exams: ["2026-10-20"])
         #expect(s.due == d("2026-10-17"))
-        // Outside the window the review still may not pass the day before the exam.
         let far = state([("2026-10-02", .easy), ("2026-10-09", .good)], exams: ["2026-10-20"])
         #expect(far.due == d("2026-10-19"))
     }
@@ -136,9 +134,9 @@ struct ReviewSchedulerTests {
             UnitReviewInput(unitId: c, startDay: d("2026-10-01"), quizAccuracy: 0.2, openWrongCards: 5),
         ]
         let states = [
-            ReviewState(unitId: a, step: 0, due: d("2026-10-20"), settled: false, writeNoteFirst: false),  // 2 days over a 1-day interval
-            ReviewState(unitId: b, step: 3, due: d("2026-10-22"), settled: false, writeNoteFirst: false),  // exam in 2 days
-            ReviewState(unitId: c, step: 2, due: d("2026-10-25"), settled: false, writeNoteFirst: false),  // not due yet
+            ReviewState(unitId: a, step: 0, due: d("2026-10-20"), settled: false, writeNoteFirst: false),
+            ReviewState(unitId: b, step: 3, due: d("2026-10-22"), settled: false, writeNoteFirst: false),
+            ReviewState(unitId: c, step: 2, due: d("2026-10-25"), settled: false, writeNoteFirst: false),
         ]
         var limited = settings
         limited.dailyLimit = 1
@@ -163,14 +161,14 @@ struct TodayTests {
     }
 
     @Test func collectsTodayAcrossCourses() {
-        let now = at(23, 2, 0)  // 02:00 Friday → study day is Thursday the 22nd
+        let now = at(23, 2, 0)  // 금요일 02:00이므로 공부일은 22일 목요일이다.
         var file = CourseFile(course: Course(device: device, at: now, title: "그래프 이론"))
         file.exams = [Exam(device: device, at: now, title: "Midterm", start: at(27, 19))]
-        var late = Assignment(device: device, at: now, title: "HW5", due: at(23, 3, 0))  // still "today" in study time
+        var late = Assignment(device: device, at: now, title: "HW5", due: at(23, 3, 0))
         late.status = .todo
         let nextWeek = Assignment(device: device, at: now, title: "HW6", due: at(28, 23, 59))
-        let gone = Assignment(device: device, at: now, title: "HW4", due: at(23, 1, 0))  // already passed
-        let project = Assignment(device: device, at: now, title: "Project", due: at(31, 23, 59))  // past the week
+        let gone = Assignment(device: device, at: now, title: "HW4", due: at(23, 1, 0))
+        let project = Assignment(device: device, at: now, title: "Project", due: at(31, 23, 59))
         file.assignments = [late, nextWeek, gone, project]
         var written = Session(device: device, at: now, week: 7, date: at(20, 10))
         written.reviewNoteId = UUID()
@@ -187,7 +185,6 @@ struct TodayTests {
         #expect(t.deadlines.first?.isToday == true && t.deadlines.last?.isToday == false)
         #expect(t.classesToday.map(\.session.date) == [at(22, 10)])
 
-        // Today's class is over, so its note is due now; tomorrow's isn't.
         #expect(t.missingReviewNotes.map(\.session.date) == [at(22, 10)])
         file.course.schedule = [ClassTime(weekday: 4, startMinute: 10 * 60, endMinute: 11 * 60 + 15)]
         #expect(TodaySummary.build(courses: [file], now: at(22, 11), settings: Settings(), calendar: calendar).missingReviewNotes.isEmpty)
@@ -204,7 +201,6 @@ struct TodayTests {
 
         #expect(session.needsReviewNote(at: now))
 
-        // Notes from before the flag, and imported ones, decode as written.
         let written = try JSONEncoder().encode(
             {
                 var s = session; s.reviewNoteUnfinished = false; return s
@@ -229,13 +225,13 @@ struct TodayTests {
         }
         file.exams = [Exam(device: device, at: now, title: "Midterm", start: at(31, 19))]
 
-        #expect(hint() == nil)  // eight days out
+        #expect(hint() == nil)
         file.exams[0].start = at(30, 19)
         #expect(hint() == .exam(days: 7))
         file.sessions = [
             Session(device: device, at: now, week: 7, date: at(23, 10)), Session(device: device, at: now, week: 7, date: at(23, 15)),
         ]
-        #expect(hint() == .nextClass(at(23, 15)))  // the morning class is over
+        #expect(hint() == .nextClass(at(23, 15)))
         #expect(hint(at(23, 16)) == .exam(days: 7))
 
         let hw = Assignment(device: device, at: now, title: "HW5", due: at(23, 23, 59))
@@ -264,7 +260,6 @@ struct TodayTests {
         #expect(TodaySummary.build(courses: [file], now: now, settings: Settings(), calendar: calendar).missingReviewNotes.isEmpty)
         let input = UnitReviewInput.all(for: file, reviews: [], settings: Settings(), calendar: calendar, now: now)
         #expect(input.first?.startDay == LocalDate("2026-10-20") && input.first?.needsReviewNote == false)
-        // Stored only when set, so older files and untouched sessions read the same.
         let json = String(decoding: try JSONEncoder().encode([taught, grading]), as: UTF8.self)
         #expect(json.components(separatedBy: "noReview").count == 2)
     }
@@ -324,7 +319,6 @@ struct TodayTests {
         #expect(UnitTree.deepest(file.units(of: file.sessions[0]), in: file.units).map(\.title) == ["고윳값"])
     }
 
-    /// A recitation the evening of a lecture is a second class that day, so both take their start.
     @Test func aRecitationIsNamedLikeAnyClass() {
         var file = CourseFile(course: Course(device: device, at: at(20, 9), title: "선형대수학"))
         file.sessions = [
@@ -337,7 +331,7 @@ struct TodayTests {
 
     @Test func ongoingClassRunsFromItsStartToItsOwnOrItsSlotsEnd() {
         var file = CourseFile(course: Course(device: device, at: at(22, 9), title: "그래프 이론"))
-        file.course.schedule = [ClassTime(weekday: 4, startMinute: 10 * 60 + 30, endMinute: 11 * 60 + 45)]  // Thursday
+        file.course.schedule = [ClassTime(weekday: 4, startMinute: 10 * 60 + 30, endMinute: 11 * 60 + 45)]  // 목요일이다.
         file.sessions = [Session(device: device, at: at(22, 9), week: 7, date: at(22, 10, 30))]
         #expect(TodaySummary.ongoingClass(in: [file], at: at(22, 10, 29), calendar: calendar) == nil)
         let ongoing = TodaySummary.ongoingClass(in: [file], at: at(22, 11, 0), calendar: calendar)
@@ -347,7 +341,6 @@ struct TodayTests {
         file.sessions[0].isCancelled = true
         #expect(TodaySummary.ongoingClass(in: [file], at: at(22, 11, 0), calendar: calendar) == nil)
 
-        // A makeup off the timetable runs to its own end.
         var makeup = Session(device: device, at: at(22, 9), week: 7, date: at(22, 21))
         makeup.end = at(22, 22, 15)
         file.sessions.append(makeup)
@@ -410,7 +403,6 @@ struct DayRibbonTests {
 
     @Test func positionsOutsideTheSpanHoldToItsEdges() {
         let ribbon = DayRibbon(day: day, classes: [], calendar: calendar)
-        // A 1am deadline belongs to the study day but lies past midnight.
         #expect(ribbon.position(of: at(25)) == 1)
         #expect(ribbon.position(of: at(7)) == 0)
         #expect(!ribbon.contains(at(25)))

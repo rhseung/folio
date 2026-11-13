@@ -14,7 +14,6 @@ struct TranscriptMigrationTests {
     let course =
         #"{"id":"C0000000-0000-4000-8000-0000000000AA","createdAt":"2026-02-20T09:00:00.000Z","updatedAt":"2026-02-20T09:00:00.000Z","updatedBy":"D0000000-0000-4000-8000-000000000001","title":"콜로퀴움","codes":[],"number":"9331","categoryIds":[],"instructorIds":[],"credits":1,"gradingMode":"pass_fail","schedule":[],"color":"","folderRoles":{},"memo":"","titleEn":""}"#
 
-    /// v1's folderless courses wait under `unfiledCourses`, and keep what this version doesn't read.
     @Test func v1CoursesBecomeUnfiled() throws {
         let url = try write(#"{"schemaVersion":1,"semesters":[],"courses":[\#(course)],"kept":true}"#)
         let doc = try StoredDocument<Transcript>.read(from: url)
@@ -28,7 +27,6 @@ struct TranscriptMigrationTests {
         if case .array(let unfiled)? = raw["unfiledCourses"] { #expect(unfiled.count == 1) } else { Issue.record("unfiledCourses missing") }
     }
 
-    /// Once they are moved, the key leaves the file.
     @Test func emptyUnfiledLeavesNoKey() throws {
         let url = try write(#"{"schemaVersion":1,"semesters":[],"courses":[\#(course)]}"#)
         var doc = try StoredDocument<Transcript>.read(from: url)

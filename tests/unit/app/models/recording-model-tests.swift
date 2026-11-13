@@ -42,8 +42,6 @@ struct RecordingPlayerModelTests {
         #expect(model.hasLines)
     }
 
-    /// The address names the moment: a link seeks the player there, and the moment the player reports back doesn't
-    /// seek it again. The audio here can't be read, so the length is the one the recording kept.
     @Test func theAddressFollowsThePlayer() throws {
         let model = try recorded(
             try fixtureWorkspace(), lines: [.init(start: 0, end: 20, text: "가"), .init(start: 20, end: 60, text: "나")])
@@ -60,7 +58,6 @@ struct RecordingPlayerModelTests {
         model.follow(model.viewedLink)
         #expect(model.player.time == 42)
 
-        // Another recording's moment is not this one's.
         model.follow(AppLink(.recording, UUID(), anchor: .time(5)))
         #expect(model.player.time == 42)
     }
@@ -94,8 +91,6 @@ struct RecordingPlayerModelTests {
         #expect(model.selected == [3])
     }
 
-    /// Shift-click covers the lines between the anchor and the click, either way, and a second Shift-click
-    /// re-reaches from the same anchor instead of adding to the first range.
     @Test func shiftExtendsFromTheAnchor() throws {
         let model = try picking(["a", "b", "c", "d", "e"])
         model.select(3, extending: true)
@@ -124,7 +119,6 @@ struct RecordingPlayerModelTests {
         #expect(model.selected == [0, 2])
     }
 
-    /// A touch screen has no ⇧: a long press starts a range on a line and taps move its other end, until 완료.
     @Test func aHoldStartsATouchRange() throws {
         let model = try picking(["a", "b", "c", "d", "e"])
         model.select(4, extending: false)
@@ -143,7 +137,6 @@ struct RecordingPlayerModelTests {
         #expect(!model.ranging, "a new transcript drops the range with the pick")
     }
 
-    /// Lines come out in transcript order, in the same form the whole-transcript copy used, however they were picked.
     @Test func copiedTextKeepsTranscriptOrder() throws {
         let model = try picking(["행렬", "고윳값", "대각화"])
         model.select(2, extending: false)
@@ -162,7 +155,7 @@ struct RecordingPlayerModelTests {
         #expect(model.copyLabel == String(localized: .recordingCopy))
     }
 
-    /// The sheet's height follows whether there are lines, so they must be known before it opens, not after `load`.
+    // 시트의 높이는 줄이 있는지에 따라 정해지므로, `load` 뒤가 아니라 시트가 열리기 전에 줄을 알아야 한다.
     @Test func readsTheTranscriptBeforeLoading() throws {
         let f = try QuizFixture()
         let heard = Recording(device: f.workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a")
@@ -202,8 +195,6 @@ struct RecordingPlayerModelTests {
         #expect(workspace.course(linearAlgebra)?.file.recordings.count == 1)
     }
 
-    /// The pending folder is read on every reload. A leftover that fails to move in must not put its error up again
-    /// with each file change.
     @Test func aLeftoverRecordingIsTriedOncePerLaunch() async throws {
         let workspace = try fixtureWorkspace()
         let recording = Recording(device: workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a")
@@ -214,10 +205,9 @@ struct RecordingPlayerModelTests {
         try await waitFor { workspace.error != nil }
         workspace.error = nil
         workspace.reload()
-        // Nothing to wait for if it was skipped; long enough for a retry to fail like the first try.
+        // 건너뛰었다면 기다릴 것이 없고, 다시 시도했다면 첫 시도처럼 실패하기에 충분한 시간이다.
         try await Task.sleep(for: .milliseconds(300))
         #expect(workspace.error == nil)
-        // Kept on this device for the next launch.
         #expect(workspace.pendingRecordings.all().map(\.recording.id) == [recording.id])
     }
 
@@ -235,8 +225,7 @@ struct RecordingPlayerModelTests {
         #expect(condition())
     }
 
-    /// Needs a spoken file and this Mac's speech model, so it runs only when given one:
-    /// `TEST_RUNNER_FOLIO_TRANSCRIBE_AUDIO=<m4a of Korean speech>`.
+    // 말소리가 든 파일과 이 Mac의 음성 모델이 필요하므로, `TEST_RUNNER_FOLIO_TRANSCRIBE_AUDIO=<한국어 음성 m4a>`를 줄 때만 실행한다.
     @Test(.enabled(if: ProcessInfo.processInfo.environment["FOLIO_TRANSCRIBE_AUDIO"] != nil))
     func aRecordingWithoutCaptionsIsTranscribedFromItsAudio() async throws {
         let workspace = try fixtureWorkspace()
@@ -263,7 +252,6 @@ struct RecordingPlayerModelTests {
 
 @MainActor
 struct RecordingBarModelTests {
-    /// Like the course column's recent sessions: the rough note, else the review note, else the sessions list.
     @Test func theSessionOpensItsNoteElseTheSessionsList() throws {
         let workspace = try fixtureWorkspace()
         let session = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now))?.made)
@@ -322,7 +310,6 @@ struct TranscriptionContextModelTests {
 
         workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: session, firstPage: 3, lastPage: 20))
         #expect(model.contextChanged)
-        // Still what it was told, not the new range.
         #expect(model.shownContext?.slides.first?.last == 12)
     }
 
@@ -341,7 +328,6 @@ struct TranscriptionContextModelTests {
     @Test func anOldTranscriptSaysItKeptNoContext() async throws {
         let model = try player(context: nil)
         #expect(model.contextNote == String(localized: .recordingContextUnrecorded))
-        // Nothing to compare with, so nothing to redo for.
         #expect(!model.contextChanged)
         await model.loadContext()
         #expect(model.contextTermsRead)
@@ -363,7 +349,6 @@ struct TranscriptionContextModelTests {
         workspace.showing(page: 3, of: slides, course: graphTheory)
         workspace.showing(page: 4, of: slides, course: graphTheory)
 
-        // Another course's file, and a file that isn't a lecture, are not this class's slides.
         workspace.showing(page: 1, of: slides, course: linearAlgebraID)
         var syllabus = slides
         syllabus.role = .syllabus
@@ -371,7 +356,6 @@ struct TranscriptionContextModelTests {
         workspace.showing(page: nil, of: slides, course: graphTheory)
         #expect(workspace.recorder.snapshot?.pages.map(\.page) == [3, 4, nil])
         #expect(workspace.recorder.snapshot?.pages.allSatisfy { $0.materialId == slides.id } == true)
-        // The page on screen counts up to now, not up to a length still 0 while recording.
         #expect(workspace.recorder.snapshot?.duration == workspace.recorder.elapsed)
     }
 
@@ -400,7 +384,6 @@ struct TranscriptionQueueTests {
         let queue = TranscriptionQueue()
         let overlap = Overlap()
         let id = UUID()
-        // Like Whisper mid-window: it notices the cancel only when its current step ends.
         let work: @Sendable (@escaping @Sendable (TranscriptionPhase) -> Void) async throws -> Void = { _ in
             await overlap.enter()
             let until = ContinuousClock.now + .milliseconds(200)
@@ -458,7 +441,7 @@ struct MicrophoneTapTests {
         #expect(MicrophoneTap.plan(hardware: mac, node: .init(sampleRate: 48_000, channels: 2)) == .tap)
     }
 
-    /// The crash of 2026-11-11: the hardware was back at 48 kHz while the engine still read the AirPods' 24 kHz.
+    // 2026-11-11에 앱이 충돌한 원인이다. 하드웨어는 48kHz로 돌아왔는데 엔진은 여전히 AirPods의 24kHz로 읽었다.
     @Test func rebuildsWhenTheNodeHoldsAnotherDevicesRate() {
         #expect(MicrophoneTap.plan(hardware: mac, node: airPods) == .rebuild)
         #expect(MicrophoneTap.plan(hardware: airPods, node: mac) == .rebuild)
@@ -472,14 +455,12 @@ struct MicrophoneTapTests {
     }
 
     @Test func restartsAStoppedOrSilentEngineOnceItHadTimeToStart() {
-        // Running and hearing buffers: leave it.
         #expect(!MicrophoneTap.restartDue(running: true, sinceHeard: 0.1, sinceRestart: 30))
-        // Stopped by a device change or sleep.
         #expect(MicrophoneTap.restartDue(running: false, sinceHeard: 0.1, sinceRestart: 30))
-        // Running with a tap that never delivers ("config change pending").
+        // tap이 버퍼를 전혀 주지 않는 상태("config change pending")로 실행 중이다.
         #expect(MicrophoneTap.restartDue(running: true, sinceHeard: 2.5, sinceRestart: 2.5))
         #expect(!MicrophoneTap.restartDue(running: true, sinceHeard: 1.9, sinceRestart: 1.9))
-        // A new engine gets its second to start.
+        // 새 엔진에는 시작할 시간 1초를 준다.
         #expect(!MicrophoneTap.restartDue(running: false, sinceHeard: 0.5, sinceRestart: 0.5))
     }
 }

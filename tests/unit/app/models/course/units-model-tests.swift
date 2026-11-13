@@ -22,7 +22,6 @@ struct UnitsModelTests {
         model.openUnit = unit.id
         model.remove(unit)
         let pending = try #require(model.pending)
-        // The declaration's words, so the screen follows when the action's wording changes.
         #expect(
             pending.question == workspace.confirmation(UnitRemove(course: graphTheory, unit: unit.id)) && pending.question.contains("'매칭'"))
         #expect(pending.refusal == nil)
@@ -70,7 +69,6 @@ struct UnitsModelTests {
         #expect(model.subtitle(try file(workspace), states: [:]) == "단원 1개 · 오늘 복습 0개 · 단원 없는 회차 1")
     }
 
-    /// A class note shows under a unit while its class is linked to the unit, and leaves with the class.
     @Test func aClassNoteLeavesTheUnitWithItsClass() throws {
         let workspace = try fixtureWorkspace()
         let model = UnitsModel(workspace: workspace, courseId: graphTheory)

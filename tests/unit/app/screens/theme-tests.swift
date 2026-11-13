@@ -5,8 +5,7 @@ import Testing
 @testable import Folio
 
 struct ThemeTests {
-    // CourseColor keeps its own copy of the light values to read an old #RRGGBB; a preset that read as another
-    // name would mean the two copies drifted apart.
+    // `CourseColor`는 옛 #RRGGBB를 읽으려고 라이트 값의 사본을 따로 가진다. 프리셋이 다른 이름으로 읽힌다면 두 사본이 서로 어긋났다는 뜻이다.
     @Test func presetsReadAsThemselves() {
         #expect(CourseAccent.presets.map(\.name) == CourseColor.presets)
         for preset in CourseAccent.presets {
@@ -14,7 +13,7 @@ struct ThemeTests {
         }
     }
 
-    // A `.prominent` button writes white on the fill; 4.5:1 is what body text needs.
+    // `.prominent` 버튼은 채운 색 위에 흰 글자를 쓰고, 본문 글자에는 4.5:1의 대비가 필요하다.
     @Test func whiteReadsOnEveryFill() {
         func luminance(_ hex: UInt32) -> Double {
             let channel = { (shift: UInt32) -> Double in

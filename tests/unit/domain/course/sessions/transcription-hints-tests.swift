@@ -52,7 +52,6 @@ struct TranscriptionHintsTests {
 
         #expect(file.lectureSlides(for: file.sessions[0]).source == .session)
 
-        // A parent unit's slides count: the chapter covers the class.
         file.setMaterial(file.materials[1].id, unit: chapter.id, linked: true)
         let slides = file.lectureSlides(for: file.sessions[0])
         #expect(slides.source == .tagged)
@@ -72,7 +71,6 @@ struct TranscriptionHintsTests {
         let hints = file.transcriptionContext(for: file.sessions[0]).reading("lookahead, lookahead, syntax analysis, syntax analysis, LALR")
             .hints(course: file.course.title)
         #expect(hints.title == "컴파일러")
-        // A slide term the units already said, in another case, is not said twice.
         #expect(hints.terms == ["LR Parsing", "Syntax Analysis", "lookahead", "syntax", "analysis", "LALR"])
     }
 
@@ -87,10 +85,8 @@ struct TranscriptionHintsTests {
         #expect(terms.contains("LR"))
         #expect(terms.contains("LALR"))
         #expect(terms.contains { $0.lowercased() == "left factoring" })
-        // A pair seen once is not a term, and plain English words are not either.
         #expect(!terms.contains("top-down parser"))
         #expect(!terms.contains("The"))
-        // What the slides repeat comes first; a word said once only fills what is left.
         #expect(terms.firstIndex { $0.lowercased() == "left factoring" }! < terms.firstIndex(of: "uses")!)
     }
 
@@ -128,7 +124,6 @@ struct TranscriptionHintsTests {
         let slides = file.lectureSlides(for: file.sessions[0], recording: r)
         #expect(slides.source == .recording)
         #expect(slides.pages == [LecturePages(path: "Lectures/06_LR.pdf", first: 4, last: 7, materialId: lr)])
-        // Without the recording the session's own link is read, whole.
         #expect(file.lectureSlides(for: file.sessions[0]).source == .session)
     }
 
@@ -143,7 +138,6 @@ struct TranscriptionHintsTests {
         let used = file.transcriptionContext(for: file.sessions[0]).reading("lookahead lookahead")
         #expect(used.source == .week && used.terms == ["lookahead"])
 
-        // Terms are not compared: knowing them means reading the slides again.
         #expect(!used.differs(from: file.transcriptionContext(for: file.sessions[0])))
         file.sessions[0].materials = [SessionMaterial(materialId: file.materials[1].id, firstPage: 2, lastPage: 5)]
         #expect(used.differs(from: file.transcriptionContext(for: file.sessions[0])))

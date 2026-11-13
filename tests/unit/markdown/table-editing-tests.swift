@@ -4,7 +4,7 @@ import Testing
 
 @testable import FolioMarkdown
 
-/// Table edits on the source, with `‸` marking the caret since `|` is the table's.
+// `|`는 표의 기호이므로 캐럿은 `‸`로 표시한다.
 struct TableEditingTests {
     static func marked(_ text: String) -> (NSString, NSRange) {
         let ns = text as NSString
@@ -14,7 +14,6 @@ struct TableEditingTests {
         return (stripped, NSRange(location: first, length: second == NSNotFound ? 0 : second - first))
     }
 
-    /// The text after `command`, with `‸` where the caret is left.
     static func run(_ command: TableCommand, _ text: String) -> String? {
         let (ns, selection) = marked(text)
         guard let edit = TableEditing.edit(command, in: ns, selection: selection) else { return nil }
@@ -47,7 +46,6 @@ struct TableEditingTests {
         #expect(Self.run(.deleteColumn, Self.table) == "앞 문단\n\n| 점수 |\n| :--: |\n| 1‸    |\n| 2    |\n\n뒤 문단")
     }
 
-    /// The header is the first row of a GFM table, whatever is moved there.
     @Test func aRowMovedToTheTopIsTheHeader() {
         #expect(Self.run(.moveRowUp, "| a | b |\n|---|---|\n| ‸1 | 2 |") == "| 1‸   | 2   |\n| --- | --- |\n| a   | b   |")
         #expect(Self.run(.deleteRow, "| a‸ | b |\n|---|---|\n| 1 | 2 |") == "| 1‸   | 2   |\n| --- | --- |")
@@ -58,7 +56,6 @@ struct TableEditingTests {
         #expect(Self.run(.format, "|a|b \\| c|\n|-|-:|\n|‸x||") == "| a   | b \\| c |\n| --- | -----: |\n| x‸   |        |")
     }
 
-    /// A link's `|` is not a cell's: the row keeps its cells, and the link stays as written, escaped or not.
     @Test func linksKeepTheirBars() {
         #expect(
             Self.run(.format, "|a|b|\n|-|-|\n|[[note:x|이름]]‸|[[y\\|z]] c|")
@@ -78,7 +75,6 @@ struct TableEditingTests {
     @Test func noTableNoCommand() {
         #expect(Self.run(.rowBelow, "그냥 ‸문단") == nil)
         #expect(Self.run(.rowBelow, "```\n| a |\n|---|\n| ‸1 |\n```") == nil)
-        // Blank lines after a table, in a quote or a list item too, are not in it.
         #expect(Self.run(.rowBelow, "| a | b |\n|---|---|\n| 1 | 2 |\n‸\n뒤") == nil)
         #expect(Self.run(.rowBelow, "| a | b |\n|---|---|\n| 1 | 2 |\n\n‸") == nil)
         #expect(Self.run(.rowBelow, "> | a | b |\n> |---|---|\n> | 1 | 2 |\n>‸\n> 뒤") == nil)
@@ -86,7 +82,6 @@ struct TableEditingTests {
         #expect(Self.run(.rowBelow, "- | a | b |\n  |---|---|\n  | 1 | 2 |\n  ‸\n- 둘") == nil)
     }
 
-    /// A `cb-table` is drawn by the preview but not edited.
     @Test func aCBTableGetsNoCommands() {
         let cb = "```cb-table\n{\"rows\": [{\"header\": true, \"cells\": [{\"text\": \"a‸\"}]}, {\"cells\": [{\"text\": \"1\"}]}]}\n```"
         #expect(TableCommand.allCases.allSatisfy { Self.run($0, cb) == nil })
@@ -99,7 +94,6 @@ struct TableEditingTests {
     }
 }
 
-/// What every table edit keeps, on random tables and random runs of edits.
 struct TablePropertyTests {
     static let words = ["", "a", "가나", "x \\| y", "**b**", "$x$", "[[note:n|이름]]"]
     static let commands = TableCommand.allCases
@@ -143,7 +137,6 @@ struct TablePropertyTests {
                 case .moveRowUp, .moveRowDown, .moveColumnLeft, .moveColumnRight, .format:
                     #expect(b.width == a.width && b.height == a.height && Self.texts(a) == Self.texts(b), "\(command): \(text) → \(next)")
                 }
-                // Written as the editor writes it, the table is already formatted.
                 if let again = after.edit(.format) { #expect(again.applied(to: next) == next as String, "\(command): \(next)") }
                 #expect(next.hasPrefix("앞\n\n") && next.hasSuffix("\n\n뒤"))
                 text = next

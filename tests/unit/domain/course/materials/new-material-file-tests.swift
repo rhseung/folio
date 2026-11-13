@@ -19,7 +19,6 @@ struct NewMaterialFileTests {
         #expect(!NewMaterialFile.accepts(folder: folder))
     }
 
-    /// Below Assignments and Exams only an item's folder: a CLI typo must not make a folder no exam owns.
     @Test func onlyItemFoldersBelowAssignmentsAndExams() {
         let places = ["Study", "Archive", "Assignments/HW04", "Exams/중간고사"]
         for ok in ["Assignments/HW04", "Assignments/HW04/src", "Exams/중간고사", "Study/풀이", "Archive"] {
@@ -54,7 +53,6 @@ struct NewMaterialFileTests {
         #expect(places == ["Study", "Archive", "Assignments/HW03", "Assignments/HW04", "Assignments/Lab01", "Exams/중간고사"])
     }
 
-    /// The `.tex` starts as a document Tectonic builds; anything else starts empty.
     @Test func startingText() {
         let tex = NewMaterialFile.text(for: "hw4.TEX")
         #expect(tex.hasPrefix("\\documentclass[11pt]{article}\n\\usepackage{kotex}\n"))

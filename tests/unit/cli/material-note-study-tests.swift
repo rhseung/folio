@@ -23,7 +23,6 @@ struct MaterialNoteStudyTests {
         try #require(try h.file(gist).materials.first { $0.path.hasSuffix(name) }).id
     }
 
-    /// A file outside the fixture, shared by both copies.
     func scratch(_ name: String, _ text: String) throws -> String {
         let url = FileManager.default.temporaryDirectory.appending(path: "folio-cli-\(UUID().uuidString)").appending(path: name)
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -49,7 +48,6 @@ struct MaterialNoteStudyTests {
         #expect(f.assignments.allSatisfy { $0.status == .todo })
         #expect(f.materials.contains { $0.path == "Lectures/05_Matchings.pdf" })
 
-        // Spring 2026 ended before the pinned now: its homework was handed in.
         let past = try h.file(GISTStore(url: gist), UUID(uuidString: "C0000000-0000-4000-8000-000000000001")!)
         #expect(past.assignments.map(\.title) == ["HW01"])
         #expect(past.assignments.first?.status == .submitted)
@@ -81,7 +79,6 @@ struct MaterialNoteStudyTests {
         for setup in [Self.track, SessionCommandTests.add] { _ = h.cli(setup, gist: gist) }
         #expect(h.cli(["session", "progress", "EC4207/10-28", "05_Matchings.pdf"], gist: gist).code == Exit.usage.rawValue)
 
-        // A backward range is refused whole: the other file isn't written either.
         #expect(h.cli(["session", "progress", "EC4207/10-28", "Problems.pdf:1-2", "05_Matchings.pdf:12-3"], gist: gist).code != 0)
         #expect(try h.file(GISTStore(url: gist)).sessions.first { $0.id == SessionCommandTests.id }?.materials.isEmpty == true)
         #expect(h.cli(["session", "progress", "EC4207/10-28", "05_Matchings.pdf:3-12"], gist: gist).code == 0)
@@ -102,10 +99,8 @@ struct MaterialNoteStudyTests {
         for setup in [Self.track, SessionCommandTests.add, Self.addUnit] { _ = h.cli(setup, gist: gist) }
         #expect(h.cli(["session", "wrap-up", "EC4207/10-28", "--unit", "매칭", "--attendance", "absent"], gist: gist).code == 0)
 
-        // The class is still ahead of the harness's clock, so saving it isn't wrapping it up.
         #expect(try h.file(GISTStore(url: gist)).sessions.first { $0.id == SessionCommandTests.id }?.isWrappedUp == false)
 
-        // Moved to a day already past, given nothing else: what the class has stays and it is marked wrapped up.
         #expect(h.cli(["session", "wrap-up", "EC4207/10-28", "--date", "2026-10-27 19:00"], gist: gist).code == 0)
         let f = try h.file(GISTStore(url: gist))
         let s = try #require(f.sessions.first { $0.id == SessionCommandTests.id })
@@ -114,12 +109,10 @@ struct MaterialNoteStudyTests {
         let entry = try #require(f.attendance.first { $0.sessionId == s.id })
         #expect(entry.state == .absent)
 
-        // The same state again keeps the entry as it was rather than writing it anew.
         #expect(h.cli(["session", "wrap-up", "EC4207/10-27", "--attendance", "absent"], gist: gist).code == 0)
         #expect(try h.file(GISTStore(url: gist)).attendance.filter { $0.sessionId == s.id }.map(\.id) == [entry.id])
     }
 
-    /// `--unlink` takes a file off the class, its pages with it, in the same save as the ranges given.
     @Test func sessionWrapUpUnlinks() throws {
         let linked = ["material", "link", "EC4207/05_Matchings.pdf", "10-28", "--pages", "3-12"]
         let setup = [Self.track, SessionCommandTests.add, linked]
@@ -139,8 +132,6 @@ struct MaterialNoteStudyTests {
         #expect(f.materials.first { $0.id == slides }?.sessionIds.contains(SessionCommandTests.id) == false)
     }
 
-    /// A class under way (09:30, the harness's clock at 10:00) is wrapped up by a save only from the prompt of a
-    /// recording just stopped, which isn't in course.json yet: its audio is still being compressed.
     @Test func wrapUpDuringTheClassCountsOnlyAfterARecording() throws {
         let gist = try Harness.fixtureCopy()
         let id = UUID(uuidString: "A0000000-0000-4000-8000-0000000000F1")!
@@ -221,8 +212,6 @@ struct MaterialNoteStudyTests {
         )
     }
 
-    /// The file changes on another device after tracking; `material show --json` reads it again, so its hash still
-    /// opens the write.
     @Test func writeTakesTheHashShowReadsNow() throws {
         let gist = try Harness.fixtureCopy()
         _ = h.cli(Self.track, gist: gist)
@@ -238,7 +227,6 @@ struct MaterialNoteStudyTests {
         #expect(try String(contentsOf: tex, encoding: .utf8) == "x")
     }
 
-    /// The format the app opens a file by, so an agent knows a PDF from a slide deck without guessing from the name.
     @Test func showReportsTheFormat() throws {
         let gist = try Harness.fixtureCopy()
         _ = h.cli(Self.track, gist: gist)
@@ -314,7 +302,6 @@ struct MaterialNoteStudyTests {
         #expect(try FileManager.default.contentsOfDirectory(atPath: backup).count == 1)
     }
 
-    /// A moved file keeps its material, which then gets the exam link and past exam mark the plan carried.
     @Test func cleanupApplyLinksMovedFiles() throws {
         let gist = try Harness.fixtureCopy()
         _ = h.cli(Self.track, gist: gist)
@@ -399,7 +386,6 @@ struct MaterialNoteStudyTests {
         #expect(h.cli(["note", "edit", "EC4207/09-08", "--old", "없는 글", "--new", "x"], gist: gist).code == Exit.conflict.rawValue)
     }
 
-    /// Writes a note file straight into Notes/, as another editor would, so it has no entry in course.json.
     func drop(_ gist: URL, _ name: String, _ text: String) throws {
         let store = try ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now).store(course)
         try text.write(to: store.url.appending(path: "Notes/\(name)"), atomically: true, encoding: .utf8)
@@ -433,7 +419,6 @@ struct MaterialNoteStudyTests {
     }
 
     @Test func noteRetitle() throws {
-        // The fixture's note as notes were named before #273.
         let setup = [
             SessionCommandTests.add, ["note", "mv", "EC4207/09-08", "2주차-1", "--yes"],
             ["note", "link", "EC4207/2주차-1", "--kind", "rough", "--session", "10-28"],

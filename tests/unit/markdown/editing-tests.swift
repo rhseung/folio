@@ -3,7 +3,7 @@ import Testing
 
 @testable import FolioMarkdown
 
-/// Text with the selection marked: `|` for the caret, `«…»` for selected text.
+// 선택을 표시한 글이다. `|`는 캐럿, `«…»`는 선택한 글이다.
 struct Marked {
     let text: NSString
     let selection: NSRange
@@ -166,7 +166,6 @@ struct ListEditingTests {
 
     @Test func tabInCodeOnlyIndents() {
         #expect(tab("```markdown\n1. a\n1. b|\n1. c\n```") == "```markdown\n1. a\n    1. b|\n1. c\n```")
-        // A list right against a code block is numbered on its own.
         #expect(tab("1. a\n2. b|\n```\n1. x\n```") == "1. a\n    1. b|\n```\n1. x\n```")
     }
 
@@ -192,7 +191,6 @@ struct ListEditingTests {
         #expect(tab("bookmk|", snippets: snippets) == "    bookmk|")
         #expect(tab("$a //|$", snippets: snippets) == "$a \\frac{|}{}$")
         #expect(tab("dm|", snippets: snippets) == "$$\n|\n$$")
-        // A math snippet doesn't fire in text, nor a text one in math.
         #expect(tab("//|", snippets: snippets) == "    //|")
         #expect(tab("$mk|$", snippets: snippets) == "$mk$|")
     }
@@ -230,7 +228,6 @@ struct CompletionTests {
         #expect(query("```py|")?.kind == .codeLanguage)
         #expect(query("```py\nx\n```|") == nil)
         #expect(query("$\\fr|$")?.kind == .texCommand)
-        // AsciiMath has no commands, but a `\` asks for its names all the same.
         #expect(query("$\\fr|$", tex: false)?.kind == .texCommand)
         #expect(query("$\\\\|$") == nil)
         #expect(query("$\\begin{pm|}$")?.kind == .texEnvironment)

@@ -75,7 +75,6 @@ struct LMSTests {
             try GISTStore(url: gist).loadSettings().model.lms.handled.map(\.description) == [
                 "assignment:139950", "file:139200", "notice:23464",
             ])
-        // A second run is refused before it writes anything.
         #expect(h.cli(["lms", "accept", "EC4207", "--items", json.path], gist: gist).code != 0)
     }
 

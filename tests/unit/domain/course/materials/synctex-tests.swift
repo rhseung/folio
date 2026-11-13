@@ -2,19 +2,19 @@ import FolioDomain
 import Foundation
 import Testing
 
-/// SyncTeX data Tectonic 0.17 wrote for this `ok.tex`, with its folder renamed:
-///
-///     1 \documentclass{article}
-///     2 \begin{document}
-///     3 Hello world.
-///     4
-///     5 Second paragraph with $x^2$.
-///     6
-///     7 \input{part}      % part.tex: "Included text from part.", "", "More included."
-///     8
-///     9 \newpage
-///    10 Page two line.
-///    11 \end{document}
+// Tectonic 0.17이 이 `ok.tex`에 대해 쓴 SyncTeX 데이터이며, 폴더 이름만 바꿨다.
+//
+//    1 \documentclass{article}
+//    2 \begin{document}
+//    3 Hello world.
+//    4
+//    5 Second paragraph with $x^2$.
+//    6
+//    7 \input{part}      % part.tex: "Included text from part.", "", "More included."
+//    8
+//    9 \newpage
+//   10 Page two line.
+//   11 \end{document}
 struct SyncTeXTests {
     static let text = """
         SyncTeX Version:1
@@ -129,12 +129,12 @@ struct SyncTeXTests {
     let main = "/course/Study/ok.tex"
     let part = "/course/Study/part.tex"
 
-    /// Points are PDF points from the page's top-left corner; the article's text starts 134pt in and 128pt down.
+    // 좌표는 쪽의 왼쪽 위에서 잰 PDF point이고, article의 글은 오른쪽으로 134pt, 아래로 128pt 지점에서 시작한다.
     @Test func aWordOnTheFirstLine() {
         #expect(sync.place(page: 1, x: 200, y: 132) == SyncTeX.Place(file: main, line: 3))
     }
 
-    /// The paragraph's row carries line 4, where the blank line ended it; its words are on line 3.
+    // 문단의 행은 빈 줄이 문단을 끝낸 4번째 줄을 가리키고, 그 낱말은 3번째 줄에 있다.
     @Test func theWordsNameTheLineNotTheParagraphEnd() {
         #expect(sync.place(page: 1, x: 140, y: 132)?.line == 3)
         #expect(sync.place(page: 1, x: 470, y: 132)?.line == 3)
@@ -159,7 +159,7 @@ struct SyncTeXTests {
         #expect(sync.place(page: 3, x: 200, y: 132) == nil)
     }
 
-    /// `-Z deterministic-mode` writes the inputs without their names; no file is better than a guessed one.
+    // `-Z deterministic-mode`는 입력을 이름 없이 쓴다. 짐작한 파일보다 파일이 없는 편이 낫다.
     @Test func withoutFileNamesNothing() {
         let blanked = Self.text.replacingOccurrences(of: main, with: "").replacingOccurrences(of: part, with: "")
         #expect(SyncTeX(text: blanked).place(page: 1, x: 200, y: 132) == nil)

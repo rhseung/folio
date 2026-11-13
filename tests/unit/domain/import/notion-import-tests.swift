@@ -56,7 +56,6 @@ struct NotionImportTests {
 
     @Test func matchesFoldersBySemesterAndCode() throws {
         let result = NotionImporter.convert(export, gist: gist, device: device, now: now)
-        // A course no folder matches gets a new one: credited ones under the term's source, named after the Notion row.
         #expect(
             Set(result.courseFiles.keys) == [
                 "2026-3/EC4207 그래프 이론", "2026-3/GS2004 선형대수학", "2026-3/GS9331 콜로퀴움",
@@ -109,7 +108,6 @@ struct NotionNotesImportTests {
             existingNotes: [], calendar: calendar, device: device, now: now)
         #expect(first.sessionsAdded == 1)
         let session = first.file.sessions[0]
-        // The only class known in week 7, so it is 7주차-1 here whatever Notion called it.
         #expect(session.week == 7 && session.roughNoteId == rough.id && session.reviewNoteId == review.id)
         #expect(first.notes.count == 3)
         #expect(first.notes.first { $0.id == topic.id }?.meta.kind == .unit)
@@ -121,7 +119,6 @@ struct NotionNotesImportTests {
         #expect(again.sessionsAdded == 0 && again.notes.isEmpty && again.file.sessions.count == 1)
     }
 
-    /// A session that already has a rough note keeps it; the Notion one comes in unlinked, with a warning.
     @Test func aSessionsNoteIsNotTakenByAnImportedOne() {
         let ours = UUID()
         var file = CourseFile(course: Course(device: device, at: now, title: "그래프 이론"))
@@ -141,8 +138,6 @@ struct NotionNotesImportTests {
         #expect(r.warnings.count == 1)
     }
 
-    /// Notion numbered a week's classes in the order they were added, so `7주차-2` can come before `7주차-1`. Two
-    /// numbers are still two classes, even when the date order names the first one `7주차-1`.
     @Test func twoNotionNumbersInAWeekStayTwoSessions() {
         let second = note("7주차-2", nil, "2026-10-13")
         let first = note("7주차-1", nil, "2026-10-15")
@@ -154,7 +149,6 @@ struct NotionNotesImportTests {
         #expect(Set(r.notes.compactMap(\.meta.sessionId)) == Set(r.file.sessions.map(\.id)))
     }
 
-    /// A note imported before and unlinked since stays unlinked; importing again doesn't set the session's side alone.
     @Test func anImportedNoteThatWasUnlinkedStaysSo() {
         let rough = note("7주차-2", nil, "2026-10-14")
         let dump = NotionCourseDump(coursePageId: UUID(), title: "그래프 이론", notes: [rough], scores: [], images: [])

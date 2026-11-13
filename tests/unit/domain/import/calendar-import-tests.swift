@@ -3,7 +3,6 @@ import Testing
 
 @testable import FolioDomain
 
-/// Shapes from the 2026 fall calendar: sessions imported from Notion carry only a day.
 struct CalendarImportTests {
     let device = UUID()
     let now = Date(timeIntervalSince1970: 1_800_000_000)
@@ -35,10 +34,8 @@ struct CalendarImportTests {
 
         #expect(r.filled.map(\.id) == [existing.id])
         #expect(r.file.sessions.first { $0.id == existing.id }?.date == at(8, 14, 30))
-        // The day's first meeting is the session that was there; the recitation that evening is a session of its own.
         let week2 = r.added.filter { $0.week == 2 }
         #expect(week2.map(\.date) == [at(8, 18, 30), at(10, 14, 30)])
-        // The meeting's title is the import's to use, not the session's: classes have no topic.
         #expect(r.titles[week2[0].id] == "Recitation" && r.titles[existing.id] == "")
         #expect(week2.map { r.file.reference(of: $0, calendar: calendar) } == ["09-08 18:30", "09-10"])
         #expect(r.added.filter { $0.week == 4 }.map(\.date) == [at(22, 14, 30), at(23, 21)])
@@ -62,7 +59,6 @@ struct CalendarImportTests {
         #expect(links.map(\.note) == [free])
     }
 
-    /// Two classes with one title can't share a note: the earlier one takes it.
     @Test func aNoteGoesToOneSession() {
         let first = Session(device: device, at: now, week: 3, date: at(16, 10, 30))
         let second = Session(device: device, at: now, week: 4, date: at(23, 10, 30))
@@ -73,7 +69,6 @@ struct CalendarImportTests {
         #expect(links.map(\.session) == [first.id])
     }
 
-    /// A day the calendar skips inside its span is a cancelled class; the session stays, marked.
     @Test func sessionsOnSkippedDaysAreCancelled() {
         let holiday = Session(device: device, at: now, week: 6, date: calendar.startOfDay(for: at(5, 0, month: 10)))
         let late = Session(device: device, at: now, week: 16, date: at(14, 14, 30, month: 12))
@@ -81,7 +76,7 @@ struct CalendarImportTests {
         var after = lecture(7)
         after.start = at(7, 14, 30, month: 10)
 
-        // The calendar spans 9/8 to 10/7: 10/5 falls inside with no meeting, 12/14 is past its end.
+        // 캘린더는 9/8부터 10/7까지이므로, 10/5는 기간 안이지만 수업이 없고 12/14는 기간이 끝난 뒤다.
         let r = CalendarImporter.merge(
             [lecture(8), after], into: file, semesterStart: LocalDate(year: 2026, month: 8, day: 31)!,
             calendar: calendar, device: device, now: now)
@@ -89,7 +84,6 @@ struct CalendarImportTests {
         #expect(r.file.sessions.first { $0.id == late.id }?.isCancelled == false)
     }
 
-    /// 선형대수학 had a Notion midterm without an end; graph theory had none. A final on another day stays a conflict.
     @Test func examsFillTheSameDayAndAddMissingOnes() {
         var midterm = Exam(device: device, at: now, title: "Midterm", start: at(20, 20, month: 10), location: "C104")
         midterm.memo = ""
@@ -123,7 +117,6 @@ struct LabUnitTests {
         #expect(unit("Labeling").labNumber == nil && unit("1장 Lab04").labNumber == nil)
     }
 
-    /// The parts of a two-session experiment share one unit; a meeting without a number links nothing.
     @Test func calendarLabMeetingsLinkToTheirUnit() {
         var c = Calendar(identifier: .gregorian)
         c.timeZone = TimeZone(identifier: "Asia/Seoul")!

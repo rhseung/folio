@@ -24,7 +24,6 @@ struct QuizGenerationTests {
 
         let unit = UUID(), device = UUID(), now = Date()
         let cards = drafts.compactMap { $0.card(unitId: unit, device: device, at: now) }
-        // The choice card whose answer isn't among its options is dropped.
         #expect(cards.map(\.type) == [.proof, .choice, .trueFalse])
         #expect(cards.allSatisfy { $0.source == .ai && $0.unitId == unit })
         #expect(cards[2].options == QuizCard.trueFalseOptions && cards[0].options.isEmpty)

@@ -3,7 +3,6 @@ import Foundation
 import PropertyBased
 import Testing
 
-/// How a class is named on the command line, in files and on screen now that it isn't `9주차-2`.
 struct SessionReferenceTests {
     let device = UUID()
     let calendar: Calendar = {
@@ -36,7 +35,6 @@ struct SessionReferenceTests {
         #expect(f.references(of: tue, calendar: calendar) == ["11-03", "11/3", "11-03", "2026-11-03", "Matchings"])
     }
 
-    /// A lecture and a lab the same day both take their start, and the day alone picks neither.
     @Test func twoClassesOneDayTakeTheirTimes() {
         let lecture = session(at(11, 3, 10, 30)), lab = session(at(11, 3, 14, 0))
         let f = file([lab, lecture])
@@ -47,7 +45,6 @@ struct SessionReferenceTests {
         #expect(f.sessions(matching: "11-0314:00", calendar: calendar).map(\.id) == [lab.id])
     }
 
-    /// A makeup the same evening as a cancelled class is a second class that day: the cancelled one stays a class.
     @Test func aMakeupBesideACancelledClass() {
         var cancelled = session(at(11, 3, 10, 30))
         cancelled.isCancelled = true
@@ -58,16 +55,12 @@ struct SessionReferenceTests {
         #expect(f.reference(of: cancelled, calendar: calendar) == "11-03 10:30")
         #expect(f.reference(of: makeup, calendar: calendar) == "11-03 21:00")
 
-        // Unlike 10주차-1 and 10주차-2, a makeup leaves the other days' classes as they were.
         #expect(f.reference(of: other, calendar: calendar) == "11-05")
 
-        // A session not yet in the file is named where its date puts it.
         let more = session(at(11, 5, 19, 0))
         #expect(f.reference(of: more, calendar: calendar) == "11-05 19:00")
     }
 
-    /// Date-only imports put two classes at midnight: they take the time all the same, since the day alone names both,
-    /// and count on in the order they were made, as file names do.
     @Test func classesAtOneMinuteCountOn() {
         let first = session(at(11, 3, 0, 0), made: at(9, 1)), second = session(at(11, 3, 0, 0), made: at(9, 2))
         let f = file([second, first])
@@ -80,14 +73,13 @@ struct SessionReferenceTests {
             [first, second, evening].map { g.reference(of: $0, calendar: calendar) } == ["11-03 00:00", "11-03 00:00 2", "11-03 19:00"])
     }
 
-    /// A course over New Year that meets on the same month and day twice tells them apart by the year.
     @Test func theSameDayAYearApart() {
         let a = session(at(1, 5, year: 2026)), b = session(at(1, 5, year: 2027))
         let f = file([a, b])
         #expect(f.reference(of: a, calendar: calendar) == "2026-01-05" && f.reference(of: b, calendar: calendar) == "2027-01-05")
     }
 
-    /// The calendar day, as the note's file name has it: a class at 1:00 is the 4th, though the study day is the 3rd.
+    // 노트 파일 이름처럼 달력 날짜를 쓴다. 1:00 수업은 공부일이 3일이어도 4일이다.
     @Test func theCalendarDayNotTheStudyDay() {
         let late = session(at(11, 3, 23, 30)), night = session(at(11, 4, 1, 0))
         let f = file([late, night])
@@ -106,7 +98,6 @@ struct SessionReferenceTests {
         #expect(file([a, b]).sessionSpan(of: note, calendar: calendar) == "11/3(화) – 11/10(화)")
     }
 
-    /// Only recordings still named the old way, and of a class, are renamed.
     @Test func oldRecordingNames() {
         let s = session(at(11, 3))
         var f = file([s])
@@ -126,8 +117,6 @@ struct SessionReferenceTests {
 
     // MARK: Properties
 
-    /// Day offsets over more than a year, so a month and day can come twice; a few starts, midnight among them, so
-    /// days with two classes and classes at one minute come up often.
     static let sessions = zip(Gen.int(in: 0...400), Gen.int(in: 0...3), Gen.int(in: 0...2)).array(of: 0...12)
     static let minutes = [0, 60, 630, 840]
 
@@ -158,7 +147,6 @@ struct SessionReferenceTests {
         }
     }
 
-    /// Classes on other days never change a class's reference, as a makeup used to renumber the whole week.
     @Test func onlyItsOwnDayMovesAReference() async {
         await propertyCheck(input: Self.sessions) { rows in
             let f = make(rows)
@@ -170,7 +158,6 @@ struct SessionReferenceTests {
         }
     }
 
-    /// The reference starts with the day the class's note and recording are named for.
     @Test func theReferenceIsTheFilesDay() async {
         await propertyCheck(input: Self.sessions) { rows in
             let f = make(rows)
@@ -184,11 +171,8 @@ struct SessionReferenceTests {
     }
 
     static let words = ["Matching", "Hall", "Tree", "Euler", "Cut", "and", "of", "그래프", "평면성", "Go-Back-N"]
-    /// Up to four units linked to one class, each a few words long, some too long to fit a file name.
     static let unitTitles = Gen.int(in: 0...9).array(of: 1...12).array(of: 0...4)
 
-    /// A class's note is named by its day and as many of its units, whole and in order, as fit in 60 letters; the day
-    /// alone without units. Only a first unit too long by itself is cut.
     @Test func aNoteTitleIsTheDayAndTheUnitsThatFit() async {
         await propertyCheck(input: Self.unitTitles) { picks in
             let s = session(at(11, 3))

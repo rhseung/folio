@@ -5,8 +5,6 @@ import Testing
 
 @testable import Folio
 
-/// The app's side of a class starting (#391): what it writes and what a window is asked to open, on a fixture at a
-/// pinned time. The recorder and the windows are left out; the rule itself is tested in ClassStartTests.
 @MainActor
 struct ClassStartModelTests {
     let workspace: Workspace
@@ -14,7 +12,7 @@ struct ClassStartModelTests {
 
     init() throws {
         workspace = try fixtureWorkspace()
-        workspace.pinnedNow = at(20)  // a Thursday in the fall term, past its midterm week
+        workspace.pinnedNow = at(20)  // 가을학기의 목요일이며, 중간고사 주가 지났다.
         let code = addCode("GS", to: workspace)
         workspace.run(TranscriptAdd(id: course, semester: fallTerm, title: "콜로퀴움", code: code, number: "9331", credits: 0))
         workspace.run(
@@ -25,7 +23,6 @@ struct ClassStartModelTests {
         workspace.calendar.date(from: DateComponents(year: 2026, month: 10, day: 29, hour: hour, minute: minute))!
     }
 
-    /// Only this course: the fixture's own timetable could put another class at the same time.
     func set(_ change: (inout ClassStartSettings) -> Void) {
         var s = workspace.settings
         change(&s.classStart)
@@ -46,15 +43,11 @@ struct ClassStartModelTests {
         let saved = try #require(session(at: at(21)))
         let note = try #require(saved.roughNoteId)
         #expect(step.ask.session == saved.id && step.ask.course == course)
-        // No lecture is linked to the class, so only the note opens, in front.
         #expect(step.ask.opens == [ClassStartOpening(link: AppLink(.note, note), placement: .here)])
         #expect(!step.records && !step.ask.asksRecording && !step.ask.front)
-        // Once per class: the next minute has nothing left to do.
         #expect(workspace.classStartStep(at: at(21, 6), recorderBusy: false) == nil)
     }
 
-    /// By default the note and the lectures open together in a new tab, laid out as "수업 중" (2026-11-09 사용자),
-    /// and the tab in front stays where it is.
     @Test func thePagesOpenSideBySideInANewTab() throws {
         set {
             $0.roughNote = .create; $0.lecture = .open
@@ -81,8 +74,6 @@ struct ClassStartModelTests {
         #expect(step.ask.opens.isEmpty)
     }
 
-    /// The layout chosen in 일반 › 칸 배치 opens instead (#62): a layout of the user's with the class's note beside a
-    /// fixed page, the note's role filled with this class's.
     @Test func theChosenLayoutOpensTheClass() throws {
         let saved = PanePreset(name: "노트와 성적", slots: [.link(.place(.grades)), .role(.classNote)], shares: [0.3, 0.7])
         var s = workspace.settings
@@ -97,7 +88,6 @@ struct ClassStartModelTests {
         #expect(split.links == [.place(.grades), AppLink(.note, note)] && split.shares == saved.shares && split.focus == 1)
     }
 
-    /// With nothing to put side by side, the class itself opens in front, as it does in the tab in front.
     @Test func withoutPagesTheClassOpensInFront() throws {
         set { $0.roughNote = .openExisting }
         let step = try #require(workspace.classStartStep(at: at(21), recorderBusy: false))
@@ -130,7 +120,6 @@ struct ClassStartModelTests {
         #expect(early.records && early.ask.opens.isEmpty && early.ask.stopAt == at(22, 5))
         let saved = try #require(session(at: at(21)))
 
-        // Opened again during the class, after its recording was stopped: the class isn't recorded twice.
         workspace.classStartDone = [:]
         let gist = try #require(workspace.gist)
         let ctx = ActionContext(
@@ -144,8 +133,6 @@ struct ClassStartModelTests {
         #expect(!again.records && again.ask.opens.map(\.link) == [AppLink(.session, saved.id)])
     }
 
-    /// Back-to-back classes: the one before is still recording until its stop time, so this class's recording waits
-    /// for it instead of being given up.
     @Test func theRecordingWaitsForTheOneBeforeToStop() throws {
         set {
             $0.recording = .start; $0.roughNote = .create
@@ -166,10 +153,8 @@ struct ClassStartModelTests {
         let elsewhere = Navigator.Entry(link: AppLink(.session, other), course: course)
         #expect(workspace.classStartOpenings(step.ask, showing: elsewhere).isEmpty)
         #expect(workspace.classStartOpenings(step.ask, showing: Navigator.Entry(link: .place(.today))) == step.ask.opens)
-        // The class first, then its note in a tab.
         #expect(step.ask.opens.map(\.placement) == [.here, .tab])
 
-        // A split tab waits the same way.
         var split = step.ask
         split.opens = []
         split.split = PaneLayout(AppLink(.session, other))
@@ -185,7 +170,6 @@ struct ClassStartModelTests {
         #expect(
             model.settings.classStart.recording == .start && model.settings.classStart.roughNote == .create
                 && model.settings.classStart.lecture == .open)
-        // A chip turned off and on again comes back as it was set, not as the default.
         model.settings.classStart.recording = .ask
         model.settings.classStart.roughNote = .openExisting
         model.classStartItems = [.lecture]

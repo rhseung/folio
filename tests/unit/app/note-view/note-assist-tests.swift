@@ -6,8 +6,6 @@ import Testing
 
 @testable import Folio
 
-/// Typing help in the edit view, driven by the keys the text view gets: the completion menu, pairs and snippets, and
-/// that none of them acts while a Hangul syllable is being composed.
 @MainActor @Suite(.serialized)
 struct NoteAssistTests {
     static let none = NSRange(location: NSNotFound, length: 0)
@@ -127,7 +125,6 @@ struct NoteAssistTests {
         #expect(Self.caretShown(view) == "값 $x \\frac{|}{}$")
     }
 
-    /// `\` lists an AsciiMath note's own names, never TeX commands (#392).
     @Test func asciiMathNotesGetNoTeXCommands() {
         let (view, _) = Self.editor("", syntax: .asciimath)
         Self.type(view, "$\\fr")
@@ -135,8 +132,6 @@ struct NoteAssistTests {
         #expect(view.completion.items.allSatisfy { !$0.title.hasPrefix("\\") })
     }
 
-    /// Each block shows its faster way in, read from the snippets for `mk` and `dm`; the guide comes last, and taking
-    /// it takes the `/` away and opens the guide (#395).
     @Test func theSlashMenuShowsShortcutsAndEndsWithTheGuide() {
         let (view, _) = Self.editor("# 행렬\n\n")
         var opened = 0
@@ -150,8 +145,6 @@ struct NoteAssistTests {
         #expect(view.string == "# 행렬\n\n" && opened == 1 && !view.completion.visible)
     }
 
-    /// The hint sits on an empty line with the caret, as a label over the text: typing, a syllable being composed or a
-    /// caret on a line with text takes it away, and the text never holds it.
     @Test func anEmptyLineHintsAtTheBlockMenu() {
         let (view, _) = Self.editor("# 행렬\n\n")
         view.updateHint()
@@ -181,8 +174,6 @@ struct NoteAssistTests {
         #expect(view.string == "> ")
     }
 
-    /// The input method owns the keys while a syllable is marked: no pair closes under it, the menu takes no key and
-    /// doesn't narrow, and a list doesn't carry on. Once the syllable is done, all of it applies again.
     @Test func composingHangulIsLeftAlone() throws {
         let (view, _) = Self.editor("")
         Self.type(view, "/")
@@ -193,12 +184,10 @@ struct NoteAssistTests {
         #expect(view.string == "/표" && view.hasMarkedText() && view.completion.items == items)
         view.insertText("표", replacementRange: Self.none)
         #expect(!view.hasMarkedText() && view.completion.current?.id == "slash.table")
-        // Return while the next syllable is marked is the input method's, not the menu's.
         view.setMarkedText("ㄱ", selectedRange: NSRange(location: 1, length: 0), replacementRange: Self.none)
         Self.enter(view)
         #expect(!view.string.contains("---"))
 
-        // A symbol the input method puts in place of the marked syllable is typed as it is.
         let (list, _) = Self.editor("- 하나")
         list.setMarkedText("ㄷ", selectedRange: NSRange(location: 1, length: 0), replacementRange: Self.none)
         list.insertText("(", replacementRange: list.markedRange())
@@ -207,7 +196,6 @@ struct NoteAssistTests {
         list.insertNewline(nil)
         #expect(!list.string.contains("\n- "))
 
-        // A syllable composed inside a pair stays whole and keeps the closer after it.
         let (pair, _) = Self.editor("")
         Self.type(pair, "(")
         pair.setMarkedText("ㅎ", selectedRange: NSRange(location: 1, length: 0), replacementRange: Self.none)
@@ -218,8 +206,7 @@ struct NoteAssistTests {
         #expect(Self.caretShown(pair) == "(하)|")
     }
 
-    /// The edit view with the menu over it, to look at the menu: offscreen, AppKit draws neither the menu's hosting
-    /// view nor glass, so SwiftUI draws the menu on the card color where the view put it.
+    // 화면 밖에서는 AppKit이 메뉴의 hosting view와 glass를 그리지 않으므로, SwiftUI가 뷰가 둔 자리에 카드 색으로 메뉴를 그린다.
     static func writeWithMenu(_ view: SourceTextView, _ name: String, dark: Bool) throws {
         guard let dir = ProcessInfo.processInfo.environment["FOLIO_NOTE_RENDER"] else { return }
         let host = try #require(view.menuHost)
@@ -228,7 +215,7 @@ struct NoteAssistTests {
         let text = try #require(view.bitmapImageRepForCachingDisplay(in: area))
         view.cacheDisplay(in: area, to: text)
 
-        // The rows without their scroll view, which ImageRenderer leaves empty.
+        // `ImageRenderer`는 scroll view 안의 행을 비워 두므로, scroll view 없이 행만 그린다.
         let rows = CompletionMenuView(menu: view.completion) { _ in }.rows
             .frame(width: CompletionMenuView.width, height: CompletionMenuView.height(rows: view.completion.items.count), alignment: .top)
             .clipped()
@@ -247,7 +234,6 @@ struct NoteAssistTests {
             back.setFill()
             area.fill()
             text.draw(in: area)
-            // The text view is flipped and the image isn't.
             menu.draw(in: NSRect(x: frame.minX, y: area.height - frame.maxY, width: frame.width, height: frame.height))
             return true
         }
@@ -255,7 +241,6 @@ struct NoteAssistTests {
         try rep.representation(using: .png, properties: [:])?.write(to: URL(filePath: dir).appending(path: "\(name).png"))
     }
 
-    /// The edit view's top, its hint included, to look at.
     static func writeText(_ view: SourceTextView, _ name: String, dark: Bool) throws {
         guard let dir = ProcessInfo.processInfo.environment["FOLIO_NOTE_RENDER"] else { return }
         let area = NSRect(x: 0, y: 0, width: view.bounds.width, height: 160)
@@ -311,7 +296,6 @@ struct NoteAssistTests {
         return (view, window)
     }
 
-    /// A link's candidates come from the app a moment later.
     static func waitForMenu(_ view: SourceTextView, until done: (CompletionMenu) -> Bool = { $0.visible }) async throws {
         for _ in 0..<200 where !done(view.completion) { try await Task.sleep(for: .milliseconds(5)) }
         #expect(done(view.completion))
@@ -373,14 +357,12 @@ struct NoteAssistTests {
         let (view, _) = Self.editor("", syntax: .asciimath)
         Self.type(view, "$sq")
         #expect(view.completion.current?.id.hasPrefix("snippet.") == true)
-        // Return under a menu that opened by itself is the line break it would be.
         #expect(view.completion.query?.takesReturn == false)
         Self.tab(view)
         #expect(Self.caretShown(view) == "$sqrt(|)$")
     }
 }
 
-/// Link candidates as the app would give them, without a GIST folder.
 @MainActor final class StubLinks: NoteLinkSource {
     func candidates(for query: CompletionQuery, text: String) async -> [CompletionItem] {
         guard case .link(let link) = query.kind else { return [] }

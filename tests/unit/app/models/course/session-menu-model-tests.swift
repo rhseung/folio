@@ -9,7 +9,6 @@ import Testing
 
 @MainActor
 struct SessionMenuModelTests {
-    /// A class the timetable holds weeks ahead of the semester's start, not saved yet.
     func planned(_ workspace: Workspace) throws -> Workspace.SuggestedSession {
         workspace.run(
             CourseSet(course: graphTheory, [.schedule([ClassTime(weekday: 2, startMinute: 10 * 60 + 30, endMinute: 11 * 60 + 45)])]))
@@ -64,8 +63,6 @@ struct SessionMenuModelTests {
         try #require(source.commands.map(source.row).first { $0.title == String(localized: title) })
     }
 
-    /// After the class: its review note to make and the one check, then editing, sharing and deleting. Off its own
-    /// screen, opening it leads.
     @Test func afterClassTheMenuOffersTheReviewAndItsCheck() throws {
         let workspace = try fixtureWorkspace()
         let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: workspace.now.addingTimeInterval(-86_400)))?.made)
@@ -78,7 +75,6 @@ struct SessionMenuModelTests {
         #expect(try source(workspace, id).commands.contains(.review(.notNeeded)))
         #expect(try file(workspace).sessions.first { $0.id == id }?.skipsReview == true)
 
-        // Made, the note is opened from here on, and the check becomes 작성 완료.
         perform(try row(menu, .sessionsMakeReviewNote))
         let written = try source(workspace, id)
         #expect(written.commands.contains(.openNote(.review)) && written.commands.contains(.review(.writing)))
@@ -86,7 +82,6 @@ struct SessionMenuModelTests {
         #expect(try file(workspace).sessions.first { $0.id == id }?.reviewNoteUnfinished == false)
     }
 
-    /// Ahead of the class: recording, and no review yet.
     @Test func aheadOfClassTheMenuOffersRecording() throws {
         let workspace = try fixtureWorkspace()
         let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: workspace.now.addingTimeInterval(2 * 86_400)))?.made)
@@ -94,7 +89,6 @@ struct SessionMenuModelTests {
         #expect(menu.commands == [.record, .edit, .share, .remove])
     }
 
-    /// Editing and deleting go to the window, so any place that shows the class can do them.
     @Test func editAndDeleteAskTheWindow() throws {
         let workspace = try fixtureWorkspace()
         let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: workspace.now.addingTimeInterval(-86_400)))?.made)
@@ -122,7 +116,6 @@ struct SessionMenuModelTests {
         #expect(try file(workspace).sessions.first { $0.id == id }?.unitIds.isEmpty == true)
     }
 
-    /// One skip for every screen: the review screen's keeps the time the unit was open, a list's has none.
     @Test func skippingFromTheReviewScreenKeepsTheTimeOpen() throws {
         let workspace = try fixtureWorkspace()
         let a = try #require(workspace.run(UnitAdd(course: graphTheory, title: "매칭"))?.made)

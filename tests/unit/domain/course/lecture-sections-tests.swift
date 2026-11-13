@@ -7,7 +7,6 @@ struct LectureSectionsTests {
     let device = UUID()
     let now = Date(timeIntervalSince1970: 1_793_149_200)
 
-    /// Two lecture files and the units of a matchings chapter.
     func course() -> CourseFile {
         var file = CourseFile(course: Course(device: device, at: now, title: "그래프 이론"))
         file.materials = ["Lectures/05_Matchings.pdf", "Lectures/06_Flows.pdf"].map {
@@ -32,7 +31,6 @@ struct LectureSectionsTests {
         pages(&f, 1, 0, 5...8)
         pages(&f, 2, 0, 9...13)
 
-        // One unit across two files: its pages in the other file don't show here.
         pages(&f, 2, 1, 1...3)
         #expect(
             f.lectureZones(of: m, pageCount: 16) == [
@@ -42,7 +40,6 @@ struct LectureSectionsTests {
                 LectureZone(firstPage: 14, lastPage: 16, units: []),
             ])
 
-        // Without the count the file ends where the last unit does.
         #expect(f.lectureZones(of: m, pageCount: nil).last == LectureZone(firstPage: 9, lastPage: 13, units: [f.units[2].id]))
         #expect(
             f.lectureZones(of: f.materials[1].id, pageCount: 10).first == LectureZone(firstPage: 1, lastPage: 3, units: [f.units[2].id]))
@@ -89,7 +86,6 @@ struct LectureSectionsTests {
             SessionMaterial(materialId: f.materials[1].id, firstPage: 2, lastPage: 6),
         ]
 
-        // The first file has no units' pages, and the second's first link has no range.
         #expect(f.splitProgress(of: session)?.material == f.materials[1].id)
         #expect(f.splitProgress(of: session)?.pages == 2...6)
         pages(&f, 1, 1, 9...12)
@@ -124,7 +120,6 @@ struct LectureSectionsTests {
 
     static let held = zip(Gen.int(in: 0...3), Gen.int(in: 1...25), Gen.int(in: 0...10)).array(of: 0...6)
 
-    /// The zones tile the file from page 1, neighbors differ, and each page lists exactly the units whose pages hold it.
     @Test func zonesTileTheFile() async {
         await propertyCheck(input: Self.held, Gen.int(in: 1...30)) { held, count in
             var f = course()
@@ -164,14 +159,12 @@ struct LectureSectionsTests {
                 LectureCut(unit: UUID(), firstPage: 13, lastPage: 19),
             ], device: device, now: now)
 
-        // The other file's pages stay.
         #expect(f.units[0].lecturePages == [UnitPages(materialId: f.materials[1].id, firstPage: 1, lastPage: 5)])
         #expect(f.units[1].lecturePages == [UnitPages(materialId: m, firstPage: 1, lastPage: 8)])
         let berge = f.units.first { $0.id == new }
         #expect(berge?.title == "Berge" && berge?.parentId == f.units[0].id)
         #expect(berge?.lecturePages.map(\.pages) == [9...12, 20...24])
 
-        // A cut naming no unit and no title makes nothing.
         #expect(f.units.count == 5)
     }
 
@@ -199,7 +192,6 @@ struct LectureSectionsTests {
                 ], pageCount: 12))
         #expect(s.moveBoundary(after: 0, to: 6) == 6)
         #expect(s.sections.map(\.pages) == [1...6, 7...8, 9...12])
-        // Each side keeps a page.
         #expect(s.moveBoundary(after: 0, to: 20) == 7)
         #expect(s.moveBoundary(after: 1, to: 2) == 8)
         #expect(s.boundaryRange(after: 0) == 1...7)
@@ -216,8 +208,6 @@ struct LectureSectionsTests {
         #expect(s.sections.count == 1 && s.sections[0].pages == 1...10 && s.sections[0].unit != nil)
     }
 
-    /// The thumbnails' ⇧-click on a section being changed: at or after its start moves its end, before it its start,
-    /// and a neighbor keeps a page.
     @Test func aPickedPageMovesTheNearEdge() throws {
         var s = try #require(
             LectureSplit(
@@ -230,20 +220,17 @@ struct LectureSectionsTests {
         s.moveEdge(of: 1, to: 2)
         #expect(s.sections.map(\.pages) == [1...1, 2...10, 11...12])
 
-        // Short of its end, its end comes back; past a neighbor's last page, it stops before it.
         s.moveEdge(of: 1, to: 6)
         #expect(s.sections.map(\.pages) == [1...1, 2...6, 7...12])
         s.moveEdge(of: 1, to: 30)
         #expect(s.sections.map(\.pages) == [1...1, 2...11, 12...12])
 
-        // The last section's end pages go to no unit.
         var t = LectureSplit(pageCount: 8)
         t.setUnit(UUID(), of: 0)
         t.moveEdge(of: 0, to: 5)
         #expect(t.sections.map(\.pages) == [1...5, 6...8] && t.sections[1].unit == nil && t.sections[0].unit != nil)
     }
 
-    /// A range picked across the thumbnails becomes one section.
     @Test func aPickedRangeBecomesASection() throws {
         let a = UUID(), b = UUID()
         var s = try #require(
@@ -255,24 +242,20 @@ struct LectureSectionsTests {
         s.setUnit(a, of: 0)
         s.setUnit(b, of: 1)
 
-        // From a section's start: it keeps its unit and takes the pages after.
         #expect(s.carve(5...10) == 1)
         #expect(s.sections.map(\.pages) == [1...4, 5...10, 11...12] && s.sections[1].unit == b)
 
-        // Out of a section's middle: a section for no unit, and the rest of that section after it, still its unit's.
         #expect(s.carve(2...3) == 1)
         #expect(s.sections.map(\.pages) == [1...1, 2...3, 4...4, 5...10, 11...12])
         #expect(s.sections.map(\.unit) == [a, nil, a, b, nil])
         #expect(Set(s.sections.map(\.id)).count == 5)
 
-        // Ending inside a section: the pages after the range stay that section's, under its id and title.
         let tail = s.sections[3]
         #expect(s.carve(4...6) == 2)
         #expect(s.sections.map(\.pages) == [1...1, 2...3, 4...6, 7...10, 11...12])
         #expect(s.sections.map(\.unit) == [a, nil, a, b, nil])
         #expect(s.sections[3].id == tail.id && s.sections[3].title == tail.title)
 
-        // A range that is already a section stays as it is.
         let before = s
         #expect(s.carve(7...10) == 3 && s == before)
     }
@@ -294,7 +277,6 @@ struct LectureSectionsTests {
 
         #expect(s.sections[2].unit == made)
 
-        // A new unit without a name can't be made.
         s.makeNew(3)
         #expect(
             s.cuts == [
@@ -316,7 +298,6 @@ struct LectureSectionsTests {
 
     static let edits = zip(Gen.int(in: 0...4), Gen.int(in: 0...8), Gen.int(in: 1...40)).array(of: 0...12)
 
-    /// Whatever the edits, the sections stay in order, touch, and cover the file.
     @Test func editsKeepTheFileCovered() async {
         await propertyCheck(input: Self.edits, Gen.int(in: 1...30)) { edits, count in
             var s = LectureSplit(pageCount: count)
@@ -347,7 +328,6 @@ struct LectureSectionsTests {
         #expect(found?.map(\.title) == ["Matchings", "König's theorem", "Hall"])
         #expect(found?.map(\.firstPage) == [1, 5, 9])
 
-        // A bookmark per slide is no outline.
         let everySlide = (1...20).map { LectureReading.Bookmark(title: "Slide \($0)", page: $0) }
         #expect(LectureReading.sections(outline: everySlide, pageCount: 20) == nil)
         #expect(LectureReading.sections(outline: [.init(title: "Only", page: 1)], pageCount: 20) == nil)
@@ -363,7 +343,6 @@ struct LectureSectionsTests {
         let found = LectureReading.sections(pages: pages, units: ["Hall의 결혼 정리", "Hall"])
         #expect(found?.map(\.title) == ["Matchings", "König's theorem", "Hall"])
         #expect(found?.map(\.firstPage) == [1, 5, 9])
-        // Every slide its own title and nothing to tell chapters by: left to Claude.
         #expect(LectureReading.sections(pages: (1...12).map { page("Slide \($0)") }, units: []) == nil)
     }
 
@@ -381,7 +360,6 @@ struct LectureSectionsTests {
         #expect(SectionMatch.unit(for: "3. augmenting  paths", in: units) == 3)
         #expect(SectionMatch.unit(for: "Hall", in: units) == 2)
         #expect(SectionMatch.unit(for: "Berge", in: units) == nil)
-        // Two letters match only exactly.
         #expect(SectionMatch.unit(for: "ABC", in: units) == nil)
     }
 

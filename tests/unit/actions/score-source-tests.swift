@@ -5,7 +5,6 @@ import FolioStorage
 import Foundation
 import Testing
 
-/// A score means the same whether it was put in on the grades page or in the assignment sheet.
 struct ScoreSourceTests {
     let course = ActionTests.graphTheory
     let device = UUID()
@@ -27,7 +26,6 @@ struct ScoreSourceTests {
 
     func file() throws -> CourseFile { try ActionContext(gist: gist, device: device).file(course) }
 
-    /// As the sheet saves: every field.
     func save(title: String = "HW 3", status: AssignmentStatus = .submitted, component: UUID?, scores: [AssignmentSave.Score]) throws {
         try run(
             AssignmentSave(
@@ -80,7 +78,6 @@ struct ScoreSourceTests {
         let id = try #require(try score(in: homework)).id
         try run(ScoreSet(course: course, score: id, component: .set(lab), title: .set("HW3 재채점")))
 
-        // The sheet still targets 숙제 and shows its field empty; only the due date changed.
         try save(component: homework, scores: [])
         let moved = try #require(try score(in: lab))
         #expect(moved.id == id && moved.title == "HW3 재채점" && moved.score == 9)
@@ -111,7 +108,6 @@ struct ScoreSourceTests {
         let a = try #require(try file().assignments.first { $0.id == assignment })
         #expect(a.title == "HW 3 (보충)" && a.due == now && a.componentId == homework && a.memo == "3번 질문함" && a.status == .graded)
 
-        // The score stays, its title following the assignment's.
         let s = try #require(try score(in: homework))
         #expect(s.score == 9 && s.max == 10 && s.title == "HW 3 (보충)")
     }
@@ -123,7 +119,6 @@ struct ScoreSourceTests {
                 scores: .set([.init(component: nil, score: 9, max: 10)])))
         #expect(try score(in: homework)?.score == 9)
 
-        // A score for a component the assignment doesn't count toward is refused, not dropped.
         #expect(throws: ActionError.self) {
             try run(AssignmentSave(course: course, assignment: assignment, scores: .set([.init(component: lab, score: 9, max: 10)])))
         }

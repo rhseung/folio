@@ -34,7 +34,7 @@ struct SessionTimelineTests {
         }
     }
 
-    /// Week 10 holds Fri 10/30 and Mon 11/2, so November begins partway through it and gets a line of its own.
+    // 10주차에는 10/30 금요일과 11/2 월요일이 있으므로, 11월이 주 중간에 시작해 따로 줄을 받는다.
     @Test func groupsByWeekInDateOrderAndMarksMonthTurns() {
         let file = CourseFile(
             course: Course(device: device, at: .now, title: ""),
@@ -47,7 +47,6 @@ struct SessionTimelineTests {
             ])
     }
 
-    /// Exams outside class time sit by date inside their week, or between weeks when no class shares the week.
     @Test func examsOutsideClassTakeTheirOwnRows() {
         let midterm = Exam(device: device, at: .now, title: "중간", start: date("2026-10-21 09:00"))
         let final = Exam(device: device, at: .now, title: "기말", start: date("2026-12-14 09:00"))
@@ -62,7 +61,6 @@ struct SessionTimelineTests {
                 == ["week8+m", "s10-19", "중간", "week9", "s10-26", "퀴즈", "기말"])
     }
 
-    /// Only the times decide: an exam inside a held or planned class rides on it, one in a cancelled class stands alone.
     @Test func examsDuringClassRideOnThatClass() {
         let held = session(9, "2026-10-26 13:00")
         var cancelled = session(9, "2026-10-28 13:00")
@@ -99,7 +97,6 @@ struct SessionTimelineTests {
 
         #expect(file.missingReviewNotes(at: now) == 1)
 
-        // Nothing to link to yet, so nothing is flagged.
         #expect(file.sessionsNeedingUnits(at: now).isEmpty)
 
         var unit = Unit(device: device, at: .now, title: "그래프", order: 1)
@@ -110,7 +107,6 @@ struct SessionTimelineTests {
         #expect(file.missingReviewNotes(at: now) == 0)
     }
 
-    /// A saved class still meets unless it is 휴강; one marked absent ahead (which saves it) still counts.
     @Test func remainingClassesCountSavedAndPlannedButNotCancelled() {
         let now = date("2026-10-28 12:00")
         let past = session(9, "2026-10-26 13:00")

@@ -16,11 +16,9 @@ struct CourseModelTests {
         #expect(model.section == .notes && model.openNote == note && model.noteAnchor == .heading("정리"))
         let material = AppLink(.material, UUID(), anchor: .page(3))
         model.follow(Navigator.Entry(link: material, course: graphTheory))
-        // The materials page opens the file itself, from the place.
         #expect(model.section == .materials && model.place == material && model.noteAnchor == nil)
     }
 
-    /// Following a link changes the page without reporting a move; the page's own moves are reported once each.
     @Test func reportsItsOwnMovesButNotTheOnesItFollows() throws {
         let model = CourseModel(workspace: try fixtureWorkspace(), courseId: graphTheory)
         let unit = AppLink(.unit, UUID())
@@ -33,7 +31,6 @@ struct CourseModelTests {
         model.section = .notes
         model.openNote = note
         #expect(model.place == AppLink(.note, note))
-        // A heading a link opened at doesn't follow to the next note picked by hand.
         model.follow(Navigator.Entry(link: AppLink(.note, note, anchor: .heading("요약")), course: graphTheory))
         #expect(model.noteAnchor == .heading("요약"))
         model.openNote = UUID()
@@ -43,18 +40,14 @@ struct CourseModelTests {
         let file = AppLink(.material, UUID())
         model.moved(file)
         #expect(model.place == file)
-        // The page goes with the file, for the window to keep on the step it is on.
         model.moved(file.with(.page(9)))
         #expect(model.place == file.with(.page(9)))
-        // Reported again before its viewer is on a page (opened from the history), the file keeps the page.
         model.moved(file)
         #expect(model.place == file.with(.page(9)))
         model.moved(nil)
         #expect(model.place == .course(graphTheory, page: .materials))
     }
 
-    /// A link to an item of a list page opens that page with the item as its focus, which the page scrolls to and
-    /// marks. Units, notes and files open on a page of their own instead.
     @Test func anItemLinkOpensItsPageAtTheItem() throws {
         let model = CourseModel(workspace: try fixtureWorkspace(), courseId: graphTheory)
         let pages: [(AppLink.Kind, CourseSection)] = [
@@ -74,7 +67,6 @@ struct CourseModelTests {
         }
     }
 
-    /// A recording opens on the sessions page in place of its list, and the moments it reports become the window's link.
     @Test func aRecordingIsAPageOfTheSessions() throws {
         let workspace = try fixtureWorkspace()
         let session = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now))?.made)
@@ -91,7 +83,6 @@ struct CourseModelTests {
         #expect(model.place == .course(graphTheory, page: .sessions) && model.openRecording == nil)
     }
 
-    /// The page the viewer is on comes back as the window's link; following it again must not jump the viewer.
     @Test func aFileFollowsOnlyAPageItIsNotOn() throws {
         let workspace = try fixtureWorkspace()
         workspace.run(MaterialTrack(course: graphTheory))
@@ -101,7 +92,6 @@ struct CourseModelTests {
         #expect(model.follow(AppLink(.material, pdf.id, anchor: .page(3)))?.id == pdf.id)
         #expect(model.requestedPage == 2)
 
-        // The file view takes the page once its PDF has it.
         model.requestedPage = nil
         model.open(pdf)
         model.shownPage = 2
@@ -111,7 +101,6 @@ struct CourseModelTests {
         _ = model.follow(AppLink(.material, pdf.id, anchor: .page(7)))
         #expect(model.requestedPage == 6)
 
-        // Another file starts with no page until its viewer has one.
         model.viewing = UUID()
         #expect(model.shownPage == nil)
     }

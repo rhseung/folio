@@ -35,7 +35,6 @@ struct TextFileActionTests {
     @Test func writeReplacesTheFileAndItsHash() throws {
         let before = try material(Self.tex)
 
-        // Same length as the fixture's text, so only the hash can tell the files apart.
         let text = String(try store.readText(Self.tex).reversed())
         try run(MaterialWrite(course: Self.course, material: before.id, text: text))
         #expect(try store.readText(Self.tex) == text)
@@ -54,9 +53,9 @@ struct TextFileActionTests {
         #expect(try store.readText(Self.tex).hasSuffix("바깥에서 고침\n"))
     }
 
-    /// A CP949 `.csv` from Excel would come back as U+FFFD wherever it didn't decode as UTF-8.
+    // Excel의 CP949 `.csv`는 UTF-8로 디코딩되지 않는 자리마다 U+FFFD로 돌아온다.
     @Test func aFileThatIsNotUTF8IsLeftAsItIs() throws {
-        let cp949 = Data([0xC7, 0xD1, 0xB1, 0xDB, 0x2C, 0x31, 0x0A])  // "한글,1\n"
+        let cp949 = Data([0xC7, 0xD1, 0xB1, 0xDB, 0x2C, 0x31, 0x0A])  // "한글,1\n"의 CP949 바이트다.
         try cp949.write(to: store.fileURL("Exams/Midterm/scores.csv"))
         try run(MaterialTrack(course: Self.course))
         let m = try material("Exams/Midterm/scores.csv")
@@ -82,7 +81,6 @@ struct TextFileActionTests {
         #expect(try store.readText(Self.tex) == read)
     }
 
-    /// Where the app's build of `source` would leave its PDF; the action takes nothing from anywhere else.
     func builtPDF(_ text: String, of source: String = Self.tex) throws -> URL {
         let folder = TexEngine.outputFolder(for: store.fileURL(source))
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -91,8 +89,6 @@ struct TextFileActionTests {
         return url
     }
 
-    /// The fixture's Problems.pdf came with the course, so the first build asks; after that the PDF is the build's own
-    /// until something else replaces it.
     @Test func buildReplacesOnlyItsOwnPDFWithoutAsking() throws {
         let tex = try material(Self.tex)
         let given = try store.readText("Study/Problems.pdf")
@@ -123,7 +119,6 @@ struct TextFileActionTests {
         #expect(try material("Assignments/HW03/hw.tex").sourceOf == material("Assignments/HW03/hw.pdf").id)
     }
 
-    /// A move keeps the ids and their links, so the old link would send the build back to the old folder.
     @Test func aMovedTexBuildsBesideItsNewPlace() throws {
         let tex = try material(Self.tex)
         try run(MaterialMove(course: Self.course, material: tex.id, to: "Assignments/HW03/hw.tex"))
@@ -133,7 +128,6 @@ struct TextFileActionTests {
         #expect(try material("Assignments/HW03/hw.tex").sourceOf == material("Assignments/HW03/hw.pdf").id)
     }
 
-    /// Any other file would take the course PDF's place and be marked as built, so the next build wouldn't ask.
     @Test func aPDFFromOutsideTheBuildFolderIsRefused() throws {
         let tex = try material(Self.tex)
         let given = try store.readText("Study/Problems.pdf")
@@ -174,7 +168,6 @@ struct TextFileActionTests {
         #expect(!FileManager.default.fileExists(atPath: store.fileURL("Assignments/HW03/hw.pdf").path))
     }
 
-    /// One build lists every mistake, and the PDF Tectonic still writes past them is not placed.
     @Test
     func aBrokenDocumentNamesEveryError() throws {
         try store.writeText(
@@ -191,8 +184,7 @@ struct TextFileActionTests {
         #expect(!FileManager.default.fileExists(atPath: store.fileURL("Assignments/HW03/hw.pdf").path))
     }
 
-    /// The PDF carries the day it was built: the same day gives the same bytes, the next day a new `\today`, and the PDF
-    /// built the day before is still known as Folio's, so replacing it doesn't ask.
+    // PDF에는 빌드한 날짜가 들어가므로, 같은 날에는 같은 바이트가, 다음 날에는 새 `\today`가 나온다.
     @Test
     func aBuildIsStampedWithItsDay() throws {
         var seoul = Calendar(identifier: .gregorian)
@@ -213,7 +205,6 @@ struct TextFileActionTests {
         #expect(PDFDocument(data: nextDay)?.string?.contains("November 6, 2026") == true)
     }
 
-    /// The SyncTeX data stays in the build folder, and a click on the placed PDF finds the line that wrote there.
     @Test
     func aBuildKeepsSyncTeXOutOfTheCourseFolder() throws {
         try store.writeText("Assignments/HW03/hw.tex", text: "\\documentclass{article}\n\\begin{document}\nHello world.\n\\end{document}\n")
@@ -228,7 +219,6 @@ struct TextFileActionTests {
         #expect(URL(filePath: place.file).resolvingSymlinksInPath() == source.resolvingSymlinksInPath())
         #expect(place.line == 3)
 
-        // Another PDF on screen, say one built on another device, is not what this data describes.
         try Data("%PDF-other".utf8).write(to: store.fileURL("Assignments/HW03/hw.pdf"))
         #expect(TexEngine.syncTeX(for: source, showing: store.fileURL("Assignments/HW03/hw.pdf")) == nil)
     }
@@ -266,7 +256,6 @@ struct MaterialNewTests {
         #expect(AssignmentFiles.materials(of: hw, in: try file().materials).contains { $0.id == m.id })
     }
 
-    /// An exam's folder is made by its first file.
     @Test func makesTheFolderOfAnExamWithoutFiles() throws {
         try run(ExamAdd(course: Self.course, title: "기말고사"))
         try run(MaterialNew(course: Self.course, folder: "Exams/기말고사", name: "풀이.py"))
@@ -302,7 +291,6 @@ struct MaterialNewTests {
         #expect(!FileManager.default.fileExists(atPath: store.fileURL("Exams/중간고사오타").path))
     }
 
-    /// Its files were tracked one by one before `git init`; tracking now reads the folder as one project.
     @Test func aFolderThatBecameACodeProjectIsRefused() throws {
         try FileManager.default.createDirectory(at: store.fileURL("Assignments/HW03/.git"), withIntermediateDirectories: true)
         #expect(throws: ActionError.rule("코드 프로젝트 폴더 안에는 만들지 않습니다: Assignments/HW03")) {

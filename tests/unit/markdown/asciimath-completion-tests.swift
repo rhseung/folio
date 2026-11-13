@@ -18,11 +18,9 @@ struct AsciiMathCompletionTests {
         #expect(q.kind == .asciiMath && q.text == "al" && !q.takesReturn)
         let items = Completion.items(for: q, catalog: catalog)
         #expect(items.first?.title == "alpha" && items.first?.preview == "alpha" && items.first?.previewAsciiMath == true)
-        // One letter is a variable; a word no symbol starts with offers nothing; text outside formulas is text.
         #expect(query("$a|$") == nil)
         #expect(query("$qz|$") == nil)
         #expect(query("al|") == nil)
-        // After `\` it is a name asked for, not a word typed (MathSymbolsTests).
         #expect(query("$\\fr|$")?.kind == .texCommand)
         #expect(query("값 mk|")?.kind == .snippet)
     }
@@ -43,7 +41,6 @@ struct AsciiMathCompletionTests {
         let typed = Marked("$frac(a|)()$")
         let next = SourceEditing.tab(typed.text, typed.selection, back: false, asciiMath: true)
         #expect(Marked.show(typed.text, next) == "$frac(a)(|)$")
-        // TeX notes keep braces as their slots.
         #expect(Marked.show(typed.text, SourceEditing.tab(typed.text, typed.selection, back: false)) == "$frac(a)()$|")
     }
 

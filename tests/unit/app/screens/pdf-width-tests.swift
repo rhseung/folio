@@ -5,11 +5,8 @@ import PDFKit
 import Testing
 @testable import Folio
 
-/// A PDF pane made narrower or wider stays on the page it showed (#62): two panes merging halved a lecture's pane and
-/// its next page came up in its place.
 @MainActor @Suite(.serialized)
 struct PDFWidthTests {
-    // Low enough that a page fills most of the view at every width, so the page shown is the one in view.
     static let height: CGFloat = 200
 
     @Test func aNarrowerOrWiderPaneKeepsThePage() async throws {
@@ -22,8 +19,6 @@ struct PDFWidthTests {
         _ = window
     }
 
-    // A divider dragged changes the width a little at every frame. In a pane tall enough for a few pages, as in the
-    // window, the snapshots caught page 6 sliding to page 9.
     @Test func aDividerDraggedFrameByFrameKeepsThePage() async throws {
         let (controller, view, window) = try await pane(height: 800)
         for direction: CGFloat in [-1, 1] {
@@ -39,7 +34,7 @@ struct PDFWidthTests {
         _ = window
     }
 
-    // Panes gliding into place nudge the width by a fraction of a point for a second or so.
+    // 칸이 제자리로 움직이는 동안 1초 남짓 폭이 1pt보다 작게 흔들린다.
     @Test func aWidthNudgedByLessThanAPointKeepsThePage() async throws {
         let (controller, view, window) = try await pane(height: 800)
         for step in 0..<60 {
@@ -53,7 +48,6 @@ struct PDFWidthTests {
         _ = window
     }
 
-    // A pane opening goes to its page before it has a width.
     @Test func aPaneOpenedOnAPageShowsThatPage() async throws {
         let document = try #require(PDFDocument(data: SampleLecture.data()))
         let controller = PDFController(document: document, page: 4)

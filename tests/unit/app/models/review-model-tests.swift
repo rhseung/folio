@@ -36,7 +36,6 @@ struct ReviewModelTests {
         model.load(course: current.course, unit: current.unit)
         #expect(model.sources.isEmpty && model.mainSource == nil)
         #expect(model.sessionLine(current.course, current.unit) == nil)
-        // No past session, so no cycle: the results have no day to show.
         #expect(model.outcomes(now: .now).values.allSatisfy { $0 == " " })
     }
 

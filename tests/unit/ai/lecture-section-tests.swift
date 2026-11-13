@@ -16,7 +16,6 @@ struct LectureSectionTests {
         #expect(split.sections.map(\.pages) == [1...8, 9...13, 14...20])
         #expect(split.sections[0].unit == units[0].id && split.sections[0].match == .claude)
         #expect(split.sections[1].unit == units[1].id)
-        // A unit the course doesn't have is a new one, never a made-up match.
         #expect(split.sections[2].isNew && split.sections[2].title == "Berge")
 
         let request = try #require(await fake.requests.first)
@@ -27,7 +26,6 @@ struct LectureSectionTests {
         #expect(text.contains("- Hall의 결혼 정리") && text.contains("## 3: \n") && text.contains("## 20: p20"))
     }
 
-    /// Claude gets more than titles (#450): each page's text under its title, and a picture of a page with no words.
     @Test func theQuestionCarriesEachPagesTextAndPicturesOfTheBareOnes() async throws {
         let picture = Data([0xFF, 0xD8, 0xFF])
         let pages = [
@@ -43,7 +41,6 @@ struct LectureSectionTests {
 
         let content = try #require(await fake.requests.first?.messages.first?.content)
         guard case .text(let text, _) = content[0] else { Issue.record("text first"); return }
-        // The title isn't said twice, and the body's whitespace runs together.
         #expect(text.contains("## 1: Network layer\nOverview of the data plane and control plane"))
         #expect(text.contains("## 2:  [picture below]") && text.contains("## 3: IP addressing\nCIDR subnets"))
         #expect(content.count == 3)
@@ -65,8 +62,7 @@ struct LectureSectionTests {
         #expect(Set(bare).count == bare.count)
     }
 
-    /// PDFKit puts U+FFFC where a page has an image or a drawing. Counted as words, a diagram with a few labels read as
-    /// a page full of text (Chapter 4's slide 84: 210 "words"), and it filled the excerpt.
+    // PDFKit은 그림이나 도형이 있는 자리에 U+FFFC를 넣는다. 이것을 낱말로 세면 이름표 몇 개가 있는 도표가 글로 가득 찬 쪽으로 읽혀(4장 84번 슬라이드: 210 낱말) 발췌를 채웠다.
     @Test func figuresAreNotWordsAndAPageOfThemIsPictured() {
         let figures = String(repeating: "\u{FFFC}\n", count: 60)
         let diagram =
@@ -81,12 +77,9 @@ struct LectureSectionTests {
         #expect(LecturePage.pictured(texts: [prose, diagram], titles: [nil, "Generalized forwarding: match plus action"]) == [1])
     }
 
-    /// A deck shows its roadmap again before each part, the same words with the part highlighted: only the picture
-    /// tells the parts apart, so a page that repeats an earlier one goes as a picture.
     @Test func aRepeatedRoadmapIsPictured() {
         let roadmap =
             "Network layer: data plane roadmap\nNetwork layer: overview\nWhat's inside a router\nIP: the Internet Protocol\nnetwork address translation\nIPv6\nMiddleboxes\nNetwork Layer: 4-"
-        // Each slide its own topic: slides that differ only in their numbers would count as repeats too.
         let prose = [
             "forwarding", "prefixes", "switching", "buffers", "scheduling", "neutrality", "datagrams", "addressing", "subnets",
             "dhcp", "translation", "tunneling",
@@ -96,7 +89,6 @@ struct LectureSectionTests {
         #expect(LecturePage.pictured(texts: texts, titles: titles) == [7, 14])
     }
 
-    /// Neighbors under one unit are one section; a section Claude skips goes to no unit.
     @Test func sectionsUnderOneUnitJoinAndSkippedOnesTakeNone() async throws {
         let device = UUID(), now = Date()
         let layer = FolioDomain.Unit(device: device, at: now, title: "Network Layer", order: 1)

@@ -6,20 +6,16 @@ import Testing
 
 @testable import Folio
 
-/// Every page and sheet for every scenario, light and dark, as PNGs in FOLIO_RENDER_DIR (mise run render). Skipped
-/// without it, so `mise run test-app` stays quick.
 @MainActor @Suite(.serialized)
 struct ScreenRenders {
     nonisolated static let env = ProcessInfo.processInfo.environment
     nonisolated static let folder = env["FOLIO_RENDER_DIR"].map { URL(filePath: $0, directoryHint: .isDirectory) }
 
-    /// `1180` is a width with the page at full height; `1440x900` also crops to that height, like a window would.
     static let sizes: [(name: String, width: CGFloat, height: CGFloat?)] = list("FOLIO_RENDER_SIZES", or: "1180,720").compactMap { spec in
         let parts = spec.split(separator: "x").compactMap { Double($0) }
         guard let width = parts.first else { return nil }
         return (spec, width, parts.count > 1 ? parts[1] : nil)
     }
-    /// Name prefixes, e.g. `today,course-sessions,form-`.
     static let screens = list("FOLIO_RENDER_SCREENS", or: "")
 
     nonisolated static func list(_ key: String, or fallback: String) -> [String] {
@@ -52,7 +48,6 @@ struct ScreenRenders {
                     }
                 }
             }
-            // Sheets and panels are drawn at their own size, as they open over the window.
             for sheet in sheets {
                 for scheme in [ColorScheme.light, .dark] {
                     jobs.append(
@@ -68,8 +63,6 @@ struct ScreenRenders {
 
     typealias Screen = (name: String, view: () -> AnyView)
 
-    /// Screens that can be on screen together. The search query is app-wide state the palette follows while it's open,
-    /// so each value gets a batch of its own.
     struct Batch {
         var setup: () -> Void = {}
         var pages: [Screen] = []
@@ -77,7 +70,6 @@ struct ScreenRenders {
     }
 
     func batches(_ workspace: Workspace) -> [Batch] {
-        // Each page is drawn from its link, as a window draws it, so a course page needs no app-wide switch to show.
         var plain = Batch(
             pages: ScreenCatalog.entries(workspace).map { name, entry in
                 (name, { AnyView(ScreenView(workspace: workspace, entry: entry)) })
@@ -86,8 +78,6 @@ struct ScreenRenders {
         plain.sheets += MathSyntax.allCases.map { syntax in
             ("input-guide-\(syntax.rawValue)", { AnyView(InputGuideSheet(workspace: workspace, syntax: syntax)) })
         }
-        // The list columns hidden by hand where they would fit (#62). Open over the page they need the glass this render
-        // cannot draw, so the window snapshot (`FOLIO_SNAPSHOT_COLUMN=open`) shows that.
         let columns = ScreenCatalog.columns(workspace)
         let hidden = ColumnPrefs(collapsed: Set(ColumnKind.allCases))
         var batches = [
@@ -100,7 +90,6 @@ struct ScreenRenders {
                     )
                 }),
         ]
-        // The first run's steps at every width, the narrowest standing in for an iPhone, over the scenario's open folder.
         batches.append(
             Batch(
                 pages: FirstRunStep.allCases.map { step in
@@ -116,9 +105,6 @@ struct ScreenRenders {
     }
 }
 
-/// A link for every screen, at one that gives it something to show: the places, the current term, and each page of
-/// the course in class at the scenario's moment (so the sessions page shows a class under way; else the busiest),
-/// with its first unit open.
 @MainActor enum ScreenCatalog {
     static func entries(_ workspace: Workspace) -> [(name: String, entry: Navigator.Entry)] {
         var entries: [(String, Navigator.Entry)] = [
@@ -153,7 +139,6 @@ struct ScreenRenders {
                 entries.append(("course-units-detail", Navigator.Entry(link: AppLink(.unit, unit.id), course: course.id)))
             }
         }
-        // A course whose units split its slides (#321): its classes and a split unit draw the section strip.
         if let split = workspace.currentCourses.first(where: { c in c.file.lectureFiles.contains { c.file.isSplit($0.id) } }) {
             entries.append(
                 ("lecture-sessions", Navigator.Entry(link: .course(split.id, page: CourseSection.sessions.page), course: split.id)))
@@ -161,7 +146,6 @@ struct ScreenRenders {
                 entries.append(("lecture-unit", Navigator.Entry(link: AppLink(.unit, unit.id), course: split.id)))
             }
         }
-        // Opened at a moment past the start, as a link from a note or a tab let go of does.
         if let held = workspace.currentCourses.first(where: { !$0.file.recordings.isEmpty }), let recording = held.file.recordings.first {
             entries.append(
                 ("course-recording", Navigator.Entry(link: AppLink(.recording, recording.id, anchor: .time(1700)), course: held.id)))
@@ -169,7 +153,6 @@ struct ScreenRenders {
         return entries
     }
 
-    /// A screen of each list column (#62), at a page each has beside it.
     static func columns(_ workspace: Workspace) -> [(name: String, entry: Navigator.Entry)] {
         var entries: [(String, Navigator.Entry)] = [("settings", Navigator.Entry(link: .settings(SettingsTab.general.page)))]
         if let person = workspace.catalog.people.first { entries.append(("person", Navigator.Entry(link: AppLink(.person, person.id)))) }
@@ -187,7 +170,6 @@ private extension ColorScheme {
     var label: String { self == .dark ? "dark" : "light" }
 }
 
-/// Without a width the view takes its own fitting size; without a height the page grows to its scrolled content.
 struct RenderJob {
     var name: String
     var view: AnyView
@@ -196,9 +178,8 @@ struct RenderJob {
     var scheme: ColorScheme
 }
 
-/// `ImageRenderer` can't draw AppKit-backed controls (text fields, menus) and never runs `.task`, which loads the study
-/// chart and more, so each view goes in a window off every display and is drawn with `cacheDisplay`. The windows of a
-/// batch are open together so they settle in one wait, which is most of the time a render takes.
+// `ImageRenderer`는 AppKit 기반 컨트롤(텍스트 필드, 메뉴)을 그리지 못하고 `.task`를 실행하지 않는다. 그래서 각 뷰를 모든 디스플레이 밖의 창에 넣고 `cacheDisplay`로
+// 그린다. batch의 창을 함께 열어 한 번에 기다리게 하는데, 이 기다림이 렌더 시간의 대부분이다.
 @MainActor
 func renderOffscreen(_ jobs: [RenderJob]) async throws -> [(String, Data)] {
     try await withOffscreenWindows(jobs) { open in
@@ -210,8 +191,6 @@ func renderOffscreen(_ jobs: [RenderJob]) async throws -> [(String, Data)] {
     }
 }
 
-/// The width each job's view was drawn at. A screen whose rows or columns won't shrink to the job's width grows its
-/// hosting view past it, as it would push a window or a pane out.
 @MainActor
 func measureOffscreen(_ jobs: [RenderJob]) async throws -> [CGFloat] {
     try await withOffscreenWindows(jobs) { open in open.map { $0.1.bounds.width } }
@@ -223,7 +202,7 @@ private func withOffscreenWindows<T>(_ jobs: [RenderJob], _ body: ([(RenderJob, 
         let host = NSHostingView(rootView: job.view.environment(\.colorScheme, job.scheme))
         let fitting = host.fittingSize
         let size = CGSize(width: job.width ?? fitting.width, height: job.height ?? (job.width == nil ? fitting.height : 900))
-        // Fully transparent and far off screen: ordered in only because SwiftUI runs `.task` for views on screen.
+        // SwiftUI는 화면에 있는 뷰에만 `.task`를 실행하므로, 완전히 투명한 창을 화면 밖 먼 곳에 두고 order in만 한다.
         let window = NSWindow(
             contentRect: CGRect(origin: CGPoint(x: -20_000, y: -20_000), size: size), styleMask: [.borderless], backing: .buffered,
             defer: false)
@@ -236,8 +215,6 @@ private func withOffscreenWindows<T>(_ jobs: [RenderJob], _ body: ([(RenderJob, 
         return (job, window, host)
     }
 
-    // Detached, not only closed: a view left alive keeps following the app-wide state the next batches set, and the
-    // main actor slows with every one of them.
     defer {
         open.forEach {
             $0.1.contentView = nil; $0.1.close()
@@ -245,8 +222,7 @@ private func withOffscreenWindows<T>(_ jobs: [RenderJob], _ body: ([(RenderJob, 
     }
     try await settle()
 
-    // Pages scroll, so a window grows by what its main scroll view hides to draw all of it. Content that loads late (the
-    // study chart) lengthens the page after the first grow, so it repeats until nothing is hidden.
+    // 페이지는 스크롤되므로, 창을 main scroll view가 숨긴 만큼 키워 전체를 그린다. 늦게 불러오는 내용(공부 차트)은 첫 확장 뒤에 페이지를 늘리므로, 숨은 부분이 없을 때까지 되풀이한다.
     for _ in 0..<4 {
         var grew = false
         for (job, window, host) in open where job.width != nil && job.height == nil {
@@ -261,8 +237,7 @@ private func withOffscreenWindows<T>(_ jobs: [RenderJob], _ body: ([(RenderJob, 
         try await settle()
     }
 
-    // Back to the job's width, once the content has settled: a window grows to fit its view's minimum at every
-    // moment, a first pass before its data loaded included, and doesn't shrink back by itself.
+    // 내용이 자리 잡은 뒤에 job의 폭으로 되돌린다. 창은 매 순간 뷰의 최소 크기에 맞춰 커지고(데이터를 불러오기 전의 첫 배치도 포함한다), 저절로 줄어들지 않는다.
     var narrowed = false
     for (job, window, _) in open {
         if let width = job.width, window.frame.width > width {
@@ -274,14 +249,13 @@ private func withOffscreenWindows<T>(_ jobs: [RenderJob], _ body: ([(RenderJob, 
     return try body(open.map { job, _, host in (job, host as NSView) })
 }
 
-/// Lets layout, `.task` and `onGeometryChange` settle before drawing. A sleep, not a nested run loop: the loop would run
-/// while this test still holds the main actor, so a `.task` resuming on it (the study chart's load) waits until after the draw.
+// nested run loop가 아니라 sleep을 쓴다. run loop는 이 테스트가 main actor를 잡은 채로 돌기 때문에, main actor에서 재개하는 `.task`(공부 차트 불러오기)는
+// 그리기가 끝난 뒤까지 기다린다.
 private func settle() async throws {
     try await Task.sleep(for: .milliseconds(400))
 }
 
 private extension NSView {
-    /// The page's own scroll view, not a list or text field inside it.
     var largestScrollView: NSScrollView? {
         var all: [NSScrollView] = []
         func walk(_ v: NSView) {

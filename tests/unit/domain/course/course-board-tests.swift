@@ -18,7 +18,6 @@ struct CourseBoardTests {
         exam.end = now + 60
         #expect(!exam.isOver(now: now, today: today, calendar: calendar))
 
-        // Without an end, an exam started earlier today is still today's.
         exam.end = nil
         #expect(!exam.isOver(now: now, today: today, calendar: calendar))
         exam.start = now - 86_400
@@ -44,8 +43,6 @@ struct CourseBoardTests {
         #expect(AssignmentGroup.graded.sorted([older, late, undated]).map(\.title) == ["B", "D", "C"])
     }
 
-    /// A note's session is the one pointing at it, and its units follow that session or its exam's scope as they are
-    /// now; only a unit note's own units count, and a stored copy on another kind is ignored.
     @Test func aNotesLinksAreReadFromItsSessionAndExam() {
         let review = UUID(), topic = UUID(), summary = UUID(), loose = UUID()
         var taught = Unit(device: device, at: now, title: "매칭", order: 0)
@@ -96,8 +93,6 @@ struct CourseBoardTests {
         group.sorted(notes, meta: \.meta, title: \.title, in: file).map(\.title)
     }
 
-    /// The newest class first, a review note covering several classes at the last of them, the rough note before the
-    /// review note of one class, and notes without a class last, rough first and then by title.
     @Test func classNotesSortByTheirLatestClass() {
         let notes = [
             Listed(meta: NoteMeta(kind: .rough), title: "둘째 러프"),
@@ -117,7 +112,6 @@ struct CourseBoardTests {
         #expect(titles(.classes, notes, in: file) == ["셋째 러프", "밀린 복습", "둘째 러프", "나 러프", "다 러프", "가 복습"])
     }
 
-    /// The next exam first; a summary of an exam without a start, or of none, after every dated one, by title.
     @Test func examSummariesSortByTheExamsStart() {
         let later = Exam(device: device, at: now, title: "기말", start: now + 5 * 86_400)
         let sooner = Exam(device: device, at: now, title: "중간", start: now + 86_400)
@@ -133,8 +127,6 @@ struct CourseBoardTests {
         #expect(titles(.exams, notes, in: file) == ["중간 정리", "기말 정리", "정리 A", "정리 B"])
     }
 
-    /// Titles compare as Finder does, so `노트 2` comes before `노트 10`; empty groups are left out and the rest keep the
-    /// page's order whatever order the notes come in.
     @Test func notesGroupInPageOrder() {
         let notes = [
             Listed(meta: NoteMeta(kind: .free), title: "노트 10"),
@@ -150,7 +142,6 @@ struct CourseBoardTests {
         #expect(NoteKind.allCases.map(NoteGroup.init) == [.classes, .classes, .exams, .units, .free])
     }
 
-    /// A unit note's units come in outline order, a chapter's units right under it, not in the order the note lists them.
     @Test func aUnitNotesUnitsFollowTheOutline() {
         let chapter = Unit(device: device, at: now, title: "장", order: 1)
         let inner = Unit(device: device, at: now, title: "절", order: 0, parentId: chapter.id)

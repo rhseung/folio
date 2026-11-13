@@ -4,8 +4,7 @@ import Testing
 
 @testable import Folio
 
-/// Tests, previews and renders must never reach this Mac's real Application Support/Folio folders: recovery there
-/// would move or delete the user's unfinished lecture recordings.
+// 테스트, 미리보기, 렌더가 이 Mac의 실제 Application Support/Folio 폴더에 닿으면, 그곳의 복구가 사용자의 끝나지 않은 강의 녹음을 옮기거나 지운다.
 @MainActor
 struct LocalFoldersTests {
     static let real = URL.applicationSupportDirectory.appending(path: "Folio", directoryHint: .isDirectory).standardizedFileURL.path
@@ -22,18 +21,16 @@ struct LocalFoldersTests {
         }
         let app = try LocalFolders.url("Recording", environment: [:])
         #expect(app.standardizedFileURL.path.hasPrefix(Self.real))
-        // The app's own recordings stay out of tmp, which the system may empty before they reach their course.
+        // 시스템이 tmp를 비울 수 있으므로, 앱의 녹음은 과목에 들어가기 전까지 tmp 밖에 둔다.
         #expect(try LocalFolders.url("Recording", perGIST: true, environment: [:]).standardizedFileURL.path.hasPrefix(Self.real))
     }
 
-    /// The window snapshots and `FOLIO_GIST` runs are the app itself, so they record, but never into this Mac's folder.
     @Test func anAppRunOnAFixtureRecordsInAFolderOfItsOwn() throws {
         let fixture = ["FOLIO_GIST": "/tmp/fixture-a"]
         let recording = try LocalFolders.url("Recording", perGIST: true, environment: fixture)
         #expect(!recording.standardizedFileURL.path.hasPrefix(Self.real))
         #expect(recording == (try LocalFolders.url("Recording", perGIST: true, environment: fixture)))
         #expect(recording != (try LocalFolders.url("Recording", perGIST: true, environment: ["FOLIO_GIST": "/tmp/fixture-b"])))
-        // The Whisper model knows no courses; a fixture run shares it rather than downloading 630MB again.
         #expect(try LocalFolders.url("Whisper", environment: fixture).standardizedFileURL.path.hasPrefix(Self.real))
         #expect(throws: LocalFolders.RealFolderInIsolatedRun.self) {
             try LocalFolders.url(

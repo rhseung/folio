@@ -39,7 +39,6 @@ struct NoteOutlineTests {
         let outline = NoteOutline(text)
         #expect(outline.entries.map(\.level) == [1, 2, 3, 4, 5, 2])
         #expect(outline.entries.map(\.title) == ["매칭", "정의", "증강 경로와 M \\oplus P", "깊은 제목", "더 깊은 제목", "베르주의 정리"])
-        // What a link writes after `#` is the heading as written, which `line(heading:)` finds it by.
         #expect(outline.entries[2].anchor == "**증강** 경로와 $M \\oplus P$")
         #expect(outline.entries[1].id == "정의-^def")
     }
@@ -73,7 +72,6 @@ struct NoteOutlineTests {
         #expect(!outline.folds(1))
         #expect(outline.shown(open: []) == [0, 1, 2, 5])
         #expect(outline.shown(open: [2]) == [0, 1, 2, 3, 4, 5])
-        // Read inside a folded heading, the heading it folds under is marked.
         #expect(outline.marked(4, open: []) == 2)
         #expect(outline.marked(4, open: [2]) == 4)
     }
@@ -82,7 +80,6 @@ struct NoteOutlineTests {
         let outline = NoteOutline("## 하나\n\n#### 둘\n\n## 셋")
         let indents = outline.entries.indices.map { outline.indent($0) }
         #expect(indents == [0, 1, 0])
-        // With no heading above it to fold under, a deep heading is listed as it is.
         #expect(NoteOutline("#### 혼자").shown(open: []) == [0])
     }
 
@@ -100,7 +97,6 @@ struct NoteOutlineTests {
             html.contains(
                 ##"<nav class="toc"><ul><li><a href="#제목">제목</a><ul><li><a href="#하나">하나</a><ul><li><a href="#안쪽">안쪽</a></li></ul></li><li><a href="#둘">둘</a></li></ul></li></ul></nav>"##
             ))
-        // The card's links go to the headings' own ids.
         #expect(html.contains(#"<h2 id="하나">"#))
         #expect(!html.contains("깊은</a>"))
         #expect(!html.contains("[TOC]"))
@@ -111,7 +107,6 @@ struct NoteOutlineTests {
         #expect(HTMLRenderer.render(markdown: "## 하나\n\n[TOC] 뒤에 글").contains("[TOC] 뒤에 글"))
         #expect(HTMLRenderer.render(markdown: "## 하나\n\n- [TOC]").contains("<li>[TOC]</li>"))
         #expect(HTMLRenderer.render(markdown: "## 하나\n\n```\n[TOC]\n```").contains("[TOC]"))
-        // Nothing to list, nothing drawn.
         #expect(HTMLRenderer.render(markdown: "[TOC]\n\n본문") == "<p>본문</p>\n")
     }
 
@@ -120,7 +115,6 @@ struct NoteOutlineTests {
         let card = String(html.prefix { $0 != "\n" })
         #expect(card.contains(#"<span class="math">x^2</span>와 링크의 <em>뜻</em>"#))
         #expect(card.components(separatedBy: "<a ").count == 2)
-        // The link goes to the heading's own id, which is made from all of it.
         let shown = card.replacing(/href="[^"]*"/, with: "")
         #expect(!shown.contains("^abc") && !shown.contains("[^1]"), "\(card)")
     }
@@ -135,7 +129,6 @@ struct NoteOutlineTests {
 
     // MARK: Properties
 
-    /// A note of random blocks, some holding `#` lines that are no headings, and the headings it was written with.
     static func note(_ blocks: [Int], levels: [Int]) -> (text: String, headings: [(level: Int, line: Int)]) {
         var rows = ["---", "id: x", "---"]
         var headings: [(Int, Int)] = []
@@ -178,7 +171,6 @@ struct NoteOutlineTests {
             let shallow = outline.entries.indices.filter { outline.entries[$0].level <= NoteOutline.depth }
             #expect(Set(shallow).isSubset(of: shown))
             if let marked = outline.marked(outline.current(at: top), open: open) { #expect(shown.contains(marked)) }
-            // Reading further down never goes back to an earlier heading.
             #expect((outline.current(at: top) ?? -1) <= (outline.current(at: top + 1) ?? -1))
         }
     }

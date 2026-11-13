@@ -18,7 +18,6 @@ struct TextDiffTests {
         #expect(TextDiff.lines(from: "x\ny", to: "") == [.removed("x"), .removed("y")])
     }
 
-    /// The last line's newline doesn't count as a line, but adding one where there was none is a change.
     @Test func theFinalNewline() {
         #expect(TextDiff.split("a\nb\n") == ["a", "b"])
         #expect(TextDiff.split("a\nb") == ["a", "b"])
@@ -48,7 +47,6 @@ struct TextDiffTests {
                 == [.removed("1"), .added("x"), .same("2"), .skipped(6), .same("9"), .removed("10"), .added("y")])
     }
 
-    /// Hiding one line saves nothing, so it stays.
     @Test func aSingleHiddenLineIsShown() {
         #expect(
             TextDiff.lines(from: "a\nb\nc\nd", to: "a\nb\nc\nD", context: 2) == [
@@ -106,7 +104,6 @@ struct TextDiffTests {
 
 struct SupersededProposalTests {
     let now = Date(timeIntervalSince1970: 0)
-    // As FolioActions declares them; `note edit` and `exam add` only add, so they have none.
     let targets: [String: ProposalTarget] = [
         "note write": ProposalTarget(arguments: ["course", "note"], effect: .replaces(covers: ["note edit"])),
         "note link": ProposalTarget(arguments: ["course", "note"], effect: .sets),
@@ -128,7 +125,6 @@ struct SupersededProposalTests {
 
     let replacement: JSONValue = .array([.object(["old": .string("teh"), "new": .string("the")])])
 
-    /// An append and a later typo fix are two changes; neither makes the other pointless.
     @Test func editsOnlyAddSoTheyNeverSupersede() {
         #expect(
             chat([[edit(["append": .string("질문")])], [edit(["replacements": replacement])]]).supersededProposals(targets: targets).isEmpty)
@@ -140,7 +136,6 @@ struct SupersededProposalTests {
         #expect(c.supersededProposals(targets: targets) == [ProposalRef(message: c.messages[1].id, index: 0)])
     }
 
-    /// Setting the start and then the place of one exam are two changes: the later leaves the start as it is.
     @Test func aSetSupersedesOnlyWhenItSetsEveryFieldTheEarlierSet() {
         let start: JSONValue = .string("2026-11-10T09:00:00Z")
         #expect(
@@ -150,7 +145,6 @@ struct SupersededProposalTests {
         #expect(chat([[examSet(["start": start])], [examSet(["start": start], exam: "f")]]).supersededProposals(targets: targets).isEmpty)
     }
 
-    /// `null` clears a field, so it sets it; a field left out stays as it is.
     @Test func clearingAFieldCountsAsSettingIt() {
         let c = chat([[examSet(["start": .string("2026-11-10T09:00:00Z")])], [examSet(["start": .null])]])
         #expect(c.supersededProposals(targets: targets) == [ProposalRef(message: c.messages[1].id, index: 0)])
@@ -170,7 +164,6 @@ struct SupersededProposalTests {
         #expect(c.supersededProposals(targets: targets) == [ProposalRef(message: c.messages[1].id, index: 0)])
     }
 
-    /// A link isn't a rewrite, and a later edit adds: neither stands in for an earlier rewrite.
     @Test func anotherNoteCourseOrCommandIsNotTheSameChange() {
         var link = write("Notes/a.md")
         link.command = "note link"
@@ -180,7 +173,6 @@ struct SupersededProposalTests {
         #expect(c.supersededProposals(targets: targets).isEmpty)
     }
 
-    /// Two changes in one answer are both offered; the older answer's line is the one replaced.
     @Test func proposalsOfOneAnswerDontSupersedeEachOther() {
         let c = chat([[write("Notes/a.md"), write("Notes/a.md")]])
         #expect(c.supersededProposals(targets: targets).isEmpty)
@@ -204,7 +196,6 @@ struct SupersededProposalTests {
     }
 }
 
-/// #90: a proposal made on top of earlier ones of its answer waits until they are applied.
 struct ProposalWaitingTests {
     func message(_ proposals: [ActionProposal]) -> ChatMessage {
         ChatMessage(role: .assistant, text: "", at: Date(timeIntervalSince1970: 0), proposals: proposals)
@@ -224,7 +215,6 @@ struct ProposalWaitingTests {
         #expect(message([proposal(), proposal(), proposal(after: [0, 1])]).waiting(2) { _ in false } == .earlier([0, 1]))
         #expect(message([proposal(applied: true), proposal(), proposal(after: [0, 1])]).waiting(2) { _ in false } == .earlier([1]))
         #expect(message([proposal(applied: true), proposal(after: [0])]).waiting(1) { _ in true } == nil)
-        // Only earlier places count: a later or its own one can't be built on.
         #expect(message([proposal(after: [0, 1])]).waiting(0) { _ in false } == nil)
     }
 
@@ -232,15 +222,12 @@ struct ProposalWaitingTests {
         #expect(message([proposal(), proposal(after: [0])]).waiting(1) { $0 == 0 } == .blocked([0]))
     }
 
-    /// The middle one is refused only because it waits on the first, which is fine: the last still just waits.
     @Test func aChainWaitsThroughOneThatIsItselfWaiting() {
         let chain = message([proposal(), proposal(after: [0]), proposal(after: [1])])
         #expect(chain.waiting(2) { $0 == 1 } == .earlier([1]))
-        // With the first refused, the whole chain is blocked.
         #expect(chain.waiting(2) { $0 <= 1 } == .blocked([1]))
     }
 
-    /// What writes outside the folder never runs for real in the staged copy, on the server or in the panel's check.
     @Test func onlyCommandsThatWriteInsideTheFolderStage() {
         for command in ["unit add", "note edit", "exam set", "assignment add"] { #expect(ActionProposal.stages(command), "\(command)") }
         for command in ["backup create", "cleanup apply", "import notion", "recording trim", ""] {

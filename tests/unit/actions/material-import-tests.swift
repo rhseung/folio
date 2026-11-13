@@ -33,7 +33,6 @@ struct MaterialImportTests {
 
     func exists(_ path: String) -> Bool { FileManager.default.fileExists(atPath: store.url.appending(path: path).path) }
 
-    /// Each file has its own folder and class, and a lecture takes its class's week, not one week for all.
     @Test func eachFileGoesToItsOwnFolderAndSession() throws {
         let session = UUID()
         try run(SessionAdd(id: session, course: Self.course, date: now))
@@ -44,7 +43,6 @@ struct MaterialImportTests {
                 items: [
                     ImportItem(file: try download("Hall.pdf"), folder: "Lectures", session: session),
                     ImportItem(file: try download("Diestel.pdf"), folder: "Textbooks"),
-                    // Already named for its week: kept, and still linked.
                     ImportItem(file: try download("05-2_König.pdf"), folder: "Lectures", session: session),
                 ]))
         let lecture = String(format: "Lectures/%02d_Hall.pdf", week)
@@ -57,7 +55,6 @@ struct MaterialImportTests {
         #expect(linked == [lecture, "Lectures/05-2_König.pdf"])
     }
 
-    /// The same name twice, or a name the folder holds, gets ` 2`, ` 3`, never an overwrite.
     @Test func sameNamesAreNumbered() throws {
         let first = try download("05_Matchings.pdf")
         try run(
@@ -66,7 +63,6 @@ struct MaterialImportTests {
         #expect(exists("Lectures/05_Matchings 2.pdf") && exists("Lectures/05_Matchings 3.pdf"))
     }
 
-    /// One file that can't go in stops the rest before anything is copied.
     @Test func oneBlockedItemWritesNothing() throws {
         let good = try download("Notes.pdf")
         #expect(throws: ActionError.self) {

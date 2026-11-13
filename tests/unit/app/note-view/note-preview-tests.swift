@@ -9,8 +9,6 @@ import WebKit
 
 @testable import Folio
 
-/// A note preview's page in a window that's never shown, with the note it shows, written back on a tick as the note
-/// screen does.
 @MainActor final class PreviewRig {
     let page: NotePreviewPage
     let window: NSWindow
@@ -18,7 +16,6 @@ import WebKit
     var baseURL: URL?
     var math: MathSyntax
     var accent = CourseAccent.presets[0].accent
-    /// Stands for the workspace's `notesRevision`, which another note's change bumps.
     var revision = 0
 
     init(
@@ -50,9 +47,8 @@ import WebKit
         show(text)
     }
 
-    /// WebKit stops a page's rendering updates while its window isn't on screen, and a widget's frame then never
-    /// hears it was resized. The window is put in the window list far off every screen, and WebKit told not to
-    /// judge by what covers it, so it draws as in the app; nothing shows and nothing takes focus.
+    // WebKit은 창이 화면에 없으면 페이지의 렌더링 갱신을 멈추고, 그러면 위젯의 frame은 크기가 바뀐 것을 알지 못한다. 그래서 창을 모든 화면에서 먼 곳에 두되 창 목록에는 넣고, WebKit이
+    // 창을 가리는 것을 기준으로 판단하지 않게 해서 앱에서처럼 그리게 한다. 화면에는 아무것도 보이지 않고 포커스도 가져가지 않는다.
     static func keepDrawing(_ view: WKWebView, in window: NSWindow) {
         let setter = Selector(("_setWindowOcclusionDetectionEnabled:"))
         if view.responds(to: setter), let method = class_getInstanceMethod(type(of: view), setter) {
@@ -73,7 +69,6 @@ import WebKit
         page.recycle()
     }
 
-    /// Until the page shows the note with every widget's height known, or a few seconds pass.
     func settle() async {
         for _ in 0..<100 {
             try? await Task.sleep(for: .milliseconds(50))
@@ -82,7 +77,6 @@ import WebKit
         try? await Task.sleep(for: .milliseconds(50))
     }
 
-    /// `body` run as a function in the note's page.
     func js(_ body: String, _ arguments: [String: Any] = [:]) async throws -> Any? {
         try await page.view.callAsyncJavaScript(body, arguments: arguments, contentWorld: .defaultClient)
     }
@@ -90,7 +84,6 @@ import WebKit
     func number(_ body: String) async throws -> Double? { try await js(body) as? Double }
 }
 
-/// The preview: the note's blocks in a web view, kept as they are while the note changes around them.
 @MainActor @Suite(.serialized, .timeLimit(.minutes(2)))
 struct NotePreviewTests {
     @Test func showsTheNoteWithItsSourceLines() async throws {
@@ -98,12 +91,11 @@ struct NotePreviewTests {
         defer { rig.close() }
         await rig.settle()
         #expect(try await rig.js("return document.querySelector('h1')?.textContent") as? String == "Title")
-        // Lines count from the top of the file, frontmatter included, as the editor counts them.
+        // 줄 번호는 편집기처럼 frontmatter를 포함해 파일 맨 위부터 센다.
         let lines = try #require(try await rig.js("return [...document.body.children].map(n => Number(n.dataset.line))") as? [Double])
         #expect(lines == [4, 6, 8])
     }
 
-    /// Typing in the editor makes only the changed block again, so what's around it (a running widget) stays.
     @Test func keepsTheBlocksThatDidNotChange() async throws {
         let rig = PreviewRig("# Title\n\nFirst\n\nSecond")
         defer { rig.close() }
@@ -128,14 +120,12 @@ struct NotePreviewTests {
         _ = try await rig.js("document.querySelector('input[data-line=\"4\"]').click()")
         await rig.settle()
         #expect(rig.text == "# Tasks\n\n- [x] one\n- [ ] two\n> - [ ] quoted")
-        // swift-markdown reads no box in a quoted list, but the line is still a task to tick.
+        // swift-markdown은 인용 안의 목록에서 체크 상자를 읽지 않지만, 그 줄은 여전히 체크할 수 있는 할 일이다.
         #expect(rig.page.tick(line: 5))
         #expect(rig.text.hasSuffix("> - [x] quoted"))
-        // A line that's no longer a task changes nothing.
         #expect(!rig.page.tick(line: 1))
     }
 
-    /// A box carries its line in the body; the note's frontmatter is above it.
     @Test func aBoxBelowFrontmatterTicksItsOwnLine() async throws {
         let rig = PreviewRig("---\ntitle: x\n---\n- [ ] one\n- [ ] two", editable: true)
         defer { rig.close() }
@@ -145,7 +135,6 @@ struct NotePreviewTests {
         #expect(rig.text == "---\ntitle: x\n---\n- [ ] one\n- [x] two")
     }
 
-    /// With no way to write the note back, a box shows its state and doesn't change it.
     @Test func boxesStayWithoutAWayToWrite() async throws {
         let rig = PreviewRig("- [ ] one")
         defer { rig.close() }
@@ -157,7 +146,6 @@ struct NotePreviewTests {
         #expect(try await rig.js("return document.querySelector('input[type=checkbox]').checked") as? Bool == false)
     }
 
-    /// A callout folded or opened stays so when the note is shown again, even when its block is made again.
     @Test func aFoldOutlivesTheBlock() async throws {
         let rig = PreviewRig("> [!theorem]- Main\n> Body\n\nAfter")
         defer { rig.close() }
@@ -171,7 +159,6 @@ struct NotePreviewTests {
         #expect(try await rig.js("return document.querySelector('details.callout').open") as? Bool == true)
     }
 
-    /// Beside the editor the preview puts the editor's top line at the top of the page, below the margin.
     @Test func followsTheEditorsTopLine() async throws {
         let text = (1...80).map { "Paragraph \($0)" }.joined(separator: "\n\n")
         let rig = PreviewRig(text)
@@ -187,7 +174,6 @@ struct NotePreviewTests {
         #expect(try await rig.number("return scrollY") == 0)
     }
 
-    /// The page goes on past the note's end, so the editor's last line can be followed to the top.
     @Test func thePageScrollsPastItsEnd() async throws {
         let rig = PreviewRig((1...40).map { "Paragraph \($0)" }.joined(separator: "\n\n"))
         defer { rig.close() }
@@ -197,7 +183,6 @@ struct NotePreviewTests {
         #expect(bottom < 120, "\(bottom)")
     }
 
-    /// Blocks wider than the column scroll sideways inside it; the page itself never does.
     @Test func wideBlocksScrollInsideTheColumn() async throws {
         let wide = String(repeating: "x", count: 400)
         let rig = PreviewRig("```\n\(wide)\n```\n\n$$\n\\sum \(String(repeating: "a + ", count: 120)) b\n$$\n\n| a |\n|---|\n| \(wide) |")
@@ -210,7 +195,6 @@ struct NotePreviewTests {
         #expect(right <= column + 1, "\(right) past \(column)")
     }
 
-    /// `%`, `#` and `&` in a formula's text are the characters, not TeX's comment and markup.
     @Test func textInMathReadsAsWritten() async throws {
         let rig = PreviewRig("$\\textbf{오차 5% 이내} \\text{과제 #3 \\& 4} \\textit{A & B}$")
         defer { rig.close() }
@@ -219,8 +203,6 @@ struct NotePreviewTests {
         #expect(try await rig.js("return document.querySelectorAll('.katex').length") as? Int == 1)
     }
 
-    /// AsciiMath's quoted text lands in `\text{…}` as written, so its `#` is the character there too, as the edit view
-    /// shows it.
     @Test func asciiMathTextReadsAsWritten() async throws {
         let rig = PreviewRig(##"$min{|F|: G - F " separates " x, y} = max{"# edge-disjoint " x,y- "paths"}$"##, math: .asciimath)
         defer { rig.close() }
@@ -229,9 +211,8 @@ struct NotePreviewTests {
         #expect(try await rig.js("return document.querySelectorAll('.katex').length") as? Int == 1)
     }
 
-    /// A bar closes the bar opened before it in the same brackets; asciimath2tex alone paired `|X| >= |I|` as one
-    /// `\left| X | >= \right|` and read `|:` in `|F|:` as a bracket that ate the colon. Read from the TeX KaTeX keeps
-    /// beside what it drew, which is what the edit view's bubble draws too (`NoteMath`).
+    // asciimath2tex만 쓰면 `|X| >= |I|`를 `\left| X | >= \right|` 하나로 짝짓고, `|F|:`의 `|:`를 콜론까지 포함한 괄호로 읽었다. 그래서 KaTeX가 그린 결과
+    // 옆에 남긴 TeX를 읽는다. 편집 보기의 말풍선(`NoteMath`)도 같은 TeX를 그린다.
     @Test func asciiMathBarsPairInOrder() async throws {
         let cases: [(String, String)] = [
             (
@@ -244,7 +225,6 @@ struct NotePreviewTests {
             ),
             (#"min{|F|: G}"#, #"\min \left \lbrace \left \lvert F \right \rvert : G \right \rbrace"#),
             (#"||x|| + |y|"#, #"\left \lvert \left \lvert x \right \rvert \right \rvert + \left \lvert y \right \rvert"#),
-            // As before: a norm, explicit bars, a lone bar and AsciiMath's tokens with a bar in them.
             (#"||x||"#, #"\left \lvert \left \lvert x \right \rvert \right \rvert"#),
             (#"|:x:|"#, #"\left \lvert x \right \rvert"#),
             (#"a|b"#, "a | b"),
@@ -261,7 +241,6 @@ struct NotePreviewTests {
         #expect(read == cases.map(\.1))
     }
 
-    /// The page loads the note's own pictures and nothing from outside.
     @Test func picturesComeFromTheNotesFolder() async throws {
         let folder = FileManager.default.temporaryDirectory.appending(path: "preview-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: folder.appending(path: "assets"), withIntermediateDirectories: true)
@@ -277,8 +256,6 @@ struct NotePreviewTests {
         #expect(try await rig.number("return document.images[1].naturalWidth") == 0)
     }
 
-    /// A picture or diagram pressed in the preview opens large over the note and closes by Esc, its button or a press
-    /// beside it; one inside a link opens the link instead (#378).
     @Test func aPictureOpensLargeAndCloses() async throws {
         let folder = FileManager.default.temporaryDirectory.appending(path: "preview-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: folder.appending(path: "assets"), withIntermediateDirectories: true)
@@ -304,7 +281,6 @@ struct NotePreviewTests {
 
         _ = try await rig.js("document.images[0].click()")
         #expect(try await rig.js(open) as? Bool == true)
-        // Drawn larger than the column holds it; the linked picture isn't one of those to step through.
         let fitted = try #require(try await rig.number(sheet))
         #expect(fitted > column)
         #expect(try await rig.js("return document.querySelector('.figure-count').textContent") as? String == "1 / 2")
@@ -312,7 +288,6 @@ struct NotePreviewTests {
         #expect(try await rig.number(sheet) ?? 0 > fitted)
         _ = try await rig.js(key, ["key": "0", "command": true])
         #expect(try await rig.number(sheet) == fitted)
-        // Pressed twice: its own size, and back.
         let tap =
             "const el = document.querySelector('.figure-sheet > *'), r = el.getBoundingClientRect();"
             + "for (const type of ['pointerdown', 'pointerup']) el.dispatchEvent(new PointerEvent(type, {pointerId: 1, isPrimary: true,"
@@ -323,7 +298,6 @@ struct NotePreviewTests {
         _ = try await rig.js(tap)
         _ = try await rig.js(tap)
         #expect(try await rig.number(sheet) == fitted)
-        // A touch pinch from the fitted picture keeps its zoom when the fingers lift, apart as they are.
         let pinch =
             "const el = document.querySelector('.figure-sheet > *'), r = el.getBoundingClientRect(), y = r.top + r.height / 2, x = r.left + r.width / 2;"
             + "const send = (type, id, at) => el.dispatchEvent(new PointerEvent(type, {pointerId: id, pointerType: 'touch', clientX: at, clientY: y, bubbles: true}));"
@@ -332,7 +306,6 @@ struct NotePreviewTests {
         #expect(try await rig.number(sheet) ?? 0 > fitted)
         #expect(try await rig.js("return document.querySelector('.figure-count').textContent") as? String == "1 / 2")
         _ = try await rig.js(key, ["key": "0", "command": true])
-        // The next is the diagram, drawn again from its own SVG.
         _ = try await rig.js(key, ["key": "ArrowRight", "command": false])
         #expect(try await rig.js("return document.querySelector('.figure-sheet > svg') != null") as? Bool == true)
         _ = try await rig.js(key, ["key": "Escape", "command": false])
@@ -356,7 +329,6 @@ struct NotePreviewTests {
         #expect(opened == [AppLink(.exam, exam)])
     }
 
-    /// A link into the app opens through the window's one opener, whether a wiki link or a markdown link.
     @Test func aClickOnALinkIntoTheAppOpensIt() async throws {
         let material = UUID()
         let exam = UUID()
@@ -372,7 +344,6 @@ struct NotePreviewTests {
         #expect(opened == [AppLink(.material, material, anchor: .page(12)), AppLink(.exam, exam)])
     }
 
-    /// A copied address between brackets or on its own opens as a link into the app (#347).
     @Test func aClickOnACopiedAddressOpensIt() async throws {
         let material = UUID()
         let exam = UUID()
@@ -392,7 +363,6 @@ struct NotePreviewTests {
         #expect(opened == [AppLink(.material, material, anchor: .page(2)), AppLink(.exam, exam)])
     }
 
-    /// The page's menu is told what it was opened on: the link, and the heading or block under the pointer.
     @Test func theMenuKnowsTheLinkAndHeadingUnderThePointer() async throws {
         let rig = PreviewRig("# Matchings\n\nA [link](folio://course/\(graphTheory)).\n\nKept ^proof")
         defer { rig.close() }
@@ -409,8 +379,6 @@ struct NotePreviewTests {
         #expect(rig.page.menuAnchor == .block("proof"))
     }
 
-    /// The selection says where it starts: on a touch screen a long press selects, and the edit menu links to that
-    /// heading or block.
     @Test func theSelectionKnowsItsHeadingAndBlock() async throws {
         let rig = PreviewRig("# Matchings\n\nKept ^proof\n\nPlain")
         defer { rig.close() }
@@ -427,7 +395,6 @@ struct NotePreviewTests {
         #expect(rig.page.selectionAnchor == nil)
     }
 
-    /// Opened at a heading, the page shows the heading at its top.
     @Test func aLinkToAHeadingScrollsToIt() async throws {
         let filler = (1...60).map { "Paragraph \($0)" }.joined(separator: "\n\n")
         let rig = PreviewRig("# Top\n\n\(filler)\n\n## Far down\n\nEnd")
@@ -439,7 +406,6 @@ struct NotePreviewTests {
         #expect(abs(top) < 80)
     }
 
-    /// A footnote's number goes down to the note's list, and the list's arrow back up to where it was referenced.
     @Test func footnotesLinkToTheListAndBack() async throws {
         let filler = (1...60).map { "Paragraph \($0)" }.joined(separator: "\n\n")
         let rig = PreviewRig("Claim[^src].\n\n\(filler)\n\n[^src]: Where it comes from")
@@ -469,7 +435,6 @@ struct NotePreviewTests {
     }
 }
 
-/// Embeds and block references draw the other notes of the course, found by title.
 @MainActor @Suite(.serialized, .timeLimit(.minutes(2)))
 struct NoteEmbedPreviewTests {
     func course() throws -> CourseStore {
@@ -483,7 +448,6 @@ struct NoteEmbedPreviewTests {
         return url
     }
 
-    /// The part under the heading is drawn and typeset; the note changing elsewhere draws it again.
     @Test func anEmbedDrawsTheOtherNoteAndFollowsIt() async throws {
         let store = try course()
         let other = try write(store, "정의 모음", "# 정의\n\n그래프는 $G=(V,E)$이다.\n\n# 다른 것\n\n빠짐")
@@ -505,7 +469,6 @@ struct NoteEmbedPreviewTests {
         #expect((try await rig.js(embed) as? String)?.contains("바뀐 내용") == true)
     }
 
-    /// A link by ID finds its note in any course, whatever the note is named now; one to no note is drawn broken.
     @Test func aLinkByIDFindsItsNoteInAnyCourse() async throws {
         let gist = GISTStore(url: try Fixture.standard.copyToTemp())
         let stores = try gist.courseStores()
@@ -525,7 +488,6 @@ struct NoteEmbedPreviewTests {
                 == true)
     }
 
-    /// A title no note of the course has is drawn broken, until a note takes it.
     @Test func aTitleNoNoteHasIsBrokenUntilOneIsMade() async throws {
         let store = try course()
         _ = try write(store, "정의 모음", "# 정의")
@@ -542,7 +504,6 @@ struct NoteEmbedPreviewTests {
         #expect(try await rig.js(broken) as? String == "")
     }
 
-    /// Resting on a block reference shows its block in a card; moving off takes it away.
     @Test func aBlockReferenceShowsItsBlockOnHover() async throws {
         let store = try course()
         _ = try write(store, "보조정리", "위\n\n증명할 것 $x^2$ ^c1\n\n아래")

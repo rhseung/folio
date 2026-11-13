@@ -60,7 +60,7 @@ struct MaterialTrackingTests {
             [m], with: scanned, io: io(hashes: ["Lectures/a.pdf": "other", "Lectures/b.pdf": "same"]), device: device, now: t1
         )
         #expect(result.first { $0.id == m.id }?.path == "Lectures/b.pdf")
-        #expect(result.count == 2)  // a.pdf registered as new
+        #expect(result.count == 2)
     }
 
     @Test func missingKeepsLinksAndRecovers() throws {
@@ -120,11 +120,9 @@ struct MaterialTrackingTests {
         let tex = try #require(result.first { $0.path == "Study/Summary.tex" })
         #expect(result.builtPDFsHidden().mapValues(\.path) == [tex.id: "Study/Summary.pdf"])
 
-        // A list without the source keeps the PDF, and a list without the PDF has none for the source to stand for.
         #expect(result.filter { $0.path.hasSuffix(".pdf") }.withoutBuiltPDFs().count == 3)
         #expect(result.filter { $0.path.hasSuffix(".tex") }.builtPDFsHidden().isEmpty)
 
-        // A missing PDF keeps its row, to be re-pointed or dropped.
         var gone = result
         let i = try #require(gone.firstIndex { $0.path == "Study/Summary.pdf" })
         gone[i].status = .missing

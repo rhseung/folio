@@ -4,8 +4,8 @@ import Testing
 
 @testable import Folio
 
-/// `folio note figure/widget render` draws a page in the note's colors, but the CLI can't link the app's theme, so it
-/// keeps a generated copy. A stale copy would show Claude a figure in colors the note no longer has.
+// `folio note figure/widget render`는 노트의 색으로 그리지만 CLI는 앱의 테마를 링크하지 못해 생성한 사본을 쓴다.
+// 사본이 낡으면 Claude가 노트에 없는 색으로 그린 그림을 보게 된다.
 struct NoteThemeCopyTests {
     static let copy = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         .deletingLastPathComponent().deletingLastPathComponent().appending(path: "sources/cli/render/note-theme.swift")
@@ -15,10 +15,9 @@ struct NoteThemeCopyTests {
             "        \(literal(preset.name)): \(literal(NoteWidgets.themeCSS(preset.accent))),"
         }
         return """
-            // Written by NoteThemeCopyTests in tests/unit/app from the app's theme, which the CLI can't link. Don't edit by hand: after
-            // changing theme.swift or NoteWidgets.themeCSS, run `TEST_RUNNER_FOLIO_WRITE_NOTE_THEME=1 mise run test-app`.
+            // CLI가 앱의 테마를 링크하지 못해 tests/unit/app의 NoteThemeCopyTests가 앱의 테마에서 만든 사본이다. 손으로 고치지 않는다.
+            // theme.swift나 NoteWidgets.themeCSS를 바꾸면 `TEST_RUNNER_FOLIO_WRITE_NOTE_THEME=1 mise run test-app`을 실행한다.
             enum NoteTheme {
-                /// `NoteWidgets.themeCSS` for each course color preset, by name.
                 static let css: [String: String] = [
             \(entries.joined(separator: "\n"))
                 ]

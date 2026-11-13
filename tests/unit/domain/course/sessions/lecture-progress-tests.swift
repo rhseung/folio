@@ -8,7 +8,6 @@ struct LectureProgressTests {
     let now = Date(timeIntervalSince1970: 1_793_149_200)
     let day: TimeInterval = 86_400
 
-    /// Three classes a week apart and two lecture files.
     func course() -> CourseFile {
         var file = CourseFile(course: Course(device: device, at: now, title: "그래프 이론"))
         file.materials = ["Lectures/06_Flows.pdf", "Lectures/05_Matchings.pdf", "Textbooks/West.pdf"].map {
@@ -37,7 +36,6 @@ struct LectureProgressTests {
                 LectureSpan(firstPage: 21, lastPage: 30, sessions: []),
             ])
 
-        // Without the count, the file ends where the classes do.
         #expect(f.lectureProgress(of: m, pageCount: nil).last == LectureSpan(firstPage: 13, lastPage: 20, sessions: [f.sessions[1].id]))
     }
 
@@ -68,7 +66,6 @@ struct LectureProgressTests {
 
     static let ranges = zip(Gen.int(in: 0...2), Gen.int(in: 1...25), Gen.int(in: 0...10)).array(of: 0...6)
 
-    /// The spans tile the file from page 1, neighbors differ, and each page lists exactly the classes whose range holds it.
     @Test func spansTileTheFile() async {
         await propertyCheck(input: Self.ranges, Gen.int(in: 1...30)) { links, count in
             var f = course()
@@ -101,7 +98,6 @@ struct LectureProgressTests {
         f.sessions[2].isCancelled = true
         f.linkMaterial(m, session: f.sessions[2].id, firstPage: 5, lastPage: 6)
 
-        // Cut at the count as the progress is, and a cancelled class has none.
         #expect(f.progressSections(of: m, pageCount: 24).map(\.session) == [f.sessions[1].id, f.sessions[0].id])
         #expect(f.progressSections(of: m, pageCount: 24).map(\.pages) == [1...4, 9...24])
         #expect(course().progressSections(of: m, pageCount: 24).isEmpty)
@@ -112,14 +108,12 @@ struct LectureProgressTests {
         let (m, book) = (matchings(f), f.materials[2].id)
         f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 5)
 
-        // Meeting end to end is fine; sharing page 5 is not.
         f.linkMaterial(m, session: f.sessions[1].id, firstPage: 6, lastPage: 9)
         #expect(f.progressOverlaps().isEmpty)
         f.linkMaterial(m, session: f.sessions[2].id, firstPage: 5, lastPage: 7)
         let found = f.progressOverlaps().map { [$0.earlier.session.id, $0.later.session.id] }
         #expect(found == [[f.sessions[0].id, f.sessions[2].id], [f.sessions[1].id, f.sessions[2].id]])
 
-        // A cancelled class taught nothing, and a textbook is read over and over.
         f.sessions[2].isCancelled = true
         f.linkMaterial(book, session: f.sessions[0].id, firstPage: 1, lastPage: 50)
         f.linkMaterial(book, session: f.sessions[1].id, firstPage: 1, lastPage: 50)
@@ -144,7 +138,6 @@ struct LectureProgressTests {
         #expect(CourseFile.model.newViolation(before: before, after: clear) == nil)
     }
 
-    /// The rule's overlaps are exactly the pairs of classes that name a common page of a lecture file.
     @Test func overlapsAreThePairsSharingAPage() async {
         await propertyCheck(input: Self.ranges) { links in
             var f = course()
@@ -171,8 +164,7 @@ struct LectureProgressTests {
         return c
     }
 
-    /// The classes held so far, latest first, leaving out those with pages of the file and cancelled ones. `now` is
-    /// 10:00 in Seoul, so an hour after the second class the third, a week on, is not held yet.
+    // `now`는 서울 기준 10:00이므로, 둘째 수업 한 시간 뒤에 일주일 뒤의 셋째 수업은 아직 열리지 않았다.
     @Test func aNewRangeIsOfferedToHeldClassesWithoutPages() {
         var f = course()
         let m = matchings(f)
@@ -183,7 +175,6 @@ struct LectureProgressTests {
         #expect(offered(f, at: at) == [f.sessions[1].id, f.sessions[0].id])
 
         f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 5)
-        // Linked without pages, or with pages of another file, a class has none of this one yet.
         f.linkMaterial(m, session: f.sessions[1].id)
         f.linkMaterial(flows(f), session: f.sessions[1].id, firstPage: 1, lastPage: 3)
         #expect(offered(f, at: at) == [f.sessions[1].id])
@@ -192,7 +183,6 @@ struct LectureProgressTests {
         #expect(offered(f, at: at).isEmpty)
     }
 
-    /// Today's class counts before it starts: the study day decides, not the clock.
     @Test func aNewRangeIsOfferedToTodaysClassBeforeItStarts() {
         let f = course()
         let morning = f.sessions[2].date - 3600
@@ -211,11 +201,9 @@ struct LectureProgressTests {
         #expect(f.resumePage(of: m, for: f.sessions[1]) == 13)
         #expect(f.suggestedProgress(for: f.sessions[1], viewed: viewed) == [SessionMaterial(materialId: m, firstPage: 13, lastPage: 21)])
 
-        // The most recent class before, not the furthest: the third class follows the second, which went back.
         f.linkMaterial(m, session: f.sessions[1].id, firstPage: 5, lastPage: 9)
         #expect(f.resumePage(of: m, for: f.sessions[2]) == 10)
 
-        // A class's own range isn't where it picks up from.
         #expect(f.resumePage(of: m, for: f.sessions[0]) == nil)
     }
 
@@ -231,7 +219,6 @@ struct LectureProgressTests {
         var f = course()
         let m = matchings(f)
         f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 20)
-        // The pages gone over belong to the class that taught them.
         #expect(
             f.suggestedProgress(for: f.sessions[1], viewed: [SessionMaterial(materialId: m, firstPage: 15, lastPage: 18)])
                 == [SessionMaterial(materialId: m)])
@@ -240,7 +227,6 @@ struct LectureProgressTests {
     @Test func aSuggestionStopsBeforeALaterClassesPages() {
         var f = course()
         let m = matchings(f)
-        // The class in between is filled in after the one following it already saved its pages.
         f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 6)
         f.linkMaterial(m, session: f.sessions[2].id, firstPage: 11, lastPage: 15)
         #expect(
@@ -248,13 +234,11 @@ struct LectureProgressTests {
                 == [SessionMaterial(materialId: m, firstPage: 7, lastPage: 10)])
     }
 
-    /// Whatever the other classes took and the recording saw, a suggestion never names a page another class took.
     @Test func aSuggestionNeverOverlaps() async {
         let taken = zip(Gen.int(in: 1...30), Gen.int(in: 0...6)).array(of: 0...2)
         await propertyCheck(input: taken, Gen.int(in: 1...30), Gen.int(in: 0...10), Gen.int(in: 1...40)) { taken, seen, length, count in
             var f = course()
             let m = matchings(f)
-            // The classes before and after, kept clear of each other as the rule keeps them.
             var placed: [ClosedRange<Int>] = []
             for (i, (first, len)) in taken.enumerated() where !placed.contains(where: { $0.overlaps(first...(first + len)) }) {
                 placed.append(first...(first + len))
@@ -279,7 +263,6 @@ struct LectureProgressTests {
             SessionMaterial(materialId: m, firstPage: 13, lastPage: 22), SessionMaterial(materialId: other, firstPage: 2, lastPage: 5),
         ]
 
-        // Saved files first, in their order; an unranged link is filled like a new one.
         #expect(
             f.suggestedProgress(for: f.sessions[1], viewed: viewed) == [
                 SessionMaterial(materialId: m, firstPage: 14, lastPage: 16),
@@ -294,21 +277,18 @@ struct LectureProgressTests {
         f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 12)
         #expect(f.suggestedProgress(for: f.sessions[1], viewed: []) == [SessionMaterial(materialId: m, firstPage: 13, lastPage: nil)])
 
-        // A cancelled class in between changes nothing.
         f.sessions[1].isCancelled = true
         #expect(
             f.suggestedProgress(for: f.sessions[2], viewed: [], pageCounts: [m: 30]) == [
                 SessionMaterial(materialId: m, firstPage: 13, lastPage: nil)
             ])
 
-        // Once the count says it is done, the next lecture file by name: 05_ before 06_, whatever order they were added in.
         f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 30)
         #expect(
             f.suggestedProgress(for: f.sessions[2], viewed: [], pageCounts: [m: 30]) == [
                 SessionMaterial(materialId: next, firstPage: 1, lastPage: nil)
             ])
 
-        // The last lecture file done leaves nothing to suggest.
         f.linkMaterial(next, session: f.sessions[1].id, firstPage: 1, lastPage: 8)
         f.sessions[1].isCancelled = false
         #expect(f.suggestedProgress(for: f.sessions[2], viewed: [], pageCounts: [m: 30, next: 8]).isEmpty)
@@ -322,7 +302,6 @@ struct LectureProgressTests {
             f.suggestedProgress(
                 for: f.sessions[1], viewed: [SessionMaterial(materialId: m, firstPage: 28, lastPage: 50)], pageCounts: [m: 40])
                 == [SessionMaterial(materialId: m, firstPage: 31, lastPage: 40)])
-        // The file the last class finished leaves nothing new.
         #expect(
             f.suggestedProgress(
                 for: f.sessions[1], viewed: [SessionMaterial(materialId: m, firstPage: 30, lastPage: 30)], pageCounts: [m: 30])
@@ -337,12 +316,9 @@ struct LectureProgressTests {
         #expect(f.suggestedLink(of: m, for: f.sessions[1], pageCount: nil) == SessionMaterial(materialId: m))
         f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 12)
         #expect(f.suggestedLink(of: m, for: f.sessions[1], pageCount: nil) == SessionMaterial(materialId: m, firstPage: 13))
-        // A finished file has no page left for the next class.
         #expect(f.suggestedLink(of: m, for: f.sessions[1], pageCount: 12) == SessionMaterial(materialId: m))
     }
 
-    /// The prompt was dismissed: nothing was saved, so opening it again starts after the last class, not at the first
-    /// page the recording saw.
     @Test func aPromptOpenedAgainStartsFromTheRecording() {
         var f = course()
         let m = matchings(f)
@@ -368,8 +344,6 @@ struct LectureProgressTests {
         #expect(f.suggestedLink(of: m, for: session, pageCount: nil) == SessionMaterial(materialId: m, firstPage: 7, lastPage: 11))
     }
 
-    /// The recording was stopped and restarted in one class. The prompt the second stop raises sees both recordings,
-    /// as a prompt opened again later will, though the one just stopped isn't saved yet.
     @Test func thePromptAtStopSeesTheClassesEarlierRecordingsToo() {
         var f = course()
         let m = matchings(f)
@@ -394,18 +368,15 @@ struct LectureProgressTests {
         #expect(range.moving(.first, to: 12, pages: nil) == PageRange(first: 12, last: 12))
         #expect(range.moving(.last, to: 3, pages: nil) == PageRange(first: 3, last: 3))
 
-        // Up to the other end exactly: one page, from either side.
         #expect(range.moving(.first, to: 9, pages: 20) == PageRange(first: 9, last: 9))
         #expect(range.moving(.last, to: 5, pages: 20) == PageRange(first: 5, last: 5))
         #expect(range.moving(.first, to: 0, pages: 20).first == 1)
         #expect(range.moving(.last, to: 40, pages: 20).last == 20)
 
-        // Pushed to the end of the file, the other end stops there too.
         #expect(range.moving(.first, to: 40, pages: 20) == PageRange(first: 20, last: 20))
         #expect(range.moving(.first, to: nil, pages: 20) == PageRange(first: nil, last: 9))
         #expect(PageRange().moving(.last, to: 4, pages: 20) == PageRange(first: nil, last: 4))
 
-        // A count learned later brings the other end in.
         #expect(PageRange(first: 2, last: 30).moving(.first, to: 3, pages: 20) == PageRange(first: 3, last: 20))
         #expect(PageRange.bounds(20) == 1...20 && PageRange.bounds(0) == 1...1)
     }
@@ -420,7 +391,6 @@ struct LectureProgressTests {
         #expect(range.tapping(5, pages: 20) == PageRange(first: 5, last: 11))
         #expect(range.tapping(14, pages: 20) == PageRange(first: 7, last: 14))
 
-        // A tie goes to the start.
         #expect(range.tapping(9, pages: 20) == PageRange(first: 9, last: 11))
         #expect(range.tapping(40, pages: 20) == PageRange(first: 7, last: 20))
     }
@@ -441,11 +411,9 @@ struct LectureProgressTests {
         #expect(range.shifted(by: -10, pages: 20) == PageRange(first: 1, last: 5))
         #expect(range.shifted(by: 30, pages: 20) == PageRange(first: 16, last: 20))
         #expect(PageRange(first: 7).shifted(by: 3, pages: 20) == PageRange(first: 7))
-        // Longer than the file: it fills the file.
         #expect(PageRange(first: 1, last: 30).shifted(by: 2, pages: 20) == PageRange(first: 1, last: 20))
     }
 
-    /// Any run of taps and shifts keeps the range inside the file and in order, and a tap always leaves both ends set.
     @Test func tapsAndShiftsKeepTheRangeInTheFile() async {
         let step = zip(Gen.int(in: 0...1), Gen.int(in: -30...60)).array(of: 1...12)
         await propertyCheck(input: step, Gen.int(in: 1...40)) { steps, pages in
@@ -466,15 +434,12 @@ struct LectureProgressTests {
         #expect(PageRange(first: 4, last: 20).touches(.last, pages: 20))
         #expect(PageRange(first: 7, last: 7).touches(.first, pages: 20) && PageRange(first: 7, last: 7).touches(.last, pages: 20))
         #expect(!PageRange(first: 4, last: 9).touches(.first, pages: 20))
-        // Without a count there is no top to hit.
         #expect(!PageRange(first: 4, last: 500).touches(.last, pages: nil))
         #expect(!PageRange(first: nil, last: 9).touches(.first, pages: 20))
     }
 
-    /// Any run of moves, typed or dragged, emptied or past the file: every page set is within 1…pages and the start
-    /// is never after the end. A page moved to inside the file is where that end lands.
     @Test func boundsHoldForAnyRunOfMoves() async {
-        // -6 empties the field; the rest run past both ends of the file.
+        // -6은 칸을 비우고, 나머지는 파일의 양 끝을 넘는다.
         let move = zip(Gen.int(in: 0...1), Gen.int(in: -6...60)).array(of: 1...12)
         await propertyCheck(input: move, Gen.int(in: 1...40)) { moves, pages in
             var range = PageRange()
@@ -496,16 +461,13 @@ struct LectureProgressTests {
         #expect(range.moving(.last, to: 13, pages: 20, besides: taken) == PageRange(first: 6, last: 11))
         #expect(range.moving(.first, to: 2, pages: 20, besides: taken) == PageRange(first: 5, last: 9))
 
-        // Pushing the other end stops at the wall too.
         #expect(range.moving(.first, to: 14, pages: 20, besides: taken) == PageRange(first: 11, last: 11))
         #expect(range.shifted(by: 6, pages: 20, besides: taken) == PageRange(first: 8, last: 11))
         #expect(range.tapping(18, pages: 20, besides: taken) == PageRange(first: 6, last: 11))
 
-        // A first tap on a taken page sets nothing; beside it, it starts there.
         #expect(PageRange().tapping(13, pages: 20, besides: taken) == PageRange())
         #expect(PageRange().tapping(16, pages: 20, besides: taken) == PageRange(first: 16, last: 16))
 
-        // At a wall the end touches, for the firmer tick.
         #expect(PageRange(first: 5, last: 11).touches(.first, pages: nil, besides: taken))
         #expect(PageRange(first: 5, last: 11).touches(.last, pages: nil, besides: taken))
         #expect(!PageRange(first: 6, last: 10).touches(.last, pages: nil, besides: taken))
@@ -521,7 +483,6 @@ struct LectureProgressTests {
         #expect(PageRange(first: 13, last: 15).fitted(besides: [1...15], pages: 15) == PageRange())
     }
 
-    /// Starting clear of the other classes, any run of moves, taps and shifts stays clear of them, in the file and in order.
     @Test func movesNeverEnterAnotherClassesPages() async {
         let step = zip(Gen.int(in: 0...3), Gen.int(in: -10...50)).array(of: 1...12)
         let walls = zip(Gen.int(in: 1...40), Gen.int(in: 0...5)).array(of: 0...3)

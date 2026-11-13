@@ -7,7 +7,6 @@ import Testing
 
 @testable import Folio
 
-/// 선형대수학 in the standard fixture: no exams, assignments or tracked files, one rough note.
 private let linearAlgebra = UUID(uuidString: "C0000000-0000-4000-8000-000000000001")!
 
 @MainActor
@@ -44,10 +43,8 @@ struct ExamsModelTests {
         let model = ExamsModel(workspace: workspace, course: course)
         let (coming, past) = model.exams(now: now)
         #expect(coming.map(\.title) == ["퀴즈 3"])
-        // Past exams read from the latest back.
         #expect(past.map(\.title) == ["퀴즈 2", "퀴즈 1"])
         #expect(past.map { model.folder(of: $0) } == ["Exams/퀴즈 2", "Exams/퀴즈 1"])
-        // No component, scope, place, files or plan: nothing is left to say.
         #expect(model.pastFacts(past[0]).isEmpty)
     }
 
@@ -122,7 +119,6 @@ struct AssignmentsModelTests {
         #expect(model.titleDetail == nil)
     }
 
-    /// The sheet picks a preset or edits a rule by its parts, and says when the next one will be due.
     @Test func sheetEditsTheRepeatRule() throws {
         let (workspace, course) = try fixtureCourse()
         let id = try #require(
@@ -131,14 +127,12 @@ struct AssignmentsModelTests {
             workspace: workspace, course: course,
             assignment: try #require(workspace.course(linearAlgebra)?.file.assignments.first { $0.id == id }))
         model.load()
-        // No preset is every three days, so its parts show.
         #expect(model.customRepeat && model.repeatLabel == "3일마다")
         #expect(model.repeatDetail == "마감을 정해야 다음 과제가 생깁니다")
         model.pickRepeat(.biweekly)
         #expect(!model.customRepeat && model.repeatLabel == "격주")
 
         model.hasDue = true
-        // Friday
         model.due = try #require(workspace.calendar.date(from: DateComponents(year: 2026, month: 11, day: 6, hour: 23, minute: 59)))
         #expect(
             model.repeatDetail
@@ -158,7 +152,6 @@ struct AssignmentsModelTests {
     }
 }
 
-/// Both pages that take scores save them with the same meaning.
 @MainActor
 struct ScoreSourceModelTests {
     func setUp() throws -> (Workspace, homework: UUID, lab: UUID, assignment: UUID, exam: UUID) {
@@ -196,11 +189,9 @@ struct ScoreSourceModelTests {
         let file = try #require(workspace.course(linearAlgebra)).file
         #expect(file.scores.first { $0.componentId == homework }?.assignmentId == assignment)
         #expect(file.assignments.first { $0.id == assignment }?.status == .graded)
-        // The assignment sheet now shows that score.
         let assignmentSheet = try sheet(workspace, assignment)
         #expect(assignmentSheet.scores[homework] == "9")
 
-        // A second score for HW 3 in 숙제 can't pick it.
         let next = ScoreEntryModel(
             workspace: workspace, course: try #require(workspace.course(linearAlgebra)),
             entry: ScoreEntry(device: workspace.device, at: .now, componentId: homework, title: "", score: 0, max: 10))
@@ -216,13 +207,11 @@ struct ScoreSourceModelTests {
                 scores: .set([.init(component: homework, score: 9, max: 10)])))
         let entry = try #require(workspace.course(linearAlgebra)?.file.scores.first { $0.assignmentId == assignment })
 
-        // On the grades page: renamed, and moved to 실험.
         let edit = ScoreEntryModel(workspace: workspace, course: try #require(workspace.course(linearAlgebra)), entry: entry)
         edit.componentId = lab
         edit.title = "HW 3 재채점"
         #expect(edit.confirm())
 
-        // In the assignment sheet: only the due date changes.
         let model = try sheet(workspace, assignment)
         model.hasDue = true
         #expect(model.apply())
@@ -233,7 +222,6 @@ struct ScoreSourceModelTests {
 
 @MainActor
 struct MaterialsModelTests {
-    /// Each file opens on its own guess, and the destination shows the name it will get before anything is copied.
     @Test func importRowsOpenOnTheirGuessAndShowTheirNames() throws {
         let (workspace, course) = try fixtureCourse()
         let model = ImportPlaceModel(
@@ -244,18 +232,15 @@ struct MaterialsModelTests {
         #expect(model.rows.map(\.folder) == ["Assignments/HW02", "Lectures", "Lectures"])
         #expect(model.kindLabel(model.rows[0]) == "과제 HW02")
         #expect(model.kindWhy(model.rows[0]) == "추측: 이름의 HW2")
-        // Nothing about Notes.pdf pointed anywhere: it sits in Lectures without a ✦.
         #expect(model.kindWhy(model.rows[2]) == nil)
 
         let placements = model.placements
         #expect(placements[1].path == "Lectures/01_Vectors 2.pdf" && placements[1].suffix == " 2")
         #expect(model.nameNote(placements[1]) == "같은 이름이 있어 뒤에 2를 붙입니다")
-        // A changed row loses its ✦.
         model.setFolder("Assignments/HW01", for: [0])
         #expect(model.kindWhy(model.rows[0]) == nil)
     }
 
-    /// ⇧ widens from the last pick, ⌘ adds one, and a menu or number key on a selected row changes every selected row.
     @Test func severalSelectedRowsChangeTogether() throws {
         let (workspace, course) = try fixtureCourse()
         let model = ImportPlaceModel(
@@ -269,12 +254,10 @@ struct MaterialsModelTests {
         let textbooks = try #require(model.kinds.first { $0.places == ["Textbooks"] })
         model.setKind(textbooks, for: model.targets(model.rows[1]))
         #expect(model.rows.map(\.folder) == ["Textbooks", "Textbooks", "Textbooks", "Lectures"])
-        // A row outside the selection changes alone.
         #expect(model.targets(model.rows[3]) == [3])
 
         let assignments = try #require(model.kinds.firstIndex { $0.perItem })
         #expect(model.applyKind(number: assignments + 1))
-        // The newest assignment: the likely one.
         #expect(model.rows.prefix(3).allSatisfy { $0.folder == "Assignments/HW02" })
 
         model.step(1, extend: false)
@@ -283,8 +266,6 @@ struct MaterialsModelTests {
         #expect(model.selection == [1, 2])
     }
 
-    /// A touch screen's way to several rows: a long press starts with that row, a tap adds or takes one away, and taking
-    /// the last one away ends the pick, so a tap picks one row again.
     @Test func aHoldStartsATouchPick() throws {
         let (workspace, course) = try fixtureCourse()
         let model = ImportPlaceModel(
@@ -305,10 +286,9 @@ struct MaterialsModelTests {
         #expect(model.selection == [1])
     }
 
-    /// The day and units say which class it was; newest first.
     @Test func importSessionsReadByDayNewestFirst() throws {
         let workspace = try fixtureWorkspace()
-        // A makeup set up first, then the class before it: made out of date order on purpose.
+        // 날짜 순서와 다르게 만들려고 보강을 먼저 만들고, 그 앞의 수업을 나중에 만든다.
         let makeup = UUID()
         for days in [-1, -2] {
             workspace.run(
@@ -325,7 +305,6 @@ struct MaterialsModelTests {
         #expect(sessions.count >= 2 && model.sessionTitle(sessions[0]).hasSuffix(": 보강"))
         #expect(sessions.map(\.date) == sessions.map(\.date).sorted(by: >))
         #expect(sessions.map(model.sessionTitle).allSatisfy { $0.wholeMatch(of: #/\d{1,2}/\d{1,2}\([월화수목금토일]\)(: .+)?/#) != nil })
-        // A file with nothing to say goes to the latest class.
         #expect(model.rows[0].session == sessions[0].id && model.sessionLabel(model.rows[0]).hasSuffix(": 보강"))
         model.setSession(nil, for: [0])
         #expect(model.sessionLabel(model.rows[0]) == "회차 없음")
@@ -343,7 +322,6 @@ struct MaterialsModelTests {
                 == "확장자 .pdf는 그대로 둡니다. 바꾼 이름은 되돌릴 수 있게 기록합니다.")
     }
 
-    /// The move menu asks with the action's own words; the rename alert already shows the new name, so it doesn't.
     @Test func movingAFileAsksButRenamingDoesNot() throws {
         let (workspace, course) = try fixtureCourse()
         workspace.run(MaterialTrack(course: linearAlgebra))
@@ -389,7 +367,6 @@ struct NotesModelTests {
 
         model.filter = nil
         #expect(model.parts.map(\.title) == ["수업 노트", "단원 노트"])
-        // Deleting is the note menu's, which asks the window first.
         var closed = false
         var asked: PendingAction?
         let menu = NoteMenuSource(
@@ -403,8 +380,6 @@ struct NotesModelTests {
         #expect(closed && model.parts.map(\.title) == ["수업 노트"])
     }
 
-    /// The sheet shows the name the note will get, ` 2` included, and saving it is the approval. The open note is found
-    /// again by its ID at the new path, and the list re-reads it.
     @Test func renamingShowsTheNewFileNameAndKeepsTheNoteOpen() throws {
         let (workspace, course) = try fixtureCourse()
         let id = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "행렬식"))?.made)
@@ -426,7 +401,6 @@ struct NotesModelTests {
         #expect(notes.note(id)?.title == "a-b")
     }
 
-    /// A `.tex` note's sheet shows its built PDF taking the new name, which the rename then does.
     @Test func renamingATexNoteShowsItsBuiltPDF() throws {
         let (workspace, course) = try fixtureCourse()
         let id = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "증명", format: .tex))?.made)
@@ -443,7 +417,6 @@ struct NotesModelTests {
         #expect(FileManager.default.fileExists(atPath: course.store.fileURL("Study/귀류법.pdf").path))
     }
 
-    /// Moving asks first, with the name the note will have in the folder.
     @Test func movingIntoAFolderAsksWithTheNewPath() throws {
         let (workspace, course) = try fixtureCourse()
         let id = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "행렬식"))?.made)
@@ -460,7 +433,6 @@ struct NotesModelTests {
         #expect(moves.batch != nil)
     }
 
-    /// The note's one sheet moves it to another folder and changes its math syntax in one save.
     @Test func theNoteSheetMovesAndSetsTheSyntax() throws {
         let (workspace, course) = try fixtureCourse()
         let id = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "행렬식"))?.made)
@@ -477,7 +449,6 @@ struct NotesModelTests {
         #expect(course.store.coursePath(of: note.url) == "Notes/정리/행렬식.md" && note.meta.math == math)
     }
 
-    /// Links made after the sheet opened (the bar's menu, the Claude panel) stay when only the syntax is saved.
     @Test func theNoteSheetKeepsLinksMadeSinceItOpened() throws {
         let (workspace, course) = try fixtureCourse()
         let id = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "행렬식"))?.made)
@@ -490,8 +461,6 @@ struct NotesModelTests {
         #expect(meta.kind == .unit && meta.unitIds == [unit])
     }
 
-    /// With no folder in Notes/ yet, a note still moves into a new one; the sheet names the folder it makes and refuses
-    /// names a note can't be in.
     @Test func movingIntoANewFolderMakesIt() throws {
         let (workspace, course) = try fixtureCourse()
         let id = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "행렬식"))?.made)
@@ -516,8 +485,6 @@ struct NotesModelTests {
         #expect(!again.canSave && again.message == "노트가 이미 이 폴더에 있습니다.")
     }
 
-    /// A rename from the open note's sheet lands in the list's undo, which asks with `cleanup undo`'s words and puts the
-    /// note's name back; the list's own moves land there too.
     @Test func theListUndoesTheLastNoteMove() throws {
         let (workspace, course) = try fixtureCourse()
         let id = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "행렬식"))?.made)
@@ -557,8 +524,6 @@ struct NotesModelTests {
         #expect(NoteEditorModel.markdown(for: URL(filePath: "/x/a b.png"), path: "assets/a b.png") == "![a b](assets/a%20b.png)")
     }
 
-    /// Classes caught up on together share one review note: picking a class in the link menu adds it, picking it again
-    /// takes it off, and the list names the classes it covers.
     @Test func aReviewNoteCoversTheClassesPicked() throws {
         let (workspace, course) = try fixtureCourse()
         let day: TimeInterval = 86_400
@@ -582,7 +547,6 @@ struct NotesModelTests {
         #expect(editor.linkedSessions.map(\.id) == [second])
     }
 
-    /// A session's note takes the session's date and subject, as `session note` names it, until the user types their own title.
     @Test func aNewSessionNoteIsNamedAfterItsSession() throws {
         let (workspace, course) = try fixtureCourse()
         let session = try #require(workspace.run(SessionAdd(course: linearAlgebra, date: .now))?.made)
@@ -602,8 +566,6 @@ struct NotesModelTests {
         #expect(!sheet.sessionOptions.contains { $0.id == session })
     }
 
-    /// The picker lists only sessions without this kind's note; a session picked for another kind is dropped rather
-    /// than linked, which would take the session from the note it already has.
     @Test func changingKindDropsASessionThatAlreadyHasThatNote() throws {
         let (workspace, course) = try fixtureCourse()
         let session = try #require(workspace.run(SessionAdd(course: linearAlgebra, date: .now))?.made)
@@ -617,8 +579,6 @@ struct NotesModelTests {
         #expect(workspace.course(linearAlgebra)?.file.sessions.first { $0.id == session }?.reviewNoteId == review)
     }
 
-    /// A block typed into in the read view lands on the lines the parser marked, counted in the same body the editor
-    /// holds; lines that changed since are left alone.
     @Test func readViewEditsReplaceTheirOwnLines() throws {
         let (workspace, course) = try fixtureCourse()
         let notes = NotesModel(workspace: workspace, course: course)
@@ -637,11 +597,8 @@ struct NotesModelTests {
     }
 }
 
-/// 그래프 이론's HW03 holds PDFs; a `.tex` is made beside them.
 @MainActor
 struct AssignmentSheetOpenTests {
-    /// Every file opens in the materials tab's file view (#179). With nothing typed the sheet gives way; holding edits
-    /// it stays and the file opens in a new window, or, with no other window to open, it asks first (#317).
     @Test func aFileOpensInTheMaterialsTabAndAsksAboutEdits() throws {
         let workspace = try fixtureWorkspace()
         workspace.run(MaterialTrack(course: graphTheory))
@@ -663,7 +620,6 @@ struct AssignmentSheetOpenTests {
 
         sheet.memo = "풀이 방향 메모"
         #expect(sheet.edited)
-        // With edits the sheet stays, and the file opens in a window of its own; with no other window to open, it asks.
         #expect(sheet.open(pdf, windows: true) == .window(pdf.id) && sheet.opening == nil)
         #expect(sheet.open(pdf, windows: false) == .asks && sheet.opening?.id == pdf.id)
         sheet.opening = nil

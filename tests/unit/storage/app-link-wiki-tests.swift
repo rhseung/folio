@@ -3,8 +3,7 @@ import FolioMarkdown
 import Foundation
 import Testing
 
-/// A note's object links are read by FolioMarkdown and opened as FolioDomain's `AppLink`; neither module sees the
-/// other, so the names they share are checked here, where both are.
+// FolioMarkdown과 FolioDomain은 서로를 보지 못하므로, 두 모듈이 공유하는 이름은 둘 다 보이는 여기서 검사한다.
 struct AppLinkWikiTests {
     @Test func everyObjectLinkOpensAsAnAppLink() throws {
         let id = UUID()
@@ -17,8 +16,6 @@ struct AppLinkWikiTests {
         }
     }
 
-    /// Every kind a link names by ID can be written in a note (`[[semester:<ID>]]`, `[[person:<ID>]]`), unless it is
-    /// left out here on purpose.
     @Test func everyKindWithAnIDIsAnObjectLink() {
         let leftOut: Set<AppLink.Kind> = []
         let withID = Set(AppLink.Kind.allCases.filter { !$0.isPlace })
@@ -26,7 +23,6 @@ struct AppLinkWikiTests {
         #expect(leftOut.isSubset(of: withID))
     }
 
-    /// A copied address between brackets (`[[folio://material/<ID>#page=2]]`) opens what the address does (#347).
     @Test func anAddressBetweenBracketsOpensAsItself() throws {
         let id = UUID()
         let links =

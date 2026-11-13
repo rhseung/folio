@@ -6,7 +6,6 @@ import Testing
 
 @testable import Folio
 
-/// 그래프 이론 in the standard fixture has the folders `Assignments/HW03` and `Assignments/SP01`.
 @MainActor
 struct NewMaterialFileModelTests {
     let workspace: Workspace
@@ -49,7 +48,6 @@ struct NewMaterialFileModelTests {
         #expect(try course.store.readText("Assignments/HW03/hw3.tex").hasPrefix("\\documentclass"))
     }
 
-    /// The action's own refusal, shown under the name before anything is written.
     @Test func aTakenNameIsRefusedBeforeCreating() throws {
         try course.store.writeText("Study/a.txt", text: "원래")
         let model = NewMaterialFileModel(workspace: workspace, course: course, folder: "Study")
@@ -60,7 +58,6 @@ struct NewMaterialFileModelTests {
         #expect(model.refusal?.hasPrefix("Folio에서 편집하는 형식") == true)
     }
 
-    /// A subfolder the menu was opened on is offered even though it is not a place of its own.
     @Test func aSubfolderIsKept() {
         let model = NewMaterialFileModel(workspace: workspace, course: course, folder: "Study/풀이")
         #expect(model.folder == "Study/풀이" && model.places.contains("Study/풀이"))

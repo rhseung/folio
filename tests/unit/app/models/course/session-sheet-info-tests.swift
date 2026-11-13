@@ -28,7 +28,6 @@ struct SessionSheetInfoTests {
     @Test func aMeetingIDOrAnEarlyEndCannotBeSaved() throws {
         let workspace = try fixtureWorkspace()
         let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: nil)
-        // The form says what the save rules say, not a copy of them.
         model.link = "884 7010 8867"
         #expect(model.disabled && model.note?.contains("참가 링크") == true)
 
@@ -63,16 +62,13 @@ struct SessionSheetInfoTests {
             return try #require(try file(workspace).sessions.first { $0.id == id })
         }
 
-        // Onto Wednesday's longer slot: still the slot's end, so changing Wednesday's times later moves it.
         let onSlot = try moved(to: wednesday)
         #expect(onSlot.end == nil)
         #expect(onSlot.end(schedule: try file(workspace).course.schedule, calendar: calendar) == wednesday.addingTimeInterval(2 * 3600))
 
-        // Off the timetable it keeps its 75 minutes.
         let evening = wednesday.addingTimeInterval(6 * 3600)
         #expect(try moved(to: evening).end == evening.addingTimeInterval(75 * 60))
 
-        // A makeup with an end of its own, moved onto Wednesday's slot: what the form showed is what's saved.
         let makeupId = try #require(
             workspace.run(
                 SessionAdd(
@@ -115,7 +111,6 @@ struct SessionSheetInfoTests {
         #expect(try file(workspace).sessions.first { $0.id == id }?.end == nil)
     }
 
-    /// Added by hand off the timetable, a class starts as 보강 until a kind is picked. Editing never guesses.
     @Test func aClassAddedOffTheTimetableStartsAsAMakeup() throws {
         let workspace = try fixtureWorkspace()
         let calendar = workspace.calendar
@@ -138,7 +133,6 @@ struct SessionSheetInfoTests {
         picked.setStart(evening.addingTimeInterval(86_400))
         #expect(picked.kind == .lecture)
 
-        // Moving a lecture off the timetable keeps it a lecture; picking a kind is what changes it.
         let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: monday))?.made)
         workspace.run(AttendanceSet(course: graphTheory, session: id, state: .late))
         let edit = SessionSheetModel(workspace: workspace, course: graphTheory, session: id)

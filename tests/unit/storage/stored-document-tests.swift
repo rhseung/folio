@@ -60,7 +60,6 @@ struct StoredDocumentTests {
         #expect(materials.first?["futureMaterialField"] == .array([.number(1), .number(2)]))
     }
 
-    /// Sessions lost their topic (#336); a file that has one keeps it through a save, as any unknown field.
     @Test func aSessionKeepsTheTopicItNoLongerHas() throws {
         let session = """
               "sessions": [{
@@ -80,8 +79,6 @@ struct StoredDocumentTests {
         #expect(sessions.first?["topic"] == .string("매칭 보강") && sessions.first?["cancelled"] == .bool(true))
     }
 
-    /// A session's kind (#338) is two flags written only when set: a file from before it reads as a lecture, and
-    /// changing the kind swaps the flags without touching fields the app doesn't know.
     @Test func aSessionKindRoundTripsAsItsFlags() throws {
         let session = """
               "sessions": [{

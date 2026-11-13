@@ -4,7 +4,7 @@ import Testing
 
 @testable import FolioLMS
 
-/// The markup is the Coursemos pages' shape as read on 2026-11-13, with made-up courses and posts.
+// 마크업은 2026-11-13에 읽은 Coursemos 페이지의 모양이고, 과목과 글은 지어낸 것이다.
 struct LMSPagesTests {
     static let dashboard = """
         <div class="course_box"><a class="course_link" href="https://lms.gist.ac.kr/course/view.php?id=27967">
@@ -58,7 +58,7 @@ struct LMSPagesTests {
         let a = try LMSPages.assignments(Self.assignments, classroom: 27967)
         #expect(a.map(\.id) == [139941, 139950])
         #expect(a.map(\.submitted) == [true, false])
-        // 23:55 in Korea is 14:55 UTC.
+        // 한국 시간 23:55는 UTC 14:55이다.
         #expect(a[1].due == ISO8601DateFormatter().date(from: "2026-11-20T14:55:00Z"))
     }
 

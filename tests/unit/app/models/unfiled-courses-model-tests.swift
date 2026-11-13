@@ -7,7 +7,6 @@ import Testing
 
 @MainActor
 struct UnfiledCoursesModelTests {
-    /// Turns the fixture's credited course back into a schema v1 record: course.json gone, the course in transcript.json.
     func unfile(_ workspace: Workspace, source: String?? = .none) throws {
         let gist = try #require(workspace.gist)
         let folder = gist.url.appending(path: "_Credited/영재고 AP/GS1101 일반물리학 및 연습 I")

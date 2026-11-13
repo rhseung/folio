@@ -5,8 +5,6 @@ import Testing
 
 @testable import Folio
 
-/// Where a list column is (#62): docked where it fits and isn't hidden by hand, otherwise folded behind the button at
-/// the page's corner, which docks it back where it fits and opens it over the page where it doesn't.
 @MainActor
 struct ColumnFitTests {
     @Test func docksOnlyWithRoomAndNotHiddenByHand() {
@@ -17,9 +15,7 @@ struct ColumnFitTests {
     }
 
     @Test func showingAgainDocksWhereItFitsAndOpensOverThePageWhereItDoesnt() {
-        // Hidden by hand with room: back beside the page, which undoes the choice.
         #expect(ColumnFit(roomy: true, collapsed: true).show == .dock)
-        // Too narrow, hidden by hand or not: over the page for the moment, the choice kept.
         #expect(ColumnFit(roomy: false, collapsed: true).show == .overlay)
         #expect(ColumnFit(roomy: false, collapsed: false).show == .overlay)
     }
@@ -28,7 +24,6 @@ struct ColumnFitTests {
         let empty = ColumnFold.list(showingPage: false)
         #expect(ColumnFit(roomy: false, collapsed: false, fold: empty).listAlone)
         #expect(ColumnFit(roomy: false, collapsed: true, fold: empty).listAlone)
-        // Hidden by hand where it fits, the page shows its empty state and the button brings the list back.
         #expect(!ColumnFit(roomy: true, collapsed: true, fold: empty).listAlone)
         #expect(ColumnFit(roomy: true, collapsed: true, fold: empty).showsPage)
         #expect(!ColumnFit(roomy: false, collapsed: false, fold: .list(showingPage: true)).listAlone)
@@ -43,7 +38,6 @@ struct ColumnFitTests {
         prefs.set(.courseSections, collapsed: true)
         #expect(prefs.isCollapsed(.courseSections))
         #expect(!prefs.isCollapsed(.people))
-        // The app opened again starts its panes from it.
         #expect(ColumnMemory(defaults: defaults).newPane().isCollapsed(.courseSections))
         prefs.set(.courseSections, collapsed: false)
         #expect(!ColumnMemory(defaults: defaults).newPane().isCollapsed(.courseSections))
@@ -59,8 +53,6 @@ struct ColumnFitTests {
     }
 }
 
-/// Each tab and each pane of a split keeps its own hidden columns; a new one starts from the last choice
-/// (2026-11-10 사용자).
 @MainActor
 struct PaneColumnTests {
     let grades = Navigator.Entry(link: .place(.grades))
@@ -74,7 +66,6 @@ struct PaneColumnTests {
         #expect(left !== right)
         left.set(.courseSections, collapsed: true)
         #expect(left.isCollapsed(.courseSections) && !right.isCollapsed(.courseSections))
-        // The next pane, and the next tab, start from the choice made last.
         panes.openBeside(people)
         #expect(panes.columns[2].isCollapsed(.courseSections))
         #expect(TabPanes(Navigator(), memory: memory).columns[0].isCollapsed(.courseSections))
@@ -93,12 +84,10 @@ struct PaneColumnTests {
         panes.swap(0, 1)
         #expect(panes.columns[0] === hidden)
 
-        // Joining another tab, each pane brings its own.
         let other = TabPanes(Navigator(people), memory: memory)
         #expect(panes.close(1) && panes.merge(other, at: 0))
         #expect(panes.columns[1] === hidden && !panes.columns[0].isCollapsed(.people))
 
-        // Out to a window of its own: what it had hidden goes with it, a pane without any starts from the last choice.
         let window = try #require(
             TabPanes(
                 histories: panes.navigators.map(\.history), shares: panes.shares, focus: 0,

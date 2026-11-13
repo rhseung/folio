@@ -5,9 +5,7 @@ import Foundation
 import Testing
 @testable import Folio
 
-/// The iPad's TeX build (#41): Tectonic linked into the app, as on the Mac. A document from Folio's template builds with
-/// its Korean, a broken one lists every error, and fontspec finds the iPad's own fonts through CoreText. The first build
-/// fetches the packages and makes the LaTeX format, which takes minutes.
+// 첫 빌드는 패키지를 받고 LaTeX 서식을 만들므로 몇 분이 걸린다.
 @MainActor @Suite(.serialized)
 struct TexPadTests {
     static func write(_ text: String, name: String = "hw.tex", beside: [String: Data] = [:]) throws -> URL {
@@ -36,7 +34,6 @@ struct TexPadTests {
         #expect(data.prefix(5) == Data("%PDF-".utf8))
         #expect(data.count > 20_000)
         #expect(FileManager.default.fileExists(atPath: TexEngine.synctex(for: source).path))
-        // The second build works from the cache the first one filled, and gives the same bytes for the same day.
         let again = try await Self.build(source)
         #expect(again.errors == [], "\(again.issues)")
         #expect(try again.pdf.map { try Data(contentsOf: $0) } == data)

@@ -7,13 +7,10 @@ import Testing
 
 @testable import Folio
 
-/// The edit view's card for a block reference: the pointer resting on `[[노트#^블록]]` shows the block, drawn as the
-/// preview draws it, but never over the completion menu or a syllable being composed.
 @MainActor @Suite(.serialized, .timeLimit(.minutes(2)))
 struct NoteReferenceCardTests {
     static let text = "앞 [[보조정리#^c1|그 식]] 뒤 [[보조정리]]\n[[보조정리#^long|긴 블록]]\n"
 
-    /// The window is returned to be kept: a view whose window goes away hides its card.
     func editor() throws -> (SourceTextView, NSWindow) {
         let gist = GISTStore(url: try Fixture.standard.copyToTemp())
         let store = try #require(try gist.courseStores().first { $0.url.lastPathComponent == "EC4207 그래프 이론" })
@@ -25,7 +22,6 @@ struct NoteReferenceCardTests {
         return (view, window)
     }
 
-    /// The middle of the character at `i`, where a pointer would rest on it.
     static func point(_ view: SourceTextView, at i: Int) throws -> NSPoint {
         let window = try #require(view.window)
         let rect = view.convert(
@@ -35,7 +31,6 @@ struct NoteReferenceCardTests {
 
     static func at(_ word: String) -> Int { (text as NSString).range(of: word).location }
 
-    /// Until the card shows, or a few seconds pass.
     static func settle(_ view: SourceTextView) async {
         for _ in 0..<60 {
             try? await Task.sleep(for: .milliseconds(50))
@@ -57,13 +52,11 @@ struct NoteReferenceCardTests {
         #expect(
             try await card.web.callAsyncJavaScript("return document.querySelectorAll('.katex').length", contentWorld: .defaultClient)
                 as? Int == 1)
-        // Under the link, the column's width, as tall as the block.
         let scroll = try #require(card.host.superview)
         let link = view.convert(try Self.point(view, at: Self.at("그 식")), to: scroll)
         let below = scroll.isFlipped ? card.host.frame.minY > link.y : card.host.frame.maxY < link.y
         #expect(below && card.host.frame.width == view.columnWidth && card.host.frame.height < 120, "\(card.host.frame)")
 
-        // Off the link, onto plain text or a link to a whole note, the card goes.
         view.hover(at: try Self.point(view, at: Self.at("뒤")))
         #expect(view.card?.shown == false)
         view.hover(at: try Self.point(view, at: Self.at("보조정리]]")))
@@ -71,7 +64,6 @@ struct NoteReferenceCardTests {
         #expect(view.card?.shown == false)
     }
 
-    /// A block taller than half the editor is cut there; it fades out at the bottom, since the card takes no scroll.
     @Test func aTallBlockFadesWhereItIsCut() async throws {
         let (view, window) = try editor()
         defer { withExtendedLifetime(window) {} }
@@ -98,7 +90,6 @@ struct NoteReferenceCardTests {
         #expect(view.card?.shown == false)
     }
 
-    /// The completion menu is being typed into; a card would cover it.
     @Test func noCardOverTheCompletionMenu() async throws {
         let (view, window) = try editor()
         defer { withExtendedLifetime(window) {} }
@@ -109,7 +100,6 @@ struct NoteReferenceCardTests {
         #expect(view.card?.shown != true)
     }
 
-    /// A syllable being composed is the input method's.
     @Test func noCardWhileASyllableIsComposed() async throws {
         let (view, window) = try editor()
         defer { withExtendedLifetime(window) {} }

@@ -28,7 +28,6 @@ struct SettingsModelTests {
         #expect(model.settings.backup.folder == before)
         #expect(workspace.error == "백업 위치는 GIST 폴더 밖이어야 합니다.")
 
-        // A sibling whose name only starts with the GIST folder's is outside it.
         let sibling = gist.deletingLastPathComponent().appending(path: gist.lastPathComponent + "-backups")
         model.pickBackupFolder(sibling)
         #expect(model.settings.backup.folder == sibling.path)
@@ -38,12 +37,10 @@ struct SettingsModelTests {
         let model = SettingsModel(workspace: try fixtureWorkspace(), tab: .notes)
         model.follow(.settings(.review))
         #expect(model.tab == .review)
-        // A link naming no tab, or another screen's, leaves the tab as it was.
         model.follow(.place(.settings))
         model.follow(.place(.grades))
         #expect(model.tab == .review)
 
-        // Tabs #416 merged open the tab that took them over.
         model.follow(try #require(AppLink(string: "folio://settings/letters")))
         #expect(model.tab == .record)
         model.follow(try #require(AppLink(string: "folio://settings/recording")))

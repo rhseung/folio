@@ -18,8 +18,6 @@ struct LiveClockTests {
         #expect(LiveClock.nextMinute(after: at(16, 0, 0.1)) == at(16, 1, 0))
     }
 
-    /// What keeps the ribbon, the wash and the sidebar in step: each reads `liveNow` in its body, and a tick of the one
-    /// clock redraws whatever read it.
     @Test func aTickRedrawsWhatReadTheLiveTime() throws {
         let workspace = try fixtureWorkspace()
         let start = Date(timeIntervalSinceReferenceDate: 815_000_000)

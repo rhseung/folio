@@ -26,14 +26,12 @@ struct LinkCompletionTests {
     }
 
     @Test func offersNothingWhereNoLinkIsBeingWritten() {
-        // After `|` is the writer's own name for the link.
         #expect(query("[[매칭|이«»]]") == nil)
         #expect(query("[[매칭]] 뒤|") == nil)
         #expect(query("[[#제목|]]") == nil)
         #expect(query("[[material:A#page=x|]]") == nil)
         #expect(query("`[[|`") == nil)
         #expect(query("$[[|$") == nil)
-        // A `/` in a note's name is not the block menu.
         #expect(link("[[a /b|]]") == LinkQuery(part: .target))
     }
 
@@ -44,7 +42,6 @@ struct LinkCompletionTests {
         let link = "[[note:X|그래프]]"
         let item = CompletionItem(id: "n", title: "그래프", body: link, caret: link.utf16.count)
         #expect(Marked.show(m.text, Completion.edit(accepting: item, for: q, in: m.text)) == "앞 [[note:X|그래프]]| 뒤")
-        // A link not yet closed ends at the caret.
         let open = Marked("[[그래| 뒤")
         let q2 = Completion.query(in: open.text, caret: open.selection.location, catalog: CompletionCatalog())!
         #expect(open.text.substring(with: q2.range) == "[[그래")
@@ -63,7 +60,6 @@ struct LinkCompletionTests {
         #expect(
             WikiLink.written("material", id, fragment: "page=3", alias: "a.pdf", embed: true)
                 == "![[material:6F9619FF-8B86-D011-B42D-00CF4FC964FF#page=3|a.pdf]]")
-        // What it writes reads back as the same link.
         let back = WikiLink.all(in: WikiLink.written("note", id, fragment: "^blk", alias: "제목"))
         #expect(back.first?.noteID == id && back.first?.blockID == "blk" && back.first?.alias == "제목")
         #expect(!WikiLink.linkable(heading: "a | b") && WikiLink.linkable(heading: "정의와 예"))
@@ -107,7 +103,6 @@ struct LinkCompletionTests {
         let edit = try #require(ParsedNote.blockTag(in: text, line: block.line, id: "abc123"))
         let tagged = edit.applied(to: text as NSString)
         #expect(tagged == "---\nk: v\n---\n- 첫 항목\n  이어진 줄 ^abc123  \n  - 아래\n")
-        // The block the link names is the item, its sublist included, not the sublist's item.
         #expect(ParsedNote(tagged).section(heading: nil, block: "abc123") == "- 첫 항목\n  이어진 줄 ^abc123  \n  - 아래")
     }
 
@@ -120,7 +115,6 @@ struct LinkCompletionTests {
     }
 }
 
-/// A fixed sequence, so a test that draws random IDs draws the same ones each run.
 struct SeededGenerator: RandomNumberGenerator {
     var state: UInt64
     init(seed: UInt64) { state = seed }

@@ -4,18 +4,15 @@ import ImageIO
 import Testing
 import UniformTypeIdentifiers
 
-/// A picture of a note view: 8-bit RGBA in sRGB, rows top down, one pixel a point. Drawn over the page color, so ink is
-/// whatever differs from the page, however the view draws its own background.
 struct Pixels: Equatable {
     let width: Int
     let height: Int
     var data: [UInt8]
-    /// The page's red, green and blue.
     let page: [UInt8]
 
     static let space = CGColorSpace(name: CGColorSpace.sRGB)!
 
-    // Byte by byte: the tests run unoptimized, where the synthesized comparison of a whole note takes seconds.
+    // 테스트는 최적화 없이 돌고, 그때 합성된 비교는 노트 하나에 몇 초가 걸리므로 바이트 단위로 비교한다.
     static func == (a: Pixels, b: Pixels) -> Bool {
         a.width == b.width && a.height == b.height && a.page == b.page
             && a.data.withUnsafeBytes { x in b.data.withUnsafeBytes { y in memcmp(x.baseAddress, y.baseAddress, x.count) == 0 } }
@@ -66,15 +63,13 @@ struct Pixels: Equatable {
         guard CGImageDestinationFinalize(destination) else { throw CocoaError(.fileWriteUnknown) }
     }
 
-    /// Antialiased edges and a box's faint tint stay under this; text, rules and borders go over it.
+    // 안티에일리어싱 가장자리와 상자의 옅은 색은 이 값보다 낮고, 글자와 선과 테두리는 이 값을 넘는다.
     static let inkLevel = 40
 
-    /// Inked pixels in `rect`, cut to the picture.
     func ink(in rect: CGRect) -> Int {
         let r = rect.integral.intersection(CGRect(x: 0, y: 0, width: width, height: height))
         guard !r.isNull, !r.isEmpty else { return 0 }
         let (pr, pg, pb, level) = (Int(page[0]), Int(page[1]), Int(page[2]), Self.inkLevel)
-        // Through a buffer, for the same reason as `==`.
         return data.withUnsafeBufferPointer { d in
             var count = 0
             for y in Int(r.minY)..<Int(r.maxY) {
@@ -88,8 +83,6 @@ struct Pixels: Equatable {
         }
     }
 
-    /// Pixels that differ from `other` by more than `tolerance` in a channel, and a picture of where: this one faded,
-    /// with the differences in red.
     func difference(from other: Pixels, tolerance: Int = 32) -> (count: Int, picture: Pixels)? {
         guard width == other.width, height == other.height else { return nil }
         var out = data
@@ -116,15 +109,8 @@ struct Pixels: Equatable {
     }
 }
 
-/// The note views' reference screens in `references/notes`, made on CI's runner and compared against there.
-///
-/// Fonts draw a little differently from one macOS to the next, so a picture is compared only where it was made: the
-/// runner's macOS is written to `machine.txt` beside the pictures. Elsewhere the comparison is skipped, unless
-/// `FOLIO_NOTE_SCREENS_STRICT` is set, as on CI, where a new runner image must fail rather than stop checking.
-///
-/// A missing or different picture fails the test and leaves the new one (and where it differs, `<name>-diff.png`)
-/// in `FOLIO_NOTE_SCREENS`, which CI uploads as the `note-screens` artifact. `mise run note-screens -- <run>` copies the
-/// new pictures in as references.
+// 글꼴은 macOS마다 조금씩 다르게 그려지므로, 그림은 만든 곳에서만 비교한다. 러너의 macOS는 그림 옆의 `machine.txt`에 적는다. 다른 곳에서는 비교를 건너뛰지만, CI처럼
+// `FOLIO_NOTE_SCREENS_STRICT`를 켜면 새 러너 이미지에서 검사를 멈추지 않고 실패한다.
 enum NoteScreens {
     static let references = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appending(
         path: "references/notes")
@@ -137,8 +123,7 @@ enum NoteScreens {
             in: .whitespacesAndNewlines)
     }
 
-    /// Differences a font update could make stay under this share of the picture; a missing line of text, a block
-    /// moved by a point or a box drawn in another color go well over it.
+    // 글꼴 갱신으로 생기는 차이는 그림의 이 비율보다 작고, 빠진 글 한 줄, 1pt 밀린 블록, 다른 색으로 그린 상자는 이 비율을 훨씬 넘는다.
     static let allowed = 0.0002
 
     static func check(_ shot: Pixels, _ name: String, sourceLocation: SourceLocation = #_sourceLocation) {

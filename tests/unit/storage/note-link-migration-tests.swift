@@ -4,7 +4,6 @@ import Testing
 
 @testable import FolioStorage
 
-/// course.json v5 -> v6: a note's session moves to the session's pointer, and only topic notes keep units.
 struct NoteLinkMigrationTests {
     let unit = UUID()
 
@@ -35,20 +34,17 @@ struct NoteLinkMigrationTests {
             sessions: [session(1), session(2, review: 21)],
             notes: [note(10, "rough", session: 1), note(11, "review", session: 2), note(21, "review", session: 2)])
 
-        // Session 2's review slot was taken by note 21, so note 11 comes out without a session rather than as a second one.
         #expect(r.sessions[0]["roughNoteId"] == .string(id(10).uuidString))
         #expect(r.sessions[1]["reviewNoteId"] == .string(id(21).uuidString))
         #expect(r.notes.allSatisfy { $0["sessionId"] == nil })
         #expect(r.sessions[0]["futureSessionField"] == .string("keep me"))
     }
 
-    /// `import calendar` made a session point at a free note; the note becomes that session's review note.
     @Test func aPointedNoteTakesItsSlotsKind() throws {
         let r = try migrated(sessions: [session(1, review: 10)], notes: [note(10, "free")])
         #expect(r.notes[0]["kind"] == .string("review"))
     }
 
-    /// The first pointer in the file keeps a note two slots claimed; the other lets go, with its draft mark.
     @Test func aSecondPointerAtANoteLetsGo() throws {
         let r = try migrated(
             sessions: [session(1, review: 10), session(2, review: 10, draft: true), session(3, rough: 10)], notes: [note(10, "review")])
@@ -57,8 +53,6 @@ struct NoteLinkMigrationTests {
         #expect(r.sessions[2]["roughNoteId"] == nil)
     }
 
-    /// `import calendar` once took any unlinked note named after a class, a topic note too; it stays a topic note
-    /// with its units, and the session lets go of it.
     @Test func aPointedTopicOrExamNoteKeepsItsKind() throws {
         let r = try migrated(
             sessions: [session(1, review: 10, draft: true), session(2, rough: 11)], notes: [note(10, "topic"), note(11, "exam_summary")])
@@ -72,7 +66,6 @@ struct NoteLinkMigrationTests {
         #expect(r.notes.map { $0["unitIds"] } == [.array([.string(unit.uuidString)]), .array([]), .array([]), .array([])])
     }
 
-    /// The whole chain on a real v5 file: it reads as v6 and passes the model's note rules.
     @Test func aV5FileReadsWithItsLinksOnTheSession() throws {
         let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)

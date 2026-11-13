@@ -3,20 +3,16 @@ import Testing
 
 @testable import Folio
 
-/// The note views' layout, read off what they draw: blocks stay in the text column, a note just opened is drawn down
-/// to the bottom of the panel, and the page scrolls on past the note's end. Pictures compared with references
-/// (`NoteScreenTests`) catch the rest, but they're made anew when the look changes; these hold through any look.
 @MainActor @Suite(.serialized, .timeLimit(.minutes(5)))
 struct NoteLayoutTests {
-    /// The text column of a picture of the panel, its margins left out. It's the picture's width, not the panel's:
-    /// where scrollers always show (a Mac with a mouse, the CI runner) they take their width off the note.
+    // 패널이 아니라 그림의 폭을 쓴다. 스크롤 막대가 항상 보이는 환경(마우스를 쓰는 Mac, CI 러너)에서는 스크롤 막대가 노트의 폭을 차지하기 때문이다.
     static func column(_ shot: Pixels) -> ClosedRange<CGFloat> {
         let width = CGFloat(shot.width)
         let left = (width - min(NoteLook.measure, width)) / 2 + NoteLook.margin
         return left...(width - left)
     }
 
-    /// Ink left and right of the column, a point of antialiasing allowed at each edge.
+    // 가장자리마다 안티에일리어싱 1pt를 허용한다.
     static func outside(_ shot: Pixels) -> (left: Int, right: Int) {
         let column = Self.column(shot)
         let height = CGFloat(shot.height)
@@ -26,7 +22,6 @@ struct NoteLayoutTests {
         )
     }
 
-    /// Whether each row of the column has ink in it, top down.
     static func inkedRows(_ shot: Pixels) -> [Bool] {
         let column = Self.column(shot)
         return (0..<shot.height).map {
@@ -34,7 +29,6 @@ struct NoteLayoutTests {
         }
     }
 
-    /// The tallest run of rows with no ink, from the top down to `end`: where it starts and how tall it is.
     static func longestBlank(_ rows: [Bool], to end: Int) -> (from: Int, height: Int) {
         var best = (from: 0, height: 0), start: Int?
         for y in 0...min(end, rows.count) {
@@ -48,7 +42,7 @@ struct NoteLayoutTests {
         return best
     }
 
-    /// No two lines of a note stand this far apart; the widget, which the pictures don't show, is the tallest gap.
+    // 노트의 두 줄이 이만큼 떨어지는 일은 없고, 그림에 보이지 않는 위젯이 가장 큰 간격이다.
     static let gap = 240
 
     @Test(arguments: NoteShot.light)
@@ -67,7 +61,6 @@ struct NoteLayoutTests {
         #expect(end.left == 0 && end.right == 0, "long note at its end, \(shot.name): ink outside the column \(end)")
     }
 
-    /// A note just opened showed only the top of the panel until it was scrolled (#263).
     @Test(arguments: NoteShot.all)
     func theWholePanelIsDrawnOnOpen(_ shot: NoteShot) async {
         let bench = shot.bench(NoteBench.longNote)
@@ -85,8 +78,6 @@ struct NoteLayoutTests {
         #expect(gap.height < Self.gap, "scrolled: nothing drawn for \(gap.height) points from \(gap.from) of \(middle.count)")
     }
 
-    /// One writes at the note's end, so the page goes on past it: the editor brings the last line up to the middle
-    /// of the panel, the preview further, to follow the editor.
     @Test(arguments: NoteShot.light)
     func thePageScrollsPastTheNotesEnd(_ shot: NoteShot) async throws {
         let bench = shot.bench(NoteBench.longNote)

@@ -213,7 +213,7 @@ struct ContextTests {
 
 #if os(macOS)
 struct CLIProviderTests {
-    /// The lines of a real two-turn answer (claude 2.1.318, cut down): a tool call, then the answer in a new message.
+    // 실제 두 턴 답의 줄을 줄인 것이다(claude 2.1.318). 도구 호출 뒤에 새 메시지로 답이 온다.
     @Test func streamEventsMarkTurnsToolsAndText() {
         let lines = [
             #"{"type":"system","subtype":"init"}"#,
@@ -238,13 +238,12 @@ struct CLIProviderTests {
             ])
     }
 
-    /// Stopping a request ends the process at once instead of letting it run to the end of the answer.
     @Test func cancellingEndsTheProcess() async throws {
         let dir = FileManager.default.temporaryDirectory.appending(path: "folio-cli-cancel-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: dir) }
         let script = dir.appending(path: "claude"), pidFile = dir.appending(path: "pid")
-        // `exec`, so the process the provider started is the one still running, not a shell waiting on a child.
+        // `exec`를 써야 provider가 시작한 프로세스가 자식을 기다리는 셸이 아니라 실제로 실행 중인 프로세스가 된다.
         try """
         #!/bin/sh
         read line
@@ -276,7 +275,6 @@ struct CLIProviderTests {
         ],
         output_config: OutputConfig(effort: .low, format: .init(schema: .object(["type": .string("object")]))))
 
-    /// No tools: the CLI may only answer, never touch the GIST folder.
     @Test func runsWithoutToolsAndFoldsHistoryIntoOneMessage() throws {
         let args = try CLIProvider.arguments(for: request, systemFile: URL(fileURLWithPath: "/tmp/s.txt"))
         #expect(args.split(separator: "--tools").count == 2 && args[args.firstIndex(of: "--tools")! + 1] == "")
@@ -288,7 +286,6 @@ struct CLIProviderTests {
         #expect(content[1]["text"] == .string("두 번째 질문"))
     }
 
-    /// The chat's Folio tools: its own tools stay off, only the `folio` server is loaded and allowed, in propose mode.
     @Test func chatGetsOnlyFolioToolsAndCollectsProposals() throws {
         let folio = CLIProvider.FolioTools(executable: URL(fileURLWithPath: "/bin/folio"), gist: URL(fileURLWithPath: "/g"))
         let args = try CLIProvider.arguments(for: request, systemFile: nil, folio: folio)
@@ -330,7 +327,7 @@ struct CLIProviderTests {
         #expect(throws: ClaudeError.http(status: 401, body: "Not logged in")) { try CLIProvider.response(from: failed, request: request) }
     }
 
-    /// Spends a little of the real subscription, so it runs only with `FOLIO_LIVE_CLI=1`.
+    // 실제 구독을 조금 쓰므로 `FOLIO_LIVE_CLI=1`일 때만 실행한다.
     @Test(.enabled(if: ProcessInfo.processInfo.environment["FOLIO_LIVE_CLI"] == "1"))
     func liveStructuredAnswer() async throws {
         struct Answer: Decodable { var answer: Int }

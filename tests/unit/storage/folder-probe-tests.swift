@@ -11,7 +11,6 @@ struct FolderProbeTests {
             Issue.record("not read as a GIST folder")
             return
         }
-        // Credited courses too, a level deeper under `_Credited/<source>`.
         let stores = try GISTStore(url: url).courseStores()
         #expect(stores.contains { $0.url.path().contains(StandardLayout.creditedFolder) })
         #expect(semesters > 0)

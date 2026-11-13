@@ -3,7 +3,6 @@ import Foundation
 import Testing
 
 struct SidebarOrderTests {
-    // Readable stand-ins: id(1), id(2), ... in the default order.
     func id(_ n: Int) -> UUID { UUID(uuidString: String(format: "00000000-0000-4000-8000-%012d", n))! }
 
     @Test func nothingStoredKeepsTheDefault() {
@@ -15,7 +14,6 @@ struct SidebarOrderTests {
     }
 
     @Test func aNewCourseTakesItsDefaultPlace() {
-        // Between two by name: in front of the first stored one that comes after it.
         #expect(SidebarOrder.arrange([id(1), id(2), id(3)], by: [id(3), id(1)]) == [id(2), id(3), id(1)])
         #expect(SidebarOrder.arrange([id(0), id(1), id(2)], by: [id(2), id(1)]) == [id(0), id(2), id(1)])
     }
@@ -27,7 +25,6 @@ struct SidebarOrderTests {
 
         #expect(SidebarOrder.arrange(shown, by: order.courses) == [id(12), id(11), id(13)])
 
-        // Another term's order is left as it was.
         #expect(SidebarOrder.arrange([id(22), id(21)], by: order.courses) == [id(21), id(22)])
         order.move([id(12), id(11), id(13)], from: 2, to: 0)
         #expect(SidebarOrder.arrange(shown, by: order.courses) == [id(13), id(12), id(11)])

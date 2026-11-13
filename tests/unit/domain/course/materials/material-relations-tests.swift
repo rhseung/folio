@@ -7,7 +7,6 @@ struct MaterialRelationsTests {
     let device = UUID()
     let now = Date(timeIntervalSince1970: 0)
 
-    /// Chapter 3 holds 3.1, which holds the one class; the chapter slides, a handout and a study sheet are files.
     func course() -> CourseFile {
         var file = CourseFile(course: Course(device: device, at: now, title: "컴파일러"))
         file.materials = ["Lectures/03_Chapter.pdf", "Lectures/03-1_Handout.pdf", "Study/LR 정리.pdf", "Exams/Midterm/Guide.pdf"]
@@ -63,7 +62,6 @@ struct MaterialRelationsTests {
         #expect(file.routes(of: file.materials[3], to: .exam(exam)) == [.folder])
         #expect(file.routes(of: file.materials[2], to: .exam(exam)) == [.direct])
         #expect(file.materials(for: file.exams[0]).map(\.path) == ["Study/LR 정리.pdf", "Exams/Midterm/Guide.pdf"])
-        // A folder named like the exam's but longer is another folder.
         file.materials[3].path = "Exams/Midterm 2/Guide.pdf"
         #expect(file.routes(of: file.materials[3], to: .exam(exam)).isEmpty)
     }
@@ -80,7 +78,6 @@ struct MaterialRelationsTests {
         #expect(file.materials[0].unitIds.isEmpty)
         #expect(file.routes(of: file.materials[0], to: .unit(section(file))) == [.pages])
         #expect(file.routes(of: file.materials[0], to: .unit(chapter(file))) == [.pages])
-        // The class sits in the section, so it reaches the file through the section and the chapter above it.
         #expect(file.routes(of: file.materials[0], to: .session(file.sessions[0].id)) == [.unit(section(file)), .unit(chapter(file))])
         #expect(file.units(of: file.materials[0]).map(\.routes) == [[.pages], [.pages]])
 

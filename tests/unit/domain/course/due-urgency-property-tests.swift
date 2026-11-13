@@ -3,7 +3,6 @@ import Foundation
 import PropertyBased
 import Testing
 
-/// What any deadline must keep, whatever the hour and the day boundary. The worked cases sit in CourseWorkTests.
 struct DueUrgencyPropertyTests {
     let calendar: Calendar = {
         var c = Calendar(identifier: .gregorian)

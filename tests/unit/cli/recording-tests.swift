@@ -12,8 +12,6 @@ struct RecordingTrimTests {
     static let heard = UUID(uuidString: "A0000000-0000-4000-8000-0000000000E1")!
     static let silent = UUID(uuidString: "A0000000-0000-4000-8000-0000000000E2")!
 
-    /// Two recordings in the finished spring semester: one with a transcript, one without. Recordings are made by the
-    /// recorder, not by an action, so they are written here.
     func record(_ gist: URL, course: UUID = linearAlgebra) throws {
         let ctx = ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now)
         let store = try ctx.store(course)
@@ -62,8 +60,6 @@ struct RecordingRetitleTests {
     static let trimmed = UUID(uuidString: "A0000000-0000-4000-8000-0000000000F3")!
     static let mine = UUID(uuidString: "A0000000-0000-4000-8000-0000000000F4")!
 
-    /// Recordings of the 10-28 class named the old way: one with its transcript, a second that day, one whose audio was
-    /// trimmed (only the transcript is there), and one the user named. A new recording took 10-28's name already.
     func record(_ gist: URL) throws {
         #expect(h.cli(SessionCommandTests.add, gist: gist).code == 0)
         let ctx = ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now)
@@ -87,8 +83,6 @@ struct RecordingRetitleTests {
         }
     }
 
-    /// Audio and transcript take the class's day, after the name a newer recording took; undoing the batch puts the
-    /// files and the entries back.
     @Test func retitleRenamesOldRecordingsAndUndoTurnsThemBack() throws {
         let gist = try Harness.fixtureCopy()
         try record(gist)
@@ -121,8 +115,6 @@ struct RecordingRetitleTests {
 struct SessionLinkViewedTests {
     let h = Harness()
 
-    /// A recording of the added session that stayed on pages 4 to 9 of the matchings slides. The recorder writes
-    /// recordings, not an action, so it is written here.
     func record(_ url: URL) throws {
         #expect(h.cli(MaterialNoteStudyTests.track, gist: url).code == 0)
         #expect(h.cli(SessionCommandTests.add, gist: url).code == 0)
@@ -150,7 +142,6 @@ struct SessionLinkViewedTests {
         var file = try h.file(GISTStore(url: gist))
         let session = try #require(file.sessions.first { $0.id == SessionCommandTests.id })
 
-        // Page 4 was passed in two seconds.
         #expect(session.materials.map { [$0.firstPage, $0.lastPage] } == [[6, 9]])
 
         _ = h.cli(["material", "link", "EC4207/05_Matchings.pdf", "10-28", "--pages", "1-3"], gist: gist)

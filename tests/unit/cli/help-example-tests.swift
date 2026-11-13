@@ -8,11 +8,9 @@ import Testing
 
 @testable import FolioCLI
 
-/// Every example in the help runs on a `Fixture.standard` copy, writes as `--dry-run`.
 struct HelpExampleTests {
     let h = Harness()
 
-    /// What the examples talk about, made first on the copy through the commands themselves.
     static let world: [[String]] = [
         ["session", "add", "EC4207", "--date", "2026-09-08 10:30"],
         ["session", "add", "EC4207", "--date", "2026-10-06 10:30"],
@@ -40,7 +38,6 @@ struct HelpExampleTests {
         ["unit", "add", "EC4321", "기구학"],
     ]
 
-    /// The catalog and course codes the course examples need; the fixture has none.
     func prepare(_ gist: URL) throws {
         let ec = CourseCode(device: h.device, at: h.now, prefix: "EC"), gs = CourseCode(device: h.device, at: h.now, prefix: "GS")
         let grades = [("A+", 4.5), ("A0", 4.0), ("B0", 3.0), ("F", 0)].map {
@@ -51,7 +48,6 @@ struct HelpExampleTests {
             people: [Person(device: h.device, at: h.now, name: "김교수")])
         try h.direct(CatalogSet(catalog: catalog), gist: gist)
 
-        // A course schema v1 left without a folder, for `transcript move`.
         try Harness.unfile(
             Course(
                 device: h.device, at: h.now, semesterId: UUID(uuidString: "5E4F1A00-0000-4000-8000-000000000003")!,
@@ -63,10 +59,9 @@ struct HelpExampleTests {
         try FileManager.default.copyItem(
             at: folder.appending(path: "Lectures/05_Matchings.pdf"), to: folder.appending(path: "Lectures/05_Matchings v2.pdf"))
 
-        // A deck PDFKit can open, for `material read`: the fixture's own PDFs are placeholders.
         try SampleLecture.write(to: folder.appending(path: "Lectures/06_Hall.pdf"))
 
-        // Backups go beside the copy, never to the default ~/Backups; one archive from yesterday for `backup restore`.
+        // 백업은 기본 ~/Backups가 아니라 사본 옆에 둔다.
         let backups = gist.deletingLastPathComponent().appending(path: "backups")
         var settings = try GISTStore(url: gist).loadSettings().model
         settings.backup.folder = backups.path
@@ -81,7 +76,6 @@ struct HelpExampleTests {
         )
         try h.direct(QuizCardSave(course: Harness.graphTheory, cards: [card], movedFrom: nil), gist: gist)
 
-        // A recording is the recorder's, not a command's, so it is written as the app writes it.
         let ctx = ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now)
         let file = try ctx.file(Harness.graphTheory)
         let session = try #require(file.sessions(matching: "10-26", calendar: ctx.calendar).first)
@@ -97,12 +91,10 @@ struct HelpExampleTests {
         let config = type.configuration
         let text = config.discussion + (ObjectIdentifier(type) == ObjectIdentifier(Folio.self) ? "\n" + Folio.footer : "")
         let own = text.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }.filter(runnable)
-            // The column after two or more spaces says what the example does.
             .map { $0.replacing(/\s{2,}\S.*$/, with: "") }
         return own + (config.subcommands + config.groupedSubcommands.flatMap(\.subcommands)).flatMap { examples($0) }
     }
 
-    /// Pipes, redirects, files read from or written to the user's disk, and ids made elsewhere can't run here.
     static func runnable(_ line: String) -> Bool {
         line.hasPrefix("folio ") && !line.contains("|") && !line.contains(">") && !line.contains("<") && !line.contains("~/")
             && !line.contains("--file")
@@ -130,7 +122,6 @@ struct HelpExampleTests {
         try run(Self.examples())
     }
 
-    /// The agent skill's examples are what agents copy, so they run too.
     @Test func skillExamplesRun() throws {
         var dir = URL(filePath: #filePath).deletingLastPathComponent()
         while !FileManager.default.fileExists(atPath: dir.appending(path: ".claude/skills/folio/SKILL.md").path) {

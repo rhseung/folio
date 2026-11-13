@@ -6,17 +6,13 @@ import Testing
 
 @testable import Folio
 
-/// The screen contract (#43): every screen draws its link in the width it is given, a full window, a pane or an
-/// iPhone, folding rather than running past the side or clipping its rows.
 @MainActor @Suite(.serialized)
 struct ScreenFitTests {
-    /// An iPhone, a pane of a split window, a full window.
     static let widths: [CGFloat] = [390, 720, 1440]
 
     @Test func everyKindOfLinkHasAScreen() throws {
         let workspace = try Workspace.scenario(.busyDay)
         let course = try #require(workspace.currentCourses.first)
-        // What the scenario lacks is made here, so every link names something real and has to be found.
         if course.file.materials.isEmpty { workspace.run(MaterialTrack(course: course.id)) }
         let unit = try #require(course.file.units.first?.id ?? workspace.run(UnitAdd(course: course.id, title: "매칭"))?.made)
         let card = QuizCard(device: workspace.device, at: .now, unitId: unit, type: .free, category: .definition, prompt: "p", answer: "a")
@@ -26,7 +22,6 @@ struct ScreenFitTests {
                 course: course.id, set: ProblemSet(device: workspace.device, at: .now, title: "Exercise 1", problems: [.init(number: "1")]))
         )
         if course.file.recordings.isEmpty {
-            // Recording is the recorder's, not an action's, so its entry is written here.
             let recording = Recording(
                 device: workspace.device, at: .now, sessionId: course.file.sessions.first?.id, file: "Recordings/a.m4a")
             try ActionContext(gist: try #require(workspace.gist), device: workspace.device).edit(course.id) {
@@ -38,7 +33,6 @@ struct ScreenFitTests {
         let file = try #require(workspace.course(course.id)?.file)
         func first(_ kind: AppLink.Kind, _ ids: [UUID]) throws -> AppLink { AppLink(kind, try #require(ids.first, "no \(kind) to link")) }
         for kind in AppLink.Kind.allCases {
-            // No default: a new kind fails here too until the test gives it something to point at.
             let link: AppLink
             switch kind {
             case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals: link = .place(kind)
@@ -67,7 +61,6 @@ struct ScreenFitTests {
     @Test func everyScreenFitsTheWidthItIsGiven() async throws {
         let workspace = try Workspace.scenario(.busyDay)
         var screens = ScreenCatalog.entries(workspace)
-        // Folded, the people list and a person are drawn one at a time, so each is checked.
         let person = try #require(workspace.catalog.people.first)
         screens.append(("person", Navigator.Entry(link: AppLink(.person, person.id))))
         for (name, width, drawn) in try await measure(screens, workspace) {
@@ -78,8 +71,7 @@ struct ScreenFitTests {
     func measure(_ screens: [(name: String, entry: Navigator.Entry)], _ workspace: Workspace) async throws -> [(String, CGFloat, CGFloat)] {
         let jobs = screens.flatMap { name, entry in
             Self.widths.map { width in
-                // A page beside a column clips what it can't fit rather than push the window out; lifted here, so an
-                // overflowing page grows the window this measures.
+                // 열 옆의 페이지는 들어가지 않는 부분을 잘라 창을 밀어내지 않는다. 여기서는 그 제한을 풀어서, 넘치는 페이지가 측정하는 창을 키우게 한다.
                 let screen = ScreenView(workspace: workspace, entry: entry).environment(workspace).environment(\.revealsOverflow, true)
                 return RenderJob(name: name, view: AnyView(screen), width: width, height: nil, scheme: .light)
             }
@@ -89,7 +81,6 @@ struct ScreenFitTests {
     }
 }
 
-/// The folded column's button and the column open over the page, drawn at the screen contract's widths (#43, #62).
 extension ScreenFitTests {
     func draw(_ entry: Navigator.Entry, _ workspace: Workspace, width: CGFloat, collapsed: Set<ColumnKind> = []) async throws -> (
         width: CGFloat, labels: [String]

@@ -68,7 +68,6 @@ struct SearchTests {
 
         #expect(items.map(\.kind) == [.note, .material, .assignment, .exam, .session, .unit, .quiz])
 
-        // A class goes by its day and units, and its reference is in the body so `11-03` finds it.
         #expect(
             items.map(\.title) == [
                 "09-08(화) 매칭", "05_Matchings.pdf", "HW3", "중간고사", file.title(of: session, calendar: calendar), "Covers", "덮개의 정의",

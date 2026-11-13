@@ -3,7 +3,6 @@ import FolioDomain
 
 @testable import Folio
 
-/// Lays a note view out in a window that's never shown, and writes it to `FOLIO_NOTE_RENDER` as a PNG when set.
 @MainActor enum NoteRender {
     static let fixtures = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appending(path: "fixtures")
 
@@ -23,18 +22,16 @@ import FolioDomain
         guard let manager = view.textLayoutManager else { return }
         manager.ensureLayout(for: manager.documentRange)
         let height = manager.usageBoundsForTextContainer.height + 2 * view.textContainerInset.height
-        // TextKit 2 draws only what its scroll view shows, so the window grows to the whole note.
+        // TextKit 2는 scroll view가 보이는 부분만 그리므로, 창을 노트 전체 높이로 키운다.
         let size = NSSize(width: view.frame.width, height: max(800, height))
         view.window?.setContentSize(size)
         view.enclosingScrollView?.frame = NSRect(origin: .zero, size: size)
         view.setFrameSize(size)
-        // The window's layout pass, which puts code views over their blocks.
         view.needsLayout = true
         view.layoutSubtreeIfNeeded()
         manager.ensureLayout(for: manager.documentRange)
     }
 
-    /// Where the caret is drawn at `offset`, in the text container.
     static func caret(_ view: NSTextView, at offset: Int) -> CGRect? {
         guard let manager = view.textLayoutManager, let storage = view.textStorage,
             let location = manager.location(manager.documentRange.location, offsetBy: offset)
@@ -47,7 +44,6 @@ import FolioDomain
         return rect.map { NoteLines.caret($0, at: offset, in: storage) }
     }
 
-    /// The laid-out line holding `offset`, not the paragraph's first: a paragraph wraps into several.
     static func line(_ view: NSTextView, at offset: Int) -> (fragment: NSTextLayoutFragment, line: NSTextLineFragment)? {
         guard let manager = view.textLayoutManager,
             let location = manager.location(manager.documentRange.location, offsetBy: offset),
@@ -57,7 +53,6 @@ import FolioDomain
         return fragment.textLineFragments.first { NSLocationInRange(inFragment, $0.characterRange) }.map { (fragment, $0) }
     }
 
-    /// Where the text on the line holding `offset` is drawn, its font's ascender to its descender, in the text container.
     static func text(_ view: NSTextView, at offset: Int) -> ClosedRange<CGFloat>? {
         guard let (fragment, line) = Self.line(view, at: offset),
             let font = view.textStorage?.attribute(.font, at: offset, effectiveRange: nil) as? NSFont
@@ -73,10 +68,7 @@ import FolioDomain
         try? rep.representation(using: .png, properties: [:])?.write(to: URL(filePath: dir).appending(path: "\(name).png"))
     }
 
-    /// Pictures in a table under column titles, each row named on its left, on the note's card color. A row with a
-    /// picture too wide for a column (a formula longer than the line) puts its pictures under one another instead.
-    /// Written to `FOLIO_NOTE_RENDER`, or else to `sheets/` in `FOLIO_NOTE_SCREENS`, which CI uploads on every run as
-    /// the `note-sheets` artifact: a folder of its own, so `mise run note-screens` doesn't take a sheet for a reference.
+    // `sheets/` 폴더를 따로 써야 `mise run note-screens`가 판을 기준 이미지로 가져가지 않는다.
     static func sheet(_ rows: [(String, [NSBitmapImageRep])], columns: [String], dark: Bool, _ name: String) {
         let environment = ProcessInfo.processInfo.environment
         guard
@@ -110,12 +102,11 @@ import FolioDomain
                 bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
                 bytesPerRow: 0, bitsPerPixel: 0)
         else { return }
-        // Before the context is made: it takes the rep's points, and drew at one pixel a point otherwise.
+        // context가 rep의 point 크기를 쓰므로 context를 만들기 전에 크기를 정한다. 그러지 않으면 1pt를 1픽셀로 그렸다.
         out.size = size
         guard let context = NSGraphicsContext(bitmapImageRep: out) else { return }
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = context
-        // Drawn from the top: AppKit's y runs up.
         func flip(_ point: CGPoint, _ height: CGFloat) -> CGPoint { CGPoint(x: point.x, y: size.height - point.y - height) }
         NSAppearance(named: dark ? .darkAqua : .aqua)?.performAsCurrentDrawingAppearance {
             NoteLook.card.setFill()

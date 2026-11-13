@@ -5,8 +5,6 @@ import Testing
 
 @testable import Folio
 
-/// Note and card lists read files the course document doesn't hold, so they re-read when these revisions move. Each
-/// write path bumps them through the action's changes, not through the screen that ran it.
 @MainActor
 struct WorkspaceRevisionTests {
     @Test func aSessionsRoughNoteBumpsTheNoteRevision() throws {
@@ -16,7 +14,6 @@ struct WorkspaceRevisionTests {
         #expect(workspace.note(.rough, of: session, in: graphTheory) != nil)
         #expect(workspace.notesRevision > revision)
 
-        // Opening the same note again writes nothing.
         let after = workspace.notesRevision
         _ = workspace.note(.rough, of: session, in: graphTheory)
         #expect(workspace.notesRevision == after)
@@ -42,7 +39,6 @@ struct WorkspaceRevisionTests {
         #expect(workspace.notesRevision == notes && workspace.quizRevision == quiz)
     }
 
-    /// A reload follows writes from outside the app (iCloud, the folio command), whose changes the app never sees.
     @Test func aReloadBumpsBoth() throws {
         let workspace = try fixtureWorkspace()
         let (notes, quiz) = (workspace.notesRevision, workspace.quizRevision)

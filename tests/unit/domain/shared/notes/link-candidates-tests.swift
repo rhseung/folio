@@ -24,7 +24,6 @@ struct LinkCandidatesTests {
         #expect(LinkCandidates.pages(count: 5, last: 3, typed: "") == [3, 1, 2, 4, 5])
         #expect(LinkCandidates.pages(count: 12, last: 3, typed: "1") == [1, 10, 11, 12])
         #expect(LinkCandidates.pages(count: 12, last: 12, typed: "1") == [12, 1, 10, 11])
-        // A page past the end is not offered, and without a count the typed number stands for itself.
         #expect(LinkCandidates.pages(count: 2, last: 9, typed: "") == [1, 2])
         #expect(LinkCandidates.pages(count: nil, last: 4, typed: "") == [4])
         #expect(LinkCandidates.pages(count: nil, last: 4, typed: "17") == [17])

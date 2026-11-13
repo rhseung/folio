@@ -30,7 +30,6 @@ struct ActionTests {
         #expect(note?.type == "String")
     }
 
-    /// The app enables its buttons with a dry run over the documents it shows, which may be ahead of the disk.
     @Test func aCheckReadsThePreloadedDocuments() throws {
         let disk = ActionContext(gist: gist, device: device)
         var doc = try disk.store(Self.graphTheory).load()
@@ -76,7 +75,6 @@ struct ActionTests {
         s = try #require(try file().sessions.first { $0.id == id })
         #expect(s.link == nil && s.end == end)
 
-        // Moved a day on, its own end moves with it.
         let later = now.addingTimeInterval(86_400)
         try run(SessionSet(course: Self.graphTheory, session: id, date: .set(later)))
         s = try #require(try file().sessions.first { $0.id == id })
@@ -86,7 +84,6 @@ struct ActionTests {
         #expect(throws: ActionError.self) { try run(SessionSet(course: Self.graphTheory, session: id, end: .set(now))) }
     }
 
-    /// An absence known ahead makes its session in the same write, so a refused one leaves no session behind.
     @Test func anAbsenceAheadMakesItsSessionOrNothing() throws {
         let id = UUID()
         try run(SessionAdd(id: id, course: Self.graphTheory, date: now, attendance: .absent))
@@ -98,13 +95,11 @@ struct ActionTests {
         }
         #expect(try file().sessions.count == before)
 
-        // Present is the default and stored as nothing.
         let present = UUID()
         try run(SessionAdd(id: present, course: Self.graphTheory, date: now.addingTimeInterval(2 * 86_400), attendance: .present))
         #expect(try !file().attendance.contains { $0.sessionId == present })
     }
 
-    /// One way to skip: from a list nothing was open, so no time; from the review screen the time it was open is study.
     @Test func aSkipCountsOnlyTheTimeTheUnitWasOpen() throws {
         let a = UUID(), b = UUID()
         let log = try ActionContext(gist: gist, device: device).store(Self.graphTheory).log
@@ -138,7 +133,6 @@ struct ActionTests {
         #expect(try file().course.schedule.map(\.link) == [nil, "https://zoom.us/j/1"])
     }
 
-    /// The folder is named now but made by the first file, so an exam with no files leaves no empty folder behind.
     @Test func aNewExamNamesItsFolderWithoutMakingIt() throws {
         let ctx = try run(ExamAdd(course: Self.graphTheory, title: "Quiz1", start: now))
         #expect(!ctx.changes.contains { $0.path.hasSuffix("/") })
@@ -174,7 +168,6 @@ struct ActionTests {
         #expect(try String(contentsOf: url, encoding: .utf8) == "# 매칭\n\n최대 매칭은 간선 집합이다\n- 질문\n\n다음 줄\n")
     }
 
-    /// Nothing is written when any replacement fails, and a missing `old` reads as a change made elsewhere.
     @Test func aNoteEditRefusesAnOldThatIsMissingOrNotUnique() throws {
         let store = try ActionContext(gist: gist, device: device).store(Self.graphTheory)
         let path = "Notes/09-08(화) 매칭.md"

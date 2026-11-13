@@ -14,7 +14,6 @@ struct FirstRunModelTests {
         return url
     }
 
-    /// A workspace with no folder open, as on a device's first launch.
     func bareWorkspace() -> Workspace {
         let workspace = Workspace()
         workspace.pendingRecordings = PendingRecordings(
@@ -28,7 +27,6 @@ struct FirstRunModelTests {
         let model = FirstRunModel(workspace: workspace)
         model.proceed()
         #expect(model.step == .folder)
-        // Opened again from settings, the folder step starts at the open folder.
         #expect(model.start == .existing)
         #expect(model.canContinue)
         model.proceed()
@@ -59,7 +57,6 @@ struct FirstRunModelTests {
         model.choose(url)
         #expect(model.pickedProblem == nil)
         #expect(model.pickedSummary == [String(localized: .firstRunEmptyFolder)])
-        // Nothing opens until the step is left.
         #expect(workspace.gist == nil)
         model.proceed()
         #expect(workspace.gist?.url.standardizedFileURL == url.standardizedFileURL)
@@ -117,8 +114,6 @@ struct FirstRunModelTests {
         #expect(model.step == .term)
     }
 
-    /// Opening a folder whose files are still in iCloud would read an empty term that the term step then saves over
-    /// the real one.
     @Test func aPickedFolderStillInICloudOpensOnlyOnceItIsHere() async throws {
         let workspace = bareWorkspace()
         let model = FirstRunModel(workspace: workspace, step: .folder)
@@ -176,8 +171,7 @@ struct FirstRunModelTests {
         #expect(workspace.folderTrouble == nil)
     }
 
-    /// The test host is the app itself, so `UserDefaults.standard` is the real app's: a folder remembered here would
-    /// have the next real launch open a fixture.
+    // 테스트 호스트가 앱 자신이라서 `UserDefaults.standard`는 실제 앱의 것이다. 여기서 폴더를 기억하면 다음 실제 실행이 픽스처를 연다.
     @Test func theFirstRunNeverTouchesTheRememberedFolder() throws {
         let bookmark = UserDefaults.standard.data(forKey: Workspace.bookmarkKey)
         let path = UserDefaults.standard.string(forKey: Workspace.pathKey)

@@ -10,8 +10,6 @@ import Testing
 
 @MainActor
 struct FileViewModelTests {
-    /// 그래프 이론 with its files tracked, `Study/Problems.pdf` made a real three-page PDF (the fixture's PDFs are only
-    /// bytes), and a markdown file and one no viewer knows beside it.
     func course() throws -> (Workspace, LoadedCourse) {
         let workspace = try fixtureWorkspace()
         let folder = try #require(workspace.course(graphTheory)).store.url
@@ -36,8 +34,7 @@ struct FileViewModelTests {
         ((try? course.store.log.readAll()) ?? []).events(MaterialViewEvent.self).filter { $0.event.materialId == id }.count
     }
 
-    /// A `.tex` asked for a page while showing only its source has no PDF view on screen yet; the page must survive
-    /// until the view is laid out and `restore()` goes to it.
+    // 소스만 보이는 `.tex`에는 아직 PDF 뷰가 없으므로, 요청한 쪽은 뷰가 배치되고 `restore()`가 그 쪽으로 갈 때까지 남아 있어야 한다.
     @Test func aPageAskedBeforeLayoutIsKept() throws {
         let (_, course) = try course()
         let document = try #require(PDFDocument(url: course.store.fileURL("Study/Problems.pdf")))
@@ -66,13 +63,11 @@ struct FileViewModelTests {
         let tex = FileViewModel(workspace: workspace, course: course, subject: .material(try material("Study/Problems.tex", in: course)))
         let pdf = FileViewModel(workspace: workspace, course: course, subject: .material(try material("Study/Problems.pdf", in: course)))
         #expect(tex.editsInPlace && !pdf.editsInPlace)
-        // A file outside any course is only shown.
         let admin = FileViewModel(workspace: workspace, course: nil, subject: .file(course.store.url.appending(path: "Study/Problems.tex")))
         #expect(!admin.editsInPlace && admin.opensElsewhere)
 
         let note = try #require(try course.store.notes().first { $0.url.pathExtension == "md" })
         let shown = FileViewModel(workspace: workspace, course: course, subject: .note(note))
-        // A markdown note is read here; the note is the app's own, with no other app to open it in.
         #expect(!shown.editsInPlace && !shown.opensElsewhere)
     }
 
@@ -86,11 +81,9 @@ struct FileViewModelTests {
             return (model, c)
         }
 
-        // A page past the end is the last one.
         let (_, past) = await open(10)
         #expect(past?.page == 2)
 
-        // Left where it opened: nothing to remember.
         let (first, firstPDF) = await open(nil)
         #expect(firstPDF?.page == 0)
         first.closed(at: 0)
@@ -101,7 +94,6 @@ struct FileViewModelTests {
         let (_, again) = await open(nil)
         #expect(again?.page == 1)
 
-        // A review's source leaves the resume page alone.
         let (review, _) = await open(2, remembers: false)
         review.closed(at: 2)
         #expect(views(workspace, course, id) == 1)

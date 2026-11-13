@@ -16,7 +16,6 @@ struct SearchStoreTests {
         GISTStore(url: try Fixture.standard.copyToTemp())
     }
 
-    /// The fixture PDFs are placeholders with no text layer.
     func writePDF(_ text: String, to url: URL) throws {
         var box = CGRect(x: 0, y: 0, width: 400, height: 200)
         let ctx = try #require(CGContext(url as CFURL, mediaBox: &box, nil))
@@ -37,7 +36,7 @@ struct SearchStoreTests {
         #expect(hits.first?.item.kind == .note)
         #expect(hits.first?.snippet?.contains("non-adjacent") == true)
 
-        // Two-letter Hangul is below the trigram length, so this goes through the scan path.
+        // 두 글자 한글은 trigram 길이보다 짧으므로 scan 경로를 거친다.
         #expect(try index.search("매칭").contains { $0.item.title == "09-08(화) 매칭" })
         #expect(try index.search("no such words here").isEmpty)
     }
@@ -66,7 +65,6 @@ struct SearchStoreTests {
         #expect(try index.refresh(gist) == 1)
         #expect(try index.search("theorem").map(\.item.kind) == [.note])
 
-        // A reopened index keeps what it read.
         let again = try SearchStore(url: gist.url.deletingLastPathComponent().appending(path: "cache/search.sqlite"))
         #expect(try again.refresh(gist) == 0)
         #expect(try again.search("theorem").count == 1)
@@ -81,7 +79,6 @@ struct SearchStoreTests {
         try index.refresh(gist)
         #expect(try index.search("augmenting", kinds: [.quiz]).isEmpty)
 
-        // Cards live in their own file, so adding one leaves course.json alone and still has to count as a change.
         let card = QuizCard(
             device: ctx.device, at: ctx.now, unitId: unit, type: .free, category: .theorem, prompt: "Berge의 정리",
             answer: "augmenting path가 없으면 최대 매칭")
@@ -104,7 +101,6 @@ struct SearchStoreTests {
         #expect(try index.search("09-02", courses: [robotics]).isEmpty)
     }
 
-    /// What link completion offers before anything is typed, and exams, which it links to as well.
     @Test func listsACoursesItemsAndFindsExams() throws {
         let gist = try fixture()
         let ctx = ActionContext(gist: gist, device: UUID(), now: .now)

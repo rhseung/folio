@@ -3,11 +3,6 @@ import FolioFixtures
 import FolioStorage
 import XCTest
 
-/// Every main screen through `performAccessibilityAudit()` (#471). Each test launches the app on a fresh `busyDay`
-/// fixture in a temporary folder, opens screens by their `folio://` links and audits each one.
-///
-/// UI tests take the screen and the keyboard, and the app they launch shares its defaults with the installed Folio,
-/// so they run in CI (`mise run test-a11y`), not on a Mac someone is using.
 @MainActor
 final class AccessibilityAuditTests: XCTestCase {
     func testPlaces() throws {
@@ -63,14 +58,13 @@ final class AccessibilityAuditTests: XCTestCase {
             app.terminate()
             try? FileManager.default.removeItem(at: folder)
         }
-        // FOLIO_GIST (Workspace.environmentKey) keeps the app off the folder it remembers, which on a developer's Mac
-        // is the real GIST folder, and gives its recordings a temporary folder of their own (LocalFolders.url).
+        // FOLIO_GIST(`Workspace.environmentKey`)를 주면 앱이 기억한 폴더를 열지 않는다. 개발자의 Mac에서 그 폴더는 실제 GIST 폴더다. 녹음에도 따로 임시 폴더를
+        // 준다(`LocalFolders.url`).
         app.launchEnvironment["FOLIO_GIST"] = gist.path(percentEncoded: false)
-        // Restored windows would bring back tabs from an earlier run; Korean is the language the app is written in.
+        // 창을 복원하면 이전 실행의 탭이 돌아오므로 끈다. 앱의 문구가 한국어이므로 언어를 한국어로 둔다.
         app.launchArguments += ["-ApplePersistenceIgnoreState", "YES", "-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
         app.launch()
         XCTAssertTrue(app.windows.firstMatch.waitForExistence(timeout: 30), "the window never opened")
-        // The course busyDay fills most: units, a split lecture PDF, sessions, exams.
         let stores = try GISTStore(url: gist).courseStores()
         let store = try XCTUnwrap(stores.first { $0.url.lastPathComponent.hasPrefix("EC4207") })
         let course = try store.load().model.course
@@ -80,8 +74,7 @@ final class AccessibilityAuditTests: XCTestCase {
 
     // MARK: Audit
 
-    /// A link from outside opens in a new tab; closing it after the audit keeps the tab row from filling up, which
-    /// would put the toolbar's own findings on every later screen.
+    // 바깥 링크는 새 탭에서 열린다. 검사 뒤에 탭을 닫지 않으면 탭 줄이 가득 차서, 툴바 자체의 결과가 뒤의 모든 화면에 나온다.
     private func visit(_ app: XCUIApplication, _ name: String, _ link: AppLink) {
         app.open(link.url)
         audit(app, name)
@@ -89,13 +82,11 @@ final class AccessibilityAuditTests: XCTestCase {
     }
 
     private func audit(_ app: XCUIApplication, _ screen: String) {
-        // The audit reads what is on screen: a page that is still animating in reports clipped text and elements
-        // that are about to move.
+        // 검사는 화면에 보이는 것을 읽으므로, 아직 들어오는 중인 페이지는 잘린 글과 곧 움직일 요소를 결과로 낸다.
         _ = app.windows.firstMatch.waitForExistence(timeout: 10)
         RunLoop.current.run(until: .now + 1)
         var found: [AuditFinding] = []
         do {
-            // Every issue is collected so one run lists them all; the ones not known below fail the test.
             try app.performAccessibilityAudit(for: .all) { issue in
                 found.append(AuditFinding(screen: screen, issue: issue))
                 return true
@@ -131,8 +122,7 @@ struct AuditFinding: CustomStringConvertible {
     var description: String { "\(screen): [\(type.name)] \(summary) — \(element)" }
 }
 
-/// Findings left for later, each one a line of #471's checklist. Matched by screen, type and element, so a new finding
-/// on the same screen still fails.
+// 화면, 종류, 요소로 맞추므로, 같은 화면의 새 결과는 여전히 실패한다.
 enum KnownFindings {
     struct Entry {
         let screen: String

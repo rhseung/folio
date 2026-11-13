@@ -3,7 +3,6 @@ import Testing
 
 @testable import Folio
 
-/// One way of showing a note: which view, light or dark, how wide a panel.
 struct NoteShot: Sendable, CustomTestStringConvertible {
     let kind: NoteBench.Kind
     let dark: Bool
@@ -12,7 +11,6 @@ struct NoteShot: Sendable, CustomTestStringConvertible {
     var name: String { "\(kind.rawValue)-\(dark ? "dark" : "light")-\(width)" }
     var testDescription: String { name }
 
-    /// A full panel beside a sidebar, and a narrow one: half a split iPad, a note beside its preview.
     static let widths = [900, 480]
     static let all = NoteBench.Kind.allCases.flatMap { kind in
         [false, true].flatMap { dark in widths.map { NoteShot(kind: kind, dark: dark, width: $0) } }
@@ -22,8 +20,6 @@ struct NoteShot: Sendable, CustomTestStringConvertible {
     @MainActor func bench(_ text: String) -> NoteBench { NoteBench(kind, text, width: CGFloat(width), dark: dark) }
 }
 
-/// The note views drawn and held against reference pictures made on CI (`NoteScreens`): every markdown construct,
-/// and a note taller than the panel as it opens and scrolled to its end.
 @MainActor @Suite(.serialized, .timeLimit(.minutes(5)))
 struct NoteScreenTests {
     @Test(arguments: NoteShot.all)

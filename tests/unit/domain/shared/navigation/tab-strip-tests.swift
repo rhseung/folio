@@ -22,11 +22,9 @@ struct TabStripTests {
 
         #expect(s.tabs == ["a", "d", "b", "c"] && s.selected == "d")
 
-        // Another from there goes after it in turn.
         s.open("e", afterSelected: true)
         #expect(s.tabs == ["a", "d", "e", "b", "c"])
 
-        // From the last tab, last.
         s.select("c")
         s.open("f", afterSelected: true)
         #expect(s.tabs.last == "f")
@@ -41,13 +39,11 @@ struct TabStripTests {
         #expect(first)
         #expect(s.tabs == ["a", "c", "d"] && s.selected == "c")
 
-        // The last one hands over to the one before it.
         s.select("d")
         let last = s.close("d")
         #expect(last)
         #expect(s.selected == "c")
 
-        // A tab behind closes without moving the front one.
         let behind = s.close("a")
         #expect(behind)
         #expect(s.tabs == ["c"] && s.selected == "c")
@@ -84,7 +80,6 @@ struct TabStripTests {
         s.select(number: 0)
         #expect(s.selected == "b")
 
-        // ⌘9 is the last, with fewer than nine tabs or more.
         s.select(number: 9)
         #expect(s.selected == "c")
 
@@ -133,7 +128,6 @@ struct TabStripTests {
 }
 
 struct TabFitTests {
-    /// A tab in front of one pane, 300 wide with its close button.
     let lone = TabFit.Front(trail: 260, chrome: 40)
 
     func singles(_ widths: [Double]) -> [TabFit.Other] { widths.map { TabFit.Other(single: $0, icon: 32) } }
@@ -143,55 +137,53 @@ struct TabFitTests {
     }
 
     @Test func roomyRowShowsNames() {
-        // 300 + 100 + 100 + 2 gaps = 516.
+        // 300 + 100 + 100 + 간격 2개 = 516이다.
         #expect(layout(516, others: [100, 100]) == TabFit.Layout(iconsOnly: false, shown: 2, hidden: 0))
     }
 
     @Test func tightRowShowsIconsFirst() {
-        // Names don't fit; icons do: 300 + 32 + 32 + 2 gaps = 380.
+        // 이름은 들어가지 않고 아이콘은 들어간다. 300 + 32 + 32 + 간격 2개 = 380이다.
         #expect(layout(515, others: [100, 100]) == TabFit.Layout(iconsOnly: true, shown: 2, hidden: 0))
         #expect(layout(380, others: [100, 100]) == TabFit.Layout(iconsOnly: true, shown: 2, hidden: 0))
     }
 
     @Test func thenFoldsTheRestIntoTheMenu() {
-        // Four icons need 460; one icon, the menu and 2 gaps 428.
+        // 아이콘 네 개에는 460이 필요하고, 아이콘 하나와 메뉴와 간격 2개에는 428이 필요하다.
         #expect(
             layout(430, others: [100, 100, 100, 100])
                 == TabFit.Layout(iconsOnly: true, stacked: true, compactFront: true, shown: 1, hidden: 3))
-        // Not even one icon: the menu alone, and the tab in front folds its own trail.
         #expect(layout(200, others: [100, 100]) == TabFit.Layout(iconsOnly: true, stacked: true, compactFront: true, shown: 0, hidden: 2))
     }
 
     @Test func givesWayInTheOrderTheUserPicked() {
-        // The tab in front has two other panes: named, its capsule is 500 wide; as icons, 420. One other tab has
-        // two panes (150 with its preset's name, 70 as icons, 50 stacked), one has one (100, or its 32 icon).
+        // 앞의 탭에는 다른 칸이 둘 있어서, 이름을 보이면 capsule의 폭이 500이고 아이콘으로는 420이다. 다른 탭 하나는 칸이 둘이고(배치 이름으로 150, 아이콘으로 70, 겹치면 50),
+        // 다른 하나는 칸이 하나다(100, 아이콘이면 32).
         let front = TabFit.Front(trail: 300, chrome: 200, compactChrome: 120)
         let others = [TabFit.Other(full: 150, icons: 70, stacked: 50), TabFit.Other(single: 100, icon: 32)]
         func step(_ room: Double) -> Int { TabFit.layout(room: room, front: front, others: others, gap: 8, more: 80).step }
 
-        // All of it: 500 + 150 + 100 + 2 gaps.
+        // 모두 보이면 500 + 150 + 100 + 간격 2개이다.
         #expect(step(766) == 0)
 
-        // ① names go: 500 + 70 + 32 + 16.
+        // ① 이름이 빠지면 500 + 70 + 32 + 16이다.
         #expect(step(765) == 1 && step(618) == 1)
 
-        // ② the other tab of two panes stacks: 500 + 50 + 32 + 16.
+        // ② 칸이 둘인 다른 탭이 겹치면 500 + 50 + 32 + 16이다.
         #expect(step(617) == 2 && step(598) == 2)
 
-        // ③ the tab in front's other segments go to icons: 420 + 50 + 32 + 16.
+        // ③ 앞의 탭의 다른 구획이 아이콘이 되면 420 + 50 + 32 + 16이다.
         #expect(step(597) == 3 && step(518) == 3)
 
-        // ④ the menu: alone beside the tab in front, 420 + 80 + 8.
+        // ④ 앞의 탭 옆에 메뉴만 남으면 420 + 80 + 8이다.
         let menu = TabFit.layout(room: 517, front: front, others: others, gap: 8, more: 80)
         #expect(menu.step == 4 && menu.shown == 0 && menu.hidden == 2)
 
-        // ⑤ the trail folds: 400 - 88 - 120 leaves it 192 of its 300.
+        // ⑤ 꼬리가 접히면 400 - 88 - 120이 남아, 꼬리는 300 중 192를 받는다.
         let fit = TabFit.layout(room: 400, front: front, others: others, gap: 8, more: 80)
         #expect(TabFit.trail(room: 400, front: front, others: others, layout: fit, gap: 8, more: 80) == 192)
         #expect(TabFit.trail(room: 517, front: front, others: others, layout: menu, gap: 8, more: 80) == nil)
     }
 
-    /// Others whose stacked form is no wider than their icons, and those no wider than their names.
     static let others = Gen.int(in: 32...200).array(of: 3).map { w -> TabFit.Other in
         let stacked = Double(min(w[2], 60))
         let icons = max(Double(min(w[1], 120)), stacked)
@@ -210,8 +202,6 @@ struct TabFitTests {
     }
 
     @Test func theFirstTabLinesUpWithThePanelEdge() async {
-        // Wherever the row put the buttons and wherever the panel's edge is: on the edge when it leaves the gap after
-        // the buttons, else the gap after them.
         await propertyCheck(input: Gen.int(in: 0...300), Gen.int(in: 0...400)) { after, edge in
             let start = Double(after) + TabFit.lead(panelEdge: Double(edge), after: Double(after), gap: 8)
             if Double(edge - after) >= 8 {
@@ -221,10 +211,8 @@ struct TabFitTests {
             }
         }
 
-        // The sidebar open: the panel's edge at 216, the buttons ending at 189.
         #expect(TabFit.lead(panelEdge: 216, after: 189, gap: 8) == 27)
 
-        // Folded, the edge is under the buttons.
         #expect(TabFit.lead(panelEdge: 4, after: 189, gap: 8) == 8)
     }
 
@@ -234,28 +222,26 @@ struct TabFitTests {
     }
 
     @Test func theFrontTrailIsFreeWhileItFits() {
-        // Room to spare at any width: nothing the window's width changes, so a resize there redraws nothing.
         #expect(trail(516, others: [100, 100]) == nil)
         #expect(trail(2000, others: [100, 100]) == nil)
-        // Icons only, 300 + 32 + 32 + 2 gaps = 380 still fits.
+        // 아이콘만 보이면 300 + 32 + 32 + 간격 2개 = 380이라 아직 들어간다.
         #expect(trail(380, others: [100, 100]) == nil)
     }
 
     @Test func theFrontTrailIsHeldWhenTheRowRunsOut() {
-        // The menu alone at 200: 200 - (80 + 8) - 40 = 72, however short, so the strip stays inside the row.
+        // 폭 200에서 메뉴만 남으면 200 - (80 + 8) - 40 = 72이다. 아무리 짧아도 이 값을 주어야 띠가 row 안에 남는다.
         #expect(trail(200, others: [100, 100]) == 72)
-        // A front tab of 400 (a trail of 360) beside one icon in 460: 460 - 32 - 8 - 40 = 380 still holds it.
+        // 폭 460에서 아이콘 하나 옆의 폭 400인 앞의 탭(꼬리 360)은 460 - 32 - 8 - 40 = 380이라 아직 들어간다.
         let long = TabFit.Front(trail: 360, chrome: 40)
         #expect(trail(460, front: long, others: [100]) == nil)
-        // In 400 the other tab goes to the menu: 400 - (80 + 8) - 40 = 272 for a trail that needs 360.
+        // 폭 400에서는 다른 탭이 메뉴로 가고, 360이 필요한 꼬리에 400 - (80 + 8) - 40 = 272가 남는다.
         #expect(trail(400, front: long, others: [100]) == 272)
     }
 
     @Test func theNewTabGlyphSitsOneGapAfterTheLastCapsule() {
-        // A 12-point plus centered in a 32-point button has 10 on each side: the button starts 2 under the capsule.
+        // 32pt 버튼 가운데에 놓인 12pt의 +는 양쪽에 10씩 남으므로, 버튼은 capsule보다 2만큼 앞에서 시작한다.
         #expect(TabFit.newTabSpacing(gap: 8, button: 32, glyph: 12) == -2)
         #expect(TabFit.newTabSpacing(gap: 8, button: 32, glyph: 16) == 0)
-        // The glyph's own start, wherever the button puts it.
         for glyph in stride(from: 8.0, through: 32, by: 2) {
             let spacing = TabFit.newTabSpacing(gap: 8, button: 32, glyph: glyph)
             #expect(spacing + (32 - glyph) / 2 == 8)
@@ -263,8 +249,6 @@ struct TabFitTests {
     }
 
     @Test func theStripNeverOutgrowsTheRow() async {
-        // Wider than the row, the strip pushes the toolbar's search field and buttons into its overflow menu (#310).
-        // It may only when not even the front tab's capsule and the menu fit.
         await propertyCheck(input: Self.others, Gen.int(in: 0...2000), Gen.int(in: 20...600), Gen.int(in: 0...200)) {
             others, room, trail, extra in
             let front = TabFit.Front(trail: Double(trail), chrome: 40 + Double(extra), compactChrome: 40)
@@ -276,7 +260,6 @@ struct TabFitTests {
             #expect(width <= r || r < least)
         }
 
-        // By hand: the menu alone beside a front tab held to 200 - 88 - 40 = 72, which with its capsule fills the row.
         let fit = layout(200, others: [100, 100])
         #expect(TabFit.width(front: lone, others: singles([100, 100]), layout: fit, trail: 72, gap: 8, more: 80) == 200)
     }
@@ -294,10 +277,8 @@ struct TabFitTests {
             let tabs = others.prefix(fit.shown).map(fit.width(of:)).reduce(0, +)
             let menu = fit.hidden > 0
             let used = Double(selected) + tabs + (menu ? 80 : 0) + 8 * Double(fit.shown + (menu ? 1 : 0))
-            // Over only when the tab in front, with the menu, already is.
             #expect(used <= Double(room) || fit.shown == 0)
             if menu {
-                // One more tab would not have fit.
                 let next = others.prefix(fit.shown + 1).map(fit.width(of:)).reduce(0, +)
                 let more = Double(selected) + next + 80 + 8 * Double(fit.shown + 2)
                 #expect(more > Double(room) || fit.shown + 1 == others.count)
@@ -322,7 +303,6 @@ struct TabKeepTests {
     }
 
     @Test func aDroppedTabStaysDroppedUntilInFront() {
-        // "a" was dropped; the policy has room for it, but it comes back only when it is in front.
         let left = ["a": now - 5, "b": now - 10]
         #expect(TabKeep.alive(selected: "c", alive: ["b", "c"], left: left, now: now, policy: policy) == ["b", "c"])
         #expect(TabKeep.alive(selected: "a", alive: ["b", "c"], left: left, now: now, policy: policy) == ["a", "b", "c"])
@@ -333,7 +313,6 @@ struct TabKeepTests {
         #expect(TabKeep.alive(selected: "c", alive: ["a", "b", "c"], left: left, now: now, policy: policy, pressure: true) == ["c"])
     }
 
-    /// A tab playing a recording stays past the limit, the idle time and memory pressure, and takes no other tab's room.
     @Test func aPlayingTabIsNeverDropped() {
         let left = ["a": now - 30, "b": now - 10, "c": now - 20, "p": now - 9_000]
         let kept = TabKeep.alive(selected: "d", alive: ["a", "b", "c", "d", "p"], left: left, now: now, policy: policy, playing: ["p"])
@@ -342,7 +321,6 @@ struct TabKeepTests {
             TabKeep.alive(selected: "d", alive: ["a", "d", "p"], left: left, now: now, policy: policy, pressure: true, playing: ["p"]) == [
                 "d", "p",
             ])
-        // Playing doesn't bring back a tab already dropped: its screen, and so its audio, is gone.
         #expect(TabKeep.alive(selected: "d", alive: ["d"], left: left, now: now, policy: policy, playing: ["p"]) == ["d"])
     }
 
@@ -368,7 +346,6 @@ struct TabKeepTests {
             #expect(kept.subtracting(held).count <= (pressure ? 0 : limit))
             for id in kept.subtracting(held) { #expect(now.timeIntervalSince(left[id]!) < 500) }
 
-            // Nothing kept is older than something dropped that was within the time.
             let dropped = alive.subtracting(kept).filter { now.timeIntervalSince(left[$0]!) < 500 }
             if !pressure, let oldestKept = kept.subtracting(held).map({ left[$0]! }).min(),
                 let newestDropped = dropped.map({ left[$0]! }).max()

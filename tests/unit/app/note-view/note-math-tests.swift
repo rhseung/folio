@@ -6,12 +6,8 @@ import Testing
 
 @testable import Folio
 
-/// Math for the edit view's bubble and completion menu (`NoteMath`), drawn by the preview's KaTeX in a hidden page:
-/// every command the menu offers draws, the formulas that came out otherwise than in the preview, the whole ink, the
-/// appearance's color, and how long a picture takes.
 @MainActor @Suite(.serialized)
 struct NoteMathTests {
-    /// Carries the page as the edit view does, in a window nobody sees.
     static let window: NSWindow = {
         let window = NSWindow(
             contentRect: CGRect(x: -20_000, y: -20_000, width: 400, height: 300), styleMask: [.borderless],
@@ -20,8 +16,6 @@ struct NoteMathTests {
         return window
     }()
 
-    /// The picture once drawn; nil when it fails or doesn't come in time. Trimmed to its ink, as the bubble's is,
-    /// unless asked otherwise.
     func picture(
         _ source: String, _ syntax: MathSyntax = .latex, display: Bool = false, dark: Bool = false, trim: Bool = true,
         by math: NoteMath = .shared
@@ -33,15 +27,13 @@ struct NoteMathTests {
         }
         let clock = ContinuousClock(), until = clock.now + .seconds(20)
         while !done, clock.now < until {
-            // Another test's editor may have taken the page into its window.
             math.host(in: Self.window.contentView!)
             try? await Task.sleep(for: .milliseconds(20))
         }
         return math.picture(source, syntax: syntax, display: display, size: 16, dark: dark, trim: trim)
     }
 
-    /// The first picture waits for a web process and the page; later ones only for KaTeX and the snapshot. A new
-    /// renderer, as the app's is when its first editor opens, so the first is measured from cold. Printed for the PR.
+    // 첫 그림은 웹 프로세스와 페이지를 기다리고, 그 뒤의 그림은 KaTeX와 스냅숏만 기다린다. 첫 그림을 캐시가 없는 상태에서 재도록, 앱이 첫 편집기를 열 때처럼 새 renderer를 쓴다.
     @Test func picturesComeQuickly() async throws {
         let math = NoteMath(), clock = ContinuousClock()
         var start = clock.now
@@ -57,7 +49,6 @@ struct NoteMathTests {
         #expect(warm.allSatisfy { $0 < .seconds(1) }, "\(warm)")
     }
 
-    /// Whatever the menu offers draws in the bubble too, as it does in the preview: with SwiftMath a fifth didn't.
     @Test func everyOfferedCommandDraws() async throws {
         for command in TeXCommands.all where !["left", "right"].contains(command.name) {
             #expect(await picture(command.sample) != nil, "\(command.sample)")
@@ -71,7 +62,6 @@ struct NoteMathTests {
         #expect(await picture(#"\notacommand{x}"#) == nil)
     }
 
-    /// Formulas the bubble drew otherwise than the preview, or not at all (#389).
     @Test func drawsWhatThePreviewDraws() async throws {
         let cases: [(String, MathSyntax, Bool)] = [
             ("ubrace(abs(R cap {a_1,...,a_m}))_(m - absI)", .asciimath, false),
@@ -83,18 +73,13 @@ struct NoteMathTests {
         for (source, syntax, display) in cases {
             #expect(await picture(source, syntax, display: display) != nil, "\(source)")
         }
-        // The brace takes room under the formula: the picture is taller than the formula without it.
         let braced = try #require(await picture(#"\underbrace{a + b}_{n}"#))
         let plain = try #require(await picture(#"{a + b}_{n}"#))
         #expect(braced.size.height > plain.size.height + 4)
-        // The brace is a 400em picture its box clips; measured whole, the picture ran the page's width.
+        // 중괄호는 상자가 잘라 내는 400em 크기의 그림이라서, 통째로 재면 그림이 페이지 폭만큼 넓어졌다.
         #expect(braced.size.width < plain.size.width + 16, "\(braced.size) vs \(plain.size)")
     }
 
-    /// The shapes a formula takes, in TeX and in AsciiMath: from one letter to a line wider than the column, with
-    /// what reaches above and below a line (limits, fractions, roots, braces, big delimiters, rows). The last three are
-    /// the ones the bubble drew with room the formula didn't need: a line box over the ink, and a display formula as
-    /// wide as the column with the formula at its left.
     static let shapes: [(name: String, tex: String, ascii: String)] = [
         ("한 글자", "x", "x"),
         ("숫자", "1", "1"),
@@ -125,15 +110,13 @@ struct NoteMathTests {
         ("목록", "s_1,s_2,s_3,s_4,s_5", "s_1,s_2,s_3,s_4,s_5"),
     ]
 
-    /// Every shape in both syntaxes, inline and as a block.
     static var hugged: [(String, MathSyntax, Bool)] {
         shapes.flatMap { shape -> [(String, MathSyntax, Bool)] in
             [(shape.tex, .latex, false), (shape.tex, .latex, true), (shape.ascii, .asciimath, false), (shape.ascii, .asciimath, true)]
         }
     }
 
-    /// The picture is the formula's ink and nothing around it, so the bubble's even padding is all the room there is:
-    /// no side has more than the pixel the picture's whole points round to.
+    // 그림의 점 크기를 반올림하며 생기는 1픽셀보다 넓은 여백이 있으면 안 된다.
     @Test func picturesAreTheirInk() async throws {
         for (source, syntax, display) in Self.hugged {
             for dark in [false, true] {
@@ -147,14 +130,11 @@ struct NoteMathTests {
                     margins.allSatisfy { CGFloat($0) < scale }, "\(source) dark \(dark): margins \(margins) at \(scale)x, \(picture.size)")
             }
         }
-        // Nothing to draw, or what KaTeX can't read: no picture, and no bubble.
         #expect(NoteMath.shared.picture("  ", syntax: .latex, display: false, size: 16, dark: false) == nil)
         #expect(await picture(#"\frac{a}"#) == nil)
         #expect(await picture(#"\frac{a}"#, display: true) == nil)
     }
 
-    /// Cut to its ink, the picture still holds all of it: drawn with three times the room around KaTeX's boxes, a
-    /// limit, a brace or a slanted integral comes out no bigger.
     @Test func picturesKeepTheirInk() async throws {
         let roomy = NoteMath(room: 3)
         let tall = [#"G - T"#, #"\bar S"#, #"\int_0^1 f"#, #"\hat{A}^{T}"#, #"\sqrt{\frac{a}{b}}"#, #"\underbrace{a + b}_{n}"#]
@@ -171,8 +151,7 @@ struct NoteMathTests {
         }
     }
 
-    /// Untrimmed, as the palette and the completion menu ask, a picture keeps KaTeX's line box, so a symbol centered
-    /// in its cell still sits where it does on the line: low dots under centered ones, a period under a centered dot.
+    // 팔레트와 자동 완성 메뉴는 잘라 내지 않은 그림을 쓴다. 이 그림은 KaTeX의 줄 상자를 유지하므로, 칸 가운데에 놓인 기호가 줄에서와 같은 높이에 선다.
     @Test func untrimmedPicturesKeepTheirLine() async throws {
         for (low, centered) in [(#"\ldots"#, #"\cdots"#), (".", #"\cdot"#)] {
             func middle(_ tex: String) async throws -> CGFloat {
@@ -183,13 +162,11 @@ struct NoteMathTests {
             }
             let l = try await middle(low)
             let c = try await middle(centered)
-            // Trimmed, both are at the middle; untrimmed, a tenth of the height apart, give or take a runner's fonts.
+            // 잘라 낸 그림에서는 두 기호가 모두 가운데에 있고, 잘라 내지 않은 그림에서는 러너의 글꼴에 따라 조금 다르지만 높이의 10분의 1쯤 떨어져 있다.
             #expect(l > c + 0.05, "\(low) at \(l), \(centered) at \(c) of the picture's height")
         }
     }
 
-    /// The completion menu and the palette show a formula as big as on the note's line and in its own shape: framed to
-    /// a row's height but its own width, every snippet's preview came out squashed.
     @Test func previewsKeepTheirSizeAndShape() async throws {
         for tex in [#"\frac{a}{b}"#, "x^{2}", #"\sqrt{a}"#, #"\sum_{a}^{b}"#, #"\lim_{a \to b}"#] {
             let picture = try #require(await picture(tex, trim: false), "\(tex)")
@@ -204,10 +181,8 @@ struct NoteMathTests {
         }
     }
 
-    /// A big delimiter is drawn from a font of its own (KaTeX_Size1 to 4). The first formula that needed one came out
-    /// with it blank now and then, and the picture was kept: `document.fonts.ready` had settled while the font still
-    /// loaded. In a new renderer, first thing or after formulas that need none, the picture has the ink the same
-    /// formula has drawn again (untrimmed, so it isn't the kept picture).
+    // 큰 괄호는 별도 글꼴(KaTeX_Size1부터 4까지)로 그린다. 이 글꼴이 필요한 첫 수식이 가끔 괄호 없이 그려졌고, 그 그림이 그대로 남았다. 글꼴을 아직 불러오는 중에
+    // `document.fonts.ready`가 끝났기 때문이다.
     @Test func bigDelimitersDrawTheFirstTime() async throws {
         let formulas: [(String, MathSyntax)] = [
             (
@@ -232,7 +207,6 @@ struct NoteMathTests {
         }
     }
 
-    /// Drawn in the note's text color for the appearance asked for, not the page's.
     @Test func inkFollowsTheAppearance() async throws {
         for dark in [false, true] {
             let picture = try #require(await picture(#"\left( \frac{a}{b} \right) + \sqrt{x}"#, dark: dark))
@@ -249,7 +223,6 @@ struct NoteMathTests {
     private struct Pixels {
         var inked = 0, darkInk = 0, lightInk = 0
         var width = 0, height = 0
-        /// Every pixel with any ink, its edge included, in pixels from the top left.
         var ink: (minX: Int, minY: Int, maxX: Int, maxY: Int)?
 
         init(_ image: NSImage) throws {
@@ -270,7 +243,7 @@ struct NoteMathTests {
                     }
                     guard bytes[i + 3] > 128 else { continue }
                     inked += 1
-                    // Premultiplied: a light pixel's brightest channel is close to its alpha.
+                    // premultiplied 형식이라서 밝은 픽셀은 가장 밝은 채널의 값이 alpha에 가깝다.
                     let bright = Double(max(bytes[i], bytes[i + 1], bytes[i + 2])) / Double(bytes[i + 3])
                     if bright < 0.5 { darkInk += 1 } else { lightInk += 1 }
                 }

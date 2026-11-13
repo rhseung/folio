@@ -17,7 +17,6 @@ struct MaterialFormatTests {
         #expect(MaterialFormat(path: "Makefile") == .other)
     }
 
-    /// The renderer table of #179: the app draws what it can, Quick Look the rest.
     @Test func picksARendererPerFormat() {
         #expect(MaterialFormat(path: "a.pdf").renderer == .pdf)
         #expect(MaterialFormat(path: "a.md").renderer == .markdown)
@@ -68,7 +67,7 @@ struct TexBuildTimeTests {
         try #require(calendar.date(from: DateComponents(year: 2026, month: 11, day: day, hour: hour, minute: minute)))
     }
 
-    // 2026-11-05 00:00 in Seoul (UTC+9), worked out by hand as 2026-11-04 15:00 UTC.
+    // 서울(UTC+9)의 2026-11-05 00:00이며, 손으로 계산하면 2026-11-04 15:00 UTC이다.
     static let nov5Seoul = 1_793_804_400
 
     @Test func aBuildIsStampedWithMidnightOfItsDay() throws {
@@ -79,7 +78,7 @@ struct TexBuildTimeTests {
         #expect(TexBuildTime.sourceDateEpoch(at: try Self.at(day: 6, 0, 0, seoul), calendar: seoul) == Self.nov5Seoul + 86_400)
     }
 
-    /// `\today` prints a calendar date, so 01:00 is already the new day though the study day (04:00 boundary) isn't.
+    // `\today`는 달력 날짜를 찍으므로, 공부일(04:00 경계)은 바뀌지 않았어도 01:00에는 이미 새 날이다.
     @Test func theDayTurnsAtMidnightNotAtTheStudyDayBoundary() throws {
         let seoul = try Self.calendar("Asia/Seoul")
         #expect(TexBuildTime.sourceDateEpoch(at: try Self.at(day: 6, 1, 0, seoul), calendar: seoul) == Self.nov5Seoul + 86_400)
@@ -88,14 +87,14 @@ struct TexBuildTimeTests {
     @Test func theDayIsTheCalendarTimeZones() throws {
         let seoul = try Self.calendar("Asia/Seoul")
         let utc = try Self.calendar("UTC")
-        let moment = try Self.at(day: 5, 8, 0, seoul)  // 2026-11-04 23:00 UTC
+        let moment = try Self.at(day: 5, 8, 0, seoul)  // 2026-11-04 23:00 UTC이다.
         #expect(TexBuildTime.sourceDateEpoch(at: moment, calendar: seoul) == Self.nov5Seoul)
         #expect(TexBuildTime.sourceDateEpoch(at: moment, calendar: utc) == Self.nov5Seoul + 9 * 3600 - 86_400)
     }
 }
 
 struct TexLogTests {
-    // Tectonic's console output for a file with `\foo` on line 5, as it printed it.
+    // 5번째 줄에 `\foo`가 있는 파일에 대해 Tectonic이 콘솔에 출력한 그대로다.
     static let undefined = """
         note: "version 2" Tectonic command-line interface activated
         note: Running TeX ...
@@ -132,8 +131,8 @@ struct TexLogTests {
         #expect(TexLog.issues(output) == [TexIssue(.error, message: "failed to open input file \"missing.tex\"")])
     }
 
-    /// Tectonic with `-Z continue-on-errors`, as it printed it for a file with three mistakes and a missing package:
-    /// every error, then all of them again on the `.aux` rerun.
+    // `-Z continue-on-errors`로 실행한 Tectonic이 실수 세 개와 없는 패키지 하나가 있는 파일에 대해 출력한 그대로다. 모든 오류를 출력한 뒤 `.aux` 재실행에서 모두 다시
+    // 출력한다.
     @Test func collectsEveryErrorOnce() {
         let output = """
             note: Running TeX ...
@@ -160,7 +159,6 @@ struct TexLogTests {
             ])
     }
 
-    /// Errors ignored without an `error:` line of their own still fail the build.
     @Test func ignoredErrorsAloneAreAnError() {
         let output = """
             note: Running TeX ...

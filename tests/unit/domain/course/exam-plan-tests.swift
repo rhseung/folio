@@ -39,7 +39,6 @@ struct ExamPlanTests {
         let a = UUID(), b = UUID(), c = UUID()
         let t = { (s: Double) in Date(timeIntervalSince1970: s) }
 
-        // Logs from two devices arrive unsorted.
         let events: [(at: Date, event: PlanCheckEvent)] = [
             (t(30), PlanCheckEvent(itemId: a, done: false)),
             (t(10), PlanCheckEvent(itemId: a, done: true)),

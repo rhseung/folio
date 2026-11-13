@@ -33,7 +33,6 @@ struct SourceFileEditorTests {
         editor.update(view, coordinator)
         #expect(view.string == "가나")
 
-        // Leaving the window ends the syllable without a keystroke.
         view.unmarkText()
         #expect(box.text == "가나")
     }

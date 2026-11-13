@@ -16,7 +16,6 @@ struct SessionsModelTests {
 
     @Test func subtitleCountsSessionsAndMissingReviewNotes() throws {
         let workspace = try fixtureWorkspace()
-        // No timetable, so nothing is planned: the class left is the saved one ahead.
         workspace.run(CourseSet(course: graphTheory, [.schedule([])]))
         let model = SessionsModel(workspace: workspace, courseId: graphTheory)
         #expect(model.subtitle(try #require(workspace.course(graphTheory)).file) == "회차가 아직 없습니다")
@@ -28,8 +27,7 @@ struct SessionsModelTests {
     @Test func aClassWithNoEndOffersJoinUntilTheEndTheFormShows() throws {
         let workspace = try fixtureWorkspace()
         workspace.run(CourseSet(course: graphTheory, [.schedule([])]))
-        // 10:30 of the study day, whatever the clock says: late at night the form's end stops at the day's end, which
-        // the button doesn't, and before the day boundary the calendar's today is not the study day.
+        // 시계와 상관없이 공부일의 10:30을 쓴다. 밤늦게는 폼의 끝이 그날의 끝에서 멈추지만 버튼은 그렇지 않고, 하루 경계 전에는 달력의 오늘이 공부일과 다르기 때문이다.
         let day = try #require(workspace.today.date(in: Calendar.current))
         let start = try #require(Calendar.current.date(byAdding: .minute, value: 10 * 60 + 30, to: day))
         let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: start, link: "https://zoom.us/j/1"))?.made)
@@ -42,14 +40,12 @@ struct SessionsModelTests {
         #expect(model.offersJoin(s, in: try file(), now: formEnd().addingTimeInterval(-60)))
         #expect(!model.offersJoin(s, in: try file(), now: formEnd()))
 
-        // Off the timetable of a course whose classes run two hours: two hours, in the form and for the button.
         workspace.run(CourseSet(course: graphTheory, [.schedule([ClassTime(weekday: 1, startMinute: 13 * 60, endMinute: 15 * 60)])]))
         #expect(formEnd() == start.addingTimeInterval(2 * 3600))
         #expect(model.offersJoin(s, in: try file(), now: formEnd().addingTimeInterval(-60)))
         #expect(!model.offersJoin(s, in: try file(), now: formEnd()))
     }
 
-    /// An exam in a week with no class still gets that week, between the classes' own.
     @Test func weeksHoldTheirClassesAndAnExamOpensItsOwnWeek() throws {
         let workspace = try fixtureWorkspace()
         workspace.run(CourseSet(course: graphTheory, [.schedule([])]))
@@ -65,7 +61,6 @@ struct SessionsModelTests {
         if case .exam(let exam, _) = weeks[1].rows[0].item { #expect(exam.title == "중간") } else { Issue.record("no exam row") }
     }
 
-    /// A 휴강 weeks ahead: the class shows on the timeline before it is a session, and marking it saves one.
     @Test func plannedClassesRunToTheTermsEndAndCancellingOneSavesIt() throws {
         let workspace = try fixtureWorkspace()
         workspace.run(
@@ -74,7 +69,6 @@ struct SessionsModelTests {
         let course = try #require(workspace.course(graphTheory))
         let semester = try #require(workspace.semester(of: course.file.course))
         let end = try #require(semester.end?.date(in: workspace.calendar))
-        // Mid-term, on the semester's own dates rather than the clock, so the plan has weeks left to show.
         let now = try #require(semester.start?.date(in: workspace.calendar)).addingTimeInterval(7 * 7 * 86_400)
         func planned() throws -> [Workspace.SuggestedSession] {
             model.weeks(try #require(workspace.course(graphTheory)).file, now: now).flatMap(\.rows).compactMap(\.planned)
@@ -92,7 +86,6 @@ struct SessionsModelTests {
         #expect(model.subtitle(try #require(workspace.course(graphTheory)).file, now: now).contains("남은 수업 \(plan.count - 1)개"))
     }
 
-    /// A class without units is just "수업": the tile already gives its day.
     @Test func titleIsTheUnitsElseClass() throws {
         let workspace = try fixtureWorkspace()
         let model = SessionsModel(workspace: workspace, courseId: graphTheory)
@@ -118,8 +111,6 @@ struct SessionsModelTests {
         #expect(workspace.course(graphTheory)?.file.sessions.count == 1)
     }
 
-    /// A refused removal says why rather than asking for something that would then fail. The menu's 삭제… asks the
-    /// window, so every place that shows the class removes it the same way.
     @Test func removingALinkedSessionSaysWhyInsteadOfAsking() throws {
         let workspace = try fixtureWorkspace()
         let free = try session(workspace, daysFromNow: 7)
@@ -147,7 +138,7 @@ struct SessionsModelTests {
         #expect(try #require(workspace.course(graphTheory)).file.sessions.count == count - 1)
     }
 
-    /// LaunchServices answers the Zoom app launch on a background queue; a refused launch still opens the web link.
+    // LaunchServices는 Zoom 앱 실행 결과를 background queue에서 알려 준다. 실행이 거절되어도 웹 링크는 열려야 한다.
     @Test func joinFallsBackToTheWebLinkFromABackgroundQueue() async {
         let web = URL(string: "https://zoom.us/j/1")!
         let opened = await withCheckedContinuation { (done: CheckedContinuation<URL, Never>) in

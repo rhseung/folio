@@ -40,7 +40,7 @@ struct ReviewLogTests {
         let before = try state(store, now: at(2, 12))
         #expect(before.step == 0 && before.due == LocalDate("2026-10-02"))
 
-        // Finished at 02:00 on the 3rd: before the 04:00 boundary, so it counts for the 2nd.
+        // 3일 02:00에 끝났으므로, 04:00 경계 전이라서 2일로 센다.
         let event = ReviewEvent(unitId: unit.id, result: .good, seconds: 600)
         try store.log.append(event, device: device, at: at(3, 2))
         try store.log.append(

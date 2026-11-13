@@ -6,7 +6,6 @@ struct GradingTests {
     let device = UUID()
     let now = Date(timeIntervalSince1970: 0)
 
-    /// Built once per test so grade IDs stay stable within it.
     let catalog: Catalog = {
         func grade(_ symbol: String, _ points: Double?, credits: Bool = true) -> LetterGrade {
             LetterGrade(
@@ -37,7 +36,7 @@ struct GradingTests {
         #expect(s.totalCredits == 18)
         #expect(s.effectiveCredits == 15)
 
-        // (12 + 6 + 18 + 9 + 12) / 15
+        // (12 + 6 + 18 + 9 + 12) / 15이다.
         #expect(String(format: "%.3f", s.gpa!) == "3.800")
     }
 
@@ -71,7 +70,7 @@ struct GradingTests {
     }
 
     @Test func requiredAverageForTargetGPA() {
-        let current = GPACalculator.Summary(totalCredits: 16, effectiveCredits: 16, gradePoints: 64)  // 4.0
+        let current = GPACalculator.Summary(totalCredits: 16, effectiveCredits: 16, gradePoints: 64)  // 4.0이다.
         #expect(GPACalculator.requiredAverage(target: 4.2, current: current, remainingCredits: 16) == 4.4)
         #expect(GPACalculator.requiredAverage(target: 4.2, current: current, remainingCredits: 0) == nil)
     }
@@ -89,18 +88,15 @@ struct GradingTests {
             device: device, at: now, componentId: component.id, title: "", score: score, max: max, mean: mean, stdDev: sd, excused: excused)
     }
 
-    /// 그래프 이론: "Quiz는 최저 점수 1회를 제합니다."
     @Test func graphTheoryDropsLowestQuiz() {
         let quiz = component("Quiz", 10, .dropLowest(1), expected: 5)
         let entries = [entry(quiz, 35, 50), entry(quiz, 45, 50), entry(quiz, 10, 50)]
         #expect(GradeCalculator.ratio(of: entries, by: .dropLowest(1)) == 0.8)
-        // With one score nothing is dropped.
         #expect(GradeCalculator.ratio(of: [entries[2]], by: .dropLowest(1)) == 0.2)
-        // Excused quizzes are not scores at all.
         #expect(GradeCalculator.ratio(of: [entries[0], entry(quiz, 0, 50, excused: true)], by: .dropLowest(1)) == 0.7)
     }
 
-    /// Of 9 quizzes with the lowest 2 dropped, scores count as they come until the 7th; the 8th drops one, the 9th two.
+    // 퀴즈 9회 중 최저 2회를 빼면, 7회까지는 점수를 그대로 세고 8회째에 하나, 9회째에 둘을 뺀다.
     @Test func dropLowestWaitsForTheQuizzesItCanDrop() {
         let quiz = component("Quiz", 10, .dropLowest(2), expected: 9)
         let seven = [10.0, 20, 30, 40, 50, 60, 70].map { entry(quiz, $0, 100) }
@@ -110,7 +106,7 @@ struct GradingTests {
         let nine = eight + [entry(quiz, 90, 100)]
         #expect(abs(GradeCalculator.ratio(of: nine, by: .dropLowest(2), expected: 9)! - 0.6) < 1e-9)
 
-        // An excused quiz lowers the count: of 8 left, the 7th score already drops one.
+        // 면제된 퀴즈가 횟수를 줄이므로, 남은 8회 중에서는 7번째 점수부터 하나를 뺀다.
         let excused = GradeCalculator.score(components: [quiz], entries: seven + [entry(quiz, 0, 100, excused: true)])
         #expect(abs(excused.components[0].ratio! - 0.45) < 1e-9)
     }
@@ -122,10 +118,10 @@ struct GradingTests {
         let entries = [entry(quiz, 8, 10), entry(quiz, 10, 10), entry(midterm, 60, 100)]
         let score = GradeCalculator.score(components: [quiz, midterm, final], entries: entries)
 
-        // Quiz: 0.9 over half the quizzes → 9 secured; midterm 18.
+        // 퀴즈의 절반 넘게 0.9이므로 9점이 확보되고, 중간고사는 18점이다.
         #expect(abs(score.secured - 27) < 1e-9)
         #expect(abs(score.remainingWeight - 60) < 1e-9)
-        // Projected: quiz 0.9×20 + midterm 0.6×30 + final at the overall rate 27/40 × 50.
+        // 예상 점수는 퀴즈 0.9×20 + 중간고사 0.6×30 + 기말고사 전체 비율 27/40 × 50이다.
         #expect(abs(score.projected! - (18 + 18 + 27.0 / 40 * 50)) < 1e-9)
         #expect(abs(GradeCalculator.requiredAverage(for: 87, given: score)! - 100) < 1e-9)
     }
@@ -139,12 +135,11 @@ struct GradingTests {
     }
 
     @Test func relativeStandingComparesTheZWithTheAShare() {
-        // Half the class gets an A: the cut sits at the mean.
         let half = GradeCalculator.standing(z: 0.42, topGradeRatio: 0.5)
         #expect(abs(half.cutZ) < 1e-6 && half.inTopGrade)
         #expect(abs(half.above - 0.3372) < 1e-3)
         #expect(!GradeCalculator.standing(z: -0.1, topGradeRatio: 0.5).inTopGrade)
-        // A 30% share needs about +0.52σ.
+        // 30%만 A를 받으려면 약 +0.52σ가 필요하다.
         let strict = GradeCalculator.standing(z: 0.42, topGradeRatio: 0.3)
         #expect(abs(strict.cutZ - 0.5244) < 1e-3 && !strict.inTopGrade)
     }
@@ -156,11 +151,10 @@ struct GradingTests {
         #expect(score.z == (0.25 * 1 + 0.75 * -1))
     }
 
-    /// 선형대수학: "결석 6회면 최대 B0, 9회 이상이면 F" (7회 C+, 8회 C0).
-    /// A score with a mean but no standard deviation borrows the course's published sd/max ratio, and says so.
+    // 선형대수학은 결석 6회면 최대 B0, 9회 이상이면 F이다(7회 C+, 8회 C0). 평균만 있고 표준편차가 없는 점수는 과목이 공개한 sd/max 비율을 빌리고, 빌렸다고 알린다.
     @Test func missingStandardDeviationBorrowsTheCourseSpread() {
         let a = component("Midterm", 50, .single), b = component("Final", 50, .single)
-        // Midterm: sd 10 of 100, so the spread is 0.1 of the max. Final: 40 out of 50, mean 30, no sd -> 10 / (0.1 * 50) = 2.
+        // 중간고사는 100점 중 sd 10이므로 spread가 만점의 0.1이다. 기말고사는 50점 중 40점, 평균 30점이고 sd가 없으므로 10 / (0.1 * 50) = 2이다.
         let score = GradeCalculator.score(components: [a, b], entries: [entry(a, 80, 100, mean: 70, sd: 10), entry(b, 40, 50, mean: 30)])
         #expect(score.components[1].z == 2)
         #expect(score.zEstimated)
@@ -208,7 +202,6 @@ struct GradingTests {
         }
         #expect(GradeCalculator.absences(in: attendance, policy: policy) == 2)
 
-        // 지각 3회 = 결석 1회: a remainder doesn't count until the next full set.
         let lates = [AttendanceState.absent, .late, .late, .late, .late, .late, .excused].map {
             Attendance(device: device, at: now, sessionId: session, state: $0)
         }

@@ -3,9 +3,6 @@ import Testing
 
 @testable import Folio
 
-/// Points across the whole panel, as it opens and scrolled, each clicked: every one must reach the note, or what the
-/// note shows there (a widget, a block that scrolls sideways). In the edit view a click puts the caret where it lands.
-/// The lower half of a long note once took no clicks at all (#263).
 @MainActor @Suite(.serialized, .timeLimit(.minutes(5)))
 struct NoteClickGridTests {
     static let step: CGFloat = 40
@@ -16,7 +13,6 @@ struct NoteClickGridTests {
         }
     }
 
-    /// Opened, scrolled to the end, then halfway back: what each place shows is checked by `check`.
     static func places(_ bench: NoteBench, _ check: (String) async -> Void) async {
         await bench.settle()
         await check("opened")
@@ -43,21 +39,19 @@ struct NoteClickGridTests {
         }
     }
 
-    /// No line is further than this from a point beside it: a heading's gap above, a paragraph's below.
+    // 제목 위의 간격과 문단 아래의 간격을 합쳐도, 어느 줄도 곁의 점에서 이보다 멀리 있지 않다.
     static let reach: CGFloat = 56
 
-    /// Each point is a full mouse-down in the text view, so the caret grid is coarser than the hit grid.
+    // 점마다 텍스트 뷰에 mouse-down을 온전히 보내므로, 캐럿 격자를 클릭 격자보다 성기게 둔다.
     static let caretStep: CGFloat = 80
 
     @Test(arguments: NoteShot.widths)
     func aClickPutsTheCaretWhereItLands(_ width: Int) async {
         let bench = NoteBench(.edit, NoteBench.longNote, width: CGFloat(width))
         await Self.places(bench) { place in
-            // The text view exists only once SwiftUI has placed it.
             bench.focus()
             let length = (bench.text as NSString).length
-            // The last character, not the place after it: the input method has no rect for the very end. Nor for text off
-            // the panel, where the note's end is below every point.
+            // 입력기는 글의 맨 끝 자리에 대한 rect를 주지 않으므로 마지막 글자를 쓴다. 패널 밖에 있는 글도 마찬가지이며, 이때 노트의 끝은 모든 점보다 아래에 있다.
             let last = bench.rect(of: (bench.text as NSString).rangeOfCharacter(from: .newlines.inverted, options: .backwards))
             let end = last.maxY > 0 && last.minY < bench.size.height ? last.maxY : .infinity
             var wrong: [String] = []
@@ -65,8 +59,8 @@ struct NoteClickGridTests {
                 var above = 0
                 for p in column {
                     guard bench.hit(at: p) == .note else { continue }
-                    // The caret starts at the far end of the note, so a click that does nothing leaves it out of reach.
-                    // Not a selection: a click inside one waits to see whether a drag starts, which timed the test out.
+                    // 캐럿을 노트의 먼 끝에서 시작하므로, 아무 일도 하지 않는 클릭은 캐럿을 닿지 않는 곳에 남긴다. 선택 영역은 두지 않는다. 선택 영역 안을 클릭하면 드래그가 시작되는지
+                    // 기다리느라 테스트가 시간 초과로 끝났다.
                     bench.placeCaret(at: above < length / 2 ? length : 0)
                     let scrolled = bench.scrollY
                     bench.click(at: p)
@@ -87,7 +81,6 @@ struct NoteClickGridTests {
                         let off = p.y < caret.rect.minY ? caret.rect.minY - p.y : max(0, p.y - caret.rect.maxY)
                         if off > Self.reach { wrong.append("\(at) put the caret \(Int(off)) points away, at \(Int(caret.rect.minY))") }
                     }
-                    // Lower on the panel is never earlier in the note.
                     if caret.location < above { wrong.append("\(at) put the caret at \(caret.location), before \(above) above it") }
                     above = caret.location
                 }

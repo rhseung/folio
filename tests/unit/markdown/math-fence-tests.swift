@@ -3,8 +3,6 @@ import Testing
 
 @testable import FolioMarkdown
 
-/// A fenced block can choose its formula's syntax (#16): `math`, `tex` and `latex` are TeX, `asciimath` and `am`
-/// AsciiMath, whatever the note's; `$$…$$` and `$…$` stay in the note's.
 struct MathFenceTests {
     func html(_ s: String) -> String { HTMLRenderer.render(markdown: s) }
 
@@ -25,7 +23,6 @@ struct MathFenceTests {
         #expect(html("```am\n\"text\" < b\n```") == "<div class=\"math display\" data-math=\"asciimath\">&quot;text&quot; &lt; b</div>\n")
     }
 
-    /// A `$$` block carries no syntax of its own: the page reads the note's.
     @Test func dollarsKeepTheNotesSyntax() {
         #expect(html("$$\nx^2\n$$") == "<div class=\"math display\">x^2</div>\n")
         #expect(html("$x$") == "<p><span class=\"math\">x</span></p>\n")
@@ -35,7 +32,6 @@ struct MathFenceTests {
         #expect(html("> [!note] 정리\n> ```am\n> a/b\n> ```").contains("<div class=\"math display\" data-math=\"asciimath\">a/b</div>"))
     }
 
-    /// Claude's `latex` fences are source to copy; `math` was a formula there before fences chose a syntax.
     @Test func anAnswerKeepsTeXFencesAsCode() {
         #expect(
             HTMLRenderer.render(answer: "```latex\n\\section{A}\n```")
@@ -61,7 +57,6 @@ struct MathFencePlaceTests {
         #expect(place("```am\nx|\n```") == .math(display: true, content: NSRange(location: 6, length: 1), fence: .asciimath))
         #expect(place("```tex\na\nb|\n```") == .math(display: true, content: NSRange(location: 7, length: 3), fence: .latex))
         #expect(place("```math\n|a\n```").fence == .latex)
-        // Left open, it runs to the end, as the markdown parser reads it.
         #expect(place("```am\nx|\ny") == .math(display: true, content: NSRange(location: 6, length: 3), fence: .asciimath))
     }
 
@@ -75,7 +70,6 @@ struct MathFencePlaceTests {
 }
 
 struct MathFenceCompletionTests {
-    /// A TeX note, whose formulas take `//` as `\frac`; AsciiMath's `//` is `frac()()`.
     let catalog = CompletionCatalog(
         languages: ["python", "latex"],
         snippets: [Snippet(trigger: "mk", body: "$$1$", inMath: false), Snippet(trigger: "//", body: "\\frac{$1}{$2}", inMath: true)],
@@ -100,7 +94,6 @@ struct MathFenceCompletionTests {
 
     @Test func theLanguageMenuOffersMathFencesFirst() {
         let names = Completion.items(for: query("```|", catalog)!, catalog: catalog).map(\.title)
-        // `latex` is a math fence now, so it isn't offered twice.
         #expect(names == ["math", "tex", "latex", "asciimath", "am", "python", "cb-widget"])
         let m = Marked("```ma|")
         let q = Completion.query(in: m.text, caret: m.selection.location, catalog: catalog)!
@@ -114,7 +107,6 @@ struct MathFenceCompletionTests {
         #expect(Completion.items(for: command, catalog: ascii).contains { $0.title == "\\frac" })
         #expect(query("```math\n\\begin{al|}\n```", ascii)?.kind == .texEnvironment)
         #expect(tab("```math\n//|\n```", ascii) == "```math\n\\frac{|}{}\n```")
-        // Outside the fence the note's syntax holds.
         #expect(query("$\\begin{al|}$", ascii)?.kind != .texEnvironment)
         #expect(tab("$//|$", ascii) == "$frac(|)()$")
     }
@@ -124,7 +116,6 @@ struct MathFenceCompletionTests {
         #expect(word.kind == .asciiMath)
         #expect(Completion.items(for: word, catalog: catalog).contains { $0.title == "sum" })
         #expect(tab("```am\n//|\n```", catalog) == "```am\nfrac(|)()\n```")
-        // Tab moves on to AsciiMath's next bracket, not to a brace.
         #expect(tab("```am\nfrac(|a)(b)\n```", catalog) == "```am\nfrac(a)(|b)\n```")
         #expect(tab("$//|$", catalog) == "$\\frac{|}{}$")
     }

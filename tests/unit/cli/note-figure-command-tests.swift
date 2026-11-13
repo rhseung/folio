@@ -54,7 +54,6 @@ struct NoteFigureCommandTests {
         }
     }
 
-    /// `show` hands out the hash `write --expect` takes, and `list` the notes that use each file.
     @Test func showAndListRead() throws {
         let gist = try Harness.fixtureCopy()
         #expect(h.cli(try addFigure(), gist: gist).code == 0)
@@ -78,7 +77,6 @@ struct NoteFigureCommandTests {
         #expect(Skill.text.contains("### 그림(SVG)"))
     }
 
-    /// The panel only proposes a picture; what it would write comes back as the action, names resolved.
     @Test func thePanelProposesFiguresAndWidgets() throws {
         let gist = try Harness.fixtureCopy()
         let before = try Harness.files(gist)
@@ -94,7 +92,7 @@ struct NoteFigureCommandTests {
         #expect(try Harness.files(gist) == before)
     }
 
-    /// The pictures leave the text: base64 read as text would cost tens of thousands of tokens.
+    // base64를 글로 읽으면 수만 토큰이 들기 때문에 그림을 글에서 떼어 낸다.
     @Test func renderedPicturesBecomeImageContent() throws {
         var text = #"{"console":["error: x"],"images":[{"height":40,"png":"iVBO","theme":"light","width":480}],"problems":[]}"#
         let images = MCPServer.images(&text)
@@ -106,10 +104,10 @@ struct NoteFigureCommandTests {
         #expect(plain == #"{"path":"a.png"}"#)
     }
 
-    /// The `folio` built beside this test bundle. WebKit answers on the main queue, which a Swift Testing test running
-    /// on the main actor is already inside of, so a render can only be checked from a process of its own.
+    // WebKit은 main queue에서 응답하는데, main actor에서 도는 Swift Testing 테스트는 이미 그 queue 안에 있다. 그래서 렌더는 별도 프로세스에서만 검사할 수 있으므로, 이
+    // 테스트 번들 옆에 빌드된 `folio`를 쓴다.
     static let folio: URL? = {
-        // `swift test` hands the bundle's path to its runner; Xcode loads it as a bundle.
+        // `swift test`는 번들 경로를 runner에 넘기고, Xcode는 번들로 불러온다.
         let bundles = CommandLine.arguments.map { URL(filePath: $0) } + Bundle.allBundles.map(\.bundleURL)
         return bundles.lazy.compactMap { url -> URL? in
             guard let i = url.pathComponents.lastIndex(where: { $0.hasSuffix(".xctest") }) else { return nil }

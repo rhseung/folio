@@ -3,7 +3,6 @@ import Testing
 
 @testable import FolioMarkdown
 
-/// Notes found by title, as the app finds them in a course.
 private func embeds(_ notes: [String: String], own: String? = "Host", math: [String: String] = [:]) -> NoteEmbeds {
     NoteEmbeds(key: own, labels: .init(missing: "MISSING", loop: "LOOP", tooDeep: "DEEP")) { link in
         notes[link.target].map { NoteEmbeds.Note(key: link.target, text: $0, math: math[link.target]) }
@@ -45,7 +44,7 @@ struct NoteSectionTests {
     @Test func aHeadingRunsToTheNextOneAsHigh() {
         #expect(note.section(heading: "정의", block: nil) == "## 정의\n\n짝짓기는 간선 집합이다. ^def\n\n### 예시\n\n- 하나\n    - 안쪽 ^inner\n- 둘 ^two")
         #expect(note.section(heading: "정리", block: nil) == "## 정리\n\n> [!theorem] 베르주\n> 증강 경로가 없다. ^berge\n\n끝")
-        // Obsidian matches the heading's text ignoring case.
+        // Obsidian은 대소문자를 무시하고 제목의 글을 맞춘다.
         #expect(note.section(heading: " 예시 ", block: nil)?.hasPrefix("### 예시\n") == true)
         #expect(note.section(heading: "없는 제목", block: nil) == nil)
     }
@@ -69,7 +68,6 @@ struct EmbedTests {
         #expect(html.contains("<div class=\"embed\"><a class=\"embed-title\" href=\"folio://note/Other#정의\">Other › 정의</a>"), "\(html)")
         #expect(html.contains("<h2>정의</h2>") && html.contains("<p>내용 <strong>굵게</strong></p>"), "\(html)")
         #expect(!html.contains("빠짐"))
-        // Ids would repeat the other note's, which a link to this note's heading or block would scroll to.
         #expect(!html.contains("id=\"^c1\"") && !html.contains("id=\"정의\""))
     }
 
@@ -98,11 +96,9 @@ struct EmbedTests {
     }
 
     @Test func aNoteInsideItselfIsDrawnOnce() {
-        // Host embeds A, which embeds B, which embeds A again; and a note embedding itself.
         let html = page("![[A]]", ["A": "에이\n\n![[B]]", "B": "비\n\n![[A]]"])
         #expect(html.components(separatedBy: "에이").count == 2 && html.components(separatedBy: "LOOP").count == 2, "\(html)")
         #expect(page("![[Host]]", ["Host": "![[Host]]"], own: "Host").contains("LOOP"))
-        // A section of the note itself is not a loop until it holds the embed again.
         #expect(!page("![[Host#끝]]\n\n# 끝\n\n마지막", ["Host": "![[Host#끝]]\n\n# 끝\n\n마지막"]).contains("LOOP"))
     }
 
@@ -117,7 +113,6 @@ struct EmbedTests {
         #expect(page("![[A]]", ["A": "$x$"], math: ["A": "asciimath"]).contains("<div class=\"embed\" data-math=\"asciimath\">"))
     }
 
-    /// Images and other files are not notes, and keep the link they had.
     @Test func filesAreNotDrawnAsNotes() {
         #expect(page("![[그림.png]]", ["그림.png": "x"]).contains("<a class=\"embed\" href="))
         #expect(page("![[v1.2]]", ["v1.2": "버전"]).contains("버전"))
@@ -136,7 +131,6 @@ struct BlockReferencePreviewTests {
             html.contains(
                 "<a class=\"wikilink\" href=\"folio://note/Other#^c1\">보기</a><template class=\"ref-preview\" data-math=\"latex\"><p>정의 <span class=\"math\">x</span></p>\n</template> 끝"
             ), "\(html)")
-        // The paragraph keeps its own block ID.
         #expect(html.hasPrefix("<p id=\"^mine\">"))
     }
 
@@ -146,14 +140,12 @@ struct BlockReferencePreviewTests {
                 "<template class=\"ref-preview\"><p class=\"embed-note\">MISSING</p></template>"))
     }
 
-    /// Only block references: a heading link or a whole note opens without a preview.
     @Test func otherLinksCarryNothing() {
         #expect(
             !page("[[Other#제목]] [[Other]] [[material:6F1D2C4E-8A3B-4F5E-9C1D-2B7A8E0F3D41#page=2]]", ["Other": "# 제목"]).contains("template")
         )
     }
 
-    /// A preview's own references get none, so a block naming itself is drawn once.
     @Test func previewsDoNotNest() {
         let html = page("[[A#^a]]", ["A": "에이 [[A#^a]] ^a"])
         #expect(html.components(separatedBy: "<template").count == 2, "\(html)")
@@ -163,7 +155,6 @@ struct BlockReferencePreviewTests {
         #expect(page("[[R&D#^x]]", ["R&D": "찾음 ^x"]).contains("찾음"))
     }
 
-    /// The edit view floats the same card, from the link as written in the source.
     @Test func theSourceGetsThePreviewsCard() {
         let notes = ["R&D": "위\n\n정의 $x$ [[R&D#^c1]] ^c1\n\n아래"]
         let found = embeds(notes, math: ["R&D": "asciimath"])

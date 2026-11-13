@@ -42,7 +42,6 @@ struct WindowTabsTests {
         #expect(moved?.focused.backList.map(\.link) == [.place(.grades)])
         #expect(tabs.ids == [first])
 
-        // A window made for it goes on from there, back included.
         let window = Navigator(history: moved?.focused.history ?? LinkHistory(Navigator.Entry(link: .place(.today))))
         #expect(window.screen == .people && window.history.canGoBack)
     }
@@ -67,15 +66,12 @@ struct WindowTabsTests {
             now += 10
             tabs.open()
         }
-        // The front tab and the two most recently in front; the first went furthest back.
         #expect(tabs.alive.count == 3 && !tabs.alive.contains(first))
 
-        // Waiting past the time lets the ones behind go.
         now += 601
         tabs.tick()
         #expect(tabs.alive == [tabs.selected])
 
-        // In front again, a dropped tab is drawn again.
         tabs.select(first)
         #expect(tabs.alive.contains(first))
     }
@@ -100,19 +96,16 @@ struct WindowTabsTests {
         tabs.pause(player)
         #expect(paused)
 
-        // Stopped, it is kept no longer than any other tab.
         tabs.play(player, pause: nil)
         tabs.dropBackground()
         #expect(tabs.alive == [tabs.selected] && tabs.playing.isEmpty)
 
-        // A closed tab's screen saying it stopped leaves nothing behind.
         tabs.play(player, pause: {})
         tabs.close(player)
         tabs.play(player, pause: nil)
         #expect(tabs.playing.isEmpty)
     }
 
-    /// The strip marks the pane that plays, not the tab's first, and pauses that one from its icon.
     @Test func aPlayingPaneIsTheOneMarked() throws {
         let tabs = WindowTabs(Navigator())
         let player = tabs.selected
@@ -127,7 +120,6 @@ struct WindowTabsTests {
         tabs.pause(player)
         #expect(paused)
 
-        // The pane closed, its screen says it stopped and the tab plays no longer.
         tabs.play(player, pane: second, pause: nil)
         #expect(tabs.playingPanes.isEmpty && tabs.playing.isEmpty)
     }
@@ -151,17 +143,15 @@ struct WindowTabsTests {
     }
 }
 
-/// The tabs' place in the toolbar row as the window resizes: with room to spare it stays the same, so a live resize
-/// doesn't redraw the tabs (#310), and it changes the frame the row runs out.
 @MainActor
 struct ToolbarRowTests {
-    /// `onChange` runs synchronously, on the thread that made the change.
+    // `onChange`는 변경을 만든 스레드에서 동기적으로 실행된다.
     final class Changes: @unchecked Sendable { var count = 0 }
 
     func row(width: CGFloat) -> ToolbarRow {
         let row = ToolbarRow()
         row.leadingX = 84
-        // With the row's trailing inset, 360 from the search field's start to the window's edge.
+        // row의 trailing inset을 포함해, 검색 필드의 시작에서 창 가장자리까지 360이다.
         row.trailingWidth = 360 - TitleRowEdges.trailing
         row.measures = ToolbarRow.Measures(
             front: TabFit.Front(trail: 256, chrome: 44), others: [120, 120, 32].map { TabFit.Other(single: $0, icon: 32) },
@@ -175,7 +165,7 @@ struct ToolbarRowTests {
         let wide = row.placement
         #expect(wide.fit == TabFit.Layout(iconsOnly: false, shown: 3, hidden: 0) && wide.trail == nil)
         let changes = Changes()
-        // The names fit down to 1220, where the tabs have just the 596 they take.
+        // 이름은 1220까지 들어가고, 그 폭에서 탭은 필요한 596만 가진다.
         for width in stride(from: 1400, through: 1220, by: -4) {
             withObservationTracking {
                 _ = row.placement
@@ -190,12 +180,11 @@ struct ToolbarRowTests {
 
     @Test func itFollowsTheWidthAtOnceWhenTheRowRunsOut() throws {
         let row = row(width: 1400)
-        // The search field is pinned to the trailing edge, so the narrower width counts now, not a turn later.
         row.windowWidth = 1180
         #expect(row.placement.fit == TabFit.Layout(iconsOnly: true, shown: 3, hidden: 0))
 
-        // The + takes its 32 and the spacing that sets its glyph one gap after the menu; the rest is the tabs': the
-        // menu alone beside the tab in front, whose trail is held to what is left after the menu, its gap and the chrome.
+        // +는 32와, 그 글리프를 메뉴에서 간격 하나만큼 띄우는 spacing을 차지하고, 나머지는 탭의 몫이다. 앞의 탭 옆에는 메뉴만 남고, 앞의 탭의 꼬리는 메뉴와 그 간격과 크롬을 빼고 남은
+        // 폭으로 제한된다.
         row.windowWidth = 900
         #expect(row.placement.fit == TabFit.Layout(iconsOnly: true, stacked: true, compactFront: true, shown: 0, hidden: 3))
         let spacing = TabFit.newTabSpacing(gap: TabBar.gap, button: Theme.Size.toolbarButton, glyph: TabBar.plusInk)
@@ -206,13 +195,11 @@ struct ToolbarRowTests {
     }
 
     @Test func theNewTabGlyphIsMeasuredByItsInk() {
-        // The plus's image is about 17 wide at the toolbar's size; its ink is about 13.
+        // 툴바 크기에서 +의 이미지는 폭이 약 17이고, 잉크는 약 13이다.
         #expect((11...14).contains(TabBar.plusInk))
     }
 
     @Test func theStripNeverTakesTheSearchFieldsRoom() {
-        // Wider than the row leaves it, the strip ran under the search field and the buttons (#310). Down to where
-        // the tab in front's capsule, the menu and the + alone fill it.
         let row = row(width: 1400)
         let least = 44 + 60 + TabBar.gap * 2 + Theme.Size.toolbarButton
         for width in stride(from: 1400, through: 600, by: -4) {
@@ -223,8 +210,6 @@ struct ToolbarRowTests {
     }
 
     @Test func aWiderSearchGroupTakesItsRoomFromTheTabs() {
-        // A course's timer or a recording's clock widens the group without the window: its width alone gives the
-        // room back.
         let row = row(width: 1000)
         let room = row.room
         let width = row.placement.width
@@ -234,7 +219,6 @@ struct ToolbarRowTests {
     }
 }
 
-/// What a tab behind the front one says: the thing it shows, else its screen; Today only its icon.
 @MainActor
 struct TabTitleTests {
     @Test func namesWhatTheTabShows() throws {
@@ -242,7 +226,6 @@ struct TabTitleTests {
         let exam = try #require(workspace.run(ExamAdd(course: graphTheory, title: "중간고사"))?.made)
         #expect(workspace.tabTitle(of: Navigator.Entry(link: AppLink(.exam, exam), course: graphTheory)) == "중간고사")
         let course = try #require(workspace.course(graphTheory))
-        // A section alone says less than the course.
         #expect(workspace.tabTitle(of: Navigator.Entry(link: .course(graphTheory, page: .notes), course: graphTheory)) == course.title)
         #expect(workspace.tabTitle(of: Navigator.Entry(link: .place(.grades))) == String(localized: .rootNavGrades))
         #expect(workspace.tabTitle(of: Navigator.Entry(link: .place(.today))) == nil)
@@ -251,7 +234,7 @@ struct TabTitleTests {
     @Test func aCourseTabWearsTheCoursesMarkAndColor() throws {
         let workspace = try fixtureWorkspace()
         let place = workspace.placeCrumb(of: Navigator.Entry(link: .course(graphTheory), course: graphTheory))
-        // Colors made per call compare unequal, so only that it has one.
+        // 호출마다 만든 색은 서로 같지 않으므로, 색이 있는지만 본다.
         #expect(place.dot != nil)
         #expect(place.symbol == workspace.course(graphTheory)?.file.course.icon)
         #expect(workspace.placeCrumb(of: Navigator.Entry(link: .place(.today))).symbol == "house")

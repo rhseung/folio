@@ -26,8 +26,7 @@ struct DarkPaperTests {
         for v in grid { #expect(close(DarkPaper.flip(DarkPaper.flip(v)), v)) }
     }
 
-    // `source(of:)` paints the gaps between pages. If the tokens move so that ink and paper nearly meet in a channel, the
-    // color it asks for leaves the drawable range and the gaps come out wrong.
+    // `source(of:)`는 쪽 사이의 간격을 칠한다. 토큰이 바뀌어 어느 채널에서 잉크와 종이 색이 거의 같아지면, 요청하는 색이 그릴 수 있는 범위를 벗어나 간격 색이 틀어진다.
     @Test func theGapColorComesBackThroughTheFilter() throws {
         let hex = Swatch.lineSoft.dark
         let color = try #require(paper.source(of: hex).usingColorSpace(.sRGB))

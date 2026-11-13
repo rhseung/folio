@@ -5,7 +5,7 @@ import Testing
 
 @testable import Folio
 
-/// Made-up grades only: the repository is public.
+// 저장소가 공개이므로 지어낸 성적만 쓴다.
 @MainActor
 struct GradesModelTests {
     let device = UUID()
@@ -14,7 +14,6 @@ struct GradesModelTests {
         LetterGrade(device: device, at: .now, symbol: symbol, points: points, countsInGpa: points != nil, countsInCredits: true)
     }
 
-    /// The fixture's semesters with a made-up A0/B0 scale in the catalog.
     func workspace() throws -> Workspace {
         let workspace = try fixtureWorkspace()
         var catalog = workspace.catalog
@@ -36,7 +35,6 @@ struct GradesModelTests {
         let model = GradesModel(workspace: try workspace())
         model.remaining = 10
         model.target = 3.5
-        // Nothing graded yet: the remaining credits must average the target itself.
         #expect(model.needText == "3.500")
         #expect(model.needDetail == nil)
         model.target = 4.2
@@ -49,7 +47,6 @@ struct GradesModelTests {
         let rows = model.semesterRows
         #expect(rows.map(\.semester.id) == model.semesters.reversed().map(\.id))
         #expect(rows.filter(\.inProgress).allSatisfy { $0.enrolled > 0 })
-        // A credited term is never in progress, though its course has no grade yet.
         #expect(rows.contains { $0.semester.id == creditedTerm && $0.enrolled == 3 && !$0.inProgress })
     }
 
@@ -135,7 +132,6 @@ struct RequirementsModelTests {
         #expect(workspace.catalog.categories.first { $0.id == child.id }?.parentId == nil)
     }
 
-    /// Applying all is one action, so it is asked once and a course the handbook can't place stops the rest.
     @Test func applyingEverySuggestionAsksOnceThenAppliesThemAll() throws {
         let workspace = try fixtureWorkspace()
         var catalog = workspace.catalog
@@ -160,7 +156,6 @@ struct RequirementsModelTests {
         #expect(workspace.course(graphTheory)?.file.course.categoryIds == [elective.id])
         #expect(workspace.course(linear)?.file.course.categoryIds == [elective.id])
         #expect(model.audit.suggestions.isEmpty)
-        // Applied, they have nothing left to take: the whole is refused and each row says so too.
         let refused = model.acceptRefusals(suggestions)
         #expect(refused.all != nil && refused.rows.count == 2)
     }
@@ -212,7 +207,6 @@ struct CourseGradesModelTests {
         #expect(model.componentDetail(quiz, in: file) == "최저 1회 제외 · 1/4회")
     }
 
-    /// 선형대수학's rule: six absences cap the grade at B0, nine or more give F.
     @Test func attendanceCapsSayWhatTheNextAbsenceCosts() throws {
         let workspace = try fixtureWorkspace()
         var catalog = workspace.catalog

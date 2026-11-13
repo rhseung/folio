@@ -12,17 +12,14 @@ struct QuizTests {
         let resolved = WrongFlow.status([(d("2026-10-01"), .wrong), (d("2026-10-03"), .correct)])
         #expect(resolved == .resolved(on: d("2026-10-03"), recheckDue: d("2026-10-10")))
 
-        // Wrong again at the recheck: back to open.
         #expect(
             WrongFlow.status([(d("2026-10-01"), .wrong), (d("2026-10-03"), .correct), (d("2026-10-10"), .wrong)])
                 == .open(since: d("2026-10-10")))
 
-        // Correct at the recheck: done, no further recheck.
         #expect(
             WrongFlow.status([(d("2026-10-01"), .wrong), (d("2026-10-03"), .correct), (d("2026-10-11"), .correct)])
                 == .resolved(on: d("2026-10-03"), recheckDue: nil))
 
-        // A correct answer before the recheck day doesn't count as the recheck.
         #expect(
             WrongFlow.status([(d("2026-10-01"), .wrong), (d("2026-10-03"), .correct), (d("2026-10-05"), .correct)])
                 == .resolved(on: d("2026-10-03"), recheckDue: d("2026-10-10")))
@@ -55,11 +52,11 @@ struct QuizTests {
     @Test func deckFiltersByScopeAndOrders() {
         let u1 = UUID(), u2 = UUID(), u3 = UUID()
 
-        // File order puts a u2 card first; unit order must still lead with u1.
+        // 파일 순서로는 u2 카드가 먼저지만, 단원 순서로는 u1이 앞서야 한다.
         let a = card(u2, .proof), b = card(u1), c = card(u1, .theorem), x = card(u3), e = card(u2)
         let history: [UUID: AttemptHistory] = [
             c.id: [(d("2026-10-20"), .wrong)],
-            e.id: [(d("2026-10-01"), .wrong), (d("2026-10-02"), .correct)],  // recheck due 10-09
+            e.id: [(d("2026-10-01"), .wrong), (d("2026-10-02"), .correct)],  // 다시 볼 날은 10-09이다.
             a.id: [(d("2026-10-20"), .correct)],
         ]
         var rng = SystemRandomNumberGenerator()
@@ -87,14 +84,13 @@ struct QuizTests {
         let byUnit = QuizStats.tally(cards, keys: { [$0.unitId] }, history: { history[$0.id] ?? [] })
 
         #expect(byUnit[u1]?.items == 2 && byUnit[u1]?.open == 1 && byUnit[u1]?.resolved == 1)
-        #expect(byUnit[u1]?.accuracy == 0.5)  // wrong 0 + partial 0.5 + correct 1 over 3 attempts
+        #expect(byUnit[u1]?.accuracy == 0.5)  // 틀림 0, 부분 0.5, 맞음 1을 3번의 시도로 나눈다.
         #expect(byUnit[u2]?.attempted == 1 && byUnit[u2]?.correct == 1 && byUnit[u2]?.progress == 0.5)
         let byCategory = QuizStats.tally(cards, keys: { [$0.category] }, history: { history[$0.id] ?? [] })
         #expect(byCategory[.proof]?.open == 1 && byCategory[.proof]?.items == 2)
         let total = QuizStats.total(cards) { history[$0.id] ?? [] }
         #expect(total.items == 4 && total.open == 1 && total.resolved == 1 && total.correct == 1)
 
-        // A problem in two units counts in both.
         let shared = ProblemSet.Problem(number: "3", unitIds: [u1, u2])
         let multi = QuizStats.tally([shared], keys: \.unitIds, history: { _ in [(d("2026-10-01"), .wrong)] })
         #expect(multi[u1]?.open == 1 && multi[u2]?.open == 1)

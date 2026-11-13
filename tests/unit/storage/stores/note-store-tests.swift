@@ -20,7 +20,6 @@ struct NoteStoreTests {
         #expect(try store().read(#require(notes.first)).hasPrefix("# 09-08(화) 매칭"))
     }
 
-    /// A link's title finds its note as written first, and otherwise ignoring case.
     @Test func aLinkFindsItsNoteByTitle() throws {
         let store = try store()
         try store.createNote(at: store.newNoteURL(title: "Matching", format: .markdown), text: "")
@@ -30,7 +29,6 @@ struct NoteStoreTests {
         #expect(notes.titled("09-08(화) 매칭")?.meta.id != nil)
         #expect(notes.titled("없음") == nil)
 
-        // A link may name the file; a `.tex` note is still a note to open.
         try store.createNote(at: store.newNoteURL(title: "증명", format: .tex), text: "")
         let all = try store.notes()
         #expect(all.linked("Matching.md")?.url.lastPathComponent == "Matching.md")
@@ -57,14 +55,12 @@ struct NoteStoreTests {
         #expect(first.lastPathComponent == "09-08(화) 매칭 정리.md")
         #expect(store.newNoteURL(title: "09-08(화) 매칭 정리", format: .markdown).lastPathComponent == "09-08(화) 매칭 정리 2.md")
 
-        // The title is the file name, so another format doesn't free it.
         #expect(store.newNoteURL(title: "09-08(화) 매칭 정리", format: .tex).lastPathComponent == "09-08(화) 매칭 정리 2.tex")
         #expect(store.newNoteURL(title: "숙제", format: .markdown, avoiding: ["숙제", "숙제 2"]).lastPathComponent == "숙제 3.md")
         #expect(store.newNoteURL(title: "a/b:c", format: .markdown).lastPathComponent == "a-b-c.md")
     }
 
-    /// A moved note avoids every other note's title in the course, whatever its folder, case or Unicode form (macOS
-    /// hands back decomposed Hangul), and keeps its own.
+    // macOS는 분해된 한글을 돌려주므로, 옮긴 노트는 폴더, 대소문자, Unicode 형식과 상관없이 과목의 다른 노트 제목을 피해야 한다.
     @Test func aMovedNoteAvoidsOtherNotesTitles() throws {
         let store = try store()
         let folder = store.url.appending(path: "Notes/정리")
@@ -112,7 +108,7 @@ struct NoteStoreTests {
     @Test func contextImagesReadEmbedsInsideTheCourseAsShrunkJPEG() throws {
         let store = try store()
 
-        // A 2000x1000 PNG: wide enough to be shrunk to the 1568px edge.
+        // 1568px 가장자리로 줄일 만큼 넓은 2000x1000 PNG다.
         let ctx = try #require(
             CGContext(
                 data: nil, width: 2000, height: 1000, bitsPerComponent: 8, bytesPerRow: 0,
@@ -208,7 +204,7 @@ struct RecordingStoreTests {
         let recording = Recording(
             device: UUID(), at: Date(timeIntervalSince1970: 3_000_000), sessionId: nil, file: try store.newRecordingFile(named: "11-03(화)"))
         try pending.save(PendingRecording(courseId: UUID(), recording: recording))
-        #expect(pending.all().isEmpty)  // no audio yet
+        #expect(pending.all().isEmpty)
         try Data("caf".utf8).write(to: pending.audioURL(of: recording.id))
         #expect(pending.all().map(\.recording) == [recording])
 
@@ -235,6 +231,6 @@ struct RecordingStoreTests {
         #expect(!FileManager.default.fileExists(atPath: store.fileURL(file).path))
         #expect(!FileManager.default.fileExists(atPath: store.fileURL(recording.transcriptFile).path))
         #expect(FileManager.default.fileExists(atPath: store.fileURL(other).path))
-        try store.deleteFiles(of: recording)  // already gone: not an error
+        try store.deleteFiles(of: recording)
     }
 }

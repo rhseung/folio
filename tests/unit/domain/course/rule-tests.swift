@@ -3,7 +3,6 @@ import Testing
 
 @testable import FolioDomain
 
-/// One breaking edit per declared rule: each must be the violation a save would refuse.
 struct RuleTests {
     static let device = UUID()
     static let now = Date(timeIntervalSince1970: 1_793_149_200)

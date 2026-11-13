@@ -6,7 +6,6 @@ import Testing
 
 @testable import Folio
 
-/// 그래프 이론 in the standard fixture has `Study/Problems.tex` next to its PDF.
 @MainActor
 struct TextFileModelTests {
     let workspace: Workspace
@@ -56,8 +55,6 @@ struct TextFileModelTests {
         #expect(try course.store.readText("Study/Problems.tex") == "여기서 고침\n")
     }
 
-    /// A write from the Claude panel or the CLI shows without asking when nothing here is unsaved, asks when something
-    /// is, and the screen's own save reads nothing again.
     @Test func aWriteElsewhereReloadsOnlyWhatIsSaved() throws {
         let model = try model("Study/Problems.tex")
         let id = try #require(course.file.materials.first { $0.path == "Study/Problems.tex" }).id
@@ -82,7 +79,6 @@ struct TextFileModelTests {
         #expect(try course.store.readText("Study/Problems.tex") == "또 바깥에서\n")
     }
 
-    /// A `.tex` note saves through `note write` and keeps its PDF in Study, not among the notes.
     @Test func aTexNoteOpensAsAFile() throws {
         let id = try #require(workspace.run(NoteAdd(course: graphTheory, title: "증명", format: .tex))?.made)
         let note = try #require(try workspace.course(graphTheory)?.store.note(id: id))
@@ -94,12 +90,10 @@ struct TextFileModelTests {
         #expect(!model.dirty && model.issues.isEmpty)
         #expect(try course.store.readText("Notes/증명.tex") == "\\documentclass{article}\n")
 
-        // Every note exports to Study, so changing the kind from the same screen leaves the place alone.
         workspace.run(NoteLink(course: graphTheory, note: id, kind: .examSummary))
         #expect(model.pdfPath == "Study/증명.pdf")
     }
 
-    /// A `.tex` opens the way it was last left, as a markdown note does: a material by its own ID, a note by its note's.
     @Test func aTexIsRememberedByItsOwnID() throws {
         let tex = try model("Study/Problems.tex")
         let material = try #require(course.file.materials.first { $0.path == "Study/Problems.tex" })
@@ -130,8 +124,6 @@ struct TextFileModelTests {
         #expect(model.isHere(TexIssue(.error, file: "./Problems.tex", line: 1, message: "x")))
     }
 
-    /// A ⌘-click on the PDF goes to the line of this file that wrote there, but only with SyncTeX data from the build
-    /// that made the PDF on screen. The data is written by hand so the test runs without Tectonic.
     @Test func aCommandClickOnThePDFShowsItsLine() throws {
         let model = try model("Study/Problems.tex")
         let shown = try #require(model.pdfURL)
@@ -166,7 +158,7 @@ struct TextFileModelTests {
         gzip.waitUntilExit()
 
         model.showSource(page: 0, at: CGPoint(x: 200, y: 145))
-        #expect(model.reveal == nil)  // part.tex's line, not open here
+        #expect(model.reveal == nil)
         model.showSource(page: 0, at: CGPoint(x: 200, y: 132))
         #expect(model.reveal == 3)
 
@@ -176,7 +168,7 @@ struct TextFileModelTests {
         #expect(model.reveal == nil)
     }
 
-    /// An empty editor over a file that couldn't be read would look like an empty file, and saving would replace it.
+    // 읽지 못한 파일 위에 빈 편집기를 띄우면 빈 파일처럼 보이고, 저장하면 원래 파일을 덮어쓴다.
     @Test func aFileThatCantBeReadDoesNotOpenEmpty() throws {
         try Data([0xC7, 0xD1, 0x0A]).write(to: course.store.fileURL("Study/Problems.tex"))
         let model = try model("Study/Problems.tex")

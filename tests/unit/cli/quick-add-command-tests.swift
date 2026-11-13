@@ -6,8 +6,7 @@ import Testing
 
 @testable import FolioCLI
 
-/// `folio add`: the quick-add line read as the app reads it, then `assignment add`. The harness clock is Wednesday
-/// 2026-10-28 10:00, so `금` is 10/30.
+// harness의 시계는 2026-10-28 수요일 10:00이므로 `금`은 10/30이다.
 struct QuickAddCommandTests {
     let h = Harness()
     let course = Harness.graphTheory
@@ -56,7 +55,6 @@ struct QuickAddCommandTests {
         #expect(try Harness.files(gist) == before)
     }
 
-    /// As on the chips: what is picked stands over what the line reads, and the line's course words stay out of the title.
     @Test func optionsStandOverTheLine() throws {
         try h.expectSame(["add", "그래프 HW5 금 23:59", "--course", "EC4321", "--due", "2026-11-02 18:00"]) { _ in
             AssignmentAdd(course: Self.robotics, title: "HW5", due: date("2026-11-02 18:00"))
@@ -68,7 +66,6 @@ struct QuickAddCommandTests {
             AssignmentAdd(course: Self.robotics, title: "Weekly Quiz", due: date("2026-10-30 23:59"))
         }
 
-        // Clearing the deadline clears the repeat with it, as the deadline chip's clear button does.
         try h.expectSame(["add", "로봇 매주 금요일 23:59 Weekly Quiz", "--due", "none"]) { _ in
             AssignmentAdd(course: Self.robotics, title: "Weekly Quiz")
         }
@@ -78,7 +75,6 @@ struct QuickAddCommandTests {
         let gist = try Harness.fixtureCopy()
         let before = try Harness.files(gist)
 
-        // 선형대수학 was last semester's, so the line names none of this semester's courses.
         let r = h.cli(["add", "선대 HW5 금 23:59"], gist: gist)
         #expect(r.code == Exit.notFound.rawValue)
         #expect(r.err.contains("과목을 읽지 못했습니다"), "\(r.err)")
@@ -118,7 +114,6 @@ struct QuickAddCommandTests {
         }
     }
 
-    /// Written by hand, but a write: marked so, and dry-run when asked, like the actions' tools.
     @Test func theTerminalOpensItAsAWriteTool() throws {
         let gist = try Harness.fixtureCopy()
         let server = MCPServer(gist: nil, propose: false)
@@ -136,7 +131,6 @@ struct QuickAddCommandTests {
         #expect(try assignments(gist).contains { $0.title == "HW5" })
     }
 
-    /// The panel already has `assignment add`; another tool for the same thing would cost tokens on every question.
     @Test func thePanelLeavesItOut() throws {
         let gist = try Harness.fixtureCopy()
         #expect(try tools(MCPServer(gist: nil, propose: true), gist)["add"] == nil)

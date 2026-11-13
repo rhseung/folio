@@ -19,7 +19,6 @@ struct MaterialFilesTests {
         doc.model.linkMaterial(lecture.id, session: session.id, firstPage: 2, lastPage: 9)
         try store.save(doc)
 
-        // The lecture is replaced by a revised file under another name, so neither bookmark nor hash finds it.
         let fm = FileManager.default
         try fm.removeItem(at: store.url.appending(path: lecture.path))
         let revised = store.url.appending(path: "Lectures/05_Matchings (revised).pdf")

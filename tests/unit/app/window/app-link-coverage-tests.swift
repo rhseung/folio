@@ -10,38 +10,21 @@ import Testing
 
 @testable import Folio
 
-/// Every app link a note or a file can hold (#347): each `AppLink` kind with each anchor and page it takes, written
-/// each way (`Form`), opened from each view that shows it (`Surface`). Each cell checks the name the view shows, when
-/// it shows one, and that the click hands `\.openLink` the link written, which the workspace finds and a screen draws.
-///
-/// The samples come from `AppLink.Kind.allCases` and the forms and surfaces from their own `allCases`, and every
-/// switch below has no default: a new kind, form or surface doesn't compile, or fails here, until it is covered or
-/// says why it can't be, as the action coverage check does for actions.
 @MainActor @Suite(.serialized)
 struct AppLinkCoverageTests {
     enum Form: CaseIterable {
-        /// `[[<kind>:<ID>#…|이름]]`, as link completion writes it.
         case objectWiki
-        /// `[[folio://<kind>/<ID>#…|이름]]`, a copied address between brackets.
         case addressWiki
-        /// A bare `folio://…` in a note.
         case bare
-        /// `[이름](folio://…)`.
         case markdown
-        /// `\href{folio://…}{이름}` in a `.tex`.
         case texHref
-        /// `folio://…` in a code or text file, in a comment or a string.
         case textFile
     }
 
     enum Surface: CaseIterable {
-        /// A markdown note's preview, clicked.
         case preview
-        /// A markdown note's edit view, ⌘-clicked.
         case editor
-        /// The PDF a `.tex` builds, clicked.
         case texPDF
-        /// The editor for `.tex`, code and text files, ⌘-clicked.
         case textEditor
     }
 
@@ -70,8 +53,6 @@ struct AppLinkCoverageTests {
         }
     }
 
-    /// Whether the surface shows a name of its own for a link. The edit views show the source as written, and a built
-    /// PDF the text the author typeset, so only the preview names what a link points at.
     static func showsName(_ surface: Surface) -> Bool {
         switch surface {
         case .preview: true
@@ -86,7 +67,6 @@ struct AppLinkCoverageTests {
         var screen: Screen
     }
 
-    /// One of each kind in the fixture folder, with each anchor it takes, and every course page and settings tab.
     static func samples(_ workspace: Workspace) throws -> [Sample] {
         let course = graphTheory
         let fixture = try Fixtures(workspace)
@@ -155,7 +135,6 @@ struct AppLinkCoverageTests {
         return out
     }
 
-    /// Something of every kind a link names by ID, in 그래프 이론 or the folder's tables.
     @MainActor struct Fixtures {
         var semester, session, unit, note, material, assignment, exam, card, problemSet, person, recording: UUID
 
@@ -190,8 +169,6 @@ struct AppLinkCoverageTests {
 
     // MARK: Writing
 
-    /// A link written in a form: the text, and where in it a click lands on the link. A text file's editor colors
-    /// nothing as a link and opens the address under the click, so there the click lands on the address.
     struct Written {
         var text: String
         var at: Int
@@ -200,7 +177,6 @@ struct AppLinkCoverageTests {
 
     static let alias = "보기"
 
-    /// How `form` writes `link`, or why it can't. `named` adds `|이름` to a wiki link.
     static func write(_ link: AppLink, _ form: Form, named: Bool) -> Result<Written, Unwritable> {
         let address = link.string
         func around(_ body: String) -> Written {
@@ -290,7 +266,7 @@ struct AppLinkCoverageTests {
             case .preview:
                 let html = HTMLRenderer.blocks(ParsedNote(written.text), embeds: embeds).map(\.html).joined()
                 guard let m = html.firstMatch(of: /<a [^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/) else { return Shown() }
-                // As the page's navigation hands the click over: a URL, which WebKit escapes as Foundation does.
+                // 페이지의 navigation은 클릭을 URL로 넘기고, WebKit은 Foundation처럼 escape한다.
                 let href = Self.unescape(String(m.1))
                 NoteLinks.open(URL(string: href)?.absoluteString ?? href, base: nil, openNote: { _ in }, openLink: opener)
                 return Shown(name: Self.unescape(String(m.2)), opened: opened)
@@ -307,8 +283,6 @@ struct AppLinkCoverageTests {
             }
         }
 
-        /// The links `sources` (each a `\href`) put in the PDF they build with Tectonic, as the app builds, each as a click
-        /// on it opens.
         func texPDF(_ sources: [String]) throws -> [AppLink?] {
             let folder = URL.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
             // folio:not-an-action a test's temporary folder
@@ -343,8 +317,6 @@ struct AppLinkCoverageTests {
         }
     }
 
-    /// The name the preview shows for a link without one of its own: what the app calls it, with its page, heading
-    /// or moment. A note's link shows its title and heading, as before #347; its block shows on the card.
     static func expectedName(_ link: AppLink, written form: Form, named: Bool, in workspace: Workspace) -> String? {
         switch form {
         case .objectWiki, .addressWiki:
@@ -418,7 +390,6 @@ struct AppLinkCoverageTests {
         }
 
         #expect(broken.isEmpty, "\(broken.joined(separator: "\n"))")
-        // Only the kind-and-ID form has links it can't hold (places, course pages and settings tabs), and it says why.
         #expect(!unwritable.isEmpty && unwritable.allSatisfy { $0.hasPrefix("\(Form.objectWiki) ") }, "\(unwritable)")
     }
 

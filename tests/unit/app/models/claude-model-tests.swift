@@ -42,8 +42,6 @@ struct ClaudeModelTests {
         #expect(model.addOptions(course).first?.section == "노트")
     }
 
-    /// The open note goes as it is on disk when the question is sent, not as it was when it opened. Stopping leaves no
-    /// half chat and keeps the question for the resend button, which then answers as usual.
     @Test func theOpenNoteIsReadWhenSentAndAStoppedQuestionCanBeSentAgain() async throws {
         let workspace = try fixtureWorkspace()
         let provider = StoppableProvider()
@@ -61,7 +59,6 @@ struct ClaudeModelTests {
         let text = sent.messages.last?.content.compactMap { if case .text(let t, _) = $0 { t } else { nil } }.joined() ?? ""
         #expect(text.contains("새로 쓴 줄"))
         #expect(text.contains("경로: Notes/\(note.url.lastPathComponent)\nID: \(id.uuidString)"))
-        // The text before the tool call belonged to an earlier message, so only the tool shows.
         #expect(model.partial == nil && model.progress == "읽는 중: note show")
 
         model.stop()
@@ -82,7 +79,6 @@ struct ClaudeModelTests {
         #expect(ClaudeModel.toolLabel("mcp__folio__note_add") == "제안 만드는 중: note add")
         #expect(ClaudeModel.toolLabel("mcp__folio__exam_scope_taught") == "제안 만드는 중: exam scope --taught")
         #expect(ClaudeModel.toolLabel("mcp__folio__action_search") == "액션 찾는 중")
-        // `action_run` names its command once that much of the input has streamed in.
         #expect(ClaudeModel.toolLabel("mcp__folio__action_run") == "실행할 액션 고르는 중")
         #expect(ClaudeModel.toolLabel("mcp__folio__action_run", input: #"{"action": "semest"#) == "실행할 액션 고르는 중")
         #expect(ClaudeModel.toolLabel("mcp__folio__action_run", input: #"{"action": "semester add", "inp"#) == "제안 만드는 중: semester add")
@@ -119,7 +115,6 @@ struct ClaudeModelTests {
         #expect(!ClaudeModel.html(chat).contains("SQL("))
     }
 
-    /// A proposal runs only when the user applies it, once, and the chat file remembers it was applied.
     @Test func aProposalAppliesOnceAndARemovalAsksFirst() throws {
         let workspace = try fixtureWorkspace()
         let model = ClaudeModel(workspace: workspace)
@@ -152,7 +147,6 @@ struct ClaudeModelTests {
         #expect(workspace.course(graphTheory)?.file.exams.isEmpty == true)
     }
 
-    /// A figure is approved on what it looks like, so its card shows it as the note would, before anything is written.
     @Test func aProposedFigureShowsBeforeItIsWritten() throws {
         let workspace = try fixtureWorkspace()
         let model = ClaudeModel(workspace: workspace)
@@ -175,7 +169,6 @@ struct ClaudeModelTests {
         #expect(model.describe(bad).refusal != nil)
     }
 
-    /// A proposal that fails when applied keeps why, in the chat file and in its line, instead of only a passing banner.
     @Test func aFailedProposalKeepsItsReason() throws {
         let workspace = try fixtureWorkspace()
         let model = ClaudeModel(workspace: workspace)
@@ -196,7 +189,6 @@ struct ClaudeModelTests {
         #expect(page.contains(#"<span class="why">"#))
     }
 
-    /// The note list and a unit's notes re-read on the revision, so an answer saved as a note must bump it like the new-note sheet does.
     @Test func anAnswerSavedAsANoteOrAnAppliedNoteProposalShowsInTheNoteLists() throws {
         let workspace = try fixtureWorkspace()
         let model = ClaudeModel(workspace: workspace)
@@ -217,7 +209,6 @@ struct ClaudeModelTests {
         #expect(workspace.notesRevision > revision)
     }
 
-    /// A chat of one answer holding `proposals`, open in the panel.
     func open(_ proposals: [ActionProposal], in model: ClaudeModel) -> ChatMessage {
         var chat = Chat(device: model.workspace.device, at: .now)
         let answer = ChatMessage(role: .assistant, text: "제안했습니다", at: .now, proposals: proposals)
@@ -227,8 +218,6 @@ struct ClaudeModelTests {
         return answer
     }
 
-    /// A rewrite shows the lines it changes against the note on disk, an edit each replacement and what it appends;
-    /// both escaped, since a note may hold HTML.
     @Test func noteProposalsShowWhatTheyChange() throws {
         let workspace = try fixtureWorkspace()
         let model = ClaudeModel(workspace: workspace)
@@ -258,13 +247,11 @@ struct ClaudeModelTests {
         #expect(page.contains(#"<summary>바뀌는 내용 +3 -1</summary>"#))
         #expect(page.contains(#"<div class="l del">- 옛 글</div><div class="l add">+ 새 글</div><div class="l add">+ 둘째 줄</div>"#))
         #expect(page.contains("끝에 덧붙임"))
-        // Applied, the line no longer offers a change to read.
         var applied = write
         applied.applied = true
         #expect(model.describe(applied).change == nil)
     }
 
-    /// One question for every proposal that asks, and nothing written while one of them would be refused.
     @Test func applyingAllAsksOnceAndWritesNothingWhenOneIsRefused() throws {
         let workspace = try fixtureWorkspace()
         let model = ClaudeModel(workspace: workspace)
@@ -277,7 +264,6 @@ struct ClaudeModelTests {
             ActionProposal(command: type(of: action).command, input: try JSONValue(action))
         }
 
-        // Each alone would go through; the second can't once the first has made the exam.
         let refused = open(
             [
                 try proposal(ExamAdd(id: twin, course: graphTheory, title: "새 시험")),
@@ -309,7 +295,6 @@ struct ClaudeModelTests {
         #expect(model.status == "제안 3개를 적용했습니다")
     }
 
-    /// Two changes to one exam in one answer run in the answer's order, so the last one stands.
     @Test func applyingAllRunsInTheAnswersOrder() throws {
         let workspace = try fixtureWorkspace()
         let model = ClaudeModel(workspace: workspace)
@@ -326,7 +311,6 @@ struct ClaudeModelTests {
         #expect(workspace.course(graphTheory)?.file.exams.map(\.title) == ["둘째"])
     }
 
-    /// A later answer's proposal for the same note replaces the earlier one, which then offers nothing.
     @Test func aSupersededProposalIsNotOffered() throws {
         let workspace = try fixtureWorkspace()
         let model = ClaudeModel(workspace: workspace)
@@ -353,7 +337,6 @@ struct ClaudeModelTests {
         #expect(!page.contains("folio://action/applyall/"))
     }
 
-    /// #90: a proposal the panel's server made on top of an earlier one of the answer waits until that one is applied.
     @Test func aProposalOnAnEarlierOneWaitsForIt() throws {
         let workspace = try fixtureWorkspace()
         let model = ClaudeModel(workspace: workspace)
@@ -381,7 +364,6 @@ struct ClaudeModelTests {
         #expect(workspace.course(graphTheory)?.file.exams.map(\.title) == ["쪽지 시험"])
     }
 
-    /// One it builds on that can't be applied any more blocks it too, and neither is offered to apply all.
     @Test func aProposalOnARefusedOneIsBlocked() throws {
         let workspace = try fixtureWorkspace()
         let model = ClaudeModel(workspace: workspace)
@@ -389,7 +371,6 @@ struct ClaudeModelTests {
         workspace.run(ExamAdd(id: exam, course: graphTheory, title: "퀴즈"))
         let course = try #require(workspace.course(graphTheory))
         model.load(course)
-        // The id is taken, so the first is refused for a reason of its own.
         let add = ActionProposal(command: ExamAdd.command, input: try JSONValue(ExamAdd(id: exam, course: graphTheory, title: "또 퀴즈")))
         let rename = ActionProposal(
             command: ExamSet.command, input: try JSONValue(ExamSet(course: graphTheory, exam: UUID(), title: .set("x"))), after: [0])
@@ -399,7 +380,6 @@ struct ClaudeModelTests {
         #expect(ClaudeModel.offered(answer, superseded: [], describe: model.describe).isEmpty)
     }
 
-    /// An edit of the note the answer makes first: a plain dry run can't see the note, the staged check can.
     @Test func applyingAllRunsAnEditOfANoteMadeBeforeIt() throws {
         let workspace = try fixtureWorkspace()
         let model = ClaudeModel(workspace: workspace)
@@ -421,7 +401,7 @@ struct ClaudeModelTests {
         #expect(text.contains("첫 줄") && text.contains("덧붙인 줄"), "\(text)")
     }
 
-    /// The page is drawn twice a second while an answer is written; its proposals' dry runs wait for the folder to change.
+    // 답을 쓰는 동안 페이지를 1초에 두 번 그리므로, 제안의 dry run은 폴더가 바뀔 때만 다시 계산해야 한다.
     @Test func proposalLinesAreWorkedOutOncePerFolderChange() throws {
         let workspace = try fixtureWorkspace()
         let model = ClaudeModel(workspace: workspace)
@@ -437,7 +417,6 @@ struct ClaudeModelTests {
         #expect(model.described == 2)
     }
 
-    /// The card goes to the unit on screen, then the open note's unit, and only without either to the first unit.
     @Test func aCardFromAnAnswerGoesToTheUnitInView() throws {
         let workspace = try fixtureWorkspace()
         let model = ClaudeModel(workspace: workspace)
@@ -467,7 +446,6 @@ struct ClaudeModelTests {
     }
 }
 
-/// The first answer reads with a tool, then runs until stopped; later ones answer at once.
 final class StoppableProvider: ClaudeProvider {
     let requests = Mutex<[MessagesRequest]>([])
 

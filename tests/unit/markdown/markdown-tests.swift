@@ -54,7 +54,6 @@ struct MathTests {
                 == "<p>집합 <span class=\"math\">\\{x_1, x_2\\}</span> 과 <span class=\"math\">a_1 * b_2</span></p>\n")
     }
 
-    /// AsciiMath's quotes, `#`, bars and braces reach the page as written; the preview reads the span's text.
     @Test func asciiMathSurvivesMarkdown() {
         #expect(
             html(##"$min{|F|: G - F " separates " x, y} = max{"# edge-disjoint " x,y- "paths"}$"##)
@@ -132,11 +131,9 @@ struct CalloutTests {
         }
         #expect(spans("# T\n\ntext\n\n> [!note]\n> body\n\n- a\n- b") == ["1-1 # T", "3-3 text", "5-6 > [!note]\n> body", "8-9 - a\n- b"])
         #expect(spans("- a\n- b\n\ntext") == ["1-2 - a\n- b", "4-4 text"])
-        // `$$…$$` is longer once protected; the blocks after it still name their own lines, and it ends where it closed.
         #expect(spans("$$x$$\n\nafter\n\n$$\nx\n$$\n\nend") == ["1-1 $$x$$", "3-3 after", "5-7 $$\nx\n$$", "9-9 end"])
     }
 
-    /// The body an edit's lines count in is the same one the note renders from, frontmatter and all.
     @Test func bodyRoundTripsThroughItsFrontmatter() {
         let note = ParsedNote("---\nid: 1\n---\n\n# T\n\ntext\n")
         #expect(ParsedNote(note.text).body == note.body)
@@ -165,7 +162,6 @@ struct LinkTests {
             out == "[[10-14(화) 매칭 정리]], [[10-14(화) 매칭 정리#예시|예시]], ![[10-14(화) 매칭 정리#^c1]], [[7주차-2 정리 2]], [[7주차-2]], [[10-14(화) 매칭 정리]]")
         #expect(WikiLink.retargeted("[[Matching]]", from: "matching", to: "Flows") == "[[Flows]]")
         #expect(WikiLink.retargeted("[[material:ABC#page=3]] 그대로", from: "7주차-2", to: "x") == "[[material:ABC#page=3]] 그대로")
-        // A table row's escaped bar stays escaped.
         #expect(WikiLink.retargeted("| [[7주차-2#예시\\|예시]] |", from: "7주차-2", to: "x") == "| [[x#예시\\|예시]] |")
         let id = UUID()
         #expect(
@@ -196,7 +192,7 @@ struct LinkTests {
             ))
     }
 
-    /// A one-word cell keeps to one line: WebKit broke `10/26(월)` after `/` and `(` beside a long column.
+    // WebKit은 긴 열 옆에서 `10/26(월)`을 `/`와 `(` 뒤에서 줄바꿈했다.
     @Test func oneShortWordCellsKeepToOneLine() {
         let out = HTMLRenderer.render(
             markdown:
@@ -208,7 +204,7 @@ struct LinkTests {
                 "<td class=\"word\"><a class=\"wikilink\" href=\"folio://note/n\">9주차-1</a></td><td>ExtraordinarilyLongUnbrokenName</td>"))
     }
 
-    /// A link's `|` is not a cell's, as in Obsidian; link completion always writes one.
+    // Obsidian처럼 링크의 `|`는 칸을 나누지 않는다. 링크 자동 완성은 항상 `|`를 쓴다.
     @Test func linksInTableCellsStayWhole() {
         let id = "ED8DDEC6-86E0-4EF8-B163-9C3CF446C3C8"
         let out = HTMLRenderer.render(
@@ -228,7 +224,7 @@ struct LinkTests {
         #expect(!out.contains("[["))
     }
 
-    /// Obsidian escapes the bar in a table row; elsewhere `\|` is markdown's escape and reads the same.
+    // Obsidian은 표 행에서 막대를 escape한다. 다른 곳에서도 `\|`는 마크다운의 escape라서 같게 읽힌다.
     @Test func escapedBarsSplitNoCellAndNameTheLink() {
         let out = HTMLRenderer.render(markdown: "| a | b |\n|---|---|\n| [[노트\\|이름]] | x \\| y |\n\n[[노트\\|밖]]")
         #expect(out.contains("<td class=\"word\"><a class=\"wikilink\" href=\"folio://note/%EB%85%B8%ED%8A%B8\">이름</a></td><td>x | y</td>"))
@@ -239,7 +235,7 @@ struct LinkTests {
         #expect(links[1].fragment == "page=2")
     }
 
-    /// A code span's bar still splits a cell, as in GFM, and a link written in code stays code.
+    // GFM처럼 code span의 막대도 칸을 나눈다.
     @Test func codeInATableKeepsGFMRules() {
         let out = HTMLRenderer.render(markdown: "| a | b |\n|---|---|\n| `x \\| y` | `[[n|m]]` |")
         #expect(out.contains("<td><code>x | y</code></td><td class=\"word\">`[[n</td></tr>"))
@@ -296,7 +292,6 @@ struct BlockTests {
     }
 }
 
-/// The note preview's blocks: the same HTML as the whole note, cut where its top-level blocks start, with their lines.
 struct RenderedBlockTests {
     @Test func blocksJoinToTheWholeNoteAndKnowTheirLines() {
         let text = "# 제목\n\n첫 문단\n둘째 줄\n\n$$\nx^2\n$$\n\n> [!theorem] 정리\n> 본문\n\n> [!proof]\n> 증명"
@@ -304,7 +299,6 @@ struct RenderedBlockTests {
         let blocks = HTMLRenderer.blocks(note)
         #expect(blocks.map(\.html).joined() == HTMLRenderer.render(note))
         #expect(blocks.map(\.lines) == [1...1, 3...4, 6...8, 10...11, 13...14])
-        // A proof right under its theorem still joins it, block by block.
         #expect(blocks[4].html.contains("callout-proof attached"))
     }
 
@@ -319,7 +313,6 @@ struct RenderedBlockTests {
         for (line, checked) in [(1, false), (2, true), (3, false), (5, false)] {
             #expect(html.contains("<input type=\"checkbox\" data-line=\"\(line)\" disabled\(checked ? " checked" : "")>"), "\(line)")
         }
-        // The whole-note rendering, which the Claude panel uses, has no lines to write back to.
         #expect(!HTMLRenderer.render(note).contains("data-line"))
     }
 
@@ -355,7 +348,6 @@ struct TaskBoxTests {
 }
 
 struct DraftItemTests {
-    /// Enter then Tab under a list item leaves `    - `; the item above stays a list item, not a heading.
     @Test func aStartedSubItemDoesNotMakeAHeading() {
         for text in ["- 하나\n    - ", "- 하나\n    -", "본문\n  -"] {
             let note = ParsedNote(text)

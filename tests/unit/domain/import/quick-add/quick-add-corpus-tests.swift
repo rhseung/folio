@@ -3,8 +3,7 @@ import Foundation
 import PropertyBased
 import Testing
 
-/// Lines as they get typed into the quick-add field, each with what it should save. The clock is Thursday
-/// 2026-10-22 15:00, so `금` is tomorrow and `다음 주 수요일` is 10/28.
+// 시계는 2026-10-22 목요일 15:00이므로 `금`은 내일이고 `다음 주 수요일`은 10/28이다.
 struct QuickAddCorpusTests {
     let device = UUID()
     let calendar: Calendar = {
@@ -46,16 +45,14 @@ struct QuickAddCorpusTests {
 
     struct Case: Sendable {
         let line: String
-        /// Index into `courses`, nil when the line names none.
         let course: Int?
         let title: String
-        /// `yyyy-MM-dd HH:mm`, nil when the line has no deadline.
+        // `yyyy-MM-dd HH:mm` 꼴이고, 줄에 마감이 없으면 nil이다.
         let due: String?
         var repeats: AssignmentRepeat?
     }
 
     static let cases: [Case] = [
-        // Course by alias, code and full name
         Case(line: "선대 HW5 금 23:59", course: 0, title: "HW5", due: "2026-10-23 23:59"),
         Case(line: "그래프 HW3 내일", course: 1, title: "HW3", due: "2026-10-23 23:59"),
         Case(line: "EC4207 SP2 월", course: 1, title: "SP2", due: "2026-10-26 23:59"),
@@ -76,14 +73,12 @@ struct QuickAddCorpusTests {
         Case(line: "선대 HW5 내일 새벽 2시", course: 0, title: "HW5", due: "2026-10-23 02:00"),
         Case(line: "HW4 금요일까지", course: nil, title: "HW4", due: "2026-10-23 23:59"),
         Case(line: "보고서 금", course: nil, title: "보고서", due: "2026-10-23 23:59"),
-        // Kinds and numbers in the title
         Case(line: "운영체제 Project1 12/5", course: 5, title: "Project1", due: "2026-12-05 23:59"),
         Case(line: "그래프 Reading2 내일", course: 1, title: "Reading2", due: "2026-10-23 23:59"),
         Case(line: "선대 HW 5 금", course: 0, title: "HW 5", due: "2026-10-23 23:59"),
         Case(line: "그래프 SP 2 다음 주 월요일", course: 1, title: "SP 2", due: "2026-10-26 23:59"),
         Case(line: "그래프 HW 금 오후 11:59", course: 1, title: "HW", due: "2026-10-23 23:59"),
         Case(line: "확통 Lab 3 금까지 제출", course: 4, title: "Lab 3 제출", due: "2026-10-23 23:59"),
-        // Week words
         Case(line: "컴네 Lab2 보고서 다음 주 수요일까지", course: 2, title: "Lab2 보고서", due: "2026-10-28 23:59"),
         Case(line: "선대 HW5 다음 주 금", course: 0, title: "HW5", due: "2026-10-30 23:59"),
         Case(line: "선대 HW5 다음주 금요일", course: 0, title: "HW5", due: "2026-10-30 23:59"),
@@ -91,7 +86,6 @@ struct QuickAddCorpusTests {
         Case(line: "선대 HW5 이번주 토요일", course: 0, title: "HW5", due: "2026-10-24 23:59"),
         Case(line: "그래프 HW3 다음 주 수 오후 6시", course: 1, title: "HW3", due: "2026-10-28 18:00"),
         Case(line: "선대 HW5 담주 월", course: 0, title: "HW5", due: "2026-10-26 23:59"),
-        // Days
         Case(line: "선대 HW5 오늘", course: 0, title: "HW5", due: "2026-10-22 23:59"),
         Case(line: "선대 HW5 오늘 18:00", course: 0, title: "HW5", due: "2026-10-22 18:00"),
         Case(line: "선대 HW5 23:59", course: 0, title: "HW5", due: "2026-10-22 23:59"),
@@ -104,7 +98,6 @@ struct QuickAddCorpusTests {
         Case(line: "확통 HW3 3/2", course: 4, title: "HW3", due: "2027-03-02 23:59"),
         Case(line: "선대 일요일까지 HW", course: 0, title: "HW", due: "2026-10-25 23:59"),
         Case(line: "선대 토론 준비 목", course: 0, title: "토론 준비", due: "2026-10-22 23:59"),
-        // Times
         Case(line: "확통 HW2 11/20 오후 3시", course: 4, title: "HW2", due: "2026-11-20 15:00"),
         Case(line: "선대 HW5 금 오후 11시", course: 0, title: "HW5", due: "2026-10-23 23:00"),
         Case(line: "선대 HW5 금 밤 11시", course: 0, title: "HW5", due: "2026-10-23 23:00"),
@@ -117,11 +110,9 @@ struct QuickAddCorpusTests {
         Case(line: "선대 HW5 금요일 자정", course: 0, title: "HW5", due: "2026-10-24 00:00"),
         Case(line: "그래프 HW3 일요일 밤 12시", course: 1, title: "HW3", due: "2026-10-26 00:00"),
         Case(line: "컴네 HW1 금 마감", course: 2, title: "HW1", due: "2026-10-23 23:59"),
-        // Weekly
         Case(line: "로봇 실습 보고서 매주 화", course: 3, title: "실습 보고서", due: "2026-10-27 23:59", repeats: .weekly),
         Case(line: "선대 매주 금 퀴즈", course: 0, title: "퀴즈", due: "2026-10-23 23:59", repeats: .weekly),
         Case(line: "로봇 매주 화요일 실습 보고서", course: 3, title: "실습 보고서", due: "2026-10-27 23:59", repeats: .weekly),
-        // Other repeats
         Case(line: "선대 HW 매주 월수", course: 0, title: "HW", due: "2026-10-26 23:59", repeats: AssignmentRepeat(.week, weekdays: [1, 3])),
         Case(
             line: "선대 매주 월수 오후 6시 HW", course: 0, title: "HW", due: "2026-10-26 18:00", repeats: AssignmentRepeat(.week, weekdays: [1, 3])),
@@ -135,7 +126,6 @@ struct QuickAddCorpusTests {
         Case(line: "선대 복습 3일마다", course: 0, title: "복습", due: nil, repeats: AssignmentRepeat(every: 3, .day)),
         Case(line: "확통 정리 매달 30일", course: 4, title: "정리", due: "2026-10-30 23:59", repeats: .monthly),
         Case(line: "확통 정리 2개월마다 30일", course: 4, title: "정리", due: "2026-10-30 23:59", repeats: AssignmentRepeat(every: 2, .month)),
-        // Other words for the unit, some in several words
         Case(line: "확통 정리 매월 30일", course: 4, title: "정리", due: "2026-10-30 23:59", repeats: .monthly),
         Case(line: "선대 복습 한 달마다", course: 0, title: "복습", due: nil, repeats: .monthly),
         Case(line: "선대 복습 달마다", course: 0, title: "복습", due: nil, repeats: .monthly),
@@ -145,7 +135,6 @@ struct QuickAddCorpusTests {
         Case(line: "선대 복습 하루 걸러 23:59", course: 0, title: "복습", due: "2026-10-22 23:59", repeats: AssignmentRepeat(every: 2, .day)),
         Case(line: "로봇 보고서 매주마다 금", course: 3, title: "보고서", due: "2026-10-23 23:59", repeats: .weekly),
         Case(line: "그래프 HW 2주에 한 번 수", course: 1, title: "HW", due: "2026-10-28 23:59", repeats: .biweekly),
-        // Weekdays named together
         Case(
             line: "선대 퀴즈 평일마다", course: 0, title: "퀴즈", due: "2026-10-22 23:59",
             repeats: AssignmentRepeat(.week, weekdays: [1, 2, 3, 4, 5])),
@@ -153,7 +142,6 @@ struct QuickAddCorpusTests {
         Case(
             line: "선대 퀴즈 매주 평일", course: 0, title: "퀴즈", due: "2026-10-22 23:59",
             repeats: AssignmentRepeat(.week, weekdays: [1, 2, 3, 4, 5])),
-        // `평일` and `주말` without `마다` or the rule right before are the title's.
         Case(line: "선대 주말 과제 매주 금", course: 0, title: "주말 과제", due: "2026-10-23 23:59", repeats: .weekly),
         Case(line: "평일 복습 매일", course: nil, title: "평일 복습", due: nil, repeats: .daily),
         Case(line: "선대 HW 매주 월 수", course: 0, title: "HW", due: "2026-10-26 23:59", repeats: AssignmentRepeat(.week, weekdays: [1, 3])),
@@ -172,13 +160,10 @@ struct QuickAddCorpusTests {
         Case(
             line: "로봇 보고서 격주 화, 목", course: 3, title: "보고서", due: "2026-10-22 23:59",
             repeats: AssignmentRepeat(every: 2, .week, weekdays: [2, 4])),
-        // Weekdays with no repeat beside them are the title's.
         Case(line: "선대 월수 정리", course: 0, title: "월수 정리", due: nil),
-        // A rule word is the repeat wherever it sits, title words between it and the deadline too (2026-11-10 user).
         Case(line: "선대 매주 퀴즈 금", course: 0, title: "퀴즈", due: "2026-10-23 23:59", repeats: .weekly),
         Case(line: "선대 매주 HW2", course: 0, title: "HW2", due: nil, repeats: .weekly),
         Case(line: "선대 매일 묵상 노트", course: 0, title: "묵상 노트", due: nil, repeats: .daily),
-        // Numbers and day-like words that belong to the title
         Case(line: "선대 3장 풀기 금", course: 0, title: "3장 풀기", due: "2026-10-23 23:59"),
         Case(line: "선대 2장 연습문제 1-10번 금", course: 0, title: "2장 연습문제 1-10번", due: "2026-10-23 23:59"),
         Case(line: "선대 3.2절 읽기 금", course: 0, title: "3.2절 읽기", due: "2026-10-23 23:59"),
@@ -212,8 +197,6 @@ struct QuickAddCorpusTests {
         return wrong.isEmpty ? nil : "\(c.line) → " + wrong.joined(separator: ", ")
     }
 
-    /// Any course, title words and deadline put together: the course and deadline come out whole wherever the deadline
-    /// sits, and the title is the title words in order with nothing of the deadline left in it.
     @Test func coursesTitlesAndDeadlinesComeApartInAnyOrder() async {
         let aliases: [(String, Int)] = [("선대", 0), ("그래프 이론", 1), ("컴네", 2), ("확률과 통계", 4), ("EC4207", 1), ("운체", 5)]
         let titles = ["보고서", "HW3", "정리", "Lab2", "실험", "3장", "읽기", "1-10번", "p.32", "초안"]
@@ -247,13 +230,11 @@ struct QuickAddCorpusTests {
         #expect(r.kindRange.map { String(line[$0]) } == "Lab 3")
         #expect(reader.line(line, setting: .kind(.homework, 4)) == "그래프 이론 HW4 보고서 금")
         #expect(reader.line("그래프 보고서", setting: .kind(.lab, 2)) == "그래프 보고서 Lab2")
-        // A number inside the deadline or the course is not the assignment's.
         #expect(read("확통 보고서 11/20").kind == nil)
     }
 
     var reader: QuickAdd.Reader { QuickAdd.Reader(courses: courses, codes: codes, now: now, calendar: calendar) }
 
-    /// A chip's pick goes into the line: the words read for it replaced, taken out, or added at the end.
     @Test func aPickIsWrittenIntoTheLine() {
         #expect(reader.line("선대 HW7 금", setting: .course(courses[1].id)) == "그래프 이론 HW7 금")
         #expect(reader.line("HW7 금", setting: .course(courses[5].id)) == "HW7 금 운영체제")
@@ -261,7 +242,7 @@ struct QuickAddCorpusTests {
         #expect(reader.line("선대 HW7 금 보고서 23:59", setting: .due(date("2026-11-14 18:00"))) == "선대 HW7 11/14 18:00 보고서")
         #expect(reader.line("선대 HW7", setting: .due(date("2026-11-14 23:59"))) == "선대 HW7 11/14 23:59")
 
-        // A day `10/1` would read as next year's is written with its year.
+        // `10/1`로 쓰면 내년 날짜로 읽히는 날은 연도를 붙여 쓴다.
         #expect(reader.line("선대 HW7", setting: .due(date("2026-10-01 09:00"))) == "선대 HW7 2026/10/1 09:00")
         #expect(reader.line("선대 HW7 금 23:59 보고서", setting: .due(nil)) == "선대 HW7 보고서")
         #expect(reader.line("로봇 매주 금요일 23:59 퀴즈", setting: .due(date("2026-10-30 18:00"))) == "로봇 매주 10/30 18:00 퀴즈")
@@ -272,31 +253,24 @@ struct QuickAddCorpusTests {
         #expect(reader.line("로봇 매주 금요일 퀴즈", setting: .repeats(.biweekly)) == "로봇 격주 금요일 퀴즈")
         #expect(reader.line("로봇 퀴즈 3일마다", setting: .repeats(.monthly)) == "로봇 퀴즈 매달")
 
-        // Weekdays name the day, so the deadline's day gives way to them and keeps its time.
         #expect(reader.line("선대 HW 금 18:00", setting: .repeats(AssignmentRepeat(.week, weekdays: [1, 3]))) == "선대 HW 매주 월수 18:00")
 
-        // Taken out, they leave the deadline's own weekday.
         #expect(reader.line("선대 HW 매주 월수", setting: .repeats(nil)) == "선대 HW 월")
         #expect(reader.line("선대 HW 매주 월수", setting: .repeats(.weekly)) == "선대 HW 매주 월")
 
-        // A lone `오후` stays the deadline's after the weekdays shrink to one, as it was beside them.
         #expect(reader.line("격주 월수 오후", setting: .repeats(nil)) == "월 오후")
         #expect(reader.line("오후 3일마다 18:00", setting: .repeats(nil)) == "오후 10/22 18:00")
         #expect(reader.line("오후 3일마다 18:00", setting: .repeats(.daily)) == "오후 매일 18:00")
 
-        // Weekdays go in place of the old rule when taking it out would join `오후` to the time or leave `까지` as a title
-        // word (aWrittenValueReadsBack, seed t1DEwiqJR8EPn2nhhlxfHUxNZp0n4Dzp9XES9Gco2i4= before #426).
         #expect(reader.line("오후 3일마다 18:00", setting: .repeats(AssignmentRepeat(.week, weekdays: [1, 3]))) == "오후 매주 월수 18:00")
         #expect(reader.line("보고서 한 달마다 까지", setting: .repeats(AssignmentRepeat(.week, weekdays: [1, 3]))) == "보고서 매주 월수 까지")
         #expect(reader.line("선대 HW 매주 월수", setting: .due(date("2026-11-14 23:59"))) == "선대 HW 매주 월수 11/14 23:59")
 
-        // Words read as one rule or one set of weekdays are rewritten whole.
         #expect(reader.line("선대 HW 격주 화, 목", setting: .repeats(nil)) == "선대 HW 목")
         #expect(reader.line("선대 복습 한 달마다", setting: .repeats(.weekly)) == "선대 복습 매주")
         #expect(reader.line("선대 HW 2주에 한 번 금", setting: .due(date("2026-11-14 23:59"))) == "선대 HW 격주 11/14 23:59")
         #expect(reader.line("선대 보고서 매주", setting: .kind(.homework, 2)) == "선대 보고서 매주 HW2")
 
-        // A one-word title another course's title starts with reads as that course only typed whole.
         let physics = Course(device: device, at: .now, title: "일반물리학실험", codes: [], number: "1101")
         let wide = QuickAdd.Reader(courses: [physics] + courses, codes: codes, now: now, calendar: calendar)
         #expect(wide.read(wide.line("HW1", setting: .course(courses[6].id))).courseId == courses[6].id)
@@ -316,13 +290,11 @@ struct QuickAddCorpusTests {
     ]
     static let courseWords = ["", "선대", "그래프 이론", "컴네", "확률과 통계", "EC4207", "운체"]
 
-    /// Whatever the line, a value written into it reads back as that value, and nothing else it read changes.
     @Test func aWrittenValueReadsBack() async {
         let line = zip(
             Gen.int(in: 0...(Self.courseWords.count - 1)), Gen.int(in: 0...(Self.titleWords.count - 1)).array(of: 0...3),
             zip(Gen.int(in: -1...(Self.dueWords.count - 1)), Gen.int(in: 0...3)))
 
-        // A course, a deadline from yesterday to over a year ahead (or none), the repeat, a kind and number.
         let value = zip(Gen.int(in: 0...3), Gen.int(in: 0...(courses.count - 1)), Gen.int(in: -1...(500 * 24 * 4)))
         await propertyCheck(input: line, value) { line, value in
             var words = line.1.map { Self.titleWords[$0] }
@@ -348,7 +320,6 @@ struct QuickAddCorpusTests {
                 #expect(after.repeats == (due == nil ? nil : before.repeats), "\(text) → \(set)")
                 #expect(after.title == before.title && after.courseId == before.courseId, "\(text) → \(set)")
             case let .repeats(repeats?) where !repeats.weekdays.isEmpty:
-                // Weekdays move the deadline onto the first of them, at the time it had.
                 let due = after.due.map { calendar.isoWeekday(of: $0) }
                 #expect(
                     after.repeats == repeats.normalized(dueWeekday: due) && due.map(repeats.weekdays.contains) == true, "\(text) → \(set)")

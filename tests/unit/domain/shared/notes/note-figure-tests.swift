@@ -31,7 +31,6 @@ struct NoteFigureTests {
     @Test func aFigureWithoutADarkRuleIsCaught() {
         let svg = #"<svg xmlns="http://www.w3.org/2000/svg"><style>.a{fill:#222}</style><text class="a">x</text></svg>"#
         #expect(NoteFigure.problems(svg) == [.noDarkRule])
-        // A light-only query is not a dark rule.
         let light = #"<svg xmlns="http://www.w3.org/2000/svg"><style>@media (prefers-color-scheme: light){.a{fill:#222}}</style></svg>"#
         #expect(NoteFigure.problems(light) == [.noDarkRule])
     }
@@ -76,7 +75,7 @@ struct NoteFigureTests {
                 .external("https://fonts.example/f.css"), .external("https://x/b.png"),
             ])
 
-        // The frame is served only the widget's own file, so a file beside it is as far away as another site.
+        // frame은 위젯 자신의 파일만 받으므로, 그 옆의 파일도 다른 사이트처럼 멀리 있다.
         let relative = """
             <script src="chart.js"></script><img src=plot.png><div style="background:url(grid.svg)"></div>
             <style>@import "theme.css";</style><script>const i = new Image(); i.src = 'dot.png'</script>

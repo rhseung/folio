@@ -6,7 +6,6 @@ import Testing
 
 @testable import Folio
 
-/// Graph theory's matchings slides with two classes a week apart and one still to come.
 @MainActor
 struct PageStripModelTests {
     let workspace: Workspace
@@ -17,8 +16,7 @@ struct PageStripModelTests {
 
     init() throws {
         workspace = try fixtureWorkspace()
-        // An hour before the real clock is the day before between 4 and 5 a.m. (the study day's edge), and today's
-        // class would not be today's: a fixed afternoon keeps the class an hour ago on the same study day.
+        // 실제 시계에서 한 시간 전은 새벽 4시와 5시 사이(공부일 경계)에 전날이 되어, 오늘 수업이 오늘 것이 아니게 된다. 오후로 고정하면 한 시간 전의 수업이 같은 공부일에 남는다.
         let now = workspace.calendar.date(from: DateComponents(year: 2026, month: 10, day: 28, hour: 14))!
         workspace.pinnedNow = now
         workspace.run(MaterialTrack(course: graphTheory))
@@ -38,9 +36,8 @@ struct PageStripModelTests {
             MaterialLinkSession(
                 course: graphTheory, material: slides.id, session: session, firstPage: pages.lowerBound, lastPage: pages.upperBound))
     }
-    /// What the column shows, top to bottom: `h` a header (`H` open), `e` the edit row, `d` the draft row, then the
-    /// page, `|` for a page on its section's tint and `*` for one picked, then ` /d` and its range for a draft row
-    /// under the page.
+    // 열을 위에서 아래로 적는다. `h`는 머리(`H`는 펼친 머리), `e`는 편집 행, `d`는 초안 행이고, 나머지는 쪽이다. `|`는 구획 색이 칠해진 쪽, `*`는 고른 쪽을 나타내며, 쪽 아래의
+    // 초안 행은 ` /d`와 그 범위로 적는다.
     func column(_ model: PageStripModel) -> [String] {
         model.items.map { item in
             let lead: String =
@@ -65,17 +62,14 @@ struct PageStripModelTests {
         link(earlier, 1...7)
         link(session, 9...30)
         let model = model()
-        // Cut at the file's last page, as its progress is.
         #expect(model.sections.map(\.id) == [earlier, session] && model.sections.map(\.pages) == [1...7, 9...24])
         let day = file.day(of: file.sessions.first { $0.id == earlier }!, calendar: workspace.calendar)
         #expect(model.sections[0].title == day && model.sections[0].label == "1–7쪽")
-        // Both are among the last two, so both are open; a plain page between them has no header.
         let column = column(model)
         #expect(Array(column.prefix(2)) == ["H1–7쪽 1|", " 2|"] && column[6] == " 7|" && column[7] == " 8")
         #expect(column[8] == "H9–24쪽 9|" && column.count == 24)
     }
 
-    /// Unfolded until folded by hand: the two latest sections. A fold is kept per file on this device.
     @Test func earlierSectionsFoldAndAFoldIsKept() throws {
         let third = try #require(workspace.run(SessionAdd(course: graphTheory, date: workspace.now.addingTimeInterval(-3 * 86_400)))?.made)
         link(earlier, 1...4)
@@ -84,7 +78,6 @@ struct PageStripModelTests {
         let defaults = try #require(UserDefaults(suiteName: "PageStripModelTests.\(UUID())"))
         let model = model(defaults: defaults)
         #expect(Array(column(model).prefix(3)) == ["h1–4쪽", "H5–8쪽 5|", " 6|"])
-        // Where the PDF is on a folded section's page, the column goes to that header.
         #expect(model.itemID(showing: 3) == .folded(earlier) && model.itemID(showing: 6) == .page(6))
         model.toggle(model.sections[0])
         model.toggle(model.sections[2])
@@ -102,11 +95,9 @@ struct PageStripModelTests {
         model.extend(to: 4)
         model.start(at: 2)
         #expect(model.selection == nil && model.items.map(\.page) == Array(1...24))
-        // A file no course tracks has none either.
         #expect(!PageStripModel(workspace: workspace, course: nil, material: nil, pageCount: 3, defaults: nil).isLecture)
     }
 
-    /// Pressed, then ⇧-pressed before it: the range runs either way round, and its row goes above its first page.
     @Test func aPressThenAShiftPressPicksTheRange() {
         let model = model()
         model.press(9)
@@ -116,19 +107,15 @@ struct PageStripModelTests {
         #expect(Array(column(model)[3...4]) == ["d4–9쪽 4*", " 5*"] && column(model)[9] == " 10")
         model.extend(to: 12)
         #expect(model.selection == 9...12)
-        // A plain press lets the range go and starts the next one there.
         model.press(3)
         #expect(model.selection == nil && model.anchor == 3)
         model.extend(to: 3)
         #expect(model.selectionLabel == "3쪽")
-        // ⇧ with nothing pressed before starts and ends at that page.
         let fresh = self.model()
         fresh.extend(to: 6)
         #expect(fresh.selection == 6...6)
     }
 
-    /// The draft row stands at the end the range was picked out to: under it picked downward, over it picked upward
-    /// or with one page alone, and the column scrolls to the item that holds it.
     @Test func theDraftRowFollowsThePickedEnd() {
         let model = model()
         model.press(4)
@@ -136,15 +123,12 @@ struct PageStripModelTests {
         #expect(model.selection == 4...9 && model.draftBelow && model.draftItemID == .page(9))
         let down = column(model)
         #expect(down[3] == " 4*" && down[8] == " 9* /d4–9쪽" && down[9] == " 10")
-        // ⇧ back above the anchor turns it round: the row goes over the range, by its first page.
         model.extend(to: 2)
         #expect(model.selection == 2...4 && !model.draftBelow && model.draftItemID == .page(2))
         let up = column(model)
         #expect(up[1] == "d2–4쪽 2*" && up[3] == " 4*")
-        // One page alone keeps the row over it.
         model.extend(to: 4)
         #expect(model.selection == 4...4 && !model.draftBelow && column(model)[3] == "d4쪽 4*")
-        // iPad: a long press then a tap further down does the same.
         model.start(at: 12)
         #expect(!model.draftBelow && model.draftItemID == .page(12))
         model.extend(to: 15)
@@ -153,7 +137,6 @@ struct PageStripModelTests {
         #expect(model.draftItemID == nil)
     }
 
-    /// A class's range being changed keeps its row in the header's place, whichever way it is widened.
     @Test func theEditRowStaysInTheHeadersPlace() {
         link(session, 9...12)
         let model = model()
@@ -163,7 +146,6 @@ struct PageStripModelTests {
         #expect(column(model)[8] == "e9–14쪽 9*" && !column(model).contains { $0.contains("/d") })
     }
 
-    /// A range stops at another class's pages, and a press on one of them starts nothing.
     @Test func aRangeStopsAtAnotherClassesPages() {
         link(earlier, 5...8)
         let model = model()
@@ -181,7 +163,6 @@ struct PageStripModelTests {
         #expect(model.selection == 9...20)
     }
 
-    /// iPad: a long press starts a one-page range, and the next tap moves its end.
     @Test func aLongPressStartsARangeATapWidens() {
         let model = model()
         model.start(at: 10)
@@ -194,8 +175,6 @@ struct PageStripModelTests {
         #expect(model.selection == nil)
     }
 
-    /// iPad: the strip's button turns picking on, so the next tap starts a range as a long press does, on a section's
-    /// page changing that class's range; pressed again, it lets the range go.
     @Test func theButtonStartsPickingATapBegins() {
         link(earlier, 5...8)
         let model = model()
@@ -212,8 +191,6 @@ struct PageStripModelTests {
         #expect(model.editing == earlier && model.selection == 5...8)
     }
 
-    /// The candidates are the classes held so far with no pages of this file, latest first, today's picked. Saving
-    /// writes the range as that class's pages, and the row becomes its section, open.
     @Test func savingWritesTheRangeToTheChosenClass() {
         let model = model()
         #expect(!model.canSave)
@@ -227,7 +204,6 @@ struct PageStripModelTests {
         #expect(model.selection == nil && !model.choosing && model.fresh == session)
         #expect(model.sections.map(\.pages) == [9...12] && column(model)[8] == "H9–12쪽 9|")
         #expect(links(upcoming).isEmpty)
-        // A class with pages here is changed from its header, not offered again.
         #expect(model.choices.map(\.id) == [earlier])
         link(earlier, 1...4)
         model.press(14)
@@ -242,8 +218,6 @@ struct PageStripModelTests {
         #expect(model.onlyToday?.id == session && model.chosen == session)
     }
 
-    /// A header pressed turns into the row that changes its class's range: ⇧ moves its end, or its start before it,
-    /// up to the next class's pages.
     @Test func aHeaderChangesItsClassesRange() {
         link(earlier, 1...4)
         link(session, 9...12)
@@ -258,13 +232,10 @@ struct PageStripModelTests {
         model.commit()
         #expect(links(session) == [SessionMaterial(materialId: slides.id, firstPage: 5, lastPage: 14)])
         #expect(model.editing == nil && model.sections.map(\.pages) == [1...4, 5...14])
-        // On iPad a long press on a section's page does the same.
         model.start(at: 2)
         #expect(model.editing == earlier && model.selection == 1...4)
     }
 
-    /// The edit row, and the header's menu without editing first, take the file off the class as the wrap-up's
-    /// unticked row does. The class is offered for a new range again, and its fold is forgotten.
     @Test func aSectionsProgressIsRemoved() throws {
         link(earlier, 1...4)
         link(session, 9...12)
@@ -284,7 +255,6 @@ struct PageStripModelTests {
         #expect(links(upcoming).isEmpty)
     }
 
-    /// From one header's menu, another section being changed or a new range being picked stays as it was.
     @Test func removingFromAMenuKeepsOtherWork() {
         link(earlier, 1...4)
         link(session, 9...12)
@@ -301,7 +271,6 @@ struct PageStripModelTests {
         #expect(links(session).isEmpty && model.selection == 15...17)
     }
 
-    /// The rule behind the stop: a save that would share a page is refused, naming the other class's pages.
     @Test func anOverlappingSaveIsRefused() {
         link(earlier, 1...7)
         let refusal = workspace.refusal(
@@ -309,7 +278,6 @@ struct PageStripModelTests {
         #expect(refusal?.contains("1–7쪽") == true)
     }
 
-    /// A cancelled class taught nothing and isn't offered.
     @Test func aCancelledClassIsNotOffered() {
         workspace.run(SessionSet(course: graphTheory, session: earlier, kind: .set(.cancelled)))
         #expect(model().choices.map(\.id) == [session])

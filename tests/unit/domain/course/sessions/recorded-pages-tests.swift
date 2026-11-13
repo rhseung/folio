@@ -14,7 +14,6 @@ struct RecordedPagesTests {
     }
 
     @Test func pagesPassedOnTheWayDoNotCount() {
-        // Paging from 3 to 9 to find the slide, then staying.
         let r = recording([
             PageVisit(at: 0, materialId: slides, page: 3), PageVisit(at: 100, materialId: slides, page: 4),
             PageVisit(at: 101, materialId: slides, page: 5),
@@ -29,7 +28,6 @@ struct RecordedPagesTests {
             PageVisit(at: 40, materialId: slides, page: nil),
         ]
         #expect(recording(visits).viewedPages() == [SessionMaterial(materialId: slides, firstPage: 3, lastPage: 3)])
-        // Closing the file ends its last page's time; the rest of the class doesn't count toward it.
         #expect(
             recording([PageVisit(at: 0, materialId: slides, page: 2), PageVisit(at: 10, materialId: slides, page: nil)]).viewedPages()
                 .isEmpty)
@@ -60,7 +58,6 @@ struct RecordedPagesTests {
         #expect(r.visit(slides, page: nil, at: 0) == nil)
         r.pages.append(r.visit(slides, page: 4, at: 5)!)
         #expect(r.visit(slides, page: 4, at: 9) == nil)
-        // Another file's viewer closing after this one opened is not this one closing.
         #expect(r.visit(other, page: nil, at: 10) == nil)
         #expect(r.visit(slides, page: 5, at: 11) == PageVisit(at: 11, materialId: slides, page: 5))
         r.pages.append(r.visit(slides, page: nil, at: 12)!)
@@ -97,13 +94,11 @@ struct RecordedPagesTests {
             ])
         #expect(file.materials[1].sessionIds == [session])
 
-        // Again changes nothing.
         #expect(file.linkViewedPages(of: r) == 0)
     }
 
     static let visits = zip(Gen.int(in: 0...90), Gen.int(in: 0...2), Gen.int(in: 0...12)).array(of: 0...30)
 
-    /// Every range is made of pages that were on screen for the dwell, and covers every such page of its file.
     @Test func rangesSpanExactlyTheDwelledPages() async {
         let files = [UUID(), UUID()]
         await propertyCheck(input: Self.visits) { steps in

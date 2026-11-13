@@ -11,12 +11,11 @@ private let other = AppLink(.note, UUID())
 private func approx(_ a: Double, _ b: Double) -> Bool { abs(a - b) < 1e-9 }
 
 struct PaneLayoutTests {
-    // Three panes at 360pt beside 40pt strips with 8pt gaps: three open need 1096, two 776, one 456.
+    // 360pt 칸 세 개와 40pt 띠, 8pt 간격으로 세면, 세 칸을 펼치려면 1096, 두 칸은 776, 한 칸은 456이 필요하다.
     static func fit(_ l: PaneLayout, _ room: Double) -> PaneLayout.Fit { l.fit(room: room, minWidth: 360, strip: 40, gap: 8) }
 
     static func three() -> PaneLayout {
         var l = PaneLayout(links: [lecture, note, quiz])!
-        // Pressed in this order, so the lecture is the oldest press and the note the focus.
         l.press(0)
         l.press(2)
         l.press(1)
@@ -26,49 +25,41 @@ struct PaneLayoutTests {
     @Test func everyPaneOpensWhenTheyFit() {
         let f = Self.fit(Self.three(), 1216)
         #expect(f.folded.isEmpty)
-        // Even shares of 1216 - 16.
         #expect(f.widths.allSatisfy { approx($0, 400) })
     }
 
     @Test func theRunGivesUpItsOlderEndAndNeverTheFocus() {
         var l = Self.three()
 
-        // The lecture, pressed before the quiz, goes to the left bundle: a bundle of one, drawn as its own strip.
         let two = Self.fit(l, 956)
         #expect(two.fold.run == 1...2 && two.fold.left == [0] && two.fold.right.isEmpty)
         #expect(two.fold.look(0) == .bundle([0]) && two.widths[0] == 40)
         #expect(Self.fit(l, 500).folded == [0, 2])
 
-        // Far too narrow: the focused pane still stays open, with what there is.
         let tiny = Self.fit(l, 200)
         #expect(tiny.folded == [0, 2])
         #expect(approx(tiny.widths[1], 200 - 80 - 16))
 
-        // Pressing the lecture's strip slides the run to it, and the quiz, now the end pressed longer ago, goes right.
         l.press(0)
         #expect(Self.fit(l, 956).fold.run == 0...1 && Self.fit(l, 956).folded == [2])
         #expect(l.focus == 0)
     }
 
     @Test func theRunHangsOnTheWidthAndThePressesAlone() {
-        // Three open need 1096; two beside a bundle 776; one beside two bundles 456.
+        // 세 칸을 펼치려면 1096, 묶음 옆의 두 칸은 776, 묶음 두 개 옆의 한 칸은 456이 필요하다.
         let l = Self.three()
         let runs = [1096.0, 1095, 776, 775, 456, 10].map { l.fold(room: $0, minWidth: 360, strip: 40, gap: 8).run }
         #expect(runs == [0...2, 1...2, 1...2, 1...1, 1...1, 1...1])
 
-        // The same fold as `fit`, with the widths for it.
         let fold = l.fold(room: 956, minWidth: 360, strip: 40, gap: 8)
         #expect(l.widths(room: 956, fold: fold, minWidth: 360, strip: 40, gap: 8) == Self.fit(l, 956).widths)
         #expect(fold.gaps(8) == [8, 8])
 
-        // A fold for another count of panes reads as every pane in place.
         #expect(l.widths(room: 1216, fold: PaneLayout(lecture).unfolded, minWidth: 360, strip: 40, gap: 8) == Self.fit(l, 1216).widths)
     }
 
     static let six = [lecture, note, quiz, other, AppLink(.exam, UUID()), AppLink.place(.today)]
 
-    // The mockup's six panes in 700pt (#62): only the quiz in focus is open, two panes left of it in one bundle and
-    // three right of it in the other, each bundle a strip.
     @Test func theRestFoldsIntoABundleAtEitherEnd() throws {
         var l = try #require(PaneLayout(links: Self.six))
         l.press(2)
@@ -80,17 +71,13 @@ struct PaneLayoutTests {
         #expect(f.widths == [0, 40, 700 - 80 - 16, 40, 0, 0])
         #expect(f.gaps == [0, 8, 8, 0, 0])
 
-        // Choosing the first of the right bundle slides the run one pane over: the quiz joins the left bundle.
         l.press(3)
         let moved = Self.fit(l, 700)
         #expect(moved.fold.run == 3...3 && moved.fold.left == [0, 1, 2] && moved.fold.right == [4, 5])
 
-        // Wider, the run keeps the pane pressed just before beside the focus.
         #expect(Self.fit(l, 900).fold.run == 2...3)
     }
 
-    // No room beside the focus (2026-11-12 사용자): the new pane opens and takes the focus, and the pane it opened
-    // beside, now the end pressed longer ago, goes to the bundle on its side.
     @Test func besideWithNoRoomFoldsTheOtherEnd() throws {
         var l = try #require(PaneLayout(links: Self.six))
         l.press(2)
@@ -103,7 +90,6 @@ struct PaneLayoutTests {
     @Test func aPaneFollowsItsOwnHistory() {
         var l = Self.three()
         l.show(.write, in: 2)
-        // The quiz pane, not the focused note, goes on; its note mode stays only for the same target.
         l.open(AppLink.course(UUID(), page: .quiz), in: 2)
         #expect(l.links[1] == note && l.focus == 1)
         #expect(l.panes[2].noteMode == nil)
@@ -129,19 +115,15 @@ struct PaneLayoutTests {
         #expect(l.links == [lecture, note, quiz] && l.focus == 2)
         #expect(l.shares == [0.5, 0.25, 0.25])
 
-        // A pane already showing the target takes it, at the new page.
         l.openBeside(note.with(.heading("Hall")))
         #expect(l.links == [lecture, note.with(.heading("Hall")), quiz] && l.focus == 1)
     }
 
-    // No cap on the panes (2026-11-12 사용자): a fourth opens beside the focus like the second did, and the row folds
-    // what it has no room for rather than a pane in use giving way.
     @Test func besideOpensAPaneWhateverTheCount() {
         var l = Self.three()
         l.openBeside(other)
         #expect(l.links == [lecture, note, other, quiz] && l.focus == 2)
         #expect(approx(l.shares.reduce(0, +), 1))
-        // 856pt holds two open beside two bundles: the lecture and the quiz, pressed longest ago, fold to either end.
         #expect(Self.fit(l, 856).fold.run == 1...2 && Self.fit(l, 856).folded == [0, 3])
     }
 
@@ -180,7 +162,6 @@ struct PaneLayoutTests {
 
         #expect(l.shares.allSatisfy { approx($0, 1.0 / 3) })
 
-        // Only the widths: the focus and which pane folds first stay.
         #expect(l.focus == 1 && l.links == [lecture, note, quiz])
         #expect(Self.fit(l, 776).folded == [0])
 
@@ -195,32 +176,26 @@ struct PaneLayoutTests {
     @Test func aPaneFoldedByHandStaysFoldedUntilPressed() {
         var l = Self.three()
 
-        // The focused note folds by hand: the focus goes to the quiz, pressed before it.
         l.collapse(1)
         #expect(l.collapsed == [1] && l.focus == 2)
 
-        // However wide the window: the rest open, the note a strip in its place, the others sharing what it leaves.
         let wide = Self.fit(l, 2000)
         #expect(wide.folded == [1] && wide.fold.look(1) == .strip && wide.widths[1] == 40)
         #expect(approx(wide.widths[0], wide.widths[2]))
 
-        // Narrower, the lecture goes to the left bundle, and the note, left at the run's end beside it, goes in too.
         let narrow = Self.fit(l, 500)
         #expect(narrow.folded == [0, 1] && narrow.fold.look(1) == .bundle([0, 1]))
 
-        // The last open pane can't fold.
         l.collapse(0)
         #expect(!l.canCollapse(2))
         l.collapse(2)
         #expect(l.collapsed == [0, 1] && l.focus == 2)
 
-        // Pressing its strip opens it.
         l.press(1)
         #expect(l.collapsed == [0] && l.focus == 1)
         #expect(Self.fit(l, 2000).folded == [0])
     }
 
-    // The mockup's hand fold (#62): in place at 1200pt, in the right bundle with the quiz at 560pt.
     @Test func aPaneFoldedByHandJoinsTheBundleBesideIt() {
         var l = Self.three()
         l.press(0)
@@ -237,7 +212,6 @@ struct PaneLayoutTests {
         l.collapse(2)
         let closed = l.close(1)
         #expect(closed)
-        // The quiz was pressed more recently than the lecture: it takes the focus and opens.
         #expect(l.links == [lecture, quiz] && l.focus == 1 && l.collapsed == [0])
     }
 
@@ -250,7 +224,6 @@ struct PaneLayoutTests {
         let json =
             #"{"panes":[{"link":"\#(lecture.string)","share":1,"pressed":0},{"link":"\#(note.string)","share":1,"pressed":1,"collapsed":true}],"focus":1}"#
         let old = try JSONDecoder().decode(PaneLayout.self, from: Data(json.utf8))
-        // A focus folded by hand, which the app never writes, moves to the pane left open.
         #expect(old.focus == 0 && old.collapsed == [1])
     }
 
@@ -269,7 +242,6 @@ struct PaneLayoutTests {
         let kept = try #require(l.keeping { $0 != 0 })
         #expect(kept.links == [note, quiz] && kept.focus == 1)
         #expect(approx(kept.shares.reduce(0, +), 1))
-        // The focused pane left out: the focus goes to the pane pressed most recently of those kept.
         let without = try #require(l.keeping { $0 != 2 })
         #expect(without.links == [lecture, note] && without.links[without.focus] == note)
         #expect(l.keeping { _ in false } == nil)
@@ -286,7 +258,6 @@ struct PaneLayoutTests {
 
         #expect(file.session(holding: note) == a.id && file.session(holding: other) == b.id)
         #expect(file.session(holding: AppLink(.recording, recording.id)) == a.id)
-        // The class's own link opens the list of classes, which is no class's layout.
         #expect(file.session(holding: AppLink(.session, a.id)) == nil && file.session(holding: lecture) == nil)
 
         let lectureAndNote = try #require(PaneLayout(links: [lecture, note, quiz]))
@@ -299,20 +270,17 @@ struct PaneLayoutTests {
     }
 
     @Test func anotherTabJoinsAtAnEdgeWithItsFocus() {
-        // A tab of one joining a tab of one halves the row; the other tab's focus comes along and takes the focus.
         var l = PaneLayout(lecture)
         l.merge(PaneLayout(note), at: 1)
         #expect(l.links == [lecture, note] && l.focus == 1)
         #expect(l.shares.allSatisfy { approx($0, 0.5) })
 
-        // A tab of two at the leading edge: two thirds of the row, split as it had it, its own focus kept.
         var two = PaneLayout(links: [quiz, other], shares: [0.75, 0.25])!
         two.press(1)
         var one = PaneLayout(lecture)
         one.merge(two, at: 0)
         #expect(one.links == [quiz, other, lecture] && one.focus == 1)
         #expect(approx(one.shares[0], 0.5) && approx(one.shares[1], 1.0 / 6) && approx(one.shares[2], 1.0 / 3))
-        // The joined panes count as pressed after the ones here, so the lecture folds first.
         #expect(Self.fit(one, 776).folded == [2])
     }
 
@@ -372,8 +340,6 @@ struct PanePresetTests {
         #expect(PanePreset.review.layout(session: Self.session(material: nil, rough: nil), course: Self.course) == nil)
     }
 
-    // "복습" is written from the lecture and the class's note (2026-11-11 사용자), on every device: an iPad folds
-    // what it has no room for rather than leaving a pane out (2026-11-12 사용자).
     @Test func reviewIsTheLectureTheClassNoteAndTheReviewNote() throws {
         let s = Self.session(review: UUID())
         let lecture = AppLink(.material, s.materials[0].materialId, anchor: .page(4))
@@ -399,12 +365,10 @@ struct PanePresetTests {
         #expect(l.links == [lectures[0], lectures[1], note] && l.focus == 2)
         #expect(approx(l.shares[0], 0.275) && approx(l.shares[1], 0.275) && approx(l.shares[2], 0.45))
 
-        // Every lecture comes, however many: none gives way for the device.
         let all = try #require(PanePreset.inClass.layout([.lecture: lectures, .classNote: [note]], focus: .classNote))
         #expect(all.links == lectures + [note] && all.focus == 3)
         #expect(approx(all.shares[0], 0.55 / 3) && approx(all.shares[3], 0.45))
 
-        // Without the note, the lectures alone, focused on the first.
         let alone = try #require(PanePreset.inClass.layout([.lecture: [lectures[0]], .classNote: []], focus: .classNote))
         #expect(alone.links == [lectures[0]] && alone.shares == [1] && alone.focus == 0)
         #expect(PanePreset.inClass.layout([:]) == nil)
@@ -415,7 +379,6 @@ struct PanePresetTests {
         #expect(PanePreset.builtIn.allSatisfy { $0.slots.count == $0.shares.count && $0.name == nil && $0.isBuiltIn })
     }
 
-    // "지금 배치 저장…" (2026-11-11 사용자): the class's own pages are kept as roles, anything else at its address.
     @Test func savingKeepsTheClassesPagesAsRolesAndTheRestAsAddresses() throws {
         let s = Self.session(review: UUID())
         let textbook = AppLink(.material, UUID(), anchor: .page(30))
@@ -428,13 +391,11 @@ struct PanePresetTests {
         #expect(saved.slots == [.role(.reviewNote), .role(.lecture), .link(textbook)])
         #expect(saved.name == "정리" && !saved.isBuiltIn && saved.needsClass && approx(saved.shares[0], 0.5))
 
-        // Chosen in another class's tab, it takes that class's note and lecture, and the textbook as it was.
         let next = Self.session(page: nil, review: UUID())
         let filled = try #require(saved.layout(session: next, course: Self.course))
         #expect(filled.links == [AppLink(.note, next.reviewNoteId!), AppLink(.material, next.materials[0].materialId), textbook])
         #expect(saved.matches(filled, session: next, course: Self.course))
 
-        // Off where there is no class to fill it from.
         #expect(saved.layout(session: nil, course: nil) == nil)
     }
 
@@ -450,7 +411,6 @@ struct PanePresetTests {
     @Test func aRoleInTwoSlotsTakesALinkEach() throws {
         let preset = PanePreset(name: "렉처 둘", slots: [.role(.lecture), .role(.classNote), .role(.lecture)], shares: [0.4, 0.2, 0.4])
         let lectures = [AppLink(.material, UUID()), AppLink(.material, UUID()), AppLink(.material, UUID())]
-        // The last lecture slot takes the rest: nothing is left out for want of room (2026-11-12 사용자).
         let l = try #require(preset.layout([.lecture: lectures, .classNote: [note]]))
         #expect(l.links == [lectures[0], note, lectures[1], lectures[2]])
         let one = try #require(preset.layout([.lecture: lectures, .classNote: [note]], spreads: false))
@@ -468,7 +428,6 @@ struct PanePresetTests {
         #expect(back.panePresets == [saved] && back.classStartPreset == saved)
         #expect(back.presets.map(\.id) == PanePreset.builtIn.map(\.id) + [saved.id])
 
-        // A deleted layout, or none chosen, starts a class in "수업 중".
         settings.panePresets = []
         #expect(settings.classStartPreset == .inClass && Settings().classStartPreset == .inClass)
         #expect(try JSONDecoder().decode(Settings.self, from: Data("{}".utf8)).panePresets.isEmpty)
@@ -486,7 +445,6 @@ struct PanePresetTests {
         let quiz = AppLink.course(course, page: .quiz)
         let concepts = PanePreset(name: "개념", slots: [.role(.lecture), .role(.quiz)], shares: [0.6, 0.4])
 
-        // A lecture and the quiz with no lecture: the quiz alone is no class's tab.
         #expect(concepts.startLayout([.quiz: [quiz], .classNote: [note]]) == nil)
         let mine = PanePreset(name: "성적과 노트", slots: [.link(.place(.grades)), .role(.classNote)], shares: [0.3, 0.7])
         #expect(mine.startLayout([.quiz: [quiz]]) == nil)
@@ -533,7 +491,6 @@ struct PaneLessonTests {
         let file = Self.file([c, a, holiday, b])
         let l = PaneLayout(AppLink(.material, lecture, anchor: .page(3)))
         #expect(l.lesson(in: [file], now: .init(timeIntervalSince1970: 11 * 86400))?.session.id == b.id)
-        // Before any, the first to come.
         #expect(l.lesson(in: [file], now: .init(timeIntervalSince1970: 0))?.session.id == a.id)
         #expect(PaneLayout(.place(.grades)).lesson(in: [file], now: .now) == nil)
     }
@@ -570,10 +527,8 @@ struct PaneMemoryTests {
         #expect(restored.focused.noteMode == .read)
         #expect(zip(restored.shares, [0.5, 0.3, 0.2]).allSatisfy { approx($0, $1) })
 
-        // A note the layout doesn't show, a session with none remembered: nothing to bring back.
         #expect(memory.restoring(other, session: session) == nil)
         #expect(memory.restoring(note, session: UUID()) == nil)
-        // Every pane comes back, wherever the layout was left: the row folds what it has no room for.
         #expect(memory.restoring(note, session: session)?.links == [lecture, note, quiz])
     }
 
@@ -599,10 +554,8 @@ struct PaneMemoryTests {
     }
 }
 
-/// What a layout keeps whatever is done to it, and what folding keeps at any width.
 struct PaneLayoutPropertyTests {
     static let links = [lecture, note, quiz, other, AppLink(.exam, UUID()), AppLink.place(.today)]
-    // An action, which pane or link, and a fraction for a drag.
     static let steps = zip(Gen.int(in: 0...7), Gen.int(in: 0...5), Gen.double(in: -0.5...1.5)).array(of: 0...30)
 
     static func run(_ steps: [(Int, Int, Double)]) -> PaneLayout {
@@ -658,11 +611,9 @@ struct PaneLayoutPropertyTests {
             if f.fold.open.count > 1 {
                 #expect(f.fold.open.allSatisfy { f.widths[$0] >= min - 1e-9 })
             }
-            // Two bundles at most: one open pane and two strips is all any row needs.
             if room >= min + 2 * (strip + gap) {
                 #expect(abs(f.widths.reduce(0, +) + f.gaps.reduce(0, +) - room) < 1e-6)
             }
-            // A wider window keeps the run and adds to it.
             let wide = l.fold(room: room + more, minWidth: min, strip: strip, gap: gap)
             #expect(wide.run.lowerBound <= f.fold.run.lowerBound && wide.run.upperBound >= f.fold.run.upperBound)
         }
@@ -678,7 +629,6 @@ struct PaneLayoutPropertyTests {
             l.press(i)
             let after = l.fold(room: room, minWidth: 360, strip: 40, gap: 8)
             #expect(after.open.contains(i))
-            // It comes in at the run's end on its side: the run slides no further than it must.
             #expect(before.left.contains(i) ? after.run.lowerBound == i : after.run.upperBound == i)
         }
     }

@@ -9,7 +9,6 @@ import Testing
 
 @testable import Folio
 
-/// A lecture's units (#321): proposed in the add sheet, edited on the split screen, and drawn where its progress shows.
 @MainActor
 struct LectureSectionsModelTests {
     let workspace: Workspace
@@ -25,7 +24,6 @@ struct LectureSectionsModelTests {
 
     var file: CourseFile { workspace.course(graphTheory)!.file }
 
-    /// A file outside the course, as the add sheet gets it.
     func incoming(_ name: String) throws -> URL {
         let url = FileManager.default.temporaryDirectory.appending(path: "folio-sections-\(UUID().uuidString)").appending(path: name)
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -71,8 +69,6 @@ struct LectureSectionsModelTests {
         #expect(f.units.first { $0.title == "Berge" }?.lecturePages == [UnitPages(materialId: m.id, firstPage: 11, lastPage: 16)])
     }
 
-    /// Put off, the file comes in unsplit, but what was proposed comes back on asking; a row turned into an assignment
-    /// takes no sections at all.
     @Test func putOffOrNoLongerALectureWritesNoSections() async throws {
         let course = try #require(workspace.course(graphTheory))
         let model = ImportPlaceModel(
@@ -97,17 +93,13 @@ struct LectureSectionsModelTests {
             .nothing(pageCount: 12)
         }
         await settle(model)
-        // Two files: each keeps to its line.
         #expect(model.opened.isEmpty)
         #expect(model.sectionsLine(model.rows[0]) == "목차와 슬라이드 제목을 찾지 못했습니다")
         model.splitByHand(0)
         #expect(model.edit(0)?.sections.map(\.pages) == [1...12] && model.opened == [0])
-        // One zone for no unit writes nothing.
         #expect(model.cuts(model.rows[0]) == nil)
     }
 
-    /// A deck without an outline splits at its divider slides, a long title (nine words) included; titles that name no
-    /// unit are proposed as new ones.
     @Test func theReaderSplitsADeckAtItsDividers() async throws {
         let url = FileManager.default.temporaryDirectory.appending(path: "folio-deck-\(UUID().uuidString).pdf")
         try SampleLecture.write(to: url)
@@ -137,7 +129,6 @@ struct LectureSectionsModelTests {
         for i in 0..<10 { document.insert(PDFPage(), at: i) }
         let controller = PDFController(document: document, page: 0)
         await model.startSplit(controller)
-        // The fixture's file isn't a PDF to read: one zone to cut by hand, and the screen says so.
         #expect(model.splitting?.sections.map(\.pages) == [1...10])
         #expect(model.splitNote == String(localized: .fileViewSplitNothing))
         model.splitting?.split(at: 5)
@@ -146,12 +137,10 @@ struct LectureSectionsModelTests {
         #expect(model.splitting == nil)
         #expect(file.units.first { $0.id == matching }?.lecturePages == [UnitPages(materialId: slides.id, firstPage: 5, lastPage: 10)])
 
-        // Opened again, it starts from what the course holds.
         await model.startSplit(controller)
         #expect(model.splitting?.sections.map(\.pages) == [1...4, 5...10] && model.splitting?.sections[1].unit == matching)
     }
 
-    /// Cancelled, the screen closes and the course is as it was; opened again, it starts over.
     @Test func cancellingTheSplitScreenWritesNothing() async throws {
         let course = try #require(workspace.course(graphTheory))
         let model = FileViewModel(workspace: workspace, course: course, subject: .material(slides.id))
@@ -173,7 +162,6 @@ struct LectureSectionsModelTests {
 
     // MARK: Claude (#450)
 
-    /// What a stand-in Claude proposes: two new units over ten pages. Each call makes new section ids.
     var claudes: LectureSplit {
         var split = LectureSplit(
             [.init(title: "Overview", firstPage: 1, lastPage: 1), .init(title: "IP", firstPage: 4, lastPage: 4)], pageCount: 10)!
@@ -190,8 +178,6 @@ struct LectureSectionsModelTests {
             })
     }
 
-    /// Claude reads every page, not only the titles: each page's text goes under its title, and the divider slides,
-    /// which have hardly any words, go as pictures.
     @Test func claudeGetsEachPagesTextAndPicturesOfTheDividers() async throws {
         let url = FileManager.default.temporaryDirectory.appending(path: "folio-deck-\(UUID().uuidString).pdf")
         try SampleLecture.write(to: url)
@@ -210,7 +196,6 @@ struct LectureSectionsModelTests {
             return
         }
         #expect(text.contains("<pages count=\"24\">") && text.contains("## 9: Hall's theorem"))
-        // A content slide's own words, past its title.
         let pages = text.components(separatedBy: "## ").dropFirst()
         #expect(pages.filter { $0.contains("\n") }.count > 12)
         let pictures = content.compactMap { block -> Data? in
@@ -221,8 +206,6 @@ struct LectureSectionsModelTests {
         #expect(content.contains(.text("Page 9:")))
     }
 
-    /// Claude's failure is the one time the split screen offers Claude again; its answer is on screen, not in the
-    /// file, until "저장".
     @Test func theSplitScreenOffersClaudeAgainOnlyAfterItFailed() async throws {
         let before = file
         let course = try #require(workspace.course(graphTheory))
@@ -235,7 +218,6 @@ struct LectureSectionsModelTests {
         await model.startSplit(PDFController(document: document, page: 0))
         #expect(model.canRetryClaude && model.splitNote == failure && model.splitting?.sections.map(\.pages) == [1...10])
         await model.retryClaude()
-        // Failing again keeps what is on screen and the way back to Claude.
         #expect(model.canRetryClaude && model.splitNote == failure && model.splitting?.sections.map(\.pages) == [1...10])
 
         let claudes = claudes
@@ -247,7 +229,6 @@ struct LectureSectionsModelTests {
         #expect(file.units.first { $0.title == "IP" } != nil)
     }
 
-    /// A split Claude made and a row with nothing found but no failure offer no Claude: the user adjusts it by hand.
     @Test func withoutAFailureThereIsNoClaudeToAskAgain() async throws {
         let course = try #require(workspace.course(graphTheory))
         let model = FileViewModel(workspace: workspace, course: course, subject: .material(slides.id))
@@ -271,8 +252,6 @@ struct LectureSectionsModelTests {
         #expect(!asked && sheet.asking.isEmpty)
     }
 
-    /// In the add sheet, a row Claude gave no split can ask again, and only the sheet's own button brings the file in
-    /// with Claude's answer.
     @Test func theAddSheetAsksClaudeAgainAfterItFailed() async throws {
         let course = try #require(workspace.course(graphTheory))
         let claudes = claudes
@@ -298,13 +277,10 @@ struct LectureSectionsModelTests {
         failing.retryClaude(0)
         for _ in 0..<50 where !failing.asking.isEmpty { await Task.yield() }
         #expect(failing.sectionsLine(failing.rows[0]) == "Claude가 나눌 곳을 찾지 못했습니다" && failing.showsRetry(0))
-        // Cut by hand, the row has moved on from what Claude couldn't find.
         failing.splitByHand(0)
         #expect(!failing.showsRetry(0))
     }
 
-    /// With Claude set up, adding a lecture asks Claude straight away, even where the slide titles would split it: their
-    /// guess is not what the user wants first. A failure is not covered over by the titles' guess.
     @Test func withClaudeTheReaderAsksClaudeFirst() async throws {
         let url = FileManager.default.temporaryDirectory.appending(path: "folio-deck-\(UUID().uuidString).pdf")
         try SampleLecture.write(to: url)
@@ -341,7 +317,6 @@ struct LectureSectionsModelTests {
         #expect(model.zones(slides.id).map(\.title) == ["", "매칭"])
         #expect(!model.changed)
 
-        // Splitting alone, without a link to the unit, puts the file on the unit's page as its own (#454).
         let units = UnitsModel(workspace: workspace, courseId: graphTheory)
         let unit = try #require(file.units.first { $0.id == matching })
         let row = try #require(units.materials(unit, in: file).first { $0.material.id == slides.id })
@@ -366,8 +341,6 @@ struct LectureSectionsModelTests {
 import AppKit
 import SwiftUI
 
-/// The split screen drawn in a window, on `busyDay`'s real deck: closing it or merging zones redraws rows whose zone
-/// is gone, which read past the split's end and stopped the app (#179).
 @MainActor @Suite(.serialized)
 struct LectureSplitScreenTests {
     let workspace: Workspace

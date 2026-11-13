@@ -3,7 +3,6 @@ import Testing
 
 @testable import FolioDomain
 
-/// Cases taken from names in the real GIST folder.
 struct CleanupKeywordTests {
     @Test func examFolderFromName() {
         #expect(Keywords.examFolder(in: "quiz3 대비 정리.pdf") == "Quiz3")
@@ -85,7 +84,6 @@ struct CleanupKeywordTests {
         #expect(moves.contains { $0.review == .nameCollision })
     }
 
-    /// Past exams keep their names in `Inherited`; a source folder moves whole and only loose files are marked.
     @Test func pastExamsGoToInherited() {
         let course = FolderTree(
             name: "GS1211 일반화학실험",
@@ -110,8 +108,6 @@ struct CleanupKeywordTests {
         #expect(moves["족보 (소순범)/2024 중간.pdf"].map { ($0.to, $0.kind) }! == ("Inherited/소순범/2024 중간.pdf", .pastExam))
     }
 
-    /// Where the journal says files came from `Exam Review`, `Exercises` is mixed: those go to Study for sure, the rest
-    /// only as a suggestion. An `Exercises` with no such history is the professor's and stays.
     @Test func selfMadeFilesLeaveExercises() {
         let file = { (name: String) in FolderTree(name: name, content: .file(size: 1)) }
         let mixed = FolderTree(
@@ -128,8 +124,6 @@ struct CleanupKeywordTests {
         #expect(clean.plan().isEmpty)
     }
 
-    /// A new exam names its folder from its title, so the guessed `Midterm` must become the folder of the exam it means,
-    /// or no link at all when the course has no such exam.
     @Test func examLinksNameExamsThatExist() {
         let file = { (name: String) in FolderTree(name: name, content: .file(size: 1)) }
         let course = FolderTree(
@@ -162,7 +156,6 @@ struct CleanupKeywordTests {
         #expect(CleanupPlanner.selfMade(moves: moves) == ["c/Exercises/a.pdf", "c/Archive/old/b.pdf"])
     }
 
-    /// An exam names its folder from its title, so a folder under Exams stays; only a loose file goes to an exam.
     @Test func examFoldersNamedByTitleStay() {
         let course = FolderTree(
             name: "EC4207 그래프 이론",
@@ -181,7 +174,6 @@ struct CleanupKeywordTests {
         #expect(planner.removals == ["Exams/Quiz 3"])
     }
 
-    /// An exam folder keeps the exam's record; a summary made for it goes to Study, linked, as a suggestion.
     @Test func selfMadeFilesLeaveExamFolders() {
         let course = FolderTree(
             name: "EC4207 그래프 이론",
@@ -204,7 +196,6 @@ struct CleanupKeywordTests {
         #expect(moves.first?.review == .guessedOrigin)
     }
 
-    /// 2026-2 일반화학실험: experiments counted in schedule order; the leading `2_`/`3_` are not lab numbers.
     @Test func labFilesFollowTheExperimentSchedule() {
         let labs = [
             "Accuracy & Precision", "Separation of benzoic acid and acetanilide (extraction)",
@@ -230,7 +221,7 @@ struct CleanupKeywordTests {
                     ])),
             ]))
 
-        // Weekly from week 3, so experiment n's session is in week n + 2.
+        // 실험은 3주차부터 매주 있으므로, n번째 실험의 회차는 n + 2주차에 든다.
         var planner = CoursePlanner(
             course: course, labs: Dictionary(uniqueKeysWithValues: labs.enumerated().map { ($1, $0 + 1) }),
             labWeeks: Dictionary(uniqueKeysWithValues: labs.indices.map { ($0 + 1, $0 + 3) }))
@@ -247,7 +238,6 @@ struct CleanupKeywordTests {
         #expect(to["Manuals/Unrelated.pdf"]?.hasPrefix("Lectures/") == true)
     }
 
-    /// The two parts of one experiment share its number, so either part's name finds it.
     @Test func partsOfAnExperimentShareTheNumber() {
         let labs = [
             "Accuracy & Precision": 1, "Separation of benzoic acid and acetanilide (extraction)": 2,

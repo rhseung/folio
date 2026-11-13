@@ -10,7 +10,6 @@ import Testing
 struct ProposalsModelTests {
     static let graphTheory = UUID(uuidString: "C0000000-0000-4000-8000-000000000002")!
 
-    /// The fixture's clock is the real one, so deadlines are set from now.
     func workspace(_ items: (Date) -> LMSSnapshot) throws -> Workspace {
         let workspace = try fixtureWorkspace()
         workspace.lms = LMSConnection(
@@ -34,10 +33,8 @@ struct ProposalsModelTests {
 
         await workspace.syncLMS()
         #expect(workspace.settings.lms.known == [1, 2])
-        // The file and the notice were there when the classrooms were first seen; the open assignment still can be done.
         #expect(model.waiting.map(\.classroom.title) == ["그래프 이론[01]"])
         #expect(model.inbox.proposals.map(\.id) == ["assignment:100"])
-        // They stay in view as handled, the classroom with nothing new last.
         #expect(model.sections.map(\.id) == [1, 2])
         #expect(model.sections.map { $0.handled.map(\.id) } == [["file:200"], ["notice:300"]])
         #expect(model.total == 1)
@@ -58,13 +55,11 @@ struct ProposalsModelTests {
         await model.add([proposals[0]], into: Self.graphTheory)
         #expect(workspace.course(Self.graphTheory)?.file.assignments.filter { $0.lmsId == 100 }.count == 1)
         model.dismiss([proposals[2]])
-        // The fixed LMS hands no file over: it is the viewer-only kind, kept proposed with no way to add it.
         await model.add([proposals[1]], into: Self.graphTheory)
         #expect(model.inbox.proposals.map(\.id) == ["file:200"])
         let left = try #require(model.inbox.proposals.first)
         #expect(!model.canAdd(left) && model.isViewerOnly(left))
 
-        // The added assignment says where it went and stays there; the dismissed notice can be proposed again.
         let handled = model.sections.flatMap(\.handled)
         let added = try #require(handled.first { $0.id == "assignment:100" })
         #expect(!model.canProposeAgain(added) && model.detail(added).contains("그래프 이론"))

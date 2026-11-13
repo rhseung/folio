@@ -4,8 +4,6 @@ import Testing
 
 @testable import Folio
 
-/// The split screen's thumbnail column (#321): a lecture of 12 pages in a unit's section 1–4, a new unit's 5–8 and
-/// pages for no unit 9–12.
 struct SplitStripTests {
     let base: LectureSplit
 
@@ -25,8 +23,8 @@ struct SplitStripTests {
         { split.sections[$0].title.isEmpty ? "이름 없는 구역" : split.sections[$0].title }
     }
 
-    /// What the column shows, top to bottom, as in `PageStripModelTests`: `H` an open header with its dot (`●` held,
-    /// `○` new, `·` no unit), `h` a folded one, `e` the edit row; `|` a page on its section's tint, `*` a page picked.
+    // 열을 위에서 아래로 `PageStripModelTests`와 같은 기호로 적는다. `H`는 점이 붙은 펼친 머리(`●` 기존 단원, `○` 새 단원, `·` 단원 없음), `h`는 접힌 머리, `e`는
+    // 편집 행이다. `|`는 구획 색이 칠해진 쪽, `*`는 고른 쪽이다.
     func column(_ strip: SplitStrip, _ split: LectureSplit) -> [String] {
         strip.items(split, name: names(split)).map { item in
             func dot(_ s: StripSection) -> String {
@@ -53,8 +51,6 @@ struct SplitStripTests {
         }
     }
 
-    /// Every section is headed and open; a unit's pages are on the tint, a new unit's too, and pages for no unit are
-    /// not. The tint rounds off under each section's last page.
     @Test func sectionsAreHeadedAndTintedByWhereTheyGo() {
         let split = base
         let items = SplitStrip().items(split, name: names(split))
@@ -73,13 +69,10 @@ struct SplitStripTests {
         strip.toggle(split.sections[1].id)
         let column = column(strip, split)
         #expect(column[4] == "h○Hall" && column[5] == "H·이름 없는 구역 9")
-        // A folded header keeps its piece of the tint, alone and rounded at both ends.
         #expect(strip.items(split, name: names(split))[4].mark == .tinted(last: true))
         #expect(strip.itemID(showing: 6, in: split) == .folded(split.sections[1].id) && strip.itemID(showing: 2, in: split) == .page(2))
     }
 
-    /// A header pressed turns into the edit row: ⇧ moves the section's end, or its start before it, and a neighbor keeps a
-    /// page. 취소 puts the split back as it was.
     @Test func aHeaderChangesItsSectionsPagesAndCancelPutsThemBack() {
         var split = base
         var strip = SplitStrip()
@@ -96,7 +89,6 @@ struct SplitStripTests {
         #expect(split == before && strip.editing == nil)
     }
 
-    /// 적용, or a plain press on another page, keeps the change for the screen's 저장.
     @Test func applyingKeepsTheChange() {
         var split = base
         var strip = SplitStrip()
@@ -108,13 +100,10 @@ struct SplitStripTests {
         strip.edit(split.sections[2].id, in: split)
         strip.extend(to: 7, in: &split)
         strip.press(3)
-        // Its start stops where the section before keeps a page.
         #expect(split.sections.map(\.pages) == [1...6, 7...7, 8...12])
         #expect(strip.editing == nil && strip.anchor == 3)
     }
 
-    /// A press then ⇧-press elsewhere makes those pages one section, which is then the one being changed; 취소 takes
-    /// the cut back.
     @Test func aPickedRangeBecomesASectionToChange() {
         var split = base
         var strip = SplitStrip()
@@ -127,7 +116,6 @@ struct SplitStripTests {
         #expect(split == before)
     }
 
-    /// iPad: a long press takes up the section holding the page.
     @Test func aLongPressTakesUpItsSection() {
         let split = base
         var strip = SplitStrip()

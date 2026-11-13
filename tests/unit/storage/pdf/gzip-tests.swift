@@ -10,7 +10,7 @@ struct GzipTests {
         let text = String(repeating: "SyncTeX Version:1\nInput:1:/course/hw.tex\n", count: 50)
         try Data(text.utf8).write(to: file)
 
-        // `-N` keeps the file name in the header, which Tectonic's output has too.
+        // `-N`은 Tectonic의 출력처럼 헤더에 파일 이름을 남긴다.
         let gzip = Process()
         gzip.executableURL = URL(filePath: "/usr/bin/gzip")
         gzip.arguments = ["-N", file.path]

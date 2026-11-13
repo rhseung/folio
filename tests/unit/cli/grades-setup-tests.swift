@@ -33,7 +33,6 @@ struct GradesSetupTests {
             people: [Person(id: Self.person, device: h.device, at: at, name: "김교수")])
     }
 
-    /// A catalog file both copies load in setup, since course codes and grades are looked up by name.
     func catalogFile() throws -> String {
         let url = FileManager.default.temporaryDirectory.appending(path: "catalog-\(UUID().uuidString).json")
         try JSONEncoder.folio.encode(catalog).write(to: url)
@@ -83,12 +82,11 @@ struct GradesSetupTests {
         }
         let gist = try Harness.fixtureCopy()
         #expect(h.cli(["semester", "add", "2024", "credited"], gist: gist).err.contains("출처"))
-        #expect(h.cli(["semester", "add", "2024", "credited", "--source", "영재고 AP"], gist: gist).code != 0)  // the fixture's source
+        #expect(h.cli(["semester", "add", "2024", "credited", "--source", "영재고 AP"], gist: gist).code != 0)
         for line in Self.creditedSetup { #expect(h.cli(line, gist: gist).code == 0) }
         #expect(FileManager.default.fileExists(atPath: gist.appending(path: "_Credited/군 복무").path))
     }
 
-    /// Renaming the source renames `_Credited/<source>`, through moves.jsonl.
     @Test func creditedSource() throws {
         try h.expectSame(["semester", "source", "영재고 AP", "영재고 AP 과정", "--yes"]) { _ in
             SemesterSource(semester: UUID(uuidString: "5E4F1A00-0000-4000-8000-0000000000C1")!, source: "영재고 AP 과정")
@@ -100,12 +98,11 @@ struct GradesSetupTests {
         #expect(try GISTStore(url: gist).courseStores().contains { $0.url.lastPathComponent == "GS1101 일반물리학 및 연습 I" })
     }
 
-    /// A refused source moves nothing: on a regular term the folder that would move is the whole semester's.
     @Test func refusedSourceLeavesFolders() throws {
         let gist = try Harness.fixtureCopy()
         func exists(_ path: String) -> Bool { FileManager.default.fileExists(atPath: gist.appending(path: path).path) }
         let fall = try FileManager.default.contentsOfDirectory(atPath: gist.appending(path: "2026-3").path).sorted()
-        #expect(h.cli(["semester", "source", "2026-3", "가을", "--yes"], gist: gist).code != 0)  // only credited terms have one
+        #expect(h.cli(["semester", "source", "2026-3", "가을", "--yes"], gist: gist).code != 0)
         #expect(try FileManager.default.contentsOfDirectory(atPath: gist.appending(path: "2026-3").path).sorted() == fall)
         #expect(!exists("_Credited/가을"))
         #expect(h.cli(["semester", "source", "영재고 AP", "영재고/AP", "--yes"], gist: gist).code != 0)
@@ -116,7 +113,7 @@ struct GradesSetupTests {
         doc.model.semesters.append(Semester(device: h.device, at: h.now, year: 2024, term: .credited, source: "군 복무"))
         try store.save(doc)
         try FileManager.default.createDirectory(at: gist.appending(path: "_Credited/군 복무"), withIntermediateDirectories: true)
-        #expect(h.cli(["semester", "source", "영재고 AP", "군 복무", "--yes"], gist: gist).code != 0)  // taken
+        #expect(h.cli(["semester", "source", "영재고 AP", "군 복무", "--yes"], gist: gist).code != 0)
         #expect(exists("_Credited/영재고 AP/GS1101 일반물리학 및 연습 I"))
         #expect(try store.loadTranscript().model.semesters.filter { $0.source == "영재고 AP" }.count == 1)
     }
@@ -134,7 +131,6 @@ struct GradesSetupTests {
         for l in setup + [line] { #expect(h.cli(l, gist: gist).code == 0) }
         let course = try GISTStore(url: gist).courseStores().first { $0.url.lastPathComponent == "EC1001 병영 독서" }
         #expect(try course?.load().model.course.id == Self.creditedCourse)
-        // subfolders come when needed
         #expect(course.map { (try? FileManager.default.contentsOfDirectory(atPath: $0.url.path)) == [".folio"] } == true)
     }
 
@@ -157,22 +153,20 @@ struct GradesSetupTests {
         #expect(try store.loadTranscript().model.unfiledCourses.isEmpty)
         #expect(try store.allCourses().first { $0.id == Self.creditedCourse } == colloquium())
         #expect(try !String(contentsOf: store.transcriptURL, encoding: .utf8).contains("unfiledCourses"))
-        #expect(h.cli(["transcript", "move", "--yes"], gist: gist).code != 0)  // nothing left
+        #expect(h.cli(["transcript", "move", "--yes"], gist: gist).code != 0)
 
-        // `cleanup undo` puts the course back where it was.
         let batch = try #require(try MoveJournal.records(in: gist).last { $0.op == .fileCourse }?.batch)
         #expect(h.cli(["cleanup", "undo", batch.uuidString, "--yes"], gist: gist).code == 0)
         #expect(try store.loadTranscript().model.unfiledCourses == [colloquium()])
         #expect(!FileManager.default.fileExists(atPath: gist.appending(path: "2026-3/EC9331 콜로퀴움").path))
     }
 
-    /// Moving changes where a course is kept, never what it counts for: every grade figure is the same after.
     @Test func transcriptMoveKeepsGrades() throws {
         let gist = try Harness.fixtureCopy()
         let at = Date(timeIntervalSince1970: 1_790_000_000)
         let ec = CourseCode(device: h.device, at: at, prefix: "EC"), gs = CourseCode(device: h.device, at: at, prefix: "GS")
 
-        // Invented grades: the repo is public.
+        // 저장소가 공개이므로 지어낸 성적을 쓴다.
         let aPlus = LetterGrade(device: h.device, at: at, symbol: "A+", points: 4.5, countsInGpa: true, countsInCredits: true)
         let b0 = LetterGrade(device: h.device, at: at, symbol: "B0", points: 3, countsInGpa: true, countsInCredits: true)
         let pass = LetterGrade(device: h.device, at: at, symbol: "S", points: nil, countsInGpa: false, countsInCredits: true)
@@ -221,7 +215,6 @@ struct GradesSetupTests {
         #expect(FileManager.default.fileExists(atPath: gist.appending(path: "_Credited/영재고 AP/GS1102 일반물리학 및 연습 II").path))
     }
 
-    /// A credited course can't go anywhere until its term has a source.
     @Test func transcriptMoveNeedsSource() throws {
         let gist = try Harness.fixtureCopy()
         let term = UUID()
@@ -251,7 +244,6 @@ struct GradesSetupTests {
         }
     }
 
-    /// Left out, the semester is the one today falls in, for the command and the JSON input alike.
     @Test func courseAddInTheCurrentSemester() throws {
         let id = UUID()
         try h.expectSame(
@@ -289,7 +281,6 @@ struct GradesSetupTests {
     @Test func courseSetIcon() throws {
         try h.expectSame(["course", "set", "EC4207", "--icon", "function"]) { _ in CourseSet(course: gt, [.icon("function")]) }
 
-        // none clears the icon, and the key goes with it.
         try h.expectSame(["course", "set", "EC4207", "--icon", "none"], setup: [["course", "set", "EC4207", "--icon", "function"]]) { _ in
             CourseSet(course: gt, [.icon(nil)])
         }
@@ -301,7 +292,6 @@ struct GradesSetupTests {
             CourseSet(course: gt, [.color("")])
         }
 
-        // Colors come from the presets only.
         #expect(h.cli(["course", "set", "EC4207", "--color", "#FF0000"], gist: try Harness.fixtureCopy()).code == 2)
     }
 

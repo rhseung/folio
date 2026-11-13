@@ -14,7 +14,7 @@ struct AssignmentRepeatTests {
     }
 
     let seoul = Self.calendar("Asia/Seoul")
-    /// Clocks move here, so a day is not always 24 hours.
+    // 이 시간대는 일광 절약 시간을 쓰므로 하루가 늘 24시간은 아니다.
     let newYork = Self.calendar("America/New_York")
 
     func date(_ text: String, _ calendar: Calendar) -> Date {
@@ -34,7 +34,6 @@ struct AssignmentRepeatTests {
         #expect(AssignmentRepeat.biweekly.next(after: fri, calendar: c) == date("2026-11-13 23:59", c))
         #expect(AssignmentRepeat.monthly.next(after: fri, calendar: c) == date("2026-11-30 23:59", c))
 
-        // Monday and Wednesday: Wednesday after Monday, then Monday a week (or two) on.
         let mon = date("2026-11-02 09:00", c)
         let monWed = AssignmentRepeat(.week, weekdays: [1, 3])
         #expect(monWed.next(after: mon, calendar: c) == date("2026-11-04 09:00", c))
@@ -43,7 +42,6 @@ struct AssignmentRepeatTests {
             AssignmentRepeat(every: 2, .week, weekdays: [1, 3]).next(after: date("2026-11-04 09:00", c), calendar: c)
                 == date("2026-11-16 09:00", c))
 
-        // A deadline moved off the rule's days goes back onto them.
         #expect(monWed.next(after: date("2026-11-06 09:00", c), calendar: c) == date("2026-11-09 09:00", c))
     }
 
@@ -58,7 +56,7 @@ struct AssignmentRepeatTests {
 
     @Test func aDeadlineKeepsItsClockTimeAcrossDaylightSaving() {
         let c = newYork
-        // 2026-03-08 the clocks go forward an hour; 2026-11-01 back.
+        // 2026-03-08에 시계가 한 시간 앞으로 가고, 2026-11-01에 되돌아온다.
         #expect(AssignmentRepeat.daily.next(after: date("2026-03-07 23:59", c), calendar: c) == date("2026-03-08 23:59", c))
         #expect(AssignmentRepeat.weekly.next(after: date("2026-10-30 23:59", c), calendar: c) == date("2026-11-06 23:59", c))
         #expect(AssignmentRepeat.monthly.next(after: date("2026-02-28 18:00", c), calendar: c) == date("2026-03-28 18:00", c))
@@ -68,8 +66,6 @@ struct AssignmentRepeatTests {
         AssignmentRepeat(every: every, [.day, .week, .month][unit], weekdays: (1...7).filter { days & (1 << ($0 - 1)) != 0 })
     }
 
-    /// Whatever the rule and the deadline, the next one comes later, at the same clock time, on a chosen weekday, and
-    /// a monthly one on its day or the month's last.
     @Test func theNextDeadlineIsLaterOnTheRulesDay() async {
         let calendars = [seoul, newYork]
         let base = date("2026-01-01 00:00", seoul)
@@ -80,7 +76,6 @@ struct AssignmentRepeatTests {
             let next = rule.next(after: due, day: day, calendar: c)
             #expect(next > due, "\(rule) \(due)")
             let time = { (d: Date) in c.dateComponents([.hour, .minute], from: d) }
-            // The same clock time, unless the clocks skip it that day.
             var wanted = c.dateComponents([.year, .month, .day], from: next)
             (wanted.hour, wanted.minute) = (time(due).hour, time(due).minute)
             if c.date(from: wanted).map({ time($0) == time(due) }) ?? false { #expect(time(next) == time(due), "\(rule) \(due) → \(next)") }
@@ -107,11 +102,9 @@ struct AssignmentRepeatTests {
         #expect(AssignmentRepeat(text: "매주 월수") == AssignmentRepeat(.week, weekdays: [1, 3]))
         #expect(AssignmentRepeat(text: "월,수마다") == AssignmentRepeat(.week, weekdays: [1, 3]))
 
-        // Typed on its own, one weekday is kept: the deadline may fall on another day.
         #expect(AssignmentRepeat(text: "금요일마다") == AssignmentRepeat(.week, weekdays: [5]))
         #expect(AssignmentRepeat(text: "매주 금") == AssignmentRepeat(.week, weekdays: [5]))
 
-        // Other words for the unit, some in several words.
         for text in ["매월", "한 달마다", "달마다", "매달마다", "한 달에 한 번"] { #expect(AssignmentRepeat(text: text) == .monthly, "\(text)") }
         for text in ["격일", "이틀마다", "하루걸러", "하루 걸러"] { #expect(AssignmentRepeat(text: text) == AssignmentRepeat(every: 2, .day), "\(text)") }
         for text in ["매주마다", "주마다", "일주일에 한 번"] { #expect(AssignmentRepeat(text: text) == .weekly, "\(text)") }
@@ -119,7 +112,6 @@ struct AssignmentRepeatTests {
         #expect(AssignmentRepeat(text: "1주일마다") == .weekly)
         #expect(AssignmentRepeat(text: "격월") == AssignmentRepeat(every: 2, .month))
 
-        // Weekdays named together, with or without the rule before them.
         #expect(AssignmentRepeat(text: "평일마다") == AssignmentRepeat(.week, weekdays: [1, 2, 3, 4, 5]))
         #expect(AssignmentRepeat(text: "주말마다") == AssignmentRepeat(.week, weekdays: [6, 7]))
         #expect(AssignmentRepeat(text: "매주 평일") == AssignmentRepeat(.week, weekdays: [1, 2, 3, 4, 5]))
@@ -133,7 +125,6 @@ struct AssignmentRepeatTests {
         #expect(AssignmentRepeat(text: "0일마다") == nil)
         #expect(AssignmentRepeat(text: "가끔") == nil)
 
-        // One weekday is a rule only with `마다` or the rule before it: alone it may be a deadline.
         #expect(AssignmentRepeat(text: "금") == nil)
         #expect(AssignmentRepeat(text: "매일 월수") == nil)
         #expect(AssignmentRepeat(text: "세일마다") == nil)
@@ -145,7 +136,6 @@ struct AssignmentRepeatTests {
         #expect(AssignmentRepeat(every: 2, .month).label == "2개월마다")
     }
 
-    /// Every rule's line form reads back as the rule.
     @Test func thePhraseReadsBack() async {
         await propertyCheck(input: Self.rule) { rule in
             #expect(AssignmentRepeat(text: rule.phrase) == rule, "\(rule.phrase)")
@@ -176,7 +166,6 @@ struct AssignmentRepeatTests {
         file.assignments[1].status = .submitted
         file.continueRepeating(file.assignments[1].id, until: nil, calendar: c, device: device, now: now)
 
-        // The series started on the 31st, so December's falls on the 31st again, as the sheet's hint says.
         let november = file.assignments[1]
         #expect(file.nextDue(after: november.due!, rule: .monthly, title: november.title, calendar: c) == date("2026-12-31 23:59", c))
         #expect(file.assignments.last?.due == date("2026-12-31 23:59", c))

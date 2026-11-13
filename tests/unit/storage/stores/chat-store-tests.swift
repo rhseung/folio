@@ -23,7 +23,6 @@ struct ChatStoreTests {
         #expect(chats.map(\.model.title) == ["고유값", "행렬식"])
         #expect(chats[1].model == old)
 
-        // A newer app version's field survives a save from this version.
         let url = store.url.appending(path: ".folio/chats/\(old.id.uuidString).json")
         var raw = try #require(try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
         #expect(raw["schemaVersion"] as? Int == 1)
@@ -44,7 +43,6 @@ struct ChatStoreTests {
         try Data([0, 1]).write(to: store.url.appending(path: "Notes/x.bin"))
         #expect(try store.contextText(ofMaterial: "Notes/x.bin") == nil)
 
-        // Any text format `MaterialFormat` knows, not a list of its own: data a code assignment reads, too.
         try Data("{\"n\": 3}".utf8).write(to: store.url.appending(path: "Notes/x.json"))
         #expect(try store.contextText(ofMaterial: "Notes/x.json") == "{\"n\": 3}")
     }

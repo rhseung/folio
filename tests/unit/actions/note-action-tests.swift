@@ -27,7 +27,6 @@ struct NoteActionTests {
     func store() throws -> CourseStore { try ActionContext(gist: gist, device: device).store(Self.graphTheory) }
     func text(_ path: String) throws -> String { try String(contentsOf: try store().fileURL(path), encoding: .utf8) }
 
-    /// The app re-reads its note and card lists from these, whichever screen or tool ran the action.
     @Test func changesSayWhetherNotesOrCardsWereTouched() throws {
         let id = UUID(), unit = UUID()
         let added = try run(NoteAdd(id: id, course: Self.graphTheory, title: "매칭 정리"))
@@ -65,7 +64,6 @@ struct NoteActionTests {
         #expect(linked.meta(of: entry).sessionId == session && entry.examId == nil)
     }
 
-    /// A session holds one review note; another can't take it from the app, the CLI or MCP alike.
     @Test func aSessionsReviewNoteIsNotTaken() throws {
         let session = UUID(), first = UUID(), second = UUID()
         try run(SessionAdd(id: session, course: Self.graphTheory, date: now))
@@ -79,7 +77,6 @@ struct NoteActionTests {
         #expect(try file().sessions.first { $0.id == session }?.reviewNoteId == first)
     }
 
-    /// The editor saves a math change through `note link`; it isn't writing the note, so it stays unfinished.
     @Test func relinkingAReviewNoteKeepsItUnfinished() throws {
         let session = UUID(), id = UUID()
         try run(SessionAdd(id: session, course: Self.graphTheory, date: now))
@@ -90,7 +87,6 @@ struct NoteActionTests {
         #expect(try file().notes.first { $0.id == id }?.math == .asciimath)
     }
 
-    /// Classes caught up on at once share one review note: linking adds a class without taking the note off the others.
     @Test func aReviewNoteGathersSeveralSessions() throws {
         let days = [0.0, 2, 7].map { now.addingTimeInterval($0 * 86_400) }
         let ids = days.map { _ in UUID() }
@@ -100,17 +96,13 @@ struct NoteActionTests {
         try run(NoteLinkSessions(course: Self.graphTheory, note: note, sessions: [ids[2], ids[1]]))
         #expect(try file().sessions(pointingAt: note).map(\.id) == ids)
 
-        // The note was made from the template, so every class it covers waits for it to be written; writing it
-        // finishes them together.
         #expect(try file().sessions.filter { ids.contains($0.id) }.allSatisfy(\.reviewNoteUnfinished))
         try run(SessionSet(course: Self.graphTheory, session: ids[1], reviewUnfinished: .set(false)))
         #expect(try !file().sessions.contains { ids.contains($0.id) && $0.reviewNoteUnfinished })
 
-        // `note link` adds too, and doesn't move it.
         try run(NoteUnlinkSession(course: Self.graphTheory, note: note, session: ids[0]))
         #expect(try file().sessions(pointingAt: note).map(\.id) == [ids[1], ids[2]])
 
-        // A session the note isn't on is a mistake to report, not a silent success.
         #expect(throws: ActionError.self) { try run(NoteUnlinkSession(course: Self.graphTheory, note: note, session: ids[0])) }
         try run(NoteLink(course: Self.graphTheory, note: note, kind: .review, session: ids[0]))
         #expect(try meta(note).sessionIds == ids)
@@ -118,7 +110,6 @@ struct NoteActionTests {
         #expect(try file().sessions.allSatisfy { $0.reviewNoteId != note })
     }
 
-    /// The whole list is checked before anything is written, so one refused class leaves the others unlinked.
     @Test func linkingSessionsRefusesBeforeWriting() throws {
         let free = UUID(), taken = UUID(), note = UUID(), other = UUID()
         try run(SessionAdd(id: free, course: Self.graphTheory, date: now))
@@ -128,7 +119,6 @@ struct NoteActionTests {
         #expect(throws: ActionError.self) { try run(NoteLinkSessions(course: Self.graphTheory, note: note, sessions: [free, taken])) }
         #expect(try file().sessions(pointingAt: note).isEmpty)
 
-        // Only a review note covers several classes; a rough note is linked with `note link`.
         #expect(throws: ActionError.self) { try run(NoteLinkSessions(course: Self.graphTheory, note: Self.note, sessions: [free])) }
     }
 
@@ -164,8 +154,6 @@ struct NoteActionTests {
         #expect(throws: ActionError.self) { try run(NoteBuild(course: Self.graphTheory, note: "Notes/09-08(화) 매칭.md", pdf: built.path)) }
     }
 
-    /// Exports are placed by title, so another tool's export can sit there already. Like `material build`, only this
-    /// note's own PDF is replaced without asking, and a replaced one goes to the Trash.
     @Test func aNoteBuildReplacesOnlyItsOwnPDF() throws {
         try run(NoteAdd(id: UUID(), course: Self.graphTheory, title: "증명", format: .tex))
         let folder = TexEngine.outputFolder(for: try store().fileURL("Notes/증명.tex"))
@@ -189,7 +177,6 @@ struct NoteActionTests {
         #expect(try text("Study/증명.pdf") == "%PDF again")
     }
 
-    /// Without an entry there is nowhere to keep the hash, so the next build couldn't tell its own PDF.
     @Test func aNoteWithoutAnEntryIsNotBuilt() throws {
         try "\\documentclass{article}\n".write(to: try store().url.appending(path: "Notes/바깥.tex"), atomically: true, encoding: .utf8)
         #expect(throws: ActionError.rule("course.json에 항목이 없는 노트라서 빌드하지 않습니다: Notes/바깥.tex. 먼저 folio note adopt로 들입니다")) {
@@ -208,8 +195,6 @@ struct NoteActionTests {
         #expect(try file().materials.contains { $0.path == "Study/중간 정리.pdf" })
     }
 
-    /// Unknown keys stay in the file; references to things that are gone are dropped; an id another note already has
-    /// (a copy made in Finder) is replaced; a second run finds nothing to do.
     @Test func migrationMovesFolioKeysOnly() throws {
         let gone = UUID()
         let notes = try store().url.appending(path: "Notes")
@@ -227,7 +212,6 @@ struct NoteActionTests {
         #expect(try file().notes == after.notes)
     }
 
-    /// A note with frontmatter that already has an entry (adopted, or linked in the app).
     func entryWithFrontmatter(_ frontmatter: String, body: String, tags: [String] = [], exam: UUID? = nil) throws -> UUID {
         let id = UUID()
         try run(NoteAdd(id: id, course: Self.graphTheory, title: "기출", kind: .examSummary, exam: exam))
@@ -240,7 +224,6 @@ struct NoteActionTests {
 
     func entry(_ id: UUID) throws -> NoteEntry { try #require(try file().notes.first { $0.id == id }) }
 
-    /// The real case: an entry with no tags and two in the frontmatter. A dry run shows the merge and writes nothing.
     @Test func migrationMergesTagsIntoAnExistingEntry() throws {
         let id = try entryWithFrontmatter("tags:\n  - math/graph-theory\n  - type/exam\ndate: 2026-09-21\n", body: "\n# 기출\n")
         let preview = ActionContext(gist: gist, device: device, now: now, dryRun: true)
@@ -258,7 +241,6 @@ struct NoteActionTests {
         #expect(try file().notes == after.notes)
     }
 
-    /// The entry wins where it holds a value: tags are joined in its order, and its kind, exam and math stay.
     @Test func migrationKeepsTheEntrysValues() throws {
         let exam = UUID(), other = UUID()
         try run(ExamAdd(id: exam, course: Self.graphTheory, title: "모의고사"))
@@ -273,7 +255,6 @@ struct NoteActionTests {
         #expect(merged.kind == .examSummary && merged.examId == exam && merged.math == before.math && before.math == .asciimath)
     }
 
-    /// An empty link the entry's kind reads is filled in.
     @Test func migrationFillsAnEmptyExam() throws {
         let exam = UUID()
         try run(ExamAdd(id: exam, course: Self.graphTheory, title: "모의고사"))
@@ -282,8 +263,6 @@ struct NoteActionTests {
         #expect(try entry(id).examId == exam)
     }
 
-    /// A frontmatter id other than the entry's goes; the entry's stays. Only when something points at the old one
-    /// is the person told, since that link would now break.
     @Test func migrationKeepsTheEntrysID() throws {
         let old = UUID()
         let id = try entryWithFrontmatter("id: \(old)\ntags: [a]\n", body: "\n# 기출\n")
@@ -304,7 +283,6 @@ struct NoteActionTests {
         #expect(try text("Notes/기출.md") == "\n# 기출\n")
     }
 
-    /// Only the frontmatter's Folio keys go; every byte after the block stays, and so do the keys Folio never wrote.
     @Test func migrationLeavesTheBodyAsItIs() throws {
         let body = "\n# 기출\n\n- [ ] 문제 $x^2$ ^q1\n\n```\n---\nid: not frontmatter\n```\n\n끝  \n\n"
         _ = try entryWithFrontmatter("tags: [a]\nscope: \"HW1, 기초\"\ndate: 2026-09-21\n", body: body)
@@ -312,7 +290,6 @@ struct NoteActionTests {
         #expect(try text("Notes/기출.md") == "---\nscope: \"HW1, 기초\"\ndate: 2026-09-21\n---\n" + body)
     }
 
-    /// Before #206 a note that lost its session kept it in its frontmatter, so two notes may claim one session.
     @Test func migrationKeepsOneReviewNotePerSession() throws {
         let session = UUID()
         try run(SessionAdd(id: session, course: Self.graphTheory, date: now))
@@ -324,7 +301,6 @@ struct NoteActionTests {
         try run(NoteMigrate(course: Self.graphTheory))
         let claims = try file().notes.filter { $0.path.hasPrefix("Notes/정리") }
 
-        // The session points at one of them, so it no longer asks for a review note.
         let pointed = try #require(try file().sessions.first { $0.id == session }?.reviewNoteId)
         #expect(claims.count == 2 && claims.contains { $0.id == pointed })
     }
@@ -334,13 +310,10 @@ struct NoteActionTests {
         return f.meta(of: try #require(f.notes.first { $0.id == id }))
     }
 
-    /// The fixture's rough note as notes were named before #273.
     func oldName() throws {
         try run(NoteMove(course: Self.graphTheory, note: "Notes/09-08(화) 매칭.md", to: "2주차-1"))
     }
 
-    /// Session notes named before #273 take the date and subject; their headings and the links to them follow, and
-    /// undoing the batch turns all three back.
     @Test func retitlingRenamesOldSessionNotesAndUndoTurnsThemBack() throws {
         let session = UUID(), review = UUID(), mine = UUID(), own = UUID()
         try oldName()
@@ -353,7 +326,6 @@ struct NoteActionTests {
         try run(SessionAdd(id: other, course: Self.graphTheory, date: now.addingTimeInterval(86400)))
         try run(NoteAdd(id: own, course: Self.graphTheory, title: "내 필기", kind: .rough, session: other))
 
-        // A note deleted in Finder keeps its entry; it is skipped rather than stopping the rest.
         let gone = UUID(), third = UUID()
         try run(SessionAdd(id: third, course: Self.graphTheory, date: now.addingTimeInterval(2 * 86400)))
         try run(NoteAdd(id: gone, course: Self.graphTheory, title: "9주차-3", kind: .rough, session: third))
@@ -385,8 +357,6 @@ struct NoteActionTests {
         #expect(try ["Notes/2주차-1.md", "Notes/9주차-1 정리.md", "Notes/모음.md"].map(text) == before)
     }
 
-    /// A link by ID keeps reaching the note whatever its name; the name it shows follows a rename while it is still the
-    /// old title, in any course, and an undo turns it back. A name the writer chose stays.
     @Test func retitlingFollowsTheNamesOfLinksByID() throws {
         let session = UUID(), mine = UUID(), elsewhere = UUID()
         try oldName()
@@ -411,8 +381,6 @@ struct NoteActionTests {
         #expect(try other() == "![[note:\(id)#정의|2주차-1]]\n")
     }
 
-    /// Renaming a note carries its entry, heading and the links to it by title and by ID along, in one batch that
-    /// `cleanup undo` turns back whole. A name the writer gave a link stays.
     @Test func renamingANoteFollowsItsLinksAndUndoTurnsThemBack() throws {
         let id = Self.note.uuidString, mine = UUID()
         let body = "[[09-08(화) 매칭#Matching]], [[note:\(id)|09-08(화) 매칭]], [[note:\(id)|첫 수업]]\n"
@@ -438,7 +406,6 @@ struct NoteActionTests {
         #expect(try text("Notes/09-08(화) 매칭.md") == before && text("Notes/모음.md") == body)
     }
 
-    /// Moved into a folder of Notes/, a note keeps its pictures, and a name another note of the course has gets ` 2`.
     @Test func movingANoteIntoAFolderKeepsItsPicturesAndAvoidsTakenNames() throws {
         let picture = UUID(), other = UUID()
         try run(NoteAdd(id: picture, course: Self.graphTheory, title: "그림 노트", body: "# 그림 노트\n\n![](assets/a.png)\n"))
@@ -453,13 +420,10 @@ struct NoteActionTests {
         try run(CleanupUndo(batch: batch))
         #expect(try text("Notes/그림 노트.md") == "# 그림 노트\n\n![](assets/a.png)\n")
 
-        // Its own name is no other note's, so moving it alone keeps it.
         try run(NoteMove(course: Self.graphTheory, note: "Notes/그림 노트.md", to: "그림 노트"))
         #expect(try file().notes.first { $0.id == picture }?.path == "Notes/그림 노트.md")
     }
 
-    /// A note moved in from an old folder has no entry until it is opened; its heading, pictures and the links to it
-    /// follow all the same, and it still has no entry afterwards.
     @Test func aNoteWithoutAnEntryMovesWithItsLinks() throws {
         let notes = try store().url.appending(path: "Notes")
         try "# 그림\n\n![](assets/a.png)\n".write(to: notes.appending(path: "그림.md"), atomically: true, encoding: .utf8)
@@ -473,7 +437,6 @@ struct NoteActionTests {
         #expect(try text("Notes/그림.md") == "# 그림\n\n![](assets/a.png)\n" && text("Notes/모음.md") == "[[그림]]\n")
     }
 
-    /// Builds the `.tex` note at `path` from `text`, as the app hands `note build` the PDF Tectonic wrote.
     func build(_ path: String, _ text: String) throws {
         let folder = TexEngine.outputFolder(for: try store().fileURL(path))
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -482,8 +445,6 @@ struct NoteActionTests {
         try run(NoteBuild(course: Self.graphTheory, note: path, pdf: url.path))
     }
 
-    /// A `.tex` note renames as a markdown note does, and the PDF its build wrote takes the new title in the same batch,
-    /// tracked under its new path, so the next build replaces it without asking. One undo puts both back.
     @Test func renamingATexNoteTakesItsBuiltPDFAlong() throws {
         let id = UUID()
         try run(NoteAdd(id: id, course: Self.graphTheory, title: "증명", format: .tex))
@@ -510,8 +471,6 @@ struct NoteActionTests {
         #expect(try file().materials.first { $0.id == material }?.path == "Study/증명.pdf")
     }
 
-    /// A PDF of the old title that Folio didn't build stays, and so does the built PDF when the new title's PDF is
-    /// already there: nothing is overwritten.
     @Test func aPDFNotBuiltHereOrWithNowhereToGoStays() throws {
         try run(NoteAdd(id: UUID(), course: Self.graphTheory, title: "증명", format: .tex))
         let study = try store().fileURL("Study")
@@ -540,7 +499,6 @@ struct NoteActionTests {
         #expect(try file().notes.first { $0.id == Self.note }?.path == "Notes/09-08(화) 매칭.md")
     }
 
-    /// A class note's units are its session's as they are now, so unlinking the class from a unit takes the note off it.
     @Test func aSessionNotesUnitsFollowTheSession() throws {
         let session = UUID(), unit = UUID(), note = UUID()
         try run(SessionAdd(id: session, course: Self.graphTheory, date: now))
@@ -563,7 +521,6 @@ struct NoteActionTests {
         #expect(try meta(note).unitIds == [unit])
     }
 
-    /// Becoming a unit note doesn't bring back units the note had as another kind, and leaving it drops them.
     @Test func changingKindDropsTheOtherKindsLinks() throws {
         let session = UUID(), unit = UUID(), other = UUID(), note = UUID()
         try run(SessionAdd(id: session, course: Self.graphTheory, date: now))
@@ -579,7 +536,6 @@ struct NoteActionTests {
         #expect(try meta(note).unitIds == [unit])
     }
 
-    /// The session holds the link alone, so it can't name a note of another kind.
     @Test func aSessionPointsOnlyAtANoteOfItsSlotsKind() throws {
         let session = UUID(), note = UUID()
         try run(SessionAdd(id: session, course: Self.graphTheory, date: now))
@@ -598,7 +554,6 @@ struct NoteActionTests {
         try run(UnitLink(course: Self.graphTheory, unit: unit, sessions: [session]))
     }
 
-    /// `import calendar` gives a free note named after a class's meeting to that class as its review note.
     @Test func importCalendarMakesTheNoteAReviewNote() throws {
         let note = UUID()
         try run(NoteAdd(id: note, course: Self.graphTheory, title: "평면 그래프"))
@@ -611,8 +566,6 @@ struct NoteActionTests {
         #expect(try meta(note).kind == .review && meta(note).sessionId == s.id)
     }
 
-    /// Rewrites replace, `set` actions of `Patch` fields set what they name, and the rest only add, so they never
-    /// stand in for an earlier proposal.
     @Test func proposalTargetsFollowWhatEachCommandWrites() {
         #expect(
             Actions.targets[NoteWrite.command]

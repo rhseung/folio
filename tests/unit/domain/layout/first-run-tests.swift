@@ -54,7 +54,6 @@ struct FirstRunTests {
 
     @Test func anyOtherFolderIsNotOne() {
         #expect(FolderKind(folder("Documents", [folder("사진"), file("이력서.pdf")])) == .other)
-        // A file named like a semester isn't one.
         #expect(FolderKind(folder("Documents", [file("2026-1")])) == .other)
     }
 

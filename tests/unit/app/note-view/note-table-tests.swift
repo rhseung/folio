@@ -5,8 +5,6 @@ import Testing
 
 @testable import Folio
 
-/// The table commands in the edit view: their keys and the context menu, which change the source through
-/// `TableEditing` and leave every other key alone outside a table.
 @MainActor @Suite(.serialized)
 struct NoteTableTests {
     static let table = "앞\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n뒤"
@@ -58,7 +56,6 @@ struct NoteTableTests {
         #expect(view.string.hasPrefix("앞\n\n| 1   | 2   |\n"))
     }
 
-    /// No two table commands share a key.
     @Test func theKeysAreTheirOwn() {
         let shortcuts = TableCommand.allCases.compactMap(TableCommands.shortcut)
         #expect(Set(shortcuts.map { "\($0)" }).count == shortcuts.count)

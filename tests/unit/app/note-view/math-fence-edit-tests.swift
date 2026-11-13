@@ -6,8 +6,6 @@ import Testing
 
 @testable import Folio
 
-/// A math fence in the edit view (#16): its body reads as math in the fence's syntax, which the typing help, the
-/// bubble and the math palette follow; `$$` keeps the note's.
 @MainActor @Suite(.serialized)
 struct MathFenceEditTests {
     @Test func aFencesBodyIsMathInItsSyntax() {

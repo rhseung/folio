@@ -7,8 +7,6 @@ import Testing
 
 @testable import Folio
 
-/// Every symbol of a formula without typing its name first (#392): a bare `\` opens the whole list in the edit view's
-/// menu, in AsciiMath notes too, and the palette under the note bar's f(x) puts what is picked at the caret.
 @MainActor @Suite(.serialized)
 struct MathSymbolsMenuTests {
     static func escape(_ view: SourceTextView) { view.doCommand(by: #selector(NSResponder.cancelOperation(_:))) }
@@ -18,7 +16,6 @@ struct MathSymbolsMenuTests {
         NoteAssistTests.type(view, "값 $x + \\")
         #expect(view.completion.visible && view.completion.query?.kind == .texCommand)
         #expect(view.completion.items.first?.category == .snippets && view.completion.items.contains { $0.title == "\\alpha" })
-        // Typing on narrows it as before; Return takes the pick.
         NoteAssistTests.type(view, "subsete")
         #expect(view.completion.current?.title == "\\subseteq")
         NoteAssistTests.enter(view)
@@ -49,7 +46,6 @@ struct MathSymbolsMenuTests {
         NoteAssistTests.type(view, "$x + ")
         view.showMathSymbols(nil)
         #expect(NoteAssistTests.caretShown(view) == "$x + \\|$" && view.completion.visible)
-        // Outside a formula there is nothing to list, and nothing is typed.
         let (text, _) = NoteAssistTests.editor("값 ")
         text.showMathSymbols(nil)
         #expect(text.string == "값 " && !text.completion.visible)
@@ -87,12 +83,10 @@ struct MathPaletteModelTests {
         palette.search = "arrow"
         #expect(palette.searching && palette.sections.map(\.category) == [.arrows, .fonts])
         palette.search = ""
-        // The syntax on top is the note's own, which the f(x) button chose before.
         palette.syntax = .asciimath
         #expect(editor.meta.math == .asciimath && palette.sections[0].items.first?.title == "alpha")
     }
 
-    /// In a math fence the palette shows the fence's symbols, and the note's syntax can't be changed from there (#16).
     @Test func insideAFenceItsSyntaxHolds() {
         let palette = MathPaletteModel(editor: editor)
         editor.meta.math = .latex

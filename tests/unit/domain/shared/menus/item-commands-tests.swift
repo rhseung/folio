@@ -3,7 +3,6 @@ import Foundation
 import PropertyBased
 import Testing
 
-/// Every kind's menu (#403): rows by group, delete alone at the end, and only the rows the item's data allows.
 struct ItemCommandsTests {
     let device = UUID()
     let now = Date(timeIntervalSince1970: 1_793_000_000)
@@ -56,7 +55,6 @@ struct ItemCommandsTests {
         ordered(ExamPlanItem.commands(done: true))
     }
 
-    /// The item's own screen leaves "열기" out; everywhere else the menu leads with it.
     @Test func openLeadsOffTheItemsOwnScreen() {
         let f = course()
         #expect(f.commands(for: f.exams[0], host: .elsewhere).first == .open)
@@ -81,7 +79,6 @@ struct ItemCommandsTests {
         #expect(f.commands(for: f.assignments[0], host: .own, revealable: true).contains(.showInFinder))
     }
 
-    /// Up and down only in the list that holds the units in order, and only the ways a unit can go among its siblings.
     @Test func aUnitMovesOnlyInTheListAndOnlyWhereItCan() {
         let f = course()
         let first = f.commands(for: f.units[0], host: .list, dueToday: false)
@@ -89,7 +86,6 @@ struct ItemCommandsTests {
         let last = f.commands(for: f.units[1], host: .list, dueToday: false)
         #expect(last.contains(.moveUp) && !last.contains(.moveDown))
 
-        // An only child has nowhere to go.
         let child = f.commands(for: f.units[2], host: .list, dueToday: false)
         #expect(!child.contains(.moveUp) && !child.contains(.moveDown))
         #expect(!f.commands(for: f.units[0], host: .elsewhere, dueToday: false).contains(.moveDown))
@@ -97,13 +93,11 @@ struct ItemCommandsTests {
         #expect(!f.commands(for: f.units[0], host: .elsewhere, dueToday: false).contains(.skipToday))
     }
 
-    /// Only a review note has the 작성 완료 row, and only once it is one.
     @Test func aNoteHasTheReviewRowOnlyWhenItReviewsAClass() {
         let plain = NoteMenuCommand.commands(host: .own, builtPDF: false, builds: false, review: nil, finder: false)
         #expect(plain == [.edit, .move, .share, .remove])
         let review = NoteMenuCommand.commands(host: .own, builtPDF: false, builds: false, review: .writing, finder: false)
         #expect(review.contains(.review(.writing)))
-        // A class without a note yet: nothing for a note's menu to check.
         #expect(
             !NoteMenuCommand.commands(host: .own, builtPDF: false, builds: false, review: .needed, finder: false).contains {
                 $0.group == .state
@@ -117,7 +111,6 @@ struct ItemCommandsTests {
         #expect(f.commands(for: f.materials[2], host: .own, pdf: nil, mac: true) == [.relink, .untrack])
     }
 
-    /// A folder opens only in Finder and has no link to share; the screen that links a file can let it go.
     @Test func aFileAndAFolderByPlatformAndHost() {
         var f = course()
         #expect(f.commands(for: f.materials[1], host: .elsewhere, pdf: nil, mac: false) == [.edit, .move, .remove])

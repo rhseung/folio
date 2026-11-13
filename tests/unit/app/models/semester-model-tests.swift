@@ -13,13 +13,12 @@ struct SemesterModelTests {
     @Test func weekOptionsRunThroughTheTermAndOfferNoneOnlyWithoutADefault() throws {
         let model = SemesterModel(workspace: try fixtureWorkspace(), semesterID: fallTerm)
         let fall = try #require(model.semester)
-        // 2026-09-01 is a Tuesday, so week 1 starts on Monday 08-31 and 12-18 falls in week 16.
+        // 2026-09-01은 화요일이므로 1주차는 08-31 월요일에 시작하고, 12-18은 16주차에 든다.
         let weeks = model.weekOptions(fall, fallback: 8)
         #expect(weeks.count == 16)
         #expect(weeks.first?.1.hasPrefix("1주차 · ") == true)
         let open = model.weekOptions(fall, fallback: nil)
         #expect(open.count == 17 && open[0].0 == nil && open[0].1 == "없음")
-        // A default exam week past the term's end still gets a row.
         #expect(model.weekOptions(fall, fallback: 20).count == 20)
     }
 

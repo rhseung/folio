@@ -4,8 +4,6 @@ import Testing
 
 @testable import Folio
 
-/// A tab's panes (#62): each keeps its own history, the tab's place follows the focused one, and "옆 칸에 열기" opens
-/// a pane beside the one that asked.
 @MainActor
 struct TabPanesTests {
     let grades = Navigator.Entry(link: .place(.grades))
@@ -20,14 +18,11 @@ struct TabPanesTests {
         #expect(panes.navigators.map(\.current) == [Navigator.Entry(link: .place(.today)), grades])
         #expect(!panes.focused.history.canGoBack)
 
-        // From the first pane, the next one opens right of it, between the two.
         panes.openBeside(people, from: panes.navigators[0])
         #expect(panes.navigators.map(\.current) == [Navigator.Entry(link: .place(.today)), people, grades])
         #expect(panes.trails.count == 3 && Set(panes.ids).count == 3)
     }
 
-    // No cap on the panes (2026-11-12 사용자): a fourth pane opens like the second, and a narrow row folds the rest
-    // into bundles at its ends rather than a pane giving way.
     @Test func besideAlwaysOpensAPaneAndTheWidthFoldsTheRest() {
         let panes = TabPanes(Navigator())
         panes.openBeside(grades)
@@ -36,18 +31,14 @@ struct TabPanesTests {
         #expect(panes.count == 4 && panes.focus == 3)
         #expect(panes.navigators.map(\.current) == [Navigator.Entry(link: .place(.today)), grades, people, codes])
 
-        // A target a pane already shows goes to that pane.
         panes.openBeside(Navigator.Entry(link: .place(.today)))
         #expect(panes.focus == 0 && panes.count == 4)
 
-        // Room for two open beside a bundle: the run gives up its end pressed longer ago, twice, to the right bundle.
         panes.measure(900)
         #expect(panes.fold.run == 0...1 && panes.fold.right == [2, 3])
         panes.measure(2000)
         #expect(panes.fold.run == 0...3 && panes.folded.isEmpty)
 
-        // A pane opened in a narrow row takes the run at once, from the width the row last had, and the pane it opened
-        // beside goes to the left bundle.
         panes.measure(500)
         panes.openBeside(settings)
         #expect(panes.focus == 1 && panes.fold.run == 1...1 && panes.fold.left == [0] && panes.folded == [0, 2, 3, 4])
@@ -74,8 +65,7 @@ struct TabPanesTests {
     }
 
     @Test func draggingADividerDoesNotRedrawTheTabs() {
-        // The toolbar's tabs draw from the focus and the panes; a share changing every frame of a drag must not touch
-        // them, or the toolbar rebuilds its menu form each frame (#310).
+        // 툴바의 탭은 초점과 칸을 보고 그린다. 끄는 동안 프레임마다 바뀌는 비율이 탭에 닿으면, 툴바가 프레임마다 메뉴를 다시 만든다(#310).
         let panes = TabPanes(Navigator())
         panes.openBeside(grades)
         final class Changes: @unchecked Sendable { var count = 0 }
@@ -118,16 +108,12 @@ struct TabPanesTests {
         panes.openBeside(people)
         #expect(panes.folded.isEmpty)
 
-        // The focused pane folds by hand: the focus goes to the pane pressed before it.
         panes.collapse(2)
         #expect(panes.collapsed == [2] && panes.folded == [2] && panes.focus == 1)
 
-        // A row with room for every pane open still keeps it a strip.
         panes.measure(2000)
         #expect(panes.folded == [2])
 
-        // Narrower, the pane pressed longer ago goes to the left bundle, never the focus; the one folded by hand
-        // stays a strip in its place.
         panes.measure(500)
         #expect(panes.folded == [0, 2] && panes.fold.left == [0] && panes.fold.strips == [2])
 
@@ -148,7 +134,6 @@ struct TabPanesTests {
         panes.press(0)
         #expect(tabs.current.screen == .today)
 
-        // A pane's screen finds its tab even behind another.
         let pane = panes.navigators[1]
         tabs.open()
         #expect(tabs.panes(holding: pane) === panes)
@@ -174,8 +159,6 @@ struct TabPanesTests {
         #expect(abs(window.shares[0] - 0.7) < 1e-9)
     }
 
-    /// "옆 칸으로 합치기" (2026-11-09 사용자): the other tab's pane joins with its history and its focus, and its tab
-    /// closes; the tab it joined comes to the front.
     @Test func anotherTabJoinsBesideTheFocusWithItsHistory() throws {
         let tabs = WindowTabs(Navigator(grades))
         let front = try #require(tabs.front)
@@ -215,7 +198,6 @@ struct TabPanesTests {
         #expect(tabs.ids == [target] && tabs.panes(target)?.count == 5)
     }
 
-    /// A drag lets go onto the panes' edge, within reach of it and below their top.
     @Test func aDragJoinsOnlyNearThePanesEdge() throws {
         let tabs = WindowTabs(TabPanes(Navigator(grades)))
         let target = tabs.selected
@@ -244,7 +226,6 @@ struct TabPanesTests {
         saved.show(.read, in: 1)
         saved.press(1)
         #expect(panes.restore(saved, entries: [grades, note, people]))
-        // The pane that opened the note keeps its history, its place among the screens and its columns.
         #expect(panes.count == 3 && panes.focus == 1)
         #expect(panes.focused === navigator && panes.ids[1] == id)
         #expect(navigator.current == note && navigator.backList == [Navigator.Entry(link: .place(.today))])
@@ -252,7 +233,6 @@ struct TabPanesTests {
         let noteID = try #require(note.link.id)
         #expect(panes.noteModes == [nil, .read, nil] && panes.noteMode(of: noteID, pane: id) == .read)
 
-        // A tab of more panes is the student's own arrangement: nothing changes.
         #expect(!panes.restore(saved, entries: [grades, note, people]))
         #expect(panes.count == 3)
     }
@@ -266,7 +246,6 @@ struct TabPanesTests {
         #expect(panes.navigators.map(\.current) == [note, people] && panes.focus == 0)
         #expect(abs(panes.shares.reduce(0, +) - 1) < 1e-9)
 
-        // Left with the note alone, the tab stays as it was.
         let alone = TabPanes(Navigator())
         #expect(!alone.restore(saved, entries: [nil, note, nil]))
         #expect(alone.count == 1 && alone.focused.current == Navigator.Entry(link: .place(.today)))
@@ -282,12 +261,10 @@ struct TabPanesTests {
         #expect(panes.current.panes[0].noteMode == .write && panes.noteModes == [.write, nil])
         #expect(panes.noteMode(of: noteID, pane: id) == .write)
 
-        // The pane gone on to another note starts that one from nothing.
         panes.navigators[0].go(Navigator.Entry(link: other))
         #expect(panes.noteMode(of: otherID, pane: id) == nil)
         #expect(panes.noteMode(of: noteID, pane: id) == nil)
 
-        // A note the pane no longer shows can't set how the pane shows things.
         panes.show(.read, of: noteID, pane: id)
         #expect(panes.current.panes[0].noteMode == nil)
     }

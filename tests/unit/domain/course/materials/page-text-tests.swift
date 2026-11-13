@@ -133,7 +133,7 @@ struct TranscriptWindowTests {
             ])
         let cut = said.window(from: nil, to: nil, budget: 31)
         #expect(cut.lines.map(\.start) == [120] && cut.next == 125.7)
-        // `next` goes out as 2:05, so the next read starts at 125 s.
+        // `next`는 2:05로 나가므로, 다음 읽기는 125초에서 시작한다.
         #expect(said.window(from: 125, to: nil).lines.map(\.start) == [125.7])
     }
 }

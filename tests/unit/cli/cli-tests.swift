@@ -23,7 +23,6 @@ struct SessionCommandTests {
         }
     }
 
-    /// The Korean the app shows reads as the English value.
     @Test func addMakeupInKorean() throws {
         for word in ["makeup", "보강"] {
             try h.expectSame(Self.add + ["--kind", word]) { _ in
@@ -118,7 +117,7 @@ struct SessionCommandTests {
         let cut = marked.truncated(to: 5)
         #expect(cut.plain == "a hi…")
 
-        // The reset past the cut is kept, so the yellow doesn't run into the next column.
+        // 잘라 낸 뒤의 reset을 남겨야 노란색이 다음 열로 번지지 않는다.
         #expect(cut == "a \u{1B}[33mhi\u{1B}[0m\u{1B}[0m…")
     }
 }
@@ -135,7 +134,6 @@ struct SchemaTests {
                 continue
             }
 
-            // Backing up takes nothing: the folder and retention come from settings.json. Moving takes every unfiled course.
             #expect(
                 !props.isEmpty || [.string("backup create"), .string("transcript move")].contains(a["command"]), "\(a["command"] ?? .null)")
         }
@@ -169,7 +167,6 @@ struct SearchCommandTests {
 struct AgentTests {
     let h = Harness()
 
-    /// The repository copy is what agents working in the repo load; it must say what `folio skill` installs.
     @Test func repositorySkillMatchesTheBinary() throws {
         var dir = URL(filePath: #filePath).deletingLastPathComponent()
         while !FileManager.default.fileExists(atPath: dir.appending(path: ".claude/skills/folio/SKILL.md").path) {
@@ -189,8 +186,6 @@ struct AgentTests {
         #expect(h.cli(["skill", "--install", dir.path, "--json"], gist: gist).out.contains("unchanged"))
     }
 
-    /// The evaluation's first requests, the ones the synonym table was built from, must stay on top; the rest is
-    /// measured, not asserted (FinderEvaluation).
     @Test func findsCommandFromRequest() {
         for (request, answers) in FinderEvaluation.cases.prefix(11) {
             let first = Finder.find(request).first?.command.replacing("folio ", with: "")
@@ -205,16 +200,15 @@ struct AgentTests {
         #expect(r.out.contains("folio assignment set"))
         #expect(h.cli(["help", "zzzz"], gist: gist).code == Exit.notFound.rawValue)
 
-        // Command names and topics still go to their own help.
         #expect(h.cli(["help", "refs"], gist: gist).out.contains("가리키기"))
     }
 }
 
-/// Serialized: one test sets SAP_SHELL for the whole process.
+// 한 테스트가 프로세스 전체의 SAP_SHELL을 바꾸므로 차례로 실행한다.
 @Suite(.serialized) struct CompletionTests {
     let h = Harness()
 
-    /// The shell calls back with `---completion <command> -- <argument> <word index> <cursor> <words…>`.
+    // 셸은 `---completion <command> -- <argument> <word index> <cursor> <words…>` 꼴로 다시 부른다.
     @Test func itemsFollowTheCourse() throws {
         let gist = try Harness.fixtureCopy()
         #expect(h.cli(["unit", "add", "EC4207", "매칭"], gist: gist).code == 0)
@@ -225,7 +219,7 @@ struct AgentTests {
         #expect(semesters.out.split(separator: "\n").contains("2026-3"), "\(semesters.out) \(semesters.err)")
     }
 
-    /// zsh gets `value:note`, so a list of course codes says which course each is.
+    // zsh는 `value:note` 꼴을 받으므로, 과목 코드 목록이 각 코드의 과목을 알릴 수 있다.
     @Test func zshCandidatesCarryANote() throws {
         let gist = try Harness.fixtureCopy()
         setenv("SAP_SHELL", "zsh", 1)
@@ -243,14 +237,12 @@ struct GradesLockTests {
         #expect(h.cli(["catalog", "set", "--file", try GradesSetupTests().catalogFile(), "--yes"], gist: gist).code == 0)
         #expect(h.cli(["course", "set", "EC4207", "--grade", "A+", "--yes"], gist: gist).code == 0)
 
-        // Commands that exist to show grades stop with 5 instead of printing them.
         for args in [["gpa"], ["transcript", "list"], ["score", "list", "EC4207"]] {
             let r = h.cli(args, gist: gist, gradesLocked: true)
             #expect(r.code == 5, "\(args)")
             #expect(!r.out.contains("A+"))
         }
 
-        // Others keep working and hide just the grade.
         let locked = h.cli(["course", "show", "EC4207"], gist: gist, gradesLocked: true)
         #expect(locked.code == 0 && locked.out.contains("성적  ••") && !locked.out.contains("A+"))
         #expect(h.cli(["course", "show", "EC4207"], gist: gist).out.contains("성적  A+"))
@@ -265,7 +257,6 @@ struct GradesLockTests {
         #expect(h.cli(["unlock", "--for", "12h"], gist: URL(filePath: "/nonexistent")).code == 0)
         #expect(h.cli(["unlock", "--for", "12h1s"], gist: URL(filePath: "/nonexistent")).code == 2)
 
-        // Unlocking asks even for a longer time; a refusal leaves it locked.
         #expect(h.cli(["unlock", "--for", "1h"], gist: URL(filePath: "/nonexistent"), gradesLocked: true).code == 5)
     }
 }

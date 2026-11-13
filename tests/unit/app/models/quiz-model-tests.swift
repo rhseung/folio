@@ -5,7 +5,6 @@ import Testing
 
 @testable import Folio
 
-/// The fixture course gets two units and three cards; the first card is answered wrong today.
 @MainActor
 struct QuizFixture {
     let workspace: Workspace
@@ -87,7 +86,6 @@ struct QuizModelTests {
         #expect(f.model.linkedTitles(set.problems[0], units: f.course.outline.map(\.unit)) == "그래프")
     }
 
-    /// The card's menu asks the window, and the list reads the cards again when the quizzes change.
     @Test func removingACardReloadsTheList() throws {
         let f = try QuizFixture()
         var asked: PendingAction?
@@ -144,7 +142,6 @@ struct QuizSolveModelTests {
         #expect(solve.unitHelp(tally) == "진도 25% · 푼 카드 1 / 4")
     }
 
-    /// The folded screen goes on to the cards at each start, a restart over the same deck included.
     @Test func everyStartCountsAsARun() throws {
         let f = try QuizFixture()
         let solve = QuizSolveModel(quiz: f.model)

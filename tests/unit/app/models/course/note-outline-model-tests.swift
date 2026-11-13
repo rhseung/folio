@@ -18,7 +18,6 @@ struct NoteOutlineModelTests {
         #expect(model.rows.first(where: \.marked)?.title == "제목")
         model.views.previewScrolled(9)
         #expect(model.rows.first(where: \.marked)?.title == "둘")
-        // Inside a folded heading, the one it folds under is marked.
         model.views.previewScrolled(7)
         #expect(model.rows.first(where: \.marked)?.title == "하나")
     }
@@ -40,7 +39,6 @@ struct NoteOutlineModelTests {
         model.read(text)
         let two = try #require(model.rows.first { $0.title == "둘" })
         model.jump(two.index)
-        // The note's end can't come to the top, so the scroll stops above the heading.
         model.views.previewScrolled(5)
         #expect(model.rows.first(where: \.marked)?.title == "둘")
         clock.now += 1
