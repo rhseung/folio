@@ -11,9 +11,10 @@ struct PageStrip: View {
     @State private var model: PageStripModel
     @Environment(\.accent) private var accent
 
-    init(controller: PDFController, workspace: Workspace, course: UUID?, material: UUID?) {
+    /// Kept from the first view made: a later one, made as the screen redraws, is dropped.
+    init(controller: PDFController, model: PageStripModel) {
         self.controller = controller
-        _model = State(initialValue: PageStripModel(workspace: workspace, course: course, material: material, pageCount: controller.pageCount))
+        _model = State(initialValue: model)
     }
 
     static let column: CGFloat = 128

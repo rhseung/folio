@@ -55,4 +55,10 @@ extension Workspace {
         guard let path = course.store.coursePath(of: note.url) else { return nil }
         return run(NoteAdopt(course: course.id, note: path))?.made
     }
+
+    /// A note's `[[제목]]` link, as the preview finds the note it draws (`NoteEmbedSource`). Adopted here too: the
+    /// preview draws the link whole, so the link must open it.
+    func noteId(titled title: String, in course: LoadedCourse) -> UUID? {
+        ((try? course.store.notes()) ?? []).linked(title).flatMap { noteId(of: $0, in: course) }
+    }
 }

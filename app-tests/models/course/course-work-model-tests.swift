@@ -515,8 +515,8 @@ struct NotesModelTests {
     @Test func editorNamesItsLinkAndFindsNotesByTitle() throws {
         let (workspace, course) = try fixtureCourse()
         let notes = NotesModel(workspace: workspace, course: course)
-        let id = try #require(notes.noteId(titled: "03-03(화)"))
-        #expect(notes.noteId(titled: "03-03(화)".uppercased()) == id)
+        let id = try #require(workspace.noteId(titled: "03-03(화)", in: course))
+        #expect(workspace.noteId(titled: "03-03(화)".uppercased(), in: course) == id)
         let editor = NoteEditorModel(workspace: workspace, course: course, note: try #require(notes.note(id)))
         editor.load()
         #expect(editor.currentLink == "러프 노트 · 회차 없음")
@@ -594,7 +594,7 @@ struct NotesModelTests {
     @Test func readViewEditsReplaceTheirOwnLines() throws {
         let (workspace, course) = try fixtureCourse()
         let notes = NotesModel(workspace: workspace, course: course)
-        let editor = NoteEditorModel(workspace: workspace, course: course, note: try #require(notes.note(try #require(notes.noteId(titled: "03-03(화)")))))
+        let editor = NoteEditorModel(workspace: workspace, course: course, note: try #require(notes.note(workspace.noteId(titled: "03-03(화)", in: course))))
         editor.load()
         editor.body += "\n\n문단 하나\n둘째 줄\n"
         let parsed = ParsedNote(editor.body)

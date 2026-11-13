@@ -455,15 +455,3 @@ final class SessionSheetModel {
         return true
     }
 }
-
-/// The names of what a past class still lacks, for the sessions notice and Today's wrap-up card.
-extension WrapUpItem {
-    var label: String {
-        switch self {
-        case .progress: String(localized: .wrapUpProgress)
-        case .units: String(localized: .wrapUpUnits)
-        case .note: String(localized: .wrapUpNote)
-        case .attendance: String(localized: .wrapUpAttendance)
-        }
-    }
-}
