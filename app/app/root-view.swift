@@ -39,6 +39,9 @@ struct RootView: View {
     @State private var fullScreen = false
     #else
     @State var windowWidth: CGFloat = 1200
+    @Environment(\.horizontalSizeClass) var sizeClass
+    /// The iPhone's search tab is in front (`touchShell`).
+    @State var phoneSearching = false
     #endif
 
     init(request: WindowRequest? = nil) {
@@ -76,7 +79,11 @@ struct RootView: View {
             workspace.error = String(localized: .linkNotFound(link.string))
             return
         }
+        #if os(iOS)
+        let pane = (placement == .here ? phoneRoute(entry) : nil) ?? pane ?? navigator
+        #else
         let pane = pane ?? navigator
+        #endif
         switch placement {
         case .here:
             // Opening a class's note, not moving about in it.

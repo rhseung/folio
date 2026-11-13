@@ -76,8 +76,9 @@ targets:
         INFOPLIST_KEY_NSFaceIDUsageDescription: 성적을 보기 전에 본인인지 확인합니다.
         INFOPLIST_KEY_NSMicrophoneUsageDescription: 강의를 녹음하고 받아쓰기 위해 마이크를 씁니다.
         INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: 녹음한 강의를 기기 안에서 글로 받아씁니다.
-        # iPad only; the spec targets macOS and iPadOS, not iPhone.
-        TARGETED_DEVICE_FAMILY: "2"
+        # iPhone and iPad (#134). The iPhone keeps to portrait: its screens are laid out for 390pt across.
+        TARGETED_DEVICE_FAMILY: "1,2"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         SWIFT_EMIT_LOC_STRINGS: YES
