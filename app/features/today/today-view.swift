@@ -33,6 +33,7 @@ struct TodayView: View {
             wrapUpBlock(model.wrapUps(now: model.workspace.liveNow))
             AttendanceWarnings(model: model)
             UnfiledCoursesNotice(workspace: model.workspace)
+            LMSTodayNotice(workspace: model.workspace)
             agenda(summary)
             ExamPlanTodayBlock(courses: model.current)
             reviewBlock(reviews, notes: summary.missingReviewNotes, today: summary.studyDay)

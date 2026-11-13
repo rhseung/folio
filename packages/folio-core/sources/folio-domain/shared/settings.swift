@@ -26,6 +26,7 @@ public struct Settings: Codable, Sendable, Equatable {
     /// The layouts the user saved and named, in their order (#62, "지금 배치 저장…"). The built-in ones come before
     /// them and aren't kept here.
     public var panePresets: [PanePreset]
+    public var lms: LMSSettings
 
     public static let defaultNoteRules = """
     - 정의는 전제, 조건, 결론 순서로 쓴다.
@@ -37,7 +38,7 @@ public struct Settings: Codable, Sendable, Equatable {
                 notifications: NotificationSettings = .init(), backup: BackupSettings = .init(), noteTemplates: [String: [String]] = [:],
                 newNoteMath: MathSyntax = .asciimath, sidebar: SidebarOrder = .init(), classMinutes: Int = 75,
                 mathSnippets: [MathSnippet]? = nil, asciiMathSnippets: [MathSnippet]? = nil, classStart: ClassStartSettings = .init(),
-                panePresets: [PanePreset] = []) {
+                panePresets: [PanePreset] = [], lms: LMSSettings = .init()) {
         self.dayBoundaryMinutes = dayBoundaryMinutes
         self.review = review
         self.noteRules = noteRules
@@ -51,6 +52,7 @@ public struct Settings: Codable, Sendable, Equatable {
         self.asciiMathSnippets = asciiMathSnippets
         self.classStart = classStart
         self.panePresets = panePresets
+        self.lms = lms
     }
 
     public init(from decoder: any Decoder) throws {
@@ -69,6 +71,7 @@ public struct Settings: Codable, Sendable, Equatable {
         asciiMathSnippets = try c.decodeIfPresent([MathSnippet].self, forKey: .asciiMathSnippets)
         classStart = try c.value(.classStart, or: d.classStart)
         panePresets = try c.value(.panePresets, or: d.panePresets)
+        lms = try c.value(.lms, or: d.lms)
     }
 
     /// Every layout to choose from: the built-in ones, then the user's.

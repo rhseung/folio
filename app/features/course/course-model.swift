@@ -69,7 +69,7 @@ final class CourseModel {
         case .problemSet: section = .quizProblems
         case .recording: section = .sessions
         // Not in a course: `Screen` never hands these to one.
-        case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .semester, .person: break
+        case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals, .semester, .person: break
         }
     }
 
@@ -79,7 +79,7 @@ final class CourseModel {
         switch place.kind {
         case .session, .assignment, .exam, .card, .problemSet: return id
         // A note, a file, a unit and a recording open on a page of their own; the rest are no item of a page.
-        case .note, .material, .unit, .recording, .course, .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .semester,
+        case .note, .material, .unit, .recording, .course, .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals, .semester,
              .person: return nil
         }
     }

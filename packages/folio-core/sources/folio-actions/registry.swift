@@ -18,6 +18,7 @@ public enum Actions {
         QuizCardSave.self, QuizCardRemove.self, QuizRecord.self,
         ProblemSetSave.self, ProblemSetRemove.self, ProblemLinkUnit.self, ProblemRecord.self,
         ReviewRecord.self, ReviewSkip.self,
+        LMSSeen.self, LMSMark.self, LMSAccept.self,
         ImportNotion.self, ImportNotes.self, ImportCalendar.self, ImportExams.self, ImportUnits.self, ImportRequirements.self, ImportHandbook.self,
     ]
 

@@ -21758,6 +21758,457 @@
           }
         }
       }
+    },
+    "root.nav.proposals": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제안함"
+          }
+        }
+      }
+    },
+    "lms.download-failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@을(를) 받지 못했습니다: %2$@"
+          }
+        }
+      }
+    },
+    "lms.proposals.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS에 새로 올라온 것. 추가할 때 넣을 과목을 고릅니다."
+          }
+        }
+      }
+    },
+    "lms.not-connected": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결 안 됨"
+          }
+        }
+      }
+    },
+    "lms.needs-login": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS가 로그인을 받지 않습니다. 다시 연결하세요"
+          }
+        }
+      }
+    },
+    "lms.syncing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "동기화 중…"
+          }
+        }
+      }
+    },
+    "lms.never-synced": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 동기화하지 않음"
+          }
+        }
+      }
+    },
+    "lms.last-sync": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마지막 동기화 %@"
+          }
+        }
+      }
+    },
+    "lms.due": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마감 %@"
+          }
+        }
+      }
+    },
+    "lms.kind.assignment": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과제"
+          }
+        }
+      }
+    },
+    "lms.kind.file": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자료"
+          }
+        }
+      }
+    },
+    "lms.kind.notice": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "공지"
+          }
+        }
+      }
+    },
+    "lms.proposals.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 항목 없음"
+          }
+        }
+      }
+    },
+    "lms.add-all": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두 추가"
+          }
+        }
+      }
+    },
+    "lms.viewer-only": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS 뷰어 전용"
+          }
+        }
+      }
+    },
+    "lms.open": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS에서 열기"
+          }
+        }
+      }
+    },
+    "lms.dismiss": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "무시"
+          }
+        }
+      }
+    },
+    "lms.today.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS 새 항목 %lld개"
+          }
+        }
+      }
+    },
+    "lms.today.detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가장 이른 마감 %1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "lms.open-proposals": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제안함 열기"
+          }
+        }
+      }
+    },
+    "lms.sync-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · 새 항목 %2$lld개"
+          }
+        }
+      }
+    },
+    "lms.connection": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결 상태"
+          }
+        }
+      }
+    },
+    "lms.student-number": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학번"
+          }
+        }
+      }
+    },
+    "lms.last-sync-label": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마지막 동기화"
+          }
+        }
+      }
+    },
+    "lms.reconnect": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 연결"
+          }
+        }
+      }
+    },
+    "lms.sync-now": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 동기화"
+          }
+        }
+      }
+    },
+    "lms.login": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "로그인"
+          }
+        }
+      }
+    },
+    "lms.keychain": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iCloud 키체인"
+          }
+        }
+      }
+    },
+    "lms.disconnect-ellipsis": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결 해제…"
+          }
+        }
+      }
+    },
+    "lms.account": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS 계정"
+          }
+        }
+      }
+    },
+    "lms.connect-button": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS 연결"
+          }
+        }
+      }
+    },
+    "lms.connect": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결"
+          }
+        }
+      }
+    },
+    "lms.disconnect.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS 연결을 해제할까요?"
+          }
+        }
+      }
+    },
+    "lms.disconnect": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결 해제"
+          }
+        }
+      }
+    },
+    "lms.disconnect.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 기기와 iCloud 키체인에서 LMS 로그인을 지웁니다. 강의실 연결과 처리한 항목은 그대로 남습니다."
+          }
+        }
+      }
+    },
+    "lms.connect.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS 연결"
+          }
+        }
+      }
+    },
+    "lms.connect.note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비밀번호는 iCloud 키체인에만 두고, LMS 세션이 끝났을 때 다시 로그인하는 데만 씁니다."
+          }
+        }
+      }
+    },
+    "lms.password": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비밀번호"
+          }
+        }
+      }
+    },
+    "lms.login-refused": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학번이나 비밀번호가 맞지 않습니다"
+          }
+        }
+      }
+    },
+    "lms.dismiss-all": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두 무시"
+          }
+        }
+      }
+    },
+    "lms.add-to": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목에 추가"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

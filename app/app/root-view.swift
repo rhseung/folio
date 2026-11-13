@@ -407,6 +407,20 @@ struct RootView: View {
         VStack(spacing: 0) {
         List(selection: listSelection) {
             Label { Text(.rootNavToday) } icon: { sidebarIcon("house", .today) }.sidebarRow(.today, selectionBinding)
+            // Only once something waits: an empty inbox has nothing to open for.
+            let waiting = workspace.lmsInbox.proposals.count
+            if waiting > 0 || selection == .proposals {
+                Label {
+                    HStack {
+                        Text(.rootNavProposals).lineLimit(1)
+                        if waiting > 0 {
+                            Spacer(minLength: Theme.Space.xs)
+                            Text("\(waiting)").font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit()
+                                .foregroundStyle(Theme.Palette.chromeText).fixedSize()
+                        }
+                    }
+                } icon: { sidebarIcon("tray", .proposals) }.sidebarRow(.proposals, selectionBinding)
+            }
             Label { Text(.rootNavGrades) } icon: { sidebarIcon("chart.line.uptrend.xyaxis", .grades) }.sidebarRow(.grades, selectionBinding)
             Label { Text(.rootNavRequirements) } icon: { sidebarIcon("flag", .requirements) }.sidebarRow(.requirements, selectionBinding)
             Label { Text(.rootNavPeople) } icon: { sidebarIcon("person", .people) }.sidebarRow(.people, selectionBinding)

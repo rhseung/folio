@@ -59,6 +59,8 @@ final class Workspace {
     let transcriptions = TranscriptionQueue()
     /// What each release changed, from GitHub, and the sheet an update brings (#415). A test hands it a feed of its own.
     var releaseNotes = ReleaseNotes()
+    /// The LMS as last read; what was decided about it is in `settings.lms` (#132).
+    var lms = LMSConnection()
     @ObservationIgnored private var watcher: GISTWatcher?
     @ObservationIgnored private var lastOwnWrite = Date.distantPast
     @ObservationIgnored private var pendingReload: Task<Void, Never>?

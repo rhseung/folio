@@ -8,6 +8,8 @@ public struct AppLink: Hashable, Sendable {
         case today, grades, requirements, people, codes, settings
         /// What each release changed (#415).
         case whatsNew = "whats-new"
+        /// What the LMS brought in, waiting to be added or dismissed (#132).
+        case proposals
         case semester, course, session, unit, note, material, assignment, exam, card
         case problemSet = "problem-set"
         case person, recording
@@ -30,7 +32,7 @@ public struct AppLink: Hashable, Sendable {
         // its `#` and whether it has pages, and every switch over these facts (or over the kind) then has to place it.
         public var home: Home {
             switch self {
-            case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew: .app
+            case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals: .app
             case .semester: .transcript
             case .person: .catalog
             case .course, .session, .unit, .note, .material, .assignment, .exam, .problemSet, .recording: .course
@@ -46,7 +48,7 @@ public struct AppLink: Hashable, Sendable {
             case .material: [.page]
             case .note: [.block, .heading]
             case .recording: [.time]
-            case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .semester, .person, .course, .session,
+            case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals, .semester, .person, .course, .session,
                  .unit, .assignment, .exam, .problemSet, .card: []
             }
         }
@@ -55,7 +57,7 @@ public struct AppLink: Hashable, Sendable {
         public var hasPages: Bool {
             switch self {
             case .course, .settings: true
-            case .today, .grades, .requirements, .people, .codes, .whatsNew, .semester, .person, .session, .unit, .note,
+            case .today, .grades, .requirements, .people, .codes, .whatsNew, .proposals, .semester, .person, .session, .unit, .note,
                  .material, .assignment, .exam, .problemSet, .card, .recording: false
             }
         }
@@ -100,7 +102,7 @@ public struct AppLink: Hashable, Sendable {
     /// A tab is a screen of its own, like a course's page, so it is a path and not an anchor: the window's history
     /// compares links without anchors and would take two tabs for one step.
     public enum SettingsPage: String, CaseIterable, Sendable {
-        case general, record, classes = "class", notes, review, notifications, claude, backup, about
+        case general, record, classes = "class", notes, review, notifications, claude, lms, backup, about
 
         /// Tabs before #416 merged or renamed them. Links in patch notes, notes and remembered tabs still name them,
         /// so they are read as the tab that took them over and written by the new name.
@@ -333,7 +335,7 @@ extension AppLink {
         case .problemSet: holds = { $0.problemSets.contains { $0.id == id } }
         case .note: holds = { $0.notes.contains { $0.id == id } }
         case .recording: holds = { $0.recordings.contains { $0.id == id } }
-        case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .semester, .person, .card: return nil
+        case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals, .semester, .person, .card: return nil
         }
         return files.first(where: holds)?.course.id
     }

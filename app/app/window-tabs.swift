@@ -369,6 +369,7 @@ extension Workspace {
         case .codes: Crumb(title: String(localized: .rootNavCodes), symbol: "number")
         case .settings: Crumb(title: String(localized: .rootNavSettings), symbol: "gearshape")
         case .whatsNew: Crumb(title: String(localized: .whatsNewTitle), symbol: "sparkles")
+        case .proposals: Crumb(title: String(localized: .rootNavProposals), symbol: "tray")
         // The address itself, as the page says it can't be found: not today's, which the page no longer shows.
         case .missing: Crumb(title: entry.link.string, symbol: "questionmark.folder")
         case .today: Crumb(title: String(localized: .rootNavToday), symbol: "house")
@@ -382,7 +383,7 @@ extension Workspace {
         case .today: nil
         case .session, .unit, .note, .material, .assignment, .exam, .problemSet, .person, .recording: itemName(of: entry) ?? placeCrumb(of: entry).title
         // A card names only its page ("카드"), which says less than the course.
-        case .grades, .requirements, .people, .codes, .settings, .whatsNew, .semester, .course, .card: placeCrumb(of: entry).title
+        case .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals, .semester, .course, .card: placeCrumb(of: entry).title
         }
     }
 }

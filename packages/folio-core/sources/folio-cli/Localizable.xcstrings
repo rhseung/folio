@@ -7634,6 +7634,17 @@
           }
         }
       }
+    },
+    "lms.abstract": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GIST LMS 강의실 연결과 제안 처리"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
