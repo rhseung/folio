@@ -2,8 +2,6 @@ import FolioDomain
 import FolioMarkdown
 import SwiftUI
 
-/// Where link completion's candidates come from (the app's search index and files), and what taking one does beyond
-/// the text being edited.
 @MainActor protocol NoteLinkSource: AnyObject {
     /// `text` is the note as the editor has it, which may be ahead of the file.
     func candidates(for query: CompletionQuery, text: String) async -> [CompletionItem]
@@ -13,8 +11,6 @@ import SwiftUI
     func take(_ item: CompletionItem, for query: CompletionQuery, text: String) -> (item: CompletionItem, own: SourceEditing.Edit?)?
 }
 
-/// What the edit view's typing help needs from the app beside the text: the snippets and the note templates, from
-/// settings.json, and where link candidates come from.
 struct NoteAssist: Equatable {
     var snippets: [MathSnippet] = MathSnippet.defaults
     var asciiSnippets: [MathSnippet] = MathSnippet.asciiMathDefaults
@@ -63,7 +59,7 @@ struct NoteAssist: Equatable {
     }
 }
 
-/// The blocks `/` offers. Their bodies are markdown, and data; their names are the app's.
+/// Their bodies are markdown, and data; their names are the app's.
 @MainActor enum SlashBlocks {
     static func items(templates: [(NoteKind, [String])]) -> [CompletionItem] {
         func item(_ id: String, _ title: String, _ symbol: String, _ keywords: String, _ body: String, block: Bool = true) -> CompletionItem {
@@ -104,9 +100,8 @@ struct NoteAssist: Equatable {
     }
 }
 
-/// The completion menu's state: one query, its candidates and the one picked. Every completion in the edit view
-/// goes through it; candidates found later (a search the app runs) are added by `more` when they arrive, and
-/// `arrived` tells the view to fit the menu to them.
+/// Every completion in the edit view goes through it; candidates found later (a search the app runs) are added by
+/// `more` when they arrive, and `arrived` tells the view to fit the menu to them.
 @MainActor @Observable final class CompletionMenu {
     private(set) var query: CompletionQuery?
     private(set) var items: [CompletionItem] = []
@@ -125,11 +120,13 @@ struct NoteAssist: Equatable {
         let same = self.query.map { query.continues($0) } ?? false
         let picked = same ? current?.id : nil
         let waits = items.isEmpty && more != nil && Self.late(query)
+
         self.query = query
         if !(waits && same) {
             self.items = items
             selected = picked.flatMap { id in items.firstIndex { $0.id == id } } ?? 0
         }
+
         pending?.cancel()
         guard let more, Self.late(query) else { return }
         pending = Task { [weak self] in

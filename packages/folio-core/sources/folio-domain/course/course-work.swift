@@ -123,6 +123,7 @@ extension CourseFile {
               !assignments.contains(where: { $0.title == a.title && ($0.due ?? .distantPast) > due }) else { return }
         let next = nextDue(after: due, rule: rule, title: a.title, calendar: calendar)
         guard end.map({ next <= $0 }) ?? true else { return }
+
         var made = Assignment(device: device, at: now, title: a.title, due: next)
         made.repeats = rule
         made.componentId = a.componentId

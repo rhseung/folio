@@ -1,7 +1,7 @@
 import AVFoundation
 import SwiftUI
 
-/// An image fitted to the pane; a smaller one stays at its own size rather than blown up.
+/// A smaller image stays at its own size rather than blown up to the pane.
 struct ImagePane: View {
     let url: URL
     @State private var image: Image?

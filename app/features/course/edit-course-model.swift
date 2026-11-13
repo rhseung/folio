@@ -113,7 +113,6 @@ final class EditCourseModel {
     }
 }
 
-/// People, memo and folder at the bottom of the course overview.
 @MainActor @Observable
 final class CourseInfoModel {
     let workspace: Workspace

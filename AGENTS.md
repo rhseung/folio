@@ -33,6 +33,7 @@ folio/
     folio-ai/         # Claude 연동 계층. 프로바이더 추상화, 맥락 구성, 작업별 요청과 응답 스키마
   app/                # 멀티플랫폼 앱 타깃(macOS, iPadOS)
   app-tests/          # 화면 모델 테스트와 노트 보기 회귀 검사(`mise run test-app`), iPad 테스트는 ipad/(`mise run test-ipad`)
+  app-ui-tests/       # 주요 화면의 접근성 검사(`performAccessibilityAudit()`, `mise run test-a11y`). CI만 돌린다
   web/                # 노트 미리보기와 Claude 패널의 페이지(KaTeX 수식, 코드 하이라이팅, mermaid 그림, 노트 CSS, 미리보기의 그림 크게 보기), 편집 보기가 JavaScriptCore로 부르는 코드 하이라이팅. 편집 보기의 수식 말풍선과 자동 완성 미리보기도 미리보기와 같은 KaTeX와 노트 CSS로, 숨은 페이지에서 그린다(`NoteMath`). 번들은 app/resources/web
   tectonic/           # TeX 엔진 Tectonic을 앱에 넣는 정적 라이브러리의 원본: 브리지 crate(bridge/), Tectonic 패치(patches/), 앱이 받는 판(pin.json)
 ```
@@ -229,6 +230,7 @@ Me/GIST/
 - 옵시디언 볼트: `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Brain`. Folio는 이 볼트를 읽거나 쓰지 않고, `obsidian://` 링크로만 참조한다.
 - 개발과 테스트 중에는 실제 GIST 폴더에 쓰지 않는다. 테스트는 `FolioFixtures`의 가짜 폴더를 임시 디렉터리에 써서 쓴다. 앱이나 CLI를 가짜 폴더로 돌릴 때는 `mise run fixture -- <폴더>`로 만든다.
 - 실제 폴더를 대상으로 처음 실행하기 전에 사용자에게 알리고, 백업이 있는지 확인한다.
+- 앱이 여는 폴더는 기기마다 기억한다(`Workspace.bookmarkKey`). 기억한 폴더가 없으면 첫 실행 화면(#453)이 뜨고, 기억한 폴더가 없어졌거나 iCloud에서 아직 내려받지 않았으면 그 폴더를 열지 않고 첫 실행의 자료 폴더 단계로 다시 연결하게 한다(`FolderProbe.availability`). 테스트, 미리보기, `FOLIO_GIST` 실행은 기억한 폴더를 바꾸지 않는다(`Workspace.remembersFolders`). 테스트 호스트가 앱 자신이라 `UserDefaults.standard`가 실제 앱의 것이기 때문이다.
 
 ## 테스트 기준
 
@@ -259,6 +261,7 @@ Me/GIST/
 - 화면 모델 테스트와 노트 보기 회귀 검사: `mise run test-app`. macOS에서 앱을 호스트로 `app-tests/`를 돌린다. 테스트 중에는 앱이 기억해 둔 GIST 폴더를 열지 않고, 창을 띄우거나 포커스를 가져가지 않는다. `FOLIO_TEST_PART=notes`는 노트 보기 검사(`mise.toml`의 `notes` 목록)만, `rest`는 나머지만 돌린다. CI는 두 절반을 `build (test-app-notes)`와 `build (test-app-rest)`에서 나란히 돌리고, 룰셋이 요구하는 `build (test-app)`은 Linux 러너에서 두 절반을 기다려 둘 다 통과해야 통과한다. 새 노트 보기 검사는 목록에 넣기 전까지 `rest`에서 돈다
 - 노트 보기 기준 이미지 다시 만들기: `test-app`은 없거나 달라진 이미지를 새 이미지와 차이 이미지(`-diff.png`)로 `FOLIO_NOTE_SCREENS`(기본 `.build/note-screens`)에 남기고, CI는 실패할 때 이것을 `note-screens` 아티팩트로 올린다. 차이 이미지로 의도한 변화인지 확인한 뒤 `mise run note-screens -- <CI 실행 ID>`로 기준 이미지에 들인다. 로컬에서 그린 이미지는 기준으로 쓰지 않는다. 테스트가 PR에 붙일 그림으로 펼친 판(`NoteRender.sheet`, 예: 수식 말풍선 모음)은 `FOLIO_NOTE_SCREENS/sheets`에 남고, CI는 테스트가 통과해도 `note-sheets` 아티팩트로 올린다
 - iPad 테스트: `mise run test-ipad`. 첫 번째 iPad 시뮬레이터에서 `FolioPad` 스킴으로 앱을 호스트 삼아 `app-tests/ipad/`를 돌린다. 이 파일들은 `#if os(iOS)`로 감싸서 Mac의 `FolioTests`에서는 비어 있다
+- 접근성 검사: `mise run test-a11y`. `FolioUITests` 스킴이 임시 폴더에 `busyDay` 가짜 GIST 폴더를 펼쳐 `FOLIO_GIST`로 앱을 띄우고, 오늘, 학기, 성적, 졸업 요건, 사람, 코드, 과목의 모든 탭, 설정의 모든 탭, 검색을 `folio://` 주소로 열어 `performAccessibilityAudit()`을 돌린다(#471). UI 테스트는 화면과 키보드를 가져가고 앱의 UserDefaults를 설치한 Folio와 함께 쓰므로 사용 중인 Mac에서 돌리지 않는다. CI의 `build (test-a11y)`가 돌리고 룰셋의 필수 검사는 아니다. 아직 고치지 못한 결과는 `app-ui-tests`의 `KnownFindings`에 화면, 종류, 요소로 적고 #471 체크리스트에 남긴다. 모든 결과를 통과시키는 처리기를 두지 않는다
 - 화면 밖 렌더: `mise run render`. `FolioFixtures`의 상황마다 모든 페이지(오늘, 학기, 과목의 각 탭과 다시 듣기, 성적, 졸업 요건, 사람, 코드, 설정의 각 탭)와 시트(입력 폼, 검색)를 라이트·다크 PNG로 `FOLIO_RENDER_DIR`(기본 `.build/renders`)의 `<상황>/`에 쓴다. 폭과 높이는 `FOLIO_RENDER_SIZES=1180,720,1440x900`(높이를 빼면 페이지 끝까지), 고르기는 `FOLIO_RENDER_SCREENS=today,course-`(이름 앞부분)와 `FOLIO_RENDER_SCENARIOS=busyDay`. 창이 뜨지 않고 실제 GIST 폴더와 시계를 쓰지 않는다. 리퀴드 글라스, 노트 보기와 `WKWebView`, 뷰 안에서 여는 시트, 창 틀은 그리지 못하니 `FOLIO_SNAPSHOT_DIR` 창 스냅숏(`docs/DESIGN.md` 마지막 절)으로 본다
 - TeX 엔진: `mise run tectonic`. `packages/folio-core`를 빌드하는 모든 작업(`generate`, `test`, `cli`, `gen-cli`, `fixture`, `install-cli`)이 먼저 돌린다. `tectonic/pin.json`이 가리키는 `FolioTectonic.xcframework`를 받아 sha256을 확인하고 `packages/folio-core/vendor`에 푼다. `tectonic/bridge`, `tectonic/patches`, `scripts/tectonic-build.sh`, 도구 판을 정하는 `tectonic.yml`을 바꾸면 `tectonic.yml`이 그 내용의 해시로 이름 지은 프리릴리스(`tectonic-<판>-<해시>`)를 만들고 새 `pin.json`을 작업 요약에 적으므로, 그것을 커밋한다. 핀이 지금 입력과 다르면 `mise run tectonic`이 경고한다. 빌드는 Mac의 `tectonic -X compile -Z continue-on-errors --synctex`와 같고, 받은 패키지만으로 먼저 빌드해 보고 없는 파일이 있을 때만 온라인으로 다시 빌드한다. 캐시는 `Caches/Tectonic`이라 Mac에서는 Homebrew Tectonic과 같은 폴더를 쓴다
 - 가짜 GIST 폴더: `mise run fixture -- <폴더> [standard|legacy|<상황>]`. 상황(`busyDay` 등)은 `Scenario`로 회차와 마감이 채워진 폴더다. 다른 `.pdf`는 열리지 않는 자리표시자지만, `busyDay`와 `manyExams`의 그래프 이론 렉처(`05_Matchings.pdf`)는 단원으로 나눈 24쪽 PDF(`SampleLecture`)다. 이미 있는 폴더에는 쓰지 않는다
@@ -269,7 +272,7 @@ Me/GIST/
 - 버전 올리기: `mise run version-bump -- major|minor|patch`. 1.0 전에는 새 기능이 든 릴리스는 minor, 고침만 든 릴리스는 patch를 올리고, major는 1.0(사용자 데이터 형식과 기능 범위를 굳힐 때)에만 올린다. 올린 커밋은 PR로 머지한다
 - 릴리스 노트: 원본은 PR 본문의 `## 패치 노트` 절이다(아래 "PR 전 점검", #415). `mise run release-notes [-- <since>]`가 지난 태그 뒤 머지된 PR의 본문을 `gh`로 읽어 그 절의 항목 줄을 모은 릴리스 본문을 보여 준다. 커밋 메시지가 아니라 PR 본문을 읽으므로 머지 뒤에 고친 본문도 들어간다. 저장소에는 버전별 노트 파일을 두지 않는다. 릴리스 본문은 `## 패치 노트` 제목, 형식 표시(`<!-- folio-patch-notes 1 -->`), 종류별 소제목(`### feat`, `### fix`, `### change` 순)으로 묶은 항목 줄, 머지된 PR 목록, 설치 안내 순이다. 앱은 이 본문을 GitHub Releases API에서 받아 `FolioDomain`의 `PatchNotes`로 읽으니, 줄의 형식을 바꾸면 스크립트의 `format`과 `PatchNotes.format`을 함께 올린다. 첫 릴리스(앞선 태그 없음)는 그때까지 머지된 모든 PR을 모은다
 - 릴리스: `mise run release-tag`가 `origin/main`에 `v<버전>` 태그를 달고 푸시한다. 태그가 푸시되면 `release.yml`이 Release 앱을 빌드해 `Folio-<버전>.zip`을 붙인 GitHub Release 초안을 만들고, 본문에는 패치 노트 항목과 머지된 PR(제목과 한국어 요약)을 적는다. 초안을 게시해야 앱이 그 버전의 패치 노트를 본다. 초안은 사람이 확인하고 게시한다. 태그와 `FolioVersion`이 다르면 실패한다. 수동 실행(`workflow_dispatch`, `since` 입력)은 릴리스 없이 같은 결과를 아티팩트로만 올린다. Developer ID 서명, 공증, 자동 업데이트(#414)는 아직 없다
-- iPad 빌드: `mise run build-ipad`
+- iPad와 iPhone 빌드: `mise run build-ipad`. 앱 타깃은 iPhone과 iPad를 함께 지원하고(`TARGETED_DEVICE_FAMILY: "1,2"`), 모든 iOS 시뮬레이터용으로 빌드하므로 iPhone도 이 빌드로 확인한다
 - 생성 CLI 명령: `mise run gen-cli`. `@Action` 선언을 고친 뒤 실행한다. `mise run test`가 커밋된 파일이 낡지 않았는지 본다
 - 명령줄 도구: `mise run cli -- <명령>`. `~/.local/bin`에 설치는 `mise run install-cli`. GIST 폴더는 `--gist <경로>`, `FOLIO_GIST`, 앱이 연 폴더 순으로 정한다. 모든 쓰기 명령은 `--dry-run`으로 먼저 본다. 명령 목록은 `folio help`, 자연어로 찾기는 `folio help <하고 싶은 일>`
 - MCP: `folio mcp`가 모든 쓰기 액션과 읽기 명령을 표준 입출력 MCP 도구로 연다. 앱의 Claude 패널은 `--propose`로 붙여 쓰기를 제안으로만 받는다. 도구 정의는 질문마다 함께 가므로 `--propose`에는 과목 대화에 쓰는 도구만 연다(`MCPServer.panelGroups`가 목록). 나머지 액션과 읽기 명령에는 범용 도구 두 개로 닿는다. `action_search`는 `folio help <하고 싶은 일>`의 검색으로 명령과 입력 형식(JSON Schema)을 찾아 주고, `action_run`은 명령 이름과 JSON 입력으로 그 명령의 도구를 그대로 부른다. 그래서 `--propose`의 쓰기는 제안이 되고, 성적 잠금은 명령 자신이 지킨다. `--propose` 서버는 한 답(질문마다 새 프로세스)의 제안을 GIST 폴더의 임시 사본(`StagedFolder`, APFS 복제)에 차례로 실제로 실행해 쌓는다(`ProposalStage`). 다음 쓰기의 미리 실행과 읽기(`search` 빼고)가 그 사본에서 돌아서, `unit add` 뒤의 `unit pages add`, `note add` 뒤의 `note edit`이 제안 단계에서 통과하고, 읽은 결과의 그 항목에는 `proposed`가 붙는다. 사본 안에서는 `CoordinatedFile`이 사본 밖으로 가는 쓰기를 막는다. 폴더만으로는 실패하는 제안은 기대는 앞 제안의 번호(`ActionProposal.after`)를 지니고, 패널은 그 제안이 적용되기 전에는 따로 적용하지 않으며(`ChatMessage.waiting`), 모두 적용은 같은 사본 검사(`Workspace.stagedRefusal`)로 차례대로 확인한다. 터미널의 `folio mcp`에도 같은 두 도구가 있다. 도구 결과의 JSON은 한 줄로 줄이고 null, 빈 배열, 빈 객체를 뺀다. 셸 없는 클라이언트에는 `claude mcp add folio -- folio mcp`처럼 붙인다
@@ -321,7 +324,7 @@ Me/GIST/
     - 그림은 본문에 바로 보이게 넣는다. 브랜치에 `pr-renders/<이슈>/`로 커밋하고 `<img src="https://raw.githubusercontent.com/rhseung/folio/<커밋>/pr-renders/…" width="…">`처럼 커밋 해시로 가리킨 뒤, 머지 전에 그 폴더를 브랜치에서 지운다. 디자인이 바뀌면 이전과 이후를 나란히 두고, 라이트·다크와 바뀐 폭을 함께 보인다. 그림마다 무엇을 보면 되는지 한 줄을 붙인다.
 - 무엇을 보여 줄지, 언제 막을지, 날짜와 개수를 어떻게 셀지 같은 규칙을 뷰나 모델에 다시 적지 않았는지 본다. 규칙은 `FolioDomain`에 두고 `swift test`로 검사한다.
 - `#if os(macOS)`나 `#if os(iOS)` 안에 넣은 기능에 다른 플랫폼 쪽(`#else`)이 있는지 본다. 없다면 그 플랫폼에 필요 없는 이유가 분명해야 한다. `mise run build-ipad`도 돌린다.
-- 더하거나 바꾼 화면 요소를 포인터와 터치 둘 다로 쓸 수 있는지 본다. 마우스 올림, 도움말, 두 번 클릭, 수식 키 클릭, 오른쪽 클릭, 키보드만으로 되는 일이 없고, 터치 표적이 44pt 이상이어야 한다(`docs/DESIGN.md` "입력 기기").
+- 더하거나 바꾼 화면 요소를 포인터와 터치 둘 다로 쓸 수 있는지 본다. 마우스 올림, 도움말, 두 번 클릭, 수식 키 클릭, 오른쪽 클릭, 키보드만으로 되는 일이 없고, 터치 표적이 44pt 이상이어야 한다(`docs/DESIGN.md` "입력 기기". iPad와 iPhone의 크롬은 Mac 비율을 따르는 예외).
 - 날짜가 공부일(`Settings.studyDay`, 하루 경계 새벽 4시)인지 달력 날짜인지 구분한다. 오늘 할 일, 마감까지 남은 날, 복습 날짜는 공부일로 센다. 경계 직전과 직후를 테스트한다.
 - 테스트와 미리보기가 실제 `Application Support` 폴더나 GIST 폴더를 읽거나 쓰지 않는지 본다.
 - 사용자에게 보이는 변화가 있는 PR은 본문에 `## 패치 노트` 절을 둔다. 줄마다 `- feat: …`, `- fix: …`, `- change: …` 중 하나로 쓰고(종류는 커밋 규칙처럼 영어 그대로, 번역하지 않는다), 그 자리나 설정 탭이 있으면 끝에 `(folio://today)`, `(folio://settings/class)`처럼 링크를 붙인다. 앱의 새 기능 화면과 업데이트 뒤 시트가 이 줄을 종류 순으로 정렬해 칩과 함께 보여 주므로 사용자 말로 짧게 쓴다(개발 용어, PR 번호, 파일 이름 없이). 링크는 앱의 자리와 설정 탭만 쓴다. 노트나 과목처럼 사람마다 다른 항목은 가리키지 않는다. `feat`가 든 버전만 업데이트 뒤 시트를 띄우므로 고침을 `feat`로 올려 적지 않는다. CI, 테스트, 문서, 리팩터링처럼 보이는 변화가 없는 PR은 절을 쓰지 않는다. 머지 뒤에 고쳐도 릴리스 전이면 반영된다.

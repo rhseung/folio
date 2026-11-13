@@ -71,6 +71,7 @@ struct ReadingTests {
         let shown = try json(r.out)
         #expect(int(shown["last"]) == ReadingLimit.images)
         #expect(string(shown["next"]) == "\(ReadingLimit.images + 1)-\(2 * ReadingLimit.images)")
+
         // At a terminal without --out the pictures go nowhere, and it says how to get them.
         #expect(r.err.contains("--out"))
     }
@@ -204,6 +205,7 @@ struct ReadingTests {
         #expect(!failed)
         let pictures = try images(blocks)
         #expect(pictures.count == 2 && pictures.allSatisfy { isJPEG($0, edge: ReadingLimit.imageEdge) })
+
         // Each picture follows a line naming it, and the page list names it the same way.
         let labels = blocks.indices.dropLast().filter { blocks[$0 + 1]["type"] == .string("image") }.compactMap { string(blocks[$0]["text"]) }
         #expect(labels == ["06_Hall.pdf p.9", "06_Hall.pdf p.10"])

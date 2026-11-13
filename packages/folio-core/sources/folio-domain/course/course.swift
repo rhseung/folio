@@ -112,7 +112,7 @@ public struct Course: Entity {
     public var color: String
     /// An SF Symbol name the course is shown with, in its color; nil shows the app's default (a book).
     public var icon: String?
-    /// Exceptions to the standard layout: relative folder path -> role. Empty by default.
+    /// Exceptions to the standard layout: relative folder path -> role.
     public var folderRoles: [String: MaterialRole]
     public var syllabusMaterialId: UUID?
     public var memo: String

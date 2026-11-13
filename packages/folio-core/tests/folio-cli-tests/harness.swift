@@ -73,6 +73,7 @@ struct Harness {
     /// are renumbered by first appearance; the same id still has to show up in the same places.
     static func canonical(_ data: Data?) -> String? {
         guard let data else { return nil }
+
         // A material's bookmark encodes the copy's absolute path, so it differs between any two copies.
         let text = String(decoding: data, as: UTF8.self).replacing(/"bookmark" : "[^"]*"/, with: #""bookmark" : """#)
         var seen: [Substring: Int] = [:]

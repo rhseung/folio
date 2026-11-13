@@ -25,14 +25,14 @@ final class NoteFolderModel {
     var folder: String { name.trimmingCharacters(in: .whitespaces) }
     var problem: StandardLayout.NoteFolderProblem? { StandardLayout.noteFolderProblem(name) }
 
-    /// Notes-relative, the way `note mv` takes it, with the name `note mv` will give.
+    /// With the name `note mv` will give, ` 2` included.
     var target: String? {
         guard problem == nil else { return nil }
         let store = course.store
-        return store.movedNoteURL(note, to: folder + "/" + note.url.lastPathComponent, in: course.file).flatMap { NoteListModel.notesPath(of: $0, in: store) }
+        return store.movedNoteURL(note, to: folder + "/" + note.url.lastPathComponent, in: course.file).flatMap { store.notesPath(of: $0) }
     }
 
-    var isHere: Bool { target != nil && target == NoteListModel.notesPath(of: note.url, in: course.store) }
+    var isHere: Bool { target != nil && target == course.store.notesPath(of: note.url) }
     var canSave: Bool { target != nil && !isHere }
 
     var message: String {

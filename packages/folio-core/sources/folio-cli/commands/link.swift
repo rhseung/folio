@@ -5,7 +5,6 @@ import Foundation
 
 extension AppLink.Kind: ExpressibleByArgument {}
 
-/// What `folio link` and `folio open` point at: a kind and the item, named as every other command names it.
 struct LinkTarget: ParsableArguments {
     @Argument(help: ArgumentHelp(String(localized: .linkHelpKind), valueName: "kind")) var kind: AppLink.Kind
     @Argument(help: ArgumentHelp(String(localized: .linkHelpRef), valueName: "ref")) var ref: String = ""

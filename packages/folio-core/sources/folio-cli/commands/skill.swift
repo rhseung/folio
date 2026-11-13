@@ -6,9 +6,8 @@ import Foundation
 private let noteGuide = NoteWritingGuide.text.split(separator: "\n", omittingEmptySubsequences: false)
     .map { $0.hasPrefix("#") ? "#" + $0 : $0 }.joined(separator: "\n")
 
-/// The binary holds the only
-/// copy so an agent outside the repository can install it; the repository's `.claude/skills/folio/SKILL.md` is a test-
-/// checked copy of this text.
+/// The binary holds the only copy so an agent outside the repository can install it; the repository's
+/// `.claude/skills/folio/SKILL.md` is a test-checked copy of this text.
 enum Skill {
     static let text = #"""
 ---

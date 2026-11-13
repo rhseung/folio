@@ -95,6 +95,7 @@ struct SessionsModelTests {
         let s = try session(workspace, daysFromNow: -1)
         #expect(model.title(of: s, in: try #require(workspace.course(graphTheory)).file) == "수업")
         #expect(!model.hasSubject(s, in: try #require(workspace.course(graphTheory)).file))
+
         let unit = try #require(workspace.run(UnitAdd(course: graphTheory, title: "매칭"))?.made)
         workspace.run(UnitLink(course: graphTheory, unit: unit, sessions: [s.id]))
         #expect(model.title(of: s, in: try #require(workspace.course(graphTheory)).file) == "매칭")
@@ -130,6 +131,7 @@ struct SessionsModelTests {
                                            sheets: ItemSheetsAction(confirm: { asked = $0 }))
             if case .action(let action) = source.row(.remove).kind { action() }
         }
+
         remove(noted)
         #expect(asked?.refusal != nil)
         remove(free)

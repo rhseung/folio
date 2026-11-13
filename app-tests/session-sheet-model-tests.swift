@@ -5,7 +5,6 @@ import Foundation
 import Testing
 @testable import Folio
 
-/// A graph theory class with the matchings slides tracked and one unit.
 @MainActor
 struct SessionSheetModelTests {
     let workspace: Workspace
@@ -60,6 +59,7 @@ struct SessionSheetModelTests {
         model.makesNote = true
         #expect(model.refusal == nil)
         model.submit()
+
         let s = saved
         #expect(s.isWrappedUp)
         #expect(s.materials == [SessionMaterial(materialId: slides.id, firstPage: 3, lastPage: 9)])
@@ -111,6 +111,7 @@ struct SessionSheetModelTests {
         #expect(model.submit())
         #expect(saved.materials == [SessionMaterial(materialId: problems.id)])
         #expect(file.materials.first { $0.id == slides.id }?.sessionIds.contains(session) == false)
+
         // Checked again before saving, the row keeps its link.
         workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: session, firstPage: 3, lastPage: 9))
         let again = SessionSheetModel(workspace: workspace, course: graphTheory, session: session, recorded: true)
@@ -119,7 +120,6 @@ struct SessionSheetModelTests {
         #expect(again.unlinked.isEmpty)
     }
 
-    /// Saving the class's own attendance again leaves its entry as it was.
     @Test func unchangedAttendanceIsNotWrittenAgain() throws {
         workspace.run(AttendanceSet(course: graphTheory, session: session, state: .late))
         let entry = try #require(file.attendance.first { $0.sessionId == session })
@@ -176,6 +176,7 @@ struct SessionSheetModelTests {
         #expect(SessionSheetModel(workspace: workspace, course: graphTheory, session: run.current).submit())
         model.wrappedUpOne()
         #expect(model.wrapUpRun?.index == 1)
+
         // Saved, so neither the notice nor the row's mark lists it, though its gaps were left empty.
         #expect(!model.leftUnwrapped(file).contains { $0.id == run.sessions[0] })
         #expect(model.leftGaps(file.sessions.first { $0.id == run.sessions[0] }!, in: file).isEmpty)
@@ -208,6 +209,7 @@ struct SessionSheetModelTests {
         #expect(model.units.isEmpty && model.linkedUnits.isEmpty)
         let outline = UnitTree.outline(file.units).map(\.unit.id)
         #expect(model.unitOptions.map(\.id) == outline)
+
         model.pick(flows)
         model.pick(unit)
         // Chips follow the outline, not the order of picking.
@@ -311,6 +313,7 @@ struct SessionSheetModelTests {
         #expect(!model.showsReview)
         model.setKind(.cancelled)
         #expect(model.sections == [.info])
+
         let adding = SessionSheetModel(workspace: workspace, course: graphTheory, session: nil)
         #expect(adding.sections.first == .info && !adding.sections.contains(.notes) && !adding.sections.contains(.progress))
     }

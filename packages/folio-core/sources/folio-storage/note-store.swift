@@ -69,8 +69,7 @@ extension CourseStore {
         notes(in: try load().model)
     }
 
-    /// Every note file under Notes/, with the properties `file` has for it. A file without an entry (made outside
-    /// Folio) has no id until it is adopted.
+    /// A file without an entry (made outside Folio) has no id until it is adopted.
     public func notes(in file: CourseFile) -> [NoteFile] {
         let entries = Dictionary(file.notes.map { ($0.path, $0) }, uniquingKeysWith: { a, _ in a })
         return noteURLs().map { NoteFile(url: $0, meta: entries[notePath(of: $0)].map(file.meta(of:)) ?? NoteMeta(id: nil)) }.sorted { $0.title < $1.title }

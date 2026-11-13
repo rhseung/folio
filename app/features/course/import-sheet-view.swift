@@ -256,7 +256,7 @@ private struct ImportSections: View {
             }
         }
         .padding(EdgeInsets(top: 0, leading: Self.indent, bottom: Theme.Space.m, trailing: Theme.Space.m))
-        .animation(.snappy(duration: 0.2), value: open)
+        .animation(Theme.Motion.quick, value: open)
     }
 
     /// Why Claude gave no split is the summary line before it.

@@ -37,6 +37,7 @@ final class UnitsModel {
         for (at, attempt) in ((try? course.store.log.readAll()) ?? []).events(QuizAttemptEvent.self) {
             attempts[attempt.cardId, default: []].append((settings.studyDay(of: at, calendar: calendar), attempt.verdict))
         }
+
         var result: [UUID: QuizStats] = [:]
         for unit in course.file.units {
             let cards = (try? course.store.loadQuiz(unit: unit.id).model.cards) ?? []

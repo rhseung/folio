@@ -1,7 +1,6 @@
 import Foundation
 import Markdown
 
-/// What the edit view can do to the GFM table the caret is in. Each one rewrites the table's source.
 public enum TableCommand: String, CaseIterable, Sendable {
     case rowAbove, rowBelow, columnLeft, columnRight
     case deleteRow, deleteColumn
@@ -10,10 +9,8 @@ public enum TableCommand: String, CaseIterable, Sendable {
     case format
 }
 
-/// Table edits as changes to the markdown source, for the Mac and iPad edit views alike. Only GFM pipe tables: a
-/// `cb-table` is drawn by the preview but not edited (#39).
+/// Only GFM pipe tables: a `cb-table` is drawn by the preview but not edited (#39).
 public enum TableEditing {
-    /// The table the selection starts in, or nil outside one.
     public static func table(in text: NSString, selection: NSRange) -> TableSource? {
         TableSource(text, selection)
     }
@@ -23,7 +20,6 @@ public enum TableEditing {
     }
 }
 
-/// A GFM table found in the source: its grid, where it is, and the cell the selection starts in.
 public struct TableSource {
     public let grid: TableGrid
     public let cell: (row: Int, column: Int)
@@ -49,6 +45,7 @@ public struct TableSource {
             guard line >= 1, line <= protected.origin.count else { return nil }
             return protected.origin[line - 1] - 1
         }
+
         var found: (first: Int, last: Int, column: Int)?
         func walk(_ node: Markup) {
             guard found == nil else { return }
@@ -95,6 +92,7 @@ public struct TableSource {
         }
         grid = TableGrid(alignments: (0..<width).map { i in i < delimiter.count ? Self.alignment(delimiter[i].text) : nil },
                          rows: [cells(header)] + body.map(cells))
+
         // The delimiter row holds no cell; a caret on it is in the header.
         let line = caretLine - found.first
         let content = contents[line]
@@ -142,6 +140,7 @@ public struct TableSource {
         case .format:
             break
         }
+
         let written = Self.gfm(grid, first: firstPrefix, rest: restPrefix)
         let caret = block.location + NSMaxRange(written.cells[target.row][target.column])
         let new = text.replacingCharacters(in: block, with: written.text) as NSString
@@ -150,7 +149,6 @@ public struct TableSource {
 
     // MARK: GFM
 
-    /// A row's cells between unescaped pipes, trimmed, with the range of each between its pipes.
     static func split(_ line: String) -> [(text: String, range: NSRange)] {
         let units = Array(line.utf16)
         var i = 0
@@ -222,7 +220,6 @@ public struct TableSource {
         return String(utf16CodeUnits: out, count: out.count)
     }
 
-    /// The table with its pipes lined up, and where each cell's text is in it.
     static func gfm(_ grid: TableGrid, first: String, rest: String) -> (text: String, cells: [[NSRange]]) {
         let texts = grid.rows.map { $0.map(escapePipes) }
         let widths = (0..<grid.width).map { c in max(3, texts.map { DisplayWidth.of($0[c]) }.max() ?? 0) }
@@ -239,6 +236,7 @@ public struct TableSource {
             }
             return ranges
         }
+
         cells.append(line(first, texts[0]))
         _ = line(rest, (0..<grid.width).map { c in
             let w = widths[c]

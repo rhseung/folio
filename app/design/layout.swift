@@ -1,7 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// A scrolling page: cards on a quiet background, centered at reading width.
 struct Page<Content: View, Backdrop: View>: View {
     var maxWidth: CGFloat = Theme.Size.pageMaxWidth
     // Behind the content's top across the page's full width, scrolling away with it: Today's course wash.
@@ -9,6 +8,7 @@ struct Page<Content: View, Backdrop: View>: View {
     @ViewBuilder var content: Content
     // Not private: a private property would make the memberwise init private too.
     @Environment(\.linkFocus) var focus
+    @Environment(\.pageGutter) var gutter
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -22,7 +22,7 @@ struct Page<Content: View, Backdrop: View>: View {
                     // on the page keeps its own.
                     .scrollIndicators(.automatic)
                     .frame(maxWidth: maxWidth, alignment: .leading)
-                    .padding(.horizontal, Theme.Space.xxl)
+                    .padding(.horizontal, gutter)
                     .padding(.top, Theme.Space.xl)
                     .clearOfColumnButtons(inset: Theme.Space.xl)
                     .padding(.bottom, Theme.Space.xxl * 2)
@@ -47,13 +47,18 @@ struct Page<Content: View, Backdrop: View>: View {
     }
 }
 
+extension EnvironmentValues {
+    /// A page's side margin. The iPhone's screen sets a narrower one (#134): at 390pt across, the Mac's 32 on each side
+    /// left a sixth of the screen empty.
+    @Entry var pageGutter: CGFloat = Theme.Space.xxl
+}
+
 extension Page where Backdrop == EmptyView {
     init(maxWidth: CGFloat = Theme.Size.pageMaxWidth, @ViewBuilder content: () -> Content) {
         self.init(maxWidth: maxWidth, backdrop: { EmptyView() }, content: content)
     }
 }
 
-/// Page heading: optional chips above, title, and a muted line below.
 struct PageHeader<Chips: View>: View {
     let title: String
     var subtitle: String?
@@ -225,7 +230,6 @@ struct Breadcrumb: View {
 
     var separator: some View { Text("/").font(Theme.Typeface.bodyStrong).foregroundStyle(Theme.Palette.textTertiary) }
 
-    /// The first step carries the page's icon; the steps between are quieter links back.
     @ViewBuilder func step(_ crumb: Crumb, at i: Int) -> some View {
         let between = i > 0 && i < crumbs.count - 1
         HStack(spacing: Theme.Space.s) {
@@ -296,7 +300,6 @@ struct PageBar<Leading: View, Trailing: View>: View {
     }
 }
 
-/// A titled group: muted heading above the content, with an optional trailing action.
 struct Block<Content: View, Trailing: View>: View {
     let title: String
     var note: String?
@@ -349,6 +352,7 @@ struct BlockHeading: Layout {
         let titleSize = title.sizeThatFits(ProposedViewSize(width: p.titleWidth, height: nil))
         let actionSize = action.sizeThatFits(.unspecified)
         let baseline = title.dimensions(in: ProposedViewSize(titleSize))[VerticalAlignment.firstTextBaseline]
+
         title.place(at: CGPoint(x: bounds.minX, y: bounds.minY), proposal: ProposedViewSize(width: p.titleWidth, height: nil))
         let actionBaseline = action.dimensions(in: .unspecified)[VerticalAlignment.firstTextBaseline]
         action.place(at: CGPoint(x: bounds.maxX - actionSize.width, y: bounds.minY + max(0, baseline - actionBaseline)), proposal: .unspecified)
@@ -384,7 +388,6 @@ extension Block where Trailing == EmptyView {
 }
 
 extension View {
-    /// Lists and forms drawn on the page color instead of the system's grouped gray.
     func paperList() -> some View {
         scrollContentBackground(.hidden)
             .background(Theme.Palette.page)
@@ -399,7 +402,6 @@ extension View {
     /// surface there floated apart from the material.
     func surface(_ color: Color, in shape: some Shape) -> some View { modifier(Surface(color: color, shape: shape)) }
 
-    /// A short value field drawn as a pill, right-aligned, like `0.0 s` in system settings.
     /// A nil width fills the space offered, for text rather than a number.
     func pill(width: CGFloat? = 80, alignment: TextAlignment = .trailing) -> some View {
         textFieldStyle(.plain)
@@ -460,7 +462,7 @@ struct FolderIcon: View {
             FolderPart(kind: .corners, t: t).stroke(style: line).opacity(open ? 1 : 0)
         }
         .frame(width: Theme.Size.tile, height: Theme.Size.tile)
-        .animation(.snappy(duration: 0.25), value: open)
+        .animation(Theme.Motion.standard, value: open)
         .accessibilityHidden(true)
     }
 }
@@ -481,7 +483,7 @@ struct FolderPart: Shape {
     /// 160pt medium `folder` (2.05 canvas px a unit, a 13px stroke), which is not the small template scaled evenly.
     static let unit: CGFloat = 2.05 / 160 // design: one-off, fitted to the folder symbol
     static let stroke: CGFloat = 13 / 160 // design: one-off, fitted to the folder symbol
-    /// The template's middle, which sits at the middle of the symbol's image.
+    /// Sits at the middle of the symbol's image.
     static let middle = CGPoint(x: 53.54, y: -35.51)
     static let left: CGFloat = 13.28, right: CGFloat = 93.8, bottom: CGFloat = -3.64, top: CGFloat = -60.4, tabTop: CGFloat = -67.38 // design: one-off, folder template units
     /// The bar inside the closed folder becomes the open front's top edge, which leans `lean` to the right.
@@ -502,6 +504,7 @@ struct FolderPart: Shape {
             let dx = to.x - from.x, dy = to.y - from.y, l = (dx * dx + dy * dy).squareRoot()
             return CGPoint(x: from.x + dx / l * d, y: from.y + dy / l * d)
         }
+
         var p = Path()
         if kind == .corners {
             p.move(to: along(tl, tr, r))
@@ -548,10 +551,6 @@ struct FolderPart: Shape {
     }
 }
 
-/// A section in a page's own column (a course's sections, the settings sections): a line icon, the name, and an optional
-/// count or chip. No colored tile: the window sidebar already uses tiles, and a second column of them read as a repeat.
-/// The app's icon: an outline symbol in the tile-wide icon column, with no tile behind it. Sidebars, section columns
-/// and the search palette all use it.
 struct LineIcon: View {
     let symbol: String
     var font: Font = Theme.Glyph.line
@@ -594,6 +593,7 @@ struct LineIcon: View {
     }
 }
 
+/// No colored tile: the window sidebar already uses tiles, and a second column of them read as a repeat.
 struct ColumnRow<Trailing: View>: View {
     let title: String
     let symbol: String
@@ -603,7 +603,7 @@ struct ColumnRow<Trailing: View>: View {
     var fill: Color = Theme.Palette.fill
     @ViewBuilder var trailing: Trailing
 
-    /// Where the title starts, for sub-rows that line up under it.
+    /// For sub-rows that line up under the title.
     static var titleInset: CGFloat { Theme.Inset.listRow.leading + Theme.Size.tile + gap }
     static var gap: CGFloat { Theme.Space.s + 2 }
 

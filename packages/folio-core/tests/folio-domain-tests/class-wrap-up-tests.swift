@@ -39,14 +39,17 @@ struct ClassWrapUpTests {
     @Test func eachItemIsFilledByWhatItAsks() {
         var f = course()
         let s = f.sessions[0].id
+
         // A link without pages names the file but not how far the class went.
         f.linkMaterial(f.materials[0].id, session: s)
         #expect(f.wrapUpGaps(of: f.sessions[0]).first == .progress)
+
         f.linkMaterial(f.materials[0].id, session: s, firstPage: 7, lastPage: 11)
         let unit = FolioDomain.Unit(device: device, at: at(1, 9), title: "매칭", order: 0, parentId: nil)
         f.units = [unit]
         f.toggle(session: s, unit: unit.id)
         #expect(f.wrapUpGaps(of: f.sessions[0]) == [.note, .attendance])
+
         // A review note is a written-up class too.
         f.sessions[0].reviewNoteId = UUID()
         #expect(f.wrapUpGaps(of: f.sessions[0]) == [.attendance])
@@ -72,8 +75,10 @@ struct ClassWrapUpTests {
         let f = course()
         let s = f.sessions[0].id
         func asked(_ now: Date) -> Bool { f.classesToWrapUp(at: now, classMinutes: 75, calendar: calendar).map(\.id) == [s] }
+
         #expect(!asked(at(2, 11, 44)))
         #expect(asked(at(2, 11, 45)))
+
         // Over the night and the 4 a.m. day boundary: still the same class until Wednesday's starts.
         #expect(asked(at(3, 3, 59)))
         #expect(asked(at(3, 4, 0)))
@@ -87,8 +92,10 @@ struct ClassWrapUpTests {
         off.isCancelled = true
         f.sessions.append(off)
         let mine = f.sessions[0]
+
         #expect(f.nextClassStart(after: mine, calendar: calendar) == at(9, 10, 30))
         #expect(f.classesToWrapUp(at: at(5, 12), classMinutes: 75, calendar: calendar).map(\.id) == [mine.id])
+
         // A makeup on Thursday evening is the next class instead.
         f.sessions.append(Session(device: device, at: at(1, 9), week: 10, date: at(5, 19)))
         #expect(f.nextClassStart(after: mine, calendar: calendar) == at(5, 19))
@@ -99,10 +106,12 @@ struct ClassWrapUpTests {
         let now = at(2, 12)
         var f = course()
         f.sessions[0].isWrappedUp = true
+
         #expect(f.classesToWrapUp(at: now, classMinutes: 75, calendar: calendar).isEmpty)
         f.sessions[0].isWrappedUp = false
         f.sessions[0].isCancelled = true
         #expect(f.classesToWrapUp(at: now, classMinutes: 75, calendar: calendar).isEmpty)
+
         f.sessions[0].isCancelled = false
         let s = f.sessions[0].id
         f.linkMaterial(f.materials[0].id, session: s, firstPage: 1, lastPage: 4)
@@ -131,6 +140,7 @@ struct ClassWrapUpTests {
         let settings = Settings()
         var f = course()
         let monday = f.sessions[0]
+
         // Last week's Monday wrapped up, Wednesday cancelled and a makeup that evening never wrapped up.
         var wrapped = Session(device: device, at: at(1, 9), week: 9, date: at(2, 10, 30).addingTimeInterval(-7 * 86400))
         wrapped.isWrappedUp = true
@@ -140,6 +150,7 @@ struct ClassWrapUpTests {
         let today = Session(device: device, at: at(1, 9), week: 10, date: at(4, 10, 30))
         f.sessions = [today, monday, wrapped, cancelled, lastWeek]
         #expect(f.unwrappedPastSessions(at: at(4, 12), settings: settings, calendar: calendar).map(\.id) == [lastWeek.id, monday.id])
+
         // A class with nothing missing is done without a wrap-up.
         let s = monday.id
         f.linkMaterial(f.materials[0].id, session: s, firstPage: 1, lastPage: 4)
@@ -160,6 +171,7 @@ struct ClassWrapUpTests {
         let pastMidnight = Session(device: device, at: at(1, 9), week: 10, date: at(3, 1, 0))
         f.sessions = [night, pastMidnight]
         let turn = at(3, 4, 0)
+
         #expect(f.unwrappedPastSessions(at: at(3, 3, 59), settings: settings, calendar: calendar).isEmpty)
         #expect(f.unwrappedPastSessions(at: turn, settings: settings, calendar: calendar).count == 2)
         await propertyCheck(input: Gen.int(in: 0...(3 * 24 * 60))) { minutes in
@@ -179,7 +191,9 @@ struct ClassWrapUpTests {
         let old = note("old", 1), new = note("new", 3), held = note("held", 4), free = note("free", 2, .free)
         f.notes = [old, new, held, free, note("review", 5, .review), note("exam", 6, .examSummary, exam: UUID())]
         f.linkNote(held.id, to: other.id, as: .rough)
+
         #expect(f.classNoteChoices.map(\.id) == [new.id, free.id, old.id])
+
         // Linked to this class, it is this class's and no longer a choice.
         f.linkNote(new.id, to: f.sessions[0].id, as: .rough)
         #expect(f.classNoteChoices.map(\.id) == [free.id, old.id])
@@ -196,6 +210,7 @@ struct ClassWrapUpTests {
         let moved = SessionMaterial(materialId: a, firstPage: 3, lastPage: 12)
         let paged = SessionMaterial(materialId: b, firstPage: 1, lastPage: 4)
         let new = SessionMaterial(materialId: c, firstPage: 10, lastPage: 11)
+
         #expect(session.changedRanges([same, paged, new]) == [paged, new])
         #expect(session.changedRanges([moved]) == [moved])
         #expect(session.changedRanges([same, SessionMaterial(materialId: b)]).isEmpty)
@@ -239,6 +254,7 @@ struct ClassWrapUpTests {
             #expect(!session.wrapUpChecks(suggested, wrappingUp: false))
             #expect(session.wrapUpChecks(suggested, wrappingUp: true))
         }
+
         #expect(session.wrapUpChecks(own, wrappingUp: false) && session.wrapUpChecks(own, wrappingUp: true))
     }
 
@@ -252,10 +268,12 @@ struct ClassWrapUpTests {
         #expect(!wrapping(f, at(2, 10, 30), false))
         #expect(!wrapping(f, at(2, 11, 44), false))
         #expect(wrapping(f, at(2, 11, 45), false))
+
         // A recording just stopped, saved or not.
         #expect(wrapping(f, at(2, 11), true))
         f.recordings = [Recording(device: device, at: at(2, 11), sessionId: f.sessions[0].id, file: "Recordings/a.m4a")]
         #expect(wrapping(f, at(2, 11), false))
+
         // A class with its own end ends there, not at the slot's.
         f.recordings = []
         f.sessions[0].end = at(2, 11)

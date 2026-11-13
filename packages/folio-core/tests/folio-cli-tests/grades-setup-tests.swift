@@ -154,6 +154,7 @@ struct GradesSetupTests {
         let gist = try Harness.fixtureCopy()
         let at = Date(timeIntervalSince1970: 1_790_000_000)
         let ec = CourseCode(device: h.device, at: at, prefix: "EC"), gs = CourseCode(device: h.device, at: at, prefix: "GS")
+
         // Invented grades: the repo is public.
         let aPlus = LetterGrade(device: h.device, at: at, symbol: "A+", points: 4.5, countsInGpa: true, countsInCredits: true)
         let b0 = LetterGrade(device: h.device, at: at, symbol: "B0", points: 3, countsInGpa: true, countsInCredits: true)
@@ -253,6 +254,7 @@ struct GradesSetupTests {
 
     @Test func courseSetIcon() throws {
         try h.expectSame(["course", "set", "EC4207", "--icon", "function"]) { _ in CourseSet(course: gt, [.icon("function")]) }
+
         // none clears the icon, and the key goes with it.
         try h.expectSame(["course", "set", "EC4207", "--icon", "none"], setup: [["course", "set", "EC4207", "--icon", "function"]]) { _ in
             CourseSet(course: gt, [.icon(nil)])
@@ -264,6 +266,7 @@ struct GradesSetupTests {
         try h.expectSame(["course", "set", "EC4207", "--color", "none"], setup: [["course", "set", "EC4207", "--color", "teal"]]) { _ in
             CourseSet(course: gt, [.color("")])
         }
+
         // Colors come from the presets only.
         #expect(h.cli(["course", "set", "EC4207", "--color", "#FF0000"], gist: try Harness.fixtureCopy()).code == 2)
     }

@@ -17,6 +17,7 @@ struct UnitsModelTests {
         #expect(model.newTitle.isEmpty)
         let unit = try #require(try file(workspace).units.first)
         #expect(unit.title == "매칭")
+
         model.openUnit = unit.id
         model.remove(unit)
         let pending = try #require(model.pending)
@@ -75,6 +76,7 @@ struct UnitsModelTests {
         let note = try #require(workspace.run(SessionNote(course: graphTheory, session: session, kind: .review))?.made)
         model.loadNotes(try #require(try file(workspace).units.first))
         #expect(model.notes.map(\.meta.id) == [note])
+
         workspace.run(UnitLink(course: graphTheory, unit: unitId, sessions: [session], linked: false))
         model.loadNotes(try #require(try file(workspace).units.first))
         #expect(model.notes.isEmpty)

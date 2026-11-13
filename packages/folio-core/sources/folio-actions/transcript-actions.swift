@@ -69,6 +69,7 @@ public struct TranscriptMove {
             try MoveJournal.file(moves, in: ctx.gist.url, device: ctx.device, now: ctx.now)
         }
         ctx.invalidate()
+
         // A course that already has its folder (a move that stopped after writing it) only leaves the transcript.
         try ctx.editTranscript { $0.unfiledCourses = [] }
     }

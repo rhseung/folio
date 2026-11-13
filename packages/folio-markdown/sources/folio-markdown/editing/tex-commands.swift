@@ -12,7 +12,6 @@ public enum TeXCommands {
         public let arguments: Int
         public let category: MathCategory
 
-        /// A formula showing it, its arguments filled in.
         public var sample: String {
             let fills = Self.fills[name] ?? ["a", "b"]
             return "\\" + name + (0..<arguments).map { "{\(fills[min($0, fills.count - 1)])}" }.joined()
@@ -40,10 +39,8 @@ public enum TeXCommands {
             ("left right", 0, .fonts), ("text mathbb mathcal mathrm mathbf mathit mathsf mathtt mathfrak boldsymbol bm operatorname", 1, .fonts),
             ("hat widehat tilde widetilde bar overline underline vec overrightarrow dot ddot overbrace underbrace cancel boxed", 1, .fonts),
             ("overset underset stackrel textcolor", 2, .fonts), ("textbf textit", 1, .fonts), ("pmod", 1, .functions), ("phantom", 1, .fonts),
-            // Greek.
             ("alpha beta gamma delta epsilon varepsilon zeta eta theta vartheta iota kappa lambda mu nu xi pi varpi rho varrho sigma varsigma tau upsilon phi varphi chi psi omega", 0, .greek),
             ("Gamma Delta Theta Lambda Xi Pi Sigma Upsilon Phi Psi Omega", 0, .greek),
-            // Operators and relations.
             ("times div cdot pm mp ast star circ bullet oplus otimes odot cup cap setminus wedge vee", 0, .operators),
             ("le leq ge geq neq ne approx equiv sim simeq cong propto ll gg subset subseteq supset supseteq subsetneq in notin ni mid nmid parallel perp", 0, .relations),
             ("to rightarrow leftarrow Rightarrow Leftarrow leftrightarrow Leftrightarrow iff implies impliedby mapsto longrightarrow longleftarrow longmapsto uparrow downarrow", 0, .arrows),

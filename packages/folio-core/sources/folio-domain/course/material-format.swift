@@ -55,7 +55,6 @@ public enum MaterialFormat: Equatable, Sendable {
         return (path as NSString).deletingPathExtension + ".pdf"
     }
 
-    /// The language name the code highlighter takes, or nil for plain text.
     public var highlightLanguage: String? {
         switch self {
         case .tex: "latex"

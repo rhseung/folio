@@ -40,13 +40,16 @@ struct MaterialIntakeTests {
     @Test func aWeekInTheNameIsALectureForThatWeek() {
         let g = guess("04_Trees.pdf")
         #expect(g.folder == "Lectures" && g.why == .named("04_"))
+
         // The later of week 4's classes, both past.
         #expect(g.session == Self.sessions[1].id && g.sessionWhy == .week(4))
         let lecture = guess("GT_Lecture 5 - Matchings.pdf")
         #expect(lecture.why == .named("Lecture 5") && lecture.session == Self.sessions[3].id)
         #expect(guess("6주차 흐름.pdf").why == .named("6주차"))
+
         // A week with no class yet takes its first.
         #expect(guess("6주차 흐름.pdf").session == Self.sessions[4].id)
+
         // A week without a class gets none rather than today's, whose week would go in front of the name.
         #expect(guess("09_Coloring.pdf").session == nil && guess("09_Coloring.pdf").sessionWhy == nil)
     }
@@ -61,10 +64,12 @@ struct MaterialIntakeTests {
     @Test func namesPointAtTheirFolders() {
         #expect(guess("HW3.pdf") == IntakeGuess(folder: "Assignments/HW03", why: .named("HW3")))
         #expect(guess("gt_hw_2_solution.pdf").folder == "Assignments/HW02")
+
         // The report is the student's; the manual is the professor's handout for that class, so it is a lecture file.
         #expect(guess("Lab 2 report.pdf").folder == "Assignments/Lab02")
         #expect(guess("Lab 2 manual.pdf") == IntakeGuess(folder: "Lectures", why: .named("manual"), session: Self.sessions[3].id, sessionWhy: .today))
         #expect(guess("실험 안내 3.pdf").folder == "Lectures")
+
         // No HW09 folder to put it in: the sheet can't make one, so the name says nothing.
         #expect(guess("HW9.pdf").folder == "Lectures" && guess("HW9.pdf").why == nil)
         #expect(guess("2024 중간고사 기출.pdf") == IntakeGuess(folder: "Inherited", why: .named("기출")))

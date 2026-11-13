@@ -24,7 +24,9 @@ struct SidebarOrderTests {
         let shown = [id(11), id(12), id(13)]
         var order = SidebarOrder(courses: [id(21), id(22)])
         order.move(shown, from: 0, to: 2)
+
         #expect(SidebarOrder.arrange(shown, by: order.courses) == [id(12), id(11), id(13)])
+
         // Another term's order is left as it was.
         #expect(SidebarOrder.arrange([id(22), id(21)], by: order.courses) == [id(21), id(22)])
         order.move([id(12), id(11), id(13)], from: 2, to: 0)

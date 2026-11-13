@@ -92,7 +92,7 @@ struct SessionLayoutSaver: View {
     let panes: TabPanes
     @Environment(\.paneMemory) private var memory
 
-    /// What a remembered layout holds. Pages are in the links, so a lecture read on is remembered at its page.
+    /// Pages are in the links, so a lecture read on is remembered at its page.
     private struct Shape: Equatable {
         var links: [AppLink]
         var shares: [Double]

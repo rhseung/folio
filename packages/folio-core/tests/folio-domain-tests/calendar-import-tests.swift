@@ -72,6 +72,7 @@ struct CalendarImportTests {
         let file = CourseFile(course: Course(device: device, at: now, title: "그래프 이론"), sessions: [holiday, late])
         var after = lecture(7)
         after.start = at(7, 14, 30, month: 10)
+
         // The calendar spans 9/8 to 10/7: 10/5 falls inside with no meeting, 12/14 is past its end.
         let r = CalendarImporter.merge([lecture(8), after], into: file, semesterStart: LocalDate(year: 2026, month: 8, day: 31)!,
                                        calendar: calendar, device: device, now: now)
@@ -92,6 +93,7 @@ struct CalendarImportTests {
         ]
         let r = CalendarImporter.mergeExams(exams, into: file, calendar: calendar, device: device, now: now)
         let m = r.file.exams.first { $0.id == midterm.id }!
+
         #expect(m.end == at(20, 22, 45, month: 10) && m.location == "C104" && m.memo == "자리배치표대로 앉기")
         #expect(r.added.map(\.title) == ["Quiz1"])
         #expect(r.conflicts.map(\.exam.id) == [final.id])
@@ -119,6 +121,7 @@ struct LabUnitTests {
         let file = CourseFile(course: Course(device: device, at: now, title: "일반화학실험"))
         let r = CalendarImporter.merge([meet(15, 4), meet(17, 4), meet(22, nil)], into: file, semesterStart: LocalDate("2026-08-31")!,
                                        calendar: c, device: device, now: now)
+
         #expect(r.file.units.map(\.title) == ["Lab04 TLC"])
         #expect(r.file.units[0].sessionIds == r.file.sessions.prefix(2).map(\.id))
         #expect(r.file.sessions[2].unitIds.isEmpty)

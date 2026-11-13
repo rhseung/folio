@@ -2,7 +2,6 @@ import FolioDomain
 import FolioMarkdown
 import SwiftUI
 
-/// The write view: the note's markdown source in a TextKit 2 text view, styled in place by `SourceStyler`.
 struct MarkdownEditor {
     @Binding var text: String
     var baseURL: URL?
@@ -57,6 +56,7 @@ struct MarkdownEditor {
         view.onScroll = onScroll
         view.openGuide = openGuide
         if views?.editor !== view { views?.editor = view }
+
         view.configure(accent: accent, syntax: math, dark: dark)
         view.setAssist(assist, syntax: math)
         #if os(macOS)
@@ -64,6 +64,7 @@ struct MarkdownEditor {
         view.cards = embeds
         view.cardsRevision = revision
         #endif
+
         // The binding hasn't the syllable being composed yet, so swapping the text in then would delete it under the
         // input method, which then types each next jamo over a gap.
         if view.string != text, !view.hasMarkedText() { view.replace(with: text) }
@@ -76,6 +77,7 @@ struct MarkdownEditor {
             coordinator.revealed = anchor
             if let location = anchor.location(in: text) { view.reveal(location) }
         }
+
         afterUpdate($insert) { view.insertAtCaret($0) }
         afterUpdate(insertMath) { view.insertMath($0) }
     }
@@ -129,7 +131,6 @@ extension MarkdownEditor: NSViewRepresentable {
     }
 }
 
-/// A scroll view holding a note view, with the find bar above it.
 final class NoteScrollView: NSScrollView {
     init(document: NSTextView) {
         super.init(frame: .zero)
@@ -187,8 +188,7 @@ final class NoteClipView: NSClipView {
     }
 }
 
-/// A TextKit 2 text view for notes: the column centered at the note measure, and the note's own clicks (⌘ on a link, a
-/// task's box) taken before the text view's. It draws only styled text, as TextKit lays it out.
+/// It draws only styled text, as TextKit lays it out.
 ///
 /// The system text views, not a package such as STTextView: that one is AppKit-first with its UIKit port still young,
 /// and Hangul composition, which the system views get right and `NoteHangulTests` guard, is where editors break.
@@ -235,7 +235,6 @@ class NoteTextView: NSTextView {
     /// The text column's width, which the bubble's pictures fit.
     var columnWidth: CGFloat { max(120, min(NoteLook.measure, bounds.width) - 2 * NoteLook.margin) }
 
-    /// Where the text column runs across the view.
     var column: ClosedRange<CGFloat> { textContainerOrigin.x...(textContainerOrigin.x + columnWidth) }
 
     func accentColors(_ accent: CourseAccent) {
@@ -332,7 +331,6 @@ class NoteTextView: NSTextView {
     // TextKit 2 guesses the height of text it hasn't laid out, so after the text or its look changes the same scroll
     // offset shows other text. Every change notes where a line stood on screen and puts it back there afterwards.
 
-    /// The first character on the top line of the screen.
     var firstVisible: Int? {
         guard let manager = textLayoutManager,
               let fragment = manager.textLayoutFragment(for: CGPoint(x: 0, y: max(0, visibleRect.minY - textContainerOrigin.y))) else { return nil }
@@ -1008,6 +1006,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         }
         bubble?.removeFromSuperview()
         bubble = nil
+
         guard let found else { return }
         // At its own size: a formula wider than the column scrolls sideways in the bubble, as it does in the preview,
         // since shrunk to fit it was too small to read. A picture is already cut to a preview's size. The picture shows
@@ -1196,8 +1195,6 @@ final class HintLabel: NSTextField {
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }
 
-/// Rendered math or an image over the text, by its source. A picture wider than the bubble scrolls sideways in
-/// it, with a fade at an edge it runs on past.
 final class PreviewBubble: NSView {
     /// The same on every side: a formula's picture is its ink (`NoteMath`), so this is all the room around it.
     static let pad = Theme.Space.m
@@ -1224,6 +1221,7 @@ final class PreviewBubble: NSView {
         scroller = BubbleScroller(frame: inner)
         scrolls = whole.width > shown.width
         super.init(frame: NSRect(origin: .zero, size: shown))
+
         wantsLayer = true
         layer?.cornerRadius = NoteLook.radius
         layer?.borderWidth = border
@@ -1231,6 +1229,7 @@ final class PreviewBubble: NSView {
         layer?.shadowOpacity = 0.12
         layer?.shadowRadius = 10
         layer?.shadowOffset = CGSize(width: 0, height: -6)
+
         picture.image = image
         picture.imageScaling = .scaleAxesIndependently
         let document = NSView(frame: NSRect(x: 0, y: 0, width: whole.width - 2 * border, height: inner.height))
@@ -1246,11 +1245,13 @@ final class PreviewBubble: NSView {
         scroller.layer?.masksToBounds = true
         addSubview(scroller)
         scroller.tile()
+
         for (fade, x) in [(leading, inner.minX), (trailing, inner.maxX - Self.fade)] {
             fade.frame = NSRect(x: x, y: inner.minY, width: Self.fade, height: inner.height)
             fade.layer?.cornerRadius = NoteLook.radius - border
             addSubview(fade)
         }
+
         scroller.contentView.postsBoundsChangedNotifications = true
         NotificationCenter.default.addObserver(self, selector: #selector(scrolled), name: NSView.boundsDidChangeNotification, object: scroller.contentView)
         scrolled()
@@ -1338,7 +1339,6 @@ final class BubbleScroller: NSScrollView {
     override func hitTest(_ point: NSPoint) -> NSView? { frame.contains(point) ? self : nil }
 }
 
-/// The card's color fading out over a scrolling picture's edge.
 final class EdgeFade: NSView {
     private let leading: Bool
 
@@ -1383,7 +1383,6 @@ extension MarkdownEditor: UIViewRepresentable {
     }
 }
 
-/// The iPad's text view for notes: TextKit 2, the column centered at the note measure.
 class NoteTextView: UITextView {
     private let content = NSTextContentStorage()
     var baseURL: URL?

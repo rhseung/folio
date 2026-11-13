@@ -48,9 +48,11 @@ struct WhatsNewModelTests {
         #expect(ask.items.map(\.text) == ["노트 목차", "수식 말풍선 여백", "칸 닫기"])
         #expect(n.take() == ask)
         #expect(n.take() == nil)
+
         // Taken but not yet closed: the next minute's check doesn't bring it again.
         await n.check(busy: false)
         #expect(n.ask == nil)
+
         // Closing marks it seen, for the next launch too.
         n.markSeen()
         let next = ReleaseNotes(source: ReleaseList(list: Self.releases), defaults: d, current: V(0, 3, 0), prompts: true)
@@ -108,6 +110,7 @@ struct WhatsNewModelTests {
         // 0.3.0 is for a newer app.
         #expect(shown.map(\.version) == [V(0, 2, 1), V(0, 2, 0)])
         #expect(model.isOpen(shown[0]) && !model.isOpen(shown[1]))
+
         model.toggle(shown[1])
         model.toggle(shown[0])
         #expect(!model.isOpen(shown[0]) && model.isOpen(shown[1]))
@@ -121,6 +124,7 @@ struct WhatsNewModelTests {
         guard case .releases(let shown) = model.state else { Issue.record("\(model.state)"); return }
         #expect(shown.map(\.version) == [V(0, 2, 0)])
         #expect(model.isOpen(shown[0]))
+
         model.kind = .fix
         #expect(model.state == .noMatch)
         #expect(model.noMatch == "‘창’에 맞는 항목 없음 (fix)")

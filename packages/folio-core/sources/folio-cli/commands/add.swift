@@ -29,6 +29,7 @@ struct AddCommand: ParsableCommand {
         // The courses the line can name are the ones the app's quick add reads: this semester's.
         let current = (try? r.currentSemester()).map { s in r.courses.filter { $0.course.semesterId == s.id } } ?? []
         let read = QuickAdd.parse(line, courses: current.map(\.course), codes: (try? ctx.catalog().codes) ?? [], now: ctx.now, calendar: ctx.calendar)
+
         // The options stand over what the line reads, as the chips' picks do, and clearing the deadline clears the
         // repeat with it, as the deadline chip's clear button does.
         var parsed = read
@@ -39,10 +40,12 @@ struct AddCommand: ParsableCommand {
         } else if case .clear? = due {
             parsed.repeats = nil
         }
+
         let ref = parsed.courseId.flatMap { id in r.courses.first { $0.id == id } }
         let shown = Read(course: ref?.code, courseId: parsed.courseId, title: parsed.title, due: parsed.due, repeats: parsed.repeats,
                          folder: parsed.folderName.map { "\(CourseFolder.assignments.rawValue)/\($0)" })
         if !g.json { show(shown, ref: ref, now: ctx.now, calendar: ctx.calendar) }
+
         guard let id = parsed.courseId else {
             throw CLIError(exit: .notFound, message: String(localized: .addNoCourse(line)), candidates: current.map(\.code),
                            hints: [String(localized: .addNoCourseHint(line))])

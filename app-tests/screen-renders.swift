@@ -85,6 +85,10 @@ struct ScreenRenders {
         var batches = [plain, Batch(pages: columns.map { name, entry in
             ("column-hidden-\(name)", { AnyView(ScreenView(workspace: workspace, entry: entry).environment(\.columnPrefs, hidden)) })
         })]
+        // The first run's steps at every width, the narrowest standing in for an iPhone, over the scenario's open folder.
+        batches.append(Batch(pages: FirstRunStep.allCases.map { step in
+            ("first-run-\(step.rawValue)", { AnyView(FirstRunView(workspace: workspace, step: step)) })
+        }))
         for (name, query) in [("search-empty", ""), ("search", "매칭")] {
             batches.append(Batch(setup: { SnapshotDriver.shared.searchQuery = query },
                                  sheets: [(name, { AnyView(SearchPalette(workspace: workspace, close: {}, choose: { _, _ in })) })]))
@@ -203,10 +207,12 @@ private func withOffscreenWindows<T>(_ jobs: [RenderJob], _ body: ([(RenderJob, 
         window.orderFrontRegardless()
         return (job, window, host)
     }
+
     // Detached, not only closed: a view left alive keeps following the app-wide state the next batches set, and the
     // main actor slows with every one of them.
     defer { open.forEach { $0.1.contentView = nil; $0.1.close() } }
     try await settle()
+
     // Pages scroll, so a window grows by what its main scroll view hides to draw all of it. Content that loads late (the
     // study chart) lengthens the page after the first grow, so it repeats until nothing is hidden.
     for _ in 0..<4 {
@@ -222,6 +228,7 @@ private func withOffscreenWindows<T>(_ jobs: [RenderJob], _ body: ([(RenderJob, 
         guard grew else { break }
         try await settle()
     }
+
     // Back to the job's width, once the content has settled: a window grows to fit its view's minimum at every
     // moment, a first pass before its data loaded included, and doesn't shrink back by itself.
     var narrowed = false

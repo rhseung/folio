@@ -130,6 +130,7 @@ struct TabScreensTests {
                                                 context: nil, characters: "e", charactersIgnoringModifiers: "e", isARepeat: false, keyCode: 14))
         _ = window.performKeyEquivalent(with: key)
         try await settle()
+
         tabs.select(number: 1)
         try await settle(1)
         let editors = views(NoteTextView.self).count

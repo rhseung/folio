@@ -93,7 +93,6 @@ struct NoteLayoutTests {
         let last = try #require(rows.lastIndex(of: true), "nothing drawn at the end")
         let room = rows.count - last
         #expect(room >= rows.count / 3, "\(shot.name): \(room) points below the last line of \(rows.count)")
-        // Everything above the last line is drawn too.
         let blank = Self.longestBlank(rows, to: last)
         #expect(blank.height < Self.gap, "at the end: nothing drawn for \(blank.height) points from \(blank.from)")
     }

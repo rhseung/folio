@@ -71,9 +71,11 @@ struct RecordedPagesTests {
         file.linkMaterial(a.id, session: session, firstPage: 1, lastPage: 3)
         let r = recording([PageVisit(at: 0, materialId: a.id, page: 8), PageVisit(at: 60, materialId: b.id, page: 2),
                            PageVisit(at: 120, materialId: b.id, page: 6), PageVisit(at: 180, materialId: UUID(), page: 1)], session: session)
+
         #expect(file.linkViewedPages(of: r) == 1)
         #expect(file.sessions[0].materials == [SessionMaterial(materialId: a.id, firstPage: 1, lastPage: 3), SessionMaterial(materialId: b.id, firstPage: 2, lastPage: 6)])
         #expect(file.materials[1].sessionIds == [session])
+
         // Again changes nothing.
         #expect(file.linkViewedPages(of: r) == 0)
     }
@@ -96,6 +98,7 @@ struct RecordedPagesTests {
                 let left = i + 1 < pages.count ? pages[i + 1].at : r.duration
                 if left - v.at >= Recording.pageDwell { dwelled[v.materialId, default: []].append(page) }
             }
+
             let ranges = r.viewedPages()
             #expect(Set(ranges.map(\.materialId)) == Set(dwelled.keys))
             #expect(ranges.count == Set(ranges.map(\.materialId)).count)

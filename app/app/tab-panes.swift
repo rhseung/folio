@@ -156,7 +156,6 @@ final class TabPanes {
     /// The panes not drawn open: folded by hand, or in a bundle for want of room.
     var folded: Set<Int> { fold.folded }
 
-    /// The row's width, as it is laid out.
     func measure(_ width: Double) {
         self.width = width
         refold()
@@ -175,7 +174,6 @@ final class TabPanes {
 
     func index(of navigator: Navigator) -> Int? { navigators.firstIndex { $0 === navigator } }
 
-    /// A click anywhere in pane `i`, or on its strip or segment.
     func press(_ i: Int) {
         // The focused pane is always the one pressed last, so pressing it again changes nothing.
         guard i != focus, ids.indices.contains(i) else { return }
@@ -314,7 +312,7 @@ final class TabPanes {
 /// panel's edge sliding over it.
 struct PaneGlide: Equatable {
     static let duration = 0.5
-    static let spring = Spring.smooth(duration: 0.34)
+    static let spring = Theme.Motion.paneSpring
 
     let from: PaneLayout
     let fold: PaneLayout.Fold
@@ -326,7 +324,7 @@ struct PaneGlide: Equatable {
         self.fold = fold
     }
 
-    /// How far along at `date`, 0 to 1, on the curve 0.34s `.smooth` takes; whole once the spring has settled.
+    /// How far along at `date`, 0 to 1, on `Theme.Motion.paneSpring`; whole once the spring has settled.
     func progress(at date: Date) -> Double {
         let t = date.timeIntervalSince(start)
         return t >= Self.duration ? 1 : min(1, max(0, Self.spring.value(target: 1.0, time: t)))
@@ -385,7 +383,6 @@ extension PanePreset {
         }
     }
 
-    /// A split-pane glyph for as many panes as it has.
     var symbol: String { slots.count >= 3 ? "rectangle.split.3x1" : "rectangle.split.2x1" }
 }
 

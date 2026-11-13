@@ -13,7 +13,6 @@ public enum AsciiMathSymbols {
         public let arguments: Int
         public let category: MathCategory
 
-        /// A formula showing it, its arguments filled in.
         public var sample: String {
             let fills = Self.fills[name] ?? ["a", "b"]
             return name + (0..<arguments).map { "(\(fills[min($0, fills.count - 1)]))" }.joined()
@@ -41,10 +40,8 @@ public enum AsciiMathSymbols {
             ("frac root", 2, .operators), ("stackrel overset underset color", 2, .fonts), ("sqrt", 1, .operators),
             ("abs norm floor ceil hat bar vec dot ddot tilde ul overline underline obrace ubrace cancel bb bbb cc tt sf fr text", 1, .fonts),
             ("sum prod int oint lim", 0, .operators),
-            // Greek.
             ("alpha beta gamma delta epsilon varepsilon zeta eta theta vartheta iota kappa lambda mu nu xi pi rho sigma tau upsilon phi varphi chi psi omega", 0, .greek),
             ("Gamma Delta Theta Lambda Xi Pi Sigma Phi Psi Omega", 0, .greek),
-            // Operators and relations.
             ("xx div ox oplus odot cdot ast star circ nn uu nnn uuu vv wedge vee setminus", 0, .operators),
             ("in notin sub sup sube supe ne le ge lt gt approx cong equiv prop models vdash prec succ", 0, .relations),
             ("to rarr larr harr rArr lArr hArr uarr darr mapsto implies iff", 0, .arrows),

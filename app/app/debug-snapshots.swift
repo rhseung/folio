@@ -114,7 +114,8 @@ final class SnapshotDriver {
 
     /// `links` are opened by their address at the end, each drawn as its step: what a click on such a link shows.
     func run(select: (Screen) -> Void, open: (AppLink) -> Void, courses: [UUID], semester: UUID?, links: [(String, AppLink)]) async {
-        guard let directory = Self.directory else { return }
+        // The first run's walk (`FirstRunDebug`) keeps the window at its own small size and quits when done.
+        guard let directory = Self.directory, !FirstRunDebug.walks else { return }
         // folio:not-an-action debug screenshots, outside the GIST folder
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         if let window = NSApp.windows.first(where: { $0.isVisible }) {

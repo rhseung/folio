@@ -9,6 +9,7 @@ struct GzipTests {
         let file = folder.appending(path: "hw.synctex")
         let text = String(repeating: "SyncTeX Version:1\nInput:1:/course/hw.tex\n", count: 50)
         try Data(text.utf8).write(to: file)
+
         // `-N` keeps the file name in the header, which Tectonic's output has too.
         let gzip = Process()
         gzip.executableURL = URL(filePath: "/usr/bin/gzip")

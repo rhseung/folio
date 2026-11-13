@@ -1,7 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// A lecture file's pages by the classes that went through them, with the part no class has reached yet.
 struct LectureProgressBlock: View {
     @State private var model: LectureProgressModel
     @Environment(\.openLink) private var openLink

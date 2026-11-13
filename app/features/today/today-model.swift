@@ -16,9 +16,28 @@ final class TodayModel {
         var queue: [Workspace.ReviewEntry]
         /// Over the daily cap, moved to tomorrow.
         var deferred: [Workspace.ReviewEntry]
+        /// Classes whose review note is owed, which count toward the day's reviews with the units.
+        var notes: [TodaySummary.SessionItem]
         var doneToday: Int
         var streak: Int
         var all: [Workspace.ReviewEntry] { queue + deferred }
+        var left: Int { queue.count + notes.count }
+        var total: Int { doneToday + left }
+        var fraction: Double { total == 0 ? 0 : Double(doneToday) / Double(total) }
+    }
+
+    /// What the page draws for one study day, read once per redraw so its blocks agree.
+    struct Day {
+        let summary: TodaySummary
+        let reviews: Reviews
+        let classes: [RibbonClass]
+        let wash: [UUID]
+    }
+
+    func day(now: Date) -> Day {
+        let summary = self.summary(now: now)
+        return Day(summary: summary, reviews: reviews(summary, now: now), classes: ribbonClasses(summary, now: now),
+                   wash: washCourses(summary, now: now))
     }
 
     var current: [LoadedCourse] { workspace.currentCourses }
@@ -39,11 +58,11 @@ final class TodayModel {
         (summary.studyDay.date(in: workspace.calendar) ?? now).formatted(.dateTime.month().day().weekday(.wide))
     }
 
-    func reviews(now: Date) -> Reviews {
+    func reviews(_ summary: TodaySummary, now: Date) -> Reviews {
         let queue = workspace.reviewQueue(now: now)
         let progress = reviewProgress(now: now)
         return Reviews(queue: queue.filter { $0.item.deferred == nil }, deferred: queue.filter { $0.item.deferred != nil },
-                       doneToday: progress.doneToday, streak: progress.streak)
+                       notes: summary.missingReviewNotes, doneToday: progress.doneToday, streak: progress.streak)
     }
 
     /// Units reviewed today (skips aside, which aren't study) and the days-in-a-row streak, across every course.
@@ -114,6 +133,11 @@ final class TodayModel {
         workspace.note(.review, of: item.session.id, in: item.courseId)
     }
 
+    /// The review check the row's button gives, as the class's menu has it.
+    func review(of item: TodaySummary.SessionItem) -> ClassReview? {
+        workspace.course(item.courseId)?.file.review(of: item.session)
+    }
+
     var attendanceWarnings: [(course: LoadedCourse, absences: Int, cap: AttendanceCap)] {
         current.compactMap { course in course.file.capOneAway(at: workspace.now).map { (course, $0.absences, $0.cap) } }
     }
@@ -132,8 +156,6 @@ final class TodayModel {
     func sessionName(_ course: UUID, _ session: Session) -> String {
         workspace.course(course)?.file.title(of: session, calendar: workspace.calendar) ?? ""
     }
-
-    func examTitle(_ item: TodaySummary.ExamItem) -> String { "\(title(item.courseId)) · \(item.exam.title)" }
 
     func dDay(_ item: TodaySummary.ExamItem) -> String { item.dDay == 0 ? "D-day" : "D-\(item.dDay)" }
 
@@ -160,6 +182,8 @@ final class TodayModel {
         .sorted { $0.session.date < $1.session.date }
     }
 
+    var liveWrapUps: [WrapUp] { wrapUps(now: workspace.liveNow) }
+
     func wrapUpName(_ item: WrapUp) -> String {
         guard let course = workspace.course(item.courseId) else { return "" }
         return String(localized: .todayWrapUpClass(course.title, course.file.day(of: item.session, calendar: workspace.calendar)))
@@ -185,6 +209,14 @@ final class TodayModel {
         var urgency: DueUrgency
         var due: String
         var id: UUID { item.assignment.id }
+
+        var tone: Tone? {
+            switch urgency {
+            case .urgent: .danger
+            case .soon: .warning
+            case .later: nil
+            }
+        }
     }
 
     /// Near deadlines say how soon, each as a span from now; past a week a date reads quicker than a count of days.
@@ -212,10 +244,13 @@ final class TodayModel {
     static let deadlineLimit = 6
     var showsAllDeadlines = false
 
-    /// The rows cut to `deadlineLimit` unless unfolded, and how many were left out.
     func shownDeadlines(_ rows: [DeadlineRow]) -> (rows: [DeadlineRow], more: Int) {
         guard !showsAllDeadlines, rows.count > Self.deadlineLimit else { return (rows, 0) }
         return (Array(rows.prefix(Self.deadlineLimit)), rows.count - Self.deadlineLimit)
+    }
+
+    func shownDeadlines(_ summary: TodaySummary) -> (rows: [DeadlineRow], more: Int) {
+        shownDeadlines(deadlineRows(summary.deadlines, studyDay: summary.studyDay))
     }
 
     // MARK: Day ribbon
@@ -255,6 +290,36 @@ final class TodayModel {
 
     func ribbon(_ classes: [RibbonClass], on day: LocalDate) -> DayRibbon {
         DayRibbon(day: day, classes: classes.map { DateInterval(start: $0.start, end: max($0.start, $0.end)) }, calendar: workspace.calendar)
+    }
+
+    func ribbonNote(_ classes: [RibbonClass], summary: TodaySummary) -> String? {
+        guard !classes.isEmpty else { return nil }
+        let due = summary.deadlines.filter(\.isToday).count
+        return due > 0 ? String(localized: .todayRibbonNoteDue(classes.count, due)) : String(localized: .todayRibbonNote(classes.count))
+    }
+
+    /// `오전 9 · 12 · 오후 3 · 6 · 9 · 자정`: am/pm on the first tick and where it turns, as on a timetable. Noon reads
+    /// plainly as 12, so the turn is marked at the next tick.
+    func ribbonTick(_ hour: Int, on ribbon: DayRibbon) -> String {
+        if hour == 24 { return String(localized: .todayRibbonMidnight) }
+        let calendar = workspace.calendar
+        let before = ribbon.ticks.last { $0 < hour && $0 != 12 }
+        let marked = hour != 12 && before.map { ($0 >= 12) != (hour >= 12) } ?? true
+        let number = "\(hour % 12 == 0 ? 12 : hour % 12)"
+        return marked ? "\(hour < 12 ? calendar.amSymbol : calendar.pmSymbol) \(number)" : number
+    }
+
+    struct RibbonDue: Identifiable {
+        let date: Date
+        let items: [TodaySummary.DeadlineItem]
+        var id: Date { date }
+    }
+
+    /// Today's deadlines by their time, those due together on one flag.
+    func ribbonDues(_ summary: TodaySummary) -> [RibbonDue] {
+        let today = summary.deadlines.filter(\.isToday)
+        return Dictionary(grouping: today) { $0.assignment.due ?? .distantFuture }.sorted { $0.key < $1.key }
+            .map { RibbonDue(date: $0.key, items: $0.value) }
     }
 
     /// The next class to start after `now`, made or only on the timetable.
@@ -302,16 +367,18 @@ final class TodayModel {
     /// The line under the date, as Markdown-styled pieces whose bold runs are the counts; `urgent` colors them.
     func summaryLine(classes: [RibbonClass], summary: TodaySummary, reviews: Reviews, now: Date) -> [(text: AttributedString, urgent: Bool)] {
         var pieces: [(AttributedString, Bool)] = []
+
         let ended = classes.filter { $0.end <= now }.count
         pieces.append((classes.isEmpty ? AttributedString(localized: .todayLineNoClasses)
                        : ended == classes.count ? AttributedString(localized: .todayLineClassesDone(classes.count))
                        : ended > 0 ? AttributedString(localized: .todayLineClassesEnded(classes.count, ended))
                        : AttributedString(localized: .todayLineClasses(classes.count)), false))
+
         let due = summary.deadlines.filter(\.isToday).count
         if due > 0 { pieces.append((AttributedString(localized: .todayLineDue(due)), true)) }
-        let left = reviews.queue.count + summary.missingReviewNotes.count
-        if left > 0 {
-            pieces.append((AttributedString(localized: .todayLineReviews(left)), false))
+
+        if reviews.left > 0 {
+            pieces.append((AttributedString(localized: .todayLineReviews(reviews.left)), false))
         } else if reviews.doneToday > 0 {
             pieces.append((AttributedString(localized: .todayLineReviewsDone), false))
         }

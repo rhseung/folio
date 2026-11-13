@@ -237,7 +237,7 @@ struct NoteEditor: View {
         }
         #endif
         .background(Theme.Palette.card)
-        .animation(.snappy(duration: 0.25), value: showsAssets)
+        .animation(Theme.Motion.standard, value: showsAssets)
         // Edits save on their own; ⌘S is kept only for the habit, with no button of its own.
         .background { Button("") { model.saveNow(force: false) }.keyboardShortcut("s").opacity(0).allowsHitTesting(false).accessibilityHidden(true) }
         // The note's name is the screen's title; clicking it renames the note. Saved first: the file is about to move.
@@ -288,7 +288,7 @@ struct NoteEditor: View {
 
     func toggleOutline() {
         if outlineFit.docks(shown) {
-            withAnimation(.snappy(duration: 0.25)) { outlineOn.toggle() }
+            withAnimation(Theme.Motion.standard) { outlineOn.toggle() }
         } else {
             outlinePopover.toggle()
         }

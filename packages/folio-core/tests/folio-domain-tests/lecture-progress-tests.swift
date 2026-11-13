@@ -28,12 +28,14 @@ struct LectureProgressTests {
         let m = matchings(f)
         f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 12)
         f.linkMaterial(m, session: f.sessions[1].id, firstPage: 10, lastPage: 20)
+
         #expect(f.lectureProgress(of: m, pageCount: 30) == [
             LectureSpan(firstPage: 1, lastPage: 9, sessions: [f.sessions[0].id]),
             LectureSpan(firstPage: 10, lastPage: 12, sessions: [f.sessions[0].id, f.sessions[1].id]),
             LectureSpan(firstPage: 13, lastPage: 20, sessions: [f.sessions[1].id]),
             LectureSpan(firstPage: 21, lastPage: 30, sessions: []),
         ])
+
         // Without the count, the file ends where the classes do.
         #expect(f.lectureProgress(of: m, pageCount: nil).last == LectureSpan(firstPage: 13, lastPage: 20, sessions: [f.sessions[1].id]))
     }
@@ -45,6 +47,7 @@ struct LectureProgressTests {
         f.linkMaterial(m, session: f.sessions[1].id)
         f.sessions[2].isCancelled = true
         f.linkMaterial(m, session: f.sessions[2].id, firstPage: 1, lastPage: 8)
+
         #expect(f.lectureProgress(of: m, pageCount: 6) == [
             LectureSpan(firstPage: 1, lastPage: 2, sessions: []),
             LectureSpan(firstPage: 3, lastPage: 5, sessions: [f.sessions[0].id]),
@@ -93,6 +96,7 @@ struct LectureProgressTests {
         f.linkMaterial(m, session: f.sessions[1].id, firstPage: 1, lastPage: 4)
         f.sessions[2].isCancelled = true
         f.linkMaterial(m, session: f.sessions[2].id, firstPage: 5, lastPage: 6)
+
         // Cut at the count as the progress is, and a cancelled class has none.
         #expect(f.progressSections(of: m, pageCount: 24).map(\.session) == [f.sessions[1].id, f.sessions[0].id])
         #expect(f.progressSections(of: m, pageCount: 24).map(\.pages) == [1...4, 9...24])
@@ -103,12 +107,14 @@ struct LectureProgressTests {
         var f = course()
         let (m, book) = (matchings(f), f.materials[2].id)
         f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 5)
+
         // Meeting end to end is fine; sharing page 5 is not.
         f.linkMaterial(m, session: f.sessions[1].id, firstPage: 6, lastPage: 9)
         #expect(f.progressOverlaps().isEmpty)
         f.linkMaterial(m, session: f.sessions[2].id, firstPage: 5, lastPage: 7)
         let found = f.progressOverlaps().map { [$0.earlier.session.id, $0.later.session.id] }
         #expect(found == [[f.sessions[0].id, f.sessions[2].id], [f.sessions[1].id, f.sessions[2].id]])
+
         // A cancelled class taught nothing, and a textbook is read over and over.
         f.sessions[2].isCancelled = true
         f.linkMaterial(book, session: f.sessions[0].id, firstPage: 1, lastPage: 50)
@@ -123,10 +129,12 @@ struct LectureProgressTests {
         var after = before
         after.linkMaterial(m, session: after.sessions[1].id, firstPage: 17, lastPage: 21)
         let refused = CourseFile.model.newViolation(before: before, after: after)
+
         #expect(refused?.rule == "Session.progressOverlap")
         #expect(refused?.message.contains(before.day(of: before.sessions[0], calendar: .current)) == true)
         #expect(refused?.message.contains("16–18쪽") == true && refused?.message.contains("17–21쪽") == true)
         #expect(refused?.message.contains("05_Matchings.pdf") == true)
+
         var clear = before
         clear.linkMaterial(m, session: clear.sessions[1].id, firstPage: 19, lastPage: 21)
         #expect(CourseFile.model.newViolation(before: before, after: clear) == nil)
@@ -151,6 +159,43 @@ struct LectureProgressTests {
         }
     }
 
+    // MARK: A new range on the page strip
+
+    var seoul: Calendar {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        return c
+    }
+
+    /// The classes held so far, latest first, leaving out those with pages of the file and cancelled ones. `now` is
+    /// 10:00 in Seoul, so an hour after the second class the third, a week on, is not held yet.
+    @Test func aNewRangeIsOfferedToHeldClassesWithoutPages() {
+        var f = course()
+        let m = matchings(f)
+        let at = now + 7 * day + 3600
+        func offered(_ f: CourseFile, at: Date) -> [UUID] {
+            f.sessionsForNewRange(of: m, now: at, settings: Settings(), calendar: seoul).map(\.id)
+        }
+        #expect(offered(f, at: at) == [f.sessions[1].id, f.sessions[0].id])
+
+        f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 5)
+        // Linked without pages, or with pages of another file, a class has none of this one yet.
+        f.linkMaterial(m, session: f.sessions[1].id)
+        f.linkMaterial(flows(f), session: f.sessions[1].id, firstPage: 1, lastPage: 3)
+        #expect(offered(f, at: at) == [f.sessions[1].id])
+
+        f.sessions[1].isCancelled = true
+        #expect(offered(f, at: at).isEmpty)
+    }
+
+    /// Today's class counts before it starts: the study day decides, not the clock.
+    @Test func aNewRangeIsOfferedToTodaysClassBeforeItStarts() {
+        let f = course()
+        let morning = f.sessions[2].date - 3600
+        let offered = f.sessionsForNewRange(of: matchings(f), now: morning, settings: Settings(), calendar: seoul).map(\.id)
+        #expect(offered == [f.sessions[2].id, f.sessions[1].id, f.sessions[0].id])
+    }
+
     // MARK: The end-of-class prompt
 
     @Test func theNextClassPicksUpAfterTheLastOne() {
@@ -158,11 +203,14 @@ struct LectureProgressTests {
         let m = matchings(f)
         f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 12)
         let viewed = [SessionMaterial(materialId: m, firstPage: 11, lastPage: 21)]
+
         #expect(f.resumePage(of: m, for: f.sessions[1]) == 13)
         #expect(f.suggestedProgress(for: f.sessions[1], viewed: viewed) == [SessionMaterial(materialId: m, firstPage: 13, lastPage: 21)])
+
         // The most recent class before, not the furthest: the third class follows the second, which went back.
         f.linkMaterial(m, session: f.sessions[1].id, firstPage: 5, lastPage: 9)
         #expect(f.resumePage(of: m, for: f.sessions[2]) == 10)
+
         // A class's own range isn't where it picks up from.
         #expect(f.resumePage(of: m, for: f.sessions[0]) == nil)
     }
@@ -221,6 +269,7 @@ struct LectureProgressTests {
         f.linkMaterial(m, session: f.sessions[1].id, firstPage: 14, lastPage: 16)
         f.linkMaterial(other, session: f.sessions[1].id)
         let viewed = [SessionMaterial(materialId: m, firstPage: 13, lastPage: 22), SessionMaterial(materialId: other, firstPage: 2, lastPage: 5)]
+
         // Saved files first, in their order; an unranged link is filled like a new one.
         #expect(f.suggestedProgress(for: f.sessions[1], viewed: viewed) == [
             SessionMaterial(materialId: m, firstPage: 14, lastPage: 16),
@@ -234,12 +283,15 @@ struct LectureProgressTests {
         #expect(f.suggestedProgress(for: f.sessions[0], viewed: []).isEmpty)
         f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 12)
         #expect(f.suggestedProgress(for: f.sessions[1], viewed: []) == [SessionMaterial(materialId: m, firstPage: 13, lastPage: nil)])
+
         // A cancelled class in between changes nothing.
         f.sessions[1].isCancelled = true
         #expect(f.suggestedProgress(for: f.sessions[2], viewed: [], pageCounts: [m: 30]) == [SessionMaterial(materialId: m, firstPage: 13, lastPage: nil)])
+
         // Once the count says it is done, the next lecture file by name: 05_ before 06_, whatever order they were added in.
         f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 30)
         #expect(f.suggestedProgress(for: f.sessions[2], viewed: [], pageCounts: [m: 30]) == [SessionMaterial(materialId: next, firstPage: 1, lastPage: nil)])
+
         // The last lecture file done leaves nothing to suggest.
         f.linkMaterial(next, session: f.sessions[1].id, firstPage: 1, lastPage: 8)
         f.sessions[1].isCancelled = false
@@ -256,8 +308,6 @@ struct LectureProgressTests {
         #expect(f.suggestedProgress(for: f.sessions[1], viewed: [SessionMaterial(materialId: m, firstPage: 30, lastPage: 30)], pageCounts: [m: 30])
             == [SessionMaterial(materialId: m)])
     }
-
-    // MARK: Replay
 
     // MARK: A link added by hand, and a prompt opened again
 
@@ -286,6 +336,7 @@ struct LectureProgressTests {
             Recording(device: device, at: now, sessionId: f.sessions[2].id, file: "Recordings/c.m4a", duration: 600,
                       pages: [PageVisit(at: 0, materialId: m, page: 30)]),
         ]
+
         #expect(f.viewedPages(of: session) == [SessionMaterial(materialId: m, firstPage: 6, lastPage: 11)])
         #expect(f.suggestedProgress(for: session, viewed: f.viewedPages(of: session)) == [SessionMaterial(materialId: m, firstPage: 7, lastPage: 11)])
         #expect(f.suggestedLink(of: m, for: session, pageCount: nil) == SessionMaterial(materialId: m, firstPage: 7, lastPage: 11))
@@ -303,6 +354,7 @@ struct LectureProgressTests {
                                pages: [PageVisit(at: 0, materialId: m, page: 10), PageVisit(at: 100, materialId: m, page: 11)])
         f.recordings = [first]
         let atStop = f.viewedPages(of: session, including: second)
+
         #expect(atStop == [SessionMaterial(materialId: m, firstPage: 6, lastPage: 11)])
         f.recordings = [first, second]
         #expect(f.viewedPages(of: session) == atStop)
@@ -313,15 +365,18 @@ struct LectureProgressTests {
         let range = PageRange(first: 5, last: 9)
         #expect(range.moving(.first, to: 12, pages: nil) == PageRange(first: 12, last: 12))
         #expect(range.moving(.last, to: 3, pages: nil) == PageRange(first: 3, last: 3))
+
         // Up to the other end exactly: one page, from either side.
         #expect(range.moving(.first, to: 9, pages: 20) == PageRange(first: 9, last: 9))
         #expect(range.moving(.last, to: 5, pages: 20) == PageRange(first: 5, last: 5))
         #expect(range.moving(.first, to: 0, pages: 20).first == 1)
         #expect(range.moving(.last, to: 40, pages: 20).last == 20)
+
         // Pushed to the end of the file, the other end stops there too.
         #expect(range.moving(.first, to: 40, pages: 20) == PageRange(first: 20, last: 20))
         #expect(range.moving(.first, to: nil, pages: 20) == PageRange(first: nil, last: 9))
         #expect(PageRange().moving(.last, to: 4, pages: 20) == PageRange(first: nil, last: 4))
+
         // A count learned later brings the other end in.
         #expect(PageRange(first: 2, last: 30).moving(.first, to: 3, pages: 20) == PageRange(first: 3, last: 20))
         #expect(PageRange.bounds(20) == 1...20 && PageRange.bounds(0) == 1...1)
@@ -336,6 +391,7 @@ struct LectureProgressTests {
         let range = PageRange(first: 7, last: 11)
         #expect(range.tapping(5, pages: 20) == PageRange(first: 5, last: 11))
         #expect(range.tapping(14, pages: 20) == PageRange(first: 7, last: 14))
+
         // A tie goes to the start.
         #expect(range.tapping(9, pages: 20) == PageRange(first: 9, last: 11))
         #expect(range.tapping(40, pages: 20) == PageRange(first: 7, last: 20))
@@ -411,13 +467,16 @@ struct LectureProgressTests {
         let range = PageRange(first: 6, last: 9)
         #expect(range.moving(.last, to: 13, pages: 20, besides: taken) == PageRange(first: 6, last: 11))
         #expect(range.moving(.first, to: 2, pages: 20, besides: taken) == PageRange(first: 5, last: 9))
+
         // Pushing the other end stops at the wall too.
         #expect(range.moving(.first, to: 14, pages: 20, besides: taken) == PageRange(first: 11, last: 11))
         #expect(range.shifted(by: 6, pages: 20, besides: taken) == PageRange(first: 8, last: 11))
         #expect(range.tapping(18, pages: 20, besides: taken) == PageRange(first: 6, last: 11))
+
         // A first tap on a taken page sets nothing; beside it, it starts there.
         #expect(PageRange().tapping(13, pages: 20, besides: taken) == PageRange())
         #expect(PageRange().tapping(16, pages: 20, besides: taken) == PageRange(first: 16, last: 16))
+
         // At a wall the end touches, for the firmer tick.
         #expect(PageRange(first: 5, last: 11).touches(.first, pages: nil, besides: taken))
         #expect(PageRange(first: 5, last: 11).touches(.last, pages: nil, besides: taken))

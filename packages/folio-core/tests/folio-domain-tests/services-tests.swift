@@ -29,6 +29,7 @@ struct StudyActivityTests {
         func s(_ from: Double, _ to: Double) -> StudySessionEvent {
             StudySessionEvent(courseId: course, start: base + from * 60, end: base + to * 60, screen: "course")
         }
+
         // Mac 0–60, iPad 10–20 (inside), manual 60–90 (touching), empty 100–100.
         let perDay = StudyTime.perDay([s(0, 60), s(10, 20), s(60, 90), s(100, 100)], settings: Settings(), calendar: calendar)
         #expect(perDay == [LocalDate("2026-10-23")!: 90 * 60])
@@ -46,10 +47,13 @@ struct BackupRetentionTests {
         let today = LocalDate("2026-10-23")!
         let days = (0..<60).map { today.adding(days: -$0) }
         let kept = BackupRetention.keep(days, today: today, dailyDays: 30, calendar: calendar)
+
         #expect(days.prefix(30).allSatisfy(kept.contains))
+
         // 2026-09-23 is day 30 (a Wednesday): its ISO week runs Mon 09-21 to Sun 09-27, newest older one is 09-23.
         #expect(kept.contains(LocalDate("2026-09-23")!))
         #expect(!kept.contains(LocalDate("2026-09-22")!))
+
         // A full older week (09-14 … 09-20) keeps only its Sunday.
         #expect(kept.contains(LocalDate("2026-09-20")!))
         #expect((14...19).allSatisfy { !kept.contains(LocalDate(year: 2026, month: 9, day: $0)!) })

@@ -46,6 +46,7 @@ struct SplitStripTests {
         let split = base
         let items = SplitStrip().items(split, name: names(split))
         #expect(items[2].mark == .tinted(last: false) && items[3].mark == .tinted(last: true) && items[11].mark == .plain)
+
         let column = column(SplitStrip(), split)
         #expect(column.count == 12)
         #expect(column[0] == "H●Intro 1|" && column[3] == " 4|")
@@ -90,6 +91,7 @@ struct SplitStripTests {
         strip.extend(to: 6, in: &split)
         strip.done()
         #expect(split.sections.map(\.pages) == [1...6, 7...8, 9...12] && strip.editing == nil)
+
         strip.edit(split.sections[2].id, in: split)
         strip.extend(to: 7, in: &split)
         strip.press(3)

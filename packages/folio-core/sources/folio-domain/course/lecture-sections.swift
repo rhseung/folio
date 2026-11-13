@@ -1,6 +1,5 @@
 import Foundation
 
-/// Pages of one lecture file that belong to a unit.
 public struct UnitPages: Codable, Sendable, Hashable {
     public var materialId: UUID
     public var firstPage: Int
@@ -42,7 +41,6 @@ public struct LectureZone: Equatable, Sendable {
 }
 
 extension CourseFile {
-    /// Every unit's pages of `material`, units in outline order.
     public func unitPages(of material: UUID) -> [(unit: Unit, pages: ClosedRange<Int>)] {
         UnitTree.outline(units).flatMap { item in
             item.unit.lecturePages.filter { $0.materialId == material }.map { (item.unit, $0.pages) }
@@ -62,6 +60,7 @@ extension CourseFile {
         guard let reach = held.map(\.pages.upperBound).max() else { return [] }
         let end = pageCount ?? reach
         guard end > 0 else { return [] }
+
         var zones: [LectureZone] = []
         for page in 1...end {
             var here: [UUID] = []
@@ -135,6 +134,7 @@ extension CourseFile {
             units[i].lecturePages.removeAll { $0.materialId == material }
             units[i].touch(by: device, at: now)
         }
+
         for cut in cuts {
             if !units.contains(where: { $0.id == cut.unit }) {
                 guard let title = cut.title?.trimmingCharacters(in: .whitespaces), !title.isEmpty else { continue }
@@ -210,6 +210,7 @@ public struct LectureSplit: Equatable, Sendable {
             guard s.firstPage <= count else { continue }
             tidy.append(s)
         }
+
         guard !tidy.isEmpty else { return nil }
         tidy[0].firstPage = 1
         for i in tidy.indices {
@@ -238,7 +239,6 @@ public struct LectureSplit: Equatable, Sendable {
         self.sections = sections
     }
 
-    /// The section holding `page`.
     public func section(at page: Int) -> Int {
         sections.firstIndex { $0.pages.contains(page) } ?? (page < 1 ? 0 : sections.count - 1)
     }
@@ -254,7 +254,6 @@ public struct LectureSplit: Equatable, Sendable {
         return edge
     }
 
-    /// The pages a boundary after section `i` can move through.
     public func boundaryRange(after i: Int) -> ClosedRange<Int>? {
         guard sections.indices.contains(i), sections.indices.contains(i + 1) else { return nil }
         return sections[i].firstPage...(sections[i + 1].lastPage - 1)
@@ -319,6 +318,7 @@ public struct LectureSplit: Equatable, Sendable {
                 sections.insert(rest, at: j + 1)
             }
         }
+
         split(at: lo)
         let first = section(at: lo)
         while sections.indices.contains(first + 1), sections[first + 1].lastPage <= hi { merge(after: first) }
@@ -374,7 +374,7 @@ public struct LectureSplit: Equatable, Sendable {
 /// Finds a lecture's sections in what the app reads from its PDF: the outline (bookmarks) first, then each page's
 /// title. Only a proposal: the add sheet shows it, and nothing is written until the user approves (#321).
 public enum LectureReading {
-    /// One bookmark: its title, the 1-based page it opens and how deep it sits.
+    /// `page` is 1-based.
     public struct Bookmark: Equatable, Sendable {
         public var title: String
         public var page: Int

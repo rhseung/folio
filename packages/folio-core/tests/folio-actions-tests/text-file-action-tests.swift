@@ -34,6 +34,7 @@ struct TextFileActionTests {
 
     @Test func writeReplacesTheFileAndItsHash() throws {
         let before = try material(Self.tex)
+
         // Same length as the fixture's text, so only the hash can tell the files apart.
         let text = String(try store.readText(Self.tex).reversed())
         try run(MaterialWrite(course: Self.course, material: before.id, text: text))
@@ -219,6 +220,7 @@ struct TextFileActionTests {
         let place = try #require(sync.place(page: 1, x: 200, y: 132))
         #expect(URL(filePath: place.file).resolvingSymlinksInPath() == source.resolvingSymlinksInPath())
         #expect(place.line == 3)
+
         // Another PDF on screen, say one built on another device, is not what this data describes.
         try Data("%PDF-other".utf8).write(to: store.fileURL("Assignments/HW03/hw.pdf"))
         #expect(TexEngine.syncTeX(for: source, showing: store.fileURL("Assignments/HW03/hw.pdf")) == nil)

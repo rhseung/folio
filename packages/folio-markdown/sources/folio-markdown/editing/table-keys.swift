@@ -32,7 +32,6 @@ public struct TableShortcut: Equatable, Sendable {
 }
 
 extension TableCommand {
-    /// The commands in the groups the table menu shows them in.
     public static let groups: [[TableCommand]] = [
         [.rowAbove, .rowBelow, .columnLeft, .columnRight],
         [.moveRowUp, .moveRowDown, .moveColumnLeft, .moveColumnRight],

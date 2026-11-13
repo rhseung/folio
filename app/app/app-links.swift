@@ -6,10 +6,9 @@ import PDFKit
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Where a link opens. Taken apart from the link, so any link opens in any of them.
+/// Kept apart from the link, so any link opens in any of them.
 enum LinkPlacement: CaseIterable {
     case here
-    /// The pane beside this one (`TabPanes.openBeside`).
     case beside
     case tab
     case window
@@ -33,7 +32,7 @@ enum LinkPlacement: CaseIterable {
     }
 }
 
-/// Opens a link from anywhere in a window. Screens call this instead of choosing a destination themselves, so every
+/// Screens call this instead of choosing a destination themselves, so every
 /// way of moving lands in the window's one history. `course` names where the target likely is; it is only a hint.
 struct OpenLinkAction {
     var handler: @MainActor (AppLink, LinkPlacement, UUID?) -> Void = { _, _, _ in }
@@ -49,10 +48,9 @@ extension EnvironmentValues {
     @Entry var place: Navigator.Entry?
 }
 
-/// One window's place and where it has been. Moves only go through `go`, `back` and `forward`.
 @MainActor @Observable
 final class Navigator {
-    /// A link and the course it was found in, worked out once when it is opened rather than on every redraw.
+    /// The course is worked out once when the link is opened rather than on every redraw.
     struct Entry: Equatable, Sendable, Codable {
         var link: AppLink
         var course: UUID?
@@ -137,7 +135,6 @@ extension Workspace {
         return nil
     }
 
-    /// What a step in the history is called in the list a held back button shows.
     func title(of entry: Navigator.Entry) -> String {
         let link = entry.link
         let item = itemName(of: entry)
@@ -184,16 +181,13 @@ extension Workspace {
         }
     }
 
-    /// What a link is named in a note: the file, exam or note, a course with its page, a place. Nil when nothing here
-    /// has it (deleted, or from another GIST folder).
+    /// Nil when nothing here has it (deleted, or from another GIST folder).
     func name(of link: AppLink) -> String? {
         // A place is named as it is written, not with the settings tab opening it would fill in.
         guard let entry = link.kind.isPlace ? Navigator.Entry(link: link) : entry(for: link) else { return nil }
         return link.kind == .course ? title(of: entry) : itemName(of: entry) ?? title(of: entry)
     }
 
-    /// What a link without a name of its own shows in a note's preview: its name and the page, heading, block or
-    /// moment it points at, as a link to a note shows its title and heading.
     func label(of link: AppLink) -> String? {
         name(of: link).map(link.label)
     }
@@ -234,7 +228,7 @@ extension AppLink.Anchor {
         if case .block = self { true } else { false }
     }
 
-    /// Where this heading or block starts in a note's text, for the editor's caret; nil when the note has none.
+    /// For the editor's caret; nil when the note has none.
     func location(in text: String) -> Int? {
         switch self {
         case .heading(let heading): ParsedNote.location(in: text, heading: heading, block: nil)

@@ -75,6 +75,7 @@ final class SearchModel {
         guard let gist = workspace.gist, let store = try? SearchStore.local(for: gist) else { return }
         index = store
         refresh()
+
         // Each course read shows up in the results as it lands, not only at the end.
         await Task.detached {
             _ = try? store.refresh(gist) { done, total in
@@ -85,6 +86,7 @@ final class SearchModel {
                 }
             }
         }.value
+
         caughtUp = true
         indexing = nil
         refresh(keepSelection: true)
@@ -101,6 +103,7 @@ final class SearchModel {
         case .semester(let id): Set(workspace.courses.filter { $0.file.course.semesterId == id }.map(\.id))
         }
         let (query, kinds, limit) = (query, kind.map { Set([$0]) }, kind == nil ? 60 : 200)
+
         searching?.cancel()
         searching = Task {
             let found = await Task.detached { (try? index.search(query, kinds: kinds, courses: courses, limit: limit)) ?? [] }.value

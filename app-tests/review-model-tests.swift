@@ -18,6 +18,7 @@ struct ReviewModelTests {
         #expect(model.action(for: review) == nil)
         #expect(model.action(for: rough) == "옆에 펼치기")
         #expect(model.action(for: other) == "이 노트로 바꾸기")
+
         model.pick(rough)
         #expect(model.side == rough.id && model.action(for: rough) == "옆에서 닫기")
         model.pick(rough)

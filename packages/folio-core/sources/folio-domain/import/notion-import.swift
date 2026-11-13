@@ -2,7 +2,7 @@ import Foundation
 
 /// Notion data as read through the Notion MCP, in a Notion-independent shape.
 /// IDs are the Notion page IDs, so importing twice yields the same entity IDs.
-/// Judgement calls the spec assigns to Claude (rule text → aggregation and attendance caps, exam times written in
+/// Judgement calls (rule text → aggregation and attendance caps, exam times written in
 /// page bodies) are already resolved in this file; the original text stays in `policy.notes` and `memo`.
 public struct NotionExport: Codable, Sendable {
     public struct SemesterRow: Codable, Sendable {
@@ -131,7 +131,7 @@ public enum NotionImporter {
     static let majorGroup = "전공"
     static let gradingModes: [String: GradingMode] = ["상대평가": .relative, "절대평가": .absolute, "S/U": .passFail]
 
-    /// `2026 가을학기` → (2026, fall). Credited terms take the earliest regular year so ordering stays sensible.
+    /// `2026 가을학기` → (2026, fall).
     static func term(of title: String) -> (year: Int, term: Term)? {
         guard let m = title.firstMatch(of: /(\d{4})\s*(봄|여름|가을|겨울)학기/), let term = termNames[String(m.2)] else { return nil }
         return (Int(m.1)!, term)
@@ -162,7 +162,8 @@ public enum NotionImporter {
                 semesters.append(Semester(id: row.id, device: device, at: now, year: year, term: term, start: row.start, end: row.end))
             } else if row.title == creditedTitle {
                 let hours = export.courses.filter { $0.semesterId == row.id }.reduce(0) { $0 + $1.credits }
-                // Notion has no source for it; the row's title keeps its courses together until the user names one.
+                // Credited terms take the earliest regular year so ordering stays sensible. Notion has no source for it;
+                // the row's title keeps its courses together until the user names one.
                 semesters.append(Semester(id: row.id, device: device, at: now, year: regularYears.min() ?? 0, term: .credited, creditedHours: hours,
                                           source: row.title))
             } else {
@@ -198,6 +199,7 @@ public enum NotionImporter {
                 guard let exam else { continue }
                 file.exams.append(Exam(device: device, at: now, title: name, start: exam.start, end: exam.end, location: exam.location ?? "", folder: name))
             }
+
             for (order, c) in (row.components ?? []).enumerated() {
                 file.components.append(GradeComponent(id: c.id, device: device, at: now, name: c.name, weight: c.weight, order: order,
                                                       aggregation: c.aggregation ?? .sum, expectedCount: c.expectedCount))
@@ -205,6 +207,7 @@ public enum NotionImporter {
                     ScoreEntry(id: $0.id, device: device, at: now, componentId: c.id, title: $0.title, score: $0.score, max: $0.max)
                 }
             }
+
             if let p = row.policy {
                 var caps: [AttendanceCap] = []
                 for cap in p.caps ?? [] {

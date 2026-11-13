@@ -46,6 +46,7 @@ struct HelpExampleTests {
         let catalog = Catalog(codes: [ec, gs], letterGrades: grades,
                               people: [Person(device: h.device, at: h.now, name: "김교수")])
         try h.direct(CatalogSet(catalog: catalog), gist: gist)
+
         // A course schema v1 left without a folder, for `transcript move`.
         try Harness.unfile(Course(device: h.device, at: h.now, semesterId: UUID(uuidString: "5E4F1A00-0000-4000-8000-000000000003")!,
                                   title: "콜로퀴움", codes: [gs.id], number: "9331-01", credits: 1, gradingMode: .passFail), gist: gist)
@@ -53,8 +54,10 @@ struct HelpExampleTests {
         let folder = gist.appending(path: "2026-3/EC4207 그래프 이론")
         try "외부에서 쓴 노트\n".write(to: folder.appending(path: "Notes/외부.md"), atomically: true, encoding: .utf8)
         try FileManager.default.copyItem(at: folder.appending(path: "Lectures/05_Matchings.pdf"), to: folder.appending(path: "Lectures/05_Matchings v2.pdf"))
+
         // A deck PDFKit can open, for `material read`: the fixture's own PDFs are placeholders.
         try SampleLecture.write(to: folder.appending(path: "Lectures/06_Hall.pdf"))
+
         // Backups go beside the copy, never to the default ~/Backups; one archive from yesterday for `backup restore`.
         let backups = gist.deletingLastPathComponent().appending(path: "backups")
         var settings = try GISTStore(url: gist).loadSettings().model
@@ -67,6 +70,7 @@ struct HelpExampleTests {
         let matching = try #require(try h.file(GISTStore(url: gist)).units.first { $0.title == "매칭" })
         let card = QuizCard(device: h.device, at: h.now, unitId: matching.id, type: .free, category: .definition, prompt: "최대 매칭의 정의", answer: "크기가 가장 큰 매칭")
         try h.direct(QuizCardSave(course: Harness.graphTheory, cards: [card], movedFrom: nil), gist: gist)
+
         // A recording is the recorder's, not a command's, so it is written as the app writes it.
         let ctx = ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now)
         let file = try ctx.file(Harness.graphTheory)

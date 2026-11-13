@@ -3,7 +3,6 @@ import FolioDomain
 import FolioStorage
 import Foundation
 
-/// A course as the CLI sees it: its folder and the course.json in it.
 struct CourseRef: Identifiable {
     var course: Course
     var store: CourseStore

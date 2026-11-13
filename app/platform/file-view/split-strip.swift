@@ -1,11 +1,8 @@
 import FolioDomain
 import Foundation
 
-/// What the split screen's thumbnail column holds beside the split itself (#321): the section whose pages are being
-/// changed, with the split as it was before so 취소 can put it back; the page a range starts from; the sections folded
-/// by hand. A section is changed from the thumbnails as a class's progress is in the page strip: its header pressed,
-/// then ⇧-click (a tap on a touch screen) moves its near edge; a press then ⇧-click elsewhere makes those pages one
-/// section. The section being changed is also the one picked on the bar and in the rows, so picking it there shows
+/// The split screen's thumbnail column (#321). `before` is the split as it was when a section was taken up, so 취소 can
+/// put it back. The section being changed is also the one picked on the bar and in the rows, so picking it there shows
 /// its pages here.
 struct SplitStrip: Equatable {
     private(set) var editing: UUID?

@@ -2,16 +2,13 @@ import FolioDomain
 import PDFKit
 import SwiftUI
 
-/// The split screen (#321): a lecture's pages down the left in its sections, the page itself in the middle, and the
-/// section bar with a row per section on the right. The column heads each section as the page strip heads a class's
-/// progress, and changes its pages the same way; a gap between two thumbnails cuts a section there, or joins two. The
-/// rows say which unit each section goes to. Saving writes the whole split in one `material split`.
+/// The split screen (#321). Saving writes the whole split in one `material split`.
 struct LectureSplitPane: View {
     let controller: PDFController
     @Binding var split: LectureSplit
     let units: [FolioDomain.Unit]
     let note: String?
-    /// "Claude로 다시 나누기" (#450), only once Claude has given no split.
+    /// Only once Claude has given no split (#450).
     var claude: ClaudeSplitButton?
     let save: () -> Void
     let cancel: () -> Void
@@ -88,8 +85,6 @@ struct LectureSplitPane: View {
     }
 }
 
-/// Every page small, in its section under the section's header; between two pages, a press cuts there, and between
-/// two sections joins them.
 private struct SplitThumbnails: View {
     let controller: PDFController
     @Binding var split: LectureSplit
@@ -97,27 +92,28 @@ private struct SplitThumbnails: View {
     let name: (Int) -> String
 
     var body: some View {
+        let items = strip.items(split, name: name)
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(strip.items(split, name: name).enumerated()), id: \.element.id) { n, item in
+                    ForEach(Array(items.enumerated()), id: \.element.id) { n, item in
                         StripItemFrame(item: item) {
                             lead(item)
                             page(item)
                         }
-                            .id(item.id)
-                            // Each page over the next: a gap's touch target reaches down into the next page's top.
-                            .zIndex(-Double(n))
+                        .id(item.id)
+                        // Each page over the next: a gap's touch target reaches down into the next page's top.
+                        .zIndex(-Double(n))
                     }
                 }
                 .padding(.vertical, Theme.Space.s)
             }
             .overflowFade(.vertical)
             .onChange(of: controller.page) { _, page in
-                withAnimation(.snappy(duration: 0.2)) { proxy.scrollTo(strip.itemID(showing: page + 1, in: split)) }
+                withAnimation(Theme.Motion.quick) { proxy.scrollTo(strip.itemID(showing: page + 1, in: split)) }
             }
         }
-        .animation(.snappy(duration: 0.2), value: strip.items(split, name: name))
+        .animation(Theme.Motion.quick, value: items)
         #if os(iOS)
         .sensoryFeedback(.selection, trigger: split.sections.map(\.pages))
         #endif
@@ -225,7 +221,7 @@ private struct Gap: View {
 
 /// "Claude로 다시 나누기" on the split screen and in the add sheet (#450), shown only after Claude gave no split: past
 /// that the user adjusts the split by hand, and asking Claude the same question again would only repeat its answer.
-/// Its split replaces what is shown, still unsaved. While it reads, a spinner takes the sparkle's place.
+/// Its split replaces what is shown, still unsaved.
 struct ClaudeSplitButton: View {
     let asking: Bool
     let retry: () -> Void

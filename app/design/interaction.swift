@@ -19,9 +19,8 @@ extension PrimitiveButtonStyle {
     static func pointing<Base: PrimitiveButtonStyle>(_ base: Base) -> Self where Self == PointingButtonStyle<Base> { .init(base: base) }
 }
 
-/// A screen's one main action: `.borderedProminent` filled with the course's colour inside a course, the system accent
-/// outside one. Set here, not by the tint around it: a course tints its pages with its ink, pale in dark, and a sheet
-/// doesn't take the tint of the view it opens from, only the `accent` it is handed.
+/// The course's colour is set here, not by the tint around it: a course tints its pages with its ink, pale in dark,
+/// and a sheet doesn't take the tint of the view it opens from, only the `accent` it is handed.
 struct ProminentButtonStyle: PrimitiveButtonStyle {
     @Environment(\.accent) private var accent
 
@@ -108,10 +107,8 @@ private struct LinkTarget: ViewModifier {
 }
 
 extension View {
-    /// Takes files dropped from outside (Finder, Files, another app), outlined in the accent while they hover.
     func fileDrop(_ perform: @escaping ([URL]) -> Void) -> some View { modifier(FileDrop(perform: perform)) }
 
-    /// Lets the file be dragged out, for example into a browser's upload field.
     func fileDrag(_ url: URL) -> some View {
         // shortcut: an iCloud placeholder that isn't downloaded yet drags as nothing; download first if that bites.
         onDrag { NSItemProvider(contentsOf: url) ?? NSItemProvider() }
@@ -220,7 +217,6 @@ private struct KeyProbe: UIGestureRecognizerRepresentable {
 }
 #endif
 
-/// While a touch pick that a tap can't end is under way: that it is, in a word, and the way out of it.
 struct PickingLine: View {
     let text: String
     let done: () -> Void

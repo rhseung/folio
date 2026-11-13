@@ -217,12 +217,14 @@ struct CourseGradesModelTests {
         let f = LetterGrade(device: device, at: .now, symbol: "F", points: 0, countsInGpa: true, countsInCredits: false)
         catalog.letterGrades = [b, f]
         workspace.saveCatalog(catalog)
+
         let course = try #require(workspace.courses.first)
         let model = CourseGradesModel(workspace: workspace, course: course.id)
         var file = course.file
         file.attendance = []
         file.policy.attendanceCap = [AttendanceCap(absences: 9, maxGrade: f.id), AttendanceCap(absences: 6, maxGrade: b.id)]
         file.policy.latesPerAbsence = 3
+
         let a = model.attendance(file)
         #expect(a.absences == 0 && a.cap == nil)
         #expect(a.detail == "6회 B0 · 9회 F · 지각 3회를 결석 1회로 셈")
@@ -288,6 +290,7 @@ struct GradeEditingModelTests {
         workspace.saveCatalog(catalog)
         let course = try #require(workspace.courses.first)
         let model = PolicyModel(workspace: workspace, course: course)
+
         model.topShare = "100"
         #expect(model.invalid)
         model.topShare = "30"

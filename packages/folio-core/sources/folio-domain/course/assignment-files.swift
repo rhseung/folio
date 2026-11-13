@@ -11,7 +11,6 @@ public enum AssignmentFiles {
         "\(CourseFolder.assignments.rawValue)/\(folder(of: assignment))"
     }
 
-    /// Tracked files inside the assignment's folder, folder-relative paths kept as stored.
     public static func materials(of assignment: Assignment, in materials: [Material]) -> [Material] {
         let prefix = path(of: assignment) + "/"
         return materials.filter { $0.path.hasPrefix(prefix) && $0.status != .ignored }
@@ -30,7 +29,7 @@ public enum AssignmentFiles {
     }
 }
 
-/// Where a deadline stands, for badges. Real clock time, not the study-day boundary.
+/// Real clock time, not the study-day boundary.
 public enum DueState: Equatable, Sendable {
     case none
     case overdue(days: Int)

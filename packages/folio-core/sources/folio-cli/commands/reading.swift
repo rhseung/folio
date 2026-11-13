@@ -54,6 +54,7 @@ extension MaterialCommand {
             guard let pdf = PDFPages.open(c.store.fileURL(m.path)) else {
                 throw CLIError(exit: .notFound, message: String(localized: .materialReadUnreadable(m.path)))
             }
+
             let count = pdf.pageCount
             let given = try pages.map(Self.range)
             guard let asked = ReadingLimit.clamp(given, count: count) else {
@@ -64,6 +65,7 @@ extension MaterialCommand {
             let read = reach.map { n in pdf.page(at: n - 1).map { PDFPages.text(of: $0, number: n) } ?? PDFPageText(page: n, text: "", words: 0, figures: 0) }
             let served = titles ? reach : ReadingLimit.served(asked, most: most, lengths: read.map(\.text.count), budget: ReadingLimit.pageText)
             let kept = read.prefix(served.count)
+
             let file = (m.path as NSString).lastPathComponent
             let pictures: [Pictures.Picture] = images ? kept.compactMap { p in
                 pdf.page(at: p.page - 1).flatMap { PDFPages.jpeg($0) }.map { Pictures.Picture(label: "\(file) p.\(p.page)", file: "\(file) p\(p.page).jpg", data: $0) }
@@ -79,6 +81,7 @@ extension MaterialCommand {
                 },
                 next: next)
             if g.json { return try printJSON(shown) }
+
             say(String(localized: .materialReadHeader(m.path, count, served.lowerBound, served.upperBound)).styled(.bold))
             if let outline = shown.outline, !outline.isEmpty {
                 say(String(localized: .materialReadOutline).styled(.dim))
@@ -152,6 +155,7 @@ extension RecordingCommand {
             let shown = Shown(recording: rec.file, session: session, duration: clock(rec.duration),
                               lines: lines.map { Line(at: clock($0.start), text: $0.text) }, next: next.map(clock))
             if g.json { return try printJSON(shown) }
+
             let span = "\(clock(start ?? 0))–\(clock(end ?? rec.duration))"
             say(String(localized: .recordingTranscriptHeader(rec.file, shown.duration, span)).styled(.bold))
             if lines.isEmpty { say(String(localized: .recordingTranscriptEmpty).styled(.dim)) }
@@ -211,6 +215,7 @@ extension NoteCommand {
                 c = try r.course(note)
                 found = nil
             }
+
             let store = c.store
             let listed: [NoteImageFile]
             if !file.isEmpty {
@@ -222,6 +227,7 @@ extension NoteCommand {
                 let assets = store.noteAssets().compactMap(store.coursePath(of:)).filter { MaterialFormat(path: $0) == .image }.sorted()
                 return try show(Shown(note: nil, pictures: assets.enumerated().map { Item(index: $0 + 1, written: $1, path: $1) }), c)
             }
+
             let start = max(from ?? 1, 1)
             let window = Array(listed.enumerated().dropFirst(start - 1).prefix(ReadingLimit.images))
             let pictures = window.compactMap { i, f -> Pictures.Picture? in

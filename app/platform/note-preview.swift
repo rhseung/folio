@@ -3,16 +3,14 @@ import FolioMarkdown
 import SwiftUI
 import WebKit
 
-/// The note preview: the note rendered by `HTMLRenderer`, as the Claude panel renders answers, in a web view. It's read
-/// only; task boxes tick and callouts fold, and everything else is changed in the edit view.
+/// Read only: task boxes tick and callouts fold, and everything else is changed in the edit view.
 struct NotePreview {
     var text: String
     var baseURL: URL?
     var math: MathSyntax = .latex
     var openNote: (String) -> Void = { _ in }
-    /// Where a link opened at shows first: a heading or a block. Scrolled to once for each new one.
+    /// Scrolled to once for each new one.
     var anchor: AppLink.Anchor?
-    /// The note's own link, for copying a link to a heading or block from the menu; nil for a note without an ID.
     var noteLink: AppLink?
     /// Writes a ticked box back: its line in `text`, what the line should still hold, and its new text. False when the
     /// line no longer holds it. Without it boxes don't tick.
@@ -84,8 +82,7 @@ extension NotePreview: UIViewRepresentable {
 }
 #endif
 
-/// Carries the editor's scroll to the preview beside it. Not observed state: going through SwiftUI would render the
-/// note again on every step of a scroll.
+/// Not observed state: going through SwiftUI would render the note again on every step of a scroll.
 @MainActor final class PreviewLink {
     weak var page: NotePreviewPage?
     private(set) var last: (line: Int, frac: Double)?
@@ -101,8 +98,8 @@ extension NotePreview: UIViewRepresentable {
     }
 }
 
-/// The preview's web view and what it shows. Pages are kept and handed out again (`take`, `recycle`): a new web view
-/// starts a web process and parses the bundled scripts, which made opening a note slow.
+/// Pages are kept and handed out again (`take`, `recycle`): a new web view starts a web process and parses the bundled
+/// scripts, which made opening a note slow.
 @MainActor final class NotePreviewPage: NSObject, WKNavigationDelegate {
     let view: PreviewWebView
     private let files = LocalFileScheme()
@@ -285,10 +282,12 @@ extension NotePreview: UIViewRepresentable {
             return out
         }
         widgets.end()
+
         let options: [String: Any] = [
             "math": wanted.math.rawValue, "editable": wanted.editable,
             "base": LocalFileScheme.base(for: wanted.baseURL)?.absoluteString ?? Self.shellURL.absoluteString,
         ]
+
         let theme = NoteStyle.variables(accent: wanted.accent)
         let accentChanged = shown?.accent != wanted.accent
         shown = wanted
@@ -309,7 +308,7 @@ extension NotePreview: UIViewRepresentable {
 
     // MARK: Showing a heading or block
 
-    /// Scrolls to where a link pointed, once the note is on the page; the same anchor again leaves the scroll alone.
+    /// The same anchor again leaves the scroll alone.
     func reveal(_ anchor: AppLink.Anchor?) {
         guard anchor != revealed else { return }
         revealed = anchor
@@ -382,7 +381,6 @@ extension NotePreview: UIViewRepresentable {
         }
     }
 
-    /// Ticks or clears the box on line `line` of the note's text, through `edit`.
     @discardableResult func tick(line: Int) -> Bool {
         guard let edit, line >= 1, line <= lines.count else { return false }
         let old = String(lines[line - 1])
@@ -414,7 +412,6 @@ extension NotePreview: UIViewRepresentable {
         return url == Self.shellURL || url.absoluteString == "about:blank" ? .allow : .cancel
     }
 
-    /// Opens a link of the note in another place, from the page's menu.
     func open(_ href: String, in placement: LinkPlacement) {
         NoteLinks.open(href, base: nil, in: placement, openNote: openNote, openLink: openLink)
     }
@@ -479,7 +476,6 @@ final class PreviewWebView: WKWebView {
     }
 }
 
-/// A menu item that runs a closure, for menus AppKit builds.
 @MainActor final class LinkMenuItem: NSMenuItem {
     private let run: @MainActor () -> Void
 

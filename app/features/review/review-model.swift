@@ -83,6 +83,7 @@ final class ReviewModel {
             let page = via?.materials.first { $0.materialId == item.material.id }?.firstPage ?? file.pages(of: unit.id, in: item.material.id)?.lowerBound
             return (material: item.material, session: via, page: page)
         }
+
         return items.sorted { a, b in
             switch (a.session, b.session) {
             case let (x?, y?) where x.id != y.id: Session.inOrder(x, y)

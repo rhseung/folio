@@ -150,9 +150,11 @@ struct LectureProgressModelTests {
         try store.saveTranscript(LectureTranscript(locale: "ko-KR", lines: [
             .init(start: 0, end: 20, text: "매칭"), .init(start: 20, end: 60, text: "증가 경로"), .init(start: 61, end: 80, text: "홀의 정리"),
         ]), of: recording)
+
         let ctx = ActionContext(gist: try #require(workspace.gist), device: workspace.device, now: workspace.now)
         try ctx.edit(graphTheory) { $0.recordings = [recording] }
         workspace.reload()
+
         let model = RecordingPlayerModel(workspace: workspace, courseId: graphTheory, store: store, recording: recording)
         #expect((0..<3).map { model.page(at: $0)?.page } == [4, nil, 6])
         #expect(model.pageLabel(try #require(model.page(at: 2))) == "p.6")

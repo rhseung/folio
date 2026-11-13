@@ -11,11 +11,14 @@ struct QuizTests {
         #expect(WrongFlow.status([(d("2026-10-01"), .partial)]) == .open(since: d("2026-10-01")))
         let resolved = WrongFlow.status([(d("2026-10-01"), .wrong), (d("2026-10-03"), .correct)])
         #expect(resolved == .resolved(on: d("2026-10-03"), recheckDue: d("2026-10-10")))
+
         // Wrong again at the recheck: back to open.
         #expect(WrongFlow.status([(d("2026-10-01"), .wrong), (d("2026-10-03"), .correct), (d("2026-10-10"), .wrong)]) == .open(since: d("2026-10-10")))
+
         // Correct at the recheck: done, no further recheck.
         #expect(WrongFlow.status([(d("2026-10-01"), .wrong), (d("2026-10-03"), .correct), (d("2026-10-11"), .correct)])
             == .resolved(on: d("2026-10-03"), recheckDue: nil))
+
         // A correct answer before the recheck day doesn't count as the recheck.
         #expect(WrongFlow.status([(d("2026-10-01"), .wrong), (d("2026-10-03"), .correct), (d("2026-10-05"), .correct)])
             == .resolved(on: d("2026-10-03"), recheckDue: d("2026-10-10")))
@@ -30,6 +33,7 @@ struct QuizTests {
             fresh: [(d("2026-10-21"), .correct)],
         ]
         let picked = WrongFlow.pickForReview(cards: [fresh, stale, open, recheck, never], attempts: attempts, today: d("2026-10-22"), count: 4)
+
         #expect(Array(picked.prefix(2)) == [open, recheck])
         #expect(picked[2] == never && picked[3] == stale)
     }
@@ -45,6 +49,7 @@ struct QuizTests {
 
     @Test func deckFiltersByScopeAndOrders() {
         let u1 = UUID(), u2 = UUID(), u3 = UUID()
+
         // File order puts a u2 card first; unit order must still lead with u1.
         let a = card(u2, .proof), b = card(u1), c = card(u1, .theorem), x = card(u3), e = card(u2)
         let history: [UUID: AttemptHistory] = [
@@ -73,6 +78,7 @@ struct QuizTests {
             cards[2].id: [(d("2026-10-01"), .correct)],
         ]
         let byUnit = QuizStats.tally(cards, keys: { [$0.unitId] }, history: { history[$0.id] ?? [] })
+
         #expect(byUnit[u1]?.items == 2 && byUnit[u1]?.open == 1 && byUnit[u1]?.resolved == 1)
         #expect(byUnit[u1]?.accuracy == 0.5)  // wrong 0 + partial 0.5 + correct 1 over 3 attempts
         #expect(byUnit[u2]?.attempted == 1 && byUnit[u2]?.correct == 1 && byUnit[u2]?.progress == 0.5)
@@ -80,6 +86,7 @@ struct QuizTests {
         #expect(byCategory[.proof]?.open == 1 && byCategory[.proof]?.items == 2)
         let total = QuizStats.total(cards) { history[$0.id] ?? [] }
         #expect(total.items == 4 && total.open == 1 && total.resolved == 1 && total.correct == 1)
+
         // A problem in two units counts in both.
         let shared = ProblemSet.Problem(number: "3", unitIds: [u1, u2])
         let multi = QuizStats.tally([shared], keys: \.unitIds, history: { _ in [(d("2026-10-01"), .wrong)] })

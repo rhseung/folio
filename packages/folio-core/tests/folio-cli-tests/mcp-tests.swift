@@ -29,6 +29,7 @@ struct MCPTests {
         for type in Actions.all { #expect(names.contains(MCPServer.name(type.command)), "\(type.command) has no tool") }
         for read in ["today", "exam_list", "note_show", "search", "gpa"] { #expect(names.contains(read)) }
         for tool in ["run", "mcp", "skill", "unlock", "cleanup_plan"] { #expect(!names.contains(tool)) }
+
         // Each tool's schema stands alone: clients don't share `$defs` between tools.
         for t in tools {
             guard let schema = t["inputSchema"] else { continue }
@@ -61,6 +62,7 @@ struct MCPTests {
 
     @Test func readResultsAreCompactJSON() throws {
         let gist = try Harness.fixtureCopy()
+
         // The fixture's note has empty `sessionIds` and `unitIds`, printed over several lines.
         let (failed, texts) = try call(MCPServer(gist: nil, propose: true), gist, "note_list", ["course": "EC4207"])
         #expect(!failed, "\(texts)")
@@ -156,14 +158,17 @@ struct MCPTests {
         let semester = try #require(try found(panel, gist, "새 학기 만들기").first { $0["command"] == "semester add" })
         #expect(semester["inputSchema"]?["properties"]?["year"] != nil)
         #expect(semester["write"] == .bool(true))
+
         // Not listed in the panel, so it goes through action_run.
         #expect(semester["tool"] == nil)
         let exam = try #require(try found(panel, gist, "시험 추가").first { $0["command"] == "exam add" })
         #expect(exam["tool"] == "exam_add")
+
         // Only what action_run can run: `unlock` is a command but never a tool.
         let unlock = try found(MCPServer(gist: nil, propose: false), gist, "성적 보이게 해줘")
         #expect(!unlock.contains { $0["command"] == "unlock" })
         #expect(try call(panel, gist, "action_search", ["query": ""]).0)
+
         // A limit past Int's range is clamped rather than ending the server.
         let (huge, texts) = try call(panel, gist, "action_search", ["query": "시험 추가", "limit": .number(1e300)])
         #expect(!huge, "\(texts)")
@@ -209,6 +214,7 @@ struct MCPTests {
         #expect(!failed, "\(texts)")
         #expect(texts.first?.contains("dayBoundaryMinutes") == true, "\(texts)")
         #expect(try call(panel, gist, "action_run", ["action": "gpa"]).0 == false)
+
         // The owner didn't unlock: the command's own Touch ID check refuses, as in the terminal.
         let locked = try call(panel, gist, "action_run", ["action": "gpa"], unlocked: false)
         #expect(locked.0, "\(locked.1)")
@@ -228,6 +234,7 @@ struct MCPTests {
     @Test func aUnitsPagesBuildOnTheUnitProposedBeforeThem() throws {
         let a = try Harness.fixtureCopy()
         #expect(h.cli(LectureSectionCommandTests.track, gist: a).code == 0)
+
         // Tracked once and copied: tracking twice would give the lecture two different ids.
         let b = FileManager.default.temporaryDirectory.appending(path: "folio-\(UUID().uuidString)")
         try FileManager.default.copyItem(at: a, to: b)
@@ -241,16 +248,19 @@ struct MCPTests {
         let (first, second) = (try #require(proposals(unit.1).first), try #require(proposals(pages.1).first))
         #expect(first.after == nil)
         #expect(second.after == [0])
+
         // Read back in the same answer, marked as not yet approved.
         let shown = try call(server, a, "unit_show", ["unit": "EC4207/König"])
         #expect(!shown.0, "\(shown.1)")
         #expect(shown.1.joined().contains("\"proposed\":\"added\""), "\(shown.1)")
         #expect(shown.1.joined().contains("firstPage"), "\(shown.1)")
         #expect(try Harness.files(a) == before)
+
         // Applied in order, they make what the answer read.
         try apply(first, to: b)
         try apply(second, to: b)
         #expect(h.cli(["unit", "show", "EC4207/König"], gist: b).out.contains("05_Matchings.pdf p.5-8"))
+
         // The next question's server starts from the folder, without the proposals left unapproved.
         let next = MCPServer(gist: nil, propose: true)
         #expect(try call(next, a, "unit_pages_add", ["course": "EC4207", "unit": "König", "material": "05_Matchings.pdf",
@@ -262,6 +272,7 @@ struct MCPTests {
         let (a, b) = (try Harness.fixtureCopy(), try Harness.fixtureCopy())
         let before = try Harness.files(a)
         let server = MCPServer(gist: nil, propose: true)
+
         // An independent proposal first: the edit builds on the note only, not on this.
         let exam = try call(server, a, "exam_add", ["course": "EC4207", "title": "제안 퀴즈"])
         #expect(!exam.0, "\(exam.1)")
@@ -287,6 +298,7 @@ struct MCPTests {
     @Test func aRefusedProposalLeavesNothingToBuildOn() throws {
         let a = try Harness.fixtureCopy()
         let server = MCPServer(gist: nil, propose: true)
+
         // Refused: no such note. Its dry run stops it before the copy is written.
         #expect(try call(server, a, "note_edit", ["course": "EC4207", "note": "없는 노트", "append": "x"]).0)
         let listed = try call(server, a, "note_list", ["course": "EC4207"])

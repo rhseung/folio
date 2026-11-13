@@ -29,6 +29,7 @@ struct NoteLinkMigrationTests {
 
     @Test func aNotesSessionMovesToTheSessionsFreeSlot() throws {
         let r = try migrated(sessions: [session(1), session(2, review: 21)], notes: [note(10, "rough", session: 1), note(11, "review", session: 2), note(21, "review", session: 2)])
+
         // Session 2's review slot was taken by note 21, so note 11 comes out without a session rather than as a second one.
         #expect(r.sessions[0]["roughNoteId"] == .string(id(10).uuidString))
         #expect(r.sessions[1]["reviewNoteId"] == .string(id(21).uuidString))

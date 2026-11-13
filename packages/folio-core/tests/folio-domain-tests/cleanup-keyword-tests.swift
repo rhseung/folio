@@ -53,6 +53,7 @@ struct CleanupKeywordTests {
         ]))
         var planner = CoursePlanner(course: course)
         let targets = Set(planner.plan().map(\.to))
+
         #expect(targets == ["Lectures/01-1_lecture1-Bool.pdf", "Lectures/01-1_lecture1-Bool.pptx", "Lectures/01-2_lecture1-Review.pdf"])
     }
 
@@ -68,6 +69,7 @@ struct CleanupKeywordTests {
         ]))
         var planner = CoursePlanner(course: FolderTree(name: course.name, content: .folder(course.children + [other])))
         let moves = planner.plan()
+
         #expect(Set(moves.map(\.to)) == ["Inherited/2023_final.pdf", "Inherited/2023_final (2).pdf", "Inherited/Final-2023.pdf"])
         #expect(moves.contains { $0.review == .nameCollision })
     }
@@ -85,6 +87,7 @@ struct CleanupKeywordTests {
         ]))
         var planner = CoursePlanner(course: course)
         let moves = Dictionary(uniqueKeysWithValues: planner.plan().map { ($0.from, $0) })
+
         #expect(moves["Exams/Past/관훈 선배 리포트"].map { ($0.to, $0.kind, $0.review) }! == ("Inherited/관훈 선배 리포트", nil, nil))
         #expect(moves["Exams/Past/mid-sol.pdf"].map { ($0.to, $0.kind) }! == ("Inherited/mid-sol.pdf", .pastExam))
         #expect(moves["족보 (소순범)/2024 중간.pdf"].map { ($0.to, $0.kind) }! == ("Inherited/소순범/2024 중간.pdf", .pastExam))
@@ -148,6 +151,7 @@ struct CleanupKeywordTests {
             ])),
         ]))
         var planner = CoursePlanner(course: course)
+
         #expect(planner.plan().map(\.from) == ["Exams/Seating.pdf"])
         #expect(planner.removals == ["Exams/Quiz 3"])
     }
@@ -163,6 +167,7 @@ struct CleanupKeywordTests {
         ]))
         var planner = CoursePlanner(course: course)
         let moves = planner.plan()
+
         #expect(moves.map { [$0.from, $0.to, $0.exam ?? ""] } == [["Exams/Quiz3/Quiz3 대비 정리.pdf", "Study/Quiz3 대비 정리.pdf", "Quiz3"]])
         #expect(moves.first?.review == .guessedOrigin)
     }
@@ -186,10 +191,12 @@ struct CleanupKeywordTests {
                 file("Analysis of synthetic aspirin.pdf"),
             ])),
         ]))
+
         // Weekly from week 3, so experiment n's session is in week n + 2.
         var planner = CoursePlanner(course: course, labs: Dictionary(uniqueKeysWithValues: labs.enumerated().map { ($1, $0 + 1) }),
                                     labWeeks: Dictionary(uniqueKeysWithValues: labs.indices.map { ($0 + 1, $0 + 3) }))
         let to = Dictionary(uniqueKeysWithValues: planner.plan().map { ($0.from, $0.to) })
+
         #expect(to["Manuals/accuracy and precision.pdf"] == "Lectures/03_accuracy and precision.pdf")
         #expect(to["Manuals/Recrystallization and melting point determination.pdf"] == "Lectures/05_Recrystallization and melting point determination.pdf")
         #expect(to["Manuals/Molecular modeling (VSEPR).pdf"] == "Lectures/06_Molecular modeling (VSEPR).pdf")

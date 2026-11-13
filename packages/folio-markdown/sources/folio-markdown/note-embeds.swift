@@ -115,7 +115,6 @@ extension ParsedNote {
         }
     }
 
-    /// The top-level block holding a block ID and, when it is in a list, the deepest item holding it.
     func blockLines(_ id: String) -> (top: ClosedRange<Int>, item: ClosedRange<Int>?)? {
         guard let line = bodyLines.firstIndex(where: { $0.firstMatch(of: BlockID.pattern).map { String($0.1) } == id }).map({ $0 + 1 }),
               let top = document.children.first(where: { lines(of: $0)?.contains(line) ?? false }),

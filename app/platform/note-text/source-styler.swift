@@ -404,6 +404,7 @@ struct MathScan {
             let tex = ranges.map { ns.substring(with: $0) }.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
             if !tex.isEmpty { fencedBlocks.append(Block(lines: open.first...last, tex: tex, ranges: ranges, syntax: open.syntax)) }
         }
+
         var i = 0
         while i < lines.count {
             let line = ns.substring(with: lines[i])
@@ -492,7 +493,7 @@ struct MathScan {
     }
 }
 
-/// Note pictures from `Notes/assets`, read once per file and size.
+/// Read again only when the file's modification date changes, so an edited picture shows without reopening the note.
 @MainActor enum NoteImages {
     private static var cache: [URL: (date: Date?, image: PlatformImage)] = [:]
 

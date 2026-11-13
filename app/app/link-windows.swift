@@ -27,7 +27,7 @@ extension FocusedValues {
     @Entry var openPlace: (@MainActor (AppLink) -> Void)?
 }
 
-/// Back and forward in the toolbar. A click steps once; holding the button lists the places it would step through.
+/// A click steps once; holding the button lists the places it would step through.
 struct HistoryButtons: View {
     let navigator: Navigator
     let title: (Navigator.Entry) -> String
@@ -169,12 +169,11 @@ struct WindowWidth: NSViewRepresentable {
     }
 }
 
-/// The window a view is in, kept weakly: the window owns the view.
+/// Weak: the window owns the view.
 @MainActor final class WindowHost {
     weak var window: NSWindow?
 }
 
-/// Finds the window a view is in once it has one.
 struct WindowReader: NSViewRepresentable {
     let found: @MainActor (NSWindow) -> Void
 

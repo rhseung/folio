@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// A grade picked on a track of stops, lowest on the left. The fill turns from red through amber to green as it rises,
-/// each stop clicks under the finger, and pressing the picked stop again clears it back to 미정.
 struct GradeSteps: View {
     struct Stop: Identifiable {
         let id: UUID
@@ -42,7 +40,7 @@ struct GradeSteps: View {
         }
         // Its own size: in a narrow row the off-scale buttons were squeezed before the row's label gave way.
         .fixedSize()
-        .animation(.snappy(duration: 0.22), value: selection)
+        .animation(Theme.Motion.quick, value: selection)
         .sensoryFeedback(.levelChange, trigger: selection)
         .accessibilityElement()
         .accessibilityLabel(Text(.designGrade))

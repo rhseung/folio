@@ -155,6 +155,7 @@ public enum ReviewScheduler {
             priority += w.quizMiss * (1 - (input.quizAccuracy ?? 1)) + w.openWrong * Double(input.openWrongCards)
             return Item(unitId: state.unitId, due: due, overdueDays: overdue, priority: priority, writeNoteFirst: state.writeNoteFirst, deferred: nil)
         }
+
         items.sort { ($0.priority, $1.due) > ($1.priority, $0.due) }
         if let limit = settings.dailyLimit, items.count > limit {
             for i in limit..<items.count { items[i].deferred = .dailyLimit }
@@ -173,6 +174,7 @@ public enum ReviewScheduler {
             inputs += UnitReviewInput.all(for: file, reviews: reviews, settings: settings, calendar: calendar, now: now)
             for unit in file.units { owners[unit.id] = (file.course.id, unit.title) }
         }
+
         let states = inputs.map { state(of: $0, settings: settings.review, today: today) }
         return queue(states, inputs: inputs, settings: settings.review, today: today).compactMap { item in
             owners[item.unitId].map { ReviewEntry(item: item, courseId: $0.0, unitTitle: $0.1) }

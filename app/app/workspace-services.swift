@@ -20,7 +20,7 @@ extension Workspace {
 
     // MARK: Catalog
 
-    /// Saves catalog.json; rows that changed are stamped as edited from this device. Unknown keys in the file are kept.
+    /// Rows that changed are stamped as edited from this device. Unknown keys in the file are kept.
     func saveCatalog(_ new: Catalog) {
         guard catalogLoaded else {
             error = String(localized: .workspaceCatalogUnreadable)

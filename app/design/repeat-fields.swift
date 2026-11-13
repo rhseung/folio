@@ -1,8 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// The rows of a menu picking an assignment's repeat, for the assignment sheet and the quick-add chip alike: no repeat,
-/// the presets, and "직접 설정…", which opens `RepeatRuleRows` for an interval, a unit and weekdays.
 struct RepeatMenuItems: View {
     let selection: AssignmentRepeat?
     /// The rule is edited by its parts rather than picked: one no preset matches, or "직접 설정" picked.
@@ -26,8 +24,7 @@ struct RepeatMenuItems: View {
     }
 }
 
-/// A rule's parts as form rows: the interval with its unit, and for a weekly rule the weekdays. With no weekdays the
-/// rule falls on the deadline's, so that one shows as picked and picking only it again stores none.
+/// With no weekdays the rule falls on the deadline's, so that one shows as picked and picking only it again stores none.
 struct RepeatRuleRows: View {
     @Binding var rule: AssignmentRepeat
     let dueWeekday: Int?
@@ -55,7 +52,7 @@ struct RepeatRuleRows: View {
     }
 }
 
-/// The seven weekdays as toggles, Monday first. At least one stays on: a weekly rule falls on some day.
+/// At least one stays on: a weekly rule falls on some day.
 struct WeekdayToggles: View {
     @Binding var selection: Set<Int>
     @Environment(\.accent) private var accent

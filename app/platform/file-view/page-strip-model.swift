@@ -3,9 +3,8 @@ import FolioDomain
 import Foundation
 import Observation
 
-/// The page strip beside a lecture PDF (#147): the file's pages cut into sections, one per class that went through
-/// them, each foldable under a one-line header; and a range picked on the thumbnails, saved as one class's progress
-/// or as a class's pages changed. Saving is `material link`, the same action as the link popover and the wrap-up.
+/// The page strip beside a lecture PDF (#147). Saving is `material link`, the same action as the link popover and the
+/// wrap-up.
 @MainActor @Observable
 final class PageStripModel {
     /// A class's section: its id is the class's, its title the day (`10/28(수)`).
@@ -41,7 +40,7 @@ final class PageStripModel {
     var chosen: UUID?
     /// The section just saved, lit for a moment so the eye finds where the row went.
     var fresh: UUID?
-    /// Folded or unfolded by hand, per class; the rest follow `openByDefault`.
+    /// Folded or unfolded by hand, per class; the rest follow `isOpen`'s default.
     private var folds: [UUID: Bool]
     @ObservationIgnored private let defaults: UserDefaults?
 
@@ -69,13 +68,13 @@ final class PageStripModel {
     private var file: CourseFile? { courseId.flatMap { workspace.course($0)?.file } }
 
     /// Only a course's lecture files have progress: the same files the wrap-up asks about.
-    var picks: Bool {
+    var isLecture: Bool {
         guard let file, let materialId else { return false }
         return file.lectureFiles.contains { $0.id == materialId }
     }
 
     var sections: [Section] {
-        guard picks, let file, let materialId else { return [] }
+        guard isLecture, let file, let materialId else { return [] }
         return file.progressSections(of: materialId, pageCount: pageCount).compactMap { s in
             file.sessions.first { $0.id == s.session }.map { Section(id: s.session, pages: s.pages, title: file.day(of: $0, calendar: workspace.calendar)) }
         }
@@ -152,7 +151,7 @@ final class PageStripModel {
     /// round; a class's range being changed moves its end to `page`, or its start when `page` is before it. Either
     /// stops at another class's pages, which a range never shares (`Session.progressOverlap`).
     func extend(to page: Int) {
-        guard picks else { return }
+        guard isLecture else { return }
         if picking, selection == nil { return start(at: page) }
         if editing != nil, let selection {
             guard let room = PageRange.room(at: selection.lowerBound, besides: taken, pages: pageCount) else { return }
@@ -170,7 +169,7 @@ final class PageStripModel {
     /// A long press, the touch screen's way in: a range of that one page, which the next taps widen. On a section's
     /// page it changes that class's range instead, as its header would.
     func start(at page: Int) {
-        guard picks else { return }
+        guard isLecture else { return }
         if let section = sections.first(where: { $0.pages.contains(page) }) { return edit(section) }
         guard PageRange.room(at: page, besides: taken, pages: pageCount) != nil else { return }
         clear()
@@ -212,19 +211,14 @@ final class PageStripModel {
 
     // MARK: Saving
 
-    /// Classes held so far that have no pages of this file yet, the latest first: a class with pages here is changed
-    /// from its header instead. A cancelled class taught nothing.
     var choices: [Choice] {
         guard let file, let materialId else { return [] }
         let settings = workspace.settings, calendar = workspace.calendar
         let today = settings.studyDay(of: workspace.now, calendar: calendar)
-        let held = Session.held(among: file.sessions.filter { !$0.isCancelled }, now: workspace.now, settings: settings, calendar: calendar)
-        return held.reversed()
-            .filter { s in s.materials.first { $0.materialId == materialId }?.pages == nil }
-            .map { s in
-                Choice(id: s.id, title: file.title(of: s, calendar: calendar), day: file.day(of: s, calendar: calendar),
-                       today: settings.studyDay(of: s.date, calendar: calendar) == today)
-            }
+        return file.sessionsForNewRange(of: materialId, now: workspace.now, settings: settings, calendar: calendar).map { s in
+            Choice(id: s.id, title: file.title(of: s, calendar: calendar), day: file.day(of: s, calendar: calendar),
+                   today: settings.studyDay(of: s.date, calendar: calendar) == today)
+        }
     }
 
     /// Today's class is the one to save as, alone: no menu to open.

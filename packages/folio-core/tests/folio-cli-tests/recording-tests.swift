@@ -143,6 +143,7 @@ struct SessionLinkViewedTests {
         #expect(h.cli(["session", "link-viewed", "EC4207/10-28"], gist: gist).code == 0)
         var file = try h.file(GISTStore(url: gist))
         let session = try #require(file.sessions.first { $0.id == SessionCommandTests.id })
+
         // Page 4 was passed in two seconds.
         #expect(session.materials.map { [$0.firstPage, $0.lastPage] } == [[6, 9]])
 

@@ -76,6 +76,7 @@ struct PatchNotesTests {
           {"tag_name": "test", "draft": false, "prerelease": false, "published_at": "2026-11-05T03:00:00Z", "body": null}
         ]
         """
+
         let releases = try PatchNotes.releases(fromGitHub: Data(json.utf8))
         #expect(releases.map(\.version) == [V(0, 2, 1), V(0, 2, 0)])
         #expect(releases[0].items == [Item(kind: .fix, text: "칸 닫기")])
@@ -144,11 +145,13 @@ struct PatchNotesTests {
     @Test func thePageListsWhatThisAppHasAndFilters() {
         let history = PatchNotes.history(Self.feed, upTo: V(0, 3, 0))
         #expect(history.map(\.version) == [V(0, 3, 0), V(0, 2, 1), V(0, 2, 0)])
+
         let fixes = PatchNotes.filter(history, kind: .fix, query: "")
         #expect(fixes.map(\.version) == [V(0, 3, 0), V(0, 2, 1)])
         #expect(fixes.allSatisfy { $0.items.allSatisfy { $0.kind == .fix } })
         #expect(PatchNotes.filter(history, kind: nil, query: "0.2.1").map(\.version) == [V(0, 2, 1)])
         #expect(PatchNotes.filter(history, kind: .feat, query: "0.2.1").isEmpty)
+
         let ordered = PatchNotes.ordered(PatchNotes.items(in: Self.body))
         #expect(ordered.map(\.kind) == [.feat, .feat, .fix, .fix, .fix, .change])
         #expect(ordered.filter { $0.kind == .fix }.map(\.text) == ["수식 말풍선 위와 오른쪽 여백", "회차 노트의 링크", "소제목 뒤의 항목"])
@@ -192,6 +195,7 @@ struct PatchNotesTests {
                 }
                 return
             }
+
             #expect(seen < current)
             #expect(s.latest.version == current)
             #expect(s.releases.allSatisfy { seen < $0.version && $0.version <= current })

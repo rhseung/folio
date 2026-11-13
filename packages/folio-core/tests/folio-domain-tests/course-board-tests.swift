@@ -17,6 +17,7 @@ struct CourseBoardTests {
         #expect(exam.isOver(now: now, today: today, calendar: calendar))
         exam.end = now + 60
         #expect(!exam.isOver(now: now, today: today, calendar: calendar))
+
         // Without an end, an exam started earlier today is still today's.
         exam.end = nil
         #expect(!exam.isOver(now: now, today: today, calendar: calendar))
@@ -63,6 +64,7 @@ struct CourseBoardTests {
         let file = CourseFile(course: Course(device: device, at: now, title: ""), units: [taught, tested], sessions: [session], exams: [exam],
                               notes: [stale, entry(topic, .unit, units: [tested.id]), entry(summary, .examSummary, exam: exam.id), entry(loose, .rough)])
         let meta = Dictionary(uniqueKeysWithValues: file.notes.map { ($0.id, file.meta(of: $0)) })
+
         #expect(meta[review]?.sessionId == session.id && meta[review]?.unitIds == [taught.id])
         #expect(meta[topic]?.unitIds == [tested.id] && meta[topic]?.sessionId == nil)
         #expect(meta[summary]?.unitIds == [tested.id])
@@ -77,5 +79,80 @@ struct CourseBoardTests {
         #expect(ReviewState(unitId: unit, step: 0, due: nil, settled: true, writeNoteFirst: false).isOnTrack(today: today))
         #expect(!ReviewState(unitId: unit, step: 0, due: LocalDate("2026-10-19")!, settled: false, writeNoteFirst: false).isOnTrack(today: today))
         #expect(!ReviewState(unitId: unit, step: 0, due: today, settled: false, writeNoteFirst: true).isOnTrack(today: today))
+    }
+
+    // MARK: Notes page
+
+    struct Listed {
+        var meta: NoteMeta
+        var title: String
+    }
+
+    func titles(_ group: NoteGroup, _ notes: [Listed], in file: CourseFile) -> [String] {
+        group.sorted(notes, meta: \.meta, title: \.title, in: file).map(\.title)
+    }
+
+    /// The newest class first, a review note covering several classes at the last of them, the rough note before the
+    /// review note of one class, and notes without a class last, rough first and then by title.
+    @Test func classNotesSortByTheirLatestClass() {
+        let notes = [
+            Listed(meta: NoteMeta(kind: .rough), title: "둘째 러프"),
+            Listed(meta: NoteMeta(kind: .review), title: "밀린 복습"),
+            Listed(meta: NoteMeta(kind: .rough), title: "셋째 러프"),
+            Listed(meta: NoteMeta(kind: .review), title: "가 복습"),
+            Listed(meta: NoteMeta(kind: .rough), title: "다 러프"),
+            Listed(meta: NoteMeta(kind: .rough), title: "나 러프"),
+        ]
+        var sessions = (1...3).map { Session(device: device, at: now, week: $0, date: now + Double($0) * 86_400) }
+        sessions[1].roughNoteId = notes[0].meta.id
+        sessions[0].reviewNoteId = notes[1].meta.id
+        sessions[2].reviewNoteId = notes[1].meta.id
+        sessions[2].roughNoteId = notes[2].meta.id
+        let file = CourseFile(course: Course(device: device, at: now, title: ""), sessions: sessions)
+
+        #expect(titles(.classes, notes, in: file) == ["셋째 러프", "밀린 복습", "둘째 러프", "나 러프", "다 러프", "가 복습"])
+    }
+
+    /// The next exam first; a summary of an exam without a start, or of none, after every dated one, by title.
+    @Test func examSummariesSortByTheExamsStart() {
+        let later = Exam(device: device, at: now, title: "기말", start: now + 5 * 86_400)
+        let sooner = Exam(device: device, at: now, title: "중간", start: now + 86_400)
+        let undated = Exam(device: device, at: now, title: "퀴즈")
+        let notes = [
+            Listed(meta: NoteMeta(kind: .examSummary, examId: later.id), title: "기말 정리"),
+            Listed(meta: NoteMeta(kind: .examSummary), title: "정리 B"),
+            Listed(meta: NoteMeta(kind: .examSummary, examId: undated.id), title: "정리 A"),
+            Listed(meta: NoteMeta(kind: .examSummary, examId: sooner.id), title: "중간 정리"),
+        ]
+        let file = CourseFile(course: Course(device: device, at: now, title: ""), exams: [later, sooner, undated])
+
+        #expect(titles(.exams, notes, in: file) == ["중간 정리", "기말 정리", "정리 A", "정리 B"])
+    }
+
+    /// Titles compare as Finder does, so `노트 2` comes before `노트 10`; empty groups are left out and the rest keep the
+    /// page's order whatever order the notes come in.
+    @Test func notesGroupInPageOrder() {
+        let notes = [
+            Listed(meta: NoteMeta(kind: .free), title: "노트 10"),
+            Listed(meta: NoteMeta(kind: .unit), title: "단원"),
+            Listed(meta: NoteMeta(kind: .free), title: "노트 2"),
+            Listed(meta: NoteMeta(kind: .rough), title: "러프"),
+        ]
+        let file = CourseFile(course: Course(device: device, at: now, title: ""))
+        let grouped = NoteGroup.grouped(notes, meta: \.meta, title: \.title, in: file)
+
+        #expect(grouped.map(\.group) == [.classes, .units, .free])
+        #expect(grouped.last?.notes.map(\.title) == ["노트 2", "노트 10"])
+        #expect(NoteKind.allCases.map(NoteGroup.init) == [.classes, .classes, .exams, .units, .free])
+    }
+
+    /// A unit note's units come in outline order, a chapter's units right under it, not in the order the note lists them.
+    @Test func aUnitNotesUnitsFollowTheOutline() {
+        let chapter = Unit(device: device, at: now, title: "장", order: 1)
+        let inner = Unit(device: device, at: now, title: "절", order: 0, parentId: chapter.id)
+        let first = Unit(device: device, at: now, title: "처음", order: 0)
+        let file = CourseFile(course: Course(device: device, at: now, title: ""), units: [inner, chapter, first])
+        #expect(file.units(of: NoteMeta(kind: .unit, unitIds: [inner.id, first.id])).map(\.title) == ["처음", "절"])
+        #expect(file.units(of: NoteMeta(kind: .unit, unitIds: [chapter.id, inner.id])).map(\.title) == ["장", "절"])
     }
 }

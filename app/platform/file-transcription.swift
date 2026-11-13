@@ -71,6 +71,7 @@ enum AppleFileTranscriber {
             defer { watch.cancel() }
             try await request.downloadAndInstall()
         }
+
         guard await AssetInventory.status(forModules: [transcriber]) == .installed else { throw TranscriptionError.localeUnsupported }
         let file: AVAudioFile
         do { file = try AVAudioFile(forReading: url) } catch { throw TranscriptionError.unreadableAudio }

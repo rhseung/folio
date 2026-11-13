@@ -104,7 +104,6 @@ extension InputGuide.Phrase {
     }
 }
 
-/// What the window's input guide sheet is open for.
 struct InputGuideRequest: Identifiable {
     let id = UUID()
     let syntax: MathSyntax

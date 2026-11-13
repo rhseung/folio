@@ -46,6 +46,7 @@ struct CourseWorkTests {
         let skipped = SessionPlanner.suggestion(schedule: monWed, sessions: [], from: fall.start, to: fall.end, examWeeks: fall.examWeeks,
                                                 now: date("2026-10-19 09:00"), calendar: calendar)
         #expect(skipped?.date == date("2026-10-26 13:00"))
+
         // An exam held in class time is part of that class, so the class still comes.
         let held = SessionPlanner.suggestion(schedule: monWed, sessions: [], from: fall.start, to: fall.end, examWeeks: fall.examWeeks,
                                              now: date("2026-10-26 09:00"), calendar: calendar)
@@ -67,12 +68,15 @@ struct CourseWorkTests {
         let made = Session(device: device, at: .now, week: 10, date: date("2026-11-04 13:00"))
         let plan = SessionPlanner.planned(schedule: monWed, sessions: [cancelled, made], from: LocalDate("2026-09-02"), to: LocalDate("2026-11-25"),
                                           now: date("2026-11-03 09:00"), calendar: calendar)
+
         #expect(plan.map(\.date) == ["2026-11-11 13:00", "2026-11-16 13:00", "2026-11-18 13:00", "2026-11-23 13:00", "2026-11-25 13:00"].map(date))
+
         // Without an end, the coming week only, as the suggestion always did.
         let open = SessionPlanner.planned(schedule: monWed, sessions: [], from: nil, to: nil, now: date("2026-11-03 09:00"), calendar: calendar)
         #expect(open.map(\.date) == ["2026-11-04 13:00", "2026-11-09 13:00"].map(date))
         #expect(SessionPlanner.suggestion(schedule: monWed, sessions: [made], from: nil, to: nil, now: date("2026-11-03 09:00"), calendar: calendar)?.date
                 == date("2026-11-09 13:00"))
+
         // A hand-edited term whose start is after its end plans nothing instead of running on.
         let flipped = SessionPlanner.planned(schedule: monWed, sessions: [], from: LocalDate("2026-12-01"), to: LocalDate("2026-11-25"),
                                              now: date("2026-11-03 09:00"), calendar: calendar)
@@ -100,12 +104,14 @@ struct CourseWorkTests {
         let first = SessionPlanner.session(at: date("2026-10-26 13:00"), sessions: [], termStart: LocalDate("2026-09-02"),
                                            calendar: calendar, device: device, now: .now)
         #expect(first.week == 9)
+
         let recitation = SessionPlanner.session(at: date("2026-10-27 19:00"), sessions: [first], termStart: LocalDate("2026-09-02"),
                                                 calendar: calendar, device: device, now: .now)
         let second = SessionPlanner.session(at: date("2026-10-28 13:00"), sessions: [first, recitation], termStart: LocalDate("2026-09-02"),
                                             calendar: calendar, device: device, now: .now)
         let all = [first, recitation, second]
         #expect(all.map(\.week) == [9, 9, 9])
+
         // Without a term start, weeks count from the earliest session.
         let later = SessionPlanner.session(at: date("2026-11-02 13:00"), sessions: all, termStart: nil, calendar: calendar, device: device, now: .now)
         #expect(later.week == 2)
@@ -123,6 +129,7 @@ struct CourseWorkTests {
         var unit = Unit(device: device, at: .now, title: "고윳값", order: 1)
         unit.sessionIds = [unitLinked.id]
         let file = CourseFile(course: courses[0], units: [unit], sessions: [past, empty, noted, unitLinked, online, makeup, cancelled, marked])
+
         #expect(file.untouchedFutureSessions(now: now, notedSessions: [noted.id]).map(\.id) == [empty.id])
     }
 
@@ -275,16 +282,19 @@ struct CourseWorkTests {
         let s = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
         var file = CourseFile(course: courses[0], sessions: [s])
         #expect(file.title(of: s, calendar: calendar) == "11/3(화)")
+
         var parent = Unit(device: device, at: .now, title: "행복", order: 1)
         var child = Unit(device: device, at: .now, title: "습관", order: 1, parentId: parent.id)
         child.sessionIds = [s.id]
         parent.sessionIds = [s.id]
         file.units = [parent, child]
         #expect(file.title(of: s, calendar: calendar) == "11/3(화): 습관")
+
         var other = Unit(device: device, at: .now, title: "몰입", order: 2)
         other.sessionIds = [s.id]
         file.units.append(other)
         #expect(file.title(of: s, calendar: calendar) == "11/3(화): 습관 · 몰입")
+
         // The page of a unit already names it, so its list leaves it out.
         #expect(file.subject(of: s, besides: child.id) == "몰입")
         #expect(file.subject(of: s, besides: parent.id) == "습관 · 몰입")
@@ -442,6 +452,7 @@ struct CourseWorkTests {
         }
         var s = Session(device: device, at: .now, week: 10, date: date("2026-11-04 21:00"))
         s.end = date("2026-11-04 20:00")
+
         #expect(rules(s).contains("Session.time"))
         s.end = nil
         s.link = "813643"
@@ -465,6 +476,7 @@ struct CourseWorkTests {
         }
         s.reviewNoteId = review.id
         other.reviewNoteId = review.id
+
         #expect(rules([s, other]).isDisjoint(with: ["NoteEntry.session", "Session.noteKind", "NoteEntry.units"]))
         s.roughNoteId = rough.id
         other.roughNoteId = rough.id
@@ -546,6 +558,7 @@ struct CourseWorkTests {
         func at(days: Int, _ h: Int, _ m: Int) -> Date {
             calendar.date(bySettingHour: h, minute: m, second: 0, of: calendar.date(byAdding: .day, value: days, to: now)!)!
         }
+
         #expect(due("보고서 모레 오후 3시") == at(days: 2, 15, 0))
         #expect(due("보고서 오늘 밤 11시") == at(days: 0, 23, 0))
         #expect(due("보고서 내일 자정") == at(days: 2, 0, 0))
@@ -574,11 +587,13 @@ struct CourseWorkTests {
             let r = read(line)
             #expect(r.title == "HW4" && r.due == friday, "\(line)")
         }
+
         #expect(read("HW4 내일까지").due == friday)
         #expect(read("HW4 11/14까지").due == date("2026-11-14 23:59"))
         #expect(read("HW4 금 23:59까지").due == friday)
         let line = "HW4 금요일까지"
         #expect(read(line).dueRanges.map { String(line[$0]) } == ["금요일까지"])
+
         // Only after a deadline are they its words; on their own they are the title's.
         #expect(read("마감 정리").title == "마감 정리" && read("마감 정리").due == nil)
     }
@@ -662,6 +677,7 @@ struct AssignmentFilesTests {
             Material(device: device, at: .now, path: "Assignments/HW04/26h4.pdf", status: .classified),
         ]
         let mine = AssignmentFiles.materials(of: hw, in: files)
+
         #expect(mine.count == 2)
         #expect(AssignmentFiles.suggestsSubmitted(hw, files: mine))
         hw.status = .submitted
@@ -681,9 +697,11 @@ struct AssignmentFilesTests {
         let settings = Settings()
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+
         #expect(settings.dayBoundaryMinutes == 4 * 60)
         func at(_ day: Int, _ hour: Int) -> Date { calendar.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour))! }
         func urgency(_ due: Date) -> DueUrgency { DueUrgency(due: due, now: at(29, 2), settings: settings, calendar: calendar) }
+
         // At 02:00 on the 29th the study day is still the 28th.
         #expect(settings.studyDays(from: at(29, 2), until: at(29, 3), calendar: calendar) == 0)
         #expect(settings.studyDays(from: at(29, 2), until: at(29, 5), calendar: calendar) == 1)

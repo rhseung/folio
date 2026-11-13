@@ -32,8 +32,10 @@ struct GradingTests {
             return c
         }
         let s = GPACalculator.semester(spring, courses: courses, catalog: catalog)
+
         #expect(s.totalCredits == 18)
         #expect(s.effectiveCredits == 15)
+
         // (12 + 6 + 18 + 9 + 12) / 15
         #expect(String(format: "%.3f", s.gpa!) == "3.800")
     }
@@ -47,6 +49,7 @@ struct GradingTests {
             return c
         }
         let s = GPACalculator.semester(term, courses: [course(3, "B0"), course(1, "S"), course(0, "S"), course(3, nil)], catalog: catalog)
+
         #expect(s.totalCredits == 4)
         #expect(s.effectiveCredits == 3)
         #expect(s.gpa == 3)
@@ -61,6 +64,7 @@ struct GradingTests {
         var waived = Course(device: device, at: now, semesterId: credited.id, title: "", credits: 9)
         waived.finalGrade = id("S")
         let total = GPACalculator.cumulative(semesters: [credited, fall], courses: [c, waived], catalog: catalog)
+
         #expect(total.totalCredits == 12)
         #expect(total.gpa == 4)
     }
@@ -101,6 +105,7 @@ struct GradingTests {
         #expect(abs(GradeCalculator.ratio(of: eight, by: .dropLowest(2), expected: 9)! - 0.5) < 1e-9)
         let nine = eight + [entry(quiz, 90, 100)]
         #expect(abs(GradeCalculator.ratio(of: nine, by: .dropLowest(2), expected: 9)! - 0.6) < 1e-9)
+
         // An excused quiz lowers the count: of 8 left, the 7th score already drops one.
         let excused = GradeCalculator.score(components: [quiz], entries: seven + [entry(quiz, 0, 100, excused: true)])
         #expect(abs(excused.components[0].ratio! - 0.45) < 1e-9)

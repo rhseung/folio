@@ -10,6 +10,9 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
+    # FolioTectonic.xcframework's macOS slice is arm64 only, so a universal Release build fails to link Tectonic.
+    # Folio runs on Apple silicon Macs only (#41).
+    "ARCHS[sdk=macosx*]": arm64
 packages:
   FolioCore:
     path: packages/folio-core
@@ -78,8 +81,9 @@ targets:
         INFOPLIST_KEY_NSFaceIDUsageDescription: 성적을 보기 전에 본인인지 확인합니다.
         INFOPLIST_KEY_NSMicrophoneUsageDescription: 강의를 녹음하고 받아쓰기 위해 마이크를 씁니다.
         INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: 녹음한 강의를 기기 안에서 글로 받아씁니다.
-        # iPad only; the spec targets macOS and iPadOS, not iPhone.
-        TARGETED_DEVICE_FAMILY: "2"
+        # iPhone and iPad (#134). The iPhone keeps to portrait: its screens are laid out for 390pt across.
+        TARGETED_DEVICE_FAMILY: "1,2"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         SWIFT_EMIT_LOC_STRINGS: YES
@@ -100,6 +104,25 @@ targets:
         # XcodeGen points a multiplatform app's host at the iOS layout; the Mac app keeps its binary in Contents/MacOS.
         TEST_HOST: $(BUILT_PRODUCTS_DIR)/Folio.app/Contents/MacOS/Folio
         BUNDLE_LOADER: $(TEST_HOST)
+  # The accessibility audit of the main screens (#471, mise run test-a11y). A UI test drives the app from a runner
+  # process of its own, so it links the fixtures it writes the app's folder with; nothing loads them twice.
+  FolioUITests:
+    type: bundle.ui-testing
+    supportedDestinations: [macOS]
+    sources: [app-ui-tests]
+    dependencies:
+      - target: Folio
+      - package: FolioCore
+        product: FolioFixtures
+      - package: FolioCore
+        product: FolioStorage
+      - package: FolioCore
+        product: FolioDomain
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_IDENTITY: "-"
+        TEST_TARGET_NAME: Folio
   # Hangul typed into the iPad's edit view, run inside the app on an iPad simulator (mise run test-ipad). The Mac's
   # note-view checks are in FolioTests, which builds these files to nothing (#if os(iOS)).
   FolioPadTests:
@@ -123,3 +146,12 @@ schemes:
         FolioPadTests: [test]
     test:
       targets: [FolioPadTests]
+  # Its own scheme, apart from Folio's: a UI test takes the screen and keyboard, so ⌘U and mise run test-app must not
+  # start it on a Mac someone is using. CI runs it.
+  FolioUITests:
+    build:
+      targets:
+        Folio: all
+        FolioUITests: [test]
+    test:
+      targets: [FolioUITests]

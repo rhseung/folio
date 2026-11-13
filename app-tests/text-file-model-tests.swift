@@ -49,6 +49,7 @@ struct TextFileModelTests {
         model.saveNow(force: false)
         #expect(model.conflict)
         #expect(try course.store.readText("Study/Problems.tex") == "바깥에서 고침\n")
+
         model.saveNow(force: true)
         #expect(!model.conflict)
         #expect(try course.store.readText("Study/Problems.tex") == "여기서 고침\n")
@@ -91,6 +92,7 @@ struct TextFileModelTests {
         model.saveIfDirty()
         #expect(!model.dirty && model.issues.isEmpty)
         #expect(try course.store.readText("Notes/증명.tex") == "\\documentclass{article}\n")
+
         // Every note exports to Study, so changing the kind from the same screen leaves the place alone.
         workspace.run(NoteLink(course: graphTheory, note: id, kind: .examSummary))
         #expect(model.pdfPath == "Study/증명.pdf")
@@ -101,6 +103,7 @@ struct TextFileModelTests {
         let tex = try model("Study/Problems.tex")
         let material = try #require(course.file.materials.first { $0.path == "Study/Problems.tex" })
         #expect(tex.paneId == material.id)
+
         let id = try #require(workspace.run(NoteAdd(course: graphTheory, title: "증명", format: .tex))?.made)
         let note = try #require(try workspace.course(graphTheory)?.store.note(id: id))
         #expect(TextFileModel(workspace: workspace, course: course, source: .note(note)).paneId == id)
@@ -120,6 +123,7 @@ struct TextFileModelTests {
         #expect(model.reveal == nil)
         model.jump(to: here)
         #expect(model.reveal == 3)
+
         let namesake = TexIssue(.error, file: "sections/Problems.tex", line: 9, message: "Undefined control sequence")
         #expect(!model.isHere(namesake))
         #expect(model.isHere(TexIssue(.error, file: "./Problems.tex", line: 1, message: "x")))

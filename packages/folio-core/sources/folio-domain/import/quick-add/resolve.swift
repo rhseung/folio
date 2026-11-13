@@ -12,6 +12,7 @@ extension QuickAdd {
             // `일요일 자정` is the end of Sunday; the detector rolls it to Monday 0:00, so keep the day and count to 24:00.
             if minute == 0, d.phrase.contains(/자정|밤\s*12시/) { minute = 24 * 60 }
         }
+
         let start = calendar.startOfDay(for: now)
         var day: Date? = due.compactMap(\.day).first?.date(in: calendar)
         let weekday = due.first { $0.weekday != nil }
@@ -20,6 +21,7 @@ extension QuickAdd {
             let monday = calendar.date(byAdding: .day, value: 1 - calendar.isoWeekday(of: start), to: start)!
             day = calendar.date(byAdding: .day, value: weeks * 7 + w - 1, to: monday)
         }
+
         // A bare weekday is the next one still ahead.
         func upcoming(_ w: Int) -> Date {
             let ahead = (w - calendar.isoWeekday(of: start) + 7) % 7
@@ -49,11 +51,14 @@ extension QuickAdd {
             }
         }
         spans += dueRanges.map { Span(range: $0, field: .due) }
+
         // A number inside the deadline or the course is not the assignment's.
         if let m = AssignmentKind.match(in: line, outside: spans.map(\.range)) {
             spans.append(Span(range: m.range, field: .kind(m.kind, m.number)))
         }
+
         let title = words.filter { !$0.isDue }.map(\.text).joined(separator: " ")
+
         // Weekdays join a weekly rule (`격주 화목`), or make one by themselves (`월,수마다`); one weekday is the deadline's.
         var repeats = due.lazy.compactMap(\.rule).first
         if let group, repeats == nil || repeats?.unit == .week {

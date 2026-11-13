@@ -417,6 +417,7 @@ struct ClaudeModelTests {
         let note = try #require(workspace.run(NoteAdd(course: graphTheory, title: "매칭 정리", kind: .unit, units: [second]))?.made)
         let course = try #require(workspace.course(graphTheory))
         model.load(course)
+
         var chat = Chat(device: workspace.device, at: .now)
         let answer = ChatMessage(role: .assistant, text: "답", at: .now)
         chat.messages = [ChatMessage(role: .user, text: "매칭이란?", at: .now), answer]
@@ -428,6 +429,7 @@ struct ClaudeModelTests {
             model.handle(url, course: course, openNote: note, openUnit: unit, insertIntoNote: { _ in }, showNote: { _ in })
             return model.cardDraft?.unitId
         }
+
         #expect(draftUnit(note: nil, unit: second) == second)
         #expect(draftUnit(note: note, unit: nil) == second)
         #expect(draftUnit(note: nil, unit: nil) == first)

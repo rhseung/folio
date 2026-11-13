@@ -14,6 +14,7 @@ struct HTMLView {
     var openNote: (String) -> Void = { _ in }
     /// Called with `folio://action/…` links, which a page uses for buttons since JavaScript is off.
     var onAction: (URL) -> Void = { _ in }
+
     func head(accent: CourseAccent) -> String {
         "<!doctype html><html><head><meta charset=utf-8><style>\(NoteStyle.variables(accent: accent))\(NoteStyle.css)</style></head>"
             + "<body class=\"note\" data-math=\"\(mathSyntax)\">"

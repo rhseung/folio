@@ -39,6 +39,7 @@ public enum SessionTimeline {
         let plannedIds = Set(planned.map(\.id))
         let weeks = Dictionary(grouping: file.sessions + planned, by: \.week).sorted { $0.key < $1.key }.map { $0.value.sorted(by: Session.inOrder) }
         let dated = file.exams.compactMap { e in e.start.map { (exam: e, date: $0) } }.sorted { $0.date < $1.date }
+
         // A cancelled class held nothing, so an exam in its slot stands on its own.
         var onClass: [UUID: [Exam]] = [:]
         var free: [(exam: Exam, date: Date)] = []
@@ -51,6 +52,7 @@ public enum SessionTimeline {
                 free.append(e)
             }
         }
+
         var items: [Item] = []
         var month: Int?
         func opens(_ date: Date) -> Bool {
@@ -59,6 +61,7 @@ public enum SessionTimeline {
             return m != month
         }
         func exam(_ e: (exam: Exam, date: Date)) -> Item { .exam(e.exam, e.date) }
+
         var pending = free[...]
         for sessions in weeks {
             let week = calendar.startOfWeek(containing: sessions[0].date)

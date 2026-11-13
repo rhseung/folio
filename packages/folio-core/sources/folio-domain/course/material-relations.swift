@@ -1,6 +1,5 @@
 import Foundation
 
-/// What a file can belong with.
 public enum MaterialTarget: Hashable, Sendable {
     case session(UUID)
     case unit(UUID)
@@ -48,7 +47,6 @@ extension CourseFile {
         }
     }
 
-    /// The files that belong with `target`, in `materials` order, each with how it got there.
     public func materials(of target: MaterialTarget) -> [(material: Material, routes: [MaterialRoute])] {
         materials.compactMap { m in
             let routes = routes(of: m, to: target)
@@ -56,7 +54,6 @@ extension CourseFile {
         }
     }
 
-    /// The units `material` belongs with, in outline order.
     public func units(of material: Material) -> [(unit: Unit, routes: [MaterialRoute])] {
         UnitTree.outline(units).compactMap { row in
             let routes = routes(of: material, to: .unit(row.unit.id))
@@ -68,7 +65,6 @@ extension CourseFile {
         units.contains { $0.id == id && $0.lecturePages.contains { $0.materialId == material } }
     }
 
-    /// Sessions linked to the unit, by date.
     func sessions(inUnit id: UUID) -> [Session] {
         sessions.filter { s in s.unitIds.contains(id) || units.contains { $0.id == id && $0.sessionIds.contains(s.id) } }.sorted(by: Session.inOrder)
     }

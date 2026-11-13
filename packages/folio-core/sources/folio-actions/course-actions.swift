@@ -65,6 +65,7 @@ public struct SemesterSource {
                 s.touch(by: ctx.device, at: ctx.now)
             }
         }
+
         // Checked before the move: on a regular term, `coursesFolder` is the whole semester folder.
         try ctx.checkTranscript(edit)
         if let from = old.coursesFolder, let to = StandardLayout.creditedFolder(source: source), from != to,
@@ -111,7 +112,6 @@ public struct SemesterSet {
     }
 }
 
-/// Creates the course folder `<code><number> <title>` with its course.json.
 @Action("course add", "과목 추가. 과목 폴더와 course.json을 만든다",
         discussion: "강의 코드는 catalog.json에 있어야 한다. 폴더 이름은 `<코드><번호> <과목 이름>`이다.",
         effect: .creates, done: "과목 '{title}'을(를) 추가했습니다",
@@ -141,12 +141,12 @@ public struct CourseAdd {
         ctx.made(id)
     }
 
-    /// `<term folder>/<code><number> <title>/.folio/course.json`, the folder named from the course.
     static func create(_ course: Course, _ ctx: ActionContext) throws {
         guard let semester = try ctx.transcript().semesters.first(where: { $0.id == course.semesterId }) else {
             throw ActionError.notFound(String(localized: .errorNotFoundSemester))
         }
         guard let parent = semester.coursesFolder else { throw ActionError.rule(String(localized: .errorCreditedNeedsSource(semester.name))) }
+
         // Course folders are found by the id in their course.json, so a second folder with this id would be unreachable.
         guard !ctx.hasFolder(course.id) else { throw ActionError.rule(String(localized: .errorIdTakenCourse("\(course.id)"))) }
         let folder = try CourseRename.folderName(title: course.title, codes: course.codes, number: course.number, catalog: ctx.catalog())
@@ -191,6 +191,7 @@ public struct CourseRename {
         let name = try Self.folderName(title: title, codes: codes, number: number, catalog: ctx.catalog())
         let from = ctx.relative(try ctx.store(course).url)
         let to = (from as NSString).deletingLastPathComponent + "/" + name
+
         if from != to {
             try ctx.io(Change(.moved, from, to: to)) {
                 try MoveJournal.apply([PlannedMove(from: from, to: to)], in: ctx.gist.url, device: ctx.device, now: ctx.now)
@@ -293,7 +294,7 @@ public struct RequirementAccept {
     }
 }
 
-/// Replaces catalog.json's tables; rows that changed are stamped as edited from this device. Unknown keys are kept.
+/// Rows that changed are stamped as edited from this device. Unknown keys are kept.
 @Action("catalog set", "catalog.json을 파일 내용으로 바꾸기. 바뀐 행만 수정 시각이 바뀐다",
         discussion: "`folio catalog show --json`으로 받은 파일을 고쳐서 넣는다. 모르는 필드는 남는다.",
         done: "카탈로그를 바꿨습니다", examples: ["folio catalog set --file catalog.json --dry-run"], phrases: ["카탈로그 수정"])
@@ -312,6 +313,7 @@ public struct CatalogSet {
                     return item
                 }
             }
+
             var new = catalog
             new.codes = touched(catalog.codes, old.codes)
             new.categories = touched(catalog.categories, old.categories)

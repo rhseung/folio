@@ -38,7 +38,6 @@ public enum ModelError: Error, Equatable, CustomStringConvertible {
     }
 }
 
-/// What happens to a pointer when the item it points at is removed.
 public enum OnDelete: Sendable {
     /// The pointing item goes too (a component's scores).
     case cascade
@@ -397,12 +396,14 @@ extension Model {
         guard let items = items(of: kind), let name = items.all(doc).first(where: { $0.id == id })?.name else {
             throw ModelError.notFound(String(localized: .modelNotFound(Korean.object(items(of: kind)?.noun ?? String(localized: .modelNounItem)))))
         }
+
         let pointing = collections.flatMap { c in c.refs.filter { $0.target == kind }.map { (c, $0) } }
         for (c, r) in pointing where r.onDelete == .restrict {
             guard let holder = r.holders(doc, id).first else { continue }
             let by = c.all(doc).first { $0.id == holder }?.name ?? ""
             throw ModelError.rule(String(localized: .modelDeleteRestricted(c.noun, Korean.quoted(by, "이", "가"), items.noun, Korean.quoted(name, "을", "를"))))
         }
+
         let cascaded = pointing.filter { $0.1.onDelete == .cascade }.map { ($0.0.kind, $0.1.holders(doc, id)) }
         let parent = pointing.first { $0.0.kind == kind && $0.1.onDelete == .reparent }.flatMap { $0.1.values(doc, id).first }
         items.delete(&doc, id)
@@ -413,6 +414,7 @@ extension Model {
             case .cascade, .restrict: break
             }
         }
+
         for (holderKind, holders) in cascaded {
             for h in holders where self.items(of: holderKind)?.all(doc).contains(where: { $0.id == h }) == true {
                 try remove(holderKind, h, in: &doc)

@@ -4,7 +4,6 @@ import Foundation
 import Testing
 @testable import Folio
 
-/// A window's own tabs: each keeps its history, the last one closes the window, and one moved out takes its history.
 @MainActor
 struct WindowTabsTests {
     @Test func eachTabKeepsItsOwnHistory() {
@@ -15,6 +14,7 @@ struct WindowTabsTests {
         #expect(tabs.count == 2)
         #expect(tabs.current.screen == .course(graphTheory))
         #expect(!tabs.current.history.canGoBack)
+
         tabs.select(first)
         #expect(tabs.current.screen == .grades)
         #expect(tabs.current.backList.map(\.link) == [.place(.today)])
@@ -40,6 +40,7 @@ struct WindowTabsTests {
         let moved = tabs.take(tabs.selected)
         #expect(moved?.focused.backList.map(\.link) == [.place(.grades)])
         #expect(tabs.ids == [first])
+
         // A window made for it goes on from there, back included.
         let window = Navigator(history: moved?.focused.history ?? LinkHistory(Navigator.Entry(link: .place(.today))))
         #expect(window.screen == .people && window.history.canGoBack)
@@ -67,10 +68,12 @@ struct WindowTabsTests {
         }
         // The front tab and the two most recently in front; the first went furthest back.
         #expect(tabs.alive.count == 3 && !tabs.alive.contains(first))
+
         // Waiting past the time lets the ones behind go.
         now += 601
         tabs.tick()
         #expect(tabs.alive == [tabs.selected])
+
         // In front again, a dropped tab is drawn again.
         tabs.select(first)
         #expect(tabs.alive.contains(first))
@@ -95,10 +98,12 @@ struct WindowTabsTests {
         #expect(tabs.alive == [tabs.selected, player])
         tabs.pause(player)
         #expect(paused)
+
         // Stopped, it is kept no longer than any other tab.
         tabs.play(player, pause: nil)
         tabs.dropBackground()
         #expect(tabs.alive == [tabs.selected] && tabs.playing.isEmpty)
+
         // A closed tab's screen saying it stopped leaves nothing behind.
         tabs.play(player, pause: {})
         tabs.close(player)
@@ -120,6 +125,7 @@ struct WindowTabsTests {
         #expect(!paused)
         tabs.pause(player)
         #expect(paused)
+
         // The pane closed, its screen says it stopped and the tab plays no longer.
         tabs.play(player, pane: second, pause: nil)
         #expect(tabs.playingPanes.isEmpty && tabs.playing.isEmpty)
@@ -181,6 +187,7 @@ struct ToolbarRowTests {
         // The search field is pinned to the trailing edge, so the narrower width counts now, not a turn later.
         row.windowWidth = 1180
         #expect(row.placement.fit == TabFit.Layout(iconsOnly: true, shown: 3, hidden: 0))
+
         // The + takes its 32 and the spacing that sets its glyph one gap after the menu; the rest is the tabs': the
         // menu alone beside the tab in front, whose trail is held to what is left after the menu, its gap and the chrome.
         row.windowWidth = 900

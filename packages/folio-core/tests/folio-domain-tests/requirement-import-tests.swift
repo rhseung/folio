@@ -88,6 +88,7 @@ struct HandbookClassifierTests {
         let done = course([hs], "1001", in: spring, [humanities, hus])  // already right; the extra parent is not worth a prompt
         let lastYear = course([hs], "2734", in: older)
         let s = HandbookClassifier.suggest(courses: [happiness, done, lastYear], semesters: [spring, older], catalog: catalog)
+
         #expect(s.count == 1)
         #expect(s.first?.code == "HS2734")
         #expect(s.first?.categoryIds == [science.id, ppe.id])  // 인문사회 is replaced, unrelated 기초과학 kept
