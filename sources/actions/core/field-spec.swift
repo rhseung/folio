@@ -14,7 +14,7 @@ public struct FieldSpec: Codable, Sendable, Equatable {
     public var help: String
     public var role: Role
     public var type: String
-    public var ref: String?
+    public var ref: ItemKind?
     public var optional: Bool
     public var many: Bool
     public var patch: Bool
@@ -27,7 +27,8 @@ public struct FieldSpec: Codable, Sendable, Equatable {
     public var parsedForm: String?
 
     public init(
-        name: String, help: String = "", role: Role = .option, type: String, ref: String? = nil, optional: Bool = false, many: Bool = false,
+        name: String, help: String = "", role: Role = .option, type: String, ref: ItemKind? = nil, optional: Bool = false,
+        many: Bool = false,
         patch: Bool = false, defaultValue: String? = nil, cliName: String? = nil, file: String? = nil, filePerItem: Bool = false,
         folder: Bool = false,
         parsed: String? = nil, parsedForm: String? = nil

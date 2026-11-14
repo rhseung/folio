@@ -15,13 +15,13 @@ extension GeneratedCommands {
               folio recording trim 2026-1 --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("학기. 2026-1 또는 \"2026 spring\"", valueName: "semester"), completion: Complete.ref("Semester")) var semester: String = ""
+        @Argument(help: ArgumentHelp("학기. 2026-1 또는 \"2026 spring\"", valueName: "semester"), completion: Complete.ref(.semester)) var semester: String = ""
 
         func run() throws {
             let ctx = try CLI.context(g)
             let r = Resolver(ctx)
             let action = FolioActions.RecordingTrim(
-                semester: try r.id("Semester", semester, in: nil)
+                semester: try r.id(.semester, semester, in: nil)
             )
             try perform(spec: action, g, ctx: ctx)
         }

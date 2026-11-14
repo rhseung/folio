@@ -16,7 +16,7 @@ extension GeneratedCommands {
               folio component policy EC4207 --cutoff A+:95 --cutoff A0:90 --top-grade-ratio none --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String = ""
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref(.course)) var course: String = ""
         @Option(help: "최소 출석 비율. 0.75. none이면 지운다") var minAttendanceRatio: Clearable<Double>?
         @Option(help: "지각 규칙 설명. none이면 지운다") var latePolicy: Clearable<String>?
         @Option(help: "지각 몇 번이 결석 한 번인지. none이면 지운다") var latesPerAbsence: Clearable<Int>?

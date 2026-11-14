@@ -5,7 +5,7 @@ import Foundation
 
 @Action(
     "problem-set add", "문제 번호로 문제 묶음 만들기", effect: .creates, done: "문제 묶음을 저장했습니다",
-    phrases: ["문제 묶음 만들기", "연습문제 등록"], cli: .manual(reason: "제목과 문제 번호로 문제 묶음(ProblemSet) 전체를 만든다"))
+    phrases: ["문제 묶음 만들기", "연습문제 등록"], cli: .manual(reason: "제목과 문제 번호로 문제 묶음(ProblemSet) 전체를 만든다"), panel: true)
 public struct ProblemSetSave {
     @Arg var course: Course.ID
     var set: ProblemSet

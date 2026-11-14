@@ -13,14 +13,14 @@ extension GeneratedCommands {
               folio semester source \"영재고 AP\" \"영재고 AP 과정\" --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("인정학기", valueName: "semester"), completion: Complete.ref("Semester")) var semester: String
+        @Argument(help: ArgumentHelp("인정학기", valueName: "semester"), completion: Complete.ref(.semester)) var semester: String
         @Argument(help: "출처. 영재고 AP") var source: String
 
         func run() throws {
             let ctx = try CLI.context(g)
             let r = Resolver(ctx)
             let action = FolioActions.SemesterSource(
-                semester: try r.id("Semester", semester, in: nil),
+                semester: try r.id(.semester, semester, in: nil),
                 source: source
             )
             try perform(spec: action, g, ctx: ctx)

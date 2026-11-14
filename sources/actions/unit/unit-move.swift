@@ -4,7 +4,7 @@ import Foundation
 
 @Action(
     "unit move", "단원을 형제 사이에서 옮기거나 다른 단원 아래로 옮기기", done: "단원 '{unit}'을(를) 옮겼습니다",
-    cli: .manual(reason: "--up, --down, --parent, --top 중 하나가 옮길 곳(Target) 하나가 된다"))
+    cli: .manual(reason: "--up, --down, --parent, --top 중 하나가 옮길 곳(Target) 하나가 된다"), panel: true)
 public struct UnitMove {
     public enum Target: Codable, Sendable, Equatable {
         case by(Int), parent(UUID?)

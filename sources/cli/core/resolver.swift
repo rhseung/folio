@@ -38,12 +38,14 @@ final class Resolver {
     func semester(_ ref: String?) throws -> Semester {
         guard let ref else { return try currentSemester() }
         return try pick(
-            ref, semesters, what: "학기", names: { [$0.folder?.name ?? "", $0.source ?? "", "\($0.year) \($0.term.rawValue)"] },
+            ref, semesters, what: ItemKind.semester.noun,
+            names: { [$0.folder?.name ?? "", $0.source ?? "", "\($0.year) \($0.term.rawValue)"] },
             ref: { $0.folder?.name ?? $0.source ?? $0.id.uuidString })
     }
 
     func course(_ ref: String) throws -> CourseRef {
-        try pick(ref, courses, what: "과목", names: { [$0.code, $0.course.title, $0.store.url.lastPathComponent] }, ref: \.code)
+        try pick(
+            ref, courses, what: ItemKind.course.noun, names: { [$0.code, $0.course.title, $0.store.url.lastPathComponent] }, ref: \.code)
     }
 
     func split(_ ref: String, course: String? = nil) throws -> (CourseRef, String) {
@@ -59,7 +61,7 @@ final class Resolver {
     func session(_ name: String, in c: CourseRef) throws -> Session {
         let f = c.file
         return try pick(
-            name, f.sessions, what: "회차", names: { f.references(of: $0, calendar: self.ctx.calendar) },
+            name, f.sessions, what: ItemKind.session.noun, names: { f.references(of: $0, calendar: self.ctx.calendar) },
             ref: { "\(c.code)/\(f.reference(of: $0, calendar: self.ctx.calendar))" })
     }
 
@@ -69,41 +71,42 @@ final class Resolver {
             r.sessionId.flatMap { id in f.sessions.first { $0.id == id } }.map { f.references(of: $0, calendar: self.ctx.calendar) } ?? []
         }
         return try pick(
-            name, f.recordings, what: "녹음", names: { session($0) + [$0.file, ($0.file as NSString).lastPathComponent] },
+            name, f.recordings, what: ItemKind.recording.noun, names: { session($0) + [$0.file, ($0.file as NSString).lastPathComponent] },
             ref: { "\(c.code)/\(($0.file as NSString).lastPathComponent)" })
     }
 
     func exam(_ name: String, in c: CourseRef) throws -> Exam {
-        try pick(name, c.file.exams, what: "시험", names: { [$0.title] }, ref: { "\(c.code)/\($0.title)" })
+        try pick(name, c.file.exams, what: ItemKind.exam.noun, names: { [$0.title] }, ref: { "\(c.code)/\($0.title)" })
     }
 
     func unit(_ name: String, in c: CourseRef) throws -> FolioDomain.Unit {
-        try pick(name, c.file.units, what: "단원", names: { [$0.title] }, ref: { "\(c.code)/\($0.title)" })
+        try pick(name, c.file.units, what: ItemKind.unit.noun, names: { [$0.title] }, ref: { "\(c.code)/\($0.title)" })
     }
 
     func assignment(_ name: String, in c: CourseRef) throws -> Assignment {
-        try pick(name, c.file.assignments, what: "과제", names: { [$0.title] }, ref: { "\(c.code)/\($0.title)" })
+        try pick(name, c.file.assignments, what: ItemKind.assignment.noun, names: { [$0.title] }, ref: { "\(c.code)/\($0.title)" })
     }
 
     func component(_ name: String, in c: CourseRef) throws -> GradeComponent {
-        try pick(name, c.file.components, what: "성적 항목", names: { [$0.name] }, ref: { "\(c.code)/\($0.name)" })
+        try pick(name, c.file.components, what: ItemKind.gradeComponent.noun, names: { [$0.name] }, ref: { "\(c.code)/\($0.name)" })
     }
 
     func material(_ name: String, in c: CourseRef) throws -> Material {
         try pick(
-            name, c.file.materials, what: "자료", names: { [$0.path, ($0.path as NSString).lastPathComponent] },
+            name, c.file.materials, what: ItemKind.material.noun, names: { [$0.path, ($0.path as NSString).lastPathComponent] },
             ref: { "\(c.code)/\($0.path)" })
     }
 
     func problemSet(_ name: String, in c: CourseRef) throws -> ProblemSet {
-        try pick(name, c.file.problemSets, what: "문제 묶음", names: { [$0.title] }, ref: { "\(c.code)/\($0.title)" })
+        try pick(name, c.file.problemSets, what: ItemKind.problemSet.noun, names: { [$0.title] }, ref: { "\(c.code)/\($0.title)" })
     }
 
     func note(_ name: String, in c: CourseRef) throws -> NoteFile {
         let store = c.store
         let notes = try store.notes()
         let path = { (n: NoteFile) in store.coursePath(of: n.url) ?? n.url.lastPathComponent }
-        return try pick(name, notes, what: "노트", id: { $0.meta.id }, names: { [path($0), $0.title] }, ref: { "\(c.code)/\(path($0))" })
+        return try pick(
+            name, notes, what: ItemKind.note.noun, id: { $0.meta.id }, names: { [path($0), $0.title] }, ref: { "\(c.code)/\(path($0))" })
     }
 
     // MARK: Matching

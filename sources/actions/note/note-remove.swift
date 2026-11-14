@@ -7,7 +7,7 @@ import Foundation
 @Action(
     "note rm", "노트를 휴지통으로. 회차의 연결도 뗀다", discussion: "그림은 assets에 남는다.", effect: .removes,
     confirm: "{note}을(를) 휴지통으로 옮깁니다.", done: "{note}을(를) 휴지통으로 옮겼습니다",
-    examples: [#"folio note rm "EC4207/시험 메모" --dry-run"#], phrases: ["노트 삭제"])
+    examples: [#"folio note rm "EC4207/시험 메모" --dry-run"#], phrases: ["노트 삭제"], panel: true)
 public struct NoteRemove {
     /// 과목
     @Arg var course: Course.ID

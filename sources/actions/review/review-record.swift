@@ -8,7 +8,7 @@ import Foundation
 @Action(
     "review record", "단원 복습 결과와 걸린 시간을 기록", effect: .logs, done: "단원 '{unit}'의 복습을 기록했습니다",
     examples: [#"folio review record EC4207/매칭 good --start "2026-10-28 20:00" --end "2026-10-28 20:40""#],
-    phrases: ["복습했", "공부했", "복습 완료", "복습 기록", "공부함"])
+    phrases: ["복습했", "공부했", "복습 완료", "복습 기록", "공부함"], panel: true)
 public struct ReviewRecord {
     /// 과목
     @Arg var course: Course.ID

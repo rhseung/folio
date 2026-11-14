@@ -11,6 +11,7 @@ struct MCPServer {
         var name: String
         var command: String
         var write: Bool
+        var panel: Bool
         var spec: JSONValue
         var argv: (JSONValue) -> [String]
     }
@@ -29,12 +30,21 @@ struct MCPServer {
             Self.writeTools(propose: propose)
             + Self.readTools().map { Self.builds[$0.command] == nil ? $0 : Self.writing($0, propose: propose) }
         catalog = all
-        tools = (propose ? all.filter { Self.inPanel($0.command) } : all) + Self.generalTools(propose: propose)
+        tools = (propose ? all.filter(\.panel) : all) + Self.generalTools(propose: propose)
     }
 
     // 도움말에서 읽으면 읽기 명령처럼 읽기 전용으로 표시되어 `--propose`에서 `--dry-run`을 건너뛴다. 그래서 액션 하나를
-    // 만들어 쓰는 손 명령을 여기 적고, 만든 액션을 제안한다.
-    static let builds: [String: String] = ["add": "assignment add"]
+    // 만들어 쓰는 손 명령(`BuildsAction`)은 쓰기로 열고, 만든 액션을 제안한다.
+    static let builds: [String: String] = {
+        func walk(_ type: any ParsableCommand.Type, _ path: [String]) -> [(String, String)] {
+            let here = (type as? any BuildsAction.Type).map { [(path.joined(separator: " "), $0.builds.command)] } ?? []
+            return here
+                + type.configuration.subcommands.flatMap { sub in
+                    walk(sub, path + [sub.configuration.commandName ?? sub._commandName])
+                }
+        }
+        return Dictionary(walk(Folio.self, []), uniquingKeysWith: { a, _ in a })
+    }()
 
     static func writing(_ tool: Tool, propose: Bool) -> Tool {
         var t = tool
@@ -237,8 +247,8 @@ struct MCPServer {
             "annotations": ["readOnlyHint": .bool(false), "destructiveHint": .bool(true), "openWorldHint": .bool(false)],
         ]
         return [
-            Tool(name: searchTool, command: "", write: false, spec: search) { _ in [] },
-            Tool(name: runTool, command: "", write: true, spec: runSpec) { _ in [] },
+            Tool(name: searchTool, command: "", write: false, panel: true, spec: search) { _ in [] },
+            Tool(name: runTool, command: "", write: true, panel: true, spec: runSpec) { _ in [] },
         ]
     }
 
@@ -324,7 +334,8 @@ struct MCPServer {
                 "inputSchema": input,
                 "annotations": ["readOnlyHint": .bool(false), "destructiveHint": .bool(removes), "openWorldHint": .bool(false)],
             ]
-            return Tool(name: name(command), command: command, write: true, spec: spec) { args in
+            let panel = Actions.all.first { $0.command == command }?.spec.panel ?? false
+            return Tool(name: name(command), command: command, write: true, panel: panel, spec: spec) { args in
                 var input = args
                 input["dryRun"] = nil
                 return ["run"] + command.split(separator: " ").map(String.init) + ["--input", string(input), "--json", "--yes"]
@@ -423,7 +434,7 @@ struct MCPServer {
             "inputSchema": ["type": "object", "properties": .object(properties), "required": .array(required)],
             "annotations": ["readOnlyHint": .bool(true), "openWorldHint": .bool(false)],
         ]
-        return Tool(name: name(command), command: command, write: false, spec: spec) { input in
+        return Tool(name: name(command), command: command, write: false, panel: inPanel(command), spec: spec) { input in
             var options: [String] = [], positionals: [String] = []
             for a in args {
                 guard let v = input[key(a)], v != .null else { continue }

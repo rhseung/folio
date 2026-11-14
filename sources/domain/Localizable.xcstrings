@@ -1639,6 +1639,28 @@
           }
         }
       }
+    },
+    "model.noun.note-widget": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "위젯"
+          }
+        }
+      }
+    },
+    "model.noun.move-batch": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이동 묶음"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

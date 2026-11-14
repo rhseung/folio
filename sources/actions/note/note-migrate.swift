@@ -10,7 +10,7 @@ import Foundation
     discussion:
         "Folio가 쓴 키(id, kind, sessionId, unitIds, examId, tags, math)만 옮기고, 다른 키는 파일에 남긴다. course.json에 이미 항목이 있는 노트는 태그를 합치고 나머지는 항목에서 빈 값만 채우며, ID는 항목의 것을 둔다. 실제 폴더에서는 백업한 뒤 --dry-run으로 먼저 본다.",
     done: "노트 프로퍼티를 course.json으로 옮겼습니다", examples: ["folio note migrate --dry-run", "folio note migrate EC4207"],
-    phrases: ["노트 프로퍼티 옮기기", "frontmatter 정리"])
+    phrases: ["노트 프로퍼티 옮기기", "frontmatter 정리"], panel: true)
 public struct NoteMigrate {
     /// 과목. 빼면 모든 과목
     @Arg var course: Course.ID?

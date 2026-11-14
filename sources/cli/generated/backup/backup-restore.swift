@@ -14,7 +14,7 @@ extension GeneratedCommands {
               folio backup restore EC4207 2026-10-27
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref(.course)) var course: String
         @Argument(help: ArgumentHelp("백업 날짜. 2026-10-27", valueName: "date")) var day: LocalDate
 
         func run() throws {

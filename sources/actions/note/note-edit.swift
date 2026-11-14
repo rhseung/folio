@@ -11,7 +11,7 @@ import Foundation
         #"folio note edit EC4207/09-08 --old "non-adjacent" --new "서로 이웃하지 않는""#,
         #"folio note edit EC4207/09-08 --append "질문: 최대 매칭은 어떻게 찾나""#,
     ],
-    phrases: ["노트 일부 수정", "노트에 덧붙이기", "노트 끝에 추가", "노트 찾아 바꾸기"], cli: .manual(reason: "--old와 --new를 준 순서대로 짝지어 바꿀 목록을 만든다"))
+    phrases: ["노트 일부 수정", "노트에 덧붙이기", "노트 끝에 추가", "노트 찾아 바꾸기"], cli: .manual(reason: "--old와 --new를 준 순서대로 짝지어 바꿀 목록을 만든다"), panel: true)
 public struct NoteEdit {
     public struct Replacement: Codable, Sendable, Equatable {
         public var old: String

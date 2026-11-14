@@ -8,7 +8,7 @@ import Foundation
     done: "카탈로그를 바꿨습니다", examples: ["folio catalog set --file catalog.json --dry-run"], phrases: ["카탈로그 수정"])
 public struct CatalogSet {
     /// catalog.json 형식의 파일
-    @CLIName("file") @FromFile("path") var catalog: Catalog
+    @CLIName("file") @FromFile("path") @WholeFile var catalog: Catalog
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.editCatalog { old in

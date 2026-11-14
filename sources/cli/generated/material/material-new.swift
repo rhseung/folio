@@ -12,7 +12,7 @@ extension GeneratedCommands {
               folio material new EC4207 Study 풀이.py --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref(.course)) var course: String
         @Argument(help: "과목 폴더 기준 폴더. 예: Assignments/HW04, Exams/중간고사, Study") var folder: String
         @Argument(help: "확장자까지 쓴 파일 이름. 예: hw4.tex") var name: String
 

@@ -13,13 +13,13 @@ extension GeneratedCommands {
               folio exam set EC4207/Quiz1 --end none --component none --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<시험>", valueName: "exam"), completion: Complete.ref("Exam")) var exam: String = ""
+        @Argument(help: ArgumentHelp("<과목>/<시험>", valueName: "exam"), completion: Complete.ref(.exam)) var exam: String = ""
         @Option(help: "새 제목") var title: String?
         @Option(help: ArgumentHelp("시작 일시. none이면 지운다", valueName: "date")) var start: Clearable<DateArg>?
         @Option(help: ArgumentHelp("끝 일시. none이면 지운다", valueName: "date")) var end: Clearable<DateArg>?
         @Option(help: "장소") var location: String?
-        @Option(help: ArgumentHelp("반영되는 성적 항목. none이면 지운다", valueName: "component"), completion: Complete.ref("GradeComponent")) var component: Clearable<String>?
-        @Option(help: ArgumentHelp("범위 단원 전체. 단원을 하나씩 넣고 빼려면 folio exam scope. 여러 번 줄 수 있다. 주면 목록 전체를 바꾸고, none이면 비운다", valueName: "scope"), completion: Complete.ref("Unit")) var scope: [String] = []
+        @Option(help: ArgumentHelp("반영되는 성적 항목. none이면 지운다", valueName: "component"), completion: Complete.ref(.gradeComponent)) var component: Clearable<String>?
+        @Option(help: ArgumentHelp("범위 단원 전체. 단원을 하나씩 넣고 빼려면 folio exam scope. 여러 번 줄 수 있다. 주면 목록 전체를 바꾸고, none이면 비운다", valueName: "scope"), completion: Complete.ref(.unit)) var scope: [String] = []
         @Option(help: "범위 설명") var scopeText: String?
         @Option(help: "허용 자료") var allowed: String?
         @Option(help: "메모") var memo: String?
@@ -31,13 +31,13 @@ extension GeneratedCommands {
             let (c, examName) = try r.split(exam)
             let action = FolioActions.ExamSet(
                 course: c.id,
-                exam: try r.id("Exam", examName, in: c),
+                exam: try r.id(.exam, examName, in: c),
                 title: title.map { Patch.set($0) } ?? .keep,
                 start: start.map { p in Patch.set(p.value.map { $0.date }) } ?? .keep,
                 end: end.map { p in Patch.set(p.value.map { $0.date }) } ?? .keep,
                 location: location.map { Patch.set($0) } ?? .keep,
-                component: try component.map { p in Patch.set(try p.value.map { try r.id("GradeComponent", $0, in: c) }) } ?? .keep,
-                scope: scope.isEmpty ? .keep : .set(try scope.clearing.map { try r.id("Unit", $0, in: c) }),
+                component: try component.map { p in Patch.set(try p.value.map { try r.id(.gradeComponent, $0, in: c) }) } ?? .keep,
+                scope: scope.isEmpty ? .keep : .set(try scope.clearing.map { try r.id(.unit, $0, in: c) }),
                 scopeText: scopeText.map { Patch.set($0) } ?? .keep,
                 allowed: allowed.map { Patch.set($0) } ?? .keep,
                 memo: memo.map { Patch.set($0) } ?? .keep

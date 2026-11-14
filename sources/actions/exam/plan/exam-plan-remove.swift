@@ -4,7 +4,7 @@ import Foundation
 
 @Action(
     "exam plan rm", "공부 계획 항목 지우기", effect: .removes, confirm: "공부 계획 항목 '{item}'을(를) 지웁니다.",
-    done: "공부 계획에서 '{item}'을(를) 지웠습니다", examples: [#"folio exam plan rm EC4207/중간고사 "트리 단원 복습" --dry-run"#])
+    done: "공부 계획에서 '{item}'을(를) 지웠습니다", examples: [#"folio exam plan rm EC4207/중간고사 "트리 단원 복습" --dry-run"#], panel: true)
 public struct ExamPlanRemove {
     @Arg var course: Course.ID
     /// 시험

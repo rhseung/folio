@@ -39,7 +39,9 @@ struct TranscriptCommand: ParsableCommand {
             ], shrink: [semester ? 2 : 1])
         for x in rows {
             t.rows.append(
-                (semester ? [x.semester] : []) + [x.code, x.title, x.credits.formatted(), x.gradingMode.rawValue.toned, x.grade ?? "-"])
+                (semester ? [x.semester] : []) + [
+                    x.code, x.title, x.credits.formatted(), x.gradingMode.rawValue.toned(x.gradingMode.tone), x.grade ?? "-",
+                ])
         }
         t.print()
         footer(rows.count)

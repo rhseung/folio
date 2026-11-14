@@ -13,7 +13,7 @@ extension GeneratedCommands {
               folio component rm EC4207/퀴즈 --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<항목 이름>", valueName: "component"), completion: Complete.ref("GradeComponent")) var component: String = ""
+        @Argument(help: ArgumentHelp("<과목>/<항목 이름>", valueName: "component"), completion: Complete.ref(.gradeComponent)) var component: String = ""
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -21,7 +21,7 @@ extension GeneratedCommands {
             let (c, componentName) = try r.split(component)
             let action = FolioActions.ComponentRemove(
                 course: c.id,
-                component: try r.id("GradeComponent", componentName, in: c)
+                component: try r.id(.gradeComponent, componentName, in: c)
             )
             try perform(spec: action, g, ctx: ctx)
         }

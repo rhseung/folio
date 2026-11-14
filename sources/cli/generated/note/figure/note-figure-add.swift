@@ -11,7 +11,7 @@ extension GeneratedCommands {
 
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref(.course)) var course: String
         @Argument(help: "Notes/assets 안의 파일 이름. 확장자를 빼면 .svg를 붙인다") var name: String
         @Option(help: ArgumentHelp("SVG 원문", valueName: "figure.svg"), completion: .file()) var svg: String
 

@@ -5,3 +5,13 @@ public enum AssignmentStatus: String, Codable, Sendable, CaseIterable {
 
     public var isOpen: Bool { self == .todo || self == .doing }
 }
+
+extension AssignmentStatus {
+    public var tone: StatusTone {
+        switch self {
+        case .submitted, .graded: .good
+        case .doing: .caution
+        case .todo: .muted
+        }
+    }
+}

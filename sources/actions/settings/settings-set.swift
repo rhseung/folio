@@ -20,7 +20,7 @@ public struct SettingsSet {
     /// 새 값
     @Arg var value: JSONValue?
     /// settings.json 형식의 파일. 필드 대신 설정 전체를 바꾼다
-    @CLIName("file") @FromFile("path") var settings: Settings?
+    @CLIName("file") @FromFile("path") @WholeFile var settings: Settings?
 
     public func run(_ ctx: ActionContext) throws {
         let new: Settings

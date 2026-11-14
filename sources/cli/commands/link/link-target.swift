@@ -35,43 +35,18 @@ struct LinkTarget: ParsableArguments {
             let s = try r.semester(ref.isEmpty ? nil : ref)
             return done(AppLink(.semester, s.id), title: s.folder?.name ?? s.source ?? s.id.uuidString)
         case .course:
-            let c = try r.course(ref)
-            return done(.course(c.id, page: try page(AppLink.CoursePage.self)), title: "\(c.code) \(c.course.title)")
+            let c = try r.named(.course, ref)
+            return done(.course(c.id, page: try page(AppLink.CoursePage.self)), title: c.name)
         case .person:
-            let p = try r.person(ref)
+            let p = try r.named(.person, ref)
             return done(AppLink(.person, p.id), title: p.name)
         case .card:
             return try card(r)
-        case .session:
-            return try item(r) { c, name in
-                let s = try r.session(name, in: c); return (s.id, c.file.title(of: s, calendar: r.ctx.calendar))
-            }
-        case .unit:
-            return try item(r) { c, name in
-                let u = try r.unit(name, in: c); return (u.id, u.title)
-            }
-        case .exam:
-            return try item(r) { c, name in
-                let e = try r.exam(name, in: c); return (e.id, e.title)
-            }
-        case .assignment:
-            return try item(r) { c, name in
-                let a = try r.assignment(name, in: c); return (a.id, a.title)
-            }
-        case .problemSet:
-            return try item(r) { c, name in
-                let p = try r.problemSet(name, in: c); return (p.id, p.title)
-            }
-        case .material:
-            return try item(r) { c, name in
-                let m = try r.material(name, in: c); return (m.id, m.path)
-            }
         case .note:
             return try item(r) { c, name in try note(r, name, in: c) }
-        case .recording:
-            return try item(r) { c, name in
-                let rec = try r.recording(name, in: c); return (rec.id, (rec.file as NSString).lastPathComponent)
-            }
+        case .session, .unit, .exam, .assignment, .problemSet, .material, .recording:
+            guard let item = ItemKind(link: kind) else { throw usage(.linkBadAnchor) }
+            return try self.item(r) { c, name in try r.named(item, name, in: c) }
         }
     }
 
@@ -114,7 +89,7 @@ struct LinkTarget: ParsableArguments {
                 }
             }
         }
-        throw CLIError(exit: .notFound, message: String(localized: .resolveNotFound("카드", rest)))
+        throw CLIError(exit: .notFound, message: String(localized: .resolveNotFound(ItemKind.quizCard.noun, rest)))
     }
 
     func page<Page: RawRepresentable & CaseIterable>(_: Page.Type) throws -> Page? where Page.RawValue == String {

@@ -13,7 +13,7 @@ extension GeneratedCommands {
             """)
         @OptionGroup var g: GlobalOptions
         @Argument(help: "상태") var status: MaterialStatus
-        @Argument(help: ArgumentHelp("<과목>/<자료>. 둘째부터는 자료만 써도 된다", valueName: "material"), completion: Complete.ref("Material")) var materials: [String]
+        @Argument(help: ArgumentHelp("<과목>/<자료>. 둘째부터는 자료만 써도 된다", valueName: "material"), completion: Complete.ref(.material)) var materials: [String]
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -22,7 +22,7 @@ extension GeneratedCommands {
             let action = FolioActions.MaterialStatusSet(
                 course: c.id,
                 status: status,
-                materials: try ([materialsFirst] + materials.dropFirst()).map { try r.id("Material", $0, in: c) }
+                materials: try ([materialsFirst] + materials.dropFirst()).map { try r.id(.material, $0, in: c) }
             )
             try perform(spec: action, g, ctx: ctx)
         }

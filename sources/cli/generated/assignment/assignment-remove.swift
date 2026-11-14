@@ -13,7 +13,7 @@ extension GeneratedCommands {
               folio assignment rm EC4207/HW3 --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<과제>", valueName: "assignment"), completion: Complete.ref("Assignment")) var assignment: String = ""
+        @Argument(help: ArgumentHelp("<과목>/<과제>", valueName: "assignment"), completion: Complete.ref(.assignment)) var assignment: String = ""
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -21,7 +21,7 @@ extension GeneratedCommands {
             let (c, assignmentName) = try r.split(assignment)
             let action = FolioActions.AssignmentRemove(
                 course: c.id,
-                assignment: try r.id("Assignment", assignmentName, in: c)
+                assignment: try r.id(.assignment, assignmentName, in: c)
             )
             try perform(spec: action, g, ctx: ctx)
         }

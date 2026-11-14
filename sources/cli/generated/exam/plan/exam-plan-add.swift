@@ -12,10 +12,10 @@ extension GeneratedCommands {
             """)
         @OptionGroup var g: GlobalOptions
         @Option(name: .customLong("id"), help: .hidden) var id: UUID?
-        @Argument(help: ArgumentHelp("<과목>/<시험>", valueName: "exam"), completion: Complete.ref("Exam")) var exam: String
+        @Argument(help: ArgumentHelp("<과목>/<시험>", valueName: "exam"), completion: Complete.ref(.exam)) var exam: String
         @Argument(help: "할 일") var title: String
         @Option(help: ArgumentHelp("날짜. 2026-10-18", valueName: "date")) var day: LocalDate
-        @Option(help: ArgumentHelp("이 단원을 공부하는 일", valueName: "unit"), completion: Complete.ref("Unit")) var unit: String?
+        @Option(help: ArgumentHelp("이 단원을 공부하는 일", valueName: "unit"), completion: Complete.ref(.unit)) var unit: String?
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -24,10 +24,10 @@ extension GeneratedCommands {
             let action = FolioActions.ExamPlanAdd(
                 id: id ?? UUID(),
                 course: c.id,
-                exam: try r.id("Exam", examName, in: c),
+                exam: try r.id(.exam, examName, in: c),
                 title: title,
                 day: day,
-                unit: try unit.map { try r.id("Unit", $0, in: c) }
+                unit: try unit.map { try r.id(.unit, $0, in: c) }
             )
             try perform(spec: action, g, ctx: ctx)
         }

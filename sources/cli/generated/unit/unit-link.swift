@@ -12,8 +12,8 @@ extension GeneratedCommands {
               folio unit link EC4207/트리 10-28 --off --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<단원>", valueName: "unit"), completion: Complete.ref("Unit")) var unit: String
-        @Argument(help: ArgumentHelp("회차. 예: 10-26. 여러 번 줄 수 있다", valueName: "sessions"), completion: Complete.ref("Session")) var sessions: [String]
+        @Argument(help: ArgumentHelp("<과목>/<단원>", valueName: "unit"), completion: Complete.ref(.unit)) var unit: String
+        @Argument(help: ArgumentHelp("회차. 예: 10-26. 여러 번 줄 수 있다", valueName: "sessions"), completion: Complete.ref(.session)) var sessions: [String]
         @Flag(name: .customLong("off"), help: "연결 풀기") var off = false
 
         func run() throws {
@@ -22,8 +22,8 @@ extension GeneratedCommands {
             let (c, unitName) = try r.split(unit)
             let action = FolioActions.UnitLink(
                 course: c.id,
-                unit: try r.id("Unit", unitName, in: c),
-                sessions: try sessions.map { try r.id("Session", $0, in: c) },
+                unit: try r.id(.unit, unitName, in: c),
+                sessions: try sessions.map { try r.id(.session, $0, in: c) },
                 linked: !off
             )
             try perform(spec: action, g, ctx: ctx)

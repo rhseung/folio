@@ -7,7 +7,7 @@ extension Resolver {
     func score(_ name: String, in c: CourseRef) throws -> ScoreEntry {
         let f = c.file
         return try pick(
-            name, f.scores, what: "점수", names: { [f.name(of: $0.id) ?? $0.title] },
+            name, f.scores, what: ItemKind.scoreEntry.noun, names: { [f.name(of: $0.id) ?? $0.title] },
             ref: { "\(c.code)/\($0.title.isEmpty ? $0.id.uuidString : $0.title)" })
     }
 

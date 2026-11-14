@@ -9,7 +9,7 @@ import Foundation
     examples: [
         "folio session progress EC4207/10-26 05_Matchings.pdf:3-12", "folio session progress EC4207/10-26 05_Matchings.pdf:18-24 --dry-run",
     ],
-    phrases: ["렉처 진도", "수업 진도", "어디까지 나갔", "진도 기록"])
+    phrases: ["렉처 진도", "수업 진도", "어디까지 나갔", "진도 기록"], panel: true)
 public struct SessionProgress {
     /// 과목
     @Arg var course: Course.ID

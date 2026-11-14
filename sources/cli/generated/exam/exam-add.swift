@@ -13,13 +13,13 @@ extension GeneratedCommands {
             """)
         @OptionGroup var g: GlobalOptions
         @Option(name: .customLong("id"), help: .hidden) var id: UUID?
-        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref(.course)) var course: String
         @Argument(help: "시험 제목") var title: String
         @Option(help: ArgumentHelp("시작 일시", valueName: "date")) var start: DateArg?
         @Option(help: ArgumentHelp("끝 일시", valueName: "date")) var end: DateArg?
         @Option(help: "장소") var location: String = ""
-        @Option(help: ArgumentHelp("반영되는 성적 항목", valueName: "component"), completion: Complete.ref("GradeComponent")) var component: String?
-        @Option(help: ArgumentHelp("범위 단원. 여러 번 줄 수 있다. 여러 번 줄 수 있다", valueName: "scope"), completion: Complete.ref("Unit")) var scope: [String] = []
+        @Option(help: ArgumentHelp("반영되는 성적 항목", valueName: "component"), completion: Complete.ref(.gradeComponent)) var component: String?
+        @Option(help: ArgumentHelp("범위 단원. 여러 번 줄 수 있다. 여러 번 줄 수 있다", valueName: "scope"), completion: Complete.ref(.unit)) var scope: [String] = []
         @Option(help: "범위 설명. 예: 3장까지") var scopeText: String = ""
         @Option(help: "허용 자료. 예: 계산기") var allowed: String = ""
         @Option(help: "메모") var memo: String = ""
@@ -35,8 +35,8 @@ extension GeneratedCommands {
                 start: start.map { $0.date },
                 end: end.map { $0.date },
                 location: location,
-                component: try component.map { try r.id("GradeComponent", $0, in: c) },
-                scope: try scope.map { try r.id("Unit", $0, in: c) },
+                component: try component.map { try r.id(.gradeComponent, $0, in: c) },
+                scope: try scope.map { try r.id(.unit, $0, in: c) },
                 scopeText: scopeText,
                 allowed: allowed,
                 memo: memo

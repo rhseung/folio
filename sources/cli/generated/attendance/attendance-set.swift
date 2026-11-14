@@ -11,7 +11,7 @@ extension GeneratedCommands {
               folio attendance set EC4207/10-26 absent
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<회차>", valueName: "session"), completion: Complete.ref("Session")) var session: String
+        @Argument(help: ArgumentHelp("<과목>/<회차>", valueName: "session"), completion: Complete.ref(.session)) var session: String
         @Argument(help: "출결") var state: AttendanceState
 
         func run() throws {
@@ -20,7 +20,7 @@ extension GeneratedCommands {
             let (c, sessionName) = try r.split(session)
             let action = FolioActions.AttendanceSet(
                 course: c.id,
-                session: try r.id("Session", sessionName, in: c),
+                session: try r.id(.session, sessionName, in: c),
                 state: state
             )
             try perform(spec: action, g, ctx: ctx)

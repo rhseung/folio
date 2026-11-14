@@ -4,7 +4,7 @@ import Foundation
 
 @Action(
     "note build", "LaTeX 노트(.tex)를 Tectonic으로 PDF로 만들어 Study에 둔다", done: "노트 '{note}'을(를) PDF로 만들었습니다",
-    phrases: ["tex 노트 컴파일", "노트 PDF 만들기"])
+    phrases: ["tex 노트 컴파일", "노트 PDF 만들기"], panel: true)
 public struct NoteBuild {
     /// 과목
     @Arg var course: Course.ID

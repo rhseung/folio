@@ -5,7 +5,7 @@ import Foundation
 
 @Action(
     "note adopt", "Folio 밖에서 만든 노트에 ID 붙이기", done: "노트 '{note}'에 ID를 붙였습니다",
-    examples: ["folio note adopt EC4207/Notes/외부.md"], phrases: ["밖에서 만든 노트 등록"])
+    examples: ["folio note adopt EC4207/Notes/외부.md"], phrases: ["밖에서 만든 노트 등록"], panel: true)
 public struct NoteAdopt {
     /// 과목
     @Arg var course: Course.ID

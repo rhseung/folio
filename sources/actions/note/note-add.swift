@@ -9,7 +9,7 @@ import Foundation
         #"folio note add EC4207 "매칭 정리" --kind topic --unit 매칭"#, #"folio note add EC4207 "매칭 정리" --format tex"#,
         ##"echo "# 메모" | folio note add EC4207 "시험 메모" --body -"##,
     ],
-    phrases: ["노트 만들기", "새 노트", "정리 노트 쓰기"])
+    phrases: ["노트 만들기", "새 노트", "정리 노트 쓰기"], panel: true)
 public struct NoteAdd {
     @New var id: Note.ID
     /// 과목

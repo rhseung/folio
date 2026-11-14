@@ -4,7 +4,7 @@ import Foundation
 
 @Action(
     "note figure write", "노트 그림(SVG) 전체를 바꾸기. note figure show의 해시를 --expect로 넘겨 그사이 바뀌지 않았는지 확인한다",
-    done: "그림 '{name}'을(를) 썼습니다", phrases: ["그림 다시 그리기", "SVG 수정"])
+    done: "그림 '{name}'을(를) 썼습니다", phrases: ["그림 다시 그리기", "SVG 수정"], proposal: .replaces(covers: []), panel: true)
 public struct NoteFigureWrite {
     /// 과목
     @Arg var course: Course.ID

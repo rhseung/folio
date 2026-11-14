@@ -9,7 +9,7 @@ import Foundation
         #"folio assignment add EC4207 "Weekly Quiz" --due 2026-11-02 --repeats weekly --dry-run"#,
         #"folio assignment add EC4207 "Lab 보고서" --due 2026-11-02 --repeats "격주 월수""#,
     ],
-    phrases: ["과제 추가", "숙제 생김", "새 과제"])
+    phrases: ["과제 추가", "숙제 생김", "새 과제"], panel: true)
 public struct AssignmentAdd {
     @New var id: Assignment.ID
     /// 과목

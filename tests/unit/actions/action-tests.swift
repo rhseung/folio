@@ -26,7 +26,7 @@ struct ActionTests {
 
     @Test func aPathFieldNamesAFile() {
         let note = NoteRemove.spec.fields.first { $0.name == "note" }
-        #expect(note?.ref == "NotePath")
+        #expect(note?.ref == .notePath)
         #expect(note?.type == "String")
     }
 

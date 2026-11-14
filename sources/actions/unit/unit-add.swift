@@ -7,7 +7,7 @@ import Foundation
 @Action(
     "unit add", "단원 추가. 형제 단원 맨 뒤에 놓인다", effect: .creates, done: "단원 '{title}'을(를) 추가했습니다",
     examples: ["folio unit add EC4207 트리", #"folio unit add EC4207 "스패닝 트리" --parent 트리 --dry-run"#],
-    phrases: ["단원 추가", "챕터 추가", "새 단원"])
+    phrases: ["단원 추가", "챕터 추가", "새 단원"], panel: true)
 public struct UnitAdd {
     @New var id: FolioDomain.Unit.ID
     /// 과목

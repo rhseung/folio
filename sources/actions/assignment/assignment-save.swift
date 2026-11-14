@@ -14,7 +14,7 @@ import Foundation
         "folio assignment set EC4207/HW3 --component 과제 --score 9/10",
         "folio assignment set EC4207/HW3 --due none --repeats weekly --dry-run",
     ],
-    phrases: ["미뤄졌", "연기", "마감일", "마감 변경", "기한 연장", "과제 메모", "과제 이름"])
+    phrases: ["미뤄졌", "연기", "마감일", "마감 변경", "기한 연장", "과제 메모", "과제 이름"], panel: true)
 public struct AssignmentSave {
     public struct Score: Codable, Sendable, Equatable {
         public var component: UUID?

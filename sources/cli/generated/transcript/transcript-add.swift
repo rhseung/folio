@@ -12,26 +12,26 @@ extension GeneratedCommands {
             """)
         @OptionGroup var g: GlobalOptions
         @Option(name: .customLong("id"), help: .hidden) var id: UUID?
-        @Argument(help: ArgumentHelp("학기", valueName: "semester"), completion: Complete.ref("Semester")) var semester: String
+        @Argument(help: ArgumentHelp("학기", valueName: "semester"), completion: Complete.ref(.semester)) var semester: String
         @Argument(help: "과목 이름") var title: String
-        @Option(help: ArgumentHelp("강의 코드. 과목 폴더 이름이 된다", valueName: "code"), completion: Complete.ref("CourseCode")) var code: String
+        @Option(help: ArgumentHelp("강의 코드. 과목 폴더 이름이 된다", valueName: "code"), completion: Complete.ref(.courseCode)) var code: String
         @Option(help: "과목 번호. 예: 4207") var number: String
         @Option(help: "학점") var credits: Double = 3
         @Option(help: "평가 방식") var mode: GradingMode = .passFail
-        @Option(help: ArgumentHelp("받은 성적", valueName: "grade"), completion: Complete.ref("LetterGrade")) var grade: String?
+        @Option(help: ArgumentHelp("받은 성적", valueName: "grade"), completion: Complete.ref(.letterGrade)) var grade: String?
 
         func run() throws {
             let ctx = try CLI.context(g)
             let r = Resolver(ctx)
             let action = FolioActions.TranscriptAdd(
                 id: id ?? UUID(),
-                semester: try r.id("Semester", semester, in: nil),
+                semester: try r.id(.semester, semester, in: nil),
                 title: title,
-                code: try r.id("CourseCode", code, in: nil),
+                code: try r.id(.courseCode, code, in: nil),
                 number: number,
                 credits: credits,
                 mode: mode,
-                grade: try grade.map { try r.id("LetterGrade", $0, in: nil) }
+                grade: try grade.map { try r.id(.letterGrade, $0, in: nil) }
             )
             try perform(spec: action, g, ctx: ctx)
         }

@@ -13,16 +13,16 @@ extension GeneratedCommands {
               folio score set EC4207/HW1 --date none --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<점수 제목>", valueName: "score"), completion: Complete.ref("ScoreEntry")) var score: String = ""
-        @Option(help: ArgumentHelp("성적 항목", valueName: "component"), completion: Complete.ref("GradeComponent")) var component: String?
+        @Argument(help: ArgumentHelp("<과목>/<점수 제목>", valueName: "score"), completion: Complete.ref(.scoreEntry)) var score: String = ""
+        @Option(help: ArgumentHelp("성적 항목", valueName: "component"), completion: Complete.ref(.gradeComponent)) var component: String?
         @Option(help: "제목") var title: String?
         @Option(help: "받은 점수") var value: Double?
         @Option(help: "만점") var max: Double?
         @Option(help: "평균. none이면 지운다") var mean: Clearable<Double>?
         @Option(help: "표준편차. none이면 지운다") var stdDev: Clearable<Double>?
         @Option(help: ArgumentHelp("날짜. none이면 지운다", valueName: "date")) var date: Clearable<LocalDate>?
-        @Option(help: ArgumentHelp("점수가 나온 시험. none이면 지운다", valueName: "exam"), completion: Complete.ref("Exam")) var exam: Clearable<String>?
-        @Option(help: ArgumentHelp("점수가 나온 과제. none이면 지운다", valueName: "assignment"), completion: Complete.ref("Assignment")) var assignment: Clearable<String>?
+        @Option(help: ArgumentHelp("점수가 나온 시험. none이면 지운다", valueName: "exam"), completion: Complete.ref(.exam)) var exam: Clearable<String>?
+        @Option(help: ArgumentHelp("점수가 나온 과제. none이면 지운다", valueName: "assignment"), completion: Complete.ref(.assignment)) var assignment: Clearable<String>?
         @Option(help: "면제 여부") var excused: Toggle?
 
         func run() throws {
@@ -32,16 +32,16 @@ extension GeneratedCommands {
             let (c, scoreName) = try r.split(score)
             let action = FolioActions.ScoreSet(
                 course: c.id,
-                score: try r.id("ScoreEntry", scoreName, in: c),
-                component: try component.map { Patch.set(try r.id("GradeComponent", $0, in: c)) } ?? .keep,
+                score: try r.id(.scoreEntry, scoreName, in: c),
+                component: try component.map { Patch.set(try r.id(.gradeComponent, $0, in: c)) } ?? .keep,
                 title: title.map { Patch.set($0) } ?? .keep,
                 value: value.map { Patch.set($0) } ?? .keep,
                 max: max.map { Patch.set($0) } ?? .keep,
                 mean: mean.map { p in Patch.set(p.value) } ?? .keep,
                 stdDev: stdDev.map { p in Patch.set(p.value) } ?? .keep,
                 date: date.map { p in Patch.set(p.value) } ?? .keep,
-                exam: try exam.map { p in Patch.set(try p.value.map { try r.id("Exam", $0, in: c) }) } ?? .keep,
-                assignment: try assignment.map { p in Patch.set(try p.value.map { try r.id("Assignment", $0, in: c) }) } ?? .keep,
+                exam: try exam.map { p in Patch.set(try p.value.map { try r.id(.exam, $0, in: c) }) } ?? .keep,
+                assignment: try assignment.map { p in Patch.set(try p.value.map { try r.id(.assignment, $0, in: c) }) } ?? .keep,
                 excused: excused.map { Patch.set($0.value) } ?? .keep
             )
             try perform(spec: action, g, ctx: ctx)

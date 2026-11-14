@@ -25,6 +25,23 @@ public struct Session: Entity {
 
     public enum Kind: String, Codable, Sendable, CaseIterable {
         case lecture, cancelled, makeup
+
+        // 명령줄과 빠른 입력은 원래 값과 함께 한국어 이름도 받는다.
+        public init?(word: String) {
+            switch word {
+            case "강의": self = .lecture
+            case "휴강": self = .cancelled
+            case "보강": self = .makeup
+            default: self.init(rawValue: word.lowercased())
+            }
+        }
+
+        public var tone: StatusTone {
+            switch self {
+            case .lecture, .makeup: .plain
+            case .cancelled: .muted
+            }
+        }
     }
 
     public var kind: Kind {

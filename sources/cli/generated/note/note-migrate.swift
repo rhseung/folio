@@ -14,7 +14,7 @@ extension GeneratedCommands {
               folio note migrate EC4207
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("과목. 빼면 모든 과목", valueName: "course"), completion: Complete.ref("Course")) var course: String?
+        @Argument(help: ArgumentHelp("과목. 빼면 모든 과목", valueName: "course"), completion: Complete.ref(.course)) var course: String?
 
         func run() throws {
             let ctx = try CLI.context(g)

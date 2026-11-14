@@ -8,7 +8,7 @@ import Foundation
         "folio component set EC4207/과제 --weight 25", "folio component set EC4207/퀴즈 --aggregation bestOf:3",
         "folio component set EC4207/퀴즈 --group none --dry-run",
     ],
-    phrases: ["비율 바꾸기", "반영 비율", "항목 이름"])
+    phrases: ["비율 바꾸기", "반영 비율", "항목 이름"], panel: true)
 public struct ComponentSet {
     @Arg var course: Course.ID
     /// 항목 이름

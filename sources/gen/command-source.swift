@@ -1,4 +1,5 @@
 import FolioActions
+import FolioDomain
 import Foundation
 
 enum CommandSource {
@@ -22,9 +23,9 @@ enum CommandSource {
     static func command(_ name: String, _ spec: ActionSpec) -> [String] {
         let words = spec.command.split(separator: " ")
         let fields = spec.fields
-        let course = fields.first { $0.ref == "Course" && $0.role == .argument && !$0.many }
+        let course = fields.first { $0.ref == .course && $0.role == .argument && !$0.many }
         let folded = course.flatMap { c in
-            c.optional ? nil : fields.first { $0.role == .argument && $0.ref.map(scoped.contains) == true && $0.name != c.name }
+            c.optional ? nil : fields.first { $0.role == .argument && $0.ref?.foldsIntoCourse == true && $0.name != c.name }
         }
 
         var discussion = spec.discussion.isEmpty ? [] : spec.discussion.components(separatedBy: "\n") + [""]
@@ -41,7 +42,7 @@ enum CommandSource {
             let last = !fields.contains { $0.role == .argument && fields.firstIndex(of: $0)! > fields.firstIndex(of: f)! }
             if let folded, f.name == folded.name {
                 let item = f.help.isEmpty ? f.name : f.help
-                let completion = "completion: Complete.ref(\(q(f.ref!)))"
+                let completion = f.ref.map { "completion: Complete.ref(.\(caseName($0)))" } ?? ""
                 if f.many {
                     let one = f.name.hasSuffix("s") ? String(f.name.dropLast()) : f.name
                     out.append(
@@ -90,9 +91,9 @@ enum CommandSource {
             if f.name == course?.name {
                 exprs[f.name] = f.optional ? "c?.id" : "c.id"
             } else if f.name == folded?.name, f.many {
-                exprs[f.name] = "try ([\(f.name)First] + \(f.name).dropFirst()).map { try r.\(lookup(f.ref!))(\(q(f.ref!)), $0, in: c) }"
+                exprs[f.name] = "try ([\(f.name)First] + \(f.name).dropFirst()).map { \(resolve(f, "$0")) }"
             } else if f.name == folded?.name {
-                exprs[f.name] = "try r.\(lookup(f.ref!))(\(q(f.ref!)), \(f.name)Name, in: c)"
+                exprs[f.name] = resolve(f, "\(f.name)Name")
             } else {
                 exprs[f.name] = value(f, scope: scope)
             }
@@ -109,18 +110,19 @@ enum CommandSource {
         return out
     }
 
-    static let scoped: Set<String> = [
-        "Session", "Exam", "Unit", "Assignment", "GradeComponent", "ScoreEntry", "Material", "ProblemSet", "Note", "NotePath", "NoteWidget",
-    ]
-
-    static let parents: [String: String] = ["ExamPlanItem": "Exam", "QuizCard": "Unit"]
-
     static func parent(_ f: FieldSpec, in fields: [FieldSpec]) -> FieldSpec? {
-        guard let kind = f.ref, let p = parents[kind] else { return nil }
+        guard let p = f.ref?.parent else { return nil }
         return fields.first { $0.ref == p && !$0.many && !$0.optional }
     }
 
-    static func lookup(_ kind: String) -> String { kind.hasSuffix("Path") ? "path" : "id" }
+    // 생성한 명령이 `ItemKind`의 경우를 이름으로 부른다. 경우 이름은 원래 값(타입 이름)의 첫 글자를 소문자로 바꾼 것이다.
+    static func caseName(_ kind: ItemKind) -> String { kind.rawValue.prefix(1).lowercased() + kind.rawValue.dropFirst() }
+
+    static func resolve(_ f: FieldSpec, _ value: String) -> String {
+        f.ref.map { "try r.\(lookup($0))(.\(caseName($0)), \(value), in: c)" } ?? value
+    }
+
+    static func lookup(_ kind: ItemKind) -> String { kind.byPath ? "path" : "id" }
 
     static func flag(_ f: FieldSpec) -> String { f.cliName ?? kebab(f.name) }
 
@@ -143,7 +145,7 @@ enum CommandSource {
 
     static func declaration(_ f: FieldSpec, last: Bool) -> String? {
         let t = cliType(f)
-        let completion = f.ref.map { ", completion: Complete.ref(\(q($0)))" } ?? ""
+        let completion = f.ref.map { ", completion: Complete.ref(.\(caseName($0)))" } ?? ""
         let name = f.cliName.map { "name: .customLong(\(q($0))), " } ?? ""
         if f.file != nil || f.folder {
             let json = f.file != nil && !(f.type == "String" && !f.many)
@@ -197,7 +199,7 @@ enum CommandSource {
         func one(_ v: String) -> String {
             if f.parsed != nil { return "try r.parse(\(v), in: \(scope))" }
             if let ref = f.ref {
-                return "try r.\(lookup(ref))(\(q(ref)), \(v), in: \(scope)\(parent.map { ", parent: \($0)" } ?? ""))"
+                return "try r.\(lookup(ref))(.\(caseName(ref)), \(v), in: \(scope)\(parent.map { ", parent: \($0)" } ?? ""))"
             }
             return f.type == "Date" || f.type == "Bool" && f.patch ? "\(v).\(f.type == "Date" ? "date" : "value")" : v
         }

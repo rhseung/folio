@@ -14,7 +14,9 @@ import Foundation
         "folio note link EC4207/09-08 --kind review --session 09-08",
         #"folio note link "EC4207/매칭 정리" --kind topic --unit 매칭 --unit "이분 그래프""#,
     ],
-    phrases: ["노트 연결", "노트 종류"])
+    phrases: ["노트 연결", "노트 종류"],
+    // 종류와 링크를 쓰고 빠진 링크를 지우지만, 빠진 링크를 남기는 것으로 다뤄도 앞선 제안을 덜 대체할 뿐이다.
+    proposal: .sets, panel: true)
 public struct NoteLink {
     @Arg var course: Course.ID
     /// 노트

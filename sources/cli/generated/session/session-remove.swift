@@ -15,7 +15,7 @@ extension GeneratedCommands {
               folio session rm EC4207/10-30 --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<회차>. 둘째부터는 회차만 써도 된다", valueName: "session"), completion: Complete.ref("Session")) var sessions: [String]
+        @Argument(help: ArgumentHelp("<과목>/<회차>. 둘째부터는 회차만 써도 된다", valueName: "session"), completion: Complete.ref(.session)) var sessions: [String]
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -23,7 +23,7 @@ extension GeneratedCommands {
             let (c, sessionsFirst) = try r.split(sessions.first ?? "")
             let action = FolioActions.SessionRemove(
                 course: c.id,
-                sessions: try ([sessionsFirst] + sessions.dropFirst()).map { try r.id("Session", $0, in: c) }
+                sessions: try ([sessionsFirst] + sessions.dropFirst()).map { try r.id(.session, $0, in: c) }
             )
             try perform(spec: action, g, ctx: ctx)
         }

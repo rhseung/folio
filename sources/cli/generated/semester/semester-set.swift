@@ -13,7 +13,7 @@ extension GeneratedCommands {
               folio semester set 2026-3 --final-week none --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("학기. 2026-3 또는 \"2026 fall\"", valueName: "semester"), completion: Complete.ref("Semester")) var semester: String = ""
+        @Argument(help: ArgumentHelp("학기. 2026-3 또는 \"2026 fall\"", valueName: "semester"), completion: Complete.ref(.semester)) var semester: String = ""
         @Option(help: ArgumentHelp("개강일. none이면 지운다", valueName: "date")) var start: Clearable<LocalDate>?
         @Option(help: ArgumentHelp("종강일. none이면 지운다", valueName: "date")) var end: Clearable<LocalDate>?
         @Option(help: "중간고사 주차. none이면 지운다") var midtermWeek: Clearable<Int>?
@@ -25,7 +25,7 @@ extension GeneratedCommands {
             let ctx = try CLI.context(g)
             let r = Resolver(ctx)
             let action = FolioActions.SemesterSet(
-                semester: try r.id("Semester", semester, in: nil),
+                semester: try r.id(.semester, semester, in: nil),
                 start: start.map { p in Patch.set(p.value) } ?? .keep,
                 end: end.map { p in Patch.set(p.value) } ?? .keep,
                 midtermWeek: midtermWeek.map { p in Patch.set(p.value) } ?? .keep,

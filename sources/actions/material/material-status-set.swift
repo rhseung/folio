@@ -7,7 +7,7 @@ import Foundation
     "material status", "자료의 상태 바꾸기. 여러 개면 확인을 받는다", confirm: "자료 {materials}의 상태를 {status}(으)로 바꿉니다.",
     done: "자료 {materials}을(를) {status}(으)로 바꿨습니다",
     examples: ["folio material status ignored EC4207/Seating.pdf", "folio material status classified EC4207/Problems.pdf Guideline.pdf"],
-    phrases: ["자료 분류", "자료 무시"])
+    phrases: ["자료 분류", "자료 무시"], panel: true)
 public struct MaterialStatusSet {
     @Arg var course: Course.ID
     /// 상태

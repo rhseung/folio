@@ -9,7 +9,7 @@ import Foundation
         #"folio session add EC4207 --date "2026-11-04 21:00" --end "2026-11-04 22:15" --kind makeup --link https://zoom.us/j/123 --dry-run"#,
         #"folio session add EC4207 --date "2026-11-11 10:30" --attendance absent --dry-run"#,
     ],
-    phrases: ["보충", "보충수업", "잡혔", "수업 추가", "보강", "추가 수업", "회차 만들기", "줌 수업", "온라인 수업", "비대면 수업"])
+    phrases: ["보충", "보충수업", "잡혔", "수업 추가", "보강", "추가 수업", "회차 만들기", "줌 수업", "온라인 수업", "비대면 수업"], panel: true)
 public struct SessionAdd {
     @New var id: Session.ID
     /// 과목

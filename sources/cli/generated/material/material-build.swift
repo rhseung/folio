@@ -9,7 +9,7 @@ extension GeneratedCommands {
         static let configuration = CommandConfiguration(commandName: "build", abstract: "LaTeX 자료(.tex)를 Tectonic으로 PDF로 만들어 옆에 같은 이름으로 둔다", discussion: """
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<.tex 자료>", valueName: "material"), completion: Complete.ref("Material")) var material: String = ""
+        @Argument(help: ArgumentHelp("<과목>/<.tex 자료>", valueName: "material"), completion: Complete.ref(.material)) var material: String = ""
         @Flag(help: "같은 이름의 PDF가 Folio가 만든 것이 아니어도 바꾼다") var overwrite = false
 
         func run() throws {
@@ -18,7 +18,7 @@ extension GeneratedCommands {
             let (c, materialName) = try r.split(material)
             let action = FolioActions.MaterialBuild(
                 course: c.id,
-                material: try r.id("Material", materialName, in: c),
+                material: try r.id(.material, materialName, in: c),
                 pdf: nil,
                 overwrite: overwrite
             )

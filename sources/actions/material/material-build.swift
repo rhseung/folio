@@ -4,7 +4,7 @@ import Foundation
 
 @Action(
     "material build", "LaTeX 자료(.tex)를 Tectonic으로 PDF로 만들어 옆에 같은 이름으로 둔다", done: "'{material}'을(를) PDF로 만들었습니다",
-    phrases: ["tex 컴파일", "latex 빌드", "PDF 만들기"])
+    phrases: ["tex 컴파일", "latex 빌드", "PDF 만들기"], panel: true)
 public struct MaterialBuild {
     /// 과목
     @Arg var course: Course.ID

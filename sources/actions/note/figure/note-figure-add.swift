@@ -6,7 +6,7 @@ import Foundation
     "note figure add", "노트 그림(SVG)을 Notes/assets에 새로 쓰기. 같은 이름이 있으면 쓰지 않는다. 노트에는 ![설명](assets/<이름>.svg)로 넣는다",
     discussion: "XML이 올바른지, 스크립트와 바깥 참조가 없는지, 다크 모드 규칙(prefers-color-scheme: dark)이 있는지 본다. 노트 형식은 folio note format.",
     effect: .creates, done: "그림 '{name}'을(를) 만들었습니다",
-    phrases: ["그림 추가", "SVG 그림 넣기", "노트 그림 만들기", "도식 그리기", "다이어그램 그림"])
+    phrases: ["그림 추가", "SVG 그림 넣기", "노트 그림 만들기", "도식 그리기", "다이어그램 그림"], panel: true)
 public struct NoteFigureAdd {
     /// 과목
     @Arg var course: Course.ID

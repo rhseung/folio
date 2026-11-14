@@ -1,3 +1,4 @@
+import FolioActions
 import FolioDomain
 import FolioStorage
 import Foundation
@@ -6,7 +7,7 @@ import Foundation
 // 폴더에서 시작한다. 대부분의 답은 읽기만 하고 폴더 자체를 읽으므로, 사본은 답의 첫 쓰기 때 만든다.
 final class ProposalStage: @unchecked Sendable {
     struct Made {
-        var items: [String: String]
+        var items: [String: Change.Kind]
         var paths: Set<String>
     }
 
@@ -25,9 +26,9 @@ final class ProposalStage: @unchecked Sendable {
 
     func record(_ made: Made) { self.made.append(made) }
 
-    var pending: [String: String] {
+    var pending: [String: Change.Kind] {
         made.reduce(into: [:]) { all, m in
-            for (id, kind) in m.items where all[id] == nil || kind == "added" { all[id] = kind }
+            for (id, kind) in m.items where all[id] == nil || kind == .added { all[id] = kind }
         }
     }
 
@@ -51,22 +52,22 @@ final class ProposalStage: @unchecked Sendable {
 
     static func made(from output: String) -> Made {
         guard let value = try? JSONDecoder().decode(JSONValue.self, from: Data(output.utf8)) else { return Made(items: [:], paths: []) }
-        var items: [String: String] = [:]
+        var items: [String: Change.Kind] = [:]
         var paths: Set<String> = []
         if case .array(let changes)? = value["changes"] {
             for c in changes {
-                guard case .string(let kind)? = c["kind"] else { continue }
+                guard case .string(let word)? = c["kind"], let kind = Change.Kind(rawValue: word) else { continue }
                 if case .string(let path)? = c["path"] { paths.insert(path) }
                 if case .string(let to)? = c["to"] { paths.insert(to) }
                 if case .string(let item)? = c["item"], let id = item.split(separator: "/").last.map(String.init),
                     UUID(uuidString: id) != nil,
-                    kind == "added" || kind == "changed"
+                    kind == .added || kind == .changed
                 {
-                    items[id] = items[id] == "added" ? "added" : kind
+                    items[id] = items[id] == .added ? .added : kind
                 }
             }
         }
-        if case .string(let id)? = value["made"], items[id] == nil { items[id] = "added" }
+        if case .string(let id)? = value["made"], items[id] == nil { items[id] = .added }
         return Made(items: items, paths: paths)
     }
 
@@ -77,7 +78,9 @@ final class ProposalStage: @unchecked Sendable {
             switch v {
             case .object(var o):
                 for (k, member) in o { o[k] = mark(member) }
-                if case .string(let id)? = o["id"], let kind = pending[id] ?? pending[id.uppercased()] { o["proposed"] = .string(kind) }
+                if case .string(let id)? = o["id"], let kind = pending[id] ?? pending[id.uppercased()] {
+                    o["proposed"] = .string(kind.rawValue)
+                }
                 return .object(o)
             case .array(let a): return .array(a.map(mark))
             default: return v

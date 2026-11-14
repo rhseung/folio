@@ -45,8 +45,8 @@ func declaredInput(_ spec: ActionSpec, _ sniffed: JSONValue) -> JSONValue {
     for f in spec.fields {
         guard case .object(var p)? = props[f.name] else { continue }
         if let kind = f.ref {
-            let one: JSONValue = ["type": "string", "x-folio-ref": .string(kind)]
-            p = f.many ? ["type": "array", "items": one] : ["type": "string", "x-folio-ref": .string(kind)]
+            let one: JSONValue = ["type": "string", "x-folio-ref": .string(kind.rawValue)]
+            p = f.many ? ["type": "array", "items": one] : ["type": "string", "x-folio-ref": .string(kind.rawValue)]
         }
         // JSON 입력은 명령의 `2026-11-20 23:59`와 달리 오프셋이 붙은 RFC 3339만 받는데, 이 안내가 없을 때 에이전트가 잘못
         // 추측했다.

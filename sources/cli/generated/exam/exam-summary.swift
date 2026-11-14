@@ -12,7 +12,7 @@ extension GeneratedCommands {
             """)
         @OptionGroup var g: GlobalOptions
         @Option(name: .customLong("id"), help: .hidden) var note: UUID?
-        @Argument(help: ArgumentHelp("<과목>/<시험>", valueName: "exam"), completion: Complete.ref("Exam")) var exam: String = ""
+        @Argument(help: ArgumentHelp("<과목>/<시험>", valueName: "exam"), completion: Complete.ref(.exam)) var exam: String = ""
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -21,7 +21,7 @@ extension GeneratedCommands {
             let action = FolioActions.ExamSummary(
                 note: note ?? UUID(),
                 course: c.id,
-                exam: try r.id("Exam", examName, in: c)
+                exam: try r.id(.exam, examName, in: c)
             )
             try perform(spec: action, g, ctx: ctx)
         }

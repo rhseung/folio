@@ -170,12 +170,9 @@ struct SessionsView: View {
 }
 
 extension AttendanceState {
-    @MainActor static let steps: [StepToggle<AttendanceState>.Option] = [
-        .init(value: .present, label: String(localized: .attendancePresent), tint: Theme.Palette.success),
-        .init(value: .late, label: String(localized: .attendanceLate), tint: Theme.Palette.warning),
-        .init(value: .absent, label: String(localized: .attendanceAbsent), tint: Theme.Palette.danger),
-        .init(value: .excused, label: String(localized: .attendanceExcused), tint: Theme.Palette.textSecondary),
-    ]
+    @MainActor static let steps: [StepToggle<AttendanceState>.Option] = allCases.map {
+        .init(value: $0, label: $0.label, tint: $0.tone.tint)
+    }
 
     var label: String {
         switch self {

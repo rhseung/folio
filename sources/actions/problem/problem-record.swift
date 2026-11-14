@@ -6,7 +6,7 @@ import Foundation
 @Action(
     "problem-set record", "문제 풀이 결과를 기록", effect: .logs, done: "풀이를 기록했습니다",
     phrases: ["풀었", "못 풀", "문제 풀이 결과", "풀었음", "못 풂"],
-    cli: .manual(reason: "묶음, 문제 번호, 판정으로 풀이 기록(ProblemAttemptEvent) 하나를 만들고 번호가 묶음에 있는지 본다"))
+    cli: .manual(reason: "묶음, 문제 번호, 판정으로 풀이 기록(ProblemAttemptEvent) 하나를 만들고 번호가 묶음에 있는지 본다"), panel: true)
 public struct ProblemRecord {
     @Arg var course: Course.ID
     var attempt: ProblemAttemptEvent

@@ -24,7 +24,7 @@ extension MaterialCommand {
             say(m.path.link(c.store.url.appending(path: m.path)).styled(.bold))
             say(String(localized: .materialShowRole(m.role?.rawValue ?? "-")))
             if let format = m.format { say(String(localized: .materialShowFormat(ShownMaterial.label(format)))) }
-            say(String(localized: .materialShowStatus(m.status.rawValue.toned)))
+            say(String(localized: .materialShowStatus(m.status.rawValue.toned(m.status.tone))))
             let sessions = f.sessionLinks(of: m.id)
             if !sessions.isEmpty {
                 say(String(localized: .materialShowSessions))

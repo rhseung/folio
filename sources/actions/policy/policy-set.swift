@@ -10,7 +10,7 @@ import Foundation
         #"folio component policy EC4207 --notes "Quiz 최저 점수 1회 제외""#,
         "folio component policy EC4207 --cap 6:B0 --cap 9:F",
         "folio component policy EC4207 --cutoff A+:95 --cutoff A0:90 --top-grade-ratio none --dry-run",
-    ])
+    ], panel: true)
 public struct PolicySet {
     /// 과목
     @Arg var course: Course.ID

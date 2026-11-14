@@ -24,3 +24,16 @@ enum Tone {
         }
     }
 }
+
+extension StatusTone {
+    @MainActor var tint: Color {
+        switch self {
+        case .plain: Theme.Palette.text
+        case .good: Theme.Palette.success
+        case .caution: Theme.Palette.warning
+        case .bad: Theme.Palette.danger
+        case .info: Theme.Palette.info
+        case .muted: Theme.Palette.textSecondary
+        }
+    }
+}

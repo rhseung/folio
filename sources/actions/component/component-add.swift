@@ -8,7 +8,7 @@ import Foundation
         "folio component add EC4207 과제 --weight 30",
         "folio component add EC4207 퀴즈 --weight 20 --aggregation dropLowest:1 --expected-count 5 --dry-run",
     ],
-    phrases: ["평가 항목 추가"])
+    phrases: ["평가 항목 추가"], panel: true)
 public struct ComponentAdd {
     @New var id: GradeComponent.ID
     /// 과목

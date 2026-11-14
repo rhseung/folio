@@ -4,7 +4,7 @@ import Foundation
 
 @Action(
     "assignment status", "과제 상태 바꾸기. 매주 과제를 내면 다음 과제가 생긴다", done: "과제 '{assignment}'의 상태를 {status}(으)로 바꿨습니다",
-    examples: ["folio assignment status EC4207/HW3 submitted"], phrases: ["제출", "냈어", "다 했어", "하는 중", "채점됨"])
+    examples: ["folio assignment status EC4207/HW3 submitted"], phrases: ["제출", "냈어", "다 했어", "하는 중", "채점됨"], panel: true)
 public struct AssignmentStatusSet {
     /// 과목
     @Arg var course: Course.ID

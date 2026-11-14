@@ -34,7 +34,16 @@ public struct ActionMacro: MemberMacro, ExtensionMacro {
         let decodes = fields.map { "self.\($0.name) = \($0.decode)" }.joined(separator: "\n")
         let encodes = fields.map(\.encode).joined(separator: "\n")
         let specs = fields.map(\.spec).joined(separator: ",\n")
-        return [
+        let wholeFiles = fields.filter(\.wholeFile)
+        guard wholeFiles.count <= 1 else { throw MacroError("@WholeFile은 액션에 하나만 둡니다") }
+        let current: [DeclSyntax] = wholeFiles.map { f in
+            """
+            public static func currentFile(_ ctx: FolioActions.ActionContext) throws -> (field: String, value: FolioDomain.JSONValue)? {
+            (\(raw: f.quoted(f.name)), try FolioDomain.JSONValue(\(raw: f.base).current(in: ctx)))
+            }
+            """
+        }
+        return current + [
             fields.isEmpty
                 ? "public enum CodingKeys: String, CodingKey { case _none }"
                 : "public enum CodingKeys: String, CodingKey { case \(raw: keys) }",
@@ -45,7 +54,7 @@ public struct ActionMacro: MemberMacro, ExtensionMacro {
             public static let spec = FolioActions.ActionSpec(command: \(raw: args.command), summary: \(raw: args.summary), discussion: \(raw: args.discussion), \
             effect: .\(raw: args.effect), confirm: \(raw: args.confirm ?? "nil"), done: \(raw: args.done), examples: \(raw: args.examples), \
             phrases: \(raw: args.phrases), generated: \(raw: args.generated), manualReason: \(raw: args.manualReason ?? "nil"), \
-            undoable: \(raw: args.undoable), fields: [\n\(raw: specs)\n])
+            undoable: \(raw: args.undoable), proposal: \(raw: args.proposal ?? "nil"), panel: \(raw: args.panel), fields: [\n\(raw: specs)\n])
             """,
         ]
     }
@@ -63,7 +72,7 @@ public struct ActionMacro: MemberMacro, ExtensionMacro {
 
 private struct Arguments {
     var command = "", summary = "", discussion = "\"\"", effect = "changes", confirm: String?, done = "", examples = "[]", phrases = "[]"
-    var generated = "true", manualReason: String?, undoable = "false"
+    var generated = "true", manualReason: String?, undoable = "false", proposal: String?, panel = "false"
     var confirmText: String?, doneText: String?
 
     init(_ node: AttributeSyntax) throws {
@@ -93,6 +102,8 @@ private struct Arguments {
                     manualReason = reason.expression.trimmedDescription
                 }
             case "undoable": undoable = source
+            case "proposal": proposal = source
+            case "panel": panel = source
             case let other?: throw MacroError("모르는 인자입니다: \(other)")
             }
         }
@@ -118,6 +129,7 @@ private struct Field {
     var base: String
     var cliName: String?, file: String?, filePerItem = false, folder = false
     var parsed: String?, parsedForm: String?
+    var wholeFile = false
 
     init?(_ decl: DeclSyntax) throws {
         guard let v = decl.as(VariableDeclSyntax.self), !v.modifiers.contains(where: { $0.name.text == "static" }),
@@ -150,6 +162,7 @@ private struct Field {
                 file = args?.first(where: { $0.label == nil }) == nil ? "file" : given ?? "file"
                 filePerItem = args?.contains { $0.label?.text == "perItem" && $0.expression.trimmedDescription == "true" } ?? false
             case "Folder": folder = true
+            case "WholeFile": wholeFile = true
             case "Parsed":
                 let texts =
                     attr.arguments?.as(LabeledExprListSyntax.self)?.map {
@@ -192,6 +205,7 @@ private struct Field {
         if folder, base != "String" || many { throw MacroError("@Folder \(name)은(는) String이어야 합니다") }
         if filePerItem, !many { throw MacroError("@FromFile(perItem:) \(name)은(는) 목록이어야 합니다") }
         if parsed != nil, ref != nil || file != nil || folder { throw MacroError("@Parsed \(name)은(는) 항목 ID나 파일이 아닌 값이어야 합니다") }
+        if wholeFile, ref != nil || patch || many { throw MacroError("@WholeFile \(name)은(는) 문서 하나여야 합니다") }
     }
 
     var isHidden: Bool { if case .hidden = role { true } else { false } }
@@ -229,11 +243,14 @@ private struct Field {
             case .hidden: ".hidden"
             }
         return
-            "FolioActions.FieldSpec(name: \(quoted(name)), help: \(quoted(help)), role: \(role), type: \(quoted(base)), ref: \(ref.map(quoted) ?? "nil"), "
+            "FolioActions.FieldSpec(name: \(quoted(name)), help: \(quoted(help)), role: \(role), type: \(quoted(base)), ref: \(ref.map { "FolioDomain.ItemKind.\(caseName($0))" } ?? "nil"), "
             + "optional: \(optional), many: \(many), patch: \(patch), defaultValue: \(defaultValue.map(quoted) ?? "nil"), "
             + "cliName: \(cliName.map(quoted) ?? "nil"), file: \(file.map(quoted) ?? "nil"), filePerItem: \(filePerItem), folder: \(folder), "
             + "parsed: \(parsed.map(quoted) ?? "nil"), parsedForm: \(parsedForm.map(quoted) ?? "nil"))"
     }
+
+    // `ItemKind`의 경우 이름은 타입 이름의 첫 글자를 소문자로 바꾼 것이다. 표에 없는 종류는 생성한 코드가 컴파일되지 않는다.
+    func caseName(_ type: String) -> String { type.prefix(1).lowercased() + type.dropFirst() }
 
     func quoted(_ s: String) -> String {
         "\"" + s.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""

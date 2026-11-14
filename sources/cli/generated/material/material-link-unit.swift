@@ -12,8 +12,8 @@ extension GeneratedCommands {
               folio material link-unit EC4207/05_Matchings.pdf 매칭 --off
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<자료>", valueName: "material"), completion: Complete.ref("Material")) var material: String
-        @Argument(help: ArgumentHelp("같은 과목의 단원", valueName: "unit"), completion: Complete.ref("Unit")) var unit: String = ""
+        @Argument(help: ArgumentHelp("<과목>/<자료>", valueName: "material"), completion: Complete.ref(.material)) var material: String
+        @Argument(help: ArgumentHelp("같은 과목의 단원", valueName: "unit"), completion: Complete.ref(.unit)) var unit: String = ""
         @Flag(name: .customLong("off"), help: "연결 떼기") var off = false
 
         func run() throws {
@@ -22,8 +22,8 @@ extension GeneratedCommands {
             let (c, materialName) = try r.split(material)
             let action = FolioActions.MaterialLinkUnit(
                 course: c.id,
-                material: try r.id("Material", materialName, in: c),
-                unit: try r.id("Unit", unit, in: c),
+                material: try r.id(.material, materialName, in: c),
+                unit: try r.id(.unit, unit, in: c),
                 linked: !off
             )
             try perform(spec: action, g, ctx: ctx)

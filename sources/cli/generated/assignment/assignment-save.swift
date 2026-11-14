@@ -17,12 +17,12 @@ extension GeneratedCommands {
               folio assignment set EC4207/HW3 --due none --repeats weekly --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<과제>", valueName: "assignment"), completion: Complete.ref("Assignment")) var assignment: String = ""
+        @Argument(help: ArgumentHelp("<과목>/<과제>", valueName: "assignment"), completion: Complete.ref(.assignment)) var assignment: String = ""
         @Option(help: "새 제목") var title: String?
         @Option(help: ArgumentHelp("마감 일시. none이면 지운다", valueName: "date")) var due: Clearable<DateArg>?
         @Option(help: "상태") var status: AssignmentStatus?
         @Option(help: "반복. weekly, daily, biweekly, monthly, 3d, 2w, 1m, weekly:mon,wed, 또는 빠른 추가의 말(매일, 격일, 3일마다, 격주, 매월, 매주 월수, 월,수마다, 평일마다). none이면 지운다") var repeats: Clearable<AssignmentRepeat>?
-        @Option(name: .customLong("component"), help: ArgumentHelp("반영되는 성적 항목. 주면 묶음은 풀린다. none이면 지운다", valueName: "component"), completion: Complete.ref("GradeComponent")) var componentId: Clearable<String>?
+        @Option(name: .customLong("component"), help: ArgumentHelp("반영되는 성적 항목. 주면 묶음은 풀린다. none이면 지운다", valueName: "component"), completion: Complete.ref(.gradeComponent)) var componentId: Clearable<String>?
         @Option(name: .customLong("group"), help: "한꺼번에 점수를 매기는 성적 항목 묶음. 주면 성적 항목 하나는 풀린다. none이면 지운다") var componentGroup: Clearable<String>?
         @Option(help: "메모") var memo: String?
         @Option(name: .customLong("score"), help: ArgumentHelp("준 항목의 점수만 바꾸고 다른 항목의 점수는 그대로 둔다. 빈 목록이면 점수를 모두 지운다. 9/10. 묶음이면 <항목>:9/10. 여러 번 줄 수 있다. none이면 비운다", valueName: "score")) var score: [String] = []
@@ -34,12 +34,12 @@ extension GeneratedCommands {
             let (c, assignmentName) = try r.split(assignment)
             let action = FolioActions.AssignmentSave(
                 course: c.id,
-                assignment: try r.id("Assignment", assignmentName, in: c),
+                assignment: try r.id(.assignment, assignmentName, in: c),
                 title: title.map { Patch.set($0) } ?? .keep,
                 due: due.map { p in Patch.set(p.value.map { $0.date }) } ?? .keep,
                 status: status.map { Patch.set($0) } ?? .keep,
                 repeats: repeats.map { p in Patch.set(p.value) } ?? .keep,
-                componentId: try componentId.map { p in Patch.set(try p.value.map { try r.id("GradeComponent", $0, in: c) }) } ?? .keep,
+                componentId: try componentId.map { p in Patch.set(try p.value.map { try r.id(.gradeComponent, $0, in: c) }) } ?? .keep,
                 componentGroup: componentGroup.map { p in Patch.set(p.value) } ?? .keep,
                 memo: memo.map { Patch.set($0) } ?? .keep,
                 scores: .keep,

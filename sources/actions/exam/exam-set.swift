@@ -8,7 +8,7 @@ import Foundation
         #"folio exam set EC4207/중간고사 --start "2026-10-22 10:00" --end "2026-10-22 12:00""#,
         "folio exam set EC4207/Quiz1 --location B203", "folio exam set EC4207/Quiz1 --end none --component none --dry-run",
     ],
-    phrases: ["시험 날짜 변경", "시험 시간", "시험 장소", "고사실"])
+    phrases: ["시험 날짜 변경", "시험 시간", "시험 장소", "고사실"], panel: true)
 public struct ExamSet {
     @Arg var course: Course.ID
     /// 시험

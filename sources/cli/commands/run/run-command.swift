@@ -31,25 +31,24 @@ struct RunCommand: ParsableCommand {
         guard case .object(var o) = json else { throw CLIError(exit: .usage, message: String(localized: .runNotObject)) }
         let r = Resolver(ctx)
         var course: CourseRef?
-        for f in A.spec.fields.sorted(by: { ($0.ref == "Course" ? 0 : 1) < ($1.ref == "Course" ? 0 : 1) }) {
+        for f in A.spec.fields.sorted(by: { ($0.ref == .course ? 0 : 1) < ($1.ref == .course ? 0 : 1) }) {
             if f.role == .new {
                 if o[f.name] == nil { o[f.name] = .string(UUID().uuidString) }
                 continue
             }
             guard let kind = f.ref, let v = o[f.name] else { continue }
             o[f.name] = try Self.strings(v) { s in
-                if kind == "Course" {
+                if kind == .course {
                     let c = try r.course(s)
                     course = course ?? c
                     return c.id.uuidString
                 }
-                if kind.hasSuffix("Path") { return try r.path(kind, s, in: course) }
+                if kind.byPath { return try r.path(kind, s, in: course) }
                 return UUID(uuidString: s) != nil ? s : try r.id(kind, s, in: course).uuidString
             }
         }
 
-        // 파일 전체의 디코더는 빠진 키를 기본값으로 채우므로 `{"settings":{}}`는 모든 설정을 되돌린다.
-        if let (key, current) = try Self.wholeFile(A.command, ctx), let given = o[key] { o[key] = current.overlaid(with: given) }
+        if let (key, current) = try A.currentFile(ctx), let given = o[key] { o[key] = current.overlaid(with: given) }
         try perform(spec: try A.decode(JSONEncoder().encode(JSONValue.object(o))), g, ctx: ctx)
     }
 
@@ -58,15 +57,6 @@ struct RunCommand: ParsableCommand {
         case .string(let s): .string(try f(s))
         case .array(let items): .array(try items.map { try strings($0, f) })
         default: v
-        }
-    }
-
-    static func wholeFile(_ name: String, _ ctx: ActionContext) throws -> (String, JSONValue)? {
-        func json(_ v: some Encodable) throws -> JSONValue { try JSONDecoder().decode(JSONValue.self, from: JSONEncoder.folio.encode(v)) }
-        return switch name {
-        case CatalogSet.command: ("catalog", try json(ctx.catalog()))
-        case SettingsSet.command: ("settings", try json(ctx.settings()))
-        default: nil
         }
     }
 

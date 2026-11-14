@@ -11,7 +11,7 @@ extension GeneratedCommands {
               folio material untrack EC4207/Seating.pdf
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<자료>", valueName: "material"), completion: Complete.ref("Material")) var material: String = ""
+        @Argument(help: ArgumentHelp("<과목>/<자료>", valueName: "material"), completion: Complete.ref(.material)) var material: String = ""
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -19,7 +19,7 @@ extension GeneratedCommands {
             let (c, materialName) = try r.split(material)
             let action = FolioActions.MaterialUntrack(
                 course: c.id,
-                material: try r.id("Material", materialName, in: c)
+                material: try r.id(.material, materialName, in: c)
             )
             try perform(spec: action, g, ctx: ctx)
         }

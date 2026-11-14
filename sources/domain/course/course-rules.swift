@@ -80,15 +80,15 @@ extension ProblemSet {
 
 extension CourseFile: Document {
     public static let model = Model<CourseFile>(place: String(localized: .modelPlaceCourse)) {
-        One(\.course, noun: String(localized: .modelNounCourse), name: \.title) { Course.members() }
-        Items(\.materials, noun: String(localized: .modelNounMaterial), name: \.path) {
+        One(\.course, noun: ItemKind.course.noun, name: \.title) { Course.members() }
+        Items(\.materials, noun: ItemKind.material.noun, name: \.path) {
             Ref(\.sourceOf, to: Material.self, onDelete: .nullify)
             Ref(\.solutionOf, to: Material.self, onDelete: .nullify)
             Refs(\.sessionIds, to: Session.self, onDelete: .nullify)
             Refs(\.unitIds, to: Unit.self, onDelete: .nullify)
             Refs(\.examIds, to: Exam.self, onDelete: .nullify)
         }
-        Items(\.units, noun: String(localized: .modelNounUnit), name: \.title) {
+        Items(\.units, noun: ItemKind.unit.noun, name: \.title) {
             NonEmpty(\.title, String(localized: .ruleUnitTitleEmpty))
             Ref(\.parentId, to: Unit.self, as: String(localized: .modelLabelParentUnit), onDelete: .reparent)
             Refs(\.sessionIds, to: Session.self, onDelete: .nullify)
@@ -98,7 +98,7 @@ extension CourseFile: Document {
                 u.lecturePages.allSatisfy { $0.firstPage >= 1 && $0.firstPage <= $0.lastPage }
             }
         }
-        Items(\.sessions, noun: String(localized: .modelNounSession), name: { s, f in f.title(of: s, calendar: .current) }) {
+        Items(\.sessions, noun: ItemKind.session.noun, name: { s, f in f.title(of: s, calendar: .current) }) {
             Refs(\.unitIds, to: Unit.self, onDelete: .nullify)
             Refs(\.materialIds, to: Material.self, onDelete: .nullify)
             Ref(\.roughNoteId, to: NoteEntry.self, onDelete: .nullify)
@@ -116,7 +116,7 @@ extension CourseFile: Document {
                 }
             }
         }
-        Items(\.exams, noun: String(localized: .modelNounExam), name: \.title) {
+        Items(\.exams, noun: ItemKind.exam.noun, name: \.title) {
             NonEmpty(\.title, String(localized: .ruleExamTitleEmpty))
             Check("Exam.time", String(localized: .ruleExamTime)) { e, _ in
                 switch (e.start, e.end) {
@@ -128,12 +128,12 @@ extension CourseFile: Document {
             Ref(\.componentId, to: GradeComponent.self, onDelete: .nullify)
             Refs(\.scopeUnitIds, to: Unit.self, as: String(localized: .modelLabelScopeUnit), onDelete: .nullify)
         }
-        Items(\.exams, \.plan, noun: String(localized: .modelNounExamPlanItem), name: \.title) {
+        Items(\.exams, \.plan, noun: ItemKind.examPlanItem.noun, name: \.title) {
             NonEmpty(\.title, String(localized: .ruleExamPlanItemTitleEmpty))
             Ref(\.unitTarget, to: Unit.self, onDelete: .nullify)
             Ref(\.problemSetTarget, to: ProblemSet.self, onDelete: .nullify)
         }
-        Items(\.assignments, noun: String(localized: .modelNounAssignment), name: \.title) {
+        Items(\.assignments, noun: ItemKind.assignment.noun, name: \.title) {
             NonEmpty(\.title, String(localized: .ruleAssignmentTitleEmpty))
             Ref(\.componentId, to: GradeComponent.self, onDelete: .nullify)
             Check("Assignment.componentGroup", String(localized: .ruleAssignmentComponentGroup)) { a, f in
@@ -143,7 +143,7 @@ extension CourseFile: Document {
             Refs(\.submissionMaterialIds, to: Material.self, as: String(localized: .modelLabelSubmissionMaterial), onDelete: .nullify)
             Refs(\.unitIds, to: Unit.self, onDelete: .nullify)
         }
-        Items(\.components, noun: String(localized: .modelNounGradeComponent), name: \.name) {
+        Items(\.components, noun: ItemKind.gradeComponent.noun, name: \.name) {
             NonEmpty(\.name, String(localized: .ruleGradeComponentNameEmpty))
             Check("GradeComponent.weight", String(localized: .ruleGradeComponentWeight)) { c, _ in c.weight >= 0 }
             Check("GradeComponent.count", String(localized: .ruleGradeComponentCount)) { c, _ in
@@ -158,7 +158,7 @@ extension CourseFile: Document {
             }
         }
         Items(
-            \.scores, noun: String(localized: .modelNounScoreEntry),
+            \.scores, noun: ItemKind.scoreEntry.noun,
             name: { s, f in
                 s.title.isEmpty ? (f.components.first { $0.id == s.componentId }?.name ?? s.id.uuidString) : s.title
             }
@@ -181,17 +181,17 @@ extension CourseFile: Document {
                 f.sessions.first { $0.id == a.sessionId }?.isCancelled != true
             }
         }
-        Items(\.problemSets, noun: String(localized: .modelNounProblemSet), name: \.title) {
+        Items(\.problemSets, noun: ItemKind.problemSet.noun, name: \.title) {
             NonEmpty(\.title, String(localized: .ruleProblemSetTitleEmpty))
             Check("ProblemSet.problems", String(localized: .ruleProblemSetProblems)) { p, _ in !p.problems.isEmpty }
             Ref(\.materialId, to: Material.self, as: String(localized: .modelLabelProblemMaterial), onDelete: .nullify)
             Ref(\.solutionMaterialId, to: Material.self, as: String(localized: .modelLabelSolutionMaterial), onDelete: .nullify)
             Refs(\.problemUnitIds, to: Unit.self, onDelete: .nullify)
         }
-        Items(\.recordings, noun: String(localized: .modelNounRecording), name: \.file) {
+        Items(\.recordings, noun: ItemKind.recording.noun, name: \.file) {
             Ref(\.sessionId, to: Session.self, onDelete: .nullify)
         }
-        Items(\.notes, noun: String(localized: .modelNounNote), name: \.path) {
+        Items(\.notes, noun: ItemKind.note.noun, name: \.path) {
             Refs(\.unitIds, to: Unit.self, onDelete: .nullify)
             Ref(\.examId, to: Exam.self, onDelete: .nullify)
             Check("NoteEntry.path", String(localized: .ruleNotePath)) { n, f in f.notes.count { $0.path == n.path } == 1 }
@@ -241,7 +241,7 @@ extension CourseFile: Document {
 
 extension Transcript: Document {
     public static let model = Model<Transcript>(place: String(localized: .modelPlaceTranscript)) {
-        Items(\.semesters, noun: String(localized: .modelNounSemester), name: { s, _ in s.name }) {
+        Items(\.semesters, noun: ItemKind.semester.noun, name: { s, _ in s.name }) {
             Check("Semester.dates", String(localized: .ruleSemesterDates)) { s, _ in
                 guard let a = s.start, let b = s.end else { return true }
                 return a <= b
@@ -255,7 +255,7 @@ extension Transcript: Document {
                 s.source.map { s.term == .credited && StandardLayout.isCreditedSourceName($0) } ?? true
             }
         }
-        Items(\.unfiledCourses, noun: String(localized: .modelNounCourse), name: \.title) { Course.members() }
+        Items(\.unfiledCourses, noun: ItemKind.course.noun, name: \.title) { Course.members() }
         Rule("Transcript.creditedSources") { t, _ in
             let credited = t.semesters.filter { $0.term == .credited && $0.source != nil }
             return credited.filter { s in credited.contains { $0.id != s.id && $0.source == s.source } }
@@ -302,17 +302,17 @@ extension Semester {
 
 extension Catalog: Document {
     public static let model = Model<Catalog>(place: String(localized: .modelPlaceCatalog)) {
-        Items(\.codes, noun: String(localized: .modelNounCourseCode), name: \.prefix) {
+        Items(\.codes, noun: ItemKind.courseCode.noun, name: \.prefix) {
             NonEmpty(\.prefix, String(localized: .ruleCourseCodePrefixEmpty))
         }
-        Items(\.categories, noun: String(localized: .modelNounCategory), name: \.name) {
+        Items(\.categories, noun: ItemKind.category.noun, name: \.name) {
             NonEmpty(\.name, String(localized: .ruleCategoryNameEmpty))
             Ref(\.parentId, to: Category.self, as: String(localized: .modelLabelParentCategory), onDelete: .nullify)
         }
-        Items(\.letterGrades, noun: String(localized: .modelNounLetterGrade), name: \.symbol) {
+        Items(\.letterGrades, noun: ItemKind.letterGrade.noun, name: \.symbol) {
             NonEmpty(\.symbol, String(localized: .ruleLetterGradeSymbolEmpty))
         }
-        Items(\.people, noun: String(localized: .modelNounPerson), name: \.name) {
+        Items(\.people, noun: ItemKind.person.noun, name: \.name) {
             NonEmpty(\.name, String(localized: .rulePersonNameEmpty))
         }
     }
@@ -336,7 +336,7 @@ extension Settings: Document {
 
 extension QuizFile: Document {
     public static let model = Model<QuizFile>(place: String(localized: .modelPlaceUnit)) {
-        Items(\.cards, noun: String(localized: .modelNounQuizCard), name: \.prompt) {
+        Items(\.cards, noun: ItemKind.quizCard.noun, name: \.prompt) {
             NonEmpty(\.prompt, String(localized: .ruleQuizCardPromptEmpty))
             Check("QuizCard.answer", String(localized: .ruleQuizCardAnswer)) { c, _ in
                 guard !c.answer.isEmpty else { return false }

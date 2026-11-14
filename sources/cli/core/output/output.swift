@@ -1,3 +1,4 @@
+import FolioDomain
 import FolioStorage
 import Foundation
 
@@ -22,14 +23,14 @@ extension String {
         return ansi[token].map { styled($0) } ?? styled(.dim)
     }
 
-    var toned: String {
-        switch self {
-        case "present", "submitted", "graded", "good", "easy": styled(.green)
-        case "late", "todo", "doing", "hard", "unclassified": styled(.yellow)
-        case "absent", "again", "missing": styled(.red)
-        case "excused", "quiz", "midterm", "final": styled(.cyan)
-        case "ignored", "pass_fail", "휴강": styled(.dim)
-        default: self
+    func toned(_ tone: StatusTone) -> String {
+        switch tone {
+        case .good: styled(.green)
+        case .caution: styled(.yellow)
+        case .bad: styled(.red)
+        case .info: styled(.cyan)
+        case .muted: styled(.dim)
+        case .plain: self
         }
     }
 

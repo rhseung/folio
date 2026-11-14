@@ -9,7 +9,7 @@ extension GeneratedCommands {
         static let configuration = CommandConfiguration(commandName: "write", abstract: "노트 그림(SVG) 전체를 바꾸기. note figure show의 해시를 --expect로 넘겨 그사이 바뀌지 않았는지 확인한다", discussion: """
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref(.course)) var course: String
         @Argument(help: "Notes/assets 안의 그림 이름") var name: String
         @Option(help: ArgumentHelp("새 SVG 원문", valueName: "figure.svg"), completion: .file()) var svg: String
         @Option(help: "note figure show가 알려 준 해시. 그림이 그사이 바뀌었으면 쓰지 않는다") var expect: String

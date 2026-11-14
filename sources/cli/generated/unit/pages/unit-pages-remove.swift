@@ -13,8 +13,8 @@ extension GeneratedCommands {
               folio unit pages rm EC4207/매칭 05_Matchings.pdf --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<단원>", valueName: "unit"), completion: Complete.ref("Unit")) var unit: String
-        @Argument(help: ArgumentHelp("렉처 자료", valueName: "material"), completion: Complete.ref("Material")) var material: String = ""
+        @Argument(help: ArgumentHelp("<과목>/<단원>", valueName: "unit"), completion: Complete.ref(.unit)) var unit: String
+        @Argument(help: ArgumentHelp("렉처 자료", valueName: "material"), completion: Complete.ref(.material)) var material: String = ""
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -22,8 +22,8 @@ extension GeneratedCommands {
             let (c, unitName) = try r.split(unit)
             let action = FolioActions.UnitPagesRemove(
                 course: c.id,
-                unit: try r.id("Unit", unitName, in: c),
-                material: try r.id("Material", material, in: c)
+                unit: try r.id(.unit, unitName, in: c),
+                material: try r.id(.material, material, in: c)
             )
             try perform(spec: action, g, ctx: ctx)
         }

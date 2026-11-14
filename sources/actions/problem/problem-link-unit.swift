@@ -6,7 +6,7 @@ import Foundation
 @Action(
     "problem-set link", "문제를 단원에 연결하거나 떼기", done: "문제 묶음 '{set}'의 {number}번과 단원 '{unit}'의 연결을 바꿨습니다",
     examples: [#"folio problem-set link "EC4207/Exercise 1" 3a 매칭"#, #"folio problem-set link "EC4207/Exercise 1" 3a 매칭 --off"#],
-    phrases: ["문제 단원 연결"])
+    phrases: ["문제 단원 연결"], panel: true)
 public struct ProblemLinkUnit {
     /// 과목
     @Arg var course: Course.ID

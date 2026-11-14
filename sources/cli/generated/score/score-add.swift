@@ -13,16 +13,16 @@ extension GeneratedCommands {
             """)
         @OptionGroup var g: GlobalOptions
         @Option(name: .customLong("id"), help: .hidden) var id: UUID?
-        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String = ""
-        @Option(help: ArgumentHelp("성적 항목", valueName: "component"), completion: Complete.ref("GradeComponent")) var component: String
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref(.course)) var course: String = ""
+        @Option(help: ArgumentHelp("성적 항목", valueName: "component"), completion: Complete.ref(.gradeComponent)) var component: String
         @Option(help: "제목. 예: HW1") var title: String = ""
         @Option(help: "받은 점수") var score: Double
         @Option(help: "만점") var max: Double
         @Option(help: "평균") var mean: Double?
         @Option(help: "표준편차") var stdDev: Double?
         @Option(help: ArgumentHelp("날짜. 2026-10-21", valueName: "date")) var date: LocalDate?
-        @Option(help: ArgumentHelp("점수가 나온 시험", valueName: "exam"), completion: Complete.ref("Exam")) var exam: String?
-        @Option(help: ArgumentHelp("점수가 나온 과제", valueName: "assignment"), completion: Complete.ref("Assignment")) var assignment: String?
+        @Option(help: ArgumentHelp("점수가 나온 시험", valueName: "exam"), completion: Complete.ref(.exam)) var exam: String?
+        @Option(help: ArgumentHelp("점수가 나온 과제", valueName: "assignment"), completion: Complete.ref(.assignment)) var assignment: String?
         @Flag(help: "면제. 계산에서 뺀다") var excused = false
 
         func run() throws {
@@ -32,15 +32,15 @@ extension GeneratedCommands {
             let action = FolioActions.ScoreAdd(
                 id: id ?? UUID(),
                 course: c.id,
-                component: try r.id("GradeComponent", component, in: c),
+                component: try r.id(.gradeComponent, component, in: c),
                 title: title,
                 score: score,
                 max: max,
                 mean: mean,
                 stdDev: stdDev,
                 date: date,
-                exam: try exam.map { try r.id("Exam", $0, in: c) },
-                assignment: try assignment.map { try r.id("Assignment", $0, in: c) },
+                exam: try exam.map { try r.id(.exam, $0, in: c) },
+                assignment: try assignment.map { try r.id(.assignment, $0, in: c) },
                 excused: excused
             )
             try perform(spec: action, g, ctx: ctx)
