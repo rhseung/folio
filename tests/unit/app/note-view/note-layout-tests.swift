@@ -42,7 +42,7 @@ struct NoteLayoutTests {
         return best
     }
 
-    // 노트의 두 줄이 이만큼 떨어지는 일은 없고, 그림에 보이지 않는 위젯이 가장 큰 간격이다.
+    // 노트의 두 줄이 이만큼 떨어지는 일은 없고, 그림에 보이지 않는 위젯이 만드는 간격이 가장 크다.
     static let gap = 240
 
     @Test(arguments: NoteShot.light)

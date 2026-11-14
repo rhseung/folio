@@ -4,8 +4,8 @@ import Testing
 @testable import FolioStorage
 
 struct TexEngineTests {
-    // xdvipdfmx는 상태를 전역 변수에 두는데, 중단되면 그 상태가 반쯤 만들어진 채로 남았다. 받은 패키지만 쓸 때 아직 받지 않은 글꼴(이때 빌드는 온라인으로 간다)이나, 쪽 끝에서 열린 채 남은
-    // form XObject가 그런 경우다. 같은 프로세스의 다음 빌드가 이미 무효가 된 PDF handle을 닫으면서 Rust가 C 밖으로 unwind할 수 없는 panic이 나서 앱이 중단되었고, 그
+    // xdvipdfmx는 상태를 전역 변수에 두는데, 중단되면 그 상태가 반쯤 만들어진 채로 남았다. 받은 패키지만 쓸 때 아직 받지 않은 글꼴(이때 빌드를 온라인으로 다시 한다)이나, 쪽 끝에서 열린 채 남은
+    // form XObject가 그런 경우다. 같은 프로세스의 다음 빌드가 이미 무효가 된 PDF handle을 닫으면서 Rust가 C 밖으로 unwind 할 수 없는 panic이 나서 앱이 중단되었고, 그
     // 문제를 넘긴 뒤에는 남은 캐시와 쪽 상태 때문에 실패했다. 중단 뒤의 빌드는 어느 엔진이든 중단이 없었던 것처럼 나와야 한다.
     @Test func aBuildAfterAnAbortIsUnchanged() throws {
         let folder = URL.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)

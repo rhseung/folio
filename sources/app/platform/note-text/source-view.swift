@@ -590,7 +590,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         apply(SourceEditing.tab(string as NSString, selectedRange(), back: true, catalog: catalog))
     }
 
-    // 음절을 조합하는 동안에는 여기서 아무것도 하지 않는다. 그 키는 입력기의 것이고, 조합 중에 짝 기호를 닫거나 메뉴 항목을 고르면 음절이 갈라지거나 음절을 끝내는 키를 삼킨다.
+    // 음절을 조합하는 동안에는 여기서 아무것도 하지 않는다. 그 키는 입력기의 것이고, 조합 중에 짝 기호를 닫거나 메뉴 항목을 고르면 음절이 갈라지거나 음절을 끝내는 키가 사라진다.
 
     override func insertText(_ text: Any, replacementRange: NSRange) {
         let typed = (text as? String) ?? (text as? NSAttributedString)?.string
@@ -1250,7 +1250,7 @@ final class PreviewBubble: NSView {
 
     override var wantsUpdateLayer: Bool { true }
 
-    // layer는 고정된 CGColor를 쥔다. 여기서 뷰 자신의 appearance로 풀어야 테마가 바뀔 때 따라간다. init에서 풀면 그때의 appearance를 따라서, 라이트 창에 다크 말풍선이 떴다.
+    // layer는 고정된 CGColor를 가진다. 여기서 뷰 자신의 appearance로 풀어야 테마가 바뀔 때 따라간다. init에서 풀면 그때의 appearance를 따라서, 라이트 창에 다크 말풍선이 떴다.
     override func updateLayer() {
         effectiveAppearance.performAsCurrentDrawingAppearance {
             layer?.backgroundColor = NoteLook.card.cgColor
@@ -1409,6 +1409,8 @@ class NoteTextView: UITextView {
     }
 }
 
+// shortcut: iPad에서는 그림 붙여 넣기와 끌어 놓기, ⌘-클릭 링크, 상자로 할 일 체크, 수식과 그림을 그려 보이는 말풍선을 아직
+// 지원하지 않는다. iPad로 노트를 쓰게 되면 더한다.
 final class SourceTextView: NoteTextView, UITextViewDelegate {
     var onChange: () -> Void = {}
     var openGuide: @MainActor () -> Void = {}

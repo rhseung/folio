@@ -213,7 +213,7 @@ struct ContextTests {
 
 #if os(macOS)
 struct CLIProviderTests {
-    // 실제 두 턴 답의 줄을 줄인 것이다(claude 2.1.318). 도구 호출 뒤에 새 메시지로 답이 온다.
+    // 두 턴으로 된 실제 답의 줄을 줄인 것이다(claude 2.1.318). 도구 호출 뒤에 새 메시지로 답이 온다.
     @Test func streamEventsMarkTurnsToolsAndText() {
         let lines = [
             #"{"type":"system","subtype":"init"}"#,

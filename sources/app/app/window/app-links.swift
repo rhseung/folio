@@ -256,7 +256,7 @@ extension CourseSection {
 @MainActor enum NoteLinks {
     static func open(_ href: String, base: URL?, in placement: LinkPlacement = .here, openNote: (String) -> Void, openLink: OpenLinkAction)
     {
-        // web view는 링크를 URL로 넘기면서 블록의 `^`를 escape하고, 이 escape는 URL로 읽을 때만 풀린다.
+        // web view는 링크를 URL로 넘기면서 블록의 `^`를 escape 하고, 이 escape는 URL로 읽을 때만 풀린다.
         if let link = URL(string: href).flatMap(AppLink.init(url:)) ?? AppLink(string: href) {
             openLink(link, in: placement)
             return

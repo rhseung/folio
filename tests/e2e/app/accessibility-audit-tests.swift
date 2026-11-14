@@ -74,7 +74,7 @@ final class AccessibilityAuditTests: XCTestCase {
 
     // MARK: Audit
 
-    // 바깥 링크는 새 탭에서 열린다. 검사 뒤에 탭을 닫지 않으면 탭 줄이 가득 차서, 툴바 자체의 결과가 뒤의 모든 화면에 나온다.
+    // 바깥 링크는 새 탭에서 열린다. 검사 뒤에 탭을 닫지 않으면 탭 줄이 가득 차서, 툴바 자체의 검사 결과가 뒤의 모든 화면에 나온다.
     private func visit(_ app: XCUIApplication, _ name: String, _ link: AppLink) {
         app.open(link.url)
         audit(app, name)
@@ -122,7 +122,7 @@ struct AuditFinding: CustomStringConvertible {
     var description: String { "\(screen): [\(type.name)] \(summary) — \(element)" }
 }
 
-// 화면, 종류, 요소로 맞추므로, 같은 화면의 새 결과는 여전히 실패한다.
+// 알려진 결과는 화면, 종류, 요소로 맞추므로, 같은 화면의 새 결과는 여전히 실패한다.
 enum KnownFindings {
     struct Entry {
         let screen: String

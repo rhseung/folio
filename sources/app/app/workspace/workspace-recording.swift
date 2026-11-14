@@ -59,7 +59,7 @@ extension Workspace {
     }
 
     // 쪽은 `pageDwell`만큼 머물러야 세므로, 넘기는 순간에는 자막에 알릴 수 없다. 다시 확인하지 않으면 자막은 늘 한 쪽
-    // 뒤처지고, 한 쪽에 머문 수업은 끝내 자막에 닿지 않는다. 일시 정지하면 멈추는 오디오의 시계로 기다린다.
+    // 뒤처지고, 한 쪽에 머문 수업에서는 그 쪽이 끝내 자막에 닿지 않는다. 일시 정지하면 멈추는 오디오의 시계로 기다린다.
     private func retellAfterDwell(on visit: PageVisit, recording id: UUID) {
         Task {
             while recorder.current == id, recorder.pages.last == visit {
@@ -108,6 +108,7 @@ extension Workspace {
             }.value
             let path = try course.store.installRecording(from: local.compressedURL(of: id), as: recording.file)
             if path != recording.file {
+                // shortcut: 받아쓰기를 새 이름으로 복사하고 옛 파일은 남긴다. 두 기기가 같은 회차를 녹음할 때만 이름이 겹친다.
                 let transcript = course.store.transcript(of: recording)
                 recording.file = path
                 if let transcript { try? course.store.saveTranscript(transcript, of: recording) }
@@ -120,7 +121,7 @@ extension Workspace {
 
             // 본 쪽을 여기서 회차에 연결하지 않는다. 진도 시트가 그 범위를 쓰는 유일한 곳이고, 저장하지 않고 닫은 시트는 범위를
             // 비워 두어야 다시 열 때 지난 수업 다음부터 시작한다. 자막이 빠졌으면(언어 모델을 아직 내려받는 중이었거나 비정상
-            // 종료) 지금 오디오로 만든다. Whisper는 한국어와 영어를 함께 듣고 자막은 한 언어만 받으므로, Whisper는 전부 다시
+            // 종료되었으면) 지금 오디오로 만든다. Whisper는 한국어와 영어를 함께 듣고 자막은 한 언어만 받으므로, Whisper는 전부 다시
             // 만든다.
             let heard = course.store.transcript(of: recording)?.reaches(recording.duration) == true
             if !heard || TranscriptionEngine.preferred == .whisper { transcribe(recording, course: course.id, asked: false) }

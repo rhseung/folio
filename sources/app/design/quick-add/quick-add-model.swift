@@ -53,7 +53,7 @@ final class QuickAddModel {
         case repeats(AssignmentRepeat?)
         case folder(String?)
 
-        // 행에서 칩의 정체는 값이 아니라 종류다. 값을 키로 쓰면 날짜를 고를 때 마감 칩이 새 뷰가 되어, 고르는 도중에
+        // 행에서 칩의 identity는 값이 아니라 종류다. 값을 키로 쓰면 날짜를 고를 때 마감 칩이 새 뷰가 되어, 고르는 도중에
         // 자기 popover가 닫혔다.
         enum Kind { case course, due, repeats, folder }
 

@@ -53,7 +53,7 @@ struct TextFileActionTests {
         #expect(try store.readText(Self.tex).hasSuffix("바깥에서 고침\n"))
     }
 
-    // Excel의 CP949 `.csv`는 UTF-8로 디코딩되지 않는 자리마다 U+FFFD로 돌아온다.
+    // Excel의 CP949 `.csv`를 UTF-8로 읽으면, 디코딩되지 않는 자리마다 U+FFFD가 들어간다.
     @Test func aFileThatIsNotUTF8IsLeftAsItIs() throws {
         let cp949 = Data([0xC7, 0xD1, 0xB1, 0xDB, 0x2C, 0x31, 0x0A])  // "한글,1\n"의 CP949 바이트다.
         try cp949.write(to: store.fileURL("Exams/Midterm/scores.csv"))

@@ -16,7 +16,7 @@ func fixtureWorkspace() throws -> Workspace {
     // FOLIO_GIST가 있으면 open()이 기억한 폴더를 건드리지 않으므로, 테스트가 실제 앱이나 `folio`의 폴더를 바꾸지 않는다.
     setenv(Workspace.environmentKey, url.path(percentEncoded: false), 1)
     let workspace = Workspace()
-    // 열 때 다시 읽으면서 남은 녹음을 복구하므로, 그 전에 정한다. 정하지 않으면 처음 쓸 때 테스트가 멈춘다(LocalFolders).
+    // Workspace는 폴더를 열 때 다시 읽으면서 남은 녹음을 복구하므로, 녹음 폴더를 그 전에 정한다. 정하지 않으면 처음 쓸 때 테스트가 멈춘다(LocalFolders).
     workspace.pendingRecordings = PendingRecordings(
         url: URL.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory))
     workspace.open(url, remember: false)

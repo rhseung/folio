@@ -4,7 +4,7 @@ import Testing
 
 @testable import Folio
 
-// 테스트, 미리보기, 렌더가 이 Mac의 실제 Application Support/Folio 폴더에 닿으면, 그곳의 복구가 사용자의 끝나지 않은 강의 녹음을 옮기거나 지운다.
+// 테스트, 미리보기, 렌더가 이 Mac의 실제 Application Support/Folio 폴더에 닿으면, 그곳의 녹음 복구가 사용자의 끝나지 않은 강의 녹음을 옮기거나 지운다.
 @MainActor
 struct LocalFoldersTests {
     static let real = URL.applicationSupportDirectory.appending(path: "Folio", directoryHint: .isDirectory).standardizedFileURL.path

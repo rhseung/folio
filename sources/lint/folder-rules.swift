@@ -2,7 +2,7 @@ import SwiftSyntax
 
 // LocalFolders만 테스트와 미리보기와 렌더에 이 Mac의 실제 폴더를 주지 않는다. 다른 곳에서 시스템에 경로를 물으면 이
 // 거절을 건너뛰므로 tests/unit/app도 검사한다. 테스트에서 손으로 만든 경로가 사용자의 끝나지 않은 녹음을 픽스처로
-// 복구할 수 있기 때문이다. 패키지는 LocalFolders를 import할 수 없으므로 어떤 사용이든 실패한다.
+// 복구할 수 있기 때문이다. 패키지는 LocalFolders를 import 할 수 없으므로 어떤 사용이든 실패한다.
 extension Rules {
     static var localFolders: Rule {
         Rule(

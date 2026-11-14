@@ -205,7 +205,7 @@ struct RecordingPlayerModelTests {
         try await waitFor { workspace.error != nil }
         workspace.error = nil
         workspace.reload()
-        // 건너뛰었다면 기다릴 것이 없고, 다시 시도했다면 첫 시도처럼 실패하기에 충분한 시간이다.
+        // 건너뛰었다면 기다릴 것이 없고, 다시 시도했다면 300ms는 첫 시도처럼 실패하기에 충분한 시간이다.
         try await Task.sleep(for: .milliseconds(300))
         #expect(workspace.error == nil)
         #expect(workspace.pendingRecordings.all().map(\.recording.id) == [recording.id])

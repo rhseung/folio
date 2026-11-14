@@ -20,7 +20,7 @@ private struct Sensitive: ViewModifier {
         if !locked || style == nil {
             content
         } else {
-            // redact할 수 있는 것은 글뿐이고, blur는 차트의 모양이나 슬라이더의 위치를 알아볼 수 있게 남긴다. 그래서
+            // redact 할 수 있는 것은 글뿐이고, blur는 차트의 모양이나 슬라이더의 위치를 알아볼 수 있게 남긴다. 그래서
             // 글이 아닌 것은 크기만 지키고 아예 그리지 않는다.
             switch style {
             case .inline, .control:

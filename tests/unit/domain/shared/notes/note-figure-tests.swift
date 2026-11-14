@@ -75,7 +75,7 @@ struct NoteFigureTests {
                 .external("https://fonts.example/f.css"), .external("https://x/b.png"),
             ])
 
-        // frame은 위젯 자신의 파일만 받으므로, 그 옆의 파일도 다른 사이트처럼 멀리 있다.
+        // frame은 위젯 자신의 파일만 받으므로, 그 옆의 파일도 다른 사이트의 파일처럼 바깥 참조다.
         let relative = """
             <script src="chart.js"></script><img src=plot.png><div style="background:url(grid.svg)"></div>
             <style>@import "theme.css";</style><script>const i = new Image(); i.src = 'dot.png'</script>

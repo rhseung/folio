@@ -269,7 +269,7 @@ final class FileViewModel {
         return .latex
     }
 
-    // 읽을 때마다 만들지 않고 남겨 둔다. 이 소스는 노트 리비전이 바뀔 때까지 읽은 노트를 쥐고 있으므로, 본문마다 새로 만들면 연결된 노트를 모두 다시 읽는다.
+    // 읽을 때마다 만들지 않고 남겨 둔다. 이 소스는 노트 리비전이 바뀔 때까지 읽은 노트를 가지고 있으므로, 본문마다 새로 만들면 연결된 노트를 모두 다시 읽는다.
     @ObservationIgnored private var embedSource: (url: URL, source: NoteEmbedSource)?
 
     var embeds: NoteEmbedSource? {

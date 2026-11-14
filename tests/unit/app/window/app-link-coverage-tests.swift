@@ -266,7 +266,7 @@ struct AppLinkCoverageTests {
             case .preview:
                 let html = HTMLRenderer.blocks(ParsedNote(written.text), embeds: embeds).map(\.html).joined()
                 guard let m = html.firstMatch(of: /<a [^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/) else { return Shown() }
-                // 페이지의 navigation은 클릭을 URL로 넘기고, WebKit은 Foundation처럼 escape한다.
+                // 페이지의 navigation은 클릭을 URL로 넘기고, WebKit은 Foundation처럼 escape 한다.
                 let href = Self.unescape(String(m.1))
                 NoteLinks.open(URL(string: href)?.absoluteString ?? href, base: nil, openNote: { _ in }, openLink: opener)
                 return Shown(name: Self.unescape(String(m.2)), opened: opened)

@@ -41,7 +41,7 @@ struct AppLinkTests {
         }
     }
 
-    // Foundation은 URL에서 블록의 `^`를 escape한다. 그래도 블록은 제목이 아니라 블록으로 돌아와야 한다.
+    // Foundation은 URL에서 블록의 `^`를 escape 한다. 그래도 블록은 제목이 아니라 블록으로 돌아와야 한다.
     @Test func aBlockSurvivesTheURL() throws {
         let link = AppLink(.note, UUID(), anchor: .block("proof"))
         #expect(link.url.absoluteString.hasSuffix("#%5Eproof"))

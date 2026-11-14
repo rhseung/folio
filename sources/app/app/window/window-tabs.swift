@@ -155,7 +155,7 @@ final class WindowTabs {
     }
 }
 
-// 앞의 화면만 보이고 포인터와 키를 받는다. 그렇지 않으면 살려 둔 화면의 ⌘S나 ⌘E, 그 화면이 보이는 파일의 확대 키가
+// 앞의 화면만 보이고 포인터와 키를 받는다. 그렇지 않으면 남겨 둔 화면의 ⌘S나 ⌘E, 그 화면이 보이는 파일의 확대 키가
 // 보이지 않는 페이지에 작용한다.
 struct TabScreens: View {
     let tabs: WindowTabs
@@ -914,7 +914,7 @@ private struct SegmentRule: View {
 }
 
 // `placement`만 관찰한다. 이 값을 계산하는 재료는 live resize의 frame마다 바뀌고, root view의 state로 두었을 때는
-// 사이드바, 살려 둔 모든 탭의 화면, 탭을 frame마다 다시 그렸다.
+// 사이드바, 남겨 둔 모든 탭의 화면, 탭을 frame마다 다시 그렸다.
 @MainActor @Observable final class ToolbarRow {
     struct Measures: Equatable {
         var front = TabFit.Front(trail: 0, chrome: 0)
@@ -934,7 +934,7 @@ private struct SegmentRule: View {
         lead: 0, fit: TabFit.Layout(iconsOnly: false, shown: 0, hidden: 0), trail: nil, width: 0,
         newTabSpacing: TabBar.gap)
 
-    // 창이 resize되는 동안 줄이 배치되기 전에 설정되므로(`WindowWidth`) 탭이 같은 frame에 새 폭에 맞는다. 배치된 줄에서
+    // 창이 resize 되는 동안 줄이 배치되기 전에 설정되므로(`WindowWidth`) 탭이 같은 frame에 새 폭에 맞는다. 배치된 줄에서
     // 재면 창보다 한 frame 늦고, 줄보다 넓은 strip이 첫 탭을 패널 가장자리 밖으로 밀어냈다.
     @ObservationIgnored var windowWidth: CGFloat = 1200 { didSet { settle() } }
     @ObservationIgnored var leadingX = TitleRowEdges.lead(fullScreen: false) { didSet { settle() } }

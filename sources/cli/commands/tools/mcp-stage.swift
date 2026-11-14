@@ -2,7 +2,7 @@ import FolioDomain
 import FolioStorage
 import Foundation
 
-// 패널은 질문마다 `folio mcp --propose`를 띄우므로, 사본은 답 하나만큼 살고 다음 질문은 승인하지 않은 제안 없이 지금
+// 패널은 질문마다 `folio mcp --propose`를 띄우므로, 사본은 답 하나 동안만 있고 다음 질문은 승인하지 않은 제안 없이 지금
 // 폴더에서 시작한다. 대부분의 답은 읽기만 하고 폴더 자체를 읽으므로, 사본은 답의 첫 쓰기 때 만든다.
 final class ProposalStage: @unchecked Sendable {
     struct Made {

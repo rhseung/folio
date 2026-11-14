@@ -21,7 +21,7 @@ struct PageRangeField: View {
     private var taken: [ClosedRange<Int>] { taught.filter(\.wall).map(\.pages) }
     var sections: [Section] = []
     var compact = false
-    // 드래그를 놓을 때 부르고, 탭이나 키, 쪽 입력이면 바로 부른다. 그러지 않으면 드래그의 모든 걸음이 쓰기가 된다.
+    // 드래그를 놓을 때 부르고, 탭이나 키, 쪽 입력이면 바로 부른다. 그러지 않으면 드래그의 모든 단계가 쓰기가 된다.
     let set: (PageRange) -> Void
 
     @Environment(\.accent) private var accent

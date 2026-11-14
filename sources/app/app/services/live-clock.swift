@@ -10,7 +10,7 @@ import UIKit
 
 // 각 뷰가 TimelineView를 따로 돌리면 시각이 서로 어긋난다. GeometryReader의 closure는 tick이 다시 실행하지 않아,
 // ribbon의 지금 선은 멈춘 채 옆의 wash만 움직였다. 이 시계의 `now`를 읽는 뷰는 observation으로 다시 그려진다. 앱이
-// 앞으로 오거나 Mac이 깨어나거나 시계나 시간대가 바뀌면 시각이 건너뛸 수 있으므로 그때도 tick한다.
+// 앞으로 오거나 Mac이 깨어나거나 시계나 시간대가 바뀌면 시각이 건너뛸 수 있으므로 그때도 tick 한다.
 @MainActor @Observable
 final class LiveClock {
     private(set) var now: Date

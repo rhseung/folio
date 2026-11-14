@@ -146,7 +146,7 @@ import UIKit
             if firstPicture == nil, let made { firstPicture = now - made }
             finish(job)
         }
-        // 응답하지 않는 페이지가 그 뒤의 모든 수식을 붙잡으면 안 되므로, 이 수식은 다음에 다시 요청한다. 페이지가 아직 불러오는 중일 때는 그러지 않는다. 처음 시작할 때 첫 그림을 기다리는 시간의
+        // 응답하지 않는 페이지가 그 뒤의 모든 수식을 기다리게 하면 안 되므로, 이 수식은 다음에 다시 요청한다. 페이지가 아직 불러오는 중일 때는 그러지 않는다. 처음 시작할 때 첫 그림을 기다리는 시간의
         // 대부분이 그 불러오기이기 때문이다.
         Task {
             repeat { try? await Task.sleep(for: .seconds(5)) } while current == turn && !page.loaded

@@ -2,7 +2,7 @@ import FolioDomain
 import FolioStorage
 import WebKit
 
-// 위젯은 Claude가 쓰거나 사용자가 붙여 넣은 것이라 신뢰할 수 없는 코드로 다룬다. frame은 자기만의 origin으로 sandbox되어 노트 페이지에 닿거나 페이지를 이동시키지 못한다. 보안 정책은 자기
+// 위젯은 Claude가 쓰거나 사용자가 붙여 넣은 것이라 신뢰할 수 없는 코드로 다룬다. frame은 자기만의 origin으로 sandbox 되어 노트 페이지에 닿거나 페이지를 이동시키지 못한다. 보안 정책은 자기
 // 인라인 코드만 돌리고 아무것도 불러오지 못하게 하며, 실행 사이에 아무것도 남지 않고, 다른 페이지로 가지 못한다.
 @MainActor final class NoteWidgets {
     let files = WidgetFiles()

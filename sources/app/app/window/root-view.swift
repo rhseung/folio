@@ -152,7 +152,7 @@ struct RootView: View {
 
     var openLink: OpenLinkAction { openLink(from: navigator) }
 
-    // 앞 탭 뒤에 살아 있는 화면이나 초점 칸 옆의 화면도 자기 칸을 움직여야 하므로 칸마다 따로 만든다.
+    // 앞 탭 뒤에 남아 있는 화면이나 초점 칸 옆의 화면도 자기 칸을 움직여야 하므로 칸마다 따로 만든다.
     func openLink(from pane: Navigator) -> OpenLinkAction {
         OpenLinkAction { link, placement, course in open(link, in: placement, course: course, from: pane) }
     }
@@ -939,7 +939,7 @@ private extension View {
     ) -> some View {
         let line = guide.map { GuideSegment(guide: $0).stroke(Theme.Palette.chromeLine, lineWidth: 1).frame(width: SidebarGuide.reach + 1) }
         let chosen = selection.wrappedValue == destination
-        // Button이 아니라 tap을 쓴다. 버튼은 누름을 붙잡아 목록의 순서 바꾸기 drag가 시작되지 않는다.
+        // Button이 아니라 tap을 쓴다. 버튼이 누름을 가로채서 목록의 순서 바꾸기 drag가 시작되지 않는다.
         frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
             .onTapGesture { selection.wrappedValue = destination }
             .listRowBackground(

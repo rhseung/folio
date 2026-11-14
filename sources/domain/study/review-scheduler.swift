@@ -202,7 +202,7 @@ extension LocalDate {
 }
 
 extension UnitReviewInput {
-    // 임시 처리: 복습 노트를 만든 날이 아니라 회차 날짜부터 센다. 노트가 만든 날을 기록하게 되면 노트 파일의 생성일을 쓴다.
+    // shortcut: 복습 노트를 만든 날이 아니라 회차 날짜부터 센다. 노트가 만든 날을 기록하게 되면 노트 파일의 생성일을 쓴다.
     public static func all(
         for file: CourseFile, reviews: [(at: Date, event: ReviewEvent)], settings: Settings, calendar: Calendar, now: Date
     ) -> [UnitReviewInput] {

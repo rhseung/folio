@@ -224,7 +224,7 @@ struct LinkTests {
         #expect(!out.contains("[["))
     }
 
-    // Obsidian은 표 행에서 막대를 escape한다. 다른 곳에서도 `\|`는 마크다운의 escape라서 같게 읽힌다.
+    // Obsidian은 표 행에서 막대를 escape 한다. 다른 곳에서도 `\|`는 마크다운의 escape라서 같게 읽힌다.
     @Test func escapedBarsSplitNoCellAndNameTheLink() {
         let out = HTMLRenderer.render(markdown: "| a | b |\n|---|---|\n| [[노트\\|이름]] | x \\| y |\n\n[[노트\\|밖]]")
         #expect(out.contains("<td class=\"word\"><a class=\"wikilink\" href=\"folio://note/%EB%85%B8%ED%8A%B8\">이름</a></td><td>x | y</td>"))

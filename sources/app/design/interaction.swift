@@ -19,7 +19,7 @@ extension PrimitiveButtonStyle {
     static func pointing<Base: PrimitiveButtonStyle>(_ base: Base) -> Self where Self == PointingButtonStyle<Base> { .init(base: base) }
 }
 
-// 과목은 페이지를 자기 잉크 색(다크 모드에서는 옅은 색)으로 tint하고, 시트는 연 뷰의 tint를 받지 않고 넘겨받은
+// 과목은 페이지를 자기 잉크 색(다크 모드에서는 옅은 색)으로 tint 하고, 시트는 연 뷰의 tint를 받지 않고 넘겨받은
 // `accent`만 받는다. 그래서 과목 색은 둘러싼 tint가 아니라 여기서 정한다.
 struct ProminentButtonStyle: PrimitiveButtonStyle {
     @Environment(\.accent) private var accent
@@ -190,7 +190,7 @@ private struct KeyProbe: UIGestureRecognizerRepresentable {
 
     func makeUIGestureRecognizer(context: Context) -> Probe { Probe(keys: keys) }
 
-    // 다른 제스처의 터치를 붙잡거나 취소하지 않도록, 키만 읽고 바로 실패한다.
+    // 다른 제스처의 터치를 가로채거나 취소하지 않도록, 키만 읽고 바로 실패한다.
     final class Probe: UIGestureRecognizer {
         let keys: HeldKeys
 

@@ -164,7 +164,7 @@ struct LectureProgressTests {
         return c
     }
 
-    // `now`는 서울 기준 10:00이므로, 둘째 수업 한 시간 뒤에 일주일 뒤의 셋째 수업은 아직 열리지 않았다.
+    // `now`는 서울 기준 10:00이므로, 둘째 수업 한 시간 뒤에는 일주일 뒤에 있는 셋째 수업이 아직 열리지 않았다.
     @Test func aNewRangeIsOfferedToHeldClassesWithoutPages() {
         var f = course()
         let m = matchings(f)

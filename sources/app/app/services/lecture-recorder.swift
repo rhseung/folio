@@ -344,7 +344,7 @@ final class LectureRecorder {
         try? await analyzer.setContext(SpeechAssets.context(hints))
     }
 
-    // 내려받기 때문에 앞선 읽기가 뒤의 읽기보다 늦게 끝날 수 있고, 그러면 범위가 좁은 쪽이 자막에 준 값을 덮어쓴다.
+    // 내려받기를 거치면 앞선 읽기가 뒤의 읽기보다 늦게 끝날 수 있고, 그러면 범위가 좁은 쪽이 자막에 준 값을 덮어쓴다.
     // 그래서 읽기마다 번호를 매긴다.
     func telling() -> Int {
         tellings += 1

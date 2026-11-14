@@ -345,7 +345,7 @@ extension NotePreview: UIViewRepresentable {
 
     // MARK: Messages from the page
 
-    // 페이지를 약하게 참조한다. content controller가 처리기를 붙잡고 페이지가 controller를 붙잡으므로, 강하게 참조하면 순환이 생긴다.
+    // 페이지를 약하게 참조한다. content controller가 처리기를 참조하고 페이지가 controller를 참조하므로, 강하게 참조하면 순환이 생긴다.
     private final class Messages: NSObject, WKScriptMessageHandler {
         static let name = "folioPreview"
         weak var page: NotePreviewPage?
