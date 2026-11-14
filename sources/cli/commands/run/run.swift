@@ -5,14 +5,16 @@ import FolioStorage
 import Foundation
 
 extension Action {
-    static func decode(_ json: Data) throws -> Self {
-        do {
-            return try JSONDecoder.folio.decode(Self.self, from: json)
-        } catch let error as DecodingError {
-            throw CLIError(
-                exit: .usage, message: String(localized: .runBadInput(RunCommand.describe(error))),
-                hints: [String(localized: .runBadInputHint)])
-        }
+    static func decode(_ json: Data) throws -> Self { try decodeInput(Self.self, json) }
+}
+
+func decodeInput<T: Decodable>(_ type: T.Type, _ json: Data) throws -> T {
+    do {
+        return try JSONDecoder.folio.decode(T.self, from: json)
+    } catch let error as DecodingError {
+        throw CLIError(
+            exit: .usage, message: String(localized: .runBadInput(RunCommand.describe(error))),
+            hints: [String(localized: .runBadInputHint)])
     }
 }
 

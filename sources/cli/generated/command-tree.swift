@@ -56,9 +56,9 @@ extension CourseCommand {
     static let subcommandTypes: [any ParsableCommand.Type] = alphabetical([
         CourseCommand.List.self,
         CourseCommand.Set.self,
-        CourseCommand.Show.self,
         GeneratedCommands.CourseAdd.self,
         GeneratedCommands.CourseRename.self,
+        GeneratedCommands.CourseShow.self,
     ])
 }
 
@@ -68,10 +68,10 @@ extension ExamCommand {
         ExamCommand.Plan.self,
         ExamCommand.PlanCheck.self,
         ExamCommand.Scope.self,
-        ExamCommand.Show.self,
         GeneratedCommands.ExamAdd.self,
         GeneratedCommands.ExamRemove.self,
         GeneratedCommands.ExamSet.self,
+        GeneratedCommands.ExamShow.self,
         GeneratedCommands.ExamSummary.self,
     ])
 }
@@ -225,9 +225,9 @@ extension SemesterCommand {
     static let subcommandTypes: [any ParsableCommand.Type] = alphabetical([
         GeneratedCommands.SemesterAdd.self,
         GeneratedCommands.SemesterSet.self,
+        GeneratedCommands.SemesterShow.self,
         GeneratedCommands.SemesterSource.self,
         SemesterCommand.List.self,
-        SemesterCommand.Show.self,
     ])
 }
 
@@ -267,10 +267,10 @@ extension UnitCommand {
         GeneratedCommands.UnitLink.self,
         GeneratedCommands.UnitRemove.self,
         GeneratedCommands.UnitSet.self,
+        GeneratedCommands.UnitShow.self,
         UnitCommand.List.self,
         UnitCommand.Move.self,
         UnitCommand.Pages.self,
-        UnitCommand.Show.self,
     ])
 }
 

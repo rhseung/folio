@@ -49,8 +49,10 @@ private func found(_ files: [String: String], _ check: String) -> [String] {
             "sources/actions/exam/exam-add.swift": "@Action struct ExamAdd {}",
             "sources/actions/note/exam-scope.swift": "@Action struct ExamScope {}",
             "sources/actions/score-add.swift": "@Action struct ScoreAdd {}",
+            "sources/actions/exam/exam-show.swift": "@Query struct ExamShow {}",
+            "sources/actions/note/exam-summary-show.swift": "@Query struct ExamSummaryShow {}",
             "sources/actions/note/notes/note-lookup.swift": "enum NoteLookup {}",
         ]
-        #expect(found(files, "action-path") == ["ExamScope in note/", "ScoreAdd in /"])
+        #expect(found(files, "action-path") == ["ExamScope in note/", "ExamSummaryShow in note/", "ScoreAdd in /"])
     }
 }

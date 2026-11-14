@@ -44,7 +44,7 @@ extension Rules {
     }
 
     static func isActionAttribute(_ element: AttributeListSyntax.Element) -> Bool {
-        element.as(AttributeSyntax.self)?.attributeName.trimmedDescription == "Action"
+        ["Action", "Query"].contains(element.as(AttributeSyntax.self)?.attributeName.trimmedDescription)
     }
 
     // 파일 밖에서 쓰는 최상위 타입. `#if`/`#else`로 같은 타입을 두 번 선언한 것은 하나로 센다.

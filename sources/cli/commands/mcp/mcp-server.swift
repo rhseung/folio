@@ -27,7 +27,7 @@ struct MCPServer {
         self.propose = propose
         stage = propose ? ProposalStage() : nil
         let all =
-            Self.writeTools(propose: propose)
+            Self.writeTools(propose: propose) + Self.queryTools()
             + Self.readTools().map { Self.builds[$0.command] == nil ? $0 : Self.writing($0, propose: propose) }
         catalog = all
         tools = (propose ? all.filter(\.panel) : all) + Self.generalTools(propose: propose)
@@ -62,7 +62,7 @@ struct MCPServer {
         "note", "session", "unit", "exam", "assignment", "material", "quiz", "score", "component", "attendance", "review",
         "problem-set", "search", "today",
     ]
-    static let panelCommands: Set<String> = ["course show", "course list", "recording transcript"]
+    static let panelCommands: Set<String> = ["course list", "recording transcript"]
 
     static func inPanel(_ command: String) -> Bool {
         panelCommands.contains(command) || command.split(separator: " ").first.map { panelGroups.contains(String($0)) } == true
@@ -361,6 +361,27 @@ struct MCPServer {
         return found
     }
 
+    // 읽기 선언은 선언한 필드를 그대로 입력으로 받고 `run`으로 돈다. 쓰기 도구와 같은 길이다.
+    static func queryTools() -> [Tool] {
+        let builder = SchemaBuilder()
+        return Queries.all.map { type in
+            let spec = type.spec
+            var input = declaredInput(spec.fields, builder.inline(type))
+            let used = referenced(input, builder.defs)
+            if !used.isEmpty { input["$defs"] = .object(builder.defs.filter { used.contains($0.key) }) }
+            let tool: JSONValue = [
+                "name": .string(name(spec.command)),
+                "title": .string(spec.summary),
+                "description": .string(spec.summary),
+                "inputSchema": input,
+                "annotations": ["readOnlyHint": .bool(true), "openWorldHint": .bool(false)],
+            ]
+            return Tool(name: name(spec.command), command: spec.command, write: false, panel: spec.panel, spec: tool) { args in
+                ["run"] + spec.command.split(separator: " ").map(String.init) + ["--input", string(args), "--json"]
+            }
+        }
+    }
+
     static let notTools: Set<String> = ["actions", "run", "skill", "completion", "mcp", "unlock", "lock", "cleanup plan", "help", "open"]
     static let globalOptions: Set<String> = ["gist", "json", "dry-run", "yes", "no-pick", "help", "version"]
 
@@ -396,14 +417,14 @@ struct MCPServer {
         }
 
         guard let help = try? JSONDecoder().decode(Help.self, from: Data(dump.utf8)) else { return [] }
-        let writes = Set(Actions.all.map { $0.command })
+        let declared = Set(Actions.all.map { $0.command } + Queries.all.map { $0.spec.command })
         func leaves(_ c: Help.Command, _ path: [String]) -> [([String], Help.Command)] {
             guard let subs = c.subcommands, !subs.isEmpty else { return [(path, c)] }
             return subs.filter { $0.shouldDisplay != false }.flatMap { leaves($0, path + [$0.commandName]) }
         }
         return leaves(help.command, []).compactMap { path, c in
             let command = path.joined(separator: " ")
-            guard !path.isEmpty, !writes.contains(command), !notTools.contains(command), !notTools.contains(path[0]) else { return nil }
+            guard !path.isEmpty, !declared.contains(command), !notTools.contains(command), !notTools.contains(path[0]) else { return nil }
             return readTool(command, c)
         }
     }

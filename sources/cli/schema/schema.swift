@@ -38,11 +38,11 @@ extension JSONValue: ExpressibleByStringLiteral, ExpressibleByDictionaryLiteral 
     public init(dictionaryLiteral elements: (String, JSONValue)...) { self = .object(Dictionary(elements) { a, _ in a }) }
 }
 
-func declaredInput(_ spec: ActionSpec, _ sniffed: JSONValue) -> JSONValue {
+func declaredInput(_ fields: [FieldSpec], _ sniffed: JSONValue) -> JSONValue {
     guard case .object(var o) = sniffed, case .object(var props)? = o["properties"], case .array(let required)? = o["required"] else {
         return sniffed
     }
-    for f in spec.fields {
+    for f in fields {
         guard case .object(var p)? = props[f.name] else { continue }
         if let kind = f.ref {
             let one: JSONValue = ["type": "string", "x-folio-ref": .string(kind.rawValue)]
@@ -55,7 +55,7 @@ func declaredInput(_ spec: ActionSpec, _ sniffed: JSONValue) -> JSONValue {
         if !help.isEmpty { p["description"] = .string(help) }
         props[f.name] = .object(p)
     }
-    let optional = Set(spec.fields.filter { $0.patch || $0.role == .new }.map(\.name))
+    let optional = Set(fields.filter { $0.patch || $0.role == .new }.map(\.name))
     o["properties"] = .object(props)
     o["required"] = .array(required.filter { if case .string(let k) = $0 { !optional.contains(k) } else { true } })
     return .object(o)
@@ -78,7 +78,7 @@ func actionSchemas() -> JSONValue {
             "summary": .string(spec.summary),
             "effect": .string(spec.effect.rawValue),
             "asks": .bool(spec.effect == .removes || spec.effect == .moves),
-            "input": declaredInput(spec, builder.inline(type)),
+            "input": declaredInput(spec.fields, builder.inline(type)),
         ]
     }
     return [

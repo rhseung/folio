@@ -8,6 +8,13 @@ public macro Action(
     proposal: ProposalTarget.Effect? = nil, panel: Bool = false
 ) = #externalMacro(module: "FolioMacros", type: "ActionMacro")
 
+@attached(member, names: named(init), named(CodingKeys), named(encode), named(spec), named(command))
+@attached(extension, conformances: Query)
+public macro Query(
+    _ command: String, _ summary: String, discussion: String = "", examples: [String] = [], phrases: [String] = [],
+    cli: CLIMode = .generated, panel: Bool = false
+) = #externalMacro(module: "FolioMacros", type: "QueryMacro")
+
 @attached(peer) public macro Arg() = #externalMacro(module: "FolioMacros", type: "MarkerMacro")
 @attached(peer) public macro New() = #externalMacro(module: "FolioMacros", type: "MarkerMacro")
 @attached(peer) public macro Off(_ flag: String = "off") = #externalMacro(module: "FolioMacros", type: "MarkerMacro")

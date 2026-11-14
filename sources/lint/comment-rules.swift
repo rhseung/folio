@@ -144,12 +144,12 @@ extension Rules {
         return found
     }
 
-    // 매크로는 `@Action` 타입 바로 안에 선언한 stored property의 leading trivia를 읽는다.
+    // 매크로는 `@Action`과 `@Query` 타입 바로 안에 선언한 stored property의 leading trivia를 읽는다.
     static func isActionField(_ token: TokenSyntax) -> Bool {
         guard let field = token.parent?.ancestorOrSelf(VariableDeclSyntax.self), field.firstToken(viewMode: .sourceAccurate) == token,
             let group = field.parent?.parent?.parent?.parent?.asProtocol(DeclGroupSyntax.self)
         else { return false }
-        return group.attributes.contains { $0.as(AttributeSyntax.self)?.attributeName.trimmedDescription == "Action" }
+        return group.attributes.contains { ["Action", "Query"].contains($0.as(AttributeSyntax.self)?.attributeName.trimmedDescription) }
     }
 }
 

@@ -41,16 +41,17 @@ enum Finder {
     ]
 
     static let phrases: [String: [String]] = written.merging(
-        Actions.all.map { ($0.spec.command, $0.spec.phrases) }.filter { !$0.1.isEmpty },
+        (Actions.all.map { ($0.spec.command, $0.spec.phrases) } + Queries.all.map { ($0.spec.command, $0.spec.phrases) })
+            .filter { !$0.1.isEmpty },
         uniquingKeysWith: { a, b in a + b.filter { !a.contains($0) } })
 
     private static let written: [String: [String]] = [
         "today": ["오늘 할 일", "오늘 일정", "지금 뭐 해야", "하루 요약"],
         "add": ["빠른 추가", "한 줄로 추가", "금요일까지 과제", "말로 과제 추가"],
         "session list": ["수업 목록", "강의 목록", "회차 보기", "몇 주차"], "session show": ["수업 하나 보기", "회차 자세히"],
-        "session rm": ["수업 지우기", "회차 삭제"], "unit list": ["단원 목록", "챕터 목록", "진도"], "unit show": ["단원 보기"],
+        "session rm": ["수업 지우기", "회차 삭제"], "unit list": ["단원 목록", "챕터 목록", "진도"],
         "unit move": ["단원 순서", "단원 옮기기", "하위 단원으로"],
-        "exam list": ["시험 목록", "시험 언제"], "exam show": ["몇 시", "어디서", "시험 장소 보기", "시험 범위 보기", "시험 정보", "시험 시간과 장소"],
+        "exam list": ["시험 목록", "시험 언제"],
         "exam scope": ["시험 범위", "범위 넣기", "출제 범위"],
         "exam plan rm": ["공부 계획 삭제"],
         "exam plan-check": ["계획 끝냈", "계획 다 했", "계획 완료", "공부 다 함", "계획 체크"], "assignment list": ["과제 목록", "숙제 뭐 남았지", "할 일 목록"],
@@ -74,8 +75,8 @@ enum Finder {
         "note widget render": ["위젯 그려 보기", "위젯 미리 보기", "위젯 오류"],
         "search": ["어디", "찾아", "찾기", "어디 있지", "검색", "내용 찾기"],
         "link": ["링크 만들기", "링크 복사", "앱 링크", "folio 링크", "주소"], "open": ["앱에서 열기", "앱으로 열기", "화면 열기"],
-        "semester list": ["학기 목록"], "semester show": ["이번 학기 정보", "개강일"],
-        "course list": ["과목 목록", "수강 과목"], "course show": ["과목 정보", "과목 시간표"],
+        "semester list": ["학기 목록"],
+        "course list": ["과목 목록", "수강 과목"],
         "catalog show": ["카탈로그", "과목 코드 목록", "교수 목록"],
         "settings show": ["설정 보기"],
         "check": ["폴더 검사", "구조 확인", "문제 있나"], "cleanup plan": ["폴더 정리", "파일 정리 계획"], "backup list": ["백업 목록"],
