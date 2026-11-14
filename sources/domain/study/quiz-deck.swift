@@ -3,64 +3,6 @@ import Foundation
 
 public typealias AttemptHistory = [(day: LocalDate, verdict: Verdict)]
 
-public struct WrongTally: Equatable, Sendable {
-    public var items = 0
-    public var attempted = 0
-    public var correct = 0
-    public var open = 0
-    public var resolved = 0
-    public var verdicts: [Verdict] = []
-
-    public init() {}
-
-    public var accuracy: Double? { WrongFlow.accuracy(verdicts) }
-    public var progress: Double { items == 0 ? 0 : Double(attempted) / Double(items) }
-
-    mutating func add(_ history: AttemptHistory) {
-        items += 1
-        verdicts += history.map(\.verdict)
-        if !history.isEmpty { attempted += 1 }
-        switch WrongFlow.status(history) {
-        case .open: open += 1
-        case .resolved: resolved += 1
-        case .neverWrong: if !history.isEmpty { correct += 1 }
-        }
-    }
-}
-
-public enum QuizStats {
-    public static func tally<Item, Key: Hashable>(_ items: [Item], keys: (Item) -> [Key], history: (Item) -> AttemptHistory) -> [Key:
-        WrongTally]
-    {
-        var result: [Key: WrongTally] = [:]
-        for item in items {
-            let h = history(item)
-            for key in keys(item) { result[key, default: WrongTally()].add(h) }
-        }
-        return result
-    }
-
-    public static func total<Item>(_ items: [Item], history: (Item) -> AttemptHistory) -> WrongTally {
-        tally(items, keys: { _ in [0] }, history: history)[0] ?? WrongTally()
-    }
-}
-
-public enum QuizOrder: String, CaseIterable, Sendable {
-    case unitOrder, random, wrongFirst
-}
-
-public struct QuizScope: Equatable, Sendable {
-    public var unitIds: Set<UUID>
-    public var categories: Set<CardCategory>
-    public var onlyWrong: Bool
-
-    public init(unitIds: Set<UUID> = [], categories: Set<CardCategory> = [], onlyWrong: Bool = false) {
-        self.unitIds = unitIds
-        self.categories = categories
-        self.onlyWrong = onlyWrong
-    }
-}
-
 public enum QuizDeck {
     public static func build(
         cards: [QuizCard], units: [UUID], scope: QuizScope, order: QuizOrder,

@@ -203,6 +203,33 @@ struct PatchNotesTests {
         }
     }
 
+    @Test func theReleaseBodyGroupsThePRsNotesByKind() {
+        let prs = [
+            PatchNotes.Merged(number: 7, title: "feat(notes): outline", body: Self.body),
+            PatchNotes.Merged(number: 9, title: "fix: margins", body: "**말풍선** `여백`을 고칩니다.\n둘째 줄\n\n## 패치 노트\n- fix: 수식 말풍선 위와 오른쪽 여백"),
+            PatchNotes.Merged(number: 11, title: "ci: cache", body: "## 확인\n\nhttps://claude.ai/code/session"),
+        ]
+        let body = PatchNotes.releaseBody(prs, first: false)
+        #expect(body.hasPrefix("## 패치 노트\n\(PatchNotes.marker)\n\n### feat\n- feat: 노트 옆 칸의 제목 목차\n"))
+        #expect(body.contains("### fix\n- fix: 수식 말풍선 위와 오른쪽 여백\n- fix: 회차 노트의 링크\n- fix: 소제목 뒤의 항목\n"))
+        #expect(body.contains("- fix: margins (#9)\n  말풍선 여백을 고칩니다. 둘째 줄\n- ci: cache (#11)\n\n## 설치"))
+        #expect(!body.contains("첫 릴리스"))
+        #expect(PatchNotes.releaseBody([], first: true).contains("사용자에게 보이는 변화가 없습니다.\n\n첫 릴리스입니다.\n\n## 설치"))
+    }
+
+    @Test func theReleaseBodyReadsBackAsItsPRsNotes() async {
+        let line = zip(Self.kind, Self.text, Self.link).map { kind, text, link -> String in
+            PatchNotes.line(Item(kind: kind, text: text.trimmingCharacters(in: .whitespaces) + "가", link: link))
+        }
+        let pr = line.array(of: 0...4).map { "요약\n\n## 패치 노트\n" + $0.joined(separator: "\n") }
+        await propertyCheck(input: pr.array(of: 0...4)) { bodies in
+            let prs = bodies.enumerated().map { PatchNotes.Merged(number: $0.offset, title: "pr", body: $0.element) }
+            var items: [Item] = []
+            for item in bodies.flatMap(PatchNotes.items(in:)) where !items.contains(item) { items.append(item) }
+            #expect(PatchNotes.items(in: PatchNotes.releaseBody(prs, first: false)) == PatchNotes.ordered(items))
+        }
+    }
+
     @Test func filteringOnlyNarrows() async {
         await propertyCheck(input: Self.releases, Self.kind.optional(), Self.text) { releases, kind, query in
             let filtered = PatchNotes.filter(releases, kind: kind, query: query)

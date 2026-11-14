@@ -90,15 +90,6 @@ public enum MaterialFormat: Equatable, Sendable {
     ]
 }
 
-public enum FileRenderer: Equatable, Sendable {
-    case pdf
-    case markdown
-    case source
-    case image
-    case audio
-    case quickLook
-}
-
 extension Material {
     public var format: MaterialFormat? { isFolder ? nil : MaterialFormat(path: path) }
     public var isPDF: Bool { format == .pdf }

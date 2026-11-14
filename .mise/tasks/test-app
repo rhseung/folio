@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+#MISE description="Run the app's tests on macOS: screen models, and the note views against their reference screens"
+#MISE depends=["generate"]
+set -euo pipefail
+
+notes="NoteScreenTests NoteLayoutTests NoteClickGridTests NoteHangulTests NoteMathTests NoteTypingTests"
+part=()
+case "${FOLIO_TEST_PART:-}" in
+  "") ;;
+  notes) for s in $notes; do part+=("-only-testing:FolioTests/$s"); done ;;
+  rest) for s in $notes; do part+=("-skip-testing:FolioTests/$s"); done ;;
+  *)
+    echo "FOLIO_TEST_PART is notes or rest, not $FOLIO_TEST_PART" >&2
+    exit 2
+    ;;
+esac
+out="${FOLIO_NOTE_SCREENS:-.build/note-screens}"
+case "$out" in /*) ;; *) out="$PWD/$out" ;; esac
+# FOLIO_NOTE_SCREENS가 다른 파일이 든 폴더를 가리킬 수 있으므로, 실행이 남기는 그림만 지운다.
+if [ -d "$out" ]; then
+  find "$out" -maxdepth 1 -type f -name '*.png' -delete
+  rm -f "$out/machine.txt"
+fi
+rm -rf .build/test-app.xcresult
+status=0
+# xcodebuild는 TEST_RUNNER_ 접두어가 붙은 변수만 접두어를 떼고 테스트에 넘긴다. FOLIO_XCODEBUILD_FLAGS는 낱말로 나눠
+# 넘기는 플래그 목록이다.
+# shellcheck disable=SC2086
+TEST_RUNNER_FOLIO_NOTE_SCREENS="$out" TEST_RUNNER_FOLIO_NOTE_SCREENS_STRICT="${FOLIO_NOTE_SCREENS_STRICT:-}" \
+  xcodebuild -scheme Folio -destination 'platform=macOS' -resultBundlePath .build/test-app.xcresult test -quiet \
+  -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation ${part[@]+"${part[@]}"} ${FOLIO_XCODEBUILD_FLAGS:-} || status=$?
+if [ "$status" -ne 0 ] && [ -d .build/test-app.xcresult ]; then
+  xcrun xcresulttool get test-results summary --path .build/test-app.xcresult --compact
+fi
+exit "$status"

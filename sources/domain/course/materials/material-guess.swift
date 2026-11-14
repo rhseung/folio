@@ -1,54 +1,5 @@
 import Foundation
 
-public struct IncomingFile: Equatable, Sendable {
-    public var name: String
-    public var pages: Int?
-    public var landscape: Bool
-
-    public init(name: String, pages: Int? = nil, landscape: Bool = false) {
-        (self.name, self.pages, self.landscape) = (name, pages, landscape)
-    }
-}
-
-public struct IntakeGuess: Equatable, Sendable {
-    public enum Why: Equatable, Sendable {
-        case named(String)
-        case slides(pages: Int)
-        case book(pages: Int)
-
-        public var text: String {
-            switch self {
-            case .named(let words): String(localized: .intakeWhyNamed(words))
-            case .slides(let pages): String(localized: .intakeWhySlides(pages))
-            case .book(let pages): String(localized: .intakeWhyBook(pages))
-            }
-        }
-    }
-
-    public enum SessionWhy: Equatable, Sendable {
-        case week(Int)
-        case today
-        case latest
-
-        public var text: String {
-            switch self {
-            case .week(let week): String(localized: .intakeSessionWeek(week))
-            case .today: String(localized: .intakeSessionToday)
-            case .latest: String(localized: .intakeSessionLatest)
-            }
-        }
-    }
-
-    public var folder: String
-    public var why: Why?
-    public var session: UUID?
-    public var sessionWhy: SessionWhy?
-
-    public init(folder: String, why: Why? = nil, session: UUID? = nil, sessionWhy: SessionWhy? = nil) {
-        (self.folder, self.why, self.session, self.sessionWhy) = (folder, why, session, sessionWhy)
-    }
-}
-
 extension MaterialIntake {
     public static func guess(
         _ file: IncomingFile, places: [String], sessions: [Session], exams: [Exam] = [], now: Date, settings: Settings,

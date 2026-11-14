@@ -1,0 +1,52 @@
+import Foundation
+
+public struct CBTable: Codable, Equatable, Sendable {
+    public static let language = "cb-table"
+
+    public struct Column: Codable, Equatable, Sendable {
+        public var width: Double?
+        public var align: String?
+    }
+
+    public struct Cell: Codable, Equatable, Sendable {
+        public var text: String
+        public var colspan: Int?
+        public var rowspan: Int?
+    }
+
+    public struct Row: Codable, Equatable, Sendable {
+        public var header: Bool?
+        public var cells: [Cell]
+    }
+
+    public var columns: [Column]?
+    public var rows: [Row]
+    public var headerColumn: Bool?
+
+    static let alignments: Set<String> = ["left", "center", "right"]
+
+    static func render(json: String, draw: (String) -> String) -> String {
+        guard let table = try? JSONDecoder().decode(CBTable.self, from: Data(json.utf8)) else {
+            return "<pre class=\"invalid-block\">\(HTMLRenderer.escape(json))</pre>\n"
+        }
+        let columns = table.columns ?? []
+        let cols = columns.map { c in "<col\(c.width.map { " style=\"width:\(Int($0))px\"" } ?? "")>" }.joined()
+        let rows = table.rows.map { row in
+            var column = 0
+            let cells = row.cells.enumerated().map { i, cell in
+                let isHeader = row.header == true || (table.headerColumn == true && i == 0)
+                let tag = isHeader ? "th" : "td"
+                let align =
+                    column < columns.count
+                    ? columns[column].align.flatMap { alignments.contains($0) ? " style=\"text-align:\($0)\"" : nil } ?? "" : ""
+                let span =
+                    (cell.colspan.map { $0 > 1 ? " colspan=\"\($0)\"" : "" } ?? "")
+                    + (cell.rowspan.map { $0 > 1 ? " rowspan=\"\($0)\"" : "" } ?? "")
+                column += cell.colspan ?? 1
+                return "<\(tag)\(span)\(align)>\(draw(cell.text))</\(tag)>"
+            }.joined()
+            return "<tr>\(cells)</tr>"
+        }.joined()
+        return "<table class=\"cb-table\">\(cols.isEmpty ? "" : "<colgroup>\(cols)</colgroup>")<tbody>\(rows)</tbody></table>\n"
+    }
+}

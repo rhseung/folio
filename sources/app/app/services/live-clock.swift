@@ -62,15 +62,3 @@ final class LiveClock {
         observers.append((center, token))
     }
 }
-
-struct LiveTime<Content: View>: View {
-    let workspace: Workspace
-    @ViewBuilder let content: (Date) -> Content
-
-    init(_ workspace: Workspace, @ViewBuilder content: @escaping (Date) -> Content) {
-        self.workspace = workspace
-        self.content = content
-    }
-
-    var body: some View { content(workspace.liveNow) }
-}

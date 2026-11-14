@@ -2,13 +2,6 @@ import FolioDomain
 import Foundation
 import PDFKit
 
-struct ClassWrapUpAsk: Identifiable, Equatable {
-    let id = UUID()
-    let course: UUID
-    let session: UUID
-    let viewed: [SessionMaterial]
-}
-
 extension Workspace {
     func askWrapUp(after recording: Recording, course id: UUID) {
         guard let file = course(id)?.file, let session = file.sessions.first(where: { $0.id == recording.sessionId }), !session.isCancelled,

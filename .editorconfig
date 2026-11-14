@@ -1,0 +1,10 @@
+# shfmt가 읽는 셸 스크립트의 모양이다(mise run shell-check).
+[*.sh]
+indent_style = space
+indent_size = 2
+switch_case_indent = true
+
+[.mise/tasks/*]
+indent_style = space
+indent_size = 2
+switch_case_indent = true

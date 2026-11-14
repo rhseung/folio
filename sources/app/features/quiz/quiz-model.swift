@@ -4,19 +4,6 @@ import FolioStorage
 import Foundation
 import Observation
 
-struct Attempt<Event: LogEvent> {
-    var at: Date
-    var day: LocalDate
-    var event: Event
-}
-
-struct SolveRequest: Equatable {
-    var id = UUID()
-    var scope: QuizScope
-    var label: String
-    var order: QuizOrder = .unitOrder
-}
-
 // 과목은 호출마다 뷰에서 받는다. 여기에 두면 과목을 다시 불러오는 쓰기마다 낡은 값이 되었다.
 @MainActor @Observable
 final class QuizModel {

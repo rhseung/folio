@@ -3,63 +3,6 @@ import FolioLMS
 import Foundation
 import Observation
 
-protocol LMSSource: Sendable {
-    func verify(_ login: LMSCredentials) async throws
-    func read(attachments: @escaping @Sendable (LMSSnapshot) -> [LMSAssignment]) async throws -> LMSSnapshot
-    func download(_ file: LMSFile, into folder: URL) async throws -> URL?
-    func download(_ attachment: LMSAttachment, into folder: URL) async throws -> URL?
-}
-
-// 앱에서는 iCloud 키체인에, 그 밖에서는 메모리에 둔다. 그래야 어떤 테스트도 실제 항목을 읽거나 쓰지 않는다.
-protocol LMSLogins: Sendable {
-    func read() -> LMSCredentials?
-    func save(_ login: LMSCredentials) throws
-    func remove()
-}
-
-struct KeychainLogins: LMSLogins {
-    func read() -> LMSCredentials? { LMSCredentialStore.read() }
-    // folio:not-an-action the LMS login goes to the keychain
-    func save(_ login: LMSCredentials) throws { try LMSCredentialStore.save(login) }
-    func remove() { LMSCredentialStore.remove() }
-}
-
-final class MemoryLogins: LMSLogins, @unchecked Sendable {
-    private let lock = NSLock()
-    private var login: LMSCredentials?
-    init(_ login: LMSCredentials? = nil) { self.login = login }
-    func read() -> LMSCredentials? { lock.withLock { login } }
-    func save(_ login: LMSCredentials) throws { lock.withLock { self.login = login } }
-    func remove() { lock.withLock { login = nil } }
-}
-
-struct LiveLMS: LMSSource {
-    let client: LMSClient
-
-    func verify(_ login: LMSCredentials) async throws {
-        try await LMSClient(credentials: { login }).login()
-    }
-
-    func read(attachments: @escaping @Sendable (LMSSnapshot) -> [LMSAssignment]) async throws -> LMSSnapshot {
-        try await LMSSync.read(client, at: .now, attachments: attachments)
-    }
-
-    func download(_ file: LMSFile, into folder: URL) async throws -> URL? { try await client.download(file, into: folder) }
-
-    func download(_ attachment: LMSAttachment, into folder: URL) async throws -> URL? {
-        try await client.download(attachment, into: folder)
-    }
-}
-
-struct FixedLMS: LMSSource {
-    var snapshot: LMSSnapshot
-
-    func verify(_ login: LMSCredentials) throws {}
-    func read(attachments: @escaping @Sendable (LMSSnapshot) -> [LMSAssignment]) throws -> LMSSnapshot { snapshot }
-    func download(_ file: LMSFile, into folder: URL) throws -> URL? { nil }
-    func download(_ attachment: LMSAttachment, into folder: URL) throws -> URL? { nil }
-}
-
 @MainActor @Observable
 final class LMSConnection {
     enum Status: Equatable {

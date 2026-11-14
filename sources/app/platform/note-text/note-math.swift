@@ -9,25 +9,6 @@ import AppKit
 import UIKit
 #endif
 
-@MainActor enum NoteScripts {
-    private static let helpers: JSValue? = {
-        guard let context = JSContext() else { return nil }
-        context.evaluateScript(NoteStyle.resource("native.js"))
-        return context.objectForKeyedSubscript("folioNative")
-    }()
-
-    static let languages: [String] =
-        helpers?.objectForKeyedSubscript("languages").call(withArguments: [])?.toArray()?.compactMap { $0 as? String } ?? []
-
-    static func highlight(_ code: String, language: String) -> [(range: NSRange, classes: String)] {
-        guard let flat = helpers?.objectForKeyedSubscript("highlight").call(withArguments: [code, language])?.toArray() else { return [] }
-        return stride(from: 0, to: flat.count - 2, by: 3).compactMap { i in
-            guard let from = flat[i] as? Int, let to = flat[i + 1] as? Int, let cls = flat[i + 2] as? String else { return nil }
-            return (NSRange(location: from, length: to - from), cls)
-        }
-    }
-}
-
 // 편집 보기의 말풍선과 자동 완성 메뉴의 수식은 미리보기의 KaTeX와 노트 스타일시트로 보이지 않는 페이지에서 그려 그림으로 남긴다. 예전에는 SwiftMath로 그렸는데, 메뉴가 내놓는 명령의 약 5분의
 // 1(`\underbrace`, `\boldsymbol`, `align` 등)이 실패하거나 미리보기와 다르게 나왔다. 렌더러가 하나이면 수식은 두 보기에서 같게 보이거나, 두 보기에서 함께 실패한다.
 @MainActor @Observable final class NoteMath {

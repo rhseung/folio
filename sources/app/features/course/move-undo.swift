@@ -20,12 +20,3 @@ final class MoveUndo {
         }
     }
 }
-
-struct UndoMoveButton: View {
-    let moves: MoveUndo
-    let action: () -> Void
-
-    var body: some View {
-        if moves.batch != nil { Button(.commonUndoMove, action: action) }
-    }
-}

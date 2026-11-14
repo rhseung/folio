@@ -1,0 +1,42 @@
+import FolioDomain
+import FolioStorage
+import Foundation
+
+@Action(
+    "transcript move", "폴더 없는 과목을 과목 폴더로 옮기기. 과목마다 같은 ID로 폴더와 course.json을 만들고 transcript.json에서 뺀다", effect: .moves,
+    confirm: "폴더 없는 과목을 모두 과목 폴더로 옮깁니다.", done: "폴더 없는 과목을 과목 폴더로 옮겼습니다",
+    examples: ["folio transcript move --dry-run"], phrases: ["폴더 없는 과목 옮기기", "성적 기록 옮기기"])
+public struct TranscriptMove {
+    public static func plan(_ ctx: ActionContext) throws -> [(course: Course, folder: String)] {
+        let transcript = try ctx.transcript(), catalog = try ctx.catalog()
+        var taken = Set<String>()
+        return try transcript.unfiledCourses.filter { !ctx.hasFolder($0.id) }.map { course in
+            guard let semester = transcript.semesters.first(where: { $0.id == course.semesterId }) else {
+                throw ActionError.notFound(String(localized: .errorTranscriptMoveNoSemester(course.title)))
+            }
+            guard let parent = semester.coursesFolder else {
+                throw ActionError.rule(String(localized: .errorCreditedNeedsSource(semester.name)))
+            }
+            let name = try CourseRename.folderName(title: course.title, codes: course.codes, number: course.number, catalog: catalog)
+            let folder = "\(parent)/\(name)"
+            guard taken.insert(folder).inserted, !FileManager.default.fileExists(atPath: ctx.gist.url.appending(path: folder).path) else {
+                throw ActionError.rule(String(localized: .errorFolderExists(folder)))
+            }
+            return (course, folder)
+        }
+    }
+
+    public func run(_ ctx: ActionContext) throws {
+        guard !(try ctx.transcript().unfiledCourses.isEmpty) else {
+            throw ActionError.notFound(String(localized: .errorTranscriptMoveNothing))
+        }
+        let moves = try Self.plan(ctx)
+        for (_, folder) in moves { ctx.record(Change(.added, folder + "/")) }
+        try ctx.io(Change(.added, StandardLayout.metadataFolder + "/" + StandardLayout.movesFile)) {
+            try MoveJournal.file(moves, in: ctx.gist.url, device: ctx.device, now: ctx.now)
+        }
+        ctx.invalidate()
+
+        try ctx.editTranscript { $0.unfiledCourses = [] }
+    }
+}

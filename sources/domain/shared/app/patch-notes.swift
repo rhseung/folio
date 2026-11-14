@@ -1,13 +1,13 @@
 import Foundation
 
-// PR 본문의 `## 패치 노트` 절과, 릴리스 스크립트(`scripts/release-notes.sh`)가 GitHub 릴리스 본문에 쓰는 같은
-// 제목의 절은 모양이 같고, 이 읽기 하나가 둘을 읽는다. 앱은 GitHub에서 릴리스를 다시 읽으므로, 머지 뒤에 고친
-// PR 본문도 릴리스에 들어간다.
+// PR 본문의 `## 패치 노트` 절과, 릴리스 본문(`releaseBody`, `folio-dev release-notes`)의 같은 제목의 절은 모양이
+// 같고, 이 읽기 하나가 둘을 읽는다. 릴리스 본문은 릴리스할 때 PR 본문에서 쓰고 앱은 GitHub에서 릴리스를 다시 읽으므로,
+// 머지 뒤에 고친 PR 본문도 릴리스에 들어간다.
 public enum PatchNotes {
     public enum Kind: String, CaseIterable, Hashable, Sendable {
         case feat, fix, change
 
-        // UI 문구가 아니라 데이터이다. 모든 줄을 이 값과 맞추고, 릴리스 스크립트도 같은 낱말로 맞춘다.
+        // UI 문구가 아니라 데이터이다. PR 본문과 릴리스 본문의 모든 줄을 이 값과 맞춘다.
         public var prefix: String { rawValue }
     }
 
@@ -68,8 +68,8 @@ public enum PatchNotes {
     // MARK: Reading the text
 
     public static let heading = "패치 노트"
-    // 릴리스 스크립트가 제목 아래에 `marker`를 쓴다. 마커가 더 나중의 모양을 가리키는 릴리스는 잘못 읽지 않도록
-    // 건너뛴다.
+    // 릴리스 본문은 제목 아래에 `marker`를 쓴다. 마커가 더 나중의 모양을 가리키는 릴리스는 잘못 읽지 않도록
+    // 건너뛴다. 줄의 모양을 바꾸면 `format`을 올린다.
     public static let format = 1
     public static var marker: String { "<!-- folio-patch-notes \(format) -->" }
 
@@ -152,6 +152,63 @@ public enum PatchNotes {
             return Release(version: version, date: date, items: items(in: raw.body ?? ""))
         }
         .sorted { $0.version > $1.version }
+    }
+
+    // MARK: Writing the release body
+
+    public struct Merged: Hashable, Sendable {
+        public var number: Int
+        public var title: String
+        public var body: String
+
+        public init(number: Int, title: String, body: String) {
+            self.number = number
+            self.title = title
+            self.body = body
+        }
+    }
+
+    // 머지된 PR들(번호 차례)의 패치 노트를 종류마다 `### <종류>`로 묶는다. 두 PR이 똑같이 쓴 줄은 한 번만 넣는다.
+    public static func releaseBody(_ prs: [Merged], first: Bool) -> String {
+        var items: [Item] = []
+        for item in prs.flatMap({ Self.items(in: $0.body) }) where !items.contains(item) { items.append(item) }
+        let groups = Kind.allCases.compactMap { kind -> String? in
+            let lines = items.filter { $0.kind == kind }.map(line)
+            return lines.isEmpty ? nil : "### \(kind.prefix)\n" + lines.joined(separator: "\n") + "\n"
+        }
+        var parts = [
+            "## \(heading)\n\(marker)\n" + (groups.isEmpty ? "사용자에게 보이는 변화가 없습니다.\n" : "\n" + groups.joined(separator: "\n"))
+        ]
+        if first { parts.append("첫 릴리스입니다.\n") }
+        if !prs.isEmpty {
+            let rows = prs.map { pr in
+                let summary = summary(of: pr.body)
+                return "- \(pr.title) (#\(pr.number))" + (summary.isEmpty ? "" : "\n  " + summary.prefix(summaryLength))
+            }
+            parts.append("## 머지된 PR\n" + rows.joined(separator: "\n") + "\n")
+        }
+        // 앱을 Developer ID로 서명하고 공증하면(#414) 이 안내를 뺀다.
+        parts.append(
+            "## 설치\n서명과 공증을 하지 않은 빌드입니다. 압축을 풀어 `/Applications`에 옮긴 뒤 처음 한 번 "
+                + "`xattr -dr com.apple.quarantine /Applications/Folio.app`을 실행하거나, 시스템 설정 > 개인정보 보호 및 보안에서 "
+                + "\"그래도 열기\"를 누릅니다.\n")
+        return parts.joined(separator: "\n")
+    }
+
+    static let summaryLength = 280
+
+    // PR 본문의 첫 문단이 요약이다. 제목과 세션 링크 문단은 건너뛰고, 굵게와 코드 표시를 떼어 한 줄로 잇는다.
+    static func summary(of body: String) -> String {
+        let paragraphs = body.replacingOccurrences(of: "\r", with: "").components(separatedBy: "\n\n")
+        guard
+            let first = paragraphs.first(where: {
+                let start = $0.drop { $0.isWhitespace }
+                return !start.hasPrefix("#") && !start.hasPrefix("https://claude.ai/")
+            })
+        else { return "" }
+        let plain = first.replacingOccurrences(of: "**", with: "").replacingOccurrences(of: "`", with: "")
+        return plain.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }.joined(separator: " ")
+            .trimmingCharacters(in: .whitespaces)
     }
 
     // MARK: After an update

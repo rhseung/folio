@@ -386,19 +386,6 @@ final class LectureRecorder {
     }
 }
 
-enum RecorderError: LocalizedError {
-    case microphoneDenied, noMicrophone, noSignal, localeUnsupported
-
-    var errorDescription: String? {
-        switch self {
-        case .microphoneDenied: String(localized: .recordingErrorMicrophoneDenied)
-        case .noMicrophone: String(localized: .recordingErrorNoMicrophone)
-        case .noSignal: String(localized: .recordingErrorNoSignal)
-        case .localeUnsupported: String(localized: .recordingErrorLocaleUnsupported)
-        }
-    }
-}
-
 extension LectureRecorder {
     nonisolated static func compress(_ source: URL, to target: URL) throws -> TimeInterval {
         let input = try AVAudioFile(forReading: source)
@@ -514,47 +501,5 @@ private final class AudioSink: @unchecked Sendable {
         var sum: Float = 0
         for i in 0..<Int(buffer.frameLength) { sum += data[i] * data[i] }
         return sum
-    }
-}
-
-// input node는 sample rate를 변환하지 못한다. 하드웨어와 다른 rate를 읽는 동안 tap을 걸면 아무것도 녹음되지
-// 않거나("config change pending") Objective-C 예외가 난다(`installTapOnBus` "Format mismatch: input hw 48000 Hz,
-// client 24000 Hz"). Swift는 이 예외를 잡지 못하므로 앱이 종료된다.
-enum MicrophoneTap {
-    struct Stream: Equatable {
-        var sampleRate: Double
-        var channels: UInt32
-    }
-
-    enum Plan: Equatable { case tap, rebuild, noInput }
-
-    static let stall: TimeInterval = 2
-    static let settle: TimeInterval = 1
-
-    static func plan(hardware: Stream, node: Stream) -> Plan {
-        guard hardware.sampleRate > 0, hardware.channels > 0 else { return .noInput }
-        return node.sampleRate == hardware.sampleRate && node.channels > 0 ? .tap : .rebuild
-    }
-
-    static func restartDue(running: Bool, sinceHeard: TimeInterval, sinceRestart: TimeInterval) -> Bool {
-        sinceRestart > settle && (!running || sinceHeard > stall)
-    }
-}
-
-extension MicrophoneTap.Stream {
-    init(_ format: AVAudioFormat) {
-        self.init(sampleRate: format.sampleRate, channels: format.channelCount)
-    }
-}
-
-// 범위는 책상 위 노트북이 듣는 수업 소리를 기준으로, 녹음한 강의를 1초 단위로 잰 값이다. -57dB는 문장 사이의 교실
-// 소리(10번째 백분위수)이고, -42dB는 강의자가 목소리를 높일 때(95번째 백분위수)다. 예전의 -55dB에서 -5dB까지의
-// 범위에서는 수업 전체가 눈금의 3분의 1 아래에 머물러, 미터와 카드의 빛이 거의 움직이지 않았다.
-enum LectureLoudness {
-    static let quiet: Float = -57
-    static let loud: Float = -42
-
-    static func level(_ decibels: Float) -> Float {
-        max(0, min(1, (decibels - quiet) / (loud - quiet)))
     }
 }

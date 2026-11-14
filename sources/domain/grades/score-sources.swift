@@ -1,9 +1,5 @@
 import Foundation
 
-public enum ScoreSource: Hashable, Sendable {
-    case none, assignment(UUID), exam(UUID)
-}
-
 extension ScoreEntry {
     public var source: ScoreSource {
         get { assignmentId.map { .assignment($0) } ?? examId.map { .exam($0) } ?? .none }

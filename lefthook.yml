@@ -16,3 +16,7 @@ pre-commit:
       glob: "*.swift"
       # app-direction 같은 규칙은 모든 파일이 필요하므로 바뀐 파일만 넘기지 않는다. 빌드한 뒤에는 전체를 읽는 데 2초쯤 걸린다.
       run: mise run check-code
+    shell-check:
+      priority: 4
+      glob: "{*.sh,.mise/tasks/*}"
+      run: mise run shell-check

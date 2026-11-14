@@ -30,7 +30,7 @@ extension Rules {
             var hits: [Hit] = []
             for file in code.files(
                 under: "sources", except: "sources/lint", "sources/lint-command")
-            where !file.path.hasSuffix("/standard-layout.swift") && !file.path.hasPrefix("sources/fixtures/") {
+            where !standardLayoutFiles.contains(file.path) && !file.path.hasPrefix("sources/fixtures/") {
                 for literal in file.nodes(StringLiteralExprSyntax.self) where layoutNames.contains(literal.plainText) {
                     hits.append(Hit("layout-name", file, file.line(of: literal), "\"\(literal.plainText)\""))
                 }
@@ -38,6 +38,13 @@ extension Rules {
             return hits
         }
     }
+
+    // standard-layout.swift를 타입마다 나눈 파일들이다. 표준 구조의 이름은 이 파일들에만 적는다.
+    static let standardLayoutFiles: Set<String> = [
+        "sources/domain/layout/standard-layout.swift", "sources/domain/layout/term.swift",
+        "sources/domain/layout/semester-folder.swift", "sources/domain/layout/course-folder.swift",
+        "sources/domain/layout/assignment-kind.swift",
+    ]
 
     static let layoutNames: Set<String> = [
         "Syllabus", "Lectures", "Exercises", "Textbooks", "Inherited", "Assignments", "Exams", "Study", "Notes", "Ink",

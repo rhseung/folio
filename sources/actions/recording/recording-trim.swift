@@ -1,0 +1,43 @@
+import FolioDomain
+import FolioStorage
+import Foundation
+
+@Action(
+    "recording trim", "지난 학기 녹음의 오디오를 휴지통으로 옮기고 받아쓰기는 남기기",
+    discussion: "받아쓰기가 없는 녹음은 오디오를 남긴다. 휴지통에서 되살릴 수 있다.", effect: .removes,
+    confirm: "{semester}의 녹음 오디오를 휴지통으로 옮깁니다. 받아쓰기는 남습니다.", done: "{semester}의 녹음 오디오를 휴지통으로 옮겼습니다",
+    examples: ["folio recording trim 2026-1 --dry-run"], phrases: ["녹음 용량", "녹음 정리", "오디오 지우기", "지난 학기 녹음"])
+public struct RecordingTrim {
+    /// 학기. 2026-1 또는 "2026 spring"
+    @Arg var semester: Semester.ID
+
+    public func run(_ ctx: ActionContext) throws {
+        let semesters = try ctx.transcript().semesters
+        let s = semesters[try index(semester, in: semesters, .valueSemester)]
+        guard s.isOver(on: LocalDate(ctx.now, in: ctx.calendar), among: semesters) else {
+            throw ActionError.rule(String(localized: .errorRecordingSemesterNotOver))
+        }
+
+        for store in try ctx.gist.courseStores() {
+            let file = try store.load().model
+            guard file.course.semesterId == semester else { continue }
+            let course = file.course.id
+            let trimmed = RecordingRetention.trimmable(file.recordings) { store.transcript(of: $0)?.lines.isEmpty == false }
+            guard !trimmed.isEmpty else { continue }
+            // 항목을 먼저 지운다. 실패한 휴지통 이동이 남긴 오디오는 해가 없지만, 없는 오디오가 있다는 항목은 플레이어를 없는
+            // 파일로 보내고 알림이 그것을 계속 센다.
+            let ids = Set(trimmed.map(\.id))
+            try ctx.edit(course) { f in
+                for i in f.recordings.indices where ids.contains(f.recordings[i].id) {
+                    f.recordings[i].audioTrashedAt = ctx.now
+                    f.recordings[i].touch(by: ctx.device, at: ctx.now)
+                }
+            }
+
+            for r in trimmed {
+                ctx.record(Change(.removed, try ctx.relative(course, r.file)))
+                if !ctx.dryRun { try store.trashAudio(of: r) }
+            }
+        }
+    }
+}

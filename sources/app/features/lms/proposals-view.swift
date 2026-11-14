@@ -63,42 +63,6 @@ private struct SectionActions: View {
     }
 }
 
-private struct TargetCourseMenu<More: View>: View {
-    let model: ProposalsModel
-    let label: String
-    var strong = false
-    let pick: (UUID) -> Void
-    @ViewBuilder var more: () -> More
-
-    var body: some View {
-        Menu {
-            Section(String(localized: .lmsAddTo)) {
-                ForEach(model.targets, id: \.id) { course in
-                    Button {
-                        pick(course.id)
-                    } label: {
-                        Text(course.title)
-                    }
-                }
-            }
-            more()
-        } label: {
-            HStack(spacing: Theme.Space.xs) {
-                Text(label)
-                Image(systemName: "chevron.down").font(Theme.Glyph.small).accessibilityHidden(true)
-            }
-        }
-        .menuStyle(.button).buttonStyle(SoftButtonStyle(strong: strong)).menuIndicator(.hidden)
-        .fixedSize()
-    }
-}
-
-extension TargetCourseMenu where More == EmptyView {
-    init(model: ProposalsModel, label: String, strong: Bool = false, pick: @escaping (UUID) -> Void) {
-        self.init(model: model, label: label, strong: strong, pick: pick, more: { EmptyView() })
-    }
-}
-
 private struct ProposalRow: View {
     let model: ProposalsModel
     let proposal: LMSProposal
@@ -192,71 +156,6 @@ private struct DueChip: View {
         case .urgent: Chip(text, tone: .danger, solid: true).monospacedDigit()
         case .soon: Chip(text, tone: .warning).monospacedDigit()
         case .later: Chip(text).monospacedDigit()
-        }
-    }
-}
-
-private struct SoftButtonStyle: ButtonStyle {
-    var strong = false
-    var iconOnly = false
-
-    func makeBody(configuration: Configuration) -> some View {
-        SoftButton(configuration: configuration, strong: strong, iconOnly: iconOnly)
-    }
-}
-
-private struct SoftButton: View {
-    let configuration: ButtonStyleConfiguration
-    let strong: Bool
-    let iconOnly: Bool
-    @Environment(\.isEnabled) private var isEnabled
-    @State private var hovering = false
-
-    var body: some View {
-        let strength = Theme.Opacity.tint * (configuration.isPressed ? 2 : hovering && isEnabled ? 1.5 : 1)
-        Group {
-            if iconOnly {
-                configuration.label.labelStyle(.iconOnly)
-                    .frame(width: Theme.Space.xl + Theme.Space.xs, height: Theme.Space.xl + Theme.Space.xs)
-            } else {
-                configuration.label
-                    .padding(.horizontal, Theme.Space.m)
-                    .padding(.vertical, Theme.Space.xs + Theme.Space.xxs)
-            }
-        }
-        .font(strong ? Theme.Typeface.bodyStrong : Theme.Typeface.body)
-        .lineLimit(1)
-        .foregroundStyle(strong ? Theme.Palette.text : Theme.Palette.textSecondary)
-        .background(Theme.Palette.textSecondary.opacity(strength), in: .capsule)
-        .contentShape(TouchTarget())
-        .opacity(isEnabled ? 1 : Theme.Opacity.disabled)
-        .onHover { hovering = $0 }
-        #if os(macOS)
-        .pointerStyle(isEnabled ? .link : nil)
-        #endif
-    }
-}
-
-struct LMSTodayNotice: View {
-    @State private var model: ProposalsModel
-    @Environment(\.openLink) private var openLink
-
-    init(workspace: Workspace) { _model = State(initialValue: ProposalsModel(workspace: workspace)) }
-
-    var body: some View {
-        let sections = model.waiting
-        if !sections.isEmpty {
-            NoticeCard(title: String(localized: .lmsTodayTitle(model.total)), detail: model.earliestDue, systemImage: "tray") {
-                Button(.lmsOpenProposals) { openLink(.place(.proposals)) }.buttonStyle(.prominent)
-            } rows: {
-                ForEach(Array(sections.enumerated()), id: \.element.id) { i, section in
-                    CardRow(last: i == sections.count - 1) {
-                        Text(section.classroom.title).lineLimit(1)
-                        Spacer(minLength: Theme.Space.s)
-                        Text("\(section.proposals.count)").monospacedDigit().foregroundStyle(Theme.Palette.textSecondary)
-                    }
-                }
-            }
         }
     }
 }

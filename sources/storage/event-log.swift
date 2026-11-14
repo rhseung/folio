@@ -1,19 +1,6 @@
 import FolioDomain
 import Foundation
 
-public struct LoggedEvent: Sendable, Equatable {
-    public var id: UUID
-    public var at: Date
-    public var device: DeviceID
-    public var type: String
-    public var data: JSONValue
-
-    public func decode<E: LogEvent>(_: E.Type) throws -> E? {
-        guard type == E.type else { return nil }
-        return try JSONFormat.decoder.decode(E.self, from: JSONFormat.encoder.encode(data))
-    }
-}
-
 extension Sequence<LoggedEvent> {
     public func events<E: LogEvent>(_: E.Type) -> [(at: Date, event: E)] {
         compactMap { e in (try? e.decode(E.self)).flatMap { $0 }.map { (at: e.at, event: $0) } }
@@ -58,16 +45,5 @@ public struct EventLog: Sendable {
                 .map { LoggedEvent(id: $0.id, at: $0.at, device: $0.device, type: $0.type, data: $0.data) }
         }
         .sorted { ($0.at, $0.id.uuidString) < ($1.at, $1.id.uuidString) }
-    }
-}
-
-public enum LocalDevice {
-    static let key = "folio.deviceID"
-
-    public static func id(in defaults: UserDefaults = .standard) -> DeviceID {
-        if let stored = defaults.string(forKey: key).flatMap(UUID.init(uuidString:)) { return stored }
-        let id = UUID()
-        defaults.set(id.uuidString, forKey: key)
-        return id
     }
 }

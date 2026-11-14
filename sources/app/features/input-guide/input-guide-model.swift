@@ -98,8 +98,3 @@ extension InputGuide.Phrase {
         }
     }
 }
-
-struct InputGuideRequest: Identifiable {
-    let id = UUID()
-    let syntax: MathSyntax
-}

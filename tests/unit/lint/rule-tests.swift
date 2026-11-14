@@ -107,6 +107,7 @@ private let view = "sources/app/features/demo/demo-view.swift"
             """
         #expect(found(["sources/app/features/demo/demo.swift": source], "ui-string") == ["\"라마바\""])
         #expect(found(["sources/app/app/debug-demo.swift": "let a = \"가\""], "ui-string").isEmpty)
+        #expect(found(["sources/app/app/debug/scenario-menu.swift": "let a = \"가\""], "ui-string").isEmpty)
     }
 }
 
@@ -115,6 +116,7 @@ private let view = "sources/app/features/demo/demo-view.swift"
         let files = [
             "sources/storage/store.swift": "let notes = \"Notes\"; let path = \"Notes/assets\"",
             "sources/domain/layout/standard-layout.swift": "let notes = \"Notes\"",
+            "sources/domain/layout/course-folder.swift": "let notes = \"Notes\"",
             "sources/fixtures/standard.swift": "let notes = \"Notes\"",
         ]
         #expect(found(files, "layout-name") == ["\"Notes\""])

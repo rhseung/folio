@@ -1,6 +1,6 @@
 # ci.yml의 pick checks와 review.yml이 dorny/paths-filter(predicate-quantifier: some-with-excludes)로 읽는다. 검사마다 '**'에서 시작해
-# 그 검사에 닿지 않는 경로를 뺀다. 빼는 목록에 없는 새 파일은 모든 검사에 닿는다고 본다. 예를 들어 `mise run generate`는
-# 빌드마다 scripts/version.sh를 실행하므로 scripts/는 통째로 빼지 않는다.
+# 그 검사에 닿지 않는 경로를 뺀다. 빼는 목록에 없는 새 파일은 모든 검사에 닿는다고 본다. 예를 들어 앱 작업은
+# .mise/tasks/generate와 scripts/ipad-simulator.sh를 실행하므로 .mise/tasks와 scripts/는 통째로 빼지 않는다.
 # 한 번 뺀 파일은 다른 패턴으로 다시 넣을 수 없으므로, 일부만 남길 때는 !(...)로 남길 것을 뺀 나머지를 적는다.
 
 # review.yml: 문서만 바뀐 PR은 리뷰 없이 승인한다. 다른 .md 파일은 테스트 픽스처(tests/unit/app/fixtures/all-markdown.md)나
@@ -22,7 +22,6 @@ packages:
     - '!sources/web/**'
     - '!sources/tectonic/bridge/**'
     - '!sources/tectonic/patches/**'
-    - '!sources/tectonic/build.sh'
     - '!.github/workflows/tectonic.yml'
     - '!.github/workflows/accessibility.yml'
     - '!.github/workflows/review.yml'
@@ -39,10 +38,12 @@ mac-app:
   - *prose
   - *unbuilt
   - &tools
-    - '!scripts/note-screens.sh'
-    - '!scripts/release-notes.sh'
-    - '!scripts/install-release.sh'
+    # packages의 shell-check만 셸 스크립트를 읽는다.
+    - '!sources/tectonic/build.sh'
     - '!scripts/swift-format.sh'
+    - '!.mise/tasks/{analyze,install-cli,install-mac,install-release,note-screens,render,shell-check,test-a11y}'
+    - '!.editorconfig'
+    - '!sources/dev/**'
     - '!sources/lint/**'
     - '!sources/lint-command/**'
     - '!tests/unit/lint/**'
@@ -71,7 +72,7 @@ ipad-app:
 ipad-simulator:
   - 'tests/unit/app/ipad/**'
   - 'sources/app/platform/note-text/**'
-  - 'sources/app/platform/pdf-view.swift'
+  - 'sources/app/platform/pdf-view/**'
   - 'sources/app/platform/page-scroll.swift'
   - 'sources/markdown/editing/**'
   - 'sources/storage/pdf/tex-engine.swift'

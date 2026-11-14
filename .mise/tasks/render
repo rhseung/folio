@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+#MISE description="Draw every page and sheet for each fixture scenario into FOLIO_RENDER_DIR (default .build/renders), with no window on screen"
+#MISE depends=["generate"]
+set -euo pipefail
+
+dir="${FOLIO_RENDER_DIR:-.build/renders}"
+case "$dir" in /*) ;; *) dir="$PWD/$dir" ;; esac
+# xcodebuild는 TEST_RUNNER_ 접두어가 붙은 변수만 접두어를 떼고 테스트에 넘긴다. 한국 시각과 한국어로 실행해야 상황의
+# 수업 시각과 날짜가 어느 기기에서나 같게 그려진다.
+TEST_RUNNER_FOLIO_RENDER_DIR="$dir" TEST_RUNNER_TZ=Asia/Seoul \
+  TEST_RUNNER_FOLIO_RENDER_SIZES="${FOLIO_RENDER_SIZES:-}" TEST_RUNNER_FOLIO_RENDER_SCREENS="${FOLIO_RENDER_SCREENS:-}" \
+  TEST_RUNNER_FOLIO_RENDER_SCENARIOS="${FOLIO_RENDER_SCENARIOS:-}" \
+  xcodebuild -scheme Folio -destination 'platform=macOS,arch=arm64' test -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" \
+  -skipMacroValidation -only-testing:FolioTests/ScreenRenders -testLanguage ko -testRegion KR
+echo "$dir"

@@ -1,10 +1,6 @@
 import FolioDomain
 import Foundation
 
-public enum MaterialFileError: Error, Equatable {
-    case outsideCourseFolder(String)
-}
-
 extension CourseStore {
     public func download(_ material: Material) throws -> URL {
         let file = url.appending(path: material.path)

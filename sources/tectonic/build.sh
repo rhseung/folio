@@ -18,7 +18,10 @@ inputs() {
   (cd "$root/sources/tectonic" && cat build.sh bridge/Cargo.toml bridge/src/*.rs bridge/include/* patches/*.patch \
     ../../.github/workflows/tectonic.yml) | shasum -a 256 | cut -c1-12
 }
-if [ "${1:-}" = "--inputs" ]; then inputs; exit 0; fi
+if [ "${1:-}" = "--inputs" ]; then
+  inputs
+  exit 0
+fi
 
 work="$(mkdir -p "$1" && cd "$1" && pwd)"
 zip="$2"
@@ -27,12 +30,16 @@ src="$work/src"
 mkdir -p "$src" "$work/downloads"
 
 fetch() {
-  set -- $1
-  local file="$work/downloads/$(basename "$1")"
-  if [ ! -f "$file" ] || ! echo "$2  $file" | shasum -a 256 -c --status; then
-    curl -fsSL --retry 3 -o "$file.part" "$1" && mv "$file.part" "$file"
+  local url sha file
+  read -r url sha <<<"$1"
+  file="$work/downloads/$(basename "$url")"
+  if [ ! -f "$file" ] || ! echo "$sha  $file" | shasum -a 256 -c --status; then
+    curl -fsSL --retry 3 -o "$file.part" "$url" && mv "$file.part" "$file"
   fi
-  echo "$2  $file" | shasum -a 256 -c --status || { echo "$file does not match its pinned sha256" >&2; exit 1; }
+  echo "$sha  $file" | shasum -a 256 -c --status || {
+    echo "$file does not match its pinned sha256" >&2
+    exit 1
+  }
   echo "$file"
 }
 
@@ -49,7 +56,10 @@ fi
 git -C "$work/tectonic" fetch -q --depth 1 origin "refs/tags/$TECTONIC_TAG"
 git -C "$work/tectonic" -c advice.detachedHead=false checkout -q --force FETCH_HEAD
 git -C "$work/tectonic" clean -qfdx
-[ "$(git -C "$work/tectonic" rev-parse HEAD)" = "$TECTONIC_COMMIT" ] || { echo "$TECTONIC_TAG is no longer $TECTONIC_COMMIT" >&2; exit 1; }
+[ "$(git -C "$work/tectonic" rev-parse HEAD)" = "$TECTONIC_COMMIT" ] || {
+  echo "$TECTONIC_TAG is no longer $TECTONIC_COMMIT" >&2
+  exit 1
+}
 git -C "$work/tectonic" submodule update -q --init --depth 1 crates/bridge_harfbuzz/harfbuzz
 for patch in "$root"/sources/tectonic/patches/*.patch; do git -C "$work/tectonic" apply "$patch"; done
 rm -rf "$work/bridge" && cp -R "$root/sources/tectonic/bridge" "$work/bridge"
@@ -65,7 +75,7 @@ slice() {
   rm -rf "$prefix" "$build"
   mkdir -p "$prefix/lib/pkgconfig" "$prefix/include" "$build"
 
-  cat > "$build/toolchain.cmake" <<EOF
+  cat >"$build/toolchain.cmake" <<EOF
 set(CMAKE_SYSTEM_NAME "$system")
 set(CMAKE_OSX_SYSROOT "$sysroot")
 set(CMAKE_OSX_ARCHITECTURES "arm64")
@@ -79,10 +89,13 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 EOF
   # zlib과 libicucore는 SDK에 들어 있지만, SDK에는 그 .pc 파일이 없고 ICU 헤더도 없다.
+  # .pc 파일의 `${prefix}`와 `${includedir}`는 pkg-config가 풀 변수라 셸이 풀지 않게 작은따옴표로 쓴다.
+  # shellcheck disable=SC2016
   printf 'prefix=%s/usr\nincludedir=${prefix}/include\nlibdir=${prefix}/lib\n\nName: zlib\nDescription: SDK zlib\nVersion: 1.2.12\nLibs: -lz\nCflags: -I${includedir}\n' \
-    "$sysroot" > "$prefix/lib/pkgconfig/zlib.pc"
+    "$sysroot" >"$prefix/lib/pkgconfig/zlib.pc"
+  # shellcheck disable=SC2016
   printf 'includedir=%s\n\nName: icu-uc\nDescription: SDK libicucore\nVersion: 79.1\nLibs: -licucore\nCflags: -I${includedir} -DU_DISABLE_RENAMING=1\n' \
-    "$icu_include" > "$prefix/lib/pkgconfig/icu-uc.pc"
+    "$icu_include" >"$prefix/lib/pkgconfig/icu-uc.pc"
 
   cm() {
     cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE="$build/toolchain.cmake" -DCMAKE_BUILD_TYPE=Release \

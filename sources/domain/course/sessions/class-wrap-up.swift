@@ -1,9 +1,5 @@
 import Foundation
 
-public enum WrapUpItem: String, CaseIterable, Sendable {
-    case progress, units, note, attendance
-}
-
 extension CourseFile {
     public func isWrappingUp(_ session: Session, recorded: Bool = false, at now: Date, classMinutes: Int, calendar: Calendar) -> Bool {
         recorded || recordings.contains { $0.sessionId == session.id }

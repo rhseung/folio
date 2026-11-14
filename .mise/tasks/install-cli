@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+#MISE description="Build folio in release mode into ~/.local/lib/folio, linked from ~/.local/bin, with its zsh completion"
+#MISE depends=["tectonic"]
+set -euo pipefail
+
+swift build -c release --product folio
+# 문자열 카탈로그는 실행 파일 옆에 있어야 하는 리소스 번들이므로, 둘을 함께 전용 폴더에 둔다.
+rm -rf ~/.local/lib/folio
+mkdir -p ~/.local/lib/folio ~/.local/bin ~/.local/share/zsh/site-functions
+install -m 755 .build/release/folio ~/.local/lib/folio/folio
+cp -R .build/release/*.bundle ~/.local/lib/folio/
+ln -sf ~/.local/lib/folio/folio ~/.local/bin/folio
+~/.local/bin/folio completion zsh >~/.local/share/zsh/site-functions/_folio
