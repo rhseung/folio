@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+#MISE description="Run SwiftLint's analyzer rules (unused imports and declarations) on a clean Mac build's compiler log"
+#MISE depends=["generate"]
+set -euo pipefail
+
+# analyzer는 파일마다 컴파일러 명령을 읽으므로, 증분 빌드를 하면 바뀌지 않은 파일이 빠진다.
+mkdir -p .build
+xcodebuild -scheme Folio -destination 'platform=macOS' clean build -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation >.build/xcodebuild.log
+swiftlint analyze --quiet --compiler-log-path .build/xcodebuild.log

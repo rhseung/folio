@@ -34,13 +34,14 @@ jobs:
       - uses: jdx/mise-action@v5
       - id: version
         run: |
-          v=$(scripts/version.sh get)
+          mise run tectonic
+          v=$(swift run -q folio-dev version get)
           if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$v" ]; then
             echo "::error::The tag is $GITHUB_REF_NAME but FolioVersion is $v; tag with mise run release-tag."
             exit 1
           fi
           echo "version=$v" >> "$GITHUB_OUTPUT"
-          echo "Folio $v ($(scripts/version.sh build))"
+          echo "Folio $v ($(git rev-list --count HEAD))"
       - run: mise run build-release
       # TODO(#414): with a Developer ID (after the Apple Developer signup), sign with the hardened runtime here, then
       # notarize (xcrun notarytool submit --wait) and staple, with the certificate and the notary key in secrets.
@@ -59,7 +60,7 @@ jobs:
             # 태그의 부모에서 찾아야 태그가 자기 자신을 이전 태그로 찾지 않는다.
             SINCE=$(git describe --tags --abbrev=0 --match 'v*' HEAD^ 2>/dev/null || true)
           fi
-          scripts/release-notes.sh body "$SINCE" > .build/release/body.md
+          swift run -q folio-dev release-notes body "$SINCE" > .build/release/body.md
           cat .build/release/body.md >> "$GITHUB_STEP_SUMMARY"
       - if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v7

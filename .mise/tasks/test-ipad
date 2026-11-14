@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+#MISE description="Run the iPad tests (Hangul in the edit view) on the first available iPad simulator"
+#MISE depends=["generate"]
+set -euo pipefail
+
+id=$(scripts/ipad-simulator.sh)
+rm -rf .build/test-ipad.xcresult
+# shellcheck disable=SC2086
+xcodebuild -scheme Folio -destination "platform=iOS Simulator,id=$id" -resultBundlePath .build/test-ipad.xcresult test -quiet \
+  -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation ${FOLIO_XCODEBUILD_FLAGS:-}
+xcrun xcresulttool get test-results summary --path .build/test-ipad.xcresult --compact

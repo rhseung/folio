@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+#MISE description="Audit the main screens with performAccessibilityAudit: UI tests that take the screen and keyboard, so CI runs them"
+#MISE depends=["generate"]
+set -euo pipefail
+
+rm -rf .build/test-a11y.xcresult
+status=0
+# shellcheck disable=SC2086
+xcodebuild -scheme FolioE2ETests -destination 'platform=macOS' -resultBundlePath .build/test-a11y.xcresult test -quiet \
+  -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation -testLanguage ko -testRegion KR ${FOLIO_XCODEBUILD_FLAGS:-} || status=$?
+if [ -d .build/test-a11y.xcresult ]; then
+  xcrun xcresulttool get test-results summary --path .build/test-a11y.xcresult --compact
+fi
+exit "$status"

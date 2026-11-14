@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
-# 비교는 기준 이미지를 그린 macOS에서만 하므로(tests/unit/app/support/note-pixels.swift), 기준 이미지는 CI 러너가 그린 것만 들인다.
+#MISE description="Take the note-view pictures a CI run left as the new references"
+#USAGE arg "<run>" help="The ID of the CI run whose note-screens artifact to take"
 set -euo pipefail
-cd "$(dirname "$0")/.."
-run="${1:?usage: mise run note-screens -- <CI run ID>}"
+
+# 비교는 기준 이미지를 그린 macOS에서만 하므로(tests/unit/app/support/note-pixels.swift), 기준 이미지는 CI 러너가 그린
+# 것만 들인다.
+run="${usage_run:?}"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 gh run download "$run" --name note-screens --dir "$tmp"

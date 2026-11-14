@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+#MISE description="Build this checkout's Release app and install it to /Applications"
+#MISE depends=["build-release"]
+set -euo pipefail
+
+# DerivedData에서 실행 중인 Debug 앱도 번들 ID가 같으므로, 이름이나 ID로 끄면 그 앱까지 꺼진다. 그래서 설치한 앱만 끈다.
+# 번들이 통째로 바뀌도록 복사하기 전에 끈다.
+installed='^/Applications/Folio[.]app/Contents/MacOS/Folio( |$)'
+if pkill -f "$installed"; then
+  for _ in $(seq 50); do
+    pgrep -f "$installed" >/dev/null || break
+    sleep 0.2
+  done
+fi
+rm -rf /Applications/Coursebook.app /Applications/Folio.app
+ditto "$FOLIO_DERIVED_DATA/Build/Products/Release/Folio.app" /Applications/Folio.app

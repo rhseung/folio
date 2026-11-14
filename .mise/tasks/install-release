@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+#MISE description="Install origin/main (or a given ref) as the app and the CLI, built in a clean temporary worktree"
+#USAGE arg "[ref]" help="The commit to install" default="origin/main"
+set -euo pipefail
+
+# 이 체크아웃이나 다른 세션의 워크트리에 있는, 커밋하지 않았거나 머지하지 않은 작업이 설치되지 않도록 임시 워크트리에서
+# 빌드한다.
+git fetch -q origin
+sha=$(git rev-parse --verify "${usage_ref:-origin/main}^{commit}")
+tmp=$(mktemp -d)
+dir="$tmp/folio"
+git worktree add -q --detach "$dir" "$sha"
+trap 'git worktree remove --force "$dir"; rmdir "$tmp"' EXIT
+cd "$dir"
+mise trust -q
+mise run install-mac
+mise run install-cli
+echo "installed $(swift run -q folio-dev version get) ($(git rev-list --count HEAD)) from $(git rev-parse --short HEAD)"

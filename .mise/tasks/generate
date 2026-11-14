@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+#MISE description="Generate Folio.xcodeproj from project.yml, with the version and build number"
+#MISE depends=["tectonic"]
+set -euo pipefail
+
+# 앱의 MARKETING_VERSION은 FolioVersion에서 온다. 앱 작업이 패키지를 따로 빌드하지 않도록 그 파일 하나를 Swift
+# 인터프리터로 읽으므로, 그 파일은 다른 파일에 기대지 않는다. 빌드 번호는 커밋 수다(main은 스쿼시 머지만 받는다).
+version=$({
+  cat sources/domain/shared/app/folio-version.swift
+  echo 'print(FolioVersion.marketing)'
+} | xcrun swift -)
+if [ "$(git rev-parse --is-shallow-repository 2>/dev/null)" = true ]; then
+  echo "warning: shallow clone, the build number is not the commit count" >&2
+fi
+build=$(git rev-list --count HEAD 2>/dev/null || echo 0)
+mkdir -p .build
+printf 'MARKETING_VERSION = %s\nCURRENT_PROJECT_VERSION = %s\n' "$version" "$build" >.build/version.xcconfig
+xcodegen generate

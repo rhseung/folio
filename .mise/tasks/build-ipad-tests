@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+#MISE description="Build the app and the iPad tests for the simulator test-ipad uses, without starting it"
+#MISE depends=["generate"]
+set -euo pipefail
+
+# test-ipad와 같은 시뮬레이터를 대상으로 빌드해야 뒤이은 test-ipad가 다시 빌드하지 않는다. 시뮬레이터를 켜지 않고도
+# 그 대상으로 빌드할 수 있다.
+id=$(scripts/ipad-simulator.sh)
+# shellcheck disable=SC2086
+xcodebuild -scheme Folio -destination "platform=iOS Simulator,id=$id" build-for-testing -quiet \
+  -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation ${FOLIO_XCODEBUILD_FLAGS:-}

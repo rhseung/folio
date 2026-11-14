@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#MISE description="Check the shell scripts and file tasks with shellcheck and shfmt (.editorconfig); --fix formats them in place"
+#USAGE flag "--fix" help="Format with shfmt instead of failing on the differences"
+set -euo pipefail
+
+files=(scripts/*.sh sources/tectonic/*.sh .mise/tasks/*)
+shellcheck "${files[@]}"
+if [ "${usage_fix:-false}" = true ]; then
+  shfmt -w "${files[@]}"
+else
+  shfmt -d "${files[@]}"
+fi
