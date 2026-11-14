@@ -75,10 +75,6 @@ struct HTMLView {
 
         func open(_ url: URL) {
             if AppLink.isAction(url) { return onAction(url) }
-            if url.scheme == LocalFileScheme.scheme {
-                if url.pathExtension == "md" { openNote(url.deletingPathExtension().lastPathComponent) }
-                return
-            }
             NoteLinks.open(url.absoluteString, base: nil, openNote: openNote, openLink: openLink)
         }
     }

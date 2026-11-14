@@ -309,14 +309,10 @@ import WebKit
     }
 
     private func open(_ url: URL) async {
-        if url.scheme == LocalFileScheme.scheme, let fragment = url.fragment, url.pathExtension != "md" {
+        if url.scheme == LocalFileScheme.scheme, let fragment = url.fragment, NoteFormat(path: url.path) != .markdown {
             _ = try? await view.callAsyncJavaScript(
                 "document.getElementById(id)?.scrollIntoView()", arguments: ["id": fragment.removingPercentEncoding ?? fragment],
                 contentWorld: .defaultClient)
-            return
-        }
-        if url.scheme == LocalFileScheme.scheme {
-            if url.pathExtension == "md" { openNote(url.deletingPathExtension().lastPathComponent) }
             return
         }
         NoteLinks.open(url.absoluteString, base: nil, openNote: openNote, openLink: openLink)
