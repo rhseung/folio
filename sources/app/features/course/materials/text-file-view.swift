@@ -16,6 +16,7 @@ struct TextFileView: View {
     private var moves: MoveUndo?
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.screenRequests) private var requests
 
     init(
         workspace: Workspace, course: LoadedCourse, material: UUID, requestedPage: Binding<Int?> = .constant(nil),
@@ -67,9 +68,7 @@ struct TextFileView: View {
         .onAppear(perform: model.load)
         .rememberingPanes($panes, id: model.isTex ? model.paneId : nil)
         .onChange(of: controller?.page) { _, page in if let page { shownPage = page } }
-        #if DEBUG && os(macOS)
-        .onChange(of: SnapshotDriver.shared.texMode) { _, mode in if let mode { panes.choose(mode) } }
-        #endif
+        .onChange(of: requests.viewMode) { _, mode in if let mode { panes.choose(mode) } }
         .onChange(of: requestedPage) { _, page in
             guard page != nil, let controller, let page = takeRequestedPage() else { return }
             showPDF()

@@ -29,37 +29,24 @@ final class SnapshotDriver {
     static let math = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_MATH"] != nil
     static let outline = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_OUTLINE"]
 
-    var claudePanel = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_CLAUDE"] != nil
     @ObservationIgnored var extraCaptures: ((URL) async -> Void)?
     // 창이 열리면 `ItemSheets`가 자기 시트를 띄우는 함수로 채운다.
     @ObservationIgnored var present: @MainActor (ItemSheet?) -> Void = { _ in }
-    var askPage = false
-    var texMode: NoteViewMode?
-    var searchQuery: String?
-    var columnOpen = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_COLUMN"] == "open"
-    var strip: StripStep?
-    var quickAddText: String?
-    var quickAddOpen = false
-    var quickAddDueOpen = false
-    var quickAddRepeatOpen = false
-    var quickAddPick: UUID?
-    var mathPaletteOpen = false
+    // 창이 `\.screenRequests`로 화면에 내려 준다. 환경 변수로 켠 요청은 실행 내내 남는다. 스냅숏을 찍지 않는 디버그 실행에는
+    // 아무 요청도 없어야 화면이 평소처럼 동작한다.
+    var requests = SnapshotDriver.standing
 
-    var splitEdit: SplitEdit?
+    static let claude = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_CLAUDE"] != nil
+    static let standing: Set<ScreenRequest> = {
+        guard directory != nil else { return [] }
+        var standing: Set<ScreenRequest> = [.quiz]
+        if ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_COLUMN"] == "open" { standing.insert(.column) }
+        if claude { standing.insert(.claude) }
+        if outline == "popover" { standing.insert(.outlinePopover) }
+        return standing
+    }()
 
-    struct SplitEdit: Equatable {
-        let section: Int
-        let page: Int
-    }
-
-    enum StripStep: Equatable {
-        case page(Int)
-        case edit(Int, Int)
-        case range(Int, Int)
-        case choose
-        case save
-        case remove(Int)
-    }
+    func ask(_ asked: ScreenRequest...) { requests = Self.standing.union(asked) }
 
     func run(workspace: Workspace, open: (AppLink) -> Void, links: [(String, AppLink)]) async {
         guard let directory = Self.directory, !FirstRunDebug.walks else { return }
@@ -69,7 +56,8 @@ final class SnapshotDriver {
             window.setContentSize(NSSize(width: Self.width, height: Self.height))
             window.center()
         }
-        func step(_ name: String, _ link: AppLink? = nil, sheet: ItemSheet? = nil, wait: Double = 1.5) async {
+        func step(_ name: String, _ link: AppLink? = nil, sheet: ItemSheet? = nil, asks: [ScreenRequest] = [], wait: Double = 1.5) async {
+            requests = Self.standing.union(asks)
             if let link { open(link) }
             if let sheet { present(sheet) }
             try? await Task.sleep(for: .seconds(wait))
@@ -81,17 +69,22 @@ final class SnapshotDriver {
                 present(nil)
                 try? await Task.sleep(for: .seconds(1))
             }
+            requests = Self.standing
         }
 
+        let spring = workspace.transcript.semesters.first { $0.year == 2026 && $0.term == .spring }
         for (name, kind) in [
             ("today", AppLink.Kind.today), ("grades", .grades), ("requirements", .requirements), ("people", .people),
             ("codes", .codes), ("whats-new", .whatsNew),
         ] {
-            await step(name, .place(kind))
+            await step(name, .place(kind), asks: kind == .grades ? spring.map { [.expand($0.id)] } ?? [] : [])
         }
         if let semester = workspace.currentSemester { await step("semester", AppLink(.semester, semester.id)) }
         if let course = workspace.currentCourses.first?.id {
-            for page in AppLink.CoursePage.allCases { await step("course-\(page)", .course(course, page: page)) }
+            let note = workspace.course(course)?.file.notes.first.map { AppLink(.note, $0.id) }
+            for page in AppLink.CoursePage.allCases {
+                await step("course-\(page)", page == .notes ? note ?? .course(course, page: page) : .course(course, page: page))
+            }
             await courseSteps(course, workspace: workspace, open: open, step: step)
         }
         for (name, link) in links { await step(name, link) }
@@ -104,7 +97,7 @@ final class SnapshotDriver {
             try? await Task.sleep(for: .seconds(2))
             capture(to: directory.appending(path: "link-note.png"))
         }
-        if claudePanel, let course = workspace.currentCourses.first?.id {
+        if Self.claude, let course = workspace.currentCourses.first?.id {
             open(.course(course))
             try? await Task.sleep(for: .seconds(2))
             capture(to: directory.appending(path: "link-claude-before.png"))
@@ -121,16 +114,16 @@ final class SnapshotDriver {
     // 과목 안의 단계는 사용자가 가는 길(항목 링크와 창의 시트)로만 연다. 화면은 스냅숏을 따로 알지 않는다.
     private func courseSteps(
         _ course: UUID, workspace: Workspace, open: (AppLink) -> Void,
-        step: (String, AppLink?, ItemSheet?, Double) async -> Void
+        step: (String, AppLink?, ItemSheet?, [ScreenRequest], Double) async -> Void
     ) async {
         guard let directory = Self.directory, var file = workspace.course(course)?.file else { return }
         if let unit = UnitTree.outline(file.units).first?.unit.id {
-            await step("course-units-detail", AppLink(.unit, unit), nil, 1.5)
-            await step("course-units-review", nil, .review(course: course, unit: unit), 1.5)
+            await step("course-units-detail", AppLink(.unit, unit), nil, [], 1.5)
+            await step("course-units-review", nil, .review(course: course, unit: unit), [], 1.5)
         }
-        await step("course-edit", .course(course), .course(course), 1.5)
+        await step("course-edit", .course(course), .course(course), [], 1.5)
         if let exam = file.exams.first {
-            await step("course-exam-edit", .course(course, page: .exams), .exam(course: course, exam: exam.id), 1.5)
+            await step("course-exam-edit", .course(course, page: .exams), .exam(course: course, exam: exam.id), [], 1.5)
         }
         if let assignment = file.assignments.first {
             // 낮은 창에서 시트가 넘기는 모습을 보도록 긴 메모를 잠시 쓰고, 찍은 뒤 되돌린다. 가짜 폴더에서만 돈다.
@@ -139,7 +132,8 @@ final class SnapshotDriver {
                 + (1...14).map { "\($0). 문제 \($0)의 풀이 과정을 빠짐없이 적는다" }.joined(separator: "\n")
             workspace.run(AssignmentSave(course: course, assignment: assignment.id, memo: .set(memo)))
             await step(
-                "course-assignment-edit", .course(course, page: .assignments), .assignment(course: course, assignment: assignment.id), 1.5)
+                "course-assignment-edit", .course(course, page: .assignments), .assignment(course: course, assignment: assignment.id), [],
+                1.5)
             workspace.run(AssignmentSave(course: course, assignment: assignment.id, memo: .set(assignment.memo)))
         }
 
@@ -158,40 +152,39 @@ final class SnapshotDriver {
             capture(to: directory.appending(path: "\(name).png"))
             if Self.webStep == name { await captureWebViews(to: directory, name: name) }
             if ext == "pdf" {
-                askPage = true
+                ask(.askPage)
                 try? await Task.sleep(for: .seconds(2))
                 capture(to: directory.appending(path: "course-materials-pdf-ask.png"))
-                askPage = false
-                claudePanel = true
+                ask(.claude)
                 try? await Task.sleep(for: .seconds(0.3))
-                claudePanel = false
+                ask()
             }
             if ext == "tex" {
                 for mode in [NoteViewMode.read, .write, .split] {
-                    texMode = mode
+                    ask(.viewMode(mode))
                     try? await Task.sleep(for: .seconds(1.5))
                     if mode != .split { capture(to: directory.appending(path: "course-materials-tex-\(mode.rawValue).png")) }
                 }
-                texMode = nil
+                ask()
             }
             if Self.holdSteps.contains(name) { try? await Task.sleep(for: .seconds(6)) }
             open(.course(course, page: .materials))
             try? await Task.sleep(for: .seconds(0.5))
         }
         if let linked = file.materials.first(where: { $0.role == .lecture && $0.isPDF }) ?? file.materials.first {
-            await step("course-materials-links", nil, .material(MaterialSheetRequest(course: course, material: linked.id)), 2)
+            await step("course-materials-links", nil, .material(MaterialSheetRequest(course: course, material: linked.id)), [], 2)
         }
 
-        searchQuery = ""
+        ask(.search(""))
         try? await Task.sleep(for: .seconds(1))
         capture(to: directory.appending(path: "search-empty.png"))
         // 팔레트는 열 때 한 번만 질의를 읽으므로 사이에 닫는다.
-        searchQuery = nil
+        ask()
         try? await Task.sleep(for: .seconds(0.5))
-        searchQuery = "matching"
+        ask(.search("matching"))
         try? await Task.sleep(for: .seconds(2))
         capture(to: directory.appending(path: "search.png"))
-        searchQuery = nil
+        ask()
     }
 
     func runStrip(open: (AppLink) -> Void, lecture: AppLink) async {
@@ -217,17 +210,17 @@ final class SnapshotDriver {
             try? Data().write(to: directory.appending(path: "\(name).ready"))
             try? await Task.sleep(for: .seconds(3))
         }
-        let steps: [(String, StripStep)] = [
+        let steps: [(String, ScreenRequest.StripStep)] = [
             ("strip-idle", .page(edit.0)), ("strip-edit", .edit(edit.0, edit.1)), ("strip-pick", .range(range.0, range.1)),
             ("strip-menu", .choose), ("strip-saved", .save), ("strip-removed", .remove(min(range.0, range.1))),
         ]
         for (name, step) in steps {
-            strip = step
+            ask(.strip(step))
             // 방금 저장한 구획은 1.6초 동안 강조되므로, 0.6초 뒤에 찍으면 강조된 모습이 찍힌다.
             try? await Task.sleep(for: .seconds(step == .save ? 0.6 : 2))
             await shot(name)
         }
-        strip = nil
+        ask()
         NSApp.terminate(nil)
     }
 
@@ -250,31 +243,28 @@ final class SnapshotDriver {
         open(.course(course))
         try? await Task.sleep(for: .seconds(1.5))
         for (name, text) in [("today-no-course", "HW2 보고서 내일"), ("today-long", "\(named) \(long)")] {
-            quickAddText = text
+            ask(.quickAdd(.init(text: text)))
             open(.place(.today))
             try? await Task.sleep(for: .seconds(3))
             await shot("quick-add-\(name)")
             open(.course(course))
             try? await Task.sleep(for: .seconds(1))
         }
-        quickAddText = nil
+        ask()
         open(.place(.today))
         try? await Task.sleep(for: .seconds(3))
         for (name, text, pick) in [("empty", nil, nil), ("typed", "\(named) HW7 금", nil), ("picked", "\(named) HW7 금", other)]
             as [(String, String?, UUID?)]
         {
-            quickAddText = text
-            quickAddPick = pick
-            quickAddOpen = true
+            ask(.quickAdd(.init(text: text, course: pick)), .quickAddPopover)
             try? await Task.sleep(for: .seconds(pick == nil ? 3 : 4))
             await shot("quick-add-today-popover-\(name)", popovers: true)
-            quickAddOpen = false
-            quickAddPick = nil
+            ask()
             try? await Task.sleep(for: .seconds(1))
         }
         open(.course(course))
         try? await Task.sleep(for: .seconds(1))
-        quickAddText = long
+        ask(.quickAdd(.init(text: long)))
         open(.course(course, page: .assignments))
         try? await Task.sleep(for: .seconds(3))
         await shot("quick-add-assignments-long")
@@ -287,18 +277,14 @@ final class SnapshotDriver {
             ("repeat", "\(named) HW 매주 월수", false), ("repeat-open", "\(named) HW 격주 월수 18:00", false),
         ]
         for (name, text, dueOpen) in steps {
-            quickAddText = text
-            quickAddDueOpen = dueOpen
-            quickAddRepeatOpen = name == "repeat-open"
-            quickAddOpen = true
-            try? await Task.sleep(for: .seconds(dueOpen || quickAddRepeatOpen ? 3.5 : 3))
+            let repeats = name == "repeat-open"
+            ask(.quickAdd(.init(text: text, due: dueOpen, repeats: repeats)), .quickAddPopover)
+            try? await Task.sleep(for: .seconds(dueOpen || repeats ? 3.5 : 3))
             await shot("quick-add-course-\(name)", popovers: true)
-            quickAddOpen = false
-            quickAddDueOpen = false
-            quickAddRepeatOpen = false
+            ask()
             try? await Task.sleep(for: .seconds(1))
         }
-        quickAddText = nil
+        ask()
         NSApp.terminate(nil)
     }
 
@@ -333,14 +319,14 @@ final class SnapshotDriver {
             await shot("math-menu")
             editor.doCommand(by: #selector(NSResponder.cancelOperation(_:)))
         }
-        mathPaletteOpen = true
+        ask(.mathPalette)
         try? await Task.sleep(for: .seconds(3))
         await shot("math-palette", popovers: true)
-        mathPaletteOpen = false
+        ask()
         NSApp.terminate(nil)
     }
 
-    func runSplit(open: (AppLink) -> Void, lecture: AppLink, ask: () -> Void) async {
+    func runSplit(open: (AppLink) -> Void, lecture: AppLink, split: () -> Void) async {
         guard let directory = Self.directory else { return }
         // folio:not-an-action debug screenshots, outside the GIST folder
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -349,10 +335,12 @@ final class SnapshotDriver {
             window.center()
         }
         let bounds = (Self.split ?? "").split(separator: "-").compactMap { Int($0) }
-        let edit = bounds.count == 2 ? SplitEdit(section: bounds[0], page: bounds[1]) : SplitEdit(section: 1, page: 9)
+        let edit =
+            bounds.count == 2
+            ? ScreenRequest.SplitEdit(section: bounds[0], page: bounds[1]) : ScreenRequest.SplitEdit(section: 1, page: 9)
         open(lecture)
         try? await Task.sleep(for: .seconds(3))
-        ask()
+        split()
         func shot(_ name: String) async {
             capture(to: directory.appending(path: "\(name).png"), popovers: true)
             guard ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_STRIP_SCREEN"] != nil else { return }
@@ -362,10 +350,10 @@ final class SnapshotDriver {
         }
         try? await Task.sleep(for: .seconds(3))
         await shot("split-idle")
-        splitEdit = edit
+        ask(.splitEdit(edit))
         try? await Task.sleep(for: .seconds(2))
         await shot("split-edit")
-        splitEdit = nil
+        ask()
         NSApp.terminate(nil)
     }
 

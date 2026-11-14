@@ -9,6 +9,7 @@ struct FileView: View {
     @State private var thumbnails = true
     @State private var query = ""
     @Environment(\.askClaude) private var askClaude
+    @Environment(\.screenRequests) private var requests
 
     init(
         workspace: Workspace, course: LoadedCourse, material: UUID, requestedPage: Binding<Int?> = .constant(nil),
@@ -66,11 +67,9 @@ struct FileView: View {
         .onDisappear { model.closed(at: pdf?.page) }
         .onChange(of: pdf == nil, initial: true) { _, _ in model.takeSplitAsk(pdf) }
         .onChange(of: model.splitAsk) { _, _ in model.takeSplitAsk(pdf) }
-        #if DEBUG && os(macOS)
-        .onChange(of: SnapshotDriver.shared.askPage) { _, ask in
+        .onChange(of: requests.contains(.askPage)) { _, ask in
             if ask, let c = pdf, let item = model.pageContext(c.page, in: c) { askClaude?(item) }
         }
-        #endif
     }
 
     @ViewBuilder var content: some View {

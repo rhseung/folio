@@ -41,13 +41,7 @@ final class PageStripModel {
         folds = Dictionary(uniqueKeysWithValues: saved.compactMap { k, v in UUID(uuidString: k).map { ($0, v) } })
     }
 
-    // 테스트 호스트와 창 스냅숏 실행은 설치한 앱과 bundle ID가 같아서 UserDefaults도 사용자의 것을 쓴다. 여기서 접은 구획이 사용자의 앱에서도 접혀 보이게 된다.
-    static var sharedDefaults: UserDefaults? {
-        #if DEBUG && os(macOS)
-        if SnapshotDriver.directory != nil { return nil }
-        #endif
-        return LocalFolders.isIsolated() ? nil : .standard
-    }
+    static var sharedDefaults: UserDefaults? { LocalFolders.isolatesDefaults() ? nil : .standard }
 
     static func key(_ material: UUID) -> String { "pageStripFolds.\(material.uuidString)" }
 

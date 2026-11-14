@@ -7,6 +7,7 @@ struct PageStrip: View {
     let controller: PDFController
     @State private var model: PageStripModel
     @Environment(\.accent) private var accent
+    @Environment(\.screenRequests) private var requests
 
     init(controller: PDFController, model: PageStripModel) {
         self.controller = controller
@@ -56,8 +57,7 @@ struct PageStrip: View {
             try? await Task.sleep(for: .seconds(1.6))
             withAnimation { model.fresh = nil }
         }
-        #if DEBUG && os(macOS)
-        .onChange(of: SnapshotDriver.shared.strip) { _, step in
+        .onChange(of: requests.strip) { _, step in
             switch step {
             case .page(let page)?:
                 model.clear()
@@ -78,10 +78,8 @@ struct PageStrip: View {
             case nil: break
             }
         }
-        #endif
     }
 
-    #if DEBUG && os(macOS)
     private func go(to page: Int) {
         Task {
             try? await Task.sleep(for: .seconds(0.4))
@@ -90,7 +88,6 @@ struct PageStrip: View {
             controller.go(to: page - 1)
         }
     }
-    #endif
 }
 
 private struct PageStripItem: View {

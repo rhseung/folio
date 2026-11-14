@@ -228,7 +228,9 @@ enum FormSnapshots {
                 "quick-add-typing",
                 AnyView(
                     QuickAddField(workspace: workspace, showsEmptyChips: true, floating: true).padding(Theme.Space.l).frame(width: 440)
-                        .environment(\.quickAddTypedSample, "\(file.course.title.split(separator: " ").first ?? "") Lab3 보고서 금 마감"))
+                        .environment(
+                            \.screenRequests,
+                            [.quickAdd(.init(text: "\(file.course.title.split(separator: " ").first ?? "") Lab3 보고서 금 마감"))]))
             ))
         if let filled = held.min(by: { $0.gaps < $1.gaps }), filled.gaps < WrapUpItem.allCases.count {
             forms.append(("class-wrap-up-filled", AnyView(wrapUp(workspace, course.id, filled.session.id))))

@@ -274,11 +274,12 @@ struct RootView: View {
                 .onChange(of: sidebarOpen, initial: true) { row.panelEdge = panelEdge }
                 #endif
                 #if DEBUG && os(macOS)
-                .onChange(of: SnapshotDriver.shared.searchQuery) { _, query in
+                .environment(\.screenRequests, SnapshotDriver.shared.requests)
+                .onChange(of: SnapshotDriver.shared.requests.search) { _, query in
                     searchStart = query ?? ""
                     searching = query != nil
                 }
-                .onChange(of: SnapshotDriver.shared.quickAddOpen) { _, open in quickAdding = open }
+                .onChange(of: SnapshotDriver.shared.requests.contains(.quickAddPopover)) { _, open in quickAdding = open }
                 #endif
             }
         }

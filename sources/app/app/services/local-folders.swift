@@ -16,6 +16,12 @@ enum LocalFolders {
         environment["XCTestConfigurationFilePath"] != nil || environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
     }
 
+    // 테스트 호스트, 창 스냅숏 실행, 크기 측정 실행은 설치된 앱과 bundle ID가 같아서 UserDefaults도 사용자의 것을 쓴다. 그러면
+    // 사용자가 숨긴 열과 접은 구획이 그림과 측정을 바꾸고, 실행이 바꾼 값은 사용자의 앱에 남는다. 그런 실행은 화면 상태를 기억하지 않는다.
+    static func isolatesDefaults(_ environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
+        isIsolated(environment) || environment["FOLIO_SNAPSHOT_DIR"] != nil || environment["FOLIO_RESIZE_PROBE"] != nil
+    }
+
     // 픽스처의 과목 ID는 고정되어 있다. 그래서 실제 폴더를 쓰면 픽스처 실행이 남긴 파일이 그곳에 계속 남고, 다음 픽스처
     // 실행이 실제 강의 녹음을 임시 폴더로 복구한 뒤 여기서 지운다. 따라서 픽스처로 돌린 앱(`FOLIO_GIST`, 창 스냅숏 포함)은
     // `perGIST` 폴더를 자기 임시 폴더에 둔다.

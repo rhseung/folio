@@ -50,6 +50,7 @@ struct ColumnSplit<Column: View, Content: View>: View {
     @Environment(\.paneFocused) private var paneFocused
     @Environment(CrumbTrail.self) private var trail: CrumbTrail?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.screenRequests) private var requests
     @State private var roomy = true
     @State private var paneWidth: CGFloat = 0
     @State private var opened = false
@@ -64,11 +65,7 @@ struct ColumnSplit<Column: View, Content: View>: View {
     var buttons: Int { outerButtons + 1 }
 
     var open: Bool {
-        var asked = opened
-        #if DEBUG && os(macOS)
-        asked = asked || SnapshotDriver.shared.columnOpen
-        #endif
-        return asked && !fit.docked && !fit.listAlone
+        (opened || requests.contains(.column)) && !fit.docked && !fit.listAlone
     }
 
     var body: some View {

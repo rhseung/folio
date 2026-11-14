@@ -82,7 +82,10 @@ struct ScreenFitTests {
 }
 
 extension ScreenFitTests {
-    func draw(_ entry: Navigator.Entry, _ workspace: Workspace, width: CGFloat, collapsed: Set<ColumnKind> = []) async throws -> (
+    func draw(
+        _ entry: Navigator.Entry, _ workspace: Workspace, width: CGFloat, collapsed: Set<ColumnKind> = [],
+        requests: Set<ScreenRequest> = []
+    ) async throws -> (
         width: CGFloat, labels: [String]
     ) {
         let seen = LabelBox()
@@ -90,6 +93,7 @@ extension ScreenFitTests {
             .environment(workspace)
             .environment(\.revealsOverflow, true)
             .environment(\.columnPrefs, ColumnPrefs(collapsed: collapsed))
+            .environment(\.screenRequests, requests)
             .onPreferenceChange(ColumnButtonLabels.self) { labels in MainActor.assumeIsolated { seen.labels = labels } }
         let drawn = try #require(
             try await measureOffscreen([RenderJob(name: "column", view: AnyView(screen), width: width, height: nil, scheme: .light)]).first)
@@ -107,17 +111,14 @@ extension ScreenFitTests {
             (Navigator.Entry(link: .settings(AppLink.SettingsPage.general)), sections),
             (Navigator.Entry(link: AppLink(.person, person.id)), list),
         ]
-        defer { SnapshotDriver.shared.columnOpen = false }
         for (entry, label) in screens {
             for open in [false, true] {
-                SnapshotDriver.shared.columnOpen = open
-                let drawn = try await draw(entry, workspace, width: 390)
+                let drawn = try await draw(entry, workspace, width: 390, requests: open ? [.column] : [])
                 #expect(drawn.width <= 390.5, "\(entry.link) at 390, open \(open), is \(drawn.width) wide")
                 #expect(drawn.labels.contains(open ? label.hide : label.show), "\(entry.link) at 390, open \(open): \(drawn.labels)")
             }
         }
 
-        SnapshotDriver.shared.columnOpen = false
         for (entry, label) in screens {
             let docked = try await draw(entry, workspace, width: 1440)
             #expect(docked.labels.contains(label.hide), "\(entry.link) docked: \(docked.labels)")

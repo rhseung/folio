@@ -11,6 +11,7 @@ struct LectureSplitPane: View {
     let save: () -> Void
     let cancel: () -> Void
     @State private var strip = SplitStrip()
+    @Environment(\.screenRequests) private var requests
 
     var body: some View {
         HStack(spacing: 0) {
@@ -21,8 +22,7 @@ struct LectureSplitPane: View {
             Theme.Palette.lineSoft.frame(width: 1)
             panel.frame(width: Self.panel)
         }
-        #if DEBUG && os(macOS)
-        .onChange(of: SnapshotDriver.shared.splitEdit) { _, edit in
+        .onChange(of: requests.splitEdit) { _, edit in
             guard let edit, split.sections.indices.contains(edit.section) else { return }
             strip.edit(split.sections[edit.section].id, in: split)
             strip.extend(to: edit.page, in: &split)
@@ -34,7 +34,6 @@ struct LectureSplitPane: View {
                 controller.go(to: first - 1)
             }
         }
-        #endif
     }
 
     private var panel: some View {
