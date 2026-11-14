@@ -157,9 +157,9 @@ struct MCPServer {
         var content: [JSONValue] = [["type": "text", "text": .string(Self.compact(run.out.joined(separator: "\n")))]]
         // 앱이 시스템 프롬프트를 바꾸므로 서버의 지시가 Claude에 닿지 않을 수 있어, 결과에도 넣는다.
         content.insert(["type": "text", "text": .string(String(localized: .mcpInstructionsPropose))], at: 0)
-        content.append([
-            "type": "text", "text": .string(ActionProposal(command: command, input: input, after: after.isEmpty ? nil : after).text),
-        ])
+        // 새 항목의 ID(`@New`)는 미리 실행에서 정해져 입력에 들어 있으므로, 어느 기기에서 승인해도 같은 항목을 만든다.
+        let proposal = ActionProposal(id: UUID(), command: command, input: input, after: after.isEmpty ? nil : after)
+        content.append(["type": "text", "text": .string(proposal.text)])
         return ["content": .array(content), "isError": .bool(false)]
     }
 

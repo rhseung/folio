@@ -1,13 +1,20 @@
 import Foundation
 
+// 승인하면 `command`의 액션을 `input`으로 실행하는 제안 하나다.
 public struct ActionProposal: Codable, Hashable, Sendable {
+    // 제안을 만들 때 정한다. 두 기기가 같은 제안을 승인해도 대상 문서에 남은 이 ID로 한 번만 적용한다. 이 ID가 생기기
+    // 전의 대화 파일에는 없다.
+    public var id: UUID?
     public var command: String
     public var input: JSONValue
     public var applied: Bool?
     public var failure: String?
     public var after: [Int]?
 
-    public init(command: String, input: JSONValue, applied: Bool? = nil, failure: String? = nil, after: [Int]? = nil) {
+    public init(
+        id: UUID? = nil, command: String, input: JSONValue, applied: Bool? = nil, failure: String? = nil, after: [Int]? = nil
+    ) {
+        self.id = id
         self.command = command
         self.input = input
         self.applied = applied

@@ -760,6 +760,17 @@
         }
       }
     },
+    "error.proposal-applied": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미 적용한 제안입니다"
+          }
+        }
+      }
+    },
     "error.recording.semester-not-over": {
       "extractionState": "manual",
       "localizations": {

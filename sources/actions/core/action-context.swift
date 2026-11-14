@@ -14,6 +14,9 @@ public final class ActionContext {
     public private(set) var needsReload = false
     public private(set) var loggedCourses: Set<UUID> = []
     public private(set) var notes: [String] = []
+    // 승인한 제안을 실행하는 중이면 그 ID다. 과목 문서를 바꿀 때 함께 남기고, 이미 남아 있으면 다시 적용하지 않는다.
+    public var proposal: ActionProposal?
+    private var proposalCourses: Set<UUID> = []
 
     private var stores: [UUID: CourseStore]?
     private var courseDocs: [UUID: StoredDocument<CourseFile>] = [:]
@@ -121,9 +124,16 @@ public final class ActionContext {
         let store = try store(course)
         var doc = try document(course)
         let before = doc.model
+        if let id = proposal?.id, before.hasApplied(id), !proposalCourses.contains(course) { throw ActionError.applied }
         do { try change(&doc.model) } catch let e as ModelError { throw ActionError(e) }
         guard doc.model != before else { return }
         try refuseNewViolation(before, doc.model, World(catalog: catalog(), transcript: transcript()))
+        if let proposal, let id = proposal.id {
+            doc.model.recordApplied(id)
+            if proposalCourses.insert(course).inserted {
+                try log(ProposalAppliedEvent(proposal: id, command: proposal.command), course: course)
+            }
+        }
         doc.model.course.touch(by: device, at: now)
         courseDocs[course] = doc
         changes += diff(before, doc.model, path: relative(store.courseFileURL))

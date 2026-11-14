@@ -128,6 +128,8 @@ final class Workspace {
         let stores = attempt(String(localized: .workspaceCourseFolders)) { try gist.courseStores() } ?? []
         var seen = Set<UUID>()
         courses = stores.compactMap { store in
+            // folio:not-an-action iCloud conflict copies are merged by item ID before the course is read
+            _ = attempt(store.url.lastPathComponent) { try store.resolveConflicts() }
             guard let course = attempt(store.url.lastPathComponent, { LoadedCourse(store: store, document: try store.load()) }) else {
                 return nil
             }
@@ -280,11 +282,12 @@ final class Workspace {
         }
     }
 
-    func runThrowing(_ action: some Action) throws -> ActionContext {
+    func runThrowing(_ action: some Action, proposal: ActionProposal? = nil) throws -> ActionContext {
         guard let gist else { throw ActionError.notFound(String(localized: .workspaceNoGist)) }
         let ctx = ActionContext(
             gist: gist, device: device, now: now, calendar: calendar,
             courses: Dictionary(courses.map { ($0.id, $0.store) }, uniquingKeysWith: { a, _ in a }))
+        ctx.proposal = proposal
         defer { show(ctx) }
         try action.run(ctx)
         return ctx

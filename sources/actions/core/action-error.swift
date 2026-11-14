@@ -14,6 +14,9 @@ public enum ActionError: Error, Equatable, CustomStringConvertible {
         }
     }
 
+    // 다른 기기가 먼저 적용한 제안이다. 부르는 쪽은 실패가 아니라 적용된 것으로 본다.
+    public static var applied: ActionError { .conflict(String(localized: .errorProposalApplied)) }
+
     init(_ e: ModelError) {
         switch e {
         case .notFound(let s): self = .notFound(s)
