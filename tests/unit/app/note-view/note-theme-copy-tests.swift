@@ -8,7 +8,7 @@ import Testing
 // 사본이 낡으면 Claude가 노트에 없는 색으로 그린 그림을 보게 된다.
 struct NoteThemeCopyTests {
     static let copy = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        .deletingLastPathComponent().deletingLastPathComponent().appending(path: "sources/cli/render/note-theme.swift")
+        .deletingLastPathComponent().deletingLastPathComponent().appending(path: "sources/cli/render/generated/note-theme.swift")
 
     @MainActor static func source() -> String {
         let entries = CourseAccent.presets.map { preset in

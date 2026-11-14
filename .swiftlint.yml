@@ -3,7 +3,8 @@ included:
   - sources
   - tests
 excluded:
-  - sources/cli/generated
+  # 생성기의 출력이다(scripts/swift-format.sh의 `generated`와 같은 폴더).
+  - "sources/**/generated"
   - sources/web
   - sources/tectonic
   - "**/.build"
