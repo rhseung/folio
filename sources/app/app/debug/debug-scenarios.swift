@@ -42,7 +42,9 @@ extension LMSSnapshot {
                 LMSClassroom(id: 28020, title: "선형대수학과 응용 (01분반)", kind: "교과"),
             ],
             assignments: [
-                LMSAssignment(id: 139950, classroom: 27967, title: "Homework Set #5", due: now.addingTimeInterval(3 * day)),
+                LMSAssignment(
+                    id: 139950, classroom: 27967, title: "Homework Set #5", due: now.addingTimeInterval(3 * day),
+                    attachments: [LMSAttachment(name: "hw5.pdf", path: "/pluginfile.php/1/mod_assign/introattachment/0/hw5.pdf")]),
                 LMSAssignment(id: 139951, classroom: 27968, title: "Lab 4 보고서", due: now.addingTimeInterval(10 * day)),
                 LMSAssignment(id: 140002, classroom: 28011, title: "소방안전교육 이수 확인", due: now.addingTimeInterval(2 * 3600)),
             ],

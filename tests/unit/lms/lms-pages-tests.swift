@@ -45,6 +45,19 @@ struct LMSPagesTests {
         </tbody></table>
         """
 
+    // 사용자가 보낸 Slow Problem #2 과제 페이지의 모양이다. 마감 줄 아래 파일 트리에 첨부가 있다.
+    static let assignmentPage = """
+        <div id="region-main"><h2>Slow Problem #2</h2>
+        <div id="intro" class="box generalbox boxaligncenter"><div class="no-overflow"><p>Due: November 19, Thursday, 11:55pm</p></div>
+        <div id="assign_files_tree5f3a" class="ygtv"><ul><li><div><img class="icon" alt="">
+          <a href="https://lms.gist.ac.kr/pluginfile.php/402311/mod_assign/introattachment/0/slow_problem_2.pdf?forcedownload=1">slow_problem_2.pdf</a></div></li>
+          <li><div><a href="https://lms.gist.ac.kr/pluginfile.php/402311/mod_assign/introattachment/0/%EC%B0%B8%EA%B3%A0%20%EC%9E%90%EB%A3%8C.pdf?forcedownload=1">참고 자료.pdf</a></div></li>
+          <li><div><a href="https://lms.gist.ac.kr/pluginfile.php/402311/mod_assign/introattachment/0/slow_problem_2.pdf?forcedownload=1">slow_problem_2.pdf</a></div></li>
+        </ul></div></div>
+        <div class="submissionstatustable"><table class="generaltable"><tbody><tr><td>제출 여부</td><td>제출 안 함</td></tr></tbody></table>
+          <a href="https://lms.gist.ac.kr/pluginfile.php/402311/assignsubmission_file/submission_files/1/old.pdf">old.pdf</a></div></div>
+        """
+
     @Test func readsClassrooms() throws {
         let rooms = try LMSPages.classrooms(Self.dashboard)
         #expect(
@@ -77,6 +90,17 @@ struct LMSPagesTests {
                     id: 23464, board: 139001, classroom: 27967, title: "중간고사 안내", author: "조교",
                     posted: ISO8601DateFormatter().date(from: "2026-10-11T15:00:00Z"))
             ])
+    }
+
+    @Test func readsAssignmentAttachmentsButNotSubmissions() throws {
+        let a = try LMSPages.attachments(Self.assignmentPage)
+        #expect(a.map(\.name) == ["slow_problem_2.pdf", "참고 자료.pdf"])
+        #expect(a[0].path == "/pluginfile.php/402311/mod_assign/introattachment/0/slow_problem_2.pdf?forcedownload=1")
+        #expect(
+            a[1].url.absoluteString
+                == "https://lms.gist.ac.kr/pluginfile.php/402311/mod_assign/introattachment/0/%EC%B0%B8%EA%B3%A0%20%EC%9E%90%EB%A3%8C.pdf?forcedownload=1"
+        )
+        #expect(try LMSPages.attachments(Self.assignments).isEmpty)
     }
 
     @Test func tellsTheLoginForm() {

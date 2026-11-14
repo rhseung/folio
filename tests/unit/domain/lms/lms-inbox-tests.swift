@@ -57,6 +57,37 @@ struct LMSInboxTests {
         #expect(handled.map(\.proposable) == [false, true, false, false])
     }
 
+    @Test func attachmentsAreReadOnlyForProposedAssignments() {
+        var added = Assignment(device: device, at: now, title: "HW3", source: .lms)
+        added.lmsId = 104
+        var settings = LMSSettings(known: [1])
+        settings.mark([LMSKey(kind: .assignment, id: 105)], handled: true)
+        let snapshot = LMSSnapshot(
+            at: now, classrooms: [.init(id: 1, title: "그래프 이론"), .init(id: 2, title: "처음 보는 강의실")],
+            assignments: [
+                .init(id: 100, classroom: 1, title: "open", due: now.addingTimeInterval(3600)),
+                .init(id: 102, classroom: 1, title: "past", due: now.addingTimeInterval(-1)),
+                .init(id: 103, classroom: 1, title: "handed in", submitted: true),
+                .init(id: 104, classroom: 1, title: "already added"),
+                .init(id: 105, classroom: 1, title: "dismissed"),
+                .init(id: 200, classroom: 2, title: "new room"),
+            ])
+        let read = LMSInbox.attachmentsToRead(snapshot, settings: settings, courses: [course("선형대수학", assignments: [added])], now: now)
+        #expect(read.map(\.id) == [100, 200])
+    }
+
+    @Test func proposalsCarryTheirAttachments() {
+        let files = [LMSAttachment(name: "slow_problem_2.pdf", path: "/a"), LMSAttachment(name: "b.pdf", path: "/b")]
+        let snapshot = LMSSnapshot(
+            at: now, classrooms: [.init(id: 1, title: "그래프 이론")],
+            assignments: [.init(id: 100, classroom: 1, title: "SP2", attachments: files)], files: [.init(id: 10, classroom: 1, title: "a")])
+        let inbox = LMSInbox.build(snapshot, settings: LMSSettings(known: [1]), courses: [], now: now)
+        #expect(inbox.proposals.map(\.attachments) == [files, []])
+        #expect(LMSAttachment.summary(files)?.first == "slow_problem_2.pdf")
+        #expect(LMSAttachment.summary(files)?.more == 1)
+        #expect(LMSAttachment.summary([])?.first == nil)
+    }
+
     @Test func handledFilesAndNoticesStayQuiet() {
         let snapshot = LMSSnapshot(
             at: now, classrooms: [.init(id: 1, title: "그래프 이론"), .init(id: 2, title: "빈 강의실")],

@@ -28,6 +28,22 @@ public enum LMSPages {
         }
     }
 
+    // Moodle 3.2 과제 보기는 소개 첨부를 파일 트리(`#intro` 아래 `assign_files_tree…`)로 그리고, 링크는 모두
+    // `mod_assign/introattachment`의 pluginfile 주소다. 트리 모양 대신 주소로 고르면 Coursemos가 트리를 바꿔도 읽힌다.
+    public static func attachments(_ html: String) throws -> [LMSAttachment] {
+        let doc = try SwiftSoup.parse(html)
+        var seen = Set<String>()
+        return try doc.select("a[href*=/mod_assign/introattachment/]").array().compactMap { a in
+            guard let url = URL(string: try a.attr("href"), relativeTo: LMS.base), seen.insert(url.path).inserted else { return nil }
+            let text = try a.text().trimmingCharacters(in: .whitespaces)
+            let name = url.lastPathComponent.isEmpty ? text : url.lastPathComponent
+            guard !name.isEmpty else { return nil }
+            var path = url.path(percentEncoded: true)
+            if let query = url.query(percentEncoded: true) { path += "?" + query }
+            return LMSAttachment(name: name, path: path)
+        }
+    }
+
     public static func files(_ html: String, classroom: Int) throws -> [LMSFile] {
         var week: String?
         return try rows(html).compactMap { cells in

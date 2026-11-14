@@ -107,14 +107,22 @@ public actor LMSClient {
     }
 
     public func download(_ file: LMSFile, into folder: URL) async throws -> URL? {
-        let path = "/mod/ubfile/view.php?id=\(file.id)"
+        try await download("/mod/ubfile/view.php?id=\(file.id)", named: nil, into: folder)
+    }
+
+    public func download(_ attachment: LMSAttachment, into folder: URL) async throws -> URL? {
+        try await download(attachment.path, named: attachment.name, into: folder)
+    }
+
+    // 내려받기를 막은 파일은 원본 대신 Coursemos 뷰어 페이지(HTML)가 온다. 그런 파일은 받지 않고 nil을 돌려준다.
+    private func download(_ path: String, named: String?, into folder: URL) async throws -> URL? {
         var (data, response) = try await fetch(path)
         if LMSPages.isLogin(String(decoding: data.prefix(20_000), as: UTF8.self)) {
             try await login()
             (data, response) = try await fetch(path)
         }
         let type = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Content-Type") ?? ""
-        guard !type.hasPrefix("text/html"), let name = response.url?.lastPathComponent, !name.isEmpty else { return nil }
+        guard !type.hasPrefix("text/html"), let name = named ?? response.url?.lastPathComponent, !name.isEmpty else { return nil }
         let target = folder.appending(path: name)
         try data.write(to: target, options: .atomic)
         return target
@@ -147,10 +155,18 @@ public actor LMSClient {
 }
 
 public enum LMSSync {
-    public static func read(_ client: LMSClient, at now: Date) async throws -> LMSSnapshot {
+    // `attachments`는 다 읽은 목록에서 첨부를 읽을 과제를 고른다. 고른 과제마다 과제 페이지를 하나 더 읽는다.
+    public static func read(
+        _ client: LMSClient, at now: Date, attachments: @Sendable (LMSSnapshot) -> [LMSAssignment] = { _ in [] }
+    ) async throws -> LMSSnapshot {
         var snapshot = LMSSnapshot(at: now, classrooms: try LMSPages.classrooms(await client.page("/")))
         for room in snapshot.classrooms {
             snapshot.merge(try await classroom(client, room.id), in: room.id)
+        }
+        let wanted = Set(attachments(snapshot).map(\.id))
+        for i in snapshot.assignments.indices where wanted.contains(snapshot.assignments[i].id) {
+            let page = try await client.page("/mod/assign/view.php?id=\(snapshot.assignments[i].id)")
+            snapshot.assignments[i].attachments = try LMSPages.attachments(page)
         }
         return snapshot
     }
