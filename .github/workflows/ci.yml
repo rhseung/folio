@@ -75,7 +75,7 @@ jobs:
       - id: setup
         uses: ./.github/actions/xcode-setup
         with:
-          tools: swiftlint
+          tools: swiftlint shellcheck shfmt
       # 미리 컴파일한 FolioTectonic 모듈(.pcm)은 바이너리 타깃이 .build에 복사한 헤더의 경로를 기억하고, SwiftPM은 라이브러리가
       # 바뀌어도 그 모듈을 다시 만들지 않는다. 그래서 핀이 다른 캐시를 복원하면 없는 헤더를 찾다가 컴파일이 실패하므로 키에 핀을 넣는다.
       - id: cache

@@ -28,7 +28,7 @@ status=0
 # shellcheck disable=SC2086
 TEST_RUNNER_FOLIO_NOTE_SCREENS="$out" TEST_RUNNER_FOLIO_NOTE_SCREENS_STRICT="${FOLIO_NOTE_SCREENS_STRICT:-}" \
   xcodebuild -scheme Folio -destination 'platform=macOS' -resultBundlePath .build/test-app.xcresult test -quiet \
-  -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation "${part[@]}" ${FOLIO_XCODEBUILD_FLAGS:-} || status=$?
+  -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation ${part[@]+"${part[@]}"} ${FOLIO_XCODEBUILD_FLAGS:-} || status=$?
 if [ "$status" -ne 0 ] && [ -d .build/test-app.xcresult ]; then
   xcrun xcresulttool get test-results summary --path .build/test-app.xcresult --compact
 fi
