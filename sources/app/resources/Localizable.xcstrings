@@ -22826,6 +22826,17 @@
         }
       }
     },
+    "lms.attachments-more": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 외 %2$lld개"
+          }
+        }
+      }
+    },
     "lms.hidden": {
       "extractionState": "manual",
       "localizations": {

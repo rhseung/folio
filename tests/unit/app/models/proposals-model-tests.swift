@@ -41,6 +41,29 @@ struct ProposalsModelTests {
         #expect(model.earliestDue?.contains("Homework Set #5") == true)
     }
 
+    @Test func assignmentRowsNameTheirAttachments() async throws {
+        let one = [LMSAttachment(name: "slow_problem_2.pdf", path: "/a")]
+        let workspace = try workspace { now in
+            LMSSnapshot(
+                at: now, classrooms: [LMSClassroom(id: 1, title: "그래프 이론[01]")],
+                assignments: [
+                    LMSAssignment(id: 100, classroom: 1, title: "Slow Problem #2", attachments: one),
+                    LMSAssignment(id: 101, classroom: 1, title: "HW6", attachments: one + [LMSAttachment(name: "b.pdf", path: "/b")]),
+                    LMSAssignment(id: 102, classroom: 1, title: "HW7"),
+                ])
+        }
+        await workspace.syncLMS()
+        let model = ProposalsModel(workspace: workspace)
+        let details = model.inbox.proposals.map(model.detail)
+        #expect(details[0].hasSuffix(" · slow_problem_2.pdf"))
+        #expect(details[1].contains("slow_problem_2.pdf") && details[1].contains("1"))
+        #expect(!details[2].contains("·"))
+
+        // 내려받지 못한 첨부(뷰어 전용)는 건너뛰고 과제는 받는다.
+        await model.add([model.inbox.proposals[0]], into: Self.graphTheory)
+        #expect(workspace.course(Self.graphTheory)?.file.assignments.contains { $0.lmsId == 100 } == true)
+    }
+
     @Test func eachProposalGoesToTheCoursePickedAndDismissingHidesIt() async throws {
         let workspace = try workspace(Self.snapshot)
         await workspace.syncLMS()

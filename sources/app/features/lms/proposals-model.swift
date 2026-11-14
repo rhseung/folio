@@ -64,7 +64,10 @@ final class ProposalsModel {
     func detail(_ p: LMSProposal) -> String {
         switch p.item {
         case .assignment:
-            return String(localized: .lmsKindAssignment)
+            let files = LMSAttachment.summary(p.attachments).map {
+                $0.more == 0 ? $0.first : String(localized: .lmsAttachmentsMore($0.first, $0.more))
+            }
+            return [String(localized: .lmsKindAssignment), files].compactMap { $0 }.joined(separator: " · ")
         case .file(let f):
             let place = "\(CourseFolder.lectures.rawValue)/\(f.lectureName(f.title))"
             return [String(localized: .lmsKindFile), isViewerOnly(p) ? nil : place].compactMap { $0 }.joined(separator: " · ")

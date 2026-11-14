@@ -2097,7 +2097,8 @@ enum GeneratedCommands {
 
     struct LMSAccept: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "accept", abstract: "LMS 제안을 과목에 받기. 과제는 과제로 더하고, 받은 파일은 Lectures로 가져오고, 모두 제안함에서 숨긴다", discussion: """
-            항목 파일은 [{\"key\":\"assignment:139950\",\"title\":\"HW5\",\"due\":\"2026-11-20T14:55:00Z\"}, {\"key\":\"file:139200\",\"file\":\"/tmp/05_Matchings.pdf\"}, {\"key\":\"notice:23464\"}] 꼴이다.
+            항목 파일은 [{\"key\":\"assignment:139950\",\"title\":\"HW5\",\"due\":\"2026-11-20T14:55:00Z\",\"files\":[\"/tmp/hw5.pdf\"]}, {\"key\":\"file:139200\",\"file\":\"/tmp/05_Matchings.pdf\"}, {\"key\":\"notice:23464\"}] 꼴이다.
+            과제의 files는 과제 페이지에서 받은 첨부이고, 과제 폴더(Assignments/<과제>)에 원래 이름으로 들어가 문제 파일이 된다.
 
             """)
         @OptionGroup var g: GlobalOptions

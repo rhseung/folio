@@ -22,17 +22,41 @@ public struct LMSAssignment: Codable, Hashable, Sendable, Identifiable {
     public var title: String
     public var due: Date?
     public var submitted: Bool
+    // 과제 목록 표에는 첨부가 없어 과제 페이지를 따로 읽어야 한다. 읽지 않았으면 nil이다.
+    public var attachments: [LMSAttachment]?
 
-    public init(id: Int, classroom: Int, title: String, due: Date? = nil, submitted: Bool = false) {
+    public init(
+        id: Int, classroom: Int, title: String, due: Date? = nil, submitted: Bool = false, attachments: [LMSAttachment]? = nil
+    ) {
         self.id = id
         self.classroom = classroom
         self.title = title
         self.due = due
         self.submitted = submitted
+        self.attachments = attachments
     }
 
     public var key: LMSKey { .init(kind: .assignment, id: id) }
     public var url: URL { LMS.url("/mod/assign/view.php?id=\(id)") }
+}
+
+// 과제 소개에 붙은 파일. `path`는 LMS 기준 경로(`/pluginfile.php/…/mod_assign/introattachment/0/<이름>`)이고,
+// `name`은 LMS에 올라온 원래 이름이다.
+public struct LMSAttachment: Codable, Hashable, Sendable {
+    public var name: String
+    public var path: String
+
+    public init(name: String, path: String) {
+        self.name = name
+        self.path = path
+    }
+
+    public var url: URL { LMS.url(path) }
+
+    // 첨부가 하나면 그 이름을, 여럿이면 첫 이름과 나머지 수를 보인다.
+    public static func summary(_ attachments: [LMSAttachment]) -> (first: String, more: Int)? {
+        attachments.first.map { ($0.name, attachments.count - 1) }
+    }
 }
 
 // 받을 수 있는 파일인지는 페이지를 열어야 안다. 허용된 파일은 원본으로 리디렉션되고, 나머지는 Coursemos
@@ -230,6 +254,11 @@ public struct LMSProposal: Hashable, Sendable, Identifiable {
         case .notice(let n): n.url
         }
     }
+
+    public var attachments: [LMSAttachment] {
+        if case .assignment(let a) = item { return a.attachments ?? [] }
+        return []
+    }
 }
 
 public struct LMSInbox: Sendable, Equatable {
@@ -303,5 +332,17 @@ public struct LMSInbox: Sendable, Equatable {
             return proposals.isEmpty && handled.isEmpty ? nil : Section(classroom: room, proposals: proposals, handled: handled)
         }
         return LMSInbox(sections: sections.filter { !$0.proposals.isEmpty } + sections.filter { $0.proposals.isEmpty })
+    }
+
+    // 동기화가 첨부를 읽으러 과제 페이지를 하나 더 여는 과제다. 요청을 아끼려고 지금 제안할 과제만 고른다. 처음 보는 강의실은
+    // 동기화 직후 `lms seen`으로 기록되고 그 과제도 곧 제안되므로 함께 센다.
+    public static func attachmentsToRead(
+        _ snapshot: LMSSnapshot, settings: LMSSettings, courses: [CourseFile], now: Date
+    ) -> [LMSAssignment] {
+        var settings = settings
+        settings.know(snapshot.classrooms.map(\.id))
+        return build(snapshot, settings: settings, courses: courses, now: now).proposals.compactMap {
+            if case .assignment(let a) = $0.item { a } else { nil }
+        }
     }
 }

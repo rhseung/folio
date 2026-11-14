@@ -78,6 +78,38 @@ struct LMSTests {
         #expect(h.cli(["lms", "accept", "EC4207", "--items", json.path], gist: gist).code != 0)
     }
 
+    @Test func acceptPutsAttachmentsInTheAssignmentFolderAsProblems() throws {
+        let dir = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        let first = dir.appending(path: "1/slow_problem_2.pdf")
+        let second = dir.appending(path: "2/slow_problem_2.pdf")
+        for url in [first, second] {
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Data("%PDF-1.4".utf8).write(to: url)
+        }
+        let items = [LMSAcceptItem(key: "assignment:139960", title: "Slow Problem #2", files: [first.path, second.path])]
+        let json = dir.appending(path: "items.json")
+        try JSONEncoder().encode(items).write(to: json)
+        try h.expectSame(["lms", "accept", "EC4207", "--items", json.path]) { _ in LMSAccept(course: course, items: items) }
+
+        let gist = try Harness.fixtureCopy()
+        #expect(h.cli(["lms", "accept", "EC4207", "--items", json.path], gist: gist).code == 0)
+        let file = try h.file(GISTStore(url: gist))
+        let added = try #require(file.assignments.first { $0.lmsId == 139960 })
+        let folder = AssignmentFiles.path(of: added)
+        let files = AssignmentFiles.materials(of: added, in: file.materials)
+        #expect(Set(files.map(\.path)) == ["\(folder)/slow_problem_2.pdf", "\(folder)/slow_problem_2 2.pdf"])
+        #expect(files.allSatisfy { $0.kind == .problem })
+        #expect(file.materials.first { $0.id == added.problemMaterialId }?.path == "\(folder)/slow_problem_2.pdf")
+    }
+
+    @Test func acceptRefusesAMissingAttachment() throws {
+        let gist = try Harness.fixtureCopy()
+        let json = FileManager.default.temporaryDirectory.appending(path: "\(UUID().uuidString).json")
+        try Data(#"[{"key":"assignment:1","title":"A","files":["/nonexistent/a.pdf"]}]"#.utf8).write(to: json)
+        #expect(h.cli(["lms", "accept", "EC4207", "--items", json.path], gist: gist).code != 0)
+        #expect(try !h.file(GISTStore(url: gist)).assignments.contains { $0.lmsId == 1 })
+    }
+
     @Test func acceptRefusesAViewerOnlyFile() throws {
         let gist = try Harness.fixtureCopy()
         let json = FileManager.default.temporaryDirectory.appending(path: "\(UUID().uuidString).json")

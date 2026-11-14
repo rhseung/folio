@@ -5,8 +5,9 @@ import Observation
 
 protocol LMSSource: Sendable {
     func verify(_ login: LMSCredentials) async throws
-    func read() async throws -> LMSSnapshot
+    func read(attachments: @escaping @Sendable (LMSSnapshot) -> [LMSAssignment]) async throws -> LMSSnapshot
     func download(_ file: LMSFile, into folder: URL) async throws -> URL?
+    func download(_ attachment: LMSAttachment, into folder: URL) async throws -> URL?
 }
 
 // 앱에서는 iCloud 키체인에, 그 밖에서는 메모리에 둔다. 그래야 어떤 테스트도 실제 항목을 읽거나 쓰지 않는다.
@@ -39,17 +40,24 @@ struct LiveLMS: LMSSource {
         try await LMSClient(credentials: { login }).login()
     }
 
-    func read() async throws -> LMSSnapshot { try await LMSSync.read(client, at: .now) }
+    func read(attachments: @escaping @Sendable (LMSSnapshot) -> [LMSAssignment]) async throws -> LMSSnapshot {
+        try await LMSSync.read(client, at: .now, attachments: attachments)
+    }
 
     func download(_ file: LMSFile, into folder: URL) async throws -> URL? { try await client.download(file, into: folder) }
+
+    func download(_ attachment: LMSAttachment, into folder: URL) async throws -> URL? {
+        try await client.download(attachment, into: folder)
+    }
 }
 
 struct FixedLMS: LMSSource {
     var snapshot: LMSSnapshot
 
     func verify(_ login: LMSCredentials) throws {}
-    func read() throws -> LMSSnapshot { snapshot }
+    func read(attachments: @escaping @Sendable (LMSSnapshot) -> [LMSAssignment]) throws -> LMSSnapshot { snapshot }
     func download(_ file: LMSFile, into folder: URL) throws -> URL? { nil }
+    func download(_ attachment: LMSAttachment, into folder: URL) throws -> URL? { nil }
 }
 
 @MainActor @Observable
@@ -103,11 +111,11 @@ final class LMSConnection {
         status = .off
     }
 
-    func sync() async -> LMSSnapshot? {
+    func sync(attachments: @escaping @Sendable (LMSSnapshot) -> [LMSAssignment] = { _ in [] }) async -> LMSSnapshot? {
         guard isConnected, status != .syncing else { return nil }
         status = .syncing
         do {
-            let read = try await source.read()
+            let read = try await source.read(attachments: attachments)
             snapshot = read
             status = .idle
             return read
@@ -124,6 +132,15 @@ final class LMSConnection {
             return nil
         }
         return try LMSDownloads.rename(got, to: file.lectureName(got.lastPathComponent))
+    }
+
+    // 첨부를 하나씩 따로 폴더에 받아, 이름이 같은 두 첨부도 덮어쓰지 않는다.
+    func download(_ attachments: [LMSAttachment]) async throws -> [URL] {
+        var got: [URL] = []
+        for a in attachments {
+            if let url = try await source.download(a, into: try LMSDownloads.folder()) { got.append(url) }
+        }
+        return got
     }
 
     private static func live(_ logins: any LMSLogins) -> LiveLMS {

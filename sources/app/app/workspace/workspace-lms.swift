@@ -25,7 +25,12 @@ extension Workspace {
     // 처음 보는 강의실은 지금 있는 자료와 공지를 숨긴다. 그래야 새 학기에 오래된 글 수백 개를 제안하지 않는다. 남은 과제는
     // 계속 제안한다.
     func syncLMS() async {
-        guard let snapshot = await lms.sync() else { return }
+        let (known, files, at) = (settings.lms, courses.map(\.file), now)
+        guard
+            let snapshot = await lms.sync(attachments: {
+                LMSInbox.attachmentsToRead($0, settings: known, courses: files, now: at)
+            })
+        else { return }
         let new = settings.lms.unseen(in: snapshot).map(\.id)
         guard !new.isEmpty else { return }
         run(LMSSeen(classrooms: new, items: new.flatMap(snapshot.current(in:)).map(\.description)))
@@ -35,7 +40,14 @@ extension Workspace {
         var items: [LMSAcceptItem] = []
         for p in proposals {
             switch p.item {
-            case .assignment(let a): items.append(LMSAcceptItem(key: p.key.description, title: a.title, due: a.due))
+            case .assignment(let a):
+                do {
+                    let files = try await lms.download(a.attachments ?? []).map(\.path)
+                    items.append(LMSAcceptItem(key: p.key.description, title: a.title, due: a.due, files: files.isEmpty ? nil : files))
+                } catch {
+                    self.error = String(localized: .lmsDownloadFailed(a.title, error.localizedDescription))
+                    return
+                }
             case .notice: items.append(LMSAcceptItem(key: p.key.description))
             case .file(let f):
                 do {
