@@ -22,6 +22,9 @@ struct ItemSheets: ViewModifier {
             .environment(\.itemSheets, ItemSheetsAction(present: { shown = $0 }, confirm: { pending = $0 }, addFiles: { intake = $0 }))
             // 창 위에 놓이는 것(검색 팔레트)은 창이 값을 설정하는 곳 밖에 있으므로 다시 넘긴다.
             .environment(\.openLink, openLink)
+            #if DEBUG && os(macOS)
+        .onAppear { SnapshotDriver.shared.present = { shown = $0 } }
+            #endif
             .onChange(of: workspace.wrapUpAsk) { _, ask in
                 guard let ask, workspace.wrapUpAsk == ask else { return }
                 let request = SessionSheetRequest(course: ask.course, session: ask.session, viewed: ask.viewed, recorded: true, asked: true)

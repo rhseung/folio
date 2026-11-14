@@ -149,7 +149,7 @@ struct QuizSolveView: View {
         }
         .buttonStyle(.pointing(.plain))
         .disabled(disabled)
-        .opacity(disabled ? 0.5 : 1)
+        .opacity(disabled ? Theme.Opacity.disabled : 1)
     }
 
     func unitRow(_ unit: FolioDomain.Unit, tally: WrongTally) -> some View {
@@ -206,7 +206,7 @@ struct QuizSolveView: View {
                 }
                 .padding(Theme.Space.xl)
                 .clearOfColumnButtons(inset: Theme.Space.xl)
-                .frame(maxWidth: 720)
+                .frame(maxWidth: Theme.Size.readingColumn)
                 .frame(maxWidth: .infinity)
             }
             .overflowFade(.vertical)
@@ -265,7 +265,7 @@ struct QuizSolveView: View {
                         Caption(String(localized: .quizSolveMyAnswer))
                         GrowingTextEditor(text: $model.answer, size: 14, lines: 5...12)  // design: one-off, a step under the 15pt prompt
                             .padding(Theme.Space.s)
-                            .background(Theme.Palette.fill.opacity(0.6), in: .rect(cornerRadius: Theme.Radius.control))
+                            .background(Theme.Palette.fill.opacity(Theme.Opacity.soft), in: .rect(cornerRadius: Theme.Radius.control))
                             .disabled(model.pending != nil || model.busy)
                         if model.pending == nil && !model.revealed {
                             HStack {
@@ -319,7 +319,7 @@ struct QuizSolveView: View {
                     .background(
                         tone == .success
                             ? Theme.Palette.success.opacity(Theme.Opacity.tint)
-                            : tone == .danger ? Theme.Palette.dangerFill : Theme.Palette.fill.opacity(0.6),
+                            : tone == .danger ? Theme.Palette.dangerFill : Theme.Palette.fill.opacity(Theme.Opacity.soft),
                         in: .rect(cornerRadius: Theme.Radius.control)
                     )
                     .contentShape(.rect)
@@ -380,7 +380,7 @@ struct QuizSolveView: View {
         }
         .padding(Theme.Inset.panel)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(accent.color.opacity(0.07), in: .rect(cornerRadius: Theme.Radius.control))
+        .background(accent.color.opacity(Theme.Opacity.wash), in: .rect(cornerRadius: Theme.Radius.control))
     }
 
     func verdictButtons(selected: Verdict?, note: String, pick: @escaping (Verdict) -> Void) -> some View {
@@ -433,7 +433,7 @@ struct QuizSolveView: View {
     }
 
     @ViewBuilder func status(_ history: AttemptHistory) -> some View {
-        switch WrongFlow.status(history) {
+        switch model.status(history) {
         case .open(let since):
             Text(.quizSolveOpenSince(since.short)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.danger)
         case .resolved(_, let recheck?):

@@ -87,6 +87,11 @@ struct GradesSetupTests {
         #expect(FileManager.default.fileExists(atPath: gist.appending(path: "_Credited/군 복무").path))
     }
 
+    @Test func targetGPA() throws {
+        try h.expectSame(["transcript", "target", "4.0"]) { _ in TranscriptTarget(gpa: 4.0) }
+        try h.expectSame(["transcript", "target"]) { _ in TranscriptTarget(gpa: nil) }
+    }
+
     @Test func creditedSource() throws {
         try h.expectSame(["semester", "source", "영재고 AP", "영재고 AP 과정", "--yes"]) { _ in
             SemesterSource(semester: UUID(uuidString: "5E4F1A00-0000-4000-8000-0000000000C1")!, source: "영재고 AP 과정")

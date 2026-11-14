@@ -58,7 +58,8 @@ final class ProposalsModel {
         guard case .assignment(let a) = p.item, let due = a.due else { return nil }
         let calendar = workspace.calendar
         let days = workspace.settings.studyDays(from: workspace.now, until: due, calendar: calendar)
-        return (DueUrgency.text(due, studyDays: days), DueUrgency(studyDays: days))
+        let urgency = workspace.settings.urgency
+        return (DueUrgency.text(due, studyDays: days, settings: urgency), DueUrgency(studyDays: days, settings: urgency))
     }
 
     func detail(_ p: LMSProposal) -> String {

@@ -12,7 +12,7 @@ public macro Action(
 @attached(extension, conformances: Query)
 public macro Query(
     _ command: String, _ summary: String, discussion: String = "", examples: [String] = [], phrases: [String] = [],
-    cli: CLIMode = .generated, panel: Bool = false
+    cli: CLIMode = .generated, panel: Bool = false, lines: Bool = false, grades: Bool = false
 ) = #externalMacro(module: "FolioMacros", type: "QueryMacro")
 
 @attached(peer) public macro Arg() = #externalMacro(module: "FolioMacros", type: "MarkerMacro")

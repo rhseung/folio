@@ -78,7 +78,7 @@ final class ImportPlaceModel {
     private static func incoming(_ url: URL) -> IncomingFile {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        guard url.pathExtension.lowercased() == "pdf", let pdf = PDFDocument(url: url), let first = pdf.page(at: 0) else {
+        guard MaterialFormat(path: url.path) == .pdf, let pdf = PDFDocument(url: url), let first = pdf.page(at: 0) else {
             return IncomingFile(name: url.lastPathComponent)
         }
         let box = first.bounds(for: .mediaBox)
@@ -247,7 +247,7 @@ final class ImportPlaceModel {
 
     private func readSections(_ id: Int) {
         let row = rows[id]
-        guard isLecture(row), sections[id] == nil, reads[id] == nil, row.url.pathExtension.lowercased() == "pdf" else { return }
+        guard isLecture(row), sections[id] == nil, reads[id] == nil, MaterialFormat(path: row.url.path) == .pdf else { return }
 
         sections[id] = .reading(done: 0, total: 0)
         let units = course.file.units

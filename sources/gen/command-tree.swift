@@ -57,6 +57,8 @@ enum CommandTree {
         }
         for (name, command) in generated {
             let group = command.split(separator: " ").dropLast().joined(separator: " ")
+            // 맨 위 명령(`folio today`)은 `Folio`의 명령 묶음에 손으로 둔다.
+            if group.isEmpty { continue }
             guard let owner = owners[group] else {
                 throw GenError("no command type in sources/cli/commands is `folio \(group)` for \(command)")
             }

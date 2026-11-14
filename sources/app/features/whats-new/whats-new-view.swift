@@ -44,7 +44,7 @@ struct WhatsNewView: View {
                 }
             } else {
                 HStack(spacing: Theme.Space.m) {
-                    SearchField(prompt: String(localized: .whatsNewSearch), text: $model.query).frame(maxWidth: 280)
+                    SearchField(prompt: String(localized: .whatsNewSearch), text: $model.query).frame(maxWidth: Theme.Size.pageSearch)
                     kinds
                 }
             }

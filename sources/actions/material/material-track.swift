@@ -14,13 +14,14 @@ public struct MaterialTrack {
     public func run(_ ctx: ActionContext) throws {
         let courses = try course.map { [$0] } ?? ctx.gist.courseStores().map { try $0.load().model.course.id }
         let today = LocalDate(ctx.now, in: ctx.calendar)
+        let kinds = try ctx.settings().assignmentKindTable
         for course in courses {
             let store = try ctx.store(course)
             let folders = try store.assignmentFolders()
             let ended = try ctx.semester(of: ctx.file(course).course)?.end.map { $0 < today } ?? false
             try ctx.edit(course) { f in
                 try store.refreshMaterials(in: &f, device: ctx.device, now: ctx.now)
-                for title in AssignmentKind.unmatchedFolders(folders, assignments: f.assignments) {
+                for title in AssignmentKind.unmatchedFolders(folders, assignments: f.assignments, kinds: kinds) {
                     var a = Assignment(device: ctx.device, at: ctx.now, title: title)
                     if ended { a.status = .submitted }
                     f.assignments.append(a)

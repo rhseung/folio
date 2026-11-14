@@ -372,7 +372,7 @@ struct FirstRunView: View {
                     FormRow(
                         label: String(localized: .firstRunDayBoundary), detail: String(localized: .firstRunDayBoundaryDetail), last: true
                     ) {
-                        TimeMenu(minute: Bindable(model.settings).settings.dayBoundaryMinutes, hours: 0...8)
+                        TimeMenu(minute: Bindable(model.settings).settings.dayBoundaryMinutes, hours: SettingItem.dayBoundary.hours)
                     }
                 }
             }

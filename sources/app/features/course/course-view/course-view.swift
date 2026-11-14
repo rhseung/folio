@@ -8,7 +8,6 @@ struct CourseView: View {
     @Environment(\.paneInsert) private var paneInsert
     @Environment(\.place) private var place
     @Environment(\.openLink) private var openLink
-    @Environment(\.paneFocused) private var paneFocused
 
     init(workspace: Workspace, courseID: UUID) {
         _model = State(initialValue: CourseModel(workspace: workspace, courseId: courseID))
@@ -69,9 +68,6 @@ struct CourseView: View {
                 model.noteInsert = text
                 paneInsert?.text = nil
             }
-            #if DEBUG && os(macOS)
-            .onChange(of: SnapshotDriver.shared.section, initial: true) { _, new in if let new, paneFocused { model.section = new } }
-            #endif
         } else {
             ContentUnavailableView(String(localized: .courseNotFound), systemImage: "questionmark.folder")
         }

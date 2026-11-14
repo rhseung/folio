@@ -33,15 +33,8 @@ final class RecordingPlayerModel {
 
     // MARK: Address
 
-    static func name(of recording: Recording, in file: CourseFile, calendar: Calendar) -> String {
-        guard let session = recording.sessionId.flatMap({ id in file.sessions.first { $0.id == id } }) else {
-            return String(localized: .recordingPage)
-        }
-        return String(localized: .recordingPageNamed(file.day(of: session, calendar: calendar)))
-    }
-
     var name: String {
-        courseFile.map { Self.name(of: recording, in: $0, calendar: workspace.calendar) } ?? String(localized: .recordingPage)
+        (courseFile.map { LinkName.replay(of: recording, in: $0, calendar: workspace.calendar) } ?? .replay(day: nil)).text
     }
     var title: String {
         if let courseFile, let session { return courseFile.title(of: session, calendar: workspace.calendar) }

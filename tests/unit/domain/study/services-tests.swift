@@ -64,10 +64,11 @@ struct BackupRetentionTests {
 struct ServiceSettingsTests {
     @Test func oldSettingsFileGetsNewDefaults() throws {
         let s = try JSONDecoder().decode(
-            Settings.self, from: Data(#"{"dayBoundaryMinutes":300,"notifications":{"examMorning":false}}"#.utf8))
+            Settings.self, from: Data(#"{"dayBoundaryMinutes":300,"notifications":{"examMorning":{"on":false}}}"#.utf8))
         #expect(s.dayBoundaryMinutes == 300)
-        #expect(s.notifications.examMorning == false)
-        #expect(s.notifications.assignmentLeadHours == [24, 3] && s.notifications.dailyReview)
+        #expect(s.notifications[.examMorning].on == false)
+        #expect(s.notifications[.examMorning].minute == 8 * 60)
+        #expect(s.notifications[.assignmentDue].leadHours == [24, 3] && s.notifications[.dailyReview].on)
         #expect(s.backup == BackupSettings())
         #expect(s.noteSections(for: .review) == NoteTemplate.defaultSections(for: .review))
     }
@@ -119,8 +120,8 @@ struct NotificationPlanTests {
 
     @Test func turnedOffKindsAreLeftOut() {
         var off = NotificationSettings()
-        off.assignmentDue = false
-        off.dailyReview = false
+        off[.assignmentDue].on = false
+        off[.dailyReview].on = false
         let now = at(23, 12)
         var file = CourseFile(course: Course(device: device, at: now, title: "x"))
         file.assignments = [Assignment(device: device, at: now, title: "HW5", due: at(24, 23))]

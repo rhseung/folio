@@ -123,7 +123,7 @@ struct RequirementsView: View {
                         .frame(maxWidth: .infinity)
                     }
                 }
-                .frame(minWidth: 720)
+                .frame(minWidth: Theme.Size.requirementsWide)
                 VStack(spacing: Theme.Space.l) { ForEach(cards, id: \.group) { groupCard($0, credits: credits, listed: listed) } }
             }
 
@@ -250,7 +250,7 @@ struct RequirementsView: View {
             }
             .scrollBounceBehavior(.basedOnSize)
             .overflowFade(.vertical)
-            .frame(maxHeight: 320)
+            .frame(maxHeight: Theme.Size.popoverList)
             .fixedSize(horizontal: false, vertical: true)
             // popover가 화면에 있는 동안에는 시트를 열 수 없으므로 popover를 먼저 닫는다.
             Button(.requirementsEdit) {
@@ -259,6 +259,6 @@ struct RequirementsView: View {
         }
         .font(Theme.Typeface.caption)
         .padding(Theme.Space.m)
-        .frame(width: 340, alignment: .leading)
+        .frame(width: Theme.Size.popover, alignment: .leading)
     }
 }

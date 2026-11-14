@@ -22847,6 +22847,39 @@
           }
         }
       }
+    },
+    "settings.deadlines": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마감과 시험"
+          }
+        }
+      }
+    },
+    "settings.school": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학교"
+          }
+        }
+      }
+    },
+    "settings.lms-sync": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자동 확인"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

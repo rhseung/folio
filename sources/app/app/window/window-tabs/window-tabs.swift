@@ -187,13 +187,10 @@ extension Workspace {
 
     private func crumb(_ place: AppLink.Kind) -> Crumb { Crumb(title: place.place?.title ?? "", symbol: place.place?.symbol) }
 
+    // 오늘 탭은 아이콘만 보인다. 항목은 그 이름을, 장소와 과목 페이지는 위치 표시의 이름을 보인다.
     func tabTitle(of entry: Navigator.Entry) -> String? {
-        switch entry.link.kind {
-        case .today: nil
-        case .session, .unit, .note, .material, .assignment, .exam, .problemSet, .person, .recording:
-            itemName(of: entry) ?? placeCrumb(of: entry).title
-        case .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals, .semester, .course, .card:
-            placeCrumb(of: entry).title
-        }
+        guard entry.link.kind != .today else { return nil }
+        if let name = linkName(of: entry), name.namesItem { return name.text }
+        return placeCrumb(of: entry).title
     }
 }

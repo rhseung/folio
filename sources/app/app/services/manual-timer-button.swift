@@ -20,7 +20,7 @@ struct ManualTimerButton: View {
                     let elapsed = Int(context.date.timeIntervalSince(manual.start))
                     let other = manual.courseId == courseID ? "" : (workspace.course(manual.courseId)?.title ?? "") + " "
                     Label(
-                        "\(other)\(String(format: "%d:%02d:%02d", elapsed / 3600, elapsed / 60 % 60, elapsed % 60))",
+                        "\(other)\(ClockText.duration(elapsed, hours: true))",
                         systemImage: "stop.fill"
                     )
                     .monospacedDigit()

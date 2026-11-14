@@ -1,13 +1,6 @@
 import Foundation
 
 enum Keywords {
-    static let syllabus = ["syllabus", "강의계획서", "수업계획서", "orientation", "스케줄", "schedule", "클리닉", "clinic"]
-    static let textbook = ["textbook", "교재", "edition", "solution manual", "introduction to"]
-    static let examFiles: [(name: String, words: [String])] = [
-        ("Guideline", ["guideline", "시험 안내", "시험안내"]),
-        ("Seating", ["seating", "자리", "좌석"]),
-    ]
-
     static var midterm: Regex<Substring> { #/mid[\s_-]?term|midterm|mid|중간고사|중간/# }
     static var final: Regex<Substring> { #/final[\s_-]?(?:term|exam)|final|기말고사|기말/# }
 
@@ -20,21 +13,27 @@ enum Keywords {
         return nil
     }
 
-    // 교수의 `review.pdf`에도 이런 낱말이 있으므로, 언제나 제안으로만 쓴다.
-    static func looksSelfMade(_ name: String) -> Bool {
-        name.lowercased().contains(/대비|정리|요약|압축|summary|cheat[\s_-]?sheet|mock|모의/)
+    static func mentionsLab(_ name: String, kinds: [AssignmentKind]) -> Bool {
+        guard let lab = kinds.first(where: { $0 == .lab }),
+            let regex = try? Regex("(?:" + FileRule.alternation(lab.words) + #")\s*\d"#)
+        else { return false }
+        return name.lowercased().firstMatch(of: regex) != nil
     }
 
+    static func looksSelfMade(_ name: String) -> Bool {
+        FileRule.rules(for: .cleanup).contains { $0.kind == .selfMade && $0.match(name) != nil }
+    }
+
+    // 자료 추측과 같은 주차 낱말을 읽는다. 다만 예전 폴더의 `lecture 3`, `ch3`은 주차가 아니라 차례일 수 있어 검토로 남긴다.
     static func week(in name: String) -> (week: Int, leading: Bool?, review: ReviewReason?)? {
-        let lower = name.lowercased()
-        if let m = lower.firstMatch(of: /(?:week|wk)[\s_-]*(\d{1,2})(?!\d)/) ?? lower.firstMatch(of: /(\d{1,2})\s*주차/) {
-            return (Int(m.1)!, false, nil)
+        if let m = FileRule.numbered(FileRule.weekWords, in: name) ?? FileRule.koreanWeek(in: name) {
+            return (m.number, false, nil)
         }
-        if let m = lower.firstMatch(of: /^(\d{1,2})[\s_.-]/) {
-            return (Int(m.1)!, true, .guessedWeek)
+        if let m = name.firstMatch(of: /^(\d{1,2})[\s_.-]/), let week = Int(m.1) {
+            return (week, true, .guessedWeek)
         }
-        if let m = lower.firstMatch(of: /(?:lecture|lec|chapter|ch)[\s_-]*(\d{1,2})(?!\d)/) {
-            return (Int(m.1)!, false, .guessedWeek)
+        if let m = FileRule.numbered(FileRule.lectureWords + FileRule.chapterWords, in: name) {
+            return (m.number, false, .guessedWeek)
         }
         return nil
     }
@@ -68,10 +67,14 @@ enum Keywords {
                 .filter { !labStopWords.contains($0) && !$0.allSatisfy(\.isNumber) })
     }
 
-    static func assignmentNumber(in name: String) -> (number: Int, review: ReviewReason?)? {
+    // 예전 폴더의 이름은 낱말이 붙어 있어(`gthw2`) 자료 추측과 달리 낱말 앞의 경계를 보지 않는다.
+    static func assignmentNumber(in name: String, kinds: [AssignmentKind] = AssignmentKind.builtIn) -> (number: Int, review: ReviewReason?)?
+    {
         let lower = name.lowercased()
-        let keyword = /(?:hw|homework|assignment|assign|pa|lab|sp|slow[\s_-]?problems?|report|project|과제|숙제)[\s_-]*(\d{1,2})(?!\d)/
-        if let m = lower.firstMatch(of: keyword) ?? lower.firstMatch(of: /\d{2}h(\d{1,2})(?!\d)/) {
+        let words = kinds.flatMap(\.words)
+        let keyword =
+            words.isEmpty ? nil : try? Regex<(Substring, Substring)>("(?:" + FileRule.alternation(words) + #")[\s_-]*(\d{1,2})(?!\d)"#)
+        if let m = keyword.flatMap({ lower.firstMatch(of: $0) }) ?? lower.firstMatch(of: /\d{2}h(\d{1,2})(?!\d)/) {
             return (Int(m.1)!, nil)
         }
         if let m = lower.firstMatch(of: /^(\d{1,2})[\s_.-]/) {

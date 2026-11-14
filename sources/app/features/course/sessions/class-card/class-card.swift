@@ -45,7 +45,7 @@ enum ClassCard {
             .font(Theme.Typeface.label.monospacedDigit())
             .foregroundStyle(foreground)
             .padding(.horizontal, Theme.Space.s)
-            .frame(height: 24)
+            .frame(height: Theme.Size.chipRow)
             .background(fill, in: .capsule)
             .fixedSize()
         }

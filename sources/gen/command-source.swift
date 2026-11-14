@@ -36,6 +36,7 @@ enum CommandSource {
         var examples: [String]
         var asks: Bool
         var query: Bool
+        var lines = false
         var fields: [FieldSpec]
 
         init(_ spec: ActionSpec) {
@@ -45,7 +46,7 @@ enum CommandSource {
 
         init(_ spec: QuerySpec) {
             (command, summary, discussion, examples) = (spec.command, spec.summary, spec.discussion, spec.examples)
-            (asks, query, fields) = (false, true, spec.fields)
+            (asks, query, lines, fields) = (false, true, spec.lines, spec.fields)
         }
     }
 
@@ -86,6 +87,7 @@ enum CommandSource {
             }
             if let line = declaration(f, last: last) { out.append("    " + line) }
         }
+        if spec.lines { out.append("    @Flag(help: ArgumentHelp(String(localized: .commonHelpLines))) var lines = false") }
 
         out.append("")
         out.append("    func run() throws {")
@@ -134,7 +136,10 @@ enum CommandSource {
         out.append("        let \(value) = FolioActions.\(name)(")
         out += values.enumerated().map { $0.offset == values.count - 1 ? $0.element : $0.element + "," }
         out.append("        )")
-        out.append(spec.query ? "        try show(query, g, ctx: ctx)" : "        try perform(spec: action, g, ctx: ctx)")
+        out.append(
+            !spec.query
+                ? "        try perform(spec: action, g, ctx: ctx)"
+                : spec.lines ? "        try show(query, g, lines: lines, ctx: ctx)" : "        try show(query, g, ctx: ctx)")
         out.append("    }")
         out.append("}")
         return out

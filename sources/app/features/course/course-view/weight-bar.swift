@@ -12,13 +12,13 @@ struct WeightBar: View {
             let total = max(sorted.map(\.weight).reduce(0, +), 1)
             HStack(spacing: Theme.Space.xxs) {
                 ForEach(Array(sorted.enumerated()), id: \.element.id) { i, c in
-                    accent.color.opacity(max(0.15, 1 - Double(i) * 0.2))
+                    accent.color.opacity(max(Theme.Opacity.tint, 1 - Double(i) * 0.2))
                         .frame(width: max(0, proxy.size.width * c.weight / total - 2))
                         .help("\(c.name) \(c.weight.formatted())%")
                 }
             }
         }
-        .frame(height: 10)
+        .frame(height: Theme.Size.weightBar)
         .clipShape(.capsule)
     }
 }

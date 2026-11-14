@@ -7,18 +7,10 @@ final class Resolver {
     let ctx: ActionContext
     init(_ ctx: ActionContext) { self.ctx = ctx }
 
+    lazy var settings: Settings = (try? ctx.settings()) ?? Settings()
+
     lazy var courses: [CourseRef] = {
-        let catalog = (try? ctx.catalog()) ?? Catalog()
-        func code(_ c: Course, folder: String) -> String {
-            if let token = folder.split(separator: " ").first, StandardLayout.isCourseFolderName(folder) { return String(token) }
-            let prefix = c.codes.first.flatMap { id in catalog.codes.first { $0.id == id }?.prefix } ?? ""
-            return prefix + (c.number.split(separator: "-").first.map(String.init) ?? "")
-        }
-        let stores = (try? ctx.gist.courseStores()) ?? []
-        var refs = stores.compactMap { s -> CourseRef? in
-            guard let f = try? s.load().model else { return nil }
-            return CourseRef(course: f.course, store: s, file: f, code: code(f.course, folder: s.url.lastPathComponent))
-        }
+        var refs = ReadContext(ctx).courses().map { CourseRef(course: $0.file.course, store: $0.store, file: $0.file, code: $0.code) }
         // 앱이 세는 순서(`Workspace.courses(in:)`)와 같아야 색이 없는 과목이 같은 프리셋을 받는다.
         for i in refs.indices {
             let siblings = refs.filter { $0.course.semesterId == refs[i].course.semesterId }.sorted { $0.course.title < $1.course.title }
@@ -46,6 +38,13 @@ final class Resolver {
     func course(_ ref: String) throws -> CourseRef {
         try pick(
             ref, courses, what: ItemKind.course.noun, names: { [$0.code, $0.course.title, $0.store.url.lastPathComponent] }, ref: \.code)
+    }
+
+    func course(id: UUID) throws -> CourseRef {
+        guard let c = courses.first(where: { $0.id == id }) else {
+            throw CLIError(exit: .notFound, message: String(localized: .resolveNotFound(ItemKind.course.noun, id.uuidString)))
+        }
+        return c
     }
 
     func split(_ ref: String, course: String? = nil) throws -> (CourseRef, String) {

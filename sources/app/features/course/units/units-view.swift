@@ -35,11 +35,6 @@ struct UnitsView: View {
             if let pick = link.selection(of: .unit) { model.openUnit = pick }
         }
         .confirming($model.pending)
-        #if DEBUG && os(macOS)
-        .onChange(of: SnapshotDriver.shared.unitStep, initial: true) { _, step in
-            if step != nil { model.openUnit = UnitTree.outline(course.file.units).first?.unit.id }
-        }
-        #endif
     }
 
     struct Chapter: Identifiable {

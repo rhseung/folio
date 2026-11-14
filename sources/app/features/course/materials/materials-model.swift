@@ -140,17 +140,13 @@ final class MaterialsModel {
         pending = moves.undo(workspace, course: course.id) { [weak self] in Task { await self?.load() } }
     }
 
-    #if DEBUG
-    func trackFixtureFiles() {
-        if materials.isEmpty { workspace.run(MaterialTrack(course: course.id)) }
-    }
-    #endif
-
     func acceptsNewFile(_ folder: PathTree<FolioDomain.Material>) -> Bool {
         let file = course.file
         return NewMaterialFile.accepts(
             folder: folder.path,
-            places: NewMaterialFile.places(assignments: file.assignments, exams: file.exams, assignmentFolders: assignmentFolders))
+            places: NewMaterialFile.places(
+                assignments: file.assignments, exams: file.exams, assignmentFolders: assignmentFolders,
+                kinds: workspace.settings.assignmentKindTable))
     }
 
     func startNewFile(in folder: String?) {

@@ -40,6 +40,7 @@ import WebKit
         var baseURL: URL?
         var math: MathSyntax
         var accent: CourseAccent
+        var callouts: CalloutTable
         var editable: Bool
         var revision: Int
     }
@@ -117,6 +118,10 @@ import WebKit
 
     static let shellURL = URL(string: "\(LocalFileScheme.scheme)://local/")!
 
+    private static func theme(accent: CourseAccent, callouts: CalloutTable) -> String {
+        NoteStyle.variables(accent: accent) + NoteStyle.callouts(callouts)
+    }
+
     private static func shell(theme: String) -> String {
         let policy = [
             "default-src 'none'", "script-src 'none'", "style-src 'unsafe-inline'", "font-src data:",
@@ -141,12 +146,16 @@ import WebKit
     private func load() {
         ready = false
         shown = nil
-        view.loadHTMLString(Self.shell(theme: NoteStyle.variables(accent: wanted?.accent ?? .gray)), baseURL: Self.shellURL)
+        view.loadHTMLString(
+            Self.shell(theme: Self.theme(accent: wanted?.accent ?? .gray, callouts: wanted?.callouts ?? .standard)), baseURL: Self.shellURL)
     }
 
     // MARK: Showing
 
-    func show(_ text: String, baseURL: URL?, math: MathSyntax, accent: CourseAccent, dark: Bool, revision: Int = 0) {
+    func show(
+        _ text: String, baseURL: URL?, math: MathSyntax, accent: CourseAccent, callouts: CalloutTable = .standard, dark: Bool,
+        revision: Int = 0
+    ) {
         #if os(macOS)
         let appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
         if view.appearance?.name != appearance?.name { view.appearance = appearance }
@@ -154,7 +163,8 @@ import WebKit
         let style: UIUserInterfaceStyle = dark ? .dark : .light
         if view.overrideUserInterfaceStyle != style { view.overrideUserInterfaceStyle = style }
         #endif
-        wanted = Shown(text: text, baseURL: baseURL, math: math, accent: accent, editable: edit != nil, revision: revision)
+        wanted = Shown(
+            text: text, baseURL: baseURL, math: math, accent: accent, callouts: callouts, editable: edit != nil, revision: revision)
         render()
     }
 
@@ -166,7 +176,7 @@ import WebKit
         files.root = LocalFileScheme.root(for: wanted.baseURL)
         widgets.begin(folder: wanted.baseURL, accent: wanted.accent)
         let embeds = embeds?.embeds(revision: wanted.revision, text: wanted.text)
-        let blocks: [[String: Any]] = HTMLRenderer.blocks(note, embeds: embeds).map { block in
+        let blocks: [[String: Any]] = HTMLRenderer.blocks(note, embeds: embeds, callouts: wanted.callouts).map { block in
             var out: [String: Any] = ["html": widgets.frame(for: block.html) ?? block.html, "line": NSNull()]
             if let lines = block.lines { out["line"] = lines.lowerBound + offset }
             return out
@@ -178,8 +188,8 @@ import WebKit
             "base": LocalFileScheme.base(for: wanted.baseURL)?.absoluteString ?? Self.shellURL.absoluteString,
         ]
 
-        let theme = NoteStyle.variables(accent: wanted.accent)
-        let accentChanged = shown?.accent != wanted.accent
+        let theme = Self.theme(accent: wanted.accent, callouts: wanted.callouts)
+        let accentChanged = shown?.accent != wanted.accent || shown?.callouts != wanted.callouts
         shown = wanted
         rendering = true
         Task {
@@ -309,14 +319,10 @@ import WebKit
     }
 
     private func open(_ url: URL) async {
-        if url.scheme == LocalFileScheme.scheme, let fragment = url.fragment, url.pathExtension != "md" {
+        if url.scheme == LocalFileScheme.scheme, let fragment = url.fragment, NoteFormat(path: url.path) != .markdown {
             _ = try? await view.callAsyncJavaScript(
                 "document.getElementById(id)?.scrollIntoView()", arguments: ["id": fragment.removingPercentEncoding ?? fragment],
                 contentWorld: .defaultClient)
-            return
-        }
-        if url.scheme == LocalFileScheme.scheme {
-            if url.pathExtension == "md" { openNote(url.deletingPathExtension().lastPathComponent) }
             return
         }
         NoteLinks.open(url.absoluteString, base: nil, openNote: openNote, openLink: openLink)

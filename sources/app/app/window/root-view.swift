@@ -1,4 +1,6 @@
 import FolioDomain
+import FolioMarkdown
+import FolioStorage
 import SwiftUI
 
 struct RootView: View {
@@ -10,11 +12,13 @@ struct RootView: View {
     @State var tabs: WindowTabs
     let request: WindowRequest?
     @State private var addingSemester = false
+    private var callouts: CalloutTable { CalloutTable(workspace.settings) }
     @State private var addingCourse = false
     @State private var toggledTerms: Set<UUID> = []
     @State private var hoveredTerm: UUID?
     @State private var navHeight: CGFloat?
     @State var searching = false
+    @State private var searchStart = ""
     @AppStorage("sidebarOpen") var sidebarOpen = true
     @State var showingRecording = false
     @State var quickAdding = false
@@ -202,6 +206,7 @@ struct RootView: View {
                         }
                 }
                 .environment(\.openLink, openLink)
+                .environment(\.noteCallouts, callouts)
                 .environment(\.sheetRoom, contentHeight)
                 .onGeometryChange(for: CGFloat.self) {
                     $0.size.height - $0.safeAreaInsets.top - $0.safeAreaInsets.bottom
@@ -222,9 +227,10 @@ struct RootView: View {
                         // overlay의 내용은 기본으로 가운데에 놓여 팔레트가 창 중간에 뜨므로, 위로 정렬한 stack을 직접 둔다.
                         ZStack(alignment: .top) {
                             Theme.Palette.scrim.ignoresSafeArea().onTapGesture { searching = false }
-                            SearchPalette(workspace: workspace, close: { searching = false }) { link, course in
-                                open(link, course: course)
-                            }
+                            SearchPalette(
+                                workspace: workspace, query: searchStart, close: { searching = false },
+                                choose: { link, course in open(link, course: course) }
+                            )
                             .padding(.top, 90)
                         }
                     }
@@ -268,7 +274,10 @@ struct RootView: View {
                 .onChange(of: sidebarOpen, initial: true) { row.panelEdge = panelEdge }
                 #endif
                 #if DEBUG && os(macOS)
-                .onChange(of: SnapshotDriver.shared.searchQuery) { _, query in searching = query != nil }
+                .onChange(of: SnapshotDriver.shared.searchQuery) { _, query in
+                    searchStart = query ?? ""
+                    searching = query != nil
+                }
                 .onChange(of: SnapshotDriver.shared.quickAddOpen) { _, open in quickAdding = open }
                 #endif
             }
@@ -344,12 +353,7 @@ struct RootView: View {
                 tabs.select(number: 1)
             }
             if SnapshotDriver.panes > 1, let course = workspace.currentCourses.first {
-                let pdfs = course.file.materials.filter { $0.path.lowercased().hasSuffix(".pdf") }
-                let paged = pdfs.first { m in
-                    course.file.sessions.contains { $0.materials.contains { $0.materialId == m.id && $0.pages != nil } }
-                }
-                let lecture = (paged ?? pdfs.first).map { AppLink(.material, $0.id) }
-                let besides = [lecture, AppLink.course(course.id, page: .quiz)].compactMap { $0 }.prefix(SnapshotDriver.panes - 1)
+                let besides = DebugLinks.links("material,course/quiz", in: course).prefix(SnapshotDriver.panes - 1)
                 for tab in tabs.ids.prefix(2) {
                     for link in besides { if let entry = workspace.entry(for: link) { tabs.panes(tab)?.openBeside(entry) } }
                 }
@@ -366,9 +370,7 @@ struct RootView: View {
                 (exam.map { [("link-exam", AppLink(.exam, $0.id))] } ?? [])
                 + (replay.map { [("link-recording", AppLink(.recording, $0.id, anchor: .time(1700)))] } ?? [])
                 + (workspace.catalog.people.first.map { [("link-person", AppLink(.person, $0.id))] } ?? [])
-            await SnapshotDriver.shared.run(
-                select: { if let link = $0.link { open(link) } }, open: { open($0) }, courses: ids,
-                semester: workspace.currentSemester?.id, links: links)
+            await SnapshotDriver.shared.run(workspace: workspace, open: { open($0) }, links: links)
         }
         #endif
         .environment(\.gradesLocked, !workspace.gradesUnlocked)
@@ -589,7 +591,7 @@ struct RootView: View {
                     QuickAddField(
                         workspace: workspace, defaultCourse: navigator.current.course, showsEmptyChips: true, focusOnAppear: true,
                         floating: true
-                    ).padding(Theme.Space.l).frame(width: 440)
+                    ).padding(Theme.Space.l).frame(width: Theme.Size.popoverWide)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             timerButton
@@ -756,7 +758,7 @@ struct RootView: View {
             switch hint {
             case .dueToday: Image(systemName: "checklist").foregroundStyle(Theme.Palette.danger)
             case .nextClass(let date): Text(clock(date)).foregroundStyle(Theme.Palette.chromeText)
-            case .exam(let days): Text(days == 0 ? "D-day" : "D-\(days)").foregroundStyle(Theme.Palette.warning)
+            case .exam(let days): Text(DDay.text(days)).foregroundStyle(Theme.Palette.warning)
             }
         }
         .font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit()

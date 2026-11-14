@@ -1,5 +1,7 @@
 public enum LayoutCheck {
-    public static func issues(in gist: FolderTree, extraAssignmentPrefixes: [String] = []) -> [LayoutIssue] {
+    public static func issues(
+        in gist: FolderTree, kinds: [AssignmentKind] = AssignmentKind.builtIn, extraAssignmentPrefixes: [String] = []
+    ) -> [LayoutIssue] {
         var issues: [LayoutIssue] = []
         func courses(in folder: FolderTree, at base: String, admin: Bool) {
             for child in folder.children {
@@ -11,7 +13,7 @@ public enum LayoutCheck {
                 } else if !StandardLayout.isCourseFolderName(child.name) {
                     issues.append(.init(.invalidCourseFolderName, path))
                 } else {
-                    issues += courseIssues(child, at: path, extraAssignmentPrefixes: extraAssignmentPrefixes)
+                    issues += courseIssues(child, at: path, kinds: kinds, extraAssignmentPrefixes: extraAssignmentPrefixes)
                 }
             }
         }
@@ -38,7 +40,9 @@ public enum LayoutCheck {
         return issues
     }
 
-    static func courseIssues(_ course: FolderTree, at base: String, extraAssignmentPrefixes: [String]) -> [LayoutIssue] {
+    static func courseIssues(
+        _ course: FolderTree, at base: String, kinds: [AssignmentKind], extraAssignmentPrefixes: [String]
+    ) -> [LayoutIssue] {
         var issues: [LayoutIssue] = []
         for entry in course.children {
             let path = "\(base)/\(entry.name)"
@@ -55,7 +59,8 @@ public enum LayoutCheck {
                 }
             case .assignments:
                 for item in entry.children
-                where item.isFile || StandardLayout.assignmentFolder(item.name, extraPrefixes: extraAssignmentPrefixes) == nil {
+                where item.isFile || StandardLayout.assignmentFolder(item.name, kinds: kinds, extraPrefixes: extraAssignmentPrefixes) == nil
+                {
                     issues.append(.init(.invalidAssignmentFolder, "\(path)/\(item.name)"))
                 }
             case .exams:

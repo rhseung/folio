@@ -12,6 +12,7 @@ struct MCPServer {
         var command: String
         var write: Bool
         var panel: Bool
+        var staged = true
         var spec: JSONValue
         var argv: (JSONValue) -> [String]
     }
@@ -33,18 +34,20 @@ struct MCPServer {
         tools = (propose ? all.filter(\.panel) : all) + Self.generalTools(propose: propose)
     }
 
-    // 도움말에서 읽으면 읽기 명령처럼 읽기 전용으로 표시되어 `--propose`에서 `--dry-run`을 건너뛴다. 그래서 액션 하나를
-    // 만들어 쓰는 손 명령(`BuildsAction`)은 쓰기로 열고, 만든 액션을 제안한다.
-    static let builds: [String: String] = {
-        func walk(_ type: any ParsableCommand.Type, _ path: [String]) -> [(String, String)] {
-            let here = (type as? any BuildsAction.Type).map { [(path.joined(separator: " "), $0.builds.command)] } ?? []
-            return here
-                + type.configuration.subcommands.flatMap { sub in
+    static let commands: [String: any ParsableCommand.Type] = {
+        func walk(_ type: any ParsableCommand.Type, _ path: [String]) -> [(String, any ParsableCommand.Type)] {
+            let config = type.configuration
+            return [(path.joined(separator: " "), type)]
+                + (config.subcommands + config.groupedSubcommands.flatMap(\.subcommands)).flatMap { sub in
                     walk(sub, path + [sub.configuration.commandName ?? sub._commandName])
                 }
         }
         return Dictionary(walk(Folio.self, []), uniquingKeysWith: { a, _ in a })
     }()
+
+    // 도움말에서 읽으면 읽기 명령처럼 읽기 전용으로 표시되어 `--propose`에서 `--dry-run`을 건너뛴다. 그래서 액션 하나를
+    // 만들어 쓰는 손 명령(`BuildsAction`)은 쓰기로 열고, 만든 액션을 제안한다.
+    static let builds: [String: String] = commands.compactMapValues { ($0 as? any BuildsAction.Type)?.builds.command }
 
     static func writing(_ tool: Tool, propose: Bool) -> Tool {
         var t = tool
@@ -56,16 +59,6 @@ struct MCPServer {
             ]
         }
         return t
-    }
-
-    static let panelGroups: Set<String> = [
-        "note", "session", "unit", "exam", "assignment", "material", "quiz", "score", "component", "attendance", "review",
-        "problem-set", "search", "today",
-    ]
-    static let panelCommands: Set<String> = ["course list", "recording transcript"]
-
-    static func inPanel(_ command: String) -> Bool {
-        panelCommands.contains(command) || command.split(separator: " ").first.map { panelGroups.contains(String($0)) } == true
     }
 
     func handle(_ line: String) -> Data? {
@@ -123,10 +116,10 @@ struct MCPServer {
 
     // `--propose`에서 쓰기는 답의 사본에서 두 번 돈다. 거절할 수 있는 dry run으로 한 번, 그다음 실제로 한 번이다. 그래야
     // 거절된 쓰기가 다음 쓰기가 기댈 반쯤 쓴 상태를 남기지 않는다. 사본이 생긴 뒤에는 읽기도 사본에서 돌아 제안한 것을
-    // 본다. `search`의 색인은 폴더의 것이므로 `search`는 폴더에서 돈다.
+    // 본다. 사본에 없는 것을 읽는 명령(`HandRead.staged`)은 폴더에서 돈다.
     func proposing(_ tool: Tool, _ command: String, _ argv: [String], _ stage: ProposalStage) -> JSONValue {
         guard tool.write else {
-            let folder = command == "search" ? nil : stage.folder
+            let folder = tool.staged ? stage.folder : nil
             let run = Self.execute(argv, staging: folder.map { Staging(folder: $0, writes: false) })
             guard run.code == 0 else { return Self.result(run.err + run.out, failed: true) }
             var text = Self.compact(run.out, marking: stage)
@@ -455,7 +448,10 @@ struct MCPServer {
             "inputSchema": ["type": "object", "properties": .object(properties), "required": .array(required)],
             "annotations": ["readOnlyHint": .bool(true), "openWorldHint": .bool(false)],
         ]
-        return Tool(name: name(command), command: command, write: false, panel: inPanel(command), spec: spec) { input in
+        let hand = commands[command] as? any HandRead.Type
+        return Tool(
+            name: name(command), command: command, write: false, panel: hand?.panel ?? false, staged: hand?.staged ?? true, spec: spec
+        ) { input in
             var options: [String] = [], positionals: [String] = []
             for a in args {
                 guard let v = input[key(a)], v != .null else { continue }

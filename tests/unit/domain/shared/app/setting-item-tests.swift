@@ -10,6 +10,8 @@ struct SettingItemTests {
         full.review.dailyLimit = 10
         full.mathSnippets = []
         full.asciiMathSnippets = []
+        full.callouts = []
+        full.assignmentKinds = []
         full.classStart.preset = "in-class"
         func leaves(_ node: JSONValue, _ path: String) -> [String] {
             if SettingItem.all.contains(where: { $0.key == path }) { return [] }
@@ -24,6 +26,8 @@ struct SettingItemTests {
         full.review.dailyLimit = 10
         full.mathSnippets = []
         full.asciiMathSnippets = []
+        full.callouts = []
+        full.assignmentKinds = []
         full.classStart.preset = "in-class"
         let root = try json(full)
         for item in SettingItem.all {
@@ -31,6 +35,20 @@ struct SettingItemTests {
             #expect(value != nil, "\(item.key)")
         }
         #expect(Set(SettingItem.all.map(\.key)).count == SettingItem.all.count)
+    }
+
+    // 선언이 기본값의 단일 출처다. `Settings()`가 다른 값을 쓰면 화면과 `settings show`가 다른 기본값을 말한다.
+    @Test func defaultsAreTheDeclarations() throws {
+        let root = try json(Settings())
+        for item in SettingItem.all {
+            #expect((item.value(in: root) ?? .null) == item.fallback, "\(item.key)")
+        }
+    }
+
+    @Test func calloutKindsReadWithTheirDefaults() throws {
+        let settings = try JSONDecoder().decode(Settings.self, from: Data(#"{"callouts": [{"name": "claim", "numbered": true}]}"#.utf8))
+        #expect(settings.callouts == [NoteCallout(name: "claim", tone: "neutral", numbered: true)])
+        #expect(try JSONDecoder().decode(Settings.self, from: Data("{}".utf8)).callouts == nil)
     }
 
     @Test func defaultsPassTheirOwnChecks() throws {
@@ -51,11 +69,34 @@ struct SettingItemTests {
         #expect(SettingItem.backupDailyDays.problem(.number(9000)) == nil)
     }
 
-    @Test func timeRangesCoverWholeHours() {
-        #expect(SettingItem.dayBoundary.range == 0...539)
-        #expect(SettingItem.dayBoundary.problem(.number(8 * 60 + 55)) == nil)
+    @Test func timeRangesCoverTheLastHoursMinutes() {
+        #expect(SettingItem.dayBoundary.range == 0...8 * 60 + 59)
+        #expect(SettingItem.dayBoundary.hours == 0...8)
+        #expect(SettingItem.dayBoundary.problem(.number(8 * 60 + 30)) == nil)
+        #expect(SettingItem.dayBoundary.problem(.number(8 * 60 + 59)) == nil)
         #expect(SettingItem.dayBoundary.problem(.number(9 * 60)) != nil)
         #expect(SettingItem.examMorningMinute.hours == 0...23)
+        #expect(SettingItem.examMorningMinute.range == 0...24 * 60 - 1)
+    }
+
+    // 시간 선택은 범위의 시마다 5분 단위 분을 모두 고르게 한다. 고를 수 있는 값은 모두 저장 검사를 통과해야 한다.
+    @Test func everyPickableTimeIsAccepted() {
+        for item in SettingItem.all {
+            guard case .time = item.shape else { continue }
+            for hour in item.hours {
+                for minute in stride(from: 0, to: 60, by: 5) {
+                    #expect(item.problem(.number(Double(hour * 60 + minute))) == nil, "\(item.key) \(hour):\(minute)")
+                }
+            }
+        }
+    }
+
+    @Test func aBoundarySavedLateInTheLastHourStillReads() throws {
+        let file = try JSONDecoder().decode(JSONValue.self, from: Data(#"{"dayBoundaryMinutes": 530, "idleMinutes": 10}"#.utf8))
+        #expect(SettingItem.problems(in: file).isEmpty)
+        let settings = try JSONDecoder().decode(Settings.self, from: Data(#"{"dayBoundaryMinutes": 530}"#.utf8))
+        #expect(settings.dayBoundaryMinutes == 530)
+        #expect(settings.violations.isEmpty)
     }
 
     @Test func fieldsUnderACustomItemAndParentObjectsAreKnown() {

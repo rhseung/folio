@@ -43,10 +43,7 @@ struct DatePanel: View {
         }
     }
 
-    var minuteOfDay: Int {
-        let c = workspace.calendar.dateComponents([.hour, .minute], from: date)
-        return (c.hour ?? 0) * 60 + (c.minute ?? 0)
-    }
+    var minuteOfDay: Int { workspace.calendar.minuteOfDay(date) }
 
     func setMinute(_ m: Int) {
         let day = workspace.calendar.startOfDay(for: date)

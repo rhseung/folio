@@ -27,8 +27,10 @@ final class AssignmentSheetModel {
     }
 
     var course: LoadedCourse { workspace.course(initial.id) ?? initial }
-    var files: [FolioDomain.Material] { AssignmentFiles.materials(of: assignment, in: course.file.materials) }
-    var folder: String { AssignmentFiles.path(of: assignment) }
+    var files: [FolioDomain.Material] {
+        AssignmentFiles.materials(of: assignment, in: course.file.materials, kinds: workspace.settings.assignmentKindTable)
+    }
+    var folder: String { AssignmentFiles.path(of: assignment, kinds: workspace.settings.assignmentKindTable) }
     var sheetTitle: String { String(localized: .commonEditNamed(assignment.title)) }
 
     var invalid: Bool {
@@ -38,7 +40,8 @@ final class AssignmentSheetModel {
     }
 
     var titleDetail: String? {
-        let renamed = AssignmentFiles.path(of: Assignment(device: workspace.device, at: .now, title: title))
+        let renamed = AssignmentFiles.path(
+            of: Assignment(device: workspace.device, at: .now, title: title), kinds: workspace.settings.assignmentKindTable)
         return renamed == folder || files.isEmpty ? nil : String(localized: .assignmentsRenamedFolder(renamed))
     }
 
@@ -104,7 +107,7 @@ final class AssignmentSheetModel {
     func load() {
         title = assignment.title
         hasDue = assignment.due != nil
-        due = assignment.due ?? workspace.calendar.date(bySettingHour: 23, minute: 59, second: 0, of: workspace.now) ?? workspace.now
+        due = assignment.due ?? workspace.settings.schedule.due(on: workspace.now, calendar: workspace.calendar)
         status = assignment.status
         repeats = assignment.repeats
         customRepeat = repeats.map { !AssignmentRepeat.presets.contains($0) } ?? false
@@ -177,7 +180,7 @@ final class AssignmentSheetModel {
     ]
 
     func kind(of m: FolioDomain.Material) -> MaterialKind {
-        m.kind ?? AssignmentFiles.guessKind(fileName: (m.path as NSString).lastPathComponent)
+        m.kind ?? AssignmentFiles.guessKind(fileName: (m.path as NSString).lastPathComponent, kinds: workspace.settings.assignmentKindTable)
     }
 
     // 파일은 시트와 상관없이 이미 폴더에 있으므로, 확인할 때가 아니라 바로 저장한다.

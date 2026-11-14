@@ -68,6 +68,8 @@ public enum MaterialFormat: Equatable, Sendable {
         }
     }
 
+    public static var imageExtensions: Set<String> { Set(byExtension.filter { $0.value == .image }.keys) }
+
     static let byExtension: [String: MaterialFormat] = [
         "pdf": .pdf, "md": .markdown, "markdown": .markdown, "tex": .tex,
         "txt": .text, "bib": .text, "json": .text, "yaml": .text, "yml": .text, "toml": .text, "csv": .text, "tsv": .text,

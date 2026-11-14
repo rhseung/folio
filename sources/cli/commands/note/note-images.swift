@@ -5,7 +5,9 @@ import Foundation
 import PDFKit
 
 extension NoteCommand {
-    struct Images: ParsableCommand {
+    struct Images: ParsableCommand, HandRead {
+        static let reason = "과목이나 노트 하나를 받고, 그림을 MCP 이미지나 --out 폴더의 파일로 준다"
+        static let panel = true
         static let configuration = CommandConfiguration(
             abstract: String(localized: .noteImagesAbstract),
             discussion: String(localized: .noteImagesDiscussion(ReadingLimit.imageEdge, ReadingLimit.images)))

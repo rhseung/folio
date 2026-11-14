@@ -57,7 +57,7 @@ private struct LinkTarget: ViewModifier {
                 guard focus == id else { return lit = false }
                 lit = true
                 try? await Task.sleep(for: .seconds(1.2))
-                withAnimation(.easeOut(duration: 0.8)) { lit = false }
+                withAnimation(Theme.Motion.fade) { lit = false }
             }
     }
 }

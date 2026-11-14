@@ -39,25 +39,28 @@ struct RequirementSheet: View {
             Block(String(localized: .requirementsCriteria), note: String(localized: .requirementsCriteriaNote)) {
                 Card {
                     FormRow(label: String(localized: .requirementsFieldMinCredits)) {
-                        TextField(String(localized: .requirementsNone), value: $model.draft.minCredits, format: .number).pill(width: 72)
+                        TextField(String(localized: .requirementsNone), value: $model.draft.minCredits, format: .number).pill(
+                            width: Theme.Size.numberField)
                     }
                     FormRow(
                         label: String(localized: .requirementsFieldMaxCredits),
                         detail: String(localized: .requirementsFieldMaxCreditsDetail)
                     ) {
-                        TextField(String(localized: .requirementsNone), value: $model.draft.maxCredits, format: .number).pill(width: 72)
+                        TextField(String(localized: .requirementsNone), value: $model.draft.maxCredits, format: .number).pill(
+                            width: Theme.Size.numberField)
                     }
                     FormRow(
                         label: String(localized: .requirementsFieldMinCount), detail: String(localized: .requirementsFieldMinCountDetail)
                     ) {
-                        TextField(String(localized: .requirementsNone), value: $model.draft.minCount, format: .number).pill(width: 72)
+                        TextField(String(localized: .requirementsNone), value: $model.draft.minCount, format: .number).pill(
+                            width: Theme.Size.numberField)
                     }
                     FormRow(
                         label: String(localized: .requirementsFieldSharedCap), detail: String(localized: .requirementsFieldSharedCapDetail),
                         last: true
                     ) {
                         TextField(String(localized: .requirementsNone), value: $model.draft.maxSharedCredits, format: .number).pill(
-                            width: 72)
+                            width: Theme.Size.numberField)
                     }
                 }
             }

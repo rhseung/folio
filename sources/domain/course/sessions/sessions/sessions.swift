@@ -187,11 +187,9 @@ extension CourseFile {
     }
 
     func fileDay(of session: Session, calendar: Calendar) -> String {
-        let c = calendar.dateComponents([.month, .day], from: session.date)
-        return String(format: "%02d-%02d", c.month!, c.day!) + "(\(Self.noteWeekdays[calendar.isoWeekday(of: session.date) - 1]))"
+        let day = LocalDate(session.date, in: calendar)
+        return String(format: "%02d-%02d", day.month, day.day) + "(\(WeekdayLetters.letter(calendar.isoWeekday(of: session.date))))"
     }
-
-    static let noteWeekdays = ["월", "화", "수", "목", "금", "토", "일"]
 
     static let noteSubjectLimit = 60
 

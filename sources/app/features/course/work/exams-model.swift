@@ -49,8 +49,7 @@ final class ExamsModel {
     func reviewStates(now: Date) -> [UUID: ReviewState] { workspace.reviewStates(of: course.id, now: now) }
 
     func add() {
-        let c = workspace.calendar
-        let start = c.date(byAdding: .hour, value: 24 + 9, to: c.startOfDay(for: workspace.now)) ?? workspace.now
+        let start = workspace.settings.schedule.examStart(after: workspace.now, calendar: workspace.calendar)
         editing = Exam(device: workspace.device, at: .now, title: "", start: start)
     }
 
@@ -97,10 +96,7 @@ final class ExamsModel {
         return (start.formatted(.dateTime.month().day()), start.formatted(.dateTime.weekday()) + " " + time)
     }
 
-    private func minute(_ date: Date) -> Int {
-        let c = workspace.calendar.dateComponents([.hour, .minute], from: date)
-        return (c.hour ?? 0) * 60 + (c.minute ?? 0)
-    }
+    private func minute(_ date: Date) -> Int { workspace.calendar.minuteOfDay(date) }
 
     struct Scope {
         var units: [FolioDomain.Unit]

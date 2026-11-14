@@ -58,22 +58,6 @@ struct MaterialsView: View {
             if let m = model.follow(link), !m.isFolder { open(m) }
         }
         .onChange(of: model.viewedLink) { _, link in moved(link) }
-        #if DEBUG && os(macOS)
-        .onChange(of: SnapshotDriver.shared.openFile, initial: true) { old, ext in
-            guard ext != nil || old != nil else { return }
-            if ext != nil { model.trackFixtureFiles() }
-            model.viewing = ext.flatMap { ext in
-                model.materials.first {
-                    !$0.isFolder && ($0.path as NSString).pathExtension.lowercased() == ext && $0.status == .classified
-                }?.id
-            }
-            SnapshotDriver.shared.materialsOpenFile = model.viewing != nil
-        }
-        .onChange(of: SnapshotDriver.shared.linkFile) { _, on in
-            if on { model.trackFixtureFiles() }
-            model.linking = on ? (model.materials.first { $0.role == .lecture && $0.isPDF } ?? model.materials.first)?.id : nil
-        }
-        #endif
     }
 
     var list: some View {
@@ -140,13 +124,13 @@ struct MaterialsView: View {
         model.open(m)
     }
 
-    static let indent: CGFloat = 14 + Theme.Space.m
+    static let indent: CGFloat = Theme.Size.chevron + Theme.Space.m
 
     func folderRow(_ folder: PathTree<FolioDomain.Material>, depth: Int) -> some View {
         let open = model.opened.contains(folder.path)
         return HStack(spacing: Theme.Space.m) {
             Image(systemName: "chevron.right").font(Theme.Glyph.regular)
-                .rotationEffect(.degrees(open ? 90 : 0)).foregroundStyle(Theme.Palette.textTertiary).frame(width: 14)
+                .rotationEffect(.degrees(open ? 90 : 0)).foregroundStyle(Theme.Palette.textTertiary).frame(width: Theme.Size.chevron)
             Image(systemName: open ? "folder.fill" : "folder").foregroundStyle(accent.color)
             Text(folder.name).font(Theme.Typeface.bodyStrong).lineLimit(1)
             Text("\(folder.count)").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()

@@ -93,7 +93,7 @@ struct TodayView: View {
         if summary.exams.isEmpty && summary.deadlines.isEmpty {
             EmptyCard(
                 symbol: "checkmark", tone: .success, title: String(localized: .todayAgendaEmpty),
-                detail: String(localized: .todayAgendaEmptyDetail(TodaySummary.examHorizon)))
+                detail: String(localized: .todayAgendaEmptyDetail(model.examDays)))
         } else {
             Fold(wideFrom: Self.pairWidth) {
                 examsBlock(summary).frame(maxWidth: .infinity, alignment: .topLeading)
@@ -104,7 +104,7 @@ struct TodayView: View {
 
     func examsBlock(_ summary: TodaySummary) -> some View {
         let exams = summary.exams
-        return Block(String(localized: .todayExams), note: String(localized: .todayExamsNote(TodaySummary.examHorizon, exams.count))) {
+        return Block(String(localized: .todayExams), note: String(localized: .todayExamsNote(model.examDays, exams.count))) {
             if exams.isEmpty {
                 EmptyCard(symbol: "calendar", title: String(localized: .todayExamsEmpty), detail: String(localized: .todayExamsEmptyDetail))
             } else {
@@ -117,8 +117,10 @@ struct TodayView: View {
 
     func examRow(_ item: TodaySummary.ExamItem) -> some View {
         HStack(spacing: Theme.Space.m) {
-            Text(model.dDay(item)).font(Theme.Typeface.figureCompact).foregroundStyle(DdayChip.heat(item.dDay))
-                .frame(width: 64, alignment: .leading)
+            Text(model.dDay(item)).font(Theme.Typeface.figureCompact).foregroundStyle(
+                DdayChip.heat(item.dDay, model.workspace.settings.urgency)
+            )
+            .frame(width: Theme.Size.ddayColumn, alignment: .leading)
             VStack(alignment: .leading, spacing: Theme.Space.xs) {
                 HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
                     Text(item.exam.title).font(Theme.Typeface.bodyStrong).lineLimit(1).layoutPriority(1)

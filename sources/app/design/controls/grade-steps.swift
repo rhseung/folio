@@ -66,7 +66,7 @@ struct GradeSteps: View {
                 Circle()
                     .fill(color(i))
                     .overlay(Circle().stroke(Theme.Palette.card, lineWidth: 2.5))
-                    .shadow(color: color(i).opacity(0.5), radius: 4)
+                    .shadow(Theme.Shadow.glow, color: color(i))
                     .frame(width: Self.thumb, height: Self.thumb)
                     .offset(x: Self.spacing * CGFloat(i))
             }

@@ -1134,6 +1134,17 @@
         }
       }
     },
+    "rule.settings.assignment-kinds": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과제 종류의 접두어는 영문자로만 쓰고 서로 달라야 합니다"
+          }
+        }
+      }
+    },
     "rule.settings.class-minutes": {
       "extractionState": "manual",
       "localizations": {
@@ -1757,6 +1768,831 @@
           "stringUnit": {
             "state": "translated",
             "value": "이동 묶음"
+          }
+        }
+      }
+    },
+    "setting-item.day-boundary-minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "하루가 바뀌는 시각"
+          }
+        }
+      }
+    },
+    "setting-item.idle-minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "공부 시간 쉼 판정"
+          }
+        }
+      }
+    },
+    "setting-item.pane-presets": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 칸 배치"
+          }
+        }
+      }
+    },
+    "setting-item.today-exam-days": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 화면의 시험 범위"
+          }
+        }
+      }
+    },
+    "setting-item.urgency.assignment-urgent-days": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "급한 과제 기준"
+          }
+        }
+      }
+    },
+    "setting-item.urgency.assignment-soon-days": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다가오는 과제 기준"
+          }
+        }
+      }
+    },
+    "setting-item.urgency.exam-urgent-days": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "급한 시험 기준"
+          }
+        }
+      }
+    },
+    "setting-item.urgency.exam-soon-days": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다가오는 시험 기준"
+          }
+        }
+      }
+    },
+    "setting-item.urgency.exam-near-days": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험 D-day 표시 범위"
+          }
+        }
+      }
+    },
+    "setting-item.schedule.due-minute": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기본 마감 시각"
+          }
+        }
+      }
+    },
+    "setting-item.schedule.exam-start-minute": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기본 시험 시작 시각"
+          }
+        }
+      }
+    },
+    "setting-item.schedule.exam-minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기본 시험 길이"
+          }
+        }
+      }
+    },
+    "setting-item.schedule.session-start-minute": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기본 회차 시작 시각"
+          }
+        }
+      }
+    },
+    "setting-item.schedule.class-start-minute": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 수업 시간의 기본 시작"
+          }
+        }
+      }
+    },
+    "setting-item.grades-unlock-minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "성적 잠금 해제 시간"
+          }
+        }
+      }
+    },
+    "setting-item.school.staff-mail-domain": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "교직원 메일 도메인"
+          }
+        }
+      }
+    },
+    "setting-item.school.student-mail-domain": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학생 메일 도메인"
+          }
+        }
+      }
+    },
+    "setting-item.review.intervals": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습 간격"
+          }
+        }
+      }
+    },
+    "setting-item.review.daily-limit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "하루 복습 상한"
+          }
+        }
+      }
+    },
+    "setting-item.review.exam-window-days": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험 앞 간격 줄이기"
+          }
+        }
+      }
+    },
+    "setting-item.review.cards-per-review": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한 번에 볼 카드"
+          }
+        }
+      }
+    },
+    "setting-item.review.settle-after-passes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정착 기준"
+          }
+        }
+      }
+    },
+    "setting-item.review.quiz-recheck-days": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "틀린 문제 다시 확인"
+          }
+        }
+      }
+    },
+    "setting-item.review.weights": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습 우선순위 가중치"
+          }
+        }
+      }
+    },
+    "setting-item.notifications.assignment-due.on": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마감 알림"
+          }
+        }
+      }
+    },
+    "setting-item.notifications.assignment-due.lead-hours": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마감 알림 시점"
+          }
+        }
+      }
+    },
+    "setting-item.notifications.exam-day-before.on": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험 전날 알림"
+          }
+        }
+      }
+    },
+    "setting-item.notifications.exam-day-before.minute": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험 전날 알림 시각"
+          }
+        }
+      }
+    },
+    "setting-item.notifications.exam-morning.on": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험 당일 아침 알림"
+          }
+        }
+      }
+    },
+    "setting-item.notifications.exam-morning.minute": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험 당일 아침 알림 시각"
+          }
+        }
+      }
+    },
+    "setting-item.notifications.daily-review.on": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 복습 알림"
+          }
+        }
+      }
+    },
+    "setting-item.notifications.daily-review.minute": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 복습 알림 시각"
+          }
+        }
+      }
+    },
+    "setting-item.notifications.attendance.on": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "결석 상한 직전 알림"
+          }
+        }
+      }
+    },
+    "setting-item.backup.enabled": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "하루 한 번 자동 백업"
+          }
+        }
+      }
+    },
+    "setting-item.backup.folder": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자동 백업 위치"
+          }
+        }
+      }
+    },
+    "setting-item.backup.daily-days": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "하루 백업 보관 기간"
+          }
+        }
+      }
+    },
+    "setting-item.note-rules": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트 작성 규칙"
+          }
+        }
+      }
+    },
+    "setting-item.note-templates": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트 템플릿 소제목"
+          }
+        }
+      }
+    },
+    "setting-item.new-note-math": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 노트의 수식 문법"
+          }
+        }
+      }
+    },
+    "setting-item.math-snippets": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TeX 스니펫"
+          }
+        }
+      }
+    },
+    "setting-item.ascii-math-snippets": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AsciiMath 스니펫"
+          }
+        }
+      }
+    },
+    "setting-item.class-minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기본 수업 길이"
+          }
+        }
+      }
+    },
+    "setting-item.class-start.recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 시작 녹음"
+          }
+        }
+      }
+    },
+    "setting-item.class-start.recording-offset-minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음 시작 시점"
+          }
+        }
+      }
+    },
+    "setting-item.class-start.stops-recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음 자동 정지"
+          }
+        }
+      }
+    },
+    "setting-item.class-start.stop-after-minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음 정지 시점"
+          }
+        }
+      }
+    },
+    "setting-item.class-start.rough-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 시작 러프 노트"
+          }
+        }
+      }
+    },
+    "setting-item.class-start.rough-note-place": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "러프 노트를 여는 곳"
+          }
+        }
+      }
+    },
+    "setting-item.class-start.lecture": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 시작 렉처"
+          }
+        }
+      }
+    },
+    "setting-item.class-start.lecture-place": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "렉처를 여는 곳"
+          }
+        }
+      }
+    },
+    "setting-item.class-start.open-in": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 시작 탭"
+          }
+        }
+      }
+    },
+    "setting-item.class-start.all-lectures": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전체 렉처 열기"
+          }
+        }
+      }
+    },
+    "setting-item.class-start.resumes-lecture": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지난 진도 다음 쪽"
+          }
+        }
+      }
+    },
+    "setting-item.class-start.screen": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 시작 화면 표시"
+          }
+        }
+      }
+    },
+    "setting-item.class-start.preset": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 시작 칸 배치"
+          }
+        }
+      }
+    },
+    "setting-item.class-start.course-off": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 시작 과목별 예외"
+          }
+        }
+      }
+    },
+    "setting-item.sidebar": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사이드바 과목 순서"
+          }
+        }
+      }
+    },
+    "setting-item.lms.known": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "본 LMS 강의실"
+          }
+        }
+      }
+    },
+    "setting-item.lms.handled": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "숨긴 LMS 항목"
+          }
+        }
+      }
+    },
+    "setting-item.lms.sync-minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS 확인 주기"
+          }
+        }
+      }
+    },
+    "setting-item.assignment-kinds": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과제 종류와 별칭"
+          }
+        }
+      }
+    },
+    "dday.today": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "D-day"
+          }
+        }
+      }
+    },
+    "dday.days": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "D-%lld"
+          }
+        }
+      }
+    },
+    "setting.none": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "없음"
+          }
+        }
+      }
+    },
+    "setting.on": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "켬"
+          }
+        }
+      }
+    },
+    "setting.off": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "끔"
+          }
+        }
+      }
+    },
+    "setting.entries": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld개"
+          }
+        }
+      }
+    },
+    "setting.shape.toggle": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "true 또는 false"
+          }
+        }
+      }
+    },
+    "setting.shape.number": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정수 %1$lld–%2$lld"
+          }
+        }
+      }
+    },
+    "setting.shape.positive": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "양의 정수"
+          }
+        }
+      }
+    },
+    "setting.shape.numbers": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정수 목록, 값마다 %1$lld–%2$lld"
+          }
+        }
+      }
+    },
+    "setting.shape.time": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자정부터 센 분 %1$lld–%2$lld"
+          }
+        }
+      }
+    },
+    "setting.shape.text": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "글"
+          }
+        }
+      }
+    },
+    "setting.shape.custom": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JSON"
+          }
+        }
+      }
+    },
+    "setting-item.callouts": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "콜아웃 종류"
           }
         }
       }

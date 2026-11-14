@@ -5,13 +5,14 @@ import SwiftUI
 
 struct ClassTimesBlock: View {
     @Binding var schedule: [ClassTime]
+    let newTime: ClassTime
 
     var body: some View {
         Block(
             title: String(localized: .classTimesTitle), note: String(localized: .classTimesNote),
             trailing: {
                 Button(.classTimesAdd, systemImage: "plus") {
-                    schedule.append(ClassTime(weekday: 1, startMinute: 10 * 60 + 30, endMinute: 11 * 60 + 45))
+                    schedule.append(newTime)
                 }
                 .buttonStyle(.ghost)
             }
@@ -28,7 +29,8 @@ struct ClassTimesBlock: View {
                         Text("–").foregroundStyle(Theme.Palette.textTertiary)
                         TimeMenu(minute: $schedule.element(at: i, fallback: slot).endMinute)
                         Spacer(minLength: Theme.Space.m)
-                        TextField(String(localized: .classTimesRoom), text: $schedule.element(at: i, fallback: slot).room).pill(width: 112)
+                        TextField(String(localized: .classTimesRoom), text: $schedule.element(at: i, fallback: slot).room).pill(
+                            width: Theme.Size.shortTextField)
                         ClassLinkButton(link: $schedule.element(at: i, fallback: slot).link)
                         Button(.commonDelete, systemImage: "minus.circle") { schedule.remove(at: i) }
                             .buttonStyle(.ghostIcon).tint(Theme.Palette.danger)

@@ -87,7 +87,7 @@ struct SectionBar: View {
             ForEach(grips, id: \.self) { b in
                 Capsule()
                     .fill(dragging == b ? accent.color : Color.white)
-                    .shadow(color: .black.opacity(0.28), radius: 1.5, y: 1)
+                    .shadow(Theme.Shadow.knob)
                     .frame(width: 4, height: 16)
                     .position(x: x(split.sections[b].lastPage, w), y: Self.bubbleRow + Self.tile / 2)
                     .allowsHitTesting(false)
@@ -99,7 +99,7 @@ struct SectionBar: View {
                     .padding(.horizontal, Theme.Space.s)
                     .frame(height: Self.bubbleRow - 2)
                     .background(Theme.Palette.card, in: .capsule)
-                    .shadow(color: .black.opacity(0.18), radius: 2, y: 1)
+                    .shadow(Theme.Shadow.raised)
                     .fixedSize()
                     .position(x: min(max(bx, 32), w - 32), y: Self.bubbleRow / 2)
                     .allowsHitTesting(false)

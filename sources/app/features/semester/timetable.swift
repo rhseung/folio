@@ -41,7 +41,8 @@ struct Timetable<Menu: View>: View {
                         ForEach(days, id: \.self) { day in
                             column(layout.slots(on: day), first: first, height: height)
                                 .background(
-                                    day == today ? Theme.Palette.fill.opacity(0.5) : .clear, in: .rect(cornerRadius: Theme.Radius.control))
+                                    day == today ? Theme.Palette.fill.opacity(Theme.Opacity.soft) : .clear,
+                                    in: .rect(cornerRadius: Theme.Radius.control))
                         }
                     }
                     .background(alignment: .top) {
@@ -73,9 +74,11 @@ struct Timetable<Menu: View>: View {
                 .padding(.horizontal, Theme.Space.tight)
                 .padding(.vertical, Theme.Space.xs)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .frame(height: max(CGFloat(slot.endMinute - slot.startMinute) / 60 * Self.hourHeight - 2, 20))
+                .frame(height: max(CGFloat(slot.endMinute - slot.startMinute) / 60 * Self.hourHeight - 2, Theme.Size.timetableBlockMin))
                 .background(accent.tint, in: .rect(cornerRadius: Theme.Radius.control - 2))
-                .overlay(alignment: .leading) { accent.color.frame(width: 4).clipShape(.rect(cornerRadius: Theme.Radius.mark)) }
+                .overlay(alignment: .leading) {
+                    accent.color.frame(width: Theme.Size.stripe).clipShape(.rect(cornerRadius: Theme.Radius.mark))
+                }
                 .clipShape(.rect(cornerRadius: Theme.Radius.control - 2))
                 .opens { open(course) }
                 .contextMenu { menu(course) }

@@ -107,12 +107,7 @@ body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); 
 .note .callout-label { font-weight: 700; font-size: var(--label-size); letter-spacing: .02em; color: color-mix(in srgb, var(--c) 85%, var(--text)); white-space: nowrap; }
 .note .callout-title { font-weight: 600; }
 .note .callout > p:last-child, .note .callout > ul:last-child, .note .callout > ol:last-child { margin-bottom: 10px; }
-.note .callout-definition, .note .callout-info, .note .callout-note, .note .callout-abstract { --c: var(--c-definition); }
-.note .callout-theorem, .note .callout-lemma, .note .callout-corollary, .note .callout-proposition { --c: var(--c-theorem); }
-.note .callout-example, .note .callout-counterexample, .note .callout-tip, .note .callout-summary, .note .callout-solution { --c: var(--c-example); }
-.note .callout-warning, .note .callout-important, .note .callout-question { --c: var(--c-warning); }
-.note .callout-danger { --c: var(--c-danger); }
-.note .callout-proof, .note .callout-remark { --c: var(--c-neutral); background: none; }
+/* 종류마다 쓰는 색 변수는 앱이 콜아웃 종류 표(`NoteStyle.callouts`)에서 만들어 넣는다. */
 .note .callout-proof > :last-child::after { content: "∎"; float: right; color: var(--text-3); }
 .note .callout.attached { margin-top: calc(-1 * var(--block-gap)); border-top-left-radius: 0; border-top-right-radius: 0; }
 .note .callout:has(+ .callout.attached) { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }

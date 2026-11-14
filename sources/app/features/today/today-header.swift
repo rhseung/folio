@@ -69,7 +69,7 @@ struct TodayHeader: View {
                     .frame(height: Theme.Space.tight)
                 }
                 .foregroundStyle(day.isToday ? Theme.Palette.text : Theme.Palette.textTertiary)
-                .frame(width: 40)
+                .frame(width: Theme.Size.dayColumn)
                 .padding(.vertical, Theme.Space.s)
                 .background {
                     if day.isToday {

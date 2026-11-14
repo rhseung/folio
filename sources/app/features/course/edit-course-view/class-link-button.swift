@@ -19,11 +19,11 @@ struct ClassLinkButton: View {
                     TextField(
                         String(localized: .classTimesLinkPrompt), text: Binding(get: { link ?? "" }, set: { link = OnlineLink.stored($0) })
                     )
-                    .pill(width: 288)
+                    .pill(width: Theme.Size.linkField)
                     Text(.classTimesLinkHelp).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                 }
                 .padding(Theme.Space.l)
-                .frame(width: 320)
+                .frame(width: Theme.Size.popover)
             }
     }
 }

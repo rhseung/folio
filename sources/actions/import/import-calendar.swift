@@ -42,7 +42,7 @@ public struct ImportCalendar {
                         localized: .noteImportCalendarSchedule(
                             name,
                             r.schedule.map {
-                                "\(ClassTime.weekdayNames[$0.weekday - 1]) \(String(format: "%02d:%02d-%02d:%02d", $0.startMinute / 60, $0.startMinute % 60, $0.endMinute / 60, $0.endMinute % 60)) \($0.room)"
+                                "\(ClassTime.weekdayNames[$0.weekday - 1]) \(ClockText.range($0.startMinute, $0.endMinute)) \($0.room)"
                             }.joined(separator: ", "))))
             }
 

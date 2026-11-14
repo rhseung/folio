@@ -34,7 +34,7 @@ struct ProblemCell: View {
                 if case .resolved = status { Image(systemName: "checkmark").font(Theme.Glyph.tiny) }
             }
             .foregroundStyle(ink)
-            .frame(maxWidth: .infinity, minHeight: 40)
+            .frame(maxWidth: .infinity, minHeight: Theme.Size.problemCell)
             .background(fill, in: .rect(cornerRadius: Theme.Radius.control))
             .contentShape(.rect)
         }

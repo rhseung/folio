@@ -110,7 +110,7 @@ final class QuizModel {
             total: QuizStats.total(cards, history: history),
             byUnit: QuizStats.tally(cards, keys: { [$0.unitId] }, history: history),
             byCategory: QuizStats.tally(cards, keys: { [$0.category] }, history: history),
-            due: cards.filter { WrongFlow.isDue(history($0), today: today) },
+            due: cards.filter { WrongFlow.isDue(history($0), today: today, recheckDays: workspace.settings.review.quizRecheckDays) },
             solvedToday: attempts.filter { $0.day == today }.count + problemAttempts.filter { $0.day == today }.count)
     }
 

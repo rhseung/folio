@@ -6,12 +6,17 @@ struct CoursePlanner {
     let labWeeks: [Int: Int]
     let selfMade: Set<String>
     let exams: [Exam]?
+    let kinds: [AssignmentKind]
     var moves: [PlannedMove] = []
     var removals: [String] = []
     var lectures: [(path: String, name: String)] = []
 
-    init(course: FolderTree, labs: [String: Int] = [:], labWeeks: [Int: Int] = [:], selfMade: Set<String> = [], exams: [Exam]? = nil) {
+    init(
+        course: FolderTree, labs: [String: Int] = [:], labWeeks: [Int: Int] = [:], selfMade: Set<String> = [], exams: [Exam]? = nil,
+        kinds: [AssignmentKind] = AssignmentKind.builtIn
+    ) {
         self.course = course
+        self.kinds = kinds
         self.labs = labs
         self.labWeeks = labWeeks
         self.selfMade = selfMade
@@ -66,7 +71,7 @@ struct CoursePlanner {
                 lectureItem(item, at: "\(base)/\(item.name)")
             }
         case .assignments:
-            let loose = node.children.filter { $0.isFile || StandardLayout.assignmentFolder($0.name) == nil }
+            let loose = node.children.filter { $0.isFile || StandardLayout.assignmentFolder($0.name, kinds: kinds) == nil }
             assignmentItems(loose, in: base, kind: .homework)
         case .exams:
             for item in node.children {
@@ -122,7 +127,7 @@ struct CoursePlanner {
         case .labManuals:
             for item in node.children {
                 let path = "\(base)/\(item.name)"
-                let lab = Keywords.labNumber(of: item.name, labs: labs) ?? Keywords.assignmentNumber(in: item.name)?.number
+                let lab = Keywords.labNumber(of: item.name, labs: labs) ?? Keywords.assignmentNumber(in: item.name, kinds: kinds)?.number
                 if item.isFile, let week = lab.flatMap({ labWeeks[$0] }) {
                     moves.append(
                         .init(from: path, to: "\(CourseFolder.lectures.rawValue)/\(MaterialIntake.lectureName(item.name, week: week))"))
@@ -149,7 +154,7 @@ struct CoursePlanner {
             for item in node.children {
                 let from = "\(base)/\(item.name)"
                 if item.isFile {
-                    let folder = item.name.hasSuffix(".md") ? CourseFolder.notes : .archive
+                    let folder = NoteFormat(path: item.name) == .markdown ? CourseFolder.notes : .archive
                     moves.append(.init(from: from, to: "\(folder.rawValue)/\(item.name)"))
                 } else if containsMarkdown(item) {
                     // 상대 링크가 계속 맞도록 노트 폴더와 그 그림을 함께 둔다.
@@ -163,7 +168,7 @@ struct CoursePlanner {
 
     func containsMarkdown(_ node: FolderTree) -> Bool {
         node.name == StandardLayout.noteAssetsFolder
-            || node.children.contains { $0.isFile ? $0.name.hasSuffix(".md") : containsMarkdown($0) }
+            || node.children.contains { $0.isFile ? NoteFormat(path: $0.name) == .markdown : containsMarkdown($0) }
     }
 
     // MARK: Top-level files
@@ -171,28 +176,29 @@ struct CoursePlanner {
     mutating func topLevelFile(_ file: FolderTree) {
         let name = file.name
         let lower = name.lowercased()
-        if Keywords.syllabus.contains(where: { lower.contains($0) }) || lower.wholeMatch(of: /ot\..+/) != nil {
+        switch FileRule.first(for: .cleanup, in: name, kinds: kinds)?.kind {
+        case .syllabus:
             moves.append(.init(from: name, to: "\(CourseFolder.syllabus.rawValue)/\(name)"))
-        } else if let role = Keywords.examFiles.first(where: { $0.words.contains { lower.contains($0) } }) {
+        case .examFile(let role):
             let exam = Keywords.examFolder(in: lower)
             let ext = (name as NSString).pathExtension
             moves.append(
                 .init(
-                    from: name, to: "\(CourseFolder.exams.rawValue)/\(examFolder(exam))/\(role.name).\(ext)",
+                    from: name, to: "\(CourseFolder.exams.rawValue)/\(examFolder(exam))/\(role).\(ext)",
                     review: exam == nil ? .guessedExam : nil
                 ))
-        } else if Keywords.looksSelfMade(name) {
+        case .selfMade:
             moves.append(
                 .init(
                     from: name, to: "\(CourseFolder.study.rawValue)/\(name)", review: .guessedOrigin,
                     exam: examLink(Keywords.examFolder(in: lower))))
-        } else if name.firstMatch(of: /^\d{1,2}[ _]/) != nil {
+        case .numbered:
             lectures.append((name, name))
-        } else if Keywords.textbook.contains(where: { lower.contains($0) }) || name.firstMatch(of: /\(.+\)\.[^.]+$/) != nil {
+        case .textbook:
             moves.append(.init(from: name, to: "\(CourseFolder.textbooks.rawValue)/\(name)", review: .guessedFolder))
-        } else if name.hasSuffix(".md") {
+        case .notes:
             moves.append(.init(from: name, to: "\(CourseFolder.notes.rawValue)/\(name)"))
-        } else {
+        case .lectureFile, .labManual, .assignment, .pastExam, .exercise, .week, nil:
             moves.append(.init(from: name, to: "\(CourseFolder.archive.rawValue)/\(name)", review: .unknownFile))
         }
     }
@@ -233,21 +239,21 @@ struct CoursePlanner {
         let root = CourseFolder.assignments.rawValue
         for item in items {
             let from = "\(base)/\(item.name)"
-            let itemKind = item.name.lowercased().firstMatch(of: /lab\s*\d/) != nil ? AssignmentKind.lab : kind
+            let itemKind = Keywords.mentionsLab(item.name, kinds: kinds) ? AssignmentKind.lab : kind
             // 실험 이름이 파일 이름의 번호보다 앞선다. `2_<id>_VSEPR.pdf`는 Lab02가 아니다.
             let lab = itemKind == .lab ? Keywords.labNumber(of: item.name, labs: labs) : nil
-            let parsed = lab.map { (number: $0, review: ReviewReason?.none) } ?? Keywords.assignmentNumber(in: item.name)
+            let parsed = lab.map { (number: $0, review: ReviewReason?.none) } ?? Keywords.assignmentNumber(in: item.name, kinds: kinds)
             switch (parsed, item.content) {
             case (let p?, .folder(let children)):
-                let folder = itemKind.rawValue + String(format: "%02d", p.number)
+                let folder = itemKind.prefix + String(format: "%02d", p.number)
                 moves += children.map { .init(from: "\(from)/\($0.name)", to: "\(root)/\(folder)/\($0.name)", review: p.review) }
             case (let p?, _):
-                let folder = itemKind.rawValue + String(format: "%02d", p.number)
+                let folder = itemKind.prefix + String(format: "%02d", p.number)
                 moves.append(.init(from: from, to: "\(root)/\(folder)/\(item.name)", review: p.review))
             case (nil, .opaque):
                 moves.append(.init(from: from, to: "\(root)/\(nextFolder(.project))/\(item.name)", review: .unknownNumber))
             case (nil, _):
-                moves.append(.init(from: from, to: "\(root)/\(itemKind.rawValue)00/\(item.name)", review: .unknownNumber))
+                moves.append(.init(from: from, to: "\(root)/\(itemKind.prefix)00/\(item.name)", review: .unknownNumber))
             }
         }
     }
@@ -255,9 +261,9 @@ struct CoursePlanner {
     func nextFolder(_ kind: AssignmentKind) -> String {
         let existing = course[child: CourseFolder.assignments.rawValue]?.children.map(\.name) ?? []
         let planned = moves.compactMap { $0.to.split(separator: "/").dropFirst().first.map(String.init) }
-        let used = (existing + planned).compactMap { StandardLayout.assignmentFolder($0) }
-            .filter { $0.prefix == kind.rawValue }.map(\.number)
-        return kind.rawValue + String(format: "%02d", (used.max() ?? 0) + 1)
+        let used = (existing + planned).compactMap { StandardLayout.assignmentFolder($0, kinds: kinds) }
+            .filter { $0.prefix == kind.prefix }.map(\.number)
+        return kind.prefix + String(format: "%02d", (used.max() ?? 0) + 1)
     }
 
     // MARK: Past exams

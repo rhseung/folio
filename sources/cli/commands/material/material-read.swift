@@ -5,7 +5,9 @@ import Foundation
 import PDFKit
 
 extension MaterialCommand {
-    struct Read: ParsableCommand {
+    struct Read: ParsableCommand, HandRead {
+        static let reason = "쪽 그림을 MCP 이미지나 --out 폴더의 파일로 준다"
+        static let panel = true
         static let configuration = CommandConfiguration(
             abstract: String(localized: .materialReadAbstract),
             discussion: String(

@@ -31,18 +31,18 @@ public struct ClassStartSettings: Codable, Sendable, Equatable {
         case front, notify
     }
 
-    public var recording = Recording.off
-    public var recordingOffsetMinutes = 0
-    public var stopsRecording = false
-    public var stopAfterMinutes = 0
-    public var roughNote = RoughNote.off
-    public var roughNotePlace = Place.here
-    public var lecture = Lecture.off
-    public var lecturePlace = Place.beside
-    public var openIn = OpenIn.splitTab
-    public var allLectures = false
-    public var resumesLecture = true
-    public var screen = Screen.notify
+    public var recording: Recording = SettingItem.classRecording.choice()
+    public var recordingOffsetMinutes = SettingItem.classRecordingOffset.int
+    public var stopsRecording = SettingItem.classStopsRecording.bool
+    public var stopAfterMinutes = SettingItem.classStopAfter.int
+    public var roughNote: RoughNote = SettingItem.classRoughNote.choice()
+    public var roughNotePlace: Place = SettingItem.classRoughNotePlace.choice()
+    public var lecture: Lecture = SettingItem.classLecture.choice()
+    public var lecturePlace: Place = SettingItem.classLecturePlace.choice()
+    public var openIn: OpenIn = SettingItem.classOpenIn.choice()
+    public var allLectures = SettingItem.classAllLectures.bool
+    public var resumesLecture = SettingItem.classResumesLecture.bool
+    public var screen: Screen = SettingItem.classScreen.choice()
     public var preset: String?
     // JSON은 다른 타입을 키로 쓴 딕셔너리를 평평한 배열로 쓰므로, 과목 ID를 UUID가 아니라 문자열 키로 둔다.
     public var courseOff: [String: [Item]] = [:]

@@ -14,7 +14,7 @@ struct SnippetList: View {
                 CardRow {
                     TextField(String(localized: .settingsSnippetTrigger), text: field(i, \.trigger))
                         .font(Theme.Typeface.mono)
-                        .pill(width: 72, alignment: .leading)
+                        .pill(width: Theme.Size.numberField, alignment: .leading)
                     TextField(String(localized: .settingsSnippetBody), text: field(i, \.body), axis: .vertical)
                         .textFieldStyle(.plain)
                         .font(Theme.Typeface.mono)

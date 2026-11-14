@@ -1,11 +1,13 @@
 import FolioDomain
 import FolioMarkdown
+import FolioStorage
 import SwiftUI
 
 struct NoteAssist: Equatable {
     var snippets: [MathSnippet] = MathSnippet.defaults
     var asciiSnippets: [MathSnippet] = MathSnippet.asciiMathDefaults
     var templates: [NoteKind: [String]] = [:]
+    var callouts = CalloutTable.standard
     var links: (any NoteLinkSource)?
 
     init(
@@ -22,11 +24,13 @@ struct NoteAssist: Equatable {
         snippets = settings.snippets
         asciiSnippets = settings.asciiSnippets
         templates = Dictionary(uniqueKeysWithValues: NoteAssist.templateKinds.map { ($0, settings.noteSections(for: $0)) })
+        callouts = CalloutTable(settings)
         self.links = links
     }
 
     static func == (a: NoteAssist, b: NoteAssist) -> Bool {
-        a.snippets == b.snippets && a.asciiSnippets == b.asciiSnippets && a.templates == b.templates && a.links === b.links
+        a.snippets == b.snippets && a.asciiSnippets == b.asciiSnippets && a.templates == b.templates && a.callouts == b.callouts
+            && a.links === b.links
     }
 
     static let templateKinds: [NoteKind] = [.review, .examSummary, .unit]
@@ -48,6 +52,7 @@ struct NoteAssist: Equatable {
             languages: NoteScripts.languages + ["mermaid"],
             snippets: snippets,
             tex: syntax == .latex,
-            otherMath: other)
+            otherMath: other,
+            callouts: callouts)
     }
 }

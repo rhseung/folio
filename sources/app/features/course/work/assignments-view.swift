@@ -39,15 +39,6 @@ struct AssignmentsView: View {
                 openLink(AppLink(.material, id), in: placement, course: model.course.id)
             }
         }
-        #if DEBUG && os(macOS)
-        .onChange(of: SnapshotDriver.shared.editAssignmentMemo, initial: true) { _, memo in
-            model.editing = memo.flatMap { memo in
-                model.course.file.assignments.first.map {
-                    var a = $0; a.memo = memo; return a
-                }
-            }
-        }
-        #endif
         .confirming($model.pending)
     }
 
@@ -88,12 +79,12 @@ struct AssignmentsView: View {
                     .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()
             }
         }
-        .frame(width: 84, alignment: .leading)
+        .frame(width: Theme.Size.dateColumn, alignment: .leading)
         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
             Text(a.title).font(Theme.Typeface.bodyStrong).lineLimit(1)
                 .strikethrough(done, color: Theme.Palette.textTertiary)
                 .foregroundStyle(done ? Theme.Palette.textTertiary : Theme.Palette.text)
-                .animation(.easeOut(duration: 0.25), value: done)
+                .animation(Theme.Motion.standard, value: done)
             let meta = HStack(spacing: Theme.Space.s) {
                 if let repeats = a.repeats { Label(repeats.label, systemImage: "repeat") }
                 if row.problems > 0 { Label(.assignmentsProblems(row.problems), systemImage: "doc") }

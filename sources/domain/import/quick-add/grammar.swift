@@ -142,7 +142,7 @@ extension QuickAdd {
                 merged.range = run[0].range.lowerBound..<run[count - 1].range.upperBound
                 merged.text = String(line[merged.range])
                 merged.piece = .weekdays(list.days, each: list.each)
-                merged.normalized = AssignmentRepeat.weekdayLetters[list.days[0] - 1] + "요일"
+                merged.normalized = WeekdayLetters.letter(list.days[0]) + "요일"
                 merged.joined = false
                 words.replaceSubrange(i..<(i + count), with: [merged])
                 break

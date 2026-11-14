@@ -3,7 +3,7 @@ import Foundation
 
 public enum NoteFigure {
     public static let folder = CourseFolder.notes.rawValue + "/" + StandardLayout.noteAssetsFolder
-    static let other: Set<String> = ["png", "jpg", "jpeg", "gif", "webp", "heic", "pdf", "html"]
+    static let other: Set<String> = MaterialFormat.imageExtensions.union(["pdf", "html"])
 
     public static func fileName(_ given: String) -> String? {
         var name = given.trimmingCharacters(in: .whitespacesAndNewlines)

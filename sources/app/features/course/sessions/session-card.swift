@@ -51,7 +51,7 @@ struct SessionCard: View {
         .padding(.vertical, Theme.Space.m)
         .padding(.leading, Theme.Space.l)
         .padding(.trailing, Theme.Space.m)
-        .frame(minHeight: 60)
+        .frame(minHeight: Theme.Size.classCard)
         .background {
             GeometryReader { proxy in
                 Theme.Palette.card.overlay(alignment: .leading) {

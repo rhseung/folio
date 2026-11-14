@@ -7,19 +7,19 @@ import Observation
 @MainActor @Observable
 final class AddSemesterModel {
     let workspace: Workspace
-    var year = Calendar.current.component(.year, from: .now)
-    var term: Term = .fall
-    var start = Date.now
-    var end = Calendar.current.date(byAdding: .month, value: 4, to: .now) ?? .now
-
-    static let terms: [Term] = [.spring, .summer, .fall, .winter]
+    var year: Int
+    var term: Term
+    var start: Date
+    var end: Date
 
     init(workspace: Workspace) {
         self.workspace = workspace
-        if let newest = workspace.semesters.first {
-            let i = Self.terms.firstIndex(of: newest.term) ?? 0
-            (year, term) = i + 1 < Self.terms.count ? (newest.year, Self.terms[i + 1]) : (newest.year + 1, Self.terms[0])
-        }
+        let calendar = workspace.calendar
+        let newest = workspace.semesters.first.map { (year: $0.year, term: $0.term) }
+        let next = Term.next(after: newest, now: workspace.now, calendar: calendar)
+        (year, term) = next
+        start = workspace.now
+        end = calendar.date(byAdding: .month, value: next.term.months, to: workspace.now) ?? workspace.now
     }
 
     var exists: Bool { workspace.transcript.semesters.contains { $0.year == year && $0.term == term } }

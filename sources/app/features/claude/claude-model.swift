@@ -301,7 +301,8 @@ final class ClaudeModel {
 
     func page(_ chat: Chat, cards: Bool) -> String {
         Self.html(
-            chat, partial: sending && answering == chatID ? partial : nil, cards: cards, superseded: superseded(chat), describe: describe)
+            chat, partial: sending && answering == chatID ? partial : nil, cards: cards, superseded: superseded(chat),
+            callouts: CalloutTable(workspace.settings), describe: describe)
     }
 
     func superseded(_ chat: Chat) -> Set<ProposalRef> { chat.supersededProposals(targets: Actions.targets) }
@@ -526,14 +527,14 @@ final class ClaudeModel {
 
     static func html(
         _ chat: Chat, partial: String? = nil, cards: Bool = true, superseded: Set<ProposalRef> = [],
-        describe: (ActionProposal) -> ProposalLine = { ProposalLine(text: $0.command) }
+        callouts: CalloutTable = .standard, describe: (ActionProposal) -> ProposalLine = { ProposalLine(text: $0.command) }
     ) -> String {
-        let writing = partial.map { #"<div class="msg assistant">\#(HTMLRenderer.render(answer: $0))</div>"# }
+        let writing = partial.map { #"<div class="msg assistant">\#(HTMLRenderer.render(answer: $0, callouts: callouts))</div>"# }
         let card = String(localized: .claudeAnswerCard)
         let messages =
             (writing.map { [$0] } ?? [])
             + chat.messages.reversed().map { m in
-                let body = HTMLRenderer.render(answer: m.text)
+                let body = HTMLRenderer.render(answer: m.text, callouts: callouts)
                 switch m.role {
                 case .user:
                     return #"<div class="msg user">\#(body)</div>"#

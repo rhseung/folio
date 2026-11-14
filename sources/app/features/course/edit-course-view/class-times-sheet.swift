@@ -16,7 +16,7 @@ struct ClassTimesSheet: View {
             title: model.course.title, confirm: String(localized: .commonSave), disabled: model.timesNote != nil,
             note: model.timesNote, carded: false, width: 600
         ) {
-            ClassTimesBlock(schedule: $model.schedule)
+            ClassTimesBlock(schedule: $model.schedule, newTime: model.workspace.settings.newClassTime)
         } onConfirm: {
             model.confirmSchedule()
             dismiss()

@@ -84,25 +84,13 @@ import SwiftUI
             }
         let panes = environment["FOLIO_RESIZE_PANES"].flatMap(Int.init) ?? 1
         if let beside = environment["FOLIO_RESIZE_BESIDE"], let course = courses.first {
-            let session = course.file.sessions.first { $0.roughNoteId != nil && !$0.materials.isEmpty } ?? course.file.sessions.first
-            let links: [AppLink?] = beside.split(separator: ",").map { kind in
-                switch kind {
-                case "pdf": course.file.materials.first { $0.path.lowercased().hasSuffix(".pdf") }.map { AppLink(.material, $0.id) }
-                case "quiz": AppLink.course(course.id, page: .quiz)
-                case "session": session.map { AppLink(.session, $0.id) }
-                case "note": course.file.notes.first.map { AppLink(.note, $0.id) }
-                case "overview": AppLink.course(course.id)
-                default: nil
-                }
-            }
             front(number)
-            for link in links.compactMap({ $0 }) {
+            for link in DebugLinks.links(beside, in: course) {
                 openBeside(link, course.id)
                 try? await Task.sleep(for: .seconds(2))
             }
         } else if panes > 1, let course = courses.first {
-            let lecture = course.file.materials.first { $0.path.lowercased().hasSuffix(".pdf") }.map { AppLink(.material, $0.id) }
-            let besides = [lecture, AppLink.course(course.id, page: .quiz)].compactMap { $0 }
+            let besides = DebugLinks.links("material,course/quiz", in: course)
             for tab in Set([number, 3]).sorted() where tab <= count + 1 {
                 front(tab)
                 for link in besides.prefix(panes - 1) {
@@ -273,7 +261,7 @@ import SwiftUI
             environment["FOLIO_RESIZE_HEIGHT"].flatMap(Double.init).map { min(CGFloat($0), screen.height) } ?? min(900, screen.height)
         window.setFrame(NSRect(x: screen.minX, y: screen.maxY - high, width: wide, height: high), display: true)
         let page = AppLink.course(course.id, page: environment["FOLIO_RESIZE_PAGE"].flatMap(AppLink.CoursePage.init(rawValue:)))
-        if environment["FOLIO_RESIZE_BESIDE"] == "overview" {
+        if environment["FOLIO_RESIZE_BESIDE"] == "course" {
             front(1)
             openBeside(page, course.id)
         } else {

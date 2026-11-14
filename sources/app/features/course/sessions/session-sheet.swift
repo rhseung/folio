@@ -126,7 +126,7 @@ struct SessionSheet: View {
                         .help(Text(.designPageRangeSplitHelp))
                     }
                 }
-                .frame(width: 136, alignment: .leading)
+                .frame(width: Theme.Size.materialColumn, alignment: .leading)
                 PageRangeField(
                     range: row.range, pages: model.pageCounts[row.id], taught: model.taught(row.id),
                     seen: model.seen(row.id), sections: model.zones(row.id)

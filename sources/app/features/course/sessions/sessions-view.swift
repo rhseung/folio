@@ -76,7 +76,7 @@ struct SessionsView: View {
                 Text("· " + String(localized: .sessionsExamWeek)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
             }
         }
-        .frame(minHeight: 24)
+        .frame(minHeight: Theme.Size.chipRow)
     }
 
     @ViewBuilder func row(_ row: SessionsModel.TimelineRow, file: CourseFile, top: CGFloat) -> some View {

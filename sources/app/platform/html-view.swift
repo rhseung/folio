@@ -1,4 +1,5 @@
 import FolioDomain
+import FolioMarkdown
 import SwiftUI
 import WebKit
 
@@ -9,13 +10,14 @@ struct HTMLView {
     var openNote: (String) -> Void = { _ in }
     var onAction: (URL) -> Void = { _ in }
 
-    func head(accent: CourseAccent) -> String {
-        "<!doctype html><html><head><meta charset=utf-8><style>\(NoteStyle.variables(accent: accent))\(NoteStyle.css)</style></head>"
+    func head(accent: CourseAccent, callouts: CalloutTable) -> String {
+        "<!doctype html><html><head><meta charset=utf-8><style>"
+            + "\(NoteStyle.variables(accent: accent))\(NoteStyle.css)\(NoteStyle.callouts(callouts))</style></head>"
             + "<body class=\"note\" data-math=\"\(mathSyntax)\">"
     }
 
-    func page(accent: CourseAccent) -> String {
-        head(accent: accent) + "\(body)</body></html>"
+    func page(accent: CourseAccent, callouts: CalloutTable) -> String {
+        head(accent: accent, callouts: callouts) + "\(body)</body></html>"
     }
 
     @MainActor func makeWebView(_ coordinator: Coordinator) -> WKWebView {
@@ -39,14 +41,16 @@ struct HTMLView {
 
     @MainActor func makeCoordinator() -> Coordinator { Coordinator() }
 
-    @MainActor func update(_ view: WKWebView, _ coordinator: Coordinator, accent: CourseAccent, openLink: OpenLinkAction) {
+    @MainActor func update(
+        _ view: WKWebView, _ coordinator: Coordinator, accent: CourseAccent, callouts: CalloutTable, openLink: OpenLinkAction
+    ) {
         coordinator.openNote = openNote
         coordinator.onAction = onAction
         coordinator.openLink = openLink
-        let page = page(accent: accent)
+        let page = page(accent: accent, callouts: callouts)
         guard coordinator.loaded != page else { return }
         // 다시 불러오면 키를 누를 때마다 페이지가 비고 스크롤 위치를 잃는다.
-        if coordinator.ready, let loaded = coordinator.loaded, loaded.hasPrefix(head(accent: accent)) {
+        if coordinator.ready, let loaded = coordinator.loaded, loaded.hasPrefix(head(accent: accent, callouts: callouts)) {
             coordinator.loaded = page
             view.callAsyncJavaScript("window.folioReader?.update(html)", arguments: ["html": body], in: nil, in: .defaultClient)
             return
@@ -75,10 +79,6 @@ struct HTMLView {
 
         func open(_ url: URL) {
             if AppLink.isAction(url) { return onAction(url) }
-            if url.scheme == LocalFileScheme.scheme {
-                if url.pathExtension == "md" { openNote(url.deletingPathExtension().lastPathComponent) }
-                return
-            }
             NoteLinks.open(url.absoluteString, base: nil, openNote: openNote, openLink: openLink)
         }
     }
@@ -88,14 +88,18 @@ struct HTMLView {
 extension HTMLView: NSViewRepresentable {
     func makeNSView(context: Context) -> WKWebView { makeWebView(context.coordinator) }
     func updateNSView(_ view: WKWebView, context: Context) {
-        update(view, context.coordinator, accent: context.environment.accent, openLink: context.environment.openLink)
+        update(
+            view, context.coordinator, accent: context.environment.accent, callouts: context.environment.noteCallouts,
+            openLink: context.environment.openLink)
     }
 }
 #else
 extension HTMLView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView { makeWebView(context.coordinator) }
     func updateUIView(_ view: WKWebView, context: Context) {
-        update(view, context.coordinator, accent: context.environment.accent, openLink: context.environment.openLink)
+        update(
+            view, context.coordinator, accent: context.environment.accent, callouts: context.environment.noteCallouts,
+            openLink: context.environment.openLink)
     }
 }
 #endif

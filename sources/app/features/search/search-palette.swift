@@ -6,13 +6,15 @@ struct SearchPalette: View {
     @Environment(\.openLink) private var openLink
     @Environment(\.itemSheets) private var sheets
     @State private var model: SearchModel
+    let query: String
     let close: () -> Void
     let choose: (AppLink, UUID) -> Void
     @State private var resultsHeight: CGFloat = 0
     @FocusState private var focused: Bool
 
-    init(workspace: Workspace, close: @escaping () -> Void, choose: @escaping (AppLink, UUID) -> Void) {
+    init(workspace: Workspace, query: String = "", close: @escaping () -> Void, choose: @escaping (AppLink, UUID) -> Void) {
         _model = State(initialValue: SearchModel(workspace: workspace))
+        self.query = query
         self.close = close
         self.choose = choose
     }
@@ -89,16 +91,16 @@ struct SearchPalette: View {
                     }
                     .overflowFade(.vertical)
                     // ScrollView는 받은 높이를 모두 차지하므로, 짧은 목록이 짧게 남도록 결과 높이에 맞춘다.
-                    .frame(height: min(resultsHeight, 440))
+                    .frame(height: min(resultsHeight, Theme.Size.paletteResults))
                     .onChange(of: model.selected) { _, new in proxy.scrollTo(new) }
                 }
                 if !flat.isEmpty { footer }
             }
         }
-        .frame(maxWidth: 680)
+        .frame(maxWidth: Theme.Size.palette)
         .background(Theme.Palette.card, in: .rect(cornerRadius: Self.radius))
         .glassEffect(.regular, in: .rect(cornerRadius: Self.radius))
-        .shadow(color: .black.opacity(0.25), radius: 32, y: 16)
+        .shadow(Theme.Shadow.floating)
         .onChange(of: model.query) { model.refresh() }
         .onChange(of: model.kind) {
             model.refresh(); focused = true
@@ -108,9 +110,7 @@ struct SearchPalette: View {
         }
         .task {
             focused = true
-            #if DEBUG && os(macOS)
-            if let q = SnapshotDriver.shared.searchQuery { model.query = q }
-            #endif
+            if !query.isEmpty { model.query = query }
             await model.start()
         }
     }
@@ -201,7 +201,7 @@ struct SearchPalette: View {
                     }
                     .font(Theme.Typeface.caption)
                     .foregroundStyle(Theme.Palette.textTertiary)
-                    .frame(maxWidth: 160, alignment: .trailing)
+                    .frame(maxWidth: Theme.Size.paletteDetail, alignment: .trailing)
                     .fixedSize(horizontal: false, vertical: true)
                 }
                 if selected { keycap("↩") }

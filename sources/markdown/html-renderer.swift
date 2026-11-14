@@ -3,16 +3,16 @@ import Markdown
 
 // 노트의 원시 HTML은 실행하지 않고 이스케이프한다. 노트는 여러 곳에서 오고, 보기는 샌드박스가 아니다.
 public struct HTMLRenderer {
-    public static func render(_ note: ParsedNote) -> String {
-        blocks(note, embeds: nil, lines: false).map(\.html).joined()
+    public static func render(_ note: ParsedNote, callouts: CalloutTable = .standard) -> String {
+        blocks(note, embeds: nil, callouts: callouts, lines: false).map(\.html).joined()
     }
 
     public static func render(markdown: String) -> String {
         render(ParsedNote(markdown))
     }
 
-    public static func render(answer: String) -> String {
-        blocks(ParsedNote(answer), embeds: nil, lines: false, mathFences: false).map(\.html).joined()
+    public static func render(answer: String, callouts: CalloutTable = .standard) -> String {
+        blocks(ParsedNote(answer), embeds: nil, callouts: callouts, lines: false, mathFences: false).map(\.html).joined()
     }
 
     public struct Block: Equatable, Sendable {
@@ -20,13 +20,14 @@ public struct HTMLRenderer {
         public var lines: ClosedRange<Int>?
     }
 
-    public static func blocks(_ note: ParsedNote, embeds: NoteEmbeds? = nil) -> [Block] {
-        blocks(note, embeds: embeds, lines: true)
+    public static func blocks(_ note: ParsedNote, embeds: NoteEmbeds? = nil, callouts: CalloutTable = .standard) -> [Block] {
+        blocks(note, embeds: embeds, callouts: callouts, lines: true)
     }
 
-    static func blocks(_ note: ParsedNote, embeds: NoteEmbeds?, lines: Bool, mathFences: Bool = true) -> [Block] {
+    static func blocks(_ note: ParsedNote, embeds: NoteEmbeds?, callouts: CalloutTable, lines: Bool, mathFences: Bool = true) -> [Block] {
         var r = HTMLRenderer()
         r.mathFences = mathFences
+        r.callouts = callouts
         if lines { r.note = note }
         r.embeds = embeds
         r.trail = embeds?.key.map { [$0] } ?? []
@@ -56,6 +57,7 @@ public struct HTMLRenderer {
     var footnotes: FootnoteBook?
     var inLink = false
     var mathFences = true
+    var callouts = CalloutTable.standard
 
     func mathFence(_ language: String) -> MathFence.Syntax? {
         guard let syntax = MathFence.syntax(language) else { return nil }
@@ -70,6 +72,7 @@ public struct HTMLRenderer {
         r.previewing = previewing
         r.footnotes = footnotes
         r.mathFences = mathFences
+        r.callouts = callouts
         return r
     }
 
@@ -85,7 +88,7 @@ public struct HTMLRenderer {
         for node in nodes {
             let html: String
             if let quote = node as? BlockQuote, let header = calloutHeader(quote) {
-                html = callout(quote, header, attached: header.type == "proof" && CalloutHeader.provable.contains(previousCallout ?? ""))
+                html = callout(quote, header, attached: header.type == CalloutKind.proof && callouts.provable(previousCallout ?? ""))
                 previousCallout = header.type
             } else {
                 html = block(node)
@@ -238,7 +241,7 @@ public struct HTMLRenderer {
     mutating func callout(_ quote: BlockQuote, _ header: CalloutHeader, attached: Bool) -> String {
         var label = header.type.prefix(1).uppercased() + header.type.dropFirst()
         var title = header.title
-        if CalloutHeader.numbered.contains(header.type) {
+        if callouts.numbered(header.type) {
             if let explicit = header.explicitNumber {
                 label += " " + explicit
                 title = title.replacingOccurrences(of: #"^(?:[A-Za-z]+\s+)?\#(explicit)\s*"#, with: "", options: .regularExpression)
@@ -280,7 +283,7 @@ public struct HTMLRenderer {
     mutating func inlines(_ nodes: [Markup]) -> String {
         var out = ""
         for node in nodes { out += inline(node) }
-        return linkFootnotes(linkAddresses(linkWikiLinks(out)))
+        return NoteSyntax.html(out, self)
     }
 
     mutating func inline(_ node: Markup) -> String {
@@ -329,39 +332,6 @@ public struct HTMLRenderer {
 
     // MARK: Helpers
 
-    func linkWikiLinks(_ html: String) -> String {
-        guard html.contains("[[") else { return html }
-        let protected = /(<code>.*?<\/code>|<span class="math">.*?<\/span>)/
-        var out = ""
-        var cursor = html.startIndex
-        for m in html.matches(of: protected) {
-            out += replaceWikiLinks(String(html[cursor..<m.range.lowerBound])) + html[m.range]
-            cursor = m.range.upperBound
-        }
-        return out + replaceWikiLinks(String(html[cursor...]))
-    }
-
-    func linkFootnotes(_ html: String) -> String {
-        guard let footnotes, html.contains("[^") else { return html }
-        let protected = /(<code>.*?<\/code>|<span class="math">.*?<\/span>)/
-        let nested = nested
-        let replace = { (s: Substring) -> String in
-            String(
-                s.replacing(Footnotes.reference) { m in
-                    guard let (n, use) = footnotes.use(Self.unescape(String(m.1))) else { return String(m.0) }
-                    if nested { return "<sup class=\"footnote-ref\">\(n)</sup>" }
-                    return "<sup class=\"footnote-ref\"><a href=\"#fn-\(n)\" id=\"\(Self.footnoteRef(n, use))\">\(n)</a></sup>"
-                })
-        }
-        var out = ""
-        var cursor = html.startIndex
-        for m in html.matches(of: protected) {
-            out += replace(html[cursor..<m.range.lowerBound]) + html[m.range]
-            cursor = m.range.upperBound
-        }
-        return out + replace(html[cursor...])
-    }
-
     static func footnoteRef(_ n: Int, _ use: Int) -> String { use == 1 ? "fnref-\(n)" : "fnref-\(n)-\(use)" }
 
     mutating func footnoteSection() -> String {
@@ -407,27 +377,6 @@ public struct HTMLRenderer {
     func objectName(_ link: WikiLink) -> String? {
         guard let embeds, link.isAppLink, !link.namesNote else { return nil }
         return embeds.name(link.href)
-    }
-
-    func linkAddresses(_ html: String) -> String {
-        guard !inLink, html.localizedCaseInsensitiveContains("folio://") else { return html }
-        let protected = /(?s)(<a\b[^>]*>.*?<\/a>|<code>.*?<\/code>|<span class="math">.*?<\/span>|<template\b.*?<\/template>|<[^>]*>)/
-        let address = /[Ff][Oo][Ll][Ii][Oo]:\/\/[^\s<>"'`(){}\[\]\\|&]+/
-        let replace = { (s: Substring) -> String in
-            String(
-                s.replacing(address) { m in
-                    let written = String(m.0)
-                    let kept = Self.trimmedAddress(written)
-                    return "<a href=\"\(kept)\">\(kept)</a>" + written.dropFirst(kept.count)
-                })
-        }
-        var out = ""
-        var cursor = html.startIndex
-        for m in html.matches(of: protected) {
-            out += replace(html[cursor..<m.range.lowerBound]) + html[m.range]
-            cursor = m.range.upperBound
-        }
-        return out + replace(html[cursor...])
     }
 
     // 편집기가 주소를 찾는 FolioDomain의 `AppLink.trimmed`와 같게 자른다. 쪽, 시각, 블록 앵커에 마침표를 남기면 제목
@@ -503,9 +452,10 @@ public struct HTMLRenderer {
         public var math: String?
     }
 
-    public static func referenceCard(_ link: WikiLink, embeds: NoteEmbeds) -> ReferenceCard? {
+    public static func referenceCard(_ link: WikiLink, embeds: NoteEmbeds, callouts: CalloutTable = .standard) -> ReferenceCard? {
         var r = HTMLRenderer()
         r.embeds = embeds
+        r.callouts = callouts
         r.trail = embeds.key.map { [$0] } ?? []
         return r.card(link)
     }

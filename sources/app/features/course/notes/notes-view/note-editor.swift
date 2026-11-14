@@ -147,7 +147,7 @@ struct NoteEditor: View {
         // 편집이 사라진다.
         .task(id: model.body) {
             guard model.dirty else { return }
-            try? await Task.sleep(for: .seconds(1))
+            try? await Task.sleep(for: SavePause.delay)
             if !Task.isCancelled { model.saveNow(force: false) }
         }
         .onChange(of: model.meta.math) { model.saveMath() }

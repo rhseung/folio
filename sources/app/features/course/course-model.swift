@@ -83,7 +83,7 @@ final class CourseModel {
     // MARK: Course column
 
     func recent(_ file: CourseFile) -> [Session] {
-        Array(file.sessions.filter { $0.date <= workspace.now && !$0.isCancelled }.sorted { $0.date > $1.date }.prefix(4))
+        Array(file.heldSessions(at: workspace.now).sorted { $0.date > $1.date }.prefix(4))
     }
 
     func recentTitle(_ s: Session, in file: CourseFile) -> String { file.title(of: s, calendar: workspace.calendar) }
@@ -178,12 +178,9 @@ final class CourseModel {
 
     func stats(_ file: CourseFile, reviews: [Workspace.ReviewEntry], suggested: Workspace.SuggestedSession?, now: Date) -> [StatStrip.Item]
     {
-        let made: (date: Date, subject: String?)? = file.sessions.filter { $0.date > now && !$0.isCancelled }.min { $0.date < $1.date }
-            .map { (date: $0.date, subject: file.subject(of: $0)) }
-        let planned: (date: Date, subject: String?)? = suggested.flatMap {
-            $0.suggestion.date > now ? (date: $0.suggestion.date, subject: nil) : nil
+        let nextClass = file.nextClass(after: now, suggested: suggested.map { [$0.suggestion.date] } ?? []).map {
+            (date: $0.date, subject: $0.session.flatMap { file.subject(of: $0) })
         }
-        let nextClass = [made, planned].compactMap { $0 }.min { $0.date < $1.date }
         let nextExam = file.exams.compactMap { e in e.start.map { (e, $0) } }.filter { $0.1 > now }.min { $0.1 < $1.1 }
         let nextDue = file.assignments.compactMap { a in a.due.map { (a, $0) } }
             .filter { $0.1 > now && $0.0.status.isOpen }.min { $0.1 < $1.1 }
@@ -203,8 +200,9 @@ final class CourseModel {
             let d = days(to: start)
             items.append(
                 .init(
-                    title: String(localized: .courseNextExam), value: "\(exam.title) \(d == 0 ? "D-day" : "D-\(d)")",
-                    detail: start.formatted(.dateTime.month().day().weekday()), tone: d <= 7 ? .danger : .plain))
+                    title: String(localized: .courseNextExam), value: "\(exam.title) \(DDay.text(d))",
+                    detail: start.formatted(.dateTime.month().day().weekday()),
+                    tone: ExamUrgency(days: d, settings: workspace.settings.urgency) <= .soon ? .danger : .plain))
         } else {
             items.append(.init(title: String(localized: .courseNextExam), value: "-"))
         }

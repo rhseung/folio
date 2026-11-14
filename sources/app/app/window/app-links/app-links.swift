@@ -54,27 +54,10 @@ extension Workspace {
         }
     }
 
-    func itemName(of entry: Navigator.Entry) -> String? {
-        let link = entry.link
-        let file = entry.course.flatMap(course)?.file
-        let name = { (path: String) in ((path as NSString).lastPathComponent as NSString).deletingPathExtension }
-        switch link.kind {
-        case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals, .semester: return nil
-        case .person: return catalog.people.first { $0.id == link.id }?.name
-        case .course: return file.flatMap { _ in link.page?.title }
-        case .session: return file.flatMap { f in f.sessions.first { $0.id == link.id }.map { f.title(of: $0, calendar: calendar) } }
-        case .unit: return file?.units.first { $0.id == link.id }?.title
-        case .note: return file?.notes.first { $0.id == link.id }.map { name($0.path) }
-        case .material: return file?.materials.first { $0.id == link.id }.map { ($0.path as NSString).lastPathComponent }
-        case .assignment: return file?.assignments.first { $0.id == link.id }?.title
-        case .exam: return file?.exams.first { $0.id == link.id }?.title
-        case .problemSet: return file?.problemSets.first { $0.id == link.id }?.title
-        case .recording:
-            return file.flatMap { f in
-                f.recordings.first { $0.id == link.id }.map { RecordingPlayerModel.name(of: $0, in: f, calendar: calendar) }
-            }
-        case .card: return file.map { _ in AppLink.CoursePage.cards.title }
-        }
+    func itemName(of entry: Navigator.Entry) -> String? { linkName(of: entry)?.text }
+
+    func linkName(of entry: Navigator.Entry) -> LinkName? {
+        LinkName(entry.link, in: entry.course.flatMap(course)?.file, people: catalog.people, calendar: calendar)
     }
 
     func name(of link: AppLink) -> String? {
@@ -84,6 +67,17 @@ extension Workspace {
 
     func label(of link: AppLink) -> String? {
         name(of: link).map(link.label)
+    }
+}
+
+extension LinkName {
+    var text: String {
+        switch self {
+        case .item(let name): name
+        case .replay(let day?): String(localized: .recordingPageNamed(day))
+        case .replay(nil): String(localized: .recordingPage)
+        case .page(let page): page.title
+        }
     }
 }
 

@@ -74,7 +74,7 @@ public enum CalendarImporter {
     // 보강이나 한 번뿐인 추가 수업을 빼도록, 세 번 이상 되풀이되는 시각만 주간 시간으로 본다.
     static func weeklySlots(_ meetings: [CalendarMeeting], calendar: Calendar) -> [ClassTime] {
         let slots = meetings.map { m -> ClassTime in
-            let minute = { (d: Date) in calendar.component(.hour, from: d) * 60 + calendar.component(.minute, from: d) }
+            let minute = { (d: Date) in calendar.minuteOfDay(d) }
             return ClassTime(
                 weekday: calendar.isoWeekday(of: m.start), startMinute: minute(m.start), endMinute: minute(m.end), room: m.room)
         }

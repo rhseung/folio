@@ -18,18 +18,23 @@ public enum NewMaterialFile {
         return places.contains(parts.prefix(2).joined(separator: "/"))
     }
 
-    public static func places(assignments: [Assignment], exams: [Exam], assignmentFolders: [String]) -> [String] {
+    public static func places(
+        assignments: [Assignment], exams: [Exam], assignmentFolders: [String], kinds: [AssignmentKind] = AssignmentKind.builtIn
+    ) -> [String] {
         var seen = Set<String>()
         let all =
             [CourseFolder.study.rawValue, CourseFolder.archive.rawValue]
-            + (assignmentFolders.map { "\(CourseFolder.assignments.rawValue)/\($0)" } + assignments.map(AssignmentFiles.path(of:)))
+            + (assignmentFolders.map { "\(CourseFolder.assignments.rawValue)/\($0)" }
+            + assignments.map { AssignmentFiles.path(of: $0, kinds: kinds) })
             .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
             + exams.compactMap(MaterialIntake.folder(of:))
         return all.filter { accepts(folder: $0) && seen.insert($0).inserted }
     }
 
-    public static func defaultPlace(assignments: [Assignment], places: [String]) -> String? {
-        let newest = assignments.map { ($0, AssignmentFiles.path(of: $0)) }
+    public static func defaultPlace(
+        assignments: [Assignment], places: [String], kinds: [AssignmentKind] = AssignmentKind.builtIn
+    ) -> String? {
+        let newest = assignments.map { ($0, AssignmentFiles.path(of: $0, kinds: kinds)) }
             .filter { places.contains($0.1) }
             .max { a, b in (a.0.due ?? a.0.createdAt, a.0.createdAt) < (b.0.due ?? b.0.createdAt, b.0.createdAt) }
         return newest?.1 ?? places.first

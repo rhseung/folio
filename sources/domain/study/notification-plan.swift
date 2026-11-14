@@ -10,13 +10,17 @@ public enum NotificationPlan {
             return calendar.date(byAdding: .minute, value: minute, to: day)!
         }
 
+        let deadline = settings[.assignmentDue]
+        let eve = settings[.examDayBefore]
+        let morning = settings[.examMorning]
+        let review = settings[.dailyReview]
         var out: [PlannedNotification] = []
         for file in courses {
             let course = file.course.id
-            if settings.assignmentDue {
+            if deadline.on {
                 for a in file.assignments where a.status == .todo || a.status == .doing {
                     guard let due = a.due else { continue }
-                    for hours in settings.assignmentLeadHours {
+                    for hours in deadline.leadHours ?? [] {
                         out.append(
                             .init(
                                 id: "due-\(a.id)-\(hours)", date: due - Double(hours) * 3600, kind: .assignmentDue(hoursBefore: hours),
@@ -27,23 +31,23 @@ public enum NotificationPlan {
 
             for exam in file.exams {
                 guard let start = exam.start else { continue }
-                if settings.examDayBefore {
+                if eve.on, let minute = eve.minute {
                     out.append(
                         .init(
-                            id: "exam-eve-\(exam.id)", date: at(settings.examDayBeforeMinute, dayOffset: -1, from: start),
+                            id: "exam-eve-\(exam.id)", date: at(minute, dayOffset: -1, from: start),
                             kind: .examDayBefore, courseId: course, subject: exam.title, at: start))
                 }
-                let morning = at(settings.examMorningMinute, dayOffset: 0, from: start)
-                if settings.examMorning, morning < start {
+                if morning.on, let minute = morning.minute, at(minute, dayOffset: 0, from: start) < start {
                     out.append(
                         .init(
-                            id: "exam-morning-\(exam.id)", date: morning, kind: .examMorning, courseId: course, subject: exam.title,
+                            id: "exam-morning-\(exam.id)", date: at(minute, dayOffset: 0, from: start), kind: .examMorning,
+                            courseId: course, subject: exam.title,
                             at: start))
                 }
             }
 
             let absences = GradeCalculator.absences(in: file.heldAttendance(at: now), policy: file.policy)
-            if settings.attendance, GradeCalculator.absencesUntilNextCap(absences: absences, policy: file.policy) == 1 {
+            if settings[.attendance].on, GradeCalculator.absencesUntilNextCap(absences: absences, policy: file.policy) == 1 {
                 out.append(
                     .init(
                         id: "attendance-\(course)-\(absences)", date: now, kind: .attendanceOneAway(absences: absences),
@@ -51,9 +55,9 @@ public enum NotificationPlan {
             }
         }
 
-        if settings.dailyReview {
+        if review.on, let minute = review.minute {
             for day in 0...reviewDays {
-                let date = at(settings.dailyReviewMinute, dayOffset: day, from: now)
+                let date = at(minute, dayOffset: day, from: now)
                 guard date > now else { continue }
                 let count = reviewCount(date)
                 if count > 0 {

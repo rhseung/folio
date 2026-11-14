@@ -25,7 +25,8 @@ struct NotePreview {
 
     // `enabled`가 false이면 앞 탭 뒤에 남겨 둔 탭이므로, 이 페이지가 ⌘E를 받으면 안 된다. 웹 뷰는 SwiftUI의 비활성 버튼이 거절하기 전에 키를 먼저 받는다.
     @MainActor func update(
-        _ page: NotePreviewPage, accent: CourseAccent, dark: Bool, openLink: OpenLinkAction = OpenLinkAction(), enabled: Bool = true
+        _ page: NotePreviewPage, accent: CourseAccent, callouts: CalloutTable = .standard, dark: Bool,
+        openLink: OpenLinkAction = OpenLinkAction(), enabled: Bool = true
     ) {
         page.openNote = openNote
         page.openLink = openLink
@@ -37,7 +38,7 @@ struct NotePreview {
         page.link = link
         page.views = views
         if views?.page !== page { views?.page = page }
-        page.show(text, baseURL: baseURL, math: math, accent: accent, dark: dark, revision: revision)
+        page.show(text, baseURL: baseURL, math: math, accent: accent, callouts: callouts, dark: dark, revision: revision)
         page.reveal(anchor)
     }
 }
@@ -46,14 +47,16 @@ struct NotePreview {
 extension NotePreview: NSViewRepresentable {
     func makeNSView(context: Context) -> PreviewWebView {
         update(
-            context.coordinator.page, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
+            context.coordinator.page, accent: context.environment.accent, callouts: context.environment.noteCallouts,
+            dark: context.environment.colorScheme == .dark,
             openLink: context.environment.openLink, enabled: context.environment.isEnabled)
         return context.coordinator.page.view
     }
 
     func updateNSView(_ view: PreviewWebView, context: Context) {
         update(
-            context.coordinator.page, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
+            context.coordinator.page, accent: context.environment.accent, callouts: context.environment.noteCallouts,
+            dark: context.environment.colorScheme == .dark,
             openLink: context.environment.openLink, enabled: context.environment.isEnabled)
     }
 
@@ -63,14 +66,16 @@ extension NotePreview: NSViewRepresentable {
 extension NotePreview: UIViewRepresentable {
     func makeUIView(context: Context) -> PreviewWebView {
         update(
-            context.coordinator.page, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
+            context.coordinator.page, accent: context.environment.accent, callouts: context.environment.noteCallouts,
+            dark: context.environment.colorScheme == .dark,
             openLink: context.environment.openLink)
         return context.coordinator.page.view
     }
 
     func updateUIView(_ view: PreviewWebView, context: Context) {
         update(
-            context.coordinator.page, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
+            context.coordinator.page, accent: context.environment.accent, callouts: context.environment.noteCallouts,
+            dark: context.environment.colorScheme == .dark,
             openLink: context.environment.openLink)
     }
 

@@ -58,7 +58,8 @@ public struct LMSAccept {
         let store = try ctx.store(course)
         // 폴더는 저장된 과제에서 읽는다. dry-run에서는 과제가 저장되지 않아 같은 제목으로 짓는다.
         let stored = try ctx.file(course).assignments.first { $0.id == assignment }
-        let folder = AssignmentFiles.path(of: stored ?? Assignment(device: ctx.device, at: ctx.now, title: title))
+        let folder = AssignmentFiles.path(
+            of: stored ?? Assignment(device: ctx.device, at: ctx.now, title: title), kinds: try ctx.settings().assignmentKindTable)
         var paths: [String] = []
         for file in files {
             let url = URL(filePath: file)

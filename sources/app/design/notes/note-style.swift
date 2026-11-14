@@ -1,3 +1,4 @@
+import FolioMarkdown
 import Foundation
 
 // sources/web/src/note.css는 자기 색을 두지 않고, 열 폭과 글자 크기와 간격을 이 변수에서 받는다. 번들 stylesheet와
@@ -10,11 +11,11 @@ enum NoteStyle {
                 ("line-soft", .lineSoft), ("fill", .fill), ("code-fill", .codeFill), ("card", .card),
             ]
             let presets = Dictionary(uniqueKeysWithValues: CourseAccent.presets.map { ($0.name, $0.accent) })
-            let callouts: [(String, CourseAccent)] = [
-                ("c-definition", presets["blue"]!), ("c-theorem", presets["violet"]!), ("c-example", presets["green"]!),
-                ("c-warning", presets["orange"]!), ("c-danger", presets["red"]!), ("c-neutral", .gray), ("c-type", presets["teal"]!),
-                ("c-decorator", presets["pink"]!), ("c-property", presets["red"]!),
-            ]
+            let callouts: [(String, CourseAccent)] =
+                CalloutKind.Tone.allCases.map { ("c-\($0.rawValue)", NoteLook.tone($0)) } + [
+                    ("c-type", presets["teal", default: .gray]), ("c-decorator", presets["pink", default: .gray]),
+                    ("c-property", presets["red", default: .gray]),
+                ]
             let pairs =
                 swatches.map { ($0.0, pick($0.1.light, $0.1.dark)) }
                 + callouts.map { ($0.0, pick($0.1.light, $0.1.dark)) }
@@ -22,6 +23,14 @@ enum NoteStyle {
             return pairs.map { String(format: "--%@:#%06X;", $0.0, $0.1) }.joined()
         }
         return ":root{\(block { l, _ in l })}@media (prefers-color-scheme: dark){:root{\(block { _, d in d })}}" + sizes
+    }
+
+    // 종류마다 쓸 색 변수를 정한다. note.css의 `.note .callout`보다 구체적인 선택자라 페이지에서 어디에 두어도 이긴다.
+    static func callouts(_ table: CalloutTable) -> String {
+        table.kinds.map { kind in
+            let plain = kind.tone == .neutral ? ";background:none" : ""
+            return ".note .callout.callout-\(kind.name){--c:var(--c-\(kind.tone.rawValue))\(plain)}"
+        }.joined()
     }
 
     static let sizes: String = {

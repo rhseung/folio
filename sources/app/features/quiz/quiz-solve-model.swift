@@ -87,7 +87,9 @@ final class QuizSolveModel {
 
         return Pane(
             byUnit: byUnit,
-            wrong: cards.filter { WrongFlow.isDue(quiz.history(of: $0.id), today: today) }.count,
+            wrong: cards.filter {
+                WrongFlow.isDue(quiz.history(of: $0.id), today: today, recheckDays: workspace.settings.review.quizRecheckDays)
+            }.count,
             exam: exam,
             examCards: exam.map { e in cards.filter { e.scopeUnitIds.contains($0.unitId) }.count } ?? 0,
             reviewUnits: reviewUnits,
@@ -161,11 +163,15 @@ final class QuizSolveModel {
         String(localized: .quizSolveUnitHelp(Int((tally.progress * 100).rounded()), tally.attempted, tally.items))
     }
 
+    func status(_ history: AttemptHistory) -> WrongStatus {
+        WrongFlow.status(history, recheckDays: workspace.settings.review.quizRecheckDays)
+    }
+
     func buildDeck(_ course: LoadedCourse) -> [QuizCard] {
         var rng = SystemRandomNumberGenerator()
         return QuizDeck.build(
             cards: quiz.cards, units: units(course).map(\.id), scope: scope, order: order, history: quiz.history,
-            today: workspace.today, using: &rng)
+            today: workspace.today, recheckDays: workspace.settings.review.quizRecheckDays, using: &rng)
     }
 
     func start(label: String, course: LoadedCourse) {

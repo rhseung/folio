@@ -71,7 +71,7 @@ public struct GISTStore: Sendable {
         }
         return CleanupPlanner.plan(
             try readTree(), skip: skip, labs: labs, labWeeks: labWeeks,
-            selfMade: try MoveJournal.selfMadePaths(in: url), exams: exams)
+            selfMade: try MoveJournal.selfMadePaths(in: url), exams: exams, kinds: try loadSettings().model.assignmentKindTable)
     }
 
     public func backup(into directory: URL, now: Date) throws -> URL {
@@ -83,7 +83,7 @@ public struct GISTStore: Sendable {
     }
 
     public func layoutIssues() throws -> [LayoutIssue] {
-        LayoutCheck.issues(in: try readTree())
+        LayoutCheck.issues(in: try readTree(), kinds: try loadSettings().model.assignmentKindTable)
     }
 
     public func loadTranscript() throws -> StoredDocument<Transcript> {

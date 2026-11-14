@@ -173,7 +173,27 @@ extension Catalog: StoredModel {
 }
 
 extension Settings: StoredModel {
-    public static let schemaVersion = 1
+    public static let schemaVersion = 2
+    public static let migrations: [Int: @Sendable (inout JSONValue) throws -> Void] = [1: groupNotifications]
+
+    // 알림 종류마다 따로 있던 켜기와 시각 칸(`examMorning`, `examMorningMinute`)을 종류 하나의 객체로 모은다. 예전 칸 이름은 이
+    // 마이그레이션이 읽는 파일 형식이라 종류 이름에서 만들지 않고 그대로 적는다.
+    static func groupNotifications(_ raw: inout JSONValue) throws {
+        guard case .object(var old)? = raw["notifications"] else { return }
+        let moves = [
+            ("assignmentDue", "assignmentDue", "on"), ("assignmentLeadHours", "assignmentDue", "leadHours"),
+            ("examDayBefore", "examDayBefore", "on"), ("examDayBeforeMinute", "examDayBefore", "minute"),
+            ("examMorning", "examMorning", "on"), ("examMorningMinute", "examMorning", "minute"),
+            ("dailyReview", "dailyReview", "on"), ("dailyReviewMinute", "dailyReview", "minute"),
+            ("attendance", "attendance", "on"),
+        ]
+        var grouped: [String: [String: JSONValue]] = [:]
+        for (from, kind, field) in moves {
+            if let value = old.removeValue(forKey: from) { grouped[kind, default: [:]][field] = value }
+        }
+        for (kind, fields) in grouped { old[kind] = .object(fields) }
+        raw["notifications"] = .object(old)
+    }
 }
 
 extension QuizFile: StoredModel {

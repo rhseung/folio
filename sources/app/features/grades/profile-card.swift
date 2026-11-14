@@ -13,7 +13,7 @@ struct ProfileCard: View {
         let options = model.codeOptions
         Card {
             FormRow(label: String(localized: .profileEmail)) {
-                InlineField("name@gm.gist.ac.kr", text: $model.email)
+                InlineField(model.emailPrompt, text: $model.email)
             }
             FormRow(label: String(localized: .profileAdmissionYear)) {
                 TextField(
@@ -21,7 +21,7 @@ struct ProfileCard: View {
                     value: Binding(get: { rule.admissionYear }, set: { y in model.update { $0.admissionYear = y } }),
                     format: .number.grouping(.never)
                 )
-                .pill(width: 72)
+                .pill(width: Theme.Size.numberField)
             }
             // 같은 과정이 두 번 나열되면 충돌하므로 위치로 구분한다.
             ForEach(Array(rule.programs.enumerated()), id: \.offset) { i, p in
@@ -46,7 +46,7 @@ struct ProfileCard: View {
         .onAppear { model.load() }
         // 저장할 때마다 transcript.json을 다시 쓰므로, 설정처럼 입력이 멈춘 뒤 저장한다.
         .task(id: model.email) {
-            try? await Task.sleep(for: .milliseconds(600))
+            try? await Task.sleep(for: SavePause.delay)
             guard !Task.isCancelled else { return }
             model.saveEmail()
         }

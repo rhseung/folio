@@ -144,7 +144,7 @@ struct ColumnSplit<Column: View, Content: View>: View {
             .frame(maxHeight: .infinity)
             .clipShape(.rect(cornerRadius: Theme.Radius.floating))
             .floatingGlass()
-            .shadow(color: .black.opacity(0.18), radius: 24, y: 12)
+            .shadow(Theme.Shadow.floating)
             .padding([.top, .leading, .bottom], Theme.Space.s)
             // iPad 키보드에서도 Esc로 닫는다. 숨긴 뷰의 단축키는 동작하지 않고, 투명한 뷰의 단축키는 동작한다.
             .background {

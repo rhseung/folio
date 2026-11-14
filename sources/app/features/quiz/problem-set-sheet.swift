@@ -20,7 +20,7 @@ struct ProblemSetSheet: View {
             }
             FormRow(label: String(localized: .quizProblemsSolution)) { SearchSelect(selection: $model.solutionId, options: pdfOptions) }
             FormRow(label: String(localized: .quizProblemsFieldNumbers), detail: model.numbersDetail) {
-                TextField("1-10", text: $model.numbers).pill(width: 160)
+                TextField("1-10", text: $model.numbers).pill(width: Theme.Size.textField)
             }
             FormRow(label: String(localized: .quizUnit), detail: String(localized: .quizProblemsUnitsDetail), last: true) {
                 SearchMultiSelect(selection: $model.unitIds, options: model.course.unitOptions, placeholder: String(localized: .commonNone))

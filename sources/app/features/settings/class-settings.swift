@@ -36,10 +36,12 @@ struct ClassSettings: View {
         }
         Block(String(localized: .settingsClassTime)) {
             Card {
-                FormRow(label: String(localized: .settingsClassMinutes), last: true) {
+                FormRow(label: String(localized: .settingsClassMinutes)) {
                     IntScrub(value: $model.settings.classMinutes, range: SettingItem.classMinutes.range, step: 5, width: 80)
                     Text(.settingsUnitMinutes).foregroundStyle(Theme.Palette.textSecondary)
                 }
+                SettingTimeRow(item: .classStartMinute, minute: $model.settings.schedule.classStartMinute)
+                SettingTimeRow(item: .sessionStartMinute, minute: $model.settings.schedule.sessionStartMinute, last: true)
             }
         }
         TranscriptionSettings()
@@ -168,22 +170,31 @@ private struct RecordingSpanRow: View {
     }
 }
 
+// 창 하나를 아이콘 크기로 줄여 그린 그림이다. 탭과 칸의 비율은 그림 자신의 것이라 화면의 토큰과 맞추지 않는다.
 private struct LayoutSketch: View {
     let openIn: ClassStartSettings.OpenIn
+
+    static let tab = CGSize(width: 10, height: 4)
+    static let newTab = CGSize(width: 12, height: 4)
+    static let sidePane: CGFloat = 14
+    static let strong = 0.45
+    static let quiet = 0.25
+    static let idle = 0.3
 
     var body: some View {
         let split = openIn == .splitTab
         RoundedRectangle(cornerRadius: Theme.Radius.small)
-            .strokeBorder(.foreground.opacity(0.5))
+            .strokeBorder(.foreground.opacity(Theme.Opacity.soft))
             .overlay(alignment: .topLeading) {
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                     HStack(spacing: Theme.Space.xxs) {
-                        Capsule().fill(.foreground.opacity(split ? 0.3 : 1)).frame(width: 10, height: 4)
-                        if split { Capsule().fill(.foreground).frame(width: 12, height: 4) }
+                        Capsule().fill(.foreground.opacity(split ? Self.idle : 1)).frame(Self.tab)
+                        if split { Capsule().fill(.foreground).frame(Self.newTab) }
                     }
                     HStack(spacing: Theme.Space.xxs) {
-                        RoundedRectangle(cornerRadius: Theme.Radius.mark).fill(.foreground.opacity(split ? 0.45 : 0.25))
-                        RoundedRectangle(cornerRadius: Theme.Radius.mark).fill(.foreground.opacity(split ? 0.25 : 0.45)).frame(width: 14)
+                        RoundedRectangle(cornerRadius: Theme.Radius.mark).fill(.foreground.opacity(split ? Self.strong : Self.quiet))
+                        RoundedRectangle(cornerRadius: Theme.Radius.mark).fill(.foreground.opacity(split ? Self.quiet : Self.strong))
+                            .frame(width: Self.sidePane)
                     }
                 }
                 .padding(Theme.Space.xs)
@@ -226,7 +237,9 @@ private struct ClassStartPicture: View {
         VStack(spacing: Theme.Space.xs) {
             HStack(spacing: Theme.Space.xs) {
                 HStack(spacing: Theme.Space.xxs) {
-                    ForEach(0..<3, id: \.self) { _ in Circle().fill(Theme.Palette.line).frame(width: 6, height: 6) }
+                    ForEach(0..<3, id: \.self) { _ in
+                        Circle().fill(Theme.Palette.line).frame(width: Theme.Size.smallDot, height: Theme.Size.smallDot)
+                    }
                 }
                 .padding(.trailing, Theme.Space.xs)
                 tab(String(localized: .settingsPreviewToday), chosen: !newTab)
@@ -244,7 +257,7 @@ private struct ClassStartPicture: View {
                     HStack(spacing: Theme.Space.xs) { ForEach(panes, id: \.self, content: pane) }
                 }
             }
-            .frame(height: 112)
+            .frame(height: Theme.Size.classPreview)
             .overlay(alignment: .bottom) {
                 if items.contains(.recording), settings.recording == .ask { askCard.padding(.bottom, Theme.Space.s) }
             }
@@ -252,7 +265,7 @@ private struct ClassStartPicture: View {
         .padding(.horizontal, Theme.Space.tight)
         .padding(.bottom, Theme.Space.tight)
         .background(Theme.Palette.fill, in: .rect(cornerRadius: Theme.Radius.control))
-        .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
+        .shadow(Theme.Shadow.raised)
     }
 
     func tab(_ name: String, chosen: Bool, focused: Bool = false) -> some View {
@@ -267,7 +280,7 @@ private struct ClassStartPicture: View {
     var recordingMark: some View {
         let live = settings.recording == .start
         return HStack(spacing: Theme.Space.xs) {
-            Circle().fill(Theme.Palette.danger).frame(width: 6, height: 6)
+            Circle().fill(Theme.Palette.danger).frame(width: Theme.Size.smallDot, height: Theme.Size.smallDot)
             Text(live ? .settingsPreviewRecording : .settingsPreviewWaiting)
         }
         .foregroundStyle(live ? Theme.Palette.danger : Theme.Palette.textSecondary)
@@ -293,8 +306,9 @@ private struct ClassStartPicture: View {
             case .lecture(let i):
                 Text(.settingsClassStartLecture).foregroundStyle(Theme.Palette.textTertiary)
                 VStack(alignment: .leading, spacing: Theme.Space.xs) {
-                    Capsule().fill(Theme.Palette.textTertiary.opacity(0.6)).frame(width: 40, height: 4)
-                    RoundedRectangle(cornerRadius: Theme.Radius.mark).fill(Theme.Palette.info.opacity(0.18))
+                    Capsule().fill(Theme.Palette.textTertiary.opacity(Theme.Opacity.faded)).frame(
+                        width: Theme.Size.layoutGlyph.width, height: Theme.Size.stripe)
+                    RoundedRectangle(cornerRadius: Theme.Radius.mark).fill(Theme.Palette.info.opacity(Theme.Opacity.zoneAlt))
                 }
                 .padding(Theme.Space.xs)
                 .overlay(RoundedRectangle(cornerRadius: Theme.Radius.small).strokeBorder(Theme.Palette.lineSoft))
@@ -330,7 +344,7 @@ private struct ClassStartPicture: View {
         .padding(.horizontal, Theme.Space.s)
         .padding(.vertical, Theme.Space.xs)
         .background(Theme.Palette.card, in: .rect(cornerRadius: Theme.Radius.control))
-        .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+        .shadow(Theme.Shadow.lifted)
     }
 
     var banner: some View {
@@ -348,7 +362,7 @@ private struct ClassStartPicture: View {
         .padding(.horizontal, Theme.Space.s)
         .padding(.vertical, Theme.Space.tight)
         .background(Theme.Palette.card, in: .rect(cornerRadius: Theme.Radius.control))
-        .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+        .shadow(Theme.Shadow.lifted)
     }
 }
 
@@ -373,7 +387,7 @@ private struct TranscriptionSettings: View {
                     last: true
                 ) {
                     if let fraction = whisper.downloading {
-                        ProgressView(value: fraction).progressViewStyle(.linear).frame(width: 96)
+                        ProgressView(value: fraction).progressViewStyle(.linear).frame(width: Theme.Size.meter)
                         Text(.settingsWhisperDownloading(Int(fraction * 100))).monospacedDigit().foregroundStyle(
                             Theme.Palette.textSecondary)
                     } else if whisper.ready {

@@ -7,6 +7,7 @@ extension MaterialIntake {
     ) -> IntakeGuess {
         let name = file.name.precomposedStringWithCanonicalMapping
         let lower = name.lowercased()
+        let kinds = settings.assignmentKindTable
         let offered = { (folder: CourseFolder) in places.contains(folder.rawValue) ? folder.rawValue : nil }
         let lecture = { (why: IntakeGuess.Why?, week: Int?) in
             var guess = IntakeGuess(folder: CourseFolder.lectures.rawValue, why: why)
@@ -14,35 +15,20 @@ extension MaterialIntake {
             return guess
         }
 
-        if let m = name.firstMatch(of: /^(\d{2})(?:-\d+)?_/), StandardLayout.isLectureFileName(name) {
-            return lecture(.named(String(m.0)), Int(m.1))
-        }
-        // `Lab 3 manual`도 과제 낱말에 맞으므로 과제 낱말보다 먼저 읽는다. 실험 매뉴얼은 교수가 준 자료라서 렉처 파일이다.
-        if let m = name.firstMatch(of: /manual|매뉴얼|메뉴얼|실험[\s_-]?안내/.ignoresCase()) {
-            return lecture(.named(String(m.0)), week(in: name)?.week)
-        }
-        if let (folder, words) = assignment(in: name, places: places) {
-            return IntakeGuess(folder: folder, why: .named(words))
-        }
-        if let m = name.firstMatch(of: /기출|족보|past[\s_-]?exams?|previous[\s_-]?exams?/.ignoresCase()), let folder = offered(.inherited) {
-            return IntakeGuess(folder: folder, why: .named(String(m.0)))
-        }
-        if let word = Keywords.syllabus.first(where: lower.contains), let folder = offered(.syllabus) {
-            return IntakeGuess(folder: folder, why: .named(word))
-        }
-        if let word = Keywords.examFiles.flatMap(\.words).first(where: lower.contains),
-            let folder = examFolder(for: lower, places: places, exams: exams, now: now)
-        {
-            return IntakeGuess(folder: folder, why: .named(word))
-        }
-        if let word = Keywords.textbook.first(where: lower.contains), let folder = offered(.textbooks) {
-            return IntakeGuess(folder: folder, why: .named(word))
-        }
-        if let m = name.firstMatch(of: /exercises?|practice|연습/.ignoresCase()), let folder = offered(.exercises) {
-            return IntakeGuess(folder: folder, why: .named(String(m.0)))
-        }
-        if let (words, week) = week(in: name) {
-            return lecture(.named(words), week)
+        for rule in FileRule.rules(for: .intake) {
+            guard let m = rule.match(name, kinds: kinds) else { continue }
+            let folder: String?
+            switch rule.kind {
+            case .lectureFile, .labManual, .week: return lecture(.named(m.words), m.number)
+            case .assignment: folder = m.assignment.flatMap { assignmentFolder($0, number: m.number, places: places, kinds: kinds) }
+            case .pastExam: folder = offered(.inherited)
+            case .syllabus: folder = offered(.syllabus)
+            case .examFile: folder = examFolder(for: lower, places: places, exams: exams, now: now)
+            case .textbook: folder = offered(.textbooks)
+            case .exercise: folder = offered(.exercises)
+            case .selfMade, .numbered, .notes: folder = nil
+            }
+            if let folder { return IntakeGuess(folder: folder, why: .named(m.words)) }
         }
         if let pages = file.pages, pages >= 150, let folder = offered(.textbooks) {
             return IntakeGuess(folder: folder, why: .book(pages: pages))
@@ -53,38 +39,14 @@ extension MaterialIntake {
         return lecture(nil, nil)
     }
 
-    // 앞에 `\b` 대신 `[^a-z]`를 쓴다. `_`는 낱말 문자인데 `GT_lec3` 같은 이름이 흔하기 때문이다.
-    static func week(in name: String) -> (words: String, week: Int)? {
-        if let m = name.firstMatch(of: /(?:^|[^a-z])((?:week|wk|lecture|lec)[\s_-]*(\d{1,2}))(?!\d)/.ignoresCase()) {
-            return (String(m.1), Int(m.2)!)
-        }
-        if let m = name.firstMatch(of: /(\d{1,2})\s*주차/) { return (String(m.0), Int(m.1)!) }
-        return nil
-    }
-
-    static func assignment(in name: String, places: [String]) -> (folder: String, words: String)? {
-        let keyword =
-            /(?:^|[^a-z])((hw|homework|assignment|assign|lab|sp|slow[\s_-]?problems?|report|project|reading|과제|숙제)[\s_-]*(\d{1,2}))(?!\d)/
-        guard let m = name.firstMatch(of: keyword.ignoresCase()), let number = Int(m.3) else { return nil }
-        let prefix: AssignmentKind =
-            switch m.2.lowercased() {
-            case "lab": .lab
-            case "report": .report
-            case "project": .project
-            case "reading": .reading
-            case let word where word == "sp" || word.hasPrefix("slow"): .slowProblem
-            default: .homework
-            }
+    // 같은 번호의 과제 폴더 중 종류가 맞는 것을 고르고, 번호가 맞는 폴더가 하나뿐이면 종류가 달라도 그 폴더다.
+    static func assignmentFolder(_ kind: AssignmentKind, number: Int?, places: [String], kinds: [AssignmentKind]) -> String? {
         let base = CourseFolder.assignments.rawValue + "/"
-        let folders = places.filter { $0.hasPrefix(base) }
-        let numbered = folders.filter { StandardLayout.assignmentFolder(String($0.dropFirst(base.count)))?.number == number }
-        guard
-            let folder = numbered.first(where: {
-                StandardLayout.assignmentFolder(String($0.dropFirst(base.count)))?.prefix == prefix.rawValue
-            })
-                ?? (numbered.count == 1 ? numbered.first : nil)
-        else { return nil }
-        return (folder, String(m.1))
+        let parsed = places.filter { $0.hasPrefix(base) }.compactMap { place in
+            StandardLayout.assignmentFolder(String(place.dropFirst(base.count)), kinds: kinds).map { (place, $0) }
+        }
+        let numbered = parsed.filter { $0.1.number == number }
+        return numbered.first { $0.1.prefix == kind.prefix }?.0 ?? (numbered.count == 1 ? numbered.first?.0 : nil)
     }
 
     static func examFolder(for lower: String, places: [String], exams: [Exam], now: Date) -> String? {

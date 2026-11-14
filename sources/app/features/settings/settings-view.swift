@@ -51,12 +51,20 @@ struct SettingsView: View {
         case .record:
             Block(String(localized: .settingsProfile)) { ProfileCard(workspace: model.workspace) }
             Block(String(localized: .settingsLetters)) { CatalogEditor() }
+            SchoolSettingsForm(model: model)
         case .classes: ClassSettings(model: model)
         case .notes: NoteSettingsForm(model: model)
         case .review: ReviewSettingsForm(model: model)
         case .notifications: NotificationSettingsForm(settings: $model.settings.notifications)
         case .claude: ClaudeSettings(model: model)
-        case .lms: LMSSettingsForm(workspace: model.workspace)
+        case .lms:
+            LMSSettingsForm(workspace: model.workspace)
+            Block(String(localized: .settingsLmsSync)) {
+                Card {
+                    SettingIntRow(
+                        item: .lmsSyncMinutes, value: $model.settings.lms.syncMinutes, unit: .settingsUnitMinutes, step: 5, last: true)
+                }
+            }
         case .backup: BackupSettingsForm(model: model)
         case .about: AboutSettings(model: model)
         }
@@ -126,12 +134,58 @@ private struct GeneralSettings: View {
         }
         Block(String(localized: .settingsDay)) {
             Card {
-                FormRow(label: String(localized: .settingsDayBoundary), last: true) {
+                FormRow(label: String(localized: .settingsDayBoundary)) {
                     TimeMenu(minute: $model.settings.dayBoundaryMinutes, hours: SettingItem.dayBoundary.hours)
+                }
+                SettingIntRow(item: .idleMinutes, value: $model.settings.idleMinutes, unit: .settingsUnitMinutes, last: true)
+            }
+        }
+        DeadlineSettings(model: model)
+        PaneLayoutSettings(model: model)
+    }
+}
+
+private struct DeadlineSettings: View {
+    @Bindable var model: SettingsModel
+    @State private var details = false
+
+    var body: some View {
+        let urgency = $model.settings.urgency
+        let schedule = $model.settings.schedule
+        Block(String(localized: .settingsDeadlines)) {
+            Card(clipped: true) {
+                SettingIntRow(item: .todayExamDays, value: $model.settings.todayExamDays, unit: .settingsUnitDays)
+                SettingTimeRow(item: .dueMinute, minute: schedule.dueMinute)
+                DisclosureRow(label: String(localized: .settingsDetails), isOpen: $details, last: true) {
+                    SettingIntRow(item: .assignmentUrgentDays, value: urgency.assignmentUrgentDays, unit: .settingsUnitDays)
+                    SettingIntRow(item: .assignmentSoonDays, value: urgency.assignmentSoonDays, unit: .settingsUnitDays)
+                    SettingIntRow(item: .examUrgentDays, value: urgency.examUrgentDays, unit: .settingsUnitDays)
+                    SettingIntRow(item: .examSoonDays, value: urgency.examSoonDays, unit: .settingsUnitDays)
+                    SettingIntRow(item: .examNearDays, value: urgency.examNearDays, unit: .settingsUnitDays)
+                    SettingTimeRow(item: .examStartMinute, minute: schedule.examStartMinute)
+                    SettingIntRow(
+                        item: .examMinutes, value: schedule.examMinutes, unit: .settingsUnitMinutes, step: 10, last: true)
                 }
             }
         }
-        PaneLayoutSettings(model: model)
+    }
+}
+
+private struct SchoolSettingsForm: View {
+    @Bindable var model: SettingsModel
+
+    var body: some View {
+        Block(String(localized: .settingsSchool)) {
+            Card {
+                SettingIntRow(item: .gradesUnlockMinutes, value: $model.settings.gradesUnlockMinutes, unit: .settingsUnitMinutes)
+                FormRow(label: String(localized: SettingItem.staffMailDomain.name)) {
+                    InlineField(SettingItem.staffMailDomain.text, text: $model.settings.school.staffMailDomain)
+                }
+                FormRow(label: String(localized: SettingItem.studentMailDomain.name), last: true) {
+                    InlineField(SettingItem.studentMailDomain.text, text: $model.settings.school.studentMailDomain)
+                }
+            }
+        }
     }
 }
 
@@ -227,7 +281,7 @@ private struct LayoutGlyph: View {
                 }
             }
         }
-        .frame(width: 40, height: 28)
+        .frame(Theme.Size.layoutGlyph)
         .accessibilityHidden(true)
     }
 }
@@ -249,7 +303,7 @@ private struct ReviewSettingsForm: View {
                     range: SettingItem.reviewDailyLimit.range, width: 80
                 )
                 .disabled(limit == nil)
-                .opacity(limit == nil ? 0.4 : 1)
+                .opacity(limit == nil ? Theme.Opacity.disabled : 1)
                 Text(.settingsUnits).foregroundStyle(Theme.Palette.textSecondary)
                 Switch(isOn: Binding(get: { limit != nil }, set: { model.settings.review.dailyLimit = $0 ? 10 : nil }))
             }
@@ -262,10 +316,11 @@ private struct ReviewSettingsForm: View {
                     IntScrub(value: review.cardsPerReview, range: SettingItem.reviewCardsPerReview.range)
                     Text(.settingsUnitCards).foregroundStyle(Theme.Palette.textSecondary)
                 }
-                FormRow(label: String(localized: .settingsSettleAfter), last: true) {
+                FormRow(label: String(localized: .settingsSettleAfter)) {
                     IntScrub(value: review.settleAfterPasses, range: SettingItem.reviewSettleAfter.range)
                     Text(.settingsUnitPasses).foregroundStyle(Theme.Palette.textSecondary)
                 }
+                SettingIntRow(item: .quizRecheckDays, value: review.quizRecheckDays, unit: .settingsUnitDays, last: true)
             }
         }
     }
@@ -299,15 +354,16 @@ private struct NotificationSettingsForm: View {
     @Binding var settings: NotificationSettings
 
     var body: some View {
+        let due = settings[.assignmentDue].on
         Block(String(localized: .settingsAssignments)) {
             Card {
-                FormRow(label: String(localized: .settingsDueAlert), last: !settings.assignmentDue) {
-                    Switch(isOn: $settings.assignmentDue)
+                FormRow(label: String(localized: .settingsDueAlert), last: !due) {
+                    Switch(isOn: on(.assignmentDue))
                 }
-                if settings.assignmentDue {
+                if due {
                     FormRow(label: String(localized: .settingsAlertLead), last: true) {
                         IntListField(
-                            values: $settings.assignmentLeadHours, unit: String(localized: .settingsUnitHoursBefore),
+                            values: leadHours(.assignmentDue), unit: String(localized: .settingsUnitHoursBefore),
                             range: SettingItem.assignmentLeadHours.range)
                     }
                 }
@@ -315,25 +371,45 @@ private struct NotificationSettingsForm: View {
         }
         Block(String(localized: .settingsExams)) {
             Card {
-                FormRow(label: String(localized: .settingsDayBefore)) {
-                    TimeMenu(minute: $settings.examDayBeforeMinute).disabled(!settings.examDayBefore).opacity(
-                        settings.examDayBefore ? 1 : 0.4)
-                    Switch(isOn: $settings.examDayBefore)
-                }
-                FormRow(label: String(localized: .settingsMorningOf), last: true) {
-                    TimeMenu(minute: $settings.examMorningMinute).disabled(!settings.examMorning).opacity(settings.examMorning ? 1 : 0.4)
-                    Switch(isOn: $settings.examMorning)
-                }
+                FormRow(label: String(localized: .settingsDayBefore)) { timed(.examDayBefore) }
+                FormRow(label: String(localized: .settingsMorningOf), last: true) { timed(.examMorning) }
             }
         }
         Block(String(localized: .settingsReviewAndAttendance)) {
             Card {
-                FormRow(label: String(localized: .settingsDailyReview)) {
-                    TimeMenu(minute: $settings.dailyReviewMinute).disabled(!settings.dailyReview).opacity(settings.dailyReview ? 1 : 0.4)
-                    Switch(isOn: $settings.dailyReview)
-                }
-                FormRow(label: String(localized: .settingsAttendanceAlert), last: true) { Switch(isOn: $settings.attendance) }
+                FormRow(label: String(localized: .settingsDailyReview)) { timed(.dailyReview) }
+                FormRow(label: String(localized: .settingsAttendanceAlert), last: true) { Switch(isOn: on(.attendance)) }
             }
+        }
+    }
+
+    @ViewBuilder private func timed(_ kind: NotificationSettings.Kind) -> some View {
+        let isOn = settings[kind].on
+        TimeMenu(minute: minute(kind)).disabled(!isOn).opacity(isOn ? 1 : Theme.Opacity.disabled)
+        Switch(isOn: on(kind))
+    }
+
+    private func on(_ kind: NotificationSettings.Kind) -> Binding<Bool> {
+        Binding {
+            settings[kind].on
+        } set: {
+            settings[kind].on = $0
+        }
+    }
+
+    private func minute(_ kind: NotificationSettings.Kind) -> Binding<Int> {
+        Binding {
+            settings[kind].minute ?? kind.item(.minute)?.int ?? 0
+        } set: {
+            settings[kind].minute = $0
+        }
+    }
+
+    private func leadHours(_ kind: NotificationSettings.Kind) -> Binding<[Int]> {
+        Binding {
+            settings[kind].leadHours ?? []
+        } set: {
+            settings[kind].leadHours = $0
         }
     }
 }
@@ -355,7 +431,7 @@ private struct BackupSettingsForm: View {
                 FormRow(label: String(localized: .settingsLocation), detail: model.backupFolder) {
                     Button(.settingsChange) { picking = true }
                 }
-                .opacity(on ? 1 : 0.4)
+                .opacity(on ? 1 : Theme.Opacity.disabled)
                 FormRow(label: String(localized: .settingsLastBackup), detail: model.lastBackup, last: true) {
                     Button(model.backingUp ? .settingsBackingUp : .settingsBackUpNow) {
                         Task { await model.backUpNow() }
@@ -494,7 +570,8 @@ private struct ClaudeSettings: View {
                         Text(SettingsModel.month(m)).monospacedDigit()
                         Spacer()
                         Text(.settingsRequestCount(m.requests)).monospacedDigit().foregroundStyle(Theme.Palette.textSecondary)
-                        Text(m.cost, format: .currency(code: "USD")).monospacedDigit().frame(minWidth: 72, alignment: .trailing)
+                        Text(m.cost, format: .currency(code: "USD")).monospacedDigit().frame(
+                            minWidth: Theme.Size.numberColumn, alignment: .trailing)
                     }
                 }
             }

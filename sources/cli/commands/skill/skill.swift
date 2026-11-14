@@ -1,8 +1,9 @@
 import ArgumentParser
 import FolioDomain
+import FolioStorage
 import Foundation
 
-private let noteGuide = NoteWritingGuide.text.split(separator: "\n", omittingEmptySubsequences: false)
+private let noteGuide = NoteWritingGuide.text(for: nil).split(separator: "\n", omittingEmptySubsequences: false)
     .map { $0.hasPrefix("#") ? "#" + $0 : $0 }.joined(separator: "\n")
 
 enum Skill {

@@ -32,7 +32,7 @@ enum Complete {
         return ([c.course.title] + (semester.map { [$0] } ?? [])).joined(separator: " · ")
     }
 
-    static func day(_ date: Date?, _ r: Resolver) -> String { date.map { when($0, now: r.ctx.now).plain } ?? "" }
+    static func day(_ date: Date?, _ r: Resolver) -> String { date.map { when($0, now: r.ctx.now, settings: r.settings).plain } ?? "" }
 
     static func joined(_ parts: String...) -> String { parts.filter { !$0.isEmpty }.joined(separator: " · ") }
 

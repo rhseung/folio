@@ -24,14 +24,10 @@ public struct TodaySummary: Sendable {
     public var classesToday: [SessionItem]
     public var missingReviewNotes: [SessionItem]
 
-    public static let examHorizon = 30
-
-    public static func build(courses: [CourseFile], now: Date, settings: Settings, calendar: Calendar, examHorizonDays: Int = examHorizon)
-        -> TodaySummary
-    {
+    public static func build(courses: [CourseFile], now: Date, settings: Settings, calendar: Calendar) -> TodaySummary {
         let today = settings.studyDay(of: now, calendar: calendar)
-        let dayStart = calendar.date(byAdding: .minute, value: settings.dayBoundaryMinutes, to: today.date(in: calendar)!)!
-        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)!
+        let dayStart = settings.start(of: today, calendar: calendar)
+        let dayEnd = settings.start(of: today.adding(days: 1), calendar: calendar)
 
         var exams: [ExamItem] = []
         var deadlines: [DeadlineItem] = []
@@ -42,7 +38,7 @@ public struct TodaySummary: Sendable {
             for exam in file.exams {
                 guard let start = exam.start, start >= now else { continue }
                 let d = today.days(until: LocalDate(start, in: calendar))
-                if d <= examHorizonDays { exams.append(ExamItem(courseId: id, exam: exam, dDay: d)) }
+                if d <= settings.todayExamDays { exams.append(ExamItem(courseId: id, exam: exam, dDay: d)) }
             }
 
             for a in file.assignments where a.status.isOpen {

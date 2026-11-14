@@ -35,15 +35,18 @@ struct StandingCurve: View {
                 let split = x(cut)
                 ZStack(alignment: .topLeading) {
                     area.fill(
-                        LinearGradient(colors: [accent.color.opacity(0.22), accent.color.opacity(0)], startPoint: .top, endPoint: .bottom)
+                        LinearGradient(
+                            colors: [accent.color.opacity(Theme.Opacity.area), accent.color.opacity(0)], startPoint: .top, endPoint: .bottom
+                        )
                     )
                     .mask(alignment: .leading) { Rectangle().frame(width: split) }
                     area.fill(
                         LinearGradient(
-                            colors: [accent.color.opacity(0.6), accent.color.opacity(0.02)], startPoint: .top, endPoint: .bottom)
+                            colors: [accent.color.opacity(Theme.Opacity.areaStrong), accent.color.opacity(0)], startPoint: .top,
+                            endPoint: .bottom)
                     )
                     .mask(alignment: .trailing) { Rectangle().frame(width: max(w - split, 0)) }
-                    top.stroke(accent.color.opacity(0.45), lineWidth: 1.5)
+                    top.stroke(accent.color.opacity(Theme.Opacity.ended), lineWidth: 1.5)
                         .mask(alignment: .leading) { Rectangle().frame(width: split) }
                     top.stroke(accent.color, lineWidth: 1.5)
                         .mask(alignment: .trailing) { Rectangle().frame(width: max(w - split, 0)) }
@@ -57,8 +60,8 @@ struct StandingCurve: View {
                         Path { p in
                             p.move(to: CGPoint(x: mx, y: 18)); p.addLine(to: CGPoint(x: mx, y: h))
                         }
-                        .stroke(Theme.Palette.text.opacity(0.7), lineWidth: 1.5)
-                        Circle().fill(Theme.Palette.text).frame(width: 10, height: 10)
+                        .stroke(Theme.Palette.text.opacity(Theme.Opacity.secondaryInk), lineWidth: 1.5)
+                        Circle().fill(Theme.Palette.text).frame(width: Theme.Size.swatch, height: Theme.Size.swatch)
                             .overlay(Circle().strokeBorder(Theme.Palette.card, lineWidth: 2))
                             .offset(x: mx - 5, y: my - 5)
                         HStack(spacing: 0) {
@@ -74,13 +77,13 @@ struct StandingCurve: View {
                     }
                 }
             }
-            .frame(height: 104)
+            .frame(height: Theme.Size.standingCurve)
             GeometryReader { proxy in
                 let w = proxy.size.width
                 Text(.courseGradesStandingCut).fixedSize()
                     .position(x: min(max(w * (min(max(cut, -Self.span), Self.span) + Self.span) / (2 * Self.span), 24), w - 24), y: 7)
             }
-            .frame(height: 14)
+            .frame(height: Theme.Size.standingLabel)
             .font(Theme.Typeface.caption)
             .foregroundStyle(Theme.Palette.textTertiary)
             HStack(spacing: Theme.Space.l) {

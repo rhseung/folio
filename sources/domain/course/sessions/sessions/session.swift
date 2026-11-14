@@ -98,7 +98,7 @@ public struct Session: Entity {
 
 extension Session {
     public func slot(in schedule: [ClassTime], calendar: Calendar) -> ClassTime? {
-        let minute = calendar.component(.hour, from: date) * 60 + calendar.component(.minute, from: date)
+        let minute = calendar.minuteOfDay(date)
         let weekday = calendar.isoWeekday(of: date)
         return schedule.first { $0.weekday == weekday && $0.startMinute == minute }
     }

@@ -34,7 +34,7 @@ final class SessionsModel {
         guard let exam = file.exams.filter({ ($0.start ?? .distantPast) > now }).min(by: { $0.start! < $1.start! }),
             let days = examDays(exam, now: now)
         else { return nil }
-        return String(localized: .sessionsNextExam(exam.title, days == 0 ? "D-day" : "D-\(days)"))
+        return String(localized: .sessionsNextExam(exam.title, DDay.text(days)))
     }
 
     private func plan(now: Date) -> [Workspace.SuggestedSession] {
@@ -115,7 +115,7 @@ final class SessionsModel {
     }
 
     static func minute(of date: Date, in calendar: Calendar) -> Int {
-        calendar.component(.hour, from: date) * 60 + calendar.component(.minute, from: date)
+        calendar.minuteOfDay(date)
     }
 
     static func weekdayTime(_ date: Date, in calendar: Calendar) -> String {

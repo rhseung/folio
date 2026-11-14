@@ -3,8 +3,6 @@ import LocalAuthentication
 import SwiftUI
 
 extension Workspace {
-    static let gradeUnlockDuration: Duration = .seconds(GradeLock.unlockSeconds)
-
     func unlockGrades() async {
         let context = LAContext()
         var error: NSError?
@@ -16,7 +14,7 @@ extension Workspace {
         guard gradesUnlocked else { return }
         gradeRelock?.cancel()
         gradeRelock = Task {
-            try? await Task.sleep(for: Self.gradeUnlockDuration)
+            try? await Task.sleep(for: .seconds(settings.gradesUnlockMinutes * 60))
             if !Task.isCancelled { gradesUnlocked = false }
         }
     }

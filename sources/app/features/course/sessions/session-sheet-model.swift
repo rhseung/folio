@@ -76,7 +76,7 @@ final class SessionSheetModel {
         self.initial = initial
 
         let calendar = workspace.calendar
-        let begin = s?.date ?? start ?? calendar.date(byAdding: .hour, value: 18, to: calendar.startOfDay(for: workspace.now))!
+        let begin = s?.date ?? start ?? workspace.settings.schedule.sessionStart(on: workspace.now, calendar: calendar)
         let schedule = file?.course.schedule ?? []
         let end = (s ?? Session(device: workspace.device, at: begin, week: 1, date: begin))
             .expectedEnd(schedule: schedule, classMinutes: workspace.settings.classMinutes, calendar: calendar)

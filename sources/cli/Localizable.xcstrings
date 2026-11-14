@@ -375,28 +375,6 @@
         }
       }
     },
-    "assignment.list.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목의 과제 목록. 기본은 아직 낼 것만"
-          }
-        }
-      }
-    },
-    "assignment.list.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio assignment list EC4207\n  folio assignment list EC4207 --all --lines"
-          }
-        }
-      }
-    },
     "assignment.list.header.assignment": {
       "extractionState": "manual",
       "localizations": {
@@ -441,28 +419,6 @@
         }
       }
     },
-    "assignment.list.help.all": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "낸 것과 채점된 것까지"
-          }
-        }
-      }
-    },
-    "assignment.list.help.course": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목. 강의 코드, 폴더 이름, 과목 이름, UUID"
-          }
-        }
-      }
-    },
     "assignment.list.hidden": {
       "extractionState": "manual",
       "localizations": {
@@ -485,28 +441,6 @@
         }
       }
     },
-    "assignment.show.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과제 하나의 자세한 내용과 점수"
-          }
-        }
-      }
-    },
-    "assignment.show.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio assignment show EC4207/HW3"
-          }
-        }
-      }
-    },
     "assignment.show.due": {
       "extractionState": "manual",
       "localizations": {
@@ -514,17 +448,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "  마감  %@"
-          }
-        }
-      }
-    },
-    "assignment.show.help.assignment": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "<과목>/<과제>. 예: EC4207/HW3"
           }
         }
       }
@@ -584,28 +507,6 @@
         }
       }
     },
-    "backup.list.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "백업 목록, 새것부터"
-          }
-        }
-      }
-    },
-    "backup.list.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio backup list\n  folio backup list --json"
-          }
-        }
-      }
-    },
     "backup.list.header.date": {
       "extractionState": "manual",
       "localizations": {
@@ -639,17 +540,6 @@
         }
       }
     },
-    "catalog.show.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "카탈로그 요약. --json이면 catalog.json 전체"
-          }
-        }
-      }
-    },
     "catalog.show.categories": {
       "extractionState": "manual",
       "localizations": {
@@ -679,17 +569,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "강의 코드"
-          }
-        }
-      }
-    },
-    "catalog.show.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio catalog show\n  folio catalog show --json > catalog.json"
           }
         }
       }
@@ -1387,28 +1266,6 @@
         }
       }
     },
-    "component.list.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목의 성적 항목과 비중"
-          }
-        }
-      }
-    },
-    "component.list.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio component list EC4207"
-          }
-        }
-      }
-    },
     "component.list.header.aggregation": {
       "extractionState": "manual",
       "localizations": {
@@ -1596,17 +1453,6 @@
         }
       }
     },
-    "course.list.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목 목록. 생략하면 현재 학기"
-          }
-        }
-      }
-    },
     "course.list.credits": {
       "extractionState": "manual",
       "localizations": {
@@ -1614,17 +1460,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@학점"
-          }
-        }
-      }
-    },
-    "course.list.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio course list\n  folio course list --semester 2026-1\n  folio course list --all --lines"
           }
         }
       }
@@ -1680,28 +1515,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "평가"
-          }
-        }
-      }
-    },
-    "course.list.help.all": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "모든 학기"
-          }
-        }
-      }
-    },
-    "course.list.help.semester": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "학기"
           }
         }
       }
@@ -1937,28 +1750,6 @@
         }
       }
     },
-    "exam.list.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목의 시험 목록"
-          }
-        }
-      }
-    },
-    "exam.list.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio exam list EC4207\n  folio exam list EC4207 --lines"
-          }
-        }
-      }
-    },
     "exam.list.header.component": {
       "extractionState": "manual",
       "localizations": {
@@ -2010,17 +1801,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "일시"
-          }
-        }
-      }
-    },
-    "exam.list.help.course": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목. 강의 코드, 폴더 이름, 과목 이름, UUID"
           }
         }
       }
@@ -2509,39 +2289,6 @@
         }
       }
     },
-    "gpa.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "학기별 학점과 GPA, 누적과 전공"
-          }
-        }
-      }
-    },
-    "gpa.cumulative": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "누적"
-          }
-        }
-      }
-    },
-    "gpa.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio gpa\n  folio gpa --json"
-          }
-        }
-      }
-    },
     "gpa.header.effective-credits": {
       "extractionState": "manual",
       "localizations": {
@@ -2571,17 +2318,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "총 학점"
-          }
-        }
-      }
-    },
-    "gpa.major": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "전공"
           }
         }
       }
@@ -3037,28 +2773,6 @@
         }
       }
     },
-    "material.list.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목의 자료 목록"
-          }
-        }
-      }
-    },
-    "material.list.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio material list EC4207\n  folio material list EC4207 --lines"
-          }
-        }
-      }
-    },
     "material.list.header.path": {
       "extractionState": "manual",
       "localizations": {
@@ -3103,17 +2817,6 @@
         }
       }
     },
-    "material.list.help.all": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "무시한 자료까지"
-          }
-        }
-      }
-    },
     "material.list.hidden": {
       "extractionState": "manual",
       "localizations": {
@@ -3154,39 +2857,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "새 파일. 과목 폴더 기준 경로나 절대 경로"
-          }
-        }
-      }
-    },
-    "material.show.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자료 하나의 자세한 내용"
-          }
-        }
-      }
-    },
-    "material.show.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio material show EC4207/Lectures/05_Matchings.pdf\n  folio material show EC4207/05_Matchings.pdf"
-          }
-        }
-      }
-    },
-    "material.show.help.material": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "<과목>/<경로 또는 파일 이름>"
           }
         }
       }
@@ -3433,28 +3103,6 @@
         }
       }
     },
-    "note.list.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목의 노트 목록"
-          }
-        }
-      }
-    },
-    "note.list.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio note list EC4207\n  folio note list EC4207 --lines"
-          }
-        }
-      }
-    },
     "note.list.header.kind": {
       "extractionState": "manual",
       "localizations": {
@@ -3506,39 +3154,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "파일을 읽지 못했습니다: %@"
-          }
-        }
-      }
-    },
-    "note.show.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노트 파일을 그대로 출력"
-          }
-        }
-      }
-    },
-    "note.show.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio note show EC4207/09-08\n  folio note show \"EC4207/Notes/09-08(화) 매칭.md\""
-          }
-        }
-      }
-    },
-    "note.show.help.note": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "<과목>/<노트 제목 또는 경로>"
           }
         }
       }
@@ -3752,28 +3367,6 @@
         }
       }
     },
-    "problem-set.list.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목의 문제 묶음"
-          }
-        }
-      }
-    },
-    "problem-set.list.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio problem-set list EC4207"
-          }
-        }
-      }
-    },
     "problem-set.list.header.problems": {
       "extractionState": "manual",
       "localizations": {
@@ -3873,28 +3466,6 @@
         }
       }
     },
-    "quiz.list.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "단원별 퀴즈 카드"
-          }
-        }
-      }
-    },
-    "quiz.list.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio quiz list EC4207\n  folio quiz list EC4207 --unit 매칭"
-          }
-        }
-      }
-    },
     "quiz.list.header.category": {
       "extractionState": "manual",
       "localizations": {
@@ -3935,17 +3506,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "단원"
-          }
-        }
-      }
-    },
-    "quiz.list.help.unit": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 단원만"
           }
         }
       }
@@ -4445,17 +4005,6 @@
         }
       }
     },
-    "requirement.show.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "졸업 요건과 학생 정보 보기"
-          }
-        }
-      }
-    },
     "requirement.show.admission-year": {
       "extractionState": "manual",
       "localizations": {
@@ -4463,17 +4012,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "  입학 연도  %@"
-          }
-        }
-      }
-    },
-    "requirement.show.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio requirement show"
           }
         }
       }
@@ -4863,28 +4401,6 @@
         }
       }
     },
-    "score.list.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목의 점수 목록"
-          }
-        }
-      }
-    },
-    "score.list.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio score list EC4207\n  folio score list EC4207 --lines"
-          }
-        }
-      }
-    },
     "score.list.excused": {
       "extractionState": "manual",
       "localizations": {
@@ -5083,28 +4599,6 @@
         }
       }
     },
-    "semester.list.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "학기 목록"
-          }
-        }
-      }
-    },
-    "semester.list.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio semester list"
-          }
-        }
-      }
-    },
     "semester.list.header.name": {
       "extractionState": "manual",
       "localizations": {
@@ -5215,17 +4709,6 @@
         }
       }
     },
-    "session.list.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목의 회차 목록"
-          }
-        }
-      }
-    },
     "session.list.cancelled": {
       "extractionState": "manual",
       "localizations": {
@@ -5233,17 +4716,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "휴강"
-          }
-        }
-      }
-    },
-    "session.list.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio session list EC4207           그래프 이론의 회차\n  folio session list EC4207 --lines   fzf에 넘길 줄 형식"
           }
         }
       }
@@ -5303,28 +4775,6 @@
         }
       }
     },
-    "session.list.help.all": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "휴강한 회차까지"
-          }
-        }
-      }
-    },
-    "session.list.help.course": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목. 강의 코드, 폴더 이름, 과목 이름, UUID"
-          }
-        }
-      }
-    },
     "session.list.hidden": {
       "extractionState": "manual",
       "localizations": {
@@ -5380,17 +4830,6 @@
         }
       }
     },
-    "session.show.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "회차 하나의 자세한 내용"
-          }
-        }
-      }
-    },
     "session.show.cancelled": {
       "extractionState": "manual",
       "localizations": {
@@ -5424,28 +4863,6 @@
         }
       }
     },
-    "session.show.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio session show EC4207/10-26"
-          }
-        }
-      }
-    },
-    "session.show.help.session": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "<과목>/<회차>. 예: EC4207/10-26"
-          }
-        }
-      }
-    },
     "session.show.units": {
       "extractionState": "manual",
       "localizations": {
@@ -5474,40 +4891,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "설정 보기. --json이면 settings.json 전체"
-          }
-        }
-      }
-    },
-    "settings.show.backup": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자동 백업"
-          }
-        }
-      }
-    },
-    "settings.show.day-boundary": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "하루 경계"
-          }
-        }
-      }
-    },
-    "settings.show.days": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld일"
+            "value": "설정 보기. 항목마다 지금 값, 기본값과 다르면 기본값, 필드 이름을 보인다. --json이면 settings.json 전체"
           }
         }
       }
@@ -5519,116 +4903,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "예시:\n  folio settings show\n  folio settings show --json > settings.json"
-          }
-        }
-      }
-    },
-    "settings.show.intervals": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "복습 간격"
-          }
-        }
-      }
-    },
-    "settings.show.new-note-math": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "새 노트 수식"
-          }
-        }
-      }
-    },
-    "settings.show.off": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "끔"
-          }
-        }
-      }
-    },
-    "today.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오늘 화면과 같은 요약: 시험, 수업, 복습, 마감, 시험 계획"
-          }
-        }
-      }
-    },
-    "today.attendance-cap": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "상한"
-          }
-        }
-      }
-    },
-    "today.attendance-warning": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "결석 %lld회 · 한 번 더 결석하면 최대 %@"
-          }
-        }
-      }
-    },
-    "today.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이번 학기 과목만 본다. 오늘의 범위는 설정의 하루 경계를 따른다.\n\n예시:\n  folio today\n  folio today --json"
-          }
-        }
-      }
-    },
-    "today.minutes-left": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld분 남음"
-          }
-        }
-      }
-    },
-    "today.overdue": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld일 밀림"
-          }
-        }
-      }
-    },
-    "today.plan-done": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": " · 완료"
           }
         }
       }
@@ -5820,61 +5094,6 @@
         }
       }
     },
-    "transcript.list.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "모든 학기의 과목과 성적"
-          }
-        }
-      }
-    },
-    "transcript.list.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "성적은 folio course set <과목> --grade로, 학점 합계와 GPA는 folio gpa로 본다.\n\n예시:\n  folio transcript list\n  folio transcript list --json"
-          }
-        }
-      }
-    },
-    "transcript.show.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "한 학기의 과목, 성적, 학기 GPA"
-          }
-        }
-      }
-    },
-    "transcript.show.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "학기를 생략하면 이번 학기.\n\n예시:\n  folio transcript show\n  folio transcript show 2026-1"
-          }
-        }
-      }
-    },
-    "transcript.show.help.semester": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "학기. 폴더 이름(2026-1) 또는 '2026 봄'"
-          }
-        }
-      }
-    },
     "transcript.show.summary": {
       "extractionState": "manual",
       "localizations": {
@@ -5893,50 +5112,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "단원: 트리, 추가, 옮기기, 회차 연결"
-          }
-        }
-      }
-    },
-    "unit.list.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목의 단원 트리"
-          }
-        }
-      }
-    },
-    "unit.list.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio unit list EC4207             그래프 이론의 단원 트리\n  folio unit list EC4207 --depth 1   맨 위 단원만"
-          }
-        }
-      }
-    },
-    "unit.list.help.course": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목. 강의 코드, 폴더 이름, 과목 이름, UUID"
-          }
-        }
-      }
-    },
-    "unit.list.help.depth": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "보여 줄 깊이. 1이면 맨 위 단원만"
           }
         }
       }
@@ -6256,28 +5431,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "읽을 때의 contentHash(material show --json). 다르면 쓰지 않는다"
-          }
-        }
-      }
-    },
-    "settings.show.class-minutes": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "기본 수업 길이"
-          }
-        }
-      }
-    },
-    "settings.show.minutes": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld분"
           }
         }
       }
@@ -6799,28 +5952,6 @@
         }
       }
     },
-    "note.figure.list.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목의 노트 그림과 그 그림을 쓰는 노트"
-          }
-        }
-      }
-    },
-    "note.figure.show.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노트 그림의 SVG 원문. --json에는 note figure write --expect에 넘길 해시가 있다"
-          }
-        }
-      }
-    },
     "note.figure.help.name": {
       "extractionState": "manual",
       "localizations": {
@@ -6876,17 +6007,6 @@
         }
       }
     },
-    "note.figure.bad-name": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "그림 이름으로 쓸 수 없습니다: %@"
-          }
-        }
-      }
-    },
     "note.widget.abstract": {
       "extractionState": "manual",
       "localizations": {
@@ -6894,39 +6014,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "노트 위젯 HTML. 과목의 .folio/widgets에 둔다"
-          }
-        }
-      }
-    },
-    "note.widget.list.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목의 위젯과 그 위젯을 쓰는 노트"
-          }
-        }
-      }
-    },
-    "note.widget.show.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "위젯 HTML 원문. --json에는 note widget write --expect에 넘길 해시가 있다"
-          }
-        }
-      }
-    },
-    "note.widget.help.widget": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "<과목>/<위젯 ID>"
           }
         }
       }
@@ -7026,28 +6113,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "PNG를 쓸 폴더. 기본은 임시 폴더"
-          }
-        }
-      }
-    },
-    "note.file.missing": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "파일이 없습니다: %@"
-          }
-        }
-      }
-    },
-    "note.file.not-utf8": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "UTF-8 텍스트가 아닙니다: %@"
           }
         }
       }
@@ -7415,39 +6480,6 @@
         }
       }
     },
-    "recording.transcript.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "녹음 받아쓰기 읽기: 회차나 녹음 파일로 가리키고 시간 구간으로 자른다"
-          }
-        }
-      }
-    },
-    "recording.transcript.bad-time": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "시각은 12:30, 1:02:03, 750 꼴로 적습니다: %@"
-          }
-        }
-      }
-    },
-    "recording.transcript.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "한 번에 %lld자(강의 20분쯤)까지 준다. 넘으면 잘라서 다음에 읽을 --from을 알려 준다. 줄마다 시각(12:30)이 붙어서 folio link recording … --time으로 그 자리를 가리킬 수 있다.\n\n예시:\n  folio recording transcript EC4207/10-26                       그 수업의 받아쓰기 처음부터\n  folio recording transcript EC4207/10-26 --from 10:00 --to 20:00"
-          }
-        }
-      }
-    },
     "recording.transcript.empty": {
       "extractionState": "manual",
       "localizations": {
@@ -7470,50 +6502,6 @@
         }
       }
     },
-    "recording.transcript.help.from": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 시각부터(12:30, 1:02:03, 초)"
-          }
-        }
-      }
-    },
-    "recording.transcript.help.recording": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "녹음: <과목>/<회차> 또는 <과목>/<파일 이름>"
-          }
-        }
-      }
-    },
-    "recording.transcript.help.to": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 시각까지"
-          }
-        }
-      }
-    },
-    "recording.transcript.none": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@에는 받아쓰기가 없습니다"
-          }
-        }
-      }
-    },
     "lms.abstract": {
       "extractionState": "manual",
       "localizations": {
@@ -7521,6 +6509,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "GIST LMS 제안함의 본 강의실과 숨긴 항목"
+          }
+        }
+      }
+    },
+    "actions.no-read-reason": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: 손으로 짠 읽기 명령의 이유가 없습니다. HandRead의 reason에 적거나 @Query로 옮겨 주세요"
+          }
+        }
+      }
+    },
+    "actions.query-no-command": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: 읽기 선언의 명령이 없습니다. 맨 위 명령이면 Folio의 명령 묶음에 넣어 주세요"
+          }
+        }
+      }
+    },
+    "settings.show.default": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(기본 %@)"
+          }
+        }
+      }
+    },
+    "settings.show.elsewhere": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 화면에서 바꾸는 값"
           }
         }
       }

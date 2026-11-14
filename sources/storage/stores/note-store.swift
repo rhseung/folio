@@ -8,7 +8,7 @@ extension Array where Element == NoteFile {
     }
 
     public func linked(_ target: String) -> NoteFile? {
-        titled(target.hasSuffix(".md") ? String(target.dropLast(3)) : target)
+        titled(NoteFormat(path: target) == .markdown ? (target as NSString).deletingPathExtension : target)
     }
 }
 

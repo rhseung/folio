@@ -1,11 +1,14 @@
 import Foundation
 
 extension QuickAdd {
-    static func resolve(_ words: [Word], line: String, course: UUID?, courseSpan: Span?, now: Date, calendar: Calendar) -> QuickAdd {
+    static func resolve(
+        _ words: [Word], line: String, course: UUID?, courseSpan: Span?, dueMinute: Int, kinds: [AssignmentKind], now: Date,
+        calendar: Calendar
+    ) -> QuickAdd {
         let due = words.filter(\.isDue)
         var minute = due.compactMap(\.minute).first
         if minute == nil, let d = due.compactMap(\.detected).first(where: { $0.phrase.contains(/시|자정|정오/) }) {
-            minute = calendar.component(.hour, from: d.date) * 60 + calendar.component(.minute, from: d.date)
+            minute = calendar.minuteOfDay(d.date)
             // `일요일 자정`은 일요일의 끝이다. 날짜 인식기는 이를 월요일 0:00으로 넘기므로, 날은 그대로 두고 24:00으로 센다.
             if minute == 0, d.phrase.contains(/자정|밤\s*12시/) { minute = 24 * 60 }
         }
@@ -21,7 +24,7 @@ extension QuickAdd {
         func upcoming(_ w: Int) -> Date {
             let ahead = (w - calendar.isoWeekday(of: start) + 7) % 7
             var d = calendar.date(byAdding: .day, value: ahead, to: start)!
-            if ahead == 0, calendar.date(byAdding: .minute, value: minute ?? defaultMinute, to: d)! <= now {
+            if ahead == 0, (calendar.date(byAdding: .minute, value: minute ?? dueMinute, to: d) ?? d) <= now {
                 d = calendar.date(byAdding: .day, value: 7, to: d)!
             }
             return d
@@ -45,7 +48,7 @@ extension QuickAdd {
         }
         spans += dueRanges.map { Span(range: $0, field: .due) }
 
-        if let m = AssignmentKind.match(in: line, outside: spans.map(\.range)) {
+        if let m = AssignmentKind.match(in: line, outside: spans.map(\.range), kinds: kinds) {
             spans.append(Span(range: m.range, field: .kind(m.kind, m.number)))
         }
 
@@ -56,7 +59,7 @@ extension QuickAdd {
             repeats = AssignmentRepeat(every: repeats?.every ?? 1, .week, weekdays: group.days.count > 1 ? group.days : [])
         }
         return QuickAdd(
-            courseId: course, title: title, due: day.map { calendar.date(byAdding: .minute, value: minute ?? defaultMinute, to: $0)! },
+            courseId: course, title: title, due: day.flatMap { calendar.date(byAdding: .minute, value: minute ?? dueMinute, to: $0) },
             repeats: repeats, spans: spans, repeatRanges: due.filter { $0.rule != nil }.map { $0.core(in: line) },
             weekdayRanges: due.filter { $0.weekdayGroup != nil }.map { $0.core(in: line) })
     }

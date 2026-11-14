@@ -28,7 +28,7 @@ struct AddCourseSheet: View {
                             id: Optional($0.id), title: $0.prefix,
                             detail: [$0.department, $0.program].filter { !$0.isEmpty }.joined(separator: " · "))
                     })
-                TextField("4207-01", text: $model.number).pill(width: 100)
+                TextField("4207-01", text: $model.number).pill(width: Theme.Size.codeField)
             }
             FormRow(label: String(localized: .semesterCreditsLabel)) { CreditsField(credits: $model.credits) }
             FormRow(label: String(localized: .semesterAddCourseMode), last: true) {

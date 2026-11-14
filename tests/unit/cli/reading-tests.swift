@@ -237,7 +237,7 @@ struct ReadingTests {
         let gist = try Harness.fixtureCopy()
         try record(gist, lines: [.init(start: 0, end: 5, text: "매칭")])
         let (failed, blocks) = try content(
-            MCPServer(gist: nil, propose: true), gist, "recording_transcript", ["recording": "EC4207/10-26(월).m4a"])
+            MCPServer(gist: nil, propose: true), gist, "recording_transcript", ["course": "EC4207", "recording": "10-26(월).m4a"])
         #expect(!failed && string(blocks.first?["text"])?.contains("매칭") == true)
         guard
             case .array(let tools)? = try json(

@@ -16,6 +16,10 @@ struct AppLinkWikiTests {
         }
     }
 
+    @Test func noteImagesAreMaterialImages() {
+        #expect(NoteImages.extensions == MaterialFormat.imageExtensions)
+    }
+
     @Test func everyKindWithAnIDIsAnObjectLink() {
         let leftOut: Set<AppLink.Kind> = []
         let withID = Set(AppLink.Kind.allCases.filter { !$0.isPlace })

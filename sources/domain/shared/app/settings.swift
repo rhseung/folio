@@ -16,19 +16,29 @@ public struct Settings: Codable, Sendable, Equatable {
     public var classStart: ClassStartSettings
     public var panePresets: [PanePreset]
     public var lms: LMSSettings
+    public var idleMinutes: Int
+    public var todayExamDays: Int
+    public var urgency: UrgencySettings
+    public var schedule: ScheduleDefaults
+    public var gradesUnlockMinutes: Int
+    public var school: SchoolSettings
+    // 기본 종류 밖의 콜아웃 종류다. nil이면 기본 종류만 쓴다.
+    public var callouts: [NoteCallout]?
+    // 기본 종류 표가 앱과 함께 늘어날 수 있도록, 바꾸기 전까지는 nil로 둔다.
+    public var assignmentKinds: [AssignmentKind]?
 
-    public static let defaultNoteRules = """
-        - 정의는 전제, 조건, 결론 순서로 쓴다.
-        - 수학적 진술은 영어와 기호로, 설명은 한국어로 쓴다.
-        - display 수식은 하나씩 나눠 쓴다.
-        """
+    public static let defaultNoteRules = SettingItem.noteRules.text
 
     public init(
-        dayBoundaryMinutes: Int = 240, review: ReviewSettings = .init(), noteRules: String = Settings.defaultNoteRules,
-        notifications: NotificationSettings = .init(), backup: BackupSettings = .init(), noteTemplates: [String: [String]] = [:],
-        newNoteMath: MathSyntax = .asciimath, sidebar: SidebarOrder = .init(), classMinutes: Int = 75,
-        mathSnippets: [MathSnippet]? = nil, asciiMathSnippets: [MathSnippet]? = nil, classStart: ClassStartSettings = .init(),
-        panePresets: [PanePreset] = [], lms: LMSSettings = .init()
+        dayBoundaryMinutes: Int = SettingItem.dayBoundary.int, review: ReviewSettings = .init(),
+        noteRules: String = Settings.defaultNoteRules, notifications: NotificationSettings = .init(), backup: BackupSettings = .init(),
+        noteTemplates: [String: [String]] = [:], newNoteMath: MathSyntax = SettingItem.newNoteMath.choice(),
+        sidebar: SidebarOrder = .init(), classMinutes: Int = SettingItem.classMinutes.int, mathSnippets: [MathSnippet]? = nil,
+        asciiMathSnippets: [MathSnippet]? = nil, classStart: ClassStartSettings = .init(), panePresets: [PanePreset] = [],
+        lms: LMSSettings = .init(), idleMinutes: Int = SettingItem.idleMinutes.int, todayExamDays: Int = SettingItem.todayExamDays.int,
+        urgency: UrgencySettings = .init(), schedule: ScheduleDefaults = .init(),
+        gradesUnlockMinutes: Int = SettingItem.gradesUnlockMinutes.int, school: SchoolSettings = .init(), callouts: [NoteCallout]? = nil,
+        assignmentKinds: [AssignmentKind]? = nil
     ) {
         self.dayBoundaryMinutes = dayBoundaryMinutes
         self.review = review
@@ -44,6 +54,14 @@ public struct Settings: Codable, Sendable, Equatable {
         self.classStart = classStart
         self.panePresets = panePresets
         self.lms = lms
+        self.idleMinutes = idleMinutes
+        self.todayExamDays = todayExamDays
+        self.urgency = urgency
+        self.schedule = schedule
+        self.gradesUnlockMinutes = gradesUnlockMinutes
+        self.school = school
+        self.callouts = callouts
+        self.assignmentKinds = assignmentKinds
     }
 
     public init(from decoder: any Decoder) throws {
@@ -63,6 +81,14 @@ public struct Settings: Codable, Sendable, Equatable {
         classStart = try c.value(.classStart, or: d.classStart)
         panePresets = try c.value(.panePresets, or: d.panePresets)
         lms = try c.value(.lms, or: d.lms)
+        idleMinutes = try c.value(.idleMinutes, or: d.idleMinutes)
+        todayExamDays = try c.value(.todayExamDays, or: d.todayExamDays)
+        urgency = try c.value(.urgency, or: d.urgency)
+        schedule = try c.value(.schedule, or: d.schedule)
+        gradesUnlockMinutes = try c.value(.gradesUnlockMinutes, or: d.gradesUnlockMinutes)
+        school = try c.value(.school, or: d.school)
+        callouts = try c.decodeIfPresent([NoteCallout].self, forKey: .callouts)
+        assignmentKinds = try c.decodeIfPresent([AssignmentKind].self, forKey: .assignmentKinds)
     }
 
     public var presets: [PanePreset] { PanePreset.builtIn + panePresets }
@@ -73,6 +99,7 @@ public struct Settings: Codable, Sendable, Equatable {
 
     public var snippets: [MathSnippet] { mathSnippets ?? MathSnippet.defaults }
     public var asciiSnippets: [MathSnippet] { asciiMathSnippets ?? MathSnippet.asciiMathDefaults }
+    public var assignmentKindTable: [AssignmentKind] { assignmentKinds ?? AssignmentKind.builtIn }
 
     public func noteSections(for kind: NoteKind) -> [String] {
         (noteTemplates[kind.rawValue] ?? NoteTemplate.defaultSections(for: kind)).filter {
@@ -82,6 +109,17 @@ public struct Settings: Codable, Sendable, Equatable {
 
     public func studyDay(of date: Date, calendar: Calendar) -> LocalDate {
         LocalDate(calendar.date(byAdding: .minute, value: -dayBoundaryMinutes, to: date)!, in: calendar)
+    }
+
+    // 공부일이 시작하는 시각이다. 그날 자정에 하루 경계를 더한다.
+    public func start(of day: LocalDate, calendar: Calendar) -> Date {
+        // `LocalDate`는 만들 때 날짜를 검사하므로 그날의 자정은 언제나 있다.
+        let midnight = day.date(in: calendar) ?? .distantPast
+        return calendar.date(byAdding: .minute, value: dayBoundaryMinutes, to: midnight) ?? midnight
+    }
+
+    public func nextDayStart(after now: Date, calendar: Calendar) -> Date {
+        start(of: studyDay(of: now, calendar: calendar).adding(days: 1), calendar: calendar)
     }
 }
 

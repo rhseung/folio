@@ -124,6 +124,32 @@ struct CalloutTests {
         #expect(out.components(separatedBy: "callout-proof attached").count == 2)
     }
 
+    @Test func settingKindsNumberAndCarryProofs() {
+        let table = CalloutTable(adding: [CalloutKind("Claim", .theorem, numbered: true, provable: true), CalloutKind("note", .warning)])
+        #expect(table["claim"]?.tone == .theorem)
+        #expect(table["note"]?.tone == .warning)
+        #expect(table.names.filter { $0 == "note" }.count == 1)
+        let out = HTMLRenderer.render(ParsedNote("> [!claim]\n> C.\n\n> [!proof]\n> P.\n\n> [!claim]\n> D."), callouts: table)
+        #expect(out.contains("<span class=\"callout-label\">Claim 1</span>"))
+        #expect(out.contains("<span class=\"callout-label\">Claim 2</span>"))
+        #expect(out.contains("callout-proof attached"))
+        #expect(!HTMLRenderer.render(markdown: "> [!claim]\n> C.").contains("Claim 1"))
+    }
+
+    @Test func kindsThatCannotBeWrittenAsHeadersAreLeftOut() {
+        let table = CalloutTable(adding: [CalloutKind("two words", .danger), CalloutKind("x}", .danger)])
+        #expect(table == .standard)
+    }
+
+    @Test func everyKindIsCompletedAndListed() {
+        let table = CalloutTable(adding: [CalloutKind("claim", .theorem)])
+        let catalog = CompletionCatalog(callouts: table)
+        let query = CompletionQuery(kind: .callout, text: "cla", range: NSRange(location: 0, length: 0), place: .text)
+        #expect(Completion.items(for: query, catalog: catalog).map(\.title) == ["claim"])
+        let guide = InputGuide.entries(catalog: catalog).first { $0.id == "menu.callout" }
+        #expect(guide?.keywords.contains("claim") == true)
+    }
+
     @Test func topLevelBlocksKnowTheirLines() {
         func spans(_ text: String) -> [String] {
             let note = ParsedNote(text)

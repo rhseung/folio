@@ -17,10 +17,12 @@ final class NewMaterialFileModel {
         let file = course.file
         var places = NewMaterialFile.places(
             assignments: file.assignments, exams: file.exams,
-            assignmentFolders: (try? course.store.assignmentFolders()) ?? [])
+            assignmentFolders: (try? course.store.assignmentFolders()) ?? [], kinds: workspace.settings.assignmentKindTable)
         if let folder, !places.contains(folder) { places.append(folder) }
         self.places = places
-        self.folder = folder ?? NewMaterialFile.defaultPlace(assignments: file.assignments, places: places) ?? places[0]
+        self.folder =
+            folder ?? NewMaterialFile.defaultPlace(
+                assignments: file.assignments, places: places, kinds: workspace.settings.assignmentKindTable) ?? places[0]
     }
 
     var course: LoadedCourse { workspace.course(initial.id) ?? initial }

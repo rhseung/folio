@@ -167,11 +167,11 @@ struct QuickAddChip: View {
         let current = model.kind
         return Menu {
             Section(String(localized: .quickAddKind)) {
-                ForEach(AssignmentKind.allCases, id: \.self) { kind in
+                ForEach(model.kinds, id: \.self) { kind in
                     Button {
                         model.renumber(kind: kind, number: current?.number ?? 1)
                     } label: {
-                        if kind == current?.kind { Label(kind.rawValue, systemImage: "checkmark") } else { Text(kind.rawValue) }
+                        if kind == current?.kind { Label(kind.prefix, systemImage: "checkmark") } else { Text(kind.prefix) }
                     }
                 }
             }

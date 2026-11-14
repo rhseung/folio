@@ -45,9 +45,6 @@ struct ExamsView: View {
             }
         }
         .sheet(item: $model.editing) { ExamEditor(workspace: model.workspace, course: model.course, exam: $0) }
-        #if DEBUG && os(macOS)
-        .onChange(of: SnapshotDriver.shared.editExam, initial: true) { _, on in model.editing = on ? model.course.file.exams.first : nil }
-        #endif
         .confirming($model.pending)
         .task(id: model.course.id) { model.load() }
         .onChange(of: model.workspace.notesRevision) { model.load() }
@@ -55,7 +52,7 @@ struct ExamsView: View {
 
     func section(_ exam: Exam, states: [UUID: ReviewState]) -> some View {
         Block(title: exam.title, note: model.component(of: exam)) {
-            if let start = exam.start { DdayChip(days: model.days(to: start)) }
+            if let start = exam.start { DdayChip(days: model.days(to: start), urgency: model.workspace.settings.urgency) }
         } content: {
             Card {
                 CardRow {
@@ -152,7 +149,7 @@ struct ExamsView: View {
                     ForEach(Array(scope.tops.enumerated()), id: \.element.unit.id) { i, top in
                         HStack(spacing: Theme.Space.s) {
                             Text("\(i + 1)").font(Theme.Typeface.label).monospacedDigit().foregroundStyle(accent.ink)
-                                .frame(width: 20, alignment: .trailing)
+                                .frame(width: Theme.Size.indexColumn, alignment: .trailing)
                             Text(top.unit.title).lineLimit(1)
                             if top.children > 0 {
                                 Text("+\(top.children)").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
@@ -206,7 +203,9 @@ struct ExamsView: View {
         Menu {
             actions(exam)
         } label: {
-            Image(systemName: "ellipsis").foregroundStyle(Theme.Palette.textSecondary).frame(width: 24, height: 24).contentShape(.rect)
+            Image(systemName: "ellipsis").foregroundStyle(Theme.Palette.textSecondary)
+                .frame(width: Theme.Size.inlineButton, height: Theme.Size.inlineButton).contentShape(.rect)
+                .accessibilityLabel(Text(.examsMenuHelp))
         }
         .menuStyle(.button)
         .menuIndicator(.hidden)

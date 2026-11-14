@@ -37,7 +37,7 @@ struct WindowClaude: View {
                     // 고정 폭은 좁은 창의 가장자리를 넘었으므로, 칸들이 좁으면 이보다 좁게 둔다.
                     .frame(maxWidth: width, maxHeight: Self.maxHeight)
                     .floatingGlass()
-                    .shadow(color: .black.opacity(0.18), radius: 24, y: 12)
+                    .shadow(Theme.Shadow.floating)
                     .overlay(alignment: .leading) { resizeHandle }
                     .transition(.scale(scale: 0.9, anchor: .bottomTrailing).combined(with: .opacity))
                 }

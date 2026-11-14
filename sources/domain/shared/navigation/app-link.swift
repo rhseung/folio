@@ -221,11 +221,7 @@ public struct AppLink: Hashable, Sendable {
         return heading.isEmpty ? nil : .heading(heading)
     }
 
-    public static func clock(_ seconds: Int) -> String {
-        seconds >= 3600
-            ? String(format: "%d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60)
-            : String(format: "%d:%02d", seconds / 60, seconds % 60)
-    }
+    public static func clock(_ seconds: Int) -> String { ClockText.duration(seconds) }
 
     static func time(_ a: Substring?, _ b: Substring?, _ c: Substring) -> Anchor? {
         let parts = [a, b].compactMap { $0 }.compactMap { Int($0) } + [Int(c) ?? 0]
@@ -256,7 +252,7 @@ public struct AppLink: Hashable, Sendable {
 
     // 주소가 끝나는 문장의 문장부호(`시험은 folio://exam/<ID>#page=12.`)는 주소에 넣지 않는다. 제목 앵커는 문장부호로
     // 끝날 수 있으므로 예외이다. 쪽, 시각, 블록에 문장부호를 남기면 그 앵커로 읽히지 않아 맨 위에서 열린다. 노트
-    // 미리보기도 같은 규칙으로 맨 주소를 링크로 만든다(FolioMarkdown의 `HTMLRenderer.linkAddresses`).
+    // 미리보기도 같은 규칙으로 맨 주소를 링크로 만든다(FolioMarkdown `NoteSyntax`의 맨 주소).
     static func trimmed(_ written: String) -> String {
         if let hash = written.firstIndex(of: "#") {
             let anchor = written[written.index(after: hash)...]

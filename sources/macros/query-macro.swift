@@ -23,7 +23,7 @@ public struct QueryMacro: MemberMacro, ExtensionMacro {
             let source = arg.expression.trimmedDescription
             guard let label = arg.label?.text else { positional.append(source); continue }
             switch label {
-            case "discussion", "examples", "phrases", "panel": named[label] = source
+            case "discussion", "examples", "phrases", "panel", "lines", "grades": named[label] = source
             case "cli":
                 guard source != ".generated" else { break }
                 named["generated"] = "false"
@@ -49,6 +49,7 @@ public struct QueryMacro: MemberMacro, ExtensionMacro {
             discussion: \(raw: named["discussion"] ?? "\"\""), examples: \(raw: named["examples"] ?? "[]"), \
             phrases: \(raw: named["phrases"] ?? "[]"), generated: \(raw: named["generated"] ?? "true"), \
             manualReason: \(raw: named["manualReason"] ?? "nil"), panel: \(raw: named["panel"] ?? "false"), \
+            lines: \(raw: named["lines"] ?? "false"), grades: \(raw: named["grades"] ?? "false"), \
             fields: [\n\(raw: specs)\n])
             """
         ]
