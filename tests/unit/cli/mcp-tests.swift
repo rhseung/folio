@@ -68,6 +68,32 @@ struct MCPTests {
         }
     }
 
+    // 패널의 도구 정의는 질문마다 함께 가므로, 도구가 늘거나 빠지면 이 목록을 함께 고친다.
+    @Test func thePanelToolSetIsPinned() throws {
+        let gist = try Harness.fixtureCopy()
+        let panel = try toolNames(MCPServer(gist: nil, propose: true), gist)
+        let pinned: Set<String> = [
+            "action_run", "action_search", "assignment_add", "assignment_list", "assignment_rm", "assignment_set", "assignment_show",
+            "assignment_status", "attendance_set", "component_add", "component_list", "component_move", "component_policy",
+            "component_rm", "component_set", "course_list", "course_show", "exam_add", "exam_list", "exam_plan-check", "exam_plan_add",
+            "exam_plan_rm", "exam_rm", "exam_scope", "exam_scope_taught", "exam_set", "exam_show", "exam_summary", "material_build",
+            "material_import", "material_kind", "material_link", "material_link-exam", "material_link-unit", "material_list",
+            "material_mv", "material_new", "material_read", "material_relink", "material_rm", "material_show", "material_split",
+            "material_status", "material_track", "material_untrack", "material_write", "note_add", "note_adopt", "note_build",
+            "note_edit", "note_figure_add", "note_figure_list", "note_figure_render", "note_figure_show", "note_figure_write",
+            "note_format", "note_images", "note_link", "note_link-sessions", "note_list", "note_migrate", "note_mv", "note_retitle",
+            "note_rm", "note_show", "note_unlink-session", "note_widget_add", "note_widget_list", "note_widget_render",
+            "note_widget_show", "note_widget_write", "note_write", "problem-set_add", "problem-set_link", "problem-set_list",
+            "problem-set_record", "problem-set_rm", "quiz_add", "quiz_list", "quiz_record", "quiz_rm", "recording_transcript",
+            "review_record", "review_skip", "score_add", "score_list", "score_rm", "score_set", "search", "session_add",
+            "session_link-viewed", "session_list", "session_note", "session_progress", "session_rm", "session_set", "session_show",
+            "session_wrap-up", "today", "unit_add", "unit_link", "unit_list", "unit_move", "unit_pages_add", "unit_pages_rm",
+            "unit_pages_set", "unit_rm", "unit_set", "unit_show",
+        ]
+        #expect(panel.subtracting(pinned).isEmpty, "\(panel.subtracting(pinned).sorted()) joined the panel")
+        #expect(pinned.subtracting(panel).isEmpty, "\(pinned.subtracting(panel).sorted()) left the panel")
+    }
+
     @Test func readResultsAreCompactJSON() throws {
         let gist = try Harness.fixtureCopy()
 
