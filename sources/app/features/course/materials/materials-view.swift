@@ -58,22 +58,6 @@ struct MaterialsView: View {
             if let m = model.follow(link), !m.isFolder { open(m) }
         }
         .onChange(of: model.viewedLink) { _, link in moved(link) }
-        #if DEBUG && os(macOS)
-        .onChange(of: SnapshotDriver.shared.openFile, initial: true) { old, ext in
-            guard ext != nil || old != nil else { return }
-            if ext != nil { model.trackFixtureFiles() }
-            model.viewing = ext.flatMap { ext in
-                model.materials.first {
-                    !$0.isFolder && ($0.path as NSString).pathExtension.lowercased() == ext && $0.status == .classified
-                }?.id
-            }
-            SnapshotDriver.shared.materialsOpenFile = model.viewing != nil
-        }
-        .onChange(of: SnapshotDriver.shared.linkFile) { _, on in
-            if on { model.trackFixtureFiles() }
-            model.linking = on ? (model.materials.first { $0.role == .lecture && $0.isPDF } ?? model.materials.first)?.id : nil
-        }
-        #endif
     }
 
     var list: some View {

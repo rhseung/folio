@@ -32,9 +32,6 @@ struct CourseOverview: View {
                 PageMenuButton { CourseMenu(courseId: course.id, host: .own) }
             }
             .sheet(isPresented: $editing) { EditCourseSheet(workspace: model.workspace, course: course) }
-            #if DEBUG && os(macOS)
-            .onChange(of: SnapshotDriver.shared.editCourse, initial: true) { _, on in editing = on }
-            #endif
 
             StatStrip(items: model.stats(file, reviews: reviews, suggested: suggested, now: now))
 

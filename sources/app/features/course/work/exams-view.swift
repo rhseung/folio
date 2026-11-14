@@ -45,9 +45,6 @@ struct ExamsView: View {
             }
         }
         .sheet(item: $model.editing) { ExamEditor(workspace: model.workspace, course: model.course, exam: $0) }
-        #if DEBUG && os(macOS)
-        .onChange(of: SnapshotDriver.shared.editExam, initial: true) { _, on in model.editing = on ? model.course.file.exams.first : nil }
-        #endif
         .confirming($model.pending)
         .task(id: model.course.id) { model.load() }
         .onChange(of: model.workspace.notesRevision) { model.load() }
