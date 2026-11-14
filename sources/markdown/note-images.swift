@@ -1,7 +1,8 @@
 import Foundation
 
 public enum NoteImages {
-    static let extensions: Set<String> = ["png", "jpg", "jpeg", "heic", "gif", "webp", "tif", "tiff"]
+    // FolioDomain `MaterialFormat`의 이미지 확장자를 되풀이한다. `AppLinkWikiTests`가 양쪽이 같은지 확인한다.
+    public static let extensions: Set<String> = ["png", "jpg", "jpeg", "gif", "heic", "heif", "webp", "tif", "tiff", "bmp"]
     static var link: Regex<(Substring, Substring)> { /!\[[^\]]*\]\(<?([^)>]+?)>?(?:\s+"[^"]*")?\)/ }
     static var wiki: Regex<(Substring, Substring)> { /!\[\[([^\]|#]+?)\\?(?:[|#][^\]]*)?\]\]/ }
 

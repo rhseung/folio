@@ -149,7 +149,7 @@ struct CoursePlanner {
             for item in node.children {
                 let from = "\(base)/\(item.name)"
                 if item.isFile {
-                    let folder = item.name.hasSuffix(".md") ? CourseFolder.notes : .archive
+                    let folder = NoteFormat(path: item.name) == .markdown ? CourseFolder.notes : .archive
                     moves.append(.init(from: from, to: "\(folder.rawValue)/\(item.name)"))
                 } else if containsMarkdown(item) {
                     // 상대 링크가 계속 맞도록 노트 폴더와 그 그림을 함께 둔다.
@@ -163,7 +163,7 @@ struct CoursePlanner {
 
     func containsMarkdown(_ node: FolderTree) -> Bool {
         node.name == StandardLayout.noteAssetsFolder
-            || node.children.contains { $0.isFile ? $0.name.hasSuffix(".md") : containsMarkdown($0) }
+            || node.children.contains { $0.isFile ? NoteFormat(path: $0.name) == .markdown : containsMarkdown($0) }
     }
 
     // MARK: Top-level files
@@ -190,7 +190,7 @@ struct CoursePlanner {
             lectures.append((name, name))
         } else if Keywords.textbook.contains(where: { lower.contains($0) }) || name.firstMatch(of: /\(.+\)\.[^.]+$/) != nil {
             moves.append(.init(from: name, to: "\(CourseFolder.textbooks.rawValue)/\(name)", review: .guessedFolder))
-        } else if name.hasSuffix(".md") {
+        } else if NoteFormat(path: name) == .markdown {
             moves.append(.init(from: name, to: "\(CourseFolder.notes.rawValue)/\(name)"))
         } else {
             moves.append(.init(from: name, to: "\(CourseFolder.archive.rawValue)/\(name)", review: .unknownFile))

@@ -18,7 +18,7 @@ import Foundation
         case .course: return .course(course.id, page: parts.dropFirst().first.flatMap(AppLink.CoursePage.init(rawValue:)))
         case .material:
             // 렉처 칸은 회차 진도가 있는 PDF를 먼저 연다. 쪽 열의 구획이 함께 보여야 하기 때문이다.
-            let pdfs = file.materials.filter { $0.path.lowercased().hasSuffix(".pdf") }
+            let pdfs = file.materials.filter { $0.isPDF }
             let paged = pdfs.first { m in file.sessions.contains { $0.materials.contains { $0.materialId == m.id && $0.pages != nil } } }
             return (paged ?? pdfs.first).map { AppLink(.material, $0.id) }
         case .session:
