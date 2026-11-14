@@ -34,7 +34,14 @@ struct Sniffer: Decoder {
             probe.field(key, probe.builder.schema(T.self), required: true)
             return try probe.builder.placeholder(T.self, probe: probe)
         }
-        func decodeIfPresent<T: Decodable>(_ type: T.Type, forKey key: Key) throws -> T? {
+        func decodeIfPresent<T: Decodable>(_ type: T.Type, forKey key: Key) throws -> T? { optional(T.self, key) }
+        // 표준 라이브러리의 기본 구현은 이 형식들을 `decode`로 보내 빠질 수 있는 필드를 필수로 적는다.
+        func decodeIfPresent(_ type: Bool.Type, forKey key: Key) throws -> Bool? { optional(type, key) }
+        func decodeIfPresent(_ type: String.Type, forKey key: Key) throws -> String? { optional(type, key) }
+        func decodeIfPresent(_ type: Int.Type, forKey key: Key) throws -> Int? { optional(type, key) }
+        func decodeIfPresent(_ type: Double.Type, forKey key: Key) throws -> Double? { optional(type, key) }
+
+        private func optional<T: Decodable>(_ type: T.Type, _ key: Key) -> T? {
             probe.field(key, probe.builder.schema(T.self), required: false)
             return nil
         }
