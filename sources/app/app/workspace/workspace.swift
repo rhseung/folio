@@ -288,6 +288,7 @@ final class Workspace {
             gist: gist, device: device, now: now, calendar: calendar,
             courses: Dictionary(courses.map { ($0.id, $0.store) }, uniquingKeysWith: { a, _ in a }))
         ctx.proposal = proposal
+        try ctx.refuseAppliedProposal()
         defer { show(ctx) }
         try action.run(ctx)
         return ctx

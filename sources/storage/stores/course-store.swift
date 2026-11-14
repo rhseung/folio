@@ -48,8 +48,9 @@ public struct CourseStore: Sendable {
         try document.write(to: courseFileURL)
     }
 
-    // iCloud가 남긴 충돌 사본을 지금 문서에 합쳐 쓰고 사본을 지운다. 아직 내려받지 않아 읽지 못한 사본은 남겨 두고
-    // 다음에 다시 합친다. 합친 사본이 있으면 true다.
+    // iCloud가 남긴 충돌 사본을 지금 문서에 합쳐 쓰고 해결됨으로 표시한다. 사본은 지우지 않는다. 합치기가 같은 항목에서
+    // 잘못 고른 쪽이 있어도 파일의 다른 버전에서 되찾을 수 있게 하기 위해서다. 아직 내려받지 않아 읽지 못한 사본은
+    // 남겨 두고 다음에 다시 합친다. 합친 사본이 있으면 true다.
     @discardableResult
     public func resolveConflicts() throws -> Bool {
         let versions = CoordinatedFile.unresolvedConflicts(courseFileURL)
@@ -64,7 +65,6 @@ public struct CourseStore: Sendable {
         guard !merged.isEmpty else { return false }
         try save(doc)
         for version in merged { version.isResolved = true }
-        if merged.count == versions.count { try NSFileVersion.removeOtherVersionsOfItem(at: courseFileURL) }
         return true
     }
 

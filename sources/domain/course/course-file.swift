@@ -87,6 +87,28 @@ public struct CourseFile: Codable, Sendable, Equatable {
         return m
     }
 
+    // 합치기는 같은 항목을 `updatedAt`으로 고르는데, 액션은 바꾼 항목을 따로 `touch`하지 않기도 한다. 그래서 저장하기
+    // 전에 이전 문서와 다른 항목을 모두 찍는다. 찍지 않으면 다른 기기가 나중에 저장한 사본의 바뀌지 않은 옛 항목이 이
+    // 편집을 덮는다.
+    public mutating func touchChanged(since before: CourseFile, by device: DeviceID, at date: Date) {
+        Self.touch(&materials, before.materials, device, date)
+        Self.touch(&units, before.units, device, date)
+        Self.touch(&sessions, before.sessions, device, date)
+        Self.touch(&exams, before.exams, device, date)
+        Self.touch(&assignments, before.assignments, device, date)
+        Self.touch(&components, before.components, device, date)
+        Self.touch(&scores, before.scores, device, date)
+        Self.touch(&attendance, before.attendance, device, date)
+        Self.touch(&problemSets, before.problemSets, device, date)
+        Self.touch(&recordings, before.recordings, device, date)
+        Self.touch(&notes, before.notes, device, date)
+    }
+
+    private static func touch<T: Entity>(_ items: inout [T], _ before: [T], _ device: DeviceID, _ date: Date) {
+        let old = Dictionary(before.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        for i in items.indices where items[i] != old[items[i].id] { items[i].touch(by: device, at: date) }
+    }
+
     // 어느 사본을 먼저 주어도 결과가 같도록, 시각이 같으면 기기 ID로 고른다.
     private static func later<T: Entity>(_ a: T, _ b: T) -> Bool {
         a.updatedAt != b.updatedAt ? a.updatedAt > b.updatedAt : a.updatedBy.uuidString >= b.updatedBy.uuidString

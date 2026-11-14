@@ -120,6 +120,13 @@ public final class ActionContext {
 
     // MARK: Writes
 
+    // 제안의 액션은 과목 문서보다 파일을 먼저 쓰기도 한다(`material import`의 복사). 그래서 실행하기 전에 모든 과목에서
+    // 이미 남은 제안인지 보고, 남아 있으면 아무것도 쓰지 않고 멈춘다.
+    public func refuseAppliedProposal() throws {
+        guard let id = proposal?.id else { return }
+        for course in try courseStores().keys where (try? file(course))?.hasApplied(id) == true { throw ActionError.applied }
+    }
+
     public func edit(_ course: UUID, _ change: (inout CourseFile) throws -> Void) throws {
         let store = try store(course)
         var doc = try document(course)
@@ -134,6 +141,7 @@ public final class ActionContext {
                 try log(ProposalAppliedEvent(proposal: id, command: proposal.command), course: course)
             }
         }
+        doc.model.touchChanged(since: before, by: device, at: now)
         doc.model.course.touch(by: device, at: now)
         courseDocs[course] = doc
         changes += diff(before, doc.model, path: relative(store.courseFileURL))
