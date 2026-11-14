@@ -2596,6 +2596,215 @@
           }
         }
       }
+    },
+    "setting-group.day": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "하루"
+          }
+        }
+      }
+    },
+    "setting-group.deadlines": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마감과 시험"
+          }
+        }
+      }
+    },
+    "setting-group.school": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학교"
+          }
+        }
+      }
+    },
+    "setting-group.class-time": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 시간"
+          }
+        }
+      }
+    },
+    "setting-group.new-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 노트"
+          }
+        }
+      }
+    },
+    "setting-group.assignment-alerts": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과제"
+          }
+        }
+      }
+    },
+    "setting-group.exam-alerts": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험"
+          }
+        }
+      }
+    },
+    "setting-group.review-alerts": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습과 출석"
+          }
+        }
+      }
+    },
+    "setting-group.auto-backup": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자동 백업"
+          }
+        }
+      }
+    },
+    "setting-group.lms-sync": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자동 확인"
+          }
+        }
+      }
+    },
+    "setting-unit.minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "분"
+          }
+        }
+      }
+    },
+    "setting-unit.days": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일"
+          }
+        }
+      }
+    },
+    "setting-unit.days-before": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일 전부터"
+          }
+        }
+      }
+    },
+    "setting-unit.hours-before": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시간 전"
+          }
+        }
+      }
+    },
+    "setting-unit.cards": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "장"
+          }
+        }
+      }
+    },
+    "setting-unit.passes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "번 통과"
+          }
+        }
+      }
+    },
+    "setting-unit.units": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원"
+          }
+        }
+      }
+    },
+    "math-syntax.latex": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LaTeX"
+          }
+        }
+      }
+    },
+    "math-syntax.asciimath": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AsciiMath"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

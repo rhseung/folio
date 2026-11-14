@@ -1,4 +1,5 @@
 import FolioDomain
+import FolioMarkdown
 import Foundation
 import Testing
 
@@ -66,5 +67,43 @@ struct SettingsModelTests {
         let today = workspace.today
         let days = [today.adding(days: 1), today.adding(days: 4)].map(SettingsModel.monthDay).joined(separator: " · ")
         #expect(model.reviewDays == "\(SettingsModel.monthDay(today)) → \(days)")
+    }
+
+    @Test func aRowWritesItsDeclaredKey() throws {
+        let model = SettingsModel(workspace: try fixtureWorkspace())
+        model.set(.examMinutes, .number(150))
+        #expect(model.settings.schedule.examMinutes == 150)
+        #expect(model.value(.examMinutes) == .number(150))
+        model.set(.reviewDailyLimit, .number(20))
+        #expect(model.settings.review.dailyLimit == 20)
+        model.set(.reviewDailyLimit, .null)
+        #expect(model.settings.review.dailyLimit == nil)
+    }
+
+    @Test func calloutKindsAreAddedChangedAndRemoved() throws {
+        let model = SettingsModel(workspace: try fixtureWorkspace())
+        model.newCallout = " Claim "
+        #expect(model.canAddCallout)
+        model.addCallout()
+        #expect(model.newCallout.isEmpty)
+        #expect(model.customCallouts.map(\.name) == ["claim"])
+
+        model.newCallout = "theorem"
+        #expect(!model.canAddCallout)
+        model.newCallout = "two words"
+        #expect(!model.canAddCallout)
+
+        var theorem = try #require(model.callouts["theorem"])
+        theorem.numbered = false
+        model.setCallout(theorem)
+        #expect(model.changed(theorem))
+        theorem.numbered = true
+        model.setCallout(theorem)
+        #expect(!model.changed(theorem))
+        #expect(model.settings.callouts?.map(\.name) == ["claim"])
+
+        model.removeCallout("claim")
+        #expect(model.settings.callouts == nil)
+        #expect(model.customCallouts.isEmpty)
     }
 }

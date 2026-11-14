@@ -34,16 +34,7 @@ struct ClassSettings: View {
                 }
             }
         }
-        Block(String(localized: .settingsClassTime)) {
-            Card {
-                FormRow(label: String(localized: .settingsClassMinutes)) {
-                    IntScrub(value: $model.settings.classMinutes, range: SettingItem.classMinutes.range, step: 5, width: 80)
-                    Text(.settingsUnitMinutes).foregroundStyle(Theme.Palette.textSecondary)
-                }
-                SettingTimeRow(item: .classStartMinute, minute: $model.settings.schedule.classStartMinute)
-                SettingTimeRow(item: .sessionStartMinute, minute: $model.settings.schedule.sessionStartMinute, last: true)
-            }
-        }
+        SettingBlock(.classTime, model: model)
         TranscriptionSettings()
     }
 }

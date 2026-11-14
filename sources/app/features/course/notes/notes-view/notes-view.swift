@@ -38,12 +38,7 @@ struct NotesView: View {
 }
 
 extension MathSyntax {
-    var label: String {
-        switch self {
-        case .latex: "LaTeX"
-        case .asciimath: "AsciiMath"
-        }
-    }
+    var label: String { String(localized: name) }
 }
 
 extension NoteKind {

@@ -139,6 +139,10 @@ struct CalloutTests {
     @Test func kindsThatCannotBeWrittenAsHeadersAreLeftOut() {
         let table = CalloutTable(adding: [CalloutKind("two words", .danger), CalloutKind("x}", .danger)])
         #expect(table == .standard)
+        #expect(CalloutKind.allows("worked-example"))
+        #expect(!CalloutKind.allows("Claim"))
+        #expect(CalloutKind("theorem", .danger).isDefault)
+        #expect(!CalloutKind("claim", .theorem).isDefault)
     }
 
     @Test func everyKindIsCompletedAndListed() {

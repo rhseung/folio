@@ -51,20 +51,18 @@ struct SettingsView: View {
         case .record:
             Block(String(localized: .settingsProfile)) { ProfileCard(workspace: model.workspace) }
             Block(String(localized: .settingsLetters)) { CatalogEditor() }
-            SchoolSettingsForm(model: model)
+            SettingBlock(.school, model: model)
         case .classes: ClassSettings(model: model)
         case .notes: NoteSettingsForm(model: model)
-        case .review: ReviewSettingsForm(model: model)
-        case .notifications: NotificationSettingsForm(settings: $model.settings.notifications)
+        case .review: SettingBlock(.review, model: model)
+        case .notifications:
+            SettingBlock(.assignmentAlerts, model: model)
+            SettingBlock(.examAlerts, model: model)
+            SettingBlock(.reviewAlerts, model: model)
         case .claude: ClaudeSettings(model: model)
         case .lms:
             LMSSettingsForm(workspace: model.workspace)
-            Block(String(localized: .settingsLmsSync)) {
-                Card {
-                    SettingIntRow(
-                        item: .lmsSyncMinutes, value: $model.settings.lms.syncMinutes, unit: .settingsUnitMinutes, step: 5, last: true)
-                }
-            }
+            SettingBlock(.lmsSync, model: model)
         case .backup: BackupSettingsForm(model: model)
         case .about: AboutSettings(model: model)
         }
@@ -132,60 +130,9 @@ private struct GeneralSettings: View {
         .fileImporter(isPresented: $pickingFolder, allowedContentTypes: [.folder]) { result in
             if case .success(let url) = result { model.workspace.open(url) }
         }
-        Block(String(localized: .settingsDay)) {
-            Card {
-                FormRow(label: String(localized: .settingsDayBoundary)) {
-                    TimeMenu(minute: $model.settings.dayBoundaryMinutes, hours: SettingItem.dayBoundary.hours)
-                }
-                SettingIntRow(item: .idleMinutes, value: $model.settings.idleMinutes, unit: .settingsUnitMinutes, last: true)
-            }
-        }
-        DeadlineSettings(model: model)
+        SettingBlock(.day, model: model)
+        SettingBlock(.deadlines, model: model)
         PaneLayoutSettings(model: model)
-    }
-}
-
-private struct DeadlineSettings: View {
-    @Bindable var model: SettingsModel
-    @State private var details = false
-
-    var body: some View {
-        let urgency = $model.settings.urgency
-        let schedule = $model.settings.schedule
-        Block(String(localized: .settingsDeadlines)) {
-            Card(clipped: true) {
-                SettingIntRow(item: .todayExamDays, value: $model.settings.todayExamDays, unit: .settingsUnitDays)
-                SettingTimeRow(item: .dueMinute, minute: schedule.dueMinute)
-                DisclosureRow(label: String(localized: .settingsDetails), isOpen: $details, last: true) {
-                    SettingIntRow(item: .assignmentUrgentDays, value: urgency.assignmentUrgentDays, unit: .settingsUnitDays)
-                    SettingIntRow(item: .assignmentSoonDays, value: urgency.assignmentSoonDays, unit: .settingsUnitDays)
-                    SettingIntRow(item: .examUrgentDays, value: urgency.examUrgentDays, unit: .settingsUnitDays)
-                    SettingIntRow(item: .examSoonDays, value: urgency.examSoonDays, unit: .settingsUnitDays)
-                    SettingIntRow(item: .examNearDays, value: urgency.examNearDays, unit: .settingsUnitDays)
-                    SettingTimeRow(item: .examStartMinute, minute: schedule.examStartMinute)
-                    SettingIntRow(
-                        item: .examMinutes, value: schedule.examMinutes, unit: .settingsUnitMinutes, step: 10, last: true)
-                }
-            }
-        }
-    }
-}
-
-private struct SchoolSettingsForm: View {
-    @Bindable var model: SettingsModel
-
-    var body: some View {
-        Block(String(localized: .settingsSchool)) {
-            Card {
-                SettingIntRow(item: .gradesUnlockMinutes, value: $model.settings.gradesUnlockMinutes, unit: .settingsUnitMinutes)
-                FormRow(label: String(localized: SettingItem.staffMailDomain.name)) {
-                    InlineField(SettingItem.staffMailDomain.text, text: $model.settings.school.staffMailDomain)
-                }
-                FormRow(label: String(localized: SettingItem.studentMailDomain.name), last: true) {
-                    InlineField(SettingItem.studentMailDomain.text, text: $model.settings.school.studentMailDomain)
-                }
-            }
-        }
     }
 }
 
@@ -286,46 +233,6 @@ private struct LayoutGlyph: View {
     }
 }
 
-private struct ReviewSettingsForm: View {
-    @Bindable var model: SettingsModel
-    @State private var details = false
-
-    var body: some View {
-        let review = $model.settings.review
-        Card(clipped: true) {
-            FormRow(label: String(localized: .settingsIntervals), detail: model.reviewDays) {
-                IntListField(values: review.intervals, unit: String(localized: .settingsUnitDays), range: SettingItem.reviewIntervals.range)
-            }
-            FormRow(label: String(localized: .settingsDailyLimit)) {
-                let limit = model.settings.review.dailyLimit
-                IntScrub(
-                    value: Binding(get: { limit ?? 10 }, set: { model.settings.review.dailyLimit = $0 }),
-                    range: SettingItem.reviewDailyLimit.range, width: 80
-                )
-                .disabled(limit == nil)
-                .opacity(limit == nil ? Theme.Opacity.disabled : 1)
-                Text(.settingsUnits).foregroundStyle(Theme.Palette.textSecondary)
-                Switch(isOn: Binding(get: { limit != nil }, set: { model.settings.review.dailyLimit = $0 ? 10 : nil }))
-            }
-            DisclosureRow(label: String(localized: .settingsDetails), isOpen: $details, last: true) {
-                FormRow(label: String(localized: .settingsExamWindow)) {
-                    IntScrub(value: review.examWindowDays, range: SettingItem.reviewExamWindow.range)
-                    Text(.settingsUnitDaysBefore).foregroundStyle(Theme.Palette.textSecondary)
-                }
-                FormRow(label: String(localized: .settingsCardsPerReview)) {
-                    IntScrub(value: review.cardsPerReview, range: SettingItem.reviewCardsPerReview.range)
-                    Text(.settingsUnitCards).foregroundStyle(Theme.Palette.textSecondary)
-                }
-                FormRow(label: String(localized: .settingsSettleAfter)) {
-                    IntScrub(value: review.settleAfterPasses, range: SettingItem.reviewSettleAfter.range)
-                    Text(.settingsUnitPasses).foregroundStyle(Theme.Palette.textSecondary)
-                }
-                SettingIntRow(item: .quizRecheckDays, value: review.quizRecheckDays, unit: .settingsUnitDays, last: true)
-            }
-        }
-    }
-}
-
 private struct AboutSettings: View {
     let model: SettingsModel
     @Environment(\.openLink) private var openLink
@@ -350,70 +257,6 @@ private struct AboutSettings: View {
     }
 }
 
-private struct NotificationSettingsForm: View {
-    @Binding var settings: NotificationSettings
-
-    var body: some View {
-        let due = settings[.assignmentDue].on
-        Block(String(localized: .settingsAssignments)) {
-            Card {
-                FormRow(label: String(localized: .settingsDueAlert), last: !due) {
-                    Switch(isOn: on(.assignmentDue))
-                }
-                if due {
-                    FormRow(label: String(localized: .settingsAlertLead), last: true) {
-                        IntListField(
-                            values: leadHours(.assignmentDue), unit: String(localized: .settingsUnitHoursBefore),
-                            range: SettingItem.assignmentLeadHours.range)
-                    }
-                }
-            }
-        }
-        Block(String(localized: .settingsExams)) {
-            Card {
-                FormRow(label: String(localized: .settingsDayBefore)) { timed(.examDayBefore) }
-                FormRow(label: String(localized: .settingsMorningOf), last: true) { timed(.examMorning) }
-            }
-        }
-        Block(String(localized: .settingsReviewAndAttendance)) {
-            Card {
-                FormRow(label: String(localized: .settingsDailyReview)) { timed(.dailyReview) }
-                FormRow(label: String(localized: .settingsAttendanceAlert), last: true) { Switch(isOn: on(.attendance)) }
-            }
-        }
-    }
-
-    @ViewBuilder private func timed(_ kind: NotificationSettings.Kind) -> some View {
-        let isOn = settings[kind].on
-        TimeMenu(minute: minute(kind)).disabled(!isOn).opacity(isOn ? 1 : Theme.Opacity.disabled)
-        Switch(isOn: on(kind))
-    }
-
-    private func on(_ kind: NotificationSettings.Kind) -> Binding<Bool> {
-        Binding {
-            settings[kind].on
-        } set: {
-            settings[kind].on = $0
-        }
-    }
-
-    private func minute(_ kind: NotificationSettings.Kind) -> Binding<Int> {
-        Binding {
-            settings[kind].minute ?? kind.item(.minute)?.int ?? 0
-        } set: {
-            settings[kind].minute = $0
-        }
-    }
-
-    private func leadHours(_ kind: NotificationSettings.Kind) -> Binding<[Int]> {
-        Binding {
-            settings[kind].leadHours ?? []
-        } set: {
-            settings[kind].leadHours = $0
-        }
-    }
-}
-
 private struct BackupSettingsForm: View {
     @Bindable var model: SettingsModel
     #if os(macOS)
@@ -423,21 +266,16 @@ private struct BackupSettingsForm: View {
     var body: some View {
         #if os(macOS)
         let on = model.settings.backup.enabled
-        Block(String(localized: .settingsAutoBackup)) {
-            Card {
-                FormRow(label: String(localized: .settingsDailyBackup)) {
-                    Switch(isOn: $model.settings.backup.enabled)
+        SettingBlock(.autoBackup, model: model) {
+            FormRow(label: String(localized: SettingItem.backupFolder.name), detail: model.backupFolder) {
+                Button(.settingsChange) { picking = true }
+            }
+            .opacity(on ? 1 : Theme.Opacity.disabled)
+            FormRow(label: String(localized: .settingsLastBackup), detail: model.lastBackup, last: true) {
+                Button(model.backingUp ? .settingsBackingUp : .settingsBackUpNow) {
+                    Task { await model.backUpNow() }
                 }
-                FormRow(label: String(localized: .settingsLocation), detail: model.backupFolder) {
-                    Button(.settingsChange) { picking = true }
-                }
-                .opacity(on ? 1 : Theme.Opacity.disabled)
-                FormRow(label: String(localized: .settingsLastBackup), detail: model.lastBackup, last: true) {
-                    Button(model.backingUp ? .settingsBackingUp : .settingsBackUpNow) {
-                        Task { await model.backUpNow() }
-                    }
-                    .disabled(model.backingUp)
-                }
+                .disabled(model.backingUp)
             }
         }
         .fileImporter(isPresented: $picking, allowedContentTypes: [.folder]) { result in
@@ -493,28 +331,22 @@ private struct NoteSettingsForm: View {
     static let kinds: [NoteKind] = [.review, .examSummary, .unit]
 
     var body: some View {
-        let settings = $model.settings
-        Block(String(localized: .settingsNewNote)) {
-            Card(clipped: true) {
-                FormRow(label: String(localized: .settingsMathSyntax)) {
-                    ChoiceMenu(selection: settings.newNoteMath, options: MathSyntax.allCases.map { ($0, $0.label) })
-                }
-                ForEach(Self.kinds, id: \.self) { kind in
-                    let last = kind == Self.kinds.last
-                    DisclosureRow(
-                        label: String(localized: .settingsTemplateHeadings(Self.name(kind))),
-                        isOpen: Binding(get: { open.contains(kind) }, set: { if $0 { open.insert(kind) } else { open.remove(kind) } }),
-                        last: last
-                    ) {
-                        // 방금 더한 행이 입력할 때까지 남도록 빈 칸까지 담은 목록 그대로 쓴다.
-                        HeadingRows(
-                            lines: Binding(
-                                get: { model.settings.noteTemplates[kind.rawValue] ?? NoteTemplate.defaultSections(for: kind) },
-                                set: {
-                                    model.settings.noteTemplates[kind.rawValue] = $0 == NoteTemplate.defaultSections(for: kind) ? nil : $0
-                                }
-                            ), last: last)
-                    }
+        SettingBlock(.newNote, model: model) {
+            ForEach(Self.kinds, id: \.self) { kind in
+                let last = kind == Self.kinds.last
+                DisclosureRow(
+                    label: String(localized: .settingsTemplateHeadings(Self.name(kind))),
+                    isOpen: Binding(get: { open.contains(kind) }, set: { if $0 { open.insert(kind) } else { open.remove(kind) } }),
+                    last: last
+                ) {
+                    // 방금 더한 행이 입력할 때까지 남도록 빈 칸까지 담은 목록 그대로 쓴다.
+                    HeadingRows(
+                        lines: Binding(
+                            get: { model.settings.noteTemplates[kind.rawValue] ?? NoteTemplate.defaultSections(for: kind) },
+                            set: {
+                                model.settings.noteTemplates[kind.rawValue] = $0 == NoteTemplate.defaultSections(for: kind) ? nil : $0
+                            }
+                        ), last: last)
                 }
             }
         }
@@ -541,6 +373,7 @@ private struct NoteSettingsForm: View {
                     defaults: MathSnippet.asciiMathDefaults, placed: false)
             }
         }
+        CalloutList(model: model)
     }
 
     static func name(_ kind: NoteKind) -> String {
@@ -560,7 +393,7 @@ private struct ClaudeSettings: View {
         Block(String(localized: .settingsConnection)) {
             ClaudeConnectionCard(model: model)
         }
-        FormTextArea(label: String(localized: .settingsNoteRules), text: $model.settings.noteRules)
+        SettingBlock(.noteRules, model: model)
         Block(String(localized: .settingsUsage)) {
             Card {
                 let shown = Array(model.usage.prefix(6))

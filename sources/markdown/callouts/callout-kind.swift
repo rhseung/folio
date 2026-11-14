@@ -22,6 +22,11 @@ public struct CalloutKind: Hashable, Sendable {
 
     public static let proof = "proof"
 
+    // 헤더 `[!종류]`로 쓸 수 없는 이름은 CSS 클래스로도 안전하지 않으므로 받지 않는다.
+    public static func allows(_ name: String) -> Bool { name.wholeMatch(of: /[a-z-]+/) != nil }
+
+    public var isDefault: Bool { Self.defaults.contains { $0.name == name } }
+
     public static let defaults: [CalloutKind] = [
         CalloutKind("definition", .definition, numbered: true),
         CalloutKind("theorem", .theorem, numbered: true, provable: true),

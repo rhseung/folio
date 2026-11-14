@@ -24,7 +24,7 @@ extension SettingItem {
         case .numbers(let r): String(localized: .settingShapeNumbers(r.lowerBound, r.upperBound))
         case .time: String(localized: .settingShapeTime(range.lowerBound, range.upperBound))
         case .choice(let options): options.joined(separator: ", ")
-        case .text: String(localized: .settingShapeText)
+        case .text, .prose: String(localized: .settingShapeText)
         case .custom: String(localized: .settingShapeCustom)
         }
     }
