@@ -11,6 +11,7 @@ struct SettingItemTests {
         full.mathSnippets = []
         full.asciiMathSnippets = []
         full.callouts = []
+        full.assignmentKinds = []
         full.classStart.preset = "in-class"
         func leaves(_ node: JSONValue, _ path: String) -> [String] {
             if SettingItem.all.contains(where: { $0.key == path }) { return [] }
@@ -26,6 +27,7 @@ struct SettingItemTests {
         full.mathSnippets = []
         full.asciiMathSnippets = []
         full.callouts = []
+        full.assignmentKinds = []
         full.classStart.preset = "in-class"
         let root = try json(full)
         for item in SettingItem.all {

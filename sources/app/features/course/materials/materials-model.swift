@@ -144,7 +144,9 @@ final class MaterialsModel {
         let file = course.file
         return NewMaterialFile.accepts(
             folder: folder.path,
-            places: NewMaterialFile.places(assignments: file.assignments, exams: file.exams, assignmentFolders: assignmentFolders))
+            places: NewMaterialFile.places(
+                assignments: file.assignments, exams: file.exams, assignmentFolders: assignmentFolders,
+                kinds: workspace.settings.assignmentKindTable))
     }
 
     func startNewFile(in folder: String?) {

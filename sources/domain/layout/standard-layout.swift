@@ -102,7 +102,7 @@ public enum StandardLayout {
             let number = Int(match.2)
         else { return nil }
         let prefix = String(match.1)
-        let known = kinds.map(\.rawValue) + extraPrefixes
+        let known = kinds.map(\.prefix) + extraPrefixes
         return known.contains(prefix) ? (prefix, number) : nil
     }
 }

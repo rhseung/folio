@@ -13,7 +13,7 @@ struct AssignmentMenuSource: ItemMenuSource {
     let sheets: ItemSheetsAction
 
     private var link: AppLink { AppLink(.assignment, assignment.id) }
-    private var folder: String { AssignmentFiles.path(of: assignment) }
+    private var folder: String { AssignmentFiles.path(of: assignment, kinds: workspace.settings.assignmentKindTable) }
     private var folderURL: URL? { workspace.course(courseId)?.store.fileURL(folder) }
 
     var commands: [AssignmentMenuCommand] {

@@ -2,7 +2,8 @@ import Foundation
 
 extension QuickAdd {
     static func resolve(
-        _ words: [Word], line: String, course: UUID?, courseSpan: Span?, dueMinute: Int, now: Date, calendar: Calendar
+        _ words: [Word], line: String, course: UUID?, courseSpan: Span?, dueMinute: Int, kinds: [AssignmentKind], now: Date,
+        calendar: Calendar
     ) -> QuickAdd {
         let due = words.filter(\.isDue)
         var minute = due.compactMap(\.minute).first
@@ -47,7 +48,7 @@ extension QuickAdd {
         }
         spans += dueRanges.map { Span(range: $0, field: .due) }
 
-        if let m = AssignmentKind.match(in: line, outside: spans.map(\.range)) {
+        if let m = AssignmentKind.match(in: line, outside: spans.map(\.range), kinds: kinds) {
             spans.append(Span(range: m.range, field: .kind(m.kind, m.number)))
         }
 

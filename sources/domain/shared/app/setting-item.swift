@@ -275,6 +275,8 @@ extension SettingItem {
     public static let lmsKnown = SettingItem("lms.known", .custom, [], page: nil, name: .settingItemLmsKnown)
     public static let lmsHandled = SettingItem("lms.handled", .custom, [], page: nil, name: .settingItemLmsHandled)
     public static let lmsSyncMinutes = SettingItem("lms.syncMinutes", .number(5...1440), 30, page: .lms, name: .settingItemLmsSyncMinutes)
+    public static let assignmentKinds = SettingItem(
+        "assignmentKinds", .custom, .null, optional: true, page: nil, name: .settingItemAssignmentKinds)
 
     private static func choice<T: RawRepresentable & CaseIterable>(_ key: String, _ fallback: T, _ name: LocalizedStringResource)
         -> SettingItem where T.RawValue == String
@@ -294,6 +296,6 @@ extension SettingItem {
         noteRules, noteTemplates, newNoteMath, mathSnippets, asciiMathSnippets, callouts,
         classMinutes, classRecording, classRecordingOffset, classStopsRecording, classStopAfter, classRoughNote, classRoughNotePlace,
         classLecture, classLecturePlace, classOpenIn, classAllLectures, classResumesLecture, classScreen, classPreset, classCourseOff,
-        sidebar, lmsKnown, lmsHandled, lmsSyncMinutes,
+        sidebar, lmsKnown, lmsHandled, lmsSyncMinutes, assignmentKinds,
     ]
 }

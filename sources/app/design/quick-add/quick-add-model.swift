@@ -117,6 +117,8 @@ final class QuickAddModel {
         }
     }
 
+    var kinds: [AssignmentKind] { workspace.settings.assignmentKindTable }
+
     var kind: (kind: AssignmentKind, number: Int)? {
         let r = read
         return r.kind.flatMap { k in r.number.map { (k, $0) } }

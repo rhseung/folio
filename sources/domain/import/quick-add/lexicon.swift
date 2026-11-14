@@ -248,18 +248,22 @@ extension QuickAdd {
 // MARK: Kind and number
 
 extension AssignmentKind {
-    public static func parse(title: String) -> (kind: AssignmentKind, number: Int)? {
-        match(in: title).map { ($0.kind, $0.number) }
+    public static func parse(title: String, kinds: [AssignmentKind] = builtIn) -> (kind: AssignmentKind, number: Int)? {
+        match(in: title, kinds: kinds).map { ($0.kind, $0.number) }
     }
 
     // 종류 순서가 아니라 줄에서 처음 나온 것을 고른다. 번호 칩은 자기가 보이는 것을 고쳐 쓰는데, 종류 순서로
     // 고르면 `HW3 Lab2`에서 `HW3` 위에 쓴 `Report3`가 뒤의 `Lab2`로 읽혔다.
-    public static func match(in line: String, outside: [Range<String.Index>] = []) -> (
+    // 별칭이 아니라 접두어만 읽는다. 과제 제목은 폴더 이름(`HW03`)과 같은 꼴로 쓰므로, 별칭까지 읽으면 `Slow Problem 2` 같은
+    // 이미 있는 과제 제목이 폴더를 새로 얻어 그 과제의 파일이 다른 폴더를 가리키게 된다.
+    public static func match(in line: String, outside: [Range<String.Index>] = [], kinds: [AssignmentKind] = builtIn) -> (
         kind: AssignmentKind, number: Int, range: Range<String.Index>
     )? {
         var first: (kind: AssignmentKind, number: Int, range: Range<String.Index>)?
-        for kind in allCases {
-            for m in line.matches(of: try! Regex("(?i)\\b\(kind.rawValue)\\s*(\\d{1,2})(?!\\d)"))
+        for kind in kinds {
+            guard let regex = try? Regex("(?i)\\b" + NSRegularExpression.escapedPattern(for: kind.prefix) + "\\s*(\\d{1,2})(?!\\d)")
+            else { continue }
+            for m in line.matches(of: regex)
             where !outside.contains(where: { $0.overlaps(m.range) }) {
                 guard let n = (m.output[1].substring).flatMap({ Int($0) }) else { continue }
                 if first.map({ m.range.lowerBound < $0.range.lowerBound }) ?? true { first = (kind, n, m.range) }
@@ -270,11 +274,11 @@ extension AssignmentKind {
     }
 
     public func folderName(_ number: Int) -> String {
-        rawValue + String(format: "%02d", number)
+        prefix + String(format: "%02d", number)
     }
 
-    public static func unmatchedFolders(_ folders: [String], assignments: [Assignment]) -> [String] {
-        let taken = Set(assignments.map { a in parse(title: a.title).map { $0.kind.folderName($0.number) } ?? a.title })
+    public static func unmatchedFolders(_ folders: [String], assignments: [Assignment], kinds: [AssignmentKind] = builtIn) -> [String] {
+        let taken = Set(assignments.map { AssignmentFiles.folder(of: $0, kinds: kinds) })
         return folders.filter { !taken.contains($0) }.sorted()
     }
 }

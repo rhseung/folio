@@ -24,6 +24,8 @@ public struct Settings: Codable, Sendable, Equatable {
     public var school: SchoolSettings
     // 기본 종류 밖의 콜아웃 종류다. nil이면 기본 종류만 쓴다.
     public var callouts: [NoteCallout]?
+    // 기본 종류 표가 앱과 함께 늘어날 수 있도록, 바꾸기 전까지는 nil로 둔다.
+    public var assignmentKinds: [AssignmentKind]?
 
     public static let defaultNoteRules = SettingItem.noteRules.text
 
@@ -35,7 +37,8 @@ public struct Settings: Codable, Sendable, Equatable {
         asciiMathSnippets: [MathSnippet]? = nil, classStart: ClassStartSettings = .init(), panePresets: [PanePreset] = [],
         lms: LMSSettings = .init(), idleMinutes: Int = SettingItem.idleMinutes.int, todayExamDays: Int = SettingItem.todayExamDays.int,
         urgency: UrgencySettings = .init(), schedule: ScheduleDefaults = .init(),
-        gradesUnlockMinutes: Int = SettingItem.gradesUnlockMinutes.int, school: SchoolSettings = .init(), callouts: [NoteCallout]? = nil
+        gradesUnlockMinutes: Int = SettingItem.gradesUnlockMinutes.int, school: SchoolSettings = .init(), callouts: [NoteCallout]? = nil,
+        assignmentKinds: [AssignmentKind]? = nil
     ) {
         self.dayBoundaryMinutes = dayBoundaryMinutes
         self.review = review
@@ -58,6 +61,7 @@ public struct Settings: Codable, Sendable, Equatable {
         self.gradesUnlockMinutes = gradesUnlockMinutes
         self.school = school
         self.callouts = callouts
+        self.assignmentKinds = assignmentKinds
     }
 
     public init(from decoder: any Decoder) throws {
@@ -84,6 +88,7 @@ public struct Settings: Codable, Sendable, Equatable {
         gradesUnlockMinutes = try c.value(.gradesUnlockMinutes, or: d.gradesUnlockMinutes)
         school = try c.value(.school, or: d.school)
         callouts = try c.decodeIfPresent([NoteCallout].self, forKey: .callouts)
+        assignmentKinds = try c.decodeIfPresent([AssignmentKind].self, forKey: .assignmentKinds)
     }
 
     public var presets: [PanePreset] { PanePreset.builtIn + panePresets }
@@ -94,6 +99,7 @@ public struct Settings: Codable, Sendable, Equatable {
 
     public var snippets: [MathSnippet] { mathSnippets ?? MathSnippet.defaults }
     public var asciiSnippets: [MathSnippet] { asciiMathSnippets ?? MathSnippet.asciiMathDefaults }
+    public var assignmentKindTable: [AssignmentKind] { assignmentKinds ?? AssignmentKind.builtIn }
 
     public func noteSections(for kind: NoteKind) -> [String] {
         (noteTemplates[kind.rawValue] ?? NoteTemplate.defaultSections(for: kind)).filter {

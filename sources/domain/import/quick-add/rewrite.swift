@@ -117,7 +117,7 @@ extension QuickAdd {
                         + [plain.splicing(ranges.map { ($0, "") }).appending(word: words)] + inPlace
                 }
             case let .kind(kind, number):
-                let word = "\(kind.rawValue)\(number)"
+                let word = "\(kind.prefix)\(number)"
                 tries = [before.kindRange.map { line.splicing([($0, word)]) } ?? line.appending(word: word)]
             }
 

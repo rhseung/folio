@@ -16,8 +16,8 @@ public struct CourseStore: Sendable {
     public var log: EventLog { EventLog(folder: metadataURL.appending(path: StandardLayout.logsFolder)) }
 
     @discardableResult
-    public func ensureFolder(assignmentTitle: String) throws -> String? {
-        guard let (kind, number) = AssignmentKind.parse(title: assignmentTitle) else { return nil }
+    public func ensureFolder(assignmentTitle: String, kinds: [AssignmentKind] = AssignmentKind.builtIn) throws -> String? {
+        guard let (kind, number) = AssignmentKind.parse(title: assignmentTitle, kinds: kinds) else { return nil }
         return try ensure("\(CourseFolder.assignments.rawValue)/\(kind.folderName(number))")
     }
 

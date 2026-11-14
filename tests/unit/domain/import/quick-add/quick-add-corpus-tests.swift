@@ -305,7 +305,7 @@ struct QuickAddCorpusTests {
             case 0: set = .course(courses[value.1].id)
             case 1: set = .due(value.2 < 0 ? nil : calendar.date(byAdding: .minute, value: value.2 * 15, to: date("2026-10-21 00:00")))
             case 2: set = .repeats(Self.rules[abs(value.2) % Self.rules.count])
-            default: set = .kind(AssignmentKind.allCases[value.1 % AssignmentKind.allCases.count], value.1 + 1)
+            default: set = .kind(AssignmentKind.builtIn[value.1 % AssignmentKind.builtIn.count], value.1 + 1)
             }
 
             let before = reader.read(text)

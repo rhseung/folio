@@ -35,11 +35,14 @@ public struct AssignmentAdd {
             f.assignments.append(a)
         }
 
-        if AssignmentKind.parse(title: title) != nil {
-            let path = AssignmentFiles.path(of: Assignment(device: ctx.device, at: ctx.now, title: title))
+        let kinds = try ctx.settings().assignmentKindTable
+        if AssignmentKind.parse(title: title, kinds: kinds) != nil {
+            let path = AssignmentFiles.path(of: Assignment(device: ctx.device, at: ctx.now, title: title), kinds: kinds)
             let store = try ctx.store(course)
             if !FileManager.default.fileExists(atPath: store.fileURL(path).path) {
-                try ctx.io(Change(.added, ctx.relative(store.fileURL(path)) + "/")) { try store.ensureFolder(assignmentTitle: title) }
+                try ctx.io(Change(.added, ctx.relative(store.fileURL(path)) + "/")) {
+                    try store.ensureFolder(assignmentTitle: title, kinds: kinds)
+                }
             }
         }
         ctx.made(id)

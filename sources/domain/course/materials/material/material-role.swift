@@ -16,7 +16,7 @@ public enum MaterialRole: String, Codable, Sendable, CaseIterable {
         case .archive: self = .archive
         case .assignments:
             guard parts.count >= 3 else { return nil }
-            self = StandardLayout.assignmentFolder(parts[1])?.prefix == AssignmentKind.lab.rawValue ? .lab : .assignment
+            self = StandardLayout.assignmentFolder(parts[1])?.prefix == AssignmentKind.lab.prefix ? .lab : .assignment
         case .exams:
             guard parts.count >= 3 else { return nil }
             self = .exam

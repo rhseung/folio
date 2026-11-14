@@ -13,6 +13,13 @@ enum Keywords {
         return nil
     }
 
+    static func mentionsLab(_ name: String, kinds: [AssignmentKind]) -> Bool {
+        guard let lab = kinds.first(where: { $0 == .lab }),
+            let regex = try? Regex("(?:" + FileRule.alternation(lab.words) + #")\s*\d"#)
+        else { return false }
+        return name.lowercased().firstMatch(of: regex) != nil
+    }
+
     static func looksSelfMade(_ name: String) -> Bool {
         FileRule.rules(for: .cleanup).contains { $0.kind == .selfMade && $0.match(name) != nil }
     }
@@ -60,10 +67,14 @@ enum Keywords {
                 .filter { !labStopWords.contains($0) && !$0.allSatisfy(\.isNumber) })
     }
 
-    static func assignmentNumber(in name: String) -> (number: Int, review: ReviewReason?)? {
+    // 예전 폴더의 이름은 낱말이 붙어 있어(`gthw2`) 자료 추측과 달리 낱말 앞의 경계를 보지 않는다.
+    static func assignmentNumber(in name: String, kinds: [AssignmentKind] = AssignmentKind.builtIn) -> (number: Int, review: ReviewReason?)?
+    {
         let lower = name.lowercased()
-        let keyword = /(?:hw|homework|assignment|assign|pa|lab|sp|slow[\s_-]?problems?|report|project|과제|숙제)[\s_-]*(\d{1,2})(?!\d)/
-        if let m = lower.firstMatch(of: keyword) ?? lower.firstMatch(of: /\d{2}h(\d{1,2})(?!\d)/) {
+        let words = kinds.flatMap(\.words)
+        let keyword =
+            words.isEmpty ? nil : try? Regex<(Substring, Substring)>("(?:" + FileRule.alternation(words) + #")[\s_-]*(\d{1,2})(?!\d)"#)
+        if let m = keyword.flatMap({ lower.firstMatch(of: $0) }) ?? lower.firstMatch(of: /\d{2}h(\d{1,2})(?!\d)/) {
             return (Int(m.1)!, nil)
         }
         if let m = lower.firstMatch(of: /^(\d{1,2})[\s_.-]/) {

@@ -7,7 +7,7 @@ extension MaterialIntake {
     ) -> IntakeGuess {
         let name = file.name.precomposedStringWithCanonicalMapping
         let lower = name.lowercased()
-        let kinds = AssignmentKind.builtIn
+        let kinds = settings.assignmentKindTable
         let offered = { (folder: CourseFolder) in places.contains(folder.rawValue) ? folder.rawValue : nil }
         let lecture = { (why: IntakeGuess.Why?, week: Int?) in
             var guess = IntakeGuess(folder: CourseFolder.lectures.rawValue, why: why)
@@ -46,7 +46,7 @@ extension MaterialIntake {
             StandardLayout.assignmentFolder(String(place.dropFirst(base.count)), kinds: kinds).map { (place, $0) }
         }
         let numbered = parsed.filter { $0.1.number == number }
-        return numbered.first { $0.1.prefix == kind.rawValue }?.0 ?? (numbered.count == 1 ? numbered.first?.0 : nil)
+        return numbered.first { $0.1.prefix == kind.prefix }?.0 ?? (numbered.count == 1 ? numbered.first?.0 : nil)
     }
 
     static func examFolder(for lower: String, places: [String], exams: [Exam], now: Date) -> String? {

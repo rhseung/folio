@@ -21,7 +21,8 @@ public struct MaterialNew {
         let folder = folder.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         guard NewMaterialFile.accepts(folder: folder) else { throw ActionError.rule(String(localized: .errorMaterialNewPlace(folder))) }
         let places = NewMaterialFile.places(
-            assignments: file.assignments, exams: file.exams, assignmentFolders: try store.assignmentFolders())
+            assignments: file.assignments, exams: file.exams, assignmentFolders: try store.assignmentFolders(),
+            kinds: try ctx.settings().assignmentKindTable)
         guard NewMaterialFile.accepts(folder: folder, places: places) else {
             throw ActionError.rule(String(localized: .errorMaterialNewNoItem(folder)))
         }

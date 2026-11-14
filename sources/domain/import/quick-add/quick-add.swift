@@ -67,6 +67,7 @@ public struct QuickAdd: Equatable, Sendable {
         detect(&words)
         markEndings(&words)
         return resolve(
-            words, line: line, course: course, courseSpan: courseSpan, dueMinute: settings.schedule.dueMinute, now: now, calendar: calendar)
+            words, line: line, course: course, courseSpan: courseSpan, dueMinute: settings.schedule.dueMinute,
+            kinds: settings.assignmentKindTable, now: now, calendar: calendar)
     }
 }

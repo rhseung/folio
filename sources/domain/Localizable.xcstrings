@@ -1134,6 +1134,17 @@
         }
       }
     },
+    "rule.settings.assignment-kinds": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과제 종류의 접두어는 영문자로만 쓰고 서로 달라야 합니다"
+          }
+        }
+      }
+    },
     "rule.settings.class-minutes": {
       "extractionState": "manual",
       "localizations": {
@@ -2417,6 +2428,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "LMS 확인 주기"
+          }
+        }
+      }
+    },
+    "setting-item.assignment-kinds": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과제 종류와 별칭"
           }
         }
       }

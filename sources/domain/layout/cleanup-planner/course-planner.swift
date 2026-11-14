@@ -71,7 +71,7 @@ struct CoursePlanner {
                 lectureItem(item, at: "\(base)/\(item.name)")
             }
         case .assignments:
-            let loose = node.children.filter { $0.isFile || StandardLayout.assignmentFolder($0.name) == nil }
+            let loose = node.children.filter { $0.isFile || StandardLayout.assignmentFolder($0.name, kinds: kinds) == nil }
             assignmentItems(loose, in: base, kind: .homework)
         case .exams:
             for item in node.children {
@@ -127,7 +127,7 @@ struct CoursePlanner {
         case .labManuals:
             for item in node.children {
                 let path = "\(base)/\(item.name)"
-                let lab = Keywords.labNumber(of: item.name, labs: labs) ?? Keywords.assignmentNumber(in: item.name)?.number
+                let lab = Keywords.labNumber(of: item.name, labs: labs) ?? Keywords.assignmentNumber(in: item.name, kinds: kinds)?.number
                 if item.isFile, let week = lab.flatMap({ labWeeks[$0] }) {
                     moves.append(
                         .init(from: path, to: "\(CourseFolder.lectures.rawValue)/\(MaterialIntake.lectureName(item.name, week: week))"))
@@ -239,21 +239,21 @@ struct CoursePlanner {
         let root = CourseFolder.assignments.rawValue
         for item in items {
             let from = "\(base)/\(item.name)"
-            let itemKind = item.name.lowercased().firstMatch(of: /lab\s*\d/) != nil ? AssignmentKind.lab : kind
+            let itemKind = Keywords.mentionsLab(item.name, kinds: kinds) ? AssignmentKind.lab : kind
             // 실험 이름이 파일 이름의 번호보다 앞선다. `2_<id>_VSEPR.pdf`는 Lab02가 아니다.
             let lab = itemKind == .lab ? Keywords.labNumber(of: item.name, labs: labs) : nil
-            let parsed = lab.map { (number: $0, review: ReviewReason?.none) } ?? Keywords.assignmentNumber(in: item.name)
+            let parsed = lab.map { (number: $0, review: ReviewReason?.none) } ?? Keywords.assignmentNumber(in: item.name, kinds: kinds)
             switch (parsed, item.content) {
             case (let p?, .folder(let children)):
-                let folder = itemKind.rawValue + String(format: "%02d", p.number)
+                let folder = itemKind.prefix + String(format: "%02d", p.number)
                 moves += children.map { .init(from: "\(from)/\($0.name)", to: "\(root)/\(folder)/\($0.name)", review: p.review) }
             case (let p?, _):
-                let folder = itemKind.rawValue + String(format: "%02d", p.number)
+                let folder = itemKind.prefix + String(format: "%02d", p.number)
                 moves.append(.init(from: from, to: "\(root)/\(folder)/\(item.name)", review: p.review))
             case (nil, .opaque):
                 moves.append(.init(from: from, to: "\(root)/\(nextFolder(.project))/\(item.name)", review: .unknownNumber))
             case (nil, _):
-                moves.append(.init(from: from, to: "\(root)/\(itemKind.rawValue)00/\(item.name)", review: .unknownNumber))
+                moves.append(.init(from: from, to: "\(root)/\(itemKind.prefix)00/\(item.name)", review: .unknownNumber))
             }
         }
     }
@@ -261,9 +261,9 @@ struct CoursePlanner {
     func nextFolder(_ kind: AssignmentKind) -> String {
         let existing = course[child: CourseFolder.assignments.rawValue]?.children.map(\.name) ?? []
         let planned = moves.compactMap { $0.to.split(separator: "/").dropFirst().first.map(String.init) }
-        let used = (existing + planned).compactMap { StandardLayout.assignmentFolder($0) }
-            .filter { $0.prefix == kind.rawValue }.map(\.number)
-        return kind.rawValue + String(format: "%02d", (used.max() ?? 0) + 1)
+        let used = (existing + planned).compactMap { StandardLayout.assignmentFolder($0, kinds: kinds) }
+            .filter { $0.prefix == kind.prefix }.map(\.number)
+        return kind.prefix + String(format: "%02d", (used.max() ?? 0) + 1)
     }
 
     // MARK: Past exams

@@ -38,7 +38,7 @@ final class AssignmentsModel {
     }
 
     func drop(_ urls: [URL], on a: Assignment) {
-        workspace.importFiles(urls, into: AssignmentFiles.path(of: a), course: course.id)
+        workspace.importFiles(urls, into: AssignmentFiles.path(of: a, kinds: workspace.settings.assignmentKindTable), course: course.id)
     }
 
     struct Row {
@@ -52,16 +52,18 @@ final class AssignmentsModel {
 
     func row(_ a: Assignment) -> Row {
         let file = course.file
-        let files = AssignmentFiles.materials(of: a, in: file.materials)
+        let files = AssignmentFiles.materials(of: a, in: file.materials, kinds: workspace.settings.assignmentKindTable)
         let submissions = files.filter {
-            ($0.kind ?? AssignmentFiles.guessKind(fileName: ($0.path as NSString).lastPathComponent)) == .submission
+            ($0.kind
+                ?? AssignmentFiles.guessKind(
+                    fileName: ($0.path as NSString).lastPathComponent, kinds: workspace.settings.assignmentKindTable)) == .submission
         }.count
         let scores = file.scores.filter { $0.assignmentId == a.id }
         return Row(
             files: files, problems: files.count - submissions, submissions: submissions,
             score: scores.isEmpty ? nil : "\(scores.map(\.score).reduce(0, +).formatted())/\(scores.map(\.max).reduce(0, +).formatted())",
             component: a.componentGroup ?? file.components.first { $0.id == a.componentId }?.name,
-            suggestsSubmitted: AssignmentFiles.suggestsSubmitted(a, files: files))
+            suggestsSubmitted: AssignmentFiles.suggestsSubmitted(a, files: files, kinds: workspace.settings.assignmentKindTable))
     }
 
     func due(_ a: Assignment) -> (date: String, time: String?) {

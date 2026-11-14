@@ -43,7 +43,7 @@ public enum CleanupPlanner {
     public static func plan(
         _ gist: FolderTree, skip: Set<String> = [], labs: [String: [String: Int]] = [:],
         labWeeks: [String: [Int: Int]] = [:], selfMade: Set<String> = [],
-        exams: [String: [Exam]] = [:]
+        exams: [String: [Exam]] = [:], kinds: [AssignmentKind] = AssignmentKind.builtIn
     ) -> CleanupPlan {
         var moves: [PlannedMove] = []
         var skipped: [String] = []
@@ -74,7 +74,7 @@ public enum CleanupPlanner {
                     let mine = Set(selfMade.filter { $0.hasPrefix(path + "/") }.map { String($0.dropFirst(path.count + 1)) })
                     var planner = CoursePlanner(
                         course: child, labs: labs[path] ?? [:], labWeeks: labWeeks[path] ?? [:], selfMade: mine,
-                        exams: exams[path])
+                        exams: exams[path], kinds: kinds)
                     moves += planner.plan().map {
                         .init(from: "\(path)/\($0.from)", to: "\(path)/\($0.to)", review: $0.review, exam: $0.exam, kind: $0.kind)
                     }
