@@ -1,9 +1,9 @@
 import Foundation
 
 public struct BackupSettings: Codable, Sendable, Equatable {
-    public var enabled = true
-    public var folder = "~/Backups/Folio/auto"
-    public var dailyDays = 30
+    public var enabled = SettingItem.backupEnabled.bool
+    public var folder = SettingItem.backupFolder.text
+    public var dailyDays = SettingItem.backupDailyDays.int
 
     public init() {}
 

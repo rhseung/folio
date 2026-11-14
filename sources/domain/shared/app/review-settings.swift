@@ -7,10 +7,13 @@ public struct ReviewSettings: Codable, Sendable, Equatable {
     public var examWindowDays: Int
     public var cardsPerReview: Int
     public var weights: PriorityWeights
+    public var quizRecheckDays: Int
 
     public init(
-        intervals: [Int] = [1, 3, 7, 14, 30], settleAfterPasses: Int = 2, dailyLimit: Int? = nil,
-        examWindowDays: Int = 7, cardsPerReview: Int = 5, weights: PriorityWeights = .init()
+        intervals: [Int] = SettingItem.reviewIntervals.ints, settleAfterPasses: Int = SettingItem.reviewSettleAfter.int,
+        dailyLimit: Int? = nil, examWindowDays: Int = SettingItem.reviewExamWindow.int,
+        cardsPerReview: Int = SettingItem.reviewCardsPerReview.int, weights: PriorityWeights = .init(),
+        quizRecheckDays: Int = SettingItem.quizRecheckDays.int
     ) {
         self.intervals = intervals
         self.settleAfterPasses = settleAfterPasses
@@ -18,6 +21,7 @@ public struct ReviewSettings: Codable, Sendable, Equatable {
         self.examWindowDays = examWindowDays
         self.cardsPerReview = cardsPerReview
         self.weights = weights
+        self.quizRecheckDays = quizRecheckDays
     }
 
     public func interval(atStep step: Int) -> Int { intervals[min(max(step, 0), intervals.count - 1)] }
@@ -40,5 +44,6 @@ public struct ReviewSettings: Codable, Sendable, Equatable {
         examWindowDays = try c.decodeIfPresent(Int.self, forKey: .examWindowDays) ?? d.examWindowDays
         cardsPerReview = try c.decodeIfPresent(Int.self, forKey: .cardsPerReview) ?? d.cardsPerReview
         weights = try c.decodeIfPresent(PriorityWeights.self, forKey: .weights) ?? d.weights
+        quizRecheckDays = try c.value(.quizRecheckDays, or: d.quizRecheckDays)
     }
 }

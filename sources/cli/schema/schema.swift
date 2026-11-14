@@ -33,11 +33,6 @@ extension Aggregation: SchemaHint {
     static var example: Any { Aggregation.sum }
 }
 
-extension JSONValue: ExpressibleByStringLiteral, ExpressibleByDictionaryLiteral {
-    public init(stringLiteral value: String) { self = .string(value) }
-    public init(dictionaryLiteral elements: (String, JSONValue)...) { self = .object(Dictionary(elements) { a, _ in a }) }
-}
-
 func declaredInput(_ fields: [FieldSpec], _ sniffed: JSONValue) -> JSONValue {
     guard case .object(var o) = sniffed, case .object(var props)? = o["properties"], case .array(let required)? = o["required"] else {
         return sniffed
@@ -78,7 +73,8 @@ func actionSchemas() -> JSONValue {
             "summary": .string(spec.summary),
             "effect": .string(spec.effect.rawValue),
             "asks": .bool(spec.effect == .removes || spec.effect == .moves),
-            "input": declaredInput(spec.fields, builder.inline(type)),
+            "input": (type as? any InputRefining.Type)?.refine(declaredInput(spec.fields, builder.inline(type)))
+                ?? declaredInput(spec.fields, builder.inline(type)),
         ]
     }
     return [

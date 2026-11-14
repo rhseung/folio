@@ -33,6 +33,14 @@ struct SettingItemTests {
         #expect(Set(SettingItem.all.map(\.key)).count == SettingItem.all.count)
     }
 
+    // 선언이 기본값의 단일 출처다. `Settings()`가 다른 값을 쓰면 화면과 `settings show`가 다른 기본값을 말한다.
+    @Test func defaultsAreTheDeclarations() throws {
+        let root = try json(Settings())
+        for item in SettingItem.all {
+            #expect((item.value(in: root) ?? .null) == item.fallback, "\(item.key)")
+        }
+    }
+
     @Test func defaultsPassTheirOwnChecks() throws {
         #expect(SettingItem.problems(in: try json(Settings())).isEmpty)
     }
@@ -51,10 +59,11 @@ struct SettingItemTests {
         #expect(SettingItem.backupDailyDays.problem(.number(9000)) == nil)
     }
 
-    @Test func timeRangesCoverWholeHours() {
-        #expect(SettingItem.dayBoundary.range == 0...539)
-        #expect(SettingItem.dayBoundary.problem(.number(8 * 60 + 55)) == nil)
-        #expect(SettingItem.dayBoundary.problem(.number(9 * 60)) != nil)
+    @Test func timeRangesAreMinutes() {
+        #expect(SettingItem.dayBoundary.range == 0...480)
+        #expect(SettingItem.dayBoundary.hours == 0...8)
+        #expect(SettingItem.dayBoundary.problem(.number(8 * 60)) == nil)
+        #expect(SettingItem.dayBoundary.problem(.number(8 * 60 + 5)) != nil)
         #expect(SettingItem.examMorningMinute.hours == 0...23)
     }
 

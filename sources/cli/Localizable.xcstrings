@@ -5474,40 +5474,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "설정 보기. --json이면 settings.json 전체"
-          }
-        }
-      }
-    },
-    "settings.show.backup": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자동 백업"
-          }
-        }
-      }
-    },
-    "settings.show.day-boundary": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "하루 경계"
-          }
-        }
-      }
-    },
-    "settings.show.days": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld일"
+            "value": "설정 보기. 항목마다 지금 값, 기본값과 다르면 기본값, 필드 이름을 보인다. --json이면 settings.json 전체"
           }
         }
       }
@@ -5519,39 +5486,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "예시:\n  folio settings show\n  folio settings show --json > settings.json"
-          }
-        }
-      }
-    },
-    "settings.show.intervals": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "복습 간격"
-          }
-        }
-      }
-    },
-    "settings.show.new-note-math": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "새 노트 수식"
-          }
-        }
-      }
-    },
-    "settings.show.off": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "끔"
           }
         }
       }
@@ -6256,28 +6190,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "읽을 때의 contentHash(material show --json). 다르면 쓰지 않는다"
-          }
-        }
-      }
-    },
-    "settings.show.class-minutes": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "기본 수업 길이"
-          }
-        }
-      }
-    },
-    "settings.show.minutes": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld분"
           }
         }
       }
@@ -7521,6 +7433,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "GIST LMS 제안함의 본 강의실과 숨긴 항목"
+          }
+        }
+      }
+    },
+    "settings.show.default": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(기본 %@)"
+          }
+        }
+      }
+    },
+    "settings.show.elsewhere": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 화면에서 바꾸는 값"
           }
         }
       }

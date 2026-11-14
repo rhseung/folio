@@ -1,15 +1,15 @@
 import Foundation
 
 public struct NotificationSettings: Codable, Sendable, Equatable {
-    public var assignmentDue = true
-    public var assignmentLeadHours = [24, 3]
-    public var examDayBefore = true
-    public var examDayBeforeMinute = 21 * 60
-    public var examMorning = true
-    public var examMorningMinute = 8 * 60
-    public var dailyReview = true
-    public var dailyReviewMinute = 9 * 60
-    public var attendance = true
+    public var assignmentDue = SettingItem.assignmentDue.bool
+    public var assignmentLeadHours = SettingItem.assignmentLeadHours.ints
+    public var examDayBefore = SettingItem.examDayBefore.bool
+    public var examDayBeforeMinute = SettingItem.examDayBeforeMinute.int
+    public var examMorning = SettingItem.examMorning.bool
+    public var examMorningMinute = SettingItem.examMorningMinute.int
+    public var dailyReview = SettingItem.dailyReview.bool
+    public var dailyReviewMinute = SettingItem.dailyReviewMinute.int
+    public var attendance = SettingItem.attendance.bool
 
     public init() {}
 

@@ -44,3 +44,13 @@ public enum JSONValue: Hashable, Sendable, Codable {
         }
     }
 }
+
+extension JSONValue: ExpressibleByStringLiteral, ExpressibleByDictionaryLiteral, ExpressibleByArrayLiteral,
+    ExpressibleByIntegerLiteral, ExpressibleByBooleanLiteral
+{
+    public init(stringLiteral value: String) { self = .string(value) }
+    public init(dictionaryLiteral elements: (String, JSONValue)...) { self = .object(Dictionary(elements) { a, _ in a }) }
+    public init(arrayLiteral elements: JSONValue...) { self = .array(elements) }
+    public init(integerLiteral value: Int) { self = .number(Double(value)) }
+    public init(booleanLiteral value: Bool) { self = .bool(value) }
+}
