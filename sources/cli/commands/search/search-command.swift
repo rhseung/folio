@@ -3,7 +3,13 @@ import FolioDomain
 import FolioIndex
 import Foundation
 
-struct SearchCommand: ParsableCommand {
+struct SearchCommand: ParsableCommand, HandRead {
+
+    static let reason = "검색 색인(FolioIndex)은 이 기기의 캐시라 FolioActions가 읽지 않는다"
+
+    static let panel = true
+
+    static let staged = false
     static let configuration = CommandConfiguration(
         commandName: "search", abstract: String(localized: .searchAbstract), discussion: String(localized: .searchDiscussion))
     @OptionGroup var g: GlobalOptions

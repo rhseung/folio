@@ -1,10 +1,13 @@
 import ArgumentParser
+import FolioActions
 import FolioDomain
 import FolioStorage
 import Foundation
 
 extension NoteCommand.Figure {
-    struct Render: ParsableCommand {
+    struct Render: ParsableCommand, HandRead {
+        static let reason = "그려 보기는 FolioCLI의 화면 밖 WKWebView(PageRender)로 그린다"
+        static let panel = true
         static let configuration = CommandConfiguration(
             abstract: String(localized: .noteFigureRenderAbstract), discussion: String(localized: .noteRenderDiscussion))
         @OptionGroup var g: GlobalOptions
@@ -26,7 +29,7 @@ extension NoteCommand.Figure {
                 source = (URL(filePath: svg).deletingPathExtension().lastPathComponent, try readText(svg))
             } else {
                 guard let c, let name else { throw CLIError(exit: .usage, message: String(localized: .noteFigureRenderNothing)) }
-                let (file, read) = try readFigure(c, name)
+                let (file, read) = try reporting { try MaterialText.figure(c.store, name) }
                 source = ((file as NSString).deletingPathExtension, read)
             }
             try out.report(

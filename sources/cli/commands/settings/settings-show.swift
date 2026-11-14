@@ -34,3 +34,7 @@ extension SettingsCommand {
         }
     }
 }
+
+extension SettingsCommand.Show: HandRead {
+    static let reason = "설정 항목 선언(SettingItem)에서 그리는 출력으로 옮긴다(#500)"
+}

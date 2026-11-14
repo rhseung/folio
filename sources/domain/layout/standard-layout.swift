@@ -74,6 +74,14 @@ public enum StandardLayout {
         name.wholeMatch(of: /[A-Z]{2,}\d{3,4} \S.*/) != nil
     }
 
+    // 명령줄이 과목을 가리키고 출력에 쓰는 짧은 이름이다. 표준 이름의 폴더는 그 첫 낱말(`EC4207`)이고, 아니면 첫 강의
+    // 코드와 분반을 뺀 번호다.
+    public static func courseCode(of course: Course, folder: String, catalog: Catalog) -> String {
+        if let token = folder.split(separator: " ").first, isCourseFolderName(folder) { return String(token) }
+        let prefix = course.codes.first.flatMap { id in catalog.codes.first { $0.id == id }?.prefix } ?? ""
+        return prefix + (course.number.split(separator: "-").first.map(String.init) ?? "")
+    }
+
     public static func isLectureFileName(_ name: String) -> Bool {
         lectureWeek(name) != nil
     }

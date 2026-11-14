@@ -45,9 +45,13 @@ struct ActionsCommand: ParsableCommand {
         }
         let writes = Self.directWrites(app)
         let unexplained = rows.filter { !$0.generated && ($0.manualReason ?? "").isEmpty }
-        let unexplainedReads = Queries.all.filter { !$0.spec.generated && ($0.spec.manualReason ?? "").isEmpty }
+        let unexplainedReads =
+            Queries.all.filter { !$0.spec.generated && ($0.spec.manualReason ?? "").isEmpty }.map { $0.spec.command }
+            + Self.unexplainedHandReads()
+        let commandless = Queries.all.map { $0.spec.command }.filter { !commands.contains($0) }
         let passed =
             rows.allSatisfy { $0.hasCommand && $0.equivalenceTest } && writes.isEmpty && unexplained.isEmpty && unexplainedReads.isEmpty
+            && commandless.isEmpty
         if g.json {
             try printJSON(Report(actions: rows, directWrites: writes, passed: passed))
         } else {
@@ -66,7 +70,8 @@ struct ActionsCommand: ParsableCommand {
             t.print()
             for w in writes { say("✗".styled(.red) + " " + String(localized: .actionsDirectWrite(w))) }
             for r in unexplained { say("✗".styled(.red) + " " + String(localized: .actionsNoReason(r.command))) }
-            for q in unexplainedReads { say("✗".styled(.red) + " " + String(localized: .actionsNoReason(q.spec.command))) }
+            for q in unexplainedReads { say("✗".styled(.red) + " " + String(localized: .actionsNoReadReason(q))) }
+            for q in commandless { say("✗".styled(.red) + " " + String(localized: .actionsQueryNoCommand(q))) }
             let n = rows.count
             say(
                 [
@@ -100,6 +105,20 @@ struct ActionsCommand: ParsableCommand {
             let path = prefix + [name]
             return [path.joined(separator: " ")] + commandPaths(sub, prefix: path)
         }
+    }
+
+    // 손으로 짠 끝 명령 중 액션도, 읽기 선언도, 액션을 만드는 명령도, MCP 도구가 아닌 명령도 아닌 것은 손 읽기 명령이고
+    // 이유(`HandRead.reason`)가 있어야 한다.
+    static func unexplainedHandReads() -> [String] {
+        let declared = Set(Actions.all.map { $0.command.components(separatedBy: " --")[0] } + Queries.all.map { $0.spec.command })
+        return MCPServer.commands.compactMap { path, type in
+            let config = type.configuration
+            guard !path.isEmpty, config.subcommands.isEmpty, config.groupedSubcommands.isEmpty, !declared.contains(path),
+                !String(reflecting: type).contains(".GeneratedCommands."), !(type is any BuildsAction.Type),
+                !MCPServer.notTools.contains(path), !MCPServer.notTools.contains(String(path.split(separator: " ")[0]))
+            else { return nil }
+            return ((type as? any HandRead.Type)?.reason ?? "").isEmpty ? path : nil
+        }.sorted()
     }
 
     static func sources(_ root: URL) -> [(String, String)] {

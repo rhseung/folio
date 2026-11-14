@@ -1705,6 +1705,138 @@
           }
         }
       }
+    },
+    "error.file.missing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일이 없습니다: %@"
+          }
+        }
+      }
+    },
+    "error.file.not-utf8": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "UTF-8 텍스트가 아닙니다: %@"
+          }
+        }
+      }
+    },
+    "gpa.cumulative": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "누적"
+          }
+        }
+      }
+    },
+    "gpa.major": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전공"
+          }
+        }
+      }
+    },
+    "semester.recognized": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인정학기"
+          }
+        }
+      }
+    },
+    "today.overdue": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld일 밀림"
+          }
+        }
+      }
+    },
+    "today.minutes-left": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld분 남음"
+          }
+        }
+      }
+    },
+    "today.plan-done": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · 완료"
+          }
+        }
+      }
+    },
+    "today.attendance-warning": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "결석 %lld회 · 한 번 더 결석하면 최대 %@"
+          }
+        }
+      }
+    },
+    "today.attendance-cap": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "상한"
+          }
+        }
+      }
+    },
+    "error.transcript.none": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에는 받아쓰기가 없습니다"
+          }
+        }
+      }
+    },
+    "error.transcript.bad-time": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시각은 12:30, 1:02:03, 750 꼴로 적습니다: %@"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

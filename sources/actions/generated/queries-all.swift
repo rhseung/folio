@@ -3,14 +3,44 @@ extension Queries {
     public static let all: [any Query.Type] = everywhere + platform
 
     static let everywhere: [any Query.Type] = [
+        AssignmentList.self,
+        AssignmentShow.self,
+        CatalogShow.self,
+        ComponentList.self,
+        CourseList.self,
         CourseShow.self,
+        ExamList.self,
         ExamShow.self,
+        GPAShow.self,
+        MaterialList.self,
+        MaterialShow.self,
+        NoteFigureList.self,
+        NoteFigureShow.self,
+        NoteList.self,
+        NoteShow.self,
+        NoteWidgetList.self,
+        NoteWidgetShow.self,
+        ProblemSetList.self,
+        QuizList.self,
+        RecordingTranscript.self,
+        RequirementShow.self,
+        ScoreList.self,
+        SemesterList.self,
         SemesterShow.self,
+        SessionList.self,
+        SessionShow.self,
+        TodayShow.self,
+        TranscriptList.self,
+        TranscriptShow.self,
+        UnitList.self,
         UnitShow.self,
     ]
 
     static var platform: [any Query.Type] {
         var list: [any Query.Type] = []
+        #if os(macOS)
+        list.append(BackupList.self)
+        #endif
         return list
     }
 }

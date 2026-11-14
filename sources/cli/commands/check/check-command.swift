@@ -2,7 +2,9 @@ import ArgumentParser
 import FolioDomain
 import Foundation
 
-struct CheckCommand: ParsableCommand {
+struct CheckCommand: ParsableCommand, HandRead {
+
+    static let reason = "문제를 모두 보인 뒤 규칙 오류로 끝난다"
     static let configuration = CommandConfiguration(
         commandName: "check", abstract: String(localized: .checkAbstract),
         discussion: String(localized: .checkDiscussion))

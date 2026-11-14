@@ -1,10 +1,13 @@
 import ArgumentParser
+import FolioActions
 import FolioDomain
 import FolioStorage
 import Foundation
 
 extension NoteCommand.Widget {
-    struct Render: ParsableCommand {
+    struct Render: ParsableCommand, HandRead {
+        static let reason = "그려 보기는 FolioCLI의 화면 밖 WKWebView(PageRender)로 그린다"
+        static let panel = true
         static let configuration = CommandConfiguration(
             abstract: String(localized: .noteWidgetRenderAbstract), discussion: String(localized: .noteRenderDiscussion))
         @OptionGroup var g: GlobalOptions
@@ -31,7 +34,7 @@ extension NoteCommand.Widget {
                     throw CLIError(exit: .usage, message: String(localized: .noteWidgetRenderNothing))
                 }
                 let id = try r.widget(ref, in: c)
-                source = (String(id.uuidString.prefix(8)), try MaterialText.read(c.store, NoteWidget.path(id)))
+                source = (String(id.uuidString.prefix(8)), try reporting { try MaterialText.read(c.store, NoteWidget.path(id)) })
             }
             try out.report(
                 try PageRender.widget(source.text, accent: course?.color ?? CourseColor.neutral, widths: out.sizes),

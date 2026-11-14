@@ -331,7 +331,7 @@ struct MCPTests {
         #expect(made.count == 3)
         #expect(made[1].after == nil)
         #expect(made[2].after == [1])
-        let shown = try call(server, a, "note_show", ["note": "EC4207/증명 모음"])
+        let shown = try call(server, a, "note_show", ["course": "EC4207", "note": "증명 모음"])
         #expect(!shown.0, "\(shown.1)")
         #expect(shown.1.joined().contains("고친 줄") && shown.1.joined().contains("덧붙인 줄"), "\(shown.1)")
         #expect(try Harness.files(a) == before)

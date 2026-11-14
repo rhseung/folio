@@ -3,7 +3,8 @@ import FolioDomain
 import Foundation
 
 extension RequirementCommand {
-    struct Check: ParsableCommand {
+    struct Check: ParsableCommand, HandRead {
+        static let reason = "결과가 세 모양이고, 과목이 없으면 강의 코드로 찾으며, 걸린 것을 보인 뒤 규칙 오류로 끝난다"
         static let configuration = CommandConfiguration(
             abstract: String(localized: .requirementCheckAbstract), discussion: String(localized: .requirementCheckDiscussion))
         @OptionGroup var g: GlobalOptions
