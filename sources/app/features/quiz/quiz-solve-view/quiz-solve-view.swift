@@ -433,7 +433,7 @@ struct QuizSolveView: View {
     }
 
     @ViewBuilder func status(_ history: AttemptHistory) -> some View {
-        switch WrongFlow.status(history) {
+        switch model.status(history) {
         case .open(let since):
             Text(.quizSolveOpenSince(since.short)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.danger)
         case .resolved(_, let recheck?):

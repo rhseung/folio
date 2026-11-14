@@ -98,6 +98,7 @@ extension Actions {
         SettingsSet.self,
         TranscriptAdd.self,
         TranscriptMove.self,
+        TranscriptTarget.self,
         UnitPagesAdd.self,
         UnitPagesRemove.self,
         UnitPagesSet.self,

@@ -34,7 +34,7 @@ struct QuizTests {
             fresh: [(d("2026-10-21"), .correct)],
         ]
         let picked = WrongFlow.pickForReview(
-            cards: [fresh, stale, open, recheck, never], attempts: attempts, today: d("2026-10-22"), count: 4)
+            cards: [fresh, stale, open, recheck, never], attempts: attempts, today: d("2026-10-22"), count: 4, recheckDays: 7)
 
         #expect(Array(picked.prefix(2)) == [open, recheck])
         #expect(picked[2] == never && picked[3] == stale)
@@ -63,7 +63,8 @@ struct QuizTests {
         let today = d("2026-10-22")
         func ids(_ scope: QuizScope, _ order: QuizOrder) -> [UUID] {
             QuizDeck.build(
-                cards: [a, b, c, x, e], units: [u1, u2, u3], scope: scope, order: order, history: history, today: today, using: &rng
+                cards: [a, b, c, x, e], units: [u1, u2, u3], scope: scope, order: order, history: history, today: today, recheckDays: 7,
+                using: &rng
             ).map(\.id)
         }
         #expect(ids(QuizScope(unitIds: [u1, u2]), .unitOrder) == [b.id, c.id, a.id, e.id])

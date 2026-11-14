@@ -104,7 +104,7 @@ final class AssignmentSheetModel {
     func load() {
         title = assignment.title
         hasDue = assignment.due != nil
-        due = assignment.due ?? workspace.calendar.date(bySettingHour: 23, minute: 59, second: 0, of: workspace.now) ?? workspace.now
+        due = assignment.due ?? workspace.settings.schedule.due(on: workspace.now, calendar: workspace.calendar)
         status = assignment.status
         repeats = assignment.repeats
         customRepeat = repeats.map { !AssignmentRepeat.presets.contains($0) } ?? false

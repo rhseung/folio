@@ -51,12 +51,20 @@ struct SettingsView: View {
         case .record:
             Block(String(localized: .settingsProfile)) { ProfileCard(workspace: model.workspace) }
             Block(String(localized: .settingsLetters)) { CatalogEditor() }
+            SchoolSettingsForm(model: model)
         case .classes: ClassSettings(model: model)
         case .notes: NoteSettingsForm(model: model)
         case .review: ReviewSettingsForm(model: model)
         case .notifications: NotificationSettingsForm(settings: $model.settings.notifications)
         case .claude: ClaudeSettings(model: model)
-        case .lms: LMSSettingsForm(workspace: model.workspace)
+        case .lms:
+            LMSSettingsForm(workspace: model.workspace)
+            Block(String(localized: .settingsLmsSync)) {
+                Card {
+                    SettingIntRow(
+                        item: .lmsSyncMinutes, value: $model.settings.lms.syncMinutes, unit: .settingsUnitMinutes, step: 5, last: true)
+                }
+            }
         case .backup: BackupSettingsForm(model: model)
         case .about: AboutSettings(model: model)
         }
@@ -126,12 +134,58 @@ private struct GeneralSettings: View {
         }
         Block(String(localized: .settingsDay)) {
             Card {
-                FormRow(label: String(localized: .settingsDayBoundary), last: true) {
+                FormRow(label: String(localized: .settingsDayBoundary)) {
                     TimeMenu(minute: $model.settings.dayBoundaryMinutes, hours: SettingItem.dayBoundary.hours)
+                }
+                SettingIntRow(item: .idleMinutes, value: $model.settings.idleMinutes, unit: .settingsUnitMinutes, last: true)
+            }
+        }
+        DeadlineSettings(model: model)
+        PaneLayoutSettings(model: model)
+    }
+}
+
+private struct DeadlineSettings: View {
+    @Bindable var model: SettingsModel
+    @State private var details = false
+
+    var body: some View {
+        let urgency = $model.settings.urgency
+        let schedule = $model.settings.schedule
+        Block(String(localized: .settingsDeadlines)) {
+            Card(clipped: true) {
+                SettingIntRow(item: .todayExamDays, value: $model.settings.todayExamDays, unit: .settingsUnitDays)
+                SettingTimeRow(item: .dueMinute, minute: schedule.dueMinute)
+                DisclosureRow(label: String(localized: .settingsDetails), isOpen: $details, last: true) {
+                    SettingIntRow(item: .assignmentUrgentDays, value: urgency.assignmentUrgentDays, unit: .settingsUnitDays)
+                    SettingIntRow(item: .assignmentSoonDays, value: urgency.assignmentSoonDays, unit: .settingsUnitDays)
+                    SettingIntRow(item: .examUrgentDays, value: urgency.examUrgentDays, unit: .settingsUnitDays)
+                    SettingIntRow(item: .examSoonDays, value: urgency.examSoonDays, unit: .settingsUnitDays)
+                    SettingIntRow(item: .examNearDays, value: urgency.examNearDays, unit: .settingsUnitDays)
+                    SettingTimeRow(item: .examStartMinute, minute: schedule.examStartMinute)
+                    SettingIntRow(
+                        item: .examMinutes, value: schedule.examMinutes, unit: .settingsUnitMinutes, step: 10, last: true)
                 }
             }
         }
-        PaneLayoutSettings(model: model)
+    }
+}
+
+private struct SchoolSettingsForm: View {
+    @Bindable var model: SettingsModel
+
+    var body: some View {
+        Block(String(localized: .settingsSchool)) {
+            Card {
+                SettingIntRow(item: .gradesUnlockMinutes, value: $model.settings.gradesUnlockMinutes, unit: .settingsUnitMinutes)
+                FormRow(label: String(localized: SettingItem.staffMailDomain.name)) {
+                    InlineField(SettingItem.staffMailDomain.text, text: $model.settings.school.staffMailDomain)
+                }
+                FormRow(label: String(localized: SettingItem.studentMailDomain.name), last: true) {
+                    InlineField(SettingItem.studentMailDomain.text, text: $model.settings.school.studentMailDomain)
+                }
+            }
+        }
     }
 }
 
@@ -262,10 +316,11 @@ private struct ReviewSettingsForm: View {
                     IntScrub(value: review.cardsPerReview, range: SettingItem.reviewCardsPerReview.range)
                     Text(.settingsUnitCards).foregroundStyle(Theme.Palette.textSecondary)
                 }
-                FormRow(label: String(localized: .settingsSettleAfter), last: true) {
+                FormRow(label: String(localized: .settingsSettleAfter)) {
                     IntScrub(value: review.settleAfterPasses, range: SettingItem.reviewSettleAfter.range)
                     Text(.settingsUnitPasses).foregroundStyle(Theme.Palette.textSecondary)
                 }
+                SettingIntRow(item: .quizRecheckDays, value: review.quizRecheckDays, unit: .settingsUnitDays, last: true)
             }
         }
     }

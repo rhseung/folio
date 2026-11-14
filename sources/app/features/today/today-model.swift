@@ -39,13 +39,9 @@ final class TodayModel {
 
     var current: [LoadedCourse] { workspace.currentCourses }
 
-    var nextDayStart: Date {
-        let calendar = workspace.calendar
-        let start = workspace.today.date(in: calendar).flatMap {
-            calendar.date(byAdding: .minute, value: workspace.settings.dayBoundaryMinutes, to: $0)
-        }
-        return start.flatMap { calendar.date(byAdding: .day, value: 1, to: $0) } ?? .distantFuture
-    }
+    var nextDayStart: Date { workspace.settings.start(of: workspace.today.adding(days: 1), calendar: workspace.calendar) }
+
+    var examDays: Int { workspace.settings.todayExamDays }
 
     func summary(now: Date) -> TodaySummary {
         TodaySummary.build(courses: current.map(\.file), now: now, settings: workspace.settings, calendar: workspace.calendar)
@@ -158,7 +154,7 @@ final class TodayModel {
         workspace.course(course)?.file.title(of: session, calendar: workspace.calendar) ?? ""
     }
 
-    func dDay(_ item: TodaySummary.ExamItem) -> String { item.dDay == 0 ? "D-day" : "D-\(item.dDay)" }
+    func dDay(_ item: TodaySummary.ExamItem) -> String { DDay.text(item.dDay) }
 
     func examStart(_ item: TodaySummary.ExamItem) -> String {
         item.exam.start?.formatted(.dateTime.month().day().weekday().hour().minute()) ?? ""
@@ -223,8 +219,9 @@ final class TodayModel {
         return items.compactMap { item in
             guard let due = item.assignment.due else { return nil }
             let days = studyDay.days(until: workspace.settings.studyDay(of: due, calendar: calendar))
-            let urgency = DueUrgency(studyDays: days)
-            return DeadlineRow(item: item, urgency: urgency, due: DueUrgency.text(due, studyDays: days))
+            let urgency = DueUrgency(studyDays: days, settings: workspace.settings.urgency)
+            return DeadlineRow(
+                item: item, urgency: urgency, due: DueUrgency.text(due, studyDays: days, settings: workspace.settings.urgency))
         }
     }
 
@@ -310,13 +307,10 @@ final class TodayModel {
     }
 
     func nextClass(after now: Date) -> (courseId: UUID, date: Date)? {
-        let made = current.flatMap { c in
-            c.file.sessions.filter { !$0.isCancelled && $0.date > now }.map { (courseId: c.id, date: $0.date) }
-        }
-        let planned = workspace.suggestedSessions(now: now).filter { $0.suggestion.date > now }.map {
-            (courseId: $0.courseId, date: $0.suggestion.date)
-        }
-        return (made + planned).min { $0.date < $1.date }
+        let planned = Dictionary(grouping: workspace.suggestedSessions(now: now), by: \.courseId)
+        return current.compactMap { c in
+            c.file.nextClass(after: now, suggested: planned[c.id]?.map(\.suggestion.date) ?? []).map { (courseId: c.id, date: $0.date) }
+        }.min { $0.date < $1.date }
     }
 
     func nextClassLine(after now: Date) -> (when: String, courseId: UUID)? {

@@ -3,10 +3,11 @@ import SwiftUI
 
 struct DdayChip: View {
     let days: Int
+    let urgency: UrgencySettings
 
-    static let horizon = 14
-
-    static func heat(_ days: Int) -> Color {
+    // 남은 날이 D-day로 세는 범위의 끝에서 0으로 갈수록 회색에서 경고색, 위험색으로 옮겨 간다.
+    static func heat(_ days: Int, _ urgency: UrgencySettings) -> Color {
+        let horizon = max(urgency.examNearDays, 1)
         let t = 1 - Double(min(max(days, 0), horizon)) / Double(horizon)
         return t < 0.5
             ? Theme.Palette.textSecondary.mix(with: Theme.Palette.warning, by: t * 2)
@@ -14,15 +15,16 @@ struct DdayChip: View {
     }
 
     var body: some View {
-        let color = Self.heat(days)
-        Text(days == 0 ? "D-day" : "D-\(days)")
+        let color = Self.heat(days, urgency)
+        let urgent = ExamUrgency(days: days, settings: urgency) == .urgent
+        Text(DDay.text(days))
             .font(Theme.Typeface.caption.weight(.semibold))
             .monospacedDigit()
             .foregroundStyle(color)
             .padding(Theme.Inset.tag)
             .background(color.opacity(Theme.Opacity.tint), in: .capsule)
-            .phaseAnimator([false, true], trigger: days <= 3) { chip, lit in
-                chip.scaleEffect(lit && days <= 3 ? 1.06 : 1)
+            .phaseAnimator([false, true], trigger: urgent) { chip, lit in
+                chip.scaleEffect(lit && urgent ? 1.06 : 1)
             } animation: { _ in
                 .easeInOut(duration: 0.5)
             }
@@ -30,9 +32,9 @@ struct DdayChip: View {
 }
 
 extension DueUrgency {
-    static func text(_ due: Date, studyDays days: Int) -> String {
+    static func text(_ due: Date, studyDays days: Int, settings: UrgencySettings) -> String {
         let time = due.formatted(date: .omitted, time: .shortened)
-        return switch DueUrgency(studyDays: days) {
+        return switch DueUrgency(studyDays: days, settings: settings) {
         case .urgent: String(localized: days == 0 ? .todayDeadlinesTodayAt(time) : .todayDeadlinesTomorrowAt(time))
         case .soon: String(localized: .todayDeadlinesInDays(days))
         case .later: due.formatted(.dateTime.month().day().weekday())

@@ -44,11 +44,9 @@ public struct QuickAdd: Equatable, Sendable {
     public var kindRange: Range<String.Index>? { kindSpan?.range }
     public var folderName: String? { kindSpan.map { $0.kind.folderName($0.number) } }
 
-    public static let defaultMinute = 23 * 60 + 59
-
     public static func parse(
         _ line: String, courses: [Course], codes: [CourseCode] = [], fixedCourse: UUID? = nil, defaultCourse: UUID? = nil,
-        now: Date, calendar: Calendar
+        settings: Settings = Settings(), now: Date, calendar: Calendar
     ) -> QuickAdd {
         var found = line.ranges(of: /\S+/).map { (String(line[$0]), $0) }
         var course = fixedCourse
@@ -68,6 +66,7 @@ public struct QuickAdd: Equatable, Sendable {
         bindWeekdays(&words)
         detect(&words)
         markEndings(&words)
-        return resolve(words, line: line, course: course, courseSpan: courseSpan, now: now, calendar: calendar)
+        return resolve(
+            words, line: line, course: course, courseSpan: courseSpan, dueMinute: settings.schedule.dueMinute, now: now, calendar: calendar)
     }
 }

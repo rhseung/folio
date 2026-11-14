@@ -36,7 +36,7 @@ extension ExamCommand {
                 ], shrink: [3])
             for e in exams {
                 let cells = [
-                    e.title, e.start.map { when($0, now: r.ctx.now, time: true) } ?? "-", component(e), e.location,
+                    e.title, e.start.map { when($0, now: r.ctx.now, time: true, settings: r.settings) } ?? "-", component(e), e.location,
                     e.scopeUnitIds.isEmpty ? "" : String(localized: .examListUnits(e.scopeUnitIds.count)),
                 ]
                 t.rows.append((e.end ?? e.start).map { $0 < r.ctx.now } ?? false ? cells.map { $0.styled(.dim) } : cells)

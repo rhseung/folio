@@ -22,10 +22,10 @@ enum GradesLock {
 
     static func masked(_ value: String) -> String { isUnlocked ? value : "••".styled(.dim) }
 
-    static func require() throws {
+    static func require(minutes: Int = SettingItem.gradesUnlockMinutes.int) throws {
         guard !isUnlocked else { return }
         try authenticate()
-        unlock(for: GradeLock.unlockSeconds)
+        unlock(for: Double(minutes * 60))
     }
 
     static func authenticate() throws {

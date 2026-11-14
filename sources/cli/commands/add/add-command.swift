@@ -27,7 +27,8 @@ struct AddCommand: ParsableCommand {
         let r = Resolver(ctx)
         let current = (try? r.currentSemester()).map { s in r.courses.filter { $0.course.semesterId == s.id } } ?? []
         let read = QuickAdd.parse(
-            line, courses: current.map(\.course), codes: (try? ctx.catalog().codes) ?? [], now: ctx.now, calendar: ctx.calendar)
+            line, courses: current.map(\.course), codes: (try? ctx.catalog().codes) ?? [], settings: r.settings,
+            now: ctx.now, calendar: ctx.calendar)
 
         var parsed = read
         if let course { parsed.courseId = try r.course(course).id }
@@ -42,7 +43,7 @@ struct AddCommand: ParsableCommand {
         let shown = Read(
             course: ref?.code, courseId: parsed.courseId, title: parsed.title, due: parsed.due, repeats: parsed.repeats,
             folder: parsed.folderName.map { "\(CourseFolder.assignments.rawValue)/\($0)" })
-        if !g.json { show(shown, ref: ref, now: ctx.now, calendar: ctx.calendar) }
+        if !g.json { show(shown, ref: ref, now: ctx.now, calendar: ctx.calendar, settings: r.settings) }
 
         guard let id = parsed.courseId else {
             throw CLIError(
@@ -55,7 +56,7 @@ struct AddCommand: ParsableCommand {
             read: try JSONValue(shown))
     }
 
-    func show(_ read: Read, ref: CourseRef?, now: Date, calendar: Calendar) {
+    func show(_ read: Read, ref: CourseRef?, now: Date, calendar: Calendar, settings: Settings) {
         func row(_ label: String, _ value: String) { say("  " + label.padded(to: 4).styled(.dim) + "  " + value) }
         say(String(localized: .addRead).styled(.bold))
         row(
@@ -64,11 +65,12 @@ struct AddCommand: ParsableCommand {
                 ?? String(localized: .addUnread).styled(.red))
         row(String(localized: .addFieldTitle), read.title.isEmpty ? String(localized: .addUnread).styled(.red) : read.title)
         if let due = read.due {
-            let day = calendar.dateComponents([.day], from: calendar.startOfDay(for: now), to: calendar.startOfDay(for: due)).day ?? 0
+            let day = settings.studyDays(from: now, until: due, calendar: calendar)
             let deadline = CourseFile.deadline(due, calendar: calendar, locale: Locale(identifier: "ko_KR"))
             row(
                 String(localized: .addFieldDue),
-                (-1...14).contains(day) ? deadline + " · " + when(due, now: now, calendar: calendar) : deadline)
+                (-1...settings.urgency.examNearDays).contains(day)
+                    ? deadline + " · " + when(due, now: now, calendar: calendar, settings: settings) : deadline)
         } else {
             row(String(localized: .addFieldDue), String(localized: .addNoDue).styled(.dim))
         }

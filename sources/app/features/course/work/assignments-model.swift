@@ -69,7 +69,7 @@ final class AssignmentsModel {
         let c = workspace.calendar
         return (
             due.formatted(.dateTime.month().day()),
-            due.formatted(.dateTime.weekday()) + " " + TimeMenu.label(c.component(.hour, from: due) * 60 + c.component(.minute, from: due))
+            due.formatted(.dateTime.weekday()) + " " + TimeMenu.label(c.minuteOfDay(due))
         )
     }
 
@@ -85,7 +85,7 @@ final class AssignmentsModel {
         case .none: return nil
         case .overdue(let d): return (String(localized: d == 0 ? .assignmentsJustOverdue : .assignmentsOverdueDays(d)), .danger)
         case .hours(let h): return (String(localized: .assignmentsHoursLeft(h)), tone)
-        case .days(let d): return ("D-\(d)", tone)
+        case .days(let d): return (DDay.text(d), tone)
         }
     }
 }

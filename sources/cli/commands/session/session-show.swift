@@ -19,7 +19,7 @@ extension SessionCommand {
             let f = c.file
             courseHeader(c, catalog: try? r.ctx.catalog())
             say(f.title(of: s, calendar: r.ctx.calendar).styled(.bold))
-            say(String(localized: .sessionShowDate(when(s.date, now: r.ctx.now, time: true))))
+            say(String(localized: .sessionShowDate(when(s.date, now: r.ctx.now, time: true, settings: r.settings))))
             switch s.kind {
             case .cancelled: say(String(localized: .sessionShowCancelled))
             case .makeup: say(String(localized: .sessionShowMakeup))

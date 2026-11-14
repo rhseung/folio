@@ -38,16 +38,13 @@ final class ExamEditorModel {
     }
 
     func setDefaultStart() {
-        draft.start = workspace.calendar.date(byAdding: .hour, value: 33, to: workspace.calendar.startOfDay(for: workspace.now))
+        draft.start = workspace.settings.schedule.examStart(after: workspace.now, calendar: workspace.calendar)
     }
 
     var startMinute: Int? { draft.start.map(minute) }
     var endMinute: Int? { draft.end.map(minute) }
 
-    private func minute(_ date: Date) -> Int {
-        let c = workspace.calendar.dateComponents([.hour, .minute], from: date)
-        return (c.hour ?? 0) * 60 + (c.minute ?? 0)
-    }
+    private func minute(_ date: Date) -> Int { workspace.calendar.minuteOfDay(date) }
 
     func setStart(_ new: Date) {
         if let old = draft.start, let end = draft.end { draft.end = end.addingTimeInterval(new.timeIntervalSince(old)) }
@@ -59,7 +56,7 @@ final class ExamEditorModel {
         draft.end = minute.flatMap { workspace.calendar.date(byAdding: .minute, value: $0, to: workspace.calendar.startOfDay(for: start)) }
     }
 
-    func addEnd() { setEnd(min((startMinute ?? 9 * 60) + 120, 23 * 60 + 59)) }
+    func addEnd() { setEnd(workspace.settings.schedule.examEndMinute(startMinute: startMinute)) }
 
     func apply() -> Bool {
         draft.title = draft.title.trimmingCharacters(in: .whitespaces)

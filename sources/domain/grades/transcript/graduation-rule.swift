@@ -7,8 +7,12 @@ public struct GraduationRule: Codable, Sendable, Equatable {
     public var programs: [StudentProgram]
     public var email: String
 
+    public static let defaultTotalCredits: Double = 130
+    public static let defaultMinGPA = 2.0
+
     public init(
-        totalCredits: Double = 130, minGPA: Double = 2.0, admissionYear: Int? = nil, programs: [StudentProgram] = [], email: String = ""
+        totalCredits: Double = defaultTotalCredits, minGPA: Double = defaultMinGPA, admissionYear: Int? = nil,
+        programs: [StudentProgram] = [], email: String = ""
     ) {
         self.totalCredits = totalCredits
         self.minGPA = minGPA
@@ -19,8 +23,8 @@ public struct GraduationRule: Codable, Sendable, Equatable {
 
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        totalCredits = try c.decodeIfPresent(Double.self, forKey: .totalCredits) ?? 130
-        minGPA = try c.decodeIfPresent(Double.self, forKey: .minGPA) ?? 2.0
+        totalCredits = try c.decodeIfPresent(Double.self, forKey: .totalCredits) ?? Self.defaultTotalCredits
+        minGPA = try c.decodeIfPresent(Double.self, forKey: .minGPA) ?? Self.defaultMinGPA
         admissionYear = try c.decodeIfPresent(Int.self, forKey: .admissionYear)
         programs = try c.decodeIfPresent([StudentProgram].self, forKey: .programs) ?? []
         email = try c.decodeIfPresent(String.self, forKey: .email) ?? ""

@@ -207,7 +207,7 @@ struct SemesterView: View {
                         }
                         Spacer(minLength: Theme.Space.s)
                         if start > now {
-                            DdayChip(days: model.workspace.days(to: start))
+                            DdayChip(days: model.workspace.days(to: start), urgency: model.workspace.settings.urgency)
                         } else {
                             Text(.commonEnded).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                         }

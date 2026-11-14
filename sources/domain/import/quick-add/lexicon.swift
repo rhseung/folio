@@ -4,7 +4,7 @@ import Foundation
 // Swift 패키지가 없고, Apple의 날짜 인식기는 실제 시계로 읽는다.
 
 extension QuickAdd {
-    static let weekdays: [String: Int] = ["월": 1, "화": 2, "수": 3, "목": 4, "금": 5, "토": 6, "일": 7]
+    static let weekdays = Dictionary(uniqueKeysWithValues: WeekdayLetters.all.enumerated().map { ($1, $0 + 1) })
     static let relativeDays: [String: Int] = ["오늘": 0, "내일": 1, "모레": 2]
     static let dueEndings = ["까지", "마감"]
     static let morning: Set = ["오전", "아침", "새벽"]
@@ -49,7 +49,7 @@ extension QuickAdd {
             // 옆에서도 인식기가 그렇게 하므로, 이렇게 하지 않으면 반복을 뺄 때 제목이 바뀐다.
             case .weekdays:
                 guard let w = AssignmentRepeat.weekdayWord(text) else { return nil }
-                return (Piece.weekdays(w.days, each: w.each), AssignmentRepeat.weekdayLetters[w.days[0] - 1] + "요일")
+                return (Piece.weekdays(w.days, each: w.each), WeekdayLetters.letter(w.days[0]) + "요일")
             case .relativeDay:
                 guard let d = QuickAdd.relativeDays[text] else { return nil }
                 return (Piece.day(today.adding(days: d)), nil)

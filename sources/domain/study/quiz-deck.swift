@@ -6,11 +6,11 @@ public typealias AttemptHistory = [(day: LocalDate, verdict: Verdict)]
 public enum QuizDeck {
     public static func build(
         cards: [QuizCard], units: [UUID], scope: QuizScope, order: QuizOrder,
-        history: [UUID: AttemptHistory], today: LocalDate,
+        history: [UUID: AttemptHistory], today: LocalDate, recheckDays: Int,
         using rng: inout some RandomNumberGenerator
     ) -> [QuizCard] {
         let rank = Dictionary(units.enumerated().map { ($1, $0) }, uniquingKeysWith: { a, _ in a })
-        let due = { (card: QuizCard) in WrongFlow.isDue(history[card.id] ?? [], today: today) }
+        let due = { (card: QuizCard) in WrongFlow.isDue(history[card.id] ?? [], today: today, recheckDays: recheckDays) }
         let picked = cards.enumerated()
             .filter { scope.unitIds.contains($0.element.unitId) }
             .filter { scope.categories.isEmpty || scope.categories.contains($0.element.category) }

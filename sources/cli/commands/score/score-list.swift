@@ -16,7 +16,7 @@ extension ScoreCommand {
             let r = Resolver(try CLI.context(g))
             let c = try r.course(course)
             let f = c.file
-            try GradesLock.require()
+            try GradesLock.require(minutes: r.settings.gradesUnlockMinutes)
             let order = Dictionary(f.components.map { ($0.id, $0.order) }, uniquingKeysWith: { a, _ in a })
             let scores = f.scores.sorted {
                 (order[$0.componentId] ?? 0, $0.date?.description ?? "") < (order[$1.componentId] ?? 0, $1.date?.description ?? "")

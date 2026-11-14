@@ -24,7 +24,7 @@ struct SessionLayoutSaver: View {
             collapsed: panes.collapsed, modes: panes.noteModes)
         Color.clear
             .task(id: shape) {
-                try? await Task.sleep(for: .seconds(1))
+                try? await Task.sleep(for: SavePause.delay)
                 guard !Task.isCancelled, let memory, panes.count > 1 else { return }
                 let layout = panes.current
                 let files = Set(panes.navigators.compactMap(\.current.course)).compactMap { workspace.course($0)?.file }

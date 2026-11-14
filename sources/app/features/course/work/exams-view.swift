@@ -55,7 +55,7 @@ struct ExamsView: View {
 
     func section(_ exam: Exam, states: [UUID: ReviewState]) -> some View {
         Block(title: exam.title, note: model.component(of: exam)) {
-            if let start = exam.start { DdayChip(days: model.days(to: start)) }
+            if let start = exam.start { DdayChip(days: model.days(to: start), urgency: model.workspace.settings.urgency) }
         } content: {
             Card {
                 CardRow {

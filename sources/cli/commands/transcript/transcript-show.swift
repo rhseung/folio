@@ -15,7 +15,7 @@ extension TranscriptCommand {
         func run() throws {
             let r = Resolver(try CLI.context(g))
             let s = try r.semester(semester)
-            try GradesLock.require()
+            try GradesLock.require(minutes: r.settings.gradesUnlockMinutes)
             let rows = try TranscriptCommand.rows(r, in: [s])
             let summary = GPACalculator.semester(s, courses: try r.ctx.gist.allCourses(), catalog: try r.ctx.catalog())
             struct Out: Encodable { var courses: [Row]; var totalCredits: Double; var effectiveCredits: Double; var gpa: Double? }

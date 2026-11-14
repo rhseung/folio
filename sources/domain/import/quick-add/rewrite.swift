@@ -13,25 +13,27 @@ extension QuickAdd {
         public var codes: [CourseCode]
         public var fixedCourse: UUID?
         public var defaultCourse: UUID?
+        public var settings: Settings
         public var now: Date
         public var calendar: Calendar
 
         public init(
-            courses: [Course], codes: [CourseCode] = [], fixedCourse: UUID? = nil, defaultCourse: UUID? = nil, now: Date,
-            calendar: Calendar
+            courses: [Course], codes: [CourseCode] = [], fixedCourse: UUID? = nil, defaultCourse: UUID? = nil,
+            settings: Settings = Settings(), now: Date, calendar: Calendar
         ) {
             self.courses = courses
             self.codes = codes
             self.fixedCourse = fixedCourse
             self.defaultCourse = defaultCourse
+            self.settings = settings
             self.now = now
             self.calendar = calendar
         }
 
         public func read(_ line: String) -> QuickAdd {
             QuickAdd.parse(
-                line, courses: courses, codes: codes, fixedCourse: fixedCourse, defaultCourse: defaultCourse, now: now,
-                calendar: calendar)
+                line, courses: courses, codes: codes, fixedCourse: fixedCourse, defaultCourse: defaultCourse,
+                settings: settings, now: now, calendar: calendar)
         }
 
         // 칩은 줄만 읽으므로, 고른 값을 줄 밖에 두면 칩과 줄이 서로 다른 과목을 말할 수 있다. 낱말은 이웃에 따라 다르게
@@ -71,7 +73,7 @@ extension QuickAdd {
                 }
             case let .repeats(repeats):
                 guard before.repeats != repeats else { return line }
-                let letter = before.due.map { AssignmentRepeat.weekdayLetters[calendar.isoWeekday(of: $0) - 1] } ?? ""
+                let letter = before.due.map { WeekdayLetters.letter(calendar.isoWeekday(of: $0)) } ?? ""
                 let plain = line.splicing(before.repeatRanges.map { (line.wordRange($0), "") } + before.weekdayRanges.map { ($0, letter) })
                 let stripped = read(plain)
                 // 낱말을 빼면 이웃 낱말이 다르게 읽힐 수 있으므로, 옛 규칙의 낱말을 그 자리에서 바꾼다. `오후 3일마다 18:00`에서는
@@ -123,11 +125,10 @@ extension QuickAdd {
         }
 
         func text(of date: Date) -> String {
-            let c = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
             let day = LocalDate(date, in: calendar)
             let today = LocalDate(now, in: calendar)
             let short = QuickAdd.ahead(month: day.month, day: day.day, today: today, year: today.year) == day
-            let time = String(format: "%02d:%02d", c.hour ?? 0, c.minute ?? 0)
+            let time = ClockText.minute(calendar.minuteOfDay(date))
             return (short ? "\(day.month)/\(day.day)" : "\(day.year)/\(day.month)/\(day.day)") + " " + time
         }
 

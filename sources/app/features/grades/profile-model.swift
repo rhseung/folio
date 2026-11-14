@@ -8,6 +8,7 @@ import Observation
 final class ProfileModel {
     let workspace: Workspace
     var email = ""
+    var emailPrompt: String { workspace.settings.school.studentMailPrompt }
     // 초안을 transcript에서 채우기 전에 저장하면 저장된 메일이 지워진다.
     private var loaded = false
 

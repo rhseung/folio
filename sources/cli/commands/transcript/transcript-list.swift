@@ -11,7 +11,7 @@ extension TranscriptCommand {
 
         func run() throws {
             let r = Resolver(try CLI.context(g))
-            try GradesLock.require()
+            try GradesLock.require(minutes: r.settings.gradesUnlockMinutes)
             let rows = try TranscriptCommand.rows(r, in: r.semesters)
             if g.json { return try printJSON(rows) }
             TranscriptCommand.print(rows, semester: true)

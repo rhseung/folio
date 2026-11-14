@@ -71,7 +71,7 @@ struct TodayCommand: ParsableCommand {
                     String(localized: .todayMinutesLeft(Int(($0.end.timeIntervalSince(now) / 60).rounded(.up)))))
             },
             exams: summary.exams.map {
-                item($0.courseId, $0.exam.id, $0.exam.title, at: $0.exam.start, $0.dDay == 0 ? "D-day" : "D-\($0.dDay)")
+                item($0.courseId, $0.exam.id, $0.exam.title, at: $0.exam.start, DDay.text($0.dDay))
             },
             classes: summary.classesToday.map(session),
             reviewNotes: summary.missingReviewNotes.map(session),
@@ -114,7 +114,7 @@ struct TodayCommand: ParsableCommand {
             let t = Table(
                 header: ["", "", "", ""],
                 rows: items.map { i in
-                    let at = i.at.map { time ? when($0, now: now, time: true) : "" } ?? ""
+                    let at = i.at.map { time ? when($0, now: now, time: true, calendar: calendar, settings: settings) : "" } ?? ""
                     let detail = i.detail.map { at.plain.hasPrefix($0) ? "" : $0 } ?? ""
                     return [tag[i.courseId] ?? i.course, i.title, at, detail.styled(.dim)]
                 }, shrink: [1, 3])

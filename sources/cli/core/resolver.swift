@@ -7,6 +7,8 @@ final class Resolver {
     let ctx: ActionContext
     init(_ ctx: ActionContext) { self.ctx = ctx }
 
+    lazy var settings: Settings = (try? ctx.settings()) ?? Settings()
+
     lazy var courses: [CourseRef] = {
         let catalog = (try? ctx.catalog()) ?? Catalog()
         func code(_ c: Course, folder: String) -> String {

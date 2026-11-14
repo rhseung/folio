@@ -18,7 +18,7 @@ struct CatalogEditing<Content: View>: View {
             .onChange(of: workspace.catalog) { _, new in catalog = new }
             .task(id: catalog) {
                 guard loaded else { return }
-                try? await Task.sleep(for: .milliseconds(800))
+                try? await Task.sleep(for: SavePause.delay)
                 guard !Task.isCancelled, catalog != workspace.catalog else { return }
                 workspace.saveCatalog(catalog)
             }

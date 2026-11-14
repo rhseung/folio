@@ -221,11 +221,7 @@ public struct AppLink: Hashable, Sendable {
         return heading.isEmpty ? nil : .heading(heading)
     }
 
-    public static func clock(_ seconds: Int) -> String {
-        seconds >= 3600
-            ? String(format: "%d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60)
-            : String(format: "%d:%02d", seconds / 60, seconds % 60)
-    }
+    public static func clock(_ seconds: Int) -> String { ClockText.duration(seconds) }
 
     static func time(_ a: Substring?, _ b: Substring?, _ c: Substring) -> Anchor? {
         let parts = [a, b].compactMap { $0 }.compactMap { Int($0) } + [Int(c) ?? 0]

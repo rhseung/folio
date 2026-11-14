@@ -756,7 +756,7 @@ struct RootView: View {
             switch hint {
             case .dueToday: Image(systemName: "checklist").foregroundStyle(Theme.Palette.danger)
             case .nextClass(let date): Text(clock(date)).foregroundStyle(Theme.Palette.chromeText)
-            case .exam(let days): Text(days == 0 ? "D-day" : "D-\(days)").foregroundStyle(Theme.Palette.warning)
+            case .exam(let days): Text(DDay.text(days)).foregroundStyle(Theme.Palette.warning)
             }
         }
         .font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit()

@@ -17,7 +17,7 @@ struct GPACommand: ParsableCommand {
 
     func run() throws {
         let ctx = try CLI.context(g)
-        try GradesLock.require()
+        try GradesLock.require(minutes: (try? ctx.settings().gradesUnlockMinutes) ?? SettingItem.gradesUnlockMinutes.int)
         let catalog = try ctx.catalog()
         let courses = try ctx.gist.allCourses()
         let semesters = try ctx.transcript().semesters.sorted { $0.order < $1.order }

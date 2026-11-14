@@ -1,3 +1,4 @@
+import FolioActions
 import FolioDomain
 import Foundation
 import Observation
@@ -5,7 +6,23 @@ import Observation
 @MainActor @Observable
 final class GradesModel {
     let workspace: Workspace
-    var target = 4.3
+    // 끄는 동안에는 화면 값만 바꾸고, 멈춘 뒤 한 번 저장한다. 끌 때마다 쓰면 transcript.json을 연달아 쓴다.
+    private var draftTarget: Double?
+    private var savingTarget: Task<Void, Never>?
+
+    var target: Double {
+        get { draftTarget ?? workspace.transcript.targetGPA ?? Transcript.defaultTargetGPA }
+        set {
+            draftTarget = newValue
+            savingTarget?.cancel()
+            savingTarget = Task { [weak self] in
+                try? await Task.sleep(for: SavePause.delay)
+                guard let self, !Task.isCancelled else { return }
+                if newValue != workspace.transcript.targetGPA { workspace.run(TranscriptTarget(gpa: newValue)) }
+                draftTarget = nil
+            }
+        }
+    }
     var targetProgram: UUID? { didSet { if targetProgram != oldValue { remainingCredits = nil } } }
     var remainingCredits: Double?
     var expanded: UUID?

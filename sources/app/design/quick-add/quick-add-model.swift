@@ -32,7 +32,7 @@ final class QuickAddModel {
     private static func reader(_ workspace: Workspace, fixedCourse: UUID?, defaultCourse: UUID?) -> QuickAdd.Reader {
         QuickAdd.Reader(
             courses: workspace.currentCourses.map(\.file.course), codes: workspace.catalog.codes, fixedCourse: fixedCourse,
-            defaultCourse: defaultCourse, now: workspace.now, calendar: workspace.calendar)
+            defaultCourse: defaultCourse, settings: workspace.settings, now: workspace.now, calendar: workspace.calendar)
     }
 
     var parsed: QuickAdd? { isEmpty ? nil : read }
@@ -105,8 +105,7 @@ final class QuickAddModel {
     var dueWeekday: Int? { parsed?.due.map { workspace.calendar.isoWeekday(of: $0) } }
 
     var newDue: Date {
-        let c = workspace.calendar
-        return c.date(byAdding: .minute, value: QuickAdd.defaultMinute, to: c.startOfDay(for: workspace.now)) ?? workspace.now
+        workspace.settings.schedule.due(on: workspace.now, calendar: workspace.calendar)
     }
 
     func left(_ due: Date) -> (text: String, overdue: Bool)? {
@@ -114,7 +113,7 @@ final class QuickAddModel {
         case .none: nil
         case .overdue(let d): (String(localized: d == 0 ? .assignmentsJustOverdue : .assignmentsOverdueDays(d)), true)
         case .hours(let h): (String(localized: .assignmentsHoursLeft(h)), false)
-        case .days(let d): ("D-\(d)", false)
+        case .days(let d): (DDay.text(d), false)
         }
     }
 

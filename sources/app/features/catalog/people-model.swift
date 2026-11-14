@@ -9,6 +9,8 @@ final class PeopleModel {
     var selection: UUID?
     var removing: Person?
 
+    var emailPrompt: String { workspace.settings.school.staffMailPrompt }
+
     init(workspace: Workspace) { self.workspace = workspace }
 
     func shown(in catalog: Catalog) -> UUID? {

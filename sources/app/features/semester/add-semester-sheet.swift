@@ -22,7 +22,7 @@ struct AddSemesterSheet: View {
                     width: 88)
             }
             FormRow(label: String(localized: .semesterAddTerm)) {
-                ChoiceMenu(selection: $model.term, options: AddSemesterModel.terms.map { ($0, $0.label) })
+                ChoiceMenu(selection: $model.term, options: Term.ordered.map { ($0, $0.label) })
             }
             FormRow(label: String(localized: .semesterStart)) { DateChip(date: $model.start, showsTime: false) }
             FormRow(label: String(localized: .semesterEnd), last: true) { DateChip(date: $model.end, showsTime: false) }

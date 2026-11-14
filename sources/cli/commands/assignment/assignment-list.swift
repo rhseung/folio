@@ -38,7 +38,7 @@ extension AssignmentCommand {
                 ], shrink: [3])
             for a in items {
                 let late = a.due.map { $0 < r.ctx.now } ?? false
-                let due = a.due.map { when($0, now: r.ctx.now, time: true) } ?? "-"
+                let due = a.due.map { when($0, now: r.ctx.now, time: true, settings: r.settings) } ?? "-"
                 let open = a.status == .todo || a.status == .doing
                 t.rows.append([
                     a.title, late && open ? due.plain.styled(.red) : due, a.status.rawValue.toned(a.status.tone),

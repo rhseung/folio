@@ -27,7 +27,10 @@ public struct Catalog: Codable, Sendable, Equatable {
         handbooks = try c.decodeIfPresent([Handbook].self, forKey: .handbooks) ?? []
     }
 
-    public var maxPoints: Double { letterGrades.compactMap(\.points).max() ?? 4.5 }
+    // 평어를 아직 적지 않은 학점 규칙은 4.5 만점으로 본다.
+    public static let defaultMaxPoints = 4.5
+
+    public var maxPoints: Double { letterGrades.compactMap(\.points).max() ?? Self.defaultMaxPoints }
 
     public func grade(_ id: UUID?) -> LetterGrade? {
         id.flatMap { id in letterGrades.first { $0.id == id } }

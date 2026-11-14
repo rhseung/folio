@@ -15,7 +15,7 @@ extension CourseShow: QueryOutput {
         if !x.schedule.isEmpty {
             FolioCLI.say(String(localized: .courseShowSchedule))
             for t in x.schedule {
-                let time = String(format: "%02d:%02d–%02d:%02d", t.startMinute / 60, t.startMinute % 60, t.endMinute / 60, t.endMinute % 60)
+                let time = ClockText.range(t.startMinute, t.endMinute)
                 FolioCLI.say("    \(ClassTime.weekdayNames[t.weekday - 1]) \(time) \(t.room)")
             }
         }

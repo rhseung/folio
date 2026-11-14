@@ -10,7 +10,7 @@ extension ExamShow: QueryOutput {
         FolioCLI.say(e.title.styled(.bold))
         if let start = e.start {
             FolioCLI.say(
-                String(localized: .examShowTime(when(start, now: r.ctx.now, time: true)))
+                String(localized: .examShowTime(when(start, now: r.ctx.now, time: true, settings: r.settings)))
                     + (e.end.map { " – \($0.formatted(date: .omitted, time: .shortened))" } ?? ""))
         }
         if !e.location.isEmpty { FolioCLI.say(String(localized: .examShowLocation(e.location))) }

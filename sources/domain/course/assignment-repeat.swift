@@ -64,7 +64,7 @@ public struct AssignmentRepeat: Hashable, Sendable {
             case (.month, 1): "매달"
             case (.month, _): "\(every)개월마다"
             }
-        return weekdays.isEmpty ? base : base + " " + weekdays.map { Self.weekdayLetters[$0 - 1] }.joined()
+        return weekdays.isEmpty ? base : base + " " + weekdays.map(WeekdayLetters.letter).joined()
     }
 
     public var label: String {
@@ -81,8 +81,6 @@ public struct AssignmentRepeat: Hashable, Sendable {
         guard !weekdays.isEmpty else { return base }
         return String(localized: .repeatOnWeekdays(base, weekdays.map { ClassTime.weekdayNames[$0 - 1] }.joined(separator: ", ")))
     }
-
-    static let weekdayLetters = ["월", "화", "수", "목", "금", "토", "일"]
 
     static let named: [String: AssignmentRepeat] = [
         "매일": .daily, "날마다": .daily, "매일마다": .daily, "하루마다": .daily, "하루에한번": .daily,
@@ -114,13 +112,13 @@ public struct AssignmentRepeat: Hashable, Sendable {
         var days: [Int] = []
         if parts.count == 1, core.count > 1, !core.hasSuffix("요일") {
             for c in core {
-                guard let i = weekdayLetters.firstIndex(of: String(c)) else { return nil }
+                guard let i = WeekdayLetters.all.firstIndex(of: String(c)) else { return nil }
                 days.append(i + 1)
             }
         } else {
             for p in parts {
                 let letter = p.hasSuffix("요일") && p.count == 3 ? String(p.prefix(1)) : p
-                guard let i = weekdayLetters.firstIndex(of: letter) else { return nil }
+                guard let i = WeekdayLetters.all.firstIndex(of: letter) else { return nil }
                 days.append(i + 1)
             }
         }

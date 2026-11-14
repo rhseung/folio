@@ -9,6 +9,8 @@ extension View {
 
 private struct AppServices: ViewModifier {
     @Environment(Workspace.self) private var workspace
+    @State private var lmsSync: Task<Void, Never>?
+    @State private var lmsTried: Date?
 
     struct PlanInputs: Equatable {
         var settings: NotificationSettings
@@ -28,6 +30,18 @@ private struct AppServices: ViewModifier {
             reviews: workspace.reviewEvents.values.map(\.count).reduce(0, +), semester: workspace.currentSemester?.id)
     }
 
+    // 동기화가 1분보다 오래 걸릴 수 있어 시계가 다시 움직여도 끊지 않는다. 그래서 `.task(id:)`가 아니라 따로 둔 Task다.
+    private func syncLMSIfDue() {
+        guard workspace.gist != nil, !workspace.runsOnFixture, workspace.lms.isConnected, lmsSync == nil,
+            workspace.settings.lms.syncDue(lastAttempt: lmsTried, now: .now)
+        else { return }
+        lmsTried = .now
+        lmsSync = Task {
+            await workspace.syncLMS()
+            lmsSync = nil
+        }
+    }
+
     func body(content: Content) -> some View {
         content
             .task(id: inputs) {
@@ -36,13 +50,12 @@ private struct AppServices: ViewModifier {
                 guard !Task.isCancelled else { return }
                 await NotificationScheduler.reschedule(workspace)
             }
-            // LMS는 학교 전체가 쓰므로 30분보다 자주 읽지 않는다.
-            .task(id: LMSInputs(gist: workspace.gist?.url, connected: workspace.lms.isConnected)) {
-                guard workspace.gist != nil, !workspace.runsOnFixture, workspace.lms.isConnected else { return }
-                while !Task.isCancelled {
-                    await workspace.syncLMS()
-                    try? await Task.sleep(for: .seconds(30 * 60))
-                }
+            // 시계는 분마다, 그리고 앱이 앞으로 오거나 Mac이 깨어날 때 움직인다. 그때마다 확인 주기가 지났는지 본다. 잠든 동안
+            // 기다리던 `Task.sleep`은 깨어난 뒤 바로 끝나지 않는다.
+            .onChange(of: workspace.liveNow, initial: true) { syncLMSIfDue() }
+            .onChange(of: LMSInputs(gist: workspace.gist?.url, connected: workspace.lms.isConnected)) {
+                lmsTried = nil
+                syncLMSIfDue()
             }
             #if os(macOS)
         .task(id: workspace.gist?.url) {

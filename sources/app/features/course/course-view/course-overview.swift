@@ -132,7 +132,7 @@ struct CourseOverview: View {
                             if due < now {
                                 Chip(String(localized: .courseOverdue), tone: .danger)
                             } else {
-                                DdayChip(days: model.days(to: due))
+                                DdayChip(days: model.days(to: due), urgency: model.workspace.settings.urgency)
                             }
                         }
                     }

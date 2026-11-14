@@ -256,6 +256,7 @@ extension TranscriptCommand {
     static let subcommandTypes: [any ParsableCommand.Type] = alphabetical([
         GeneratedCommands.TranscriptAdd.self,
         GeneratedCommands.TranscriptMove.self,
+        GeneratedCommands.TranscriptTarget.self,
         TranscriptCommand.List.self,
         TranscriptCommand.Show.self,
     ])

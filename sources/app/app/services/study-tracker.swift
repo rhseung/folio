@@ -40,11 +40,13 @@ final class StudyTracker {
         #endif
     }
 
+    private var idleMinutes: Int { workspace?.settings.idleMinutes ?? SettingItem.idleMinutes.int }
+
     func enter(_ courseId: UUID, workspace: Workspace) {
         close()
         self.workspace = workspace
         course = courseId
-        if appActive { span = ActivitySpan(start: .now) }
+        if appActive { span = ActivitySpan(start: .now, idleMinutes: idleMinutes) }
     }
 
     func leave(_ courseId: UUID) {
@@ -55,13 +57,13 @@ final class StudyTracker {
 
     func setActive(_ active: Bool) {
         appActive = active
-        if !active { close() } else if course != nil, span == nil { span = ActivitySpan(start: .now) }
+        if !active { close() } else if course != nil, span == nil { span = ActivitySpan(start: .now, idleMinutes: idleMinutes) }
     }
 
     func input() {
         guard let course, appActive else { return }
         guard var current = span else {
-            span = ActivitySpan(start: .now)
+            span = ActivitySpan(start: .now, idleMinutes: idleMinutes)
             return
         }
         if let done = current.input(at: .now) { write(course, done, screen: "course") }

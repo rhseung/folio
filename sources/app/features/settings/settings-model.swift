@@ -37,7 +37,7 @@ final class SettingsModel {
 
     func saveAfterPause() async {
         guard loaded else { return }
-        try? await Task.sleep(for: .milliseconds(600))
+        try? await Task.sleep(for: SavePause.delay)
         guard !Task.isCancelled else { return }
         saveNow()
     }

@@ -125,7 +125,7 @@ struct PeopleView: View {
                     FormRow(label: String(localized: .peopleFieldRole)) {
                         ChoiceMenu(selection: person.role, options: PersonRole.allCases.map { ($0, $0.label) })
                     }
-                    FormRow(label: String(localized: .peopleFieldEmail)) { InlineField("name@gist.ac.kr", text: person.email) }
+                    FormRow(label: String(localized: .peopleFieldEmail)) { InlineField(model.emailPrompt, text: person.email) }
                     FormRow(label: String(localized: .peopleFieldOffice)) {
                         InlineField(String(localized: .peopleFieldOfficeExample), text: person.office)
                     }

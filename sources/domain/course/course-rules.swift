@@ -262,7 +262,7 @@ extension Transcript: Document {
                 .map { ($0.id, String(localized: .ruleTranscriptCreditedSources($0.source ?? ""))) }
         }
         Rule("Transcript.targetGPA", String(localized: .ruleTranscriptTargetGpa)) { t, w in
-            t.targetGPA.map { $0 >= 0 && $0 <= (w.catalog?.maxPoints ?? 4.5) } ?? true
+            t.targetGPA.map { $0 >= 0 && $0 <= (w.catalog?.maxPoints ?? Catalog.defaultMaxPoints) } ?? true
         }
         Rule("GraduationRule.range", String(localized: .ruleGraduationRuleRange)) { t, _ in
             t.graduation.totalCredits >= 0 && t.graduation.minGPA >= 0
@@ -320,7 +320,9 @@ extension Catalog: Document {
 
 extension Settings: Document {
     public static let model = Model<Settings>(place: String(localized: .modelPlaceSettings)) {
-        Rule("Settings.dayBoundary", String(localized: .ruleSettingsDayBoundary)) { s, _ in (0...(8 * 60)).contains(s.dayBoundaryMinutes) }
+        Rule("Settings.dayBoundary", String(localized: .ruleSettingsDayBoundary)) { s, _ in
+            SettingItem.dayBoundary.range.contains(s.dayBoundaryMinutes)
+        }
         Rule("Settings.classMinutes", String(localized: .ruleSettingsClassMinutes)) { s, _ in (10...300).contains(s.classMinutes) }
         Rule("Settings.dailyLimit", String(localized: .ruleSettingsDailyLimit)) { s, _ in
             s.review.dailyLimit.map { (1...50).contains($0) } ?? true

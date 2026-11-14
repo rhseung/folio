@@ -37,7 +37,7 @@ struct EditCourseSheet: View {
                     }
                 }
             }
-            ClassTimesBlock(schedule: $model.schedule)
+            ClassTimesBlock(schedule: $model.schedule, newTime: model.workspace.settings.newClassTime)
             Block(String(localized: .courseEditManage)) {
                 Card {
                     FormRow(label: String(localized: .courseInfoPeople)) {

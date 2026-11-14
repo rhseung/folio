@@ -118,9 +118,8 @@ final class NoteEditorModel {
     // MARK: Links
 
     func linkSessions(_ kind: NoteKind) -> [Session] {
-        course.file.sessions.filter { s in
-            !s.isCancelled && s.date <= workspace.now && s.note(of: kind).map { $0 == meta.id } ?? true
-        }.sorted { $0.date > $1.date }
+        course.file.heldSessions(at: workspace.now).filter { s in s.note(of: kind).map { $0 == meta.id } ?? true }
+            .sorted { $0.date > $1.date }
     }
     var linkExams: [Exam] { course.file.exams.sorted { ($0.start ?? .distantFuture) < ($1.start ?? .distantFuture) } }
     var outline: [(unit: FolioDomain.Unit, depth: Int)] { course.outline }

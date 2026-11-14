@@ -77,7 +77,7 @@ struct TextFileView: View {
         }
         .task(id: model.text) {
             guard model.dirty else { return }
-            try? await Task.sleep(for: .seconds(1))
+            try? await Task.sleep(for: SavePause.delay)
             if !Task.isCancelled { model.saveNow(force: false) }
         }
         .task(id: "\(model.pdfRevision) \(model.pdfURL?.path ?? "")") { openPDF() }

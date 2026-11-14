@@ -6,6 +6,9 @@ public struct Transcript: Codable, Sendable, Equatable {
     public var targetGPA: Double?
     public var graduation: GraduationRule
 
+    // 목표를 정하지 않았을 때 계산에 쓰는 값이다.
+    public static let defaultTargetGPA = 4.3
+
     public init(semesters: [Semester] = [], targetGPA: Double? = nil, graduation: GraduationRule = .init()) {
         self.semesters = semesters
         self.unfiledCourses = []
