@@ -12,7 +12,7 @@ struct UnitsView: View {
     init(workspace: Workspace, course: LoadedCourse, place: AppLink, opened: @escaping (UUID?) -> Void) {
         let model = UnitsModel(workspace: workspace, courseId: course.id)
         // 아래의 첫 보고보다 먼저 정해야 한다. 그러지 않으면 창에 목록이 보인다고 알린다.
-        if place.kind == .unit { model.openUnit = place.id }
+        if let pick = place.selection(of: .unit) { model.openUnit = pick }
         _model = State(initialValue: model)
         self.course = course
         self.place = place
@@ -32,7 +32,7 @@ struct UnitsView: View {
         // 페이지는 목록에서 시작하고 지난번에 연 단원은 모델과 함께 사라졌으므로 initial로도 부른다.
         .onChange(of: model.openUnit, initial: true) { _, id in opened(id) }
         .onChange(of: place) { _, link in
-            if link.kind == .unit { model.openUnit = link.id } else if link.kind == .course { model.openUnit = nil }
+            if let pick = link.selection(of: .unit) { model.openUnit = pick }
         }
         .confirming($model.pending)
         #if DEBUG && os(macOS)

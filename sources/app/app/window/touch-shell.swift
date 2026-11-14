@@ -202,9 +202,13 @@ extension RootView {
 
     var phoneShell: some View {
         TabView(selection: phoneSelection) {
-            Tab(String(localized: .rootNavToday), systemImage: "house", value: PhoneTab.today) { phonePage(.today) }
+            Tab(AppLink.Kind.today.place?.title ?? "", systemImage: AppLink.Kind.today.place?.symbol ?? "", value: PhoneTab.today) {
+                phonePage(.today)
+            }
             Tab(String(localized: .rootNavCourses), systemImage: "book.closed", value: PhoneTab.courses) { phonePage(.courses) }
-            Tab(String(localized: .rootNavGrades), systemImage: "chart.line.uptrend.xyaxis", value: PhoneTab.grades) { phonePage(.grades) }
+            Tab(AppLink.Kind.grades.place?.title ?? "", systemImage: AppLink.Kind.grades.place?.symbol ?? "", value: PhoneTab.grades) {
+                phonePage(.grades)
+            }
             Tab(value: PhoneTab.search, role: .search) { phoneSearch }
         }
         .tabBarMinimizeBehavior(.onScrollDown)
@@ -255,8 +259,7 @@ extension RootView {
             Spacer(minLength: 0)
             switch tab {
             case .today:
-                Button(.rootNavSettings, systemImage: "gearshape") { open(.place(.settings)) }
-                    .phoneGlass()
+                placeButton(.settings).phoneGlass()
             case .courses:
                 if !navigator.history.canGoBack { phoneCoursesMenu }
             case .grades:
@@ -267,8 +270,8 @@ extension RootView {
                         open($0 == .requirements ? .place(.requirements) : .place(.grades))
                     }
                 ) {
-                    Text(.rootNavGrades).tag(Screen.grades)
-                    Text(.rootNavRequirements).tag(Screen.requirements)
+                    Text(AppLink.Kind.grades.place?.title ?? "").tag(Screen.grades)
+                    Text(AppLink.Kind.requirements.place?.title ?? "").tag(Screen.requirements)
                 } label: {
                     EmptyView()
                 }
@@ -283,6 +286,10 @@ extension RootView {
         .background(Theme.Palette.page)
     }
 
+    func placeButton(_ kind: AppLink.Kind) -> some View {
+        Button(kind.place?.title ?? "", systemImage: kind.place?.symbol ?? "") { open(.place(kind)) }
+    }
+
     var phoneCoursesMenu: some View {
         Menu {
             Section(String(localized: .rootSemesters)) {
@@ -291,9 +298,9 @@ extension RootView {
                 }
             }
             Section {
-                Button(.rootNavPeople, systemImage: "person") { open(.place(.people)) }
-                Button(.rootNavCodes, systemImage: "number") { open(.place(.codes)) }
-                Button(.rootNavSettings, systemImage: "gearshape") { open(.place(.settings)) }
+                placeButton(.people)
+                placeButton(.codes)
+                placeButton(.settings)
             }
         } label: {
             Label(.rootMore, systemImage: "ellipsis")

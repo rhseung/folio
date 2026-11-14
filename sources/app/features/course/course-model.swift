@@ -7,7 +7,7 @@ final class CourseModel {
     let workspace: Workspace
     var pending: PendingAction?
     let courseId: UUID
-    var section: CourseSection = .overview { didSet { if section != oldValue { settle() } } }
+    var section: AppLink.CoursePage = .overview { didSet { if section != oldValue { settle() } } }
     var openNote: UUID? { didSet { if openNote != oldValue { settle() } } }
     private(set) var noteAnchor: AppLink.Anchor?
     var openUnit: UUID?
@@ -43,33 +43,19 @@ final class CourseModel {
         place = link
         noteAnchor = nil
 
-        switch link.kind {
-        case .course: section = CourseSection(link.page ?? .overview)
-        case .note:
+        if link.kind == .note {
             openNote = link.id
             noteAnchor = link.anchor
-            section = .notes
-        case .session: section = .sessions
-        case .unit: section = .units
-        case .material: section = .materials
-        case .assignment: section = .assignments
-        case .exam: section = .exams
-        case .card: section = .quizCards
-        case .problemSet: section = .quizProblems
-        case .recording: section = .sessions
-        case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals, .semester, .person: break
+        }
+        if link.kind == .course {
+            section = link.page ?? .overview
+        } else if let page = link.kind.coursePage {
+            section = page
         }
     }
 
     var focus: UUID? {
-        guard let id = place.id else { return nil }
-        switch place.kind {
-        case .session, .assignment, .exam, .card, .problemSet: return id
-        case .note, .material, .unit, .recording, .course, .today, .grades, .requirements, .people, .codes, .settings, .whatsNew,
-            .proposals, .semester,
-            .person:
-            return nil
-        }
+        place.kind.focusesRow ? place.id : nil
     }
 
     func moved(_ link: AppLink?) {
@@ -90,7 +76,7 @@ final class CourseModel {
         if section == .notes, let openNote {
             place = AppLink(.note, openNote)
         } else {
-            place = .course(courseId, page: section.page)
+            place = .course(courseId, page: section)
         }
     }
 
@@ -230,7 +216,7 @@ final class CourseModel {
             .init(
                 title: String(localized: .courseNearestDue), value: nextDue?.0.title ?? "-",
                 detail: nextDue?.1.formatted(.dateTime.month().day().weekday().hour().minute())))
-        for (i, target) in [CourseSection.sessions, .exams, .units, .assignments].enumerated() {
+        for (i, target) in [AppLink.CoursePage.sessions, .exams, .units, .assignments].enumerated() {
             items[i].action = { [weak self] in self?.section = target }
         }
         return items

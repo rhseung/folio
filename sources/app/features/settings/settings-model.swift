@@ -15,16 +15,16 @@ final class SettingsModel {
     var keyHint = SettingsModel.hint(of: APIKeyStore.read())
     var replacingKey = false
     var usage: [MonthlyUsage] = []
-    private(set) var tab: SettingsTab
+    private(set) var tab: AppLink.SettingsPage
 
-    init(workspace: Workspace, tab: SettingsTab = .general) {
+    init(workspace: Workspace, tab: AppLink.SettingsPage = .general) {
         self.workspace = workspace
         self.tab = tab
     }
 
     func follow(_ link: AppLink) {
         guard link.kind == .settings, let page = link.settingsPage else { return }
-        tab = SettingsTab(page)
+        tab = page
     }
 
     func load() {
@@ -68,13 +68,7 @@ final class SettingsModel {
     @ObservationIgnored private var keptRecording = ClassStartSettings.Recording.start
     @ObservationIgnored private var keptRoughNote = ClassStartSettings.RoughNote.create
 
-    func isOn(_ item: ClassStartSettings.Item) -> Bool {
-        switch item {
-        case .recording: settings.classStart.recording != .off
-        case .roughNote: settings.classStart.roughNote != .off
-        case .lecture: settings.classStart.lecture != .off
-        }
-    }
+    func isOn(_ item: ClassStartSettings.Item) -> Bool { settings.classStart.isOn(item) }
 
     func setOn(_ on: Bool, _ item: ClassStartSettings.Item) {
         guard on != isOn(item) else { return }
@@ -262,65 +256,6 @@ final class SettingsModel {
     }
 
     static func month(_ m: MonthlyUsage) -> String { String(localized: .settingsUsageMonth(String(m.year), m.month)) }
-}
-
-extension SettingsTab {
-    var label: String {
-        switch self {
-        case .general: String(localized: .settingsTabGeneral)
-        case .record: String(localized: .settingsTabRecord)
-        case .classes: String(localized: .settingsTabClass)
-        case .notes: String(localized: .settingsTabNotes)
-        case .review: String(localized: .settingsTabReview)
-        case .notifications: String(localized: .settingsTabNotifications)
-        case .claude: "Claude"
-        case .lms: "LMS"
-        case .backup: String(localized: .settingsTabBackup)
-        case .about: String(localized: .settingsTabAbout)
-        }
-    }
-
-    init(_ page: AppLink.SettingsPage) {
-        self =
-            switch page {
-            case .general: .general
-            case .record: .record
-            case .classes: .classes
-            case .notes: .notes
-            case .review: .review
-            case .notifications: .notifications
-            case .claude: .claude
-            case .lms: .lms
-            case .backup: .backup
-            case .about: .about
-            }
-    }
-
-    var page: AppLink.SettingsPage {
-        switch self {
-        case .general: .general
-        case .record: .record
-        case .classes: .classes
-        case .notes: .notes
-        case .review: .review
-        case .notifications: .notifications
-        case .claude: .claude
-        case .lms: .lms
-        case .backup: .backup
-        case .about: .about
-        }
-    }
-
-    // 예전에는 탭을 한국어 이름으로 저장했으므로, 그때 고른 탭도 그 탭이나 그것을 넘겨받은 탭으로 연다.
-    static let formerNames: [String: SettingsTab] = [  // strings: data, read back from settings
-        "내 정보": .record, "평어": .record, "녹음": .classes, "일반": .general, "알림": .notifications, "백업": .backup,
-        "노트": .notes, "Claude": .claude, "앱 정보": .about,
-    ]
-
-    static var remembered: SettingsTab {
-        guard let stored = UserDefaults.standard.string(forKey: storageKey) else { return .general }
-        return SettingsTab(rawValue: stored) ?? formerNames[stored] ?? .general
-    }
 }
 
 extension ClassStartSettings.Item {

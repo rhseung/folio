@@ -5,7 +5,7 @@ struct DayRibbonCard: View {
     let model: TodayModel
     let summary: TodaySummary
     let classes: [TodayModel.RibbonClass]
-    let go: (UUID, CourseSection) -> Void
+    let go: (UUID, AppLink.CoursePage) -> Void
     let openNote: (UUID) -> (UUID) -> Void
     @State private var opened: String?
     @State private var width: CGFloat = 0

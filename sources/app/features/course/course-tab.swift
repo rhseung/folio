@@ -1,10 +1,11 @@
+import FolioDomain
 import Foundation
 
 enum CourseTab: CaseIterable, Identifiable {
     case overview, classes, notes, materials, quiz, assessment
     var id: Self { self }
 
-    var pages: [CourseSection] { CourseSection.allCases.filter { $0.tab == self } }
+    var pages: [AppLink.CoursePage] { AppLink.CoursePage.allCases.filter { $0.tab == self } }
 
     var title: String {
         switch self {

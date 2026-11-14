@@ -211,11 +211,12 @@ final class MaterialsModel {
     }
 
     func follow(_ link: AppLink) -> FolioDomain.Material? {
-        guard link.kind == .material else {
-            if link.kind == .course { viewing = nil }
+        guard let pick = link.selection(of: .material) else { return nil }
+        guard let id = pick else {
+            viewing = nil
             return nil
         }
-        guard let m = materials.first(where: { $0.id == link.id }) else { return nil }
+        guard let m = materials.first(where: { $0.id == id }) else { return nil }
         // 뷰어가 알린 쪽은 창의 링크로 돌아온다. 그 쪽으로 다시 가면 스크롤한 자리에서 페이지 맨 위로 뛴다.
         if case .page(let n) = link.anchor, viewing != m.id || shownPage != n - 1 { requestedPage = n - 1 }
         return m

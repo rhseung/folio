@@ -40,8 +40,7 @@ struct PeopleView: View {
         .navigationTitle(.peopleTitle)
         .onChange(of: place, initial: true) { _, entry in
             guard let entry else { return }
-            if entry.link.kind == .person, let id = entry.link.id { model.selection = id }
-            if entry.link.kind == .people { model.selection = nil }
+            if let pick = entry.link.selection(of: .person) { model.selection = pick }
         }
     }
 

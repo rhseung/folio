@@ -104,7 +104,7 @@ extension ScreenFitTests {
         let list = (show: String(localized: .designColumnShowList), hide: String(localized: .designColumnHideList))
         let screens: [(Navigator.Entry, (show: String, hide: String))] = [
             (Navigator.Entry(link: .course(course.id), course: course.id), sections),
-            (Navigator.Entry(link: .settings(SettingsTab.general.page)), sections),
+            (Navigator.Entry(link: .settings(AppLink.SettingsPage.general)), sections),
             (Navigator.Entry(link: AppLink(.person, person.id)), list),
         ]
         defer { SnapshotDriver.shared.columnOpen = false }

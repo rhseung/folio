@@ -74,14 +74,15 @@ public struct ClassStartSettings: Codable, Sendable, Equatable {
         courseOff[course.uuidString] = items.isEmpty ? nil : Item.allCases.filter(items.contains)
     }
 
-    public func isOn(_ item: Item, course: UUID) -> Bool {
-        guard !off(for: course).contains(item) else { return false }
-        return switch item {
+    public func isOn(_ item: Item) -> Bool {
+        switch item {
         case .recording: recording != .off
         case .roughNote: roughNote != .off
         case .lecture: lecture != .off
         }
     }
+
+    public func isOn(_ item: Item, course: UUID) -> Bool { !off(for: course).contains(item) && isOn(item) }
 
     public func isOn(for course: UUID) -> Bool { Item.allCases.contains { isOn($0, course: course) } }
 

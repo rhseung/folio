@@ -28,7 +28,7 @@ final class SnapshotDriver {
     static let math = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_MATH"] != nil
     static let outline = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_OUTLINE"]
 
-    var section: CourseSection?
+    var section: AppLink.CoursePage?
     var unitStep: String?
     var claudePanel = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_CLAUDE"] != nil
     @ObservationIgnored var extraCaptures: ((URL) async -> Void)?
@@ -75,18 +75,19 @@ final class SnapshotDriver {
             window.center()
         }
 
-        var plan: [(String, Screen, CourseSection?)] = [
-            ("today", .today, nil), ("grades", .grades, nil), ("requirements", .requirements, nil), ("people", .people, nil),
-            ("codes", .codes, nil),
-            ("whats-new", .whatsNew, nil),
+        var plan: [SnapshotStep] = [
+            .init("today", .today), .init("grades", .grades), .init("requirements", .requirements), .init("people", .people),
+            .init("codes", .codes),
+            .init("whats-new", .whatsNew),
         ]
-        if let semester { plan.append(("semester", .semester(semester), nil)) }
+        if let semester { plan.append(.init("semester", .semester(semester))) }
         if let first = courses.first {
-            plan += CourseSection.allCases.map { ("course-\($0)", .course(first), $0) }
+            plan += AppLink.CoursePage.allCases.map { .init("course-\($0)", .course(first), $0) }
         }
-        for (name, destination, section) in plan {
-            select(destination)
-            self.section = section
+        for step in plan {
+            let name = step.name
+            select(step.destination)
+            self.section = step.section
             try? await Task.sleep(for: .seconds(1.5))
             capture(to: directory.appending(path: "\(name).png"), popovers: name == "course-notes" && Self.outline != nil)
             if name == "today" || name == "course-materials" { captureScrolled(to: directory.appending(path: "\(name)-full.png")) }
@@ -199,8 +200,8 @@ final class SnapshotDriver {
             try? await Task.sleep(for: .seconds(1.5))
             capture(to: directory.appending(path: "link-claude.png"))
         }
-        for tab in SettingsTab.allCases {
-            UserDefaults.standard.set(tab.rawValue, forKey: SettingsTab.storageKey)
+        for tab in AppLink.SettingsPage.allCases {
+            UserDefaults.standard.set(tab.rawValue, forKey: AppLink.SettingsPage.storageKey)
             select(.settings)
             try? await Task.sleep(for: .seconds(1.2))
             capture(to: directory.appending(path: "settings-\(tab).png"))
@@ -454,5 +455,16 @@ final class SnapshotDriver {
 
 extension NSWindow {
     fileprivate var isPopover: Bool { className.contains("Popover") }
+}
+private struct SnapshotStep {
+    let name: String
+    let destination: Screen
+    let section: AppLink.CoursePage?
+
+    init(_ name: String, _ destination: Screen, _ section: AppLink.CoursePage? = nil) {
+        self.name = name
+        self.destination = destination
+        self.section = section
+    }
 }
 #endif

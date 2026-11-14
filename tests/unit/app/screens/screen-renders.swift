@@ -116,7 +116,7 @@ struct ScreenRenders {
             ("whats-new", Navigator.Entry(link: .place(.whatsNew))),
             ("proposals", Navigator.Entry(link: .place(.proposals))),
         ]
-        entries += SettingsTab.allCases.map { ("settings-\($0)", Navigator.Entry(link: .settings($0.page))) }
+        entries += AppLink.SettingsPage.allCases.map { ("settings-\($0)", Navigator.Entry(link: .settings($0))) }
         if let semester = workspace.currentSemester {
             entries.append(("semester", Navigator.Entry(link: AppLink(.semester, semester.id))))
         }
@@ -132,8 +132,8 @@ struct ScreenRenders {
             }
         }
         if let course = live ?? workspace.currentCourses.max(by: { $0.file.sessions.count < $1.file.sessions.count }) {
-            for section in CourseSection.allCases {
-                entries.append(("course-\(section)", Navigator.Entry(link: .course(course.id, page: section.page), course: course.id)))
+            for section in AppLink.CoursePage.allCases {
+                entries.append(("course-\(section)", Navigator.Entry(link: .course(course.id, page: section), course: course.id)))
             }
             if let unit = UnitTree.outline(course.file.units).first?.unit {
                 entries.append(("course-units-detail", Navigator.Entry(link: AppLink(.unit, unit.id), course: course.id)))
@@ -141,7 +141,7 @@ struct ScreenRenders {
         }
         if let split = workspace.currentCourses.first(where: { c in c.file.lectureFiles.contains { c.file.isSplit($0.id) } }) {
             entries.append(
-                ("lecture-sessions", Navigator.Entry(link: .course(split.id, page: CourseSection.sessions.page), course: split.id)))
+                ("lecture-sessions", Navigator.Entry(link: .course(split.id, page: AppLink.CoursePage.sessions), course: split.id)))
             if let unit = split.file.units.first(where: { !$0.lecturePages.isEmpty }) {
                 entries.append(("lecture-unit", Navigator.Entry(link: AppLink(.unit, unit.id), course: split.id)))
             }
@@ -154,13 +154,13 @@ struct ScreenRenders {
     }
 
     static func columns(_ workspace: Workspace) -> [(name: String, entry: Navigator.Entry)] {
-        var entries: [(String, Navigator.Entry)] = [("settings", Navigator.Entry(link: .settings(SettingsTab.general.page)))]
+        var entries: [(String, Navigator.Entry)] = [("settings", Navigator.Entry(link: .settings(AppLink.SettingsPage.general)))]
         if let person = workspace.catalog.people.first { entries.append(("person", Navigator.Entry(link: AppLink(.person, person.id)))) }
         if let course = workspace.currentCourses.first {
             entries.append(("course", Navigator.Entry(link: .course(course.id), course: course.id)))
-            entries.append(("course-notes", Navigator.Entry(link: .course(course.id, page: CourseSection.notes.page), course: course.id)))
+            entries.append(("course-notes", Navigator.Entry(link: .course(course.id, page: AppLink.CoursePage.notes), course: course.id)))
             entries.append(
-                ("course-quiz", Navigator.Entry(link: .course(course.id, page: CourseSection.quizSolve.page), course: course.id)))
+                ("course-quiz", Navigator.Entry(link: .course(course.id, page: AppLink.CoursePage.quiz), course: course.id)))
         }
         return entries
     }

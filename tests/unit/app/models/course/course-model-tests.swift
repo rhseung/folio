@@ -50,9 +50,9 @@ struct CourseModelTests {
 
     @Test func anItemLinkOpensItsPageAtTheItem() throws {
         let model = CourseModel(workspace: try fixtureWorkspace(), courseId: graphTheory)
-        let pages: [(AppLink.Kind, CourseSection)] = [
+        let pages: [(AppLink.Kind, AppLink.CoursePage)] = [
             (.session, .sessions), (.assignment, .assignments), (.exam, .exams),
-            (.card, .quizCards), (.problemSet, .quizProblems),
+            (.card, .cards), (.problemSet, .problems),
         ]
         for (kind, section) in pages {
             let id = UUID()
@@ -138,6 +138,6 @@ struct CourseModelTests {
         #expect(model.trailing(.classes, file: try #require(workspace.course(graphTheory)).file) == nil)
         workspace.run(SessionAdd(course: graphTheory, date: .now))
         #expect(model.trailing(.classes, file: try #require(workspace.course(graphTheory)).file)?.text == "1회")
-        #expect(CourseSection.quizStats.title == "오답과 통계" && CourseTab.assessment.title == "평가")
+        #expect(AppLink.CoursePage.stats.title == "오답과 통계" && CourseTab.assessment.title == "평가")
     }
 }
