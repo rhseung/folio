@@ -95,12 +95,14 @@ public enum StandardLayout {
         return name.hasPrefix(quizFolderPrefix) && Int(name.dropFirst(quizFolderPrefix.count)).map { $0 > 0 } == true
     }
 
-    public static func assignmentFolder(_ name: String, extraPrefixes: [String] = []) -> (prefix: String, number: Int)? {
+    public static func assignmentFolder(
+        _ name: String, kinds: [AssignmentKind] = AssignmentKind.builtIn, extraPrefixes: [String] = []
+    ) -> (prefix: String, number: Int)? {
         guard let match = name.wholeMatch(of: /([A-Za-z]+)(\d{2})/),
             let number = Int(match.2)
         else { return nil }
         let prefix = String(match.1)
-        let known = AssignmentKind.allCases.map(\.rawValue) + extraPrefixes
+        let known = kinds.map(\.rawValue) + extraPrefixes
         return known.contains(prefix) ? (prefix, number) : nil
     }
 }

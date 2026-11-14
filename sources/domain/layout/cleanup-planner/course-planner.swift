@@ -6,12 +6,17 @@ struct CoursePlanner {
     let labWeeks: [Int: Int]
     let selfMade: Set<String>
     let exams: [Exam]?
+    let kinds: [AssignmentKind]
     var moves: [PlannedMove] = []
     var removals: [String] = []
     var lectures: [(path: String, name: String)] = []
 
-    init(course: FolderTree, labs: [String: Int] = [:], labWeeks: [Int: Int] = [:], selfMade: Set<String> = [], exams: [Exam]? = nil) {
+    init(
+        course: FolderTree, labs: [String: Int] = [:], labWeeks: [Int: Int] = [:], selfMade: Set<String> = [], exams: [Exam]? = nil,
+        kinds: [AssignmentKind] = AssignmentKind.builtIn
+    ) {
         self.course = course
+        self.kinds = kinds
         self.labs = labs
         self.labWeeks = labWeeks
         self.selfMade = selfMade
@@ -171,28 +176,29 @@ struct CoursePlanner {
     mutating func topLevelFile(_ file: FolderTree) {
         let name = file.name
         let lower = name.lowercased()
-        if Keywords.syllabus.contains(where: { lower.contains($0) }) || lower.wholeMatch(of: /ot\..+/) != nil {
+        switch FileRule.first(for: .cleanup, in: name, kinds: kinds)?.kind {
+        case .syllabus:
             moves.append(.init(from: name, to: "\(CourseFolder.syllabus.rawValue)/\(name)"))
-        } else if let role = Keywords.examFiles.first(where: { $0.words.contains { lower.contains($0) } }) {
+        case .examFile(let role):
             let exam = Keywords.examFolder(in: lower)
             let ext = (name as NSString).pathExtension
             moves.append(
                 .init(
-                    from: name, to: "\(CourseFolder.exams.rawValue)/\(examFolder(exam))/\(role.name).\(ext)",
+                    from: name, to: "\(CourseFolder.exams.rawValue)/\(examFolder(exam))/\(role).\(ext)",
                     review: exam == nil ? .guessedExam : nil
                 ))
-        } else if Keywords.looksSelfMade(name) {
+        case .selfMade:
             moves.append(
                 .init(
                     from: name, to: "\(CourseFolder.study.rawValue)/\(name)", review: .guessedOrigin,
                     exam: examLink(Keywords.examFolder(in: lower))))
-        } else if name.firstMatch(of: /^\d{1,2}[ _]/) != nil {
+        case .numbered:
             lectures.append((name, name))
-        } else if Keywords.textbook.contains(where: { lower.contains($0) }) || name.firstMatch(of: /\(.+\)\.[^.]+$/) != nil {
+        case .textbook:
             moves.append(.init(from: name, to: "\(CourseFolder.textbooks.rawValue)/\(name)", review: .guessedFolder))
-        } else if NoteFormat(path: name) == .markdown {
+        case .notes:
             moves.append(.init(from: name, to: "\(CourseFolder.notes.rawValue)/\(name)"))
-        } else {
+        case .lectureFile, .labManual, .assignment, .pastExam, .exercise, .week, nil:
             moves.append(.init(from: name, to: "\(CourseFolder.archive.rawValue)/\(name)", review: .unknownFile))
         }
     }
