@@ -25,19 +25,20 @@
 ```text
 folio/
   AGENTS.md
-  Package.swift       # Swift 패키지 하나. 앱 밖의 모든 모듈과 그 테스트, 실행 파일(folio, folio-gen, folio-fixture, folio-lint)
+  Package.swift       # Swift 패키지 하나. 앱 밖의 모든 모듈과 그 테스트, 실행 파일(folio, folio-gen, folio-fixture, folio-lint, folio-dev)
   project.yml         # 앱의 Xcode 프로젝트(`mise run generate`)
-  mise.toml
+  mise.toml           # 도구 버전, 환경 변수, 한 줄짜리 작업. 여러 줄이거나 조건이 있는 작업은 .mise/tasks/<이름>의 파일 작업
   .swiftlint-baseline.json, .folio-lint-baseline.txt   # 두 린트의 기준선
   docs/
     DESIGN.md         # 디자인 시스템: 원칙, 토큰과 구성 요소의 쓰임, 패턴
-  scripts/            # 버전, 릴리스, 설치, 포매팅, 노트 기준 이미지
+  scripts/            # mise 밖에서도 부르는 스크립트: 포매팅(lefthook), iPad 시뮬레이터 고르기(CI)
   sources/
     app/              # 멀티플랫폼 앱 타깃(macOS, iPadOS, iOS)
     domain/ storage/ actions/ index/ lms/ cli/ macros/ fixtures/   # 모델, 저장소, 파일 추적, 성적과 GPA 계산, 복습 스케줄러, 명령줄 도구. UI 코드 없음
     command/ gen/ fixture-writer/   # 실행 파일 folio, folio-gen, folio-fixture의 진입점
     markdown/         # 마크다운 파서와 확장 문법(콜아웃, 위키링크, 블록 참조, 각주, `[TOC]`, cb-table, cb-widget), 편집 보기의 입력 보조와 표 편집 변환(`editing/`)
     ai/               # Claude 연동 계층. 프로바이더 추상화, 맥락 구성, 작업별 요청과 응답 스키마
+    dev/              # 개발 도구 folio-dev: 버전 읽기와 올리기, 태그, 릴리스 본문(`PatchNotes`). 앱과 CLI에 링크되지 않는다
     lint/ lint-command/   # AGENTS.md 규칙 검사기(`mise run check-code`). swift-syntax로 코드를 읽고 기준선(`.folio-lint-baseline.txt`)을 둔다. 앱과 다른 모듈에 링크되지 않는다
     web/              # 노트 미리보기와 Claude 패널의 페이지(KaTeX 수식, 코드 하이라이팅, mermaid 그림, 노트 CSS, 미리보기의 그림 크게 보기), 편집 보기가 JavaScriptCore로 부르는 코드 하이라이팅. 편집 보기의 수식 말풍선과 자동 완성 미리보기도 미리보기와 같은 KaTeX와 노트 CSS로, 숨은 페이지에서 그린다(`NoteMath`). 번들은 sources/app/resources/web
     tectonic/         # TeX 엔진 Tectonic을 앱에 넣는 정적 라이브러리의 원본: 브리지 crate(bridge/), Tectonic 패치(patches/), 빌드(build.sh)와 받기(fetch.sh), 앱이 받는 판(pin.json). 받은 라이브러리는 vendor/(커밋하지 않음)
@@ -65,6 +66,7 @@ App (SwiftUI), FolioCLI  ->  FolioIndex  ->  FolioStorage   (검색 색인)
 App (SwiftUI)  ->  FolioLMS  ->  FolioDomain   (GIST LMS 읽기)
 FolioStorage, FolioActions, App  ->  FolioMarkdown   (노트 frontmatter와 렌더링)
 FolioActions  ..>  FolioMacros   (@Action 매크로. 컴파일 때만 쓰고 앱에 링크되지 않는다)
+FolioDev  ->  FolioDomain   (릴리스 본문을 PatchNotes로 쓴다)
 FolioGen  ->  FolioActions   (액션 목록을 sources/actions/generated에, CLI 명령과 명령 트리를 sources/cli/generated에 쓴다)
 ```
 
@@ -80,6 +82,7 @@ FolioGen  ->  FolioActions   (액션 목록을 sources/actions/generated에, CLI
 | `FolioCLI` | `sources/cli`, `sources/command` | 터미널 도구 `folio`의 명령 라이브러리. 실행 파일은 진입점만 있는 `FolioCommand`다(실행 타깃의 테스트 빌드에는 카탈로그 심볼이 생기지 않아서다). 모든 액션을 `<대상> <동작>` 명령으로 열고, 사람용 출력과 `--json` 출력을 만든다. 노트 그림과 위젯의 그려 보기(`render/`의 `PageRender`)는 macOS에서 화면 밖 `WKWebView`로 그린다. 앱의 노트 색은 링크할 수 없어 생성한 사본(`NoteTheme`)을 쓴다 | 액션 로직. 명령은 인자를 해석해 `FolioActions`를 부르고 결과를 그리기만 한다 |
 | `FolioMacros` | `sources/macros` | `@Action`과 필드 표시(`@Arg`, `@New`, `@Off`, `@Hidden`, `@CLIName`, `@FromFile`, `@Folder`). 선언에서 입력 형식, init, 코딩, `spec`을 만들고 실수(맨 `UUID`, 없는 `{필드}`, 확인 문구 없는 삭제)를 컴파일 오류로 막는다 | 실행 코드. 앱과 CLI에 링크되지 않는다 |
 | `FolioGen` | `sources/gen` | 파일에서 등록을 만든다. `sources/actions`의 `@Action` 선언을 읽어 `Actions.all`(`sources/actions/generated/actions-all.swift`, `#if` 안의 선언은 같은 조건 안에)을 쓰고, 액션의 `spec`에서 생성 명령을 명령 하나에 파일 하나(`sources/cli/generated/<액션과 같은 경로>`)로, `sources/cli/commands`의 손 명령과 생성 명령에서 명령 트리(`command-tree.swift`의 `subcommandTypes`, 이름 차례)를 쓴다. 결과는 커밋한다. 손 명령(`cli: .manual(reason:)`)은 명령을 쓰지 않는다 | FolioCLI에 의존. 생성 파일이 깨져도 다시 만들 수 있게 한다 |
+| `FolioDev` | `sources/dev` | 개발 도구 `folio-dev`. 버전(`FolioVersion.marketing`의 리터럴을 swift-syntax로 읽고 올리기, `origin/main`에 태그)과 머지된 PR의 릴리스 본문(`PatchNotes.releaseBody`). mise 작업과 릴리스 워크플로가 부른다 | 앱과 CLI에 링크되지 않는다. 앱 작업은 이 도구를 빌드하지 않는다(`generate`는 그 파일만 Swift 인터프리터로 읽는다) |
 | `FolioFixtures` | `sources/fixtures` | 테스트와 개발 실행에 쓰는 가짜 GIST 폴더. 파일을 코드에 두고 쓸 때 디스크에 펼친다. 공개 저장소에 과목 파일 폴더를 두지 않기 위해서다. 화면 확인용 상황(`Scenario`)은 표준 폴더에 고정된 시각 기준으로 액션을 돌려 만든다 | CLI에 링크되지 않는다. 앱에서는 `#if DEBUG`의 `Workspace.scenario`(미리보기와 화면 밖 렌더)만 쓴다 |
 | App | `sources/app` | 화면. `app/`(진입점과 탐색), `design/`(디자인 토큰과 공용 구성 요소), `features/<화면>/`, `platform/`(PencilKit, PDFKit, WKWebView 연결, `file-view/`의 파일 보기(형식별 렌더러), `note-preview.swift`의 노트 미리보기와 `note-text/`의 TextKit 2 편집 보기. 편집 보기는 원문에 글꼴과 색만 입히고, 그림·수식·콜아웃·임베드와 코드의 상자는 미리보기만 그린다), `resources/` | 파일 시스템 직접 접근과 `course.json` 값의 직접 변경. 반드시 `FolioActions`를 거친다 |
 
@@ -156,16 +159,16 @@ PageHeader(title: String(localized: .sessionsAdd))   // String을 받는 API
 
 ### 이름과 주석
 
-- 파일과 폴더 이름은 소문자 케밥 케이스다(`today-view.swift`, `fixture-writer/`). 타입 이름은 Swift 관례를 따르고, 파일 이름은 그 파일의 타입 이름에서 온다(위 "프로젝트 구조"). 약어는 한 낱말로 읽고(`LMSPages`: `lms-pages`), `TeX`, `LaTeX`, `SyncTeX`, `AsciiMath`는 낱말 하나다(`folio-lint`의 `kebab`).
+- 파일과 폴더 이름은 소문자 케밥 케이스다(`today-view.swift`, `fixture-writer/`). 타입 이름은 Swift 관례를 따르고, 파일 이름은 그 파일의 타입 이름에서 온다(위 "프로젝트 구조"). 약어는 한 낱말로 읽고(`LMSPages`: `lms-pages`), `TeX`, `LaTeX`, `SyncTeX`, `AsciiMath`는 낱말 하나다(`folio-lint`의 `kebab`). 도구가 이름을 정하는 파일(`Package.swift`, `Localizable.xcstrings`, Swift 모듈 이름을 따르는 `FolioTectonic.xcframework`와 그 안의 `libFolioTectonic.a`)은 예외다.
 - 주석은 정말 필요한 것만 남긴다. 남는 것은 다르게 짜면 깨지는 이유, 바깥 제약(OS 버그, 도구의 한계, 따라야 하는 파일 형식), 숫자의 근거 정도다. 이름이나 코드에서 읽히는 것, 한 번 보면 알 내용, 이슈 번호만 남긴 이력은 적지 않는다.
 - 주석은 `//`로, 한국어로 쓴다. 말투는 `dadeum` 스킬을 따른다(빠진 성분 없이 완결된 문장, 비유 없이, 기술 용어와 식별자는 원어 그대로).
-- 문서 주석(`///`, `/** */`)은 `@Action` 타입에 바로 선언한 필드에만 쓴다. 매크로가 읽어 CLI 도움말로 만드는 데이터라 주석 규칙을 따르지 않는다. 생성기가 만드는 파일(`sources/actions/generated`, `sources/cli/generated`, `NoteThemeCopyTests`가 쓰는 `note-theme.swift`)의 글도 원본에서 고친다. `check-code`가 그 밖의 문서 주석을 모두 막고(`doc-comment`, 기준선 없음), 한 줄 영어 주석의 낱말이 바로 아래 선언의 이름에 모두 들어 있는 경우(`// The course title.` 위의 `var courseTitle`)도 잡는다. 나머지는 리뷰가 본다.
+- 문서 주석(`///`, `/** */`)은 `@Action` 타입에 바로 선언한 필드에만 쓴다. 매크로가 읽어 CLI 도움말로 만드는 데이터라 주석 규칙을 따르지 않는다. 생성기가 만드는 파일(`generated` 폴더: `sources/actions/generated`, `sources/cli/generated`, `NoteThemeCopyTests`가 쓰는 `sources/cli/render/generated`)의 글도 원본에서 고친다. `check-code`가 그 밖의 문서 주석을 모두 막고(`doc-comment`, 기준선 없음), 한 줄 영어 주석의 낱말이 바로 아래 선언의 이름에 모두 들어 있는 경우(`// The course title.` 위의 `var courseTitle`)도 잡는다. 나머지는 리뷰가 본다.
 
 ### 단일 출처(SSOT)
 
 - 폴더와 파일 이름 규칙은 `FolioDomain`의 `sources/domain/layout/`(`StandardLayout`, `Term`, `SemesterFolder`, `CourseFolder`, `AssignmentKind`)에서만 정의한다. 다른 곳에서 `"Lectures"`, `".folio"` 같은 문자열을 다시 쓰지 않는다. `check-code`가 표준 구조의 폴더와 파일 이름과 똑같은 문자열을 앱과 패키지 소스에서 찾는다(픽스처 제외).
 - 사용자가 바꿀 수 있는 값(하루 경계, 복습 간격, 알림 시점, 학점 규칙)은 코드 상수가 아니라 `settings.json`과 `transcript.json`에서 읽는다. 기본값은 Domain의 한 곳에서만 정의한다.
-- 빌드와 테스트 명령은 `mise.toml`의 작업으로만 정의한다. 문서는 `mise run <작업>`을 가리킨다.
+- 빌드와 테스트 명령은 mise 작업(`mise.toml`과 `.mise/tasks`)으로만 정의한다. 규칙이 든 일(버전, 릴리스 본문)은 셸이 아니라 Swift 도구 `folio-dev`에 둔다. 문서는 `mise run <작업>`을 가리킨다.
 - Xcode 프로젝트는 `project.yml`에서 생성한다. `Folio.xcodeproj`는 커밋하지 않고 직접 고치지 않는다.
 - 버전은 `FolioDomain`의 `FolioVersion.marketing`(`X.Y.Z`)에서만 정한다. 앱의 `MARKETING_VERSION`은 `mise run generate`가 여기서 읽어 `.build/version.xcconfig`에 쓰고, CLI(`folio --version`)와 MCP는 이 상수를 그대로 쓴다. 빌드 번호는 커밋 수(`git rev-list --count HEAD`)라 파일에 두지 않는다. `main`이 스쿼시 머지뿐이라 머지할 때마다 는다.
 - 최소 지원 버전은 `project.yml`과 `Package.swift`에 있다. 도구 제약으로 하나로 합칠 수 없으니 함께 고친다.
@@ -270,13 +273,13 @@ Me/GIST/
 
 ## 빌드와 실행
 
-도구 버전과 환경 변수는 `mise.toml`이 정한다. Xcode 툴체인은 전역 `xcode-select`를 바꾸지 않고 `DEVELOPER_DIR`로 이 저장소에서만 쓴다. 명령은 항상 `mise run`으로 실행한다. 정의는 `mise.toml`에 있다.
+도구 버전과 환경 변수는 `mise.toml`이 정한다. Xcode 툴체인은 전역 `xcode-select`를 바꾸지 않고 `DEVELOPER_DIR`로 이 저장소에서만 쓴다. 명령은 항상 `mise run`으로 실행한다. 한 줄짜리 작업은 `mise.toml`에, 여러 줄이거나 조건이 있는 작업은 `.mise/tasks/<이름>`의 파일 작업(머리의 `#MISE description=`, `depends=`, 인자는 `#USAGE`)에 있다. `scripts/`에는 mise 밖(lefthook, CI)에서도 부르는 스크립트만 둔다.
 
 - Xcode 프로젝트 생성: `mise run generate`. 그 뒤 `open Folio.xcodeproj`. 버전과 빌드 번호도 이때 정해지므로, 커밋한 뒤 Xcode에서 빌드하면 빌드 번호는 마지막 `generate` 때의 것이다
 - 패키지 테스트: `mise run test` (Swift 패키지의 모든 테스트 타깃, folio-lint, SwiftLint, swift-format 검사, 액션 검사)
 - `git blame`: 폴더 재배치(#473)와 전체 포매팅(#474)처럼 거의 모든 파일을 건드리는 기계적 변경은 `.git-blame-ignore-revs`에 스쿼시 커밋 해시를 적어 blame에서 건너뛴다. 로컬에서는 `git config blame.ignoreRevsFile .git-blame-ignore-revs`를 한 번 실행하고, GitHub의 blame 화면은 이 파일을 저절로 읽는다. 앞으로 그런 변경(옮기기, 포매터 판 올리기)을 머지하면 그 해시를 주석과 함께 이 파일에 더한다
-- 포매팅: `mise run format`. Xcode 툴체인의 swift-format이 `.swift-format`대로 `sources`와 `tests`의 Swift 파일을 그 자리에서 고친다. `sources/cli/generated`(`folio-gen --check`)와 `sources/cli/render/note-theme.swift`(`NoteThemeCopyTests`)는 검사가 만든 내용과 그대로 비교하므로 빼고, 포매터를 부르는 곳은 `scripts/swift-format.sh` 하나다. 한 줄에 여러 문장이나 선언을 쓰는 Folio의 문체를 바꾸는 규칙은 끄고, 그 이유는 `mise.toml`의 `format` 작업에 적었다. 고칠 것이 남았는지는 `mise run format-check`(`swift format lint --strict`, `lint`와 `test`에 포함)가 본다. main에 올라온 브랜치를 다시 얹다가 모양만 다른 충돌이 나면 손으로 풀지 않고 한쪽을 고른 뒤 `mise run format`을 다시 돌린다
-- 린트: `mise run lint`(folio-lint, SwiftLint, swift-format 검사, `mise run test`에 포함). SwiftLint의 규칙은 `.swiftlint.yml`에 있고, 레이아웃 규칙은 포매터에 맡겨 끈다. 켜기 전부터 있던 곳은 `.swiftlint-baseline.json`에 있고 `mise run swiftlint-baseline`으로 다시 쓴다. 고친 곳을 빼거나 옮긴 파일을 따라갈 때만 다시 쓰고, 새 위반을 넣어 통과시키지 않는다. 커밋 전 검사(`lefthook.yml`: 바뀐 파일을 swift-format으로 고쳐 다시 올린 뒤 SwiftLint, folio-lint)는 `mise run hooks`로 넣는다. 훅은 `.git/hooks`에 들어가고 워크트리는 이 폴더를 함께 쓰므로, 한 번 넣으면 세션 워크트리에서도 돈다. CI에는 lint 작업을 따로 두지 않는다. 훅이 돌지 않는 커밋(`--no-verify`, 충돌 없는 머지 커밋, GitHub가 만든 스쿼시 커밋)과 각자는 통과한 두 PR을 합친 결과(폴더의 Swift 파일 수, 기준선, import 순서)는 `packages` 작업의 `mise run test`가 잡는다. 이 작업은 빌드가 필요 없는 SwiftLint와 swift-format 검사를 맨 앞에서 돌린다
+- 포매팅: `mise run format`. Xcode 툴체인의 swift-format이 `.swift-format`대로 `sources`와 `tests`의 Swift 파일을 그 자리에서 고친다. 생성 파일은 모두 `generated` 폴더(`sources/actions/generated`, `sources/cli/generated`는 `folio-gen --check`, `sources/cli/render/generated`는 `NoteThemeCopyTests`)에 두고, 검사가 만든 내용과 그대로 비교하므로 swift-format과 SwiftLint가 그 폴더를 뺀다. 포매터를 부르는 곳은 `scripts/swift-format.sh` 하나다. 한 줄에 여러 문장이나 선언을 쓰는 Folio의 문체를 바꾸는 규칙은 끄고, 그 이유는 `mise.toml`의 `format` 작업에 적었다. 고칠 것이 남았는지는 `mise run format-check`(`swift format lint --strict`, `lint`와 `test`에 포함)가 본다. main에 올라온 브랜치를 다시 얹다가 모양만 다른 충돌이 나면 손으로 풀지 않고 한쪽을 고른 뒤 `mise run format`을 다시 돌린다
+- 린트: `mise run lint`(folio-lint, SwiftLint, swift-format 검사, 셸 검사, `mise run test`에 포함). 셸 검사(`mise run shell-check`)는 `scripts`, `sources/tectonic`, `.mise/tasks`의 스크립트를 shellcheck로 보고 shfmt(`.editorconfig`)로 모양을 비교한다. `-- --fix`가 모양을 고친다. SwiftLint의 규칙은 `.swiftlint.yml`에 있고, 레이아웃 규칙은 포매터에 맡겨 끈다. 켜기 전부터 있던 곳은 `.swiftlint-baseline.json`에 있고 `mise run swiftlint-baseline`으로 다시 쓴다. 고친 곳을 빼거나 옮긴 파일을 따라갈 때만 다시 쓰고, 새 위반을 넣어 통과시키지 않는다. 커밋 전 검사(`lefthook.yml`: 바뀐 파일을 swift-format으로 고쳐 다시 올린 뒤 SwiftLint, folio-lint, 셸 스크립트가 바뀌면 셸 검사)는 `mise run hooks`로 넣는다. 훅은 `.git/hooks`에 들어가고 워크트리는 이 폴더를 함께 쓰므로, 한 번 넣으면 세션 워크트리에서도 돈다. CI에는 lint 작업을 따로 두지 않는다. 훅이 돌지 않는 커밋(`--no-verify`, 충돌 없는 머지 커밋, GitHub가 만든 스쿼시 커밋)과 각자는 통과한 두 PR을 합친 결과(폴더의 Swift 파일 수, 기준선, import 순서)는 `packages` 작업의 `mise run test`가 잡는다. 이 작업은 빌드가 필요 없는 SwiftLint와 swift-format 검사를 맨 앞에서 돌린다
 - 안 쓰는 코드: `mise run periphery`(`.periphery.yml`)와 `mise run analyze`(SwiftLint의 안 쓰는 import와 선언). Mac 앱 전체를 빌드하므로 `quality.yml`이 매주와 설정을 바꾼 PR에서 돌려 실행 요약에 적고, 실패로 치지 않는다. 이름으로만 닿는 코드가 있어 사람이 보고 지운다
 - 화면 모델 테스트와 노트 보기 회귀 검사: `mise run test-app`. macOS에서 앱을 호스트로 `tests/unit/app`을 돌린다. 테스트 중에는 앱이 기억해 둔 GIST 폴더를 열지 않고, 창을 띄우거나 포커스를 가져가지 않는다. `FOLIO_TEST_PART=notes`는 노트 보기 검사(`mise.toml`의 `notes` 목록)만, `rest`는 나머지만 돌린다. CI의 `mac app` 작업은 두 절반을 나누지 않고 한 번에 돌린다. 나누면 같은 Debug 앱을 두 러너가 따로 빌드하기 때문이다. 새 노트 보기 검사는 목록에 넣기 전까지 `rest`에서 돈다
 - 노트 보기 기준 이미지 다시 만들기: `test-app`은 없거나 달라진 이미지를 새 이미지와 차이 이미지(`-diff.png`)로 `FOLIO_NOTE_SCREENS`(기본 `.build/note-screens`)에 남기고, CI는 실패할 때 이것을 `note-screens` 아티팩트로 올린다. 차이 이미지로 의도한 변화인지 확인한 뒤 `mise run note-screens -- <CI 실행 ID>`로 기준 이미지에 들인다. 로컬에서 그린 이미지는 기준으로 쓰지 않는다. 테스트가 PR에 붙일 그림으로 펼친 판(`NoteRender.sheet`, 예: 수식 말풍선 모음)은 `FOLIO_NOTE_SCREENS/sheets`에 남고, CI는 테스트가 통과해도 `note-sheets` 아티팩트로 올린다
@@ -290,7 +293,7 @@ Me/GIST/
 - macOS 빌드: `mise run build-mac`. 모든 `xcodebuild` 작업은 `~/Library`의 DerivedData 대신 체크아웃 안의 `.build/DerivedData`(`FOLIO_DERIVED_DATA`)에 빌드한다. 워크트리마다 몇 GB씩 남지 않고 워크트리를 지우면 함께 지워진다. 디버그 앱은 `.build/DerivedData/Build/Products/Debug/Folio.app`이다. `FolioMacros`는 로컬 패키지라 Xcode가 매크로 신뢰를 묻지 않는다. mise 작업의 `-skipMacroValidation`은 명령줄 빌드가 멈추지 않게 하는 안전장치다
 - macOS 앱 설치: `mise run install-release [-- <ref>]`. `origin/main`(또는 준 커밋, 예를 들어 PR 브랜치를 합쳐 본 임시 커밋)을 임시 워크트리에 꺼내 Release로 빌드하고, `/Applications/Folio.app`과 `~/.local/bin/folio`를 바꾼 뒤 워크트리를 지운다. 커밋하지 않은 작업과 다른 세션의 워크트리는 들어가지 않는다. 실행 중인 `/Applications/Folio.app`만 끄고, 같은 번들 ID의 Debug 앱은 건드리지 않는다. 지금 체크아웃을 그대로 설치하는 `mise run install-mac`은 그 안에서 쓰는 단계다
 - 버전 올리기: `mise run version-bump -- major|minor|patch`. 1.0 전에는 새 기능이 든 릴리스는 minor, 고침만 든 릴리스는 patch를 올리고, major는 1.0(사용자 데이터 형식과 기능 범위를 굳힐 때)에만 올린다. 올린 커밋은 PR로 머지한다
-- 릴리스 노트: 원본은 PR 본문의 `## 패치 노트` 절이다(아래 "PR 전 점검", #415). `mise run release-notes [-- <since>]`가 지난 태그 뒤 머지된 PR의 본문을 `gh`로 읽어 그 절의 항목 줄을 모은 릴리스 본문을 보여 준다. 커밋 메시지가 아니라 PR 본문을 읽으므로 머지 뒤에 고친 본문도 들어간다. 저장소에는 버전별 노트 파일을 두지 않는다. 릴리스 본문은 `## 패치 노트` 제목, 형식 표시(`<!-- folio-patch-notes 1 -->`), 종류별 소제목(`### feat`, `### fix`, `### change` 순)으로 묶은 항목 줄, 머지된 PR 목록, 설치 안내 순이다. 앱은 이 본문을 GitHub Releases API에서 받아 `FolioDomain`의 `PatchNotes`로 읽으니, 줄의 형식을 바꾸면 스크립트의 `format`과 `PatchNotes.format`을 함께 올린다. 첫 릴리스(앞선 태그 없음)는 그때까지 머지된 모든 PR을 모은다
+- 릴리스 노트: 원본은 PR 본문의 `## 패치 노트` 절이다(아래 "PR 전 점검", #415). `mise run release-notes [-- <since>]`(`folio-dev release-notes preview`)가 지난 태그 뒤 머지된 PR의 본문을 `gh pr list --json`으로 읽어 그 절의 항목 줄을 모은 릴리스 본문을 보여 준다. 커밋 메시지가 아니라 PR 본문을 읽으므로 머지 뒤에 고친 본문도 들어간다. 저장소에는 버전별 노트 파일을 두지 않는다. 릴리스 본문은 `## 패치 노트` 제목, 형식 표시(`<!-- folio-patch-notes 1 -->`), 종류별 소제목(`### feat`, `### fix`, `### change` 순)으로 묶은 항목 줄, 머지된 PR 목록, 설치 안내 순이다. 본문을 쓰는 일(`PatchNotes.releaseBody`)과 앱이 GitHub Releases API에서 받아 읽는 일(`PatchNotes.items`)이 `FolioDomain`의 `PatchNotes` 한 타입에 있고 `swift test`가 왕복을 검사한다. 줄의 형식을 바꾸면 `PatchNotes.format`을 올린다. 첫 릴리스(앞선 태그 없음)는 그때까지 머지된 모든 PR을 모은다
 - 릴리스: `mise run release-tag`가 `origin/main`에 `v<버전>` 태그를 달고 푸시한다. 태그가 푸시되면 `release.yml`이 Release 앱을 빌드해 `Folio-<버전>.zip`을 붙인 GitHub Release 초안을 만들고, 본문에는 패치 노트 항목과 머지된 PR(제목과 한국어 요약)을 적는다. 초안을 게시해야 앱이 그 버전의 패치 노트를 본다. 초안은 사람이 확인하고 게시한다. 태그와 `FolioVersion`이 다르면 실패한다. 수동 실행(`workflow_dispatch`, `since` 입력)은 릴리스 없이 같은 결과를 아티팩트로만 올린다. Developer ID 서명, 공증, 자동 업데이트(#414)는 아직 없다
 - iPad와 iPhone 빌드: `mise run build-ipad`. 앱 타깃은 iPhone과 iPad를 함께 지원하고(`TARGETED_DEVICE_FAMILY: "1,2"`), 모든 iOS 시뮬레이터용으로 빌드하므로 iPhone도 이 빌드로 확인한다
 - 생성 액션 목록과 CLI 명령: `mise run gen-cli`. `@Action` 선언이나 손 명령을 더하거나 고친 뒤 실행한다. 생성기는 링크한 액션 목록으로 명령을 쓰므로 목록을 고친 뒤 한 번 더 돈다. `mise run test`가 커밋된 파일이 낡지 않았는지 본다
