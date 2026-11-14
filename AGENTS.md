@@ -49,6 +49,8 @@ folio/
       app/            # 앱을 띄워 주요 화면의 접근성을 검사한다(`FolioE2ETests`, `performAccessibilityAudit()`, `mise run test-a11y`). CI만 돌린다
 ```
 
+- 파일 밖에서 쓰는 타입 하나에 파일 하나를 두고, 파일 이름은 타입 이름 전체의 케밥 케이스다(`LMSClient`: `lms-client.swift`, `NoteFigureAdd`: `note-figure-add.swift`). Swift가 한 모듈 안에 같은 파일 이름을 두 번 받지 않아서, 폴더가 이름의 앞부분을 말해도 파일 이름을 줄이지 않는다. 그 파일 안에서만 쓰는 `private` 조각(작은 View, 도우미 타입)과 한 값의 `extension`은 그 값의 파일에 둔다. `mise run check-code`(`one-type-per-file`, 기준선 없음)가 검사한다. 폴더에 Swift 파일이 20개를 넘으면 역할로 하위 폴더를 나눈다.
+- 액션은 `sources/actions/<대상>/[<하위 대상>/]<타입 이름 케밥>.swift`이고, 폴더가 이름의 앞부분이다(`NoteFigureAdd`: `note/figure/note-figure-add.swift`, `action-path`). 여러 액션이 함께 쓰는 도우미는 그 대상 폴더의 이름 있는 파일(`note/note-lookup.swift`)에, 모든 액션의 바탕은 `actions/core/`에 둔다. CLI의 손 명령은 `sources/cli/commands/<대상>/`에 같은 모양으로 두고, 하위 명령마다 `extension <상위 명령> { struct … }` 파일 하나다.
 - `sources/app` 밖의 모듈은 SwiftUI를 import하지 않는다.
 - 계산 로직(환산 점수, GPA, 복습 간격, 우선순위)은 순수 함수로 만들고 단위 테스트를 붙인다.
 - Claude 호출은 `FolioAI`의 프로토콜 뒤에 둔다. 테스트에서는 가짜 프로바이더를 쓴다.
@@ -63,7 +65,7 @@ App (SwiftUI), FolioCLI  ->  FolioIndex  ->  FolioStorage   (검색 색인)
 App (SwiftUI)  ->  FolioLMS  ->  FolioDomain   (GIST LMS 읽기)
 FolioStorage, FolioActions, App  ->  FolioMarkdown   (노트 frontmatter와 렌더링)
 FolioActions  ..>  FolioMacros   (@Action 매크로. 컴파일 때만 쓰고 앱에 링크되지 않는다)
-FolioGen  ->  FolioActions   (생성한 CLI 명령을 sources/cli/generated에 쓴다)
+FolioGen  ->  FolioActions   (액션 목록을 sources/actions/generated에, CLI 명령과 명령 트리를 sources/cli/generated에 쓴다)
 ```
 
 | 모듈 | 위치 | 맡는 일 | 하지 않는 일 |
@@ -77,7 +79,7 @@ FolioGen  ->  FolioActions   (생성한 CLI 명령을 sources/cli/generated에 �
 | `FolioLMS` | `sources/lms` | GIST LMS(Coursemos) 읽기. 학생에게는 웹 서비스 토큰이 없어 웹 세션으로 대시보드, 과제, 자료, 공지 페이지를 읽고(`LMSPages`, SwiftSoup), 세션이 끝나면 iCloud 키체인에 둔 로그인으로 한 번 다시 로그인한다(`LMSClient`, `LMSCredentialStore`). 거절되면 다시 시도하지 않는다. 요청 사이 0.5초를 둔다 | 파일 쓰기와 제안 판단. 읽은 값(`LMSSnapshot`)과 제안 규칙(`LMSInbox`)은 Domain, 받기는 `lms accept` 액션이다 |
 | `FolioCLI` | `sources/cli`, `sources/command` | 터미널 도구 `folio`의 명령 라이브러리. 실행 파일은 진입점만 있는 `FolioCommand`다(실행 타깃의 테스트 빌드에는 카탈로그 심볼이 생기지 않아서다). 모든 액션을 `<대상> <동작>` 명령으로 열고, 사람용 출력과 `--json` 출력을 만든다. 노트 그림과 위젯의 그려 보기(`render/`의 `PageRender`)는 macOS에서 화면 밖 `WKWebView`로 그린다. 앱의 노트 색은 링크할 수 없어 생성한 사본(`NoteTheme`)을 쓴다 | 액션 로직. 명령은 인자를 해석해 `FolioActions`를 부르고 결과를 그리기만 한다 |
 | `FolioMacros` | `sources/macros` | `@Action`과 필드 표시(`@Arg`, `@New`, `@Off`, `@Hidden`, `@CLIName`, `@FromFile`, `@Folder`). 선언에서 입력 형식, init, 코딩, `spec`을 만들고 실수(맨 `UUID`, 없는 `{필드}`, 확인 문구 없는 삭제)를 컴파일 오류로 막는다 | 실행 코드. 앱과 CLI에 링크되지 않는다 |
-| `FolioGen` | `sources/gen` | `@Action` 액션의 `spec`에서 `sources/cli/generated/commands.swift`를 만든다. 결과는 커밋한다. 손 명령(`cli: .manual(reason:)`)은 건너뛴다 | FolioCLI에 의존. 생성 파일이 깨져도 다시 만들 수 있게 한다 |
+| `FolioGen` | `sources/gen` | 파일에서 등록을 만든다. `sources/actions`의 `@Action` 선언을 읽어 `Actions.all`(`sources/actions/generated/actions-all.swift`, `#if` 안의 선언은 같은 조건 안에)을 쓰고, 액션의 `spec`에서 생성 명령을 명령 하나에 파일 하나(`sources/cli/generated/<액션과 같은 경로>`)로, `sources/cli/commands`의 손 명령과 생성 명령에서 명령 트리(`command-tree.swift`의 `subcommandTypes`, 이름 차례)를 쓴다. 결과는 커밋한다. 손 명령(`cli: .manual(reason:)`)은 명령을 쓰지 않는다 | FolioCLI에 의존. 생성 파일이 깨져도 다시 만들 수 있게 한다 |
 | `FolioFixtures` | `sources/fixtures` | 테스트와 개발 실행에 쓰는 가짜 GIST 폴더. 파일을 코드에 두고 쓸 때 디스크에 펼친다. 공개 저장소에 과목 파일 폴더를 두지 않기 위해서다. 화면 확인용 상황(`Scenario`)은 표준 폴더에 고정된 시각 기준으로 액션을 돌려 만든다 | CLI에 링크되지 않는다. 앱에서는 `#if DEBUG`의 `Workspace.scenario`(미리보기와 화면 밖 렌더)만 쓴다 |
 | App | `sources/app` | 화면. `app/`(진입점과 탐색), `design/`(디자인 토큰과 공용 구성 요소), `features/<화면>/`, `platform/`(PencilKit, PDFKit, WKWebView 연결, `file-view/`의 파일 보기(형식별 렌더러), `note-preview.swift`의 노트 미리보기와 `note-text/`의 TextKit 2 편집 보기. 편집 보기는 원문에 글꼴과 색만 입히고, 그림·수식·콜아웃·임베드와 코드의 상자는 미리보기만 그린다), `resources/` | 파일 시스템 직접 접근과 `course.json` 값의 직접 변경. 반드시 `FolioActions`를 거친다 |
 
@@ -85,7 +87,7 @@ FolioGen  ->  FolioActions   (생성한 CLI 명령을 sources/cli/generated에 �
     - 필드의 형식이 입력을 정한다. 가리키는 항목은 `Exam.ID`처럼 종류의 ID로 쓰고(경로로 가리키는 노트는 `Note.Path`), `set`의 필드는 `Patch<T>`(빠지면 그대로, `T?`면 `none`/`null`로 지운다. 액션이 지금 값 위에 준 칸만 덮으므로 CLI가 지금 값을 읽어 빈 칸을 채우지 않는다. 시트처럼 값 전체를 가진 화면은 모든 칸을 `.set`으로 보내거나 `Patch.changed(이전, 새 값)`으로 바뀐 칸만 보낸다), 새 항목의 ID는 `@New`, 위치 인자는 `@Arg`로 쓴다. `///` 주석이 도움말이다.
     - CLI 입력의 모양도 선언에 적는다. 위치 인자의 순서는 필드 순서이고, 과목 인자 뒤의 항목 인자는 `<과목>/<항목>` 하나로 받는다(목록이면 둘째부터 항목만). 과목을 `Course.ID?`로 두면 빼서 모든 과목에 한다. 다른 옵션 이름은 `@CLIName("unit")`, 파일에서 읽는 값(문자열은 글, 그 밖은 JSON, `-`는 표준 입력. 목록을 파일마다 받으면 `perItem: true`)은 `@FromFile`, 실행한 곳 기준의 폴더 경로는 `@Folder`, 끄는 플래그는 `@Off("undo")`, `05_Matchings.pdf:3-12`나 `6:B0`처럼 한 단어를 읽어 값을 만드는 입력은 `@Parsed("<값 이름>", "<쓰는 꼴>")`(그 형식이 FolioCLI의 `CLIText`를 따르고 이름도 거기서 찾는다)로 쓴다. 빠지면 지금 것으로 채울 값(지금 학기)은 옵셔널로 두고 액션이 채운다. 계획 항목과 카드처럼 다른 항목 안에서 찾는 ID는 그 항목 필드가 있으면 그 안에서 찾는다. `made`가 `moves.jsonl` 묶음이면 `undoable: true`로 되돌리는 법을 보인다.
     - 확인 문구와 완료 문구는 `{필드}` 자리표시자로 쓰고, ID는 실행하기 전에 이름으로 바뀐다. `.removes`와 `.moves`는 `confirm:`이 있어야 컴파일된다.
-    - 선언한 뒤 `mise run gen-cli`로 CLI 명령을 다시 만든다. 생성기가 다루지 못하는 입력(한 옵션을 두 필드로 나누기, 플래그 여럿이 값 하나가 되기, 액션 여러 번 돌리기, 해시 비교)만 손으로 쓰고 `cli: .manual(reason: "...")`에 이유를 적는다. 이유가 없으면 `actions --check`가 실패한다. 손 명령도 같은 액션 하나를 `perform(spec:)`으로 부른다.
+    - 선언한 뒤 `mise run gen-cli`로 액션 목록, CLI 명령, 명령 트리를 다시 만든다. 목록에 손으로 줄을 더하지 않는다. 손 명령을 더하면 상위 명령의 `subcommands: subcommandTypes`가 그 명령을 받는다. 생성기가 다루지 못하는 입력(한 옵션을 두 필드로 나누기, 플래그 여럿이 값 하나가 되기, 액션 여러 번 돌리기, 해시 비교)만 손으로 쓰고 `cli: .manual(reason: "...")`에 이유를 적는다. 이유가 없으면 `actions --check`가 실패한다. 손 명령도 같은 액션 하나를 `perform(spec:)`으로 부른다.
     - 규칙은 액션이 아니라 `FolioDomain`의 모델(`course-rules.swift`의 `Document.model`)에 둔다. 모든 저장이 그 규칙으로 검사한다.
     - 화면은 규칙을 다시 적지 않는다. 버튼을 켜고 끌 때는 `workspace.can(액션)`, 막힌 이유는 `refusal`, 확인 문구는 `confirmation`으로 묻는다. 앱이 보여 주는 문서로 미리 실행해 본다.
     - `confirm:`이 있는 액션은 `workspace.ask(액션)`으로 실행하고 결과를 모델의 `pending`에 둔다. 뷰는 `.confirming($model.pending)`으로 묻고, 막힌 액션이면 묻지 않고 이유를 보여 준다. 확인 문구를 화면에서 따로 쓰지 않는다.
@@ -102,7 +104,7 @@ FolioGen  ->  FolioActions   (생성한 CLI 명령을 sources/cli/generated에 �
 | 축 | 하나로 모으는 것 | 상태 |
 | --- | --- | --- |
 | 액션 `@Action` | 데이터를 바꾸는 모든 동작. 앱, CLI, MCP가 같은 선언을 쓰고, CLI 명령은 선언에서 생성한다(손 명령은 이유를 적는다) | 있음 |
-| 표준 구조 `standard-layout.swift` | 폴더와 파일 이름 | 있음 |
+| 표준 구조 `sources/domain/layout/` | 폴더와 파일 이름 | 있음 |
 | 앱 링크 `AppLink` | 앱 안의 모든 대상을 가리키는 `folio://<종류>/<ID>[#page=N\|#^블록\|#제목\|#t=12:30]` 주소(`t`는 녹음의 재생 위치). 과목의 페이지는 `folio://course/<ID>/<페이지>`, 설정 탭은 `folio://settings/<탭>`이다(`general`, `record`, `class`, `notes`, `review`, `notifications`, `claude`, `lms`, `backup`, `about`. 합쳐진 옛 탭 이름 `profile`, `letters`, `recording`도 읽어 학적, 수업 탭으로 연다). 종류마다 담는 곳(`home`), 받는 앵커(`anchors`), 페이지 경로(`hasPages`)는 `AppLink.Kind` 한 곳에 있고 주소 해석, CLI 검사, `Workspace.entry`가 그 값을 읽는다. 종류별 `switch`에는 `default:`를 두지 않아 새 종류는 모든 곳이 다룰 때까지 컴파일되지 않는다. 앱은 `\.openLink`(여는 위치는 여기·옆 칸·새 탭·새 창)로만 열고, 칸마다 `Navigator`가 뒤로·앞으로 기록을 둔다. 새 탭은 macOS 창 탭이 아니라 창이 툴바 줄에 직접 그리는 탭이다(`WindowTabs`, 탭 목록과 고른 탭은 값 `TabStrip`). 회차, 과제, 시험, 카드, 문제집 링크는 그 목록 페이지를 열고 그 항목으로 스크롤해 표시한다(`\.linkFocus`, `.linkTarget`). 자료의 쪽은 주소에 실려 기록의 지금 걸음을 고친다. 사이드바, 검색, 노트와 파일의 링크, Claude 패널의 답, 바깥에서 온 `folio://`(앞에 있는 창의 새 탭에서 열고 그 탭을 고르며 앱을 앞으로 가져온다), `folio open`이 쓴다. 같은 scheme의 두 주소는 `AppLink`가 아니다. 손으로 쓴 `[[제목]]`이 되는 `folio://note/<제목>`은 그 노트가 있는 과목에서 `[NoteFile].linked`로 찾고(`AppLink.noteTitle`), `folio://action/…`은 Claude 패널의 버튼이라 종류 이름으로 쓸 수 없다(`AppLink.actionHost`) | 있음 |
 | 화면 계약 `ScreenView` | 모든 화면이 주소 하나를 그리고 전체·칸·좁은 폭(1440·720·390)에서 넘치거나 잘리지 않는다. 주소에서 화면을 고르는 곳은 `Screen(entry)` 하나이고, `ScreenFitTests`가 세 폭을 검사한다 | 있음 |
 | 칸 배치 `PaneLayout` | 탭 하나의 칸들(주소, 비율, 초점, 누른 순서)과 접기 규칙. 칸마다 기록(`Navigator`)과 위치 표시가 따로 있고(`TabPanes`), 툴바의 위치 표시와 뒤로·앞으로는 초점 칸을 따른다. 창 폭이 모자라면 초점 칸이 든 이어진 칸들만 펼치고 나머지는 양 끝의 묶음(띠 하나)으로 접는다. 폭이 줄면 펼친 칸의 양 끝 중 더 오래 안 누른 쪽이 묶음으로 가고, 묶음에서 고른 칸까지 펼친 칸들이 가장 짧게 밀려 가며, 손으로 접은 칸만 제자리 빗금 띠로 남는다(`PaneLayout.fold`, `PaneRow`). "옆 칸에서 열기"(`LinkPlacement.beside`)가 칸을 연다. 툴바 탭이 줄어드는 순서는 `TabFit`이 정한다. Claude는 칸마다가 아니라 탭에 하나이고(`WindowClaude`), 맥락에 칸 목록을 초점 칸부터 넣는다(`ContextBuilder.panes`). 칸이 둘 이상이고 노트와 녹음이 한 회차의 것인 탭(`PaneLayout.session(in:)`)은 바뀔 때마다 그 회차의 배치로 이 기기에 남고(`PaneMemory`, `SessionLayoutSaver`), 칸이 하나인 탭이 그 회차의 노트나 녹음을 열거나 수업 시작이 나눠 보기 탭을 열면 남긴 배치로 돌아온다(`PaneMemory.restoring`). 노트 보기 방식은 칸에 함께 남는다(`PaneNotes`). PDF 칸은 폭이 바뀌어도 보던 자리를 지킨다(`SteadyPDFView`). 칸 수에는 한도가 없다. 몇 칸을 펼칠지는 기기가 아니라 그 순간의 칸 줄 폭과 누른 순서만으로 정하고(`PaneLayout.fold`, 칸 최소 폭 360pt), 폭이 줄면 칸을 빼거나 새 탭으로 떼지 않고 묶음으로 접기만 한다. 자리가 없을 때 옆 칸에서 열면 새 칸이 초점으로 펼쳐지고 반대쪽 끝 칸이 묶음으로 간다. 다른 기기에서 남긴 배치와 이름 붙인 배치도 칸을 줄이지 않고 연다 | 있음(#62). 탭 메뉴의 "배치 ▸"가 기본 배치(`PanePreset.builtIn`)와 `settings.json`의 내 배치(`Settings.panePresets`)를 고르고 지금 배치를 저장하며, 수업 시작은 설정에서 고른 배치로 연다(`Settings.classStartPreset`) |
@@ -118,7 +120,7 @@ FolioGen  ->  FolioActions   (생성한 CLI 명령을 sources/cli/generated에 �
 
 ### 화면: 모델과 뷰
 
-화면 하나는 `sources/app/features/<기능>/`의 `<화면>-view.swift`와 `<화면>-model.swift`로 나눈다. 본보기는 `features/catalog/`다.
+화면 하나는 `sources/app/features/<기능>/`의 `<화면>-view.swift`와 `<화면>-model.swift`로 나눈다. 화면 안의 큰 조각(다른 파일에서 쓰는 행, 카드, 시트)은 타입마다 `features/<기능>/<조각>.swift`로 빼고, 그 화면 파일 안에서만 쓰는 조각은 `private`으로 둔다. 본보기는 `features/catalog/`다.
 
 - **모델** `<화면>Model`: `@MainActor @Observable final class`이고 `init(workspace:, 대상 ID)`로 만든다. 검색어, 고른 항목, 지우려는 항목처럼 화면의 상태를 들고, 뷰가 바로 그릴 값(묶고, 거르고, 세고, 문구로 만든 값)과 동작(`add()`, `remove()`)을 내놓는다. 동작은 `workspace.run(액션)`을 부른다.
 - **뷰**: 모델을 읽고 배치만 한다. `body`에서 묶기, 거르기, 세기를 하지 않고 `workspace`를 직접 부르지 않는다. 뷰는 `@State private var model`을 `init(workspace:)`에서 만들고, `@State`는 시트, 마우스 올림, 포커스 같은 화면 상태에만 쓴다.
@@ -154,14 +156,14 @@ PageHeader(title: String(localized: .sessionsAdd))   // String을 받는 API
 
 ### 이름과 주석
 
-- 파일과 폴더 이름은 소문자 케밥 케이스다(`today-view.swift`, `fixture-writer/`). 타입 이름은 Swift 관례를 따른다.
+- 파일과 폴더 이름은 소문자 케밥 케이스다(`today-view.swift`, `fixture-writer/`). 타입 이름은 Swift 관례를 따르고, 파일 이름은 그 파일의 타입 이름에서 온다(위 "프로젝트 구조"). 약어는 한 낱말로 읽고(`LMSPages`: `lms-pages`), `TeX`, `LaTeX`, `SyncTeX`, `AsciiMath`는 낱말 하나다(`folio-lint`의 `kebab`).
 - 주석은 정말 필요한 것만 남긴다. 남는 것은 다르게 짜면 깨지는 이유, 바깥 제약(OS 버그, 도구의 한계, 따라야 하는 파일 형식), 숫자의 근거 정도다. 이름이나 코드에서 읽히는 것, 한 번 보면 알 내용, 이슈 번호만 남긴 이력은 적지 않는다.
 - 주석은 `//`로, 한국어로 쓴다. 말투는 `dadeum` 스킬을 따른다(빠진 성분 없이 완결된 문장, 비유 없이, 기술 용어와 식별자는 원어 그대로).
-- 문서 주석(`///`, `/** */`)은 `@Action` 타입에 바로 선언한 필드에만 쓴다. 매크로가 읽어 CLI 도움말로 만드는 데이터라 주석 규칙을 따르지 않는다. 생성기가 만드는 파일(`sources/cli/generated`, `NoteThemeCopyTests`가 쓰는 `note-theme.swift`)의 글도 원본에서 고친다. `check-code`가 그 밖의 문서 주석을 모두 막고(`doc-comment`, 기준선 없음), 한 줄 영어 주석의 낱말이 바로 아래 선언의 이름에 모두 들어 있는 경우(`// The course title.` 위의 `var courseTitle`)도 잡는다. 나머지는 리뷰가 본다.
+- 문서 주석(`///`, `/** */`)은 `@Action` 타입에 바로 선언한 필드에만 쓴다. 매크로가 읽어 CLI 도움말로 만드는 데이터라 주석 규칙을 따르지 않는다. 생성기가 만드는 파일(`sources/actions/generated`, `sources/cli/generated`, `NoteThemeCopyTests`가 쓰는 `note-theme.swift`)의 글도 원본에서 고친다. `check-code`가 그 밖의 문서 주석을 모두 막고(`doc-comment`, 기준선 없음), 한 줄 영어 주석의 낱말이 바로 아래 선언의 이름에 모두 들어 있는 경우(`// The course title.` 위의 `var courseTitle`)도 잡는다. 나머지는 리뷰가 본다.
 
 ### 단일 출처(SSOT)
 
-- 폴더와 파일 이름 규칙은 `FolioDomain`의 `standard-layout.swift`(`Term`, `SemesterFolder`, `CourseFolder`)에서만 정의한다. 다른 곳에서 `"Lectures"`, `".folio"` 같은 문자열을 다시 쓰지 않는다. `check-code`가 표준 구조의 폴더와 파일 이름과 똑같은 문자열을 앱과 패키지 소스에서 찾는다(픽스처 제외).
+- 폴더와 파일 이름 규칙은 `FolioDomain`의 `sources/domain/layout/`(`StandardLayout`, `Term`, `SemesterFolder`, `CourseFolder`, `AssignmentKind`)에서만 정의한다. 다른 곳에서 `"Lectures"`, `".folio"` 같은 문자열을 다시 쓰지 않는다. `check-code`가 표준 구조의 폴더와 파일 이름과 똑같은 문자열을 앱과 패키지 소스에서 찾는다(픽스처 제외).
 - 사용자가 바꿀 수 있는 값(하루 경계, 복습 간격, 알림 시점, 학점 규칙)은 코드 상수가 아니라 `settings.json`과 `transcript.json`에서 읽는다. 기본값은 Domain의 한 곳에서만 정의한다.
 - 빌드와 테스트 명령은 `mise.toml`의 작업으로만 정의한다. 문서는 `mise run <작업>`을 가리킨다.
 - Xcode 프로젝트는 `project.yml`에서 생성한다. `Folio.xcodeproj`는 커밋하지 않고 직접 고치지 않는다.
@@ -182,7 +184,7 @@ PageHeader(title: String(localized: .sessionsAdd))   // String을 받는 API
 
 ### 폴더 구조와 이름 규칙
 
-코드의 단일 출처는 `standard-layout.swift`다. 이 절은 그 규칙을 사람이 읽는 형태로 적는다. 과목 폴더는 출처로만 나뉜다. 받은 것(`Syllabus`, `Lectures`, `Exercises`, `Textbooks`, `Inherited`), 평가 기록(`Assignments/<과제>`, `Exams/<시험>`), 내가 만든 것(`Study`, `Notes`, `Ink`, `Recordings`, `Archive`)이다. 어느 시험이나 단원을 위한 파일인지는 폴더가 아니라 `course.json`의 연결(ID)로 표시한다.
+코드의 단일 출처는 `sources/domain/layout/`이다. 이 절은 그 규칙을 사람이 읽는 형태로 적는다. 과목 폴더는 출처로만 나뉜다. 받은 것(`Syllabus`, `Lectures`, `Exercises`, `Textbooks`, `Inherited`), 평가 기록(`Assignments/<과제>`, `Exams/<시험>`), 내가 만든 것(`Study`, `Notes`, `Ink`, `Recordings`, `Archive`)이다. 어느 시험이나 단원을 위한 파일인지는 폴더가 아니라 `course.json`의 연결(ID)로 표시한다.
 
 ```text
 Me/GIST/
@@ -291,7 +293,7 @@ Me/GIST/
 - 릴리스 노트: 원본은 PR 본문의 `## 패치 노트` 절이다(아래 "PR 전 점검", #415). `mise run release-notes [-- <since>]`가 지난 태그 뒤 머지된 PR의 본문을 `gh`로 읽어 그 절의 항목 줄을 모은 릴리스 본문을 보여 준다. 커밋 메시지가 아니라 PR 본문을 읽으므로 머지 뒤에 고친 본문도 들어간다. 저장소에는 버전별 노트 파일을 두지 않는다. 릴리스 본문은 `## 패치 노트` 제목, 형식 표시(`<!-- folio-patch-notes 1 -->`), 종류별 소제목(`### feat`, `### fix`, `### change` 순)으로 묶은 항목 줄, 머지된 PR 목록, 설치 안내 순이다. 앱은 이 본문을 GitHub Releases API에서 받아 `FolioDomain`의 `PatchNotes`로 읽으니, 줄의 형식을 바꾸면 스크립트의 `format`과 `PatchNotes.format`을 함께 올린다. 첫 릴리스(앞선 태그 없음)는 그때까지 머지된 모든 PR을 모은다
 - 릴리스: `mise run release-tag`가 `origin/main`에 `v<버전>` 태그를 달고 푸시한다. 태그가 푸시되면 `release.yml`이 Release 앱을 빌드해 `Folio-<버전>.zip`을 붙인 GitHub Release 초안을 만들고, 본문에는 패치 노트 항목과 머지된 PR(제목과 한국어 요약)을 적는다. 초안을 게시해야 앱이 그 버전의 패치 노트를 본다. 초안은 사람이 확인하고 게시한다. 태그와 `FolioVersion`이 다르면 실패한다. 수동 실행(`workflow_dispatch`, `since` 입력)은 릴리스 없이 같은 결과를 아티팩트로만 올린다. Developer ID 서명, 공증, 자동 업데이트(#414)는 아직 없다
 - iPad와 iPhone 빌드: `mise run build-ipad`. 앱 타깃은 iPhone과 iPad를 함께 지원하고(`TARGETED_DEVICE_FAMILY: "1,2"`), 모든 iOS 시뮬레이터용으로 빌드하므로 iPhone도 이 빌드로 확인한다
-- 생성 CLI 명령: `mise run gen-cli`. `@Action` 선언을 고친 뒤 실행한다. `mise run test`가 커밋된 파일이 낡지 않았는지 본다
+- 생성 액션 목록과 CLI 명령: `mise run gen-cli`. `@Action` 선언이나 손 명령을 더하거나 고친 뒤 실행한다. 생성기는 링크한 액션 목록으로 명령을 쓰므로 목록을 고친 뒤 한 번 더 돈다. `mise run test`가 커밋된 파일이 낡지 않았는지 본다
 - 명령줄 도구: `mise run cli -- <명령>`. `~/.local/bin`에 설치는 `mise run install-cli`. GIST 폴더는 `--gist <경로>`, `FOLIO_GIST`, 앱이 연 폴더 순으로 정한다. 모든 쓰기 명령은 `--dry-run`으로 먼저 본다. 명령 목록은 `folio help`, 자연어로 찾기는 `folio help <하고 싶은 일>`
 - MCP: `folio mcp`가 모든 쓰기 액션과 읽기 명령을 표준 입출력 MCP 도구로 연다. 앱의 Claude 패널은 `--propose`로 붙여 쓰기를 제안으로만 받는다. 도구 정의는 질문마다 함께 가므로 `--propose`에는 과목 대화에 쓰는 도구만 연다(`MCPServer.panelGroups`가 목록). 나머지 액션과 읽기 명령에는 범용 도구 두 개로 닿는다. `action_search`는 `folio help <하고 싶은 일>`의 검색으로 명령과 입력 형식(JSON Schema)을 찾아 주고, `action_run`은 명령 이름과 JSON 입력으로 그 명령의 도구를 그대로 부른다. 그래서 `--propose`의 쓰기는 제안이 되고, 성적 잠금은 명령 자신이 지킨다. `--propose` 서버는 한 답(질문마다 새 프로세스)의 제안을 GIST 폴더의 임시 사본(`StagedFolder`, APFS 복제)에 차례로 실제로 실행해 쌓는다(`ProposalStage`). 다음 쓰기의 미리 실행과 읽기(`search` 빼고)가 그 사본에서 돌아서, `unit add` 뒤의 `unit pages add`, `note add` 뒤의 `note edit`이 제안 단계에서 통과하고, 읽은 결과의 그 항목에는 `proposed`가 붙는다. 사본 안에서는 `CoordinatedFile`이 사본 밖으로 가는 쓰기를 막는다. 폴더만으로는 실패하는 제안은 기대는 앞 제안의 번호(`ActionProposal.after`)를 지니고, 패널은 그 제안이 적용되기 전에는 따로 적용하지 않으며(`ChatMessage.waiting`), 모두 적용은 같은 사본 검사(`Workspace.stagedRefusal`)로 차례대로 확인한다. 터미널의 `folio mcp`에도 같은 두 도구가 있다. 도구 결과의 JSON은 한 줄로 줄이고 null, 빈 배열, 빈 객체를 뺀다. 셸 없는 클라이언트에는 `claude mcp add folio -- folio mcp`처럼 붙인다
 - 자료 읽기(#85): `material read <자료> [--pages 9-12] [--titles] [--images]`가 PDF의 쪽 글과 쪽 그림, `recording transcript <회차> [--from 10:00 --to 20:00]`가 받아쓰기, `note images <노트> [--file <그림>]`이 노트의 그림을 읽는다. 패널과 터미널의 `folio mcp`가 함께 쓰고, 그림은 MCP image content로 준다(터미널에서는 `--out <폴더>`, GIST 폴더 밖). 한 번에 주는 양은 `FolioDomain`의 `ReadingLimit`이 정하고, 넘으면 잘라서 다음 범위를 알려 준다. 쪽 글의 규칙(그림 자리 문자 U+FFFC 빼기, 첫 네 줄 중 가장 큰 글자를 제목으로)은 `PageText` 하나이고, PDFKit 읽기와 그림 줄이기는 `FolioStorage`의 `PDFPages`다. 읽기라 액션이 아니고 아무것도 쓰지 않는다
@@ -362,7 +364,7 @@ Me/GIST/
 
 - 화면을 만들거나 고치기 전에 `docs/DESIGN.md`를 읽는다. 원칙, 토큰과 구성 요소를 언제 쓰는지, 패턴, 새 토큰을 만드는 규칙이 있다.
 - 디자인은 시안 C(밝은 종이 질감, 사이드바·과목 열·본문의 3단)에 리퀴드 글라스를 더한 방향이다. Mac 창은 시안 D처럼 반투명 창 재질 위에 사이드바와 툴바가 평평하게 놓이고 본문이 둥근 패널로 들어간다. 디자인 시스템: https://claude.ai/artifact/NQsFWSkuyHUDETivg5K5bA. 시안 캔버스 "Folio 시안": https://claude.ai/artifact/FT5gk3v1afr7pEsBFd6MLy. 새 시안은 이 캔버스의 영역 페이지에 디자인 시스템으로 그리고, 따로 Artifact를 만들지 않는다.
-- 색, 간격, 모서리, 글꼴은 `sources/app/design/theme.swift`에서만 정의하고 모든 화면이 그 토큰만 쓴다. 라이트와 다크 값을 함께 둔다. 공용 구성 요소는 `sources/app/design/`에 역할별 파일(`Layout`, `Containers`, `Indicators`, `Inputs`, `Interaction`)로 있다. `mise run check-code`가 화면 코드의 글꼴 크기, 색, 모서리 숫자를 잡는다.
+- 색, 간격, 모서리, 글꼴은 `sources/app/design/theme.swift`에서만 정의하고 모든 화면이 그 토큰만 쓴다. 라이트와 다크 값을 함께 둔다. 공용 구성 요소는 `sources/app/design/`의 역할 폴더(`layout/`, `containers/`, `indicators/`, `inputs/`, `controls/`, `interaction/`)에 하나씩 파일로 있다. `mise run check-code`가 화면 코드의 글꼴 크기, 색, 모서리 숫자를 잡는다.
 - 리퀴드 글라스는 창 틀(사이드바, 툴바)과 떠 있는 요소(빠른 추가, 팝오버, Claude 패널)에만 쓴다. 본문은 종이 색으로 둔다. 창 구조와 유리 위 구성 요소의 규칙은 `docs/DESIGN.md`의 "창 구조" 절에 있다.
 - 과목 강조색은 `course.json`의 `color`(프리셋 이름)를 `CourseAccent`로 읽고, 비어 있으면 학기 안 순서로 프리셋을 고른다(무채색 `graphite`는 고르지 않는다). 예전에 고른 `#RRGGBB`는 파일을 바꾸지 않고 가장 가까운 프리셋으로 읽는다. 색은 프리셋 견본에서만 고른다. 과목 화면은 `\.accent` 환경값으로 색을 주입받는다. 프리셋 이름과 고르는 순서는 `FolioDomain`의 `CourseColor`가 정하고 앱과 CLI가 함께 쓴다. 색 값은 `theme.swift`에 둔다.
 
