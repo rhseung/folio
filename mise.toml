@@ -38,7 +38,10 @@ depends = ["tectonic"]
 # 픽스처와 기대값은 한국 시각 기준이다. Apple의 날짜 인식기는 `내일 7시` 같은 말을 테스트 달력이 아니라 기기의 시간대로
 # 읽으므로, UTC인 기기(CI)에서는 테스트가 실패한다.
 env = { TZ = "Asia/Seoul" }
+# 빌드가 필요 없는 SwiftLint와 swift-format 검사를 먼저 돌려, 형식 오류가 빌드와 테스트를 기다리지 않고 실패하게 한다.
 run = [
+  "swiftlint lint --quiet --strict --baseline .swiftlint-baseline.json",
+  "scripts/swift-format.sh lint",
   "swift build --build-tests",
   "swift test --skip-build",
   "swift run --skip-build -q folio actions --check",
@@ -47,8 +50,6 @@ run = [
   # 다시 컴파일하므로 folio-lint만 빌드한다(check-code와 같은 빌드를 함께 쓴다).
   "swift build -q -c release --product folio-lint",
   "swift run -q -c release --skip-build folio-lint",
-  "swiftlint lint --quiet --strict --baseline .swiftlint-baseline.json",
-  "scripts/swift-format.sh lint",
 ]
 
 [tasks.check-code]
@@ -181,11 +182,20 @@ exit "$status"
 description = "Run the iPad tests (Hangul in the edit view) on the first available iPad simulator"
 depends = ["generate"]
 run = """
-id=$(xcrun simctl list devices available | grep -m1 -E '^ +iPad' | grep -oE '[0-9A-F-]{36}')
-[ -n "$id" ] || { echo "no available iPad simulator" >&2; exit 1; }
+id=$(scripts/ipad-simulator.sh)
 rm -rf .build/test-ipad.xcresult
 xcodebuild -scheme Folio -destination "platform=iOS Simulator,id=$id" -resultBundlePath .build/test-ipad.xcresult test -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation $FOLIO_XCODEBUILD_FLAGS
 xcrun xcresulttool get test-results summary --path .build/test-ipad.xcresult --compact
+"""
+
+[tasks.build-ipad-tests]
+description = "Build the app and the iPad tests for the simulator test-ipad uses, without starting it"
+depends = ["generate"]
+# test-ipad와 같은 시뮬레이터를 대상으로 빌드해야 뒤이은 test-ipad가 다시 빌드하지 않는다. 시뮬레이터를 켜지 않고도
+# 그 대상으로 빌드할 수 있다.
+run = """
+id=$(scripts/ipad-simulator.sh)
+xcodebuild -scheme Folio -destination "platform=iOS Simulator,id=$id" build-for-testing -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation $FOLIO_XCODEBUILD_FLAGS
 """
 
 [tasks.note-screens]

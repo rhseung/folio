@@ -1,0 +1,94 @@
+name: Xcode setup
+description: Prepare a macOS runner for a mise task that builds with Xcode, restoring its build cache.
+
+inputs:
+  derived-data:
+    description: Name of the DerivedData cache to restore, or empty for none (packages keeps its own .build cache)
+    default: ""
+  tools:
+    description: The mise tools this job needs
+    required: true
+
+outputs:
+  xcode:
+    value: ${{ steps.xcode.outputs.version }}
+  cache-primary-key:
+    value: ${{ steps.cache.outputs.cache-primary-key }}
+  cache-matched-key:
+    value: ${{ steps.cache.outputs.cache-matched-key }}
+
+runs:
+  using: composite
+  steps:
+    # checkout은 모든 파일에 지금 시각을 찍는다. Xcode와 SwiftPM은 소스의 시각을 지난 빌드가 기록한 시각과 비교하므로,
+    # 이대로면 캐시에 든 것을 모두 다시 컴파일한다. 파일 내용(blob 해시)에서 만든 시각은 내용이 같으면 어느 러너에서나
+    # 같고 내용이 바뀌면 달라지므로, 캐시된 빌드가 바뀌지 않은 파일만 건너뛴다. 시각은 2001-2010년 사이라 미래가 되지 않는다.
+    - name: Pin file times to content
+      shell: bash
+      run: |
+        git ls-files -s -z | perl -0ne 'my ($mode, $sha, $path) = /^(\d+) ([0-9a-f]+) \d+\t(.*)\0$/s or next; next unless $mode =~ /^100/; my $t = 1_000_000_000 + hex(substr($sha, 0, 7)); utime($t, $t, $path) or die "$path: $!"'
+    - shell: bash
+      run: sudo ln -sfn "$XCODE" /Applications/Xcode.app
+    # Apple의 날짜 인식기는 한국어가 선호 언어일 때만 `오후 3시`나 `자정`을 읽는다. 영어 러너에서는 날짜만 읽고 시각을 버린다.
+    - shell: bash
+      run: defaults write -g AppleLanguages -array ko-KR en-US && defaults write -g AppleLocale ko_KR
+    - id: xcode
+      shell: bash
+      run: echo "version=$(DEVELOPER_DIR="$XCODE/Contents/Developer" xcodebuild -version | tr -s ' \n' '-' | sed 's/-$//')" >> "$GITHUB_OUTPUT"
+    - if: inputs.derived-data != ''
+      id: key
+      shell: bash
+      run: |
+        echo "base=derived-data-${{ inputs.derived-data }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}" >> "$GITHUB_OUTPUT"
+        echo "deps=${{ hashFiles('Package.resolved', 'project.yml') }}" >> "$GITHUB_OUTPUT"
+    # 작업마다 다른 플랫폼이나 구성을 자기 DerivedData에 빌드하므로 캐시를 작업마다 둔다.
+    - if: inputs.derived-data != ''
+      id: cache
+      uses: actions/cache/restore@v6
+      with:
+        path: |
+          .build/DerivedData
+          !.build/DerivedData/Index.noindex
+          !.build/DerivedData/Logs
+          !.build/DerivedData/TestResults
+          Folio.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+          ~/Library/Caches/org.swift.swiftpm/manifests
+        key: ${{ steps.key.outputs.base }}-${{ steps.key.outputs.deps }}-${{ github.sha }}
+        restore-keys: |
+          ${{ steps.key.outputs.base }}-${{ steps.key.outputs.deps }}-
+          ${{ steps.key.outputs.base }}-
+    # Folio.xcodeproj를 커밋하지 않으므로 그 Package.resolved는 캐시에만 있다. 이 파일이 있으면 xcodebuild가 패키지 해석
+    # 1분을 건너뛰지만(-skipPackageUpdates), 파일에 고정된 판도 그대로 쓴다. 그래서 커밋한 Package.resolved와 project.yml이
+    # 같은 캐시의 파일만 쓴다. 다른 캐시의 파일을 쓰면 올린 의존성을 옛 판으로 빌드한다.
+    - if: inputs.derived-data != ''
+      name: Reuse package versions only from the same dependencies
+      shell: bash
+      env:
+        SAME: ${{ github.event_name != 'push' && startsWith(steps.cache.outputs.cache-matched-key, format('{0}-{1}-', steps.key.outputs.base, steps.key.outputs.deps)) }}
+      run: |
+        if [ "$SAME" = true ]; then
+          echo "FOLIO_XCODEBUILD_FLAGS=-skipPackageUpdates" >> "$GITHUB_ENV"
+        else
+          rm -f Folio.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+        fi
+    # Xcode는 리소스를 번들에 복사할 때 옛 파일을 지우지 않으므로, 브랜치가 지운 파일이 남지 않게 앱, 테스트, 리소스 번들을
+    # 지운다. 또 Xcode는 inode가 바뀐 소스를 고친 파일로 보는데 이 머신에서는 모든 파일이 새것이므로, 시각과 크기만 보게 한다.
+    - if: inputs.derived-data != ''
+      shell: bash
+      run: |
+        rm -rf .build/DerivedData/Build/Products/*/*.app .build/DerivedData/Build/Products/*/*.xctest .build/DerivedData/Build/Products/*/*.bundle
+        defaults write com.apple.dt.SWBBuildService IgnoreFileSystemDeviceInodeChanges -bool YES
+    - uses: actions/cache@v6
+      with:
+        path: sources/tectonic/vendor
+        key: tectonic-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('sources/tectonic/pin.json') }}
+    - uses: actions/cache@v6
+      with:
+        path: ~/Library/Caches/Tectonic
+        key: tectonic-tex-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('sources/tectonic/pin.json') }}
+        restore-keys: tectonic-tex-${{ runner.os }}-${{ runner.arch }}-
+    # mise.toml의 도구를 모두 받으면 쓰지 않는 도구까지 설치하고 캐시한다. MISE_TASK_RUN_AUTO_INSTALL이 꺼져 있어야
+    # mise run이 빠진 도구를 다시 받지 않는다.
+    - uses: jdx/mise-action@v5
+      with:
+        install_args: ${{ inputs.tools }}

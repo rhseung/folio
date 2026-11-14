@@ -7,7 +7,6 @@ publish = false
 [lib]
 crate-type = ["staticlib"]
 
-# `../tectonic` is the pinned, patched checkout that ../build.sh puts next to a copy of this folder.
 [dependencies]
 tectonic = { path = "../tectonic", default-features = false, features = ["geturl-reqwest"] }
 tectonic_bundles = { path = "../tectonic/crates/bundles", default-features = false, features = ["geturl-reqwest"] }

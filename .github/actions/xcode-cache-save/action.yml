@@ -1,0 +1,32 @@
+name: Xcode cache save
+description: Save the DerivedData cache that xcode-setup restored, when this run's build is worth keeping.
+
+inputs:
+  primary-key:
+    required: true
+  matched-key:
+    default: ""
+  outcome:
+    description: Outcome of the step that ran the mise task
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # PR은 맞는 캐시가 없을 때만 저장한다. 그래야 PR의 push가 저장한 캐시 때문에 main의 캐시가 10 GB 한도를 넘어 지워지지
+    # 않는다. 빌드에 실패한 실행은 의존성이 빠진 캐시를 남기므로 저장하지 않는다. 테스트만 실패했으면 앱은 빌드됐으므로 저장한다.
+    - id: keep
+      if: ${{ !cancelled() && (github.event_name == 'push' || inputs.matched-key == '') && (inputs.outcome == 'success' || (inputs.outcome == 'failure' && hashFiles('.build/DerivedData/Build/Products/*/Folio.app/**/Info.plist') != '')) }}
+      shell: bash
+      run: du -sh .build/DerivedData/* || true
+    - if: ${{ !cancelled() && steps.keep.outcome == 'success' }}
+      uses: actions/cache/save@v6
+      with:
+        path: |
+          .build/DerivedData
+          !.build/DerivedData/Index.noindex
+          !.build/DerivedData/Logs
+          !.build/DerivedData/TestResults
+          Folio.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+          ~/Library/Caches/org.swift.swiftpm/manifests
+        key: ${{ inputs.primary-key }}
