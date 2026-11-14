@@ -183,7 +183,7 @@ extension Rules {
 
     static let launchFiles: Set<String> = [
         "sources/app/app/folio-app.swift", "sources/app/app/services/local-folders.swift", "sources/app/app/workspace/workspace.swift",
-        "sources/cli/core/environment.swift",
+        "sources/cli/core/environment/cli.swift",
     ]
 
     static var kebabNames: Rule {

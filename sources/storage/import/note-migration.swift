@@ -2,12 +2,6 @@ import FolioDomain
 import FolioMarkdown
 import Foundation
 
-public struct FrontmatterNote: Sendable, Equatable {
-    public var url: URL
-    public var meta: NoteMeta
-    public var text: String
-}
-
 extension CourseStore {
     public func frontmatterNotes() throws -> [FrontmatterNote] {
         try noteURLs().filter { NoteFormat(path: $0.path) == .markdown }.compactMap { url in

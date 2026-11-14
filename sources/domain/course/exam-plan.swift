@@ -1,48 +1,5 @@
 import Foundation
 
-public struct ExamPlanTarget: Codable, Sendable, Hashable {
-    public enum Kind: String, Codable, Sendable, CaseIterable {
-        case unit
-        case problemSet = "problem_set"
-        case quiz
-    }
-
-    public var kind: Kind
-    public var id: UUID
-
-    public init(kind: Kind, id: UUID) {
-        self.kind = kind
-        self.id = id
-    }
-}
-
-public struct ExamPlanItem: Codable, Sendable, Equatable, Identifiable {
-    public var id: UUID
-    public var day: LocalDate
-    public var title: String
-    public var target: ExamPlanTarget?
-
-    public init(id: UUID = UUID(), day: LocalDate, title: String, target: ExamPlanTarget? = nil) {
-        self.id = id
-        self.day = day
-        self.title = title
-        self.target = target
-    }
-}
-
-public struct PlanCheckEvent: LogEvent, Equatable {
-    public static let type = "plan_check"
-    public var itemId: UUID
-    public var done: Bool
-    public var auto: Bool
-
-    public init(itemId: UUID, done: Bool, auto: Bool = false) {
-        self.itemId = itemId
-        self.done = done
-        self.auto = auto
-    }
-}
-
 public enum ExamPlan {
     public struct DayItem: Sendable, Equatable {
         public var courseId: UUID

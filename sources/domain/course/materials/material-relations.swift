@@ -1,19 +1,5 @@
 import Foundation
 
-public enum MaterialTarget: Hashable, Sendable {
-    case session(UUID)
-    case unit(UUID)
-    case exam(UUID)
-}
-
-public enum MaterialRoute: Hashable, Sendable {
-    case direct
-    case pages
-    case session(UUID)
-    case unit(UUID)
-    case folder
-}
-
 extension CourseFile {
     // 나누기는 쪽만 기록하므로 `unitIds`만 읽으면 나눈 렉처가 자기 단원에서 빠진다.
     public func routes(of material: Material, to target: MaterialTarget) -> [MaterialRoute] {

@@ -126,15 +126,6 @@ extension ClaudeClient {
     }
 }
 
-public struct MonthlyUsage: Sendable, Equatable {
-    public var year: Int
-    public var month: Int
-    public var requests: Int
-    public var inputTokens: Int
-    public var outputTokens: Int
-    public var cost: Double
-}
-
 extension APIUsageEvent {
     public static func monthly(_ events: [(at: Date, event: APIUsageEvent)], calendar: Calendar) -> [MonthlyUsage] {
         var months: [DateComponents: MonthlyUsage] = [:]

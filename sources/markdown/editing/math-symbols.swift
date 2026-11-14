@@ -1,11 +1,5 @@
 import Foundation
 
-public enum MathCategory: String, CaseIterable, Sendable {
-    case snippets, greek, relations, operators, arrows, functions
-    case fonts
-    case symbols
-}
-
 public enum MathSymbols {
     public static func items(tex: Bool, snippets: [Snippet]) -> [CompletionItem] {
         groups(tex: tex, snippets: snippets).flatMap(\.items)

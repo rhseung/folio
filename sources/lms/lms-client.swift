@@ -2,66 +2,6 @@ import FolioDomain
 import Foundation
 import Security
 
-public struct LMSCredentials: Sendable, Equatable {
-    public var username: String
-    public var password: String
-
-    public init(username: String, password: String) {
-        self.username = username
-        self.password = password
-    }
-}
-
-public enum LMSCredentialStore {
-    static let service = "com.rhseung.folio.lms"
-
-    static var base: [String: Any] {
-        [
-            kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
-            kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
-        ]
-    }
-
-    public static func read() -> LMSCredentials? {
-        var q = base
-        q[kSecReturnData as String] = true
-        q[kSecReturnAttributes as String] = true
-        q[kSecMatchLimit as String] = kSecMatchLimitOne
-        var item: CFTypeRef?
-        guard SecItemCopyMatching(q as CFDictionary, &item) == errSecSuccess, let found = item as? [String: Any],
-            let account = found[kSecAttrAccount as String] as? String, let data = found[kSecValueData as String] as? Data
-        else { return nil }
-        return LMSCredentials(username: account, password: String(decoding: data, as: UTF8.self))
-    }
-
-    public static func save(_ credentials: LMSCredentials) throws {
-        remove()
-        var q = base
-        q[kSecAttrAccount as String] = credentials.username
-        q[kSecValueData as String] = Data(credentials.password.utf8)
-        q[kSecAttrLabel as String] = "Folio GIST LMS"
-        q[kSecAttrSynchronizable as String] = true
-        var status = SecItemAdd(q as CFDictionary, nil)
-        // 팀 없이 서명한 앱(Sign to Run Locally)은 동기화되는 항목을 쓰지 못할 수 있다. 그때는 로그인을 아예 남기지
-        // 않는 대신 이 기기에만 남기고, 서명한 빌드는 다음 연결 때 동기화되는 항목으로 쓴다.
-        if status == errSecMissingEntitlement {
-            q[kSecAttrSynchronizable as String] = false
-            status = SecItemAdd(q as CFDictionary, nil)
-        }
-        guard status == errSecSuccess else { throw NSError(domain: NSOSStatusErrorDomain, code: Int(status)) }
-    }
-
-    public static func remove() {
-        SecItemDelete(base as CFDictionary)
-    }
-}
-
-public enum LMSError: Error, Equatable, Sendable {
-    case needsLogin
-    case refused
-    case http(Int)
-}
-
 // 로그인 폼으로 돌아온 페이지는 저장된 로그인으로 한 번 로그인한 뒤 다시 받는다. 틀린 비밀번호를 거듭 보내면 포털
 // 계정이 잠길 수 있으므로 두 번째 거절에서 멈춘다.
 public actor LMSClient {
@@ -151,31 +91,5 @@ public actor LMSClient {
         let (data, response) = try await session.data(for: request)
         if let http = response as? HTTPURLResponse, !(200..<400).contains(http.statusCode) { throw LMSError.http(http.statusCode) }
         return (data, response)
-    }
-}
-
-public enum LMSSync {
-    // `attachments`는 다 읽은 목록에서 첨부를 읽을 과제를 고른다. 고른 과제마다 과제 페이지를 하나 더 읽는다.
-    public static func read(
-        _ client: LMSClient, at now: Date, attachments: @Sendable (LMSSnapshot) -> [LMSAssignment] = { _ in [] }
-    ) async throws -> LMSSnapshot {
-        var snapshot = LMSSnapshot(at: now, classrooms: try LMSPages.classrooms(await client.page("/")))
-        for room in snapshot.classrooms {
-            snapshot.merge(try await classroom(client, room.id), in: room.id)
-        }
-        let wanted = Set(attachments(snapshot).map(\.id))
-        for i in snapshot.assignments.indices where wanted.contains(snapshot.assignments[i].id) {
-            let page = try await client.page("/mod/assign/view.php?id=\(snapshot.assignments[i].id)")
-            snapshot.assignments[i].attachments = try LMSPages.attachments(page)
-        }
-        return snapshot
-    }
-
-    public static func classroom(_ client: LMSClient, _ id: Int) async throws -> LMSSnapshot {
-        LMSSnapshot(
-            at: .now,
-            assignments: try LMSPages.assignments(await client.page("/mod/assign/index.php?id=\(id)"), classroom: id),
-            files: try LMSPages.files(await client.page("/mod/ubfile/index.php?id=\(id)"), classroom: id),
-            notices: try LMSPages.notices(await client.page("/mod/ubboard/my.php?mc=\(id)"), classroom: id))
     }
 }

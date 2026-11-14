@@ -1,43 +1,5 @@
 import SwiftSyntax
 
-public struct Hit: Hashable, Sendable {
-    public let check: String
-    public let path: String
-    public let line: Int
-    // 기준선은 줄이 아니라 이 값으로 자리를 맞춘다. 그래서 위의 줄이 움직여도 자리가 자기 항목을 유지한다.
-    public let key: String
-
-    init(_ check: String, _ file: SourceFile, _ line: Int, _ key: String) {
-        self.init(check, path: file.path, line, key)
-    }
-
-    init(_ check: String, path: String, _ line: Int, _ key: String) {
-        self.check = check
-        self.path = path
-        self.line = line
-        self.key = key.split(whereSeparator: \.isWhitespace).joined(separator: " ")
-    }
-
-    public var entry: String { "\(check)\t\(path)\t\(key)" }
-}
-
-public struct Rule {
-    public let name: String
-    public let advice: String
-    // strict 규칙에는 기준선이 없다. 규칙을 만들 때 모든 자리가 통과했으므로, `--update`를 주든 말든 걸리면 실패한다.
-    public let strict: Bool
-    let find: (Codebase) -> [Hit]
-
-    init(name: String, strict: Bool = false, advice: String, find: @escaping (Codebase) -> [Hit]) {
-        self.name = name
-        self.strict = strict
-        self.advice = advice
-        self.find = find
-    }
-
-    public func hits(in code: Codebase) -> [Hit] { find(code) }
-}
-
 public enum Rules {
     public static var all: [Rule] {
         [
@@ -87,6 +49,7 @@ private func isDataMark(_ comment: String) -> Bool {
 }
 
 func isDebugFile(_ path: String) -> Bool {
+    if path.hasPrefix("sources/app/app/debug/") { return true }
     let name = path.split(separator: "/").last.map(String.init) ?? path
     return name.hasPrefix("debug-") || name.hasSuffix("-snapshots.swift")
 }

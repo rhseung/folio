@@ -86,10 +86,6 @@ extension Resolver {
     }
 }
 
-protocol CLIText {
-    init(cli text: String, _ r: Resolver, in course: CourseRef?) throws
-}
-
 extension Resolver {
     func parse<T: CLIText>(_ text: String, in course: CourseRef?) throws -> T { try T(cli: text, self, in: course) }
 }
@@ -202,8 +198,4 @@ func readJSONFile<T: Decodable>(_ type: T.Type, _ path: String) throws -> T {
     } catch let e as DecodingError {
         throw CLIError(exit: .usage, message: String(localized: .importBadFormat(path, RunCommand.describe(e))))
     }
-}
-
-enum Built {
-    @TaskLocal static var record: (@Sendable (String, JSONValue) -> Void)?
 }

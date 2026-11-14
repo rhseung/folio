@@ -75,7 +75,7 @@ depends = ["check-code", "swiftlint", "format-check"]
 
 # .swift-format은 Folio의 코드 문체를 되돌리는 규칙을 끈다. 끈 규칙은 한 줄에 여러 문장이나 선언을 쓰는 것(`{ a(); b() }`,
 # `let x = 1, y = 2`, `case a, b`), `private extension`, `case let (a?, b?)`, `return x += 1`, `.forEach`, 후행 클로저 여러 개,
-# 대문자로 시작하는 DSL 함수(sources/domain의 model.swift)를 막는 규칙이다. Folio는 문서 주석을 거의 쓰지 않으므로 문서 주석
+# 대문자로 시작하는 DSL 함수(sources/domain/shared/core/model)를 막는 규칙이다. Folio는 문서 주석을 거의 쓰지 않으므로 문서 주석
 # 규칙도 끈다.
 [tasks.format]
 description = "Format the Swift sources in place with swift-format (.swift-format)"

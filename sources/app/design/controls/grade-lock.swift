@@ -5,12 +5,6 @@ extension EnvironmentValues {
     @Entry var unlockGrades: @MainActor () -> Void = {}
 }
 
-enum SensitiveStyle {
-    case inline
-    case control
-    case block
-}
-
 private struct Sensitive: ViewModifier {
     let style: SensitiveStyle?
     @Environment(\.gradesLocked) private var locked

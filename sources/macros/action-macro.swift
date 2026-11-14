@@ -61,11 +61,6 @@ public struct ActionMacro: MemberMacro, ExtensionMacro {
     }
 }
 
-struct MacroError: Error, CustomStringConvertible {
-    let description: String
-    init(_ description: String) { self.description = description }
-}
-
 private struct Arguments {
     var command = "", summary = "", discussion = "\"\"", effect = "changes", confirm: String?, done = "", examples = "[]", phrases = "[]"
     var generated = "true", manualReason: String?, undoable = "false"

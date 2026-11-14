@@ -823,17 +823,6 @@ extension Semester {
     }
 }
 
-private struct SidebarLabelStyle: LabelStyle {
-    static let gap = Theme.Space.s
-
-    func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: Self.gap) {
-            configuration.icon
-            configuration.title
-        }
-    }
-}
-
 // 도구는 행 안이 아니라 위에 놓는다. 행은 버튼이고, 버튼의 label 안에 있는 버튼은 클릭을 받지 못한다. 터치에는 hover가
 // 없으므로 iPad에서는 도구가 항상 보인다.
 private struct RowTools: ViewModifier {
@@ -883,13 +872,6 @@ private struct RowTools: ViewModifier {
         .help(help)
         .accessibilityLabel(help)
     }
-}
-
-enum SidebarGuide {
-    case stem, course, lastCourse
-
-    static let indent = Theme.Space.xl
-    static var reach: CGFloat { indent - SidebarLabelStyle.gap - Theme.Size.tile / 2 }
 }
 
 private struct GuideSegment: Shape {

@@ -2,11 +2,6 @@
 import AppKit
 import SwiftUI
 
-struct QuickAddMark: Equatable {
-    var range: NSRange
-    var fill: Color
-}
-
 // AppKit 텍스트 뷰를 쓴다. 그래야 읽은 낱말 양옆에 알약이 채울 자리(kerning)를 주면서도, 이웃 낱말과는 온전한 공백으로 떨어뜨릴 수 있다. SwiftUI 입력란은 일반 텍스트만 받아서, 낱말보다
 // 넓은 알약이 다음 낱말에 닿았다. `SourceFileEditor`처럼 kerning은 음절 사이에서만 정한다(`swaps`). 입력기 아래에서 텍스트를 바꾸면 한글 조합이 깨지기 때문이다.
 struct QuickAddTextView {
@@ -169,47 +164,6 @@ extension QuickAddTextView.Coordinator: NSTextViewDelegate {
         let joined = text.split(whereSeparator: \.isNewline).joined(separator: " ")
         textView.insertText(joined, replacementRange: range)
         return false
-    }
-}
-
-final class QuickAddNSTextView: NSTextView {
-    var marks: [QuickAddMark] = []
-    var prompt = ""
-    var unmarked: () -> Void = {}
-
-    override func unmarkText() {
-        super.unmarkText()
-        unmarked()
-    }
-
-    override func drawBackground(in rect: NSRect) {
-        super.drawBackground(in: rect)
-        guard let layout = layoutManager, let container = textContainer, let storage = textStorage else { return }
-        let limit = hasMarkedText() ? markedRange().location : storage.length
-        let room = QuickAddTextView.room
-        let height = layout.defaultLineHeight(for: QuickAddTextView.font)
-        let none = NSRange(location: NSNotFound, length: 0)
-        for mark in marks where mark.range.length > 0 && NSMaxRange(mark.range) <= limit {
-            let glyphs = layout.glyphRange(forCharacterRange: mark.range, actualCharacterRange: nil)
-            layout.enumerateEnclosingRects(forGlyphRange: glyphs, withinSelectedGlyphRange: none, in: container) { line, _ in
-                var pill = line.offsetBy(dx: self.textContainerOrigin.x, dy: self.textContainerOrigin.y)
-                pill.origin.x -= room
-                pill.size.width += room
-                pill.size.height = min(pill.height, height) + QuickAddLine.overhang * 2
-                pill.origin.y -= QuickAddLine.overhang
-                let path = NSBezierPath(roundedRect: pill, xRadius: Theme.Radius.small, yRadius: Theme.Radius.small)
-                NSColor(mark.fill).setFill()
-                path.fill()
-            }
-        }
-    }
-
-    override func draw(_ dirtyRect: NSRect) {
-        super.draw(dirtyRect)
-        guard string.isEmpty, !hasMarkedText() else { return }
-        let padding = textContainer?.lineFragmentPadding ?? 0
-        let attributes: [NSAttributedString.Key: Any] = [.font: QuickAddTextView.font, .foregroundColor: NSColor.placeholderTextColor]
-        (prompt as NSString).draw(at: NSPoint(x: textContainerOrigin.x + padding, y: textContainerOrigin.y), withAttributes: attributes)
     }
 }
 #endif

@@ -348,8 +348,4 @@ private extension View {
             .buttonStyle(.plain)
     }
 }
-enum TitleRowEdges {
-    static func lead(fullScreen: Bool) -> CGFloat { Theme.Space.l }
-    static let trailing = Theme.Space.l
-}
 #endif

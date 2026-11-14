@@ -71,7 +71,7 @@ ipad-app:
 ipad-simulator:
   - 'tests/unit/app/ipad/**'
   - 'sources/app/platform/note-text/**'
-  - 'sources/app/platform/pdf-view.swift'
+  - 'sources/app/platform/pdf-view/**'
   - 'sources/app/platform/page-scroll.swift'
   - 'sources/markdown/editing/**'
   - 'sources/storage/pdf/tex-engine.swift'

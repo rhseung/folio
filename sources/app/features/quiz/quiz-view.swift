@@ -105,19 +105,6 @@ extension WrongTally {
     var accuracyText: String { accuracy.map { "\(Int(($0 * 100).rounded()))%" } ?? "-" }
 }
 
-struct MissingKeyNotice: View {
-    @Environment(\.showSettings) private var showSettings
-
-    var body: some View {
-        NoticeCard(
-            title: String(localized: .quizMissingKeyTitle), detail: String(localized: .quizMissingKeyDetail),
-            systemImage: "key.fill"
-        ) {
-            Button(.quizMissingKeyOpenSettings) { showSettings(.claude) }.buttonStyle(.ghost)
-        }
-    }
-}
-
 extension Date {
     var monthDay: String { formatted(.dateTime.month().day()) }
 }

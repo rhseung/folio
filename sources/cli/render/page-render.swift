@@ -1,19 +1,6 @@
 import FolioDomain
 import Foundation
 
-struct RenderedShot: Codable, Sendable {
-    var theme: String
-    var width: Int
-    var height: Int
-    var png: String
-}
-
-struct RenderResult: Codable, Sendable {
-    var images: [RenderedShot]
-    var console: [String]
-    var problems: [String]
-}
-
 enum PageRender {
     static let widths = [480, 900]
     static let tallest = 1800
