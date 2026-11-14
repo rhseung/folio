@@ -127,7 +127,7 @@ private struct GeneralSettings: View {
         Block(String(localized: .settingsDay)) {
             Card {
                 FormRow(label: String(localized: .settingsDayBoundary), last: true) {
-                    TimeMenu(minute: $model.settings.dayBoundaryMinutes, hours: 0...8)
+                    TimeMenu(minute: $model.settings.dayBoundaryMinutes, hours: SettingItem.dayBoundary.hours)
                 }
             }
         }
@@ -240,13 +240,13 @@ private struct ReviewSettingsForm: View {
         let review = $model.settings.review
         Card(clipped: true) {
             FormRow(label: String(localized: .settingsIntervals), detail: model.reviewDays) {
-                IntListField(values: review.intervals, unit: String(localized: .settingsUnitDays), range: 1...365)
+                IntListField(values: review.intervals, unit: String(localized: .settingsUnitDays), range: SettingItem.reviewIntervals.range)
             }
             FormRow(label: String(localized: .settingsDailyLimit)) {
                 let limit = model.settings.review.dailyLimit
-                ScrubField(
-                    value: Binding(get: { Double(limit ?? 10) }, set: { model.settings.review.dailyLimit = Int($0.rounded()) }),
-                    range: 1...50, step: 1, width: 80
+                IntScrub(
+                    value: Binding(get: { limit ?? 10 }, set: { model.settings.review.dailyLimit = $0 }),
+                    range: SettingItem.reviewDailyLimit.range, width: 80
                 )
                 .disabled(limit == nil)
                 .opacity(limit == nil ? 0.4 : 1)
@@ -255,15 +255,15 @@ private struct ReviewSettingsForm: View {
             }
             DisclosureRow(label: String(localized: .settingsDetails), isOpen: $details, last: true) {
                 FormRow(label: String(localized: .settingsExamWindow)) {
-                    IntScrub(value: review.examWindowDays, range: 0...30)
+                    IntScrub(value: review.examWindowDays, range: SettingItem.reviewExamWindow.range)
                     Text(.settingsUnitDaysBefore).foregroundStyle(Theme.Palette.textSecondary)
                 }
                 FormRow(label: String(localized: .settingsCardsPerReview)) {
-                    IntScrub(value: review.cardsPerReview, range: 1...20)
+                    IntScrub(value: review.cardsPerReview, range: SettingItem.reviewCardsPerReview.range)
                     Text(.settingsUnitCards).foregroundStyle(Theme.Palette.textSecondary)
                 }
                 FormRow(label: String(localized: .settingsSettleAfter), last: true) {
-                    IntScrub(value: review.settleAfterPasses, range: 1...5)
+                    IntScrub(value: review.settleAfterPasses, range: SettingItem.reviewSettleAfter.range)
                     Text(.settingsUnitPasses).foregroundStyle(Theme.Palette.textSecondary)
                 }
             }
@@ -307,7 +307,8 @@ private struct NotificationSettingsForm: View {
                 if settings.assignmentDue {
                     FormRow(label: String(localized: .settingsAlertLead), last: true) {
                         IntListField(
-                            values: $settings.assignmentLeadHours, unit: String(localized: .settingsUnitHoursBefore), range: 1...336)
+                            values: $settings.assignmentLeadHours, unit: String(localized: .settingsUnitHoursBefore),
+                            range: SettingItem.assignmentLeadHours.range)
                     }
                 }
             }

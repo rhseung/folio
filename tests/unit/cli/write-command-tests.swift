@@ -58,6 +58,10 @@ struct WriteCommandTests {
         let gist = try Harness.fixtureCopy()
         #expect(h.cli(["settings", "set", "review.intervalz", "[1]"], gist: gist).code == 2)
         #expect(h.cli(["settings", "set", "dayBoundaryMinutes", "새벽"], gist: gist).code == 2)
+        #expect(h.cli(["settings", "set", "review.settleAfterPasses", "9"], gist: gist).code == 2)
+        #expect(h.cli(["settings", "set", "review.intervals", "[]"], gist: gist).code == 2)
+        #expect(h.cli(["settings", "set", "review.dailyLimit", "20"], gist: gist).code == 0)
+        #expect(try ActionContext(gist: GISTStore(url: gist), device: h.device).settings().review.dailyLimit == 20)
     }
 
     @Test func settingsFieldKeepsTheOthers() throws {

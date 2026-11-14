@@ -138,8 +138,11 @@ struct ActionSafetyTests {
     @Test func settingsStayInRange() throws {
         let gist = try Harness.fixtureCopy()
         let r = h.cli(["settings", "set", "dayBoundaryMinutes", "2000"], gist: gist)
-        #expect(r.code == Exit.rule.rawValue)
-        #expect(r.err.contains("하루 경계"))
+        #expect(r.code == Exit.usage.rawValue)
+        #expect(r.err.contains("dayBoundaryMinutes"))
+        let late = h.cli(["settings", "set", "dayBoundaryMinutes", "500"], gist: gist)
+        #expect(late.code == Exit.rule.rawValue)
+        #expect(late.err.contains("하루 경계"))
     }
 
     @Test func planCheckNeedsTheItem() throws {

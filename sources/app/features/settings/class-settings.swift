@@ -37,10 +37,7 @@ struct ClassSettings: View {
         Block(String(localized: .settingsClassTime)) {
             Card {
                 FormRow(label: String(localized: .settingsClassMinutes), last: true) {
-                    ScrubField(
-                        value: Binding(
-                            get: { Double(model.settings.classMinutes) }, set: { model.settings.classMinutes = Int($0.rounded()) }),
-                        range: 10...300, step: 5, width: 80)
+                    IntScrub(value: $model.settings.classMinutes, range: SettingItem.classMinutes.range, step: 5, width: 80)
                     Text(.settingsUnitMinutes).foregroundStyle(Theme.Palette.textSecondary)
                 }
             }
@@ -143,14 +140,14 @@ private struct RecordingSpanRow: View {
         FormRow(label: String(localized: .settingsClassStartSpan), detail: model.recordingSpanTimes, last: last) {
             FlowLayout(spacing: Theme.Space.s, centered: true) {
                 HStack(spacing: Theme.Space.xs) {
-                    minutes(Binding(get: { s.recordingOffsetMinutes }, set: { model.settings.classStart.recordingOffsetMinutes = $0 }))
+                    minutes($model.settings.classStart.recordingOffsetMinutes, .classRecordingOffset)
                     Text(s.recordingOffsetMinutes < 0 ? .settingsClassStartMinutesBefore : .settingsUnitMinutesAfter)
                 }
                 Text(verbatim: "~").foregroundStyle(Theme.Palette.textTertiary)
                 if s.stopsRecording {
                     HStack(spacing: Theme.Space.xs) {
                         Text(s.stopAfterMinutes < 0 ? .settingsClassStartBeforeEnd : .settingsClassStartAfterEnd)
-                        minutes(Binding(get: { s.stopAfterMinutes }, set: { model.settings.classStart.stopAfterMinutes = $0 }))
+                        minutes($model.settings.classStart.stopAfterMinutes, .classStopAfter)
                         Text(s.stopAfterMinutes < 0 ? .settingsClassStartMinutesBefore : .settingsUnitMinutesAfter)
                     }
                 } else {
@@ -166,12 +163,8 @@ private struct RecordingSpanRow: View {
         }
     }
 
-    func minutes(_ value: Binding<Int>) -> some View {
-        ScrubField(
-            value: Binding(get: { Double(value.wrappedValue) }, set: { value.wrappedValue = Int($0.rounded()) }),
-            range: -60...60, step: 1, width: 64, magnitude: true
-        )
-        .foregroundStyle(Theme.Palette.text)
+    func minutes(_ value: Binding<Int>, _ item: SettingItem) -> some View {
+        IntScrub(value: value, range: item.range, magnitude: true).foregroundStyle(Theme.Palette.text)
     }
 }
 
