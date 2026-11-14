@@ -1,0 +1,247 @@
+import FolioAI
+import FolioDomain
+import FolioStorage
+import SwiftUI
+
+extension EnvironmentValues {
+    @Entry var askClaude: (@MainActor (ContextItem) -> Void)?
+}
+
+struct ClaudePanel: View {
+    @State private var model: ClaudeModel
+    @Environment(\.accent) private var accent
+    @Environment(\.showSettings) private var showSettings
+    let course: LoadedCourse
+    let openNote: UUID?
+    var alsoOpen: [UUID] = []
+    var panes: ContextItem?
+    let openUnit: UUID?
+    @Binding var incoming: ContextItem?
+    let insertIntoNote: (String) -> Void
+    let showNote: (UUID) -> Void
+
+    init(
+        workspace: Workspace, course: LoadedCourse, openNote: UUID?, alsoOpen: [UUID] = [], panes: ContextItem? = nil, openUnit: UUID?,
+        incoming: Binding<ContextItem?> = .constant(nil), insertIntoNote: @escaping (String) -> Void, showNote: @escaping (UUID) -> Void
+    ) {
+        _model = State(initialValue: ClaudeModel(workspace: workspace))
+        self.course = course
+        self.openNote = openNote
+        self.alsoOpen = alsoOpen
+        self.panes = panes
+        self.openUnit = openUnit
+        _incoming = incoming
+        self.insertIntoNote = insertIntoNote
+        self.showNote = showNote
+    }
+
+    var body: some View {
+        let built = model.built(course)
+        VStack(spacing: 0) {
+            header
+            contextList(built)
+                .padding(.horizontal, Theme.Space.m)
+                .padding(.bottom, Theme.Space.m)
+            Theme.Palette.lineSoft.frame(height: 1)
+            conversation
+            if model.sending || model.status != nil { statusLine }
+            ChatComposer(enabled: model.hasKey, sending: model.sending, send: { model.send($0, course: course) }, stop: model.stop)
+        }
+        .font(Theme.Typeface.body)
+        .foregroundStyle(Theme.Palette.text)
+        .task(id: course.id) { model.load(course) }
+        .task(id: [openNote] + alsoOpen.map(Optional.some)) { model.loadOpenNote(openNote, alsoOpen: alsoOpen, course: course) }
+        .onChange(of: panes, initial: true) { _, panes in model.panes = panes }
+        .onChange(of: incoming, initial: true) { _, item in
+            guard let item else { return }
+            model.add(item)
+            incoming = nil
+        }
+        .confirmationDialog(
+            model.confirming?.question ?? "",
+            isPresented: Binding(get: { model.confirming != nil }, set: { if !$0 { model.confirming = nil } }),
+            titleVisibility: .visible, presenting: model.confirming
+        ) { pending in
+            Button(.claudeProposalApply, role: .destructive) { model.confirm(pending, course: course) }
+        }
+        .sheet(item: $model.cardDraft) { draft in
+            CardEditorSheet(workspace: model.workspace, course: course, draft: draft, units: course.file.units) {
+                model.status = String(localized: .claudeStatusCardMade)
+            }
+        }
+    }
+
+    var header: some View {
+        HStack(spacing: Theme.Space.s) {
+            SearchSelect(selection: Binding(get: { model.chatID }, set: { model.select($0) }), options: model.chatOptions)
+            Spacer()
+            Button {
+                model.select(nil)
+            } label: {
+                Image(systemName: "square.and.pencil")
+            }
+            .buttonStyle(.ghost)
+            .help(Text(.claudeNewChat))
+        }
+        .padding(Theme.Space.m)
+    }
+
+    func contextList(_ built: BuiltContext) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Space.xs) {
+            HStack(spacing: Theme.Space.s) {
+                Caption(String(localized: .claudeContext))
+                Spacer()
+                Text(model.tokens(built))
+                    .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()
+                addMenu
+            }
+            .padding(.horizontal, Theme.Space.xs)
+            .padding(.bottom, Theme.Space.xxs)
+            ScrollView {
+                VStack(spacing: Theme.Space.xs) {
+                    ForEach(built.included + built.dropped) { item in
+                        contextRow(item, dropped: built.dropped.contains(item))
+                    }
+                }
+            }
+            .overflowFade(.vertical)
+            .frame(maxHeight: 200)
+            .fixedSize(horizontal: false, vertical: true)
+            if !model.removed.isEmpty {
+                Button(.claudeContextRestore) { model.removed = [] }
+                    .buttonStyle(.ghost).font(Theme.Typeface.caption)
+                    .padding(.horizontal, Theme.Space.xs)
+            }
+        }
+    }
+
+    func contextRow(_ item: ContextItem, dropped: Bool) -> some View {
+        HStack(spacing: Theme.Space.s) {
+            Image(systemName: Self.symbol(item.tier)).foregroundStyle(Theme.Palette.textTertiary).frame(width: 16)
+            Text(item.title).lineLimit(1).truncationMode(.middle).strikethrough(dropped)
+            if !item.images.isEmpty {
+                Label("\(item.images.count)", systemImage: "photo").labelStyle(.titleAndIcon)
+                    .font(Theme.Typeface.caption).monospacedDigit().foregroundStyle(Theme.Palette.textTertiary)
+                    .help(Text(.claudeContextImages(item.images.count)))
+            }
+            Spacer(minLength: Theme.Space.xs)
+            Text(dropped ? String(localized: .claudeContextDropped) : ContextBuilder.estimate(item).formatted())
+                .font(Theme.Typeface.caption).monospacedDigit()
+                .foregroundStyle(dropped ? Theme.Palette.warning : Theme.Palette.textTertiary)
+            Button {
+                model.remove(item)
+            } label: {
+                Image(systemName: "xmark").font(Theme.Glyph.small.weight(.semibold))
+            }
+            .buttonStyle(.ghost)
+            .help(Text(.claudeContextRemove))
+        }
+        .padding(Theme.Inset.listRow)
+        .surface(Theme.Palette.card, in: .rect(cornerRadius: Theme.Radius.control))
+        .contextMenu { Button(.claudeContextRemove, role: .destructive) { model.remove(item) } }
+    }
+
+    var addMenu: some View {
+        SearchPicker(
+            options: model.addOptions(course), pick: { model.addContext($0, course: course) }, prompt: String(localized: .claudeAddPrompt)
+        ) {
+            Image(systemName: "plus").foregroundStyle(Theme.Palette.textSecondary)
+        }
+        .help(Text(.claudeAddHelp))
+    }
+
+    @ViewBuilder var conversation: some View {
+        if let chat = model.chat, !chat.messages.isEmpty {
+            HTMLView(
+                body: model.page(chat, cards: !course.file.units.isEmpty),
+                openNote: { title in if let id = model.noteId(titled: title, course: course) { showNote(id) } },
+                onAction: {
+                    model.handle(
+                        $0, course: course, openNote: openNote, openUnit: openUnit, insertIntoNote: insertIntoNote, showNote: showNote)
+                })
+        } else {
+            VStack(spacing: Theme.Space.s) {
+                Image(systemName: model.hasKey ? "sparkle" : "key")
+                    .font(Theme.Glyph.large.weight(.semibold))
+                    .foregroundStyle(model.hasKey ? accent.ink : Theme.Palette.textTertiary)
+                Text(model.hasKey ? .claudeEmptyTitle : .claudeSetupTitle).font(Theme.Typeface.bodyStrong)
+                Text(model.hasKey ? .claudeEmptyDetail : .claudeSetupDetail)
+                    .font(Theme.Typeface.caption)
+                    .foregroundStyle(Theme.Palette.textSecondary)
+                    .multilineTextAlignment(.center)
+                if !model.hasKey { Button(.claudeOpenSettings) { showSettings(.claude) }.padding(.top, Theme.Space.xs) }
+            }
+            .padding(Theme.Space.xl)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    var statusLine: some View {
+        HStack(spacing: Theme.Space.s) {
+            if model.sending {
+                ProgressView().controlSize(.small)
+                Text(model.progress).lineLimit(1).truncationMode(.middle)
+            } else if let status = model.status {
+                Text(status)
+            }
+            Spacer(minLength: 0)
+            if let failed = model.failed, !model.sending {
+                Button(.claudeResend) { model.send(failed, course: course) }.buttonStyle(.ghost)
+            }
+        }
+        .font(Theme.Typeface.caption)
+        .foregroundStyle(model.statusIsError ? Theme.Palette.danger : Theme.Palette.textSecondary)
+        .padding(.horizontal, Theme.Space.l)
+        .padding(.top, Theme.Space.s)
+    }
+
+    static func symbol(_ tier: ContextItem.Tier) -> String {
+        switch tier {
+        case .courseSummary: "book.closed"
+        case .userRules: "list.bullet.rectangle"
+        case .focus: "doc.text"
+        case .related: "paperclip"
+        case .search: "magnifyingglass"
+        }
+    }
+}
+
+// 입력할 때마다 대화가 다시 그려지지 않도록 글을 자기 상태로 둔다.
+struct ChatComposer: View {
+    let enabled: Bool
+    let sending: Bool
+    let send: (String) -> Void
+    let stop: () -> Void
+    @State private var text = ""
+
+    var question: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    var body: some View {
+        // 마지막 baseline에 맞추므로 긴 글은 위로 자라고 버튼은 마지막 줄 옆에 남는다. 버튼의 중심은 그 baseline보다
+        // 4.5pt 위, 즉 13pt 한글 줄의 가운데에 있다. 이미지의 아래 끝에 맞추면 글이 2-3pt 아래로 처졌다.
+        HStack(alignment: .lastTextBaseline, spacing: Theme.Space.s) {
+            TextField(String(localized: enabled ? .claudeAsk : .claudeAskDisabled), text: $text, axis: .vertical)
+                .textFieldStyle(.plain)
+                .lineLimit(1...8)
+                .onSubmit(submit)
+                .disabled(!enabled)
+            Button(action: sending ? stop : submit) {
+                Image(systemName: sending ? "stop.circle.fill" : "arrow.up.circle.fill").font(Theme.Glyph.large)
+            }
+            .buttonStyle(.ghost)
+            .disabled(!enabled || (!sending && question.isEmpty))
+            .help(Text(sending ? .claudeStop : .claudeSend))
+            .alignmentGuide(.lastTextBaseline) { $0[VerticalAlignment.center] + 4.5 }
+        }
+        .padding(.horizontal, Theme.Space.m)
+        .padding(.vertical, Theme.Space.s + 2)
+        .floatingGlass()
+        .padding(Theme.Space.m)
+    }
+
+    func submit() {
+        guard enabled, !sending, !question.isEmpty else { return }
+        send(question)
+        text = ""
+    }
+}

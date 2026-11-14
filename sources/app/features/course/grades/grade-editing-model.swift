@@ -1,0 +1,232 @@
+import FolioActions
+import FolioDomain
+import Foundation
+import Observation
+
+// 반쯤 입력한 값(`8.`)이 되돌아가지 않도록 숫자를 입력한 글 그대로 둔다.
+@MainActor @Observable
+final class ScoreEntryModel {
+    let workspace: Workspace
+    let course: LoadedCourse
+    let entry: ScoreEntry
+    let isNew: Bool
+    var pending: PendingAction?
+    var componentId: UUID
+    var title: String
+    var score: String
+    var max: String
+    var mean: String
+    var stdDev: String
+    var excused: Bool
+    private(set) var source: ScoreSource
+
+    init(workspace: Workspace, course: LoadedCourse, entry: ScoreEntry) {
+        self.workspace = workspace
+        self.course = course
+        self.entry = entry
+        isNew = !course.file.scores.contains { $0.id == entry.id }
+        componentId = entry.componentId
+        title = entry.title
+        score = isNew ? "" : entry.score.formatted(.number.grouping(.never))
+        max = entry.max.formatted(.number.grouping(.never))
+        mean = entry.mean?.formatted(.number.grouping(.never)) ?? ""
+        stdDev = entry.stdDev?.formatted(.number.grouping(.never)) ?? ""
+        excused = entry.excused
+        source = entry.source
+    }
+
+    var sourceOptions: [PickOption<ScoreSource>] {
+        let file = course.file
+        let assignments = String(localized: .scoreSheetSourceAssignments), exams = String(localized: .scoreSheetSourceExams)
+        return [PickOption(id: ScoreSource.none, title: String(localized: .scoreSheetSourceNone))]
+            + file.scoreSources(for: componentId).map { s in
+                let taken = file.hasScore(s, in: componentId, other: entry.id)
+                let section: String = if case .exam = s { exams } else { assignments }
+                return PickOption(
+                    id: s, title: file.title(of: s) ?? "", detail: taken ? String(localized: .scoreSheetSourceTaken) : nil,
+                    section: section, disabled: taken)
+            }
+    }
+
+    func pick(_ s: ScoreSource) {
+        source = s
+        if title.trimmingCharacters(in: .whitespaces).isEmpty, let name = course.file.title(of: s) { title = name }
+    }
+
+    private var links: (exam: UUID?, assignment: UUID?) {
+        switch source {
+        case .none: (nil, nil)
+        case .assignment(let a): (nil, a)
+        case .exam(let e): (e, nil)
+        }
+    }
+
+    var sheetTitle: String { String(localized: isNew ? .scoreSheetAdd : .scoreSheetEdit) }
+    var confirmTitle: String { String(localized: isNew ? .commonAdd : .commonSave) }
+
+    var valid: Bool {
+        Double(score) != nil && (Double(max) ?? 0) > 0 && (mean.isEmpty || Double(mean) != nil) && (stdDev.isEmpty || Double(stdDev) != nil)
+    }
+
+    var hasTitle: Bool { course.file.components.first { $0.id == componentId }?.aggregation != .single }
+
+    var componentOptions: [(UUID, String)] { course.file.components.sorted { $0.order < $1.order }.map { ($0.id, $0.name) } }
+
+    var meanDetail: String {
+        let s = Double(score)
+        let z = s.flatMap { s in Double(mean).flatMap { mu in Double(stdDev).flatMap { $0 > 0 ? (s - mu) / $0 : nil } } }
+        let gap = s.flatMap { s in Double(mean).map { s - $0 } }
+        return z.map(\.sigmas) ?? gap.map { String(localized: .scoreSheetGapNoStdDev($0.points)) } ?? String(localized: .scoreSheetMeanHint)
+    }
+
+    func confirm() -> Bool {
+        guard let s = Double(score), let m = Double(max) else { return false }
+        let saved =
+            isNew
+            ? workspace.run(
+                ScoreAdd(
+                    id: entry.id, course: course.id, component: componentId, title: title, score: s, max: m,
+                    mean: Double(mean), stdDev: Double(stdDev), date: entry.date, exam: links.exam, assignment: links.assignment,
+                    excused: excused))
+            : workspace.run(
+                ScoreSet(
+                    course: course.id, score: entry.id, component: .set(componentId), title: .set(title), value: .set(s), max: .set(m),
+                    mean: .set(Double(mean)), stdDev: .set(Double(stdDev)), exam: .set(links.exam), assignment: .set(links.assignment),
+                    excused: .set(excused)))
+        return saved != nil
+    }
+
+    func remove(then done: @escaping @MainActor () -> Void) {
+        pending = workspace.ask(ScoreRemove(course: course.id, score: entry.id)) { _ in done() }
+    }
+}
+
+@MainActor @Observable
+final class ComponentModel {
+    let workspace: Workspace
+    let course: LoadedCourse
+    let component: GradeComponent
+    let isNew: Bool
+    var pending: PendingAction?
+    var name: String
+    var group: String
+    var weight: Double
+    var aggregation: Aggregation
+    var expectedCount: Int?
+
+    init(workspace: Workspace, course: LoadedCourse, component: GradeComponent) {
+        self.workspace = workspace
+        self.course = course
+        self.component = component
+        isNew = !course.file.components.contains { $0.id == component.id }
+        name = component.name
+        group = component.group ?? ""
+        weight = component.weight
+        aggregation = component.aggregation
+        expectedCount = component.expectedCount
+    }
+
+    var sheetTitle: String { String(localized: isNew ? .componentSheetAdd : .componentSheetEdit) }
+    var confirmTitle: String { String(localized: isNew ? .commonAdd : .commonSave) }
+
+    var invalid: Bool { name.trimmingCharacters(in: .whitespaces).isEmpty || weight < 0 || (expectedCount ?? 1) < 1 }
+
+    var count: Int? {
+        switch aggregation {
+        case .dropLowest(let n), .bestOf(let n): n
+        default: nil
+        }
+    }
+
+    var aggregationOptions: [(Aggregation, String)] {
+        let n = count ?? 1
+        return [
+            (.sum, String(localized: .aggregationSum)), (.mean, String(localized: .aggregationMean)),
+            (.single, String(localized: .aggregationSingle)),
+            (.dropLowest(n), String(localized: .componentSheetDropLowest)), (.bestOf(n), String(localized: .componentSheetBestOf)),
+        ]
+    }
+
+    var dropsLowest: Bool { aggregation == .dropLowest(count ?? 1) }
+
+    var countLabel: String { String(localized: dropsLowest ? .componentSheetDropCount : .componentSheetKeepCount) }
+
+    var countValue: Int {
+        get { count ?? 1 }
+        set { aggregation = dropsLowest ? .dropLowest(newValue) : .bestOf(newValue) }
+    }
+
+    var countOptions: [(Int, String)] { (1...10).map { ($0, String(localized: .componentSheetTimes($0))) } }
+
+    func confirm() -> Bool {
+        let saved =
+            isNew
+            ? workspace.run(
+                ComponentAdd(
+                    id: component.id, course: course.id, name: name, weight: weight, aggregation: aggregation,
+                    expectedCount: expectedCount, group: group))
+            : workspace.run(
+                ComponentSet(
+                    course: course.id, component: component.id, name: .set(name), weight: .set(weight),
+                    aggregation: .set(aggregation), expectedCount: .set(expectedCount), group: .set(group)))
+        return saved != nil
+    }
+
+    func remove(then done: @escaping @MainActor () -> Void) {
+        pending = workspace.ask(ComponentRemove(course: course.id, component: component.id)) { _ in done() }
+    }
+}
+
+@MainActor @Observable
+final class PolicyModel {
+    let workspace: Workspace
+    let course: LoadedCourse
+    var caps: [AttendanceCap]
+    var ratio: String
+    var late: String
+    var notes: String
+    var topShare: String
+    var lates: String
+
+    init(workspace: Workspace, course: LoadedCourse) {
+        self.workspace = workspace
+        self.course = course
+        let p = course.file.policy
+        caps = p.attendanceCap.sorted { $0.absences < $1.absences }
+        ratio = p.minAttendanceRatio.map { ($0 * 100).formatted(.number.precision(.fractionLength(0...1))) } ?? ""
+        late = p.latePolicy ?? ""
+        notes = p.notes
+        topShare = p.topGradeRatio.map { ($0 * 100).formatted(.number.precision(.fractionLength(0...1))) } ?? ""
+        lates = p.latesPerAbsence.map(String.init) ?? ""
+    }
+
+    var isRelative: Bool { course.file.course.gradingMode == .relative }
+
+    var defaultTopShare: String { "\(Int(GradePolicy.defaultTopGradeRatio * 100))" }
+
+    var grades: [LetterGrade] { workspace.catalog.letterGrades.filter { $0.points != nil }.sorted { $0.points! > $1.points! } }
+
+    var invalid: Bool {
+        let badShare = !topShare.isEmpty && !(Double(topShare).map { $0 > 0 && $0 < 100 } ?? false)
+        let badLates = !lates.isEmpty && !(Int(lates).map { $0 > 0 } ?? false)
+        let badRatio = !ratio.isEmpty && !(Double(ratio).map { $0 > 0 && $0 <= 100 } ?? false)
+        return badRatio || badShare || badLates
+    }
+
+    func addCap() {
+        guard let lowest = grades.last else { return }
+        caps.append(AttendanceCap(absences: (caps.map(\.absences).max() ?? 5) + 1, maxGrade: lowest.id))
+    }
+
+    func cap(_ i: Int) -> AttendanceCap { caps.indices.contains(i) ? caps[i] : AttendanceCap(absences: 0, maxGrade: UUID()) }
+
+    func setCap(_ i: Int, _ cap: AttendanceCap) { if caps.indices.contains(i) { caps[i] = cap } }
+
+    func confirm() -> Bool {
+        workspace.run(
+            PolicySet(
+                course: course.id, minAttendanceRatio: .set(Double(ratio).map { $0 / 100 }), latePolicy: .set(late.isEmpty ? nil : late),
+                latesPerAbsence: .set(Int(lates)), topGradeRatio: .set(Double(topShare).map { $0 / 100 }), attendanceCap: .set(caps),
+                notes: .set(notes))) != nil
+    }
+}

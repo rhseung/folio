@@ -1,7 +1,5 @@
-# Unused code (Periphery) and unused imports and declarations (SwiftLint's analyzer). Both need a whole Mac build,
-# which CI's test job doesn't make, so they run weekly and on a PR that changes their settings. They report in the
-# run's summary and fail nothing: what they find is a list to work through, and some of it (code reached only by
-# name) needs a person to judge.
+# Periphery와 SwiftLint analyzer는 CI의 test 작업이 만들지 않는 Mac 앱 전체 빌드가 필요하므로, 매주 한 번과 설정을 바꾼
+# PR에서만 돌린다. 찾은 것에는 이름으로만 닿는 코드도 섞여 있어 사람이 판단해야 하므로, 실패로 치지 않고 실행 요약에 적는다.
 name: quality
 
 on:
@@ -25,7 +23,7 @@ jobs:
   scan:
     runs-on: xcode-27
     env:
-      # mise.toml sets DEVELOPER_DIR to /Applications/Xcode.app; the image keeps each Xcode under its version.
+      # mise.toml이 DEVELOPER_DIR을 /Applications/Xcode.app으로 정하는데, 러너 이미지는 Xcode를 버전별 이름으로 둔다.
       XCODE: /Applications/Xcode_27.1.app
       MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
     steps:
@@ -33,8 +31,8 @@ jobs:
       - run: sudo ln -sfn "$XCODE" /Applications/Xcode.app
       - uses: actions/cache@v6
         with:
-          path: packages/folio-core/vendor
-          key: tectonic-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tectonic/pin.json') }}
+          path: sources/tectonic/vendor
+          key: tectonic-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('sources/tectonic/pin.json') }}
       - uses: jdx/mise-action@v5
       - name: Periphery
         continue-on-error: true

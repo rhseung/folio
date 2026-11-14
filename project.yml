@@ -2,7 +2,7 @@ name: Folio
 options:
   bundleIdPrefix: com.rhseung
   developmentLanguage: ko
-  # Keep in sync with platforms in every packages/*/Package.swift.
+  # Package.swift의 platforms와 함께 고친다.
   deploymentTarget:
     macOS: "26.0"
     iOS: "26.0"
@@ -10,20 +10,14 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
-    # FolioTectonic.xcframework's macOS slice is arm64 only, so a universal Release build fails to link Tectonic.
-    # Folio runs on Apple silicon Macs only (#41).
+    # FolioTectonic.xcframework의 macOS slice는 arm64뿐이라, universal Release 빌드는 Tectonic을 링크하지 못한다.
     "ARCHS[sdk=macosx*]": arm64
 packages:
-  FolioCore:
-    path: packages/folio-core
-  FolioMarkdown:
-    path: packages/folio-markdown
-  FolioAI:
-    path: packages/folio-ai
+  Folio:
+    path: .
   swift-algorithms:
     url: https://github.com/apple/swift-algorithms
     from: 1.2.0
-  # WhisperKit: Whisper on the device, for transcribing a whole recording where Korean and English mix (#99).
   ArgmaxOSS:
     url: https://github.com/argmaxinc/argmax-oss-swift
     exactVersion: 1.1.1
@@ -34,34 +28,33 @@ targets:
     scheme:
       testTargets: [FolioTests]
     sources:
-      - path: app
+      - path: sources/app
         excludes: ["resources/AppIcon.icon", "resources/info.plist"]
-      # An Icon Composer document; XcodeGen doesn't know the type, so it's named here or it lands as a plain folder.
-      - path: app/resources/AppIcon.icon
+      # XcodeGen은 Icon Composer 문서의 형식을 모르므로, 여기서 따로 지정하지 않으면 보통 폴더로 들어간다.
+      - path: sources/app/resources/AppIcon.icon
         type: file
         buildPhase: resources
     dependencies:
-      - package: FolioCore
+      - package: Folio
         product: FolioDomain
-      - package: FolioCore
+      - package: Folio
         product: FolioStorage
-      - package: FolioCore
+      - package: Folio
         product: FolioActions
-      - package: FolioCore
+      - package: Folio
         product: FolioIndex
-      - package: FolioCore
+      - package: Folio
         product: FolioLMS
-      # Only the #if DEBUG previews use it (Workspace.scenario).
-      - package: FolioCore
+      - package: Folio
         product: FolioFixtures
-      - package: FolioMarkdown
-      - package: FolioAI
+      - package: Folio
+        product: FolioMarkdown
+      - package: Folio
+        product: FolioAI
       - package: swift-algorithms
         product: Algorithms
       - package: ArgmaxOSS
         product: WhisperKit
-    # MARKETING_VERSION and CURRENT_PROJECT_VERSION, which the generated Info.plist reads. `mise run generate` writes
-    # it from FolioVersion and the commit count (scripts/version.sh), so a build is only as new as its last generate.
     configFiles:
       Debug: .build/version.xcconfig
       Release: .build/version.xcconfig
@@ -69,89 +62,71 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.rhseung.folio
         PRODUCT_NAME: Folio
-        # Sign to Run Locally (no team). Set here, not at project level: XcodeGen's target preset
-        # would override it with "iPhone Developer". Needs a team before running on a real iPad.
+        # Sign to Run Locally(팀 없음)로 서명한다. 프로젝트 수준에 두면 XcodeGen의 타깃 preset이 "iPhone Developer"로
+        # 덮어쓰므로 여기에 둔다. 실제 iPad에서 실행하려면 팀이 필요하다.
         CODE_SIGN_IDENTITY: "-"
         CODE_SIGN_STYLE: Automatic
         GENERATE_INFOPLIST_FILE: YES
-        # The keys the build settings can't hold (the folio:// scheme), merged into the generated Info.plist.
-        INFOPLIST_FILE: app/resources/info.plist
+        # 빌드 설정으로 쓸 수 없는 키(folio:// scheme)는 이 파일에 두고, 생성한 Info.plist에 합친다.
+        INFOPLIST_FILE: sources/app/resources/info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_KEY_CFBundleDisplayName: Folio
         INFOPLIST_KEY_NSFaceIDUsageDescription: 성적을 보기 전에 본인인지 확인합니다.
         INFOPLIST_KEY_NSMicrophoneUsageDescription: 강의를 녹음하고 받아쓰기 위해 마이크를 씁니다.
         INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: 녹음한 강의를 기기 안에서 글로 받아씁니다.
-        # iPhone and iPad (#134). The iPhone keeps to portrait: its screens are laid out for 390pt across.
+        # iPhone 화면은 폭 390pt에 맞춰 배치했으므로 iPhone은 세로 방향만 지원한다.
         TARGETED_DEVICE_FAMILY: "1,2"
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         SWIFT_EMIT_LOC_STRINGS: YES
-        # Keys added to Localizable.xcstrings by hand become `.key` symbols (Text(.peopleTitle)), checked at compile time.
         STRING_CATALOG_GENERATE_SYMBOLS: YES
-  # Screen models, run inside the app on macOS (mise run test-app). Workspace skips the saved folder under tests.
+  # Mac 테스트 파일은 AppKit을, iPad 테스트 파일은 UIKit을 쓰므로 폴더마다 자기 플랫폼에서만 빌드한다.
   FolioTests:
     type: bundle.unit-test
-    supportedDestinations: [macOS]
-    sources: [app-tests]
+    supportedDestinations: [macOS, iOS]
+    sources:
+      - path: tests/unit/app
+        excludes: ["ipad"]
+        destinationFilters: [macOS]
+      - path: tests/unit/app/ipad
+        destinationFilters: [iOS]
     dependencies:
-      # FolioFixtures comes through the app it is hosted in; linking it here too would load a second copy.
+      # FolioFixtures는 호스트 앱을 거쳐 들어오므로, 여기서도 링크하면 두 번째 사본이 로드된다.
       - target: Folio
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
         CODE_SIGN_IDENTITY: "-"
-        # XcodeGen points a multiplatform app's host at the iOS layout; the Mac app keeps its binary in Contents/MacOS.
-        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Folio.app/Contents/MacOS/Folio
+        TARGETED_DEVICE_FAMILY: "2"
+        # XcodeGen은 멀티플랫폼 앱의 호스트를 iOS 배치로 가리키는데, Mac 앱은 실행 파일을 Contents/MacOS에 둔다.
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Folio.app/Folio
+        "TEST_HOST[sdk=macosx*]": $(BUILT_PRODUCTS_DIR)/Folio.app/Contents/MacOS/Folio
         BUNDLE_LOADER: $(TEST_HOST)
-  # The accessibility audit of the main screens (#471, mise run test-a11y). A UI test drives the app from a runner
-  # process of its own, so it links the fixtures it writes the app's folder with; nothing loads them twice.
-  FolioUITests:
+  # UI 테스트는 앱과 다른 러너 프로세스에서 돌므로, 앱의 폴더를 쓰는 데 필요한 픽스처를 직접 링크해도 두 번 로드되지 않는다.
+  FolioE2ETests:
     type: bundle.ui-testing
     supportedDestinations: [macOS]
-    sources: [app-ui-tests]
+    sources: [tests/e2e/app]
     dependencies:
       - target: Folio
-      - package: FolioCore
+      - package: Folio
         product: FolioFixtures
-      - package: FolioCore
+      - package: Folio
         product: FolioStorage
-      - package: FolioCore
+      - package: Folio
         product: FolioDomain
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
         CODE_SIGN_IDENTITY: "-"
         TEST_TARGET_NAME: Folio
-  # Hangul typed into the iPad's edit view, run inside the app on an iPad simulator (mise run test-ipad). The Mac's
-  # note-view checks are in FolioTests, which builds these files to nothing (#if os(iOS)).
-  FolioPadTests:
-    type: bundle.unit-test
-    supportedDestinations: [iOS]
-    sources: [app-tests/ipad]
-    dependencies:
-      - target: Folio
-    settings:
-      base:
-        GENERATE_INFOPLIST_FILE: YES
-        TARGETED_DEVICE_FAMILY: "2"
-        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Folio.app/Folio
-        BUNDLE_LOADER: $(TEST_HOST)
 schemes:
-  # Its own scheme: in Folio's, a Mac test run would also try to run these iOS-only tests.
-  FolioPad:
+  # UI 테스트는 화면과 키보드를 가져가므로, 사용 중인 Mac에서 ⌘U나 mise run test-app이 시작하지 않도록 Folio와 다른 scheme에 둔다.
+  FolioE2ETests:
     build:
       targets:
         Folio: all
-        FolioPadTests: [test]
+        FolioE2ETests: [test]
     test:
-      targets: [FolioPadTests]
-  # Its own scheme, apart from Folio's: a UI test takes the screen and keyboard, so ⌘U and mise run test-app must not
-  # start it on a Mac someone is using. CI runs it.
-  FolioUITests:
-    build:
-      targets:
-        Folio: all
-        FolioUITests: [test]
-    test:
-      targets: [FolioUITests]
+      targets: [FolioE2ETests]

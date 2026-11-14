@@ -1,21 +1,18 @@
 #!/bin/bash
-# Formats (`format`) or checks (`lint`) the Swift sources with the toolchain's swift-format (.swift-format): every file
-# in app, app-tests, app-ui-tests and the packages' sources and tests, or those of the files given (lefthook passes the
-# staged ones). A file given outside these folders (a Package.swift) is left alone, so a commit and CI agree.
+# 넘겨받은 파일 중 sources와 tests 밖의 것(Package.swift)은 건드리지 않는다. 그래야 커밋 전 검사와 CI의 결과가 같다.
 #
-# Two generated sources are left as they are written, since a check compares each byte for byte with what its writer
-# makes now and formatting would fail it: folio-cli/generated (`folio-gen --check`) and folio-cli/render/note-theme.swift
-# (NoteThemeCopyTests in app-tests). Nobody edits either by hand.
+# 생성한 두 소스는 검사가 생성기의 출력과 바이트 단위로 비교하므로, 포매팅하면 검사가 실패한다. 그래서 둘은 그대로 둔다:
+# sources/cli/generated(`folio-gen --check`), sources/cli/render/note-theme.swift(tests/unit/app의 NoteThemeCopyTests).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 mode=${1:?usage: scripts/swift-format.sh format|lint [<file>...]}
 shift
-folders='^(app|app-tests|app-ui-tests|packages/[^/]+/(sources|tests))/'
-generated='^packages/folio-core/sources/folio-cli/(generated/|render/note-theme\.swift$)'
+folders='^(sources|tests)/'
+generated='^sources/cli/(generated/|render/note-theme\.swift$)'
 
 if [ $# -eq 0 ]; then
-    files=$(find app app-tests app-ui-tests packages/*/sources packages/*/tests -name '*.swift' -not -path '*/.build/*' | sort)
+    files=$(find sources tests -name '*.swift' -not -path '*/.build/*' -not -path '*/node_modules/*' | sort)
 else
     files=$(printf '%s\n' "$@")
 fi

@@ -26,30 +26,25 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
         run: |
-          # Not `gh pr diff --name-only`: GitHub refuses the diff of a PR touching more than 300 files.
+          # GitHub은 파일을 300개 넘게 바꾼 PR의 diff를 거절하므로 `gh pr diff --name-only`를 쓰지 않는다.
           files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --jq '.[].filename')
-          # Only prose meant for people: docs/, top-level *.md and .github/**/*.md. Other .md files are inputs, such as
-          # test fixtures (app-tests/fixtures/all-markdown.md) or the generated skill copy, and get a review.
+          # 다른 .md 파일은 테스트 픽스처(tests/unit/app/fixtures/all-markdown.md)나 생성한 스킬 사본처럼 입력이므로 리뷰를 받는다.
           if [ -n "$files" ] && ! grep -qvE '^docs/|^[^/]+\.md$|^\.github/.+\.md$' <<< "$files"; then
             echo docs=true >> "$GITHUB_OUTPUT"
           else
             echo docs=false >> "$GITHUB_OUTPUT"
           fi
 
-  # claude[bot]'s approval is what the main ruleset requires, so this review is a merge gate. What it looks for is in
-  # .github/review.md.
   review:
     needs: changes
     if: vars.ENABLE_CLAUDE_REVIEW == 'true' && needs.changes.outputs.docs != 'true'
     uses: rhseung/claude-review-plugin/.github/workflows/review.yml@main
-    # Dependabot's runs get only Dependabot secrets, so CLAUDE_CODE_OAUTH_TOKEN must be set there too
+    # Dependabot 실행은 Dependabot secret만 받으므로, CLAUDE_CODE_OAUTH_TOKEN을 그쪽에도 넣어야 한다
     # (gh secret set --app dependabot).
     with:
       allowed_bots: dependabot[bot]
     secrets: inherit
 
-  # Docs-only PRs skip code review, but the ruleset still needs one approval. A new push dismisses it and this job
-  # approves again, so a later code commit falls back to the review above.
   approve-docs:
     needs: changes
     if: needs.changes.outputs.docs == 'true'

@@ -8,7 +8,7 @@
 #   version.sh tag                      tags origin/main as v<version> and pushes the tag
 set -euo pipefail
 cd "$(dirname "$0")/.."
-source=packages/folio-core/sources/folio-domain/shared/app/version.swift
+source=sources/domain/shared/app/version.swift
 
 read_version() { sed -nE 's/.*static let marketing = "([0-9]+\.[0-9]+\.[0-9]+)".*/\1/p' | head -1; }
 
@@ -19,7 +19,6 @@ get() {
   echo "$v"
 }
 
-# A shallow clone counts only what it fetched; the release workflow checks out the whole history.
 build() {
   if [ "$(git rev-parse --is-shallow-repository 2>/dev/null)" = true ]; then
     echo "warning: shallow clone, the build number is not the commit count" >&2
@@ -47,7 +46,7 @@ case "${1:-}" in
     echo "$new"
     ;;
   tag)
-    # The tag goes on what main has, never on a local checkout that may hold unmerged work.
+    # 로컬 체크아웃에는 머지하지 않은 작업이 있을 수 있으므로, 태그는 origin/main에 단다.
     git fetch -q origin main --tags
     v=$(git show origin/main:"$source" | read_version)
     [ -n "$v" ] || { echo "no version on origin/main" >&2; exit 1; }

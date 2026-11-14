@@ -1,0 +1,143 @@
+import FolioActions
+import FolioDomain
+import Foundation
+import Testing
+
+@testable import Folio
+
+@MainActor
+struct CourseModelTests {
+    @Test func followsOnlyLinksIntoItsOwnCourse() throws {
+        let model = CourseModel(workspace: try fixtureWorkspace(), courseId: graphTheory)
+        model.follow(Navigator.Entry(link: .course(UUID(), page: .units), course: UUID()))
+        #expect(model.section == .overview)
+        let note = UUID()
+        model.follow(Navigator.Entry(link: AppLink(.note, note, anchor: .heading("정리")), course: graphTheory))
+        #expect(model.section == .notes && model.openNote == note && model.noteAnchor == .heading("정리"))
+        let material = AppLink(.material, UUID(), anchor: .page(3))
+        model.follow(Navigator.Entry(link: material, course: graphTheory))
+        #expect(model.section == .materials && model.place == material && model.noteAnchor == nil)
+    }
+
+    @Test func reportsItsOwnMovesButNotTheOnesItFollows() throws {
+        let model = CourseModel(workspace: try fixtureWorkspace(), courseId: graphTheory)
+        let unit = AppLink(.unit, UUID())
+        model.follow(Navigator.Entry(link: unit, course: graphTheory))
+        #expect(model.place == unit)
+        model.section = .grades
+        #expect(model.place == .course(graphTheory, page: .grades))
+
+        let note = UUID()
+        model.section = .notes
+        model.openNote = note
+        #expect(model.place == AppLink(.note, note))
+        model.follow(Navigator.Entry(link: AppLink(.note, note, anchor: .heading("요약")), course: graphTheory))
+        #expect(model.noteAnchor == .heading("요약"))
+        model.openNote = UUID()
+        #expect(model.noteAnchor == nil)
+
+        model.section = .materials
+        let file = AppLink(.material, UUID())
+        model.moved(file)
+        #expect(model.place == file)
+        model.moved(file.with(.page(9)))
+        #expect(model.place == file.with(.page(9)))
+        model.moved(file)
+        #expect(model.place == file.with(.page(9)))
+        model.moved(nil)
+        #expect(model.place == .course(graphTheory, page: .materials))
+    }
+
+    @Test func anItemLinkOpensItsPageAtTheItem() throws {
+        let model = CourseModel(workspace: try fixtureWorkspace(), courseId: graphTheory)
+        let pages: [(AppLink.Kind, CourseSection)] = [
+            (.session, .sessions), (.assignment, .assignments), (.exam, .exams),
+            (.card, .quizCards), (.problemSet, .quizProblems),
+        ]
+        for (kind, section) in pages {
+            let id = UUID()
+            model.follow(Navigator.Entry(link: AppLink(kind, id), course: graphTheory))
+            #expect(model.section == section && model.focus == id, "\(kind)")
+        }
+        model.section = .grades
+        #expect(model.focus == nil)
+        for kind in [AppLink.Kind.unit, .note, .material] {
+            model.follow(Navigator.Entry(link: AppLink(kind, UUID()), course: graphTheory))
+            #expect(model.focus == nil, "\(kind)")
+        }
+    }
+
+    @Test func aRecordingIsAPageOfTheSessions() throws {
+        let workspace = try fixtureWorkspace()
+        let session = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now))?.made)
+        let recording = Recording(device: workspace.device, at: .now, sessionId: session, file: "Recordings/a.m4a", duration: 600)
+        try ActionContext(gist: try #require(workspace.gist), device: workspace.device).edit(graphTheory) { $0.recordings = [recording] }
+        workspace.reload()
+        let model = CourseModel(workspace: workspace, courseId: graphTheory)
+        let link = AppLink(.recording, recording.id, anchor: .time(90))
+        model.follow(Navigator.Entry(link: link, course: graphTheory))
+        #expect(model.section == .sessions && model.openRecording?.id == recording.id && model.focus == nil)
+        model.moved(link.with(.time(95)))
+        #expect(model.place == link.with(.time(95)))
+        model.resetPage()
+        #expect(model.place == .course(graphTheory, page: .sessions) && model.openRecording == nil)
+    }
+
+    @Test func aFileFollowsOnlyAPageItIsNotOn() throws {
+        let workspace = try fixtureWorkspace()
+        workspace.run(MaterialTrack(course: graphTheory))
+        let course = try #require(workspace.course(graphTheory))
+        let pdf = try #require(course.file.materials.first { $0.isPDF })
+        let model = MaterialsModel(workspace: workspace, course: course)
+        #expect(model.follow(AppLink(.material, pdf.id, anchor: .page(3)))?.id == pdf.id)
+        #expect(model.requestedPage == 2)
+
+        model.requestedPage = nil
+        model.open(pdf)
+        model.shownPage = 2
+        #expect(model.viewedLink == AppLink(.material, pdf.id, anchor: .page(3)))
+        _ = model.follow(AppLink(.material, pdf.id, anchor: .page(3)))
+        #expect(model.requestedPage == nil)
+        _ = model.follow(AppLink(.material, pdf.id, anchor: .page(7)))
+        #expect(model.requestedPage == 6)
+
+        model.viewing = UUID()
+        #expect(model.shownPage == nil)
+    }
+
+    @Test func noteStateFollowsTheReviewNote() throws {
+        let workspace = try fixtureWorkspace()
+        let model = CourseModel(workspace: workspace, courseId: graphTheory)
+        let past = Calendar.current.date(byAdding: .day, value: -1, to: .now)!
+        let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: past))?.made)
+        var file = try #require(workspace.course(graphTheory)).file
+        var s = try #require(file.sessions.first { $0.id == id })
+        #expect(model.noteState(s, in: file) == "복습 노트 없음")
+        #expect(model.weekStatus(s, in: file, now: .now) == "복습 노트 없음")
+        s.skipsReview = true
+        #expect(model.noteState(s, in: file) == "복습 필요 없음")
+        s.isCancelled = true
+        #expect(model.weekStatus(s, in: file, now: .now) == "휴강")
+        file.course.reviews = false
+        s = try #require(file.sessions.first)
+        #expect(model.noteState(s, in: file) == "복습 필요 없음")
+    }
+
+    @Test func eachStatOpensThePageItSumsUp() throws {
+        let workspace = try fixtureWorkspace()
+        let model = CourseModel(workspace: workspace, courseId: graphTheory)
+        let items = model.stats(try #require(workspace.course(graphTheory)).file, reviews: [], suggested: nil, now: .now)
+        #expect(items.map(\.title) == ["다음 수업", "다음 시험", "오늘 복습", "가까운 마감"])
+        items[2].action?()
+        #expect(model.section == .units)
+    }
+
+    @Test func trailingShowsTheSessionCountOnlyOnceThereAreSessions() throws {
+        let workspace = try fixtureWorkspace()
+        let model = CourseModel(workspace: workspace, courseId: graphTheory)
+        #expect(model.trailing(.classes, file: try #require(workspace.course(graphTheory)).file) == nil)
+        workspace.run(SessionAdd(course: graphTheory, date: .now))
+        #expect(model.trailing(.classes, file: try #require(workspace.course(graphTheory)).file)?.text == "1회")
+        #expect(CourseSection.quizStats.title == "오답과 통계" && CourseTab.assessment.title == "평가")
+    }
+}

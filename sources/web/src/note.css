@@ -1,0 +1,210 @@
+/* 색과 크기는 앱이 CSS 변수로 넘긴다. note-style.swift가 theme.swift와 note-look.swift의 값으로 변수를 만든다. */
+
+:root {
+  color-scheme: light dark;
+  --leading: 1.78;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", sans-serif;
+}
+
+html { background: transparent; color: var(--text); -webkit-font-smoothing: antialiased; }
+body.note { box-sizing: border-box; margin: 0 auto; padding: var(--margin) var(--margin) 96px; max-width: var(--measure);
+  font: var(--body)/var(--leading) var(--sans); letter-spacing: -0.003em; word-break: keep-all; overflow-wrap: anywhere; }
+/* 편집기 옆의 미리보기는 노트 끝을 포함해 어느 블록이든 맨 위로 올릴 수 있어야 한다. */
+body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); }
+::selection { background: color-mix(in srgb, var(--accent) 28%, transparent); }
+
+.note h1 { font-size: var(--h1); line-height: 1.25; font-weight: 750; letter-spacing: -0.025em; margin: 0 0 28px; }
+.note h2 { font-size: var(--h2); line-height: 1.35; font-weight: 700; letter-spacing: -0.015em; margin: 48px 0 14px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--line-soft); position: relative; }
+.note h2::after { content: ""; position: absolute; left: 0; bottom: -1px; width: 28px; height: 2px; border-radius: 2px; background: var(--accent); }
+.note h3 { font-size: var(--h3); font-weight: 680; margin: 32px 0 8px; }
+.note h4 { font-size: var(--h4); }
+.note h5 { font-size: var(--h5); }
+.note h6 { font-size: var(--h6); color: var(--text-2); }
+.note h4, .note h5, .note h6 { font-weight: 650; margin: 24px 0 6px; }
+.note h1 + h2, .note h2:first-child { margin-top: 0; }
+
+.note p { margin: 0 0 var(--paragraph-gap); }
+.note strong { font-weight: 650; }
+.note em { font-style: italic; }
+.note del { color: var(--text-3); }
+.note mark { background: color-mix(in srgb, #f5c542 40%, transparent); color: inherit; border-radius: 3px; padding: 0 2px; }
+
+.note a { color: var(--accent-ink); text-decoration: none; background-image: linear-gradient(color-mix(in srgb, var(--accent) 35%, transparent), color-mix(in srgb, var(--accent) 35%, transparent));
+  background-size: 100% 1px; background-position: 0 100%; background-repeat: no-repeat; transition: background-size .15s; }
+.note a:hover { background-image: linear-gradient(color-mix(in srgb, var(--accent) 18%, transparent), color-mix(in srgb, var(--accent) 18%, transparent)); background-size: 100% 100%; border-radius: 3px; }
+.note a[href^="http"]::after { content: "↗"; font-size: .75em; margin-left: 2px; color: var(--text-3); }
+
+.note ul, .note ol { margin: 0 0 var(--paragraph-gap); padding-left: 1.5em; }
+.note li { margin: 3px 0; padding-left: 2px; }
+.note li > ul, .note li > ol { margin: 3px 0 4px; }
+.note ul > li::marker { color: color-mix(in srgb, var(--accent) 70%, var(--text-3)); }
+.note ol > li::marker { color: var(--text-3); font-variant-numeric: tabular-nums; font-weight: 600; font-size: .92em; }
+.note li:has(> input[type=checkbox]) { list-style: none; margin-left: -1.4em; }
+.note input[type=checkbox] { appearance: none; position: relative; width: 15px; height: 15px; margin: 0 7px 0 0; vertical-align: -2px; border: 1.5px solid var(--text-3);
+  border-radius: 5px; display: inline-grid; place-content: center; }
+.note input[type=checkbox]:checked { background: var(--accent); border-color: var(--accent); }
+/* 표시를 흐름 밖에 둔다. 흐름 안에 두면 표시가 상자의 기준선이 되어, 체크한 상자가 글자보다 아래로 내려간다. */
+.note input[type=checkbox]:checked::after { content: ""; position: absolute; left: 50%; top: 50%; width: 7px; height: 4px; border: 2px solid white; border-top: 0; border-right: 0;
+  transform: translate(-50%, -50%) rotate(-45deg) translate(1px, -1px); }
+.note li:has(> input:checked) { color: var(--text-3); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--text-3) 60%, transparent); }
+
+.note code { font: 0.86em var(--mono); background: var(--code-fill); padding: 2px 6px; border-radius: 6px; }
+.note pre { margin: 18px 0; padding: 14px 18px; background: var(--code-fill); border-radius: var(--radius); overflow-x: auto; line-height: 1.6; tab-size: 4; }
+.note pre code { background: none; padding: 0; font-size: var(--code-size); }
+.note pre[data-lang]::before { content: attr(data-lang); display: block; font: 600 11px var(--sans); color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+/* 편집기는 마크다운 표시에도 tok-* 클래스를 붙이므로, 그 표시가 자기 모양을 유지하도록 코드 안으로만 범위를 좁힌다. */
+:is(.note pre, .cm-code) :is(.tok-keyword, .tok-operatorKeyword) { color: var(--c-theorem); }
+:is(.note pre, .cm-code) :is(.tok-string, .tok-string2) { color: var(--c-example); }
+:is(.note pre, .cm-code) :is(.tok-number, .tok-bool, .tok-atom, .tok-literal) { color: var(--c-warning); }
+:is(.note pre, .cm-code) .tok-function { color: var(--c-definition); }
+:is(.note pre, .cm-code) :is(.tok-typeName, .tok-className, .tok-namespace, .tok-builtin) { color: var(--c-type); }
+:is(.note pre, .cm-code) .tok-comment { color: var(--text-3); }
+:is(.note pre, .cm-code) :is(.tok-meta, .tok-decorator) { color: var(--c-decorator); }
+:is(.note pre, .cm-code) .tok-propertyName { color: var(--c-property); }
+:is(.note pre, .cm-code) .tok-propertyName.tok-function { color: var(--c-definition); }
+:is(.note pre, .cm-code) .tok-comment { font-style: italic; }
+
+.note blockquote { margin: 18px 0; padding: 2px 0 2px 18px; border-left: 3px solid var(--line); color: var(--text-2); }
+.note blockquote > :last-child { margin-bottom: 0; }
+/* 가운뎃점 글자 대신 점을 그린다. 글자는 크기와 간격이 글꼴을 따라가서 너무 작게 보였다. */
+.note hr { border: 0; height: var(--break-dot); margin: var(--break-space) 0; position: relative; overflow: visible; }
+.note hr::before { content: ""; position: absolute; top: 0; left: calc(50% - var(--break-dot) / 2); width: var(--break-dot); height: var(--break-dot);
+  border-radius: 50%; background: var(--text-2);
+  box-shadow: calc(-1 * var(--break-pitch)) 0 var(--text-2), var(--break-pitch) 0 var(--text-2); }
+
+/* 그림 뒤에 배경을 두지 않는다. 투명한 SVG는 다크 모드용 색을 직접 가지고 있어서, 밝은 배경을 깔면 밝은 선이 보이지 않는다. */
+.note img:not(.cm-widgetBuffer) { display: block; max-width: 100%; height: auto; margin: 22px auto; border-radius: 10px; }
+.note p > img:only-child { margin: 22px auto; }
+
+.note table { border-collapse: separate; border-spacing: 0; margin: var(--block-gap) 0; font-size: 14.5px; line-height: 1.6; max-width: 100%;
+  border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; display: block; overflow-x: auto; width: fit-content; }
+/* `anywhere`를 쓰면 칸의 min-content를 글자 단위로 계산해서 긴 열이 다른 열을 좁힌다. 그 대신 열보다 넓은 표는
+   스크롤한다. 렌더러가 `.word`를 붙인 한 낱말 칸은 한 줄을 유지한다. */
+.note th, .note td { padding: 9px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line-soft); overflow-wrap: normal; }
+.note th.word, .note td.word { white-space: nowrap; }
+.note th { background: var(--fill); font-weight: 650; font-size: 13.5px; color: var(--text-2); }
+.note tr:last-child td { border-bottom: 0; }
+.note tbody tr:hover td { background: color-mix(in srgb, var(--fill) 55%, transparent); }
+.note td + td, .note th + th { border-left: 1px solid var(--line-soft); }
+
+.note .math { font-size: 1.04em; }
+.note .math.display { display: block; margin: var(--block-gap) 0; padding: 6px 0; overflow-x: auto; overflow-y: hidden; text-align: center; }
+.note .math.pending { font: .9em var(--mono); color: var(--text-3); }
+.note .math-error { font: .9em var(--mono); color: var(--c-danger); background: color-mix(in srgb, var(--c-danger) 10%, transparent); padding: 1px 5px; border-radius: 5px; }
+.note .katex { font-size: 1.08em; }
+.note .katex-display { margin: 0; }
+
+.note .callout { --c: var(--c-neutral); margin: var(--block-gap) 0; padding: 12px 18px 4px; border-radius: var(--radius);
+  background: color-mix(in srgb, var(--c) 7%, transparent); border-left: 3px solid color-mix(in srgb, var(--c) 75%, transparent); }
+.note .callout:not([open]) { padding-bottom: 12px; }
+.note .callout > summary { cursor: pointer; list-style: none; margin-bottom: 6px; display: flex; gap: 8px; align-items: baseline; }
+.note .callout:not([open]) > summary { margin-bottom: 0; }
+.note .callout > summary::-webkit-details-marker { display: none; }
+.note .callout > summary::after { content: "›"; margin-left: auto; color: var(--text-3); transform: rotate(90deg); transition: transform .15s; }
+.note .callout:not([open]) > summary::after { transform: none; }
+.note .callout-label { font-weight: 700; font-size: var(--label-size); letter-spacing: .02em; color: color-mix(in srgb, var(--c) 85%, var(--text)); white-space: nowrap; }
+.note .callout-title { font-weight: 600; }
+.note .callout > p:last-child, .note .callout > ul:last-child, .note .callout > ol:last-child { margin-bottom: 10px; }
+.note .callout-definition, .note .callout-info, .note .callout-note, .note .callout-abstract { --c: var(--c-definition); }
+.note .callout-theorem, .note .callout-lemma, .note .callout-corollary, .note .callout-proposition { --c: var(--c-theorem); }
+.note .callout-example, .note .callout-counterexample, .note .callout-tip, .note .callout-summary, .note .callout-solution { --c: var(--c-example); }
+.note .callout-warning, .note .callout-important, .note .callout-question { --c: var(--c-warning); }
+.note .callout-danger { --c: var(--c-danger); }
+.note .callout-proof, .note .callout-remark { --c: var(--c-neutral); background: none; }
+.note .callout-proof > :last-child::after { content: "∎"; float: right; color: var(--text-3); }
+.note .callout.attached { margin-top: calc(-1 * var(--block-gap)); border-top-left-radius: 0; border-top-right-radius: 0; }
+.note .callout:has(+ .callout.attached) { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+
+.note a.wikilink { font-weight: 550; }
+.note a.wikilink.missing { color: var(--text-3); background-image: none; text-decoration: underline dashed var(--line); }
+.note a.embed.missing, .note .embed-title.missing { text-decoration: underline dashed var(--line); }
+.note a.embed { display: block; margin: 16px 0; padding: 10px 14px; border: 1px dashed var(--line); border-radius: 10px; color: var(--text-3);
+  font-size: 14px; background-image: none; }
+.note a.embed:hover { border-color: var(--accent); background-image: none; }
+.note a.embed::before { content: "↪ "; }
+.note div.embed { margin: var(--block-gap) 0; padding: 12px 20px; border: 1px solid var(--line-soft); border-left: 3px solid var(--line); border-radius: var(--radius); }
+.note div.embed-empty { border-style: dashed; border-left-width: 1px; }
+.note .embed-title { display: inline-block; margin-bottom: 8px; font-size: var(--label-size); font-weight: 600; color: var(--text-3); background-image: none; }
+.note .embed-title::before { content: "↪ "; }
+.note .embed-title:hover { color: var(--accent-ink); }
+.note .embed-body > :first-child { margin-top: 0; }
+.note .embed-body > :last-child { margin-bottom: 0; }
+.note .embed-note { margin: 0; font-size: var(--label-size); color: var(--text-3); }
+
+.note nav.toc { margin: var(--block-gap) 0; padding: 12px 20px; border: 1px solid var(--line-soft); border-radius: var(--radius); }
+.note nav.toc::before { content: var(--toc-label, none); display: block; margin-bottom: 8px; font-size: var(--label-size); font-weight: 600; color: var(--text-3); }
+.note nav.toc ul { list-style: none; margin: 0; padding-left: 0; }
+.note nav.toc ul ul { padding-left: 1.25em; }
+.note nav.toc li { margin: 4px 0; padding-left: 0; }
+.note nav.toc a { color: var(--text-2); background-image: none; }
+.note nav.toc > ul > li > a { color: var(--text); font-weight: 550; }
+.note nav.toc a:hover { color: var(--accent-ink); background-image: none; }
+
+.ref-popover { position: absolute; z-index: 10; box-sizing: border-box; width: min(calc(var(--measure) - 2 * var(--margin)), calc(100vw - 16px));
+  max-height: 50vh; overflow: auto; padding: 12px 16px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--text) 16%, transparent); font-size: .94em; }
+.ref-popover > :first-child { margin-top: 0; }
+.ref-popover > :last-child { margin-bottom: 0; }
+.note .cb-widget { border: 1px dashed var(--line); border-radius: var(--radius); }
+/* 노트가 한 페이지로 스크롤되도록 위젯의 frame은 위젯 페이지가 알린 높이를 그대로 쓴다. frame 높이에 맞춰 크기를 정하는
+   페이지는 frame과 함께 끝없이 커지는데, 앱의 `WidgetSizer`가 이를 감지해 블록의 높이를 유지한다. */
+.note iframe.cb-widget { display: block; box-sizing: border-box; width: 100%; margin: var(--block-gap) 0; border: 0; border-radius: 0; }
+
+.note figure.mermaid { margin: var(--block-gap) 0; overflow-x: auto; text-align: center; }
+.note figure.mermaid svg { max-width: 100%; height: auto; }
+.note .raw-html { color: var(--text-3); }
+
+.note sup.footnote-ref { font-size: .72em; line-height: 0; vertical-align: super; font-variant-numeric: tabular-nums; }
+.note sup.footnote-ref a { font-weight: 650; padding: 0 1px; background-image: none; }
+.note section.footnotes { margin-top: calc(2 * var(--block-gap)); padding-top: var(--paragraph-gap); border-top: 1px solid var(--line-soft);
+  font-size: .9em; color: var(--text-2); }
+.note section.footnotes ol { margin: 0; }
+.note section.footnotes li > p { margin: 0; }
+.note a.footnote-back { margin-left: 2px; color: var(--text-3); background-image: none; }
+.note a.footnote-back:hover { color: var(--accent-ink); }
+.note [id^="^"]:target { background: color-mix(in srgb, var(--accent) 14%, transparent); border-radius: 6px; transition: background 1s; }
+
+
+/* 그림 보기는 투명한 SVG가 원래 그려진 바탕 위에 보이도록 카드 색 위에 그림을 놓는다. 앱의 유리 재질은 웹 보기 안까지
+   닿지 않으므로, 떠 있는 버튼은 반투명한 카드 색 뒤에 blur를 넣어 유리처럼 만든다. */
+body.preview :is(img, figure.mermaid):not(a *, .ref-popover *, .figure-viewer *) { cursor: zoom-in; }
+.figure-viewer { position: fixed; inset: 0; z-index: 20; background: var(--scrim); touch-action: none; overscroll-behavior: contain;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: grab; }
+.figure-viewer.dragging { cursor: grabbing; }
+@media (prefers-reduced-motion: no-preference) { .figure-viewer { animation: figure-in .16s ease-out; } }
+@keyframes figure-in { from { opacity: 0; } }
+.figure-sheet { position: absolute; left: 0; top: 0; overflow: hidden; background: var(--card); border-radius: var(--radius);
+  box-shadow: 0 var(--gap) calc(4 * var(--gap)) var(--scrim); }
+/* `.note img`보다 뒤에 두어야 한다. 그렇지 않으면 사본이 열의 여백과 최대 폭을 물려받는다. */
+.note .figure-sheet > :is(img, svg) { display: block; box-sizing: border-box; width: 100%; height: 100%; max-width: none; margin: 0; border-radius: 0; }
+.figure-bar { position: absolute; display: flex; gap: var(--gap); }
+.figure-top { top: calc(1.5 * var(--gap)); right: calc(1.5 * var(--gap)); }
+.figure-bottom { bottom: calc(1.5 * var(--gap)); left: 50%; transform: translateX(-50%); }
+.figure-nav { position: absolute; top: 50%; transform: translateY(-50%); }
+.figure-previous { left: calc(1.5 * var(--gap)); }
+.figure-next { right: calc(1.5 * var(--gap)); }
+.figure-pill { appearance: none; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; min-width: var(--control);
+  height: var(--control); padding: 0 calc(1.5 * var(--gap)); border-radius: 999px; font: 600 var(--label-size)/1 var(--sans);
+  font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--text); cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--text) 12%, transparent); background: color-mix(in srgb, var(--card) 72%, transparent);
+  -webkit-backdrop-filter: saturate(1.4) blur(var(--glass-blur)); backdrop-filter: saturate(1.4) blur(var(--glass-blur)); }
+.figure-pill:has(> svg) { padding: 0; }
+.figure-pill[hidden] { display: none; }
+.figure-count { cursor: default; }
+.figure-actual { min-width: calc(2 * var(--control)); }
+@media (hover: hover) { button.figure-pill:hover { background: color-mix(in srgb, var(--card) 90%, transparent); } }
+button.figure-pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (pointer: coarse) { .figure-pill { min-width: var(--touch); height: var(--touch); } .figure-actual { min-width: calc(2 * var(--touch)); } }
+
+/* 스크롤 막대와 마스크는 실제로 스크롤되는 상자에 둔다. Claude 패널은 페이지가 움직이지 않고 `.chat`만 스크롤되므로,
+   `html { scrollbar-width: none }`이나 문서에서 읽은 가장자리는 효과가 없었다. 양 끝 색은 @property로 등록해야 같은
+   0.15s 동안 서서히 바뀐다. */
+@property --fade-start { syntax: "<color>"; inherits: false; initial-value: #000; }
+@property --fade-end { syntax: "<color>"; inherits: false; initial-value: #000; }
+.edge-fade { scrollbar-width: none; transition: --fade-start .15s ease-out, --fade-end .15s ease-out;
+  mask-image: linear-gradient(to bottom, var(--fade-start), #000 var(--fade), #000 calc(100% - var(--fade)), var(--fade-end)); }
+.edge-fade::-webkit-scrollbar { display: none; }
+.edge-fade.past-start { --fade-start: transparent; }
+.edge-fade.past-end { --fade-end: transparent; }

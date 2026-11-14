@@ -1,9 +1,6 @@
 [env]
-# Use Xcode's toolchain in this repo only; the global xcode-select points at Command Line Tools,
-# which has no iPadOS SDK.
+# 전역 xcode-select는 iPadOS SDK가 없는 Command Line Tools를 가리키므로, 이 저장소에서만 Xcode 툴체인을 쓴다.
 DEVELOPER_DIR = "/Applications/Xcode.app/Contents/Developer"
-# Every xcodebuild builds into the checkout instead of ~/Library/Developer/Xcode/DerivedData, whose folder is keyed
-# by the project path: each agent worktree would leave a few GB there that nothing reuses once the worktree is gone.
 FOLIO_DERIVED_DATA = "{{config_root}}/.build/DerivedData"
 
 [tools]
@@ -17,10 +14,11 @@ description = "Generate Folio.xcodeproj from project.yml, with the version and b
 depends = ["tectonic"]
 run = ["scripts/version.sh xcconfig", "xcodegen generate"]
 
-# Every build of packages/folio-core links Tectonic, so every task that builds it depends on this one.
+# folio-lint는 Tectonic이 필요 없지만, SwiftPM은 Package.swift를 읽을 때마다 바이너리 타깃 폴더를 확인한다. 그래서 Swift 패키지를
+# 읽는 모든 작업이 이 작업에 의존한다.
 [tasks.tectonic]
-description = "Fetch Tectonic as a static library (FolioTectonic.xcframework) pinned in tectonic/pin.json, checked by sha256"
-run = "scripts/tectonic.sh"
+description = "Fetch Tectonic as a static library (FolioTectonic.xcframework) pinned in sources/tectonic/pin.json, checked by sha256"
+run = "sources/tectonic/fetch.sh"
 
 [tasks.version-bump]
 description = "Raise the version in FolioVersion: mise run version-bump -- major|minor|patch"
@@ -37,32 +35,28 @@ run = "scripts/version.sh tag"
 [tasks.test]
 description = "Run package tests, folio-lint (code, design and Application Support rules), SwiftLint and the swift-format check"
 depends = ["tectonic"]
-# fixtures and expectations are in Korean time, and Apple's date detector reads phrases like 내일 7시 in the
-# machine's zone, not the test calendar's; a UTC machine (CI) would fail them.
+# 픽스처와 기대값은 한국 시각 기준이다. Apple의 날짜 인식기는 `내일 7시` 같은 말을 테스트 달력이 아니라 기기의 시간대로
+# 읽으므로, UTC인 기기(CI)에서는 테스트가 실패한다.
 env = { TZ = "Asia/Seoul" }
-# folio-core is built once with its tests: `swift run` alone builds without testability and so compiles every module
-# again for the checks.
 run = [
-  "swift test --package-path packages/folio-markdown",
-  "swift build --build-tests --package-path packages/folio-core",
-  "swift test --skip-build --package-path packages/folio-core",
-  "swift test --package-path packages/folio-ai",
-  "swift run --skip-build -q --package-path packages/folio-core folio actions --check",
-  "swift run --skip-build -q --package-path packages/folio-core folio-gen --check",
-  # Release: debug swift-syntax takes some 20 seconds to parse the codebase, release two.
-  "swift build -q -c release --build-tests --package-path packages/folio-lint",
-  "swift test -c release --skip-build --package-path packages/folio-lint",
-  "swift run -q -c release --skip-build --package-path packages/folio-lint folio-lint",
+  "swift build --build-tests",
+  "swift test --skip-build",
+  "swift run --skip-build -q folio actions --check",
+  "swift run --skip-build -q folio-gen --check",
+  # debug로 빌드한 swift-syntax는 코드 전체를 읽는 데 20초쯤, release는 2초쯤 걸린다. release로 모든 모듈을 빌드하면 코드를
+  # 다시 컴파일하므로 folio-lint만 빌드한다(check-code와 같은 빌드를 함께 쓴다).
+  "swift build -q -c release --product folio-lint",
+  "swift run -q -c release --skip-build folio-lint",
   "swiftlint lint --quiet --strict --baseline .swiftlint-baseline.json",
   "scripts/swift-format.sh lint",
 ]
 
 [tasks.check-code]
-description = "Fail on the screen, string, layer, comment, design and Application Support rules a syntax tree can see, past the places in packages/folio-lint/baseline.txt; -- --update rewrites it"
-# Built with its tests, as in `test`, so the two tasks share one build.
+description = "Fail on the screen, string, layer, comment, design and Application Support rules a syntax tree can see, past the places in .folio-lint-baseline.txt; -- --update rewrites it"
+depends = ["tectonic"]
 run = [
-  "swift build -q -c release --build-tests --package-path packages/folio-lint",
-  "swift run -q -c release --skip-build --package-path packages/folio-lint folio-lint",
+  "swift build -q -c release --product folio-lint",
+  "swift run -q -c release --skip-build folio-lint",
 ]
 
 [tasks.swiftlint]
@@ -71,18 +65,17 @@ run = "swiftlint lint --quiet --strict --baseline .swiftlint-baseline.json"
 
 [tasks.swiftlint-baseline]
 description = "Rewrite .swiftlint-baseline.json from what SwiftLint finds now: only to drop fixed places or follow moved ones"
-# SwiftLint exits non-zero when it finds anything, which is what a baseline is written from.
+# SwiftLint는 찾은 것이 있으면 0이 아닌 값으로 끝나는데, 기준선은 바로 그 결과로 쓴다.
 run = "swiftlint lint --quiet --write-baseline .swiftlint-baseline.json > /dev/null || true"
 
 [tasks.lint]
 description = "Run folio-lint, SwiftLint and the swift-format check"
 depends = ["check-code", "swiftlint", "format-check"]
 
-# The swift-format in Xcode's toolchain (DEVELOPER_DIR above), so it needs no install. .swift-format turns off the
-# rules that would undo how Folio writes code: several statements or declarations on one line (`{ a(); b() }`,
-# `let x = 1, y = 2`, `case a, b`), `private extension`, `case let (a?, b?)`, `return x += 1`, `.forEach`, more than one
-# trailing closure, and uppercase DSL functions (folio-domain's model.swift). Doc comments aren't required or checked,
-# as Folio writes few.
+# .swift-format은 Folio의 코드 문체를 되돌리는 규칙을 끈다. 끈 규칙은 한 줄에 여러 문장이나 선언을 쓰는 것(`{ a(); b() }`,
+# `let x = 1, y = 2`, `case a, b`), `private extension`, `case let (a?, b?)`, `return x += 1`, `.forEach`, 후행 클로저 여러 개,
+# 대문자로 시작하는 DSL 함수(sources/domain의 model.swift)를 막는 규칙이다. Folio는 문서 주석을 거의 쓰지 않으므로 문서 주석
+# 규칙도 끈다.
 [tasks.format]
 description = "Format the Swift sources in place with swift-format (.swift-format)"
 run = "scripts/swift-format.sh format"
@@ -94,7 +87,7 @@ run = "scripts/swift-format.sh lint"
 [tasks.analyze]
 description = "Run SwiftLint's analyzer rules (unused imports and declarations) on a clean Mac build's compiler log"
 depends = ["generate"]
-# The analyzer reads the compiler's command for each file, so an incremental build would leave unchanged files out.
+# analyzer는 파일마다 컴파일러 명령을 읽으므로, 증분 빌드를 하면 바뀌지 않은 파일이 빠진다.
 run = [
   "mkdir -p .build",
   "xcodebuild -scheme Folio -destination 'platform=macOS' clean build -derivedDataPath \"$FOLIO_DERIVED_DATA\" -skipMacroValidation > .build/xcodebuild.log",
@@ -111,37 +104,35 @@ description = "Install the git hooks in lefthook.yml (swift-format, SwiftLint an
 run = "lefthook install"
 
 [tasks.gen-cli]
-description = "Write the CLI commands of the actions declared with @Action (sources/folio-cli/generated)"
+description = "Write the CLI commands of the actions declared with @Action (sources/cli/generated)"
 depends = ["tectonic"]
-run = "swift run -q --package-path packages/folio-core folio-gen"
+run = "swift run -q folio-gen"
 
 [tasks.fixture]
 description = "Write a fake GIST folder to run the app or the CLI on: mise run fixture -- <folder> [standard|legacy|busyDay|manyExams|quietDay|empty]"
 depends = ["tectonic"]
-run = "swift run -q --package-path packages/folio-core folio-fixture"
+run = "swift run -q folio-fixture"
 
 [tasks.cli]
 description = "Run the folio CLI"
 depends = ["tectonic"]
-run = "swift run --package-path packages/folio-core folio"
+run = "swift run folio"
 
 [tasks.install-cli]
 description = "Build folio in release mode into ~/.local/lib/folio, linked from ~/.local/bin, with its zsh completion"
 depends = ["tectonic"]
 run = [
-  "swift build -c release --package-path packages/folio-core --product folio",
-  # The string catalogs ship as resource bundles that must sit beside the binary, so both go in their own folder.
+  "swift build -c release --product folio",
+  # 문자열 카탈로그는 실행 파일 옆에 있어야 하는 리소스 번들이므로, 둘을 함께 전용 폴더에 둔다.
   "rm -rf ~/.local/lib/folio && mkdir -p ~/.local/lib/folio ~/.local/bin",
-  "install -m 755 packages/folio-core/.build/release/folio ~/.local/lib/folio/folio",
-  "cp -R packages/folio-core/.build/release/*.bundle ~/.local/lib/folio/",
+  "install -m 755 .build/release/folio ~/.local/lib/folio/folio",
+  "cp -R .build/release/*.bundle ~/.local/lib/folio/",
   "ln -sf ~/.local/lib/folio/folio ~/.local/bin/folio",
-  # zsh picks completions up from this fpath folder; other shells: folio completion bash|fish
   "mkdir -p ~/.local/share/zsh/site-functions",
   "~/.local/bin/folio completion zsh > ~/.local/share/zsh/site-functions/_folio",
 ]
 
-# -skipMacroValidation: FolioActions uses macros from the local FolioMacros target, which xcodebuild would
-# otherwise ask to trust interactively.
+# FolioActions는 로컬 FolioMacros 타깃의 매크로를 쓰는데, -skipMacroValidation이 없으면 xcodebuild가 신뢰할지 묻고 멈출 수 있다.
 [tasks.build-mac]
 description = "Build the app for macOS"
 depends = ["generate"]
@@ -150,11 +141,7 @@ run = "xcodebuild -scheme Folio -destination 'platform=macOS' build -quiet -deri
 [tasks.test-app]
 description = "Run the app's tests on macOS: screen models, and the note views against their reference screens"
 depends = ["generate"]
-# xcodebuild passes TEST_RUNNER_-prefixed variables to the tests without the prefix. A note-view picture that is missing
-# or differs from its reference lands in FOLIO_NOTE_SCREENS; FOLIO_NOTE_SCREENS_STRICT fails a run on a macOS other than
-# the one the references were made on, instead of skipping the comparison (CI sets it). FOLIO_TEST_PART=notes runs only
-# the slow note-view suites and FOLIO_TEST_PART=rest everything else, so CI can run the halves side by side; a new
-# suite lands in rest until it is listed here.
+# xcodebuild는 TEST_RUNNER_ 접두어가 붙은 변수만 접두어를 떼고 테스트에 넘긴다.
 run = """
 notes="NoteScreenTests NoteLayoutTests NoteClickGridTests NoteHangulTests NoteMathTests NoteTypingTests"
 case "${FOLIO_TEST_PART:-}" in
@@ -165,13 +152,12 @@ case "${FOLIO_TEST_PART:-}" in
 esac
 out="${FOLIO_NOTE_SCREENS:-.build/note-screens}"
 case "$out" in /*) ;; *) out="$PWD/$out" ;; esac
-# Only the pictures a run leaves: FOLIO_NOTE_SCREENS may name a folder that holds other files.
+# FOLIO_NOTE_SCREENS가 다른 파일이 든 폴더를 가리킬 수 있으므로, 실행이 남기는 그림만 지운다.
 if [ -d "$out" ]; then find "$out" -maxdepth 1 -type f -name '*.png' -delete; rm -f "$out/machine.txt"; fi
 rm -rf .build/test-app.xcresult
 status=0
 TEST_RUNNER_FOLIO_NOTE_SCREENS="$out" TEST_RUNNER_FOLIO_NOTE_SCREENS_STRICT="${FOLIO_NOTE_SCREENS_STRICT:-}" \
 xcodebuild -scheme Folio -destination 'platform=macOS' -resultBundlePath .build/test-app.xcresult test -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation $part $FOLIO_XCODEBUILD_FLAGS || status=$?
-# -quiet leaves out why a test failed; the summary has each failure's message.
 if [ "$status" -ne 0 ] && [ -d .build/test-app.xcresult ]; then
   xcrun xcresulttool get test-results summary --path .build/test-app.xcresult --compact
 fi
@@ -181,12 +167,10 @@ exit "$status"
 [tasks.test-a11y]
 description = "Audit the main screens with performAccessibilityAudit: UI tests that take the screen and keyboard, so CI runs them"
 depends = ["generate"]
-# The summary is printed whether the run passed or not: each finding is a failure message there, and a passing run
-# shows that the screens were visited.
 run = """
 rm -rf .build/test-a11y.xcresult
 status=0
-xcodebuild -scheme FolioUITests -destination 'platform=macOS' -resultBundlePath .build/test-a11y.xcresult test -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation -testLanguage ko -testRegion KR $FOLIO_XCODEBUILD_FLAGS || status=$?
+xcodebuild -scheme FolioE2ETests -destination 'platform=macOS' -resultBundlePath .build/test-a11y.xcresult test -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation -testLanguage ko -testRegion KR $FOLIO_XCODEBUILD_FLAGS || status=$?
 if [ -d .build/test-a11y.xcresult ]; then
   xcrun xcresulttool get test-results summary --path .build/test-a11y.xcresult --compact
 fi
@@ -200,8 +184,7 @@ run = """
 id=$(xcrun simctl list devices available | grep -m1 -E '^ +iPad' | grep -oE '[0-9A-F-]{36}')
 [ -n "$id" ] || { echo "no available iPad simulator" >&2; exit 1; }
 rm -rf .build/test-ipad.xcresult
-xcodebuild -scheme FolioPad -destination "platform=iOS Simulator,id=$id" -resultBundlePath .build/test-ipad.xcresult test -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation $FOLIO_XCODEBUILD_FLAGS
-# -quiet leaves out the tests themselves; the count shows they ran.
+xcodebuild -scheme Folio -destination "platform=iOS Simulator,id=$id" -resultBundlePath .build/test-ipad.xcresult test -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation $FOLIO_XCODEBUILD_FLAGS
 xcrun xcresulttool get test-results summary --path .build/test-ipad.xcresult --compact
 """
 
@@ -212,8 +195,8 @@ run = "scripts/note-screens.sh"
 [tasks.render]
 description = "Draw every page and sheet for each fixture scenario into FOLIO_RENDER_DIR (default .build/renders), with no window on screen"
 depends = ["generate"]
-# xcodebuild passes TEST_RUNNER_-prefixed variables to the tests without the prefix. Korean time and language keep the
-# scenarios' class times and dates the same on any machine. FOLIO_RENDER_SIZES, _SCREENS and _SCENARIOS narrow a run.
+# xcodebuild는 TEST_RUNNER_ 접두어가 붙은 변수만 접두어를 떼고 테스트에 넘긴다. 한국 시각과 한국어로 실행해야 상황의
+# 수업 시각과 날짜가 어느 기기에서나 같게 그려진다.
 run = """
 dir="${FOLIO_RENDER_DIR:-.build/renders}"
 case "$dir" in /*) ;; *) dir="$PWD/$dir" ;; esac
@@ -233,14 +216,13 @@ run = "xcodebuild -scheme Folio -configuration Release -destination 'platform=ma
 [tasks.install-mac]
 description = "Build this checkout's Release app and install it to /Applications"
 depends = ["build-release"]
-# Only the installed copy is stopped: a Debug build running from DerivedData shares the bundle ID, so quitting by
-# name or ID would take it down too. It is stopped before the copy so the bundle is replaced whole.
+# DerivedData에서 실행 중인 Debug 앱도 번들 ID가 같으므로, 이름이나 ID로 끄면 그 앱까지 꺼진다. 그래서 설치한 앱만 끈다.
+# 번들이 통째로 바뀌도록 복사하기 전에 끈다.
 run = """
 installed='^/Applications/Folio[.]app/Contents/MacOS/Folio( |$)'
 if pkill -f "$installed"; then
   for _ in $(seq 50); do pgrep -f "$installed" >/dev/null || break; sleep 0.2; done
 fi
-# The app was Coursebook.app before it was renamed; the old copy goes so only one remains.
 rm -rf /Applications/Coursebook.app /Applications/Folio.app
 ditto "$FOLIO_DERIVED_DATA/Build/Products/Release/Folio.app" /Applications/Folio.app
 """
@@ -252,11 +234,11 @@ run = "scripts/install-release.sh"
 [tasks.build-ipad]
 description = "Build the app for the iPad simulator (FOLIO_CONFIGURATION=Release for a Release build)"
 depends = ["generate"]
-# A generic destination builds every simulator architecture outside Debug; Intel's adds a second full compile of the
-# same code and nothing an iPad runs.
+# generic destination은 Debug가 아니면 모든 시뮬레이터 아키텍처를 빌드한다. Intel용은 같은 코드를 한 번 더 컴파일할 뿐이고
+# iPad에서 쓰이지 않으므로 ARCHS=arm64로 줄인다.
 run = "xcodebuild -scheme Folio -configuration \"${FOLIO_CONFIGURATION:-Debug}\" -destination 'generic/platform=iOS Simulator' ARCHS=arm64 build -quiet -derivedDataPath \"$FOLIO_DERIVED_DATA\" -skipMacroValidation $FOLIO_XCODEBUILD_FLAGS"
 
 [tasks.build-web]
-description = "Bundle the note page (KaTeX math, code highlighting, diagrams, note CSS) and the edit view's code highlighting into app/resources/web"
-dir = "web"
+description = "Bundle the note page (KaTeX math, code highlighting, diagrams, note CSS) and the edit view's code highlighting into sources/app/resources/web"
+dir = "sources/web"
 run = ["npm ci --ignore-scripts --no-audit --no-fund", "npm run build"]

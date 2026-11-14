@@ -1,14 +1,14 @@
 version: 2
 updates:
   - package-ecosystem: swift
-    directories: [/packages/folio-core, /packages/folio-markdown, /packages/folio-ai]
+    directory: /
     schedule: { interval: weekly }
     groups:
       swift: { patterns: ["*"] }
 
-  # A bump here does not rebuild app/resources/web; run mise run build-web on the PR before merging.
+  # 이 판 올리기는 sources/app/resources/web을 다시 묶지 않으므로, 머지하기 전에 그 PR에서 mise run build-web을 실행한다.
   - package-ecosystem: npm
-    directory: /web
+    directory: /sources/web
     schedule: { interval: weekly }
     groups:
       web: { patterns: ["*"] }

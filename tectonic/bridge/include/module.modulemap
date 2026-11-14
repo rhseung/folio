@@ -1,4 +1,0 @@
-module FolioTectonic {
-    header "folio_tectonic.h"
-    export *
-}
