@@ -10,6 +10,7 @@ struct SettingItemTests {
         full.review.dailyLimit = 10
         full.mathSnippets = []
         full.asciiMathSnippets = []
+        full.callouts = []
         full.classStart.preset = "in-class"
         func leaves(_ node: JSONValue, _ path: String) -> [String] {
             if SettingItem.all.contains(where: { $0.key == path }) { return [] }
@@ -24,6 +25,7 @@ struct SettingItemTests {
         full.review.dailyLimit = 10
         full.mathSnippets = []
         full.asciiMathSnippets = []
+        full.callouts = []
         full.classStart.preset = "in-class"
         let root = try json(full)
         for item in SettingItem.all {
@@ -39,6 +41,12 @@ struct SettingItemTests {
         for item in SettingItem.all {
             #expect((item.value(in: root) ?? .null) == item.fallback, "\(item.key)")
         }
+    }
+
+    @Test func calloutKindsReadWithTheirDefaults() throws {
+        let settings = try JSONDecoder().decode(Settings.self, from: Data(#"{"callouts": [{"name": "claim", "numbered": true}]}"#.utf8))
+        #expect(settings.callouts == [NoteCallout(name: "claim", tone: "neutral", numbered: true)])
+        #expect(try JSONDecoder().decode(Settings.self, from: Data("{}".utf8)).callouts == nil)
     }
 
     @Test func defaultsPassTheirOwnChecks() throws {

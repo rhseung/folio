@@ -71,7 +71,7 @@ public enum Completion {
         case .slash:
             return filter(catalog.slash, query.text)
         case .callout:
-            return filter(CalloutHeader.known.map { CompletionItem(id: "callout.\($0)", title: $0, body: $0) }, query.text)
+            return filter(catalog.callouts.names.map { CompletionItem(id: "callout.\($0)", title: $0, body: $0) }, query.text)
         case .codeLanguage:
             return filter(catalog.fenceNames.map { CompletionItem(id: "language.\($0)", title: $0, body: $0) }, query.text)
         case .texCommand:

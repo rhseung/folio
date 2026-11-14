@@ -1,7 +1,9 @@
 // Claude가 읽을 때마다 맥락에 들어가므로 짧게 쓴다. 다크 색은 두 모드에서 모두 잘 보였던 손으로 그린 그림의
 // 색이고, 대응하는 노트 토큰 옆에 둔다. 이미지로 보이는 그림은 페이지 변수를 읽지 못하므로 hex 값을 직접 가진다.
 public enum NoteWritingGuide {
-    public static let text = #"""
+    // 콜아웃 종류는 설정에 따라 달라지므로 FolioMarkdown의 표를 읽는 쪽이 넘긴다.
+    public static func text(callouts: [String], numbered: [String]) -> String {
+        #"""
         # Folio 노트 형식
 
         노트는 마크다운이다. 명령 이름은 MCP 도구에서 공백이 `_`가 된다(`note figure add` → `note_figure_add`).
@@ -9,7 +11,7 @@ public enum NoteWritingGuide {
         ## 수식, 콜아웃, 목차
         - 수식은 `$…$`, `$$…$$`. 문법은 노트의 `math`(기본 TeX). 블록 하나만 다르면 ```` ```asciimath ```` 펜스.
         - 콜아웃: `> [!종류] 제목` 다음 줄부터 `> 본문`. `[!종류]-`는 접힌 채, `[!종류]+`는 펼친 채 접을 수 있다.
-          종류: definition theorem lemma corollary proof example counterexample remark note tip warning important question solution summary abstract info danger. definition·theorem·lemma·corollary·example·counterexample은 번호가 붙는다(제목에 `1.2`를 쓰면 그 번호).
+          종류: \#(callouts.joined(separator: " ")). \#(numbered.joined(separator: "·"))은 번호가 붙는다(제목에 `1.2`를 쓰면 그 번호).
         - 한 줄에 홀로 쓴 `[TOC]`는 목차.
 
         ## 링크
@@ -42,4 +44,5 @@ public enum NoteWritingGuide {
         ## 그려 보기
         쓰기 전에 `note figure render <과목> --text <SVG>`, `note widget render <과목> --text <HTML>`로 라이트·다크, 폭 480·900에서 그린 그림을 본다(이미 쓴 것은 이름이나 ID로). 겹친 글자, 잘린 부분, 다크에서 사라진 색, 위젯의 콘솔 오류를 고친 뒤 쓴다.
         """#
+    }
 }

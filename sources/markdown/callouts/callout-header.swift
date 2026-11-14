@@ -14,15 +14,6 @@ public struct CalloutHeader: Hashable, Sendable {
         title = String(m.3)
     }
 
-    public static let numbered: Set<String> = ["definition", "theorem", "lemma", "corollary", "example", "counterexample"]
-
-    public static let provable: Set<String> = ["theorem", "lemma", "corollary", "proposition"]
-
-    public static let known: [String] = [
-        "definition", "theorem", "lemma", "corollary", "proof", "example", "counterexample", "remark", "note", "tip",
-        "warning", "important", "question", "solution", "summary", "abstract", "info", "danger",
-    ]
-
     public var explicitNumber: String? {
         title.firstMatch(of: /^(?:[A-Za-z]+\s+)?(\d+(?:\.\d+)*)\b/).map { String($0.1) }
     }

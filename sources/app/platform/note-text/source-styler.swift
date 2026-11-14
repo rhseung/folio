@@ -41,6 +41,7 @@ extension NSAttributedString {
     var syntax: MathSyntax
     var baseURL: URL?
     var dark: Bool
+    var callouts = CalloutTable.standard
 
     private static let heading = NSAttributedString.Key("folio.s.heading")
     private static let weight = NSAttributedString.Key("folio.s.weight")
@@ -69,48 +70,17 @@ extension NSAttributedString {
         let all = NSRange(location: 0, length: storage.length)
         let lines = Self.lines(text)
         let math = MathScan(text: text, lines: lines)
-        let masked = Footnotes.mask(DraftItem.mask(math.masked(text)))
+        let masked = NoteSyntax.masked(math.masked(text))
         let document = Document(parsing: masked)
         var w = Writer(storage: storage, columns: Columns(masked), text: text as NSString)
 
         storage.beginEditing()
         storage.setAttributes([.foregroundColor: NoteLook.text, .paragraphStyle: Self.paragraph()], range: all)
         w.walk(document, styler: self)
-        for i in DraftItem.dashes(in: text) {
-            w.set(
-                NSRange(location: i, length: 1),
-                [.foregroundColor: accent.native.withAlphaComponent(0.85), Self.weight: PlatformFont.Weight.semibold.rawValue])
-        }
-
-        for line in lines where !w.inCode(line) {
-            let s = (text as NSString).substring(with: line)
-            if let m = s.firstMatch(of: BlockID.pattern) { w.marks.append(Self.nsRange(m.range, in: s, at: line.location)) }
-        }
-        let masked16 = masked as NSString
-        for m in Self.escape.matches(in: masked, range: NSRange(location: 0, length: masked16.length)) where !w.inCode(m.range) {
-            w.marks.append(NSRange(location: m.range.location, length: 1))
-        }
-        for m in text.matches(of: WikiLink.pattern) {
-            let r = NSRange(m.range, in: text)
-            guard !w.inCode(r, orTable: false), !math.covers(r) else { continue }
-            let open = m.1.isEmpty ? 2 : 3
-            w.set(
-                r,
-                [
-                    .foregroundColor: accent.inkNative, Self.weight: PlatformFont.Weight.medium.rawValue,
-                    .noteWiki: WikiLink(m).target, .underlineStyle: NSUnderlineStyle.single.rawValue,
-                    .underlineColor: accent.native.withAlphaComponent(0.4),
-                ])
-            w.marks.append(NSRange(location: r.location, length: open))
-            w.marks.append(NSRange(location: NSMaxRange(r) - 2, length: 2))
-            if WikiLink(m).noteID != nil {
-                w.marks.append(NSRange(m.2.startIndex..<m.2.endIndex, in: text))
-                if let alias = m.5 {
-                    let bar = text.index(before: alias.startIndex)
-                    let escaped = bar > m.range.lowerBound && text[text.index(before: bar)] == "\\"
-                    w.marks.append(NSRange((escaped ? text.index(before: bar) : bar)..<alias.startIndex, in: text))
-                }
-            }
+        for span in NoteSyntax.spans(in: text, masked: masked) {
+            if let scope = span.scope, w.inCode(scope, orTable: span.tables) || (span.math && math.covers(scope)) { continue }
+            if let attributes = attributes(span.kind) { w.set(span.range, attributes) }
+            w.marks += span.marks
         }
         for (r, link) in AppLink.links(in: text) where !w.inCode(r, orTable: false) && !math.covers(r) {
             let taken =
@@ -123,13 +93,6 @@ extension NSAttributedString {
                     .foregroundColor: accent.inkNative, .noteHref: link.string, .underlineStyle: NSUnderlineStyle.single.rawValue,
                     .underlineColor: accent.native.withAlphaComponent(0.4),
                 ])
-        }
-        for mark in Footnotes.marks(in: text) where !w.inCode(mark.range) && !math.covers(mark.range) {
-            w.set(
-                mark.label,
-                [.foregroundColor: accent.inkNative, Self.weight: (mark.definition ? PlatformFont.Weight.semibold : .medium).rawValue])
-            w.marks.append(NSRange(location: mark.range.location, length: mark.label.location - mark.range.location))
-            w.marks.append(NSRange(location: NSMaxRange(mark.label), length: NSMaxRange(mark.range) - NSMaxRange(mark.label)))
         }
 
         for span in math.inline {
@@ -152,6 +115,23 @@ extension NSAttributedString {
         NoteLines.fix(storage)
         storage.endEditing()
         return storage
+    }
+
+    // 확장 문법(`NoteSyntax`)마다 편집 보기에서 입히는 속성이다.
+    private func attributes(_ kind: SourceSpan.Kind) -> [NSAttributedString.Key: Any]? {
+        switch kind {
+        case .listDash:
+            [.foregroundColor: accent.native.withAlphaComponent(0.85), Self.weight: PlatformFont.Weight.semibold.rawValue]
+        case .blockID, .escape:
+            nil
+        case .wikiLink(let target):
+            [
+                .foregroundColor: accent.inkNative, Self.weight: PlatformFont.Weight.medium.rawValue, .noteWiki: target,
+                .underlineStyle: NSUnderlineStyle.single.rawValue, .underlineColor: accent.native.withAlphaComponent(0.4),
+            ]
+        case .footnote(let definition):
+            [.foregroundColor: accent.inkNative, Self.weight: (definition ? PlatformFont.Weight.semibold : .medium).rawValue]
+        }
     }
 
     private func resolveFonts(_ storage: NSMutableAttributedString, _ all: NSRange) {
@@ -178,8 +158,6 @@ extension NSAttributedString {
         p.lineBreakStrategy = .hangulWordPriority
         return p
     }
-
-    static let escape = try! NSRegularExpression(pattern: #"\\[!-/:-@\[-`{-~]"#)
 
     static func lines(_ text: String) -> [NSRange] {
         let ns = text as NSString
@@ -316,7 +294,7 @@ extension NSAttributedString {
                 let s = w.text.substring(with: first)
                 if let m = s.firstMatch(of: /\[![A-Za-z-]+\][+-]?/) {
                     let type = Self.nsRange(m.range, in: s, at: first.location)
-                    let color = NoteLook.callout(header.type)
+                    let color = NoteLook.tone(callouts[header.type]?.tone ?? .neutral).native
                     w.set(type, [Self.weight: PlatformFont.Weight.bold.rawValue, .foregroundColor: color])
                     w.set(
                         NSRange(location: NSMaxRange(type), length: NSMaxRange(first) - NSMaxRange(type)),

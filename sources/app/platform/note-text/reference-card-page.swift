@@ -30,7 +30,8 @@ import WebKit
     }
 
     func load(
-        _ card: HTMLRenderer.ReferenceCard, math: String, accent: CourseAccent, baseURL: URL?, width: CGFloat, maxHeight: CGFloat,
+        _ card: HTMLRenderer.ReferenceCard, math: String, accent: CourseAccent, callouts: CalloutTable, baseURL: URL?, width: CGFloat,
+        maxHeight: CGFloat,
         done: @escaping (CGFloat) -> Void
     ) {
         hide()
@@ -40,7 +41,7 @@ import WebKit
         host.resize(CGSize(width: width, height: Theme.Space.xxs))
         files.root = LocalFileScheme.root(for: baseURL)
         let page =
-            "<!doctype html><html><head><meta charset=utf-8><style>\(NoteStyle.variables(accent: accent))\(NoteStyle.css)\(Self.css)</style></head>"
+            "<!doctype html><html><head><meta charset=utf-8><style>\(NoteStyle.variables(accent: accent))\(NoteStyle.css)\(NoteStyle.callouts(callouts))\(Self.css)</style></head>"
             + "<body class=\"note\" data-math=\"\(card.math ?? math)\">\(card.html)</body></html>"
         loading = web.loadHTMLString(page, baseURL: LocalFileScheme.base(for: baseURL))
     }

@@ -2563,6 +2563,17 @@
           }
         }
       }
+    },
+    "setting-item.callouts": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "콜아웃 종류"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

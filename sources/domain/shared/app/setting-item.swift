@@ -199,6 +199,7 @@ extension SettingItem {
         "review.quizRecheckDays", .number(1...60), 7, page: .review, name: .settingItemReviewQuizRecheckDays)
     public static let reviewWeights = SettingItem(
         "review.weights", .custom, encoded(PriorityWeights()), page: nil, name: .settingItemReviewWeights)
+    public static let callouts = SettingItem("callouts", .custom, .null, optional: true, page: .notes, name: .settingItemCallouts)
 
     public static let assignmentDue = SettingItem(
         "notifications.assignmentDue", .toggle, true, page: .notifications, name: .settingItemNotificationsAssignmentDue)
@@ -290,7 +291,7 @@ extension SettingItem {
         assignmentDue, assignmentLeadHours, examDayBefore, examDayBeforeMinute, examMorning, examMorningMinute, dailyReview,
         dailyReviewMinute, attendance,
         backupEnabled, backupFolder, backupDailyDays,
-        noteRules, noteTemplates, newNoteMath, mathSnippets, asciiMathSnippets,
+        noteRules, noteTemplates, newNoteMath, mathSnippets, asciiMathSnippets, callouts,
         classMinutes, classRecording, classRecordingOffset, classStopsRecording, classStopAfter, classRoughNote, classRoughNotePlace,
         classLecture, classLecturePlace, classOpenIn, classAllLectures, classResumesLecture, classScreen, classPreset, classCourseOff,
         sidebar, lmsKnown, lmsHandled, lmsSyncMinutes,

@@ -10,6 +10,6 @@ extension NoteCommand {
         static let configuration = CommandConfiguration(abstract: String(localized: .noteFormatAbstract))
         @OptionGroup var g: GlobalOptions
 
-        func run() throws { say(NoteWritingGuide.text) }
+        func run() throws { say(NoteWritingGuide.text(for: try? CLI.context(g).settings())) }
     }
 }

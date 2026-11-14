@@ -69,9 +69,9 @@ public enum InputGuide {
             Entry("menu.page", .menu, .phrase(.pageLink), note: .phrase(.lastPageFirst), [.key("[[…#page="), .result(.phrase(.pageList))]),
             Entry("menu.embed", .menu, .phrase(.embed), note: .phrase(.embedTargets), [.key("![["), .result(.phrase(.targetList))]),
             Entry(
-                "menu.callout", .menu, .phrase(.calloutKind), note: .list(CalloutHeader.known),
+                "menu.callout", .menu, .phrase(.calloutKind), note: .list(catalog.callouts.names),
                 [.key("> [!"), .result(.phrase(.kindList))],
-                keywords: CalloutHeader.known),
+                keywords: catalog.callouts.names),
             Entry(
                 "menu.language", .menu, .phrase(.codeLanguage), note: .list(languages), [.key("```"), .result(.phrase(.languageList))],
                 keywords: languages),

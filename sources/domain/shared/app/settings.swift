@@ -22,6 +22,8 @@ public struct Settings: Codable, Sendable, Equatable {
     public var schedule: ScheduleDefaults
     public var gradesUnlockMinutes: Int
     public var school: SchoolSettings
+    // 기본 종류 밖의 콜아웃 종류다. nil이면 기본 종류만 쓴다.
+    public var callouts: [NoteCallout]?
 
     public static let defaultNoteRules = SettingItem.noteRules.text
 
@@ -33,7 +35,7 @@ public struct Settings: Codable, Sendable, Equatable {
         asciiMathSnippets: [MathSnippet]? = nil, classStart: ClassStartSettings = .init(), panePresets: [PanePreset] = [],
         lms: LMSSettings = .init(), idleMinutes: Int = SettingItem.idleMinutes.int, todayExamDays: Int = SettingItem.todayExamDays.int,
         urgency: UrgencySettings = .init(), schedule: ScheduleDefaults = .init(),
-        gradesUnlockMinutes: Int = SettingItem.gradesUnlockMinutes.int, school: SchoolSettings = .init()
+        gradesUnlockMinutes: Int = SettingItem.gradesUnlockMinutes.int, school: SchoolSettings = .init(), callouts: [NoteCallout]? = nil
     ) {
         self.dayBoundaryMinutes = dayBoundaryMinutes
         self.review = review
@@ -55,6 +57,7 @@ public struct Settings: Codable, Sendable, Equatable {
         self.schedule = schedule
         self.gradesUnlockMinutes = gradesUnlockMinutes
         self.school = school
+        self.callouts = callouts
     }
 
     public init(from decoder: any Decoder) throws {
@@ -80,6 +83,7 @@ public struct Settings: Codable, Sendable, Equatable {
         schedule = try c.value(.schedule, or: d.schedule)
         gradesUnlockMinutes = try c.value(.gradesUnlockMinutes, or: d.gradesUnlockMinutes)
         school = try c.value(.school, or: d.school)
+        callouts = try c.decodeIfPresent([NoteCallout].self, forKey: .callouts)
     }
 
     public var presets: [PanePreset] { PanePreset.builtIn + panePresets }

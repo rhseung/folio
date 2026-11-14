@@ -6,15 +6,18 @@ public struct CompletionCatalog: Sendable {
     public var snippets: [Snippet]
     public var tex: Bool
     public var otherMath: [Snippet]
+    public var callouts: CalloutTable
 
     public init(
-        slash: [CompletionItem] = [], languages: [String] = [], snippets: [Snippet] = [], tex: Bool = true, otherMath: [Snippet] = []
+        slash: [CompletionItem] = [], languages: [String] = [], snippets: [Snippet] = [], tex: Bool = true, otherMath: [Snippet] = [],
+        callouts: CalloutTable = .standard
     ) {
         self.slash = slash
         self.languages = languages
         self.snippets = snippets
         self.tex = tex
         self.otherMath = otherMath
+        self.callouts = callouts
     }
 
     public var fenceNames: [String] {

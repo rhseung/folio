@@ -91,7 +91,7 @@ folio review skip EC4207/매칭 --dry-run
 ### 수식, 콜아웃, 목차
 - 수식은 `$…$`, `$$…$$`. 문법은 노트의 `math`(기본 TeX). 블록 하나만 다르면 ```` ```asciimath ```` 펜스.
 - 콜아웃: `> [!종류] 제목` 다음 줄부터 `> 본문`. `[!종류]-`는 접힌 채, `[!종류]+`는 펼친 채 접을 수 있다.
-  종류: definition theorem lemma corollary proof example counterexample remark note tip warning important question solution summary abstract info danger. definition·theorem·lemma·corollary·example·counterexample은 번호가 붙는다(제목에 `1.2`를 쓰면 그 번호).
+  종류: definition theorem lemma corollary proposition proof example counterexample remark note tip warning important question solution summary abstract info danger. definition·theorem·lemma·corollary·example·counterexample은 번호가 붙는다(제목에 `1.2`를 쓰면 그 번호).
 - 한 줄에 홀로 쓴 `[TOC]`는 목차.
 
 ### 링크

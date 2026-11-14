@@ -1,3 +1,5 @@
+import FolioMarkdown
+
 #if os(macOS)
 import AppKit
 typealias PlatformFont = NSFont
@@ -54,22 +56,24 @@ enum NoteLook {
     static let lineSoft = Swatch.lineSoft.native
     static let fill = Swatch.fill.native
     static let card = Swatch.card.native
-    static let danger = preset("red").accent
 
     static func preset(_ name: String) -> (accent: PlatformColor, ink: PlatformColor) {
         let a = CourseAccent.presets.first { $0.name == name }?.accent ?? .gray
         return (a.native, a.inkNative)
     }
 
-    static func callout(_ type: String) -> PlatformColor {
-        switch type {
-        case "definition", "info", "note", "abstract": preset("blue").accent
-        case "theorem", "lemma", "corollary", "proposition": preset("violet").accent
-        case "example", "counterexample", "tip", "summary", "solution": preset("green").accent
-        case "warning", "important", "question": preset("orange").accent
-        case "danger": danger
-        default: CourseAccent.gray.native
-        }
+    // 편집 보기의 콜아웃 색과 페이지의 `--c-<tone>` 변수가 함께 읽는다. 표에 없는 종류는 `neutral`의 회색이다.
+    static func tone(_ tone: CalloutKind.Tone) -> CourseAccent {
+        let name =
+            switch tone {
+            case .definition: "blue"
+            case .theorem: "violet"
+            case .example: "green"
+            case .warning: "orange"
+            case .danger: "red"
+            case .neutral: ""
+            }
+        return CourseAccent.presets.first { $0.name == name }?.accent ?? .gray
     }
 
     // 하이라이터의 `tok-*` class(resources/web/native.js)에 따라 색을 정한다.

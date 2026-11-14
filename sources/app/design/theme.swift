@@ -1,4 +1,5 @@
 import FolioDomain
+import FolioMarkdown
 import SwiftUI
 
 enum Theme {
@@ -317,6 +318,8 @@ enum Theme {
 
 extension EnvironmentValues {
     @Entry var accent: CourseAccent = .gray
+    // 노트를 그리는 보기(미리보기, Claude 패널)가 읽는 콜아웃 종류 표다. 창이 설정에서 만들어 넣는다.
+    @Entry var noteCallouts: CalloutTable = .standard
 }
 
 extension View {

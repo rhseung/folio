@@ -1,4 +1,6 @@
 import FolioDomain
+import FolioMarkdown
+import FolioStorage
 import SwiftUI
 
 struct RootView: View {
@@ -10,6 +12,7 @@ struct RootView: View {
     @State var tabs: WindowTabs
     let request: WindowRequest?
     @State private var addingSemester = false
+    private var callouts: CalloutTable { CalloutTable(workspace.settings) }
     @State private var addingCourse = false
     @State private var toggledTerms: Set<UUID> = []
     @State private var hoveredTerm: UUID?
@@ -203,6 +206,7 @@ struct RootView: View {
                         }
                 }
                 .environment(\.openLink, openLink)
+                .environment(\.noteCallouts, callouts)
                 .environment(\.sheetRoom, contentHeight)
                 .onGeometryChange(for: CGFloat.self) {
                     $0.size.height - $0.safeAreaInsets.top - $0.safeAreaInsets.bottom

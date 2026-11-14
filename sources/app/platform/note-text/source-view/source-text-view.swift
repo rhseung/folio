@@ -32,8 +32,11 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     func configure(accent: CourseAccent, syntax: MathSyntax, dark: Bool) {
         accentColors(accent)
         self.accent = accent
-        let next = SourceStyler(accent: accent, syntax: syntax, baseURL: baseURL, dark: dark)
-        let changed = styler.map { $0.accent != accent || $0.syntax != syntax || $0.dark != dark || $0.baseURL != baseURL } ?? true
+        let callouts = assisting?.0.callouts ?? .standard
+        let next = SourceStyler(accent: accent, syntax: syntax, baseURL: baseURL, dark: dark, callouts: callouts)
+        let changed =
+            styler.map { $0.accent != accent || $0.syntax != syntax || $0.dark != dark || $0.baseURL != baseURL || $0.callouts != callouts }
+            ?? true
         styler = next
         if changed { restyle() }
     }
@@ -301,6 +304,10 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         if let assisting, assisting.0 == assist, assisting.1 == syntax { return }
         assisting = (assist, syntax)
         catalog = assist.catalog(syntax: syntax)
+        if let styler, styler.callouts != assist.callouts {
+            self.styler?.callouts = assist.callouts
+            restyle()
+        }
         if let links = assist.links {
             completion.more = { [weak self] query in
                 guard let self else { return [] }
@@ -514,14 +521,18 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
 
     private func showCard(_ link: WikiLink, range: NSRange) {
         guard let cards, let styler, hovered == range, !hasMarkedText(), !completion.visible, let scroll = enclosingScrollView,
-            let content = HTMLRenderer.referenceCard(link, embeds: cards.embeds(revision: cardsRevision, text: string))
+            let content = HTMLRenderer.referenceCard(
+                link, embeds: cards.embeds(revision: cardsRevision, text: string), callouts: styler.callouts)
         else { return }
         let page = card ?? ReferenceCardPage()
         card = page
         if page.host.superview !== scroll { scroll.addSubview(page.host) }
         let width = min(columnWidth, scroll.bounds.width - 2 * Theme.Space.s)
         let tallest = (scroll.bounds.height / 2).rounded()
-        page.load(content, math: styler.syntax.rawValue, accent: accent, baseURL: baseURL, width: width, maxHeight: tallest) {
+        page.load(
+            content, math: styler.syntax.rawValue, accent: accent, callouts: styler.callouts, baseURL: baseURL, width: width,
+            maxHeight: tallest
+        ) {
             [weak self] height in
             guard let self, self.hovered == range, !self.hasMarkedText(), !self.completion.visible else { return }
             self.placeCard(page, range: range, size: CGSize(width: width, height: min(height, tallest)))
@@ -836,8 +847,11 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
 
     func configure(accent: CourseAccent, syntax: MathSyntax, dark: Bool) {
         accentColors(accent)
-        let next = SourceStyler(accent: accent, syntax: syntax, baseURL: baseURL, dark: dark)
-        let changed = styler.map { $0.accent != accent || $0.syntax != syntax || $0.dark != dark || $0.baseURL != baseURL } ?? true
+        let callouts = assisting?.0.callouts ?? .standard
+        let next = SourceStyler(accent: accent, syntax: syntax, baseURL: baseURL, dark: dark, callouts: callouts)
+        let changed =
+            styler.map { $0.accent != accent || $0.syntax != syntax || $0.dark != dark || $0.baseURL != baseURL || $0.callouts != callouts }
+            ?? true
         styler = next
         if changed { restyle() }
     }
@@ -862,6 +876,10 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
         if let assisting, assisting.0 == assist, assisting.1 == syntax { return }
         assisting = (assist, syntax)
         catalog = assist.catalog(syntax: syntax)
+        if let styler, styler.callouts != assist.callouts {
+            self.styler?.callouts = assist.callouts
+            restyle()
+        }
     }
 
     var caretFence: MathSyntax? {
