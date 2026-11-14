@@ -2036,7 +2036,7 @@
         }
       }
     },
-    "setting-item.notifications.assignment-due": {
+    "setting-item.notifications.assignment-due.on": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -2047,7 +2047,7 @@
         }
       }
     },
-    "setting-item.notifications.assignment-lead-hours": {
+    "setting-item.notifications.assignment-due.lead-hours": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -2058,7 +2058,7 @@
         }
       }
     },
-    "setting-item.notifications.exam-day-before": {
+    "setting-item.notifications.exam-day-before.on": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -2069,7 +2069,7 @@
         }
       }
     },
-    "setting-item.notifications.exam-day-before-minute": {
+    "setting-item.notifications.exam-day-before.minute": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -2080,7 +2080,7 @@
         }
       }
     },
-    "setting-item.notifications.exam-morning": {
+    "setting-item.notifications.exam-morning.on": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -2091,7 +2091,7 @@
         }
       }
     },
-    "setting-item.notifications.exam-morning-minute": {
+    "setting-item.notifications.exam-morning.minute": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -2102,7 +2102,7 @@
         }
       }
     },
-    "setting-item.notifications.daily-review": {
+    "setting-item.notifications.daily-review.on": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -2113,7 +2113,7 @@
         }
       }
     },
-    "setting-item.notifications.daily-review-minute": {
+    "setting-item.notifications.daily-review.minute": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -2124,7 +2124,7 @@
         }
       }
     },
-    "setting-item.notifications.attendance": {
+    "setting-item.notifications.attendance.on": {
       "extractionState": "manual",
       "localizations": {
         "ko": {

@@ -331,7 +331,7 @@ extension Settings: Document {
             !s.review.intervals.isEmpty && s.review.intervals.allSatisfy { (1...365).contains($0) }
         }
         Rule("Settings.assignmentLeadHours", String(localized: .ruleSettingsAssignmentLeadHours)) { s, _ in
-            s.notifications.assignmentLeadHours.allSatisfy { (1...336).contains($0) }
+            (s.notifications[.assignmentDue].leadHours ?? []).allSatisfy { SettingItem.assignmentLeadHours.range.contains($0) }
         }
         Rule("Settings.assignmentKinds", String(localized: .ruleSettingsAssignmentKinds)) { s, _ in
             let prefixes = s.assignmentKindTable.map(\.prefix)

@@ -354,15 +354,16 @@ private struct NotificationSettingsForm: View {
     @Binding var settings: NotificationSettings
 
     var body: some View {
+        let due = settings[.assignmentDue].on
         Block(String(localized: .settingsAssignments)) {
             Card {
-                FormRow(label: String(localized: .settingsDueAlert), last: !settings.assignmentDue) {
-                    Switch(isOn: $settings.assignmentDue)
+                FormRow(label: String(localized: .settingsDueAlert), last: !due) {
+                    Switch(isOn: on(.assignmentDue))
                 }
-                if settings.assignmentDue {
+                if due {
                     FormRow(label: String(localized: .settingsAlertLead), last: true) {
                         IntListField(
-                            values: $settings.assignmentLeadHours, unit: String(localized: .settingsUnitHoursBefore),
+                            values: leadHours(.assignmentDue), unit: String(localized: .settingsUnitHoursBefore),
                             range: SettingItem.assignmentLeadHours.range)
                     }
                 }
@@ -370,27 +371,45 @@ private struct NotificationSettingsForm: View {
         }
         Block(String(localized: .settingsExams)) {
             Card {
-                FormRow(label: String(localized: .settingsDayBefore)) {
-                    TimeMenu(minute: $settings.examDayBeforeMinute).disabled(!settings.examDayBefore).opacity(
-                        settings.examDayBefore ? 1 : Theme.Opacity.disabled)
-                    Switch(isOn: $settings.examDayBefore)
-                }
-                FormRow(label: String(localized: .settingsMorningOf), last: true) {
-                    TimeMenu(minute: $settings.examMorningMinute).disabled(!settings.examMorning).opacity(
-                        settings.examMorning ? 1 : Theme.Opacity.disabled)
-                    Switch(isOn: $settings.examMorning)
-                }
+                FormRow(label: String(localized: .settingsDayBefore)) { timed(.examDayBefore) }
+                FormRow(label: String(localized: .settingsMorningOf), last: true) { timed(.examMorning) }
             }
         }
         Block(String(localized: .settingsReviewAndAttendance)) {
             Card {
-                FormRow(label: String(localized: .settingsDailyReview)) {
-                    TimeMenu(minute: $settings.dailyReviewMinute).disabled(!settings.dailyReview).opacity(
-                        settings.dailyReview ? 1 : Theme.Opacity.disabled)
-                    Switch(isOn: $settings.dailyReview)
-                }
-                FormRow(label: String(localized: .settingsAttendanceAlert), last: true) { Switch(isOn: $settings.attendance) }
+                FormRow(label: String(localized: .settingsDailyReview)) { timed(.dailyReview) }
+                FormRow(label: String(localized: .settingsAttendanceAlert), last: true) { Switch(isOn: on(.attendance)) }
             }
+        }
+    }
+
+    @ViewBuilder private func timed(_ kind: NotificationSettings.Kind) -> some View {
+        let isOn = settings[kind].on
+        TimeMenu(minute: minute(kind)).disabled(!isOn).opacity(isOn ? 1 : Theme.Opacity.disabled)
+        Switch(isOn: on(kind))
+    }
+
+    private func on(_ kind: NotificationSettings.Kind) -> Binding<Bool> {
+        Binding {
+            settings[kind].on
+        } set: {
+            settings[kind].on = $0
+        }
+    }
+
+    private func minute(_ kind: NotificationSettings.Kind) -> Binding<Int> {
+        Binding {
+            settings[kind].minute ?? kind.item(.minute)?.int ?? 0
+        } set: {
+            settings[kind].minute = $0
+        }
+    }
+
+    private func leadHours(_ kind: NotificationSettings.Kind) -> Binding<[Int]> {
+        Binding {
+            settings[kind].leadHours ?? []
+        } set: {
+            settings[kind].leadHours = $0
         }
     }
 }

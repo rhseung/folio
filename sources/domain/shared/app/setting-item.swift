@@ -201,28 +201,29 @@ extension SettingItem {
         "review.weights", .custom, encoded(PriorityWeights()), page: nil, name: .settingItemReviewWeights)
     public static let callouts = SettingItem("callouts", .custom, .null, optional: true, page: .notes, name: .settingItemCallouts)
 
+    // 알림 종류마다 `notifications.<종류>.<칸>`이다. `NotificationSettings.Kind.item`이 이 키로 종류의 칸과 기본값을 찾는다.
     public static let assignmentDue = SettingItem(
-        "notifications.assignmentDue", .toggle, true, page: .notifications, name: .settingItemNotificationsAssignmentDue)
+        "notifications.assignmentDue.on", .toggle, true, page: .notifications, name: .settingItemNotificationsAssignmentDueOn)
     public static let assignmentLeadHours = SettingItem(
-        "notifications.assignmentLeadHours", .numbers(1...336), [24, 3], page: .notifications,
-        name: .settingItemNotificationsAssignmentLeadHours)
+        "notifications.assignmentDue.leadHours", .numbers(1...336), [24, 3], page: .notifications,
+        name: .settingItemNotificationsAssignmentDueLeadHours)
     public static let examDayBefore = SettingItem(
-        "notifications.examDayBefore", .toggle, true, page: .notifications, name: .settingItemNotificationsExamDayBefore)
+        "notifications.examDayBefore.on", .toggle, true, page: .notifications, name: .settingItemNotificationsExamDayBeforeOn)
     public static let examDayBeforeMinute = SettingItem(
-        "notifications.examDayBeforeMinute", .time(0...24 * 60 - 1), .number(21 * 60), page: .notifications,
+        "notifications.examDayBefore.minute", .time(0...24 * 60 - 1), .number(21 * 60), page: .notifications,
         name: .settingItemNotificationsExamDayBeforeMinute)
     public static let examMorning = SettingItem(
-        "notifications.examMorning", .toggle, true, page: .notifications, name: .settingItemNotificationsExamMorning)
+        "notifications.examMorning.on", .toggle, true, page: .notifications, name: .settingItemNotificationsExamMorningOn)
     public static let examMorningMinute = SettingItem(
-        "notifications.examMorningMinute", .time(0...24 * 60 - 1), .number(8 * 60), page: .notifications,
+        "notifications.examMorning.minute", .time(0...24 * 60 - 1), .number(8 * 60), page: .notifications,
         name: .settingItemNotificationsExamMorningMinute)
     public static let dailyReview = SettingItem(
-        "notifications.dailyReview", .toggle, true, page: .notifications, name: .settingItemNotificationsDailyReview)
+        "notifications.dailyReview.on", .toggle, true, page: .notifications, name: .settingItemNotificationsDailyReviewOn)
     public static let dailyReviewMinute = SettingItem(
-        "notifications.dailyReviewMinute", .time(0...24 * 60 - 1), .number(9 * 60), page: .notifications,
+        "notifications.dailyReview.minute", .time(0...24 * 60 - 1), .number(9 * 60), page: .notifications,
         name: .settingItemNotificationsDailyReviewMinute)
     public static let attendance = SettingItem(
-        "notifications.attendance", .toggle, true, page: .notifications, name: .settingItemNotificationsAttendance)
+        "notifications.attendance.on", .toggle, true, page: .notifications, name: .settingItemNotificationsAttendanceOn)
 
     public static let backupEnabled = SettingItem("backup.enabled", .toggle, true, page: .backup, name: .settingItemBackupEnabled)
     public static let backupFolder = SettingItem(
