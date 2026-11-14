@@ -54,7 +54,7 @@ struct GenerateCardsSheet: View {
                     }
                 }
                 .overflowFade(.vertical)
-                .frame(maxHeight: 420)
+                .frame(maxHeight: Theme.Size.cardDrafts)
             }
         } onConfirm: {
             guard model.confirm() else { return }

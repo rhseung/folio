@@ -44,7 +44,11 @@ struct ReviewView: View {
                 footer()
             }
             .clipped()
-            .frame(minWidth: 860, idealWidth: model.side == nil ? 960 : 1280, minHeight: 640, idealHeight: 760)
+            .frame(
+                minWidth: Theme.Size.reviewWindowMin.width,
+                idealWidth: model.side == nil ? Theme.Size.sheetWindow.width : Theme.Size.reviewWindowWide,
+                minHeight: Theme.Size.reviewWindowMin.height, idealHeight: Theme.Size.sheetWindow.height
+            )
             .background(Theme.Palette.card)
             .foregroundStyle(Theme.Palette.text)
             .font(Theme.Typeface.body)
@@ -52,7 +56,7 @@ struct ReviewView: View {
             .task(id: model.unitId) { model.load(course: course, unit: unit) }
         } else {
             ContentUnavailableView(String(localized: .reviewNotFound), systemImage: "questionmark.folder")
-                .frame(minWidth: 480, minHeight: 320)
+                .frame(minWidth: Theme.Size.emptyWindow.width, minHeight: Theme.Size.emptyWindow.height)
                 .toolbar { Button(.commonClose) { dismiss() } }
         }
     }
@@ -156,13 +160,13 @@ struct ReviewView: View {
                             Text("\(result.shortcut)")
                                 .font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit()
                                 .foregroundStyle(Theme.Palette.textTertiary)
-                                .frame(width: 16, height: 16)
+                                .frame(width: Theme.Size.smallIcon, height: Theme.Size.smallIcon)
                                 .overlay(RoundedRectangle(cornerRadius: Theme.Radius.small).strokeBorder(Theme.Palette.line))
                             Text(result.label).font(Theme.Typeface.bodyStrong)
                         }
                         Text(outcomes[result] ?? " ").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                     }
-                    .frame(minWidth: 96)
+                    .frame(minWidth: Theme.Size.choiceButton)
                     .padding(.vertical, Theme.Space.s)
                     .background(
                         result == .again ? Theme.Palette.dangerFill : Theme.Palette.fill, in: .rect(cornerRadius: Theme.Radius.control)
@@ -181,7 +185,7 @@ struct ReviewView: View {
     func finish(_ result: ReviewResult) {
         model.record(result)
         guard !model.isLast else { return dismiss() }
-        withAnimation(.snappy(duration: 0.45)) { model.advance() }
+        withAnimation(Theme.Motion.settle) { model.advance() }
     }
 }
 

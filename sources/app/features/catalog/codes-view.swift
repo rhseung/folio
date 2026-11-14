@@ -11,7 +11,7 @@ struct CodesView: View {
         CatalogEditing { $catalog in
             Page {
                 PageHeader(title: String(localized: .codesTitle), subtitle: model.subtitle(catalog))
-                SearchField(prompt: String(localized: .codesSearch), text: $model.query).frame(maxWidth: 320)
+                SearchField(prompt: String(localized: .codesSearch), text: $model.query).frame(maxWidth: Theme.Size.pageSearch)
                 let programs = model.programs(in: catalog)
                 ForEach(programs, id: \.self) { program in
                     let shown = model.shown(program, in: catalog)
@@ -95,7 +95,10 @@ private struct CodeTile: View {
         .frame(maxWidth: .infinity, minHeight: Self.height, maxHeight: Self.height, alignment: .topLeading)
         .background(accent?.tint ?? .clear, in: .rect(cornerRadius: Theme.Radius.card))
         .background(Theme.Palette.card, in: .rect(cornerRadius: Theme.Radius.card))
-        .overlay(RoundedRectangle(cornerRadius: Theme.Radius.card).strokeBorder(accent?.color.opacity(0.35) ?? Theme.Palette.lineSoft))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.card).strokeBorder(
+                accent?.color.opacity(Theme.Opacity.toneEdge) ?? Theme.Palette.lineSoft)
+        )
         .contentShape(.rect)
         .pointingHand()
     }

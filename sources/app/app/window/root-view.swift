@@ -587,7 +587,7 @@ struct RootView: View {
                     QuickAddField(
                         workspace: workspace, defaultCourse: navigator.current.course, showsEmptyChips: true, focusOnAppear: true,
                         floating: true
-                    ).padding(Theme.Space.l).frame(width: 440)
+                    ).padding(Theme.Space.l).frame(width: Theme.Size.popoverWide)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             timerButton

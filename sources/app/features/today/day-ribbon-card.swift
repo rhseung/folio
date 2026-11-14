@@ -122,7 +122,7 @@ struct DayRibbonCard: View {
             ) {
                 SuggestedSessionRow(item: suggested, showsCourse: true, openNote: openNote(item.courseId))
                     .padding(Theme.Space.m)
-                    .frame(width: 420)
+                    .frame(width: Theme.Size.popoverWide)
             }
             .contextMenu {
                 SuggestedSessionItems(item: suggested, primary: true, openNote: openNote(item.courseId))
@@ -158,7 +158,7 @@ struct DayRibbonCard: View {
             .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
         }
         .padding(Theme.Space.l)
-        .frame(width: 280, alignment: .leading)
+        .frame(width: Theme.Size.hoverCard, alignment: .leading)
         .background(Theme.Palette.card)
     }
 

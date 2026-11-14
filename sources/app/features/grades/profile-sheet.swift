@@ -17,7 +17,7 @@ struct ProfileSheet: View {
             }
         }
         .padding(Theme.Space.xl)
-        .frame(width: 520)
+        .frame(width: Theme.Size.profileSheet)
         .background(Theme.Palette.page)
         .font(Theme.Typeface.body)
         .controlSize(.large)

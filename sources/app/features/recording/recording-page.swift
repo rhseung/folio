@@ -34,7 +34,7 @@ struct RecordingPage: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 if model.hasLines {
-                    TextField(String(localized: .recordingSearch), text: $model.query).pill(width: 180)
+                    TextField(String(localized: .recordingSearch), text: $model.query).pill(width: Theme.Size.textField)
                 }
                 PageMenuButton {
                     ItemMenu(source: RecordingMenuSource(model: model, host: .own, remove: { deleting = true }, openLink: openLink))
@@ -242,8 +242,8 @@ struct RecordingPage: View {
                 Image(systemName: "goforward.15")
             }.help(Text(.recordingForward15))
             Text(RecordingTime.label(player.time)).monospacedDigit().foregroundStyle(Theme.Palette.textSecondary).frame(
-                width: 56, alignment: .trailing)
-            track.frame(height: 20)
+                width: Theme.Size.playerTime, alignment: .trailing)
+            track.frame(height: Theme.Size.scrubTrack)
             Menu(String(format: "%gx", player.rate)) {
                 ForEach([1.0, 1.25, 1.5, 1.75, 2.0], id: \.self) { rate in Button(String(format: "%gx", rate)) { player.rate = Float(rate) }
                 }
@@ -261,16 +261,16 @@ struct RecordingPage: View {
             let length = max(player.duration, 1)
             let x = w * CGFloat(min(player.time / length, 1))
             ZStack(alignment: .leading) {
-                Capsule().fill(Theme.Palette.fill).frame(height: 6)
-                Capsule().fill(accent.color).frame(width: max(6, x), height: 6)
+                Capsule().fill(Theme.Palette.fill).frame(height: Theme.Size.track)
+                Capsule().fill(accent.color).frame(width: max(Theme.Size.track, x), height: Theme.Size.track)
                 ForEach(recording.bookmarks, id: \.self) { mark in
-                    Capsule().fill(Theme.Palette.warning).frame(width: 4, height: 12)
+                    Capsule().fill(Theme.Palette.warning).frame(Theme.Size.trackMark)
                         .offset(x: w * CGFloat(mark / length) - 2)
                 }
                 Circle().fill(.white)  // design: one-off, a slider knob stays white in both appearances, as in the system
-                    .frame(width: 14, height: 14)  // design: one-off, the system slider knob's size
-                    .shadow(color: .black.opacity(0.25), radius: 2, y: 1)  // design: one-off, and its shadow
-                    .offset(x: min(max(x - 7, 0), w - 14))
+                    .frame(width: Theme.Size.knob, height: Theme.Size.knob)
+                    .shadow(Theme.Shadow.knob)
+                    .offset(x: min(max(x - Theme.Size.knob / 2, 0), w - Theme.Size.knob))
             }
             .frame(maxHeight: .infinity)
             .contentShape(.rect)
@@ -289,7 +289,9 @@ struct RecordingPage: View {
                 model.jump(to: line.start); hold()
             } label: {
                 Text(RecordingTime.label(line.start)).font(Theme.Typeface.label).monospacedDigit()
-                    .foregroundStyle(playing ? accent.ink : Theme.Palette.textTertiary).frame(width: 52, alignment: .leading)
+                    .foregroundStyle(playing ? accent.ink : Theme.Palette.textTertiary).frame(
+                        width: Theme.Size.transcriptTime, alignment: .leading
+                    )
                     .contentShape(.rect)
             }
             .buttonStyle(.pointing(.plain))

@@ -26,7 +26,7 @@ struct DdayChip: View {
             .phaseAnimator([false, true], trigger: urgent) { chip, lit in
                 chip.scaleEffect(lit && urgent ? 1.06 : 1)
             } animation: { _ in
-                .easeInOut(duration: 0.5)
+                Theme.Motion.pulse
             }
     }
 }

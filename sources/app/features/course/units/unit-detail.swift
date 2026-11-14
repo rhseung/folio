@@ -206,7 +206,7 @@ struct UnitDetail: View {
             }
             .font(Theme.Typeface.caption)
         }
-        .frame(width: 84, alignment: .leading)
+        .frame(width: Theme.Size.dateColumn, alignment: .leading)
         let title = model.classTitle(s, besides: unit, in: file)
         Text(title ?? String(localized: .sessionsClass))
             .font(Theme.Typeface.bodyStrong).foregroundStyle(title == nil ? Theme.Palette.textTertiary : Theme.Palette.text)

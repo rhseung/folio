@@ -227,7 +227,7 @@ struct TextFileView: View {
                 .padding(.vertical, Theme.Space.xs)
             }
             .overflowFade(.vertical)
-            .frame(maxHeight: 160)
+            .frame(maxHeight: Theme.Size.popoverList)
         }
     }
 

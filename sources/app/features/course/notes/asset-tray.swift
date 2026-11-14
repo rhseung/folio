@@ -19,7 +19,7 @@ struct AssetTray: View {
                 ForEach(files, id: \.self) { file in
                     AssetTile(file: file)
                         .onTapGesture { model.pendingInsert = model.assetLink(file) }
-                        .draggable(model.assetLink(file)) { AssetTile(file: file).frame(width: 72) }
+                        .draggable(model.assetLink(file)) { AssetTile(file: file).frame(width: Theme.Size.assetTile.width) }
                         .help(Text(.notesAssetsTileHelp))
                         .contextMenu { Button(.notesAssetsInsert) { model.pendingInsert = model.assetLink(file) } }
                 }
@@ -28,8 +28,8 @@ struct AssetTray: View {
             .padding(.vertical, Theme.Space.s)
         }
         .overflowFade(.horizontal)
-        .frame(height: files.isEmpty ? Theme.Size.rowHeight : 104)
-        .background(targeted ? accent.tint : Theme.Palette.page.opacity(0.5))
+        .frame(height: files.isEmpty ? Theme.Size.rowHeight : Theme.Size.assetTray)
+        .background(targeted ? accent.tint : Theme.Palette.page.opacity(Theme.Opacity.soft))
         .overlay {
             if targeted {
                 RoundedRectangle(cornerRadius: Theme.Radius.control)
@@ -63,7 +63,7 @@ private struct AssetTile: View {
                     Image(systemName: "doc").font(.title2).foregroundStyle(Theme.Palette.textTertiary)
                 }
             }
-            .frame(width: 72, height: 56)
+            .frame(Theme.Size.assetTile)
             .background(Theme.Palette.fill)
             .clipShape(.rect(cornerRadius: Theme.Radius.tile))
             .overlay(RoundedRectangle(cornerRadius: Theme.Radius.tile).strokeBorder(Theme.Palette.lineSoft))
@@ -72,17 +72,17 @@ private struct AssetTile: View {
                 .foregroundStyle(Theme.Palette.textSecondary)
                 .lineLimit(1)
                 .truncationMode(.middle)
-                .frame(width: 72)
+                .frame(width: Theme.Size.assetTile.width)
         }
         .scaleEffect(hovering ? 1.06 : 1)
-        .shadow(color: .black.opacity(hovering ? 0.18 : 0), radius: 6, y: 3)
+        .shadow(Theme.Shadow.lifted, shown: hovering)
         .animation(Theme.Motion.quick, value: hovering)
         .onHover { hovering = $0 }
         .pointingHand()
         .contentShape(.rect)
         .task(id: file) {
             let request = QLThumbnailGenerator.Request(
-                fileAt: file, size: CGSize(width: 72, height: 56), scale: 2, representationTypes: .thumbnail)
+                fileAt: file, size: Theme.Size.assetTile, scale: 2, representationTypes: .thumbnail)
             thumbnail = try? await QLThumbnailGenerator.shared.generateBestRepresentation(for: request).cgImage
         }
     }

@@ -19,7 +19,7 @@ struct LectureProgressBlock: View {
                 if rows.isEmpty { CardRow(last: unranged == nil) { EmptyLine(String(localized: .materialsProgressEmpty)) } }
                 ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
                     CardRow(last: i == rows.count - 1 && unranged == nil) {
-                        Text(row.pages).monospacedDigit().frame(width: 72, alignment: .leading)
+                        Text(row.pages).monospacedDigit().frame(width: Theme.Size.pagesColumn, alignment: .leading)
                         if row.classes.isEmpty {
                             Text(.materialsProgressNotYet).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
                         } else {

@@ -228,7 +228,8 @@ private struct ImportSections: View {
                 .buttonStyle(.pointing(.plain))
                 .help(Text(.materialsImportSectionsHelp))
                 if case .reading(let done, let total)? = state, total > 0 {
-                    ProgressView(value: Double(done), total: Double(total)).progressViewStyle(.linear).frame(width: 80).tint(accent.color)
+                    ProgressView(value: Double(done), total: Double(total)).progressViewStyle(.linear).frame(width: Theme.Size.meter).tint(
+                        accent.color)
                 }
                 Spacer()
                 switch state {

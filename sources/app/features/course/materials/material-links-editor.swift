@@ -112,6 +112,6 @@ struct MaterialLinksEditor: View {
             }
         }
         .overflowFade(.vertical)
-        .frame(height: 520)
+        .frame(height: Theme.Size.materialLinks)
     }
 }

@@ -18,7 +18,8 @@ struct ScorePanel: View {
                 if relative == nil {
                     VStack(alignment: .leading, spacing: Theme.Space.xs) {
                         Caption(String(localized: .courseGradesTargetScore))
-                        TextField(String(localized: .courseGradesTarget), value: $target, format: .number).pill(width: 72)
+                        TextField(String(localized: .courseGradesTarget), value: $target, format: .number).pill(
+                            width: Theme.Size.numberField)
                     }
                     VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                         Text(.courseGradesNeedTitle).font(Theme.Typeface.label).foregroundStyle(accent.ink)
@@ -51,23 +52,25 @@ struct ScorePanel: View {
                         Capsule().fill(accent.color.opacity(Theme.Opacity.projected)).frame(width: w * min(p, 100) / 100)
                     }
                     Capsule().fill(accent.color).frame(width: w * min(result.secured, 100) / 100)
-                    Theme.Palette.text.frame(width: 2, height: 20).offset(x: w * min(target, 100) / 100 - 1)
+                    Theme.Palette.text.frame(width: Theme.Size.line, height: Theme.Size.scoreTarget).offset(
+                        x: w * min(target, 100) / 100 - 1)
                 }
             }
-            .frame(height: 12)
+            .frame(height: Theme.Size.scoreBar)
             HStack(spacing: Theme.Space.l) {
                 Text("0").foregroundStyle(Theme.Palette.textTertiary)
                 HStack(spacing: Theme.Space.tight) {
-                    Capsule().fill(accent.color).frame(width: 14, height: 6); Text(.courseGradesLegendSecured(result.secured.oneDecimal))
+                    Capsule().fill(accent.color).frame(Theme.Size.legendBar); Text(.courseGradesLegendSecured(result.secured.oneDecimal))
                 }
                 if let p = result.projected {
                     HStack(spacing: Theme.Space.tight) {
-                        Capsule().fill(accent.color.opacity(Theme.Opacity.projected)).frame(width: 14, height: 6)
+                        Capsule().fill(accent.color.opacity(Theme.Opacity.projected)).frame(Theme.Size.legendBar)
                         Text(.courseGradesLegendProjected(p.oneDecimal))
                     }
                 }
                 HStack(spacing: Theme.Space.tight) {
-                    Theme.Palette.text.frame(width: 2, height: 12); Text(.courseGradesLegendTarget(target.formatted()))
+                    Theme.Palette.text.frame(width: Theme.Size.line, height: Theme.Size.scoreBar)
+                    Text(.courseGradesLegendTarget(target.formatted()))
                 }
                 Spacer()
                 Text("100").foregroundStyle(Theme.Palette.textTertiary)

@@ -27,7 +27,7 @@ struct TodayWash: View {
             LinearGradient(
                 stops: [.init(color: .primary, location: 0.3), .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom)
         )
-        .animation(.easeInOut(duration: 0.6), value: now)
+        .animation(Theme.Motion.fade, value: now)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }

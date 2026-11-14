@@ -52,7 +52,8 @@ struct ExamEditor: View {
                         }
                     }
                     FormRow(label: String(localized: .examsEditorLocation)) {
-                        TextField(String(localized: .examsEditorLocationExample), text: $model.draft.location).pill(width: 140)
+                        TextField(String(localized: .examsEditorLocationExample), text: $model.draft.location).pill(
+                            width: Theme.Size.textField)
                     }
                     FormRow(label: String(localized: .examsEditorAllowed), last: true) {
                         InlineField(String(localized: .examsEditorAllowedExample), text: $model.draft.allowed)

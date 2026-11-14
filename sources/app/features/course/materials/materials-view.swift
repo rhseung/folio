@@ -124,13 +124,13 @@ struct MaterialsView: View {
         model.open(m)
     }
 
-    static let indent: CGFloat = 14 + Theme.Space.m
+    static let indent: CGFloat = Theme.Size.chevron + Theme.Space.m
 
     func folderRow(_ folder: PathTree<FolioDomain.Material>, depth: Int) -> some View {
         let open = model.opened.contains(folder.path)
         return HStack(spacing: Theme.Space.m) {
             Image(systemName: "chevron.right").font(Theme.Glyph.regular)
-                .rotationEffect(.degrees(open ? 90 : 0)).foregroundStyle(Theme.Palette.textTertiary).frame(width: 14)
+                .rotationEffect(.degrees(open ? 90 : 0)).foregroundStyle(Theme.Palette.textTertiary).frame(width: Theme.Size.chevron)
             Image(systemName: open ? "folder.fill" : "folder").foregroundStyle(accent.color)
             Text(folder.name).font(Theme.Typeface.bodyStrong).lineLimit(1)
             Text("\(folder.count)").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()

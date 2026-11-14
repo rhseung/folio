@@ -17,6 +17,6 @@ struct ToggleChip: View {
             Chip(title, tone: isOn ? .success : .plain)
         }
         .buttonStyle(.pointing(.plain))
-        .opacity(isOn ? 1 : 0.6)
+        .opacity(isOn ? 1 : Theme.Opacity.disabled)
     }
 }

@@ -8,7 +8,7 @@ struct CreditsField: View {
 
     var body: some View {
         HStack(spacing: Theme.Space.xs) {
-            TextField("3", value: $credits, format: .number).pill(width: 56).multilineTextAlignment(.trailing)
+            TextField("3", value: $credits, format: .number).pill(width: Theme.Size.countField).multilineTextAlignment(.trailing)
             Text(.courseEditCredits).foregroundStyle(Theme.Palette.textSecondary)
         }
     }

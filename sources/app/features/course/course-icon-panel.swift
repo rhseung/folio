@@ -206,7 +206,7 @@ struct CourseIconPanel: View {
                 .onAppear { if let icon { proxy.scrollTo(icon, anchor: .center) } }
                 .overflowFade(.vertical)
             }
-            .frame(height: 340)
+            .frame(height: Theme.Size.courseIcons)
         }
         .frame(width: cell * CGFloat(Self.columns) + Self.gap * CGFloat(Self.columns - 1) + Theme.Space.m * 2)
         .font(Theme.Typeface.body)

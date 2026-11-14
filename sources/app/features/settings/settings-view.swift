@@ -281,7 +281,7 @@ private struct LayoutGlyph: View {
                 }
             }
         }
-        .frame(width: 40, height: 28)
+        .frame(Theme.Size.layoutGlyph)
         .accessibilityHidden(true)
     }
 }
@@ -303,7 +303,7 @@ private struct ReviewSettingsForm: View {
                     range: SettingItem.reviewDailyLimit.range, width: 80
                 )
                 .disabled(limit == nil)
-                .opacity(limit == nil ? 0.4 : 1)
+                .opacity(limit == nil ? Theme.Opacity.disabled : 1)
                 Text(.settingsUnits).foregroundStyle(Theme.Palette.textSecondary)
                 Switch(isOn: Binding(get: { limit != nil }, set: { model.settings.review.dailyLimit = $0 ? 10 : nil }))
             }
@@ -372,11 +372,12 @@ private struct NotificationSettingsForm: View {
             Card {
                 FormRow(label: String(localized: .settingsDayBefore)) {
                     TimeMenu(minute: $settings.examDayBeforeMinute).disabled(!settings.examDayBefore).opacity(
-                        settings.examDayBefore ? 1 : 0.4)
+                        settings.examDayBefore ? 1 : Theme.Opacity.disabled)
                     Switch(isOn: $settings.examDayBefore)
                 }
                 FormRow(label: String(localized: .settingsMorningOf), last: true) {
-                    TimeMenu(minute: $settings.examMorningMinute).disabled(!settings.examMorning).opacity(settings.examMorning ? 1 : 0.4)
+                    TimeMenu(minute: $settings.examMorningMinute).disabled(!settings.examMorning).opacity(
+                        settings.examMorning ? 1 : Theme.Opacity.disabled)
                     Switch(isOn: $settings.examMorning)
                 }
             }
@@ -384,7 +385,8 @@ private struct NotificationSettingsForm: View {
         Block(String(localized: .settingsReviewAndAttendance)) {
             Card {
                 FormRow(label: String(localized: .settingsDailyReview)) {
-                    TimeMenu(minute: $settings.dailyReviewMinute).disabled(!settings.dailyReview).opacity(settings.dailyReview ? 1 : 0.4)
+                    TimeMenu(minute: $settings.dailyReviewMinute).disabled(!settings.dailyReview).opacity(
+                        settings.dailyReview ? 1 : Theme.Opacity.disabled)
                     Switch(isOn: $settings.dailyReview)
                 }
                 FormRow(label: String(localized: .settingsAttendanceAlert), last: true) { Switch(isOn: $settings.attendance) }
@@ -410,7 +412,7 @@ private struct BackupSettingsForm: View {
                 FormRow(label: String(localized: .settingsLocation), detail: model.backupFolder) {
                     Button(.settingsChange) { picking = true }
                 }
-                .opacity(on ? 1 : 0.4)
+                .opacity(on ? 1 : Theme.Opacity.disabled)
                 FormRow(label: String(localized: .settingsLastBackup), detail: model.lastBackup, last: true) {
                     Button(model.backingUp ? .settingsBackingUp : .settingsBackUpNow) {
                         Task { await model.backUpNow() }
@@ -549,7 +551,8 @@ private struct ClaudeSettings: View {
                         Text(SettingsModel.month(m)).monospacedDigit()
                         Spacer()
                         Text(.settingsRequestCount(m.requests)).monospacedDigit().foregroundStyle(Theme.Palette.textSecondary)
-                        Text(m.cost, format: .currency(code: "USD")).monospacedDigit().frame(minWidth: 72, alignment: .trailing)
+                        Text(m.cost, format: .currency(code: "USD")).monospacedDigit().frame(
+                            minWidth: Theme.Size.numberColumn, alignment: .trailing)
                     }
                 }
             }

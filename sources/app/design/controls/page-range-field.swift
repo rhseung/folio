@@ -75,7 +75,7 @@ struct PageRangeField: View {
     #else
     private static let grabReach: CGFloat = 10
     #endif
-    private static let spring = Animation.spring(duration: 0.32, bounce: 0.35)
+    private static let spring = Theme.Motion.pop
     private static let zone: CGFloat = 20
     private static let handleClear: CGFloat = 14
     private static let onEdge: CGFloat = 2
@@ -164,7 +164,7 @@ struct PageRangeField: View {
                 Capsule()
                     .fill(LinearGradient(colors: [accent.color.opacity(0.8), accent.color], startPoint: .top, endPoint: .bottom))
                     .overlay(Capsule().strokeBorder(Color.white.opacity(0.35), lineWidth: 0.5))
-                    .shadow(color: accent.color.opacity(0.4), radius: 2, y: 1)
+                    .shadow(Theme.Shadow.glow, color: accent.color)
                     .frame(width: max(xb - xa, Self.bar), height: Self.bar)
                     .offset(x: grabbedSpan ? rubber : 0)
                     .position(x: (xa + xb) / 2, y: barY)
@@ -313,7 +313,7 @@ struct PageRangeField: View {
         return Capsule()
             .fill(Color.white)
             .overlay(Capsule().strokeBorder(lone ? accent.color : Color.black.opacity(0.12), lineWidth: lone ? 1.5 : 0.5))
-            .shadow(color: .black.opacity(0.28), radius: 1.5, y: 1)
+            .shadow(Theme.Shadow.knob)
             .frame(width: 12, height: 22)
             .overlay {
                 if keyed, focused == end { Capsule().inset(by: -3).stroke(accent.color.opacity(0.45), lineWidth: 3) }
@@ -420,11 +420,11 @@ struct PageRangeField: View {
                 Capsule().fill(Theme.Palette.card)
                     .overlay(Capsule().strokeBorder(Theme.Palette.lineStrong, lineWidth: 0.5))
                     .drawingGroup()
-                    .shadow(color: .black.opacity(0.12), radius: 1, y: 1)
+                    .shadow(Theme.Shadow.raised)
             }
             .onHover { pillHover = $0 }
-            .animation(.easeOut(duration: 0.18), value: moved)
-            .animation(.easeOut(duration: 0.15), value: pillsUp)
+            .animation(Theme.Motion.quick, value: moved)
+            .animation(Theme.Motion.quick, value: pillsUp)
     }
 
     @ViewBuilder
@@ -473,7 +473,7 @@ struct PageRangeField: View {
         .padding(.horizontal, Theme.Space.s)
         .padding(.vertical, Theme.Space.xxs)
         .background(Theme.Palette.card, in: .capsule)
-        .shadow(color: .black.opacity(0.18), radius: 2, y: 1)
+        .shadow(Theme.Shadow.raised)
         .fixedSize()
         .position(x: x(p - 1, w) + unit(w) / 2, y: barY - Self.pillRise)
         .allowsHitTesting(false)
@@ -654,7 +654,7 @@ struct PageRangeField: View {
             ? range.tapping(value + step, pages: pages, besides: taken) : range.moving(end, to: value + step, pages: pages, besides: taken)
         guard next != range else {
             bumps += 1
-            withAnimation(.easeOut(duration: 0.08)) {
+            withAnimation(Theme.Motion.nudge) {
                 rubber = step > 0 ? 4 : -4; grab = .end(end, from: range)
             }
             withAnimation(Self.spring.delay(0.08)) {

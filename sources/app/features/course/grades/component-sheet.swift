@@ -22,7 +22,8 @@ struct ComponentSheet: View {
             }
             FormRow(label: String(localized: .componentSheetWeight)) {
                 HStack(spacing: Theme.Space.s) {
-                    TextField(String(localized: .componentSheetWeight), value: $model.weight, format: .number).pill(width: 72)
+                    TextField(String(localized: .componentSheetWeight), value: $model.weight, format: .number).pill(
+                        width: Theme.Size.numberField)
                     Text("%").foregroundStyle(Theme.Palette.textTertiary)
                 }
             }
@@ -40,7 +41,8 @@ struct ComponentSheet: View {
                     last: true
                 ) {
                     HStack(spacing: Theme.Space.tight) {
-                        TextField(String(localized: .componentSheetUnset), value: $model.expectedCount, format: .number).pill(width: 110)
+                        TextField(String(localized: .componentSheetUnset), value: $model.expectedCount, format: .number).pill(
+                            width: Theme.Size.shortTextField)
                         Text(.componentSheetTimesUnit).foregroundStyle(Theme.Palette.textSecondary)
                     }
                 }

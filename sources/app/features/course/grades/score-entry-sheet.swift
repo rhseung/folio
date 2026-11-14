@@ -29,16 +29,16 @@ struct ScoreEntrySheet: View {
             }
             FormRow(label: String(localized: .scoreSheetScore)) {
                 HStack(spacing: Theme.Space.s) {
-                    TextField(String(localized: .scoreSheetScore), text: $model.score).pill(width: 72)
+                    TextField(String(localized: .scoreSheetScore), text: $model.score).pill(width: Theme.Size.numberField)
                     Text("/").foregroundStyle(Theme.Palette.textTertiary)
-                    TextField(String(localized: .scoreSheetMax), text: $model.max).pill(width: 72)
+                    TextField(String(localized: .scoreSheetMax), text: $model.max).pill(width: Theme.Size.numberField)
                 }
             }
             FormRow(label: String(localized: .scoreSheetMeanAndStdDev), detail: model.meanDetail) {
                 HStack(spacing: Theme.Space.s) {
-                    TextField(String(localized: .scoreSheetMean), text: $model.mean).pill(width: 72)
+                    TextField(String(localized: .scoreSheetMean), text: $model.mean).pill(width: Theme.Size.numberField)
                     Text("±").foregroundStyle(Theme.Palette.textTertiary)
-                    TextField(String(localized: .scoreSheetStdDev), text: $model.stdDev).pill(width: 72)
+                    TextField(String(localized: .scoreSheetStdDev), text: $model.stdDev).pill(width: Theme.Size.numberField)
                 }
             }
             FormRow(label: String(localized: .scoreSheetCounts), detail: String(localized: .scoreSheetCountsDetail), last: true) {

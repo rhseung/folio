@@ -31,7 +31,9 @@ struct SuggestedSessionActions: View {
             Menu {
                 SuggestedSessionItems(item: item, primary: false, openNote: openNote, editTimes: editTimes)
             } label: {
-                Image(systemName: "ellipsis").foregroundStyle(Theme.Palette.textSecondary).frame(width: 24, height: 24).contentShape(.rect)
+                Image(systemName: "ellipsis").foregroundStyle(Theme.Palette.textSecondary)
+                    .frame(width: Theme.Size.inlineButton, height: Theme.Size.inlineButton).contentShape(.rect)
+                    .accessibilityLabel(Text(.sessionsSuggestionMenuHelp))
             }
             .menuStyle(.button)
             .menuIndicator(.hidden)

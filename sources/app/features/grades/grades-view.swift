@@ -51,7 +51,7 @@ struct GradesView: View {
                     }
                     .sensitive(.block)
                 }
-                .frame(minWidth: 320, maxWidth: .infinity)
+                .frame(minWidth: Theme.Size.cardMin, maxWidth: .infinity)
             }
 
             Block(String(localized: .gradesBySemester)) {
@@ -204,21 +204,23 @@ struct GradesView: View {
         return VStack(alignment: .leading, spacing: Theme.Space.xl) {
             HStack(spacing: Theme.Space.l) {
                 HStack(spacing: Theme.Space.tight) {
-                    RoundedRectangle(cornerRadius: Theme.Radius.mark).fill(Theme.Series.one).frame(width: 10, height: 10)
+                    RoundedRectangle(cornerRadius: Theme.Radius.mark).fill(Theme.Series.one).frame(
+                        width: Theme.Size.swatch, height: Theme.Size.swatch)
                     Text(.gradesTrendSemesterGpa)
                     value(.semester)
                 }
                 HStack(spacing: Theme.Space.tight) {
                     ZStack {
-                        Capsule().fill(Theme.Series.oneCompanion).frame(width: 16, height: 2)
-                        Circle().fill(Theme.Series.oneCompanion).frame(width: 8, height: 8)
+                        Capsule().fill(Theme.Series.oneCompanion).frame(Theme.Size.legendLine)
+                        Circle().fill(Theme.Series.oneCompanion).frame(width: Theme.Size.dot, height: Theme.Size.dot)
                     }
                     Text(.gradesCumulativeGpa)
                     value(.cumulative)
                 }
                 if !dashed.isEmpty {
                     HStack(spacing: Theme.Space.tight) {
-                        RoundedRectangle(cornerRadius: Theme.Radius.mark).fill(Theme.Series.one.opacity(0.4)).frame(width: 10, height: 10)
+                        RoundedRectangle(cornerRadius: Theme.Radius.mark).fill(Theme.Series.one.opacity(Theme.Opacity.projected)).frame(
+                            width: Theme.Size.swatch, height: Theme.Size.swatch)
                         Text(.gradesTrendSimulated)
                     }
                 }
@@ -230,13 +232,14 @@ struct GradesView: View {
 
             Chart {
                 ForEach(semester) { p in
-                    let c = Theme.Series.one.opacity((hovered == nil || hovered == p.label ? 1 : 0.45) * (p.simulated ? 0.4 : 1))
+                    let c = Theme.Series.one.opacity(
+                        (hovered == nil || hovered == p.label ? 1 : Theme.Opacity.faded) * (p.simulated ? Theme.Opacity.projected : 1))
                     // 흐려지는 막대 아래에 불투명한 바탕을 깐다. 그러지 않으면 끝 막대의 절반에 누적 채움이 비친다.
                     BarMark(x: .value(termLabel, p.label), yStart: .value("GPA", low), yEnd: .value("GPA", p.gpa), width: width(p))
                         .foregroundStyle(Theme.Palette.card)
                         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 6, topTrailingRadius: 6))
                     BarMark(x: .value(termLabel, p.label), yStart: .value("GPA", low), yEnd: .value("GPA", p.gpa), width: width(p))
-                        .foregroundStyle(LinearGradient(colors: [c, c.opacity(0.12)], startPoint: .top, endPoint: .bottom))
+                        .foregroundStyle(LinearGradient(colors: [c, c.opacity(Theme.Opacity.tint)], startPoint: .top, endPoint: .bottom))
                         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 6, topTrailingRadius: 6))
                 }
                 ForEach(solid) { p in
@@ -246,7 +249,8 @@ struct GradesView: View {
                     )
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [Theme.Series.oneCompanion.opacity(0.18), Theme.Series.oneCompanion.opacity(0)], startPoint: .top,
+                            colors: [Theme.Series.oneCompanion.opacity(Theme.Opacity.area), Theme.Series.oneCompanion.opacity(0)],
+                            startPoint: .top,
                             endPoint: .bottom)
                     )
                     .interpolationMethod(.monotone)
@@ -264,8 +268,10 @@ struct GradesView: View {
                 ForEach(cumulative) { p in
                     PointMark(x: .value(termLabel, p.label), y: .value("GPA", p.gpa))
                         .symbol {
-                            Circle().fill(p.simulated ? Theme.Palette.card : Theme.Series.oneCompanion).frame(width: 8, height: 8)
-                                .overlay(Circle().stroke(p.simulated ? Theme.Series.oneCompanion : Theme.Palette.card, lineWidth: 2))
+                            Circle().fill(p.simulated ? Theme.Palette.card : Theme.Series.oneCompanion).frame(
+                                width: Theme.Size.dot, height: Theme.Size.dot
+                            )
+                            .overlay(Circle().stroke(p.simulated ? Theme.Series.oneCompanion : Theme.Palette.card, lineWidth: 2))
                         }
                 }
                 if let hovered {
@@ -284,7 +290,7 @@ struct GradesView: View {
             }
             .chartXAxis { AxisMarks { AxisValueLabel().foregroundStyle(Theme.Palette.textTertiary) } }
             .chartXSelection(value: $hovered)
-            .frame(height: 220)
+            .frame(height: Theme.Size.chart)
         }
     }
 
@@ -293,6 +299,6 @@ struct GradesView: View {
             .fontWeight(strong ? .semibold : nil)
             .foregroundStyle(muted ? Theme.Palette.textTertiary : Theme.Palette.text)
             .monospacedDigit()
-            .frame(width: 56, alignment: .trailing)
+            .frame(width: Theme.Size.numberColumn, alignment: .trailing)
     }
 }

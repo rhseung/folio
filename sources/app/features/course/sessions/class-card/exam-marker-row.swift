@@ -17,7 +17,7 @@ struct ExamMarkerRow: View {
                 Text(exam.title).font(Theme.Typeface.bodyLarge.weight(.bold)).lineLimit(1).fixedSize()
                 Text(model.examLine(exam, date)).font(Theme.Typeface.caption).monospacedDigit().lineLimit(1)
                 Capsule().fill(Theme.Palette.danger.opacity(Theme.Opacity.toneEdge)).frame(minWidth: Theme.Space.xl, maxWidth: .infinity)
-                    .frame(height: 2)
+                    .frame(height: Theme.Size.line)
                 if let days = model.examDays(exam, now: model.workspace.now) {
                     Chip(DDay.text(days), tone: .danger, solid: true)
                 }
@@ -27,6 +27,6 @@ struct ExamMarkerRow: View {
         .padding(.vertical, Theme.Space.xs)
         .padding(.leading, Theme.Space.l)
         .padding(.trailing, Theme.Space.m)
-        .frame(minHeight: 52)
+        .frame(minHeight: Theme.Size.examMarker)
     }
 }

@@ -120,7 +120,7 @@ struct TodayView: View {
             Text(model.dDay(item)).font(Theme.Typeface.figureCompact).foregroundStyle(
                 DdayChip.heat(item.dDay, model.workspace.settings.urgency)
             )
-            .frame(width: 64, alignment: .leading)
+            .frame(width: Theme.Size.ddayColumn, alignment: .leading)
             VStack(alignment: .leading, spacing: Theme.Space.xs) {
                 HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
                     Text(item.exam.title).font(Theme.Typeface.bodyStrong).lineLimit(1).layoutPriority(1)

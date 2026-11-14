@@ -16,7 +16,7 @@ struct ClassExamCard: ViewModifier {
                 card
                 content
                     .background {
-                        RoundedRectangle(cornerRadius: ClassCard.radius).fill(.clear).shadow(color: .black.opacity(0.06), radius: 3, y: -2)
+                        RoundedRectangle(cornerRadius: ClassCard.radius).fill(.clear).shadow(Theme.Shadow.tucked)
                     }
                     .padding(.top, -Self.tuck)
             }
@@ -38,7 +38,7 @@ struct ClassExamCard: ViewModifier {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     if let days = model.examDays(exam, now: now) { Chip(DDay.text(days), tone: .danger, solid: true) }
                 }
-                .frame(minHeight: 24)
+                .frame(minHeight: Theme.Size.chipRow)
             }
         }
         .foregroundStyle(Theme.Palette.danger)

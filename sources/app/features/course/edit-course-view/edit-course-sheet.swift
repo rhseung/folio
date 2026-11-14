@@ -24,7 +24,7 @@ struct EditCourseSheet: View {
                     }
                     FormRow(label: String(localized: .courseEditCode), detail: model.codeDetail) {
                         CodesMenu(codes: $model.codes)
-                        TextField("2004-02", text: $model.number).pill(width: 100)
+                        TextField("2004-02", text: $model.number).pill(width: Theme.Size.codeField)
                     }
                     if model.codes.count > 1 {
                         FormRow(label: String(localized: .courseEditMainCode)) {

@@ -95,7 +95,7 @@ extension RootView {
                         floating: true
                     )
                     .padding(Theme.Space.l)
-                    .frame(width: 440)
+                    .frame(width: Theme.Size.popoverWide)
                     .fixedSize(horizontal: false, vertical: true)
                 }
             Menu {

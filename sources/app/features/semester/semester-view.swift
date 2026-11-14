@@ -199,7 +199,7 @@ struct SemesterView: View {
                                 Theme.Palette.textTertiary
                             ).monospacedDigit()
                         }
-                        .frame(width: 84, alignment: .leading)
+                        .frame(width: Theme.Size.dateColumn, alignment: .leading)
                         CourseMark(model.workspace, item.course.id)
                         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                             Text(model.examTitle(item.exam)).lineLimit(1)
@@ -212,7 +212,7 @@ struct SemesterView: View {
                             Text(.commonEnded).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                         }
                     }
-                    .opacity(start > now ? 1 : 0.6)
+                    .opacity(start > now ? 1 : Theme.Opacity.ended)
                     .opens { showExams(item.course.id) }
                     .contextMenu { ExamMenu(courseId: item.course.id, examId: item.exam.id) }
                 }
@@ -270,7 +270,10 @@ private struct AdminFileSheet: View {
                 .navigationTitle(url.lastPathComponent)
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button(.commonClose) { dismiss() } } }
         }
-        .frame(minWidth: 720, idealWidth: 960, minHeight: 560, idealHeight: 760)
+        .frame(
+            minWidth: Theme.Size.sheetWindowMin.width, idealWidth: Theme.Size.sheetWindow.width,
+            minHeight: Theme.Size.sheetWindowMin.height,
+            idealHeight: Theme.Size.sheetWindow.height)
     }
 }
 

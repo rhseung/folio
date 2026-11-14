@@ -80,11 +80,11 @@ struct CourseOverview: View {
                             VStack(spacing: 0) {
                                 Text(s.date.formatted(.dateTime.weekday(.abbreviated))).font(Theme.Typeface.label.weight(.regular))
                                     .foregroundStyle(Theme.Palette.textTertiary)
-                                // 숫자만 쓴다. 한국어 날짜 형식은 `일`을 붙여 34pt 열을 넘었다.
+                                // 숫자만 쓴다. 한국어 날짜 형식은 `일`을 붙여 `dayColumn` 열을 넘었다.
                                 Text(verbatim: "\(model.day(of: s.date))").font(Theme.Typeface.figureMedium).foregroundStyle(
                                     s.date > now ? accent.ink : Theme.Palette.text)
                             }
-                            .frame(width: 34)
+                            .frame(width: Theme.Size.dayColumn)
                             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                                 HStack(spacing: Theme.Space.s) {
                                     Text(model.recentTitle(s, in: file)).font(Theme.Typeface.bodyStrong).lineLimit(1)

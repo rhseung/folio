@@ -25,7 +25,7 @@ struct SuggestedSessionRow: View {
                     Text(SessionsModel.weekdayTime(date, in: workspace.calendar))
                         .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()
                 }
-                .frame(width: 96, alignment: .leading)
+                .frame(width: Theme.Size.dateTimeColumn, alignment: .leading)
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                     Text(.sessionsLecture).font(Theme.Typeface.bodyStrong)
                     if !item.suggestion.room.isEmpty {
@@ -44,7 +44,7 @@ struct SuggestedSessionRow: View {
             RoundedRectangle(cornerRadius: Theme.Radius.card).strokeBorder(
                 Theme.Palette.lineStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
         )
-        .opacity(today ? 1 : 0.85)
+        .opacity(today ? 1 : Theme.Opacity.secondaryInk)
         .contentShape(.rect)
         .contextMenu { SuggestedSessionItems(item: item, primary: true, openNote: openNote, editTimes: editTimes) }
     }

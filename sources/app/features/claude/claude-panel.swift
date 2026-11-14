@@ -105,7 +105,7 @@ struct ClaudePanel: View {
                 }
             }
             .overflowFade(.vertical)
-            .frame(maxHeight: 200)
+            .frame(maxHeight: Theme.Size.popoverList)
             .fixedSize(horizontal: false, vertical: true)
             if !model.removed.isEmpty {
                 Button(.claudeContextRestore) { model.removed = [] }
@@ -117,7 +117,8 @@ struct ClaudePanel: View {
 
     func contextRow(_ item: ContextItem, dropped: Bool) -> some View {
         HStack(spacing: Theme.Space.s) {
-            Image(systemName: Self.symbol(item.tier)).foregroundStyle(Theme.Palette.textTertiary).frame(width: 16)
+            Image(systemName: Self.symbol(item.tier)).foregroundStyle(Theme.Palette.textTertiary).frame(width: Theme.Size.smallIcon)
+                .accessibilityHidden(true)
             Text(item.title).lineLimit(1).truncationMode(.middle).strikethrough(dropped)
             if !item.images.isEmpty {
                 Label("\(item.images.count)", systemImage: "photo").labelStyle(.titleAndIcon)

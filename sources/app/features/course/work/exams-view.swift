@@ -149,7 +149,7 @@ struct ExamsView: View {
                     ForEach(Array(scope.tops.enumerated()), id: \.element.unit.id) { i, top in
                         HStack(spacing: Theme.Space.s) {
                             Text("\(i + 1)").font(Theme.Typeface.label).monospacedDigit().foregroundStyle(accent.ink)
-                                .frame(width: 20, alignment: .trailing)
+                                .frame(width: Theme.Size.indexColumn, alignment: .trailing)
                             Text(top.unit.title).lineLimit(1)
                             if top.children > 0 {
                                 Text("+\(top.children)").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
@@ -203,7 +203,9 @@ struct ExamsView: View {
         Menu {
             actions(exam)
         } label: {
-            Image(systemName: "ellipsis").foregroundStyle(Theme.Palette.textSecondary).frame(width: 24, height: 24).contentShape(.rect)
+            Image(systemName: "ellipsis").foregroundStyle(Theme.Palette.textSecondary)
+                .frame(width: Theme.Size.inlineButton, height: Theme.Size.inlineButton).contentShape(.rect)
+                .accessibilityLabel(Text(.examsMenuHelp))
         }
         .menuStyle(.button)
         .menuIndicator(.hidden)

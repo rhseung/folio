@@ -71,12 +71,12 @@ struct AssignmentSheet: View {
                             TextField(
                                 String(localized: .assignmentsScore),
                                 text: Binding(get: { model.scores[c.id] ?? "" }, set: { model.scores[c.id] = $0 })
-                            ).pill(width: 72)
+                            ).pill(width: Theme.Size.numberField)
                             Text("/").foregroundStyle(Theme.Palette.textTertiary)
                             TextField(
                                 String(localized: .assignmentsMax),
                                 text: Binding(get: { model.maxes[c.id] ?? "" }, set: { model.maxes[c.id] = $0 })
-                            ).pill(width: 72)
+                            ).pill(width: Theme.Size.numberField)
                         }
                     }
                 }

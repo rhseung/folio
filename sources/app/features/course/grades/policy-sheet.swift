@@ -23,7 +23,7 @@ struct PolicySheet: View {
                             detail: String(localized: .policySheetTopShareDetail(model.defaultTopShare)), last: true
                         ) {
                             HStack(spacing: Theme.Space.s) {
-                                TextField(model.defaultTopShare, text: $model.topShare).pill(width: 72)
+                                TextField(model.defaultTopShare, text: $model.topShare).pill(width: Theme.Size.numberField)
                                 Text("%").foregroundStyle(Theme.Palette.textTertiary)
                             }
                         }
@@ -47,7 +47,8 @@ struct PolicySheet: View {
                         let cap = Binding(get: { model.cap(i) }, set: { model.setCap(i, $0) })
                         CardRow(last: i == model.caps.count - 1) {
                             Text(.courseGradesAbsences)
-                            TextField(String(localized: .policySheetTimes), value: cap.absences, format: .number).pill(width: 56)
+                            TextField(String(localized: .policySheetTimes), value: cap.absences, format: .number).pill(
+                                width: Theme.Size.countField)
                             Text(.policySheetCapFrom).foregroundStyle(Theme.Palette.textSecondary)
                             ChoiceMenu(selection: cap.maxGrade, options: grades.map { ($0.id, $0.symbol) })
                             Spacer()
@@ -67,13 +68,13 @@ struct PolicySheet: View {
                 Card {
                     FormRow(label: String(localized: .policySheetLate), detail: String(localized: .policySheetLateDetail)) {
                         HStack(spacing: Theme.Space.s) {
-                            TextField(String(localized: .requirementsNone), text: $model.lates).pill(width: 56)
+                            TextField(String(localized: .requirementsNone), text: $model.lates).pill(width: Theme.Size.countField)
                             Text(.policySheetLatesPerAbsence).foregroundStyle(Theme.Palette.textTertiary)
                         }
                     }
                     FormRow(label: String(localized: .courseGradesMinAttendance)) {
                         HStack(spacing: Theme.Space.s) {
-                            TextField(String(localized: .requirementsNone), text: $model.ratio).pill(width: 72)
+                            TextField(String(localized: .requirementsNone), text: $model.ratio).pill(width: Theme.Size.numberField)
                             Text("%").foregroundStyle(Theme.Palette.textTertiary)
                         }
                     }

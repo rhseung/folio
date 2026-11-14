@@ -18,7 +18,7 @@ struct StudyTimeBlock: View {
             } else {
                 Card(padding: Theme.Space.xl) {
                     Fold(wideFrom: 480, spacing: Theme.Space.xxl, stackSpacing: Theme.Space.xl) {
-                        totals(chart).frame(width: 200, alignment: .leading)
+                        totals(chart).frame(width: Theme.Size.chartLegend, alignment: .leading)
                         Chart {
                             ForEach(chart.segments) { s in
                                 BarMark(
@@ -28,7 +28,7 @@ struct StudyTimeBlock: View {
                                 )
                                 .foregroundStyle(by: .value(String(localized: .todayStudyAxisCourse), s.title))
                                 .cornerRadius(Theme.Radius.small)
-                                .opacity(hovered == nil || hovered == s.day ? 1 : 0.35)
+                                .opacity(hovered == nil || hovered == s.day ? 1 : Theme.Opacity.faded)
                             }
                             if let hovered, let tip = model.tooltip(hovered, in: chart) {
                                 RuleMark(x: .value(String(localized: .todayStudyAxisDay), hovered))
@@ -67,7 +67,7 @@ struct StudyTimeBlock: View {
                         }
                         .chartLegend(.hidden)
                         .font(Theme.Typeface.caption)
-                        .frame(height: 200)
+                        .frame(height: Theme.Size.chartCompact)
                     }
                 }
             }
@@ -91,7 +91,7 @@ struct StudyTimeBlock: View {
                 ForEach(courses, id: \.course.id) { entry in
                     GridRow {
                         Text(entry.course.title).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1).frame(
-                            width: 88, alignment: .leading)
+                            width: Theme.Size.courseLabel, alignment: .leading)
                         Capsule().fill(Theme.Palette.fill)
                             .overlay(alignment: .leading) {
                                 GeometryReader { proxy in
@@ -123,7 +123,7 @@ struct StudyTimeBlock: View {
         }
         .font(Theme.Typeface.caption)
         .padding(.horizontal, Theme.Space.m).padding(.vertical, Theme.Space.s)
-        .frame(width: 200, alignment: .leading)
+        .frame(width: Theme.Size.tooltip, alignment: .leading)
         .background(Theme.Palette.card, in: .rect(cornerRadius: Theme.Radius.control))
         .overlay(RoundedRectangle(cornerRadius: Theme.Radius.control).strokeBorder(Theme.Palette.line))
     }

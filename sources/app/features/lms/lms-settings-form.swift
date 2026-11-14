@@ -76,10 +76,11 @@ private struct LMSConnectSheet: View {
             note: failure ?? String(localized: .lmsConnectNote)
         ) {
             FormRow(label: String(localized: .lmsStudentNumber)) {
-                TextField(String(localized: .lmsStudentNumber), text: $username).pill(width: 220).textContentType(.username)
+                TextField(String(localized: .lmsStudentNumber), text: $username).pill(width: Theme.Size.loginField).textContentType(
+                    .username)
             }
             FormRow(label: String(localized: .lmsPassword), last: true) {
-                SecureField(String(localized: .lmsPassword), text: $password).pill(width: 220).textContentType(.password)
+                SecureField(String(localized: .lmsPassword), text: $password).pill(width: Theme.Size.loginField).textContentType(.password)
             }
         } onConfirm: {
             Task {

@@ -117,7 +117,7 @@ private struct OverflowFade: ViewModifier {
                 if visible < size - 1 { past.insert(end) }
                 return past
             } action: { _, past in
-                withAnimation(.easeOut(duration: 0.15)) { edges = past }
+                withAnimation(Theme.Motion.quick) { edges = past }
             }
             .mask { OverflowFadeMask(axis: axis, edges: edges) }
     }

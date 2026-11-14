@@ -18,7 +18,7 @@ struct ProgressRing: View {
                 ZStack {
                     Circle().stroke(Theme.Palette.fill, lineWidth: 2.5)
                     Circle().trim(from: 0, to: min(1, (done + taking) / goal)).stroke(
-                        Theme.Palette.textTertiary.opacity(0.45), lineWidth: 2.5)
+                        Theme.Palette.textTertiary.opacity(Theme.Opacity.faded), lineWidth: 2.5)
                     Circle().trim(from: 0, to: min(1, done / goal)).stroke(
                         Theme.Palette.textSecondary, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
                 }
@@ -29,6 +29,6 @@ struct ProgressRing: View {
             }
         }
         .font(Theme.Glyph.check)
-        .frame(width: 16, height: 16)
+        .frame(width: Theme.Size.smallIcon, height: Theme.Size.smallIcon)
     }
 }

@@ -94,7 +94,7 @@ struct RecordingBar: View {
                         showingTranscript = false
                         open(link)
                     }
-                    .frame(width: Theme.Size.claudePanel, height: 320)
+                    .frame(Theme.Size.feed)
                 }
             }
             .buttonStyle(.ghost)
@@ -151,7 +151,7 @@ private struct TranscriptFeed: View {
                 .padding([.horizontal, .bottom], Theme.Space.m)
             }
             .overflowFade(.vertical)
-            .frame(maxHeight: 200)
+            .frame(maxHeight: Theme.Size.popoverList)
             .transition(.opacity)
         }
     }
@@ -164,7 +164,7 @@ private struct TranscriptFeed: View {
                     ForEach(Array(model.recentLines.enumerated()), id: \.offset) { _, line in
                         HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
                             Text(RecordingTime.label(line.start)).font(Theme.Typeface.label).monospacedDigit()
-                                .foregroundStyle(Theme.Palette.textTertiary).frame(width: 44, alignment: .leading)
+                                .foregroundStyle(Theme.Palette.textTertiary).frame(width: Theme.Size.transcriptTime, alignment: .leading)
                             Text(line.text).frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled)
                         }
                     }
@@ -195,12 +195,12 @@ private struct LevelMeter: View {
             ForEach(0..<5, id: \.self) { i in
                 let lit = Float(i) / 5 < level
                 Capsule()
-                    .fill(lit ? Theme.Palette.success : Theme.Palette.textTertiary.opacity(0.3))
-                    .frame(width: 2, height: 4 + CGFloat([0, 2, 4, 2, 0][i]) + (lit ? CGFloat(level) * 4 : 0))
+                    .fill(lit ? Theme.Palette.success : Theme.Palette.textTertiary.opacity(Theme.Opacity.faded))
+                    .frame(width: Theme.Size.line, height: 4 + CGFloat([0, 2, 4, 2, 0][i]) + (lit ? CGFloat(level) * 4 : 0))
             }
         }
         .frame(height: Theme.Space.l)
-        .animation(.easeOut(duration: 0.15), value: level)
+        .animation(Theme.Motion.quick, value: level)
         .accessibilityHidden(true)
     }
 }

@@ -37,7 +37,7 @@ struct CodeEditor: View {
                         }
                     }
                     .overflowFade(.vertical)
-                    .frame(maxHeight: 240)
+                    .frame(maxHeight: Theme.Size.popoverList)
                     .fixedSize(horizontal: false, vertical: true)
                 }
                 Divider()
@@ -45,7 +45,8 @@ struct CodeEditor: View {
             Grid(alignment: .leading, horizontalSpacing: Theme.Space.m, verticalSpacing: Theme.Space.s) {
                 GridRow {
                     Text(.codesFieldPrefix)
-                    TextField("EC", text: $code.prefix).pill(width: 64, alignment: .leading)  // strings: data, a code prefix
+                    TextField("EC", text: $code.prefix)  // strings: data, a code prefix
+                        .pill(width: Theme.Size.prefixField, alignment: .leading)
                 }
                 GridRow {
                     Text(.codesFieldDepartment)
@@ -68,6 +69,6 @@ struct CodeEditor: View {
             }
         }
         .padding(Theme.Space.l)
-        .frame(width: 300)
+        .frame(width: Theme.Size.popover)
     }
 }

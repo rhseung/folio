@@ -31,7 +31,8 @@ struct ClaudeConnectionCard: View {
                     detail: model.keyMissing(subscription: subscription) ? String(localized: .settingsApiKeyMissing) : nil, warns: true,
                     last: true
                 ) {
-                    SecureField("sk-ant-…", text: $model.apiKey).pill(width: 180).onSubmit(model.saveKey)  // strings: data, the key's form
+                    SecureField("sk-ant-…", text: $model.apiKey)  // strings: data, the key's form
+                        .pill(width: Theme.Size.textField).onSubmit(model.saveKey)
                     Button(.commonSave, action: model.saveKey).disabled(model.apiKey.isEmpty)
                 }
             }

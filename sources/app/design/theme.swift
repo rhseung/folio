@@ -79,6 +79,23 @@ enum Theme {
         static let zoneAlt = 0.18
         static let zonePicked = 0.3
         static let folded = 0.32
+        static let soft = 0.5
+        static let faded = 0.4
+        static let area = 0.2
+        static let areaStrong = 0.6
+    }
+
+    struct Shadow {
+        let opacity: Double
+        let radius: CGFloat
+        var y: CGFloat = 0
+
+        static let floating = Shadow(opacity: 0.18, radius: 24, y: 12)
+        static let lifted = Shadow(opacity: 0.18, radius: 4, y: 2)
+        static let raised = Shadow(opacity: 0.18, radius: 2, y: 1)
+        static let knob = Shadow(opacity: 0.28, radius: 1.5, y: 1)
+        static let glow = Shadow(opacity: 0.5, radius: 4)
+        static let tucked = Shadow(opacity: 0.06, radius: 3, y: -2)
     }
 
     enum Space {
@@ -168,6 +185,86 @@ enum Theme {
         static let windowMin = CGSize(width: 1120, height: 640)
         static let windowIdeal = CGSize(width: 1440, height: 900)
         static let windowShare = 0.9
+
+        static let sheetWindowMin = CGSize(width: 720, height: 560)
+        static let sheetWindow = CGSize(width: 960, height: 760)
+        static let reviewWindowMin = CGSize(width: 860, height: 640)
+        static let reviewWindowWide: CGFloat = 1280
+        static let emptyWindow = CGSize(width: 480, height: 320)
+        static let profileSheet: CGFloat = 520
+        static let popover: CGFloat = 320
+        static let popoverWide: CGFloat = 440
+        static let popoverList: CGFloat = 240
+        static let hoverCard: CGFloat = 280
+        static let tooltip: CGFloat = 200
+        static let chartLegend: CGFloat = 200
+        static let palette: CGFloat = 680
+        static let paletteResults: CGFloat = 440
+        static let paletteDetail: CGFloat = 160
+        static let pageSearch: CGFloat = 320
+        static let readingColumn: CGFloat = 720
+        static let cardMin: CGFloat = 320
+
+        static let countField: CGFloat = 56
+        static let numberField: CGFloat = 72
+        static let prefixField: CGFloat = 64
+        static let codeField: CGFloat = 100
+        static let shortTextField: CGFloat = 112
+        static let textField: CGFloat = 180
+        static let loginField: CGFloat = 220
+        static let linkField: CGFloat = 288
+
+        static let indexColumn: CGFloat = 20
+        static let dayColumn: CGFloat = 40
+        static let percentColumn: CGFloat = 40
+        static let numberColumn: CGFloat = 56
+        static let ddayColumn: CGFloat = 64
+        static let pagesColumn: CGFloat = 72
+        static let dateColumn: CGFloat = 84
+        static let courseLabel: CGFloat = 88
+        static let dateTimeColumn: CGFloat = 96
+        static let materialColumn: CGFloat = 136
+        static let transcriptTime: CGFloat = 52
+        static let playerTime: CGFloat = 56
+
+        static let line: CGFloat = 2
+        static let smallDot: CGFloat = 6
+        static let stripe: CGFloat = 4
+        static let track: CGFloat = 6
+        static let swatch: CGFloat = 10
+        static let chevron: CGFloat = 14
+        static let knob: CGFloat = 14
+        static let smallIcon: CGFloat = 16
+        static let inlineButton: CGFloat = 24
+        static let chipRow: CGFloat = 24
+        static let scrubTrack: CGFloat = 20
+        static let legendLine = CGSize(width: 16, height: 2)
+        static let legendBar = CGSize(width: 14, height: 6)
+        static let trackMark = CGSize(width: 4, height: 12)
+        static let meter: CGFloat = 96
+        static let choiceButton: CGFloat = 96
+        static let layoutGlyph = CGSize(width: 40, height: 28)
+
+        static let classCard: CGFloat = 60
+        static let examMarker: CGFloat = 52
+        static let problemCell: CGFloat = 40
+        static let assetTile = CGSize(width: 72, height: 56)
+        static let assetTray: CGFloat = 104
+        static let chart: CGFloat = 220
+        static let chartCompact: CGFloat = 200
+        static let standingCurve: CGFloat = 104
+        static let standingLabel: CGFloat = 14
+        static let scoreBar: CGFloat = 12
+        static let scoreTarget: CGFloat = 20
+        static let weightBar: CGFloat = 10
+        static let dailyBars: CGFloat = 110
+        static let timetableBlockMin: CGFloat = 20
+        static let classPreview: CGFloat = 112
+        static let courseIcons: CGFloat = 340
+        static let materialLinks: CGFloat = 520
+        static let cardDrafts: CGFloat = 420
+        static let requirementsWide: CGFloat = 720
+        static let feed = CGSize(width: claudePanel, height: 320)
     }
 
     enum Motion {
@@ -178,6 +275,10 @@ enum Theme {
         // 칸의 가장자리가 이웃이 멈추기 전에 도착하므로 같은 값을 쓴다.
         static let paneSpring = Spring.smooth(duration: 0.34)
         static let pane = Animation.spring(paneSpring)
+        static let nudge = Animation.easeOut(duration: 0.08)
+        static let pop = Animation.spring(duration: 0.32, bounce: 0.35)
+        static let pulse = Animation.easeInOut(duration: 0.5)
+        static let fade = Animation.easeOut(duration: 0.8)
     }
 
     enum Typeface {
@@ -224,6 +325,16 @@ extension View {
     // `.gray`는 tint를 시스템에 맡긴다.
     func courseAccent(_ accent: CourseAccent) -> some View {
         environment(\.accent, accent).tint(accent == .gray ? nil : accent.ink)
+    }
+}
+
+extension View {
+    func shadow(_ shadow: Theme.Shadow, color: Color = .black, shown: Bool = true) -> some View {
+        self.shadow(color: color.opacity(shown ? shadow.opacity : 0), radius: shadow.radius, y: shadow.y)
+    }
+
+    func frame(_ size: CGSize, alignment: Alignment = .center) -> some View {
+        frame(width: size.width, height: size.height, alignment: alignment)
     }
 }
 

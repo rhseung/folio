@@ -10,7 +10,8 @@ struct HeadingRows: View {
     var body: some View {
         ForEach(lines.indices, id: \.self) { i in
             CardRow {
-                Text("\(i + 1)").monospacedDigit().foregroundStyle(Theme.Palette.textTertiary).frame(width: 18, alignment: .trailing)
+                Text("\(i + 1)").monospacedDigit().foregroundStyle(Theme.Palette.textTertiary).frame(
+                    width: Theme.Size.indexColumn, alignment: .trailing)
                 // 목록을 다시 그리는 동안 지운 행에 글을 한 번 더 물을 수 있으므로 인덱스를 확인한다.
                 TextField(
                     String(localized: .settingsHeading),
