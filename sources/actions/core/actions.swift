@@ -1,36 +1,7 @@
 import FolioDomain
 
 public enum Actions {
-    public static let all: [any Action.Type] =
-        platform + [
-            SemesterAdd.self, SemesterSet.self, SemesterSource.self, TranscriptAdd.self, TranscriptMove.self, CourseAdd.self,
-            CourseRename.self, CourseSet.self, GraduationSet.self, RequirementAccept.self, CatalogSet.self,
-            SettingsSet.self,
-            SessionAdd.self, SessionRemove.self, SessionSet.self, SessionNote.self, SessionProgress.self, SessionWrapUp.self,
-            SessionLinkViewed.self, AttendanceSet.self,
-            UnitAdd.self, UnitRemove.self, UnitSet.self, UnitMove.self, UnitLink.self, UnitPagesAdd.self, UnitPagesSet.self,
-            UnitPagesRemove.self, MaterialSplit.self,
-            ExamAdd.self, ExamSet.self, ExamRemove.self, ExamScope.self, ExamScopeTaught.self, ExamPlanAdd.self, ExamPlanRemove.self,
-            ExamPlanCheck.self, ExamSummary.self,
-            AssignmentAdd.self, AssignmentSave.self, AssignmentStatusSet.self, AssignmentRemove.self,
-            ScoreAdd.self, ScoreSet.self, ScoreRemove.self, ComponentAdd.self, ComponentSet.self, ComponentRemove.self, ComponentMove.self,
-            PolicySet.self,
-            MaterialLinkSession.self, MaterialLinkUnit.self, MaterialLinkExam.self, MaterialStatusSet.self, MaterialKindSet.self,
-            MaterialRelink.self, MaterialUntrack.self,
-            MaterialTrack.self, MaterialImport.self, MaterialMove.self, MaterialTrash.self, MaterialWrite.self, MaterialNew.self,
-            MaterialBuild.self, CleanupApply.self, CleanupUndo.self,
-            RecordingTrim.self, RecordingRetitleLegacy.self,
-            NoteAdd.self, NoteWrite.self, NoteEdit.self, NoteAdopt.self, NoteLink.self, NoteLinkSessions.self, NoteUnlinkSession.self,
-            NoteRemove.self, NoteMigrate.self, NoteRetitleSessions.self, NoteMove.self, NoteBuild.self,
-            NoteFigureAdd.self, NoteFigureWrite.self, NoteWidgetAdd.self, NoteWidgetWrite.self,
-            QuizCardSave.self, QuizCardRemove.self, QuizRecord.self,
-            ProblemSetSave.self, ProblemSetRemove.self, ProblemLinkUnit.self, ProblemRecord.self,
-            ReviewRecord.self, ReviewSkip.self,
-            LMSSeen.self, LMSMark.self, LMSAccept.self,
-            ImportNotion.self, ImportNotes.self, ImportCalendar.self, ImportExams.self, ImportUnits.self, ImportRequirements.self,
-            ImportHandbook.self,
-        ]
-
+    // 목록 `all`은 folio-gen이 sources/actions의 선언에서 만든다(generated/actions-all.swift).
     public static let targets: [String: ProposalTarget] = {
         func arguments(_ type: any Action.Type) -> [String] { type.spec.fields.filter { $0.role == .argument }.map(\.name) }
         var targets = Dictionary(
@@ -50,10 +21,4 @@ public enum Actions {
         targets[NoteLink.command] = ProposalTarget(arguments: arguments(NoteLink.self), effect: .sets)
         return targets
     }()
-
-    #if os(macOS)
-    static let platform: [any Action.Type] = [BackupCreate.self, BackupRestore.self]
-    #else
-    static let platform: [any Action.Type] = []
-    #endif
 }

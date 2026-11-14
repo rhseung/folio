@@ -7,6 +7,6 @@ extension NoteCommand {
     struct Widget: ParsableCommand {
         static let configuration = CommandConfiguration(
             abstract: String(localized: .noteWidgetAbstract),
-            subcommands: [List.self, Show.self, Render.self] + GeneratedCommands.noteWidget)
+            subcommands: subcommandTypes)
     }
 }

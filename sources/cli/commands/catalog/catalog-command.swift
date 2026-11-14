@@ -6,5 +6,5 @@ import Foundation
 
 struct CatalogCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "catalog", abstract: String(localized: .catalogAbstract), subcommands: [Show.self] + GeneratedCommands.catalog)
+        commandName: "catalog", abstract: String(localized: .catalogAbstract), subcommands: subcommandTypes)
 }

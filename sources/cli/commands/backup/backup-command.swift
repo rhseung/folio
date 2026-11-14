@@ -6,6 +6,6 @@ import Foundation
 
 struct BackupCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "backup", abstract: String(localized: .backupAbstract), subcommands: GeneratedCommands.backup + [List.self])
+        commandName: "backup", abstract: String(localized: .backupAbstract), subcommands: subcommandTypes)
 
 }

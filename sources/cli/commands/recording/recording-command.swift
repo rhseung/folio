@@ -6,6 +6,6 @@ import Foundation
 struct RecordingCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "recording", abstract: String(localized: .recordingAbstract),
-        subcommands: [Transcript.self] + GeneratedCommands.recording)
+        subcommands: subcommandTypes)
 
 }

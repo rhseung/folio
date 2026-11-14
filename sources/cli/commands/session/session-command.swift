@@ -14,5 +14,5 @@ func kindLabel(_ s: Session) -> String? {
 struct SessionCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "session", abstract: String(localized: .sessionAbstract),
-        subcommands: [List.self, Show.self] + GeneratedCommands.session)
+        subcommands: subcommandTypes)
 }

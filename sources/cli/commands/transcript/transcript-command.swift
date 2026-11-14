@@ -6,7 +6,7 @@ import Foundation
 struct TranscriptCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "transcript", abstract: String(localized: .transcriptAbstract),
-        subcommands: [List.self, Show.self] + GeneratedCommands.transcript)
+        subcommands: subcommandTypes)
 
     struct Row: Encodable {
         var semester: String

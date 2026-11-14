@@ -7,7 +7,7 @@ import Foundation
 struct CleanupCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "cleanup", abstract: String(localized: .cleanupAbstract),
-        subcommands: [Plan.self, Apply.self] + GeneratedCommands.cleanup)
+        subcommands: subcommandTypes)
 
     static let reasonText: [ReviewReason: String] = [
         .guessedWeek: String(localized: .cleanupReasonGuessedWeek),

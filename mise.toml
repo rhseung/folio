@@ -105,9 +105,10 @@ description = "Install the git hooks in lefthook.yml (swift-format, SwiftLint an
 run = "lefthook install"
 
 [tasks.gen-cli]
-description = "Write the CLI commands of the actions declared with @Action (sources/cli/generated)"
+description = "Write the action list (sources/actions/generated) and the CLI commands and command tree (sources/cli/generated) from the @Action declarations"
 depends = ["tectonic"]
-run = "swift run -q folio-gen"
+# folio-gen은 링크한 액션 목록으로 명령을 쓴다. 새 액션은 첫 실행이 목록을 고친 뒤에야 링크되므로 두 번 돌린다.
+run = ["swift run -q folio-gen", "swift run -q folio-gen"]
 
 [tasks.fixture]
 description = "Write a fake GIST folder to run the app or the CLI on: mise run fixture -- <folder> [standard|legacy|busyDay|manyExams|quietDay|empty]"

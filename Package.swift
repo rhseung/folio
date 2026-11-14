@@ -66,9 +66,12 @@ let package = Package(
         // Only the entry point: an executable target's test build gets no string-catalog symbols, so the commands live
         // in the FolioCLI library that the tests import.
         .executableTarget(name: "FolioCommand", dependencies: ["FolioCLI"], path: "sources/command"),
-        // Writes cli/generated/commands.swift from the action specs. It must not need FolioCLI, so a broken generated
-        // file can always be generated again.
-        .executableTarget(name: "FolioGen", dependencies: ["FolioActions"], path: "sources/gen"),
+        // Writes the action list (actions/generated) from the @Action declarations, and the CLI commands and their tree
+        // (cli/generated) from the action specs and cli/commands. It must not need FolioCLI, so a broken generated file can
+        // always be generated again.
+        .executableTarget(name: "FolioGen", dependencies: [
+            "FolioActions", .product(name: "SwiftSyntax", package: "swift-syntax"), .product(name: "SwiftParser", package: "swift-syntax"),
+        ], path: "sources/gen"),
         .target(name: "FolioFixtures", dependencies: ["FolioActions"], path: "sources/fixtures"),
         .executableTarget(name: "FolioFixtureWriter", dependencies: ["FolioFixtures"], path: "sources/fixture-writer"),
         // The code rules of AGENTS.md that a syntax tree can check (`mise run check-code`). It needs swift-syntax alone, so

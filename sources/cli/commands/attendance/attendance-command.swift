@@ -5,5 +5,5 @@ import Foundation
 
 struct AttendanceCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "attendance", abstract: String(localized: .attendanceAbstract), subcommands: GeneratedCommands.attendance)
+        commandName: "attendance", abstract: String(localized: .attendanceAbstract), subcommands: subcommandTypes)
 }

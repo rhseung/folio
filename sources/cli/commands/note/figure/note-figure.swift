@@ -7,7 +7,7 @@ extension NoteCommand {
     struct Figure: ParsableCommand {
         static let configuration = CommandConfiguration(
             abstract: String(localized: .noteFigureAbstract),
-            subcommands: [List.self, Show.self, Render.self] + GeneratedCommands.noteFigure)
+            subcommands: subcommandTypes)
     }
 }
 

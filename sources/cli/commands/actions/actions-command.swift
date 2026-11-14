@@ -78,7 +78,7 @@ struct ActionsCommand: ParsableCommand {
     }
 
     static func repository() throws -> URL {
-        let marker = "sources/cli/generated/commands.swift"
+        let marker = "sources/cli/generated/generated-commands.swift"
         for start in [URL(filePath: FileManager.default.currentDirectoryPath), URL(filePath: #filePath)] {
             var dir = start
             while dir.path != "/" {
