@@ -15,29 +15,30 @@ permissions:
   id-token: write
 
 jobs:
-  changes:
+  pick:
+    name: pick checks
     runs-on: ubuntu-latest
     outputs:
-      docs: ${{ steps.files.outputs.docs }}
+      docs: ${{ steps.files.outcome == 'success' && steps.files.outputs.all_count != '0' && steps.files.outputs.code == 'false' }}
     steps:
-      - id: files
-        if: github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR: ${{ github.event.pull_request.number }}
-        run: |
-          # GitHub은 파일을 300개 넘게 바꾼 PR의 diff를 거절하므로 `gh pr diff --name-only`를 쓰지 않는다.
-          files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --jq '.[].filename')
-          # 다른 .md 파일은 테스트 픽스처(tests/unit/app/fixtures/all-markdown.md)나 생성한 스킬 사본처럼 입력이므로 리뷰를 받는다.
-          if [ -n "$files" ] && ! grep -qvE '^docs/|^[^/]+\.md$|^\.github/.+\.md$' <<< "$files"; then
-            echo docs=true >> "$GITHUB_OUTPUT"
-          else
-            echo docs=false >> "$GITHUB_OUTPUT"
-          fi
+      - if: github.event_name == 'pull_request'
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: .github/check-paths.yml
+          sparse-checkout-cone-mode: false
+      # 어떤 파일이 문서인지는 .github/check-paths.yml의 code 필터가 정한다. GitHub은 파일을 300개 넘게 바꾼 PR의 diff를
+      # 거절하지만 paths-filter는 파일 목록 API를 쓰므로 그런 PR도 센다.
+      - if: github.event_name == 'pull_request'
+        id: files
+        continue-on-error: true
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          filters: .github/check-paths.yml
+          predicate-quantifier: some-with-excludes
 
   review:
-    needs: changes
-    if: vars.ENABLE_CLAUDE_REVIEW == 'true' && needs.changes.outputs.docs != 'true'
+    needs: pick
+    if: vars.ENABLE_CLAUDE_REVIEW == 'true' && needs.pick.outputs.docs != 'true'
     uses: rhseung/claude-review-plugin/.github/workflows/review.yml@main
     # Dependabot 실행은 Dependabot secret만 받으므로, CLAUDE_CODE_OAUTH_TOKEN을 그쪽에도 넣어야 한다
     # (gh secret set --app dependabot).
@@ -46,8 +47,8 @@ jobs:
     secrets: inherit
 
   approve-docs:
-    needs: changes
-    if: needs.changes.outputs.docs == 'true'
+    needs: pick
+    if: needs.pick.outputs.docs == 'true'
     runs-on: ubuntu-latest
     steps:
       - env:

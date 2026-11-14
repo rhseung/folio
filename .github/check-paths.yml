@@ -1,0 +1,82 @@
+# ci.yml의 pick checks와 review.yml이 dorny/paths-filter(predicate-quantifier: some-with-excludes)로 읽는다. 검사마다 '**'에서 시작해
+# 그 검사에 닿지 않는 경로를 뺀다. 빼는 목록에 없는 새 파일은 모든 검사에 닿는다고 본다. 예를 들어 `mise run generate`는
+# 빌드마다 scripts/version.sh를 실행하므로 scripts/는 통째로 빼지 않는다.
+# 한 번 뺀 파일은 다른 패턴으로 다시 넣을 수 없으므로, 일부만 남길 때는 !(...)로 남길 것을 뺀 나머지를 적는다.
+
+# review.yml: 문서만 바뀐 PR은 리뷰 없이 승인한다. 다른 .md 파일은 테스트 픽스처(tests/unit/app/fixtures/all-markdown.md)나
+# 생성한 스킬 사본처럼 입력이므로 리뷰를 받는다.
+code:
+  - '**'
+  - &prose
+    - '!docs/**'
+    - '!*.md'
+    - '!.github/**/*.md'
+
+# 파일이 3000개 이상이면 API가 목록을 자르므로 모든 검사를 돌린다. 그 개수를 이 필터로 센다.
+all: '**'
+
+packages:
+  - '**'
+  - *prose
+  - &unbuilt
+    - '!sources/web/**'
+    - '!sources/tectonic/bridge/**'
+    - '!sources/tectonic/patches/**'
+    - '!sources/tectonic/build.sh'
+    - '!.github/workflows/tectonic.yml'
+    - '!.github/workflows/accessibility.yml'
+  # folio-lint, SwiftLint, 액션 검사가 앱 폴더에서 읽는 것은 Swift 파일뿐이다.
+  - '!sources/app/**/!(*.swift)'
+  - '!tests/unit/app/**/!(*.swift)'
+  - '!tests/e2e/app/**/!(*.swift)'
+
+mac-app:
+  - '**'
+  - *prose
+  - *unbuilt
+  - &tools
+    - '!scripts/note-screens.sh'
+    - '!scripts/release-notes.sh'
+    - '!scripts/install-release.sh'
+    - '!scripts/swift-format.sh'
+    - '!sources/lint/**'
+    - '!sources/lint-command/**'
+    - '!tests/unit/lint/**'
+    - '!.folio-lint-baseline.txt'
+    - '!.swiftlint.yml'
+    - '!.swiftlint-baseline.json'
+    - '!.swift-format'
+    - '!.periphery.yml'
+    - '!lefthook.yml'
+    - '!.github/workflows/quality.yml'
+    - '!.claude/**'
+  - '!tests/e2e/app/**'
+
+# iOS로 빌드하는 테스트는 tests/unit/app/ipad뿐이다. 나머지 앱 테스트 파일은 project.yml에서 macOS에서만 빌드한다.
+ipad-app:
+  - '**'
+  - *prose
+  - *unbuilt
+  - *tools
+  - '!tests/e2e/app/**'
+  - '!tests/unit/app/*'
+  - '!tests/unit/app/!(ipad)/**'
+
+# PR의 ipad app은 컴파일만 하고, iPad 테스트(편집 보기의 캐럿과 한글, PDF 보기, iPad의 TeX 빌드)가 읽는 코드가 바뀔 때만
+# 시뮬레이터에서 테스트한다. 여기서 놓친 것은 모든 검사를 돌리는 main push가 잡는다.
+ipad-simulator:
+  - 'tests/unit/app/ipad/**'
+  - 'sources/app/platform/note-text/**'
+  - 'sources/app/platform/pdf-view.swift'
+  - 'sources/app/platform/page-scroll.swift'
+  - 'sources/app/platform/file-view/**'
+  - 'sources/markdown/editing/**'
+  - 'sources/storage/pdf/**'
+  - 'sources/tectonic/pin.json'
+  - 'sources/tectonic/fetch.sh'
+  - 'project.yml'
+  - 'Package.swift'
+  - 'Package.resolved'
+  - 'mise.toml'
+  - '.github/workflows/ci.yml'
+  - '.github/actions/**'

@@ -1,0 +1,42 @@
+name: accessibility
+
+# 아직 고치지 못한 결과가 남은 검사(#471)라 필수가 아니다. 머지마다 돌리면 macOS 러너를 15분씩 쓰므로 매일 밤 main을 한 번
+# 보고, 고치는 PR은 a11y 라벨을 붙여 돌린다. ci.yml에 라벨 이벤트를 넣으면 라벨을 붙일 때마다 돌던 CI가 취소되므로 따로 둔다.
+on:
+  schedule:
+    - cron: "0 18 * * *"
+  workflow_dispatch:
+  pull_request:
+    types: [labeled, synchronize, reopened]
+
+concurrency:
+  group: accessibility-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  XCODE: /Applications/Xcode_27.1.app
+  MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+  MISE_TASK_RUN_AUTO_INSTALL: false
+
+jobs:
+  accessibility:
+    if: >-
+      github.event_name != 'pull_request'
+      || (contains(github.event.pull_request.labels.*.name, 'a11y') && (github.event.action != 'labeled' || github.event.label.name == 'a11y'))
+    runs-on: xcode-27
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      # ci.yml의 mac app과 같은 Debug Mac 앱을 빌드하므로 그 캐시에서 시작한다. UI 테스트 러너가 캐시 용량만 차지하므로
+      # 저장하지 않는다.
+      - uses: ./.github/actions/xcode-setup
+        with:
+          derived-data: test-app
+          tools: xcodegen
+      - run: mise run test-a11y
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-a11y
+          path: .build/test-a11y.xcresult
+          if-no-files-found: ignore
