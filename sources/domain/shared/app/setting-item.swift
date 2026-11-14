@@ -9,8 +9,9 @@ public struct SettingItem: Sendable {
         case positive
         // 정수 목록이다. 값마다 범위 안이어야 하고 목록은 비지 않는다.
         case numbers(ClosedRange<Int>)
-        // 자정부터 센 분이다. 화면은 이 범위가 걸친 시 안에서 고른다.
-        case time(ClosedRange<Int>)
+        // 값은 자정부터 센 분이고, 범위는 시로 적는다. 화면이 시를 고른 뒤 그 시의 분을 고르므로, 끝 시의 59분까지 받아야
+        // 화면에서 고를 수 있는 값을 저장 검사가 거절하지 않는다.
+        case time(hours: ClosedRange<Int>)
         case choice([String])
         case text
         // 목록, 사전, 배치처럼 모양을 디코딩으로만 확인하는 값이다. 그 아래 키도 이 항목에 속한다.
@@ -42,14 +43,14 @@ public struct SettingItem: Sendable {
     public var range: ClosedRange<Int> {
         switch shape {
         case .number(let r), .numbers(let r): r
-        case .time(let minutes): minutes
+        case .time(let hours): hours.lowerBound * 60...hours.upperBound * 60 + 59
         case .positive: 1...Int.max
         case .toggle, .choice, .text, .custom: Int.min...Int.max
         }
     }
 
     public var hours: ClosedRange<Int> {
-        if case .time(let minutes) = shape { minutes.lowerBound / 60...minutes.upperBound / 60 } else { 0...23 }
+        if case .time(let hours) = shape { hours } else { 0...23 }
     }
 
     public func problem(_ value: JSONValue) -> String? {
@@ -149,7 +150,7 @@ extension SettingItem {
 
 extension SettingItem {
     public static let dayBoundary = SettingItem(
-        "dayBoundaryMinutes", .time(0...8 * 60), 240, page: .general, name: .settingItemDayBoundaryMinutes)
+        "dayBoundaryMinutes", .time(hours: 0...8), 240, page: .general, name: .settingItemDayBoundaryMinutes)
     public static let idleMinutes = SettingItem("idleMinutes", .number(1...60), 5, page: .general, name: .settingItemIdleMinutes)
     public static let panePresets = SettingItem("panePresets", .custom, [], page: .general, name: .settingItemPanePresets)
 
@@ -166,16 +167,16 @@ extension SettingItem {
         "urgency.examNearDays", .number(1...90), 14, page: .general, name: .settingItemUrgencyExamNearDays)
 
     public static let dueMinute = SettingItem(
-        "schedule.dueMinute", .time(0...24 * 60 - 1), .number(23 * 60 + 59), page: .general, name: .settingItemScheduleDueMinute)
+        "schedule.dueMinute", .time(hours: 0...23), .number(23 * 60 + 59), page: .general, name: .settingItemScheduleDueMinute)
     public static let examStartMinute = SettingItem(
-        "schedule.examStartMinute", .time(0...24 * 60 - 1), .number(9 * 60), page: .general, name: .settingItemScheduleExamStartMinute)
+        "schedule.examStartMinute", .time(hours: 0...23), .number(9 * 60), page: .general, name: .settingItemScheduleExamStartMinute)
     public static let examMinutes = SettingItem(
         "schedule.examMinutes", .number(10...600), 120, page: .general, name: .settingItemScheduleExamMinutes)
     public static let sessionStartMinute = SettingItem(
-        "schedule.sessionStartMinute", .time(0...24 * 60 - 1), .number(18 * 60), page: .classes,
+        "schedule.sessionStartMinute", .time(hours: 0...23), .number(18 * 60), page: .classes,
         name: .settingItemScheduleSessionStartMinute)
     public static let classStartMinute = SettingItem(
-        "schedule.classStartMinute", .time(0...24 * 60 - 1), .number(10 * 60 + 30), page: .classes,
+        "schedule.classStartMinute", .time(hours: 0...23), .number(10 * 60 + 30), page: .classes,
         name: .settingItemScheduleClassStartMinute)
 
     public static let gradesUnlockMinutes = SettingItem(
@@ -210,17 +211,17 @@ extension SettingItem {
     public static let examDayBefore = SettingItem(
         "notifications.examDayBefore.on", .toggle, true, page: .notifications, name: .settingItemNotificationsExamDayBeforeOn)
     public static let examDayBeforeMinute = SettingItem(
-        "notifications.examDayBefore.minute", .time(0...24 * 60 - 1), .number(21 * 60), page: .notifications,
+        "notifications.examDayBefore.minute", .time(hours: 0...23), .number(21 * 60), page: .notifications,
         name: .settingItemNotificationsExamDayBeforeMinute)
     public static let examMorning = SettingItem(
         "notifications.examMorning.on", .toggle, true, page: .notifications, name: .settingItemNotificationsExamMorningOn)
     public static let examMorningMinute = SettingItem(
-        "notifications.examMorning.minute", .time(0...24 * 60 - 1), .number(8 * 60), page: .notifications,
+        "notifications.examMorning.minute", .time(hours: 0...23), .number(8 * 60), page: .notifications,
         name: .settingItemNotificationsExamMorningMinute)
     public static let dailyReview = SettingItem(
         "notifications.dailyReview.on", .toggle, true, page: .notifications, name: .settingItemNotificationsDailyReviewOn)
     public static let dailyReviewMinute = SettingItem(
-        "notifications.dailyReview.minute", .time(0...24 * 60 - 1), .number(9 * 60), page: .notifications,
+        "notifications.dailyReview.minute", .time(hours: 0...23), .number(9 * 60), page: .notifications,
         name: .settingItemNotificationsDailyReviewMinute)
     public static let attendance = SettingItem(
         "notifications.attendance.on", .toggle, true, page: .notifications, name: .settingItemNotificationsAttendanceOn)

@@ -69,12 +69,34 @@ struct SettingItemTests {
         #expect(SettingItem.backupDailyDays.problem(.number(9000)) == nil)
     }
 
-    @Test func timeRangesAreMinutes() {
-        #expect(SettingItem.dayBoundary.range == 0...480)
+    @Test func timeRangesCoverTheLastHoursMinutes() {
+        #expect(SettingItem.dayBoundary.range == 0...8 * 60 + 59)
         #expect(SettingItem.dayBoundary.hours == 0...8)
-        #expect(SettingItem.dayBoundary.problem(.number(8 * 60)) == nil)
-        #expect(SettingItem.dayBoundary.problem(.number(8 * 60 + 5)) != nil)
+        #expect(SettingItem.dayBoundary.problem(.number(8 * 60 + 30)) == nil)
+        #expect(SettingItem.dayBoundary.problem(.number(8 * 60 + 59)) == nil)
+        #expect(SettingItem.dayBoundary.problem(.number(9 * 60)) != nil)
         #expect(SettingItem.examMorningMinute.hours == 0...23)
+        #expect(SettingItem.examMorningMinute.range == 0...24 * 60 - 1)
+    }
+
+    // 시간 선택은 범위의 시마다 5분 단위 분을 모두 고르게 한다. 고를 수 있는 값은 모두 저장 검사를 통과해야 한다.
+    @Test func everyPickableTimeIsAccepted() {
+        for item in SettingItem.all {
+            guard case .time = item.shape else { continue }
+            for hour in item.hours {
+                for minute in stride(from: 0, to: 60, by: 5) {
+                    #expect(item.problem(.number(Double(hour * 60 + minute))) == nil, "\(item.key) \(hour):\(minute)")
+                }
+            }
+        }
+    }
+
+    @Test func aBoundarySavedLateInTheLastHourStillReads() throws {
+        let file = try JSONDecoder().decode(JSONValue.self, from: Data(#"{"dayBoundaryMinutes": 530, "idleMinutes": 10}"#.utf8))
+        #expect(SettingItem.problems(in: file).isEmpty)
+        let settings = try JSONDecoder().decode(Settings.self, from: Data(#"{"dayBoundaryMinutes": 530}"#.utf8))
+        #expect(settings.dayBoundaryMinutes == 530)
+        #expect(settings.violations.isEmpty)
     }
 
     @Test func fieldsUnderACustomItemAndParentObjectsAreKnown() {

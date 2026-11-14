@@ -22,7 +22,9 @@ struct TimeMenu: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Self.label(minute))
         .accessibilityAdjustableAction { direction in
-            minute = (minute + (direction == .increment ? 5 : -5) + 1440) % 1440
+            let next = minute + (direction == .increment ? 5 : -5)
+            // 시 범위가 하루 전체가 아니면(하루 경계 0–8시) 넘어가지 않고 멈춘다. 넘어간 값은 저장 검사가 거절한다.
+            minute = hours == 0...23 ? (next + 1440) % 1440 : min(max(next, hours.lowerBound * 60), hours.upperBound * 60 + 59)
         }
         .popover(item: $dial, arrowEdge: .bottom) { mode in
             TimeDial(minute: $minute, hours: hours, mode: mode) { dial = nil }

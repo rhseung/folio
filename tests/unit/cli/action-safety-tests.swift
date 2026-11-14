@@ -140,10 +140,10 @@ struct ActionSafetyTests {
         let r = h.cli(["settings", "set", "dayBoundaryMinutes", "2000"], gist: gist)
         #expect(r.code == Exit.usage.rawValue)
         #expect(r.err.contains("dayBoundaryMinutes"))
-        // 하루 경계는 선언한 범위(0–480분)에서 입력으로 거른다. 모델 규칙은 다른 길(파일 전체 교체)로 오는 값을 막는다.
-        let late = h.cli(["settings", "set", "dayBoundaryMinutes", "500"], gist: gist)
+        // 하루 경계는 선언한 범위(0:00–8:59)에서 입력으로 거른다. 모델 규칙은 다른 길(파일 전체 교체)로 오는 값을 막는다.
+        let late = h.cli(["settings", "set", "dayBoundaryMinutes", "540"], gist: gist)
         #expect(late.code == Exit.usage.rawValue)
-        #expect(h.cli(["settings", "set", "dayBoundaryMinutes", "480", "--dry-run"], gist: gist).code == 0)
+        #expect(h.cli(["settings", "set", "dayBoundaryMinutes", "539", "--dry-run"], gist: gist).code == 0)
     }
 
     @Test func planCheckNeedsTheItem() throws {
