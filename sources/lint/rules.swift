@@ -4,7 +4,8 @@ public enum Rules {
     public static var all: [Rule] {
         [
             viewWorkspaceCall, viewBodyLogic, uiString, layoutName, layer, restatingComment, docComment, designValue, designGrid,
-            courseAccent, localFolders, appDirection, kindDefault, minuteTimeline, screenToolbar, launchEnvironment,
+            designOpacity, designShadow, designMotion, designSize, courseAccent, localFolders, appDirection, kindDefault, minuteTimeline,
+            screenToolbar, launchEnvironment,
             kebabNames, folderSize, oneTypePerFile, actionPath,
         ]
     }

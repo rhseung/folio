@@ -301,6 +301,81 @@ private let view = "sources/app/features/demo/demo-view.swift"
     }
 }
 
+@Suite struct DesignTokenTests {
+    @Test func opacityNumbersInScreens() {
+        let source = """
+            struct DemoView: View {
+                var body: some View {
+                    Text(.commonSave).opacity(0.4).opacity(on ? 1 : 0.6).opacity(0).opacity(1)
+                    Rectangle().fill(Color.black.opacity(Theme.Opacity.tint)).opacity(max(0.15, level))
+                    Rectangle().opacity((on ? 1 : Theme.Opacity.faded) * 0.5)
+                    Text(.commonSave).opacity(0.3) // design: one-off, a window drawn small
+                }
+            }
+            """
+        #expect(found([view: source], "design-opacity") == ["opacity(0.15)", "opacity(0.4)", "opacity(0.6)"])
+        #expect(found(["sources/app/design/meter.swift": "let a = Color.black.opacity(0.4)"], "design-opacity").isEmpty)
+    }
+
+    @Test func shadowValuesEverywhereButTheTheme() {
+        let source = """
+            struct DemoView: View {
+                var body: some View {
+                    Text(.commonSave).shadow(color: .black.opacity(0.18), radius: 24, y: 12)
+                    Text(.commonSave).shadow(Theme.Shadow.floating).shadow(Theme.Shadow.lifted, shown: hovering)
+                }
+            }
+            """
+        #expect(found([view: source], "design-shadow") == ["shadow(radius: 24)"])
+        #expect(found(["sources/app/design/knob.swift": "let k = Circle().shadow(radius: 2)"], "design-shadow") == ["shadow(radius: 2)"])
+        let theme = "func shadow(_ s: Theme.Shadow) -> some View { shadow(color: .black, radius: s.radius) }"
+        #expect(found(["sources/app/design/theme.swift": theme], "design-shadow").isEmpty)
+    }
+
+    @Test func curvesWithTheirOwnDuration() {
+        let source = """
+            struct DemoView: View {
+                static let spring = Animation.spring(duration: 0.32, bounce: 0.35)
+                var body: some View {
+                    Text(.commonSave)
+                        .animation(.easeOut(duration: 0.25), value: done)
+                        .animation(Theme.Motion.quick, value: done)
+                        .animation(.snappy, value: done)
+                    Button(.commonSave) { withAnimation(.snappy(duration: 0.45)) { advance() } }
+                }
+            }
+            """
+        #expect(
+            found([view: source], "design-motion") == [
+                ".easeOut(duration: 0.25)", ".snappy(duration: 0.45)", ".spring(duration: 0.32, bounce: 0.35)",
+            ])
+        #expect(found(["sources/app/design/theme.swift": "static let quick = Animation.snappy(duration: 0.2)"], "design-motion").isEmpty)
+    }
+
+    @Test func frameAndPillNumbersInScreens() {
+        let source = """
+            struct DemoView: View {
+                var body: some View {
+                    Text(.commonSave).frame(width: 84, alignment: .leading).frame(minWidth: 720, idealWidth: wide ? 960 : 1280)
+                    TextField("", text: $score).pill(width: 72)
+                    Divider().frame(height: 1).frame(width: 0)
+                    Rectangle().frame(width: reach * 2, height: max(4, level)).frame(maxWidth: .infinity)
+                    TextField("", text: $code).pill(width: Theme.Size.numberField).frame(width: Theme.Size.dateColumn)
+                    Text(.commonSave).frame(width: 14) // design: one-off, the system slider knob
+                }
+            }
+            #Preview { DemoView().frame(width: 1440, height: 900) }
+            """
+        #expect(
+            found([view: source], "design-size") == [
+                "frame(height: 4)", "frame(idealWidth: 1280)", "frame(idealWidth: 960)", "frame(minWidth: 720)", "frame(width: 84)",
+                "pill(width: 72)",
+            ])
+        let debug = "struct Probe: View { var body: some View { Color.clear.frame(width: 1180, height: 720) } }"
+        #expect(found(["sources/app/app/debug/form-snapshots.swift": debug], "design-size").isEmpty)
+    }
+}
+
 @Suite struct CourseAccentTests {
     @Test func theAccentAloneOutsideTheDesignFolder() {
         let line = "Text(.commonSave).environment(\\.accent, accent).environment(\\.locale, locale)"

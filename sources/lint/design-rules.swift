@@ -38,6 +38,130 @@ extension Rules {
         }
     }
 
+    // 화면 코드의 투명도, 그림자, 움직임, 크기는 `Theme`의 이름 있는 토큰으로만 쓴다. 숫자를 그 자리에 적으면 같은 역할의
+    // 값이 화면마다 조금씩 달라졌다(떠 있는 판 둘의 그림자, 날짜 열의 폭).
+    static var designOpacity: Rule {
+        Rule(
+            name: "design-opacity", strict: true,
+            advice: "take opacities from Theme.Opacity; 0 and 1 (hide and show) stay as numbers"
+        ) { code in
+            tokenHits("design-opacity", code.files(under: "sources/app/features", "sources/app/app")) { call in
+                calledName(call) == "opacity" ? Array(call.arguments) : []
+            }
+        }
+    }
+
+    static var designShadow: Rule {
+        Rule(
+            name: "design-shadow", strict: true,
+            advice: "draw shadows with .shadow(Theme.Shadow.<role>), not colour, radius and offset numbers"
+        ) { code in
+            var hits: [Hit] = []
+            for file in code.files(under: "sources/app") where file.path != "sources/app/design/theme.swift" {
+                for call in file.nodes(FunctionCallExprSyntax.self) where calledName(call) == "shadow" {
+                    guard let radius = call.arguments.first(where: { $0.label?.text == "radius" }), !file.oneOff(radius) else { continue }
+                    hits.append(
+                        Hit("design-shadow", file, file.line(of: radius), "shadow(radius: \(radius.expression.trimmedDescription))"))
+                }
+            }
+            return hits
+        }
+    }
+
+    static let animationCurves: Set<String> = [
+        "snappy", "smooth", "bouncy", "spring", "interactiveSpring", "interpolatingSpring", "easeIn", "easeOut", "easeInOut",
+        "linear", "timingCurve",
+    ]
+
+    static var designMotion: Rule {
+        Rule(
+            name: "design-motion", strict: true,
+            advice: "animate with Theme.Motion, not a curve with its own duration"
+        ) { code in
+            var hits: [Hit] = []
+            for file in code.files(under: "sources/app") where file.path != "sources/app/design/theme.swift" {
+                for call in file.nodes(FunctionCallExprSyntax.self) {
+                    guard let name = calledName(call), animationCurves.contains(name),
+                        call.calledExpression.is(MemberAccessExprSyntax.self),
+                        let first = call.arguments.first(where: { numberLiteral($0.expression) != nil }), !file.oneOff(first)
+                    else { continue }
+                    hits.append(Hit("design-motion", file, file.line(of: first), ".\(name)(\(call.arguments.trimmedDescription))"))
+                }
+            }
+            return hits
+        }
+    }
+
+    static let frameLabels: Set<String> = [
+        "width", "height", "minWidth", "idealWidth", "maxWidth", "minHeight", "idealHeight", "maxHeight",
+    ]
+
+    static var designSize: Rule {
+        Rule(
+            name: "design-size", strict: true,
+            advice: "take frame and pill widths from Theme.Size; 0 and 1pt lines stay as numbers"
+        ) { code in
+            tokenHits("design-size", code.files(under: "sources/app/features", "sources/app/app")) { call in
+                switch calledName(call) {
+                case "frame": call.arguments.filter { $0.label.map { frameLabels.contains($0.text) } ?? false }
+                case "pill": call.arguments.filter { $0.label?.text == "width" }
+                default: []
+                }
+            }
+        }
+    }
+
+    // 계산식 안의 숫자(`reach * 2`, `size + 4`)는 토큰이 아니라 식의 일부이므로 보지 않는다. 숫자 하나, 삼항 연산의 갈래,
+    // `max`와 `min`의 인자만 본다.
+    static func tokenHits(_ check: String, _ files: [SourceFile], arguments: (FunctionCallExprSyntax) -> [LabeledExprSyntax]) -> [Hit] {
+        var hits: [Hit] = []
+        for file in files where !isDebugFile(file.path) {
+            for call in file.nodes(FunctionCallExprSyntax.self) {
+                for argument in arguments(call) {
+                    for literal in tokenLiterals(argument.expression) where !file.oneOff(literal) && !file.debugOnly(literal) {
+                        let label = argument.label.map { "\($0.text): " } ?? ""
+                        hits.append(Hit(check, file, file.line(of: literal), "\(calledName(call) ?? "")(\(label)\(literal.text))"))
+                    }
+                }
+            }
+        }
+        return hits
+    }
+
+    static func tokenLiterals(_ expression: ExprSyntax) -> [TokenSyntax] {
+        if let literal = numberLiteral(expression) {
+            return Double(literal.text.filter { $0 != "_" }).map { $0 == 0 || $0 == 1 } == true ? [] : [literal]
+        }
+        if let ternary = expression.as(TernaryExprSyntax.self) {
+            return tokenLiterals(ternary.thenExpression) + tokenLiterals(ternary.elseExpression)
+        }
+        // 파서는 연산자를 접지 않으므로 삼항 연산은 `조건, ? 갈래 :, 다른 갈래`가 나란한 열로 온다.
+        if let sequence = expression.as(SequenceExprSyntax.self) {
+            let parts = Array(sequence.elements)
+            if let index = parts.firstIndex(where: { $0.is(UnresolvedTernaryExprSyntax.self) }),
+                let middle = parts[index].as(UnresolvedTernaryExprSyntax.self)
+            {
+                let rest = parts[(index + 1)...]
+                return tokenLiterals(middle.thenExpression) + (rest.count == 1 ? tokenLiterals(rest[rest.startIndex]) : [])
+            }
+        }
+        if let tuple = expression.as(TupleExprSyntax.self), tuple.elements.count == 1, let inner = tuple.elements.first {
+            return tokenLiterals(inner.expression)
+        }
+        if let call = expression.as(FunctionCallExprSyntax.self), ["max", "min"].contains(calledName(call)) {
+            return call.arguments.flatMap { tokenLiterals($0.expression) }
+        }
+        return []
+    }
+
+    static func numberLiteral(_ expression: ExprSyntax) -> TokenSyntax? {
+        var expression = expression
+        if let negative = expression.as(PrefixOperatorExprSyntax.self), negative.operator.text == "-" {
+            expression = negative.expression
+        }
+        return expression.as(IntegerLiteralExprSyntax.self)?.literal ?? expression.as(FloatLiteralExprSyntax.self)?.literal
+    }
+
     // tests/unit/app의 note bench는 accent만 정한 상태로 기준 이미지를 그렸으므로 tests/unit/app은 검사하지 않는다.
     static var courseAccent: Rule {
         Rule(
