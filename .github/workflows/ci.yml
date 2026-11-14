@@ -79,6 +79,8 @@ jobs:
       - run: defaults write -g AppleLanguages -array ko-KR en-US && defaults write -g AppleLocale ko_KR
       - id: xcode
         run: echo "version=$(DEVELOPER_DIR="$XCODE/Contents/Developer" xcodebuild -version | tr -s ' \n' '-' | sed 's/-$//')" >> "$GITHUB_OUTPUT"
+      # 미리 컴파일한 FolioTectonic 모듈(.pcm)은 바이너리 타깃이 .build에 복사한 헤더의 경로를 기억하고, SwiftPM은 라이브러리가
+      # 바뀌어도 그 모듈을 다시 만들지 않는다. 그래서 핀이 다른 캐시를 복원하면 없는 헤더를 찾다가 컴파일이 실패하므로 키에 핀을 넣는다.
       - id: cache
         uses: actions/cache/restore@v6
         with:
@@ -86,10 +88,10 @@ jobs:
             .build
             !.build/tectonic
             ~/Library/Caches/org.swift.swiftpm/manifests
-          key: swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('Package.resolved') }}-${{ github.sha }}
+          key: swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('sources/tectonic/pin.json') }}-${{ hashFiles('Package.resolved') }}-${{ github.sha }}
           restore-keys: |
-            swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('Package.resolved') }}-
-            swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
+            swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('sources/tectonic/pin.json') }}-${{ hashFiles('Package.resolved') }}-
+            swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('sources/tectonic/pin.json') }}-
       - uses: actions/cache@v6
         with:
           path: sources/tectonic/vendor
