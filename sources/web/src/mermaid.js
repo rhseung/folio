@@ -1,7 +1,7 @@
 import { renderMermaidSVG } from "beautiful-mermaid";
 
-// Resolved here rather than passed as `var(--accent)`: the SVG declares its own `--accent` and `--line`, which would
-// then refer to themselves.
+// `var(--accent)`로 넘기지 않고 여기서 값을 읽는다. SVG가 자기 `--accent`와 `--line`을 선언하므로, 변수로 넘기면
+// 그 변수가 자기 자신을 가리킨다.
 function colors() {
   const style = getComputedStyle(document.documentElement);
   const get = (name) => style.getPropertyValue(name).trim();
@@ -9,7 +9,6 @@ function colors() {
     surface: get("--fill"), border: get("--line") };
 }
 
-// ```mermaid blocks become diagrams; one that doesn't parse stays as its code.
 export function renderDiagrams(root) {
   const blocks = [...root.querySelectorAll("pre[data-lang=mermaid]"), ...root.querySelectorAll("figure.mermaid")];
   if (!blocks.length) return;
@@ -17,9 +16,9 @@ export function renderDiagrams(root) {
   for (const el of blocks) {
     const source = el.dataset.source ?? el.querySelector("code")?.textContent ?? "";
     try {
-      // The library asks Google for its fonts; notes load nothing from the network.
+      // 라이브러리가 Google에서 글꼴을 받으려 하지만, 노트는 네트워크에서 아무것도 받지 않는다.
       const svg = renderMermaidSVG(source, theme).replace(/@import url\([^)]*\);?/g, "");
-      // A diagram drawn again for a new look keeps its element, which the preview holds on to.
+      // 미리보기가 이 요소를 붙잡고 있으므로, 화면 모드가 바뀌어 다시 그릴 때는 요소를 바꾸지 않고 안만 바꾼다.
       if (el.tagName === "FIGURE") { el.innerHTML = svg; continue; }
       const figure = document.createElement("figure");
       figure.className = "mermaid";
@@ -27,7 +26,6 @@ export function renderDiagrams(root) {
       figure.innerHTML = svg;
       el.replaceWith(figure);
     } catch {
-      // Left as code, which the highlighter treats as plain text.
     }
   }
 }

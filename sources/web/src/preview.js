@@ -1,15 +1,10 @@
-// The note preview: the app sends the note as top-level blocks, each with the source lines it was written on.
-
 const post = (message) => window.webkit?.messageHandlers?.folioPreview?.postMessage(message);
 
 export function preview({ typeset, redraw }) {
-  // What the page shows, block by block: the HTML it was made from and the elements that came of it.
   let shown = [];
   let options = {};
-  // Folded or opened callouts by their title and how many before it have that title, so a fold survives the
-  // block being made again.
+  // 블록을 다시 만들어도 접힌 상태가 남도록, 콜아웃을 요소가 아니라 제목과 앞에 같은 제목이 몇 개 있는지로 찾는다.
   const folds = new Map();
-  // Each widget frame's height as its page last said, by the frame's key: a frame made again starts at it.
   const heights = new Map();
 
   const calloutKey = (details) => {
@@ -22,13 +17,13 @@ export function preview({ typeset, redraw }) {
     return `${title}#${n}`;
   };
 
-  // `toggle` doesn't bubble, so it's caught on the way down.
+  // `toggle` 이벤트는 버블링되지 않으므로 capture 단계에서 받는다.
   document.addEventListener("toggle", (event) => {
     const el = event.target;
     if (el instanceof HTMLDetailsElement && el.classList.contains("callout")) folds.set(calloutKey(el), el.open);
   }, true);
 
-  // A task's box is ticked in the source; the page shows it once the note comes back with it.
+  // 할 일의 체크 표시는 앱이 원문에 쓴다. 페이지는 체크가 반영된 노트를 다시 받은 뒤에 체크를 보인다.
   document.addEventListener("click", (event) => {
     const box = event.target.closest?.("input[type=checkbox][data-line]");
     if (!box) return;
@@ -36,11 +31,10 @@ export function preview({ typeset, redraw }) {
     if (options.editable) post({ type: "task", line: Number(box.dataset.line) });
   }, true);
 
-  // The app adds its own items to the page's menu (open a link in a tab, copy a link to the heading or block under
-  // the pointer), and the menu doesn't say what it was opened on.
+  // 앱은 페이지의 메뉴에 자기 항목(링크를 탭에서 열기, 포인터 아래 제목이나 블록의 링크 복사)을 넣는데, 메뉴는 어느
+  // 요소에서 열렸는지 알려 주지 않는다. 그래서 페이지가 직접 알린다.
   document.addEventListener("contextmenu", (event) => {
     const at = (selector) => event.target.closest?.(selector);
-    // A heading drawn from another note (an embed, a reference's preview) is not one of this note's.
     const own = !at(".embed, .ref-popover");
     post({
       type: "menu",
@@ -50,9 +44,9 @@ export function preview({ typeset, redraw }) {
     });
   }, true);
 
-  // A long press on a touch screen selects the words under the finger and opens the edit menu, which the app gives
-  // the same heading and block links as the pointer's menu: the edit menu is asked for the selection, not a point,
-  // so the page says where the selection starts whenever that changes.
+  // 터치 화면에서 길게 누르면 손가락 아래 낱말이 선택되고 편집 메뉴가 열린다. 앱은 이 메뉴에도 포인터 메뉴와 같은 제목과
+  // 블록 링크를 넣는데, 편집 메뉴는 한 점이 아니라 선택 영역을 기준으로 열린다. 그래서 페이지는 선택이 시작하는 곳이
+  // 바뀔 때마다 그 위치를 알린다.
   let selected = null;
   document.addEventListener("selectionchange", () => {
     const node = document.getSelection()?.anchorNode;
@@ -67,8 +61,8 @@ export function preview({ typeset, redraw }) {
     post({ type: "selection", heading, block });
   });
 
-  // A block reference shows the block it names while the pointer rests on it. The renderer puts the block in a
-  // template right after the link; the card stays while the pointer moves onto it, so its links can be clicked.
+  // 렌더러는 블록 참조가 가리키는 블록을 링크 바로 다음의 template에 넣는다. 카드 안의 링크를 누를 수 있도록, 포인터가
+  // 카드 위로 옮겨 가도 카드를 닫지 않는다.
   let card = null, cardFor = null, showing = 0, hiding = 0;
   const hideCard = () => {
     clearTimeout(showing);
@@ -133,15 +127,14 @@ export function preview({ typeset, redraw }) {
   const margin = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--margin")) || 0;
   const top = (node) => node.getBoundingClientRect().top + scrollY;
 
-  // The line of the block at the top of the page, for the outline beside it to mark the heading being read. Said only
-  // when it changes, once a frame at most: a scroll fires many times a frame.
+  // scroll 이벤트는 한 프레임에 여러 번 오므로, 맨 위 블록의 줄은 바뀌었을 때만 한 프레임에 많아야 한 번 알린다.
   let reported = null, reporting = false;
   const report = () => {
     if (reporting) return;
     reporting = true;
     requestAnimationFrame(() => {
       reporting = false;
-      // A block placed at the top (a jump, following the editor) starts a margin below the page's top edge.
+      // 맨 위로 옮긴 블록(jump, 편집기 따라가기)은 페이지 위 끝에서 여백만큼 아래에서 시작한다.
       const y = scrollY + margin() + 1;
       let line = null;
       for (const block of shown) {
@@ -157,8 +150,7 @@ export function preview({ typeset, redraw }) {
   addEventListener("scroll", report, { passive: true });
 
   return {
-    // Only blocks whose HTML changed are made again, so typing in the editor leaves the rest of the page (and a
-    // widget's running page) alone.
+    // 편집기에서 입력할 때 페이지의 나머지 부분과 실행 중인 위젯 페이지를 건드리지 않도록, HTML이 바뀐 블록만 다시 만든다.
     show(blocks, next) {
       const restart = next.math !== options.math || next.base !== options.base;
       const editable = next.editable !== options.editable;
@@ -177,8 +169,7 @@ export function preview({ typeset, redraw }) {
         && shown[shown.length - 1 - tail].html === blocks[blocks.length - 1 - tail].html) tail++;
       const first = (list, from) => list.slice(from).find((b) => b.nodes.length)?.nodes[0];
       const after = first(shown, shown.length - tail) ?? null;
-      // Between the unchanged ends, a block whose HTML is still there stays where it is: moving an element would
-      // reload a widget's frame. The rest are made anew in place.
+      // 바뀌지 않은 양 끝 사이에서도 HTML이 남아 있는 블록은 제자리에 둔다. 요소를 옮기면 위젯의 frame이 다시 로드된다.
       const old = shown.slice(head, shown.length - tail);
       const middle = [], made = [];
       let p = 0;
@@ -202,7 +193,7 @@ export function preview({ typeset, redraw }) {
       shown = [...shown.slice(0, head), ...middle, ...shown.slice(shown.length - tail)];
       if (editable) prepare(shown.flatMap((b) => b.nodes));
       if (cardFor && !cardFor.isConnected) hideCard();
-      // Lines move with every edit above a block, which leaves its HTML as it was.
+      // 블록 위쪽을 고치면 블록의 HTML은 그대로여도 줄 번호는 바뀌므로, 모든 블록의 줄을 다시 적는다.
       shown.forEach((block, i) => {
         block.line = blocks[i].line;
         for (const node of block.nodes) {
@@ -213,13 +204,11 @@ export function preview({ typeset, redraw }) {
       report();
     },
 
-    // Puts the block written on `line` at the top, a margin below the edge as following the editor does.
     jump(line) {
       const block = shown.find((b) => b.line === line && b.nodes.length);
       if (block) scrollTo(0, Math.max(0, top(block.nodes[0]) - margin()));
     },
 
-    // Puts the block holding the editor's top line where the editor has it: `frac` of the way through the line.
     follow(line, frac) {
       const blocks = shown.filter((b) => b.line != null && b.nodes.length);
       let i = -1;
@@ -233,7 +222,6 @@ export function preview({ typeset, redraw }) {
       scrollTo(0, Math.max(0, y - margin()));
     },
 
-    // The page is handed to another note: nothing of this one stays.
     reset() {
       hideCard();
       for (const block of shown) for (const node of block.nodes) node.remove();
@@ -245,7 +233,6 @@ export function preview({ typeset, redraw }) {
       scrollTo(0, 0);
     },
 
-    // A widget's frame takes its page's height, as the app works it out from what the page reports.
     size(key, height) {
       heights.set(key, height);
       for (const frame of document.querySelectorAll("iframe.cb-widget")) {
@@ -253,7 +240,6 @@ export function preview({ typeset, redraw }) {
       }
     },
 
-    // The variables the page's colors come from, swapped when the course's accent changes.
     theme(css) {
       const style = document.getElementById("folio-theme");
       if (style && style.textContent !== css) {

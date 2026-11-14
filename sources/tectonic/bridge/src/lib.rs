@@ -1,5 +1,5 @@
-// Tectonic in the app's process, doing what `tectonic -X compile -Z continue-on-errors --synctex [--only-cached]
-// --outdir <dir> <file>` does, and logging the lines that CLI prints, so `TexLog` reads the output unchanged.
+// `tectonic -X compile -Z continue-on-errors --synctex [--only-cached] --outdir <dir> <file>`과 같은 일을 하고, 그 CLI가
+// 출력하는 줄을 그대로 남긴다. `TexLog`가 이 출력을 CLI의 출력과 똑같이 읽기 때문이다.
 use std::ffi::{c_char, CStr, CString};
 use std::fmt::{Arguments, Write as _};
 use std::path::PathBuf;
@@ -11,13 +11,12 @@ use tectonic::errors::Error;
 use tectonic::status::{MessageKind, StatusBackend};
 use tectonic::unstable_opts::UnstableOptions;
 
-// xdvipdfmx reads SOURCE_DATE_EPOCH from the environment for the PDF's dates, so a build sets it process-wide; two
-// builds at once would stamp each other's PDFs.
+// xdvipdfmx는 PDF의 날짜를 환경 변수 SOURCE_DATE_EPOCH에서 읽으므로, 빌드는 이 값을 프로세스 전체에 설정한다. 두 빌드가
+// 동시에 돌면 서로의 PDF에 상대의 날짜가 찍힌다.
 static ONE_BUILD: Mutex<()> = Mutex::new(());
 
-// A panic inside one of the engine's `extern "C"` callbacks can't unwind into C, so Rust aborts the app before
-// `catch_unwind` sees it, and the default hook's stderr line is all that is left. Keeping the message lets a panic that
-// does unwind name itself in the build log.
+// 엔진의 `extern "C"` 콜백 안에서 난 panic은 C 쪽으로 unwind할 수 없어서, Rust가 `catch_unwind`보다 먼저 앱을 중단시키고
+// 기본 hook이 stderr에 쓴 한 줄만 남는다. 메시지를 따로 저장해 두면, unwind되는 panic은 그 메시지가 빌드 로그에 남는다.
 static LAST_PANIC: Mutex<Option<String>> = Mutex::new(None);
 static HOOK: Once = Once::new();
 
@@ -75,7 +74,7 @@ fn compile(input: PathBuf, outdir: PathBuf, cache: PathBuf, only_cached: bool, e
         .format_name("latex")
         .keep_logs(false)
         .keep_intermediates(false)
-        // The same folders the CLI uses under its cache root, so the Mac shares one cache with a Homebrew Tectonic.
+        // CLI가 캐시 루트 아래에 쓰는 폴더와 같아야 Mac에서 Homebrew Tectonic과 캐시 하나를 함께 쓴다.
         .format_cache_path(cache.join("formats"))
         .synctex(true)
         .output_format(OutputFormat::Pdf)

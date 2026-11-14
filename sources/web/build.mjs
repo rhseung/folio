@@ -1,4 +1,4 @@
-// Bundles into ../app/resources/web. KaTeX fonts are inlined (woff2 only) so pages need no file access.
+// 페이지가 파일에 접근하지 않고도 글꼴을 쓰도록 KaTeX 글꼴은 woff2만 data URL로 넣는다.
 import { build } from "esbuild";
 
 const out = "../app/resources/web";

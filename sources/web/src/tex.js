@@ -1,18 +1,16 @@
-// How a note's formula reads as TeX. Both note views draw math with math.js in a page (the preview, and the edit view's
-// bubble and completion menu through NoteMath), so they never disagree on what a `$…$` says.
 import AsciiMathParser from "asciimath2tex";
 
 const ascii = new AsciiMathParser();
 
-// Tokens with a bar in them that aren't a bar, longest first, as asciimath2tex reads them.
+// 막대가 들어 있지만 막대가 아닌 토큰이다. asciimath2tex가 읽는 순서대로 긴 것부터 둔다.
 const barTokens = ["|><|", "|><", "><|", "|->", "|--", "|==", "|__", "__|", "_|_", ":|:", "|~", "~|", "\\|", "||"];
 const openers = ["(:", "{:", "<<", "(", "[", "{"];
 const closers = [":)", ":}", ">>", ")", "]", "}"];
 
-// asciimath2tex pairs a bare `|` with whatever bar comes after the next term, so `|X| >= |I| + |J|` came out with
-// `\left|` around `X| >= |I` and `|:` in `|F|: G` read as a bracket that ate the colon. A bar here closes the bar
-// opened before it in the same brackets, written out as `|: … :|` so the parser can't pair it otherwise. A bracket
-// with an odd number of bars (`{x | x > 0}`, `a|b`) is left for the parser: which bar is the odd one is a guess.
+// asciimath2tex는 짝 없는 `|`를 다음 항 뒤에 오는 아무 막대와 짝짓는다. 그래서 `|X| >= |I| + |J|`에서는
+// `X| >= |I`가 `\left|`로 감싸졌고, `|F|: G`의 `|:`는 콜론까지 포함한 괄호로 읽혔다. 여기서는 같은 괄호 안에서
+// 앞서 연 막대를 다음 막대가 닫게 하고, 파서가 다르게 짝짓지 못하도록 `|:`와 `:|`로 바꿔 쓴다. 막대 수가 홀수인
+// 괄호(`{x | x > 0}`, `a|b`)는 어느 막대가 남는지 추측할 수밖에 없으므로 파서에 맡긴다.
 function pairBars(source) {
   const levels = [[]];
   const pairs = [];
@@ -57,5 +55,4 @@ function pairBars(source) {
   return source.split("").map((c, i) => marks.get(i) ?? c).join("");
 }
 
-/** TeX for a formula written in the note's math syntax (`asciimath` or `latex`). */
 export const toTeX = (source, syntax) => (syntax === "asciimath" ? ascii.parse(pairBars(source)) : source);

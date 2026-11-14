@@ -1,29 +1,19 @@
 #!/usr/bin/env bash
-# Builds FolioTectonic.xcframework: Tectonic as a static library for iOS devices, the iOS simulator and macOS (#41).
-# CI runs it (.github/workflows/tectonic.yml) and publishes the zip as a release asset; the app's builds only fetch that
-# zip, checked by the sha256 in pin.json (fetch.sh), so neither the repository nor an app build
-# needs Rust or these sources.
-#
-# Tectonic is built from its release tag with patches/ applied: ios-coretext.patch lets XeTeX find fonts with
-# CoreText on iOS as it does on macOS, so no fontconfig is needed. HarfBuzz comes with Tectonic; ICU is the SDK's
-# libicucore, called through ICU 79's headers with renaming off.
-#
-#   sources/tectonic/build.sh <work folder> <output zip>
-#   sources/tectonic/build.sh --inputs     prints the hash that names a build of the current inputs
+# ios-coretext.patch는 XeTeX가 iOS에서도 macOS처럼 CoreText로 글꼴을 찾게 하므로 fontconfig가 필요 없다. ICU는 SDK의
+# libicucore를 쓰고, ICU 79의 헤더로 renaming을 끈 채 부른다.
 set -euo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 
 TECTONIC_TAG="tectonic@0.17.0"
 TECTONIC_COMMIT="8c0126a9653239a2e6e0a5274af9b8510f643030"
 DEPLOYMENT=26.0
-# url sha256
 LIBPNG="https://downloads.sourceforge.net/project/libpng/libpng16/1.6.59/libpng-1.6.59.tar.xz d80dd2a38a37f803cb9b6ac7b14bd6e74ddc3b654780a8380bdf93523fdb4389"
 FREETYPE="https://downloads.sourceforge.net/project/freetype/freetype2/2.14.3/freetype-2.14.3.tar.xz 36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f"
 GRAPHITE2="https://github.com/silnrsi/graphite/releases/download/1.3.15/graphite2-1.3.15.tgz c6bc8b4252724665297f7cad0c55897285c673f9b8e6db3522ace833593fe0b1"
 ICU="https://github.com/unicode-org/icu/releases/download/release-79.1/icu4c-79.1-sources.tgz 06fa63ecb521048f8082f12ad988f6b678d90cbd88aafce24cbc94902b191d99"
 
-# The workflow is an input too: it pins Rust, Xcode, CMake, Ninja and pkg-config, and a new tool with the same name would
-# find the old release and skip the build.
+# 워크플로도 입력에 넣는다. 워크플로가 Rust, Xcode, CMake, Ninja, pkg-config의 판을 고정하므로, 빠뜨리면 도구만 바꾼
+# 빌드가 같은 이름의 이전 릴리스를 찾고 빌드를 건너뛴다.
 inputs() {
   (cd "$root/sources/tectonic" && cat build.sh bridge/Cargo.toml bridge/src/*.rs bridge/include/* patches/*.patch \
     ../../.github/workflows/tectonic.yml) | shasum -a 256 | cut -c1-12
@@ -36,7 +26,7 @@ case "$zip" in /*) ;; *) zip="$PWD/$zip" ;; esac
 src="$work/src"
 mkdir -p "$src" "$work/downloads"
 
-fetch() { # "url sha256" -> path of the checked download
+fetch() {
   set -- $1
   local file="$work/downloads/$(basename "$1")"
   if [ ! -f "$file" ] || ! echo "$2  $file" | shasum -a 256 -c --status; then
@@ -51,7 +41,7 @@ icu_include="$work/icu-include"
 rm -rf "$icu_include" && mkdir -p "$icu_include/unicode"
 cp "$src"/icu/source/{common,i18n,io}/unicode/*.h "$icu_include/unicode/"
 
-# The bridge's Cargo.toml finds Tectonic at ../tectonic, so both sit side by side in the work folder.
+# 브리지의 Cargo.toml이 Tectonic을 ../tectonic에서 찾으므로, 작업 폴더에 둘을 나란히 둔다.
 if [ ! -d "$work/tectonic/.git" ]; then
   git init -q "$work/tectonic"
   git -C "$work/tectonic" remote add origin https://github.com/tectonic-typesetting/tectonic.git
@@ -63,10 +53,10 @@ git -C "$work/tectonic" clean -qfdx
 git -C "$work/tectonic" submodule update -q --init --depth 1 crates/bridge_harfbuzz/harfbuzz
 for patch in "$root"/sources/tectonic/patches/*.patch; do git -C "$work/tectonic" apply "$patch"; done
 rm -rf "$work/bridge" && cp -R "$root/sources/tectonic/bridge" "$work/bridge"
-# Tectonic's own lock pins every crate it was released with; only the bridge itself is new to it.
+# Tectonic의 lock 파일은 릴리스 때의 모든 crate 판을 고정하고, 거기에 없는 것은 브리지 자신뿐이다.
 cp "$work/tectonic/Cargo.lock" "$work/bridge/Cargo.lock"
 
-slice() { # name sdk cmake-system rust-target min-flag deployment-variable
+slice() {
   local name=$1 sdk=$2 system=$3 target=$4 min=$5 deployment=$6
   local sysroot prefix build
   sysroot="$(xcrun --sdk "$sdk" --show-sdk-path)"
@@ -88,7 +78,7 @@ set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 EOF
-  # zlib and libicucore come with the SDK, which has no .pc files for them (and no ICU headers).
+  # zlib과 libicucore는 SDK에 들어 있지만, SDK에는 그 .pc 파일이 없고 ICU 헤더도 없다.
   printf 'prefix=%s/usr\nincludedir=${prefix}/include\nlibdir=${prefix}/lib\n\nName: zlib\nDescription: SDK zlib\nVersion: 1.2.12\nLibs: -lz\nCflags: -I${includedir}\n' \
     "$sysroot" > "$prefix/lib/pkgconfig/zlib.pc"
   printf 'includedir=%s\n\nName: icu-uc\nDescription: SDK libicucore\nVersion: 79.1\nLibs: -licucore\nCflags: -I${includedir} -DU_DISABLE_RENAMING=1\n' \
@@ -111,17 +101,15 @@ EOF
     -DPNG_LIBRARY="$prefix/lib/libpng16.a" -DPNG_PNG_INCLUDE_DIR="$prefix/include/libpng16"
   cmake --build "$build/freetype" && cmake --install "$build/freetype"
 
-  # Only the target's C flags carry the platform: global CFLAGS would also reach build scripts compiled for this Mac,
-  # and psm's host assembly then fails with an iOS minimum version. Only the slice's own deployment variable is set:
-  # clang reads it when a compile names no platform, and with both set aws-lc-sys's compiler check on the macOS slice
-  # was built for iOS.
+  # 플랫폼은 타깃의 C 플래그에만 넣는다. 전역 CFLAGS는 이 Mac용으로 컴파일하는 build script에도 들어가서, psm의 호스트
+  # 어셈블리가 iOS 최소 버전 때문에 실패한다. deployment 변수도 그 slice의 것 하나만 설정한다. clang은 플랫폼을 지정하지
+  # 않은 컴파일에서 이 변수를 읽는데, 둘 다 설정하면 macOS slice에서 aws-lc-sys의 컴파일러 검사가 iOS용으로 빌드되었다.
   local var=${target//-/_}
   env -u IPHONEOS_DEPLOYMENT_TARGET -u MACOSX_DEPLOYMENT_TARGET "$deployment=$DEPLOYMENT" \
     CARGO_TARGET_DIR="$work/cargo-target" PKG_CONFIG_ALLOW_CROSS=1 PKG_CONFIG_LIBDIR="$prefix/lib/pkgconfig" \
     TECTONIC_PKGCONFIG_FORCE_SEMI_STATIC=1 \
     "CFLAGS_$var=-DU_DISABLE_RENAMING=1 $min" "CXXFLAGS_$var=-DU_DISABLE_RENAMING=1 $min" \
     cargo build --manifest-path "$work/bridge/Cargo.toml" --target "$target" --release
-  # One archive per slice, so the app links a single library.
   mkdir -p "$work/lib/$name"
   libtool -static -o "$work/lib/$name/libFolioTectonic.a" "$work/cargo-target/$target/release/libfolio_tectonic.a" \
     "$prefix/lib/libfreetype.a" "$prefix/lib/libgraphite2.a" "$prefix/lib/libpng16.a"

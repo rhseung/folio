@@ -1,4 +1,3 @@
-// Code block languages, shared so the reader and the editor color code the same way.
 import { StreamLanguage } from "@codemirror/language";
 import { classHighlighter, highlightCode, styleTags, tagHighlighter, tags as t } from "@lezer/highlight";
 import { pythonLanguage } from "@codemirror/lang-python";
@@ -13,10 +12,9 @@ import { stex } from "@codemirror/legacy-modes/mode/stex";
 import { swift } from "@codemirror/legacy-modes/mode/swift";
 
 const byName = new Map();
-// The first name of each language, which the editor offers after an opening fence.
 export const languageNames = [];
 for (const [language, names] of [
-  // The grammar tags only a decorator's `@`, so its name would read as a plain variable.
+  // 이 문법은 데코레이터의 `@`에만 태그를 달아서, 그대로 두면 데코레이터 이름이 일반 변수로 칠해진다.
   [pythonLanguage.configure({ props: [styleTags({ "Decorator/VariableName Decorator/PropertyName": t.meta })] }), "python py"],
   [cppLanguage, "cpp c++ c h hpp cc"],
   [javaLanguage, "java"],
@@ -33,7 +31,7 @@ for (const [language, names] of [
   for (const n of names.split(" ")) byName.set(n, language);
 }
 
-// classHighlighter leaves called and defined functions and builtins as plain names, which leaves most of a line uncolored.
+// classHighlighter는 호출하거나 정의한 함수와 내장 이름에 클래스를 붙이지 않는다. 이것이 없으면 줄 대부분에 색이 없다.
 export const highlighters = [classHighlighter, tagHighlighter([
   { tag: [t.function(t.variableName), t.function(t.propertyName)], class: "tok-function" },
   { tag: t.standard(t.variableName), class: "tok-builtin" },
@@ -42,7 +40,6 @@ export const highlighters = [classHighlighter, tagHighlighter([
 
 export const codeLanguage = (info) => byName.get(info.trim().split(/\s/)[0]?.toLowerCase() ?? "") ?? null;
 
-// Same tok-* classes as the editor's code lines, so note.css colors both.
 export function highlightBlocks(root) {
   for (const code of root.querySelectorAll("pre[data-lang] > code")) {
     const language = codeLanguage(code.parentElement.dataset.lang);

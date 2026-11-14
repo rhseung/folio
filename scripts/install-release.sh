@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Installs committed code only: origin/main, or a ref given (a throwaway merge of PR branches, say). Uncommitted or
-# unmerged work in this checkout, or in another session's worktree, never ships.
+# 이 체크아웃이나 다른 세션의 워크트리에 있는, 커밋하지 않았거나 머지하지 않은 작업이 설치되지 않도록 임시 워크트리에서 빌드한다.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 git fetch -q origin

@@ -2,26 +2,21 @@
 # The GitHub release's body, from the PRs merged to main between two commits.
 #   release-notes.sh body <since> [<until>]   the body on stdout; an empty <since> means no earlier release
 #   release-notes.sh preview [<since>]        the same, since the latest v* tag unless given
-# The first release (no earlier tag) gathers every PR merged before it.
 #
-# A PR that changes what the student sees writes its patch notes in its own body (AGENTS.md "PR 전 점검"): a
-# `## 패치 노트` section of lines `- feat: …`, `- fix: …` or `- change: …`, each optionally ending in `(folio://…)`. The
-# PR's body is read here at release time, not its commit message, so a body edited after the merge still counts. The
-# lines go into the release under the same heading, after a marker naming their shape, in `### feat`, `### fix` and
-# `### change` groups; the app reads them back from GitHub's releases (`PatchNotes` in FolioDomain) and passes over the
-# group headings. Keep `format`, the kinds and the line shape in step with that reader.
+# 머지한 뒤에 고친 본문도 반영되도록 커밋 메시지가 아니라 PR 본문을 릴리스할 때 읽는다. 앱은 릴리스 본문을 FolioDomain의
+# `PatchNotes`로 읽으므로, `format`, 종류, 줄 모양을 바꾸면 `PatchNotes`도 함께 고친다.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 format=1
 
-# Squash merges put one commit per PR on main; a PR counts when its merge commit is in since..until.
+# main은 스쿼시 머지만 받아 PR마다 커밋이 하나이므로, 머지 커밋이 since..until에 있는 PR만 센다.
 prs() {
   local since=$1 until=$2
   local repo shas q
   repo=${GITHUB_REPOSITORY:-$(gh repo view --json nameWithOwner -q .nameWithOwner)}
   if [ -n "$since" ]; then
     shas=$(git rev-list "$since..$until" | jq -R . | jq -sc .)
-    # The search is cut at the day of <since> to stay short; the SHAs decide.
+    # 검색은 결과를 줄이려고 <since>의 날짜로만 자르므로, 실제로 포함할 PR은 SHA로 정한다.
     q="repo:$repo is:pr is:merged base:main merged:>=$(git log -1 --format=%cs "$since")"
   else
     shas=$(git rev-list "$until" | jq -R . | jq -sc .)
@@ -37,13 +32,10 @@ prs() {
     jq -sc --argjson shas "$shas" '[.[] | select(.mergeCommit.oid as $o | $shas | index($o))] | sort_by(.number)'
 }
 
-# The PR body's first paragraph, without markdown emphasis or the trailing session link.
 summary='def summary: (.body // "") | split("\n\n") | map(select(test("^\\s*(#|https://claude.ai/)") | not)) | (.[0] // "")
   | gsub("\\*\\*|`"; "") | gsub("\\s*\n\\s*"; " ") | ltrimstr(" ") | rtrimstr(" ");'
 
-# The item lines of a body's `## 패치 노트` section, written the one way the app reads (`- feat: …`). The section ends at
-# the next heading of its level or above, so a body grouped under `### feat` is read whole; prose and blank lines in it
-# are left out.
+# 절은 같은 수준 이상의 다음 제목에서 끝나므로, `### feat` 아래로 묶은 본문도 끝까지 읽는다.
 notes='def notes: (.body // "") | gsub("\r"; "") | split("\n") | map(sub("^\\s+"; "") | sub("\\s+$"; "")) as $lines
   | ($lines | map(test("^##\\s+패치 노트$")) | index(true)) as $start
   | if $start == null then [] else

@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
-# Puts FolioTectonic.xcframework (Tectonic as a static library, #41) where Package.swift's binary target expects it. The
-# library is built by .github/workflows/tectonic.yml from sources/tectonic (build.sh) and published as a release asset;
-# pin.json names that asset and its sha256, so the repository holds no binaries and a build needs no Rust. After changing
-# the bridge, the patches, build.sh or that workflow, wait for it and copy the pin it prints.
+# Package.swift의 바이너리 타깃이 sources/tectonic/vendor의 FolioTectonic.xcframework를 가리키므로, 받은 라이브러리를
+# 그 자리에 둔다.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 pin=sources/tectonic/pin.json

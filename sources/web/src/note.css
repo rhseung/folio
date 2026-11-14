@@ -1,8 +1,4 @@
-/* Note typography, shared by the note preview, the Claude panel and PDF export.
-   Colors and sizes come from the app as variables (note-style.swift, from theme.swift and note-look.swift): --text,
-   --text-2, --text-3, --line, --line-soft, --fill, --card, --accent, --accent-ink, the callout kinds --c-*, and
-   --measure, --margin, --body, --paragraph-gap, --block-gap, --radius, --code-size, --label-size, --h1 to --h6, --fade
-   (the edge fade's length, Theme.Space.xl), and the words the page shows, --toc-label. */
+/* 색과 크기는 앱이 CSS 변수로 넘긴다. note-style.swift가 theme.swift와 note-look.swift의 값으로 변수를 만든다. */
 
 :root {
   color-scheme: light dark;
@@ -12,14 +8,12 @@
 }
 
 html { background: transparent; color: var(--text); -webkit-font-smoothing: antialiased; }
-/* The measure takes the margins in, as the native views' column does. */
 body.note { box-sizing: border-box; margin: 0 auto; padding: var(--margin) var(--margin) 96px; max-width: var(--measure);
   font: var(--body)/var(--leading) var(--sans); letter-spacing: -0.003em; word-break: keep-all; overflow-wrap: anywhere; }
-/* Beside the editor the preview brings any block up to the top, the note's end included. */
+/* 편집기 옆의 미리보기는 노트 끝을 포함해 어느 블록이든 맨 위로 올릴 수 있어야 한다. */
 body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); }
 ::selection { background: color-mix(in srgb, var(--accent) 28%, transparent); }
 
-/* Headings: a quiet hierarchy, the accent only as a short rule under h2. */
 .note h1 { font-size: var(--h1); line-height: 1.25; font-weight: 750; letter-spacing: -0.025em; margin: 0 0 28px; }
 .note h2 { font-size: var(--h2); line-height: 1.35; font-weight: 700; letter-spacing: -0.015em; margin: 48px 0 14px; padding-bottom: 8px;
   border-bottom: 1px solid var(--line-soft); position: relative; }
@@ -37,13 +31,11 @@ body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); 
 .note del { color: var(--text-3); }
 .note mark { background: color-mix(in srgb, #f5c542 40%, transparent); color: inherit; border-radius: 3px; padding: 0 2px; }
 
-/* Links: notes in the accent with a soft underline, outside links marked with an arrow. */
 .note a { color: var(--accent-ink); text-decoration: none; background-image: linear-gradient(color-mix(in srgb, var(--accent) 35%, transparent), color-mix(in srgb, var(--accent) 35%, transparent));
   background-size: 100% 1px; background-position: 0 100%; background-repeat: no-repeat; transition: background-size .15s; }
 .note a:hover { background-image: linear-gradient(color-mix(in srgb, var(--accent) 18%, transparent), color-mix(in srgb, var(--accent) 18%, transparent)); background-size: 100% 100%; border-radius: 3px; }
 .note a[href^="http"]::after { content: "↗"; font-size: .75em; margin-left: 2px; color: var(--text-3); }
 
-/* Lists */
 .note ul, .note ol { margin: 0 0 var(--paragraph-gap); padding-left: 1.5em; }
 .note li { margin: 3px 0; padding-left: 2px; }
 .note li > ul, .note li > ol { margin: 3px 0 4px; }
@@ -53,17 +45,16 @@ body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); 
 .note input[type=checkbox] { appearance: none; position: relative; width: 15px; height: 15px; margin: 0 7px 0 0; vertical-align: -2px; border: 1.5px solid var(--text-3);
   border-radius: 5px; display: inline-grid; place-content: center; }
 .note input[type=checkbox]:checked { background: var(--accent); border-color: var(--accent); }
-/* Out of flow: an in-flow mark becomes the box's baseline and drops the checked box below the text. */
+/* 표시를 흐름 밖에 둔다. 흐름 안에 두면 표시가 상자의 기준선이 되어, 체크한 상자가 글자보다 아래로 내려간다. */
 .note input[type=checkbox]:checked::after { content: ""; position: absolute; left: 50%; top: 50%; width: 7px; height: 4px; border: 2px solid white; border-top: 0; border-right: 0;
   transform: translate(-50%, -50%) rotate(-45deg) translate(1px, -1px); }
 .note li:has(> input:checked) { color: var(--text-3); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--text-3) 60%, transparent); }
 
-/* Code */
 .note code { font: 0.86em var(--mono); background: var(--code-fill); padding: 2px 6px; border-radius: 6px; }
 .note pre { margin: 18px 0; padding: 14px 18px; background: var(--code-fill); border-radius: var(--radius); overflow-x: auto; line-height: 1.6; tab-size: 4; }
 .note pre code { background: none; padding: 0; font-size: var(--code-size); }
 .note pre[data-lang]::before { content: attr(data-lang); display: block; font: 600 11px var(--sans); color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
-/* Code colors from code.js's classes; scoped to code so markdown marks the editor also tags keep their own look. */
+/* 편집기는 마크다운 표시에도 tok-* 클래스를 붙이므로, 그 표시가 자기 모양을 유지하도록 코드 안으로만 범위를 좁힌다. */
 :is(.note pre, .cm-code) :is(.tok-keyword, .tok-operatorKeyword) { color: var(--c-theorem); }
 :is(.note pre, .cm-code) :is(.tok-string, .tok-string2) { color: var(--c-example); }
 :is(.note pre, .cm-code) :is(.tok-number, .tok-bool, .tok-atom, .tok-literal) { color: var(--c-warning); }
@@ -75,26 +66,22 @@ body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); 
 :is(.note pre, .cm-code) .tok-propertyName.tok-function { color: var(--c-definition); }
 :is(.note pre, .cm-code) .tok-comment { font-style: italic; }
 
-/* Quotes and rules */
 .note blockquote { margin: 18px 0; padding: 2px 0 2px 18px; border-left: 3px solid var(--line); color: var(--text-2); }
-/* The last block's margin would sit inside the rule and leave it longer below the text than above. */
 .note blockquote > :last-child { margin-bottom: 0; }
-/* Drawn dots, not "· · ·" text: a glyph's size and spacing follow the font and came out too small to see. */
+/* 가운뎃점 글자 대신 점을 그린다. 글자는 크기와 간격이 글꼴을 따라가서 너무 작게 보였다. */
 .note hr { border: 0; height: var(--break-dot); margin: var(--break-space) 0; position: relative; overflow: visible; }
 .note hr::before { content: ""; position: absolute; top: 0; left: calc(50% - var(--break-dot) / 2); width: var(--break-dot); height: var(--break-dot);
   border-radius: 50%; background: var(--text-2);
   box-shadow: calc(-1 * var(--break-pitch)) 0 var(--text-2), var(--break-pitch) 0 var(--text-2); }
 
-/* No backdrop behind images: transparent SVGs carry their own dark-mode palette, and a light card under them hides their light ink. */
-/* A width from `|300` stays a cap, not a minimum. */
+/* 그림 뒤에 배경을 두지 않는다. 투명한 SVG는 다크 모드용 색을 직접 가지고 있어서, 밝은 배경을 깔면 밝은 선이 보이지 않는다. */
 .note img:not(.cm-widgetBuffer) { display: block; max-width: 100%; height: auto; margin: 22px auto; border-radius: 10px; }
 .note p > img:only-child { margin: 22px auto; }
 
-/* Tables: rounded frame, tinted header, hover row. */
 .note table { border-collapse: separate; border-spacing: 0; margin: var(--block-gap) 0; font-size: 14.5px; line-height: 1.6; max-width: 100%;
   border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; display: block; overflow-x: auto; width: fit-content; }
-/* `anywhere` would size a cell's min-content letter by letter, letting a long column squeeze the others; a table wider
-   than the column scrolls instead. A one-word cell (`.word`, from the renderer) keeps to one line. */
+/* `anywhere`를 쓰면 칸의 min-content를 글자 단위로 계산해서 긴 열이 다른 열을 좁힌다. 그 대신 열보다 넓은 표는
+   스크롤한다. 렌더러가 `.word`를 붙인 한 낱말 칸은 한 줄을 유지한다. */
 .note th, .note td { padding: 9px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line-soft); overflow-wrap: normal; }
 .note th.word, .note td.word { white-space: nowrap; }
 .note th { background: var(--fill); font-weight: 650; font-size: 13.5px; color: var(--text-2); }
@@ -102,7 +89,6 @@ body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); 
 .note tbody tr:hover td { background: color-mix(in srgb, var(--fill) 55%, transparent); }
 .note td + td, .note th + th { border-left: 1px solid var(--line-soft); }
 
-/* Math */
 .note .math { font-size: 1.04em; }
 .note .math.display { display: block; margin: var(--block-gap) 0; padding: 6px 0; overflow-x: auto; overflow-y: hidden; text-align: center; }
 .note .math.pending { font: .9em var(--mono); color: var(--text-3); }
@@ -110,7 +96,6 @@ body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); 
 .note .katex { font-size: 1.08em; }
 .note .katex-display { margin: 0; }
 
-/* Callouts: a tinted card with a colored spine. Math-style blocks (definition, theorem, proof) read like a textbook. */
 .note .callout { --c: var(--c-neutral); margin: var(--block-gap) 0; padding: 12px 18px 4px; border-radius: var(--radius);
   background: color-mix(in srgb, var(--c) 7%, transparent); border-left: 3px solid color-mix(in srgb, var(--c) 75%, transparent); }
 .note .callout:not([open]) { padding-bottom: 12px; }
@@ -129,17 +114,12 @@ body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); 
 .note .callout-danger { --c: var(--c-danger); }
 .note .callout-proof, .note .callout-remark { --c: var(--c-neutral); background: none; }
 .note .callout-proof > :last-child::after { content: "∎"; float: right; color: var(--text-3); }
-/* A proof right under a theorem joins it: no gap (the negative margin cancels the theorem's) and square corners where they meet. */
 .note .callout.attached { margin-top: calc(-1 * var(--block-gap)); border-top-left-radius: 0; border-top-right-radius: 0; }
 .note .callout:has(+ .callout.attached) { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
 
-/* Wikilinks and embeds */
 .note a.wikilink { font-weight: 550; }
-/* A link to no note (an ID that is gone, a title no note has): grey with a dashed underline, as an embed that can't be
-   drawn is dashed. An embed's name is grey already. */
 .note a.wikilink.missing { color: var(--text-3); background-image: none; text-decoration: underline dashed var(--line); }
 .note a.embed.missing, .note .embed-title.missing { text-decoration: underline dashed var(--line); }
-/* An embed beside other text is a link to the note; one on its own line draws the note (or the part it names). */
 .note a.embed { display: block; margin: 16px 0; padding: 10px 14px; border: 1px dashed var(--line); border-radius: 10px; color: var(--text-3);
   font-size: 14px; background-image: none; }
 .note a.embed:hover { border-color: var(--accent); background-image: none; }
@@ -153,7 +133,6 @@ body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); 
 .note .embed-body > :last-child { margin-bottom: 0; }
 .note .embed-note { margin: 0; font-size: var(--label-size); color: var(--text-3); }
 
-/* `[TOC]`: the note's headings on a quiet card, each a link to its heading. Its name comes from the app (--toc-label). */
 .note nav.toc { margin: var(--block-gap) 0; padding: 12px 20px; border: 1px solid var(--line-soft); border-radius: var(--radius); }
 .note nav.toc::before { content: var(--toc-label, none); display: block; margin-bottom: 8px; font-size: var(--label-size); font-weight: 600; color: var(--text-3); }
 .note nav.toc ul { list-style: none; margin: 0; padding-left: 0; }
@@ -163,24 +142,20 @@ body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); 
 .note nav.toc > ul > li > a { color: var(--text); font-weight: 550; }
 .note nav.toc a:hover { color: var(--accent-ink); background-image: none; }
 
-/* A block reference's card, shown while the pointer rests on the link: the block on the card color, above the page. */
 .ref-popover { position: absolute; z-index: 10; box-sizing: border-box; width: min(calc(var(--measure) - 2 * var(--margin)), calc(100vw - 16px));
   max-height: 50vh; overflow: auto; padding: 12px 16px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
   box-shadow: 0 8px 24px color-mix(in srgb, var(--text) 16%, transparent); font-size: .94em; }
 .ref-popover > :first-child { margin-top: 0; }
 .ref-popover > :last-child { margin-bottom: 0; }
 .note .cb-widget { border: 1px dashed var(--line); border-radius: var(--radius); }
-/* A widget runs in a frame of its own, as tall as its page says, however tall, so the note scrolls as one page. A page
-   sized by its frame would grow with it for ever; `WidgetSizer` in the app catches that and keeps the block's height. */
+/* 노트가 한 페이지로 스크롤되도록 위젯의 frame은 위젯 페이지가 알린 높이를 그대로 쓴다. frame 높이에 맞춰 크기를 정하는
+   페이지는 frame과 함께 끝없이 커지는데, 앱의 `WidgetSizer`가 이를 감지해 블록의 높이를 유지한다. */
 .note iframe.cb-widget { display: block; box-sizing: border-box; width: 100%; margin: var(--block-gap) 0; border: 0; border-radius: 0; }
 
-/* Diagrams: drawn to their own size, never wider than the column, which scrolls them sideways if they can't shrink. */
 .note figure.mermaid { margin: var(--block-gap) 0; overflow-x: auto; text-align: center; }
 .note figure.mermaid svg { max-width: 100%; height: auto; }
 .note .raw-html { color: var(--text-3); }
 
-/* Footnotes and block IDs */
-/* A reference is a small raised number; line-height 0 keeps it from opening up its line. */
 .note sup.footnote-ref { font-size: .72em; line-height: 0; vertical-align: super; font-variant-numeric: tabular-nums; }
 .note sup.footnote-ref a { font-weight: 650; padding: 0 1px; background-image: none; }
 .note section.footnotes { margin-top: calc(2 * var(--block-gap)); padding-top: var(--paragraph-gap); border-top: 1px solid var(--line-soft);
@@ -192,9 +167,8 @@ body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); 
 .note [id^="^"]:target { background: color-mix(in srgb, var(--accent) 14%, transparent); border-radius: 6px; transition: background 1s; }
 
 
-/* The preview's picture viewer (figures.js): a pressed picture over the dimmed note, on the card color so a transparent
-   SVG keeps the ground its ink was drawn for. Its buttons float, so they are glass pills; in a page that is a blur
-   behind a see-through card color, as the app's glass can't reach into the web view. */
+/* 그림 보기는 투명한 SVG가 원래 그려진 바탕 위에 보이도록 카드 색 위에 그림을 놓는다. 앱의 유리 재질은 웹 보기 안까지
+   닿지 않으므로, 떠 있는 버튼은 반투명한 카드 색 뒤에 blur를 넣어 유리처럼 만든다. */
 body.preview :is(img, figure.mermaid):not(a *, .ref-popover *, .figure-viewer *) { cursor: zoom-in; }
 .figure-viewer { position: fixed; inset: 0; z-index: 20; background: var(--scrim); touch-action: none; overscroll-behavior: contain;
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: grab; }
@@ -203,7 +177,7 @@ body.preview :is(img, figure.mermaid):not(a *, .ref-popover *, .figure-viewer *)
 @keyframes figure-in { from { opacity: 0; } }
 .figure-sheet { position: absolute; left: 0; top: 0; overflow: hidden; background: var(--card); border-radius: var(--radius);
   box-shadow: 0 var(--gap) calc(4 * var(--gap)) var(--scrim); }
-/* After `.note img`, which would give the copy the column's margins and cap. */
+/* `.note img`보다 뒤에 두어야 한다. 그렇지 않으면 사본이 열의 여백과 최대 폭을 물려받는다. */
 .note .figure-sheet > :is(img, svg) { display: block; box-sizing: border-box; width: 100%; height: 100%; max-width: none; margin: 0; border-radius: 0; }
 .figure-bar { position: absolute; display: flex; gap: var(--gap); }
 .figure-top { top: calc(1.5 * var(--gap)); right: calc(1.5 * var(--gap)); }
@@ -222,14 +196,11 @@ body.preview :is(img, figure.mermaid):not(a *, .ref-popover *, .figure-viewer *)
 .figure-actual { min-width: calc(2 * var(--control)); }
 @media (hover: hover) { button.figure-pill:hover { background: color-mix(in srgb, var(--card) 90%, transparent); } }
 button.figure-pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-/* A finger's width where the pointer is one. */
 @media (pointer: coarse) { .figure-pill { min-width: var(--touch); height: var(--touch); } .figure-actual { min-width: calc(2 * var(--touch)); } }
 
-/* A scroller that fades its edges in place of a scroll bar, as `overflowFade` does in the app: reader.js marks the
-   edges with more past them. Both the bar and the mask belong on the box that scrolls: the Claude panel's page holds
-   still and only its `.chat` moves, so `html { scrollbar-width: none }` and edges read from the document did nothing.
-   Masking here rather than in SwiftUI keeps the fade on that box with no round trip to the app. The ends are
-   registered colors so they ease in over the same 0.15s. */
+/* 스크롤 막대와 마스크는 실제로 스크롤되는 상자에 둔다. Claude 패널은 페이지가 움직이지 않고 `.chat`만 스크롤되므로,
+   `html { scrollbar-width: none }`이나 문서에서 읽은 가장자리는 효과가 없었다. 양 끝 색은 @property로 등록해야 같은
+   0.15s 동안 서서히 바뀐다. */
 @property --fade-start { syntax: "<color>"; inherits: false; initial-value: #000; }
 @property --fade-end { syntax: "<color>"; inherits: false; initial-value: #000; }
 .edge-fade { scrollbar-width: none; transition: --fade-start .15s ease-out, --fade-end .15s ease-out;

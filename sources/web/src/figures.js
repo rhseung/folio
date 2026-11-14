@@ -1,6 +1,3 @@
-// The note preview's picture viewer: a picture or diagram pressed in the preview opens over the note, fitted to the
-// window, to zoom and move around. A picture inside a link opens the link instead.
-
 const pictures = "img, figure.mermaid";
 const icons = {
   close: "M4 4l8 8M12 4l-8 8",
@@ -12,14 +9,14 @@ const icons = {
 const icon = (name) =>
   `<svg viewBox="0 0 16 16" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${icons[name]}"/></svg>`;
 
-// Only the note preview's own pictures: the Claude panel's page shares this script, and a block reference's card is
-// gone once the pointer leaves it.
+// 노트 미리보기의 그림만 연다. Claude 패널의 페이지도 이 스크립트를 함께 쓰고, 블록 참조 카드는 포인터가 벗어나면
+// 사라지기 때문이다.
 const openable = (el) =>
   document.body.classList.contains("preview") && el.isConnected && !el.closest("a[href], .ref-popover, .figure-viewer")
   && (el.tagName === "IMG" ? !(el.complete && el.naturalWidth === 0) : !!el.querySelector("svg"));
 
-// SVG as an <img> or inline (mermaid) is drawn again at every size, so it may fill the window; a bitmap stops at its
-// own size until zoomed.
+// SVG는 `<img>`든 인라인(mermaid)이든 크기마다 다시 그려지므로 창을 채워도 된다. 비트맵은 확대하기 전까지 원래
+// 크기에서 멈춘다.
 const isVector = (el) => el.tagName !== "IMG" || /\.svgz?([?#]|$)|^data:image\/svg/i.test(el.currentSrc || el.src);
 
 function naturalSize(el) {
@@ -37,7 +34,6 @@ function naturalSize(el) {
 export function figures() {
   const bound = new WeakSet();
   let viewer = null, sheet = null, source = null;
-  // The sheet's top left in the window and its scale against the picture's own size.
   let x = 0, y = 0, s = 1, fit = 1, size = { w: 1, h: 1 };
   const pointers = new Map();
   let drag = null, lastTap = null, gesture = null;
@@ -45,8 +41,8 @@ export function figures() {
   const label = (name) => document.body.dataset[`label${name.replace(/(^|-)(\w)/g, (_, __, c) => c.toUpperCase())}`] ?? "";
   const all = () => [...document.querySelectorAll(pictures)].filter(openable);
 
-  // A listener on each picture rather than one on the page: iPad WebKit sends no click up from an element that isn't
-  // clickable itself.
+  // 페이지 하나가 아니라 그림마다 리스너를 단다. iPad의 WebKit은 스스로 클릭할 수 없는 요소의 click을 위로 올려 보내지
+  // 않는다.
   function bind(root) {
     if (!(root instanceof Element)) return;
     for (const el of root.matches(pictures) ? [root] : root.querySelectorAll(pictures)) {
@@ -62,7 +58,6 @@ export function figures() {
   bind(document.body);
   new MutationObserver((records) => {
     for (const record of records) record.addedNodes.forEach(bind);
-    // The note changed under it (another note opened, the picture's block edited away).
     if (source && !source.isConnected) close();
   }).observe(document.body, { childList: true, subtree: true });
 
@@ -113,11 +108,11 @@ export function figures() {
 
     viewer.addEventListener("wheel", (event) => {
       event.preventDefault();
-      // A trackpad pinch comes as a wheel with ctrl held, unless WebKit sends it as a gesture below.
+      // 트랙패드 핀치는 ctrl을 누른 wheel 이벤트로 온다. WebKit이 아래의 gesture 이벤트로 보낼 때는 그쪽에서 처리한다.
       if (event.ctrlKey && gesture) return;
       zoomAt(Math.exp(-event.deltaY * (event.ctrlKey ? 0.01 : 0.002)), event.clientX, event.clientY);
     }, { passive: false });
-    // Safari's own pinch events; a touch pinch is read from the pointers instead, so it isn't zoomed twice.
+    // Safari 자체의 핀치 이벤트다. 터치 핀치는 포인터에서 읽으므로, 두 번 확대되지 않도록 여기서는 건너뛴다.
     viewer.addEventListener("gesturestart", (event) => { event.preventDefault(); gesture = pointers.size < 2 ? 1 : null; });
     viewer.addEventListener("gesturechange", (event) => {
       event.preventDefault();
@@ -182,7 +177,6 @@ export function figures() {
     show(list[(list.indexOf(source) + by + list.length) % list.length]);
   }
 
-  // The room the picture fits in: the window less the bars above and below, and the side buttons when there are some.
   function room() {
     const { top, bottom, nav } = parts();
     const edge = parseFloat(getComputedStyle(top).top) || 0;
@@ -210,10 +204,9 @@ export function figures() {
     apply();
   }
 
-  // Drawn at its size, not scaled: a scaled layer is a bitmap blown up, and SVG would blur.
+  // transform으로 늘리지 않고 크기를 정해 그린다. 늘린 레이어는 비트맵을 키운 것이라 SVG가 흐려진다.
   function apply() {
     const w = size.w * s, h = size.h * s;
-    // The sheet always covers the window's middle, so it can't be lost off an edge.
     x = Math.min(Math.max(x, innerWidth / 2 - w), innerWidth / 2);
     y = Math.min(Math.max(y, innerHeight / 2 - h), innerHeight / 2);
     sheet.style.width = `${w}px`;
@@ -234,7 +227,7 @@ export function figures() {
     try { viewer.setPointerCapture(event.pointerId); } catch {}
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointers.size === 1) drag = { x: event.clientX, y: event.clientY, moved: false, fit: atFit(), onSheet: sheet.contains(event.target) };
-    // A pinch: its fingers end apart, which would read as a swipe, and the zoom it made stays.
+    // 핀치는 손가락이 떨어진 채 끝나서 스와이프로 읽힐 수 있다. 표시해 두어 넘기지 않고 확대한 배율을 유지한다.
     else if (drag) drag.moved = drag.pinched = true;
     viewer.classList.add("dragging");
   }
@@ -272,7 +265,6 @@ export function figures() {
     const dx = event.clientX - start.x, dy = event.clientY - start.y;
     if (start.pinched) return;
     if (start.moved) {
-      // A sideways swipe of the fitted picture goes to the next one; any other drag of it springs back.
       if (start.fit && event.type === "pointerup" && Math.abs(dx) > 60 && Math.abs(dx) > 2 * Math.abs(dy) && all().length > 1) step(dx < 0 ? 1 : -1);
       else if (start.fit) fitAll();
       return;
@@ -310,7 +302,7 @@ export function figures() {
     else apply();
   });
 
-  // A diagram takes its colors as values and is drawn again for a new appearance (reader.js); the copy follows it.
+  // 화면 모드가 바뀌면 reader.js가 그림을 다시 그리므로, 그다음 프레임에 사본을 다시 만든다.
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
     requestAnimationFrame(() => {
       if (source?.tagName !== "FIGURE") return;

@@ -1,7 +1,5 @@
 name: Release
 
-# A pushed v* tag (mise run release-tag) builds the Release app and drafts its GitHub release; publishing the draft is
-# done by hand. A manual run is a dry run: the same build and notes, uploaded as an artifact, with no release.
 on:
   push:
     tags: ['v*']
@@ -28,7 +26,7 @@ jobs:
     runs-on: xcode-27
     timeout-minutes: 60
     steps:
-      # The whole history: the build number is the commit count, and the notes start at the previous tag.
+      # 빌드 번호가 커밋 수이고 패치 노트가 이전 태그부터 시작하므로, 전체 기록을 받는다.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
@@ -53,14 +51,12 @@ jobs:
         run: |
           mkdir -p .build/release
           ditto -c -k --sequesterRsrc --keepParent .build/DerivedData/Build/Products/Release/Folio.app ".build/release/Folio-$VERSION.zip"
-      # The patch notes are the merged PRs' `## 패치 노트` sections, read from their bodies now; the app reads them back
-      # from this release's body (#415). A body fixed after the draft is made needs a rerun of the tag's workflow.
       - name: Notes
         env:
           SINCE: ${{ inputs.since }}
         run: |
           if [ -z "$SINCE" ]; then
-            # From the tag's parent, so a tag never finds itself.
+            # 태그의 부모에서 찾아야 태그가 자기 자신을 이전 태그로 찾지 않는다.
             SINCE=$(git describe --tags --abbrev=0 --match 'v*' HEAD^ 2>/dev/null || true)
           fi
           scripts/release-notes.sh body "$SINCE" > .build/release/body.md
@@ -70,7 +66,7 @@ jobs:
         with:
           name: release-${{ steps.version.outputs.version }}
           path: .build/release
-      # A rerun of the same tag replaces the draft's files and notes instead of failing on the existing release.
+      # 같은 태그로 다시 실행하면 이미 있는 릴리스에서 실패하지 않도록, 초안의 파일과 본문을 바꾼다.
       - if: github.ref_type == 'tag'
         env:
           VERSION: ${{ steps.version.outputs.version }}
