@@ -393,51 +393,24 @@ struct RootView: View {
                 sidebarSearch
                 #endif
                 List(selection: listSelection) {
-                    Label {
-                        Text(.rootNavToday)
-                    } icon: {
-                        sidebarIcon("house", .today)
-                    }.sidebarRow(.today, selectionBinding)
                     let waiting = workspace.lmsInbox.proposals.count
-                    if waiting > 0 || selection == .proposals {
-                        Label {
-                            HStack {
-                                Text(.rootNavProposals).lineLimit(1)
-                                if waiting > 0 {
-                                    Spacer(minLength: Theme.Space.xs)
-                                    Text("\(waiting)").font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit()
-                                        .foregroundStyle(Theme.Palette.chromeText).fixedSize()
+                    ForEach(AppLink.Kind.sidebarPlaces, id: \.self) { kind in
+                        let screen = Screen(Navigator.Entry(link: .place(kind)))
+                        if let place = kind.place, kind != .proposals || waiting > 0 || selection == .proposals {
+                            Label {
+                                HStack {
+                                    Text(place.title).lineLimit(kind == .proposals ? 1 : nil)
+                                    if kind == .proposals, waiting > 0 {
+                                        Spacer(minLength: Theme.Space.xs)
+                                        Text("\(waiting)").font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit()
+                                            .foregroundStyle(Theme.Palette.chromeText).fixedSize()
+                                    }
                                 }
-                            }
-                        } icon: {
-                            sidebarIcon("tray", .proposals)
-                        }.sidebarRow(.proposals, selectionBinding)
+                            } icon: {
+                                sidebarIcon(place.symbol, screen)
+                            }.sidebarRow(screen, selectionBinding)
+                        }
                     }
-                    Label {
-                        Text(.rootNavGrades)
-                    } icon: {
-                        sidebarIcon("chart.line.uptrend.xyaxis", .grades)
-                    }.sidebarRow(.grades, selectionBinding)
-                    Label {
-                        Text(.rootNavRequirements)
-                    } icon: {
-                        sidebarIcon("flag", .requirements)
-                    }.sidebarRow(.requirements, selectionBinding)
-                    Label {
-                        Text(.rootNavPeople)
-                    } icon: {
-                        sidebarIcon("person", .people)
-                    }.sidebarRow(.people, selectionBinding)
-                    Label {
-                        Text(.rootNavCodes)
-                    } icon: {
-                        sidebarIcon("number", .codes)
-                    }.sidebarRow(.codes, selectionBinding)
-                    Label {
-                        Text(.rootNavSettings)
-                    } icon: {
-                        sidebarIcon("gearshape", .settings)
-                    }.sidebarRow(.settings, selectionBinding)
                 }
                 .scrollDisabled(true)
                 .onScrollGeometryChange(for: CGFloat.self) {
@@ -802,8 +775,8 @@ struct RootView: View {
 
     var detail: some View { TabScreens(tabs: tabs, workspace: workspace, openLink: openLink(from:)) }
 
-    func showSettings(_ tab: SettingsTab?) {
-        open(.settings(tab?.page))
+    func showSettings(_ tab: AppLink.SettingsPage?) {
+        open(.settings(tab))
     }
 
     func showInputGuide(_ syntax: MathSyntax?) {

@@ -14,9 +14,9 @@ extension GeneratedCommands {
               folio quiz add EC4207 --file - --moved-from 매칭 < card.json
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String = ""
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref(.course)) var course: String = ""
         @Option(name: .customLong("file"), help: ArgumentHelp("카드 JSON 파일. -이면 표준 입력", valueName: "file"), completion: .file(extensions: ["json"])) var cards: String
-        @Option(help: ArgumentHelp("카드가 떠난 단원", valueName: "moved-from"), completion: Complete.ref("Unit")) var movedFrom: String?
+        @Option(help: ArgumentHelp("카드가 떠난 단원", valueName: "moved-from"), completion: Complete.ref(.unit)) var movedFrom: String?
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -25,7 +25,7 @@ extension GeneratedCommands {
             let action = FolioActions.QuizCardSave(
                 course: c.id,
                 cards: try readJSONFile([QuizCard].self, cards),
-                movedFrom: try movedFrom.map { try r.id("Unit", $0, in: c) }
+                movedFrom: try movedFrom.map { try r.id(.unit, $0, in: c) }
             )
             try perform(spec: action, g, ctx: ctx)
         }

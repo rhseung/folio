@@ -11,6 +11,7 @@ struct MCPServer {
         var name: String
         var command: String
         var write: Bool
+        var panel: Bool
         var spec: JSONValue
         var argv: (JSONValue) -> [String]
     }
@@ -26,15 +27,24 @@ struct MCPServer {
         self.propose = propose
         stage = propose ? ProposalStage() : nil
         let all =
-            Self.writeTools(propose: propose)
+            Self.writeTools(propose: propose) + Self.queryTools()
             + Self.readTools().map { Self.builds[$0.command] == nil ? $0 : Self.writing($0, propose: propose) }
         catalog = all
-        tools = (propose ? all.filter { Self.inPanel($0.command) } : all) + Self.generalTools(propose: propose)
+        tools = (propose ? all.filter(\.panel) : all) + Self.generalTools(propose: propose)
     }
 
     // 도움말에서 읽으면 읽기 명령처럼 읽기 전용으로 표시되어 `--propose`에서 `--dry-run`을 건너뛴다. 그래서 액션 하나를
-    // 만들어 쓰는 손 명령을 여기 적고, 만든 액션을 제안한다.
-    static let builds: [String: String] = ["add": "assignment add"]
+    // 만들어 쓰는 손 명령(`BuildsAction`)은 쓰기로 열고, 만든 액션을 제안한다.
+    static let builds: [String: String] = {
+        func walk(_ type: any ParsableCommand.Type, _ path: [String]) -> [(String, String)] {
+            let here = (type as? any BuildsAction.Type).map { [(path.joined(separator: " "), $0.builds.command)] } ?? []
+            return here
+                + type.configuration.subcommands.flatMap { sub in
+                    walk(sub, path + [sub.configuration.commandName ?? sub._commandName])
+                }
+        }
+        return Dictionary(walk(Folio.self, []), uniquingKeysWith: { a, _ in a })
+    }()
 
     static func writing(_ tool: Tool, propose: Bool) -> Tool {
         var t = tool
@@ -52,7 +62,7 @@ struct MCPServer {
         "note", "session", "unit", "exam", "assignment", "material", "quiz", "score", "component", "attendance", "review",
         "problem-set", "search", "today",
     ]
-    static let panelCommands: Set<String> = ["course show", "course list", "recording transcript"]
+    static let panelCommands: Set<String> = ["course list", "recording transcript"]
 
     static func inPanel(_ command: String) -> Bool {
         panelCommands.contains(command) || command.split(separator: " ").first.map { panelGroups.contains(String($0)) } == true
@@ -147,9 +157,9 @@ struct MCPServer {
         var content: [JSONValue] = [["type": "text", "text": .string(Self.compact(run.out.joined(separator: "\n")))]]
         // 앱이 시스템 프롬프트를 바꾸므로 서버의 지시가 Claude에 닿지 않을 수 있어, 결과에도 넣는다.
         content.insert(["type": "text", "text": .string(String(localized: .mcpInstructionsPropose))], at: 0)
-        content.append([
-            "type": "text", "text": .string(ActionProposal(command: command, input: input, after: after.isEmpty ? nil : after).text),
-        ])
+        // 새 항목의 ID(`@New`)는 미리 실행에서 정해져 입력에 들어 있으므로, 어느 기기에서 승인해도 같은 항목을 만든다.
+        let proposal = ActionProposal(id: UUID(), command: command, input: input, after: after.isEmpty ? nil : after)
+        content.append(["type": "text", "text": .string(proposal.text)])
         return ["content": .array(content), "isError": .bool(false)]
     }
 
@@ -237,8 +247,8 @@ struct MCPServer {
             "annotations": ["readOnlyHint": .bool(false), "destructiveHint": .bool(true), "openWorldHint": .bool(false)],
         ]
         return [
-            Tool(name: searchTool, command: "", write: false, spec: search) { _ in [] },
-            Tool(name: runTool, command: "", write: true, spec: runSpec) { _ in [] },
+            Tool(name: searchTool, command: "", write: false, panel: true, spec: search) { _ in [] },
+            Tool(name: runTool, command: "", write: true, panel: true, spec: runSpec) { _ in [] },
         ]
     }
 
@@ -324,7 +334,8 @@ struct MCPServer {
                 "inputSchema": input,
                 "annotations": ["readOnlyHint": .bool(false), "destructiveHint": .bool(removes), "openWorldHint": .bool(false)],
             ]
-            return Tool(name: name(command), command: command, write: true, spec: spec) { args in
+            let panel = Actions.all.first { $0.command == command }?.spec.panel ?? false
+            return Tool(name: name(command), command: command, write: true, panel: panel, spec: spec) { args in
                 var input = args
                 input["dryRun"] = nil
                 return ["run"] + command.split(separator: " ").map(String.init) + ["--input", string(input), "--json", "--yes"]
@@ -348,6 +359,27 @@ struct MCPServer {
         }
         walk(schema)
         return found
+    }
+
+    // 읽기 선언은 선언한 필드를 그대로 입력으로 받고 `run`으로 돈다. 쓰기 도구와 같은 길이다.
+    static func queryTools() -> [Tool] {
+        let builder = SchemaBuilder()
+        return Queries.all.map { type in
+            let spec = type.spec
+            var input = declaredInput(spec.fields, builder.inline(type))
+            let used = referenced(input, builder.defs)
+            if !used.isEmpty { input["$defs"] = .object(builder.defs.filter { used.contains($0.key) }) }
+            let tool: JSONValue = [
+                "name": .string(name(spec.command)),
+                "title": .string(spec.summary),
+                "description": .string(spec.summary),
+                "inputSchema": input,
+                "annotations": ["readOnlyHint": .bool(true), "openWorldHint": .bool(false)],
+            ]
+            return Tool(name: name(spec.command), command: spec.command, write: false, panel: spec.panel, spec: tool) { args in
+                ["run"] + spec.command.split(separator: " ").map(String.init) + ["--input", string(args), "--json"]
+            }
+        }
     }
 
     static let notTools: Set<String> = ["actions", "run", "skill", "completion", "mcp", "unlock", "lock", "cleanup plan", "help", "open"]
@@ -385,14 +417,14 @@ struct MCPServer {
         }
 
         guard let help = try? JSONDecoder().decode(Help.self, from: Data(dump.utf8)) else { return [] }
-        let writes = Set(Actions.all.map { $0.command })
+        let declared = Set(Actions.all.map { $0.command } + Queries.all.map { $0.spec.command })
         func leaves(_ c: Help.Command, _ path: [String]) -> [([String], Help.Command)] {
             guard let subs = c.subcommands, !subs.isEmpty else { return [(path, c)] }
             return subs.filter { $0.shouldDisplay != false }.flatMap { leaves($0, path + [$0.commandName]) }
         }
         return leaves(help.command, []).compactMap { path, c in
             let command = path.joined(separator: " ")
-            guard !path.isEmpty, !writes.contains(command), !notTools.contains(command), !notTools.contains(path[0]) else { return nil }
+            guard !path.isEmpty, !declared.contains(command), !notTools.contains(command), !notTools.contains(path[0]) else { return nil }
             return readTool(command, c)
         }
     }
@@ -423,7 +455,7 @@ struct MCPServer {
             "inputSchema": ["type": "object", "properties": .object(properties), "required": .array(required)],
             "annotations": ["readOnlyHint": .bool(true), "openWorldHint": .bool(false)],
         ]
-        return Tool(name: name(command), command: command, write: false, spec: spec) { input in
+        return Tool(name: name(command), command: command, write: false, panel: inPanel(command), spec: spec) { input in
             var options: [String] = [], positionals: [String] = []
             for a in args {
                 guard let v = input[key(a)], v != .null else { continue }

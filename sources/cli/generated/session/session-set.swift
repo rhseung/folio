@@ -15,7 +15,7 @@ extension GeneratedCommands {
               folio session set EC4207/10-26 --date \"2026-10-29 19:00\" --end \"2026-10-29 20:15\" --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<회차>", valueName: "session"), completion: Complete.ref("Session")) var session: String = ""
+        @Argument(help: ArgumentHelp("<과목>/<회차>", valueName: "session"), completion: Complete.ref(.session)) var session: String = ""
         @Option(help: ArgumentHelp("일시. 회차를 가리키는 날짜(11-03)도 따라 바뀐다", valueName: "date")) var date: DateArg?
         @Option(help: ArgumentHelp("끝 일시. 수업 시간표 칸과 다를 때만 저장된다. none이면 지운다", valueName: "date")) var end: Clearable<DateArg>?
         @Option(help: "온라인 수업 링크(Zoom 등). none이면 지운다") var link: Clearable<String>?
@@ -30,7 +30,7 @@ extension GeneratedCommands {
             let (c, sessionName) = try r.split(session)
             let action = FolioActions.SessionSet(
                 course: c.id,
-                session: try r.id("Session", sessionName, in: c),
+                session: try r.id(.session, sessionName, in: c),
                 date: date.map { Patch.set($0.date) } ?? .keep,
                 end: end.map { p in Patch.set(p.value.map { $0.date }) } ?? .keep,
                 link: link.map { p in Patch.set(p.value) } ?? .keep,

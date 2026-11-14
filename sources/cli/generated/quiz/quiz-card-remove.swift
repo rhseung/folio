@@ -13,8 +13,8 @@ extension GeneratedCommands {
               folio quiz rm EC4207/매칭 3F2A9C1E-0000-4000-8000-000000000001
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<단원>", valueName: "unit"), completion: Complete.ref("Unit")) var unit: String
-        @Argument(help: ArgumentHelp("카드 ID 또는 문제 글", valueName: "card"), completion: Complete.ref("QuizCard")) var card: String = ""
+        @Argument(help: ArgumentHelp("<과목>/<단원>", valueName: "unit"), completion: Complete.ref(.unit)) var unit: String
+        @Argument(help: ArgumentHelp("카드 ID 또는 문제 글", valueName: "card"), completion: Complete.ref(.quizCard)) var card: String = ""
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -22,8 +22,8 @@ extension GeneratedCommands {
             let (c, unitName) = try r.split(unit)
             let action = FolioActions.QuizCardRemove(
                 course: c.id,
-                unit: try r.id("Unit", unitName, in: c),
-                card: try r.id("QuizCard", card, in: c, parent: try r.id("Unit", unitName, in: c))
+                unit: try r.id(.unit, unitName, in: c),
+                card: try r.id(.quizCard, card, in: c, parent: try r.id(.unit, unitName, in: c))
             )
             try perform(spec: action, g, ctx: ctx)
         }

@@ -13,7 +13,7 @@ extension GeneratedCommands {
               folio unit rm EC4207/트리 --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<단원>", valueName: "unit"), completion: Complete.ref("Unit")) var unit: String = ""
+        @Argument(help: ArgumentHelp("<과목>/<단원>", valueName: "unit"), completion: Complete.ref(.unit)) var unit: String = ""
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -21,7 +21,7 @@ extension GeneratedCommands {
             let (c, unitName) = try r.split(unit)
             let action = FolioActions.UnitRemove(
                 course: c.id,
-                unit: try r.id("Unit", unitName, in: c)
+                unit: try r.id(.unit, unitName, in: c)
             )
             try perform(spec: action, g, ctx: ctx)
         }

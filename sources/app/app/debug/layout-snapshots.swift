@@ -41,7 +41,7 @@ enum LayoutSnapshots {
                 await pop(layouts, at: point, in: window, step: "layouts-submenu", directory: directory)
             }
         }
-        UserDefaults.standard.set(SettingsTab.general.rawValue, forKey: SettingsTab.storageKey)
+        UserDefaults.standard.set(AppLink.SettingsPage.general.rawValue, forKey: AppLink.SettingsPage.storageKey)
         tabs.front?.focused.go(Navigator.Entry(link: .settings(.general)))
         try? await Task.sleep(for: .seconds(2))
         shoot("layouts-settings", in: directory)

@@ -4,7 +4,7 @@ import Foundation
 
 @Action(
     "session note", "회차의 러프 노트와 복습 노트. 없으면 템플릿으로 만든다", effect: .creates, done: "회차 '{session}'의 노트",
-    examples: ["folio session note EC4207/10-26 review"], phrases: ["수업 노트", "강의 필기", "러프 노트", "복습 노트 열기"])
+    examples: ["folio session note EC4207/10-26 review"], phrases: ["수업 노트", "강의 필기", "러프 노트", "복습 노트 열기"], panel: true)
 public struct SessionNote {
     /// The new note's id; unused when the note already exists.
     @New var id: Note.ID

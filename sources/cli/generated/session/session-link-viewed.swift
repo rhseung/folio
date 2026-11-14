@@ -13,7 +13,7 @@ extension GeneratedCommands {
               folio session link-viewed EC4207/10-26 --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<회차>", valueName: "session"), completion: Complete.ref("Session")) var session: String = ""
+        @Argument(help: ArgumentHelp("<과목>/<회차>", valueName: "session"), completion: Complete.ref(.session)) var session: String = ""
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -21,7 +21,7 @@ extension GeneratedCommands {
             let (c, sessionName) = try r.split(session)
             let action = FolioActions.SessionLinkViewed(
                 course: c.id,
-                session: try r.id("Session", sessionName, in: c)
+                session: try r.id(.session, sessionName, in: c)
             )
             try perform(spec: action, g, ctx: ctx)
         }

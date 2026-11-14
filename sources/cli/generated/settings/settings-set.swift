@@ -8,7 +8,7 @@ extension GeneratedCommands {
     struct SettingsSet: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "set", abstract: "설정 하나를 바꾸거나 settings.json 전체를 파일 내용으로 바꾸기", discussion: """
             필드는 settings.json의 이름을 점으로 이어 쓴다(`folio settings show --json`). 값은 JSON으로 읽고, JSON이 아니면 글자로 읽는다.
-            있는 필드만 바꿀 수 있다. 모양이 맞지 않는 값은 쓰지 않는다(종료 코드 2).
+            있는 필드만 바꿀 수 있다. 모양이 맞지 않거나 설정 화면이 허용하는 범위를 벗어난 값은 쓰지 않는다(종료 코드 2).
 
             예시:
               folio settings set dayBoundaryMinutes 300

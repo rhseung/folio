@@ -1,7 +1,7 @@
 import Foundation
 
 public struct ProposalTarget: Sendable, Equatable {
-    public enum Effect: Sendable, Equatable {
+    public enum Effect: Codable, Sendable, Equatable {
         case replaces(covers: Set<String>)
         case sets
     }

@@ -45,7 +45,9 @@ struct ActionsCommand: ParsableCommand {
         }
         let writes = Self.directWrites(app)
         let unexplained = rows.filter { !$0.generated && ($0.manualReason ?? "").isEmpty }
-        let passed = rows.allSatisfy { $0.hasCommand && $0.equivalenceTest } && writes.isEmpty && unexplained.isEmpty
+        let unexplainedReads = Queries.all.filter { !$0.spec.generated && ($0.spec.manualReason ?? "").isEmpty }
+        let passed =
+            rows.allSatisfy { $0.hasCommand && $0.equivalenceTest } && writes.isEmpty && unexplained.isEmpty && unexplainedReads.isEmpty
         if g.json {
             try printJSON(Report(actions: rows, directWrites: writes, passed: passed))
         } else {
@@ -64,6 +66,7 @@ struct ActionsCommand: ParsableCommand {
             t.print()
             for w in writes { say("✗".styled(.red) + " " + String(localized: .actionsDirectWrite(w))) }
             for r in unexplained { say("✗".styled(.red) + " " + String(localized: .actionsNoReason(r.command))) }
+            for q in unexplainedReads { say("✗".styled(.red) + " " + String(localized: .actionsNoReason(q.spec.command))) }
             let n = rows.count
             say(
                 [

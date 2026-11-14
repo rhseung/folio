@@ -5,7 +5,7 @@ import Foundation
 @Action(
     "unit pages rm", "단원에서 렉처 파일의 쪽 구간 빼기. 파일과 단원은 그대로 둔다", effect: .removes,
     confirm: "단원 '{unit}'에서 {material}의 쪽 구간을 뺍니다.", done: "단원 '{unit}'에서 {material}의 쪽 구간을 뺐습니다",
-    examples: ["folio unit pages rm EC4207/매칭 05_Matchings.pdf --dry-run"], phrases: ["단원 쪽 구간 지우기"])
+    examples: ["folio unit pages rm EC4207/매칭 05_Matchings.pdf --dry-run"], phrases: ["단원 쪽 구간 지우기"], panel: true)
 public struct UnitPagesRemove {
     @Arg var course: Course.ID
     /// 단원

@@ -16,7 +16,7 @@ extension GeneratedCommands {
               folio note mv EC4207/09-08 정리/09-08
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<노트>", valueName: "note"), completion: Complete.ref("NotePath")) var note: String
+        @Argument(help: ArgumentHelp("<과목>/<노트>", valueName: "note"), completion: Complete.ref(.notePath)) var note: String
         @Argument(help: "새 이름. Notes 폴더 기준이고 하위 폴더를 앞에 쓴다. 예: 정리/증명") var to: String
 
         func run() throws {
@@ -25,7 +25,7 @@ extension GeneratedCommands {
             let (c, noteName) = try r.split(note)
             let action = FolioActions.NoteMove(
                 course: c.id,
-                note: try r.path("NotePath", noteName, in: c),
+                note: try r.path(.notePath, noteName, in: c),
                 to: to
             )
             try perform(spec: action, g, ctx: ctx)

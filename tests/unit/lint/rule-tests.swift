@@ -211,6 +211,17 @@ private let view = "sources/app/features/demo/demo-view.swift"
             ])
     }
 
+    @Test func queryFieldsKeepDocComments() {
+        let source = """
+            @Query("exam show", "시험 보기")
+            struct ExamShow {
+                /// 시험
+                @Arg var exam: Exam.ID
+            }
+            """
+        #expect(found(["sources/actions/exam/exam-show.swift": source], "doc-comment").isEmpty)
+    }
+
     @Test func codeInStringsIsNotAComment() {
         let source = "let example = \"/// a doc comment\"\nlet block = \"\"\"\n    /// inside\n    \"\"\"\n"
         #expect(found(["tests/unit/macros/action-tests.swift": source], "doc-comment").isEmpty)

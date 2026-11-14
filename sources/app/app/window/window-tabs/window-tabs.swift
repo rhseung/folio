@@ -173,17 +173,19 @@ extension Workspace {
                 let semester = transcript.semesters.first { $0.id == id }
                 return Crumb(title: semester?.title ?? "", symbol: semester?.term == .credited ? "checkmark.seal" : "folder")
             }()
-        case .grades: Crumb(title: String(localized: .rootNavGrades), symbol: "chart.line.uptrend.xyaxis")
-        case .requirements: Crumb(title: String(localized: .rootNavRequirements), symbol: "flag")
-        case .people: Crumb(title: String(localized: .rootNavPeople), symbol: "person")
-        case .codes: Crumb(title: String(localized: .rootNavCodes), symbol: "number")
-        case .settings: Crumb(title: String(localized: .rootNavSettings), symbol: "gearshape")
-        case .whatsNew: Crumb(title: String(localized: .whatsNewTitle), symbol: "sparkles")
-        case .proposals: Crumb(title: String(localized: .rootNavProposals), symbol: "tray")
+        case .grades: crumb(.grades)
+        case .requirements: crumb(.requirements)
+        case .people: crumb(.people)
+        case .codes: crumb(.codes)
+        case .settings: crumb(.settings)
+        case .whatsNew: crumb(.whatsNew)
+        case .proposals: crumb(.proposals)
+        case .today: crumb(.today)
         case .missing: Crumb(title: entry.link.string, symbol: "questionmark.folder")
-        case .today: Crumb(title: String(localized: .rootNavToday), symbol: "house")
         }
     }
+
+    private func crumb(_ place: AppLink.Kind) -> Crumb { Crumb(title: place.place?.title ?? "", symbol: place.place?.symbol) }
 
     func tabTitle(of entry: Navigator.Entry) -> String? {
         switch entry.link.kind {

@@ -13,9 +13,9 @@ extension GeneratedCommands {
             """)
         @OptionGroup var g: GlobalOptions
         @Option(name: .customLong("id"), help: .hidden) var id: UUID?
-        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref(.course)) var course: String
         @Argument(help: "단원 제목") var title: String
-        @Option(help: ArgumentHelp("상위 단원. 없으면 맨 위", valueName: "parent"), completion: Complete.ref("Unit")) var parent: String?
+        @Option(help: ArgumentHelp("상위 단원. 없으면 맨 위", valueName: "parent"), completion: Complete.ref(.unit)) var parent: String?
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -25,7 +25,7 @@ extension GeneratedCommands {
                 id: id ?? UUID(),
                 course: c.id,
                 title: title,
-                parent: try parent.map { try r.id("Unit", $0, in: c) }
+                parent: try parent.map { try r.id(.unit, $0, in: c) }
             )
             try perform(spec: action, g, ctx: ctx)
         }

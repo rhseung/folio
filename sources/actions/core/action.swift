@@ -4,11 +4,13 @@ import Foundation
 
 public protocol Action: Codable, Sendable {
     static var spec: ActionSpec { get }
+    static func currentFile(_ ctx: ActionContext) throws -> (field: String, value: JSONValue)?
     func run(_ ctx: ActionContext) throws
 }
 
 extension Action {
     public static var command: String { spec.command }
+    public static func currentFile(_ ctx: ActionContext) throws -> (field: String, value: JSONValue)? { nil }
 }
 
 extension [Change] {

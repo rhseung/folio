@@ -11,8 +11,8 @@ extension GeneratedCommands {
               folio note unlink-session \"EC4207/10-26(월) 정리\" 10-26
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<노트>", valueName: "note"), completion: Complete.ref("Note")) var note: String
-        @Argument(help: ArgumentHelp("회차", valueName: "session"), completion: Complete.ref("Session")) var session: String = ""
+        @Argument(help: ArgumentHelp("<과목>/<노트>", valueName: "note"), completion: Complete.ref(.note)) var note: String
+        @Argument(help: ArgumentHelp("회차", valueName: "session"), completion: Complete.ref(.session)) var session: String = ""
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -20,8 +20,8 @@ extension GeneratedCommands {
             let (c, noteName) = try r.split(note)
             let action = FolioActions.NoteUnlinkSession(
                 course: c.id,
-                note: try r.id("Note", noteName, in: c),
-                session: try r.id("Session", session, in: c)
+                note: try r.id(.note, noteName, in: c),
+                session: try r.id(.session, session, in: c)
             )
             try perform(spec: action, g, ctx: ctx)
         }

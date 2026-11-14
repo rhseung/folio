@@ -6,7 +6,7 @@ import Foundation
     "material mv", "자료 파일을 옮기거나 이름 바꾸기. ID와 연결은 그대로", discussion: "moves.jsonl에 남겨서 folio cleanup undo로 되돌릴 수 있다.",
     effect: .moves, confirm: "{material}을(를) {to}(으)로 옮깁니다.", done: "{material}을(를) {to}(으)로 옮겼습니다",
     examples: ["folio material mv EC4207/Seating.pdf Exams/Midterm/자리.pdf --dry-run"],
-    phrases: ["파일 이름 바꾸기", "다른 폴더로", "파일 이름 변경", "파일 옮기기"], undoable: true)
+    phrases: ["파일 이름 바꾸기", "다른 폴더로", "파일 이름 변경", "파일 옮기기"], undoable: true, panel: true)
 public struct MaterialMove {
     @Arg var course: Course.ID
     /// 자료

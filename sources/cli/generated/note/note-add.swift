@@ -14,14 +14,14 @@ extension GeneratedCommands {
             """)
         @OptionGroup var g: GlobalOptions
         @Option(name: .customLong("id"), help: .hidden) var id: UUID?
-        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref(.course)) var course: String
         @Argument(help: "제목. 파일 이름이 된다") var title: String
         @Option(help: "종류") var kind: NoteKind = .free
         @Option(help: "파일 형식. markdown(.md) 또는 tex(.tex)") var format: NoteFormat = .markdown
         @Option(help: ArgumentHelp("본문 파일. -이면 표준 입력", valueName: "file"), completion: .file()) var body: String?
-        @Option(help: ArgumentHelp("회차", valueName: "session"), completion: Complete.ref("Session")) var session: String?
-        @Option(help: ArgumentHelp("시험", valueName: "exam"), completion: Complete.ref("Exam")) var exam: String?
-        @Option(name: .customLong("unit"), help: ArgumentHelp("단원. 여러 번 줄 수 있다", valueName: "unit"), completion: Complete.ref("Unit")) var units: [String] = []
+        @Option(help: ArgumentHelp("회차", valueName: "session"), completion: Complete.ref(.session)) var session: String?
+        @Option(help: ArgumentHelp("시험", valueName: "exam"), completion: Complete.ref(.exam)) var exam: String?
+        @Option(name: .customLong("unit"), help: ArgumentHelp("단원. 여러 번 줄 수 있다", valueName: "unit"), completion: Complete.ref(.unit)) var units: [String] = []
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -34,9 +34,9 @@ extension GeneratedCommands {
                 kind: kind,
                 format: format,
                 body: try body.map(readText),
-                session: try session.map { try r.id("Session", $0, in: c) },
-                exam: try exam.map { try r.id("Exam", $0, in: c) },
-                units: try units.map { try r.id("Unit", $0, in: c) }
+                session: try session.map { try r.id(.session, $0, in: c) },
+                exam: try exam.map { try r.id(.exam, $0, in: c) },
+                units: try units.map { try r.id(.unit, $0, in: c) }
             )
             try perform(spec: action, g, ctx: ctx)
         }

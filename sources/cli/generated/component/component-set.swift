@@ -13,7 +13,7 @@ extension GeneratedCommands {
               folio component set EC4207/퀴즈 --group none --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<항목 이름>", valueName: "component"), completion: Complete.ref("GradeComponent")) var component: String = ""
+        @Argument(help: ArgumentHelp("<과목>/<항목 이름>", valueName: "component"), completion: Complete.ref(.gradeComponent)) var component: String = ""
         @Option(help: "이름") var name: String?
         @Option(help: "비중(%)") var weight: Double?
         @Option(help: "점수를 묶는 방식") var aggregation: Aggregation?
@@ -27,7 +27,7 @@ extension GeneratedCommands {
             let (c, componentName) = try r.split(component)
             let action = FolioActions.ComponentSet(
                 course: c.id,
-                component: try r.id("GradeComponent", componentName, in: c),
+                component: try r.id(.gradeComponent, componentName, in: c),
                 name: name.map { Patch.set($0) } ?? .keep,
                 weight: weight.map { Patch.set($0) } ?? .keep,
                 aggregation: aggregation.map { Patch.set($0) } ?? .keep,

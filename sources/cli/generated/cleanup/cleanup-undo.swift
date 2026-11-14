@@ -13,13 +13,13 @@ extension GeneratedCommands {
               folio cleanup undo 6A1F0C2E-3B4D-4E5F-8A9B-0C1D2E3F4A5B --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("묶음 ID", valueName: "batch"), completion: Complete.ref("MoveBatch")) var batch: String = ""
+        @Argument(help: ArgumentHelp("묶음 ID", valueName: "batch"), completion: Complete.ref(.moveBatch)) var batch: String = ""
 
         func run() throws {
             let ctx = try CLI.context(g)
             let r = Resolver(ctx)
             let action = FolioActions.CleanupUndo(
-                batch: try r.id("MoveBatch", batch, in: nil),
+                batch: try r.id(.moveBatch, batch, in: nil),
                 course: nil
             )
             try perform(spec: action, g, ctx: ctx)

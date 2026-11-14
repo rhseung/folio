@@ -3,10 +3,10 @@ import SwiftUI
 
 struct QuizView: View {
     let course: LoadedCourse
-    @Binding var section: CourseSection
+    @Binding var section: AppLink.CoursePage
     @State private var model: QuizModel
 
-    init(workspace: Workspace, course: LoadedCourse, section: Binding<CourseSection>) {
+    init(workspace: Workspace, course: LoadedCourse, section: Binding<AppLink.CoursePage>) {
         _model = State(initialValue: QuizModel(workspace: workspace))
         self.course = course
         _section = section
@@ -15,10 +15,10 @@ struct QuizView: View {
     var body: some View {
         Group {
             switch section {
-            case .quizCards: QuizCardsView(course: course, model: model)
-            case .quizStats: QuizStatsView(course: course, model: model, solve: solve)
-            case .quizProblems: ProblemSetsView(course: course, model: model)
-            default: QuizSolveView(course: course, quiz: model, showCards: { section = .quizCards })
+            case .cards: QuizCardsView(course: course, model: model)
+            case .stats: QuizStatsView(course: course, model: model, solve: solve)
+            case .problems: ProblemSetsView(course: course, model: model)
+            default: QuizSolveView(course: course, quiz: model, showCards: { section = .cards })
             }
         }
         .background(Theme.Palette.page)
@@ -26,7 +26,7 @@ struct QuizView: View {
         // Claude 패널이나 제안에서 저장한 카드가 이 페이지가 열려 있는 동안 들어온다. 뷰의 사본은 revision을 올린
         // 쓰기보다 한 렌더 늦으므로 과목을 새로 읽는다.
         .onChange(of: model.workspace.quizRevision) { model.load(model.workspace.course(course.id) ?? course) }
-        .onChange(of: section) { _, new in if new != .quizSolve { model.request = nil } }
+        .onChange(of: section) { _, new in if new != .quiz { model.request = nil } }
         .sheet(item: $model.generating) { unit in
             GenerateCardsSheet(workspace: model.workspace, course: course, unit: unit) { model.load(course) }
         }
@@ -34,7 +34,7 @@ struct QuizView: View {
 
     func solve(_ request: SolveRequest) {
         model.request = request
-        section = .quizSolve
+        section = .quiz
     }
 }
 

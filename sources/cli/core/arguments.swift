@@ -20,14 +20,7 @@ extension Term: ExpressibleByArgument {}
 extension ReviewResult: ExpressibleByArgument {}
 
 extension Session.Kind: ExpressibleByArgument {
-    public init?(argument: String) {
-        switch argument {
-        case "강의": self = .lecture
-        case "휴강": self = .cancelled
-        case "보강": self = .makeup
-        default: self.init(rawValue: argument.lowercased())
-        }
-    }
+    public init?(argument: String) { self.init(word: argument) }
 }
 
 extension JSONValue: ExpressibleByArgument {

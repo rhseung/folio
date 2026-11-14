@@ -5,7 +5,7 @@ import Foundation
 // 가져온 평가 항목은 같은 `order`를 가질 수 있으므로 모두 번호를 다시 매긴다.
 @Action(
     "component move", "성적 항목을 한 칸 위나 아래로", done: "성적 항목 '{component}'을(를) 옮겼습니다",
-    cli: .manual(reason: "--up과 --down 플래그가 옮길 칸 수(by)가 된다"))
+    cli: .manual(reason: "--up과 --down 플래그가 옮길 칸 수(by)가 된다"), panel: true)
 public struct ComponentMove {
     @Arg var course: Course.ID
     @Arg var component: GradeComponent.ID

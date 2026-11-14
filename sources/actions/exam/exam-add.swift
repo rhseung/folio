@@ -10,7 +10,7 @@ import Foundation
         #"folio exam add EC4207 중간고사 --start "2026-10-21 10:00" --end "2026-10-21 12:00" --location B101"#,
         "folio exam add EC4207 Quiz1 --start 2026-09-30 --dry-run",
     ],
-    phrases: ["기말고사 추가", "중간고사 등록", "시험 추가", "중간고사 추가", "기말 등록", "퀴즈 일정"])
+    phrases: ["기말고사 추가", "중간고사 등록", "시험 추가", "중간고사 추가", "기말 등록", "퀴즈 일정"], panel: true)
 public struct ExamAdd {
     @New var id: Exam.ID
     /// 과목

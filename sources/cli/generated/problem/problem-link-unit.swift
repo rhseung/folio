@@ -12,9 +12,9 @@ extension GeneratedCommands {
               folio problem-set link \"EC4207/Exercise 1\" 3a 매칭 --off
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<묶음>", valueName: "set"), completion: Complete.ref("ProblemSet")) var set: String
+        @Argument(help: ArgumentHelp("<과목>/<묶음>", valueName: "set"), completion: Complete.ref(.problemSet)) var set: String
         @Argument(help: "문제 번호") var number: String
-        @Argument(help: ArgumentHelp("같은 과목의 단원", valueName: "unit"), completion: Complete.ref("Unit")) var unit: String = ""
+        @Argument(help: ArgumentHelp("같은 과목의 단원", valueName: "unit"), completion: Complete.ref(.unit)) var unit: String = ""
         @Flag(name: .customLong("off"), help: "연결 떼기") var off = false
 
         func run() throws {
@@ -23,9 +23,9 @@ extension GeneratedCommands {
             let (c, setName) = try r.split(set)
             let action = FolioActions.ProblemLinkUnit(
                 course: c.id,
-                set: try r.id("ProblemSet", setName, in: c),
+                set: try r.id(.problemSet, setName, in: c),
                 number: number,
-                unit: try r.id("Unit", unit, in: c),
+                unit: try r.id(.unit, unit, in: c),
                 linked: !off
             )
             try perform(spec: action, g, ctx: ctx)

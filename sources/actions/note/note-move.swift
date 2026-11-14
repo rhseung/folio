@@ -9,7 +9,7 @@ import Foundation
         #"새 이름은 Notes 폴더 기준이고 확장자는 노트 그대로다. 과목의 다른 노트가 같은 이름이면 뒤에 " 2"를 붙인다. course.json의 노트 경로, 노트의 첫 제목(아직 예전 이름일 때), 다른 노트의 [[제목]] 링크와 [[note:<ID>|제목]]의 이름(아직 예전 이름일 때)이 함께 바뀌고, 다른 폴더로 옮기면 노트 안의 상대 경로(그림)도 새 자리에 맞춘다. 이동은 moves.jsonl에 남고 folio cleanup undo로 함께 되돌린다. .tex 노트는 Folio가 빌드한 PDF(Study/<제목>.pdf)도 같은 묶음으로 새 이름을 따라가고, 새 이름의 PDF가 이미 있으면 덮어쓰지 않고 그대로 둔다. Folio가 만들지 않은 같은 이름의 PDF는 옮기지 않는다."#,
     effect: .moves, confirm: "노트 {note}을(를) Notes/{to}(으)로 옮깁니다.", done: "노트 {note}을(를) Notes/{to}(으)로 옮겼습니다",
     examples: [#"folio note mv "EC4207/시험 메모" "중간 대비" --dry-run"#, "folio note mv EC4207/09-08 정리/09-08"],
-    phrases: ["노트 이름 바꾸기", "노트 이름 변경", "노트 옮기기", "노트 폴더로"], undoable: true)
+    phrases: ["노트 이름 바꾸기", "노트 이름 변경", "노트 옮기기", "노트 폴더로"], undoable: true, panel: true)
 public struct NoteMove {
     @Arg var course: Course.ID
     /// 노트

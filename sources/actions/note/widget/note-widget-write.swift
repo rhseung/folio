@@ -4,7 +4,7 @@ import Foundation
 
 @Action(
     "note widget write", "노트 위젯 HTML 전체를 바꾸기. note widget show의 해시를 --expect로 넘겨 그사이 바뀌지 않았는지 확인한다",
-    done: "위젯 {widget}을(를) 썼습니다", phrases: ["위젯 다시 쓰기", "위젯 수정"])
+    done: "위젯 {widget}을(를) 썼습니다", phrases: ["위젯 다시 쓰기", "위젯 수정"], proposal: .replaces(covers: []), panel: true)
 public struct NoteWidgetWrite {
     /// 과목
     @Arg var course: Course.ID

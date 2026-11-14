@@ -157,23 +157,36 @@ struct WorkspaceLinkTests {
     @Test func aSettingsLinkWithoutATabOpensTheOneLastPicked() throws {
         let workspace = try fixtureWorkspace()
         // 테스트 호스트가 앱의 defaults를 함께 쓰므로, 사용자가 마지막으로 고른 탭을 되돌려 놓는다.
-        let saved = UserDefaults.standard.string(forKey: SettingsTab.storageKey)
-        defer { UserDefaults.standard.set(saved, forKey: SettingsTab.storageKey) }
-        UserDefaults.standard.set(SettingsTab.backup.rawValue, forKey: SettingsTab.storageKey)
+        let saved = UserDefaults.standard.string(forKey: AppLink.SettingsPage.storageKey)
+        defer { UserDefaults.standard.set(saved, forKey: AppLink.SettingsPage.storageKey) }
+        UserDefaults.standard.set(AppLink.SettingsPage.backup.rawValue, forKey: AppLink.SettingsPage.storageKey)
         #expect(workspace.entry(for: .place(.settings))?.link == .settings(.backup))
         #expect(workspace.entry(for: .settings(.claude))?.link == .settings(.claude))
     }
 }
 
-struct CoursePageLinkTests {
-    @Test func everySectionRoundTripsThroughItsPage() {
-        for section in CourseSection.allCases {
-            #expect(CourseSection(section.page) == section)
+struct PlaceTableTests {
+    @Test func everySidebarPlaceHasANameAndIcon() {
+        for kind in AppLink.Kind.sidebarPlaces {
+            #expect(kind.place?.title.isEmpty == false && kind.place?.symbol.isEmpty == false, "\(kind)")
         }
-        for tab in SettingsTab.allCases {
-            #expect(SettingsTab(tab.page) == tab)
+        #expect(AppLink.Kind.allCases.filter { $0.place != nil }.allSatisfy { $0.isPlace })
+    }
+
+    @Test func courseItemsOpenAPageOfTheirCourse() {
+        for kind in AppLink.Kind.allCases where kind.home == .course || kind.home == .quiz {
+            #expect((kind.coursePage != nil) == (kind != .course), "\(kind)")
         }
-        #expect(Set(SettingsTab.allCases.map(\.page)).count == AppLink.SettingsPage.allCases.count)
+        #expect(AppLink.Kind.allCases.filter(\.focusesRow).allSatisfy { $0.coursePage != nil })
+    }
+
+    @Test func aLinkPicksItsItemOrClearsAtTheList() {
+        let id = UUID()
+        #expect(AppLink(.unit, id).selection(of: .unit) == .some(id))
+        #expect(AppLink.course(id, page: .units).selection(of: .unit) == .some(nil))
+        #expect(AppLink(.note, id).selection(of: .unit) == nil)
+        #expect(AppLink.place(.people).selection(of: .person) == .some(nil))
+        #expect(AppLink.place(.today).selection(of: .person) == nil)
     }
 }
 

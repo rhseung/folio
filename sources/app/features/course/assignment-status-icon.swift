@@ -3,10 +3,11 @@ import SwiftUI
 
 extension AssignmentStatus {
     @MainActor static let steps: [StepToggle<AssignmentStatus>.Option] = [
-        .init(value: .todo, label: String(localized: .assignmentStatusTodo), tint: Theme.Palette.textSecondary),
-        .init(value: .doing, label: String(localized: .assignmentStatusDoing), tint: Theme.Palette.warning),
-        .init(value: .submitted, label: String(localized: .assignmentStatusSubmitted), tint: Theme.Palette.success),
-        .init(value: .graded, label: String(localized: .assignmentStatusGraded), tint: Theme.Series.one),
+        .init(value: .todo, label: AssignmentStatus.todo.label, tint: AssignmentStatus.todo.tone.tint),
+        .init(value: .doing, label: AssignmentStatus.doing.label, tint: AssignmentStatus.doing.tone.tint),
+        .init(value: .submitted, label: AssignmentStatus.submitted.label, tint: AssignmentStatus.submitted.tone.tint),
+        // 채점한 과제는 제출한 과제와 구분하려고 상태 색이 아니라 계열 색을 쓴다.
+        .init(value: .graded, label: AssignmentStatus.graded.label, tint: Theme.Series.one),
     ]
 
     var label: String {

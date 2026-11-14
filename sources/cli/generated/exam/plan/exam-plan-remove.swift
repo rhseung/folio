@@ -13,8 +13,8 @@ extension GeneratedCommands {
               folio exam plan rm EC4207/중간고사 \"트리 단원 복습\" --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<시험>", valueName: "exam"), completion: Complete.ref("Exam")) var exam: String
-        @Argument(help: ArgumentHelp("항목 제목이나 UUID", valueName: "item"), completion: Complete.ref("ExamPlanItem")) var item: String = ""
+        @Argument(help: ArgumentHelp("<과목>/<시험>", valueName: "exam"), completion: Complete.ref(.exam)) var exam: String
+        @Argument(help: ArgumentHelp("항목 제목이나 UUID", valueName: "item"), completion: Complete.ref(.examPlanItem)) var item: String = ""
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -22,8 +22,8 @@ extension GeneratedCommands {
             let (c, examName) = try r.split(exam)
             let action = FolioActions.ExamPlanRemove(
                 course: c.id,
-                exam: try r.id("Exam", examName, in: c),
-                item: try r.id("ExamPlanItem", item, in: c, parent: try r.id("Exam", examName, in: c))
+                exam: try r.id(.exam, examName, in: c),
+                item: try r.id(.examPlanItem, item, in: c, parent: try r.id(.exam, examName, in: c))
             )
             try perform(spec: action, g, ctx: ctx)
         }

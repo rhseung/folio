@@ -9,7 +9,7 @@ extension GeneratedCommands {
         static let configuration = CommandConfiguration(commandName: "write", abstract: "노트 위젯 HTML 전체를 바꾸기. note widget show의 해시를 --expect로 넘겨 그사이 바뀌지 않았는지 확인한다", discussion: """
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<위젯 ID>", valueName: "widget"), completion: Complete.ref("NoteWidget")) var widget: String = ""
+        @Argument(help: ArgumentHelp("<과목>/<위젯 ID>", valueName: "widget"), completion: Complete.ref(.noteWidget)) var widget: String = ""
         @Option(help: ArgumentHelp("새 위젯 HTML", valueName: "widget.html"), completion: .file()) var html: String
         @Option(help: "note widget show가 알려 준 해시. 위젯이 그사이 바뀌었으면 쓰지 않는다") var expect: String
 
@@ -19,7 +19,7 @@ extension GeneratedCommands {
             let (c, widgetName) = try r.split(widget)
             let action = FolioActions.NoteWidgetWrite(
                 course: c.id,
-                widget: try r.id("NoteWidget", widgetName, in: c),
+                widget: try r.id(.noteWidget, widgetName, in: c),
                 html: try readText(html),
                 expect: expect
             )

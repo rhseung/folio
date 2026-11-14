@@ -8,7 +8,7 @@ import Foundation
     "session rm", "아무것도 연결되지 않은 회차 지우기",
     discussion: "노트, 녹음, 출석, 자료, 단원이 연결된 회차는 지우지 않는다(종료 코드 4). 수업이 없던 날이면 session set --kind cancelled로 휴강 표시한다.",
     effect: .removes, confirm: "회차 {sessions}을(를) 지웁니다.",
-    done: "회차 {sessions}을(를) 지웠습니다", examples: ["folio session rm EC4207/10-30 --dry-run"])
+    done: "회차 {sessions}을(를) 지웠습니다", examples: ["folio session rm EC4207/10-30 --dry-run"], panel: true)
 public struct SessionRemove {
     @Arg var course: Course.ID
     /// 회차

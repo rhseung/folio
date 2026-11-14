@@ -760,6 +760,17 @@
         }
       }
     },
+    "error.proposal-applied": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미 적용한 제안입니다"
+          }
+        }
+      }
+    },
     "error.recording.semester-not-over": {
       "extractionState": "manual",
       "localizations": {
@@ -1680,6 +1691,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@: 받은 파일이 없습니다. LMS 뷰어에서만 볼 수 있는 자료는 LMS에서 열거나 무시합니다"
+          }
+        }
+      }
+    },
+    "error.no-semester": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학기가 없습니다"
           }
         }
       }

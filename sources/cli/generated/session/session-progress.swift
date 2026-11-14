@@ -14,7 +14,7 @@ extension GeneratedCommands {
               folio session progress EC4207/10-26 05_Matchings.pdf:18-24 --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<회차>", valueName: "session"), completion: Complete.ref("Session")) var session: String
+        @Argument(help: ArgumentHelp("<과목>/<회차>", valueName: "session"), completion: Complete.ref(.session)) var session: String
         @Argument(help: ArgumentHelp("렉처 파일마다 이번 수업이 다룬 쪽. 05_Matchings.pdf:3-12. 여러 번 줄 수 있다", valueName: "material:pages")) var ranges: [String]
 
         func run() throws {
@@ -23,7 +23,7 @@ extension GeneratedCommands {
             let (c, sessionName) = try r.split(session)
             let action = FolioActions.SessionProgress(
                 course: c.id,
-                session: try r.id("Session", sessionName, in: c),
+                session: try r.id(.session, sessionName, in: c),
                 ranges: try ranges.map { try r.parse($0, in: c) }
             )
             try perform(spec: action, g, ctx: ctx)

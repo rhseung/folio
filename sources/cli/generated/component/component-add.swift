@@ -13,7 +13,7 @@ extension GeneratedCommands {
             """)
         @OptionGroup var g: GlobalOptions
         @Option(name: .customLong("id"), help: .hidden) var id: UUID?
-        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref(.course)) var course: String
         @Argument(help: "항목 이름") var name: String
         @Option(help: "비중(%)") var weight: Double
         @Option(help: "점수를 묶는 방식. sum, mean, single, dropLowest:<n>, bestOf:<n>") var aggregation: Aggregation = .sum

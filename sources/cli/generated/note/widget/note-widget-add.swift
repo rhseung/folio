@@ -11,7 +11,7 @@ extension GeneratedCommands {
 
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String = ""
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref(.course)) var course: String = ""
         @Option(name: .customLong("id"), help: .hidden) var id: UUID?
         @Option(help: ArgumentHelp("위젯 HTML 페이지", valueName: "widget.html"), completion: .file()) var html: String
 

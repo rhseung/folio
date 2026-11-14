@@ -33,7 +33,8 @@ extension CourseCommand {
                 ], shrink: [2])
             for c in courses {
                 t.rows.append([
-                    "●".course(c.color), c.tag, c.course.title, c.course.credits.formatted(), c.course.gradingMode.rawValue.toned,
+                    "●".course(c.color), c.tag, c.course.title, c.course.credits.formatted(),
+                    c.course.gradingMode.rawValue.toned(c.course.gradingMode.tone),
                     catalog?.grade(c.course.finalGrade).map { GradesLock.masked($0.symbol) } ?? "",
                 ])
             }

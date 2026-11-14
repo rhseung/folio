@@ -45,7 +45,7 @@ extension SessionCommand {
                 ].compactMap { $0 }
                 let cells = [
                     f.reference(of: s, calendar: r.ctx.calendar), when(s.date, now: r.ctx.now, time: true),
-                    kindLabel(s).map { s.isCancelled ? $0.toned : $0 } ?? "", f.subject(of: s) ?? "", notes.joined(separator: " · "),
+                    kindLabel(s).map { $0.toned(s.kind.tone) } ?? "", f.subject(of: s) ?? "", notes.joined(separator: " · "),
                 ]
                 t.rows.append(s.date < r.ctx.now ? cells.map { $0.styled(.dim) } : cells)
             }

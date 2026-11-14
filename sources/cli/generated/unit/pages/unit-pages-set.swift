@@ -11,8 +11,8 @@ extension GeneratedCommands {
               folio unit pages set EC4207/매칭 05_Matchings.pdf --first 1 --last 6
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<단원>", valueName: "unit"), completion: Complete.ref("Unit")) var unit: String
-        @Argument(help: ArgumentHelp("렉처 자료", valueName: "material"), completion: Complete.ref("Material")) var material: String = ""
+        @Argument(help: ArgumentHelp("<과목>/<단원>", valueName: "unit"), completion: Complete.ref(.unit)) var unit: String
+        @Argument(help: ArgumentHelp("렉처 자료", valueName: "material"), completion: Complete.ref(.material)) var material: String = ""
         @Option(help: "첫 쪽") var first: Int
         @Option(help: "끝 쪽") var last: Int
 
@@ -22,8 +22,8 @@ extension GeneratedCommands {
             let (c, unitName) = try r.split(unit)
             let action = FolioActions.UnitPagesSet(
                 course: c.id,
-                unit: try r.id("Unit", unitName, in: c),
-                material: try r.id("Material", material, in: c),
+                unit: try r.id(.unit, unitName, in: c),
+                material: try r.id(.material, material, in: c),
                 first: first,
                 last: last
             )

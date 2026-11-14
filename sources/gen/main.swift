@@ -15,21 +15,34 @@ func fail(_ message: String) -> Never {
 }
 
 do {
-    let declared = try ActionList.scan(actionsFolder)
-    var files: [URL: String] = [generatedActions.appending(path: "actions-all.swift"): ActionList.source(declared)]
+    let scanned = try ActionList.scan(actionsFolder)
+    let declared = scanned.filter { !$0.query }
+    let queries = scanned.filter(\.query)
+    var files: [URL: String] = [
+        generatedActions.appending(path: "actions-all.swift"): ActionList.source(declared),
+        generatedActions.appending(path: "queries-all.swift"): ActionList.source(queries, kind: "Query"),
+    ]
 
     // 이 실행 파일에 링크된 Actions.all은 지난번에 만든 목록이다. 액션을 더하거나 뺐으면 목록만 먼저 쓰고, 다시 빌드한
     // 다음 실행에서 명령을 쓴다(`mise run gen-cli`가 두 번 돌린다).
     let linked = Dictionary(Actions.all.map { (String(describing: $0), $0) }, uniquingKeysWith: { a, _ in a })
-    let current = Set(linked.keys) == Set(declared.map(\.name))
+    let linkedQueries = Dictionary(Queries.all.map { (String(describing: $0), $0) }, uniquingKeysWith: { a, _ in a })
+    let current = Set(linked.keys) == Set(declared.map(\.name)) && Set(linkedQueries.keys) == Set(queries.map(\.name))
     if current {
         files[generatedCommands.appending(path: "generated-commands.swift")] = CommandSource.commandsEnum
         for action in declared {
             guard let type = linked[action.name], type.spec.generated else { continue }
             files[generatedCommands.appending(path: action.path)] = CommandSource.file(type)
         }
+        for query in queries {
+            guard let type = linkedQueries[query.name], type.spec.generated else { continue }
+            files[generatedCommands.appending(path: query.path)] = CommandSource.file(type)
+        }
         let tree = try CommandTree.scan(commandsFolder)
-        files[generatedCommands.appending(path: "command-tree.swift")] = try CommandTree.source(tree, generated: Actions.all)
+        var generated: [(name: String, command: String)] = []
+        for type in Actions.all where type.spec.generated { generated.append((String(describing: type), type.spec.command)) }
+        for type in Queries.all where type.spec.generated { generated.append((String(describing: type), type.spec.command)) }
+        files[generatedCommands.appending(path: "command-tree.swift")] = try CommandTree.source(tree, generated: generated)
     }
 
     var stale: [String] = []
@@ -49,7 +62,9 @@ do {
         }
     }
     if check {
-        if !current { fail("Actions.all이(가) sources/actions의 @Action 선언과 다릅니다. mise run gen-cli로 다시 만드세요.") }
+        if !current {
+            fail("Actions.all이나 Queries.all이 sources/actions의 @Action, @Query 선언과 다릅니다. mise run gen-cli로 다시 만드세요.")
+        }
         if !stale.isEmpty {
             fail("생성한 파일이 선언과 다릅니다. mise run gen-cli로 다시 만드세요:\n" + stale.map { "  " + $0 }.joined(separator: "\n"))
         }

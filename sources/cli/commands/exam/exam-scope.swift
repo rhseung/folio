@@ -28,7 +28,7 @@ extension ExamCommand {
                 try perform(spec: ExamScopeTaught(course: c.id, exam: e.id), g, ctx: ctx)
                 return
             }
-            let ids = try r.many(units, from: c.file.units.map(\.title), what: "단원").map { try r.unit($0, in: c).id }
+            let ids = try r.many(units, from: c.file.units.map(\.title), what: ItemKind.unit.noun).map { try r.unit($0, in: c).id }
             try performAll(
                 ids.map { ExamScope(course: c.id, exam: e.id, unit: $0, included: !off) }, g, ctx: ctx,
                 done: off ? String(localized: .examScopeRemoved(ids.count)) : String(localized: .examScopeAdded(ids.count)))

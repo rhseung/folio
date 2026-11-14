@@ -126,8 +126,9 @@ struct MCPTests {
         let (failed, texts) = try call(server, gist, "assignment_list", ["course": "EC4207", "all": .bool(true)])
         #expect(!failed, "\(texts)")
         #expect((try? JSONDecoder().decode(JSONValue.self, from: Data(texts.joined().utf8))) != nil)
-        let missing = try call(server, gist, "exam_show", ["exam": "EC4207/없는 시험"])
+        let missing = try call(server, gist, "exam_show", ["course": "EC4207", "exam": "없는 시험"])
         #expect(missing.0)
+        #expect(missing.1.joined().contains("not_found") || missing.1.joined().contains("notFound"), "\(missing.1)")
     }
 
     @Test func proposingLeavesFilesAndHandsBackTheAction() throws {
@@ -140,6 +141,9 @@ struct MCPTests {
         #expect(try Harness.files(a) == before)
         let proposal = try #require(texts.compactMap(ActionProposal.init(text:)).first)
         #expect(proposal.command == "exam add")
+        // 어느 기기에서 승인해도 같은 시험을 만들도록 제안 ID와 새 시험의 ID가 제안에 들어 있다.
+        #expect(proposal.id != nil)
+        #expect(proposal.input["id"].flatMap { if case .string(let s) = $0 { UUID(uuidString: s) } else { nil } } != nil)
         let type = try #require(Actions.all.first { $0.command == proposal.command })
         try h.direct(try type.decode(JSONEncoder().encode(proposal.input)), gist: b)
         let r = h.cli(["exam", "show", "EC4207/제안 퀴즈", "--json"], gist: b)
@@ -259,7 +263,7 @@ struct MCPTests {
         #expect(first.after == nil)
         #expect(second.after == [0])
 
-        let shown = try call(server, a, "unit_show", ["unit": "EC4207/König"])
+        let shown = try call(server, a, "unit_show", ["course": "EC4207", "unit": "König"])
         #expect(!shown.0, "\(shown.1)")
         #expect(shown.1.joined().contains("\"proposed\":\"added\""), "\(shown.1)")
         #expect(shown.1.joined().contains("firstPage"), "\(shown.1)")
@@ -278,7 +282,7 @@ struct MCPTests {
                     "first": .number(5), "last": .number(8),
                 ]
             ).0)
-        #expect(try call(next, a, "unit_show", ["unit": "EC4207/König"]).0)
+        #expect(try call(next, a, "unit_show", ["course": "EC4207", "unit": "König"]).0)
     }
 
     @Test func aNoteEditBuildsOnTheNoteProposedBeforeIt() throws {

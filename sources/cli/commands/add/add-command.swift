@@ -76,3 +76,7 @@ struct AddCommand: ParsableCommand {
         if let folder = read.folder { row(String(localized: .addFieldFolder), folder) }
     }
 }
+
+extension AddCommand: BuildsAction {
+    static var builds: any Action.Type { AssignmentAdd.self }
+}

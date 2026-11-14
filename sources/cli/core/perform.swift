@@ -9,16 +9,7 @@ func perform<A: Action>(
 ) throws -> ActionContext {
     if let confirm, !options.dryRun { try ask(confirm, options) }
     let ctx = try given ?? CLI.context(options)
-    do {
-        try action.run(ctx)
-    } catch let e as ActionError {
-        switch e {
-        case .notFound(let m): throw CLIError(exit: .notFound, message: m)
-        case .rule(let m): throw CLIError(exit: .rule, message: m)
-        case .conflict(let m): throw CLIError(exit: .conflict, message: m)
-        case .input(let m): throw CLIError(exit: .usage, message: m)
-        }
-    }
+    try reporting { try action.run(ctx) }
     if options.json {
         try printJSON(
             WriteResult(
@@ -77,5 +68,18 @@ func ask(_ question: String, _ options: GlobalOptions) throws {
     FileHandle.standardOutput.write(Data(String(localized: .performAsk(question)).utf8))
     guard let answer = readLine(), ["y", "yes", "ㅛ"].contains(answer.lowercased()) else {
         throw CLIError(exit: .needsConfirmation, message: String(localized: .performCancelled))
+    }
+}
+
+func reporting<T>(_ body: () throws -> T) throws -> T {
+    do {
+        return try body()
+    } catch let e as ActionError {
+        switch e {
+        case .notFound(let m): throw CLIError(exit: .notFound, message: m)
+        case .rule(let m): throw CLIError(exit: .rule, message: m)
+        case .conflict(let m): throw CLIError(exit: .conflict, message: m)
+        case .input(let m): throw CLIError(exit: .usage, message: m)
+        }
     }
 }

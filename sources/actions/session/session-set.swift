@@ -14,7 +14,7 @@ import Foundation
     phrases: [
         "수업 없", "수업 안 함", "휴강", "수업 취소", "보강으로", "보강 표시", "이 수업 복습 끄기", "복습 노트 다 씀",
         "줌 링크", "수업 링크", "수업 시간 변경", "보강 시간",
-    ])
+    ], panel: true)
 public struct SessionSet {
     @Arg var course: Course.ID
     /// 회차

@@ -21,6 +21,7 @@ struct AppLinkWikiTests {
         let withID = Set(AppLink.Kind.allCases.filter { !$0.isPlace })
         #expect(Set(WikiLink.objectKinds) == Set(withID.subtracting(leftOut).map(\.rawValue)))
         #expect(leftOut.isSubset(of: withID))
+        #expect(Set(ItemKind.allCases.compactMap(\.link).map(\.rawValue)) == WikiLink.objectKinds)
     }
 
     @Test func anAddressBetweenBracketsOpensAsItself() throws {

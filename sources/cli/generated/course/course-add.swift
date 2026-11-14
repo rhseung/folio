@@ -15,24 +15,24 @@ extension GeneratedCommands {
             """)
         @OptionGroup var g: GlobalOptions
         @Option(name: .customLong("id"), help: .hidden) var id: UUID?
-        @Argument(help: ArgumentHelp("강의 코드 앞부분. EC", valueName: "code"), completion: Complete.ref("CourseCode")) var code: String
+        @Argument(help: ArgumentHelp("강의 코드 앞부분. EC", valueName: "code"), completion: Complete.ref(.courseCode)) var code: String
         @Argument(help: "일련번호. 4207-01") var number: String
         @Argument(help: "과목 이름") var title: String
         @Option(help: "학점") var credits: Double = 3
         @Option(help: "평가 방식") var mode: GradingMode = .relative
-        @Option(help: ArgumentHelp("학기. 빼면 지금 학기", valueName: "semester"), completion: Complete.ref("Semester")) var semester: String?
+        @Option(help: ArgumentHelp("학기. 빼면 지금 학기", valueName: "semester"), completion: Complete.ref(.semester)) var semester: String?
 
         func run() throws {
             let ctx = try CLI.context(g)
             let r = Resolver(ctx)
             let action = FolioActions.CourseAdd(
                 id: id ?? UUID(),
-                code: try r.id("CourseCode", code, in: nil),
+                code: try r.id(.courseCode, code, in: nil),
                 number: number,
                 title: title,
                 credits: credits,
                 mode: mode,
-                semester: try semester.map { try r.id("Semester", $0, in: nil) }
+                semester: try semester.map { try r.id(.semester, $0, in: nil) }
             )
             try perform(spec: action, g, ctx: ctx)
         }

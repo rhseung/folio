@@ -11,7 +11,7 @@ extension GeneratedCommands {
               folio review record EC4207/매칭 good --start \"2026-10-28 20:00\" --end \"2026-10-28 20:40\"
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<단원>", valueName: "unit"), completion: Complete.ref("Unit")) var unit: String
+        @Argument(help: ArgumentHelp("<과목>/<단원>", valueName: "unit"), completion: Complete.ref(.unit)) var unit: String
         @Argument(help: "결과") var result: ReviewResult
         @Option(help: ArgumentHelp("시작 시각", valueName: "date")) var start: DateArg
         @Option(help: ArgumentHelp("끝난 시각", valueName: "date")) var end: DateArg
@@ -22,7 +22,7 @@ extension GeneratedCommands {
             let (c, unitName) = try r.split(unit)
             let action = FolioActions.ReviewRecord(
                 course: c.id,
-                unit: try r.id("Unit", unitName, in: c),
+                unit: try r.id(.unit, unitName, in: c),
                 result: result,
                 start: start.date,
                 end: end.date

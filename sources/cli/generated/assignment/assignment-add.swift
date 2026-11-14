@@ -14,7 +14,7 @@ extension GeneratedCommands {
             """)
         @OptionGroup var g: GlobalOptions
         @Option(name: .customLong("id"), help: .hidden) var id: UUID?
-        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref(.course)) var course: String
         @Argument(help: "과제 제목") var title: String
         @Option(help: ArgumentHelp("마감 일시", valueName: "date")) var due: DateArg?
         @Option(help: "반복. weekly, daily, biweekly, monthly, 3d, 2w, 1m, weekly:mon,wed, 또는 빠른 추가의 말(매일, 격일, 3일마다, 격주, 매월, 매주 월수, 월,수마다, 평일마다)") var repeats: AssignmentRepeat?

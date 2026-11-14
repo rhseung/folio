@@ -12,7 +12,7 @@ extension GeneratedCommands {
             """)
         @OptionGroup var g: GlobalOptions
         @Option(name: .customLong("id"), help: .hidden) var id: UUID?
-        @Argument(help: ArgumentHelp("<과목>/<회차>", valueName: "session"), completion: Complete.ref("Session")) var session: String
+        @Argument(help: ArgumentHelp("<과목>/<회차>", valueName: "session"), completion: Complete.ref(.session)) var session: String
         @Argument(help: "rough 또는 review") var kind: NoteKind
 
         func run() throws {
@@ -22,7 +22,7 @@ extension GeneratedCommands {
             let action = FolioActions.SessionNote(
                 id: id ?? UUID(),
                 course: c.id,
-                session: try r.id("Session", sessionName, in: c),
+                session: try r.id(.session, sessionName, in: c),
                 kind: kind
             )
             try perform(spec: action, g, ctx: ctx)

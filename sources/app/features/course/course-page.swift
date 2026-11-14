@@ -1,10 +1,8 @@
+import FolioDomain
 import Foundation
 
-enum CourseSection: CaseIterable, Identifiable {
-    case overview, sessions, units, notes, materials
-    case quizSolve, quizCards, quizStats, quizProblems
-    case assignments, exams, grades
-    var id: Self { self }
+extension AppLink.CoursePage: Identifiable {
+    public var id: Self { self }
 
     var title: String {
         switch self {
@@ -13,10 +11,10 @@ enum CourseSection: CaseIterable, Identifiable {
         case .units: String(localized: .courseSectionUnits)
         case .notes: String(localized: .courseSectionNotes)
         case .materials: String(localized: .courseSectionMaterials)
-        case .quizSolve: String(localized: .courseSectionQuizSolve)
-        case .quizCards: String(localized: .courseSectionQuizCards)
-        case .quizStats: String(localized: .courseSectionQuizStats)
-        case .quizProblems: String(localized: .courseSectionQuizProblems)
+        case .quiz: String(localized: .courseSectionQuizSolve)
+        case .cards: String(localized: .courseSectionQuizCards)
+        case .stats: String(localized: .courseSectionQuizStats)
+        case .problems: String(localized: .courseSectionQuizProblems)
         case .assignments: String(localized: .courseSectionAssignments)
         case .exams: String(localized: .courseSectionExams)
         case .grades: String(localized: .courseSectionGrades)
@@ -29,7 +27,7 @@ enum CourseSection: CaseIterable, Identifiable {
         case .sessions, .units: .classes
         case .notes: .notes
         case .materials: .materials
-        case .quizSolve, .quizCards, .quizStats, .quizProblems: .quiz
+        case .quiz, .cards, .stats, .problems: .quiz
         case .assignments, .exams, .grades: .assessment
         }
     }

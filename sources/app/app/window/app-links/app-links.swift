@@ -15,7 +15,7 @@ extension Workspace {
     func entry(for link: AppLink, hint: UUID? = nil) -> Navigator.Entry? {
         switch link.kind.home {
         case .app:
-            return Navigator.Entry(link: link.kind == .settings ? .settings(link.settingsPage ?? SettingsTab.remembered.page) : link)
+            return Navigator.Entry(link: link.kind == .settings ? .settings(link.settingsPage ?? .remembered) : link)
         case .transcript:
             return transcript.semesters.contains { $0.id == link.id } ? Navigator.Entry(link: link) : nil
         case .catalog:
@@ -46,16 +46,8 @@ extension Workspace {
             return [loaded.title, item].compactMap { $0 }.joined(separator: " · ")
         }
         switch link.kind {
-        case .today: return String(localized: .rootNavToday)
-        case .grades: return String(localized: .rootNavGrades)
-        case .requirements: return String(localized: .rootNavRequirements)
-        case .people: return String(localized: .rootNavPeople)
-        case .codes: return String(localized: .rootNavCodes)
-        case .whatsNew: return String(localized: .whatsNewTitle)
-        case .proposals: return String(localized: .rootNavProposals)
-        case .settings:
-            return [String(localized: .rootNavSettings), link.settingsPage.map { SettingsTab($0).label }].compactMap { $0 }.joined(
-                separator: " · ")
+        case .today, .grades, .requirements, .people, .codes, .whatsNew, .proposals: return link.kind.place?.title ?? ""
+        case .settings: return [link.kind.place?.title, link.settingsPage?.label].compactMap { $0 }.joined(separator: " · ")
         case .semester: return transcript.semesters.first { $0.id == link.id }?.title ?? ""
         case .person: return item ?? String(localized: .rootNavPeople)
         case .course, .session, .unit, .note, .material, .assignment, .exam, .problemSet, .card, .recording: return link.string
@@ -69,7 +61,7 @@ extension Workspace {
         switch link.kind {
         case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals, .semester: return nil
         case .person: return catalog.people.first { $0.id == link.id }?.name
-        case .course: return file.flatMap { _ in link.page.map { CourseSection($0).title } }
+        case .course: return file.flatMap { _ in link.page?.title }
         case .session: return file.flatMap { f in f.sessions.first { $0.id == link.id }.map { f.title(of: $0, calendar: calendar) } }
         case .unit: return file?.units.first { $0.id == link.id }?.title
         case .note: return file?.notes.first { $0.id == link.id }.map { name($0.path) }
@@ -81,7 +73,7 @@ extension Workspace {
             return file.flatMap { f in
                 f.recordings.first { $0.id == link.id }.map { RecordingPlayerModel.name(of: $0, in: f, calendar: calendar) }
             }
-        case .card: return file.map { _ in CourseSection.quizCards.title }
+        case .card: return file.map { _ in AppLink.CoursePage.cards.title }
         }
     }
 
@@ -134,43 +126,6 @@ extension AppLink.Anchor {
         case .heading(let heading): ParsedNote.location(in: text, heading: heading, block: nil)
         case .block(let block): ParsedNote.location(in: text, heading: nil, block: block)
         case .page, .time: nil
-        }
-    }
-}
-
-extension CourseSection {
-    init(_ page: AppLink.CoursePage) {
-        self =
-            switch page {
-            case .overview: .overview
-            case .sessions: .sessions
-            case .units: .units
-            case .notes: .notes
-            case .materials: .materials
-            case .quiz: .quizSolve
-            case .cards: .quizCards
-            case .stats: .quizStats
-            case .problems: .quizProblems
-            case .assignments: .assignments
-            case .exams: .exams
-            case .grades: .grades
-            }
-    }
-
-    var page: AppLink.CoursePage {
-        switch self {
-        case .overview: .overview
-        case .sessions: .sessions
-        case .units: .units
-        case .notes: .notes
-        case .materials: .materials
-        case .quizSolve: .quiz
-        case .quizCards: .cards
-        case .quizStats: .stats
-        case .quizProblems: .problems
-        case .assignments: .assignments
-        case .exams: .exams
-        case .grades: .grades
         }
     }
 }

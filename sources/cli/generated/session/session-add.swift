@@ -15,13 +15,13 @@ extension GeneratedCommands {
             """)
         @OptionGroup var g: GlobalOptions
         @Option(name: .customLong("id"), help: .hidden) var id: UUID?
-        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String = ""
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref(.course)) var course: String = ""
         @Option(help: ArgumentHelp("일시. 2026-10-28 또는 \"2026-10-28 10:30\"", valueName: "date")) var date: DateArg
         @Option(help: ArgumentHelp("끝 일시. 수업 시간표에 없는 시간일 때만 필요하다", valueName: "date")) var end: DateArg?
         @Option(help: "온라인 수업 링크(Zoom 등)") var link: String?
         @Option(help: "종류. lecture(강의), cancelled(휴강), makeup(보강)") var kind: Session.Kind = .lecture
         @Option(help: "출결. 결석이나 공결을 미리 알 때. 휴강과 함께 줄 수 없다") var attendance: AttendanceState?
-        @Option(name: .customLong("unit"), help: ArgumentHelp("이 수업이 다룰 단원. 여러 번 줄 수 있다", valueName: "unit"), completion: Complete.ref("Unit")) var units: [String] = []
+        @Option(name: .customLong("unit"), help: ArgumentHelp("이 수업이 다룰 단원. 여러 번 줄 수 있다", valueName: "unit"), completion: Complete.ref(.unit)) var units: [String] = []
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -35,7 +35,7 @@ extension GeneratedCommands {
                 link: link,
                 kind: kind,
                 attendance: attendance,
-                units: try units.map { try r.id("Unit", $0, in: c) }
+                units: try units.map { try r.id(.unit, $0, in: c) }
             )
             try perform(spec: action, g, ctx: ctx)
         }

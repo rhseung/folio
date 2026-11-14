@@ -11,7 +11,7 @@ extension GeneratedCommands {
               folio note adopt EC4207/Notes/외부.md
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<노트>", valueName: "note"), completion: Complete.ref("NotePath")) var note: String = ""
+        @Argument(help: ArgumentHelp("<과목>/<노트>", valueName: "note"), completion: Complete.ref(.notePath)) var note: String = ""
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -19,7 +19,7 @@ extension GeneratedCommands {
             let (c, noteName) = try r.split(note)
             let action = FolioActions.NoteAdopt(
                 course: c.id,
-                note: try r.path("NotePath", noteName, in: c)
+                note: try r.path(.notePath, noteName, in: c)
             )
             try perform(spec: action, g, ctx: ctx)
         }

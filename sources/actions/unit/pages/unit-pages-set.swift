@@ -6,7 +6,7 @@ import Foundation
     "unit pages set", "단원의 렉처 쪽 구간 고치기. 그 파일에서 단원이 가진 구간을 이 구간 하나로 바꾼다",
     done: "단원 '{unit}'의 {material} 쪽 구간을 고쳤습니다",
     examples: ["folio unit pages set EC4207/매칭 05_Matchings.pdf --first 1 --last 6"],
-    phrases: ["단원 쪽 구간 고치기", "목차 경계 옮기기"])
+    phrases: ["단원 쪽 구간 고치기", "목차 경계 옮기기"], panel: true)
 public struct UnitPagesSet {
     @Arg var course: Course.ID
     /// 단원

@@ -40,7 +40,7 @@ struct CourseView: View {
                     case .notes: CourseNotesPage(model: model, course: course)
                     // 퀴즈 페이지를 옮겨 다녀도 퀴즈 모델과 대기 중인 풀기 요청이 남도록, 모든 퀴즈 페이지를 한 갈래로
                     // 둔다.
-                    case .quizSolve, .quizCards, .quizStats, .quizProblems:
+                    case .quiz, .cards, .stats, .problems:
                         QuizView(workspace: model.workspace, course: course, section: $model.section)
                     case .materials: MaterialsView(workspace: workspace, course: course, place: model.place, moved: model.moved)
                     case .assignments: AssignmentsView(workspace: workspace, course: course)

@@ -4,7 +4,8 @@ import Foundation
 
 @Action(
     "material import", "바깥 파일을 과목 폴더로 복사해 등록하고 회차에 연결", effect: .creates, done: "파일 {items}을(를) 가져왔습니다",
-    phrases: ["파일 가져오기", "다운로드한 자료 넣기", "외부 파일 복사"], cli: .manual(reason: "파일마다 --folder와 --session을 붙여 가져올 항목(ImportItem)을 만든다"))
+    phrases: ["파일 가져오기", "다운로드한 자료 넣기", "외부 파일 복사"], cli: .manual(reason: "파일마다 --folder와 --session을 붙여 가져올 항목(ImportItem)을 만든다"),
+    panel: true)
 public struct MaterialImport {
     @Arg var course: Course.ID
     var items: [ImportItem]

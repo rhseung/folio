@@ -422,8 +422,8 @@ struct TodayView: View {
         UnitMenu(courseId: entry.courseId, unitId: entry.item.unitId)
     }
 
-    func go(_ course: UUID, _ section: CourseSection) {
-        openLink(.course(course, page: section.page), course: course)
+    func go(_ course: UUID, _ section: AppLink.CoursePage) {
+        openLink(.course(course, page: section), course: course)
     }
 
     func openNote(in course: UUID) -> (UUID) -> Void {

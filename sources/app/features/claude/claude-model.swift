@@ -59,7 +59,13 @@ final class ClaudeModel {
 
     var statusIsError: Bool { failed != nil && !stopped }
 
-    var chat: Chat? { chats.first { $0.model.id == chatID }?.model }
+    var chat: Chat? { current?.model }
+
+    private var current: StoredDocument<Chat>? {
+        guard var doc = chats.first(where: { $0.model.id == chatID }) else { return nil }
+        doc.model = doc.model.markingApplied(Set(workspace.courses.flatMap { $0.file.appliedProposals ?? [] }))
+        return doc
+    }
 
     func built(_ course: LoadedCourse) -> BuiltContext {
         let items = ContextBuilder.chatItems(
@@ -389,7 +395,7 @@ final class ClaudeModel {
     }
 
     func apply(message: UUID, index: Int, course: LoadedCourse, confirmed: Bool) {
-        guard var doc = chats.first(where: { $0.model.id == chatID }),
+        guard var doc = current,
             let m = doc.model.messages.firstIndex(where: { $0.id == message }),
             let proposals = doc.model.messages[m].proposals, proposals.indices.contains(index),
             case let proposal = proposals[index], proposal.applied != true,
@@ -405,12 +411,12 @@ final class ClaudeModel {
             return
         }
 
-        if run(action, at: index, of: m, in: &doc) { status = String(localized: .claudeStatusApplied(workspace.summary(action))) }
+        if run(action, proposal, at: index, of: m, in: &doc) { status = String(localized: .claudeStatusApplied(workspace.summary(action))) }
         save(doc, course: course)
     }
 
     func applyAll(message: UUID, course: LoadedCourse, confirmed: Bool) {
-        guard var doc = chats.first(where: { $0.model.id == chatID }),
+        guard var doc = current,
             let m = doc.model.messages.firstIndex(where: { $0.id == message })
         else { return }
         let picked = Self.offered(doc.model.messages[m], superseded: superseded(doc.model), describe: describe).compactMap { i in
@@ -442,16 +448,20 @@ final class ClaudeModel {
 
         var applied = 0
         for p in picked {
-            guard run(p.action, at: p.index, of: m, in: &doc) else { break }
+            guard let proposal = doc.model.messages[m].proposals?[p.index], run(p.action, proposal, at: p.index, of: m, in: &doc) else {
+                break
+            }
             applied += 1
         }
         if applied == picked.count { status = String(localized: .claudeStatusAppliedAll(applied)) }
         save(doc, course: course)
     }
 
-    private func run(_ action: any Action, at index: Int, of message: Int, in doc: inout StoredDocument<Chat>) -> Bool {
+    private func run(
+        _ action: any Action, _ proposal: ActionProposal, at index: Int, of message: Int, in doc: inout StoredDocument<Chat>
+    ) -> Bool {
         do {
-            _ = try workspace.runThrowing(action)
+            do { _ = try workspace.runThrowing(action, proposal: proposal) } catch let e as ActionError where e == .applied {}
             doc.model.messages[message].proposals?[index].applied = true
             doc.model.messages[message].proposals?[index].failure = nil
             return true

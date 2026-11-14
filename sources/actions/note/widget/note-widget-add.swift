@@ -6,7 +6,7 @@ import Foundation
     "note widget add", "노트 위젯 HTML을 .folio/widgets에 새로 쓰기. 노트에는 cb-widget 블록 {\"id\": \"<ID>\", \"height\": 320}으로 넣는다",
     discussion: "바깥 파일과 주소를 불러오는 부분이 있으면 쓰지 않는다. 위젯 환경은 folio note format.",
     effect: .creates, done: "위젯 {id}을(를) 만들었습니다",
-    phrases: ["위젯 만들기", "인터랙티브 위젯", "cb-widget 추가", "위젯 HTML"])
+    phrases: ["위젯 만들기", "인터랙티브 위젯", "cb-widget 추가", "위젯 HTML"], panel: true)
 public struct NoteWidgetAdd {
     /// 과목
     @Arg var course: Course.ID

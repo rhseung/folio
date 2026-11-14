@@ -13,7 +13,7 @@ extension GeneratedCommands {
               folio problem-set rm \"EC4207/Exercise 1\" --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<묶음>", valueName: "set"), completion: Complete.ref("ProblemSet")) var set: String = ""
+        @Argument(help: ArgumentHelp("<과목>/<묶음>", valueName: "set"), completion: Complete.ref(.problemSet)) var set: String = ""
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -21,7 +21,7 @@ extension GeneratedCommands {
             let (c, setName) = try r.split(set)
             let action = FolioActions.ProblemSetRemove(
                 course: c.id,
-                set: try r.id("ProblemSet", setName, in: c)
+                set: try r.id(.problemSet, setName, in: c)
             )
             try perform(spec: action, g, ctx: ctx)
         }

@@ -6,7 +6,7 @@ import Foundation
     "material new", "과제·시험 폴더나 Study, Archive에 새 텍스트 파일(.tex, 코드, .txt 등) 만들기. .tex는 바로 빌드되는 문서 틀로 시작한다",
     effect: .creates, done: "{folder}/{name}을(를) 만들었습니다",
     examples: ["folio material new EC4207 Assignments/HW03 hw3.tex", "folio material new EC4207 Study 풀이.py --dry-run"],
-    phrases: ["새 파일", "tex 파일 만들기", "과제 tex 만들기", "새 코드 파일"])
+    phrases: ["새 파일", "tex 파일 만들기", "과제 tex 만들기", "새 코드 파일"], panel: true)
 public struct MaterialNew {
     /// 과목
     @Arg var course: Course.ID

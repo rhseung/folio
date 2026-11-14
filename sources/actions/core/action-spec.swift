@@ -13,16 +13,20 @@ public struct ActionSpec: Codable, Sendable, Equatable {
     public var generated: Bool
     public var manualReason: String?
     public var undoable: Bool
+    // 제안을 대체하는 법. 없으면 `Patch` 필드만 가진 바꾸기 액션을 필드 설정으로 본다(`Actions.targets`).
+    public var proposal: ProposalTarget.Effect?
+    // Claude 패널(`folio mcp --propose`)에 도구로 연다. 도구 정의는 질문마다 함께 가므로 과목 대화에 쓰는 액션만 연다.
+    public var panel: Bool
     public var fields: [FieldSpec]
 
     public init(
         command: String, summary: String, discussion: String = "", effect: Effect = .changes, confirm: String? = nil, done: String,
         examples: [String] = [], phrases: [String] = [], generated: Bool = true, manualReason: String? = nil, undoable: Bool = false,
-        fields: [FieldSpec] = []
+        proposal: ProposalTarget.Effect? = nil, panel: Bool = false, fields: [FieldSpec] = []
     ) {
         (self.command, self.summary, self.discussion, self.effect, self.confirm) = (command, summary, discussion, effect, confirm)
         (self.done, self.examples, self.phrases, self.generated, self.fields) = (done, examples, phrases, generated, fields)
-        (self.manualReason, self.undoable) = (manualReason, undoable)
+        (self.manualReason, self.undoable, self.proposal, self.panel) = (manualReason, undoable, proposal, panel)
     }
 
     public func asks(_ action: some Action) -> Bool {

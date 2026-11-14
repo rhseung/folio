@@ -5,7 +5,7 @@ import Foundation
 @Action(
     "attendance set", "회차의 출결 정하기. 출석이 기본값이다", done: "회차 '{session}'의 출결을 {state}(으)로 정했습니다",
     examples: ["folio attendance set EC4207/10-26 absent"],
-    phrases: ["빠졌", "못 갔", "안 갔", "결석", "지각", "공결", "출석 체크", "수업 빠짐", "못 갔어"])
+    phrases: ["빠졌", "못 갔", "안 갔", "결석", "지각", "공결", "출석 체크", "수업 빠짐", "못 갔어"], panel: true)
 public struct AttendanceSet {
     @Arg var course: Course.ID
     /// 회차

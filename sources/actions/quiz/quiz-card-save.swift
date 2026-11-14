@@ -10,7 +10,7 @@ import Foundation
     discussion: "파일은 course.json과 같은 필드 이름을 쓰는 QuizCard 배열이다. 단원을 옮긴 카드는 --moved-from에 예전 단원을 준다.",
     done: "카드 {cards}을(를) 저장했습니다",
     examples: ["folio quiz add EC4207 --file cards.json", "folio quiz add EC4207 --file - --moved-from 매칭 < card.json"],
-    phrases: ["카드 만들기", "퀴즈 추가"])
+    phrases: ["카드 만들기", "퀴즈 추가"], panel: true)
 public struct QuizCardSave {
     /// 과목
     @Arg var course: Course.ID

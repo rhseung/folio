@@ -13,7 +13,7 @@ extension GeneratedCommands {
               folio score rm EC4207/HW1 --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<점수 제목>", valueName: "score"), completion: Complete.ref("ScoreEntry")) var score: String = ""
+        @Argument(help: ArgumentHelp("<과목>/<점수 제목>", valueName: "score"), completion: Complete.ref(.scoreEntry)) var score: String = ""
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -21,7 +21,7 @@ extension GeneratedCommands {
             let (c, scoreName) = try r.split(score)
             let action = FolioActions.ScoreRemove(
                 course: c.id,
-                score: try r.id("ScoreEntry", scoreName, in: c)
+                score: try r.id(.scoreEntry, scoreName, in: c)
             )
             try perform(spec: action, g, ctx: ctx)
         }

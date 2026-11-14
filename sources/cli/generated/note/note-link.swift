@@ -15,11 +15,11 @@ extension GeneratedCommands {
               folio note link \"EC4207/매칭 정리\" --kind topic --unit 매칭 --unit \"이분 그래프\"
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<노트>", valueName: "note"), completion: Complete.ref("Note")) var note: String = ""
+        @Argument(help: ArgumentHelp("<과목>/<노트>", valueName: "note"), completion: Complete.ref(.note)) var note: String = ""
         @Option(help: "종류") var kind: NoteKind
-        @Option(help: ArgumentHelp("회차", valueName: "session"), completion: Complete.ref("Session")) var session: String?
-        @Option(help: ArgumentHelp("시험", valueName: "exam"), completion: Complete.ref("Exam")) var exam: String?
-        @Option(name: .customLong("unit"), help: ArgumentHelp("단원. 여러 번 줄 수 있다", valueName: "unit"), completion: Complete.ref("Unit")) var units: [String] = []
+        @Option(help: ArgumentHelp("회차", valueName: "session"), completion: Complete.ref(.session)) var session: String?
+        @Option(help: ArgumentHelp("시험", valueName: "exam"), completion: Complete.ref(.exam)) var exam: String?
+        @Option(name: .customLong("unit"), help: ArgumentHelp("단원. 여러 번 줄 수 있다", valueName: "unit"), completion: Complete.ref(.unit)) var units: [String] = []
         @Option(help: "수식 문법. 빼면 그대로") var math: MathSyntax?
 
         func run() throws {
@@ -28,11 +28,11 @@ extension GeneratedCommands {
             let (c, noteName) = try r.split(note)
             let action = FolioActions.NoteLink(
                 course: c.id,
-                note: try r.id("Note", noteName, in: c),
+                note: try r.id(.note, noteName, in: c),
                 kind: kind,
-                session: try session.map { try r.id("Session", $0, in: c) },
-                exam: try exam.map { try r.id("Exam", $0, in: c) },
-                units: try units.map { try r.id("Unit", $0, in: c) },
+                session: try session.map { try r.id(.session, $0, in: c) },
+                exam: try exam.map { try r.id(.exam, $0, in: c) },
+                units: try units.map { try r.id(.unit, $0, in: c) },
                 math: math
             )
             try perform(spec: action, g, ctx: ctx)

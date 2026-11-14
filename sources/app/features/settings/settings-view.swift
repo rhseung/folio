@@ -4,27 +4,27 @@ import FolioStorage
 import SwiftUI
 
 extension EnvironmentValues {
-    @Entry var showSettings: @MainActor (SettingsTab) -> Void = { _ in }
+    @Entry var showSettings: @MainActor (AppLink.SettingsPage) -> Void = { _ in }
 }
 
 extension FocusedValues {
-    @Entry var showSettings: (@MainActor (SettingsTab?) -> Void)?
+    @Entry var showSettings: (@MainActor (AppLink.SettingsPage?) -> Void)?
 }
 
 struct SettingsView: View {
     @State private var model: SettingsModel
-    @AppStorage(SettingsTab.storageKey) private var remembered: SettingsTab = .general
+    @AppStorage(AppLink.SettingsPage.storageKey) private var remembered: AppLink.SettingsPage = .general
     @Environment(\.place) private var place
     @Environment(\.openLink) private var openLink
 
     init(workspace: Workspace) { _model = State(initialValue: SettingsModel(workspace: workspace, tab: .remembered)) }
 
-    var tab: SettingsTab { model.tab }
+    var tab: AppLink.SettingsPage { model.tab }
 
     // 고를 때만 기억해야, 링크나 뒤로 가기로 탭에 와도 사이드바가 다음에 여는 탭이 바뀌지 않는다.
-    func pick(_ t: SettingsTab) {
+    func pick(_ t: AppLink.SettingsPage) {
         remembered = t
-        openLink(.settings(t.page))
+        openLink(.settings(t))
     }
 
     var body: some View {
@@ -45,7 +45,7 @@ struct SettingsView: View {
         .onDisappear(perform: model.saveNow)
     }
 
-    @ViewBuilder func content(_ tab: SettingsTab) -> some View {
+    @ViewBuilder func content(_ tab: AppLink.SettingsPage) -> some View {
         switch tab {
         case .general: GeneralSettings(model: model)
         case .record:
@@ -65,8 +65,8 @@ struct SettingsView: View {
 
 // 그 자리에서 준 `closeColumn`을 페이지 위에 연 열이 읽도록 따로 뷰로 둔다.
 private struct SettingsColumn: View {
-    let tab: SettingsTab
-    let pick: (SettingsTab) -> Void
+    let tab: AppLink.SettingsPage
+    let pick: (AppLink.SettingsPage) -> Void
     @Environment(\.closeColumn) private var closeColumn
 
     var body: some View {
@@ -76,7 +76,7 @@ private struct SettingsColumn: View {
                 VStack(spacing: Theme.Space.m) {
                     ForEach(0..<3, id: \.self) { run in
                         VStack(spacing: Theme.Space.xxs) {
-                            ForEach(SettingsTab.allCases.filter { $0.run == run }) { t in
+                            ForEach(AppLink.SettingsPage.allCases.filter { $0.run == run }) { t in
                                 Button {
                                     pick(t)
                                     closeColumn()
@@ -127,7 +127,7 @@ private struct GeneralSettings: View {
         Block(String(localized: .settingsDay)) {
             Card {
                 FormRow(label: String(localized: .settingsDayBoundary), last: true) {
-                    TimeMenu(minute: $model.settings.dayBoundaryMinutes, hours: 0...8)
+                    TimeMenu(minute: $model.settings.dayBoundaryMinutes, hours: SettingItem.dayBoundary.hours)
                 }
             }
         }
@@ -240,13 +240,13 @@ private struct ReviewSettingsForm: View {
         let review = $model.settings.review
         Card(clipped: true) {
             FormRow(label: String(localized: .settingsIntervals), detail: model.reviewDays) {
-                IntListField(values: review.intervals, unit: String(localized: .settingsUnitDays), range: 1...365)
+                IntListField(values: review.intervals, unit: String(localized: .settingsUnitDays), range: SettingItem.reviewIntervals.range)
             }
             FormRow(label: String(localized: .settingsDailyLimit)) {
                 let limit = model.settings.review.dailyLimit
-                ScrubField(
-                    value: Binding(get: { Double(limit ?? 10) }, set: { model.settings.review.dailyLimit = Int($0.rounded()) }),
-                    range: 1...50, step: 1, width: 80
+                IntScrub(
+                    value: Binding(get: { limit ?? 10 }, set: { model.settings.review.dailyLimit = $0 }),
+                    range: SettingItem.reviewDailyLimit.range, width: 80
                 )
                 .disabled(limit == nil)
                 .opacity(limit == nil ? 0.4 : 1)
@@ -255,15 +255,15 @@ private struct ReviewSettingsForm: View {
             }
             DisclosureRow(label: String(localized: .settingsDetails), isOpen: $details, last: true) {
                 FormRow(label: String(localized: .settingsExamWindow)) {
-                    IntScrub(value: review.examWindowDays, range: 0...30)
+                    IntScrub(value: review.examWindowDays, range: SettingItem.reviewExamWindow.range)
                     Text(.settingsUnitDaysBefore).foregroundStyle(Theme.Palette.textSecondary)
                 }
                 FormRow(label: String(localized: .settingsCardsPerReview)) {
-                    IntScrub(value: review.cardsPerReview, range: 1...20)
+                    IntScrub(value: review.cardsPerReview, range: SettingItem.reviewCardsPerReview.range)
                     Text(.settingsUnitCards).foregroundStyle(Theme.Palette.textSecondary)
                 }
                 FormRow(label: String(localized: .settingsSettleAfter), last: true) {
-                    IntScrub(value: review.settleAfterPasses, range: 1...5)
+                    IntScrub(value: review.settleAfterPasses, range: SettingItem.reviewSettleAfter.range)
                     Text(.settingsUnitPasses).foregroundStyle(Theme.Palette.textSecondary)
                 }
             }
@@ -307,7 +307,8 @@ private struct NotificationSettingsForm: View {
                 if settings.assignmentDue {
                     FormRow(label: String(localized: .settingsAlertLead), last: true) {
                         IntListField(
-                            values: $settings.assignmentLeadHours, unit: String(localized: .settingsUnitHoursBefore), range: 1...336)
+                            values: $settings.assignmentLeadHours, unit: String(localized: .settingsUnitHoursBefore),
+                            range: SettingItem.assignmentLeadHours.range)
                     }
                 }
             }

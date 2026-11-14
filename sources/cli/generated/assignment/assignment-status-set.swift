@@ -11,7 +11,7 @@ extension GeneratedCommands {
               folio assignment status EC4207/HW3 submitted
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<과제>", valueName: "assignment"), completion: Complete.ref("Assignment")) var assignment: String
+        @Argument(help: ArgumentHelp("<과목>/<과제>", valueName: "assignment"), completion: Complete.ref(.assignment)) var assignment: String
         @Argument(help: "상태") var status: AssignmentStatus
 
         func run() throws {
@@ -20,7 +20,7 @@ extension GeneratedCommands {
             let (c, assignmentName) = try r.split(assignment)
             let action = FolioActions.AssignmentStatusSet(
                 course: c.id,
-                assignment: try r.id("Assignment", assignmentName, in: c),
+                assignment: try r.id(.assignment, assignmentName, in: c),
                 status: status
             )
             try perform(spec: action, g, ctx: ctx)

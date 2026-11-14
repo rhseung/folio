@@ -10,7 +10,7 @@ import Foundation
         "folio score add EC4207 --component 과제 --title HW1 --score 9 --max 10",
         "folio score add EC4207 --component 중간고사 --score 72 --max 100 --mean 61.5 --std-dev 12 --date 2026-10-21 --dry-run",
     ],
-    phrases: ["점수 입력", "점수 기록", "성적 나왔어", "몇 점 받았어", "평균 표준편차"])
+    phrases: ["점수 입력", "점수 기록", "성적 나왔어", "몇 점 받았어", "평균 표준편차"], panel: true)
 public struct ScoreAdd {
     @New var id: ScoreEntry.ID
     /// 과목

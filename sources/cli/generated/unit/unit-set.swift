@@ -11,7 +11,7 @@ extension GeneratedCommands {
               folio unit set EC4207/트리 --title \"트리와 숲\"
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<단원>", valueName: "unit"), completion: Complete.ref("Unit")) var unit: String = ""
+        @Argument(help: ArgumentHelp("<과목>/<단원>", valueName: "unit"), completion: Complete.ref(.unit)) var unit: String = ""
         @Option(help: "새 제목") var title: String
 
         func run() throws {
@@ -20,7 +20,7 @@ extension GeneratedCommands {
             let (c, unitName) = try r.split(unit)
             let action = FolioActions.UnitSet(
                 course: c.id,
-                unit: try r.id("Unit", unitName, in: c),
+                unit: try r.id(.unit, unitName, in: c),
                 title: title
             )
             try perform(spec: action, g, ctx: ctx)

@@ -11,8 +11,8 @@ extension GeneratedCommands {
               folio note link-sessions \"EC4207/10-26(월) 정리\" 10-26 10-28
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<복습 노트>", valueName: "note"), completion: Complete.ref("Note")) var note: String
-        @Argument(help: ArgumentHelp("회차. 예: 10-26. 여러 번 줄 수 있다", valueName: "sessions"), completion: Complete.ref("Session")) var sessions: [String]
+        @Argument(help: ArgumentHelp("<과목>/<복습 노트>", valueName: "note"), completion: Complete.ref(.note)) var note: String
+        @Argument(help: ArgumentHelp("회차. 예: 10-26. 여러 번 줄 수 있다", valueName: "sessions"), completion: Complete.ref(.session)) var sessions: [String]
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -20,8 +20,8 @@ extension GeneratedCommands {
             let (c, noteName) = try r.split(note)
             let action = FolioActions.NoteLinkSessions(
                 course: c.id,
-                note: try r.id("Note", noteName, in: c),
-                sessions: try sessions.map { try r.id("Session", $0, in: c) }
+                note: try r.id(.note, noteName, in: c),
+                sessions: try sessions.map { try r.id(.session, $0, in: c) }
             )
             try perform(spec: action, g, ctx: ctx)
         }

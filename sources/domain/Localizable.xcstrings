@@ -1299,6 +1299,105 @@
         }
       }
     },
+    "setting.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: 비울 수 없습니다"
+          }
+        }
+      }
+    },
+    "setting.not-bool": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: true나 false여야 합니다"
+          }
+        }
+      }
+    },
+    "setting.not-choice": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@: %2$@ 중 하나여야 합니다"
+          }
+        }
+      }
+    },
+    "setting.not-list": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: 정수 목록이어야 합니다"
+          }
+        }
+      }
+    },
+    "setting.not-positive": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: 1 이상이어야 합니다"
+          }
+        }
+      }
+    },
+    "setting.not-text": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: 글자여야 합니다"
+          }
+        }
+      }
+    },
+    "setting.not-whole": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: 정수여야 합니다"
+          }
+        }
+      }
+    },
+    "setting.out-of-range": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@: %2$lld에서 %3$lld 사이여야 합니다"
+          }
+        }
+      }
+    },
+    "setting.unknown": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "없는 설정입니다: %@"
+          }
+        }
+      }
+    },
     "study-time.hours": {
       "extractionState": "manual",
       "localizations": {
@@ -1636,6 +1735,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "위젯은 바깥 파일이나 주소를 불러오지 못합니다: %@. 코드와 스타일을 페이지 안에 씁니다"
+          }
+        }
+      }
+    },
+    "model.noun.note-widget": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "위젯"
+          }
+        }
+      }
+    },
+    "model.noun.move-batch": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이동 묶음"
           }
         }
       }

@@ -11,7 +11,7 @@ import Foundation
         "folio session wrap-up EC4207/10-26 --attendance late --dry-run",
         "folio session wrap-up EC4207/10-26 --review-unfinished false --kind makeup --dry-run",
     ],
-    phrases: ["수업 정리", "수업 끝", "오늘 수업 정리", "수업 마무리", "회차 편집"])
+    phrases: ["수업 정리", "수업 끝", "오늘 수업 정리", "수업 마무리", "회차 편집"], panel: true)
 public struct SessionWrapUp {
     /// 과목
     @Arg var course: Course.ID

@@ -15,7 +15,7 @@ extension GeneratedCommands {
               folio note rm \"EC4207/시험 메모\" --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<노트>", valueName: "note"), completion: Complete.ref("NotePath")) var note: String = ""
+        @Argument(help: ArgumentHelp("<과목>/<노트>", valueName: "note"), completion: Complete.ref(.notePath)) var note: String = ""
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -23,7 +23,7 @@ extension GeneratedCommands {
             let (c, noteName) = try r.split(note)
             let action = FolioActions.NoteRemove(
                 course: c.id,
-                note: try r.path("NotePath", noteName, in: c)
+                note: try r.path(.notePath, noteName, in: c)
             )
             try perform(spec: action, g, ctx: ctx)
         }

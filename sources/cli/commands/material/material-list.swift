@@ -35,7 +35,7 @@ extension MaterialCommand {
                     String(localized: .materialListHeaderStatus), String(localized: .materialListHeaderSession),
                 ], shrink: [3])
             for m in materials {
-                t.rows.append([m.path, m.role?.rawValue ?? "", m.status.rawValue.toned, sessions(m)])
+                t.rows.append([m.path, m.role?.rawValue ?? "", m.status.rawValue.toned(m.status.tone), sessions(m)])
             }
             t.print()
             footer(materials.count, hidden: all ? nil : String(localized: .materialListHidden))

@@ -8,7 +8,7 @@ import Foundation
         "folio score set EC4207/HW1 --value 10", "folio score set EC4207/HW1 --excused true",
         "folio score set EC4207/HW1 --date none --dry-run",
     ],
-    phrases: ["잘못 넣", "틀리게 넣", "점수 고치기", "점수 수정", "점수 정정"])
+    phrases: ["잘못 넣", "틀리게 넣", "점수 고치기", "점수 수정", "점수 정정"], panel: true)
 public struct ScoreSet {
     @Arg var course: Course.ID
     /// 점수 제목

@@ -6,7 +6,7 @@ import Foundation
     "unit pages add", "단원에 렉처 파일의 쪽 구간 더하기. 한 단원이 여러 파일에, 한 파일이 여러 단원에 걸칠 수 있다",
     done: "단원 '{unit}'에 {material}의 쪽 구간을 더했습니다",
     examples: ["folio unit pages add EC4207/매칭 05_Matchings.pdf --first 1 --last 4"],
-    phrases: ["렉처 목차", "단원 쪽 구간", "이 단원은 몇 쪽부터"])
+    phrases: ["렉처 목차", "단원 쪽 구간", "이 단원은 몇 쪽부터"], panel: true)
 public struct UnitPagesAdd {
     @Arg var course: Course.ID
     /// 단원

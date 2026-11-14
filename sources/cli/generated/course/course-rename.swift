@@ -16,9 +16,9 @@ extension GeneratedCommands {
               folio course rename EC4207 --number 4207-02
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String = ""
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref(.course)) var course: String = ""
         @Option(help: "과목 이름") var title: String?
-        @Option(name: .customLong("code"), help: ArgumentHelp("강의 코드 앞부분. 여러 개면 첫째가 주 코드. 여러 번 줄 수 있다. 주면 목록 전체를 바꾸고, none이면 비운다", valueName: "code"), completion: Complete.ref("CourseCode")) var codes: [String] = []
+        @Option(name: .customLong("code"), help: ArgumentHelp("강의 코드 앞부분. 여러 개면 첫째가 주 코드. 여러 번 줄 수 있다. 주면 목록 전체를 바꾸고, none이면 비운다", valueName: "code"), completion: Complete.ref(.courseCode)) var codes: [String] = []
         @Option(help: "일련번호") var number: String?
 
         func run() throws {
@@ -29,7 +29,7 @@ extension GeneratedCommands {
             let action = FolioActions.CourseRename(
                 course: c.id,
                 title: title.map { Patch.set($0) } ?? .keep,
-                codes: codes.isEmpty ? .keep : .set(try codes.clearing.map { try r.id("CourseCode", $0, in: c) }),
+                codes: codes.isEmpty ? .keep : .set(try codes.clearing.map { try r.id(.courseCode, $0, in: c) }),
                 number: number.map { Patch.set($0) } ?? .keep
             )
             try perform(spec: action, g, ctx: ctx)
