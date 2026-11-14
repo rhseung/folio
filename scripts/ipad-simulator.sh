@@ -4,9 +4,15 @@ set -euo pipefail
 pick() { grep -m1 -E '^ +iPad' | grep -oE '[0-9A-F-]{36}' || true; }
 id=$(xcrun simctl list devices booted available | pick)
 [ -n "$id" ] || id=$(xcrun simctl list devices available | pick)
-[ -n "$id" ] || { echo "no available iPad simulator" >&2; exit 1; }
+[ -n "$id" ] || {
+  echo "no available iPad simulator" >&2
+  exit 1
+}
 case "${1:-}" in
-"") echo "$id" ;;
-boot) xcrun simctl bootstatus "$id" -b >/dev/null ;;
-*) echo "usage: scripts/ipad-simulator.sh [boot]" >&2; exit 2 ;;
+  "") echo "$id" ;;
+  boot) xcrun simctl bootstatus "$id" -b >/dev/null ;;
+  *)
+    echo "usage: scripts/ipad-simulator.sh [boot]" >&2
+    exit 2
+    ;;
 esac
