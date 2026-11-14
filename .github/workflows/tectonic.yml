@@ -1,7 +1,10 @@
 name: Tectonic
 
-# pin.json은 입력이 아니므로, 이 작업이 출력한 핀을 커밋해도 빌드가 다시 시작되지 않는다. 프리릴리스로 올려야 앱의
-# 패치 노트(`PatchNotes.releases`)와 릴리스 노트가 세는 v* 태그에 섞이지 않는다.
+# Builds FolioTectonic.xcframework (sources/tectonic/build.sh) whenever what goes into it changes, on any branch, and
+# publishes it as a prerelease named after those inputs, this file among them for the tool versions it pins. The app's
+# builds fetch it by sources/tectonic/pin.json, which this job prints for the branch to commit; the pin itself is not an input,
+# so committing it starts no build. A prerelease stays out of the app's patch notes (`PatchNotes.releases`) and out of
+# the v* tags the release notes count from.
 on:
   push:
     paths:
@@ -48,6 +51,7 @@ jobs:
           fi
           rustup toolchain install "$RUST" --profile minimal --target "${TARGETS// /,}"
           echo "RUSTUP_TOOLCHAIN=$RUST" >> "$GITHUB_ENV"
+      # CMake and Ninja build the C dependencies; pkg-config is how Tectonic's build scripts find them.
       - if: steps.release.outputs.exists != 'true'
         name: Install CMake, Ninja and pkg-config
         run: |
