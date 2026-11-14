@@ -102,6 +102,25 @@ struct LMSTests {
         #expect(file.materials.first { $0.id == added.problemMaterialId }?.path == "\(folder)/slow_problem_2.pdf")
     }
 
+    @Test func acceptBesideAnAssignmentOfTheSameTitleKeepsBothProblemFiles() throws {
+        let dir = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let pdf = dir.appending(path: "slow_problem_2.pdf")
+        try Data("%PDF-1.4".utf8).write(to: pdf)
+        let gist = try Harness.fixtureCopy()
+        for lms in [139960, 139961] {
+            let json = dir.appending(path: "\(lms).json")
+            try JSONEncoder().encode([LMSAcceptItem(key: "assignment:\(lms)", title: "Slow Problem #2", files: [pdf.path])]).write(to: json)
+            #expect(h.cli(["lms", "accept", "EC4207", "--items", json.path], gist: gist).code == 0)
+        }
+        let file = try h.file(GISTStore(url: gist))
+        let first = try #require(file.assignments.first { $0.lmsId == 139960 })
+        let second = try #require(file.assignments.first { $0.lmsId == 139961 })
+        let problem = { (a: Assignment) in file.materials.first { $0.id == a.problemMaterialId }?.path }
+        #expect(problem(first) == "\(AssignmentFiles.path(of: first))/slow_problem_2.pdf")
+        #expect(problem(second) == "\(AssignmentFiles.path(of: second))/slow_problem_2 2.pdf")
+    }
+
     @Test func acceptRefusesAMissingAttachment() throws {
         let gist = try Harness.fixtureCopy()
         let json = FileManager.default.temporaryDirectory.appending(path: "\(UUID().uuidString).json")
