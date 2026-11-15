@@ -114,6 +114,47 @@ struct SettingItemTests {
         #expect(SettingItem.problems(in: root, under: "classMinutes").count == 1)
         #expect(SettingItem.problems(in: root).count == 1)
     }
+
+    // 설정 화면은 묶음의 항목을 모양만 보고 행으로 그린다. 행이 그릴 수 없는 모양이 묶음에 들어가면 화면에서 빠진다.
+    @Test func groupedItemsHaveARowShape() {
+        for item in SettingItem.all where item.group != nil {
+            #expect(item.shape != .custom, "\(item.key)")
+            if case .choice(let values) = item.shape {
+                #expect(item.options.map(\.value) == values, "\(item.key)")
+            }
+            if item.optional, case .number = item.shape {
+                #expect(item.starting.map(item.range.contains) == true, "\(item.key)")
+            }
+        }
+    }
+
+    @Test func everyGroupHasRows() {
+        for group in SettingGroup.allCases {
+            #expect(!group.rows.isEmpty, "\(group)")
+        }
+    }
+
+    // 스위치가 되는 토글은 같은 묶음에 있어야 그 묶음을 그릴 때 행으로 따로 그려지지 않는다.
+    @Test func switchesAreTogglesInTheSameGroup() throws {
+        for item in SettingItem.all {
+            guard let key = item.switchedBy else { continue }
+            let toggle = try #require(SettingItem.item(key), "\(item.key)")
+            #expect(toggle.shape == .toggle, "\(item.key)")
+            #expect(toggle.group == item.group, "\(item.key)")
+        }
+    }
+
+    @Test func writingAValueKeepsTheOthers() throws {
+        let start = Settings()
+        let written = try #require(SettingItem.classMinutes.writing(.number(90), into: start))
+        #expect(written.classMinutes == 90)
+        #expect(written.dayBoundaryMinutes == start.dayBoundaryMinutes)
+        let nested = try #require(SettingItem.examMinutes.writing(.number(150), into: written))
+        #expect(nested.schedule.examMinutes == 150)
+        #expect(nested.classMinutes == 90)
+        #expect(SettingItem.reviewDailyLimit.current(in: nested.json) == .null)
+        #expect(SettingItem.classMinutes.current(in: .object([:])) == SettingItem.classMinutes.fallback)
+    }
 }
 
 private func json(_ settings: Settings) throws -> JSONValue {

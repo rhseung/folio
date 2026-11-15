@@ -16,6 +16,7 @@ struct PaneRow: View {
     @State private var claudeAsk: ContextItem?
     @State private var inserts = PaneInserts()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.screenRequests) private var requests
 
     static let gap = Theme.Size.panelInset
     static let space = "panes"
@@ -56,9 +57,7 @@ struct PaneRow: View {
                 workspace: workspace, panes: panes, folded: folded, shown: $claude, incoming: $claudeAsk, inserts: inserts,
                 openLink: openLink)
         }
-        #if DEBUG && os(macOS)
-        .onChange(of: SnapshotDriver.shared.claudePanel, initial: true) { _, new in claude = new }
-        #endif
+        .onChange(of: requests.contains(.claude), initial: true) { old, new in if old || new { claude = new } }
         .onGeometryChange(for: CGFloat.self, of: \.size.width) { width in
             sizes.row = width
             panes.measure(width)

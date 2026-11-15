@@ -1,5 +1,6 @@
 import FolioAI
 import FolioDomain
+import FolioMarkdown
 import FolioStorage
 import Foundation
 import Observation
@@ -7,7 +8,9 @@ import Observation
 @MainActor @Observable
 final class SettingsModel {
     let workspace: Workspace
-    var settings = FolioDomain.Settings()
+    var settings = FolioDomain.Settings() { didSet { json = settings.json } }
+    // 선언으로 그린 행이 값을 읽을 때마다 설정 전체를 다시 인코딩하지 않도록 한 번만 만든다.
+    private(set) var json = FolioDomain.Settings().json
     // 사본을 workspace에서 채우기 전에 저장하면 기본값이 실제 파일을 덮어쓴다.
     private var loaded = false
 
@@ -56,6 +59,23 @@ final class SettingsModel {
 
     var folderPath: String {
         workspace.gist.map { ($0.url.path as NSString).abbreviatingWithTildeInPath } ?? String(localized: .settingsNone)
+    }
+
+    // MARK: Declared rows
+
+    func value(_ item: SettingItem) -> JSONValue { item.current(in: json) }
+
+    func set(_ item: SettingItem, _ value: JSONValue) {
+        // 컨트롤이 같은 값을 다시 써도 `settings`를 바꾸면 화면이 다시 그려지고 저장이 예약되므로, 바뀐 값만 넣는다.
+        if let new = item.writing(value, into: settings), new != settings { settings = new }
+    }
+
+    func text(of item: SettingItem) -> String {
+        if case .string(let s) = value(item) { s } else { "" }
+    }
+
+    func detail(of item: SettingItem) -> String? {
+        item.key == SettingItem.reviewIntervals.key ? reviewDays : nil
     }
 
     // MARK: Class start
@@ -162,6 +182,43 @@ final class SettingsModel {
     func delete(_ id: String) {
         settings.panePresets.removeAll { $0.id == id }
         if settings.classStart.preset == id { settings.classStart.preset = nil }
+    }
+
+    // MARK: Callouts
+
+    var newCallout = ""
+
+    var callouts: CalloutTable { CalloutTable(settings) }
+    var customCallouts: [CalloutKind] { callouts.kinds.filter { !$0.isDefault } }
+    var defaultCallouts: [CalloutKind] { callouts.kinds.filter(\.isDefault) }
+
+    func changed(_ kind: CalloutKind) -> Bool { kind.isDefault && settings.callouts?.contains { $0.name == kind.name } == true }
+
+    // 기본 종류와 같아진 종류는 설정에서 빼서, 기본 종류가 앱과 함께 바뀌면 따라가게 한다.
+    func setCallout(_ kind: CalloutKind) {
+        var list = settings.callouts ?? []
+        let stored = NoteCallout(name: kind.name, tone: kind.tone.rawValue, numbered: kind.numbered, provable: kind.provable)
+        let same = CalloutKind.defaults.contains { $0 == kind }
+        if let i = list.firstIndex(where: { $0.name == kind.name }) {
+            if same { list.remove(at: i) } else { list[i] = stored }
+        } else if !same {
+            list.append(stored)
+        }
+        settings.callouts = list.isEmpty ? nil : list
+    }
+
+    func removeCallout(_ name: String) {
+        let list = (settings.callouts ?? []).filter { $0.name != name }
+        settings.callouts = list.isEmpty ? nil : list
+    }
+
+    var newCalloutName: String { newCallout.trimmingCharacters(in: .whitespaces).lowercased() }
+    var canAddCallout: Bool { CalloutKind.allows(newCalloutName) && callouts[newCalloutName] == nil }
+
+    func addCallout() {
+        guard canAddCallout else { return }
+        setCallout(CalloutKind(newCalloutName, .neutral))
+        newCallout = ""
     }
 
     // MARK: Review

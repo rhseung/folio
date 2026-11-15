@@ -56,9 +56,6 @@ struct NoteList: View {
         .onChange(of: model.notesRevision) { model.reload() }
         .task(id: model.course.id) {
             model.reload()
-            #if DEBUG && os(macOS)
-            if SnapshotDriver.directory != nil, selection == nil { selection = model.parts.first?.rows.first?.note.meta.id }
-            #endif
         }
     }
 

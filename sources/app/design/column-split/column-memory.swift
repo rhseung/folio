@@ -1,18 +1,7 @@
 import SwiftUI
 
 @MainActor final class ColumnMemory {
-    // 테스트 호스트, 창 스냅숏 실행, 크기 측정 실행은 설치된 앱과 bundle ID가 같아서 defaults도 사용자의 것을 쓴다.
-    // 그러면 사용자가 숨긴 열이 측정이나 그림을 바꾸고, 실행이 숨긴 열은 사용자에게 계속 숨겨진다.
-    static let shared = ColumnMemory(defaults: isolated ? nil : .standard)
-    private static var isolated: Bool {
-        #if DEBUG && os(macOS)
-        if SnapshotDriver.directory != nil { return true }
-        #endif
-        #if os(macOS) && (DEBUG || RESIZE_PROBE)
-        if ResizeProbe.file != nil { return true }
-        #endif
-        return LocalFolders.isIsolated()
-    }
+    static let shared = ColumnMemory(defaults: LocalFolders.isolatesDefaults() ? nil : .standard)
     private let defaults: UserDefaults?
     private(set) var last: Set<ColumnKind>
 

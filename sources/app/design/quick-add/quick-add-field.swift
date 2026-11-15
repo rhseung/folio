@@ -6,7 +6,7 @@ struct QuickAddField: View {
     @State private var fieldSize = CGSize.zero
     @State private var lineSize = CGSize.zero
     @State private var lineHeights = (one: CGFloat(0), three: CGFloat(0))
-    @Environment(\.quickAddTypedSample) private var typedSample
+    @Environment(\.screenRequests) private var requests
 
     private let focusOnAppear: Bool
     private let floating: Bool
@@ -113,22 +113,17 @@ struct QuickAddField: View {
             }
         }
         .task {
-            var sample = typedSample
-            #if DEBUG && os(macOS)
-            sample = sample ?? SnapshotDriver.shared.quickAddText
-            #endif
-            guard let sample, model.text.isEmpty else { return }
+            let asked = requests.quickAdd
+            guard let sample = asked?.text, model.text.isEmpty else { return }
             try? await Task.sleep(for: .seconds(0.3))
             for word in sample.split(separator: " ", omittingEmptySubsequences: false) {
                 model.text += (model.text.isEmpty ? "" : " ") + word
                 try? await Task.sleep(for: .seconds(0.03))
             }
-            #if DEBUG && os(macOS)
-            if let pick = SnapshotDriver.shared.quickAddPick {
+            if let pick = asked?.course {
                 try? await Task.sleep(for: .seconds(1))
                 model.pickCourse(pick)
             }
-            #endif
         }
     }
 
@@ -203,8 +198,4 @@ private struct QuickAddSurface: ViewModifier {
 
 private extension Character {
     var isHangul: Bool { unicodeScalars.first.map { (0xAC00...0xD7A3).contains($0.value) } ?? false }
-}
-
-extension EnvironmentValues {
-    @Entry var quickAddTypedSample: String?
 }

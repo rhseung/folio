@@ -7,8 +7,7 @@ public struct CalloutTable: Equatable, Sendable {
 
     public init(adding custom: [CalloutKind] = []) {
         var kinds = CalloutKind.defaults
-        // 헤더 `[!종류]`로 쓸 수 없는 이름은 CSS 클래스로도 안전하지 않으므로 받지 않는다.
-        for kind in custom where kind.name.wholeMatch(of: /[a-z-]+/) != nil {
+        for kind in custom where CalloutKind.allows(kind.name) {
             if let i = kinds.firstIndex(where: { $0.name == kind.name }) { kinds[i] = kind } else { kinds.append(kind) }
         }
         self.kinds = kinds

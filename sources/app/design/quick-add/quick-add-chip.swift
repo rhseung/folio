@@ -8,6 +8,7 @@ struct QuickAddChip: View {
     @State private var pickingDue = false
     @State private var pickingRepeat = false
     @State private var rule = AssignmentRepeat.weekly
+    @Environment(\.screenRequests) private var requests
 
     var body: some View {
         Group {
@@ -18,20 +19,19 @@ struct QuickAddChip: View {
             case let .folder(name): folderChip(name)
             }
         }
-        #if DEBUG && os(macOS)
         .task {
+            let asked = requests.quickAdd
             switch chip {
-            case .due where SnapshotDriver.shared.quickAddDueOpen:
+            case .due where asked?.due == true:
                 try? await Task.sleep(for: .seconds(0.6))
                 pickingDue = true
-            case let .repeats(repeats?) where SnapshotDriver.shared.quickAddRepeatOpen:
+            case let .repeats(repeats?) where asked?.repeats == true:
                 try? await Task.sleep(for: .seconds(0.6))
                 rule = repeats
                 pickingRepeat = true
             default: break
             }
         }
-        #endif
     }
 
     private func courseChip(_ id: UUID?) -> some View {

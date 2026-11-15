@@ -16226,17 +16226,6 @@
         }
       }
     },
-    "settings.alert-lead": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "알림 시점"
-          }
-        }
-      }
-    },
     "settings.api-key": {
       "extractionState": "manual",
       "localizations": {
@@ -16266,39 +16255,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "모양"
-          }
-        }
-      }
-    },
-    "settings.assignments": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과제"
-          }
-        }
-      }
-    },
-    "settings.attendance-alert": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "결석 상한 직전"
-          }
-        }
-      }
-    },
-    "settings.auto-backup": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자동 백업"
           }
         }
       }
@@ -16354,17 +16310,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "백업은 Mac 앱이 맡습니다"
-          }
-        }
-      }
-    },
-    "settings.cards-per-review": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "한 번에 볼 카드"
           }
         }
       }
@@ -16765,72 +16710,6 @@
         }
       }
     },
-    "settings.daily-backup": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "하루 한 번 자동 백업"
-          }
-        }
-      }
-    },
-    "settings.daily-limit": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "하루 복습 상한"
-          }
-        }
-      }
-    },
-    "settings.daily-review": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오늘 복습"
-          }
-        }
-      }
-    },
-    "settings.day": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "하루"
-          }
-        }
-      }
-    },
-    "settings.day-before": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "전날"
-          }
-        }
-      }
-    },
-    "settings.day-boundary": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "하루가 바뀌는 시각"
-          }
-        }
-      }
-    },
     "settings.details": {
       "extractionState": "manual",
       "localizations": {
@@ -16838,39 +16717,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "세부"
-          }
-        }
-      }
-    },
-    "settings.due-alert": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "마감 알림"
-          }
-        }
-      }
-    },
-    "settings.exam-window": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "시험 앞 간격 줄이기"
-          }
-        }
-      }
-    },
-    "settings.exams": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "시험"
           }
         }
       }
@@ -16919,17 +16765,6 @@
         }
       }
     },
-    "settings.intervals": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "복습 간격"
-          }
-        }
-      }
-    },
     "settings.intervals-days": {
       "extractionState": "manual",
       "localizations": {
@@ -16963,50 +16798,6 @@
         }
       }
     },
-    "settings.location": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "위치"
-          }
-        }
-      }
-    },
-    "settings.math-syntax": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "수식 문법"
-          }
-        }
-      }
-    },
-    "settings.morning-of": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "당일 아침"
-          }
-        }
-      }
-    },
-    "settings.new-note": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "새 노트"
-          }
-        }
-      }
-    },
     "settings.no-backups": {
       "extractionState": "manual",
       "localizations": {
@@ -17036,17 +16827,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "없음"
-          }
-        }
-      }
-    },
-    "settings.note-rules": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노트 작성 규칙"
           }
         }
       }
@@ -17260,17 +17040,6 @@
         }
       }
     },
-    "settings.review-and-attendance": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "복습과 출석"
-          }
-        }
-      }
-    },
     "settings.screen-and-folder": {
       "extractionState": "manual",
       "localizations": {
@@ -17278,17 +17047,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "화면과 폴더"
-          }
-        }
-      }
-    },
-    "settings.settle-after": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "정착 기준"
           }
         }
       }
@@ -17480,50 +17238,6 @@
         }
       }
     },
-    "settings.unit-cards": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "장"
-          }
-        }
-      }
-    },
-    "settings.unit-days": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "일"
-          }
-        }
-      }
-    },
-    "settings.unit-days-before": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "일 전부터"
-          }
-        }
-      }
-    },
-    "settings.unit-hours-before": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "시간 전"
-          }
-        }
-      }
-    },
     "settings.unit-minutes-after": {
       "extractionState": "manual",
       "localizations": {
@@ -17531,17 +17245,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "분 후"
-          }
-        }
-      }
-    },
-    "settings.units": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "단원"
           }
         }
       }
@@ -20127,50 +19830,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "새 파일"
-          }
-        }
-      }
-    },
-    "settings.class-minutes": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "기본 수업 길이"
-          }
-        }
-      }
-    },
-    "settings.class-time": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "수업 시간"
-          }
-        }
-      }
-    },
-    "settings.unit-minutes": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "분"
-          }
-        }
-      }
-    },
-    "settings.unit-passes": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "번 통과"
           }
         }
       }
@@ -22848,35 +22507,123 @@
         }
       }
     },
-    "settings.deadlines": {
+    "settings.callouts-defaults": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "마감과 시험"
+            "value": "기본 종류"
           }
         }
       }
     },
-    "settings.school": {
+    "settings.callouts-new": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "학교"
+            "value": "새 종류 이름"
           }
         }
       }
     },
-    "settings.lms-sync": {
+    "settings.callouts-numbered": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "자동 확인"
+            "value": "번호"
+          }
+        }
+      }
+    },
+    "settings.callouts-provable": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "증명 붙이기"
+          }
+        }
+      }
+    },
+    "settings.callouts-reset": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기본값으로 되돌리기"
+          }
+        }
+      }
+    },
+    "settings.callout-tone.definition": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정의"
+          }
+        }
+      }
+    },
+    "settings.callout-tone.theorem": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정리"
+          }
+        }
+      }
+    },
+    "settings.callout-tone.example": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "예시"
+          }
+        }
+      }
+    },
+    "settings.callout-tone.warning": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "경고"
+          }
+        }
+      }
+    },
+    "settings.callout-tone.danger": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "위험"
+          }
+        }
+      }
+    },
+    "settings.callout-tone.neutral": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "무채색"
           }
         }
       }

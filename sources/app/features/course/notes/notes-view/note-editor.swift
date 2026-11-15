@@ -8,6 +8,7 @@ struct NoteEditor: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.showInputGuide) private var showInputGuide
     @Environment(\.openLink) private var openLink
+    @Environment(\.screenRequests) private var requests
     var anchor: AppLink.Anchor?
     var insert: Binding<String?> = .constant(nil)
     @State private var panes = NotePanes()
@@ -120,13 +121,11 @@ struct NoteEditor: View {
         .onChange(of: model.body, initial: true) { outline.read(model.body) }
         .onChange(of: [paneFocused, outlineShown, outline.isEmpty], initial: true) { registerOutline() }
         .onDisappear { trail?.clearOutline(owner: outlineOwner) }
-        #if DEBUG && os(macOS)
         .task {
-            guard SnapshotDriver.outline == "popover" else { return }
+            guard requests.contains(.outlinePopover) else { return }
             try? await Task.sleep(for: .seconds(0.5))
             if !outlineFit.docks(shown) { outlinePopover = true }
         }
-        #endif
         .background(Theme.Palette.card)
         .animation(Theme.Motion.standard, value: showsAssets)
         .background {
@@ -151,9 +150,7 @@ struct NoteEditor: View {
             if !Task.isCancelled { model.saveNow(force: false) }
         }
         .onChange(of: model.meta.math) { model.saveMath() }
-        #if DEBUG && os(macOS)
-        .onChange(of: SnapshotDriver.shared.mathPaletteOpen) { _, open in showsMath = open }
-        #endif
+        .onChange(of: requests.contains(.mathPalette)) { _, open in showsMath = open }
         .onChange(of: model.notesRevision) { model.refresh() }
         .onChange(of: scenePhase) { _, phase in if phase != .active { model.saveIfDirty() } }
         .onDisappear { model.saveIfDirty() }

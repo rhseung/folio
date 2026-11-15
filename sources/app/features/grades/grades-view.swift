@@ -5,6 +5,7 @@ import SwiftUI
 struct GradesView: View {
     @State private var model: GradesModel
     @State private var hovered: String?
+    @Environment(\.screenRequests) private var requests
 
     init(workspace: Workspace) {
         _model = State(initialValue: GradesModel(workspace: workspace))
@@ -129,11 +130,7 @@ struct GradesView: View {
             simulation(cumulative: cumulative)
         }
         .navigationTitle(.gradesTitle)
-        #if DEBUG && os(macOS)
-        .onAppear {
-            if SnapshotDriver.directory != nil { model.expanded = model.semesters.first { $0.year == 2026 && $0.term == .spring }?.id }
-        }
-        #endif
+        .onChange(of: requests.expanded, initial: true) { _, id in if let id { model.expanded = id } }
     }
 
     func simulation(cumulative: GPACalculator.Summary) -> some View {

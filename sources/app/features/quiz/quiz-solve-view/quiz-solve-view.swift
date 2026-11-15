@@ -3,6 +3,7 @@ import SwiftUI
 
 struct QuizSolveView: View {
     @Environment(\.accent) private var accent
+    @Environment(\.screenRequests) private var requests
     let course: LoadedCourse
     let showCards: () -> Void
     @State private var model: QuizSolveModel
@@ -21,14 +22,12 @@ struct QuizSolveView: View {
         }
         .scrollEdgeEffectHidden(true, for: .top)
         .onAppear { model.prepare(course) }
-        #if DEBUG && os(macOS)
         // 카드를 불러온 뒤에 시작해야 한다. onAppear에서 시작하면 칸은 카드를 세는데 스냅숏은 빈 덱을 보였다.
         .onChange(of: model.quiz.cards.count, initial: true) { _, n in
-            if SnapshotDriver.directory != nil, !model.started, n > 0 {
+            if requests.contains(.quiz), !model.started, n > 0 {
                 model.order = .wrongFirst; model.start(label: String(localized: .quizSolvePickedScope), course: course)
             }
         }
-        #endif
         .onChange(of: model.quiz.request?.id, initial: true) { _, _ in
             guard let request = model.quiz.request else { return }
             model.apply(request, course: course)

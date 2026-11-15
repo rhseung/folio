@@ -121,6 +121,12 @@ public struct Settings: Codable, Sendable, Equatable {
     public func nextDayStart(after now: Date, calendar: Calendar) -> Date {
         start(of: studyDay(of: now, calendar: calendar).adding(days: 1), calendar: calendar)
     }
+
+    // 설정 화면의 행이 항목의 키로 값을 읽고 쓴다(`SettingItem.current(in:)`, `writing(_:into:)`). 행마다 필드를 손으로 잇지 않으려고
+    // JSON 모양을 거친다.
+    public var json: JSONValue {
+        (try? JSONDecoder().decode(JSONValue.self, from: JSONEncoder().encode(self))) ?? .null
+    }
 }
 
 extension KeyedDecodingContainer {
