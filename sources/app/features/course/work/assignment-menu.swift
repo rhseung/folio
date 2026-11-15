@@ -4,7 +4,7 @@ import FolioStorage
 import SwiftUI
 
 extension AssignmentStatus {
-    static let menuOrder: [AssignmentStatus] = [.todo, .doing, .submitted, .graded]
+    static let menuOrder: [AssignmentStatus] = [.todo, .doing, .submitted, .graded, .missed]
 }
 
 struct AssignmentMenu: View {

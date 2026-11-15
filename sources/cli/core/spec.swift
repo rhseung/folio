@@ -145,6 +145,19 @@ extension GradeCutoff: CLIText {
     }
 }
 
+extension LateRule: CLIText {
+    init(cli text: String, _ r: Resolver, in course: CourseRef?) throws {
+        let parts = text.split(separator: ":", omittingEmptySubsequences: false)
+        let days = parts.count == 2 ? Int(parts[1]) : nil
+        guard (1...2).contains(parts.count), let percent = Double(parts[0]), parts.count == 1 || days != nil else {
+            throw CLIError(exit: .usage, message: String(localized: .lateRuleFormat(text)))
+        }
+        self.init(percentPerDay: percent, days: days)
+    }
+
+    var cliText: String { percentPerDay.formatted() + (days.map { ":\($0)" } ?? "") }
+}
+
 extension StudentProgram: CLIText {
     init(cli text: String, _ r: Resolver, in course: CourseRef?) throws {
         let parts = text.split(separator: ":", maxSplits: 1).map(String.init)

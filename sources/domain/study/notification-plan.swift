@@ -3,7 +3,7 @@ import Foundation
 public enum NotificationPlan {
     public static func build(
         courses: [CourseFile], reviewCount: (Date) -> Int, settings: NotificationSettings,
-        now: Date, calendar: Calendar, reviewDays: Int = 7
+        now: Date, calendar: Calendar, days: Int = 7
     ) -> [PlannedNotification] {
         func at(_ minute: Int, dayOffset: Int, from date: Date) -> Date {
             let day = calendar.date(byAdding: .day, value: dayOffset, to: calendar.startOfDay(for: date))!
@@ -55,8 +55,25 @@ public enum NotificationPlan {
             }
         }
 
+        // 하루에 한 번 그 시각에 마감이 지나 있을 과제를 모은다. 그 사이에 내면 다시 예약할 때 빠진다.
+        let overdue = settings[.assignmentOverdue]
+        if overdue.on, let minute = overdue.minute {
+            for day in 0...days {
+                let date = at(minute, dayOffset: day, from: now)
+                guard date > now else { continue }
+                let late = courses.flatMap { f in f.overdueAssignments(at: date).map { (course: f.course.id, assignment: $0) } }
+                guard let first = late.first else { continue }
+                let one = late.count == 1
+                out.append(
+                    .init(
+                        id: "overdue-\(LocalDate(date, in: calendar))", date: date, kind: .assignmentOverdue(count: late.count),
+                        courseId: one ? first.course : nil, subject: one ? first.assignment.title : "", at: one ? first.assignment.due : nil
+                    ))
+            }
+        }
+
         if review.on, let minute = review.minute {
-            for day in 0...reviewDays {
+            for day in 0...days {
                 let date = at(minute, dayOffset: day, from: now)
                 guard date > now else { continue }
                 let count = reviewCount(date)

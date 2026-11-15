@@ -33,6 +33,8 @@ struct CourseOverview: View {
             }
             .sheet(isPresented: $editing) { EditCourseSheet(workspace: model.workspace, course: course) }
 
+            OverdueAssignments(workspace: model.workspace, course: course.id)
+
             StatGroup(items: model.stats(file, reviews: reviews, suggested: suggested, now: now))
 
             if !unclassified.isEmpty {

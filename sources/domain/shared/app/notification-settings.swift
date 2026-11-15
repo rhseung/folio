@@ -4,7 +4,7 @@ import Foundation
 // (`"notifications": {"examMorning": {"on": true, "minute": 480}}`). 종류마다 쓰는 칸과 기본값은 설정 항목 선언(`Kind.item`)이 정한다.
 public struct NotificationSettings: Codable, Sendable, Equatable {
     public enum Kind: String, CaseIterable, Sendable, CodingKey {
-        case assignmentDue, examDayBefore, examMorning, dailyReview, attendance
+        case assignmentDue, assignmentOverdue, examDayBefore, examMorning, dailyReview, attendance
 
         // 종류가 쓰는 칸은 `notifications.<종류>.<칸>`으로 선언한 설정 항목이다. 선언하지 않은 칸(출석 알림의 시각)은 nil이다.
         public func item(_ field: Field) -> SettingItem? { SettingItem.item("notifications.\(rawValue).\(field.rawValue)") }

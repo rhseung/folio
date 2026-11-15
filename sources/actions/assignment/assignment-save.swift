@@ -13,8 +13,9 @@ import Foundation
         #"folio assignment set EC4207/HW3 --due "2026-11-06 23:59""#, #"folio assignment set EC4207/HW3 --component 과제 --memo "3번 질문함""#,
         "folio assignment set EC4207/HW3 --component 과제 --score 9/10",
         "folio assignment set EC4207/HW3 --due none --repeats weekly --dry-run",
+        #"folio assignment set EC4207/HW3 --status submitted --submitted-at "2026-11-07 01:20" --late-rule 20:2"#,
     ],
-    phrases: ["미뤄졌", "연기", "마감일", "마감 변경", "기한 연장", "과제 메모", "과제 이름"], panel: true)
+    phrases: ["미뤄졌", "연기", "마감일", "마감 변경", "기한 연장", "과제 메모", "과제 이름", "제출 시각", "늦게 냄", "지각 감점"], panel: true)
 public struct AssignmentSave {
     public struct Score: Codable, Sendable, Equatable {
         public var component: UUID?
@@ -32,8 +33,12 @@ public struct AssignmentSave {
     var title: Patch<String>
     /// 마감 일시
     var due: Patch<Date?>
-    /// 상태
+    /// 상태. todo, doing, submitted, graded, missed(못 냄)
     var status: Patch<AssignmentStatus>
+    /// 낸 시각. 상태가 submitted나 graded일 때만 둔다
+    @CLIName("submitted-at") var submittedAt: Patch<Date?>
+    /// 이 과제만 따로 쓰는 지각 규칙. none이면 과목의 규칙을 따른다
+    @CLIName("late-rule") @Parsed("late-rule", "하루당 감점 %:받는 날수. 10:3, 받는 기한이 없으면 10") var lateRule: Patch<LateRule?>
     /// 반복. weekly, daily, biweekly, monthly, 3d, 2w, 1m, weekly:mon,wed, 또는 빠른 추가의 말(매일, 격일, 3일마다, 격주, 매월, 매주 월수, 월,수마다, 평일마다)
     var repeats: Patch<AssignmentRepeat?>
     /// 반영되는 성적 항목. 주면 묶음은 풀린다
@@ -69,6 +74,7 @@ public struct AssignmentSave {
             due.apply(&a.due)
             repeats.apply(&a.repeats)
             memo.apply(&a.memo)
+            lateRule.apply(&a.lateRule)
 
             if case .set(let id) = componentId { (a.componentId, a.componentGroup) = (id, nil) }
             if case .set(let g) = componentGroup { (a.componentId, a.componentGroup) = (g == nil ? a.componentId : nil, g) }
@@ -127,7 +133,8 @@ public struct AssignmentSave {
                 }
             }
             f.scores.removeAll { $0.assignmentId == assignment && shown.contains($0.componentId) && !kept.contains($0.componentId) }
-            status.apply(&f.assignments[i].status)
+            if case .set(let new) = status { f.assignments[i].set(new, now: ctx.now) }
+            submittedAt.apply(&f.assignments[i].submittedAt)
             f.markGraded(assignment, device: ctx.device, now: ctx.now)
             f.continueRepeating(assignment, until: end, calendar: ctx.calendar, device: ctx.device, now: ctx.now)
         }

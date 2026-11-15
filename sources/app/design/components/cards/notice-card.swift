@@ -5,7 +5,8 @@ struct NoticeCard<Trailing: View, Rows: View>: View {
     let title: String
     var detail: String?
     var systemImage = "exclamationmark.bubble.fill"
-    var informs = false
+    // 띠의 색이다. 알리기만 하면 `.info`, 미룰 수 없는 일이면 `.danger`이고, 그 밖은 `.warning`이다.
+    var tone: Tone = .warning
     @ViewBuilder var trailing: Trailing
     @ViewBuilder var rows: Rows
 
@@ -24,7 +25,7 @@ struct NoticeCard<Trailing: View, Rows: View>: View {
             }
             .padding(Theme.Inset.row)
             .frame(maxWidth: .infinity, minHeight: Theme.Size.rowHeight, alignment: .leading)
-            .background(informs ? Theme.Palette.infoFill : Theme.Palette.warningBanner, in: .rect(cornerRadius: Theme.Radius.card))
+            .background(banner, in: .rect(cornerRadius: Theme.Radius.card))
             rows
         }
     }
@@ -33,10 +34,8 @@ struct NoticeCard<Trailing: View, Rows: View>: View {
 extension NoticeCard {
     func words(detailIdeal: CGFloat?) -> some View {
         HStack(spacing: Theme.Space.m) {
-            Image(systemName: systemImage).foregroundStyle(informs ? Theme.Palette.info : Theme.Palette.warning).font(
-                Theme.Typeface.bodyStrong
-            )
-            .frame(width: Theme.Size.tile)
+            Image(systemName: systemImage).foregroundStyle(tone.foreground).font(Theme.Typeface.bodyStrong)
+                .frame(width: Theme.Size.tile)
             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                 Text(title).font(Theme.Typeface.bodyStrong).lineLimit(1)
                 if let detail {
@@ -49,10 +48,21 @@ extension NoticeCard {
     }
 
     var action: some View { trailing.lineLimit(1).fixedSize() }
+
+    var banner: Color {
+        switch tone {
+        case .info: Theme.Palette.infoFill
+        case .danger: Theme.Palette.dangerBanner
+        case .plain, .accent, .warning, .success: Theme.Palette.warningBanner
+        }
+    }
 }
 
 extension NoticeCard where Rows == EmptyView {
-    init(title: String, detail: String? = nil, systemImage: String = "exclamationmark.bubble.fill", @ViewBuilder trailing: () -> Trailing) {
-        self.init(title: title, detail: detail, systemImage: systemImage, trailing: trailing, rows: { EmptyView() })
+    init(
+        title: String, detail: String? = nil, systemImage: String = "exclamationmark.bubble.fill", tone: Tone = .warning,
+        @ViewBuilder trailing: () -> Trailing
+    ) {
+        self.init(title: title, detail: detail, systemImage: systemImage, tone: tone, trailing: trailing, rows: { EmptyView() })
     }
 }

@@ -114,7 +114,7 @@ final class CourseModel {
     // MARK: Overview
 
     func score(_ file: CourseFile) -> GradeCalculator.CourseScore {
-        GradeCalculator.score(components: file.components, entries: file.scores)
+        file.courseScore(at: workspace.now)
     }
     func unclassified(_ file: CourseFile) -> [FolioDomain.Material] { file.materials.filter { $0.status == .unclassified } }
     func reviews(now: Date) -> [Workspace.ReviewEntry] { workspace.reviewQueue(now: now).filter { $0.courseId == courseId } }

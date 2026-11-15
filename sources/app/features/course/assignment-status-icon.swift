@@ -16,6 +16,7 @@ extension AssignmentStatus {
         case .doing: String(localized: .assignmentStatusDoing)
         case .submitted: String(localized: .assignmentStatusSubmitted)
         case .graded: String(localized: .assignmentStatusGraded)
+        case .missed: String(localized: .assignmentStatusMissed)
         }
     }
 
@@ -25,10 +26,11 @@ extension AssignmentStatus {
         case .doing: "circle.lefthalf.filled"
         case .submitted: "checkmark.circle.fill"
         case .graded: "checkmark.seal.fill"
+        case .missed: "xmark.circle"
         }
     }
 
-    @MainActor var tint: Color { Self.steps.first { $0.value == self }?.tint ?? Theme.Palette.textTertiary }
+    @MainActor var tint: Color { Self.steps.first { $0.value == self }?.tint ?? tone.tint }
 }
 
 struct AssignmentStatusIcon: View {

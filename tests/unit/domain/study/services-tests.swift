@@ -122,6 +122,7 @@ struct NotificationPlanTests {
         var off = NotificationSettings()
         off[.assignmentDue].on = false
         off[.dailyReview].on = false
+        off[.assignmentOverdue].on = false
         let now = at(23, 12)
         var file = CourseFile(course: Course(device: device, at: now, title: "x"))
         file.assignments = [Assignment(device: device, at: now, title: "HW5", due: at(24, 23))]

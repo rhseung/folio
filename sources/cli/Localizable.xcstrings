@@ -6556,6 +6556,61 @@
           }
         }
       }
+    },
+    "late-rule.format": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지각 규칙은 '하루당 감점 %%:받는 날수'(10:3)나 '하루당 감점 %%'(10)로 씁니다: %@"
+          }
+        }
+      }
+    },
+    "assignment.show.submitted": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "  제출  %@"
+          }
+        }
+      }
+    },
+    "assignment.show.late": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "  지각  %1$lld일%2$@"
+          }
+        }
+      }
+    },
+    "assignment.show.ceiling": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ", 최대 %lld%%"
+          }
+        }
+      }
+    },
+    "assignment.show.late-rule": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "  지각 규칙  %@"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
