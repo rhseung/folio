@@ -496,3 +496,58 @@ private let view = "sources/app/features/demo/demo-view.swift"
         #expect(hits.map(\.path) == ["sources/app/app"])
     }
 }
+
+@Suite struct DesignControlTests {
+    @Test func systemControlsInAFeature() {
+        let source = """
+            struct DemoView: View {
+                var body: some View {
+                    Toggle("", isOn: $on)
+                    Picker("", selection: $pick) { Text("a") }
+                    TextField("", text: $name)
+                    Button(.commonSave) {}.buttonStyle(.borderless)
+                    Button(.commonSave) {}.buttonStyle(PlainButtonStyle())
+                }
+            }
+            """
+        #expect(
+            found([view: source], "design-control") == [
+                ".buttonStyle(.borderless)", ".buttonStyle(PlainButtonStyle())", "Picker(", "TextField(", "Toggle(",
+            ])
+    }
+
+    @Test func atomsMenuContentAndDesignPass() {
+        let source = """
+            struct DemoView: View {
+                var body: some View {
+                    TextField("", text: $code).pill(width: Theme.Size.codeField)
+                    Button(.commonSave) {}.buttonStyle(.pointing(.plain))
+                    Button(.commonSave) {}.buttonStyle(.ghost)
+                    Menu {
+                        Toggle("", isOn: $on)
+                    } label: {
+                        ChipLabel("")
+                    }
+                    Text("").contextMenu { Picker("", selection: $pick) { Text("a") } }
+                }
+            }
+            """
+        #expect(found([view: source], "design-control").isEmpty)
+        #expect(
+            found(
+                ["sources/app/design/atoms/fields/switch.swift": "struct Switch: View { var body: some View { Toggle(\"\", isOn: $on) } }"],
+                "design-control"
+            ).isEmpty)
+    }
+
+    @Test func aControlThatOpensAContextMenuStillCounts() {
+        let source = "struct DemoView: View { var body: some View { TextField(\"\", text: $name).contextMenu { Text(\"\") } } }"
+        #expect(found([view: source], "design-control") == ["TextField("])
+    }
+
+    @Test func aButtonStyleDeclaredInAFeature() {
+        let source =
+            "private struct SoftStyle: ButtonStyle { func makeBody(configuration: Configuration) -> some View { configuration.label } }"
+        #expect(found([view: source], "design-control") == ["ButtonStyle SoftStyle"])
+    }
+}

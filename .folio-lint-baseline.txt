@@ -18,6 +18,15 @@ app-direction	sources/app/platform/note-preview-page.swift	NoteEmbedSource from 
 app-direction	sources/app/platform/note-preview.swift	NoteEmbedSource from features/course
 app-direction	sources/app/platform/note-text/markdown-editor.swift	NoteEmbedSource from features/course
 app-direction	sources/app/platform/note-text/source-view/source-text-view.swift	NoteEmbedSource from features/course
+design-control	sources/app/features/claude/chat-composer.swift	TextField(
+design-control	sources/app/features/course/course-icon-panel.swift	TextField(
+design-control	sources/app/features/course/units/units-view.swift	TextField(
+design-control	sources/app/features/course/work/exam-plan-card.swift	TextField(
+design-control	sources/app/features/search/search-palette.swift	TextField(
+design-control	sources/app/features/settings/callout-list.swift	TextField(
+design-control	sources/app/features/settings/heading-rows.swift	TextField(
+design-control	sources/app/features/settings/settings-view.swift	TextField(
+design-control	sources/app/features/settings/snippet-list.swift	TextField(
 launch-environment	sources/app/app/window/pane-memory-store.swift	ProcessInfo.processInfo.environment
 launch-environment	sources/app/app/workspace/workspace-services.swift	ProcessInfo.processInfo.environment
 launch-environment	sources/cli/core/output/output.swift	ProcessInfo.processInfo.environment
