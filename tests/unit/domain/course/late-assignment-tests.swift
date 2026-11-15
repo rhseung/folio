@@ -212,6 +212,16 @@ struct LateAssignmentTests {
         #expect(grades(rule: rule).courseScore(at: at(14, 9)).secured == 45)
     }
 
+    // 못 냄은 점수를 적기 전까지 0점이라, 규칙이 없어도 예상은 (9 + 0) / 20 = 45점이다. 못 냄을 눌러 예상이 오르지 않는다.
+    @Test func aMissedAssignmentCountsAsZeroInTheProjection() {
+        for rule in [LateRule(percentPerDay: 10, days: 3), nil] {
+            var f = grades(rule: rule)
+            #expect(f.courseScore(at: at(11, 9)).projected ?? 0 > 45)
+            f.assignments[1].set(.missed, now: at(11, 9))
+            #expect(f.courseScore(at: at(11, 9)).projected == 45 && f.courseScore(at: at(11, 9)).secured == 45)
+        }
+    }
+
     // 기록한 점수는 감점이 들어간 최종 점수라, 늦게 낸 과제의 9점도 깎지 않는다(사용자, 2026-11-15).
     @Test func aRecordedLateScoreIsFinal() {
         let f = grades(rule: LateRule(percentPerDay: 20, days: 3), submitted: at(14, 9), score: 9)

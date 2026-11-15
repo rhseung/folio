@@ -47,7 +47,10 @@ extension CourseFile {
     // 아직 없는 지각 과제에만 쓰고(`lateness`), 그 과제가 받을 수 있는 최대 비율을 예상 점수의 상한으로 둔다.
     public func lateCeilings(at now: Date) -> [UUID: [Double]] {
         assignments.reduce(into: [:]) { caps, a in
-            guard let component = a.componentId, let ceiling = lateness(of: a, at: now)?.ceiling else { return }
+            guard let component = a.componentId else { return }
+            // 못 냄은 내지 않기로 한 과제라 점수를 적기 전까지 0점으로 센다. 빼면 못 냄을 눌렀을 때 예상 점수가 오른다.
+            let missed = a.status == .missed && !scores.contains { $0.assignmentId == a.id }
+            guard let ceiling = missed ? 0 : lateness(of: a, at: now)?.ceiling else { return }
             caps[component, default: []].append(ceiling)
         }
     }

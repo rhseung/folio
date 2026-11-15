@@ -46,13 +46,10 @@ public struct TodaySummary: Sendable {
 
             for a in file.assignments where a.status.isOpen {
                 // 마감은 실제 시각을 쓴다. 오늘 밤 01:00 마감은 지나지 않았을 때만 오늘 할 일이다.
-                guard let due = a.due else { continue }
-                if due >= now {
-                    deadlines.append(DeadlineItem(courseId: id, assignment: a, isToday: due < dayEnd))
-                } else {
-                    overdue.append(DeadlineItem(courseId: id, assignment: a, isToday: false))
-                }
+                guard let due = a.due, due >= now else { continue }
+                deadlines.append(DeadlineItem(courseId: id, assignment: a, isToday: due < dayEnd))
             }
+            overdue += file.overdueAssignments(at: now).map { DeadlineItem(courseId: id, assignment: $0, isToday: false) }
 
             for s in file.sessions where !s.isCancelled {
                 if s.date >= dayStart && s.date < dayEnd { classes.append(SessionItem(courseId: id, session: s)) }

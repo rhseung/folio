@@ -62,9 +62,12 @@ final class AssignmentSheetModel {
 
     var submittedDetail: String? {
         guard showsSubmittedAt, hasDue, hasSubmittedAt else { return nil }
-        let days = LateRule.lateDays(due: due, at: submittedAt)
-        guard days > 0 else { return nil }
-        return Lateness(days: days, ceiling: (lateRule.rule ?? courseLateRule)?.ceiling(lateDays: days)).label
+        var draft = assignment
+        draft.due = due
+        draft.status = status
+        draft.submittedAt = submittedAt
+        draft.lateRule = lateRule.rule
+        return course.file.lateness(of: draft, at: workspace.now)?.label
     }
 
     var repeatLabel: String { repeats?.label ?? String(localized: .repeatPickerNone) }
