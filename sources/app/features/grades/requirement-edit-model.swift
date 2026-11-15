@@ -18,11 +18,11 @@ final class RequirementEditModel {
 
     var title: String { isNew ? String(localized: .requirementsAddCategory) : String(localized: .requirementsSheetTitle(draft.name)) }
 
-    var parentOptions: [PickOption<UUID?>] {
+    var parentOptions: [SelectOption<UUID?>] {
         let others = workspace.requirementCatalog.categories.filter { $0.id != draft.id }.sorted { $0.name < $1.name }
-        return [PickOption(id: UUID?.none, title: String(localized: .requirementsNone))]
+        return [SelectOption(id: UUID?.none, label: String(localized: .requirementsNone))]
             + Category.tree(others).map {
-                PickOption(id: Optional($0.category.id), title: $0.category.name, detail: $0.category.group, depth: $0.depth)
+                SelectOption(id: Optional($0.category.id), label: $0.category.name, detail: $0.category.group, depth: $0.depth)
             }
     }
 

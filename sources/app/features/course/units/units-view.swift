@@ -74,7 +74,7 @@ struct UnitsView: View {
                         title: root.title, note: model.sessionsLine(root, in: file),
                         trailing: {
                             HStack(spacing: Theme.Space.s) {
-                                ForEach(exams) { Chip($0.title) }
+                                ForEach(exams) { Badge($0.title) }
                                 ReviewBadge(state: states[root.id], today: today)
                                 Button {
                                     model.openUnit = root.id
@@ -125,7 +125,7 @@ struct UnitsView: View {
                             ).lineLimit(1)
                         }
                         Spacer(minLength: Theme.Space.m)
-                        if Set(exams.map(\.id)) != inheritedExams { ForEach(exams) { Chip($0.title) } }
+                        if Set(exams.map(\.id)) != inheritedExams { ForEach(exams) { Badge($0.title) } }
                         ReviewBadge(state: states[unit.id], today: today)
                     }
                     .padding(.leading, CGFloat(row.depth) * Theme.Space.xl)

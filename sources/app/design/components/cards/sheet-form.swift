@@ -5,7 +5,7 @@ struct SheetForm<Rows: View>: View {
     @Environment(\.dismiss) private var dismiss
     let title: String
     let confirm: String
-    var disabled = false
+    var isDisabled = false
     var note: String?
     var carded = true
     var width: CGFloat = 460
@@ -57,7 +57,7 @@ struct SheetForm<Rows: View>: View {
                 }
                 Spacer()
                 if cancellable { Button(cancel ?? String(localized: .commonCancel)) { dismiss() }.keyboardShortcut(.cancelAction) }
-                Button(confirm, action: onConfirm).buttonStyle(.prominent).keyboardShortcut(.defaultAction).disabled(disabled)
+                Button(confirm, action: onConfirm).buttonStyle(.prominent).keyboardShortcut(.defaultAction).disabled(isDisabled)
             }
         }
         #if os(macOS)

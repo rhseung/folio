@@ -13,11 +13,11 @@ struct NewMaterialFileSheet: View {
 
     var body: some View {
         SheetForm(
-            title: String(localized: .materialsNewTitle), confirm: String(localized: .materialsNewConfirm), disabled: !model.canCreate,
+            title: String(localized: .materialsNewTitle), confirm: String(localized: .materialsNewConfirm), isDisabled: !model.canCreate,
             note: String(localized: .materialsNewNote)
         ) {
             FormRow(label: String(localized: .materialsNewFolder)) {
-                ChoiceMenu(selection: $model.folder, options: model.folderOptions)
+                Select(selection: $model.folder, options: model.folderOptions)
             }
             FormRow(label: String(localized: .materialsNewName), detail: model.refusal, last: true) {
                 InlineField(String(localized: .materialsNewNameExample), text: $model.name)

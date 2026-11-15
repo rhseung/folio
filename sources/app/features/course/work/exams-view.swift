@@ -52,7 +52,7 @@ struct ExamsView: View {
 
     func section(_ exam: Exam, states: [UUID: ReviewState]) -> some View {
         Block(title: exam.title, note: model.component(of: exam)) {
-            if let start = exam.start { DdayChip(days: model.days(to: start), urgency: model.workspace.settings.urgency) }
+            if let start = exam.start { DdayBadge(days: model.days(to: start), urgency: model.workspace.settings.urgency) }
         } content: {
             Card {
                 CardRow {
@@ -141,7 +141,7 @@ struct ExamsView: View {
                     ).monospacedDigit()
                         .help(Text(.examsOnTrackHelp))
                 }
-                Meter(value: Double(scope.onTrack) / Double(scope.units.count), height: 4)
+                ProgressBar(value: Double(scope.onTrack) / Double(scope.units.count), height: 4)
                 LazyVGrid(
                     columns: [GridItem(.adaptive(minimum: 300), spacing: Theme.Space.l, alignment: .leading)], alignment: .leading,
                     spacing: 0

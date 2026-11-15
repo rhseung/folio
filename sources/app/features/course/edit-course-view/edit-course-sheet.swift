@@ -14,7 +14,7 @@ struct EditCourseSheet: View {
     var body: some View {
         let course = model.course
         SheetForm(
-            title: String(localized: .courseEdit), confirm: String(localized: .commonSave), disabled: !model.canSave,
+            title: String(localized: .courseEdit), confirm: String(localized: .commonSave), isDisabled: !model.canSave,
             note: model.note, carded: false, width: 600
         ) {
             Block(String(localized: .courseEditCourse)) {
@@ -28,12 +28,12 @@ struct EditCourseSheet: View {
                     }
                     if model.codes.count > 1 {
                         FormRow(label: String(localized: .courseEditMainCode)) {
-                            ChoiceMenu(selection: Binding(get: { model.codes[0] }, set: model.makeMain), options: model.codeOptions)
+                            Select(selection: Binding(get: { model.codes[0] }, set: model.makeMain), options: model.codeOptions)
                         }
                     }
                     FormRow(label: String(localized: .courseEditCredits)) { CreditsField(credits: $model.credits) }
                     FormRow(label: String(localized: .courseEditGrading), last: true) {
-                        ChoiceMenu(selection: $model.mode, options: [GradingMode.relative, .absolute, .passFail].map { ($0, $0.label) })
+                        Select(selection: $model.mode, options: [GradingMode.relative, .absolute, .passFail].map { ($0, $0.label) })
                     }
                 }
             }
@@ -41,7 +41,7 @@ struct EditCourseSheet: View {
             Block(String(localized: .courseEditManage)) {
                 Card {
                     FormRow(label: String(localized: .courseInfoPeople)) {
-                        SearchMultiSelect(selection: $model.people, options: model.peopleOptions, placeholder: model.peoplePlaceholder)
+                        MultiCombobox(selection: $model.people, options: model.peopleOptions, prompt: model.peoplePlaceholder)
                     }
                     FormRow(label: String(localized: .courseEditCategories), detail: String(localized: .courseEditCategoriesDetail)) {
                         CategoryMenu(selection: $model.categories, course: model.draft)

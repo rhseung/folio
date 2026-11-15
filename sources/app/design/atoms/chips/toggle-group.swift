@@ -1,11 +1,11 @@
 import FolioDomain
 import SwiftUI
 
-struct ToggleChips<Value: Hashable>: View {
+struct ToggleGroup<Value: Hashable>: View {
     struct Option {
         let value: Value
         let label: String
-        var symbol: String?
+        var systemImage: String?
     }
 
     // `circle`은 한 글자 선택지(요일)를 같은 크기의 원으로 둔다.
@@ -41,7 +41,7 @@ struct ToggleChips<Value: Hashable>: View {
         switch shape {
         case .capsule:
             HStack(spacing: Theme.Space.xs) {
-                if let symbol = option.symbol { Image(systemName: symbol).imageScale(.small) }
+                if let systemImage = option.systemImage { Image(systemName: systemImage).imageScale(.small) }
                 Text(option.label).lineLimit(1)
             }
             .chip(fill: on ? accent.tint : nil)

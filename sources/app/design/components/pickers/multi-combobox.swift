@@ -1,17 +1,17 @@
 import FolioDomain
 import SwiftUI
 
-struct SearchMultiSelect<Value: Hashable>: View {
+struct MultiCombobox<Value: Hashable>: View {
     @Binding var selection: [Value]
-    let options: [PickOption<Value>]
-    var placeholder = String(localized: .designPick)
+    let options: [SelectOption<Value>]
+    var prompt = String(localized: .designPick)
     var summary: String?
     var subtree: ((Value) -> Set<Value>)?
 
     var body: some View {
-        SearchPicker(
+        CommandList(
             options: options, isSelected: { selection.contains($0) },
-            pick: { id in
+            onSelect: { id in
                 let group = subtree?(id) ?? [id]
                 if selection.contains(id) {
                     selection.removeAll { group.contains($0) }
@@ -20,10 +20,10 @@ struct SearchMultiSelect<Value: Hashable>: View {
                 }
             }, multiple: true
         ) {
-            let titles = selection.compactMap { id in options.first { $0.id == id }?.title }
-            ChipLabel(
+            let titles = selection.compactMap { id in options.first { $0.id == id }?.label }
+            SelectTrigger(
                 summary ?? titles.first.map { titles.count > 1 ? String(localized: .designPickedMany(titles.count, $0)) : $0 }
-                    ?? placeholder)
+                    ?? prompt)
         }
     }
 }

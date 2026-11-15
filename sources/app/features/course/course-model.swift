@@ -130,7 +130,7 @@ final class CourseModel {
     static func scheduleLine(_ schedule: [ClassTime]) -> String? {
         var groups: [(key: String, days: [String])] = []
         for slot in schedule.sorted(by: { ($0.weekday, $0.startMinute) < ($1.weekday, $1.startMinute) }) {
-            let key = "\(TimeMenu.range(slot.startMinute, slot.endMinute))" + (slot.room.isEmpty ? "" : " \(slot.room)")
+            let key = "\(TimePicker.range(slot.startMinute, slot.endMinute))" + (slot.room.isEmpty ? "" : " \(slot.room)")
             let day = ClassTime.weekdayNames[slot.weekday - 1]
             if let i = groups.firstIndex(where: { $0.key == key }) { groups[i].days.append(day) } else { groups.append((key, [day])) }
         }
@@ -176,7 +176,7 @@ final class CourseModel {
         return Array((due + covered.suffix(8).reversed()).prefix(8))
     }
 
-    func stats(_ file: CourseFile, reviews: [Workspace.ReviewEntry], suggested: Workspace.SuggestedSession?, now: Date) -> [StatStrip.Item]
+    func stats(_ file: CourseFile, reviews: [Workspace.ReviewEntry], suggested: Workspace.SuggestedSession?, now: Date) -> [StatGroup.Item]
     {
         let nextClass = file.nextClass(after: now, suggested: suggested.map { [$0.suggestion.date] } ?? []).map {
             (date: $0.date, subject: $0.session.flatMap { file.subject(of: $0) })
@@ -186,7 +186,7 @@ final class CourseModel {
             .filter { $0.1 > now && $0.0.status.isOpen }.min { $0.1 < $1.1 }
         let maxOverdue = reviews.map(\.item.overdueDays).max() ?? 0
 
-        var items: [StatStrip.Item] = []
+        var items: [StatGroup.Item] = []
         if let next = nextClass {
             items.append(
                 .init(

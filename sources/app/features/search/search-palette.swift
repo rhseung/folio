@@ -58,7 +58,7 @@ struct SearchPalette: View {
                     }
                     .help(Text(.searchIndexingHelp))
                 }
-                SearchSelect(selection: $model.scope, options: model.scopeOptions).font(Theme.Typeface.caption)
+                Combobox(selection: $model.scope, options: model.scopeOptions).font(Theme.Typeface.caption)
             }
             .padding(.horizontal, Self.inset + Theme.Space.s)
             .padding(.vertical, Theme.Space.l + Theme.Space.xs)

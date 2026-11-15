@@ -337,7 +337,7 @@ struct FirstRunView: View {
                                 Divider()
                                 Button(.firstRunAddSemester) { addingSemester = true }
                             } label: {
-                                ChipLabel(semester.title)
+                                SelectTrigger(semester.title)
                             }
                             .menuButton()
                             .fixedSize()
@@ -371,7 +371,7 @@ struct FirstRunView: View {
                     FormRow(
                         label: String(localized: .firstRunDayBoundary), detail: String(localized: .firstRunDayBoundaryDetail), last: true
                     ) {
-                        TimeMenu(minute: Bindable(model.settings).settings.dayBoundaryMinutes, hours: SettingItem.dayBoundary.hours)
+                        TimePicker(selection: Bindable(model.settings).settings.dayBoundaryMinutes, hours: SettingItem.dayBoundary.hours)
                     }
                 }
             }

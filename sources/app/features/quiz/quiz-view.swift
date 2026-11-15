@@ -41,7 +41,7 @@ struct QuizView: View {
 extension LoadedCourse {
     var outline: [(unit: FolioDomain.Unit, depth: Int)] { UnitTree.outline(file.units) }
 
-    var unitOptions: [PickOption<UUID>] { outline.map { PickOption(id: $0.unit.id, title: $0.unit.title, depth: $0.depth) } }
+    var unitOptions: [SelectOption<UUID>] { outline.map { SelectOption(id: $0.unit.id, label: $0.unit.title, depth: $0.depth) } }
 }
 
 extension Verdict {

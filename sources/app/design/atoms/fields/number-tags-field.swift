@@ -1,7 +1,7 @@
 import FolioDomain
 import SwiftUI
 
-struct IntListField: View {
+struct NumberTagsField: View {
     @Binding var values: [Int]
     let unit: String
     let range: ClosedRange<Int>
@@ -39,7 +39,7 @@ struct IntListField: View {
             .help(Text(.commonAdd))
             .popover(isPresented: $adding) {
                 HStack(spacing: Theme.Space.s) {
-                    ScrubField(value: $draft, range: range, width: 88)
+                    NumberField(value: $draft, in: range, width: 88)
                     Text(unit).foregroundStyle(Theme.Palette.textSecondary)
                     Button(.commonAdd, action: add).buttonStyle(.prominent)
                 }

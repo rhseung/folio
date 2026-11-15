@@ -25,11 +25,11 @@ struct DatePanel: View {
                 HStack(spacing: Theme.Space.s) {
                     Text(.designTime).foregroundStyle(Theme.Palette.textSecondary)
                     Spacer()
-                    TimeMenu(minute: Binding(get: { minuteOfDay }, set: { setMinute($0) }))
+                    TimePicker(selection: Binding(get: { minuteOfDay }, set: { setMinute($0) }))
                 }
                 FlowLayout(spacing: Theme.Space.tight) {
                     ForEach(Self.presets, id: \.self) { m in
-                        Button(TimeMenu.label(m)) { setMinute(m) }
+                        Button(TimePicker.label(m)) { setMinute(m) }
                             .lineLimit(1)
                             .buttonStyle(.pointing(.plain))
                             .font(Theme.Typeface.caption.monospacedDigit())

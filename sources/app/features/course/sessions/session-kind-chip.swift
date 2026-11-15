@@ -7,8 +7,8 @@ struct SessionKindChip: View {
 
     var body: some View {
         switch kind {
-        case .cancelled: Chip(String(localized: .sessionsCancelled))
-        case .makeup: Chip(String(localized: .sessionsMakeup), tone: .accent)
+        case .cancelled: Badge(String(localized: .sessionsCancelled))
+        case .makeup: Badge(String(localized: .sessionsMakeup), tone: .accent)
         case .lecture: EmptyView()
         }
     }

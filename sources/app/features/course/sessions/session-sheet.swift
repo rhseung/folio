@@ -31,7 +31,7 @@ struct SessionSheet: View {
 
     var body: some View {
         SheetForm(
-            title: model.title, confirm: model.confirm, disabled: model.disabled, note: model.note,
+            title: model.title, confirm: model.confirm, isDisabled: model.disabled, note: model.note,
             carded: false, width: 640, mark: CourseMark(model.workspace, model.courseId),
             cancel: asked ? String(localized: .wrapUpLater) : nil, step: step
         ) {
@@ -97,7 +97,7 @@ struct SessionSheet: View {
         case .notes: notes
         case .attendance:
             CardRow(last: true) {
-                Segmented(selection: $model.attendance, options: AttendanceState.steps.map { ($0.value, $0.label) })
+                SegmentedControl(selection: $model.attendance, options: AttendanceState.steps.map { ($0.value, $0.label) })
                 Spacer(minLength: 0)
             }
         case .info: info
@@ -110,7 +110,7 @@ struct SessionSheet: View {
         let rows = model.rows
         ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
             CardRow(last: i == rows.count - 1 && model.addable.isEmpty) {
-                CheckCircle(on: row.included) { model.toggle(row.id) }
+                Checkbox(isOn: row.included) { model.toggle(row.id) }
                 VStack(alignment: .leading, spacing: Theme.Space.s) {
                     Text(model.name(row.id)).lineLimit(1).truncationMode(.middle)
                         .opacity(row.included ? 1 : Theme.Opacity.ended)
@@ -163,10 +163,10 @@ struct SessionSheet: View {
             }
         }
         CardRow(last: true) {
-            SearchPicker(
-                options: options, isSelected: { model.units.contains($0) }, pick: { model.pick($0) }, multiple: true,
-                prompt: String(localized: .wrapUpUnitsSearch), flexible: true, create: { model.makeUnit($0) },
-                createTitle: { String(localized: .sessionSheetUnitsNew($0)) }
+            CommandList(
+                options: options, isSelected: { model.units.contains($0) }, onSelect: { model.pick($0) }, multiple: true,
+                prompt: String(localized: .wrapUpUnitsSearch), flexible: true, onCreate: { model.makeUnit($0) },
+                createLabel: { String(localized: .sessionSheetUnitsNew($0)) }
             ) {
                 HStack(spacing: Theme.Space.s) {
                     Image(systemName: "plus")
@@ -202,7 +202,7 @@ struct SessionSheet: View {
             if let linked = model.linkedNote {
                 noteMenu(linked)
             } else {
-                CheckCircle(on: model.makesNote) { model.makesNote.toggle() }
+                Checkbox(isOn: model.makesNote) { model.makesNote.toggle() }
                 Text(.wrapUpNoteMake).foregroundStyle(model.makesNote ? Theme.Palette.text : Theme.Palette.textSecondary)
                     .onTapGesture { model.makesNote.toggle() }
                 Spacer(minLength: Theme.Space.s)
@@ -219,7 +219,7 @@ struct SessionSheet: View {
         }
         if model.showsReview, let review = model.review {
             FormRow(label: String(localized: .sessionSheetReview), last: true) {
-                Segmented(
+                SegmentedControl(
                     selection: Binding(get: { model.review ?? review }, set: { model.review = $0 }),
                     options: review.choices.map { ($0, model.reviewLabel($0)) })
             }
@@ -253,10 +253,12 @@ struct SessionSheet: View {
     // MARK: When and how
 
     @ViewBuilder var info: some View {
-        FormRow(label: String(localized: .sessionsDate)) { DateChip(date: Binding(get: { model.start }, set: { model.setStart($0) })) }
-        FormRow(label: String(localized: .sessionsEnd)) { TimeMenu(minute: Binding(get: { model.endMinute }, set: { model.setEnd($0) })) }
+        FormRow(label: String(localized: .sessionsDate)) { DateChip(selection: Binding(get: { model.start }, set: { model.setStart($0) })) }
+        FormRow(label: String(localized: .sessionsEnd)) {
+            TimePicker(selection: Binding(get: { model.endMinute }, set: { model.setEnd($0) }))
+        }
         FormRow(label: String(localized: .sessionsKind)) {
-            Segmented(selection: Binding(get: { model.kind }, set: { model.setKind($0) }), options: model.kindOptions)
+            SegmentedControl(selection: Binding(get: { model.kind }, set: { model.setKind($0) }), options: model.kindOptions)
         }
         FormRow(label: String(localized: .sessionsLink), detail: String(localized: .sessionsLinkDetail), last: true) {
             InlineField(String(localized: .sessionsLinkPrompt), text: $model.link)

@@ -71,7 +71,7 @@ final class AssignmentsModel {
         let c = workspace.calendar
         return (
             due.formatted(.dateTime.month().day()),
-            due.formatted(.dateTime.weekday()) + " " + TimeMenu.label(c.minuteOfDay(due))
+            due.formatted(.dateTime.weekday()) + " " + TimePicker.label(c.minuteOfDay(due))
         )
     }
 

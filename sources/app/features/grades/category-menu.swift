@@ -8,9 +8,9 @@ struct CategoryMenu: View {
     var course: Course?
 
     var body: some View {
-        SearchMultiSelect(
+        MultiCombobox(
             selection: $selection,
             options: RequirementsModel.categoryOptions(workspace.requirementCatalog, selection: selection, course: course),
-            placeholder: String(localized: .requirementsPickCategory))
+            prompt: String(localized: .requirementsPickCategory))
     }
 }

@@ -1,7 +1,7 @@
 import FolioDomain
 import SwiftUI
 
-struct Meter: View {
+struct ProgressBar: View {
     @Environment(\.accent) private var accent
     let value: Double
     var height: CGFloat = 6

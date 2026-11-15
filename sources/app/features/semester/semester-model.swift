@@ -127,7 +127,7 @@ final class SemesterModel {
             : range
     }
 
-    func stats(_ s: Semester) -> [StatStrip.Item] {
+    func stats(_ s: Semester) -> [StatGroup.Item] {
         let courses = courses(in: s)
         let summary = GPACalculator.semester(s, courses: workspace.allCourses, catalog: workspace.catalog)
         let credits = courses.map(\.file.course.credits).reduce(0, +)

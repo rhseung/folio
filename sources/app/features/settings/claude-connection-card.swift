@@ -14,7 +14,7 @@ struct ClaudeConnectionCard: View {
                 label: String(localized: .settingsConnectionMethod), detail: model.connectionDetail(subscription: subscription),
                 device: true, warns: model.connectionWarns(subscription: subscription)
             ) {
-                ChoiceMenu(
+                Select(
                     selection: $subscription,
                     options: [(true, String(localized: .settingsSubscription)), (false, String(localized: .settingsApiKey))])
             }

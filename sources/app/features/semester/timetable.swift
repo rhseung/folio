@@ -67,7 +67,7 @@ struct Timetable<Menu: View>: View {
                 let accent = model.workspace.accent(course.id)
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                     Text(course.title).font(Theme.Typeface.caption.weight(.semibold)).lineLimit(2)
-                    Text(TimeMenu.label(slot.startMinute) + (slot.room.isEmpty ? "" : " · \(slot.room)"))
+                    Text(TimePicker.label(slot.startMinute) + (slot.room.isEmpty ? "" : " · \(slot.room)"))
                         .font(Theme.Typeface.label.weight(.regular)).monospacedDigit().lineLimit(1)
                 }
                 .foregroundStyle(accent.ink)
@@ -84,7 +84,8 @@ struct Timetable<Menu: View>: View {
                 .contextMenu { menu(course) }
                 .offset(y: CGFloat(slot.startMinute - first * 60) / 60 * Self.hourHeight + 1)
                 .help(
-                    "\(course.title) · \(TimeMenu.range(slot.startMinute, slot.endMinute))" + (slot.room.isEmpty ? "" : " · \(slot.room)"))
+                    "\(course.title) · \(TimePicker.range(slot.startMinute, slot.endMinute))" + (slot.room.isEmpty ? "" : " · \(slot.room)")
+                )
             }
         }
         .frame(maxWidth: .infinity)

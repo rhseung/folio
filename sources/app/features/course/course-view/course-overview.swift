@@ -24,16 +24,16 @@ struct CourseOverview: View {
         Page {
             PageHeader(title: course.title, subtitle: model.subtitle(file)) {
                 let code = course.codeLine(model.workspace)
-                if !code.isEmpty { Chip(code, tone: .accent) }
-                Chip(model.credits(file.course))
-                Chip(file.course.gradingMode.label)
+                if !code.isEmpty { Badge(code, tone: .accent) }
+                Badge(model.credits(file.course))
+                Badge(file.course.gradingMode.label)
                 Spacer()
                 Button(.courseEdit, systemImage: "slider.horizontal.3") { editing = true }.buttonStyle(.ghost)
                 PageMenuButton { CourseMenu(courseId: course.id, host: .own) }
             }
             .sheet(isPresented: $editing) { EditCourseSheet(workspace: model.workspace, course: course) }
 
-            StatStrip(items: model.stats(file, reviews: reviews, suggested: suggested, now: now))
+            StatGroup(items: model.stats(file, reviews: reviews, suggested: suggested, now: now))
 
             if !unclassified.isEmpty {
                 NoticeCard(
@@ -127,9 +127,9 @@ struct CourseOverview: View {
                         Spacer(minLength: Theme.Space.s)
                         if let due = a.due {
                             if due < now {
-                                Chip(String(localized: .courseOverdue), tone: .danger)
+                                Badge(String(localized: .courseOverdue), tone: .danger)
                             } else {
-                                DdayChip(days: model.days(to: due), urgency: model.workspace.settings.urgency)
+                                DdayBadge(days: model.days(to: due), urgency: model.workspace.settings.urgency)
                             }
                         }
                     }
@@ -160,7 +160,7 @@ struct CourseOverview: View {
                             Text(unit.title).lineLimit(1)
                             Spacer(minLength: Theme.Space.s)
                             if let entry {
-                                Chip(
+                                Badge(
                                     String(
                                         localized: entry.item.overdueDays > 0 ? .unitsDaysLate(entry.item.overdueDays) : .courseReviewToday),
                                     tone: entry.item.overdueDays > 0 ? .danger : .accent)
@@ -189,8 +189,8 @@ struct CourseOverview: View {
                 } else {
                     VStack(alignment: .leading, spacing: Theme.Space.m) {
                         HStack(alignment: .firstTextBaseline, spacing: Theme.Space.l) {
-                            Figure(String(localized: .courseSecured), score.secured.oneDecimal, font: Theme.Typeface.figureCompact)
-                            Figure(
+                            Stat(String(localized: .courseSecured), score.secured.oneDecimal, font: Theme.Typeface.figureCompact)
+                            Stat(
                                 String(localized: .courseProjectedTitle), score.projected.map(\.oneDecimal) ?? "-", tint: accent.ink,
                                 font: Theme.Typeface.figureCompact)
                         }

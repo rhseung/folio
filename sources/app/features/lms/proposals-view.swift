@@ -11,7 +11,7 @@ struct ProposalsView: View {
             PageHeader(title: String(localized: .rootNavProposals), subtitle: model.subtitle)
             if model.inbox.isEmpty {
                 EmptyCard(
-                    symbol: "tray", tone: model.workspace.lms.isConnected ? .success : .plain,
+                    systemImage: "tray", tone: model.workspace.lms.isConnected ? .success : .plain,
                     title: String(localized: .lmsProposalsEmpty), detail: model.emptyDetail)
             }
             ForEach(model.sections) { section in
@@ -28,7 +28,7 @@ struct ProposalsView: View {
                         if !section.handled.isEmpty {
                             DisclosureRow(
                                 label: String(localized: .lmsHidden(section.handled.count)),
-                                isOpen: Binding(
+                                isExpanded: Binding(
                                     get: { model.showsHandled(section) }, set: { _ in model.toggleHandled(section) }), last: true
                             ) {
                                 ForEach(section.handled) { h in
@@ -50,7 +50,7 @@ private struct SectionActions: View {
     var body: some View {
         let addable = model.addable(section)
         if addable.isEmpty {
-            Button(.lmsDismissAll) { model.dismiss(section.proposals) }.buttonStyle(SoftButtonStyle())
+            Button(.lmsDismissAll) { model.dismiss(section.proposals) }.buttonStyle(.secondary)
         } else {
             TargetCourseMenu(model: model, label: String(localized: .lmsAddAll)) { course in
                 Task { await model.add(addable, into: course) }
@@ -76,7 +76,7 @@ private struct ProposalRow: View {
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                     HStack(spacing: Theme.Space.s) {
                         Text(proposal.title).lineLimit(2)
-                        if model.isViewerOnly(proposal) { Chip(String(localized: .lmsViewerOnly), tone: .warning) }
+                        if model.isViewerOnly(proposal) { Badge(String(localized: .lmsViewerOnly), tone: .warning) }
                         if let due = model.due(proposal) { DueChip(text: due.text, urgency: due.urgency) }
                     }
                     Text(model.detail(proposal)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1)
@@ -90,9 +90,9 @@ private struct ProposalRow: View {
                         } label: {
                             Label(.lmsOpen, systemImage: "arrow.up.forward.app")
                         }
-                        .buttonStyle(SoftButtonStyle(iconOnly: true)).help(String(localized: .lmsOpen))
+                        .buttonStyle(.secondary(iconOnly: true)).help(String(localized: .lmsOpen))
                     }
-                    Button(.lmsDismiss) { model.dismiss([proposal]) }.buttonStyle(SoftButtonStyle())
+                    Button(.lmsDismiss) { model.dismiss([proposal]) }.buttonStyle(.secondary)
                     if model.canAdd(proposal) {
                         TargetCourseMenu(model: model, label: String(localized: .commonAdd), strong: true) { course in
                             Task { await model.add([proposal], into: course) }
@@ -132,9 +132,9 @@ private struct HandledRow: View {
                     } label: {
                         Label(.lmsOpen, systemImage: "arrow.up.forward.app")
                     }
-                    .buttonStyle(SoftButtonStyle(iconOnly: true)).help(String(localized: .lmsOpen))
+                    .buttonStyle(.secondary(iconOnly: true)).help(String(localized: .lmsOpen))
                     if model.canProposeAgain(handled) {
-                        Button(.lmsRestore) { model.proposeAgain(handled) }.buttonStyle(SoftButtonStyle())
+                        Button(.lmsRestore) { model.proposeAgain(handled) }.buttonStyle(.secondary)
                     }
                 }
                 .fixedSize()
@@ -153,9 +153,9 @@ private struct DueChip: View {
 
     var body: some View {
         switch urgency {
-        case .urgent: Chip(text, tone: .danger, solid: true).monospacedDigit()
-        case .soon: Chip(text, tone: .warning).monospacedDigit()
-        case .later: Chip(text).monospacedDigit()
+        case .urgent: Badge(text, tone: .danger, solid: true).monospacedDigit()
+        case .soon: Badge(text, tone: .warning).monospacedDigit()
+        case .later: Badge(text).monospacedDigit()
         }
     }
 }

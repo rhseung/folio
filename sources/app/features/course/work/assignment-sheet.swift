@@ -19,7 +19,7 @@ struct AssignmentSheet: View {
         let store = model.course.store
         SheetForm(
             title: model.sheetTitle, confirm: String(localized: .commonSave),
-            disabled: model.title.isEmpty || model.invalid,
+            isDisabled: model.title.isEmpty || model.invalid,
             carded: false, width: 560, deleteTitle: String(localized: .assignmentsDelete), onDelete: { model.delete { dismiss() } }
         ) {
             Block(String(localized: .assignmentsSheetAssignment)) {
@@ -29,7 +29,7 @@ struct AssignmentSheet: View {
                     }
                     FormRow(label: String(localized: .assignmentsFieldDue)) {
                         if model.hasDue {
-                            DateChip(date: $model.due)
+                            DateChip(selection: $model.due)
                             Button {
                                 model.hasDue = false
                             } label: {
@@ -46,7 +46,7 @@ struct AssignmentSheet: View {
                                 selection: model.repeats, custom: model.customRepeat, pick: model.pickRepeat,
                                 customize: model.customizeRepeat)
                         } label: {
-                            ChipLabel(model.repeatLabel)
+                            SelectTrigger(model.repeatLabel)
                         }
                         .menuButton()
                         .fixedSize()
@@ -55,7 +55,7 @@ struct AssignmentSheet: View {
                         RepeatRuleRows(rule: $model.customRule, dueWeekday: model.dueWeekday)
                     }
                     FormRow(label: String(localized: .assignmentsStatus), last: true) {
-                        ChoiceMenu(
+                        Select(
                             selection: $model.status, options: [AssignmentStatus.todo, .doing, .submitted, .graded].map { ($0, $0.label) })
                     }
                 }
@@ -63,7 +63,7 @@ struct AssignmentSheet: View {
             Block(String(localized: .assignmentsScore), note: String(localized: .assignmentsScoreNote)) {
                 Card {
                     FormRow(label: String(localized: .assignmentsFieldTarget), last: scored.isEmpty) {
-                        SearchSelect(selection: Binding(get: { model.target }, set: { model.pick($0) }), options: model.targetOptions)
+                        Combobox(selection: Binding(get: { model.target }, set: { model.pick($0) }), options: model.targetOptions)
                     }
                     ForEach(Array(scored.enumerated()), id: \.element.id) { i, c in
                         FormRow(label: scored.count > 1 ? c.name : String(localized: .assignmentsScore), last: i == scored.count - 1) {
@@ -81,7 +81,7 @@ struct AssignmentSheet: View {
                 }
                 .sensitive(scored.isEmpty ? nil : .block)
             }
-            FormTextArea(label: String(localized: .assignmentsMemo), text: $model.memo)
+            TextArea(label: String(localized: .assignmentsMemo), text: $model.memo)
             Block(title: String(localized: .assignmentsFiles), note: model.folder) {
                 Button(.assignmentsAddFiles) { pickingFiles = true }
                     .buttonStyle(.ghost)
@@ -101,7 +101,7 @@ struct AssignmentSheet: View {
                             }
                             .fileDrag(store.fileURL(m.path))
                             Spacer()
-                            ChoiceMenu(selection: Binding(get: { kind }, set: { model.setKind(m, $0) }), options: model.kindOptions)
+                            Select(selection: Binding(get: { kind }, set: { model.setKind(m, $0) }), options: model.kindOptions)
                             if model.opens(m) { Button(.assignmentsOpen) { open(m) }.buttonStyle(.ghost) }
                         }
                         .contentShape(.rect)

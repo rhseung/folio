@@ -117,7 +117,7 @@ final class UnitsModel {
         workspace.reviews(of: courseId).filter { $0.event.unitId == unit.id }.reversed()
     }
 
-    func stats(_ unit: FolioDomain.Unit, state: ReviewState?, reviews: Int) -> [StatStrip.Item] {
+    func stats(_ unit: FolioDomain.Unit, state: ReviewState?, reviews: Int) -> [StatGroup.Item] {
         let review = workspace.settings.review
         let next =
             state?.due.map {

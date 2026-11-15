@@ -47,7 +47,7 @@ final class QuickAddModel {
         parsed.due.map { CourseFile.deadline($0, calendar: workspace.calendar, locale: locale) }
     }
 
-    enum Chip: Hashable {
+    enum Badge: Hashable {
         case course(UUID?)
         case due(Date?)
         case repeats(AssignmentRepeat?)
@@ -67,10 +67,10 @@ final class QuickAddModel {
         }
     }
 
-    var chips: [Chip] {
+    var chips: [Badge] {
         let shown = parsed ?? (defaultCourse != nil || showsEmptyChips ? read : nil)
         guard let shown else { return [] }
-        var chips: [Chip] = []
+        var chips: [Badge] = []
         if fixedCourse == nil { chips.append(.course(shown.courseId)) }
         if showsEmptyChips {
             return chips + [.due(shown.due), .repeats(shown.repeats), .folder(shown.folderName)]
@@ -83,7 +83,7 @@ final class QuickAddModel {
         return chips
     }
 
-    func isDimmed(_ chip: Chip) -> Bool {
+    func isDimmed(_ chip: Badge) -> Bool {
         switch chip {
         case let .course(id): id == nil && isEmpty
         case let .due(date): date == nil && showsEmptyChips

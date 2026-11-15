@@ -11,7 +11,7 @@ struct ComponentSheet: View {
 
     var body: some View {
         SheetForm(
-            title: model.sheetTitle, confirm: model.confirmTitle, disabled: model.invalid,
+            title: model.sheetTitle, confirm: model.confirmTitle, isDisabled: model.invalid,
             deleteTitle: model.isNew ? nil : String(localized: .componentSheetRemove), onDelete: { model.remove { dismiss() } }
         ) {
             FormRow(label: String(localized: .componentSheetName)) {
@@ -28,11 +28,11 @@ struct ComponentSheet: View {
                 }
             }
             FormRow(label: String(localized: .componentSheetAggregation), last: model.aggregation == .single) {
-                ChoiceMenu(selection: $model.aggregation, options: model.aggregationOptions)
+                Select(selection: $model.aggregation, options: model.aggregationOptions)
             }
             if model.count != nil {
                 FormRow(label: model.countLabel) {
-                    ChoiceMenu(selection: $model.countValue, options: model.countOptions)
+                    Select(selection: $model.countValue, options: model.countOptions)
                 }
             }
             if model.aggregation != .single {

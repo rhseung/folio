@@ -1,7 +1,7 @@
 import FolioDomain
 import SwiftUI
 
-struct StatStrip: View {
+struct StatGroup: View {
     struct Item: Identifiable {
         var id: String { title }
         let title: String

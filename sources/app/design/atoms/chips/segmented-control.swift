@@ -1,16 +1,16 @@
 import FolioDomain
 import SwiftUI
 
-struct Segmented<Value: Hashable>: View {
+struct SegmentedControl<Value: Hashable>: View {
     // `track`은 회색 트랙 안의 판으로 2~4개를 한 줄에 둔다. `flow`는 칩마다 따로 서서 줄을 바꾸므로 다섯 개가 넘어도 잘리지 않는다.
     enum Arrangement { case track, flow }
 
     @Binding var selection: Value
     let options: [(Value, String)]
     var layout = Arrangement.track
-    var symbols: [String] = []
-    var compact = false
-    var inks: [Color?] = []
+    var systemImages: [String] = []
+    var size = ControlSize.regular
+    var tints: [Color?] = []
     @Environment(\.onGlass) private var onGlass
     @Environment(\.accent) private var accent
 
@@ -22,17 +22,21 @@ struct Segmented<Value: Hashable>: View {
     }
 
     var track: some View {
-        let compact = compact || onGlass
+        let compact = size == .small || size == .mini || onGlass
         return HStack(spacing: Theme.Space.xxs) {
             ForEach(options.indices, id: \.self) { i in
                 let (value, label) = options[i]
                 let chosen = selection == value
                 option(i) {
                     Group {
-                        if symbols.indices.contains(i) { LineIcon(symbol: symbols[i], filled: chosen) } else { Text(label).lineLimit(1) }
+                        if systemImages.indices.contains(i) {
+                            LineIcon(symbol: systemImages[i], filled: chosen)
+                        } else {
+                            Text(label).lineLimit(1)
+                        }
                     }
                     .fontWeight(chosen ? .semibold : .regular)
-                    .foregroundStyle(inks.indices.contains(i) ? inks[i] ?? labelColor(chosen) : labelColor(chosen))
+                    .foregroundStyle(tints.indices.contains(i) ? tints[i] ?? labelColor(chosen) : labelColor(chosen))
                     .padding(Theme.Inset.toggle)
                     .background(
                         chosen
@@ -41,7 +45,7 @@ struct Segmented<Value: Hashable>: View {
                     )
                     .contentShape(.capsule)
                 }
-                .help(symbols.isEmpty ? "" : label)
+                .help(systemImages.isEmpty ? "" : label)
                 .accessibilityLabel(label)
                 .accessibilityAddTraits(selection == value ? .isSelected : [])
             }

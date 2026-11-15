@@ -17,7 +17,7 @@ extension Rules {
     static var designControl: Rule {
         Rule(
             name: "design-control",
-            advice: "a feature draws controls with the atoms in app/design/atoms (Switch, ChoiceMenu, Segmented, InlineField, "
+            advice: "a feature draws controls with the atoms in app/design/atoms (Switch, Select, SegmentedControl, InlineField, "
                 + "`.pill`, `.ghost`, `.pointing`, `.menuButton`), not the system Toggle, Picker, TextField and button styles, "
                 + "and doesn't declare its own ButtonStyle (docs/DESIGN.md \"층\")"
         ) { code in

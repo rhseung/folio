@@ -1,7 +1,7 @@
 import FolioDomain
 import SwiftUI
 
-struct DdayChip: View {
+struct DdayBadge: View {
     let days: Int
     let urgency: UrgencySettings
 
@@ -17,7 +17,7 @@ struct DdayChip: View {
     var body: some View {
         let color = Self.heat(days, urgency)
         let urgent = ExamUrgency(days: days, settings: urgency) == .urgent
-        Chip(DDay.text(days), color: color)
+        Badge(DDay.text(days), color: color)
             .phaseAnimator([false, true], trigger: urgent) { chip, lit in
                 chip.scaleEffect(lit && urgent ? 1.06 : 1)
             } animation: { _ in

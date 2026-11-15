@@ -1,7 +1,7 @@
 import FolioDomain
 import SwiftUI
 
-struct SoftButton: View {
+struct SecondaryButton: View {
     let configuration: ButtonStyleConfiguration
     let strong: Bool
     let iconOnly: Bool

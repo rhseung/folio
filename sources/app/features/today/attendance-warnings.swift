@@ -13,7 +13,7 @@ struct AttendanceWarnings: View {
                         CourseMark(model.workspace, w.course.id)
                         Text(.todayAttendanceAbsences(w.course.title, w.absences))
                         Spacer()
-                        Chip(model.capLabel(w.cap), tone: .warning)
+                        Badge(model.capLabel(w.cap), tone: .warning)
                     }
                 }
             }

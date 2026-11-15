@@ -8,7 +8,7 @@ struct NotePanesPicker: View {
 
     var body: some View {
         if wide {
-            Segmented(
+            SegmentedControl(
                 selection: Binding {
                     panes.mode
                 } set: {
@@ -18,18 +18,18 @@ struct NotePanesPicker: View {
                     (.read, String(localized: .notesModeRead)), (.split, String(localized: .notesModeSplit)),
                     (.write, String(localized: .notesModeWrite)),
                 ],
-                compact: true
+                size: .small
             )
             .help(Text(.notesModeToggle))
         } else {
-            Segmented(
+            SegmentedControl(
                 selection: Binding {
                     panes.shown(wide: false)
                 } set: {
                     panes.chooseNarrow($0)
                 },
                 options: [(.read, String(localized: .notesModeRead)), (.write, String(localized: .notesModeWrite))],
-                compact: true
+                size: .small
             )
             .help(Text(.notesModeToggle))
         }

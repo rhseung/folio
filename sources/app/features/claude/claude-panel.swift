@@ -73,7 +73,7 @@ struct ClaudePanel: View {
 
     var header: some View {
         HStack(spacing: Theme.Space.s) {
-            SearchSelect(selection: Binding(get: { model.chatID }, set: { model.select($0) }), options: model.chatOptions)
+            Combobox(selection: Binding(get: { model.chatID }, set: { model.select($0) }), options: model.chatOptions)
             Spacer()
             Button {
                 model.select(nil)
@@ -143,8 +143,9 @@ struct ClaudePanel: View {
     }
 
     var addMenu: some View {
-        SearchPicker(
-            options: model.addOptions(course), pick: { model.addContext($0, course: course) }, prompt: String(localized: .claudeAddPrompt)
+        CommandList(
+            options: model.addOptions(course), onSelect: { model.addContext($0, course: course) },
+            prompt: String(localized: .claudeAddPrompt)
         ) {
             Image(systemName: "plus").foregroundStyle(Theme.Palette.textSecondary)
         }

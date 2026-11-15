@@ -1,7 +1,7 @@
 import FolioDomain
 import SwiftUI
 
-struct Figure: View {
+struct Stat: View {
     let title: String
     let value: String
     var tint: Color = Theme.Palette.text

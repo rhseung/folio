@@ -11,16 +11,16 @@ struct ScoreEntrySheet: View {
 
     var body: some View {
         SheetForm(
-            title: model.sheetTitle, confirm: model.confirmTitle, disabled: !model.valid,
+            title: model.sheetTitle, confirm: model.confirmTitle, isDisabled: !model.valid,
             deleteTitle: model.isNew ? nil : String(localized: .scoreSheetRemove), onDelete: { model.remove { dismiss() } }
         ) {
             if !model.isNew {
                 FormRow(label: String(localized: .scoreSheetComponent)) {
-                    ChoiceMenu(selection: $model.componentId, options: model.componentOptions)
+                    Select(selection: $model.componentId, options: model.componentOptions)
                 }
             }
             FormRow(label: String(localized: .scoreSheetSource), detail: String(localized: .scoreSheetSourceDetail)) {
-                SearchSelect(selection: Binding(get: { model.source }, set: { model.pick($0) }), options: model.sourceOptions)
+                Combobox(selection: Binding(get: { model.source }, set: { model.pick($0) }), options: model.sourceOptions)
             }
             if model.hasTitle {
                 FormRow(label: String(localized: .scoreSheetTitle)) {
@@ -42,7 +42,7 @@ struct ScoreEntrySheet: View {
                 }
             }
             FormRow(label: String(localized: .scoreSheetCounts), detail: String(localized: .scoreSheetCountsDetail), last: true) {
-                ChoiceMenu(
+                Select(
                     selection: $model.excused,
                     options: [(false, String(localized: .scoreSheetCounts)), (true, String(localized: .courseGradesExcused))])
             }

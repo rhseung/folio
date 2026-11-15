@@ -1,7 +1,7 @@
 import FolioDomain
 import SwiftUI
 
-struct Chip: View {
+struct Badge: View {
     @Environment(\.accent) private var accent
     let text: String
     var tone: Tone = .plain

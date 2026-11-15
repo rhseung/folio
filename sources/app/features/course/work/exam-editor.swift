@@ -13,7 +13,7 @@ struct ExamEditor: View {
     var body: some View {
         let units = model.units
         let course = model.course
-        SheetForm(title: model.title, confirm: model.confirm, disabled: model.disabled, note: model.note, carded: false, width: 560) {
+        SheetForm(title: model.title, confirm: model.confirm, isDisabled: model.disabled, note: model.note, carded: false, width: 560) {
             Block(String(localized: .examsEditorExam)) {
                 Card {
                     FormRow(label: String(localized: .examsEditorName), last: course.file.components.isEmpty) {
@@ -21,7 +21,7 @@ struct ExamEditor: View {
                     }
                     if !course.file.components.isEmpty {
                         FormRow(label: String(localized: .examsEditorComponent), last: true) {
-                            ChoiceMenu(selection: $model.draft.componentId, options: model.components)
+                            Select(selection: $model.draft.componentId, options: model.components)
                         }
                     }
                 }
@@ -36,10 +36,10 @@ struct ExamEditor: View {
                             Button(.examsEditorSetDate) { model.setDefaultStart() }
                                 .buttonStyle(.ghost)
                         } else {
-                            DateChip(date: Binding(get: { model.draft.start ?? .now }, set: model.setStart))
+                            DateChip(selection: Binding(get: { model.draft.start ?? .now }, set: model.setStart))
                             Text("–").foregroundStyle(Theme.Palette.textTertiary)
                             if let end = model.endMinute {
-                                TimeMenu(minute: Binding(get: { end }, set: model.setEnd))
+                                TimePicker(selection: Binding(get: { end }, set: model.setEnd))
                                 Button {
                                     model.setEnd(nil)
                                 } label: {
@@ -63,10 +63,10 @@ struct ExamEditor: View {
             Block(String(localized: .examsScope)) {
                 Card {
                     FormRow(label: String(localized: .examsEditorUnits)) {
-                        SearchMultiSelect(
+                        MultiCombobox(
                             selection: $model.draft.scopeUnitIds,
-                            options: units.map { PickOption(id: $0.unit.id, title: $0.unit.title, depth: $0.depth) },
-                            placeholder: String(localized: units.isEmpty ? .examsEditorNoUnits : .examsEditorPick),
+                            options: units.map { SelectOption(id: $0.unit.id, label: $0.unit.title, depth: $0.depth) },
+                            prompt: String(localized: units.isEmpty ? .examsEditorNoUnits : .examsEditorPick),
                             subtree: { UnitTree.subtree(of: $0, in: course.file.units) }
                         )
                         .disabled(units.isEmpty)
@@ -76,7 +76,7 @@ struct ExamEditor: View {
                     }
                 }
             }
-            FormTextArea(label: String(localized: .examsEditorMemo), text: $model.draft.memo)
+            TextArea(label: String(localized: .examsEditorMemo), text: $model.draft.memo)
         } onConfirm: {
             if model.apply() { dismiss() }
         }

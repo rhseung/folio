@@ -1,33 +1,35 @@
 import FolioDomain
 import SwiftUI
 
-struct TimeMenu: View {
-    @Binding var minute: Int
+struct TimePicker: View {
+    @Binding var selection: Int
     var hours: ClosedRange<Int> = 0...23
     @State private var dial: TimeDial.Mode?
 
     var body: some View {
         HStack(spacing: Theme.Space.xxs) {
             TimePart(
-                value: Binding(get: { minute / 60 }, set: { minute = $0 * 60 + minute % 60 }), values: Array(hours), label: Self.hourLabel
+                value: Binding(get: { selection / 60 }, set: { selection = $0 * 60 + selection % 60 }), values: Array(hours),
+                label: Self.hourLabel
             ) { dial = .hour }
             Text(":").foregroundStyle(Theme.Palette.textTertiary)
             TimePart(
-                value: Binding(get: { minute % 60 }, set: { minute = minute / 60 * 60 + $0 }), values: Array(stride(from: 0, to: 60, by: 5))
+                value: Binding(get: { selection % 60 }, set: { selection = selection / 60 * 60 + $0 }),
+                values: Array(stride(from: 0, to: 60, by: 5))
             ) { dial = .minute }
         }
         .monospacedDigit()
         .chip()
         .fixedSize()
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Self.label(minute))
+        .accessibilityLabel(Self.label(selection))
         .accessibilityAdjustableAction { direction in
-            let next = minute + (direction == .increment ? 5 : -5)
+            let next = selection + (direction == .increment ? 5 : -5)
             // 시 범위가 하루 전체가 아니면(하루 경계 0–8시) 넘어가지 않고 멈춘다. 넘어간 값은 저장 검사가 거절한다.
-            minute = hours == 0...23 ? (next + 1440) % 1440 : min(max(next, hours.lowerBound * 60), hours.upperBound * 60 + 59)
+            selection = hours == 0...23 ? (next + 1440) % 1440 : min(max(next, hours.lowerBound * 60), hours.upperBound * 60 + 59)
         }
         .popover(item: $dial, arrowEdge: .bottom) { mode in
-            TimeDial(minute: $minute, hours: hours, mode: mode) { dial = nil }
+            TimeDial(minute: $selection, hours: hours, mode: mode) { dial = nil }
         }
     }
 
@@ -64,7 +66,7 @@ private struct TimePart: View {
                     .onChanged { g in
                         let base = start ?? value
                         start = base
-                        let steps = Int((g.translation.width / ScrubField.pointsPerStep).rounded())
+                        let steps = Int((g.translation.width / NumberField.pointsPerStep).rounded())
                         let i = values.indices.min { abs(values[$0] - base) < abs(values[$1] - base) } ?? 0
                         value = values[((i + steps) % values.count + values.count) % values.count]
                     }
@@ -99,7 +101,7 @@ private struct TimeDial: View {
     static let hub = inner - cell / 2
 
     private var hour: Int { minute / 60 }
-    private var twelve: Bool { TimeMenu.uses12Hour }
+    private var twelve: Bool { TimePicker.uses12Hour }
 
     var body: some View {
         VStack(spacing: Theme.Space.l) {
@@ -121,7 +123,7 @@ private struct TimeDial: View {
             Spacer(minLength: 0)
             if twelve {
                 if hours.contains(where: { $0 < 12 }), hours.contains(where: { $0 >= 12 }) {
-                    Segmented(
+                    SegmentedControl(
                         selection: Binding(get: { hour >= 12 }, set: { pm in setHour(hour % 12 + (pm ? 12 : 0)) }),
                         options: [(false, Calendar.current.amSymbol), (true, Calendar.current.pmSymbol)])
                 } else {
@@ -186,7 +188,7 @@ private struct TimeDial: View {
                     )
                     .frame(width: Self.cell, height: Self.cell)
                     .position(Self.point(mark.angle, mark.radius, center))
-                    .accessibilityLabel(mode == .hour ? TimeMenu.hourLabel(mark.value) : mark.label)
+                    .accessibilityLabel(mode == .hour ? TimePicker.hourLabel(mark.value) : mark.label)
                     .accessibilityAddTraits(Self.traits(allowed: allowed, selected: mark.value == selected))
                     .accessibilityAction { if set(mark.value) { advance() } }
             }

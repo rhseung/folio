@@ -11,9 +11,9 @@ struct ScorePanel: View {
         let need = GradeCalculator.requiredAverage(for: target, given: result)
         VStack(alignment: .leading, spacing: Theme.Space.l + 2) {
             HStack(alignment: .bottom, spacing: Theme.Space.section) {
-                Figure(String(localized: .courseGradesSecured), result.secured.oneDecimal)
-                Figure(String(localized: .courseGradesProjected), result.projected.map(\.oneDecimal) ?? "-", tint: accent.ink)
-                Figure(String(localized: .courseGradesRemainingWeight), "\(Int(result.remainingWeight.rounded()))%")
+                Stat(String(localized: .courseGradesSecured), result.secured.oneDecimal)
+                Stat(String(localized: .courseGradesProjected), result.projected.map(\.oneDecimal) ?? "-", tint: accent.ink)
+                Stat(String(localized: .courseGradesRemainingWeight), "\(Int(result.remainingWeight.rounded()))%")
                 Spacer()
                 if relative == nil {
                     VStack(alignment: .leading, spacing: Theme.Space.xs) {

@@ -8,8 +8,8 @@ struct RepeatRuleRows: View {
 
     var body: some View {
         FormRow(label: String(localized: .repeatPickerInterval), last: last && rule.unit != .week) {
-            ScrubField(value: Binding(get: { rule.every }, set: { set(every: $0) }), range: 1...30, width: 72)
-            Segmented(
+            NumberField(value: Binding(get: { rule.every }, set: { set(every: $0) }), in: 1...30, width: 72)
+            SegmentedControl(
                 selection: Binding(get: { rule.unit }, set: { set(unit: $0) }),
                 options: [
                     (.day, String(localized: .repeatPickerDays)), (.week, String(localized: .repeatPickerWeeks)),
@@ -18,7 +18,7 @@ struct RepeatRuleRows: View {
         }
         if rule.unit == .week {
             FormRow(label: String(localized: .repeatPickerWeekdays), last: last) {
-                ToggleChips(
+                ToggleGroup(
                     selection: Binding(get: { shownDays }, set: { set(weekdays: $0) }),
                     options: (1...7).map { .init(value: $0, label: ClassTime.weekdayNames[$0 - 1]) }, shape: .circle,
                     allowsEmptySelection: false)

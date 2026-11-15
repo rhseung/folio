@@ -1,7 +1,7 @@
 import FolioDomain
 import SwiftUI
 
-struct PictureChoice<Value: Hashable, Picture: View>: View {
+struct RadioCards<Value: Hashable, Picture: View>: View {
     @Binding var selection: Value
     let options: [(Value, String)]
     @ViewBuilder var picture: (Value) -> Picture

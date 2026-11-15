@@ -22,7 +22,7 @@ struct SemesterView: View {
             Page {
                 PageHeader(title: semester.title, subtitle: model.subtitle(semester))
 
-                StatStrip(items: model.stats(semester))
+                StatGroup(items: model.stats(semester))
 
                 if let audio = model.audio { audioCard(audio) }
 
@@ -207,7 +207,7 @@ struct SemesterView: View {
                         }
                         Spacer(minLength: Theme.Space.s)
                         if start > now {
-                            DdayChip(days: model.workspace.days(to: start), urgency: model.workspace.settings.urgency)
+                            DdayBadge(days: model.workspace.days(to: start), urgency: model.workspace.settings.urgency)
                         } else {
                             Text(.commonEnded).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                         }
@@ -241,7 +241,7 @@ struct SemesterView: View {
     }
 
     func examWeek(_ semester: Semester, _ key: WritableKeyPath<Semester, Int?>, fallback: Int?) -> some View {
-        ChoiceMenu(
+        Select(
             selection: Binding(get: { semester[keyPath: key] ?? fallback }, set: { model.setWeek(semester, key, to: $0) }),
             options: model.weekOptions(semester, fallback: fallback))
     }
@@ -252,7 +252,7 @@ struct SemesterView: View {
             if semester[keyPath: key] == nil {
                 Button(.semesterDateSet) { binding.wrappedValue = .now }.buttonStyle(.ghost)
             } else {
-                DateChip(date: binding, showsTime: false)
+                DateChip(selection: binding, showsTime: false)
             }
         }
     }

@@ -11,19 +11,19 @@ struct ProblemSetSheet: View {
 
     var body: some View {
         let pdfOptions = model.pdfOptions
-        SheetForm(title: String(localized: .quizProblemsAddTitle), confirm: String(localized: .commonAdd), disabled: !model.canAdd) {
+        SheetForm(title: String(localized: .quizProblemsAddTitle), confirm: String(localized: .commonAdd), isDisabled: !model.canAdd) {
             FormRow(label: String(localized: .quizProblemsFieldTitle)) {
                 InlineField(String(localized: .quizProblemsFieldTitleExample), text: $model.title)
             }
             FormRow(label: String(localized: .quizProblemsSheet), detail: model.sheetDetail) {
-                SearchSelect(selection: $model.problemId, options: pdfOptions)
+                Combobox(selection: $model.problemId, options: pdfOptions)
             }
-            FormRow(label: String(localized: .quizProblemsSolution)) { SearchSelect(selection: $model.solutionId, options: pdfOptions) }
+            FormRow(label: String(localized: .quizProblemsSolution)) { Combobox(selection: $model.solutionId, options: pdfOptions) }
             FormRow(label: String(localized: .quizProblemsFieldNumbers), detail: model.numbersDetail) {
                 TextField("1-10", text: $model.numbers).pill(width: Theme.Size.textField)
             }
             FormRow(label: String(localized: .quizUnit), detail: String(localized: .quizProblemsUnitsDetail), last: true) {
-                SearchMultiSelect(selection: $model.unitIds, options: model.course.unitOptions, placeholder: String(localized: .commonNone))
+                MultiCombobox(selection: $model.unitIds, options: model.course.unitOptions, prompt: String(localized: .commonNone))
             }
         } onConfirm: {
             model.add()

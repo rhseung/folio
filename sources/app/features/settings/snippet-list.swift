@@ -19,7 +19,7 @@ struct SnippetList: View {
                         .textFieldStyle(.plain)
                         .font(Theme.Typeface.mono)
                     if placed {
-                        ChoiceMenu(
+                        Select(
                             selection: field(i, \.inMath),
                             options: [
                                 (false, String(localized: .settingsSnippetInText)),

@@ -80,7 +80,7 @@ final class RequirementsModel {
 
     // MARK: Figures
 
-    var stats: [StatStrip.Item] {
+    var stats: [StatGroup.Item] {
         let progress = GPACalculator.graduation(semesters: workspace.transcript.semesters, courses: courses, catalog: catalog)
         let gpa = GPACalculator.cumulative(semesters: workspace.transcript.semesters, courses: courses, catalog: catalog).gpa
         let unassigned = audit.unassigned.count
@@ -188,16 +188,16 @@ final class RequirementsModel {
         workspace.saveCatalog(catalog)
     }
 
-    static func categoryOptions(_ catalog: Catalog, selection: [UUID], course: Course?) -> [PickOption<UUID>] {
+    static func categoryOptions(_ catalog: Catalog, selection: [UUID], course: Course?) -> [SelectOption<UUID>] {
         let already = course.map { GPACalculator.blocksSharing($0, categoryIds: selection, catalog: catalog) } ?? true
         return Category.tree(catalog.categories).map {
             let id = $0.category.id
             let blocked =
                 !already && !selection.contains(id)
                 && course.map { GPACalculator.blocksSharing($0, categoryIds: selection + [id], catalog: catalog) } == true
-            return PickOption(
-                id: id, title: $0.category.name, detail: blocked ? String(localized: .requirementsCategoryBlocked) : $0.category.rule,
-                section: $0.group, depth: $0.depth, disabled: blocked)
+            return SelectOption(
+                id: id, label: $0.category.name, detail: blocked ? String(localized: .requirementsCategoryBlocked) : $0.category.rule,
+                section: $0.group, depth: $0.depth, isDisabled: blocked)
         }
     }
 }

@@ -16,7 +16,7 @@ struct ExamPlanTodayBlock: View {
                     ForEach(Array(items.enumerated()), id: \.element.item.id) { i, entry in
                         let done = model.isDone(entry)
                         CardRow(last: i == items.count - 1) {
-                            CheckCircle(on: done) { model.toggle(entry) }
+                            Checkbox(isOn: done) { model.toggle(entry) }
                                 .help(Text(done ? .examsPlanUndo : .examsPlanCheck))
                                 .courseAccent(model.workspace.accent(entry.courseId))
                             CourseMark(model.workspace, entry.courseId)

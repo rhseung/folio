@@ -1,16 +1,16 @@
 import FolioDomain
 import SwiftUI
 
-struct CheckCircle: View {
+struct Checkbox: View {
     @Environment(\.accent) private var accent
-    let on: Bool
+    let isOn: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: on ? "checkmark.circle.fill" : "circle")
+            Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
                 .font(Theme.Glyph.check)
-                .foregroundStyle(on ? accent.color : Theme.Palette.textTertiary)
+                .foregroundStyle(isOn ? accent.color : Theme.Palette.textTertiary)
         }
         .buttonStyle(.pointing(.plain))
     }

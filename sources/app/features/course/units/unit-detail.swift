@@ -35,7 +35,7 @@ struct UnitDetail: View {
                 PageMenuButton { UnitMenu(courseId: course.id, unitId: unit.id, host: .own) }
             }
 
-            StatStrip(items: model.stats(unit, state: state, reviews: history.count))
+            StatGroup(items: model.stats(unit, state: state, reviews: history.count))
 
             Block(
                 title: String(localized: .unitsSessionsBlock), note: sessions.isEmpty ? nil : String(localized: .unitsTimes(sessions.count))
@@ -64,7 +64,7 @@ struct UnitDetail: View {
                             Image(systemName: "doc.text").foregroundStyle(Theme.Palette.textTertiary)
                             Text(note.title).lineLimit(1)
                             Spacer(minLength: Theme.Space.m)
-                            Chip(note.meta.kind.label, tone: note.meta.kind == .unit ? .accent : .plain)
+                            Badge(note.meta.kind.label, tone: note.meta.kind == .unit ? .accent : .plain)
                         }
                         .opens(note.meta.id.map { id in { openNote(id) } })
                         .contextMenu { if let id = note.meta.id { Button(.commonOpen) { openNote(id) } } }
@@ -101,9 +101,9 @@ struct UnitDetail: View {
                             }
                             Spacer(minLength: Theme.Space.m)
                             if !item.own {
-                                Chip(String(localized: .commonViaSessions)).help(Text(.unitsViaSessionsHelp))
+                                Badge(String(localized: .commonViaSessions)).help(Text(.unitsViaSessionsHelp))
                             }
-                            if missing { Chip(String(localized: .unitsFileMissing), tone: .danger) }
+                            if missing { Badge(String(localized: .unitsFileMissing), tone: .danger) }
                         }
                         .opens(missing ? nil : { openMaterial(m) })
                         .contextMenu { MaterialMenu(courseId: course.id, materialId: m.id, host: .unit(unit.id)) }
@@ -145,7 +145,7 @@ struct UnitDetail: View {
                             Spacer()
                             Text(UnitsModel.minutes(entry.event.seconds)).font(Theme.Typeface.caption).foregroundStyle(
                                 Theme.Palette.textTertiary)
-                            Chip(
+                            Badge(
                                 entry.event.result.label,
                                 tone: entry.event.result == .again ? .danger : entry.event.result == .hard ? .warning : .plain)
                         }
@@ -164,11 +164,11 @@ struct UnitDetail: View {
                         InlineField(String(localized: .unitsFieldNamePlaceholder), text: $model.name).onSubmit { model.rename(unit) }
                     }
                     FormRow(label: String(localized: .unitsFieldParent)) {
-                        SearchSelect(
+                        Combobox(
                             selection: Binding(get: { unit.parentId }, set: { model.setParent($0, of: unit) }),
-                            options: [PickOption(id: UUID?.none, title: String(localized: .unitsFieldParentNone))]
+                            options: [SelectOption(id: UUID?.none, label: String(localized: .unitsFieldParentNone))]
                                 + UnitTree.parentChoices(for: unit.id, in: file.units).map {
-                                    PickOption(id: Optional($0.id), title: $0.title)
+                                    SelectOption(id: Optional($0.id), label: $0.title)
                                 })
                     }
                     FormRow(label: String(localized: .unitsFieldOrder), detail: String(localized: .unitsFieldOrderDetail), last: true) {

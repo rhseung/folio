@@ -2,7 +2,7 @@ import FolioDomain
 import SwiftUI
 
 struct EmptyCard: View {
-    let symbol: String
+    let systemImage: String
     var tone: Tone = .plain
     let title: String
     var detail: String?
@@ -10,7 +10,7 @@ struct EmptyCard: View {
     var body: some View {
         Card {
             HStack(spacing: Theme.Space.m) {
-                Image(systemName: symbol)
+                Image(systemName: systemImage)
                     .font(Theme.Glyph.check)
                     .foregroundStyle(tone == .plain ? Theme.Palette.textTertiary : tone.foreground)
                     .frame(width: Theme.Size.toolbarButton, height: Theme.Size.toolbarButton)

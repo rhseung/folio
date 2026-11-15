@@ -107,7 +107,7 @@ struct RequirementsView: View {
                 }
             }
 
-            StatStrip(items: model.stats)
+            StatGroup(items: model.stats)
 
             if model.catalog.categories.isEmpty {
                 Card { CardRow(last: true) { EmptyLine(String(localized: .requirementsEmpty)) } }

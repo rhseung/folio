@@ -1,7 +1,7 @@
 import FolioDomain
 import SwiftUI
 
-struct FormTextArea: View {
+struct TextArea: View {
     let label: String
     var detail: String?
     @Binding var text: String

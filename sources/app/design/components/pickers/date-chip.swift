@@ -2,7 +2,7 @@ import FolioDomain
 import SwiftUI
 
 struct DateChip: View {
-    @Binding var date: Date
+    @Binding var selection: Date
     var showsTime = true
     @State private var open = false
 
@@ -10,13 +10,16 @@ struct DateChip: View {
         Button {
             open = true
         } label: {
-            Text(date.formatted(showsTime ? .dateTime.month().day().weekday().hour().minute() : .dateTime.year().month().day().weekday()))
-                .monospacedDigit()
-                .chip()
+            Text(
+                selection.formatted(
+                    showsTime ? .dateTime.month().day().weekday().hour().minute() : .dateTime.year().month().day().weekday())
+            )
+            .monospacedDigit()
+            .chip()
         }
         .buttonStyle(.pointing(.plain))
         .popover(isPresented: $open, arrowEdge: .bottom) {
-            DatePanel(date: $date, showsTime: showsTime) { if !showsTime { open = false } }
+            DatePanel(date: $selection, showsTime: showsTime) { if !showsTime { open = false } }
                 .padding(Theme.Space.l)
                 .frame(width: 280)
         }

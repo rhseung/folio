@@ -1,7 +1,7 @@
 import FolioDomain
 import SwiftUI
 
-struct ChipLabel: View {
+struct SelectTrigger: View {
     let text: String
     init(_ text: String) { self.text = text }
 

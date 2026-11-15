@@ -54,7 +54,7 @@ struct CodeEditor: View {
                 }
                 GridRow {
                     Text(.codesFieldProgram)
-                    ChoiceMenu(selection: $code.program, options: programs.map { ($0, CodesModel.programTitle($0)) })
+                    Select(selection: $code.program, options: programs.map { ($0, CodesModel.programTitle($0)) })
                 }
                 GridRow {
                     Text(.codesFieldSource)

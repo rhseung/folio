@@ -95,8 +95,8 @@ struct AssignmentsView: View {
             Button(.assignmentsSuggestSubmitted) { model.setStatus(a, .submitted) }.buttonStyle(.pointing(.bordered))
         }
         if let score = row.score {
-            Chip(score, tone: .accent).sensitive()
+            Badge(score, tone: .accent).sensitive()
         }
-        if let chip = model.dueChip(a, now: now) { Chip(chip.text, tone: chip.tone) }
+        if let chip = model.dueChip(a, now: now) { Badge(chip.text, tone: chip.tone) }
     }
 }

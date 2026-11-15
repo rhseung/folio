@@ -1,7 +1,7 @@
 import FolioDomain
 import SwiftUI
 
-struct ChoiceMenu<Value: Hashable>: View {
+struct Select<Value: Hashable>: View {
     struct Option: Hashable {
         let value: Value
         let label: String
@@ -25,7 +25,7 @@ struct ChoiceMenu<Value: Hashable>: View {
                 }
             }
         } label: {
-            ChipLabel(options.first { $0.value == selection }?.label ?? "")
+            SelectTrigger(options.first { $0.value == selection }?.label ?? "")
         }
         .menuButton()
         .fixedSize()

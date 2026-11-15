@@ -102,12 +102,12 @@ struct QuizSolveView: View {
                 VStack(spacing: Theme.Space.s) {
                     HStack {
                         Text(.quizSolveOrder); Spacer()
-                        ChoiceMenu(selection: $model.order, options: QuizOrder.allCases.map { ($0, $0.label) })
+                        Select(selection: $model.order, options: QuizOrder.allCases.map { ($0, $0.label) })
                     }
                     HStack {
                         Text(.quizSolveGrading)
                         Spacer()
-                        ChoiceMenu(selection: $model.grading, options: model.gradingOptions)
+                        Select(selection: $model.grading, options: model.gradingOptions)
                     }
                 }
             }
@@ -167,7 +167,7 @@ struct QuizSolveView: View {
                     .font(Theme.Typeface.caption)
                     .foregroundStyle(tally.open > 0 ? Theme.Palette.danger : Theme.Palette.textTertiary)
                     .padding(.leading, 22)
-                Meter(value: tally.progress, height: 4).padding(.leading, 22)
+                ProgressBar(value: tally.progress, height: 4).padding(.leading, 22)
             }
             .padding(.horizontal, Theme.Space.s).padding(.vertical, Theme.Space.s)
             .background { if on { Color.clear.surface(Theme.Palette.card, in: .rect(cornerRadius: Theme.Radius.control)) } }
@@ -199,7 +199,7 @@ struct QuizSolveView: View {
                         Text("\(model.index + 1) / \(model.deck.count)").font(Theme.Typeface.bodyStrong).monospacedDigit()
                         Button(.quizSolveFinish) { model.finish(course) }.buttonStyle(.ghost)
                     }
-                    Meter(value: Double(model.index) / Double(max(model.deck.count, 1)), height: 4)
+                    ProgressBar(value: Double(model.index) / Double(max(model.deck.count, 1)), height: 4)
                     cardView(card)
                     history(of: card)
                 }
@@ -238,7 +238,7 @@ struct QuizSolveView: View {
         VStack(spacing: Theme.Space.l) {
             Text(.quizSolveSolved(model.round.count)).font(Theme.Typeface.columnTitle)
             HStack(spacing: Theme.Space.s) {
-                ForEach([Verdict.correct, .partial, .wrong], id: \.self) { v in Chip(model.roundText(v), tone: v.tone) }
+                ForEach([Verdict.correct, .partial, .wrong], id: \.self) { v in Badge(model.roundText(v), tone: v.tone) }
             }
             Button(.quizSolveAgain) { model.start(label: model.label, course: course) }.buttonStyle(.prominent)
         }
@@ -249,7 +249,7 @@ struct QuizSolveView: View {
         Card(padding: Theme.Space.xl) {
             VStack(alignment: .leading, spacing: Theme.Space.l) {
                 HStack(spacing: Theme.Space.s) {
-                    Chip(card.category.label, tone: .accent)
+                    Badge(card.category.label, tone: .accent)
                     Text(model.unitTitle(card, course: course)).font(Theme.Typeface.bodyStrong)
                     Spacer()
                     Text(model.typeText(card))
@@ -341,7 +341,7 @@ struct QuizSolveView: View {
             VStack(alignment: .leading, spacing: Theme.Space.s) {
                 HStack(spacing: Theme.Space.s) {
                     Text(model.gradedTitle(card, p)).font(Theme.Typeface.bodyStrong)
-                    Chip(p.original.label, tone: p.original.tone)
+                    Badge(p.original.label, tone: p.original.tone)
                     if !card.rubric.isEmpty && p.byClaude {
                         Text(model.rubricMet(card, p))
                             .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
@@ -426,7 +426,7 @@ struct QuizSolveView: View {
 
     func historyRow(_ verdict: Verdict, overridden: Bool, detail: String) -> some View {
         HStack(spacing: Theme.Space.s) {
-            Chip(verdict.label, tone: verdict.tone)
+            Badge(verdict.label, tone: verdict.tone)
             Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(2)
         }
     }

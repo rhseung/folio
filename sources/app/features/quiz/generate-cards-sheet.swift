@@ -13,13 +13,13 @@ struct GenerateCardsSheet: View {
     }
 
     var body: some View {
-        SheetForm(title: model.title, confirm: model.confirmTitle, disabled: !model.canConfirm, note: model.note) {
+        SheetForm(title: model.title, confirm: model.confirmTitle, isDisabled: !model.canConfirm, note: model.note) {
             if !model.hasKey {
                 MissingKeyNotice().padding(Theme.Space.m)
             } else if model.candidates.isEmpty {
-                FormRow(label: String(localized: .quizGenerateCount)) { ChoiceMenu(selection: $model.count, options: model.countOptions) }
+                FormRow(label: String(localized: .quizGenerateCount)) { Select(selection: $model.count, options: model.countOptions) }
                 FormRow(label: String(localized: .quizCardType), last: model.busy == false && model.failure == nil) {
-                    ChoiceMenu(selection: $model.type, options: model.typeOptions)
+                    Select(selection: $model.type, options: model.typeOptions)
                 }
                 if model.busy {
                     CardRow(last: model.failure == nil) {

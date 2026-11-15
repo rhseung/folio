@@ -30,7 +30,7 @@ struct InputGuideSheet: View {
                     .keyboardShortcut(.cancelAction)
                 }
                 SearchField(prompt: String(localized: .notesGuideSearch), text: $model.search)
-                Segmented(selection: $model.section, options: model.tabs, layout: .flow)
+                SegmentedControl(selection: $model.section, options: model.tabs, layout: .flow)
             }
             .padding([.horizontal, .top], Theme.Space.xl)
             .padding(.bottom, Theme.Space.m)

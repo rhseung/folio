@@ -19,7 +19,7 @@ struct NoteList: View {
             HStack {
                 Caption(String(localized: .notesCount(shown.count)))
                 Spacer()
-                ChoiceMenu(selection: $model.filter, options: model.filterOptions)
+                Select(selection: $model.filter, options: model.filterOptions)
                 Button {
                     model.adding = true
                 } label: {

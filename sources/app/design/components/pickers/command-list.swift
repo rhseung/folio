@@ -1,30 +1,30 @@
 import FolioDomain
 import SwiftUI
 
-struct SearchPicker<ID: Hashable, Label: View>: View {
-    let options: [PickOption<ID>]
+struct CommandList<ID: Hashable, Label: View>: View {
+    let options: [SelectOption<ID>]
     var isSelected: (ID) -> Bool = { _ in false }
-    let pick: (ID) -> Void
+    let onSelect: (ID) -> Void
     var multiple = false
     var prompt = String(localized: .commonSearch)
     var flexible = false
-    var create: ((String) -> Void)?
-    var createTitle: (String) -> String = { $0 }
+    var onCreate: ((String) -> Void)?
+    var createLabel: (String) -> String = { $0 }
     @ViewBuilder let label: Label
     @State private var open = false
     @State private var query = ""
     @State private var highlighted: ID?
     @FocusState private var focused: Bool
 
-    var filtered: [PickOption<ID>] {
+    var filtered: [SelectOption<ID>] {
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return options }
-        return options.filter { o in [o.title, o.detail, o.section].contains { $0?.localizedCaseInsensitiveContains(q) == true } }
+        return options.filter { o in [o.label, o.detail, o.section].contains { $0?.localizedCaseInsensitiveContains(q) == true } }
     }
 
     var creatable: String? {
         let q = query.trimmingCharacters(in: .whitespaces)
-        guard create != nil, !q.isEmpty, !options.contains(where: { $0.title.caseInsensitiveCompare(q) == .orderedSame }) else {
+        guard onCreate != nil, !q.isEmpty, !options.contains(where: { $0.label.caseInsensitiveCompare(q) == .orderedSame }) else {
             return nil
         }
         return q
@@ -99,7 +99,7 @@ struct SearchPicker<ID: Hashable, Label: View>: View {
         .onChange(of: query) { highlighted = filtered.first?.id }
     }
 
-    func row(_ o: PickOption<ID>) -> some View {
+    func row(_ o: SelectOption<ID>) -> some View {
         Button {
             choose(o.id)
         } label: {
@@ -107,7 +107,7 @@ struct SearchPicker<ID: Hashable, Label: View>: View {
                 Image(systemName: "checkmark").font(Theme.Glyph.regular)
                     .opacity(isSelected(o.id) ? 1 : 0)
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                    Text(o.title).lineLimit(1)
+                    Text(o.label).lineLimit(1)
                     if let detail = o.detail {
                         Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
                     }
@@ -122,8 +122,8 @@ struct SearchPicker<ID: Hashable, Label: View>: View {
             .contentShape(.rect)
         }
         .buttonStyle(.pointing(.plain))
-        .disabled(o.disabled && !isSelected(o.id))
-        .opacity(o.disabled && !isSelected(o.id) ? 0.45 : 1)
+        .disabled(o.isDisabled && !isSelected(o.id))
+        .opacity(o.isDisabled && !isSelected(o.id) ? 0.45 : 1)
         .onHover { if $0 { highlighted = o.id } }
     }
 
@@ -133,7 +133,7 @@ struct SearchPicker<ID: Hashable, Label: View>: View {
         } label: {
             HStack(spacing: Theme.Space.s) {
                 Image(systemName: "plus").font(Theme.Glyph.regular)
-                Text(createTitle(title)).lineLimit(1)
+                Text(createLabel(title)).lineLimit(1)
                 Spacer(minLength: 0)
             }
             .foregroundStyle(.tint)
@@ -149,21 +149,21 @@ struct SearchPicker<ID: Hashable, Label: View>: View {
     private var rowsEmpty: Bool { filtered.isEmpty }
 
     func make(_ title: String) {
-        create?(title)
+        onCreate?(title)
         query = ""
         if !multiple { open = false }
     }
 
-    func step(_ delta: Int, in rows: [PickOption<ID>]) {
+    func step(_ delta: Int, in rows: [SelectOption<ID>]) {
         guard !rows.isEmpty else { return }
         let i = highlighted.flatMap { id in rows.firstIndex { $0.id == id } } ?? (delta > 0 ? -1 : rows.count)
         highlighted = rows[min(max(i + delta, 0), rows.count - 1)].id
     }
 
     func choose(_ id: ID) {
-        // 강조한 행에서 Return을 누르면 버튼을 거치지 않고 여기로 오므로, disabled 검사를 한 번 더 한다.
-        if options.first(where: { $0.id == id })?.disabled == true, !isSelected(id) { return }
-        pick(id)
+        // 강조한 행에서 Return을 누르면 버튼을 거치지 않고 여기로 오므로, isDisabled 검사를 한 번 더 한다.
+        if options.first(where: { $0.id == id })?.isDisabled == true, !isSelected(id) { return }
+        onSelect(id)
         if !multiple { open = false }
     }
 }

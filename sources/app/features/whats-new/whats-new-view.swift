@@ -11,16 +11,16 @@ struct WhatsNewView: View {
             PageHeader(title: String(localized: .whatsNewTitle), subtitle: model.subtitle)
             switch model.state {
             case .loading:
-                EmptyCard(symbol: "arrow.down.circle", title: String(localized: .whatsNewLoading))
+                EmptyCard(systemImage: "arrow.down.circle", title: String(localized: .whatsNewLoading))
             case .unavailable:
                 VStack(alignment: .leading, spacing: Theme.Space.m) {
                     EmptyCard(
-                        symbol: "wifi.slash", title: String(localized: .whatsNewUnavailable),
+                        systemImage: "wifi.slash", title: String(localized: .whatsNewUnavailable),
                         detail: String(localized: .whatsNewUnavailableDetail))
                     Button(.whatsNewRetry) { Task { await model.retry() } }
                 }
             case .empty:
-                EmptyCard(symbol: "doc.text", title: String(localized: .whatsNewEmpty))
+                EmptyCard(systemImage: "doc.text", title: String(localized: .whatsNewEmpty))
             case .noMatch, .releases:
                 tools
                 if case .releases(let releases) = model.state {
@@ -54,7 +54,7 @@ struct WhatsNewView: View {
     }
 
     var kinds: some View {
-        Segmented(selection: $model.kind, options: model.kindOptions, inks: model.kindOptions.map { $0.0?.tone.foreground })
+        SegmentedControl(selection: $model.kind, options: model.kindOptions, tints: model.kindOptions.map { $0.0?.tone.foreground })
     }
 }
 
@@ -74,7 +74,7 @@ private struct ReleaseSection: View {
                         .foregroundStyle(Theme.Palette.textTertiary)
                         .rotationEffect(.degrees(open ? 90 : 0))
                     Text(release.version.description).font(Theme.Typeface.figureMedium).monospacedDigit()
-                    if model.isCurrent(release) { Chip(String(localized: .whatsNewCurrent), tone: .accent) }
+                    if model.isCurrent(release) { Badge(String(localized: .whatsNewCurrent), tone: .accent) }
                     if let date = model.date(release) { Text(date).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1) }
                 }
                 .frame(maxWidth: .infinity, minHeight: Theme.Size.touchTarget, alignment: .leading)

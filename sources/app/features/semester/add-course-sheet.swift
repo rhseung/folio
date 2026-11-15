@@ -15,24 +15,24 @@ struct AddCourseSheet: View {
     var body: some View {
         SheetForm(
             title: String(localized: .semesterAddCourseTitle(model.semester.title)), confirm: String(localized: .commonAdd),
-            disabled: model.disabled, note: model.note
+            isDisabled: model.disabled, note: model.note
         ) {
             FormRow(label: String(localized: .semesterAddCourseName)) {
                 InlineField(String(localized: .semesterAddCourseNameExample), text: $model.title)
             }
             FormRow(label: String(localized: .semesterAddCourseCode)) {
-                SearchSelect(
+                Combobox(
                     selection: $model.codeId,
                     options: model.codes.map {
-                        PickOption(
-                            id: Optional($0.id), title: $0.prefix,
+                        SelectOption(
+                            id: Optional($0.id), label: $0.prefix,
                             detail: [$0.department, $0.program].filter { !$0.isEmpty }.joined(separator: " · "))
                     })
                 TextField("4207-01", text: $model.number).pill(width: Theme.Size.codeField)
             }
             FormRow(label: String(localized: .semesterCreditsLabel)) { CreditsField(credits: $model.credits) }
             FormRow(label: String(localized: .semesterAddCourseMode), last: true) {
-                ChoiceMenu(selection: $model.mode, options: [GradingMode.relative, .absolute, .passFail].map { ($0, $0.label) })
+                Select(selection: $model.mode, options: [GradingMode.relative, .absolute, .passFail].map { ($0, $0.label) })
             }
         } onConfirm: {
             guard !model.disabled else { return }

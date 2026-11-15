@@ -1,8 +1,8 @@
 import SwiftUI
 
-struct ScrubField: View {
+struct NumberField: View {
     @Binding var value: Double
-    let range: ClosedRange<Double>
+    let bounds: ClosedRange<Double>
     let step: Double
     var fractionLength = 0
     var width: CGFloat = 80
@@ -22,7 +22,7 @@ struct ScrubField: View {
         return Binding(
             get: { abs(value) },
             set: { n in
-                value = min(max((value < 0 ? -1 : 1) * abs(n), range.lowerBound), range.upperBound)
+                value = min(max((value < 0 ? -1 : 1) * abs(n), bounds.lowerBound), bounds.upperBound)
             })
     }
 
@@ -36,9 +36,9 @@ struct ScrubField: View {
                     .onAppear { focused = true }
             } else {
                 HStack(spacing: Theme.Space.xs) {
-                    Image(systemName: "chevron.left").opacity(value > range.lowerBound ? 0.5 : 0.15)
+                    Image(systemName: "chevron.left").opacity(value > bounds.lowerBound ? 0.5 : 0.15)
                     Text(text).rolling(text).frame(maxWidth: .infinity, alignment: .trailing)
-                    Image(systemName: "chevron.right").opacity(value < range.upperBound ? 0.5 : 0.15)
+                    Image(systemName: "chevron.right").opacity(value < bounds.upperBound ? 0.5 : 0.15)
                 }
                 .imageScale(.small)
                 .contentShape(.capsule)
@@ -48,7 +48,7 @@ struct ScrubField: View {
                             let base = start ?? value
                             start = base
                             let steps = (g.translation.width / Self.pointsPerStep).rounded()
-                            let next = min(max(base + steps * step, range.lowerBound), range.upperBound)
+                            let next = min(max(base + steps * step, bounds.lowerBound), bounds.upperBound)
                             value = (next / step).rounded() * step
                         }
                         .onEnded { _ in start = nil }
@@ -63,17 +63,29 @@ struct ScrubField: View {
         .pill(width: width)
         .sensoryFeedback(.levelChange, trigger: value)
         .accessibilityRepresentation {
-            Slider(value: $value, in: range, step: step) { Text(.designValue) }
+            Slider(value: $value, in: bounds, step: step) { Text(.designValue) }
         }
     }
 }
 
-extension ScrubField {
-    init(value: Binding<Int>, range: ClosedRange<Int>, step: Int = 1, width: CGFloat = 64, magnitude: Bool = false) {
+extension NumberField {
+    init(
+        value: Binding<Double>, in bounds: ClosedRange<Double>, step: Double, fractionLength: Int = 0, width: CGFloat = 80,
+        magnitude: Bool = false
+    ) {
+        self._value = value
+        self.bounds = bounds
+        self.step = step
+        self.fractionLength = fractionLength
+        self.width = width
+        self.magnitude = magnitude
+    }
+
+    init(value: Binding<Int>, in bounds: ClosedRange<Int>, step: Int = 1, width: CGFloat = 64, magnitude: Bool = false) {
         self.init(
             value: Binding(
                 get: { Double(value.wrappedValue) },
-                set: { value.wrappedValue = min(max(Int($0.rounded()), range.lowerBound), range.upperBound) }),
-            range: Double(range.lowerBound)...Double(range.upperBound), step: Double(step), width: width, magnitude: magnitude)
+                set: { value.wrappedValue = min(max(Int($0.rounded()), bounds.lowerBound), bounds.upperBound) }),
+            in: Double(bounds.lowerBound)...Double(bounds.upperBound), step: Double(step), width: width, magnitude: magnitude)
     }
 }

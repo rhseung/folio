@@ -56,7 +56,7 @@ struct MaterialLinksEditor: View {
                         ForEach(Array(sessions.enumerated()), id: \.element.id) { i, s in
                             let link = s.materials.first { $0.materialId == materialId }
                             CardRow(last: i == sessions.count - 1) {
-                                CheckCircle(on: link != nil) { model.link(materialId, session: s.id, linked: link == nil) }
+                                Checkbox(isOn: link != nil) { model.link(materialId, session: s.id, linked: link == nil) }
                                 Text(model.sessionTitle(s)).lineLimit(1).layoutPriority(1)
                                 Spacer(minLength: Theme.Space.s)
                                 if let link {
@@ -79,7 +79,7 @@ struct MaterialLinksEditor: View {
                             let u = row.unit
                             let linked = unitIds.contains(u.id)
                             CardRow(last: i == units.count - 1) {
-                                CheckCircle(on: linked) { model.link(materialId, unit: u.id, linked: !linked) }
+                                Checkbox(isOn: linked) { model.link(materialId, unit: u.id, linked: !linked) }
                                     .padding(.leading, CGFloat(row.depth) * Theme.Space.l)
                                 Text(u.title).lineLimit(1)
                                 Spacer()
@@ -99,7 +99,7 @@ struct MaterialLinksEditor: View {
                             let routes = model.routes(of: materialId, to: exam)
                             let linked = routes.contains(.direct)
                             CardRow(last: i == exams.count - 1) {
-                                CheckCircle(on: linked) { model.link(materialId, exam: exam.id, linked: !linked) }
+                                Checkbox(isOn: linked) { model.link(materialId, exam: exam.id, linked: !linked) }
                                 Text(exam.title).lineLimit(1)
                                 Spacer()
                                 if routes.contains(.folder) {
