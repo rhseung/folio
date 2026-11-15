@@ -272,7 +272,7 @@ private let view = "sources/app/features/demo/demo-view.swift"
             found([view: source], "design-value") == [
                 ".gray", ".green", ".red", ".system(size:", "0xFF8800", "Color(red:", "Color.blue", "cornerRadius: 8",
             ])
-        #expect(found(["sources/app/design/theme.swift": "let tone = Color.red"], "design-value").isEmpty)
+        #expect(found(["sources/app/design/tokens/theme.swift": "let tone = Color.red"], "design-value").isEmpty)
     }
 }
 
@@ -329,7 +329,7 @@ private let view = "sources/app/features/demo/demo-view.swift"
         #expect(found([view: source], "design-shadow") == ["shadow(radius: 24)"])
         #expect(found(["sources/app/design/knob.swift": "let k = Circle().shadow(radius: 2)"], "design-shadow") == ["shadow(radius: 2)"])
         let theme = "func shadow(_ s: Theme.Shadow) -> some View { shadow(color: .black, radius: s.radius) }"
-        #expect(found(["sources/app/design/theme.swift": theme], "design-shadow").isEmpty)
+        #expect(found(["sources/app/design/tokens/theme.swift": theme], "design-shadow").isEmpty)
     }
 
     @Test func curvesWithTheirOwnDuration() {
@@ -349,7 +349,8 @@ private let view = "sources/app/features/demo/demo-view.swift"
             found([view: source], "design-motion") == [
                 ".easeOut(duration: 0.25)", ".snappy(duration: 0.45)", ".spring(duration: 0.32, bounce: 0.35)",
             ])
-        #expect(found(["sources/app/design/theme.swift": "static let quick = Animation.snappy(duration: 0.2)"], "design-motion").isEmpty)
+        #expect(
+            found(["sources/app/design/tokens/theme.swift": "static let quick = Animation.snappy(duration: 0.2)"], "design-motion").isEmpty)
     }
 
     @Test func frameAndPillNumbersInScreens() {
@@ -380,7 +381,9 @@ private let view = "sources/app/features/demo/demo-view.swift"
     @Test func theAccentAloneOutsideTheDesignFolder() {
         let line = "Text(.commonSave).environment(\\.accent, accent).environment(\\.locale, locale)"
         #expect(found(["sources/app/features/demo/demo-view.swift": line], "course-accent") == ["environment(\\.accent"])
-        #expect(found(["sources/app/design/course-accent.swift": line, "tests/unit/app/note-bench.swift": line], "course-accent").isEmpty)
+        #expect(
+            found(["sources/app/design/tokens/course-accent.swift": line, "tests/unit/app/note-bench.swift": line], "course-accent").isEmpty
+        )
     }
 }
 
@@ -408,7 +411,7 @@ private let view = "sources/app/features/demo/demo-view.swift"
             "sources/app/features/first-run/first-run-model.swift": "let settings = SettingsModel(); let embed = NoteEmbedSource()",
             "sources/app/platform/note-preview.swift": "let source: NoteEmbedSource",
             "sources/app/features/course/course-view.swift": "let model: CourseModel",
-            "sources/app/design/theme.swift": "struct Theme {}",
+            "sources/app/design/tokens/theme.swift": "struct Theme {}",
             "sources/app/features/today/today-view.swift": "let theme = Theme()",
         ]
         #expect(found(files, "app-direction") == ["NoteEmbedSource from features/course", "SettingsModel from features/settings"])

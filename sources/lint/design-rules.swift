@@ -57,7 +57,7 @@ extension Rules {
             advice: "draw shadows with .shadow(Theme.Shadow.<role>), not colour, radius and offset numbers"
         ) { code in
             var hits: [Hit] = []
-            for file in code.files(under: "sources/app") where file.path != "sources/app/design/theme.swift" {
+            for file in code.files(under: "sources/app") where file.path != "sources/app/design/tokens/theme.swift" {
                 for call in file.nodes(FunctionCallExprSyntax.self) where calledName(call) == "shadow" {
                     guard let radius = call.arguments.first(where: { $0.label?.text == "radius" }), !file.oneOff(radius) else { continue }
                     hits.append(
@@ -79,7 +79,7 @@ extension Rules {
             advice: "animate with Theme.Motion, not a curve with its own duration"
         ) { code in
             var hits: [Hit] = []
-            for file in code.files(under: "sources/app") where file.path != "sources/app/design/theme.swift" {
+            for file in code.files(under: "sources/app") where file.path != "sources/app/design/tokens/theme.swift" {
                 for call in file.nodes(FunctionCallExprSyntax.self) {
                     guard let name = calledName(call), animationCurves.contains(name),
                         call.calledExpression.is(MemberAccessExprSyntax.self),
