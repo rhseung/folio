@@ -236,6 +236,8 @@ enum Theme {
         static let chevron: CGFloat = 14
         static let knob: CGFloat = 14
         static let smallIcon: CGFloat = 16
+        // 이보다 좁으면 `FileName`이 확장자를 따로 둔다. 여러 줄의 가운데 줄임이 13pt 글자에서 확장자의 점을 지키는 가장 좁은 폭이다.
+        static let fileNameRoom: CGFloat = 64
         static let inlineButton: CGFloat = 24
         static let chipRow: CGFloat = 24
         static let scrubTrack: CGFloat = 20

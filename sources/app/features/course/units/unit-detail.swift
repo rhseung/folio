@@ -90,7 +90,7 @@ struct UnitDetail: View {
                             )
                             .foregroundStyle(missing ? Theme.Palette.danger : Theme.Palette.textSecondary)
                             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                                Text((m.path as NSString).lastPathComponent).lineLimit(1).truncationMode(.middle).help(m.path)
+                                FileName((m.path as NSString).lastPathComponent, isFolder: m.isFolder, help: m.path)
                                 HStack(spacing: Theme.Space.s) {
                                     if let pages = item.pages {
                                         SectionProgress(file: course.file, material: m.id, range: pages).fixedSize()

@@ -551,3 +551,30 @@ private let view = "sources/app/features/demo/demo-view.swift"
         #expect(found([view: source], "design-control") == ["ButtonStyle SoftStyle"])
     }
 }
+
+@Suite struct FileNameTextTests {
+    @Test func aFileNameDrawnWithText() {
+        let source = """
+            struct DemoView: View {
+                var body: some View {
+                    Text((m.path as NSString).lastPathComponent).lineLimit(1)
+                    Text(url.lastPathComponent)
+                }
+            }
+            """
+        #expect(found([view: source], "file-name") == ["Text((m.path as NSString).lastPathComponent)", "Text(url.lastPathComponent)"])
+    }
+
+    @Test func fileNameAndWrappingDescriptionsPass() {
+        let source = """
+            struct DemoView: View {
+                var body: some View {
+                    FileName(url.lastPathComponent)
+                    ContentUnavailableView("", systemImage: "photo", description: Text(url.lastPathComponent))
+                    Text(.materialsLinksTitle(url.lastPathComponent))
+                }
+            }
+            """
+        #expect(found([view: source], "file-name").isEmpty)
+    }
+}

@@ -7,4 +7,5 @@ struct Crumb {
     var dot: Color?
     var action: (() -> Void)?
     var rename: (() -> Void)?
+    var isFile = false
 }

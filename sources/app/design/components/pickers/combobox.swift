@@ -8,7 +8,8 @@ struct Combobox<Value: Hashable>: View {
 
     var body: some View {
         CommandList(options: options, isSelected: { $0 == selection }, onSelect: { selection = $0 }) {
-            SelectTrigger(options.first { $0.id == selection }?.label ?? prompt)
+            let chosen = options.first { $0.id == selection }
+            SelectTrigger(chosen?.label ?? prompt, isFile: chosen?.isFile ?? false)
         }
     }
 }

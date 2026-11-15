@@ -67,11 +67,9 @@ private struct AssetTile: View {
             .background(Theme.Palette.fill)
             .clipShape(.rect(cornerRadius: Theme.Radius.tile))
             .overlay(RoundedRectangle(cornerRadius: Theme.Radius.tile).strokeBorder(Theme.Palette.lineSoft))
-            Text(file.lastPathComponent)
+            FileName(file.lastPathComponent, lineLimit: 1)
                 .font(Theme.Typeface.label.weight(.regular))
                 .foregroundStyle(Theme.Palette.textSecondary)
-                .lineLimit(1)
-                .truncationMode(.middle)
                 .frame(width: Theme.Size.assetTile.width)
         }
         .scaleEffect(hovering ? 1.06 : 1)

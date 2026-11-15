@@ -55,15 +55,19 @@ struct Breadcrumb: View {
                 }
             }
             if between, let action = crumb.action {
-                Button(crumb.title, action: action).buttonStyle(.pointing(.plain)).help(Text(.designCrumbTopHelp(crumb.title)))
+                Button(action: action) { title(crumb) }.buttonStyle(.pointing(.plain)).help(Text(.designCrumbTopHelp(crumb.title)))
             } else if i == crumbs.count - 1, let rename = crumb.rename {
-                Button(crumb.title, action: rename).buttonStyle(.pointing(.plain)).help(Text(.designCrumbRenameHelp))
+                Button(action: rename) { title(crumb) }.buttonStyle(.pointing(.plain)).help(Text(.designCrumbRenameHelp))
             } else {
-                Text(crumb.title)
+                title(crumb)
             }
         }
         .font(between ? Theme.Typeface.body : Theme.Typeface.bodyStrong)
         .foregroundStyle(between ? Theme.Palette.textSecondary : Theme.Palette.text)
+    }
+
+    @ViewBuilder func title(_ crumb: Crumb) -> some View {
+        if crumb.isFile { FileName(crumb.title, lineLimit: 1) } else { Text(crumb.title) }
     }
 
     var hidden: some View {

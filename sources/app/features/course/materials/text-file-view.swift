@@ -54,7 +54,7 @@ struct TextFileView: View {
         .background(Theme.Palette.card)
         // 파일을 곧 옮기므로 먼저 저장한다.
         .crumb(
-            model.name, level: 2, symbol: model.isTex ? "doc.text" : "chevron.left.forwardslash.chevron.right",
+            model.name, level: 2, symbol: model.isTex ? "doc.text" : "chevron.left.forwardslash.chevron.right", isFile: true,
             rename: links.map { _ in
                 {
                     model.saveIfDirty()

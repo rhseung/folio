@@ -101,3 +101,32 @@ extension Rules {
         return nil
     }
 }
+
+extension Rules {
+    // 파일 이름을 `Text`로 그리면 끝이 잘려 확장자가 사라진다(docs/design/patterns.md "폭과 한 줄").
+    // 이름을 변수에 담은 뒤 그리는 곳은 구문으로 알 수 없어 잡지 않고, `lastPathComponent`를 바로 넘기는 곳만 본다.
+    // `ContentUnavailableView`의 `description:`은 줄을 바꿔 다 보이므로 뺀다. 이름을 넣은 문장(`Text(.key(name))`)도
+    // 문장이라 뺀다.
+    static var fileName: Rule {
+        Rule(
+            name: "file-name",
+            strict: true,
+            advice: "a file name is drawn with FileName (app/design/atoms/marks), which keeps the extension when it truncates, "
+                + "not with Text(…lastPathComponent)"
+        ) { code in
+            var hits: [Hit] = []
+            for file in code.files(under: "sources/app") where !isDebugFile(file.path) && !file.path.hasPrefix("sources/app/design/") {
+                for call in file.nodes(FunctionCallExprSyntax.self) where !file.debugOnly(call) {
+                    guard call.calledExpression.as(DeclReferenceExprSyntax.self)?.baseName.text == "Text",
+                        let argument = call.arguments.first, argument.label == nil,
+                        argument.expression.trimmedDescription.contains("lastPathComponent"),
+                        !argument.expression.trimmedDescription.hasPrefix("."),
+                        call.parent?.as(LabeledExprSyntax.self)?.label?.text != "description"
+                    else { continue }
+                    hits.append(Hit("file-name", file, file.line(of: call), "Text(\(argument.expression.trimmedDescription))"))
+                }
+            }
+            return hits
+        }
+    }
+}

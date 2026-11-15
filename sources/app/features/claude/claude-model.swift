@@ -104,7 +104,8 @@ final class ClaudeModel {
                 SelectOption(
                     id: m.id, label: (m.path as NSString).lastPathComponent, detail: m.path,
                     section: m.status == .classified
-                        ? m.role?.label ?? String(localized: .claudeAddMaterials) : String(localized: .claudeAddUnclassified))
+                        ? m.role?.label ?? String(localized: .claudeAddMaterials) : String(localized: .claudeAddUnclassified),
+                    isFile: true)
             }
     }
 
