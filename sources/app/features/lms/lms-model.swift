@@ -43,10 +43,17 @@ final class LMSModel {
 
     func subtitle(of shown: Shown) -> String? {
         switch shown {
-        case .all: [String(localized: .lmsSubtitle), isConnected ? workspace.lmsLastSync : nil].compactMap { $0 }.joined(separator: " ")
+        case .all: nil
         case .room(let r): r.classroom.professors
         case .gone: nil
         }
+    }
+
+    // 열 아래에 두는 동기화 시각이다. 연결하지 않았으면 열의 연결 안내가 대신한다.
+    var syncNote: String? {
+        guard isConnected else { return nil }
+        if case .syncing = workspace.lms.status { return String(localized: .lmsSyncing) }
+        return workspace.lmsLastSync
     }
 
     var emptyDetail: String {

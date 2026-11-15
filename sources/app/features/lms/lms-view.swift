@@ -74,6 +74,12 @@ private struct LMSColumn: View {
             .padding(.vertical, Theme.Space.l)
             .clearOfColumnButtons(inset: Theme.Space.l)
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if let note = model.syncNote {
+                Caption(note).frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, Theme.Inset.panel + Theme.Inset.listRow.leading).padding(.vertical, Theme.Space.l)
+            }
+        }
         .overflowFade(.vertical)
         .font(Theme.Typeface.body)
         .foregroundStyle(Theme.Palette.text)

@@ -22771,17 +22771,6 @@
         }
       }
     },
-    "lms.subtitle": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "LMS에 새로 올라온 항목이에요. 승인한 것만 Folio에 들어가요."
-          }
-        }
-      }
-    },
     "lms.empty": {
       "extractionState": "manual",
       "localizations": {
