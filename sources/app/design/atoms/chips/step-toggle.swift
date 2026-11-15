@@ -33,10 +33,8 @@ struct StepToggle<Value: Hashable>: View {
                     .foregroundStyle(current.tint)
             }
             .font(Theme.Typeface.caption.weight(.semibold))
-            .padding(.horizontal, Theme.Space.s + 2)
-            .padding(.vertical, Theme.Space.xs)
-            .background(current.tint.opacity(Theme.Opacity.tint), in: .capsule)
-            .contentShape(.capsule)
+            .chip(.small, fill: current.tint.opacity(Theme.Opacity.tint))
+            .contentShape(TouchTarget())
         }
         .buttonStyle(.pointing(.plain))
         .animation(Theme.Motion.quick, value: selection)

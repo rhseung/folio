@@ -5,36 +5,59 @@ struct ToggleChips<Value: Hashable>: View {
     struct Option {
         let value: Value
         let label: String
-        let symbol: String
+        var symbol: String?
     }
+
+    // `circle`은 한 글자 선택지(요일)를 같은 크기의 원으로 둔다.
+    enum ChipShape { case capsule, circle }
 
     @Binding var selection: Set<Value>
     let options: [Option]
+    var shape = ChipShape.capsule
+    var allowsEmptySelection = true
+    @Environment(\.accent) private var accent
 
     var body: some View {
-        FlowLayout(spacing: Theme.Space.tight, centered: true) {
+        FlowLayout(spacing: shape == .circle ? Theme.Space.xs : Theme.Space.tight, centered: shape == .capsule) {
             ForEach(options.indices, id: \.self) { i in
                 let option = options[i]
                 let on = selection.contains(option.value)
                 Button {
-                    if on { selection.remove(option.value) } else { selection.insert(option.value) }
+                    toggle(option.value)
                 } label: {
-                    HStack(spacing: Theme.Space.xs) {
-                        Image(systemName: option.symbol).imageScale(.small)
-                        Text(option.label).lineLimit(1)
-                    }
-                    .fontWeight(on ? .semibold : .regular)
-                    // 채운 배경에서는 `onFill`이 아니라 `card` 색을 쓴다. 다크 모드의 밝은 파랑 위에서 흰 글자는 대비가
-                    // 3:1보다 낮다.
-                    .foregroundStyle(on ? Theme.Palette.card : Theme.Palette.textSecondary)
-                    .padding(Theme.Inset.toggle)
-                    .background(on ? Theme.Palette.info : Theme.Palette.fill, in: .capsule)
-                    .contentShape(.capsule)
-                    .fixedSize()
+                    label(option, on: on)
+                        .fontWeight(on ? .semibold : .regular)
+                        .foregroundStyle(on ? accent.ink : Theme.Palette.textSecondary)
+                        .contentShape(TouchTarget())
+                        .fixedSize()
                 }
                 .buttonStyle(.pointing(.plain))
                 .accessibilityAddTraits(on ? .isSelected : [])
             }
+        }
+    }
+
+    @ViewBuilder func label(_ option: Option, on: Bool) -> some View {
+        switch shape {
+        case .capsule:
+            HStack(spacing: Theme.Space.xs) {
+                if let symbol = option.symbol { Image(systemName: symbol).imageScale(.small) }
+                Text(option.label).lineLimit(1)
+            }
+            .chip(fill: on ? accent.tint : nil)
+        case .circle:
+            Text(option.label)
+                .font(Theme.Typeface.caption)
+                .frame(width: 28, height: 28)  // design: one-off, a one-letter day in a round toggle
+                .background(on ? accent.tint : Theme.Palette.fill, in: .circle)
+        }
+    }
+
+    func toggle(_ value: Value) {
+        if !selection.contains(value) {
+            selection.insert(value)
+        } else if allowsEmptySelection || selection.count > 1 {
+            selection.remove(value)
         }
     }
 }

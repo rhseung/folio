@@ -1,14 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-extension View {
-    func chip() -> some View {
-        padding(Theme.Inset.control)
-            .surface(Theme.Palette.fill, in: .capsule)
-            .contentShape(.capsule)
-    }
-}
-
 extension Binding {
     // 지운 행의 컨트롤은 사라지는 동안에도 바인딩을 읽는다. 그때 그냥 `$array[i]`를 쓰면 배열 끝을 넘어 읽어 앱이
     // 종료되므로, 지운 뒤에도 남는 바인딩을 준다.

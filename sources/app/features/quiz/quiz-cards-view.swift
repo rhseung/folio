@@ -69,7 +69,7 @@ struct QuizCardsView: View {
         } label: {
             Image(systemName: "plus")
         }
-        .menuStyle(.button).menuIndicator(.hidden).buttonStyle(.borderless).pointingHand().fixedSize()
+        .menuButton(tinted: true, indicator: .hidden).fixedSize()
         .foregroundStyle(Theme.Palette.textSecondary)
         .help(Text(.quizCardsAddHelp(unit.title)))
     }

@@ -67,3 +67,13 @@ struct ScrubField: View {
         }
     }
 }
+
+extension ScrubField {
+    init(value: Binding<Int>, range: ClosedRange<Int>, step: Int = 1, width: CGFloat = 64, magnitude: Bool = false) {
+        self.init(
+            value: Binding(
+                get: { Double(value.wrappedValue) },
+                set: { value.wrappedValue = min(max(Int($0.rounded()), range.lowerBound), range.upperBound) }),
+            range: Double(range.lowerBound)...Double(range.upperBound), step: Double(step), width: width, magnitude: magnitude)
+    }
+}

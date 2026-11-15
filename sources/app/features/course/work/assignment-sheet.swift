@@ -48,8 +48,7 @@ struct AssignmentSheet: View {
                         } label: {
                             ChipLabel(model.repeatLabel)
                         }
-                        .menuStyle(.button)
-                        .buttonStyle(.plain).pointingHand()
+                        .menuButton()
                         .fixedSize()
                     }
                     if model.customRepeat {

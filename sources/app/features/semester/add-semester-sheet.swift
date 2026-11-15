@@ -17,9 +17,7 @@ struct AddSemesterSheet: View {
             title: String(localized: .semesterAddTitle), confirm: String(localized: .commonAdd), disabled: model.exists, note: model.note
         ) {
             FormRow(label: String(localized: .semesterAddYear)) {
-                ScrubField(
-                    value: Binding(get: { Double(model.year) }, set: { model.year = Int($0.rounded()) }), range: 2000...2100, step: 1,
-                    width: 88)
+                ScrubField(value: $model.year, range: 2000...2100, width: 88)
             }
             FormRow(label: String(localized: .semesterAddTerm)) {
                 ChoiceMenu(selection: $model.term, options: Term.ordered.map { ($0, $0.label) })

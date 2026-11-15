@@ -112,7 +112,7 @@ struct PeopleView: View {
                 Spacer()
                 if let url = model.workspace.mailURL(to: p.email) {
                     Link(destination: url) { Label(.peopleMail, systemImage: "envelope") }
-                        .buttonStyle(.bordered).pointingHand().help(p.email)
+                        .buttonStyle(.pointing(.bordered)).help(p.email)
                 }
                 Button(.commonDelete, systemImage: "trash", role: .destructive) { model.removing = p }
                     .buttonStyle(.ghostIcon).help(Text(.peopleRemoveHelp))

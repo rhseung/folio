@@ -185,7 +185,7 @@ struct DayRibbonCard: View {
             } label: {
                 label
             }
-            .menuStyle(.button).menuIndicator(.hidden).buttonStyle(.borderless).pointingHand().fixedSize()
+            .menuButton(tinted: true, indicator: .hidden).fixedSize()
             .help(help)
             .accessibilityLabel(help)
         } else {

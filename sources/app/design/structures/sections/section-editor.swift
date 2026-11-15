@@ -151,7 +151,7 @@ private struct SectionRow: View {
             }
             .contentShape(.rect)
         }
-        .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).pointingHand()
+        .menuButton(indicator: .hidden)
         .help(matchHelp(section))
     }
 

@@ -206,7 +206,7 @@ private struct PaneLayoutSettings: View {
             Image(systemName: "ellipsis").foregroundStyle(Theme.Palette.textSecondary)
                 .frame(width: Theme.Size.toolbarButton, height: Theme.Size.toolbarButton).contentShape(TouchTarget())
         }
-        .menuStyle(.button).menuIndicator(.hidden).buttonStyle(.borderless).pointingHand().fixedSize()
+        .menuButton(tinted: true, indicator: .hidden).fixedSize()
         .help(Text(.settingsPaneLayoutsMore))
         .accessibilityLabel(Text(.settingsPaneLayoutsMore))
     }

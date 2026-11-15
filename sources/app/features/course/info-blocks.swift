@@ -43,7 +43,7 @@ struct InfoBlocks: View {
                             .buttonStyle(.pointing(.plain))
                             .help(Text(.courseInfoOpenPerson(p.name)))
                             if let url = model.mailURL(p) {
-                                Link(p.email, destination: url).buttonStyle(.plain).foregroundStyle(accent.ink).pointingHand()
+                                Link(p.email, destination: url).buttonStyle(.pointing(.plain)).foregroundStyle(accent.ink)
                             }
                         }
                         .contextMenu {

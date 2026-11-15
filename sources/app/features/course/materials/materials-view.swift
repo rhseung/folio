@@ -140,8 +140,7 @@ struct MaterialsView: View {
             } label: {
                 Image(systemName: "ellipsis")
             }
-            .menuStyle(.button)
-            .buttonStyle(.borderless).pointingHand()
+            .menuButton(tinted: true)
             .menuIndicator(.hidden)
             .fixedSize()
         }
@@ -202,8 +201,7 @@ struct MaterialsView: View {
             } label: {
                 Image(systemName: "ellipsis")
             }
-            .menuStyle(.button)
-            .buttonStyle(.borderless).pointingHand()
+            .menuButton(tinted: true)
             .menuIndicator(.hidden)
             .fixedSize()
         }

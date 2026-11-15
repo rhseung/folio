@@ -32,14 +32,14 @@ struct MathPalette: View {
         .font(Theme.Typeface.body)
     }
 
-    // 분류가 여덟 개라서 `Segmented`(2-4개)에 들어가지 않는다.
+    // 분류가 여덟 개라서 한 줄 트랙에 들어가지 않는다.
     var tabs: some View {
-        ChipTabs(
+        Segmented(
             selection: Binding {
                 model.shown
             } set: {
                 model.category = $0
-            }, options: model.categories.map { ($0, $0.label) })
+            }, options: model.categories.map { ($0, $0.label) }, layout: .flow)
     }
 
     var grid: some View {

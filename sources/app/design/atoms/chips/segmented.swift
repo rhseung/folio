@@ -2,22 +2,32 @@ import FolioDomain
 import SwiftUI
 
 struct Segmented<Value: Hashable>: View {
+    // `track`은 회색 트랙 안의 판으로 2~4개를 한 줄에 둔다. `flow`는 칩마다 따로 서서 줄을 바꾸므로 다섯 개가 넘어도 잘리지 않는다.
+    enum Arrangement { case track, flow }
+
     @Binding var selection: Value
     let options: [(Value, String)]
+    var layout = Arrangement.track
     var symbols: [String] = []
     var compact = false
     var inks: [Color?] = []
     @Environment(\.onGlass) private var onGlass
+    @Environment(\.accent) private var accent
 
     var body: some View {
+        switch layout {
+        case .track: track
+        case .flow: flow
+        }
+    }
+
+    var track: some View {
         let compact = compact || onGlass
-        HStack(spacing: Theme.Space.xxs) {
+        return HStack(spacing: Theme.Space.xxs) {
             ForEach(options.indices, id: \.self) { i in
                 let (value, label) = options[i]
                 let chosen = selection == value
-                Button {
-                    selection = value
-                } label: {
+                option(i) {
                     Group {
                         if symbols.indices.contains(i) { LineIcon(symbol: symbols[i], filled: chosen) } else { Text(label).lineLimit(1) }
                     }
@@ -31,16 +41,43 @@ struct Segmented<Value: Hashable>: View {
                     )
                     .contentShape(.capsule)
                 }
-                .buttonStyle(.pointing(.plain))
                 .help(symbols.isEmpty ? "" : label)
                 .accessibilityLabel(label)
-                .accessibilityAddTraits(chosen ? .isSelected : [])
+                .accessibilityAddTraits(selection == value ? .isSelected : [])
             }
         }
         .padding(compact ? Theme.Space.xxs : Theme.Space.xs)
         .fixedSize()
         .background(
             compact ? AnyShapeStyle(Theme.Palette.text.opacity(Theme.Opacity.wash)) : AnyShapeStyle(Theme.Palette.fill), in: .capsule)
+    }
+
+    var flow: some View {
+        FlowLayout(spacing: Theme.Space.tight) {
+            ForEach(options.indices, id: \.self) { i in
+                let (value, label) = options[i]
+                let chosen = selection == value
+                option(i) {
+                    Text(label)
+                        .lineLimit(1)
+                        .font(Theme.Typeface.caption.weight(chosen ? .semibold : .regular))
+                        .foregroundStyle(chosen ? accent.ink : Theme.Palette.textSecondary)
+                        .chip(fill: chosen ? accent.tint : nil)
+                        .contentShape(TouchTarget())
+                }
+                .accessibilityAddTraits(chosen ? .isSelected : [])
+            }
+        }
+    }
+
+    func option(_ i: Int, @ViewBuilder label: () -> some View) -> some View {
+        let value = options[i].0
+        return Button {
+            selection = value
+        } label: {
+            label()
+        }
+        .buttonStyle(.pointing(.plain))
     }
 
     func labelColor(_ chosen: Bool) -> Color { chosen ? Theme.Palette.text : Theme.Palette.textSecondary }

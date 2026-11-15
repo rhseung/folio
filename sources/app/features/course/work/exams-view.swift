@@ -207,9 +207,7 @@ struct ExamsView: View {
                 .frame(width: Theme.Size.inlineButton, height: Theme.Size.inlineButton).contentShape(.rect)
                 .accessibilityLabel(Text(.examsMenuHelp))
         }
-        .menuStyle(.button)
-        .menuIndicator(.hidden)
-        .buttonStyle(.borderless).pointingHand()
+        .menuButton(tinted: true, indicator: .hidden)
         .fixedSize()
         .help(Text(.examsMenuHelp))
     }

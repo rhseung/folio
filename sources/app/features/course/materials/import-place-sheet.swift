@@ -165,7 +165,7 @@ private struct ImportRow: View {
         } label: {
             QuietMenuLabel(text: model.kindLabel(row), guessed: model.kindWhy(row) != nil)
         }
-        .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).pointingHand()
+        .menuButton(indicator: .hidden)
         .help(model.kindWhy(row) ?? String(localized: .materialsImportKind))
     }
 
@@ -182,7 +182,7 @@ private struct ImportRow: View {
         } label: {
             QuietMenuLabel(text: model.sessionLabel(row), guessed: model.sessionWhy(row) != nil, maxText: QuietMenuLabel.sessionText)
         }
-        .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).pointingHand()
+        .menuButton(indicator: .hidden)
         .help(model.sessionWhy(row) ?? String(localized: .materialsImportSession))
     }
 

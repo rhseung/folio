@@ -24,7 +24,7 @@ struct SettingRow: View {
         case .number, .positive:
             let cleared = model.value(item) == .null
             Group {
-                IntScrub(value: int, range: scrubRange, step: item.step)
+                ScrubField(value: int, range: scrubRange, step: item.step)
                 if let unit = item.unit { Text(unit.name).foregroundStyle(Theme.Palette.textSecondary) }
             }
             .disabled(cleared).opacity(cleared ? Theme.Opacity.disabled : 1)

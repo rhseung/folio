@@ -27,8 +27,7 @@ struct ChoiceMenu<Value: Hashable>: View {
         } label: {
             ChipLabel(options.first { $0.value == selection }?.label ?? "")
         }
-        .menuStyle(.button)
-        .buttonStyle(.plain).pointingHand()
+        .menuButton()
         .fixedSize()
     }
 }

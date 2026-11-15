@@ -17,12 +17,7 @@ struct DdayChip: View {
     var body: some View {
         let color = Self.heat(days, urgency)
         let urgent = ExamUrgency(days: days, settings: urgency) == .urgent
-        Text(DDay.text(days))
-            .font(Theme.Typeface.caption.weight(.semibold))
-            .monospacedDigit()
-            .foregroundStyle(color)
-            .padding(Theme.Inset.tag)
-            .background(color.opacity(Theme.Opacity.tint), in: .capsule)
+        Chip(DDay.text(days), color: color)
             .phaseAnimator([false, true], trigger: urgent) { chip, lit in
                 chip.scaleEffect(lit && urgent ? 1.06 : 1)
             } animation: { _ in

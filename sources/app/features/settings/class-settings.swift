@@ -26,8 +26,7 @@ struct ClassSettings: View {
                             } label: {
                                 ChipLabel(model.exceptionLabel(course.id))
                             }
-                            .menuStyle(.button)
-                            .buttonStyle(.plain).pointingHand()
+                            .menuButton()
                             .fixedSize()
                         }
                     }
@@ -157,7 +156,7 @@ private struct RecordingSpanRow: View {
     }
 
     func minutes(_ value: Binding<Int>, _ item: SettingItem) -> some View {
-        IntScrub(value: value, range: item.range, magnitude: true).foregroundStyle(Theme.Palette.text)
+        ScrubField(value: value, range: item.range, magnitude: true).foregroundStyle(Theme.Palette.text)
     }
 }
 

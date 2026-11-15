@@ -2,7 +2,7 @@ import FolioDomain
 import SwiftUI
 
 struct QuickAddChip: View {
-    static let inset = Theme.Space.m
+    static let inset = Theme.Inset.control.leading
     let model: QuickAddModel
     let chip: QuickAddModel.Chip
     @State private var pickingDue = false
@@ -60,9 +60,7 @@ struct QuickAddChip: View {
                 .foregroundStyle(Theme.Palette.danger)
             }
         }
-        .menuStyle(.button)
-        .menuIndicator(.hidden)
-        .buttonStyle(.plain).pointingHand()
+        .menuButton(indicator: .hidden)
         .fixedSize()
     }
 
@@ -142,9 +140,7 @@ struct QuickAddChip: View {
                 .foregroundStyle(Theme.Palette.readDueInk)
             }
         }
-        .menuStyle(.button)
-        .menuIndicator(.hidden)
-        .buttonStyle(.plain).pointingHand()
+        .menuButton(indicator: .hidden)
         .fixedSize()
         .popover(isPresented: $pickingRepeat, arrowEdge: .bottom) {
             Card {
@@ -195,9 +191,7 @@ struct QuickAddChip: View {
                 dimmed("folder", .quickAddChipFolder)
             }
         }
-        .menuStyle(.button)
-        .menuIndicator(.hidden)
-        .buttonStyle(.plain).pointingHand()
+        .menuButton(indicator: .hidden)
         .fixedSize()
     }
 
@@ -213,10 +207,7 @@ struct QuickAddChip: View {
         HStack(spacing: Theme.Space.tight) { content() }
             .font(Theme.Typeface.caption)
             .lineLimit(1)
-            .padding(.horizontal, Self.inset)
-            .frame(height: 28)
-            .background(fill, in: .capsule)
-            .contentShape(.capsule)
+            .chip(fill: fill)
             #if os(iOS)
         .padding(.vertical, Theme.Space.s)
         .contentShape(.rect)

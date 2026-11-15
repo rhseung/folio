@@ -1,6 +1,4 @@
-import FolioAI
 import FolioDomain
-import FolioStorage
 import SwiftUI
 
 struct IntListField: View {
@@ -41,10 +39,7 @@ struct IntListField: View {
             .help(Text(.commonAdd))
             .popover(isPresented: $adding) {
                 HStack(spacing: Theme.Space.s) {
-                    ScrubField(
-                        value: Binding(
-                            get: { Double(draft) }, set: { draft = min(max(Int($0.rounded()), range.lowerBound), range.upperBound) }),
-                        range: Double(range.lowerBound)...Double(range.upperBound), step: 1, width: 88)
+                    ScrubField(value: $draft, range: range, width: 88)
                     Text(unit).foregroundStyle(Theme.Palette.textSecondary)
                     Button(.commonAdd, action: add).buttonStyle(.prominent)
                 }

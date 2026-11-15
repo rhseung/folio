@@ -339,8 +339,7 @@ struct FirstRunView: View {
                             } label: {
                                 ChipLabel(semester.title)
                             }
-                            .menuStyle(.button)
-                            .buttonStyle(.plain).pointingHand()
+                            .menuButton()
                             .fixedSize()
                         }
                         ForEach(model.courses) { course in
