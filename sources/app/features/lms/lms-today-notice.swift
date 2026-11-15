@@ -16,9 +16,9 @@ struct LMSTodayNotice: View {
             } rows: {
                 ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
                     CardRow(last: i == rows.count - 1) {
-                        Text(row.title).lineLimit(1)
+                        Text(row.classroom.title).lineLimit(1)
                         Spacer(minLength: Theme.Space.s)
-                        Text("\(row.count)").monospacedDigit().foregroundStyle(Theme.Palette.textSecondary)
+                        Text("\(row.proposals.count)").monospacedDigit().foregroundStyle(Theme.Palette.textSecondary)
                     }
                 }
             }

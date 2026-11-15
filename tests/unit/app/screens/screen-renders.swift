@@ -116,7 +116,6 @@ struct ScreenRenders {
         ]
         let board = workspace.proposalBoard
         if let room = board.rooms.first { entries.append(("lms-room", Navigator.Entry(link: .lms(.classroom(room.id))))) }
-        if let thread = board.threads.first { entries.append(("lms-claude", Navigator.Entry(link: .lms(.claude(thread.chat))))) }
         entries += AppLink.SettingsPage.allCases.map { ("settings-\($0)", Navigator.Entry(link: .settings($0))) }
         if let semester = workspace.currentSemester {
             entries.append(("semester", Navigator.Entry(link: AppLink(.semester, semester.id))))

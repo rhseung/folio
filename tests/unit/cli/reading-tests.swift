@@ -263,11 +263,11 @@ extension ReadingTests {
         let store = try course(gist)
         let open = ActionProposal(
             id: UUID(), command: ExamAdd.command, input: try JSONValue(ExamAdd(id: UUID(), course: Harness.graphTheory, title: "Quiz 3")))
-        let dismissed = ActionProposal(
+        let applied = ActionProposal(
             id: UUID(), command: ExamAdd.command, input: try JSONValue(ExamAdd(id: UUID(), course: Harness.graphTheory, title: "Quiz 4")),
-            dismissed: true)
+            applied: true)
         var chat = Chat(device: h.device, at: h.now, title: "퀴즈 일정")
-        chat.messages = [ChatMessage(role: .assistant, text: "", at: h.now, proposals: [open, dismissed])]
+        chat.messages = [ChatMessage(role: .assistant, text: "", at: h.now, proposals: [open, applied])]
         try store.save(StoredDocument(new: chat))
 
         let text = h.cli(["proposal", "list"], gist: gist)

@@ -35,13 +35,13 @@ public struct Chat: Entity {
 }
 
 extension Chat {
-    // 적용하지 않았고, 무시하지 않았고, 뒤 제안에 대체되지 않은 제안이다. 다른 기기가 적용한 제안을 빼려면 먼저
+    // 적용하지 않았고 뒤 제안에 대체되지 않은 제안이다. 다른 기기가 적용한 제안을 빼려면 먼저
     // `markingApplied`를 거친다.
     public func pending(course: UUID, targets: [String: ProposalTarget]) -> [Proposal] {
         let superseded = supersededProposals(targets: targets)
         return messages.flatMap { m in
             (m.proposals ?? []).enumerated().compactMap { i, p -> Proposal? in
-                guard p.isPending, !superseded.contains(ProposalRef(message: m.id, index: i)) else { return nil }
+                guard p.applied != true, !superseded.contains(ProposalRef(message: m.id, index: i)) else { return nil }
                 let source = ChatProposal(course: course, chat: id, chatTitle: title, message: m.id, index: i, proposal: p)
                 return Proposal(kind: .claude, source: .claude(source), action: p)
             }

@@ -41,7 +41,14 @@ extension Workspace {
         }
     }
 
-    func action(_ proposal: ActionProposal) -> (any Action)? { Actions.action(proposal) }
+    func action(_ proposal: ActionProposal) -> (any Action)? {
+        guard let type = Actions.all.first(where: { $0.command == proposal.command }) else { return nil }
+        return try? Self.decode(type, proposal.input)
+    }
+
+    private static func decode<A: Action>(_ type: A.Type, _ input: JSONValue) throws -> A {
+        try JSONDecoder.folio.decode(A.self, from: JSONEncoder().encode(input))
+    }
 
     func monthlyAPIUsage() -> [MonthlyUsage] {
         let events = courses.flatMap { course in

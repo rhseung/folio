@@ -30,8 +30,7 @@ struct ProposalBoardTests {
             lms: inbox(
                 LMSSnapshot(
                     at: now, classrooms: [room], assignments: [.init(id: 100, classroom: 1, title: "HW5", due: due)],
-                    files: [.init(id: 200, classroom: 1, title: "Flows")], notices: [.init(id: 300, board: 9, classroom: 1, title: "안내")])),
-            chats: [], targets: [:])
+                    files: [.init(id: 200, classroom: 1, title: "Flows")], notices: [.init(id: 300, board: 9, classroom: 1, title: "안내")])))
         let proposals = board.rooms[0].proposals
         #expect(proposals.map(\.kind) == [.lmsAssignment, .lmsFile, .lmsNotice])
         #expect(proposals.map(\.canApprove) == [true, true, false])
@@ -57,7 +56,7 @@ struct ProposalBoardTests {
     @Test func viewerOnlyFilesCanOnlyBeOpenedOrDismissed() {
         let board = ProposalBoard.build(
             lms: inbox(LMSSnapshot(at: now, classrooms: [room], files: [.init(id: 200, classroom: 1, title: "Flows")])),
-            viewerOnly: [200], chats: [], targets: [:])
+            viewerOnly: [200])
         let p = board.rooms[0].proposals[0]
         #expect(p.flag == .viewerOnly)
         #expect(!p.canApprove)
@@ -72,26 +71,21 @@ struct ProposalBoardTests {
         #expect(file.downloaded(file: "/tmp/f.pdf").action?.input["items"] == [["key": "file:200", "file": "/tmp/f.pdf"]])
     }
 
-    @Test func chatsShowTheProposalsStillWaiting() throws {
+    @Test func chatsListTheProposalsStillWaiting() throws {
         let open = ActionProposal(id: UUID(), command: "exam add", input: ["title": "중간"])
         let applied = ActionProposal(id: UUID(), command: "exam add", input: ["title": "기말"], applied: true)
-        let dismissed = ActionProposal(id: UUID(), command: "exam add", input: ["title": "퀴즈"], dismissed: true)
         let elsewhere = ActionProposal(id: UUID(), command: "exam add", input: ["title": "모의"])
-        let busy = chat(title: "시험 정리", [open, applied, dismissed, elsewhere]).markingApplied([try #require(elsewhere.id)])
-        let done = chat(title: "끝난 대화", [applied])
-        let board = ProposalBoard.build(
-            lms: LMSInbox(), chats: [.init(course: course, chat: done), .init(course: course, chat: busy)], targets: [:])
-        #expect(board.threads.map(\.title) == ["시험 정리"])
-        let thread = board.threads[0]
-        #expect(thread.proposals.map(\.kind) == [.claude])
-        guard case .claude(let source) = thread.proposals[0].source else { Issue.record("not a chat proposal"); return }
+        let busy = chat(title: "시험 정리", [open, applied, elsewhere]).markingApplied([try #require(elsewhere.id)])
+        let pending = busy.pending(course: course, targets: [:])
+        #expect(pending.map(\.kind) == [.claude])
+        guard case .claude(let source) = pending[0].source else { Issue.record("not a chat proposal"); return }
         #expect(source.proposal == open)
         #expect(source.index == 0)
         #expect(source.course == course)
-        #expect(thread.proposals[0].canApprove && thread.proposals[0].canDismiss)
-        // Claude 제안은 제안마다 액션이 달라 묶지 않는다.
-        #expect((thread.proposals + thread.proposals).approvals(in: nil).count == 2)
-        #expect(thread.proposals.dismissals.isEmpty)
+        #expect(source.chatTitle == "시험 정리")
+        // LMS 탭은 Claude 제안을 받지 않는다. 그 대화의 패널에서 승인한다.
+        #expect(pending[0].kind.group == nil)
+        #expect(!pending[0].canDismiss)
     }
 
     @Test func aProposalALaterAnswerReplacesIsNotWaiting() {
@@ -111,15 +105,14 @@ struct ProposalBoardTests {
         let snapshot = LMSSnapshot(
             at: now, classrooms: [room, LMSClassroom(id: 2, title: "소방 안전 교육")],
             files: [.init(id: 200, classroom: 1, title: "Flows")], notices: [.init(id: 300, board: 9, classroom: 2, title: "안내")])
-        let talk = chat([ActionProposal(command: "exam add", input: [:])])
-        let board = ProposalBoard.build(lms: inbox(snapshot), chats: [.init(course: course, chat: talk)], targets: [:])
-        #expect(board.groups.map(\.group) == [.new, .claude, .posts])
-        #expect(board.count == 3)
+        let board = ProposalBoard.build(lms: inbox(snapshot))
+        #expect(board.groups.map(\.group) == [.new, .posts])
+        #expect(board.count == 2)
         #expect(board.room(2)?.proposals.map(\.kind) == [.lmsNotice])
-        #expect(board.thread(talk.id)?.proposals.count == 1)
 
-        let quiet = ProposalBoard.build(lms: inbox(snapshot), chats: [], targets: [:])
-        #expect(quiet.groups.map(\.group) == [.new, .posts])
+        let fileOnly = ProposalBoard.build(
+            lms: inbox(LMSSnapshot(at: now, classrooms: [room], files: [.init(id: 200, classroom: 1, title: "Flows")])))
+        #expect(fileOnly.groups.map(\.group) == [.new])
     }
 
     @Test func roomsWithOnlyHiddenItemsStaySoTheyCanBeProposedAgain() {
@@ -129,7 +122,7 @@ struct ProposalBoardTests {
             LMSSnapshot(at: now, classrooms: [room], files: [.init(id: 200, classroom: 1, title: "Flows")]), settings: settings,
             courses: [],
             now: now)
-        let board = ProposalBoard.build(lms: lms, chats: [], targets: [:])
+        let board = ProposalBoard.build(lms: lms)
         #expect(board.rooms.map(\.id) == [1])
         #expect(board.rooms[0].proposals.isEmpty)
         #expect(board.rooms[0].hidden.map(\.id) == ["file:200"])

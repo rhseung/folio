@@ -2872,17 +2872,6 @@
         }
       }
     },
-    "proposal.group.claude": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Claude 제안"
-          }
-        }
-      }
-    },
     "proposal.group.posts": {
       "extractionState": "manual",
       "localizations": {

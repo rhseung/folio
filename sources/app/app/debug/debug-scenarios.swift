@@ -24,25 +24,7 @@ extension Workspace {
         workspace.lms = LMSConnection(
             source: FixedLMS(snapshot: lms), logins: MemoryLogins(LMSCredentials(username: "20260000", password: "-")))
         workspace.run(LMSSeen(classrooms: lms.classrooms.map(\.id), items: LMSSnapshot.sampleHandled))
-        if let course = workspace.currentCourses.first {
-            workspace.saveChat(StoredDocument(new: Chat.sample(course: course.id, at: scenario.now)), in: course.id)
-        }
         return workspace
-    }
-}
-
-extension Chat {
-    static func sample(course: UUID, at now: Date) -> Chat {
-        func exam(_ title: String, in days: Double) -> ActionProposal {
-            let add = ExamAdd(id: UUID(), course: course, title: title, start: now.addingTimeInterval(days * 86_400))
-            return ActionProposal(id: UUID(), command: ExamAdd.command, input: (try? JSONValue(add)) ?? [:])
-        }
-        var chat = Chat(device: UUID(), at: now, title: "퀴즈 일정 정리")
-        chat.messages = [
-            ChatMessage(role: .user, text: "강의계획서에 있는 퀴즈 일정을 넣어 줘", at: now),
-            ChatMessage(role: .assistant, text: "퀴즈 두 개를 제안했습니다.", at: now, proposals: [exam("Quiz 3", in: 5), exam("Quiz 4", in: 19)]),
-        ]
-        return chat
     }
 }
 

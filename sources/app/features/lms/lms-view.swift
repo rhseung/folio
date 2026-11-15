@@ -20,7 +20,6 @@ struct LMSView: View {
             .id(model.page)
         }
         .onChange(of: place, initial: true) { _, entry in if let entry { model.follow(entry.link) } }
-        .confirming($model.pending)
     }
 
     @ViewBuilder func content(_ shown: LMSModel.Shown) -> some View {
@@ -43,15 +42,6 @@ struct LMSView: View {
             }
         case .room(let room):
             RoomBlock(model: model, room: room).crumb(room.classroom.title, level: 1, symbol: LMSColumn.roomSymbol)
-        case .thread(let thread):
-            Block(ProposalKind.claude.name, note: model.count(thread.proposals)) {
-                Card {
-                    ForEach(thread.proposals) { p in
-                        ProposalRow(model: model, proposal: p, source: false, last: p.id == thread.proposals.last?.id)
-                    }
-                }
-            }
-            .crumb(thread.title, level: 1, symbol: LMSColumn.chatSymbol)
         case .gone:
             EmptyCard(systemImage: "tray", tone: .success, title: String(localized: .lmsEmpty))
         }
@@ -66,7 +56,6 @@ private struct LMSColumn: View {
     @Environment(\.openLink) private var openLink
 
     static let roomSymbol = "building.columns"
-    static let chatSymbol = "bubble.left.and.text.bubble.right"
 
     var body: some View {
         ScrollView {
@@ -78,15 +67,6 @@ private struct LMSColumn: View {
                     if !model.isConnected { ConnectRow() }
                     ForEach(board.rooms) { r in
                         row(r.classroom.title, symbol: Self.roomSymbol, page: .classroom(r.id), count: r.proposals.count)
-                    }
-                }
-                if !board.threads.isEmpty {
-                    VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                        Caption(String(localized: .lmsClaude)).padding(.horizontal, Theme.Inset.listRow.leading).padding(
-                            .bottom, Theme.Space.xs)
-                        ForEach(board.threads) { t in
-                            row(t.title, symbol: Self.chatSymbol, page: .claude(t.id), count: t.proposals.count)
-                        }
                     }
                 }
             }
@@ -222,9 +202,6 @@ private struct ProposalRow: View {
                         Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1)
                             .truncationMode(.middle)
                     }
-                    if let reason = model.reason(proposal) {
-                        Text(reason).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.warning).lineLimit(2)
-                    }
                 }
             } control: {
                 HStack(spacing: Theme.Space.s) {
@@ -254,8 +231,6 @@ private struct ProposalRow: View {
                 Task { await model.add([proposal], into: course) }
             }
             .disabled(model.isAdding([proposal]))
-        } else if proposal.kind == .claude {
-            Button(.claudeProposalApply) { model.apply(proposal) }.buttonStyle(.secondary(strong: true))
         }
     }
 }

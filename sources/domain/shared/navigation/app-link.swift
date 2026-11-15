@@ -114,9 +114,6 @@ public struct AppLink: Hashable, Sendable {
     // `course/view.php?id=`이고 UUID가 아니다.
     public enum LMSPage: Hashable, Sendable {
         case classroom(Int)
-        case claude(UUID)
-
-        static let claudeName = "claude"
     }
 
     public private(set) var kind: Kind
@@ -176,7 +173,6 @@ public struct AppLink: Hashable, Sendable {
         if let settingsPage { s += "/\(settingsPage.rawValue)" }
         switch lmsPage {
         case .classroom(let n): s += "/\(n)"
-        case .claude(let chat): s += "/\(LMSPage.claudeName)/\(chat.uuidString)"
         case nil: break
         }
         switch anchor {
@@ -250,7 +246,6 @@ public struct AppLink: Hashable, Sendable {
     static func lmsPage(_ parts: ArraySlice<String>) -> LMSPage? {
         let parts = Array(parts)
         if parts.count == 1, let n = Int(parts[0]), n > 0 { return .classroom(n) }
-        if parts.count == 2, parts[0].lowercased() == LMSPage.claudeName, let chat = UUID(uuidString: parts[1]) { return .claude(chat) }
         return nil
     }
 

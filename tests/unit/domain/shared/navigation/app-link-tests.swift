@@ -59,18 +59,14 @@ struct AppLinkTests {
     }
 
     @Test func lmsRowsArePathsAndTheOldProposalsAddressOpensTheLMSTab() {
-        let chat = UUID()
         #expect(AppLink.lms(nil) == .place(.lms))
         #expect(AppLink.lms(.classroom(27967)).string == "folio://lms/27967")
-        #expect(AppLink.lms(.claude(chat)).string == "folio://lms/claude/\(chat.uuidString)")
-        #expect(AppLink(string: "folio://lms/27967") == .lms(.classroom(27967)))
-        #expect(AppLink(string: "folio://LMS/Claude/\(chat.uuidString)") == .lms(.claude(chat)))
+        #expect(AppLink(string: "FOLIO://LMS/27967") == .lms(.classroom(27967)))
         #expect(AppLink(string: "folio://proposals") == .place(.lms))
-        #expect(AppLink(string: "folio://lms/claude") == nil)
         #expect(AppLink(string: "folio://lms/0") == nil)
         #expect(AppLink(string: "folio://lms/graph") == nil)
+        #expect(AppLink(string: "folio://lms/27967/1") == nil)
         #expect(AppLink.lms(.classroom(1)).withoutAnchor != AppLink.lms(nil))
-        #expect(AppLink(string: AppLink.lms(.claude(chat)).string) == .lms(.claude(chat)))
     }
 
     @Test func settingsTabsArePathsLikeACoursesPages() {

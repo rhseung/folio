@@ -58,7 +58,6 @@ extension Workspace {
     private func lmsPageTitle(_ page: AppLink.LMSPage) -> String? {
         switch page {
         case .classroom(let id): lms.snapshot?.classrooms.first { $0.id == id }?.title
-        case .claude(let id): courseChats.first { $0.doc.model.id == id }?.doc.model.title
         }
     }
 

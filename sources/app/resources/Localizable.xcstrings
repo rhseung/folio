@@ -22463,17 +22463,6 @@
         }
       }
     },
-    "claude.proposal.dismissed": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "무시함"
-          }
-        }
-      }
-    },
     "root.nav.lms": {
       "extractionState": "manual",
       "localizations": {
@@ -22491,7 +22480,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "LMS와 Claude가 낸 제안이에요. 승인한 것만 Folio에 들어가요."
+            "value": "LMS에 새로 올라온 항목이에요. 승인한 것만 Folio에 들어가요."
           }
         }
       }
@@ -22536,17 +22525,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "LMS 강의실"
-          }
-        }
-      }
-    },
-    "lms.claude": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Claude"
           }
         }
       }

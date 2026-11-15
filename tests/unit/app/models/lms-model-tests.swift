@@ -39,7 +39,7 @@ struct LMSModelTests {
         #expect(model.board.rooms.map(\.id) == [1, 2])
         #expect(model.board.rooms.map { $0.hidden.map(\.id) } == [["file:200"], ["notice:300"]])
         #expect(model.board.count == 1)
-        #expect(model.todayRows.map(\.title) == ["그래프 이론[01]"])
+        #expect(model.todayRows.map(\.classroom.title) == ["그래프 이론[01]"])
         #expect(model.earliestDue?.contains("Homework Set #5") == true)
     }
 
@@ -97,7 +97,7 @@ struct LMSModelTests {
         #expect(proposals(model).map(\.id) == ["lms/file:200", "lms/notice:300"])
     }
 
-    @Test func roomsAndChatsAreRowsOfTheTabAndFollowTheAddress() async throws {
+    @Test func roomsAreRowsOfTheTabAndFollowTheAddress() async throws {
         let workspace = try workspace(Self.snapshot)
         await workspace.syncLMS()
         let model = LMSModel(workspace: workspace)
@@ -110,37 +110,5 @@ struct LMSModelTests {
         guard case .gone = model.shown(in: model.board) else { Issue.record("a room that is not there"); return }
         model.follow(.place(.today))
         guard case .gone = model.shown(in: model.board) else { Issue.record("another place changed the row"); return }
-    }
-
-    // 다른 과목의 대화에서 낸 제안도 한 곳에서 승인하고, 대화 파일에 남겨 패널도 같은 상태를 그린다.
-    @Test func claudeProposalsFromEveryChatAreApprovedOrDismissedHere() throws {
-        let workspace = try fixtureWorkspace()
-        let course = try #require(workspace.course(graphTheory))
-        let add = ActionProposal(
-            id: UUID(), command: ExamAdd.command, input: try JSONValue(ExamAdd(id: UUID(), course: graphTheory, title: "제안 퀴즈")))
-        let other = ActionProposal(
-            id: UUID(), command: ExamAdd.command, input: try JSONValue(ExamAdd(id: UUID(), course: graphTheory, title: "무시할 퀴즈")))
-        var chat = Chat(device: workspace.device, at: .now, title: "시험 정리")
-        chat.messages = [ChatMessage(role: .assistant, text: "제안했습니다", at: .now, proposals: [add, other])]
-        workspace.saveChat(StoredDocument(new: chat), in: graphTheory)
-
-        let model = LMSModel(workspace: workspace)
-        #expect(model.board.threads.map(\.title) == ["시험 정리"])
-        #expect(model.board.groups.map(\.group) == [.claude])
-        let pending = model.board.threads[0].proposals
-        #expect(pending.map { model.title($0) } == ["시험 '제안 퀴즈'을(를) 추가했습니다", "시험 '무시할 퀴즈'을(를) 추가했습니다"])
-        #expect(pending.map(model.reason).allSatisfy { $0 == nil })
-        #expect(model.detail(pending[0], source: true) == "시험 정리 · \(course.title)")
-
-        model.apply(pending[0])
-        #expect(model.pending == nil)
-        #expect(workspace.course(graphTheory)?.file.exams.map(\.title).contains("제안 퀴즈") == true)
-        model.dismiss([pending[1]])
-        #expect(workspace.course(graphTheory)?.file.exams.map(\.title).contains("무시할 퀴즈") == false)
-        #expect(model.board.threads.isEmpty)
-
-        let saved = try #require(try course.store.chats().first?.model.messages[0].proposals)
-        #expect(saved.map(\.applied) == [true, nil])
-        #expect(saved.map(\.dismissed) == [nil, true])
     }
 }

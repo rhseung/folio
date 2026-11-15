@@ -6486,7 +6486,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "LMS와 Claude가 낸, 승인을 기다리는 제안"
+            "value": "Claude 대화에서 승인을 기다리는 제안"
           }
         }
       }

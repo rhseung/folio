@@ -6,8 +6,8 @@ import Foundation
 
 extension GeneratedCommands {
     struct ProposalList: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "list", abstract: "승인을 기다리는 제안 목록. Claude 대화에서 아직 적용하지도 무시하지도 않은 변경", discussion: """
-            앱의 LMS 탭이 같은 제안을 모아 승인한다. LMS에서 읽은 제안은 앱의 로그인으로만 읽으므로 이 목록에 없다.
+        static let configuration = CommandConfiguration(commandName: "list", abstract: "승인을 기다리는 제안 목록. Claude 대화에서 아직 적용하지 않은 변경", discussion: """
+            제안은 그 대화의 Claude 패널에서 승인한다. LMS에서 읽은 제안은 앱의 로그인으로만 읽으므로 이 목록에 없다.
             뒤 제안에 대체된 제안과 다른 기기가 이미 적용한 제안은 뺀다.
 
             예시:

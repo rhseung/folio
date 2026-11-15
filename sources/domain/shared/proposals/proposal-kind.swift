@@ -9,13 +9,12 @@ public enum ProposalKind: String, Codable, CaseIterable, Sendable {
     case cleanupMove = "cleanup-move"
 
     // 아래 switch에는 default를 두지 않는다. 새 종류는 무리, 승인 방식, 이름을 정할 때까지 컴파일되지 않아야 한다.
-    // 폴더 정리의 이동은 과목의 자료 화면에서 받으므로 LMS 탭의 무리가 없다.
+    // LMS 탭은 LMS 항목만 받는다. Claude 제안은 그 대화의 패널에서, 폴더 정리의 이동은 과목의 자료 화면에서 받는다.
     public var group: ProposalGroup? {
         switch self {
         case .lmsAssignment, .lmsFile: .new
-        case .claude: .claude
         case .lmsNotice: .posts
-        case .cleanupMove: nil
+        case .claude, .cleanupMove: nil
         }
     }
 

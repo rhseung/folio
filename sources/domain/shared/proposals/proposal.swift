@@ -6,7 +6,6 @@ public struct Proposal: Hashable, Sendable, Identifiable {
     public var source: ProposalSource
     // 없으면 승인할 수 없고 열기와 무시만 있다(공지, 뷰어 전용 자료).
     public var action: ActionProposal?
-    // Claude 제안의 무시는 액션이 아니라 대화 파일의 표시(`ActionProposal.dismissed`)라서 없다.
     public var dismissal: ActionProposal?
     public var flag: ProposalFlag?
 
@@ -53,8 +52,7 @@ public struct Proposal: Hashable, Sendable, Identifiable {
     public var canDismiss: Bool {
         switch source {
         case .lms: dismissal != nil
-        case .claude: true
-        case .cleanup: false
+        case .claude, .cleanup: false
         }
     }
 
