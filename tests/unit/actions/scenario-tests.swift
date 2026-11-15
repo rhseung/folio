@@ -18,6 +18,7 @@ struct ScenarioTests {
         let s = try summary(.busyDay)
         #expect(s.classesToday.count == 6)
         #expect(s.deadlines.count >= 7)
+        #expect(s.overdue.map(\.assignment.title) == ["Lab4 보고서", "HW5"])
         #expect((2...4).contains(s.exams.count))
         #expect(!s.missingReviewNotes.isEmpty)
     }

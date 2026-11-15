@@ -22463,6 +22463,303 @@
         }
       }
     },
+    "overdue.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마감 지난 과제 %lld개"
+          }
+        }
+      }
+    },
+    "overdue.due": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 마감 · %2$@"
+          }
+        }
+      }
+    },
+    "overdue.ceiling": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금 내면 최대 %lld%%"
+          }
+        }
+      }
+    },
+    "overdue.ceiling-until": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금 내면 최대 %1$lld%% · %2$@까지"
+          }
+        }
+      }
+    },
+    "overdue.ceiling-zero": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금 내도 0점"
+          }
+        }
+      }
+    },
+    "overdue.mark-submitted": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제출함"
+          }
+        }
+      }
+    },
+    "overdue.mark-missed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "못 냄"
+          }
+        }
+      }
+    },
+    "assignment-status.missed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "못 냄"
+          }
+        }
+      }
+    },
+    "assignments.group.missed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "못 냄"
+          }
+        }
+      }
+    },
+    "late-rule.percent": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "하루당 감점"
+          }
+        }
+      }
+    },
+    "late-rule.days": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "받는 기간"
+          }
+        }
+      }
+    },
+    "late-rule.days.detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그 뒤에는 0점. 비우면 감점이 만점을 다 깎을 때까지"
+          }
+        }
+      }
+    },
+    "late-rule.days-unit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일"
+          }
+        }
+      }
+    },
+    "late-rule.summary": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "하루 %@%% 감점"
+          }
+        }
+      }
+    },
+    "late-rule.summary-days": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "하루 %1$@%% 감점, %2$lld일까지"
+          }
+        }
+      }
+    },
+    "policy-sheet.late-rule": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지각 제출"
+          }
+        }
+      }
+    },
+    "policy-sheet.late-rule.note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과제마다 과제 편집에서 바꿀 수 있어요"
+          }
+        }
+      }
+    },
+    "assignments.late-rule": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지각 제출"
+          }
+        }
+      }
+    },
+    "assignments.late-rule.note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비우면 과목 규칙을 따라요"
+          }
+        }
+      }
+    },
+    "assignments.submitted-at": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "낸 시각"
+          }
+        }
+      }
+    },
+    "assignments.set-submitted-at": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "낸 시각 정하기"
+          }
+        }
+      }
+    },
+    "assignments.clear-submitted-at": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "낸 시각 지우기"
+          }
+        }
+      }
+    },
+    "assignments.late": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld일 늦게 냄"
+          }
+        }
+      }
+    },
+    "assignments.late-ceiling": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld일 늦게 냄 · 최대 %2$lld%%"
+          }
+        }
+      }
+    },
+    "notify.overdue": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마감 지난 과제 %lld개"
+          }
+        }
+      }
+    },
+    "notify.overdue-one": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@ 마감 지남"
+          }
+        }
+      }
+    },
+    "notify.overdue-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "낸 과제는 제출함, 내지 않을 과제는 못 냄으로 정리하세요"
+          }
+        }
+      }
+    },
     "root.nav.lms": {
       "extractionState": "manual",
       "localizations": {

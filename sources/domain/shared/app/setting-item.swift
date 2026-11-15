@@ -287,6 +287,12 @@ extension SettingItem {
     public static let assignmentLeadHours = SettingItem(
         "notifications.assignmentDue.leadHours", .numbers(1...336), [24, 3], place: .row(.assignmentAlerts),
         name: .settingItemNotificationsAssignmentDueLeadHours, unit: .hoursBefore, switchedBy: assignmentDue)
+    public static let assignmentOverdue = SettingItem(
+        "notifications.assignmentOverdue.on", .toggle, true, place: .row(.assignmentAlerts),
+        name: .settingItemNotificationsAssignmentOverdueOn)
+    public static let assignmentOverdueMinute = SettingItem(
+        "notifications.assignmentOverdue.minute", .time(hours: 0...23), .number(10 * 60), place: .row(.assignmentAlerts),
+        name: .settingItemNotificationsAssignmentOverdueMinute, switchedBy: assignmentOverdue)
     public static let examDayBefore = SettingItem(
         "notifications.examDayBefore.on", .toggle, true, place: .row(.examAlerts), name: .settingItemNotificationsExamDayBeforeOn)
     public static let examDayBeforeMinute = SettingItem(
@@ -377,7 +383,8 @@ extension SettingItem {
         dueMinute, examStartMinute, examMinutes,
         gradesUnlockMinutes, staffMailDomain, studentMailDomain,
         reviewIntervals, reviewDailyLimit, reviewExamWindow, reviewCardsPerReview, reviewSettleAfter, quizRecheckDays, reviewWeights,
-        assignmentDue, assignmentLeadHours, examDayBefore, examDayBeforeMinute, examMorning, examMorningMinute, dailyReview,
+        assignmentDue, assignmentLeadHours, assignmentOverdue, assignmentOverdueMinute, examDayBefore, examDayBeforeMinute, examMorning,
+        examMorningMinute, dailyReview,
         dailyReviewMinute, attendance,
         backupEnabled, backupDailyDays, backupFolder,
         noteRules, newNoteMath, noteTemplates, mathSnippets, asciiMathSnippets, callouts,

@@ -3,6 +3,8 @@ import Foundation
 public struct PlannedNotification: Sendable, Equatable {
     public enum Kind: Sendable, Equatable {
         case assignmentDue(hoursBefore: Int)
+        // 마감 지난 과제를 하루에 한 번 모아 알린다. 하나뿐이면 `subject`가 그 과제다.
+        case assignmentOverdue(count: Int)
         case examDayBefore, examMorning
         case dailyReview(count: Int)
         // 앱이 이미 보낸 알림인지 알 수 있도록 `id`에 결석 횟수를 담는다.

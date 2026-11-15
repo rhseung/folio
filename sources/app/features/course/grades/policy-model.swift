@@ -10,6 +10,7 @@ final class PolicyModel {
     var caps: [AttendanceCap]
     var ratio: String
     var late: String
+    var lateRule: LateRuleDraft
     var notes: String
     var topShare: String
     var lates: String
@@ -21,6 +22,7 @@ final class PolicyModel {
         caps = p.attendanceCap.sorted { $0.absences < $1.absences }
         ratio = p.minAttendanceRatio.map { ($0 * 100).formatted(.number.precision(.fractionLength(0...1))) } ?? ""
         late = p.latePolicy ?? ""
+        lateRule = LateRuleDraft(p.lateRule)
         notes = p.notes
         topShare = p.topGradeRatio.map { ($0 * 100).formatted(.number.precision(.fractionLength(0...1))) } ?? ""
         lates = p.latesPerAbsence.map(String.init) ?? ""
@@ -36,7 +38,7 @@ final class PolicyModel {
         let badShare = !topShare.isEmpty && !(Double(topShare).map { $0 > 0 && $0 < 100 } ?? false)
         let badLates = !lates.isEmpty && !(Int(lates).map { $0 > 0 } ?? false)
         let badRatio = !ratio.isEmpty && !(Double(ratio).map { $0 > 0 && $0 <= 100 } ?? false)
-        return badRatio || badShare || badLates
+        return badRatio || badShare || badLates || lateRule.invalid
     }
 
     func addCap() {
@@ -52,6 +54,7 @@ final class PolicyModel {
         workspace.run(
             PolicySet(
                 course: course.id, minAttendanceRatio: .set(Double(ratio).map { $0 / 100 }), latePolicy: .set(late.isEmpty ? nil : late),
+                lateRule: .set(lateRule.rule),
                 latesPerAbsence: .set(Int(lates)), topGradeRatio: .set(Double(topShare).map { $0 / 100 }), attendanceCap: .set(caps),
                 notes: .set(notes))) != nil
     }

@@ -56,7 +56,7 @@ struct CourseGradesView: View {
                             Button {
                                 model.editingEntry = e
                             } label: {
-                                EntryRow(entry: e, indented: indented, last: last)
+                                EntryRow(entry: e, late: model.late(e, in: file), indented: indented, last: last)
                             }
                             .buttonStyle(.pointing(.plain))
                             .contextMenu { ItemMenu(source: ScoreMenuSource(model: model, entry: e)) }
@@ -69,12 +69,16 @@ struct CourseGradesView: View {
             attendance(file)
 
             let late = model.latePolicy(file)
-            if late != nil || !file.policy.notes.isEmpty {
+            let lateRule = model.lateRule(file)
+            if late != nil || lateRule != nil || !file.policy.notes.isEmpty {
                 Block(String(localized: .courseGradesOtherRules), note: String(localized: .courseGradesOtherRulesNote)) {
                     Card {
-                        if let late {
-                            FormRow(label: String(localized: .courseGradesLateSubmission), last: file.policy.notes.isEmpty) {
-                                Text(late).foregroundStyle(Theme.Palette.textSecondary).multilineTextAlignment(.trailing)
+                        if late != nil || lateRule != nil {
+                            FormRow(
+                                label: String(localized: .courseGradesLateSubmission), detail: lateRule == nil ? nil : late,
+                                last: file.policy.notes.isEmpty
+                            ) {
+                                Text(lateRule ?? late ?? "").foregroundStyle(Theme.Palette.textSecondary).multilineTextAlignment(.trailing)
                             }
                         }
                         if !file.policy.notes.isEmpty {
@@ -169,6 +173,7 @@ struct CourseGradesView: View {
 
 private struct EntryRow: View {
     let entry: ScoreEntry
+    let late: String?
     let indented: Bool
     let last: Bool
 
@@ -178,6 +183,7 @@ private struct EntryRow: View {
                 .lineLimit(1)
                 .padding(.leading, Theme.Space.l + (indented ? Theme.Space.l : 0))
             if entry.excused { Badge(String(localized: .courseGradesExcused)) }
+            if let late { Badge(late, tone: .danger) }
             Spacer(minLength: Theme.Space.s)
             if let mean = entry.mean {
                 Text(entry.stdDev.flatMap { $0 > 0 ? ((entry.score - mean) / $0).sigmas : nil } ?? (entry.score - mean).points)

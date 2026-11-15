@@ -432,7 +432,7 @@ struct FirstRunView: View {
             case .downloading(let path, let done, let total):
                 let fraction = FolderAvailability.downloading(done: done, total: total).fraction
                 header(model.waiting ? .firstRunStepFolder : .firstRunReconnectTitle, .firstRunDownloadingSubtitle)
-                NoticeCard(title: String(localized: .firstRunDownloadingBanner), systemImage: "icloud.and.arrow.down", informs: true) {
+                NoticeCard(title: String(localized: .firstRunDownloadingBanner), systemImage: "icloud.and.arrow.down", tone: .info) {
                     Text(fraction, format: .percent.precision(.fractionLength(0))).monospacedDigit().foregroundStyle(Theme.Palette.info)
                 } rows: {
                     CardRow {

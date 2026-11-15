@@ -33,3 +33,17 @@ extension WrapUpItem {
         }
     }
 }
+
+extension Lateness {
+    var label: String {
+        ceiling.map { String(localized: .assignmentsLateCeiling(days, Int(($0 * 100).rounded()))) }
+            ?? String(localized: .assignmentsLate(days))
+    }
+}
+
+extension LateRule {
+    var label: String {
+        let percent = percentPerDay.formatted(.number.grouping(.never))
+        return days.map { String(localized: .lateRuleSummaryDays(percent, $0)) } ?? String(localized: .lateRuleSummary(percent))
+    }
+}

@@ -113,10 +113,8 @@ private struct ConnectNotice: View {
     @Environment(\.openLink) private var openLink
 
     var body: some View {
-        NoticeCard(title: String(localized: .lmsNotConnected), systemImage: "link", informs: true) {
+        NoticeCard(title: String(localized: .lmsNotConnected), systemImage: "link", tone: .info) {
             Button(.lmsConnectInSettings) { openLink(.settings(.lms)) }.buttonStyle(.prominent)
-        } rows: {
-            EmptyView()
         }
     }
 }

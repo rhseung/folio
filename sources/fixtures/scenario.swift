@@ -219,6 +219,17 @@ private struct Builder {
             if status != .todo { try run(AssignmentStatusSet(course: course, assignment: id, status: status), at: at(11, 3, 20)) }
         }
 
+        // 마감 지난 과제와 늦게 낸 과제다. 로봇공학에만 지각 규칙이 있어 "지금 내면 최대" 줄은 그 과목에만 보인다. 렌더가 그리는
+        // 과목 화면이 로봇공학이라 그 과목에 둔다.
+        try run(
+            PolicySet(course: robotics, latePolicy: .set("하루 10% 감점, 3일이 지나면 받지 않음"), lateRule: .set(LateRule(percentPerDay: 10, days: 3))),
+            at: setup)
+        let late = try run(AssignmentAdd(course: robotics, title: "Lab3 보고서", due: at(10, 19, 23, 59)), at: at(10, 13, 9))
+        try run(
+            AssignmentStatusSet(course: robotics, assignment: late, status: .submitted, submittedAt: at(10, 20, 10)), at: at(10, 20, 10))
+        try run(AssignmentAdd(course: robotics, title: "Lab4 보고서", due: at(11, 2, 23, 59)), at: at(10, 27, 9))
+        try run(AssignmentAdd(course: prob, title: "HW5", due: at(11, 3, 23, 59)), at: at(10, 27, 9))
+
         let quiz = try run(
             ExamAdd(course: prob, title: "Quiz 3", start: at(11, 6, 14, 30), end: at(11, 6, 15), location: "A203"), at: setup)
         try run(ExamAdd(course: physics, title: "2차 시험", start: at(11, 13, 19), end: at(11, 13, 21), location: "Physics 101"), at: setup)

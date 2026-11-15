@@ -21,6 +21,8 @@ public struct TodaySummary: Sendable {
     public var studyDay: LocalDate
     public var exams: [ExamItem]
     public var deadlines: [DeadlineItem]
+    // 마감이 지났는데 아직 할 일로 남은 과제다. 하루 경계와 상관없이 마감 시각이 지나면 여기로 온다.
+    public var overdue: [DeadlineItem]
     public var classesToday: [SessionItem]
     public var missingReviewNotes: [SessionItem]
 
@@ -31,6 +33,7 @@ public struct TodaySummary: Sendable {
 
         var exams: [ExamItem] = []
         var deadlines: [DeadlineItem] = []
+        var overdue: [DeadlineItem] = []
         var classes: [SessionItem] = []
         var missing: [SessionItem] = []
         for file in courses {
@@ -46,6 +49,7 @@ public struct TodaySummary: Sendable {
                 guard let due = a.due, due >= now else { continue }
                 deadlines.append(DeadlineItem(courseId: id, assignment: a, isToday: due < dayEnd))
             }
+            overdue += file.overdueAssignments(at: now).map { DeadlineItem(courseId: id, assignment: $0, isToday: false) }
 
             for s in file.sessions where !s.isCancelled {
                 if s.date >= dayStart && s.date < dayEnd { classes.append(SessionItem(courseId: id, session: s)) }
@@ -60,6 +64,7 @@ public struct TodaySummary: Sendable {
             studyDay: today,
             exams: exams.sorted { $0.exam.start! < $1.exam.start! },
             deadlines: deadlines.sorted { $0.assignment.due! < $1.assignment.due! },
+            overdue: overdue.sorted { ($0.assignment.due ?? .distantPast) < ($1.assignment.due ?? .distantPast) },
             classesToday: classes.sorted { $0.session.date < $1.session.date },
             missingReviewNotes: missing.sorted { $0.session.date < $1.session.date }
         )

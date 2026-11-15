@@ -44,7 +44,9 @@ public enum GradeCalculator {
         }
     }
 
-    public static func score(components: [GradeComponent], entries: [ScoreEntry]) -> CourseScore {
+    // `ceilings`는 성적 요소마다 점수가 아직 없는 과제가 받을 수 있는 최대 비율이다(지각 감점). 예상 점수에서 그 과제의 몫은 요소의
+    // 예상 비율과 이 비율 중 작은 쪽으로 센다. 확보한 점수는 기록한 점수만 세므로 바뀌지 않는다.
+    public static func score(components: [GradeComponent], entries: [ScoreEntry], ceilings: [UUID: [Double]] = [:]) -> CourseScore {
         // 수업은 평균만 알리고 표준편차는 알리지 않는 일이 많다. 그런 점수는 둘 다 알린 이 과목의 다른 점수에서 만점
         // 대비 퍼짐을 빌려 온다. 빌려 올 점수가 없으면 z가 없고, 평균과의 차이만 센다.
         let spreads = entries.compactMap { e -> Double? in
@@ -85,7 +87,12 @@ public enum GradeCalculator {
             results.reduce(0) { sum, r in
                 let w = weights[r.componentId]!
                 let rate = r.ratio ?? overall
-                return sum + w * rate
+                let caps = ceilings[r.componentId] ?? []
+                guard !caps.isEmpty else { return sum + w * rate }
+                let counted = entries.filter { $0.componentId == r.componentId && !$0.excused }.count
+                let slots = Double(Swift.max(components.first { $0.id == r.componentId }?.count ?? 0, counted + caps.count))
+                let lost = caps.reduce(0) { $0 + Swift.max(0, rate - $1) } / slots
+                return sum + w * (rate - lost)
             }
         }
 

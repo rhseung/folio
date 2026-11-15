@@ -2806,6 +2806,50 @@
         }
       }
     },
+    "setting-item.notifications.assignment-overdue.on": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마감 지난 과제 알림"
+          }
+        }
+      }
+    },
+    "setting-item.notifications.assignment-overdue.minute": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마감 지난 과제 알림 시각"
+          }
+        }
+      }
+    },
+    "rule.late-rule": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지각 감점은 하루 0%에서 100% 사이이고, 받는 기간은 0일 이상이어야 합니다"
+          }
+        }
+      }
+    },
+    "rule.assignment.submitted-at": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "낸 시각은 낸 과제와 채점된 과제에만 둘 수 있습니다"
+          }
+        }
+      }
+    },
     "proposal.kind.lms-assignment": {
       "extractionState": "manual",
       "localizations": {
