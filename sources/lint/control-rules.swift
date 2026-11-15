@@ -12,7 +12,7 @@ extension Rules {
         "DefaultButtonStyle",
     ]
 
-    // 메뉴와 오른쪽 클릭 메뉴의 내용은 시스템이 그리므로 그 안의 `Toggle`과 `Picker`는 체크 표시 항목이 된다(docs/DESIGN.md
+    // 메뉴와 오른쪽 클릭 메뉴의 내용은 시스템이 그리므로 그 안의 `Toggle`과 `Picker`는 체크 표시 항목이 된다(docs/design/forms.md
     // "시스템 컨트롤 대신 쓰는 것"). `.pill(width:)`을 붙인 `TextField`는 그 자체가 짧은 값의 원자다.
     static var designControl: Rule {
         Rule(
