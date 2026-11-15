@@ -179,6 +179,12 @@ extension ProblemSetCommand {
     ])
 }
 
+extension ProposalCommand {
+    static let subcommandTypes: [any ParsableCommand.Type] = alphabetical([
+        GeneratedCommands.ProposalList.self,
+    ])
+}
+
 extension QuizCommand {
     static let subcommandTypes: [any ParsableCommand.Type] = alphabetical([
         GeneratedCommands.QuizCardRemove.self,

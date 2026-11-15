@@ -89,9 +89,11 @@ extension ClaudeClient {
             let state =
                 p.applied == true
                 ? "applied"
-                : p.failure.map { "the user applied it and it failed: \($0)" }
-                    ?? (superseded.contains(i)
-                        ? "not applied; superseded by a later proposal" : "not applied; the user has not approved it")
+                : p.dismissed == true
+                    ? "not applied; the user dismissed it"
+                    : p.failure.map { "the user applied it and it failed: \($0)" }
+                        ?? (superseded.contains(i)
+                            ? "not applied; superseded by a later proposal" : "not applied; the user has not approved it")
             return "- \(p.command) \(brief(p.input)): \(state)"
         }
         return message.text + "\n\n[Changes proposed in this answer]\n" + lines.joined(separator: "\n")

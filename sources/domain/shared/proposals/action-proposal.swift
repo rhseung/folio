@@ -10,9 +10,12 @@ public struct ActionProposal: Codable, Hashable, Sendable {
     public var applied: Bool?
     public var failure: String?
     public var after: [Int]?
+    // 승인 화면에서 무시한 제안이다. 대화 파일에 남겨 다른 기기와 패널도 무시한 것으로 그린다.
+    public var dismissed: Bool?
 
     public init(
-        id: UUID? = nil, command: String, input: JSONValue, applied: Bool? = nil, failure: String? = nil, after: [Int]? = nil
+        id: UUID? = nil, command: String, input: JSONValue, applied: Bool? = nil, failure: String? = nil, after: [Int]? = nil,
+        dismissed: Bool? = nil
     ) {
         self.id = id
         self.command = command
@@ -20,7 +23,10 @@ public struct ActionProposal: Codable, Hashable, Sendable {
         self.applied = applied
         self.failure = failure
         self.after = after
+        self.dismissed = dismissed
     }
+
+    public var isPending: Bool { applied != true && dismissed != true }
 
     // 이 그룹은 GIST 폴더 밖에 쓰거나(백업, 정리의 백업 사본, 가져오기의 원본) 오디오를 다시 쓴다. 사본의 쓰기
     // 제한은 조정된 쓰기만 막으므로, 이 그룹은 사본에서도 미리 실행만 한다.

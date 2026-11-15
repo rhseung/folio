@@ -17,7 +17,7 @@ extension CleanupCommand {
         func run() throws {
             let ctx = try CLI.context(g)
             let file = try StoredDocument<CleanupPlan>.read(from: URL(filePath: absolute(plan))).model
-            let moves = includeFlagged ? file.moves : file.moves.filter { $0.review == nil }
+            let moves = file.approved(includeFlagged: includeFlagged)
             if !g.dryRun {
                 try ask(String(localized: .cleanupApplyConfirm(moves.count)), g)
                 let copy = try ctx.gist.backup(into: URL(filePath: absolute(backup)), now: ctx.now)

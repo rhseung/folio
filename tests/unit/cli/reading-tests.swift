@@ -256,3 +256,31 @@ struct ReadingTests {
         for tool in ["recording_retitle", "recording_trim"] { #expect(!names.contains(tool)) }
     }
 }
+
+extension ReadingTests {
+    @Test func listsTheProposalsEveryChatIsStillWaitingOn() throws {
+        let gist = try Harness.fixtureCopy()
+        let store = try course(gist)
+        let open = ActionProposal(
+            id: UUID(), command: ExamAdd.command, input: try JSONValue(ExamAdd(id: UUID(), course: Harness.graphTheory, title: "Quiz 3")))
+        let dismissed = ActionProposal(
+            id: UUID(), command: ExamAdd.command, input: try JSONValue(ExamAdd(id: UUID(), course: Harness.graphTheory, title: "Quiz 4")),
+            dismissed: true)
+        var chat = Chat(device: h.device, at: h.now, title: "퀴즈 일정")
+        chat.messages = [ChatMessage(role: .assistant, text: "", at: h.now, proposals: [open, dismissed])]
+        try store.save(StoredDocument(new: chat))
+
+        let text = h.cli(["proposal", "list"], gist: gist)
+        #expect(text.code == 0)
+        #expect(text.out.contains("퀴즈 일정") && text.out.contains("Quiz 3") && !text.out.contains("Quiz 4"))
+
+        let json = h.cli(["proposal", "list", "EC4207", "--json"], gist: gist)
+        struct Item: Decodable {
+            var proposal: UUID?
+            var kind: String
+        }
+        let items = try JSONDecoder().decode([Item].self, from: Data(json.out.utf8))
+        #expect(items.map(\.proposal) == [open.id])
+        #expect(items.map(\.kind) == ["claude"])
+    }
+}
