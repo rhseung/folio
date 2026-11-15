@@ -4,7 +4,7 @@ import SwiftUI
 struct QuickAddChip: View {
     static let inset = Theme.Inset.control.leading
     let model: QuickAddModel
-    let chip: QuickAddModel.Badge
+    let chip: QuickAddModel.Chip
     @State private var pickingDue = false
     @State private var pickingRepeat = false
     @State private var rule = AssignmentRepeat.weekly

@@ -140,8 +140,7 @@ struct MaterialsView: View {
             } label: {
                 Image(systemName: "ellipsis")
             }
-            .menuButton(tinted: true)
-            .menuIndicator(.hidden)
+            .menuButton(tinted: true, indicator: .hidden)
             .fixedSize()
         }
         .padding(.leading, CGFloat(depth) * Self.indent)
@@ -201,8 +200,7 @@ struct MaterialsView: View {
             } label: {
                 Image(systemName: "ellipsis")
             }
-            .menuButton(tinted: true)
-            .menuIndicator(.hidden)
+            .menuButton(tinted: true, indicator: .hidden)
             .fixedSize()
         }
     }
