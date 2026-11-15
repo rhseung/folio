@@ -74,7 +74,7 @@ struct NoteFigureCommandTests {
         let r = h.cli(["note", "format"], gist: try Harness.fixtureCopy())
         #expect(r.out.contains("prefers-color-scheme: dark"))
         #expect(r.out.contains("cb-widget"))
-        #expect(Skill.text.contains("### 그림(SVG)"))
+        #expect(Skill.text.contains("folio note format"))
     }
 
     @Test func thePanelProposesFiguresAndWidgets() throws {
