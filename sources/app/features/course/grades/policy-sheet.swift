@@ -73,12 +73,17 @@ struct PolicySheet: View {
                             Text(.policySheetLatesPerAbsence).foregroundStyle(Theme.Palette.textTertiary)
                         }
                     }
-                    FormRow(label: String(localized: .courseGradesMinAttendance)) {
+                    FormRow(label: String(localized: .courseGradesMinAttendance), last: true) {
                         HStack(spacing: Theme.Space.s) {
                             TextField(String(localized: .requirementsNone), text: $model.ratio).pill(width: Theme.Size.numberField)
                             Text("%").foregroundStyle(Theme.Palette.textTertiary)
                         }
                     }
+                }
+            }
+            Block(String(localized: .policySheetLateRule), note: String(localized: .policySheetLateRuleNote)) {
+                Card {
+                    LateRuleRows(draft: $model.lateRule)
                     FormRow(label: String(localized: .courseGradesLateSubmission), last: true) {
                         InlineField(String(localized: .policySheetLateSubmissionExample), text: $model.late)
                     }

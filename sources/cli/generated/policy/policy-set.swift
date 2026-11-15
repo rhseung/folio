@@ -13,12 +13,14 @@ extension GeneratedCommands {
               folio component policy EC4207 --min-attendance-ratio 0.75 --lates-per-absence 3
               folio component policy EC4207 --notes \"Quiz 최저 점수 1회 제외\"
               folio component policy EC4207 --cap 6:B0 --cap 9:F
+              folio component policy EC4207 --late-rule 10:3
               folio component policy EC4207 --cutoff A+:95 --cutoff A0:90 --top-grade-ratio none --dry-run
             """)
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref(.course)) var course: String = ""
         @Option(help: "최소 출석 비율. 0.75. none이면 지운다") var minAttendanceRatio: Clearable<Double>?
-        @Option(help: "지각 규칙 설명. none이면 지운다") var latePolicy: Clearable<String>?
+        @Option(help: "지각 제출 규칙의 원문. none이면 지운다") var latePolicy: Clearable<String>?
+        @Option(name: .customLong("late-rule"), help: ArgumentHelp("과제의 지각 제출 규칙. 과제마다 따로 정하지 않으면 이 규칙을 쓴다. 하루당 감점 %:받는 날수. 10:3, 받는 기한이 없으면 10. none이면 지운다", valueName: "late-rule")) var lateRule: Clearable<String>?
         @Option(help: "지각 몇 번이 결석 한 번인지. none이면 지운다") var latesPerAbsence: Clearable<Int>?
         @Option(help: "상대평가에서 A를 받는 비율. 0.5. none이면 지운다") var topGradeRatio: Clearable<Double>?
         @Option(name: .customLong("cap"), help: ArgumentHelp("결석 횟수마다 받을 수 있는 최대 성적. 주면 목록 전체를 바꾼다. 결석 횟수:최대 성적. 6:B0. 여러 번 줄 수 있다. none이면 비운다", valueName: "cap")) var attendanceCap: [String] = []
@@ -26,7 +28,7 @@ extension GeneratedCommands {
         @Option(help: "구조로 옮기지 못한 규칙 원문") var notes: String?
 
         func run() throws {
-            guard minAttendanceRatio != nil || latePolicy != nil || latesPerAbsence != nil || topGradeRatio != nil || !attendanceCap.isEmpty || !cutoffs.isEmpty || notes != nil else { throw CLIError(exit: .usage, message: "바꿀 것을 하나 이상 주세요: --min-attendance-ratio, --late-policy, --lates-per-absence, --top-grade-ratio, --cap, --cutoff, --notes") }
+            guard minAttendanceRatio != nil || latePolicy != nil || lateRule != nil || latesPerAbsence != nil || topGradeRatio != nil || !attendanceCap.isEmpty || !cutoffs.isEmpty || notes != nil else { throw CLIError(exit: .usage, message: "바꿀 것을 하나 이상 주세요: --min-attendance-ratio, --late-policy, --late-rule, --lates-per-absence, --top-grade-ratio, --cap, --cutoff, --notes") }
             let ctx = try CLI.context(g)
             let r = Resolver(ctx)
             let c = try r.course(course)
@@ -34,6 +36,7 @@ extension GeneratedCommands {
                 course: c.id,
                 minAttendanceRatio: minAttendanceRatio.map { p in Patch.set(p.value) } ?? .keep,
                 latePolicy: latePolicy.map { p in Patch.set(p.value) } ?? .keep,
+                lateRule: try lateRule.map { p in Patch.set(try p.value.map { try r.parse($0, in: c) }) } ?? .keep,
                 latesPerAbsence: latesPerAbsence.map { p in Patch.set(p.value) } ?? .keep,
                 topGradeRatio: topGradeRatio.map { p in Patch.set(p.value) } ?? .keep,
                 attendanceCap: attendanceCap.isEmpty ? .keep : .set(try attendanceCap.clearing.map { try r.parse($0, in: c) }),

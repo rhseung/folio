@@ -33,6 +33,7 @@ enum Theme {
         static let warningBanner = Color(light: 0xFBE9D0, dark: 0x54401F)
         static let danger = Color(light: 0x9C3A1E, dark: 0xF08A70)
         static let dangerFill = Color(light: 0xFBE4DD, dark: 0x3A201A)
+        static let dangerBanner = Color(light: 0xF8D5CA, dark: 0x5A2A1F)
         // 앱 아이콘(app/resources/AppIcon.icon)의 색이다. 위 막대는 잉크색, 아래 두 막대는 코랄색이고, 바탕은 흰색이며
         // 다크에서는 검은색에 가깝다.
         static let markInk = Color(light: 0x2B2B30, dark: 0xF2F0EC)
@@ -133,6 +134,9 @@ enum Theme {
 
     enum Size {
         static let pageMaxWidth: CGFloat = 900
+        static let foldingLabel: CGFloat = 120
+        // 마감 지난 과제 행의 "11/2(월) 오후 11:59 마감 · 2일 지남"과 "지금 내면 최대 80% · …까지"가 잘리지 않는 폭이다.
+        static let overdueLabel: CGFloat = 280
         static let washHeight: CGFloat = 480
         static let washReach: CGFloat = 220
         static let washReachFocus: CGFloat = 400

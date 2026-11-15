@@ -19,7 +19,7 @@ final class CourseGradesModel {
     }
 
     func result(_ file: CourseFile) -> GradeCalculator.CourseScore {
-        GradeCalculator.score(components: file.components, entries: file.scores)
+        file.courseScore(at: workspace.now)
     }
 
     func components(_ file: CourseFile) -> [GradeComponent] { file.components.sorted { $0.order < $1.order } }
@@ -106,6 +106,13 @@ final class CourseGradesModel {
     }
 
     func latePolicy(_ file: CourseFile) -> String? { file.policy.latePolicy.flatMap { $0.isEmpty ? nil : $0 } }
+
+    func lateRule(_ file: CourseFile) -> String? { file.policy.lateRule?.label }
+
+    func late(_ entry: ScoreEntry, in file: CourseFile) -> String? {
+        guard let id = entry.assignmentId, let a = file.assignments.first(where: { $0.id == id }) else { return nil }
+        return file.lateness(of: a, at: workspace.now)?.label
+    }
 
     static func needText(_ need: Double?) -> String {
         need.map {

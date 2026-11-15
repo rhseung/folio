@@ -9,10 +9,13 @@ extension GeneratedCommands {
         static let configuration = CommandConfiguration(commandName: "status", abstract: "과제 상태 바꾸기. 매주 과제를 내면 다음 과제가 생긴다", discussion: """
             예시:
               folio assignment status EC4207/HW3 submitted
+              folio assignment status EC4207/HW3 submitted --at \"2026-11-07 01:20\"
+              folio assignment status EC4207/SP01 missed
             """)
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("<과목>/<과제>", valueName: "assignment"), completion: Complete.ref(.assignment)) var assignment: String
-        @Argument(help: "상태") var status: AssignmentStatus
+        @Argument(help: "상태. todo, doing, submitted, graded, missed(못 냄)") var status: AssignmentStatus
+        @Option(name: .customLong("at"), help: ArgumentHelp("낸 시각. submitted와 graded에만 쓰고, 빼면 이미 남긴 시각이나 지금이다", valueName: "date")) var submittedAt: DateArg?
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -21,7 +24,8 @@ extension GeneratedCommands {
             let action = FolioActions.AssignmentStatusSet(
                 course: c.id,
                 assignment: try r.id(.assignment, assignmentName, in: c),
-                status: status
+                status: status,
+                submittedAt: submittedAt.map { $0.date }
             )
             try perform(spec: action, g, ctx: ctx)
         }

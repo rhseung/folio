@@ -15,12 +15,15 @@ extension GeneratedCommands {
               folio assignment set EC4207/HW3 --component 과제 --memo \"3번 질문함\"
               folio assignment set EC4207/HW3 --component 과제 --score 9/10
               folio assignment set EC4207/HW3 --due none --repeats weekly --dry-run
+              folio assignment set EC4207/HW3 --status submitted --submitted-at \"2026-11-07 01:20\" --late-rule 20:2
             """)
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("<과목>/<과제>", valueName: "assignment"), completion: Complete.ref(.assignment)) var assignment: String = ""
         @Option(help: "새 제목") var title: String?
         @Option(help: ArgumentHelp("마감 일시. none이면 지운다", valueName: "date")) var due: Clearable<DateArg>?
-        @Option(help: "상태") var status: AssignmentStatus?
+        @Option(help: "상태. todo, doing, submitted, graded, missed(못 냄)") var status: AssignmentStatus?
+        @Option(name: .customLong("submitted-at"), help: ArgumentHelp("낸 시각. 상태가 submitted나 graded일 때만 둔다. none이면 지운다", valueName: "date")) var submittedAt: Clearable<DateArg>?
+        @Option(name: .customLong("late-rule"), help: ArgumentHelp("이 과제만 따로 쓰는 지각 규칙. none이면 과목의 규칙을 따른다. 하루당 감점 %:받는 날수. 10:3, 받는 기한이 없으면 10. none이면 지운다", valueName: "late-rule")) var lateRule: Clearable<String>?
         @Option(help: "반복. weekly, daily, biweekly, monthly, 3d, 2w, 1m, weekly:mon,wed, 또는 빠른 추가의 말(매일, 격일, 3일마다, 격주, 매월, 매주 월수, 월,수마다, 평일마다). none이면 지운다") var repeats: Clearable<AssignmentRepeat>?
         @Option(name: .customLong("component"), help: ArgumentHelp("반영되는 성적 항목. 주면 묶음은 풀린다. none이면 지운다", valueName: "component"), completion: Complete.ref(.gradeComponent)) var componentId: Clearable<String>?
         @Option(name: .customLong("group"), help: "한꺼번에 점수를 매기는 성적 항목 묶음. 주면 성적 항목 하나는 풀린다. none이면 지운다") var componentGroup: Clearable<String>?
@@ -28,7 +31,7 @@ extension GeneratedCommands {
         @Option(name: .customLong("score"), help: ArgumentHelp("준 항목의 점수만 바꾸고 다른 항목의 점수는 그대로 둔다. 빈 목록이면 점수를 모두 지운다. 9/10. 묶음이면 <항목>:9/10. 여러 번 줄 수 있다. none이면 비운다", valueName: "score")) var score: [String] = []
 
         func run() throws {
-            guard title != nil || due != nil || status != nil || repeats != nil || componentId != nil || componentGroup != nil || memo != nil || !score.isEmpty else { throw CLIError(exit: .usage, message: "바꿀 것을 하나 이상 주세요: --title, --due, --status, --repeats, --component, --group, --memo, --score") }
+            guard title != nil || due != nil || status != nil || submittedAt != nil || lateRule != nil || repeats != nil || componentId != nil || componentGroup != nil || memo != nil || !score.isEmpty else { throw CLIError(exit: .usage, message: "바꿀 것을 하나 이상 주세요: --title, --due, --status, --submitted-at, --late-rule, --repeats, --component, --group, --memo, --score") }
             let ctx = try CLI.context(g)
             let r = Resolver(ctx)
             let (c, assignmentName) = try r.split(assignment)
@@ -38,6 +41,8 @@ extension GeneratedCommands {
                 title: title.map { Patch.set($0) } ?? .keep,
                 due: due.map { p in Patch.set(p.value.map { $0.date }) } ?? .keep,
                 status: status.map { Patch.set($0) } ?? .keep,
+                submittedAt: submittedAt.map { p in Patch.set(p.value.map { $0.date }) } ?? .keep,
+                lateRule: try lateRule.map { p in Patch.set(try p.value.map { try r.parse($0, in: c) }) } ?? .keep,
                 repeats: repeats.map { p in Patch.set(p.value) } ?? .keep,
                 componentId: try componentId.map { p in Patch.set(try p.value.map { try r.id(.gradeComponent, $0, in: c) }) } ?? .keep,
                 componentGroup: componentGroup.map { p in Patch.set(p.value) } ?? .keep,

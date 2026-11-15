@@ -26,6 +26,7 @@ struct TodayView: View {
             TodayWash(model: model, courses: day.wash)
         } content: {
             TodayHeader(model: model, summary: day.summary, classes: day.classes, reviews: day.reviews)
+            OverdueAssignments(workspace: model.workspace)
             DayRibbonCard(model: model, summary: day.summary, classes: day.classes, go: go, openNote: openNote)
             QuickAddField(workspace: model.workspace, showsEmptyChips: true)
             wrapUpBlock(model.liveWrapUps)

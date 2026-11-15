@@ -142,6 +142,10 @@ extension CourseFile: Document {
             Ref(\.problemMaterialId, to: Material.self, as: String(localized: .modelLabelProblemMaterial), onDelete: .nullify)
             Refs(\.submissionMaterialIds, to: Material.self, as: String(localized: .modelLabelSubmissionMaterial), onDelete: .nullify)
             Refs(\.unitIds, to: Unit.self, onDelete: .nullify)
+            Check("Assignment.submittedAt", String(localized: .ruleAssignmentSubmittedAt)) { a, _ in
+                a.submittedAt == nil || a.status == .submitted || a.status == .graded
+            }
+            Check("Assignment.lateRule", String(localized: .ruleLateRule)) { a, _ in a.lateRule?.isValid ?? true }
         }
         Items(\.components, noun: ItemKind.gradeComponent.noun, name: \.name) {
             NonEmpty(\.name, String(localized: .ruleGradeComponentNameEmpty))
@@ -228,6 +232,7 @@ extension CourseFile: Document {
         Rule("GradePolicy.latesPerAbsence", String(localized: .ruleGradePolicyLatesPerAbsence)) { f, _ in
             (f.policy.latesPerAbsence ?? 1) >= 1
         }
+        Rule("GradePolicy.lateRule", String(localized: .ruleLateRule)) { f, _ in f.policy.lateRule?.isValid ?? true }
         Rule("GradePolicy.attendanceCap", String(localized: .ruleGradePolicyAttendanceCap)) { f, _ in
             f.policy.attendanceCap.allSatisfy { $0.absences >= 1 }
         }

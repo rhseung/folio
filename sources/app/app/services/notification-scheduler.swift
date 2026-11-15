@@ -66,6 +66,10 @@ enum NotificationScheduler {
         case .assignmentDue(let hours):
             content.title = String(localized: .notifyDue(course, item.subject, hours))
             content.body = String(localized: .notifyDueAt(when))
+        case .assignmentOverdue(let count):
+            content.title =
+                count == 1 ? String(localized: .notifyOverdueOne(course, item.subject)) : String(localized: .notifyOverdue(count))
+            content.body = String(localized: .notifyOverdueDetail)
         case .examDayBefore:
             content.title = String(localized: .notifyExamTomorrow(course, item.subject))
             content.body = when

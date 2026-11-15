@@ -48,6 +48,8 @@ final class AssignmentsModel {
         var score: String?
         var component: String?
         var suggestsSubmitted: Bool
+        // 늦게 낸 과제다. 아직 내지 않은 과제는 마감 칩이 이미 지남을 보인다.
+        var late: String?
     }
 
     func row(_ a: Assignment) -> Row {
@@ -63,7 +65,8 @@ final class AssignmentsModel {
             files: files, problems: files.count - submissions, submissions: submissions,
             score: scores.isEmpty ? nil : "\(scores.map(\.score).reduce(0, +).formatted())/\(scores.map(\.max).reduce(0, +).formatted())",
             component: a.componentGroup ?? file.components.first { $0.id == a.componentId }?.name,
-            suggestsSubmitted: AssignmentFiles.suggestsSubmitted(a, files: files, kinds: workspace.settings.assignmentKindTable))
+            suggestsSubmitted: AssignmentFiles.suggestsSubmitted(a, files: files, kinds: workspace.settings.assignmentKindTable),
+            late: a.status.isOpen ? nil : file.lateness(of: a, at: workspace.now)?.label)
     }
 
     func due(_ a: Assignment) -> (date: String, time: String?) {
@@ -99,6 +102,7 @@ extension AssignmentGroup {
         case .open: String(localized: .assignmentsGroupOpen)
         case .submitted: String(localized: .assignmentsGroupSubmitted)
         case .graded: String(localized: .assignmentsGroupGraded)
+        case .missed: String(localized: .assignmentsGroupMissed)
         }
     }
 }

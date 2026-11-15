@@ -12,6 +12,14 @@ extension AssignmentShow: QueryOutput {
             FolioCLI.say(String(localized: .assignmentShowDue(when(due, now: r.ctx.now, time: true, settings: r.settings))))
         }
         FolioCLI.say(String(localized: .assignmentShowStatus(a.status.rawValue.toned(a.status.tone))))
+        if let at = a.submittedAt {
+            FolioCLI.say(String(localized: .assignmentShowSubmitted(at.formatted(date: .numeric, time: .shortened))))
+        }
+        if let late = f.lateness(of: a, at: r.ctx.now) {
+            let ceiling = late.ceiling.map { String(localized: .assignmentShowCeiling(Int(($0 * 100).rounded()))) } ?? ""
+            FolioCLI.say(String(localized: .assignmentShowLate(late.days, ceiling)).styled(.red))
+        }
+        if let rule = f.lateRule(of: a) { FolioCLI.say(String(localized: .assignmentShowLateRule(rule.cliText))) }
         if let repeats = a.repeats { FolioCLI.say(String(localized: .assignmentShowRepeats(repeats.label))) }
         if !a.memo.isEmpty { FolioCLI.say(String(localized: .assignmentShowMemo(a.memo))) }
         let scores = f.scores.filter { $0.assignmentId == a.id }

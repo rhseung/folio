@@ -41,7 +41,10 @@ struct NotificationTableTests {
         return file
     }
 
-    static func plan(_ settings: NotificationSettings) -> String {
+    // 마감 지난 과제 알림은 표로 옮긴 뒤에 더한 종류라 이 비교에서 뺀다.
+    static func plan(_ table: NotificationSettings) -> String {
+        var settings = table
+        settings[.assignmentOverdue].on = false
         let file = file()
         let f = ISO8601DateFormatter()
         f.timeZone = calendar.timeZone

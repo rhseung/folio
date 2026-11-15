@@ -13,6 +13,9 @@ final class AssignmentSheetModel {
     var hasDue = false
     var due = Date.now
     var status: AssignmentStatus = .todo
+    var hasSubmittedAt = false
+    var submittedAt = Date.now
+    var lateRule = LateRuleDraft(nil)
     var repeats: AssignmentRepeat?
     var customRepeat = false
     private(set) var target = ScoreTarget.none
@@ -34,9 +37,10 @@ final class AssignmentSheetModel {
     var sheetTitle: String { String(localized: .commonEditNamed(assignment.title)) }
 
     var invalid: Bool {
-        targetComponents.contains { c in
-            !(scores[c.id] ?? "").isEmpty && (Double(scores[c.id] ?? "") == nil || (Double(maxes[c.id] ?? "") ?? 0) <= 0)
-        }
+        lateRule.invalid
+            || targetComponents.contains { c in
+                !(scores[c.id] ?? "").isEmpty && (Double(scores[c.id] ?? "") == nil || (Double(maxes[c.id] ?? "") ?? 0) <= 0)
+            }
     }
 
     var titleDetail: String? {
@@ -50,6 +54,17 @@ final class AssignmentSheetModel {
         guard hasDue else { return String(localized: .assignmentsRepeatNeedsDue) }
         let next = course.file.nextDue(after: due, rule: repeats, title: assignment.title, calendar: workspace.calendar)
         return String(localized: .assignmentsRepeatNext(CourseFile.deadline(next, calendar: workspace.calendar)))
+    }
+
+    var showsSubmittedAt: Bool { status == .submitted || status == .graded }
+
+    var courseLateRule: LateRule? { course.file.policy.lateRule }
+
+    var submittedDetail: String? {
+        guard showsSubmittedAt, hasDue, hasSubmittedAt else { return nil }
+        let days = LateRule.lateDays(due: due, at: submittedAt)
+        guard days > 0 else { return nil }
+        return Lateness(days: days, ceiling: (lateRule.rule ?? courseLateRule)?.ceiling(lateDays: days)).label
     }
 
     var repeatLabel: String { repeats?.label ?? String(localized: .repeatPickerNone) }
@@ -109,6 +124,9 @@ final class AssignmentSheetModel {
         hasDue = assignment.due != nil
         due = assignment.due ?? workspace.settings.schedule.due(on: workspace.now, calendar: workspace.calendar)
         status = assignment.status
+        hasSubmittedAt = assignment.submittedAt != nil
+        submittedAt = assignment.submittedAt ?? workspace.now
+        lateRule = LateRuleDraft(assignment.lateRule)
         repeats = assignment.repeats
         customRepeat = repeats.map { !AssignmentRepeat.presets.contains($0) } ?? false
         memo = assignment.memo
@@ -125,13 +143,14 @@ final class AssignmentSheetModel {
 
     private struct Draft: Equatable {
         var title: String, hasDue: Bool, due: Date, status: AssignmentStatus, repeats: AssignmentRepeat?
+        var hasSubmittedAt: Bool, submittedAt: Date, lateRule: LateRuleDraft
         var target: ScoreTarget, scores: [UUID: String], maxes: [UUID: String], memo: String
     }
 
     private var draft: Draft {
         Draft(
-            title: title, hasDue: hasDue, due: due, status: status, repeats: repeats, target: target, scores: scores, maxes: maxes,
-            memo: memo)
+            title: title, hasDue: hasDue, due: due, status: status, repeats: repeats, hasSubmittedAt: hasSubmittedAt,
+            submittedAt: submittedAt, lateRule: lateRule, target: target, scores: scores, maxes: maxes, memo: memo)
     }
 
     private var loaded: Draft?
@@ -200,7 +219,10 @@ final class AssignmentSheetModel {
         return workspace.run(
             AssignmentSave(
                 course: course.id, assignment: assignment.id, title: .set(title), due: .set(hasDue ? due : nil),
-                status: .set(status), repeats: .set(repeats), componentId: .set(componentId),
+                status: .set(status),
+                // 고르지 않은 시각은 보내지 않아야 제출로 바꿀 때 액션이 지금 시각을 남긴다.
+                submittedAt: showsSubmittedAt ? .changed(assignment.submittedAt, hasSubmittedAt ? submittedAt : nil) : .keep,
+                lateRule: .changed(assignment.lateRule, lateRule.rule), repeats: .set(repeats), componentId: .set(componentId),
                 componentGroup: .set(group), memo: .set(memo), scores: .set(entered))) != nil
     }
 

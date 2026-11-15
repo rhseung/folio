@@ -54,9 +54,24 @@ struct AssignmentSheet: View {
                     if model.customRepeat {
                         RepeatRuleRows(rule: $model.customRule, dueWeekday: model.dueWeekday)
                     }
-                    FormRow(label: String(localized: .assignmentsStatus), last: true) {
-                        Select(
-                            selection: $model.status, options: [AssignmentStatus.todo, .doing, .submitted, .graded].map { ($0, $0.label) })
+                    FormRow(label: String(localized: .assignmentsStatus), last: !model.showsSubmittedAt) {
+                        Select(selection: $model.status, options: AssignmentStatus.menuOrder.map { ($0, $0.label) })
+                    }
+                    if model.showsSubmittedAt {
+                        FormRow(label: String(localized: .assignmentsSubmittedAt), detail: model.submittedDetail, last: true) {
+                            if model.hasSubmittedAt {
+                                DateChip(selection: $model.submittedAt)
+                                Button {
+                                    model.hasSubmittedAt = false
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill").accessibilityLabel(Text(.assignmentsClearSubmittedAt))
+                                }
+                                .buttonStyle(.pointing(.plain)).foregroundStyle(Theme.Palette.textTertiary)
+                                .help(Text(.assignmentsClearSubmittedAt))
+                            } else {
+                                Button(.assignmentsSetSubmittedAt) { model.hasSubmittedAt = true }.buttonStyle(.ghost)
+                            }
+                        }
                     }
                 }
             }
@@ -80,6 +95,11 @@ struct AssignmentSheet: View {
                     }
                 }
                 .sensitive(scored.isEmpty ? nil : .block)
+            }
+            if model.hasDue {
+                Block(String(localized: .assignmentsLateRule), note: String(localized: .assignmentsLateRuleNote)) {
+                    Card { LateRuleRows(draft: $model.lateRule, placeholder: model.courseLateRule, last: true) }
+                }
             }
             TextArea(label: String(localized: .assignmentsMemo), text: $model.memo)
             Block(title: String(localized: .assignmentsFiles), note: model.folder) {
