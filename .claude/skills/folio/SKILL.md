@@ -49,9 +49,13 @@ folio note add EC4207 "매칭 정리" --kind topic --dry-run
 folio note link-sessions "EC4207/10-26(월) 정리" 10-26 10-28 --dry-run
 # 아직 없는 회차의 결석은 회차와 함께 만든다
 folio session add EC4207 --date "2026-11-11 10:30" --attendance absent --dry-run
+# 노트의 일부만 고친다. --old는 노트에 꼭 한 번 나와야 한다
+folio note edit EC4207/09-08 --old "non-adjacent" --new "서로 이웃하지 않는" --dry-run
 # 인정학기 과목은 _Credited/<출처>에 두므로 학기에 출처가 있어야 한다
 folio semester add 2024 credited --source "군 복무" --credited-hours 9 --dry-run
-# 복습 건너뛰기. 단원을 열어 본 시간이 있을 때만 --start와 --end를 준다
+folio transcript add "영재고 AP" "일반물리학 및 연습 II" --code GS --number 1102 --mode pass_fail --dry-run
+# 복습 기록과 건너뛰기. 단원을 열어 본 시간이 있을 때만 --start와 --end를 준다
+folio review record EC4207/매칭 good --start "2026-10-28 20:00" --end "2026-10-28 20:40" --dry-run
 folio review skip EC4207/매칭 --dry-run
 ```
 
@@ -71,3 +75,9 @@ folio review skip EC4207/매칭 --dry-run
 - `folio help <하고 싶은 일>`(`--json`)이 맞는 명령, 옵션, 예시를 순위대로 보여 준다. `folio <대상> --help`는 사람이 읽는 도움말이다.
 - `folio help --json`은 모든 명령, `folio actions --schema`는 모든 액션의 입력 형식(JSON Schema)이다.
 - `folio run <액션> --input '<JSON>'`은 옵션으로 쓰기 어려운 입력에 쓴다. 바꾸는 액션(`set`, `rename`, `policy`, `wrap-up`)에는 바꿀 필드만 주고, `null`이면 지운다.
+
+```sh
+folio help 과제 마감 바꾸기
+folio help 단원 순서 바꾸기 --json
+folio run assignment set --input '{"course":"EC4207","assignment":"HW3","memo":"3번 질문함"}' --dry-run
+```
