@@ -14,8 +14,10 @@ extension FocusedValues {
 }
 
 extension View {
-    func crumb(_ title: String, level: Int, symbol: String? = nil, action: (() -> Void)? = nil, rename: (() -> Void)? = nil) -> some View {
-        modifier(CrumbStep(title: title, level: level, symbol: symbol, action: action, rename: rename))
+    func crumb(
+        _ title: String, level: Int, symbol: String? = nil, isFile: Bool = false, action: (() -> Void)? = nil, rename: (() -> Void)? = nil
+    ) -> some View {
+        modifier(CrumbStep(title: title, level: level, symbol: symbol, isFile: isFile, action: action, rename: rename))
     }
 }
 
@@ -23,6 +25,7 @@ private struct CrumbStep: ViewModifier {
     let title: String
     let level: Int
     let symbol: String?
+    let isFile: Bool
     let action: (() -> Void)?
     let rename: (() -> Void)?
     @Environment(CrumbTrail.self) private var trail: CrumbTrail?
@@ -36,7 +39,9 @@ private struct CrumbStep: ViewModifier {
             .onDisappear { trail?.clear(level: level, owner: owner) }
     }
 
-    func register() { trail?.set(Crumb(title: title, symbol: symbol, action: action, rename: rename), level: level, owner: owner) }
+    func register() {
+        trail?.set(Crumb(title: title, symbol: symbol, action: action, rename: rename, isFile: isFile), level: level, owner: owner)
+    }
 }
 
 extension View {

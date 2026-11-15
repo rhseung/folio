@@ -8,4 +8,5 @@ struct SelectOption<ID: Hashable>: Identifiable {
     var section: String?
     var depth = 0
     var isDisabled = false
+    var isFile = false
 }

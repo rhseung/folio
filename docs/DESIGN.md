@@ -134,7 +134,7 @@
 `mise run check-code`(`mise run test`에 포함)가 이 문서의 규칙 중 구문 트리로 보이는 것을 잡는다. 규칙은 `sources/lint`에 있고, 무엇을 어디서 잡는지는 그 코드와 단위 테스트(`tests/unit/lint`)가 원본이다.
 
 - 디자인 값: `design-value`, `design-grid`, `design-opacity`, `design-size`, `design-shadow`, `design-motion`, `course-accent`. 위반 없이 시작해 기준선이 없고, `--update`로도 통과하지 않는다.
-- 컨트롤: `design-control`.
+- 컨트롤: `design-control`, `file-name`(파일 이름은 `Text`가 아니라 `FileName`).
 - 구조: `app-direction`(`app/design`과 `app/platform`이 `app/features`를 쓰지 않는다), `screen-toolbar`(화면에 `.toolbar`를 두지 않는다), `folder-size`.
 - 검사가 보지 못하는 것은 리뷰가 본다. 덧셈(`Theme.Space.s + 2`)과 계산식 안의 숫자(`reach * 2`)는 결과가 격자와 토큰에 맞는지 리뷰에서 확인한다.
 - 테스트: `ThemeTests`(과목 색의 대비), `SingleLineTests`(한 줄이어야 하는 것), `ScreenFitTests`(세 폭에서 넘치지 않음). 화면을 눈으로 보는 법은 [화면 확인](design/screen-check.md)에 있다.

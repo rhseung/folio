@@ -107,7 +107,7 @@ struct CommandList<ID: Hashable, Label: View>: View {
                 Image(systemName: "checkmark").font(Theme.Glyph.regular)
                     .opacity(isSelected(o.id) ? 1 : 0)
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                    Text(o.label).lineLimit(1)
+                    if o.isFile { FileName(o.label, lineLimit: 1) } else { Text(o.label).lineLimit(1) }
                     if let detail = o.detail {
                         Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
                     }

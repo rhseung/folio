@@ -187,7 +187,9 @@ struct SearchPalette: View {
             HStack(spacing: Theme.Space.m) {
                 LineIcon(symbol: hit.item.kind.symbol).foregroundStyle(accent.ink)
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
+                    // 찾은 글자를 칠해야 해서 `FileName` 대신 같은 줄임을 쓴다. 자료의 이름은 파일 이름이라 확장자가 끝에 남아야 한다.
                     Text(marked(hit.item.title, color: Theme.Palette.text, match: accent.ink)).font(Theme.Typeface.bodyStrong).lineLimit(1)
+                        .truncationMode(hit.item.kind == .material ? .middle : .tail)
                     if let snippet = hit.snippet.map(SearchModel.plain) {
                         Text(marked(snippet, color: Theme.Palette.textTertiary, match: Theme.Palette.text))
                             .font(Theme.Typeface.caption).lineLimit(1)
