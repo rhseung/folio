@@ -46,11 +46,18 @@ extension Workspace {
             return [loaded.title, item].compactMap { $0 }.joined(separator: " · ")
         }
         switch link.kind {
-        case .today, .grades, .requirements, .people, .codes, .whatsNew, .proposals: return link.kind.place?.title ?? ""
+        case .today, .grades, .requirements, .people, .codes, .whatsNew: return link.kind.place?.title ?? ""
         case .settings: return [link.kind.place?.title, link.settingsPage?.label].compactMap { $0 }.joined(separator: " · ")
+        case .lms: return [link.kind.place?.title, link.lmsPage.flatMap(lmsPageTitle)].compactMap { $0 }.joined(separator: " · ")
         case .semester: return transcript.semesters.first { $0.id == link.id }?.title ?? ""
         case .person: return item ?? String(localized: .rootNavPeople)
         case .course, .session, .unit, .note, .material, .assignment, .exam, .problemSet, .card, .recording: return link.string
+        }
+    }
+
+    private func lmsPageTitle(_ page: AppLink.LMSPage) -> String? {
+        switch page {
+        case .classroom(let id): lms.snapshot?.classrooms.first { $0.id == id }?.title
         }
     }
 

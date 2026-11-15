@@ -21,7 +21,7 @@ public enum LinkName: Equatable, Sendable {
         let id = link.id
         let name: LinkName? =
             switch link.kind {
-            case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals, .semester: nil
+            case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .lms, .semester: nil
             case .person: people.first { $0.id == id }.map { .item($0.name) }
             case .course: file == nil ? nil : link.page.map(LinkName.page)
             case .session: file.flatMap { f in f.sessions.first { $0.id == id }.map { .item(f.title(of: $0, calendar: calendar)) } }

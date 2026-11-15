@@ -21,6 +21,7 @@ extension Queries {
         NoteWidgetList.self,
         NoteWidgetShow.self,
         ProblemSetList.self,
+        ProposalList.self,
         QuizList.self,
         RecordingTranscript.self,
         RequirementShow.self,

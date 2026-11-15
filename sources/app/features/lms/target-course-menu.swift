@@ -2,7 +2,7 @@ import FolioDomain
 import SwiftUI
 
 struct TargetCourseMenu<More: View>: View {
-    let model: ProposalsModel
+    let model: LMSModel
     let label: String
     var strong = false
     let pick: (UUID) -> Void
@@ -32,7 +32,7 @@ struct TargetCourseMenu<More: View>: View {
 }
 
 extension TargetCourseMenu where More == EmptyView {
-    init(model: ProposalsModel, label: String, strong: Bool = false, pick: @escaping (UUID) -> Void) {
+    init(model: LMSModel, label: String, strong: Bool = false, pick: @escaping (UUID) -> Void) {
         self.init(model: model, label: label, strong: strong, pick: pick, more: { EmptyView() })
     }
 }

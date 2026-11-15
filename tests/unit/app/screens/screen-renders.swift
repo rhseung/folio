@@ -112,8 +112,10 @@ struct ScreenRenders {
             ("people", Navigator.Entry(link: .place(.people))),
             ("codes", Navigator.Entry(link: .place(.codes))),
             ("whats-new", Navigator.Entry(link: .place(.whatsNew))),
-            ("proposals", Navigator.Entry(link: .place(.proposals))),
+            ("lms", Navigator.Entry(link: .place(.lms))),
         ]
+        let board = workspace.proposalBoard
+        if let room = board.rooms.first { entries.append(("lms-room", Navigator.Entry(link: .lms(.classroom(room.id))))) }
         entries += AppLink.SettingsPage.allCases.map { ("settings-\($0)", Navigator.Entry(link: .settings($0))) }
         if let semester = workspace.currentSemester {
             entries.append(("semester", Navigator.Entry(link: AppLink(.semester, semester.id))))
@@ -152,7 +154,9 @@ struct ScreenRenders {
     }
 
     static func columns(_ workspace: Workspace) -> [(name: String, entry: Navigator.Entry)] {
-        var entries: [(String, Navigator.Entry)] = [("settings", Navigator.Entry(link: .settings(AppLink.SettingsPage.general)))]
+        var entries: [(String, Navigator.Entry)] = [
+            ("settings", Navigator.Entry(link: .settings(AppLink.SettingsPage.general))), ("lms", Navigator.Entry(link: .place(.lms))),
+        ]
         if let person = workspace.catalog.people.first { entries.append(("person", Navigator.Entry(link: AppLink(.person, person.id)))) }
         if let course = workspace.currentCourses.first {
             entries.append(("course", Navigator.Entry(link: .course(course.id), course: course.id)))

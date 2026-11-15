@@ -227,7 +227,7 @@ struct MaterialsView: View {
                         HStack(spacing: Theme.Space.tight) {
                             Image(systemName: "arrow.turn.down.right").foregroundStyle(Theme.Palette.textTertiary)
                             FileName(model.target(group), lineLimit: 1, isFolder: group.count > 1).font(Theme.Typeface.mono)
-                            if let reason = group[0].review { Badge(reason.label, tone: .warning) }
+                            if let flag = group[0].proposal.flag { Badge(flag.label, tone: .warning) }
                         }
                     }
                     Spacer()

@@ -11,7 +11,7 @@
 | `docs/notes.md` | 노트의 문법, 링크, 편집 보기와 미리보기, 그 회귀 검사 |
 | `docs/sessions.md` | 회차, 녹음, 진도, 수업 정리 |
 | `docs/mcp.md` | `folio mcp`, Claude 패널의 제안 단계, 자료 읽기 |
-| `docs/lms.md` | GIST LMS 읽기와 제안함 |
+| `docs/lms.md` | GIST LMS 읽기와 LMS 탭 |
 | `docs/tex.md` | TeX 엔진 Tectonic |
 | `docs/release.md` | 버전, 패치 노트, 릴리스, 설치 |
 | `docs/ci.md` | CI 작업, 검사 경로, 빌드 캐시 |
@@ -126,7 +126,7 @@ FolioGen  ->  FolioActions   (액션 목록과 CLI 명령, 명령 트리를 쓴�
 | 앱 링크 `AppLink` | 앱 안의 모든 대상을 가리키는 `folio://` 주소와 종류 표(`AppLink.Kind`). 모든 이동이 `\.openLink`로 간다 | 있음 |
 | 화면 계약 `ScreenView` | 주소 하나를 그리는 화면과 세 폭(1440·720·390) 검사 | 있음 |
 | 칸 배치 `PaneLayout` | 탭 하나의 칸과 접기 규칙, 회차 배치 기억, 이름 붙인 배치 | 있음(#62) |
-| 제안 `ActionProposal` | 승인하면 실행할 액션과 그 ID, 적용 기록, 충돌 사본 합치기 | 있음(Claude 패널). 나머지 쓰임은 #90 |
+| 제안 `ActionProposal`, `Proposal` | 승인하면 실행할 액션과 그 ID, 적용 기록, 충돌 사본 합치기, 승인 화면의 종류·묶음·표시 | 있음(Claude 패널, LMS 탭, 폴더 정리). 패널의 거절은 #515, 파일 분류와 정보 추출은 #90 |
 | 파일 보기 렌더러 | 형식 판단(`MaterialFormat`)과 형식별 보기(`FileView`) | 있음 |
 | 파일 분류 `FileRule` | 파일 이름으로 종류를 읽는 규칙 표와 과제 종류 표 | 있음 |
 | 단축키 | 명령마다 한 번 등록하는 단축키 표 | #116 |

@@ -27,7 +27,7 @@ struct LinkTarget: ParsableArguments {
         if section != nil, !kind.hasPages { throw usage(.linkSectionOnlyCourse) }
         if kind.isPlace, !ref.isEmpty { throw usage(.linkPlaceTakesNoRef(kind.rawValue)) }
         switch kind {
-        case .today, .grades, .requirements, .people, .codes, .whatsNew, .proposals:
+        case .today, .grades, .requirements, .people, .codes, .whatsNew, .lms:
             return done(.place(kind), title: kind.rawValue)
         case .settings:
             return done(.settings(try page(AppLink.SettingsPage.self)), title: section ?? kind.rawValue)

@@ -20,7 +20,7 @@ extension CleanupCommand {
             if g.json { return try printJSON(plan) }
             say(
                 String(localized: .cleanupPlanTitle).styled(.bold) + "  "
-                    + String(localized: .cleanupPlanSummary(plan.moves.count, plan.moves.filter { $0.review != nil }.count)).styled(.dim))
+                    + String(localized: .cleanupPlanSummary(plan.moves.count, plan.proposals.filter { $0.flag != nil }.count)).styled(.dim))
             let groups = Dictionary(grouping: plan.moves) { $0.to.split(separator: "/").prefix(2).joined(separator: "/") }
             for group in groups.keys.sorted() {
                 let semester = group.split(separator: "/")[0]
@@ -37,7 +37,7 @@ extension CleanupCommand {
                 for m in groups[group]!.sorted(by: { $0.from < $1.from }) {
                     t.rows.append([
                         rel(m.from), rel(m.to), CleanupCommand.link(m),
-                        m.review.map { CleanupCommand.reasonText[$0]!.styled(.yellow) } ?? "",
+                        m.proposal.flag.map { $0.label.styled(.yellow) } ?? "",
                     ])
                 }
                 t.print()

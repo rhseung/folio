@@ -15,3 +15,12 @@ public struct PlannedMove: Codable, Sendable, Hashable {
         self.kind = kind
     }
 }
+
+extension PlannedMove {
+    public var proposal: Proposal {
+        let input = (try? JSONEncoder().encode(self)).flatMap { try? JSONDecoder().decode(JSONValue.self, from: $0) } ?? .null
+        return Proposal(
+            kind: .cleanupMove, source: .cleanup(self), action: ActionProposal(command: "cleanup apply", input: ["moves": [input]]),
+            flag: review.map(ProposalFlag.review))
+    }
+}

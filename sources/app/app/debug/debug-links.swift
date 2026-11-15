@@ -30,7 +30,7 @@ import Foundation
         case .assignment: return file.assignments.first.map { AppLink(.assignment, $0.id) }
         case .recording: return file.recordings.first.map { AppLink(.recording, $0.id) }
         case .problemSet: return file.problemSets.first.map { AppLink(.problemSet, $0.id) }
-        case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals: return .place(kind)
+        case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .lms: return .place(kind)
         case .semester, .card, .person: return nil
         }
     }

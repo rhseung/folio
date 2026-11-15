@@ -914,116 +914,6 @@
         }
       }
     },
-    "cleanup.reason.guessed-exam": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "대상 시험 추정"
-          }
-        }
-      }
-    },
-    "cleanup.reason.guessed-folder": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "위치 추정"
-          }
-        }
-      }
-    },
-    "cleanup.reason.guessed-number": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과제 번호 추정"
-          }
-        }
-      }
-    },
-    "cleanup.reason.guessed-origin": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "직접 만든 것인지 추정"
-          }
-        }
-      }
-    },
-    "cleanup.reason.guessed-week": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "주차 추정"
-          }
-        }
-      }
-    },
-    "cleanup.reason.name-collision": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이름 충돌"
-          }
-        }
-      }
-    },
-    "cleanup.reason.unknown-file": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "분류 불명"
-          }
-        }
-      }
-    },
-    "cleanup.reason.unknown-folder": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "대응 폴더 없음"
-          }
-        }
-      }
-    },
-    "cleanup.reason.unknown-number": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과제 번호 모름"
-          }
-        }
-      }
-    },
-    "cleanup.reason.unknown-week": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "주차 모름"
-          }
-        }
-      }
-    },
     "common.count": {
       "extractionState": "manual",
       "localizations": {
@@ -6608,6 +6498,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "  지각 규칙  %@"
+          }
+        }
+      }
+    },
+    "proposal.list.header.chat": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화"
+          }
+        }
+      }
+    },
+    "proposal.list.header.change": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "변경"
+          }
+        }
+      }
+    },
+    "proposal.list.header.command": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "명령"
+          }
+        }
+      }
+    },
+    "proposal.abstract": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude 대화에서 승인을 기다리는 제안"
           }
         }
       }

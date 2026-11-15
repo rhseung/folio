@@ -4,7 +4,7 @@ import Foundation
 
 // 읽기 선언이 받는 맥락이다. 액션의 맥락을 감싸 쓰기를 열지 않는다.
 public final class ReadContext {
-    private let base: ActionContext
+    let base: ActionContext
 
     public init(_ base: ActionContext) { self.base = base }
 

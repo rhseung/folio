@@ -58,6 +58,17 @@ struct AppLinkTests {
         #expect(AppLink(string: "folio://course/\(id.uuidString)/overview") == .course(id))
     }
 
+    @Test func lmsRowsArePathsAndTheOldProposalsAddressOpensTheLMSTab() {
+        #expect(AppLink.lms(nil) == .place(.lms))
+        #expect(AppLink.lms(.classroom(27967)).string == "folio://lms/27967")
+        #expect(AppLink(string: "FOLIO://LMS/27967") == .lms(.classroom(27967)))
+        #expect(AppLink(string: "folio://proposals") == .place(.lms))
+        #expect(AppLink(string: "folio://lms/0") == nil)
+        #expect(AppLink(string: "folio://lms/graph") == nil)
+        #expect(AppLink(string: "folio://lms/27967/1") == nil)
+        #expect(AppLink.lms(.classroom(1)).withoutAnchor != AppLink.lms(nil))
+    }
+
     @Test func settingsTabsArePathsLikeACoursesPages() {
         #expect(AppLink.settings(.claude).string == "folio://settings/claude")
         #expect(AppLink.settings(nil) == .place(.settings))

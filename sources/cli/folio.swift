@@ -28,7 +28,10 @@ struct Folio: ParsableCommand {
                 subcommands: [MaterialCommand.self, NoteCommand.self, SearchCommand.self, LinkCommand.self, OpenCommand.self]),
             CommandGroup(
                 name: String(localized: .folioGroupSetup),
-                subcommands: [SemesterCommand.self, CourseCommand.self, CatalogCommand.self, SettingsCommand.self, LMSCommand.self]),
+                subcommands: [
+                    SemesterCommand.self, CourseCommand.self, CatalogCommand.self, SettingsCommand.self, LMSCommand.self,
+                    ProposalCommand.self,
+                ]),
             CommandGroup(
                 name: String(localized: .folioGroupTools),
                 subcommands: [
