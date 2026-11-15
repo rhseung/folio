@@ -64,11 +64,7 @@ struct AssignmentsView: View {
                 .symbolEffect(.bounce, value: a.status)
                 .contentShape(.rect)
         }
-        .menuStyle(.button)
-        .menuIndicator(.hidden)
-        // borderless 메뉴는 라벨 이미지를 컨트롤의 크기와 색으로 다시 그리고 라벨의 글꼴과 색을 무시하므로,
-        // ChoiceMenu처럼 plain으로 둔다.
-        .buttonStyle(.plain).pointingHand()
+        .menuButton(indicator: .hidden)
         .fixedSize()
         .help(Text(.assignmentsStatusHelp(a.status.label)))
         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
@@ -99,8 +95,8 @@ struct AssignmentsView: View {
             Button(.assignmentsSuggestSubmitted) { model.setStatus(a, .submitted) }.buttonStyle(.pointing(.bordered))
         }
         if let score = row.score {
-            Chip(score, tone: .accent).sensitive()
+            Badge(score, tone: .accent).sensitive()
         }
-        if let chip = model.dueChip(a, now: now) { Chip(chip.text, tone: chip.tone) }
+        if let chip = model.dueChip(a, now: now) { Badge(chip.text, tone: chip.tone) }
     }
 }

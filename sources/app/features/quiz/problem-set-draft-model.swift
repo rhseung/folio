@@ -22,9 +22,9 @@ final class ProblemSetDraftModel {
         course.file.materials.filter { $0.isPDF && $0.status != .ignored }.sorted { $0.path < $1.path }
     }
 
-    var pdfOptions: [PickOption<UUID?>] {
-        [PickOption(id: UUID?.none, title: String(localized: .commonNone))]
-            + pdfs.map { PickOption(id: Optional($0.id), title: ($0.path as NSString).lastPathComponent, detail: $0.path) }
+    var pdfOptions: [SelectOption<UUID?>] {
+        [SelectOption(id: UUID?.none, label: String(localized: .commonNone))]
+            + pdfs.map { SelectOption(id: Optional($0.id), label: ($0.path as NSString).lastPathComponent, detail: $0.path) }
     }
 
     var parsed: [String] { ProblemSet.numbers(from: numbers) }

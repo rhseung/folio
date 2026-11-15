@@ -51,7 +51,7 @@ struct ProblemSetsView: View {
                     } label: {
                         Image(systemName: "ellipsis")
                     }
-                    .menuStyle(.button).menuIndicator(.hidden).buttonStyle(.borderless).pointingHand().fixedSize()
+                    .menuButton(tinted: true, indicator: .hidden).fixedSize()
                 }
             }
         ) {

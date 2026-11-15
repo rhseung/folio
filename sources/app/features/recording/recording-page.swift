@@ -248,7 +248,7 @@ struct RecordingPage: View {
                 ForEach([1.0, 1.25, 1.5, 1.75, 2.0], id: \.self) { rate in Button(String(format: "%gx", rate)) { player.rate = Float(rate) }
                 }
             }
-            .menuStyle(.button).buttonStyle(.borderless).pointingHand().fixedSize()
+            .menuButton(tinted: true).fixedSize()
             .help(Text(.recordingRate))
         }
         .buttonStyle(.ghost)

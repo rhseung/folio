@@ -22,7 +22,7 @@ struct ExamPlanCard: View {
             ForEach(Array(items.enumerated()), id: \.element.id) { i, item in
                 let on = model.done.contains(item.id)
                 CardRow {
-                    CheckCircle(on: on) { model.toggle(item.id) }.help(Text(on ? .examsPlanUndo : .examsPlanCheck))
+                    Checkbox(isOn: on) { model.toggle(item.id) }.help(Text(on ? .examsPlanUndo : .examsPlanCheck))
                     Text(model.dayLabel(items, at: i))
                         .font(Theme.Typeface.caption.weight(item.day == today ? .semibold : .regular)).monospacedDigit()
                         .foregroundStyle(
@@ -55,9 +55,9 @@ struct ExamPlanCard: View {
                 }
             }
             CardRow(last: true) {
-                DateChip(date: $day, showsTime: false)
+                DateChip(selection: $day, showsTime: false)
                 TextField(String(localized: .examsPlanPrompt), text: $title).textFieldStyle(.plain).onSubmit(add)
-                SearchSelect(selection: $unit, options: model.targets(exam))
+                Combobox(selection: $unit, options: model.targets(exam))
                 Button(.commonAdd, action: add).buttonStyle(.pointing(.bordered)).disabled(!model.canAdd(item))
             }
         }

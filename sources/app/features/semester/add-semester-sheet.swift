@@ -14,18 +14,16 @@ struct AddSemesterSheet: View {
 
     var body: some View {
         SheetForm(
-            title: String(localized: .semesterAddTitle), confirm: String(localized: .commonAdd), disabled: model.exists, note: model.note
+            title: String(localized: .semesterAddTitle), confirm: String(localized: .commonAdd), isDisabled: model.exists, note: model.note
         ) {
             FormRow(label: String(localized: .semesterAddYear)) {
-                ScrubField(
-                    value: Binding(get: { Double(model.year) }, set: { model.year = Int($0.rounded()) }), range: 2000...2100, step: 1,
-                    width: 88)
+                NumberField(value: $model.year, in: 2000...2100, width: 88)
             }
             FormRow(label: String(localized: .semesterAddTerm)) {
-                ChoiceMenu(selection: $model.term, options: Term.ordered.map { ($0, $0.label) })
+                Select(selection: $model.term, options: Term.ordered.map { ($0, $0.label) })
             }
-            FormRow(label: String(localized: .semesterStart)) { DateChip(date: $model.start, showsTime: false) }
-            FormRow(label: String(localized: .semesterEnd), last: true) { DateChip(date: $model.end, showsTime: false) }
+            FormRow(label: String(localized: .semesterStart)) { DateChip(selection: $model.start, showsTime: false) }
+            FormRow(label: String(localized: .semesterEnd), last: true) { DateChip(selection: $model.end, showsTime: false) }
         } onConfirm: {
             created(model.add())
             dismiss()

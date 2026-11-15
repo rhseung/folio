@@ -79,7 +79,7 @@ struct SessionCard: View {
                     // 강조색 테두리와 타일만 눈에 보이는 표시라서 VoiceOver에는 낱말이 필요하다.
                     .accessibilityValue(live ? String(localized: .sessionsNow) : "")
                 SessionKindChip(kind: session.kind)
-                if let late { Chip(late.label, tone: late.value == .late ? .warning : late.value == .absent ? .danger : .plain) }
+                if let late { Badge(late.label, tone: late.value == .late ? .warning : late.value == .absent ? .danger : .plain) }
                 let gaps = model.leftGaps(session, in: file, now: now)
                 if !gaps.isEmpty {
                     Button {

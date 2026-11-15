@@ -15,7 +15,7 @@ struct CardEditorSheet: View {
 
     var body: some View {
         SheetForm(
-            title: model.title, confirm: String(localized: .commonSave), disabled: !model.draft.isValid, carded: false,
+            title: model.title, confirm: String(localized: .commonSave), isDisabled: !model.draft.isValid, carded: false,
             deleteTitle: model.deleteTitle,
             onDelete: {
                 model.remove {
@@ -26,23 +26,23 @@ struct CardEditorSheet: View {
         ) {
             Card {
                 FormRow(label: String(localized: .quizUnit)) {
-                    SearchSelect(selection: $model.draft.unitId, options: model.unitOptions(units))
+                    Combobox(selection: $model.draft.unitId, options: model.unitOptions(units))
                 }
                 FormRow(label: String(localized: .quizCategory)) {
-                    ChoiceMenu(selection: $model.draft.category, options: CardCategory.allCases.map { ($0, $0.label) })
+                    Select(selection: $model.draft.category, options: CardCategory.allCases.map { ($0, $0.label) })
                 }
                 FormRow(label: String(localized: .quizCardType), last: true) {
-                    ChoiceMenu(selection: $model.draft.type, options: CardType.editable.map { ($0, $0.label) })
+                    Select(selection: $model.draft.type, options: CardType.editable.map { ($0, $0.label) })
                 }
             }
-            FormTextArea(label: String(localized: .quizCardPrompt), text: $model.draft.prompt)
+            TextArea(label: String(localized: .quizCardPrompt), text: $model.draft.prompt)
             switch model.draft.type {
             case .choice:
-                FormTextArea(
+                TextArea(
                     label: String(localized: .quizCardOptions), detail: String(localized: .quizCardOnePerLine), text: $model.draft.options)
                 Card {
                     FormRow(label: String(localized: .quizCardAnswer), last: true) {
-                        ChoiceMenu(
+                        Select(
                             selection: $model.draft.answer,
                             options: [("", String(localized: .quizCardChoose))] + model.draft.optionList.map { ($0, $0) })
                     }
@@ -50,15 +50,15 @@ struct CardEditorSheet: View {
             case .trueFalse:
                 Card {
                     FormRow(label: String(localized: .quizCardAnswer), last: true) {
-                        ChoiceMenu(
+                        Select(
                             selection: $model.draft.answer,
                             options: [("", String(localized: .quizCardChoose))] + QuizCard.trueFalseOptions.map { ($0, $0) })
                     }
                 }
             default:
-                FormTextArea(label: String(localized: .quizModelAnswer), text: $model.draft.answer)
+                TextArea(label: String(localized: .quizModelAnswer), text: $model.draft.answer)
             }
-            FormTextArea(
+            TextArea(
                 label: String(localized: .quizCardRubric), detail: String(localized: .quizCardRubricDetail), text: $model.draft.rubric)
         } onConfirm: {
             guard model.saveCard() else { return }

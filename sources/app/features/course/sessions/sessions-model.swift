@@ -111,7 +111,7 @@ final class SessionsModel {
 
     private func clock(_ start: Date, end: Date?) -> String {
         let minute = { (d: Date) in Self.minute(of: d, in: self.calendar) }
-        return end.map { TimeMenu.range(minute(start), minute($0)) } ?? TimeMenu.label(minute(start))
+        return end.map { TimePicker.range(minute(start), minute($0)) } ?? TimePicker.label(minute(start))
     }
 
     static func minute(of date: Date, in calendar: Calendar) -> Int {
@@ -119,7 +119,7 @@ final class SessionsModel {
     }
 
     static func weekdayTime(_ date: Date, in calendar: Calendar) -> String {
-        date.formatted(.dateTime.weekday()) + " " + TimeMenu.label(minute(of: date, in: calendar))
+        date.formatted(.dateTime.weekday()) + " " + TimePicker.label(minute(of: date, in: calendar))
     }
 
     func examLine(_ exam: Exam, _ date: Date) -> String {

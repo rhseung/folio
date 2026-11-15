@@ -140,9 +140,7 @@ struct MaterialsView: View {
             } label: {
                 Image(systemName: "ellipsis")
             }
-            .menuStyle(.button)
-            .buttonStyle(.borderless).pointingHand()
-            .menuIndicator(.hidden)
+            .menuButton(tinted: true, indicator: .hidden)
             .fixedSize()
         }
         .padding(.leading, CGFloat(depth) * Self.indent)
@@ -184,7 +182,7 @@ struct MaterialsView: View {
         .fileDrag(model.fileURL(m.path))
         Spacer()
         if missing {
-            Chip(String(localized: .materialsMissing), tone: .danger)
+            Badge(String(localized: .materialsMissing), tone: .danger)
             Button(.materialsRelink) { model.relinking = m.id }.buttonStyle(.ghost)
             Button(.materialsUntrack) { model.disconnecting = m }.buttonStyle(.ghost).tint(Theme.Palette.danger)
         } else {
@@ -202,9 +200,7 @@ struct MaterialsView: View {
             } label: {
                 Image(systemName: "ellipsis")
             }
-            .menuStyle(.button)
-            .buttonStyle(.borderless).pointingHand()
-            .menuIndicator(.hidden)
+            .menuButton(tinted: true, indicator: .hidden)
             .fixedSize()
         }
     }
@@ -233,7 +229,7 @@ struct MaterialsView: View {
                             Image(systemName: "arrow.turn.down.right").foregroundStyle(Theme.Palette.textTertiary)
                             Text(model.target(group))
                                 .font(Theme.Typeface.mono).lineLimit(1)
-                            if let reason = group[0].review { Chip(reason.label, tone: .warning) }
+                            if let reason = group[0].review { Badge(reason.label, tone: .warning) }
                         }
                     }
                     Spacer()

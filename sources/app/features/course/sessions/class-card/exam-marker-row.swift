@@ -19,7 +19,7 @@ struct ExamMarkerRow: View {
                 Capsule().fill(Theme.Palette.danger.opacity(Theme.Opacity.toneEdge)).frame(minWidth: Theme.Space.xl, maxWidth: .infinity)
                     .frame(height: Theme.Size.line)
                 if let days = model.examDays(exam, now: model.workspace.now) {
-                    Chip(DDay.text(days), tone: .danger, solid: true)
+                    Badge(DDay.text(days), tone: .danger, solid: true)
                 }
             }
             .foregroundStyle(Theme.Palette.danger)

@@ -66,7 +66,7 @@ struct TodayView: View {
                                 }
                                 ViewThatFits(in: .horizontal) {
                                     HStack(spacing: Theme.Space.xs) {
-                                        ForEach(item.labels, id: \.self) { Chip($0) }
+                                        ForEach(item.labels, id: \.self) { Badge($0) }
                                     }
                                     Text(item.line).font(Theme.Typeface.caption)
                                         .foregroundStyle(Theme.Palette.textSecondary).lineLimit(1).truncationMode(.tail)
@@ -92,7 +92,7 @@ struct TodayView: View {
     @ViewBuilder func agenda(_ summary: TodaySummary) -> some View {
         if summary.exams.isEmpty && summary.deadlines.isEmpty {
             EmptyCard(
-                symbol: "checkmark", tone: .success, title: String(localized: .todayAgendaEmpty),
+                systemImage: "checkmark", tone: .success, title: String(localized: .todayAgendaEmpty),
                 detail: String(localized: .todayAgendaEmptyDetail(model.examDays)))
         } else {
             Fold(wideFrom: Self.pairWidth) {
@@ -106,7 +106,8 @@ struct TodayView: View {
         let exams = summary.exams
         return Block(String(localized: .todayExams), note: String(localized: .todayExamsNote(model.examDays, exams.count))) {
             if exams.isEmpty {
-                EmptyCard(symbol: "calendar", title: String(localized: .todayExamsEmpty), detail: String(localized: .todayExamsEmptyDetail))
+                EmptyCard(
+                    systemImage: "calendar", title: String(localized: .todayExamsEmpty), detail: String(localized: .todayExamsEmptyDetail))
             } else {
                 Card {
                     ForEach(exams, id: \.exam.id) { examRow($0) }
@@ -118,7 +119,7 @@ struct TodayView: View {
     func examRow(_ item: TodaySummary.ExamItem) -> some View {
         HStack(spacing: Theme.Space.m) {
             Text(model.dDay(item)).font(Theme.Typeface.figureCompact).foregroundStyle(
-                DdayChip.heat(item.dDay, model.workspace.settings.urgency)
+                DdayBadge.heat(item.dDay, model.workspace.settings.urgency)
             )
             .frame(width: Theme.Size.ddayColumn, alignment: .leading)
             VStack(alignment: .leading, spacing: Theme.Space.xs) {
@@ -151,7 +152,7 @@ struct TodayView: View {
         ) {
             if summary.deadlines.isEmpty {
                 EmptyCard(
-                    symbol: "checkmark", tone: .success, title: String(localized: .todayDeadlinesEmpty),
+                    systemImage: "checkmark", tone: .success, title: String(localized: .todayDeadlinesEmpty),
                     detail: String(localized: .todayDeadlinesEmptyDetail))
             } else {
                 Card {
@@ -182,7 +183,7 @@ struct TodayView: View {
                 }
                 Spacer(minLength: Theme.Space.s)
                 if let tone {
-                    Chip(row.due, tone: tone, solid: row.urgency == .urgent).monospacedDigit()
+                    Badge(row.due, tone: tone, solid: row.urgency == .urgent).monospacedDigit()
                 } else {
                     Text(row.due).font(Theme.Typeface.caption).monospacedDigit().foregroundStyle(Theme.Palette.textTertiary)
                         .fixedSize().padding(Theme.Inset.tag)
@@ -225,10 +226,10 @@ struct TodayView: View {
             }
             if left == 0 {
                 if done > 0 {
-                    EmptyCard(symbol: "checkmark", tone: .success, title: String(localized: .todayReviewsDone))
+                    EmptyCard(systemImage: "checkmark", tone: .success, title: String(localized: .todayReviewsDone))
                 } else {
                     EmptyCard(
-                        symbol: CourseMark.defaultIcon, title: String(localized: .todayReviewsEmpty),
+                        systemImage: CourseMark.defaultIcon, title: String(localized: .todayReviewsEmpty),
                         detail: String(localized: .todayReviewsEmptyDetail))
                 }
             } else {
@@ -279,7 +280,7 @@ struct TodayView: View {
             String(localized: .todayReviewsNotes), note: notes.isEmpty ? nil : String(localized: .todayReviewsNotesNote(notes.count))
         ) {
             if notes.isEmpty {
-                EmptyCard(symbol: "checkmark", tone: .success, title: String(localized: .todayReviewsNotesEmpty))
+                EmptyCard(systemImage: "checkmark", tone: .success, title: String(localized: .todayReviewsNotesEmpty))
             } else {
                 Card {
                     ForEach(Array(groups.enumerated()), id: \.element.id) { i, group in
@@ -347,7 +348,7 @@ struct TodayView: View {
         let groups = model.unitGroups(queue)
         return Block(String(localized: .todayReviewsUnits), note: queue.isEmpty ? nil : "\(queue.count)") {
             if queue.isEmpty {
-                EmptyCard(symbol: "checkmark", tone: .success, title: String(localized: .todayReviewsUnitsEmpty))
+                EmptyCard(systemImage: "checkmark", tone: .success, title: String(localized: .todayReviewsUnitsEmpty))
             } else {
                 Card {
                     ForEach(Array(groups.enumerated()), id: \.element.id) { i, group in

@@ -12,17 +12,17 @@ struct NewNoteSheet: View {
     }
 
     var body: some View {
-        SheetForm(title: String(localized: .notesNewSheet), confirm: String(localized: .commonAdd), disabled: !model.canAdd) {
+        SheetForm(title: String(localized: .notesNewSheet), confirm: String(localized: .commonAdd), isDisabled: !model.canAdd) {
             FormRow(label: String(localized: .notesFieldTitle)) {
                 InlineField(String(localized: .notesFieldTitleExample), text: $model.title)
             }
             FormRow(
                 label: String(localized: .notesFieldFormat), detail: model.format == .tex ? String(localized: .notesFieldFormatTex) : nil
             ) {
-                Segmented(selection: $model.format, options: model.formatOptions)
+                SegmentedControl(selection: $model.format, options: model.formatOptions)
             }
             FormRow(label: String(localized: .notesFieldKind), last: model.link == .none) {
-                ChoiceMenu(selection: $model.kind, options: model.kindOptions)
+                Select(selection: $model.kind, options: model.kindOptions)
             }
             switch model.link {
             case .session:
@@ -30,16 +30,16 @@ struct NewNoteSheet: View {
                     label: String(localized: .notesFieldSession), detail: String(localized: .notesFieldSessionDetail(model.kind.label)),
                     last: true
                 ) {
-                    SearchSelect(selection: $model.sessionId, options: model.sessionOptions)
+                    Combobox(selection: $model.sessionId, options: model.sessionOptions)
                 }
             case .exam:
                 FormRow(label: String(localized: .notesFieldExam), last: true) {
-                    SearchSelect(selection: $model.examId, options: model.examOptions)
+                    Combobox(selection: $model.examId, options: model.examOptions)
                 }
             case .units:
                 FormRow(label: String(localized: .notesFieldUnits), last: true) {
-                    SearchMultiSelect(
-                        selection: $model.unitIds, options: model.unitOptions, placeholder: String(localized: .commonNone),
+                    MultiCombobox(
+                        selection: $model.unitIds, options: model.unitOptions, prompt: String(localized: .commonNone),
                         subtree: model.unitSubtree)
                 }
             case .none:

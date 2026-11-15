@@ -39,7 +39,7 @@ struct CatalogEditor: View {
                 TextField(String(localized: .letterGradesSymbol), text: $g.symbol).pill(width: Self.symbolWidth, alignment: .center)
                 TextField("—", value: $g.points, format: .number).pill(width: Self.pointsWidth)
             }
-            let modes = ChoiceMenu(
+            let modes = Select(
                 selection: Binding(get: { Self.canonical(g.modes) }, set: { g.modes = $0 }), options: Self.modeOptions(g.modes))
             if wide {
                 fields

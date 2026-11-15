@@ -24,7 +24,7 @@ struct RecordingCapsule<Idle: View>: View {
                         mark
                         if model.paused { stop.transition(.opacity.combined(with: .scale(scale: 0.6))) }
                     }
-                    .buttonStyle(CapsuleIconStyle())
+                    .controlSize(.small)
                     .padding(.leading, Theme.Space.s)
                     .padding(.trailing, Theme.Space.m)
                 }
@@ -95,33 +95,4 @@ struct RecordingCapsule<Idle: View>: View {
             .help(Text(.recordingStop))
             .disabled(model.settling)
     }
-}
-
-private struct CapsuleIconStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        CapsuleIcon(configuration: configuration)
-    }
-}
-
-private struct CapsuleIcon: View {
-    let configuration: ButtonStyleConfiguration
-    @Environment(\.isEnabled) private var isEnabled
-    @State private var hovering = false
-
-    var body: some View {
-        configuration.label.labelStyle(.iconOnly)
-            .font(Theme.Typeface.bodyStrong)
-            .foregroundStyle(Theme.Palette.chromeIcon)
-            .frame(width: Self.side, height: Self.side)
-            .background {
-                Circle().fill(Theme.Palette.text).opacity(
-                    configuration.isPressed ? Theme.Opacity.pressed : hovering && isEnabled ? Theme.Opacity.hover : 0)
-            }
-            .frame(height: Theme.Size.toolbarButton)
-            .contentShape(.rect)
-            .opacity(isEnabled ? 1 : Theme.Opacity.disabled)
-            .onHover { hovering = $0 }
-    }
-
-    static let side = Theme.Size.toolbarButton - Theme.Space.s
 }

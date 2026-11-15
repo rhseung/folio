@@ -108,7 +108,7 @@ struct AssignmentsModelTests {
             workspace: workspace, course: course,
             assignment: try #require(workspace.course(linearAlgebra)?.file.assignments.first { $0.id == id }))
         model.load()
-        #expect(model.targetOptions.map(\.title) == ["없음", "Lab 전체", "Lab 1", "Lab 2"])
+        #expect(model.targetOptions.map(\.label) == ["없음", "Lab 전체", "Lab 1", "Lab 2"])
         model.pick(.group("Lab"))
         #expect(model.targetComponents.count == 2)
         #expect(model.maxes[a] == "20")
@@ -179,7 +179,7 @@ struct ScoreSourceModelTests {
             workspace: workspace, course: course,
             entry: ScoreEntry(device: workspace.device, at: .now, componentId: homework, title: "", score: 0, max: 10))
         let options = model.sourceOptions
-        #expect(options.map(\.title) == ["없음", "HW 3", "쪽지시험"])
+        #expect(options.map(\.label) == ["없음", "HW 3", "쪽지시험"])
         #expect(options.map(\.section) == [nil, "과제", "시험"])
         model.pick(.assignment(assignment))
         #expect(model.title == "HW 3")
@@ -195,8 +195,8 @@ struct ScoreSourceModelTests {
         let next = ScoreEntryModel(
             workspace: workspace, course: try #require(workspace.course(linearAlgebra)),
             entry: ScoreEntry(device: workspace.device, at: .now, componentId: homework, title: "", score: 0, max: 10))
-        #expect(next.sourceOptions.first { $0.id == .assignment(assignment) }?.disabled == true)
-        #expect(next.sourceOptions.first { $0.id == .exam(exam) }?.disabled == false)
+        #expect(next.sourceOptions.first { $0.id == .assignment(assignment) }?.isDisabled == true)
+        #expect(next.sourceOptions.first { $0.id == .exam(exam) }?.isDisabled == false)
     }
 
     @Test func savingTheSheetKeepsWhatTheGradesPageChanged() throws {

@@ -92,7 +92,7 @@ final class ExamsModel {
 
     func when(_ exam: Exam) -> (date: String, time: String?) {
         guard let start = exam.start else { return (String(localized: .examsNoDate), nil) }
-        let time = exam.end.map { TimeMenu.range(minute(start), minute($0)) } ?? TimeMenu.label(minute(start))
+        let time = exam.end.map { TimePicker.range(minute(start), minute($0)) } ?? TimePicker.label(minute(start))
         return (start.formatted(.dateTime.month().day()), start.formatted(.dateTime.weekday()) + " " + time)
     }
 
@@ -172,12 +172,12 @@ final class ExamsModel {
         item.target.flatMap { target in course.file.units.first { $0.id == target.id }?.title }
     }
 
-    func targets(_ exam: Exam) -> [PickOption<UUID?>] {
+    func targets(_ exam: Exam) -> [SelectOption<UUID?>] {
         let outline = UnitTree.outline(course.file.units)
         let scoped = outline.filter { exam.scopeUnitIds.contains($0.unit.id) }
-        return [PickOption(id: UUID?.none, title: String(localized: .examsPlanNoTarget))]
+        return [SelectOption(id: UUID?.none, label: String(localized: .examsPlanNoTarget))]
             + (scoped.isEmpty ? outline : scoped).map {
-                PickOption(id: Optional($0.unit.id), title: $0.unit.title, depth: scoped.isEmpty ? $0.depth : 0)
+                SelectOption(id: Optional($0.unit.id), label: $0.unit.title, depth: scoped.isEmpty ? $0.depth : 0)
             }
     }
 

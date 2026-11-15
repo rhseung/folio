@@ -14,7 +14,7 @@ struct MathPalette: View {
             HStack(spacing: Theme.Space.s) {
                 Text(.notesMathSyntax).foregroundStyle(Theme.Palette.textSecondary)
                 Spacer(minLength: Theme.Space.s)
-                Segmented(selection: $model.syntax, options: MathSyntax.allCases.map { ($0, $0.label) }, compact: true)
+                SegmentedControl(selection: $model.syntax, options: MathSyntax.allCases.map { ($0, $0.label) }, size: .small)
                     .disabled(model.fence != nil)
             }
             .padding(Theme.Space.m)
@@ -32,14 +32,14 @@ struct MathPalette: View {
         .font(Theme.Typeface.body)
     }
 
-    // 분류가 여덟 개라서 `Segmented`(2-4개)에 들어가지 않는다.
+    // 분류가 여덟 개라서 한 줄 트랙에 들어가지 않는다.
     var tabs: some View {
-        ChipTabs(
+        SegmentedControl(
             selection: Binding {
                 model.shown
             } set: {
                 model.category = $0
-            }, options: model.categories.map { ($0, $0.label) })
+            }, options: model.categories.map { ($0, $0.label) }, layout: .flow)
     }
 
     var grid: some View {

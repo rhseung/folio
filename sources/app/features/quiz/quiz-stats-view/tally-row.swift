@@ -11,7 +11,7 @@ struct TallyRow: View {
         CardRow(last: last) {
             Text(title).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
             Text(items(tally.items)).foregroundStyle(Theme.Palette.textTertiary).frame(width: Theme.Size.numberColumn, alignment: .trailing)
-            Meter(value: tally.accuracy ?? 0).frame(width: Theme.Size.meter)
+            ProgressBar(value: tally.accuracy ?? 0).frame(width: Theme.Size.meter)
             Text(tally.accuracyText).frame(width: Theme.Size.percentColumn, alignment: .trailing)
             Text(.quizOpenCount(tally.open)).foregroundStyle(tally.open > 0 ? Theme.Palette.danger : Theme.Palette.textTertiary).frame(
                 width: Theme.Size.numberColumn, alignment: .trailing)

@@ -14,7 +14,7 @@ struct StudyTimeBlock: View {
         let chart = model.chart
         Block(String(localized: .todayStudyTitle), note: String(localized: .todayStudyNote)) {
             if model.bars.isEmpty {
-                EmptyCard(symbol: "clock", title: String(localized: .todayStudyEmpty))
+                EmptyCard(systemImage: "clock", title: String(localized: .todayStudyEmpty))
             } else {
                 Card(padding: Theme.Space.xl) {
                     Fold(wideFrom: 480, spacing: Theme.Space.xxl, stackSpacing: Theme.Space.xl) {
@@ -80,10 +80,10 @@ struct StudyTimeBlock: View {
         let courses = model.perCourse(chart)
         let top = courses.first?.seconds ?? 1
         return VStack(alignment: .leading, spacing: Theme.Space.l) {
-            Figure(StudyTimeModel.todayLabel, StudyTimeModel.duration(chart.perDay[chart.today] ?? 0))
+            Stat(StudyTimeModel.todayLabel, StudyTimeModel.duration(chart.perDay[chart.today] ?? 0))
             HStack(spacing: Theme.Space.xl) {
-                Figure(String(localized: .todayStudyFortnight), StudyTimeModel.duration(chart.total), font: Theme.Typeface.figureSmall)
-                Figure(
+                Stat(String(localized: .todayStudyFortnight), StudyTimeModel.duration(chart.total), font: Theme.Typeface.figureSmall)
+                Stat(
                     String(localized: .todayStudyDays), String(localized: .todayStudyDayCount(chart.perDay.values.filter { $0 > 0 }.count)),
                     font: Theme.Typeface.figureSmall)
             }

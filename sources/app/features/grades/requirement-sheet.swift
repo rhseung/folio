@@ -12,7 +12,7 @@ struct RequirementSheet: View {
 
     var body: some View {
         SheetForm(
-            title: model.title, confirm: String(localized: .commonSave), disabled: model.draft.name.isEmpty, carded: false, width: 560,
+            title: model.title, confirm: String(localized: .commonSave), isDisabled: model.draft.name.isEmpty, carded: false, width: 560,
             deleteTitle: model.isNew ? nil : String(localized: .requirementsRemove), onDelete: { removing = true }
         ) {
             Block(String(localized: .requirementsFieldCategory)) {
@@ -24,11 +24,11 @@ struct RequirementSheet: View {
                         InlineField(String(localized: .requirementsFieldGroupExample), text: $model.draft.group)
                     }
                     FormRow(label: String(localized: .requirementsFieldParent)) {
-                        SearchSelect(selection: $model.draft.parentId, options: model.parentOptions)
+                        Combobox(selection: $model.draft.parentId, options: model.parentOptions)
                     }
                     FormRow(label: String(localized: .requirementsFieldProgram), detail: String(localized: .requirementsFieldProgramDetail))
                     {
-                        ChoiceMenu(selection: $model.draft.programId, options: model.programOptions)
+                        Select(selection: $model.draft.programId, options: model.programOptions)
                     }
                     FormRow(
                         label: String(localized: .requirementsFieldMajor), detail: String(localized: .requirementsFieldMajorDetail),
@@ -64,7 +64,7 @@ struct RequirementSheet: View {
                     }
                 }
             }
-            FormTextArea(
+            TextArea(
                 label: String(localized: .requirementsFieldRule),
                 text: Binding(get: { model.draft.rule ?? "" }, set: { model.draft.rule = $0.isEmpty ? nil : $0 }))
         } onConfirm: {

@@ -26,7 +26,7 @@ struct TargetCourseMenu<More: View>: View {
                 Image(systemName: "chevron.down").font(Theme.Glyph.small).accessibilityHidden(true)
             }
         }
-        .menuStyle(.button).buttonStyle(SoftButtonStyle(strong: strong)).menuIndicator(.hidden)
+        .menuStyle(.button).buttonStyle(.secondary(strong: strong)).menuIndicator(.hidden)
         .fixedSize()
     }
 }

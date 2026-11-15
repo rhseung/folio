@@ -16,12 +16,12 @@ final class ProfileModel {
 
     var rule: GraduationRule { workspace.transcript.graduation }
 
-    var codeOptions: [PickOption<UUID>] {
+    var codeOptions: [SelectOption<UUID>] {
         workspace.catalog.codes.sorted { ($0.prefix, $0.program) < ($1.prefix, $1.program) }
-            .map { PickOption(id: $0.id, title: "\($0.prefix) \($0.department)", detail: $0.program) }
+            .map { SelectOption(id: $0.id, label: "\($0.prefix) \($0.department)", detail: $0.program) }
     }
 
-    var addableOptions: [PickOption<UUID>] { codeOptions.filter { o in !rule.programs.contains { $0.codeId == o.id } } }
+    var addableOptions: [SelectOption<UUID>] { codeOptions.filter { o in !rule.programs.contains { $0.codeId == o.id } } }
 
     func update(_ change: (inout GraduationRule) -> Void) {
         var r = rule

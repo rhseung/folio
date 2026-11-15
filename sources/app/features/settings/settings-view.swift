@@ -115,9 +115,9 @@ private struct GeneralSettings: View {
         Block(String(localized: .settingsScreenAndFolder)) {
             Card {
                 FormRow(label: String(localized: .settingsAppearance), device: true) {
-                    Segmented(
+                    SegmentedControl(
                         selection: $appearance, options: Appearance.allCases.map { ($0, $0.label) },
-                        symbols: Appearance.allCases.map(\.symbol))
+                        systemImages: Appearance.allCases.map(\.symbol))
                 }
                 FormRow(label: String(localized: .settingsGistFolder), detail: model.folderPath, device: true) {
                     Button(.settingsPickFolder) { pickingFolder = true }
@@ -146,7 +146,7 @@ private struct PaneLayoutSettings: View {
             VStack(alignment: .leading, spacing: Theme.Space.s) {
                 Card {
                     FormRow(label: String(localized: .settingsClassStartLayout), last: true) {
-                        ChoiceMenu(selection: $model.classStartPreset, options: model.classStartPresets.map { ($0.id, $0.title) })
+                        Select(selection: $model.classStartPreset, options: model.classStartPresets.map { ($0.id, $0.title) })
                     }
                 }
                 Card {
@@ -180,7 +180,7 @@ private struct PaneLayoutSettings: View {
             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                 HStack(spacing: Theme.Space.s) {
                     Text(preset.title).lineLimit(1)
-                    if preset.isBuiltIn { Chip(String(localized: .settingsPaneLayoutsBuiltIn)) }
+                    if preset.isBuiltIn { Badge(String(localized: .settingsPaneLayoutsBuiltIn)) }
                 }
                 Text(model.summary(of: preset)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
                     .lineLimit(1).truncationMode(.middle)
@@ -206,7 +206,7 @@ private struct PaneLayoutSettings: View {
             Image(systemName: "ellipsis").foregroundStyle(Theme.Palette.textSecondary)
                 .frame(width: Theme.Size.toolbarButton, height: Theme.Size.toolbarButton).contentShape(TouchTarget())
         }
-        .menuStyle(.button).menuIndicator(.hidden).buttonStyle(.borderless).pointingHand().fixedSize()
+        .menuButton(tinted: true, indicator: .hidden).fixedSize()
         .help(Text(.settingsPaneLayoutsMore))
         .accessibilityLabel(Text(.settingsPaneLayoutsMore))
     }
@@ -293,11 +293,11 @@ private struct BackupSettingsForm: View {
                     CardRow(last: i == shown.count - 1) {
                         Text(archive.day.description).monospacedDigit()
                         Spacer()
-                        SearchPicker(
-                            options: model.restoreOptions, pick: { restore($0, from: archive) },
+                        CommandList(
+                            options: model.restoreOptions, onSelect: { restore($0, from: archive) },
                             prompt: String(localized: .settingsRestoreCoursePrompt)
                         ) {
-                            ChipLabel(String(localized: .settingsRestoreCourse))
+                            SelectTrigger(String(localized: .settingsRestoreCourse))
                         }
                     }
                 }
@@ -336,7 +336,7 @@ private struct NoteSettingsForm: View {
                 let last = kind == Self.kinds.last
                 DisclosureRow(
                     label: String(localized: .settingsTemplateHeadings(Self.name(kind))),
-                    isOpen: Binding(get: { open.contains(kind) }, set: { if $0 { open.insert(kind) } else { open.remove(kind) } }),
+                    isExpanded: Binding(get: { open.contains(kind) }, set: { if $0 { open.insert(kind) } else { open.remove(kind) } }),
                     last: last
                 ) {
                     // 방금 더한 행이 입력할 때까지 남도록 빈 칸까지 담은 목록 그대로 쓴다.
@@ -354,9 +354,9 @@ private struct NoteSettingsForm: View {
         Block(
             title: String(localized: .settingsSnippets),
             trailing: {
-                Segmented(
+                SegmentedControl(
                     selection: Binding(get: { shown }, set: { snippets = $0 }),
-                    options: [(.latex, MathSyntax.latex.label), (.asciimath, MathSyntax.asciimath.label)], compact: true)
+                    options: [(.latex, MathSyntax.latex.label), (.asciimath, MathSyntax.asciimath.label)], size: .small)
             }
         ) {
             // 바꾸기 전까지 노트 편집기가 앱 기본값을 계속 받도록, 바꾼 뒤에만 저장한다.

@@ -29,7 +29,7 @@ struct ClaudeModelTests {
         model.failed = "질문"
         model.select(nil)
         #expect(model.status == nil && model.failed == nil && model.chatID == nil)
-        #expect(model.chatOptions.map(\.title) == ["새 대화"])
+        #expect(model.chatOptions.map(\.label) == ["새 대화"])
     }
 
     @Test func loadingACourseReadsItsChatsAndNotes() throws {

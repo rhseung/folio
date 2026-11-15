@@ -84,9 +84,9 @@ final class EditCourseModel {
         codes.insert(id, at: 0)
     }
 
-    var peopleOptions: [PickOption<UUID>] {
+    var peopleOptions: [SelectOption<UUID>] {
         workspace.catalog.people.sorted { $0.name < $1.name }.map {
-            PickOption(id: $0.id, title: $0.name, detail: [$0.role.label, $0.email].filter { !$0.isEmpty }.joined(separator: " · "))
+            SelectOption(id: $0.id, label: $0.name, detail: [$0.role.label, $0.email].filter { !$0.isEmpty }.joined(separator: " · "))
         }
     }
 

@@ -17,7 +17,7 @@ struct GradesView: View {
         Page {
             PageHeader(title: String(localized: .gradesTitle), subtitle: model.subtitle)
 
-            StatStrip(items: model.stats)
+            StatGroup(items: model.stats)
 
             UnfiledCoursesNotice(workspace: model.workspace)
 
@@ -35,14 +35,14 @@ struct GradesView: View {
                     Card {
                         if !model.programs.isEmpty {
                             FormRow(label: String(localized: .gradesGoalTarget), detail: model.goalNow) {
-                                ChoiceMenu(selection: $model.targetProgram, options: model.targetOptions)
+                                Select(selection: $model.targetProgram, options: model.targetOptions)
                             }
                         }
                         FormRow(label: String(localized: .gradesGoalGpa)) {
-                            ScrubField(value: $model.target, range: 0...model.maxPoints, step: 0.01, fractionLength: 2, width: 96)
+                            NumberField(value: $model.target, in: 0...model.maxPoints, step: 0.01, fractionLength: 2, width: 96)
                         }
                         FormRow(label: String(localized: .gradesGoalRemaining), detail: model.remainingDetail) {
-                            ScrubField(value: $model.remaining, range: 0...200, step: 1, width: 96)
+                            NumberField(value: $model.remaining, in: 0...200, step: 1, width: 96)
                         }
                         FormRow(label: String(localized: .gradesGoalNeed), detail: model.needDetail, last: true) {
                             Text(model.needText).rolling(model.needText)
@@ -79,11 +79,11 @@ struct GradesView: View {
                                     ViewThatFits(in: .horizontal) {
                                         HStack(spacing: Theme.Space.s) {
                                             Text(s.title).fontWeight(.semibold)
-                                            if inProgress { Chip(String(localized: .gradesEnrolled)) }
+                                            if inProgress { Badge(String(localized: .gradesEnrolled)) }
                                         }
                                         VStack(alignment: .leading, spacing: Theme.Space.xs) {
                                             Text(s.title).fontWeight(.semibold)
-                                            if inProgress { Chip(String(localized: .gradesEnrolled)) }
+                                            if inProgress { Badge(String(localized: .gradesEnrolled)) }
                                         }
                                     }
                                 }

@@ -26,9 +26,9 @@ struct ProfileCard: View {
             // 같은 과정이 두 번 나열되면 충돌하므로 위치로 구분한다.
             ForEach(Array(rule.programs.enumerated()), id: \.offset) { i, p in
                 FormRow(label: String(localized: .profileProgram(i + 1))) {
-                    SearchSelect(
+                    Combobox(
                         selection: Binding(get: { p.codeId }, set: { id in model.update { $0.programs[i].codeId = id } }), options: options)
-                    ChoiceMenu(
+                    Select(
                         selection: Binding(get: { p.kind }, set: { k in model.update { $0.programs[i].kind = k } }),
                         options: StudentProgram.Kind.allCases.map { ($0, $0.label) })
                     Button(.profileRemoveProgram, systemImage: "minus.circle") { model.update { $0.programs.remove(at: i) } }
@@ -37,7 +37,9 @@ struct ProfileCard: View {
                 .contextMenu { Button(.profileRemoveProgramMenu, role: .destructive) { model.update { $0.programs.remove(at: i) } } }
             }
             CardRow(last: true) {
-                SearchPicker(options: model.addableOptions, pick: { model.addProgram($0) }, prompt: String(localized: .profileCodeSearch)) {
+                CommandList(
+                    options: model.addableOptions, onSelect: { model.addProgram($0) }, prompt: String(localized: .profileCodeSearch)
+                ) {
                     Label(.profileAddProgram, systemImage: "plus")
                 }
                 Spacer()

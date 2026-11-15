@@ -12,7 +12,8 @@ struct PolicySheet: View {
     var body: some View {
         let grades = model.grades
         SheetForm(
-            title: String(localized: .courseGradesPolicy), confirm: String(localized: .commonSave), disabled: model.invalid, carded: false,
+            title: String(localized: .courseGradesPolicy), confirm: String(localized: .commonSave), isDisabled: model.invalid,
+            carded: false,
             width: 560
         ) {
             if model.isRelative {
@@ -50,7 +51,7 @@ struct PolicySheet: View {
                             TextField(String(localized: .policySheetTimes), value: cap.absences, format: .number).pill(
                                 width: Theme.Size.countField)
                             Text(.policySheetCapFrom).foregroundStyle(Theme.Palette.textSecondary)
-                            ChoiceMenu(selection: cap.maxGrade, options: grades.map { ($0.id, $0.symbol) })
+                            Select(selection: cap.maxGrade, options: grades.map { ($0.id, $0.symbol) })
                             Spacer()
                             Button {
                                 model.caps.remove(at: i)
@@ -83,7 +84,7 @@ struct PolicySheet: View {
                     }
                 }
             }
-            FormTextArea(
+            TextArea(
                 label: String(localized: .policySheetNotes), detail: String(localized: .policySheetNotesDetail), text: $model.notes)
         } onConfirm: {
             if model.confirm() { dismiss() }

@@ -24,7 +24,7 @@ struct SettingRow: View {
         case .number, .positive:
             let cleared = model.value(item) == .null
             Group {
-                IntScrub(value: int, range: scrubRange, step: item.step)
+                NumberField(value: int, in: scrubRange, step: item.step)
                 if let unit = item.unit { Text(unit.name).foregroundStyle(Theme.Palette.textSecondary) }
             }
             .disabled(cleared).opacity(cleared ? Theme.Opacity.disabled : 1)
@@ -34,11 +34,11 @@ struct SettingRow: View {
                         get: { !cleared }, set: { model.set(item, $0 ? .number(Double(item.starting ?? item.range.lowerBound)) : .null) }))
             }
         case .numbers:
-            IntListField(values: ints, unit: item.unit.map { String(localized: $0.name) } ?? "", range: item.range)
+            NumberTagsField(values: ints, unit: item.unit.map { String(localized: $0.name) } ?? "", range: item.range)
         case .time:
-            TimeMenu(minute: int, hours: item.hours)
+            TimePicker(selection: int, hours: item.hours)
         case .choice:
-            ChoiceMenu(
+            Select(
                 selection: Binding(get: { model.value(item).string ?? "" }, set: { model.set(item, .string($0)) }),
                 options: item.options.map { ($0.value, String(localized: $0.name)) })
         case .text, .prose:

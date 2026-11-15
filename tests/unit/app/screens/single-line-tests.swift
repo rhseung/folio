@@ -54,7 +54,7 @@ struct SingleLineTests {
     @Test func noticeAndEmptyCards() {
         let notice = Self.heights { NoticeCard(title: $0 + Self.long) { Button("정리") {} } }
         #expect(notice.long == notice.short)
-        let empty = Self.heights { EmptyCard(symbol: "tray", title: $0) }
+        let empty = Self.heights { EmptyCard(systemImage: "tray", title: $0) }
         #expect(empty.long == empty.short)
     }
 
@@ -63,7 +63,7 @@ struct SingleLineTests {
         #expect(caption.long == caption.short)
         let header = Self.heights { PageHeader(title: $0) }
         #expect(header.long == header.short)
-        let chipTabs = Self.heights { ChipTabs(selection: .constant(0), options: [(0, $0)]) }
+        let chipTabs = Self.heights { SegmentedControl(selection: .constant(0), options: [(0, $0)], layout: .flow) }
         #expect(chipTabs.long == chipTabs.short)
         // 텍스트 레이블은 ghost 레이블 스타일까지 닿지 않으므로, 버튼 스타일도 줄 수를 제한해야 한다.
         let ghost = Self.heights { Button($0) {}.buttonStyle(.ghost) }

@@ -11,7 +11,7 @@ struct NoteFolderSheet: View {
 
     var body: some View {
         SheetForm(
-            title: String(localized: .notesFolderTitle), confirm: String(localized: .notesFolderConfirm), disabled: !model.canSave,
+            title: String(localized: .notesFolderTitle), confirm: String(localized: .notesFolderConfirm), isDisabled: !model.canSave,
             note: model.message
         ) {
             FormRow(label: String(localized: .notesFolderField), last: true) {

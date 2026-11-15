@@ -53,13 +53,13 @@ final class SearchModel {
         String(localized: indexing != nil ? .searchEmptyIndexing : kind == nil && scope == .all ? .searchEmpty : .searchEmptyFiltered)
     }
 
-    var scopeOptions: [PickOption<Scope>] {
+    var scopeOptions: [SelectOption<Scope>] {
         let semesters = workspace.semesters.filter { !workspace.courses(in: $0).isEmpty }
-        return [PickOption(id: .all, title: String(localized: .searchScopeAll))]
-            + semesters.map { PickOption(id: .semester($0.id), title: $0.title, section: String(localized: .searchScopeSemesters)) }
+        return [SelectOption(id: .all, label: String(localized: .searchScopeAll))]
+            + semesters.map { SelectOption(id: .semester($0.id), label: $0.title, section: String(localized: .searchScopeSemesters)) }
             + semesters.flatMap { s in
                 workspace.courses(in: s).map {
-                    PickOption(id: .course($0.id), title: $0.title, detail: s.title, section: String(localized: .searchScopeCourses))
+                    SelectOption(id: .course($0.id), label: $0.title, detail: s.title, section: String(localized: .searchScopeCourses))
                 }
             }
     }

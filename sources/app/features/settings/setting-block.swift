@@ -25,7 +25,7 @@ struct SettingBlock<Extra: View>: View {
     var body: some View {
         let rows = rows, more = group.more
         if let prose = rows.first(where: { $0.shape == .prose }) {
-            FormTextArea(
+            TextArea(
                 label: String(localized: prose.name),
                 text: Binding(get: { model.text(of: prose) }, set: { model.set(prose, .string($0)) }))
         } else if let name = group.name {
@@ -42,7 +42,7 @@ struct SettingBlock<Extra: View>: View {
             }
             extra
             if !more.isEmpty {
-                DisclosureRow(label: String(localized: .settingsDetails), isOpen: $details, last: true) {
+                DisclosureRow(label: String(localized: .settingsDetails), isExpanded: $details, last: true) {
                     ForEach(more, id: \.key) { item in SettingRow(item: item, model: model, last: item.key == more.last?.key) }
                 }
             }

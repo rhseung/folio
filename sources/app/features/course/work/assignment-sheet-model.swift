@@ -81,18 +81,18 @@ final class AssignmentSheetModel {
         }
     }
 
-    var targetOptions: [PickOption<ScoreTarget>] {
-        var options = [PickOption(id: ScoreTarget.none, title: String(localized: .assignmentsNoTarget))]
+    var targetOptions: [SelectOption<ScoreTarget>] {
+        var options = [SelectOption(id: ScoreTarget.none, label: String(localized: .assignmentsNoTarget))]
         var seen = Set<String>()
         for c in sortedComponents {
-            guard let g = c.group else { options.append(PickOption(id: .component(c.id), title: c.name)); continue }
+            guard let g = c.group else { options.append(SelectOption(id: .component(c.id), label: c.name)); continue }
             guard seen.insert(g).inserted else { continue }
             let members = sortedComponents.filter { $0.group == g }
             options.append(
-                PickOption(
-                    id: .group(g), title: String(localized: .assignmentsWholeGroup(g)),
+                SelectOption(
+                    id: .group(g), label: String(localized: .assignmentsWholeGroup(g)),
                     detail: String(localized: .assignmentsWholeGroupDetail(members.count))))
-            options += members.map { PickOption(id: .component($0.id), title: $0.name, depth: 1) }
+            options += members.map { SelectOption(id: .component($0.id), label: $0.name, depth: 1) }
         }
         return options
     }

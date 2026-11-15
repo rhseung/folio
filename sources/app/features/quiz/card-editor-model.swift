@@ -20,8 +20,8 @@ final class CardEditorModel {
     var title: String { String(localized: draft.original == nil ? .quizCardAdd : .quizCardEdit) }
     var deleteTitle: String? { draft.original == nil ? nil : String(localized: .quizCardRemove) }
 
-    func unitOptions(_ units: [FolioDomain.Unit]) -> [PickOption<UUID>] {
-        UnitTree.outline(units).map { PickOption(id: $0.unit.id, title: $0.unit.title, depth: $0.depth) }
+    func unitOptions(_ units: [FolioDomain.Unit]) -> [SelectOption<UUID>] {
+        UnitTree.outline(units).map { SelectOption(id: $0.unit.id, label: $0.unit.title, depth: $0.depth) }
     }
 
     func saveCard() -> Bool {

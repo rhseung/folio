@@ -114,12 +114,12 @@ struct CourseGradesView: View {
             }
             .padding(.leading, indented ? Theme.Space.l : 0)
             Spacer(minLength: Theme.Space.m)
-            Meter(value: ratio ?? 0, height: 6).frame(width: Self.meterWidth)
+            ProgressBar(value: ratio ?? 0, height: 6).frame(width: Self.meterWidth)
             Text(CourseGradesModel.ratioText(ratio))
                 .font(Theme.Typeface.figureSmall)
                 .foregroundStyle(ratio == nil ? Theme.Palette.textTertiary : Theme.Palette.text)
                 .frame(width: Self.ratioWidth, alignment: .trailing)
-            Chip("\(c.weight.formatted())%", tone: .accent).monospacedDigit().frame(width: Self.weightWidth, alignment: .trailing)
+            Badge("\(c.weight.formatted())%", tone: .accent).monospacedDigit().frame(width: Self.weightWidth, alignment: .trailing)
             Button(action: add) { Image(systemName: "plus") }
                 .buttonStyle(.ghost)
                 .foregroundStyle(Theme.Palette.textTertiary)
@@ -153,7 +153,7 @@ struct CourseGradesView: View {
                 }
                 if let cap = a.cap {
                     FormRow(label: String(localized: .courseGradesMaxGrade), last: next == nil) {
-                        Chip(model.symbol(cap.maxGrade), tone: .danger)
+                        Badge(model.symbol(cap.maxGrade), tone: .danger)
                     }
                 }
                 if let next {
@@ -177,7 +177,7 @@ private struct EntryRow: View {
             Text(entry.title.isEmpty ? String(localized: .courseGradesScore) : entry.title).foregroundStyle(Theme.Palette.textSecondary)
                 .lineLimit(1)
                 .padding(.leading, Theme.Space.l + (indented ? Theme.Space.l : 0))
-            if entry.excused { Chip(String(localized: .courseGradesExcused)) }
+            if entry.excused { Badge(String(localized: .courseGradesExcused)) }
             Spacer(minLength: Theme.Space.s)
             if let mean = entry.mean {
                 Text(entry.stdDev.flatMap { $0 > 0 ? ((entry.score - mean) / $0).sigmas : nil } ?? (entry.score - mean).points)

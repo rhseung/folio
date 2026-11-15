@@ -47,7 +47,7 @@ struct QuizCardsView: View {
                             .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                     }
                     Spacer(minLength: Theme.Space.m)
-                    if model.isOpen(card) { Chip(String(localized: .quizWrong), tone: .danger) }
+                    if model.isOpen(card) { Badge(String(localized: .quizWrong), tone: .danger) }
                 }
                 .padding(.leading, CGFloat(depth) * Theme.Space.xl)
                 .linkTarget(card.id)
@@ -69,7 +69,7 @@ struct QuizCardsView: View {
         } label: {
             Image(systemName: "plus")
         }
-        .menuStyle(.button).menuIndicator(.hidden).buttonStyle(.borderless).pointingHand().fixedSize()
+        .menuButton(tinted: true, indicator: .hidden).fixedSize()
         .foregroundStyle(Theme.Palette.textSecondary)
         .help(Text(.quizCardsAddHelp(unit.title)))
     }

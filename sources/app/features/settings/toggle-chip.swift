@@ -14,7 +14,7 @@ struct ToggleChip: View {
         Button {
             isOn.toggle()
         } label: {
-            Chip(title, tone: isOn ? .success : .plain)
+            Badge(title, tone: isOn ? .success : .plain)
         }
         .buttonStyle(.pointing(.plain))
         .opacity(isOn ? 1 : Theme.Opacity.disabled)

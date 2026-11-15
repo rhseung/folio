@@ -205,9 +205,9 @@ final class SessionSheetModel {
 
     // MARK: Units
 
-    var unitOptions: [PickOption<UUID>] {
+    var unitOptions: [SelectOption<UUID>] {
         guard let file else { return [] }
-        return UnitTree.outline(file.units).map { PickOption(id: $0.unit.id, title: $0.unit.title, depth: $0.depth) }
+        return UnitTree.outline(file.units).map { SelectOption(id: $0.unit.id, label: $0.unit.title, depth: $0.depth) }
     }
 
     var linkedUnits: [FolioDomain.Unit] {

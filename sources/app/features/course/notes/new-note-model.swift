@@ -49,19 +49,19 @@ final class NewNoteModel {
     var kindOptions: [(NoteKind, String)] { NoteKind.allCases.map { ($0, $0.label) } }
     var formatOptions: [(NoteFormat, String)] { NoteFormat.allCases.map { ($0, $0.label) } }
 
-    var sessionOptions: [PickOption<UUID?>] {
+    var sessionOptions: [SelectOption<UUID?>] {
         let sessions = course.file.sessions.filter { [kind] in !$0.isCancelled && $0.note(of: kind) == nil }.sorted { $0.date > $1.date }
-        return [PickOption(id: nil, title: String(localized: .commonNone))]
-            + sessions.map { PickOption(id: $0.id, title: course.file.title(of: $0, calendar: workspace.calendar)) }
+        return [SelectOption(id: nil, label: String(localized: .commonNone))]
+            + sessions.map { SelectOption(id: $0.id, label: course.file.title(of: $0, calendar: workspace.calendar)) }
     }
 
-    var examOptions: [PickOption<UUID?>] {
+    var examOptions: [SelectOption<UUID?>] {
         let exams = course.file.exams.sorted { ($0.start ?? .distantFuture) < ($1.start ?? .distantFuture) }
-        return [PickOption(id: nil, title: String(localized: .commonNone))] + exams.map { PickOption(id: $0.id, title: $0.title) }
+        return [SelectOption(id: nil, label: String(localized: .commonNone))] + exams.map { SelectOption(id: $0.id, label: $0.title) }
     }
 
-    var unitOptions: [PickOption<UUID>] {
-        UnitTree.outline(course.file.units).map { PickOption(id: $0.unit.id, title: $0.unit.title, depth: $0.depth) }
+    var unitOptions: [SelectOption<UUID>] {
+        UnitTree.outline(course.file.units).map { SelectOption(id: $0.unit.id, label: $0.unit.title, depth: $0.depth) }
     }
     func unitSubtree(_ id: UUID) -> Set<UUID> { UnitTree.subtree(of: id, in: course.file.units) }
 

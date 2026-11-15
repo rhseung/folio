@@ -9,9 +9,9 @@ struct ToggleMenu: View {
     let toggle: (UUID) -> Void
 
     var body: some View {
-        SearchPicker(
-            options: items.map { PickOption(id: $0.id, title: $0.label) }, isSelected: { id in items.contains { $0.id == id && $0.on } },
-            pick: toggle, multiple: true
+        CommandList(
+            options: items.map { SelectOption(id: $0.id, label: $0.label) }, isSelected: { id in items.contains { $0.id == id && $0.on } },
+            onSelect: toggle, multiple: true
         ) {
             HStack(spacing: Theme.Space.xs) {
                 Image(systemName: "link")

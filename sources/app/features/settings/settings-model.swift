@@ -245,8 +245,8 @@ final class SettingsModel {
 
     var backupFolder: String { (settings.backup.folder as NSString).abbreviatingWithTildeInPath }
 
-    var restoreOptions: [PickOption<UUID>] {
-        workspace.semesters.flatMap { s in workspace.courses(in: s).map { PickOption(id: $0.id, title: $0.title, section: s.title) } }
+    var restoreOptions: [SelectOption<UUID>] {
+        workspace.semesters.flatMap { s in workspace.courses(in: s).map { SelectOption(id: $0.id, label: $0.title, section: s.title) } }
     }
 
     func refreshArchives() { archives = workspace.backupStore?.archives() ?? [] }

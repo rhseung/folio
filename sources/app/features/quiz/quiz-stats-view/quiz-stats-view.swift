@@ -11,7 +11,7 @@ struct QuizStatsView: View {
         let today = model.workspace.today
         Page {
             PageHeader(title: String(localized: .quizStatsTitle), subtitle: String(localized: .quizStatsSubtitle))
-            StatStrip(items: [
+            StatGroup(items: [
                 .init(title: String(localized: .quizStatsAccuracy), value: stats.total.accuracyText),
                 .init(title: String(localized: .quizStatsAttempted), value: "\(stats.total.attempted) / \(stats.total.items)"),
                 .init(
@@ -42,7 +42,7 @@ struct QuizStatsView: View {
                                     .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                             }
                             Spacer(minLength: Theme.Space.m)
-                            Chip(chip.text, tone: chip.tone)
+                            Badge(chip.text, tone: chip.tone)
                             Button(.quizStatsSolveUnitWrong) { solve(model.solveWrong(of: card.unitId, units: stats.units)) }
                                 .buttonStyle(.ghost)
                         }

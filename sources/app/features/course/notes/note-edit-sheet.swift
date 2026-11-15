@@ -12,17 +12,17 @@ struct NoteEditSheet: View {
 
     var body: some View {
         SheetForm(
-            title: String(localized: .notesEdit), confirm: String(localized: .commonSave), disabled: !model.canSave, note: model.message
+            title: String(localized: .notesEdit), confirm: String(localized: .commonSave), isDisabled: !model.canSave, note: model.message
         ) {
             FormRow(label: String(localized: .notesRenameField)) {
                 InlineField(String(localized: .notesRenameField), text: $model.name)
             }
             FormRow(label: String(localized: .notesEditFolder), last: !model.choosesMath && model.pdfName == nil) {
-                ChoiceMenu(selection: $model.folder, options: model.folderOptions)
+                Select(selection: $model.folder, options: model.folderOptions)
             }
             if model.choosesMath {
                 FormRow(label: String(localized: .notesMathSyntax), last: model.pdfName == nil) {
-                    Segmented(selection: $model.math, options: MathSyntax.allCases.map { ($0, $0.label) })
+                    SegmentedControl(selection: $model.math, options: MathSyntax.allCases.map { ($0, $0.label) })
                 }
             }
             if let pdf = model.pdfName {

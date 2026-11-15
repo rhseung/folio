@@ -10,7 +10,7 @@ struct CalloutList: View {
         Block(String(localized: SettingItem.callouts.name)) {
             Card(clipped: true) {
                 ForEach(model.customCallouts, id: \.name) { row($0) }
-                DisclosureRow(label: String(localized: .settingsCalloutsDefaults), isOpen: $defaultsOpen) {
+                DisclosureRow(label: String(localized: .settingsCalloutsDefaults), isExpanded: $defaultsOpen) {
                     ForEach(model.defaultCallouts, id: \.name) { row($0) }
                 }
                 CardRow(last: true) {
@@ -37,7 +37,7 @@ struct CalloutList: View {
                 }
             } control: {
                 FlowLayout(spacing: Theme.Space.tight, centered: true) {
-                    ChoiceMenu(selection: field(kind, \.tone), options: CalloutKind.Tone.allCases.map { ($0, $0.label) })
+                    Select(selection: field(kind, \.tone), options: CalloutKind.Tone.allCases.map { ($0, $0.label) })
                     ToggleChip(String(localized: .settingsCalloutsNumbered), isOn: field(kind, \.numbered))
                     ToggleChip(String(localized: .settingsCalloutsProvable), isOn: field(kind, \.provable))
                     if !kind.isDefault {

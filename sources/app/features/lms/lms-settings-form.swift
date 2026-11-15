@@ -72,7 +72,7 @@ private struct LMSConnectSheet: View {
     var body: some View {
         SheetForm(
             title: String(localized: .lmsConnectTitle), confirm: String(localized: .lmsConnect),
-            disabled: trying || username.trimmingCharacters(in: .whitespaces).isEmpty || password.isEmpty,
+            isDisabled: trying || username.trimmingCharacters(in: .whitespaces).isEmpty || password.isEmpty,
             note: failure ?? String(localized: .lmsConnectNote)
         ) {
             FormRow(label: String(localized: .lmsStudentNumber)) {

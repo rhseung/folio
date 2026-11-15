@@ -13,7 +13,7 @@ struct ClassTimesSheet: View {
 
     var body: some View {
         SheetForm(
-            title: model.course.title, confirm: String(localized: .commonSave), disabled: model.timesNote != nil,
+            title: model.course.title, confirm: String(localized: .commonSave), isDisabled: model.timesNote != nil,
             note: model.timesNote, carded: false, width: 600
         ) {
             ClassTimesBlock(schedule: $model.schedule, newTime: model.workspace.settings.newClassTime)

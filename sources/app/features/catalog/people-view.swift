@@ -112,7 +112,7 @@ struct PeopleView: View {
                 Spacer()
                 if let url = model.workspace.mailURL(to: p.email) {
                     Link(destination: url) { Label(.peopleMail, systemImage: "envelope") }
-                        .buttonStyle(.bordered).pointingHand().help(p.email)
+                        .buttonStyle(.pointing(.bordered)).help(p.email)
                 }
                 Button(.commonDelete, systemImage: "trash", role: .destructive) { model.removing = p }
                     .buttonStyle(.ghostIcon).help(Text(.peopleRemoveHelp))
@@ -123,7 +123,7 @@ struct PeopleView: View {
                         InlineField(String(localized: .peopleFieldName), text: person.name)
                     }
                     FormRow(label: String(localized: .peopleFieldRole)) {
-                        ChoiceMenu(selection: person.role, options: PersonRole.allCases.map { ($0, $0.label) })
+                        Select(selection: person.role, options: PersonRole.allCases.map { ($0, $0.label) })
                     }
                     FormRow(label: String(localized: .peopleFieldEmail)) { InlineField(model.emailPrompt, text: person.email) }
                     FormRow(label: String(localized: .peopleFieldOffice)) {
@@ -154,7 +154,7 @@ struct PeopleView: View {
                     }
                 }
             }
-            FormTextArea(label: String(localized: .peopleMemo), detail: String(localized: .peopleMemoDetail), text: person.memo)
+            TextArea(label: String(localized: .peopleMemo), detail: String(localized: .peopleMemoDetail), text: person.memo)
         }
     }
 }

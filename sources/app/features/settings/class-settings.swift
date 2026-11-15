@@ -24,10 +24,9 @@ struct ClassSettings: View {
                                             set: { model.setFollows($0, item, course: course.id) }))
                                 }
                             } label: {
-                                ChipLabel(model.exceptionLabel(course.id))
+                                SelectTrigger(model.exceptionLabel(course.id))
                             }
-                            .menuStyle(.button)
-                            .buttonStyle(.plain).pointingHand()
+                            .menuButton()
                             .fixedSize()
                         }
                     }
@@ -52,13 +51,13 @@ private struct ClassStartCard: View {
                 .padding(.bottom, Theme.Space.s)
             Theme.Palette.lineSoft.frame(height: 1).padding(.leading, Theme.Space.l)
             FormRow(label: String(localized: .settingsClassStartItems), last: !any) {
-                ToggleChips(
+                ToggleGroup(
                     selection: $model.classStartItems,
-                    options: ClassStartSettings.Item.allCases.map { .init(value: $0, label: $0.label, symbol: $0.symbol) })
+                    options: ClassStartSettings.Item.allCases.map { .init(value: $0, label: $0.label, systemImage: $0.symbol) })
             }
             if model.isOn(.recording) {
                 FormRow(label: String(localized: .settingsClassStartRecordingMode)) {
-                    Segmented(
+                    SegmentedControl(
                         selection: $model.settings.classStart.recording,
                         options: [
                             (.start, String(localized: .settingsClassStartNow)), (.ask, String(localized: .settingsClassStartAsk)),
@@ -67,7 +66,7 @@ private struct ClassStartCard: View {
             }
             if model.opensPages {
                 FormRow(label: String(localized: .settingsClassStartOpenIn)) {
-                    PictureChoice(
+                    RadioCards(
                         selection: $model.settings.classStart.openIn,
                         options: [
                             (.splitTab, String(localized: .settingsClassStartOpenInSplit)),
@@ -78,18 +77,18 @@ private struct ClassStartCard: View {
             }
             if any {
                 FormRow(label: String(localized: .settingsClassStartScreen)) {
-                    ChoiceMenu(
+                    Select(
                         selection: $model.settings.classStart.screen,
                         options: [
                             (.notify, String(localized: .settingsClassStartNotify)), (.front, String(localized: .settingsClassStartFront)),
                         ])
                 }
-                DisclosureRow(label: String(localized: .settingsDetails), isOpen: $details, last: true) {
+                DisclosureRow(label: String(localized: .settingsDetails), isExpanded: $details, last: true) {
                     let rows = detailRows
                     if model.isOn(.recording) { RecordingSpanRow(model: model, last: rows.last == .span) }
                     if model.isOn(.roughNote) {
                         FormRow(label: String(localized: .settingsClassStartNoNote), last: rows.last == .note) {
-                            ChoiceMenu(
+                            Select(
                                 selection: $model.settings.classStart.roughNote,
                                 options: [
                                     (.create, String(localized: .settingsClassStartCreate)),
@@ -99,7 +98,7 @@ private struct ClassStartCard: View {
                     }
                     if model.isOn(.lecture) {
                         FormRow(label: String(localized: .settingsClassStartLectureCount)) {
-                            ChoiceMenu(
+                            Select(
                                 selection: $model.settings.classStart.allLectures,
                                 options: [
                                     (false, String(localized: .settingsClassStartFirstLecture)),
@@ -157,7 +156,7 @@ private struct RecordingSpanRow: View {
     }
 
     func minutes(_ value: Binding<Int>, _ item: SettingItem) -> some View {
-        IntScrub(value: value, range: item.range, magnitude: true).foregroundStyle(Theme.Palette.text)
+        NumberField(value: value, in: item.range, magnitude: true).foregroundStyle(Theme.Palette.text)
     }
 }
 
@@ -366,7 +365,7 @@ private struct TranscriptionSettings: View {
         Block(String(localized: .settingsTranscription)) {
             Card {
                 FormRow(label: String(localized: .settingsTranscriptionEngine), device: true) {
-                    ChoiceMenu(
+                    Select(
                         selection: $engine,
                         options: [
                             (.whisper, String(localized: .settingsTranscriptionWhisper)),

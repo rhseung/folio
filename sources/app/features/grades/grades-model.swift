@@ -59,7 +59,7 @@ final class GradesModel {
 
     var subtitle: String { String(localized: .gradesSubtitle(catalog.maxPoints.formatted())) }
 
-    var stats: [StatStrip.Item] {
+    var stats: [StatGroup.Item] {
         let cumulative = cumulative
         let current = workspace.currentSemester.map { GPACalculator.semester($0, courses: courses, catalog: catalog) }
         let currentCredits = workspace.currentSemester.map { s in courses.filter { $0.semesterId == s.id }.map(\.credits).reduce(0, +) }

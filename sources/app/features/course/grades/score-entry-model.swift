@@ -35,16 +35,16 @@ final class ScoreEntryModel {
         source = entry.source
     }
 
-    var sourceOptions: [PickOption<ScoreSource>] {
+    var sourceOptions: [SelectOption<ScoreSource>] {
         let file = course.file
         let assignments = String(localized: .scoreSheetSourceAssignments), exams = String(localized: .scoreSheetSourceExams)
-        return [PickOption(id: ScoreSource.none, title: String(localized: .scoreSheetSourceNone))]
+        return [SelectOption(id: ScoreSource.none, label: String(localized: .scoreSheetSourceNone))]
             + file.scoreSources(for: componentId).map { s in
                 let taken = file.hasScore(s, in: componentId, other: entry.id)
                 let section: String = if case .exam = s { exams } else { assignments }
-                return PickOption(
-                    id: s, title: file.title(of: s) ?? "", detail: taken ? String(localized: .scoreSheetSourceTaken) : nil,
-                    section: section, disabled: taken)
+                return SelectOption(
+                    id: s, label: file.title(of: s) ?? "", detail: taken ? String(localized: .scoreSheetSourceTaken) : nil,
+                    section: section, isDisabled: taken)
             }
     }
 

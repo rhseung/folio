@@ -34,7 +34,7 @@ struct CourseColumn: View {
                             ColumnRow(title: item.title, symbol: item.symbol, chosen: chosen, tint: accent.color, fill: accent.tint) {
                                 if let trailing = model.trailing(item, file: file) {
                                     if trailing.warning {
-                                        Chip(trailing.text, tone: .warning)
+                                        Badge(trailing.text, tone: .warning)
                                     } else {
                                         Text(trailing.text).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                                     }

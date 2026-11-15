@@ -78,9 +78,9 @@ final class ClaudeModel {
         String(localized: .claudeContextTokens(built.included.map(ContextBuilder.estimate).reduce(0, +).formatted()))
     }
 
-    var chatOptions: [PickOption<UUID?>] {
-        [PickOption(id: UUID?.none, title: String(localized: .claudeNewChat))]
-            + chats.map { PickOption(id: Optional($0.model.id), title: $0.model.title) }
+    var chatOptions: [SelectOption<UUID?>] {
+        [SelectOption(id: UUID?.none, label: String(localized: .claudeNewChat))]
+            + chats.map { SelectOption(id: Optional($0.model.id), label: $0.model.title) }
     }
 
     func select(_ id: UUID?) {
@@ -98,11 +98,11 @@ final class ClaudeModel {
             + readable.filter { $0.status != .classified || $0.role == nil }
     }
 
-    func addOptions(_ course: LoadedCourse) -> [PickOption<UUID>] {
-        notes.compactMap { n in n.meta.id.map { PickOption(id: $0, title: n.title, section: String(localized: .claudeAddNotes)) } }
+    func addOptions(_ course: LoadedCourse) -> [SelectOption<UUID>] {
+        notes.compactMap { n in n.meta.id.map { SelectOption(id: $0, label: n.title, section: String(localized: .claudeAddNotes)) } }
             + materials(course).map { m in
-                PickOption(
-                    id: m.id, title: (m.path as NSString).lastPathComponent, detail: m.path,
+                SelectOption(
+                    id: m.id, label: (m.path as NSString).lastPathComponent, detail: m.path,
                     section: m.status == .classified
                         ? m.role?.label ?? String(localized: .claudeAddMaterials) : String(localized: .claudeAddUnclassified))
             }

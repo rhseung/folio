@@ -95,9 +95,7 @@ enum ClassCard {
                 Image(systemName: "ellipsis").foregroundStyle(Theme.Palette.textSecondary)
                     .frame(width: ClassCard.menu, height: ClassCard.menu).contentShape(.circle)
             }
-            .menuStyle(.button)
-            .menuIndicator(.hidden)
-            .buttonStyle(.borderless).pointingHand()
+            .menuButton(tinted: true, indicator: .hidden)
             .fixedSize()
             .help(Text(help))
         }
