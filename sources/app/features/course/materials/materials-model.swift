@@ -357,8 +357,9 @@ final class MaterialsModel {
         approve(sources.map { PlannedMove(from: $0, to: "\(prefix)\(place)/\(($0 as NSString).lastPathComponent)") })
     }
 
+    // 정리 계획의 이동은 제안이다. 고른 묶음을 목록을 받는 `cleanup apply` 하나로 승인한다.
     func approve(_ moves: [PlannedMove]) {
-        self.moves.keep(workspace.run(CleanupApply(moves: moves, course: course.id)))
+        for action in moves.map(\.proposal).approvals(in: course.id) { self.moves.keep(workspace.run(action)) }
         Task { await load() }
     }
 

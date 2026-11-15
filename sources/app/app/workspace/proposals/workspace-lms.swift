@@ -35,37 +35,4 @@ extension Workspace {
         guard !new.isEmpty else { return }
         run(LMSSeen(classrooms: new, items: new.flatMap(snapshot.current(in:)).map(\.description)))
     }
-
-    func accept(_ proposals: [LMSProposal], into course: UUID) async {
-        var items: [LMSAcceptItem] = []
-        for p in proposals {
-            switch p.item {
-            case .assignment(let a):
-                do {
-                    let files = try await lms.download(a.attachments ?? []).map(\.path)
-                    items.append(LMSAcceptItem(key: p.key.description, title: a.title, due: a.due, files: files.isEmpty ? nil : files))
-                } catch {
-                    self.error = String(localized: .lmsDownloadFailed(a.title, error.localizedDescription))
-                    return
-                }
-            case .notice: items.append(LMSAcceptItem(key: p.key.description))
-            case .file(let f):
-                do {
-                    if let url = try await lms.download(f) { items.append(LMSAcceptItem(key: p.key.description, file: url.path)) }
-                } catch {
-                    self.error = String(localized: .lmsDownloadFailed(f.title, error.localizedDescription))
-                    return
-                }
-            }
-        }
-        if !items.isEmpty { run(LMSAccept(course: course, items: items)) }
-    }
-
-    func dismiss(_ proposals: [LMSProposal]) {
-        run(LMSMark(keys: proposals.map(\.key.description), handled: true))
-    }
-
-    func propose(again proposals: [LMSProposal]) {
-        run(LMSMark(keys: proposals.map(\.key.description), handled: false))
-    }
 }

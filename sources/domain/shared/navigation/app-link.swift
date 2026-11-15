@@ -4,7 +4,7 @@ public struct AppLink: Hashable, Sendable {
     public enum Kind: String, CaseIterable, Sendable {
         case today, grades, requirements, people, codes, settings
         case whatsNew = "whats-new"
-        case proposals
+        case lms
         case semester, course, session, unit, note, material, assignment, exam, card
         case problemSet = "problem-set"
         case person, recording
@@ -21,7 +21,7 @@ public struct AppLink: Hashable, Sendable {
         // 있는지를 정할 때까지 컴파일되지 않고, 이 값들(또는 종류)을 가르는 모든 switch가 새 종류를 다루게 된다.
         public var home: Home {
             switch self {
-            case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals: .app
+            case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .lms: .app
             case .semester: .transcript
             case .person: .catalog
             case .course, .session, .unit, .note, .material, .assignment, .exam, .problemSet, .recording: .course
@@ -31,12 +31,21 @@ public struct AppLink: Hashable, Sendable {
 
         public var isPlace: Bool { home == .app }
 
+        // 합치거나 이름을 바꾸기 전의 종류 이름이다. 노트와 패치 노트의 링크가 아직 이 이름을 쓴다. 제안함은 LMS 탭이
+        // 되었다(#132).
+        static let formerNames: [String: Kind] = ["proposals": .lms]
+
+        init?(name: String) {
+            guard let kind = Kind(rawValue: name) ?? Self.formerNames[name] else { return nil }
+            self = kind
+        }
+
         public var anchors: Set<Anchor.Kind> {
             switch self {
             case .material: [.page]
             case .note: [.block, .heading]
             case .recording: [.time]
-            case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals, .semester, .person, .course, .session,
+            case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .lms, .semester, .person, .course, .session,
                 .unit, .assignment, .exam, .problemSet, .card:
                 []
             }
@@ -45,7 +54,7 @@ public struct AppLink: Hashable, Sendable {
         public var hasPages: Bool {
             switch self {
             case .course, .settings: true
-            case .today, .grades, .requirements, .people, .codes, .whatsNew, .proposals, .semester, .person, .session, .unit, .note,
+            case .today, .grades, .requirements, .people, .codes, .whatsNew, .lms, .semester, .person, .session, .unit, .note,
                 .material, .assignment, .exam, .problemSet, .card, .recording:
                 false
             }
@@ -101,17 +110,30 @@ public struct AppLink: Hashable, Sendable {
         }
     }
 
+    // LMS 탭 열에서 고른 행이다. 설정 탭처럼 경로로 두어야 창의 기록이 행마다 한 걸음이 된다. 강의실 번호는 LMS의
+    // `course/view.php?id=`이고 UUID가 아니다.
+    public enum LMSPage: Hashable, Sendable {
+        case classroom(Int)
+        case claude(UUID)
+
+        static let claudeName = "claude"
+    }
+
     public private(set) var kind: Kind
     public private(set) var id: UUID?
     public private(set) var page: CoursePage?
     public private(set) var settingsPage: SettingsPage?
+    public private(set) var lmsPage: LMSPage?
     public private(set) var anchor: Anchor?
 
-    private init(kind: Kind, id: UUID?, page: CoursePage?, settingsPage: SettingsPage? = nil, anchor: Anchor?) {
+    private init(
+        kind: Kind, id: UUID?, page: CoursePage?, settingsPage: SettingsPage? = nil, lmsPage: LMSPage? = nil, anchor: Anchor?
+    ) {
         self.kind = kind
         self.id = kind.isPlace ? nil : id
         self.page = kind == .course && page != .overview ? page : nil
         self.settingsPage = kind == .settings ? settingsPage : nil
+        self.lmsPage = kind == .lms ? lmsPage : nil
         self.anchor = anchor.flatMap { kind.anchors.contains($0.kind) && $0.isValid ? $0 : nil }
     }
 
@@ -128,6 +150,10 @@ public struct AppLink: Hashable, Sendable {
         AppLink(kind: .settings, id: nil, page: nil, settingsPage: page, anchor: nil)
     }
 
+    public static func lms(_ page: LMSPage?) -> AppLink {
+        AppLink(kind: .lms, id: nil, page: nil, lmsPage: page, anchor: nil)
+    }
+
     public init(_ kind: Kind, _ id: UUID, anchor: Anchor? = nil) {
         precondition(!kind.isPlace, "\(kind) takes no ID")
         self.init(kind: kind, id: id, page: nil, anchor: anchor)
@@ -135,7 +161,9 @@ public struct AppLink: Hashable, Sendable {
 
     public var withoutAnchor: AppLink { with(nil) }
 
-    public func with(_ anchor: Anchor?) -> AppLink { AppLink(kind: kind, id: id, page: page, settingsPage: settingsPage, anchor: anchor) }
+    public func with(_ anchor: Anchor?) -> AppLink {
+        AppLink(kind: kind, id: id, page: page, settingsPage: settingsPage, lmsPage: lmsPage, anchor: anchor)
+    }
 
     // MARK: Text
 
@@ -146,6 +174,11 @@ public struct AppLink: Hashable, Sendable {
         if let id { s += "/\(id.uuidString)" }
         if let page { s += "/\(page.rawValue)" }
         if let settingsPage { s += "/\(settingsPage.rawValue)" }
+        switch lmsPage {
+        case .classroom(let n): s += "/\(n)"
+        case .claude(let chat): s += "/\(LMSPage.claudeName)/\(chat.uuidString)"
+        case nil: break
+        }
         switch anchor {
         case .page(let n): s += "#page=\(n)"
         case .block(let b): s += "#^\(b)"
@@ -184,13 +217,18 @@ public struct AppLink: Hashable, Sendable {
         let hash = rest.firstIndex(of: "#")
         var parts = rest[..<(hash ?? rest.endIndex)].split(separator: "/", omittingEmptySubsequences: false).map(String.init)
         if parts.count > 1, parts.last == "" { parts.removeLast() }
-        guard let first = parts.first, let kind = Kind(rawValue: first.lowercased()) else { return nil }
+        guard let first = parts.first, let kind = Kind(name: first.lowercased()) else { return nil }
         let fragment = hash.map { String(rest[rest.index(after: $0)...]) } ?? ""
 
         if kind.isPlace {
             if kind == .settings, parts.count == 2 {
                 guard let tab = SettingsPage(rawValue: parts[1].lowercased()) else { return nil }
                 self.init(kind: kind, id: nil, page: nil, settingsPage: tab, anchor: nil)
+                return
+            }
+            if kind == .lms, parts.count > 1 {
+                guard let page = Self.lmsPage(parts.dropFirst()) else { return nil }
+                self.init(kind: kind, id: nil, page: nil, lmsPage: page, anchor: nil)
                 return
             }
             guard parts.count == 1 else { return nil }
@@ -207,6 +245,13 @@ public struct AppLink: Hashable, Sendable {
             return nil
         }
         self.init(kind: kind, id: id, page: page, anchor: Self.anchor(fragment, of: kind))
+    }
+
+    static func lmsPage(_ parts: ArraySlice<String>) -> LMSPage? {
+        let parts = Array(parts)
+        if parts.count == 1, let n = Int(parts[0]), n > 0 { return .classroom(n) }
+        if parts.count == 2, parts[0].lowercased() == LMSPage.claudeName, let chat = UUID(uuidString: parts[1]) { return .claude(chat) }
+        return nil
     }
 
     // 미리보기는 노트 제목 `t=1:00`을 그대로 넘기므로, 재생 위치를 받는 종류만 이 값을 읽는다.
@@ -309,7 +354,7 @@ extension AppLink {
         case .problemSet: holds = { $0.problemSets.contains { $0.id == id } }
         case .note: holds = { $0.notes.contains { $0.id == id } }
         case .recording: holds = { $0.recordings.contains { $0.id == id } }
-        case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals, .semester, .person, .card: return nil
+        case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .lms, .semester, .person, .card: return nil
         }
         return files.first(where: holds)?.course.id
     }

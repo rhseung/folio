@@ -229,7 +229,7 @@ struct MaterialsView: View {
                             Image(systemName: "arrow.turn.down.right").foregroundStyle(Theme.Palette.textTertiary)
                             Text(model.target(group))
                                 .font(Theme.Typeface.mono).lineLimit(1)
-                            if let reason = group[0].review { Badge(reason.label, tone: .warning) }
+                            if let flag = group[0].proposal.flag { Badge(flag.label, tone: .warning) }
                         }
                     }
                     Spacer()

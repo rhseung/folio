@@ -179,7 +179,7 @@ extension Workspace {
         case .codes: crumb(.codes)
         case .settings: crumb(.settings)
         case .whatsNew: crumb(.whatsNew)
-        case .proposals: crumb(.proposals)
+        case .lms: crumb(.lms)
         case .today: crumb(.today)
         case .missing: Crumb(title: entry.link.string, symbol: "questionmark.folder")
         }

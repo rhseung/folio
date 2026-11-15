@@ -6,7 +6,7 @@ extension AppLink.Kind {
     var place: (title: String, symbol: String)? {
         switch self {
         case .today: (String(localized: .rootNavToday), "house")
-        case .proposals: (String(localized: .rootNavProposals), "tray")
+        case .lms: (String(localized: .rootNavLms), "tray")
         case .grades: (String(localized: .rootNavGrades), "chart.line.uptrend.xyaxis")
         case .requirements: (String(localized: .rootNavRequirements), "flag")
         case .people: (String(localized: .rootNavPeople), "person")
@@ -28,7 +28,7 @@ extension AppLink.Kind {
         case .exam: .exams
         case .card: .cards
         case .problemSet: .problems
-        case .course, .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .proposals, .semester, .person: nil
+        case .course, .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .lms, .semester, .person: nil
         }
     }
 
@@ -37,13 +37,13 @@ extension AppLink.Kind {
         switch self {
         case .session, .assignment, .exam, .card, .problemSet: true
         case .note, .material, .unit, .recording, .course, .today, .grades, .requirements, .people, .codes, .settings, .whatsNew,
-            .proposals, .semester, .person:
+            .lms, .semester, .person:
             false
         }
     }
 
-    // 사이드바 위쪽 목록의 차례다. 제안함은 기다리는 제안이 있거나 열려 있을 때만 보인다.
-    static let sidebarPlaces: [AppLink.Kind] = [.today, .proposals, .grades, .requirements, .people, .codes, .settings]
+    // 사이드바 위쪽 목록의 차례다.
+    static let sidebarPlaces: [AppLink.Kind] = [.today, .lms, .grades, .requirements, .people, .codes, .settings]
 }
 
 extension AppLink {

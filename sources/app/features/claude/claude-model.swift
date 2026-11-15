@@ -116,6 +116,13 @@ final class ClaudeModel {
         notes = Self.notes(course)
     }
 
+    // LMS 탭이 같은 대화의 제안을 적용하거나 무시하면 그 파일을 다시 읽는다. 답을 쓰는 중에는 읽지 않는다. 그 답이 끝날 때
+    // 쓰는 대화가 지금 읽은 것을 덮기 때문이다.
+    func reloadChats(_ course: LoadedCourse) {
+        guard !sending else { return }
+        chats = (try? course.store.chats()) ?? chats
+    }
+
     func loadOpenNote(_ id: UUID?, alsoOpen: [UUID] = [], course: LoadedCourse) {
         openNote = id
         openNoteItem = id.flatMap { noteContext($0, course: course, open: true) }
@@ -214,9 +221,7 @@ final class ClaudeModel {
                 let reply = try await client.reply(to: asked, context: context, targets: Actions.targets) { stream.take($0) }
                 doc.model.messages.append(ChatMessage(role: .assistant, text: reply.text, at: .now, proposals: reply.proposals))
                 doc.model.touch(by: workspace.device, at: .now)
-                let saved = doc
-                // folio:not-an-action chat history is not an action
-                workspace.perform { try course.store.save(saved) }
+                workspace.saveChat(doc, in: course.id)
             } catch {
                 doc.model.messages.removeLast()
                 failed = question
@@ -319,7 +324,7 @@ final class ClaudeModel {
         described += 1
         let line: ProposalLine
         if let action = workspace.action(proposal) {
-            let pending = proposal.applied != true
+            let pending = proposal.isPending
             line = ProposalLine(
                 text: workspace.summary(action), refusal: pending ? workspace.refusal(action) : nil,
                 change: pending ? change(proposal) : nil)
@@ -360,7 +365,7 @@ final class ClaudeModel {
     static func offered(_ message: ChatMessage, superseded: Set<ProposalRef>, describe: (ActionProposal) -> ProposalLine) -> [Int] {
         var offered: [Int] = []
         for (i, p) in (message.proposals ?? []).enumerated()
-        where p.applied != true && !superseded.contains(ProposalRef(message: message.id, index: i)) {
+        where p.isPending && !superseded.contains(ProposalRef(message: message.id, index: i)) {
             switch waiting(message, i, superseded: superseded, describe: describe) {
             case nil: if describe(p).refusal == nil { offered.append(i) }
             case .earlier(let before)?: if before.allSatisfy(offered.contains) { offered.append(i) }
@@ -376,14 +381,8 @@ final class ClaudeModel {
     ) -> ChatMessage.Waiting? {
         let proposals = message.proposals ?? []
         return message.waiting(index) { j in
-            superseded.contains(ProposalRef(message: message.id, index: j)) || describe(proposals[j]).refusal != nil
-        }
-    }
-
-    static func reason(_ waiting: ChatMessage.Waiting) -> String {
-        switch waiting {
-        case .earlier(let before): String(localized: .claudeProposalWaiting(before.map { String($0 + 1) }.joined(separator: ", ")))
-        case .blocked(let before): String(localized: .claudeProposalWaitingBlocked(before.map { String($0 + 1) }.joined(separator: ", ")))
+            proposals[j].dismissed == true || superseded.contains(ProposalRef(message: message.id, index: j))
+                || describe(proposals[j]).refusal != nil
         }
     }
 
@@ -399,12 +398,12 @@ final class ClaudeModel {
         guard var doc = current,
             let m = doc.model.messages.firstIndex(where: { $0.id == message }),
             let proposals = doc.model.messages[m].proposals, proposals.indices.contains(index),
-            case let proposal = proposals[index], proposal.applied != true,
+            case let proposal = proposals[index], proposal.isPending,
             let action = workspace.action(proposal)
         else { return }
 
         if let waiting = Self.waiting(doc.model.messages[m], index, superseded: superseded(doc.model), describe: describe) {
-            workspace.error = Self.reason(waiting)
+            workspace.error = waiting.reason
             return
         }
         if !confirmed, let question = workspace.confirmation(action) {
@@ -461,24 +460,15 @@ final class ClaudeModel {
     private func run(
         _ action: any Action, _ proposal: ActionProposal, at index: Int, of message: Int, in doc: inout StoredDocument<Chat>
     ) -> Bool {
-        do {
-            do { _ = try workspace.runThrowing(action, proposal: proposal) } catch let e as ActionError where e == .applied {}
-            doc.model.messages[message].proposals?[index].applied = true
-            doc.model.messages[message].proposals?[index].failure = nil
-            return true
-        } catch {
-            doc.model.messages[message].proposals?[index].failure = "\(error)"
-            workspace.error = "\(error)"
-            return false
-        }
+        guard var proposals = doc.model.messages[message].proposals, proposals.indices.contains(index) else { return false }
+        defer { doc.model.messages[message].proposals = proposals }
+        return workspace.run(action, proposal, marking: &proposals[index])
     }
 
     private func save(_ doc: StoredDocument<Chat>, course: LoadedCourse) {
         var doc = doc
         doc.model.touch(by: workspace.device, at: .now)
-        let saved = doc
-        // folio:not-an-action chat history is not an action
-        workspace.perform { try course.store.save(saved) }
+        workspace.saveChat(doc, in: course.id)
         replace(doc)
     }
 
@@ -548,18 +538,21 @@ final class ClaudeModel {
                     let offered = Self.offered(m, superseded: superseded, describe: describe).count
                     let proposals = (m.proposals ?? []).enumerated().map { i, p -> String in
                         var line = describe(p)
-                        let replaced = p.applied != true && superseded.contains(ProposalRef(message: m.id, index: i))
-                        if p.applied != true, !replaced, let waiting = Self.waiting(m, i, superseded: superseded, describe: describe) {
-                            line.refusal = Self.reason(waiting)
+                        let replaced = p.isPending && superseded.contains(ProposalRef(message: m.id, index: i))
+                        if p.isPending, !replaced, let waiting = Self.waiting(m, i, superseded: superseded, describe: describe) {
+                            line.refusal = waiting.reason
                         }
                         let button =
                             p.applied == true
                             ? #"<span class="done">\#(String(localized: .claudeProposalApplied))</span>"#
-                            : replaced
-                                ? #"<span class="off">\#(String(localized: .claudeProposalSuperseded))</span>"#
-                                : line.refusal.map { _ in #"<span class="off">\#(String(localized: .claudeProposalUnavailable))</span>"# }
-                                    ?? #"<a href="folio://action/apply/\#(m.id)/\#(i)">\#(String(localized: .claudeProposalApply))</a>"#
-                        let why = p.applied == true || replaced ? nil : line.refusal ?? p.failure
+                            : p.dismissed == true
+                                ? #"<span class="off">\#(String(localized: .claudeProposalDismissed))</span>"#
+                                : replaced
+                                    ? #"<span class="off">\#(String(localized: .claudeProposalSuperseded))</span>"#
+                                    : line.refusal.map { _ in #"<span class="off">\#(String(localized: .claudeProposalUnavailable))</span>"#
+                                    }
+                                        ?? #"<a href="folio://action/apply/\#(m.id)/\#(i)">\#(String(localized: .claudeProposalApply))</a>"#
+                        let why = !p.isPending || replaced ? nil : line.refusal ?? p.failure
                         let reason = why.map { #"<span class="why">\#(escape($0))</span>"# } ?? ""
                         let change = replaced ? "" : line.change.map(changeHTML) ?? ""
                         return

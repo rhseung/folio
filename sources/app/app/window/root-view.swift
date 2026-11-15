@@ -396,14 +396,14 @@ struct RootView: View {
                 sidebarSearch
                 #endif
                 List(selection: listSelection) {
-                    let waiting = workspace.lmsInbox.proposals.count
+                    let waiting = workspace.proposalBoard.count
                     ForEach(AppLink.Kind.sidebarPlaces, id: \.self) { kind in
                         let screen = Screen(Navigator.Entry(link: .place(kind)))
-                        if let place = kind.place, kind != .proposals || waiting > 0 || selection == .proposals {
+                        if let place = kind.place {
                             Label {
                                 HStack {
-                                    Text(place.title).lineLimit(kind == .proposals ? 1 : nil)
-                                    if kind == .proposals, waiting > 0 {
+                                    Text(place.title).lineLimit(kind == .lms ? 1 : nil)
+                                    if kind == .lms, waiting > 0 {
                                         Spacer(minLength: Theme.Space.xs)
                                         Text("\(waiting)").font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit()
                                             .foregroundStyle(Theme.Palette.chromeText).fixedSize()
@@ -422,7 +422,7 @@ struct RootView: View {
                     navHeight = height
                 }
                 #if os(iOS)
-                .frame(height: max(navHeight ?? 0, Theme.Size.sidebarRow * 6 + Theme.Space.s))
+                .frame(height: max(navHeight ?? 0, Theme.Size.sidebarRow * CGFloat(AppLink.Kind.sidebarPlaces.count) + Theme.Space.s))
                 #else
                 .frame(height: navHeight)
                 #endif

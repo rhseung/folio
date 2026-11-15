@@ -15,7 +15,7 @@ struct ScreenView: View {
             case .codes: CodesView(workspace: workspace)
             case .settings: SettingsView(workspace: workspace)
             case .whatsNew: WhatsNewView(workspace: workspace)
-            case .proposals: ProposalsView(workspace: workspace)
+            case .lms: LMSView(workspace: workspace)
             case .semester(let id): SemesterView(workspace: workspace, semesterID: id).id(id)
             case .course(let id): CourseView(workspace: workspace, courseID: id).id(id)
             case .missing:

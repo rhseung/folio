@@ -2,7 +2,7 @@ import FolioDomain
 import SwiftUI
 
 enum Screen: Hashable {
-    case today, grades, requirements, people, codes, settings, whatsNew, proposals
+    case today, grades, requirements, people, codes, settings, whatsNew, lms
     case semester(UUID)
     case course(UUID)
     case missing
@@ -17,7 +17,7 @@ enum Screen: Hashable {
         case .codes: self = .codes
         case .settings: self = .settings
         case .whatsNew: self = .whatsNew
-        case .proposals: self = .proposals
+        case .lms: self = .lms
         case .semester: self = link.id.map(Screen.semester) ?? .missing
         case .course, .session, .unit, .note, .material, .assignment, .exam, .card, .problemSet, .recording:
             self = entry.course.map(Screen.course) ?? .missing
@@ -33,7 +33,7 @@ enum Screen: Hashable {
         case .codes: .place(.codes)
         case .settings: .place(.settings)
         case .whatsNew: .place(.whatsNew)
-        case .proposals: .place(.proposals)
+        case .lms: .place(.lms)
         case .semester(let id): AppLink(.semester, id)
         case .course(let id): .course(id)
         case .missing: nil

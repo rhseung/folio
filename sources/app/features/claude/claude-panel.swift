@@ -50,6 +50,7 @@ struct ClaudePanel: View {
         .font(Theme.Typeface.body)
         .foregroundStyle(Theme.Palette.text)
         .task(id: course.id) { model.load(course) }
+        .onChange(of: model.workspace.chatsRevision) { model.reloadChats(course) }
         .task(id: [openNote] + alsoOpen.map(Optional.some)) { model.loadOpenNote(openNote, alsoOpen: alsoOpen, course: course) }
         .onChange(of: panes, initial: true) { _, panes in model.panes = panes }
         .onChange(of: incoming, initial: true) { _, item in

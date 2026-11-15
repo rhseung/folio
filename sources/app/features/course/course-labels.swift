@@ -1,23 +1,6 @@
 import FolioDomain
 import Foundation
 
-extension ReviewReason {
-    var label: String {
-        switch self {
-        case .guessedWeek: String(localized: .reviewReasonGuessedWeek)
-        case .unknownWeek: String(localized: .reviewReasonUnknownWeek)
-        case .guessedNumber: String(localized: .reviewReasonGuessedNumber)
-        case .unknownNumber: String(localized: .reviewReasonUnknownNumber)
-        case .guessedExam: String(localized: .reviewReasonGuessedExam)
-        case .guessedOrigin: String(localized: .reviewReasonGuessedOrigin)
-        case .guessedFolder: String(localized: .reviewReasonGuessedFolder)
-        case .unknownFile: String(localized: .reviewReasonUnknownFile)
-        case .unknownFolder: String(localized: .reviewReasonUnknownFolder)
-        case .nameCollision: String(localized: .reviewReasonNameCollision)
-        }
-    }
-}
-
 extension String {
     var nilIfEmpty: String? { isEmpty ? nil : self }
 }

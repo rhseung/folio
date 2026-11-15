@@ -13707,116 +13707,6 @@
         }
       }
     },
-    "review-reason.guessed-exam": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "대상 시험 추정"
-          }
-        }
-      }
-    },
-    "review-reason.guessed-folder": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "위치 추정"
-          }
-        }
-      }
-    },
-    "review-reason.guessed-number": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과제 번호 추정"
-          }
-        }
-      }
-    },
-    "review-reason.guessed-origin": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "직접 만든 것인지 추정"
-          }
-        }
-      }
-    },
-    "review-reason.guessed-week": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "주차 추정"
-          }
-        }
-      }
-    },
-    "review-reason.name-collision": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이름 충돌"
-          }
-        }
-      }
-    },
-    "review-reason.unknown-file": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "분류 불명"
-          }
-        }
-      }
-    },
-    "review-reason.unknown-folder": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "대응 폴더 없음"
-          }
-        }
-      }
-    },
-    "review-reason.unknown-number": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과제 번호 모름"
-          }
-        }
-      }
-    },
-    "review-reason.unknown-week": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "주차 모름"
-          }
-        }
-      }
-    },
     "review-result.again": {
       "extractionState": "manual",
       "localizations": {
@@ -22023,17 +21913,6 @@
         }
       }
     },
-    "root.nav.proposals": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "제안함"
-          }
-        }
-      }
-    },
     "lms.download-failed": {
       "extractionState": "manual",
       "localizations": {
@@ -22041,17 +21920,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@을(를) 받지 못했습니다: %2$@"
-          }
-        }
-      }
-    },
-    "lms.proposals.subtitle": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "LMS에 새로 올라온 것. 추가할 때 넣을 과목을 고릅니다."
           }
         }
       }
@@ -22144,17 +22012,6 @@
         }
       }
     },
-    "lms.proposals.empty": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "새 항목 없음"
-          }
-        }
-      }
-    },
     "lms.add-all": {
       "extractionState": "manual",
       "localizations": {
@@ -22162,17 +22019,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "모두 추가"
-          }
-        }
-      }
-    },
-    "lms.viewer-only": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "LMS 뷰어 전용"
           }
         }
       }
@@ -22205,7 +22051,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "LMS 새 항목 %lld개"
+            "value": "LMS %lld개"
           }
         }
       }
@@ -22217,17 +22063,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "가장 이른 마감 %1$@ · %2$@"
-          }
-        }
-      }
-    },
-    "lms.open-proposals": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "제안함 열기"
           }
         }
       }
@@ -22624,6 +22459,116 @@
           "stringUnit": {
             "state": "translated",
             "value": "무채색"
+          }
+        }
+      }
+    },
+    "claude.proposal.dismissed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "무시함"
+          }
+        }
+      }
+    },
+    "root.nav.lms": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS"
+          }
+        }
+      }
+    },
+    "lms.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS와 Claude가 낸 제안이에요. 승인한 것만 Folio에 들어가요."
+          }
+        }
+      }
+    },
+    "lms.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기다리는 제안 없음"
+          }
+        }
+      }
+    },
+    "lms.open-tab": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS 열기"
+          }
+        }
+      }
+    },
+    "lms.all": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전체"
+          }
+        }
+      }
+    },
+    "lms.rooms": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS 강의실"
+          }
+        }
+      }
+    },
+    "lms.claude": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude"
+          }
+        }
+      }
+    },
+    "lms.connect-in-settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정에서 연결"
+          }
+        }
+      }
+    },
+    "lms.items": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 항목"
           }
         }
       }

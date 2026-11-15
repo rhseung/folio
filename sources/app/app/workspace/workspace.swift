@@ -25,6 +25,9 @@ final class Workspace {
     private(set) var notesRevision = 0
     private(set) var quizRevision = 0
     private(set) var dataRevision = 0
+    // 대화 파일은 액션이 쓰지 않으므로 `dataRevision`이 오르지 않는다. LMS 탭과 사이드바의 수가 패널에서 쓴 대화를 따라가야 한다.
+    private(set) var chatsRevision = 0
+    @ObservationIgnored var chatCache: (key: [Int], chats: [CourseChatFile])?
     var gradesUnlocked = false
     @ObservationIgnored var gradeRelock: Task<Void, Never>?
     let recorder = LectureRecorder()
@@ -315,5 +318,12 @@ final class Workspace {
     func perform(_ action: () throws -> Void) {
         lastOwnWrite = .now
         do { try action() } catch { self.error = "\(error)" }
+    }
+
+    func saveChat(_ doc: StoredDocument<Chat>, in course: UUID) {
+        guard let store = self.course(course)?.store else { return }
+        // folio:not-an-action chat history is not an action
+        perform { try store.save(doc) }
+        chatsRevision += 1
     }
 }
