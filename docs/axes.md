@@ -44,7 +44,12 @@ AGENTS.md "구조 축" 표의 축마다 지킬 규칙이다. 축에 기능을 �
 - 새 항목의 ID(`@New`)는 미리 실행에서 정해져 입력에 들어 있다.
 - 제안으로 실행한 액션(`ActionContext.proposal`)은 바꾼 과목의 `course.json`(`appliedProposals`)과 기기 로그(`ProposalAppliedEvent`)에 그 ID를 남긴다. 이미 남은 제안은 실행 전에 멈춘다(`ActionContext.refuseAppliedProposal`, `ActionError.applied`). 부르는 쪽은 이것을 적용된 것으로 보고, 패널은 과목 문서에 남은 ID로 다른 기기가 적용한 제안을 적용됨으로 그린다(`Chat.markingApplied`).
 - iCloud 충돌 사본은 과목을 읽을 때 항목 ID와 적용한 제안 ID로 합친다(`CourseFile.merged(with:)`, `CourseStore.resolveConflicts`). 같은 항목은 나중에 고친 쪽을 남기므로 액션은 저장할 때 바뀐 항목을 모두 찍는다(`touchChanged`). 합친 사본은 지우지 않고 해결됨으로만 둔다.
-- 쓰는 곳은 Claude 패널이다. LMS 제안함과 폴더 정리 옮기기, 모든 대화의 제안을 모으는 승인 화면, 파일 분류, 자료에서 정보 추출, 렉처 단원 구간 제안은 #90이다. 패널의 제안 단계는 `docs/mcp.md`에 있다.
+- 제안은 적용하거나(`applied`) 무시할 때까지(`dismissed`) 기다린다(`isPending`). 무시한 제안은 대화 파일에 남아 패널에 "무시함"으로 보이고 Claude의 다음 맥락에도 그렇게 들어간다.
+- 승인 화면에 보이는 제안은 `FolioDomain`의 `Proposal`이다. 종류(`ProposalKind`)가 묶음(`ProposalGroup`), 넣을 과목을 고르는지(`picksCourse`), 여러 제안을 한 액션으로 합칠 목록 필드(`list`)를 정한다. 승인은 `action`, 무시는 `dismissal`이고, 표시(`ProposalFlag`)가 검토할 것을 알리거나 승인을 막는다(LMS 뷰어 전용).
+- 같은 명령의 제안 여럿은 목록 필드를 이어 액션 하나로 승인하고 무시한다(`[Proposal].approvals(in:)`, `dismissals`). 그래서 한 번 묻고, 하나가 막히면 아무것도 쓰지 않는다.
+- 제안의 출처는 셋이다. LMS(`LMSProposal.proposal`, 승인은 `lms accept`, 무시는 `lms mark`), 모든 과목의 대화 파일(`Chat.pending`), 폴더 정리 옮기기(`PlannedMove.proposal`, 검토 표시는 `.review` 표시, 승인은 `cleanup apply`)다. LMS와 대화의 제안은 `ProposalBoard`가 강의실과 대화로 묶어 LMS 탭(`folio://lms`)에 모은다. 정리 옮기기는 자료 화면과 `cleanup plan`이 같은 선언을 읽는다.
+- CLI와 MCP는 `proposal list`로 대화의 기다리는 제안을 읽는다.
+- 파일 분류, 자료에서 정보 추출, 렉처 단원 구간 제안은 #90에 남았다. 패널의 제안 단계는 `docs/mcp.md`에 있다.
 
 ## 파일 보기 렌더러
 
