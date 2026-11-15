@@ -97,7 +97,7 @@ struct AssignmentSheet: View {
                         CardRow(last: i == files.count - 1) {
                             Group {
                                 Image(systemName: kind == .submission ? "paperplane" : "doc").foregroundStyle(Theme.Palette.textSecondary)
-                                Text(name).lineLimit(1)
+                                FileName(name, isFolder: m.isFolder)
                             }
                             .fileDrag(store.fileURL(m.path))
                             Spacer()

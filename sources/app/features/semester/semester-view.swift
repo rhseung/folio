@@ -89,7 +89,7 @@ struct SemesterView: View {
                             ForEach(Array(files.enumerated()), id: \.element) { i, url in
                                 CardRow(last: i == files.count - 1) {
                                     Image(systemName: "doc").foregroundStyle(Theme.Palette.textSecondary)
-                                    Text(url.lastPathComponent).lineLimit(1)
+                                    FileName(url.lastPathComponent)
                                     Spacer()
                                     Button(.commonOpen) { viewingFile = AdminFile(url: url) }.buttonStyle(.ghost)
                                 }

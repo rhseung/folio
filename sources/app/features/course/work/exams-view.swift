@@ -90,7 +90,7 @@ struct ExamsView: View {
                     CardRow(last: i == linked.count - 1) {
                         Image(systemName: m.isFolder ? "folder" : m.isPDF ? "doc.richtext" : "doc").foregroundStyle(
                             Theme.Palette.textTertiary)
-                        Text((m.path as NSString).lastPathComponent).lineLimit(1).truncationMode(.middle).help(m.path)
+                        FileName((m.path as NSString).lastPathComponent, isFolder: m.isFolder, help: m.path).layoutPriority(1)
                         Text((m.path as NSString).deletingLastPathComponent)
                             .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
                         Spacer(minLength: 0)

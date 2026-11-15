@@ -24,7 +24,7 @@ final class ProblemSetDraftModel {
 
     var pdfOptions: [SelectOption<UUID?>] {
         [SelectOption(id: UUID?.none, label: String(localized: .commonNone))]
-            + pdfs.map { SelectOption(id: Optional($0.id), label: ($0.path as NSString).lastPathComponent, detail: $0.path) }
+            + pdfs.map { SelectOption(id: Optional($0.id), label: ($0.path as NSString).lastPathComponent, detail: $0.path, isFile: true) }
     }
 
     var parsed: [String] { ProblemSet.numbers(from: numbers) }

@@ -175,7 +175,7 @@ struct MaterialsView: View {
         Image(systemName: m.isFolder ? "folder" : missing ? "exclamationmark.triangle" : m.isPDF ? "doc.richtext" : "doc")
             .foregroundStyle(missing ? Theme.Palette.danger : Theme.Palette.textSecondary)
         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-            Text(name).lineLimit(1).help(m.path)
+            FileName(name, isFolder: m.isFolder, help: m.path)
             let links = model.linkLine(m, pdf: pdf)
             if !links.isEmpty { Text(links).font(Theme.Typeface.caption).foregroundStyle(accent.ink).lineLimit(1) }
         }
@@ -223,12 +223,10 @@ struct MaterialsView: View {
                 let files = model.files(in: group, among: unclassified)
                 CardRow(last: i == inbox.groups.count - 1 && inbox.orphans.isEmpty) {
                     VStack(alignment: .leading, spacing: Theme.Space.xs) {
-                        Text(model.source(group))
-                            .font(Theme.Typeface.bodyStrong).lineLimit(1)
+                        FileName(model.source(group), isFolder: group.count > 1).font(Theme.Typeface.bodyStrong)
                         HStack(spacing: Theme.Space.tight) {
                             Image(systemName: "arrow.turn.down.right").foregroundStyle(Theme.Palette.textTertiary)
-                            Text(model.target(group))
-                                .font(Theme.Typeface.mono).lineLimit(1)
+                            FileName(model.target(group), lineLimit: 1, isFolder: group.count > 1).font(Theme.Typeface.mono)
                             if let reason = group[0].review { Badge(reason.label, tone: .warning) }
                         }
                     }
@@ -247,7 +245,7 @@ struct MaterialsView: View {
             }
             ForEach(Array(inbox.orphans.enumerated()), id: \.element.id) { i, m in
                 CardRow(last: i == inbox.orphans.count - 1) {
-                    Text(m.path).font(Theme.Typeface.bodyStrong).lineLimit(1)
+                    FileName(m.path, isFolder: m.isFolder).font(Theme.Typeface.bodyStrong)
                     Spacer()
                     relocateMenu([prefix + m.path])
                     Button(.materialsIgnore) { model.ignore([m.id]) }.buttonStyle(.ghost)

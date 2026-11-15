@@ -53,7 +53,7 @@ struct FileView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.Palette.card)
-        .crumb(model.name, level: 2, symbol: model.symbol)
+        .crumb(model.name, level: 2, symbol: model.symbol, isFile: true)
         .task(id: model.url) { await model.load(page: takeRequestedPage()) }
         .onChange(of: pdf?.page) { _, page in
             guard let page else { return }

@@ -71,7 +71,7 @@ private struct ImportRow: View {
         HStack(spacing: Theme.Space.m) {
             FileThumbnail(url: row.url)
             VStack(alignment: .leading, spacing: Theme.Space.xs) {
-                Text(row.url.lastPathComponent).lineLimit(1).truncationMode(.middle)
+                FileName(row.url.lastPathComponent, lineLimit: 1)
                 Button {
                     showingPath = true
                 } label: {
