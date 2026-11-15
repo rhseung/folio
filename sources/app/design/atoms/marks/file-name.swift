@@ -21,14 +21,9 @@ struct FileName: View {
             if lineLimit == 1 {
                 split
             } else {
-                // 여러 줄의 가운데 줄임은 마지막 줄 끝에 이름의 끝을 남기지만, 아주 좁으면 확장자의 점부터 잘린다.
-                // 그 폭에서는 확장자를 따로 두는 한 줄로 바꾼다. 잰 폭을 상태에 두고 고르면 시트처럼 크기를 내용에
-                // 맞추는 곳에서 배치가 되먹임되어 한 줄 쪽에 멈추므로, 상태 없이 제안된 폭으로 고른다.
-                ViewThatFits(in: .horizontal) {
-                    // 시트의 행은 한 줄 높이를 제안받아, 높이를 고정하지 않으면 줄을 넘기지 않고 가운데를 줄인다.
-                    Text(name).lineLimit(lineLimit).truncationMode(.middle).fixedSize(horizontal: false, vertical: true)
-                        .frame(idealWidth: Theme.Size.fileNameRoom, alignment: .leading)
-                    split
+                FileNameFit {
+                    Text(name).lineLimit(lineLimit).truncationMode(.middle).folding
+                    split.folding
                 }
             }
         }
@@ -51,4 +46,36 @@ struct FileName: View {
             if !parts.suffix.isEmpty { Text(parts.suffix).lineLimit(1).layoutPriority(1) }
         }
     }
+}
+
+// 여러 줄의 가운데 줄임은 마지막 줄 끝에 이름의 끝을 남기지만, 아주 좁으면 확장자의 점부터 잘린다. 그 폭에서는 확장자를 떼어
+// 둔 한 줄(둘째 꼴)을 쓴다. `ViewThatFits`가 아니라 layout으로 고른다. 페이지 scroll view 안에서 `ViewThatFits`는 고르지 않은
+// 후보만큼 스크롤 높이를 늘렸다. 잰 폭을 상태에 두고 고르면 시트처럼 크기를 내용에 맞추는 곳에서 배치가 되먹임되어 한 꼴에 멈췄다.
+// 높이는 제안을 따르지 않고 꼴이 스스로 정한다. 시트의 행은 한 줄 높이를 제안해 두 줄로 넘기지 못하게 했다.
+private struct FileNameFit: Layout {
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let (chosen, width) = pick(proposal.width, subviews)
+        return chosen.sizeThatFits(ProposedViewSize(width: width, height: nil))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let (chosen, _) = pick(bounds.width, subviews)
+        for subview in subviews {
+            subview.place(at: bounds.origin, proposal: subview == chosen ? ProposedViewSize(bounds.size) : .zero)
+        }
+    }
+
+    private func pick(_ offered: CGFloat?, _ subviews: Subviews) -> (LayoutSubview, CGFloat?) {
+        let width = offered.flatMap { $0.isFinite ? $0 : nil }
+        // 한 줄에 다 들어가는 짧은 이름은 좁아도 그대로 둔다. 떼어 둔 꼴은 글자 사이가 달라 같은 폭에서 잘렸다.
+        if let width, width < Theme.Size.fileNameRoom, subviews[0].sizeThatFits(.unspecified).width > width {
+            return (subviews[1], width)
+        }
+        return (subviews[0], width)
+    }
+}
+
+extension View {
+    // 높이가 제안을 그대로 따르게 해서, `FileNameFit`이 높이 0을 제안한 꼴은 잘려 보이지 않는다.
+    fileprivate var folding: some View { frame(minHeight: 0, maxHeight: .infinity, alignment: .top).clipped() }
 }
