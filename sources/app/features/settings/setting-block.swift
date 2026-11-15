@@ -36,7 +36,7 @@ struct SettingBlock<Extra: View>: View {
     }
 
     func card(_ rows: [SettingItem], _ more: [SettingItem]) -> some View {
-        Card(clipped: !more.isEmpty) {
+        Card(clipped: hasExtra || !more.isEmpty) {
             ForEach(rows, id: \.key) { item in
                 SettingRow(item: item, model: model, last: item.key == rows.last?.key && !hasExtra && more.isEmpty)
             }
