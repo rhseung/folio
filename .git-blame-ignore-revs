@@ -2,3 +2,7 @@
 29f8501058aa07c3226fc144d393670e81b8feed
 # style: format the codebase with swift-format (#474)
 99b49e22b74927f1b9b57d26a274d075a87eab79
+# refactor: extract FolioCore from FolioDomain (#518)
+4b79e32cb3af101d7bd342e7f46dd08aad78e814
+# refactor: move the app to the root and executables into sources/tools (#522)
+72d3117342ccb60804776747d7a8a2720d1ee647
