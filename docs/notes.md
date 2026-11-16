@@ -10,7 +10,7 @@
 - 임베드와 블록 참조는 링크가 가리키는 부분(제목 아래, 블록)을 잘라 그리고, 고리와 깊이를 막는다. 노트는 앱이 찾아 준다(`NoteEmbeds`).
 - 편집 보기의 입력 규칙(`sources/markdown/editing/`: 짝 기호, 목록 이어 쓰기와 번호, 스니펫, 수식 인자 이동, 자동 완성 질의, 표 편집)은 순수 함수로 두어 Mac과 iPad가 함께 쓴다.
 - 편집 보기(`app/platform/notes/editing/`, TextKit 2)는 원문에 글꼴과 색만 입힌다. 그림, 수식, 콜아웃, 임베드, 코드의 상자는 미리보기(`note-preview.swift`)만 그린다.
-- 웹 번들(`sources/web`)은 미리보기와 Claude 패널의 페이지(KaTeX, 코드 하이라이팅, mermaid, 노트 CSS, 그림 크게 보기)와 편집 보기가 JavaScriptCore로 부르는 코드 하이라이팅이다. 편집 보기의 수식 말풍선과 자동 완성 미리보기도 같은 KaTeX와 노트 CSS로 숨은 페이지에서 그린다(`NoteMath`). 색은 `theme.swift`의 값을, 크기와 간격은 `app/design/tokens/notes/note-look.swift`의 값을 `NoteStyle`이 CSS 변수로 넘기므로 CSS에 색과 크기를 적지 않는다. `sources/web/src/`를 고치면 `mise run build-web`을 돌린다.
+- 웹 번들(`sources/web`)은 미리보기와 Claude 패널의 페이지(KaTeX, 코드 하이라이팅, mermaid, 노트 CSS, 그림 크게 보기)와 편집 보기가 JavaScriptCore로 부르는 코드 하이라이팅이다. 편집 보기의 수식 말풍선과 자동 완성 미리보기도 같은 KaTeX와 노트 CSS로 숨은 페이지에서 그린다(`NoteMath`). 색은 `theme.swift`의 값을, 크기와 간격은 `app/design/tokens/note-look.swift`의 값을 `NoteStyle`이 CSS 변수로 넘기므로 CSS에 색과 크기를 적지 않는다. `sources/web/src/`를 고치면 `mise run build-web`을 돌린다.
 
 ## 노트 링크
 

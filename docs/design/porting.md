@@ -3,7 +3,7 @@
 다른 SwiftUI 앱에서 Folio와 같은 느낌을 만들 때의 순서다.
 
 1. **토큰.** `app/design/tokens/`를 그대로 가져온다. `CourseAccent`의 프리셋은 그 앱의 강조색 하나로 바꾸고 `\.accent` 환경값은 남긴다. 강조색이 들어가는 구성 요소(`Badge(.accent)`, `ProgressBar`, `Checkbox`, `MonthCalendar`)가 이 값을 읽는다. `Swatch`는 웹 화면이 없으면 `Palette`에 합쳐도 된다.
-2. **구성 요소.** `atoms/`, `components/`, `structures/`를 층 순서대로 가져온다. 두고 갈 것은 Folio의 데이터에 묶인 것들이다(`GradeLock`과 `.sensitive`, `GradeSteps`, `DdayBadge`, `tokens/notes/`의 `NoteStyle`, `structures/`의 `QuickAdd`와 `ItemMenu`). `DateChip`과 `MonthCalendar`는 `Workspace.calendar`를 읽으니 `Calendar` 환경값으로 바꾼다.
+2. **구성 요소.** `atoms/`, `components/`, `structures/`를 층 순서대로 가져온다. 두고 갈 것은 Folio의 데이터에 묶인 것들이다(`GradeLock`과 `.sensitive`, `GradeSteps`, `DdayBadge`, `tokens/`의 `NoteStyle`, `structures/`의 `QuickAdd`와 `ItemMenu`). `DateChip`과 `MonthCalendar`는 `Workspace.calendar`를 읽으니 `Calendar` 환경값으로 바꾼다.
 3. **창 틀.** Mac이면 [창 구조](window.md)의 Mac 절대로 창 재질, 본문 패널, 툴바 줄부터 만든다. 위치 표시가 필요 없으면 `Crumb` 관련 부분은 빼도 된다. iPad와 iPhone은 같은 문서의 iPad와 iPhone 절을 따른다.
 4. **화면.** `Page { PageHeader; Block { Card { CardRow… } } }`로 쌓고, 폼은 [폼과 컨트롤](forms.md)을 따른다.
 5. **검사.** `sources/tools/lint`의 디자인 규칙(`design-rules.swift`, `control-rules.swift`)을 가져온다. 규칙을 문서로만 두면 화면이 늘어날수록 금방 흐트러진다.

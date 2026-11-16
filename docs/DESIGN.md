@@ -97,8 +97,8 @@
 
 | 층 | 폴더 | 담는 것 |
 | --- | --- | --- |
-| 토큰 | `tokens/` | 뷰가 없는 값. `Theme`, `Tone`, `CourseAccent`, `Swatch`, `WindowSize`, `notes/`의 `NoteLook`·`NoteStyle` |
-| 원자 | `atoms/` | 더 쪼갤 수 없는 컨트롤과 표시. `buttons/`(버튼 스타일, `.menuButton`), `fields/`(글 칸, 숫자, 스위치), `chips/`(칩 바탕과 그 위의 칩), `marks/`(아이콘, 꼬리표, 진행 막대, 숨김), `interaction/`(포인터, 누르는 자리, 고르기), `layout/`(`FlowLayout`, 바탕과 흐림 수정자) |
+| 토큰 | `tokens/` | 뷰가 없는 값. `Theme`, `Tone`, `CourseAccent`, `Swatch`, `WindowSize`, `NoteLook`, `NoteStyle` |
+| 원자 | `atoms/` | 더 쪼갤 수 없는 컨트롤과 표시. `buttons/`(버튼 스타일, `.menuButton`), `fields/`(글 칸, 숫자, 스위치), `chips/`(칩 바탕과 그 위의 칩), `marks/`(아이콘, 꼬리표, 진행 막대, 숨김), `interaction/`(포인터, 누르는 자리, 고르기). 바로 아래에는 여러 원자가 쓰는 배치(`FlowLayout`, 바탕과 흐림 수정자) |
 | 조합 | `components/` | 원자를 묶은 것. `cards/`(카드, 폼 행, 시트, 알림, 수치 줄), `pickers/`(메뉴 고르기, 검색 고르기, 날짜와 시각, 반복, 쪽 구간, 성적 눈금) |
 | 구조물 | `structures/` | 화면 뼈대와 큰 부품. `page/`(`Page`, `PageBar`, 위치 표시), `column-split/`, `item-menu/`, `quick-add/`, `sections/`(렉처 구역 막대와 편집기) |
 
