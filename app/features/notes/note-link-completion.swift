@@ -47,7 +47,9 @@ import PDFKit
                 : (try? index.search(name, limit: 40)) ?? []
         }.value
         guard !Task.isCancelled else { return [] }
-        var items = LinkCandidates.order(hits, course: courseId, excluding: note.meta.id).map { item(for: $0.item, alias: alias) }
+        var items = LinkCandidates.order(hits, typed: name, course: courseId, excluding: note.meta.id).map {
+            item(for: $0.item, alias: alias)
+        }
         let titles = self.course.map { notes(of: $0).map(\.title) } ?? []
         if LinkCandidates.offersNewNote(name, titles: titles) {
             items.append(CompletionItem(id: Self.newNote, title: String(localized: .notesAssistLinkNew(name)), symbol: "plus", body: name))
