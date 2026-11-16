@@ -47,7 +47,7 @@
 - `NoteHangulTests`: 조합 중인 글자가 SwiftUI 갱신과 저장을 견디고 파일에 들어가는지 본다. iPad 편집 보기는 `NoteHangulPadTests`(`mise run test-ipad`)가 본다.
 - 검사는 보기를 `NoteBench`(`tests/unit/app/support/note-bench.swift`)로만 다룬다. 그린 픽셀, 히트한 뷰, 캐럿 위치, 스크롤 범위만 보고 TextKit이나 웹 페이지의 내부는 보지 않는다. 편집 보기의 구현을 바꿀 때는 이 파일과 기준 이미지만 바꾸고, 배치, 클릭, 한글 검사는 그대로 통과해야 한다.
 - 미리보기의 동작(블록 단위 갱신, 할 일 체크, 콜아웃 접기 유지, 편집 보기 따라가기, 위젯 iframe의 격리와 높이, 임베드와 블록 참조 카드, 깨진 링크, 그림 크게 보기)은 `NotePreviewTests`, `NoteWidgetTests`, `NoteEmbedPreviewTests`가, 편집 보기의 블록 참조 카드는 `NoteReferenceCardTests`가 본다.
-- 기준 이미지(`tests/unit/app/references/notes`)는 CI 러너가 그린 것만 커밋한다. 글꼴 렌더가 macOS마다 달라서 비교는 이미지를 그린 macOS(`machine.txt`)에서만 하고 다른 Mac에서는 건너뛴다. CI는 `FOLIO_NOTE_SCREENS_STRICT`를 켜서 러너의 macOS가 바뀌면 실패한다. 기준 이미지를 바꾸는 PR은 본문에 이전과 이후 이미지를 붙인다.
+- 기준 이미지(`tests/unit/app/references/notes`)는 CI 러너가 그린 것만 커밋한다. 글꼴 렌더가 macOS마다 달라서 비교는 같은 그림을 그린다고 확인한 macOS(`machine.txt`, 한 줄에 하나)에서만 하고 다른 Mac에서는 건너뛴다. CI 러너 풀에는 여러 macOS 빌드가 섞여 있어서 목록에 여럿을 둔다. CI는 `FOLIO_NOTE_SCREENS_STRICT`를 켜서 러너의 macOS가 목록에 없으면 실패한다. `mise run note-screens`는 들인 그림이 기준 이미지와 모두 같으면 그 실행의 macOS를 목록에 더하고, 하나라도 다르면 목록을 그 macOS 하나로 바꾼다. 기준 이미지를 바꾸는 PR은 본문에 이전과 이후 이미지를 붙인다.
 - `test-app`은 없거나 달라진 이미지를 새 이미지와 차이 이미지(`-diff.png`)로 `FOLIO_NOTE_SCREENS`(기본 `.build/note-screens`)에 남기고, CI는 실패할 때 `note-screens` 아티팩트로 올린다. 의도한 변화인지 확인한 뒤 `mise run note-screens -- <CI 실행 ID>`로 들인다. 로컬에서 그린 이미지는 기준으로 쓰지 않는다. PR에 붙일 그림으로 펼친 판(`NoteRender.sheet`)은 `FOLIO_NOTE_SCREENS/sheets`에 남고, CI는 `note-sheets` 아티팩트로 올린다.
 - 새 노트 보기 검사는 `mise.toml`의 `notes` 목록에 넣기 전까지 `FOLIO_TEST_PART=rest`에서 돈다.
 - `TEST_RUNNER_FOLIO_NOTE_RENDER=<폴더>`를 주고 `NoteSourceTests`를 돌리면 `all-markdown.md`의 편집 보기 PNG가 남는다.
