@@ -8,16 +8,16 @@ extension Rules {
                 + "don't touch the disk, screens reach files through FolioActions or their model's Workspace"
         ) { code in
             var hits: [Hit] = []
-            for file in code.files(under: "sources", except: "sources/app") {
+            for file in code.files(under: RepoPath.packages) {
                 for declaration in file.nodes(ImportDeclSyntax.self) {
                     guard let module = declaration.path.first?.name, module.text == "SwiftUI" else { continue }
                     hits.append(Hit("layer", file, file.line(of: module), "import SwiftUI"))
                 }
             }
-            for file in code.files(under: "sources/core", "sources/domain", "sources/markdown") {
+            for file in RepoPath.diskFree.flatMap { code.files(under: $0) } {
                 hits += diskAccess(in: file)
             }
-            for file in code.files(under: "sources/app/features") where !isDebugFile(file.path) {
+            for file in code.files(under: RepoPath.features) where !isDebugFile(file.path) {
                 for token in file.tokens where token.tokenKind == .identifier("FileManager") && !file.debugOnly(token) {
                     hits.append(Hit("layer", file, file.line(of: token), "FileManager in a screen"))
                 }

@@ -22,7 +22,7 @@ extension Rules {
                 + "and doesn't declare its own ButtonStyle (docs/DESIGN.md \"층\")"
         ) { code in
             var hits: [Hit] = []
-            for file in code.files(under: "sources/app/features") where !isDebugFile(file.path) {
+            for file in code.files(under: RepoPath.features) where !isDebugFile(file.path) {
                 for call in file.nodes(FunctionCallExprSyntax.self) where !file.debugOnly(call) {
                     if let found = systemControl(call) {
                         hits.append(Hit("design-control", file, file.line(of: call), found))
@@ -115,7 +115,7 @@ extension Rules {
                 + "not with Text(…lastPathComponent)"
         ) { code in
             var hits: [Hit] = []
-            for file in code.files(under: "sources/app") where !isDebugFile(file.path) && !file.path.hasPrefix("sources/app/design/") {
+            for file in code.files(under: RepoPath.app) where !isDebugFile(file.path) && !file.path.hasPrefix(RepoPath.design + "/") {
                 for call in file.nodes(FunctionCallExprSyntax.self) where !file.debugOnly(call) {
                     guard call.calledExpression.as(DeclReferenceExprSyntax.self)?.baseName.text == "Text",
                         let argument = call.arguments.first, argument.label == nil,

@@ -8,9 +8,8 @@ extension Rules {
             advice: "a comment says why the code is this way; drop one that only names what the declaration under it already says"
         ) { code in
             var hits: [Hit] = []
-            for file in code.files(
-                under: "sources", except: "sources/lint", "sources/lint-command")
-            where !file.path.contains("/generated/") && !file.path.hasPrefix("sources/actions/") {
+            for file in code.files(under: RepoPath.app, RepoPath.packages, except: RepoPath.lint)
+            where !file.path.contains("/generated/") && !file.path.hasPrefix(RepoPath.actions + "/") {
                 walk(Syntax(file.tree)) { node in
                     guard let keyword = declarationKeyword(node), let first = node.firstToken(viewMode: .sourceAccurate),
                         let comment = loneComment(before: first), restates(comment, file.restOfLine(after: keyword))
@@ -115,7 +114,7 @@ extension Rules {
             advice: "`///` is only for an @Action field's CLI help; drop the comment, or keep why the code must be this way as `//`"
         ) { code in
             var hits: [Hit] = []
-            for file in code.files(under: "sources", "tests") {
+            for file in code.files(under: RepoPath.app, RepoPath.packages, RepoPath.tests) {
                 for token in file.tokens {
                     for comment in docComments(around: token) where !(comment.leading && isActionField(token)) {
                         hits.append(Hit("doc-comment", file, file.line(of: comment.position), comment.text))

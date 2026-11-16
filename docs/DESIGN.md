@@ -1,6 +1,6 @@
 # Folio 디자인 시스템
 
-화면을 새로 만들거나 고칠 때 이 문서를 먼저 읽는다. 값은 `sources/app/design/tokens/theme.swift`에, 공용 구성 요소는 `sources/app/design/`의 층 폴더(아래 "층")에 있고, 값과 목록의 원본은 코드다. 이 문서는 그 값과 구성 요소를 언제, 왜 쓰는지 적는다.
+화면을 새로 만들거나 고칠 때 이 문서를 먼저 읽는다. 값은 `app/design/tokens/theme.swift`에, 공용 구성 요소는 `app/design/`의 층 폴더(아래 "층")에 있고, 값과 목록의 원본은 코드다. 이 문서는 그 값과 구성 요소를 언제, 왜 쓰는지 적는다.
 
 디자인 시스템: https://claude.ai/artifact/NQsFWSkuyHUDETivg5K5bA (`theme.swift`의 값을 옮긴 토큰, 플랫폼마다의 창 구조). 시안은 이 디자인 시스템을 설치한 캔버스 하나에 영역별 페이지로 그린다: https://claude.ai/artifact/FT5gk3v1afr7pEsBFd6MLy. 구현된 시안은 캔버스에서 지운다.
 
@@ -71,7 +71,7 @@
 
 ## 토큰 고르는 기준
 
-토큰의 목록과 값은 `sources/app/design/tokens/`에 있다. 이 절은 비슷한 토큰 중 무엇을 고르는지만 적는다.
+토큰의 목록과 값은 `app/design/tokens/`에 있다. 이 절은 비슷한 토큰 중 무엇을 고르는지만 적는다.
 
 - **`Theme.Palette`.** `page` 위에 `card`를 둔다. 선은 `lineSoft`(카드 안 구분선), `line`(열 경계, 테두리), `lineStrong`(아직 만들지 않은 행의 점선)이다. 채운 색 위 글자는 `onFill`이고, 상태색을 꽉 채운 바탕(`Badge(solid:)`) 위에는 `card`를 쓴다. 다크의 상태색은 밝아서 흰 글자가 3:1에 못 미치기 때문이다. 창 틀 위에는 `chrome*`(아이콘, 조용한 글자, 고른 아이콘, 안내선)과 `frameTint`(틀 재질 위의 옅은 층)를 쓴다. 틀 너머로 바탕화면이 비쳐서 본문의 회색 단계는 틀 위에서 묻힌다.
 - **`Tone`.** 상태의 뜻이고 `Badge`, `StatGroup`, 수치에 쓴다. 새 상태색은 `Palette`에 라이트·다크 쌍으로 더하고 `Tone`에 연결한다.
@@ -93,7 +93,7 @@
 
 ## 층
 
-공용 구성 요소는 네 층으로 나눈다. 아래 층은 위 층을 쓰지 않는다. 층 안은 역할 폴더로 나누고, 폴더마다 Swift 파일은 20개를 넘지 않는다. 한 기능만 쓰는 조각은 `sources/app/design`이 아니라 그 기능 폴더에 둔다. 구성 요소는 역할 폴더에 하나씩 파일로 있고, 파일 이름은 타입 이름의 케밥 케이스다(`PageHeader`: `structures/page/page-header.swift`). 수정자(`.ghost`, `.sensitive`)는 그 스타일 타입의 파일에 있다.
+공용 구성 요소는 네 층으로 나눈다. 아래 층은 위 층을 쓰지 않는다. 층 안은 역할 폴더로 나누고, 폴더마다 Swift 파일은 20개를 넘지 않는다. 한 기능만 쓰는 조각은 `app/design`이 아니라 그 기능 폴더에 둔다. 구성 요소는 역할 폴더에 하나씩 파일로 있고, 파일 이름은 타입 이름의 케밥 케이스다(`PageHeader`: `structures/page/page-header.swift`). 수정자(`.ghost`, `.sensitive`)는 그 스타일 타입의 파일에 있다.
 
 | 층 | 폴더 | 담는 것 |
 | --- | --- | --- |
@@ -112,7 +112,7 @@
 
 ## 구성 요소 고르는 기준
 
-구성 요소의 목록은 `sources/app/design/`의 폴더가 원본이다. 컨트롤과 폼은 [폼과 컨트롤](design/forms.md), 화면 골격, 넘기는 영역(`overflowFade`), 항목 메뉴(`ItemMenu`)는 [패턴](design/patterns.md), 창 틀의 부품(`Breadcrumb`, `PageBar`, `FolderIcon`)은 [창 구조](design/window.md)에 있다. 여기에는 그 밖에서 헷갈리기 쉬운 선택을 적는다.
+구성 요소의 목록은 `app/design/`의 폴더가 원본이다. 컨트롤과 폼은 [폼과 컨트롤](design/forms.md), 화면 골격, 넘기는 영역(`overflowFade`), 항목 메뉴(`ItemMenu`)는 [패턴](design/patterns.md), 창 틀의 부품(`Breadcrumb`, `PageBar`, `FolderIcon`)은 [창 구조](design/window.md)에 있다. 여기에는 그 밖에서 헷갈리기 쉬운 선택을 적는다.
 
 - **묶음과 카드.** `Block`은 회색 소제목이 붙은 묶음이고 오른쪽에 작은 동작 하나를 둘 수 있다. 행은 흰 `Card`의 `CardRow`에 두고, 행이 아닌 하나짜리 내용은 `Inset.panel`의 카드다. 결정이 필요한 알림은 `NoticeCard`(행이 없으면 배너만), 묶음 전체가 빈 것은 `EmptyCard`(기호, 무엇이 없는지, 무엇이 채우는지 한 줄. 옆 열이 차 있어도 빈 열이 높게 비지 않는다), 목록 하나가 빈 것은 `EmptyLine`이다.
 - **아이콘.** 앱의 아이콘은 `LineIcon`이다. 배경 없는 선 기호를 아이콘 열의 정사각형에 맞추고, `filled: true`가 고른 행의 속채움이다. 글꼴 크기로 키운 SF Symbol을 쓰지 않는다.
@@ -125,13 +125,13 @@
 1. **있는 토큰과 구성 요소부터 쓴다.** 비슷한 모양이 이미 있으면 그것을 쓰고, 맞지 않으면 그 구성 요소를 고친다.
 2. **세 번 반복되면 토큰으로 만든다.** 같은 역할의 값이 세 곳 이상에서 쓰이면 `Theme`에 이름 있는 토큰으로 올린다. 그 전까지는 토큰으로 올리지 않는다.
    - 한두 곳의 미세 조정(`Theme.Space.s + 2`)은 그대로 둔다. 과목 열과 교수 목록 열의 아이콘·글자 간격(`s + 2`)은 시스템 사이드바 간격에 맞춘 값이고, 과목 열 하위 탭의 들여쓰기가 이 값에 맞춰 계산되어 있다.
-   - `sources/app/design`과 `sources/app/platform`의 구성 요소 안쪽 치수와 투명도(쪽 범위 손잡이의 크기, 꺼진 눈금)는 그 구성 요소의 모양 자체라 토큰으로 올리지 않는다. 화면 파일 안에서 이름 붙인 상수(`UpdateSheet.width`, 설정의 창 그림 `LayoutSketch`의 비율)도 그 화면의 것이라 그대로 둔다.
+   - `app/design`과 `app/platform`의 구성 요소 안쪽 치수와 투명도(쪽 범위 손잡이의 크기, 꺼진 눈금)는 그 구성 요소의 모양 자체라 토큰으로 올리지 않는다. 화면 파일 안에서 이름 붙인 상수(`UpdateSheet.width`, 설정의 창 그림 `LayoutSketch`의 비율)도 그 화면의 것이라 그대로 둔다.
 3. **한 화면에만 있는 값에는 이유를 단다.** 그 화면의 얼굴 같은 요소(녹음 재생 버튼, 강의 코드 타일의 접두어)는 글자 크기나 모서리를 직접 적을 수 있다. 그 줄 끝에 `// design: one-off, <이유>`를 붙인다.
-4. **두 화면이 쓰면 `sources/app/design/`으로 옮긴다.** 화면 파일 안에 만든 구성 요소를 다른 화면이 쓰기 시작하면 맞는 층의 역할 폴더로 옮긴다.
+4. **두 화면이 쓰면 `app/design/`으로 옮긴다.** 화면 파일 안에 만든 구성 요소를 다른 화면이 쓰기 시작하면 맞는 층의 역할 폴더로 옮긴다.
 
 ## 검사
 
-`mise run check-code`(`mise run test`에 포함)가 이 문서의 규칙 중 구문 트리로 보이는 것을 잡는다. 규칙은 `sources/lint`에 있고, 무엇을 어디서 잡는지는 그 코드와 단위 테스트(`tests/unit/lint`)가 원본이다.
+`mise run check-code`(`mise run test`에 포함)가 이 문서의 규칙 중 구문 트리로 보이는 것을 잡는다. 규칙은 `sources/tools/lint`에 있고, 무엇을 어디서 잡는지는 그 코드와 단위 테스트(`tests/unit/tools/lint`)가 원본이다.
 
 - 디자인 값: `design-value`, `design-grid`, `design-opacity`, `design-size`, `design-shadow`, `design-motion`, `course-accent`. 위반 없이 시작해 기준선이 없고, `--update`로도 통과하지 않는다.
 - 컨트롤: `design-control`, `file-name`(파일 이름은 `Text`가 아니라 `FileName`).

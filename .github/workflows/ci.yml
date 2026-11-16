@@ -33,7 +33,7 @@ jobs:
         with:
           sparse-checkout: .github/check-paths.yml
           sparse-checkout-cone-mode: false
-      # 이름을 바꾼 파일은 옛 경로도 센다(paths-filter가 지운 파일과 더한 파일로 나눈다). sources/app 밖으로 옮긴 파일도
+      # 이름을 바꾼 파일은 옛 경로도 센다(paths-filter가 지운 파일과 더한 파일로 나눈다). app 밖으로 옮긴 파일도
       # 빌드하는 대상을 바꾸기 때문이다.
       - if: github.event_name == 'pull_request'
         id: files
@@ -163,9 +163,7 @@ jobs:
       # 시뮬레이터 부팅은 몇 분 걸리므로 빌드하는 동안 백그라운드에서 켠다.
       - if: env.SIMULATOR == 'true'
         name: Boot the iPad simulator while the app builds
-        env:
-          DEVELOPER_DIR: ${{ env.XCODE }}/Contents/Developer
-        run: nohup scripts/ipad-simulator.sh boot > "$RUNNER_TEMP/boot.log" 2>&1 &
+        run: nohup mise run ipad-simulator boot > "$RUNNER_TEMP/boot.log" 2>&1 &
       - id: run
         run: mise run build-ipad-tests
       - if: env.SIMULATOR == 'true'

@@ -6,7 +6,7 @@ private func found(_ files: [String: String], _ check: String) -> [String] {
     return Rules.all.filter { $0.name == check }.flatMap { $0.hits(in: code) }.map(\.key).sorted()
 }
 
-private let view = "sources/app/features/demo/demo-view.swift"
+private let view = "app/features/demo/demo-view.swift"
 
 @Suite struct ViewWorkspaceCallTests {
     @Test func callsOnTheWorkspaceInAView() {
@@ -24,7 +24,7 @@ private let view = "sources/app/features/demo/demo-view.swift"
     @Test func anExtensionInAnotherFileIsTheSameView() {
         let files = [
             view: "struct DemoView: View { var body: some View { row } }",
-            "sources/app/features/demo/demo-rows.swift": "extension DemoView { var row: some View { Text(workspace.title()) } }",
+            "app/features/demo/demo-rows.swift": "extension DemoView { var row: some View { Text(workspace.title()) } }",
         ]
         #expect(found(files, "view-workspace-call") == ["workspace.title("])
     }
@@ -37,7 +37,7 @@ private let view = "sources/app/features/demo/demo-view.swift"
                 var body: some View { Text("workspace.run(").id(workspace.notesRevision) }
             }
             """,
-            "sources/app/features/demo/demo-model.swift": "final class DemoModel { func save() { workspace.run(.save) } }",
+            "app/features/demo/demo-model.swift": "final class DemoModel { func save() { workspace.run(.save) } }",
         ]
         #expect(found(files, "view-workspace-call").isEmpty)
     }
@@ -87,7 +87,7 @@ private let view = "sources/app/features/demo/demo-view.swift"
             }
             """
         #expect(
-            found(["sources/app/features/demo/demo-view.swift": source], "ui-string")
+            found(["app/features/demo/demo-view.swift": source], "ui-string")
                 == ["\" items\"", "\"Open the file\"", "\"Save\"", "\"완료\""])
     }
 
@@ -105,9 +105,9 @@ private let view = "sources/app/features/demo/demo-view.swift"
             #endif
             #Preview { Text("미리보기") }
             """
-        #expect(found(["sources/app/features/demo/demo.swift": source], "ui-string") == ["\"라마바\""])
-        #expect(found(["sources/app/app/debug-demo.swift": "let a = \"가\""], "ui-string").isEmpty)
-        #expect(found(["sources/app/app/debug/scenario-menu.swift": "let a = \"가\""], "ui-string").isEmpty)
+        #expect(found(["app/features/demo/demo.swift": source], "ui-string") == ["\"라마바\""])
+        #expect(found(["app/window/debug-demo.swift": "let a = \"가\""], "ui-string").isEmpty)
+        #expect(found(["app/window/debug/scenario-menu.swift": "let a = \"가\""], "ui-string").isEmpty)
     }
 }
 
@@ -142,8 +142,8 @@ private let view = "sources/app/features/demo/demo-view.swift"
 
     @Test func fileManagerInScreensButNotInDebugCode() {
         let files = [
-            "sources/app/features/demo/demo-model.swift": "let manager = FileManager.default",
-            "sources/app/features/demo/demo-walk.swift": "#if DEBUG\nlet manager = FileManager.default\n#endif",
+            "app/features/demo/demo-model.swift": "let manager = FileManager.default",
+            "app/features/demo/demo-walk.swift": "#if DEBUG\nlet manager = FileManager.default\n#endif",
         ]
         #expect(found(files, "layer") == ["FileManager in a screen"])
     }
@@ -171,7 +171,7 @@ private let view = "sources/app/features/demo/demo-view.swift"
                 case linkOpen
             }
             """
-        #expect(found(["sources/app/features/demo/course.swift": source], "restating-comment") == ["The course title."])
+        #expect(found(["app/features/demo/course.swift": source], "restating-comment") == ["The course title."])
     }
 
     @Test func actionFieldsAreCLIHelp() {
@@ -228,7 +228,7 @@ private let view = "sources/app/features/demo/demo-view.swift"
     }
 
     @Test func linesPointAtTheComment() {
-        let code = Codebase(files: ["sources/app/a.swift": "let a = 1\n\n/// Two.\n/// Lines.\nlet b = 2"])
+        let code = Codebase(files: ["app/a.swift": "let a = 1\n\n/// Two.\n/// Lines.\nlet b = 2"])
         let lines = Rules.all.filter { $0.name == "doc-comment" }.flatMap { $0.hits(in: code) }.map(\.line)
         #expect(lines == [3, 4])
     }
@@ -236,18 +236,18 @@ private let view = "sources/app/features/demo/demo-view.swift"
 
 @Suite struct BaselineTests {
     @Test func newPlacesAndGonePlaces() {
-        let code = Codebase(files: ["sources/app/features/demo/demo.swift": "let a = \"가\"\nlet b = \"가\"\nlet c = \"나\""])
+        let code = Codebase(files: ["app/features/demo/demo.swift": "let a = \"가\"\nlet b = \"가\"\nlet c = \"나\""])
         let hits = Rules.all.filter { $0.name == "ui-string" }.flatMap { $0.hits(in: code) }
         let report = Baseline.compare(
             hits,
             with: Baseline.entries(
                 in: """
                     # header
-                    ui-string\tsources/app/features/demo/demo.swift\t"가"
-                    ui-string\tsources/app/features/demo/demo.swift\t"다"
+                    ui-string\tapp/features/demo/demo.swift\t"가"
+                    ui-string\tapp/features/demo/demo.swift\t"다"
                     """))
         #expect(report.new.map { "\($0.line) \($0.key)" } == ["2 \"가\"", "3 \"나\""])
-        #expect(report.gone == ["ui-string\tsources/app/features/demo/demo.swift\t\"다\""])
+        #expect(report.gone == ["ui-string\tapp/features/demo/demo.swift\t\"다\""])
         #expect(Baseline.compare(hits, with: Baseline.entries(in: Baseline.render(hits))).passed)
     }
 }
@@ -272,7 +272,7 @@ private let view = "sources/app/features/demo/demo-view.swift"
             found([view: source], "design-value") == [
                 ".gray", ".green", ".red", ".system(size:", "0xFF8800", "Color(red:", "Color.blue", "cornerRadius: 8",
             ])
-        #expect(found(["sources/app/design/tokens/theme.swift": "let tone = Color.red"], "design-value").isEmpty)
+        #expect(found(["app/design/tokens/theme.swift": "let tone = Color.red"], "design-value").isEmpty)
     }
 }
 
@@ -314,7 +314,7 @@ private let view = "sources/app/features/demo/demo-view.swift"
             }
             """
         #expect(found([view: source], "design-opacity") == ["opacity(0.15)", "opacity(0.4)", "opacity(0.6)"])
-        #expect(found(["sources/app/design/meter.swift": "let a = Color.black.opacity(0.4)"], "design-opacity").isEmpty)
+        #expect(found(["app/design/meter.swift": "let a = Color.black.opacity(0.4)"], "design-opacity").isEmpty)
     }
 
     @Test func shadowValuesEverywhereButTheTheme() {
@@ -327,9 +327,9 @@ private let view = "sources/app/features/demo/demo-view.swift"
             }
             """
         #expect(found([view: source], "design-shadow") == ["shadow(radius: 24)"])
-        #expect(found(["sources/app/design/knob.swift": "let k = Circle().shadow(radius: 2)"], "design-shadow") == ["shadow(radius: 2)"])
+        #expect(found(["app/design/knob.swift": "let k = Circle().shadow(radius: 2)"], "design-shadow") == ["shadow(radius: 2)"])
         let theme = "func shadow(_ s: Theme.Shadow) -> some View { shadow(color: .black, radius: s.radius) }"
-        #expect(found(["sources/app/design/tokens/theme.swift": theme], "design-shadow").isEmpty)
+        #expect(found(["app/design/tokens/theme.swift": theme], "design-shadow").isEmpty)
     }
 
     @Test func curvesWithTheirOwnDuration() {
@@ -350,7 +350,7 @@ private let view = "sources/app/features/demo/demo-view.swift"
                 ".easeOut(duration: 0.25)", ".snappy(duration: 0.45)", ".spring(duration: 0.32, bounce: 0.35)",
             ])
         #expect(
-            found(["sources/app/design/tokens/theme.swift": "static let quick = Animation.snappy(duration: 0.2)"], "design-motion").isEmpty)
+            found(["app/design/tokens/theme.swift": "static let quick = Animation.snappy(duration: 0.2)"], "design-motion").isEmpty)
     }
 
     @Test func frameAndPillNumbersInScreens() {
@@ -373,16 +373,16 @@ private let view = "sources/app/features/demo/demo-view.swift"
                 "pill(width: 72)",
             ])
         let debug = "struct Probe: View { var body: some View { Color.clear.frame(width: 1180, height: 720) } }"
-        #expect(found(["sources/app/app/debug/form-snapshots.swift": debug], "design-size").isEmpty)
+        #expect(found(["app/window/debug/form-snapshots.swift": debug], "design-size").isEmpty)
     }
 }
 
 @Suite struct CourseAccentTests {
     @Test func theAccentAloneOutsideTheDesignFolder() {
         let line = "Text(.commonSave).environment(\\.accent, accent).environment(\\.locale, locale)"
-        #expect(found(["sources/app/features/demo/demo-view.swift": line], "course-accent") == ["environment(\\.accent"])
+        #expect(found(["app/features/demo/demo-view.swift": line], "course-accent") == ["environment(\\.accent"])
         #expect(
-            found(["sources/app/design/tokens/course-accent.swift": line, "tests/unit/app/note-bench.swift": line], "course-accent").isEmpty
+            found(["app/design/tokens/course-accent.swift": line, "tests/unit/app/note-bench.swift": line], "course-accent").isEmpty
         )
     }
 }
@@ -390,11 +390,11 @@ private let view = "sources/app/features/demo/demo-view.swift"
 @Suite struct LocalFoldersTests {
     @Test func applicationSupportOutsideLocalFolders() {
         let files = [
-            "sources/app/features/demo/demo-model.swift": "let folder = URL.applicationSupportDirectory",
+            "app/features/demo/demo-model.swift": "let folder = URL.applicationSupportDirectory",
             "tests/unit/app/demo-tests.swift": "let folder = home + \"/Library/Application Support/Folio\"",
             "sources/ai/cache.swift": "let paths = NSSearchPathForDirectoriesInDomains(.a, .b, true)",
-            "sources/app/app/services/local-folders.swift": "let folder = URL.applicationSupportDirectory",
-            "sources/app/features/demo/demo-note.swift": "// not URL.applicationSupportDirectory",
+            "app/workspace/services/local-folders.swift": "let folder = URL.applicationSupportDirectory",
+            "app/features/demo/demo-note.swift": "// not URL.applicationSupportDirectory",
         ]
         #expect(
             found(files, "local-folders") == [
@@ -406,13 +406,13 @@ private let view = "sources/app/features/demo/demo-view.swift"
 @Suite struct AppDirectionTests {
     @Test func lowerLayersAndOtherFeaturesModels() {
         let files = [
-            "sources/app/features/course/note-embed.swift": "struct NoteEmbedSource {}\nfinal class CourseModel {}",
-            "sources/app/features/settings/settings-model.swift": "final class SettingsModel {}",
-            "sources/app/features/first-run/first-run-model.swift": "let settings = SettingsModel(); let embed = NoteEmbedSource()",
-            "sources/app/platform/note-preview.swift": "let source: NoteEmbedSource",
-            "sources/app/features/course/course-view.swift": "let model: CourseModel",
-            "sources/app/design/tokens/theme.swift": "struct Theme {}",
-            "sources/app/features/today/today-view.swift": "let theme = Theme()",
+            "app/features/course/note-embed.swift": "struct NoteEmbedSource {}\nfinal class CourseModel {}",
+            "app/features/settings/settings-model.swift": "final class SettingsModel {}",
+            "app/features/first-run/first-run-model.swift": "let settings = SettingsModel(); let embed = NoteEmbedSource()",
+            "app/platform/note-preview.swift": "let source: NoteEmbedSource",
+            "app/features/course/course-view.swift": "let model: CourseModel",
+            "app/design/tokens/theme.swift": "struct Theme {}",
+            "app/features/today/today-view.swift": "let theme = Theme()",
         ]
         #expect(found(files, "app-direction") == ["NoteEmbedSource from features/course", "SettingsModel from features/settings"])
     }
@@ -424,7 +424,7 @@ private let view = "sources/app/features/demo/demo-view.swift"
             "sources/domain/app-link.swift": """
             struct AppLink { enum Kind: String { case today, note, material } }
             """,
-            "sources/app/app/screen.swift": """
+            "app/window/screen.swift": """
             func screen(_ link: AppLink) {
                 switch link.kind {
                 case .note: break
@@ -460,7 +460,7 @@ private let view = "sources/app/features/demo/demo-view.swift"
     @Test func theWindowToolbarFromAScreen() {
         let source = "Text(.commonSave).toolbar { Button(.commonClose) {} }.buttonStyle(.toolbar).toolbarGroup()"
         #expect(found([view: source], "screen-toolbar") == [".toolbar"])
-        #expect(found(["sources/app/app/window.swift": source], "screen-toolbar").isEmpty)
+        #expect(found(["app/window/window.swift": source], "screen-toolbar").isEmpty)
     }
 }
 
@@ -468,12 +468,12 @@ private let view = "sources/app/features/demo/demo-view.swift"
     @Test func theEnvironmentOutsideTheLaunchFiles() {
         let read = "let env = ProcessInfo.processInfo.environment"
         let files = [
-            "sources/app/platform/pdf-view.swift": read,
-            "sources/app/app/workspace/workspace.swift": read,
-            "sources/app/app/debug/debug-snapshots.swift": read,
+            "app/platform/pdf-view.swift": read,
+            "app/workspace/workspace.swift": read,
+            "app/window/debug/debug-snapshots.swift": read,
             "tests/unit/app/render-tests.swift": read,
             "tests/unit/cli/env.swift": read,
-            "sources/app/features/demo/demo-model.swift": "#if DEBUG\n\(read)\n#endif",
+            "app/features/demo/demo-model.swift": "#if DEBUG\n\(read)\n#endif",
         ]
         #expect(found(files, "launch-environment") == ["ProcessInfo.processInfo.environment"])
     }
@@ -482,18 +482,18 @@ private let view = "sources/app/features/demo/demo-view.swift"
 @Suite struct NameAndFolderTests {
     @Test func kebabCaseNames() {
         let files = [
-            "sources/app/features/demo/demo-view.swift": "", "sources/app/features/Demo/DemoModel.swift": "",
-            "Package.swift": "", "sources/app/features/demo/grade_math.swift": "",
+            "app/features/demo/demo-view.swift": "", "app/features/Demo/DemoModel.swift": "",
+            "Package.swift": "", "app/features/demo/grade_math.swift": "",
         ]
         #expect(found(files, "kebab-names") == ["Demo", "DemoModel", "grade_math"])
     }
 
     @Test func foldersPastTwentyFiles() {
         var files: [String: String] = [:]
-        for index in 1...21 { files["sources/app/app/file-\(index).swift"] = "" }
-        for index in 1...20 { files["sources/app/design/file-\(index).swift"] = "" }
+        for index in 1...21 { files["app/window/file-\(index).swift"] = "" }
+        for index in 1...20 { files["app/design/file-\(index).swift"] = "" }
         let hits = Rules.all.filter { $0.name == "folder-size" }.flatMap { $0.hits(in: Codebase(files: files)) }
-        #expect(hits.map(\.path) == ["sources/app/app"])
+        #expect(hits.map(\.path) == ["app/window"])
     }
 }
 
@@ -535,7 +535,7 @@ private let view = "sources/app/features/demo/demo-view.swift"
         #expect(found([view: source], "design-control").isEmpty)
         #expect(
             found(
-                ["sources/app/design/atoms/fields/switch.swift": "struct Switch: View { var body: some View { Toggle(\"\", isOn: $on) } }"],
+                ["app/design/atoms/fields/switch.swift": "struct Switch: View { var body: some View { Toggle(\"\", isOn: $on) } }"],
                 "design-control"
             ).isEmpty)
     }

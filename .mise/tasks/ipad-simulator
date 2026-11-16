@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#MISE description="Print the iPad simulator test-ipad and CI use, preferring one already booted; boot waits until it has booted"
 # test-ipad와 CI가 미리 켜는 시뮬레이터가 같아야 부팅이 빌드와 겹친다. 그래서 이미 켠 iPad를 먼저 고른다.
 set -euo pipefail
 pick() { grep -m1 -E '^ +iPad' | grep -oE '[0-9A-F-]{36}' || true; }
@@ -12,7 +13,7 @@ case "${1:-}" in
   "") echo "$id" ;;
   boot) xcrun simctl bootstatus "$id" -b >/dev/null ;;
   *)
-    echo "usage: scripts/ipad-simulator.sh [boot]" >&2
+    echo "usage: mise run ipad-simulator [boot]" >&2
     exit 2
     ;;
 esac

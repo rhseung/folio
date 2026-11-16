@@ -9,11 +9,10 @@ extension Rules {
             name: "local-folders", strict: true,
             advice: "reach Application Support through LocalFolders.applicationSupport; packages don't use it"
         ) { code in
-            let exempt: Set = ["sources/app/app/services/local-folders.swift", "tests/unit/app/support/local-folders-tests.swift"]
+            let exempt: Set = [RepoPath.localFolders, RepoPath.localFoldersTests]
             var hits: [Hit] = []
-            // folio-lint는 자기가 찾는 경로 이름을 코드에 적으므로 검사에서 뺀다.
             for file in code.files(
-                under: "sources", "tests", except: "sources/lint", "sources/lint-command", "tests/unit/lint", "tests/e2e/app")
+                under: RepoPath.app, RepoPath.packages, RepoPath.tests, except: RepoPath.lint, RepoPath.lintTests, RepoPath.appE2E)
             where !exempt.contains(file.path) {
                 for token in file.tokens {
                     switch token.tokenKind {

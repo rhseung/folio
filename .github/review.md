@@ -37,5 +37,5 @@ claude-review-plugin이 PR을 검토할 때 `AGENTS.md`와 함께 읽는 파일�
 아래는 CI가 이미 잡습니다. 코멘트하지 않습니다.
 
 - 컴파일러: 모듈 경계를 거스르는 import, strict concurrency, 없는 문자열 키, `@Action` 매크로가 막는 실수
-- `mise run test`: `folio actions --check`, `folio-gen --check`, `check-code`(folio-lint, 규칙 이름은 `sources/lint`), SwiftLint(`.swiftlint.yml`), swift-format 검사
+- `mise run test`: `folio actions --check`, `folio-gen --check`, `check-code`(folio-lint, 규칙 이름은 `sources/tools/lint`), SwiftLint(`.swiftlint.yml`), swift-format 검사
 - macOS 앱 빌드와 화면 모델 테스트, iPad 빌드

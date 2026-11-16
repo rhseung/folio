@@ -3,7 +3,7 @@
 #MISE depends=["generate"]
 set -euo pipefail
 
-id=$(scripts/ipad-simulator.sh)
+id=$(.mise/tasks/ipad-simulator)
 rm -rf .build/test-ipad.xcresult
 # shellcheck disable=SC2086
 xcodebuild -scheme Folio -destination "platform=iOS Simulator,id=$id" -resultBundlePath .build/test-ipad.xcresult test -quiet \

@@ -17,7 +17,7 @@ shfmt = "3.14.1"
 description = "Fetch Tectonic as a static library (FolioTectonic.xcframework) pinned in sources/tectonic/pin.json, checked by sha256"
 run = "sources/tectonic/fetch.sh"
 
-# 여러 줄이거나 조건이 있는 작업은 .mise/tasks의 파일 작업이다. 버전과 릴리스 노트는 Swift 도구 folio-dev(sources/dev)가 맡는다.
+# 여러 줄이거나 조건이 있는 작업은 .mise/tasks의 파일 작업이다. 버전과 릴리스 노트는 Swift 도구 folio-dev(sources/tools/dev)가 맡는다.
 [tasks.version-bump]
 description = "Raise the version in FolioVersion: mise run version-bump -- major|minor|patch"
 depends = ["tectonic"]
@@ -42,7 +42,7 @@ env = { TZ = "Asia/Seoul" }
 # 빌드가 필요 없는 SwiftLint와 swift-format 검사를 먼저 돌려, 형식 오류가 빌드와 테스트를 기다리지 않고 실패하게 한다.
 run = [
   "swiftlint lint --quiet --strict --baseline .swiftlint-baseline.json",
-  "scripts/swift-format.sh lint",
+  ".mise/tasks/swift-format lint",
   "swift build --build-tests",
   "swift test --skip-build",
   "swift run --skip-build -q folio actions --check",
@@ -80,11 +80,11 @@ depends = ["check-code", "swiftlint", "format-check", "shell-check"]
 # 규칙도 끈다.
 [tasks.format]
 description = "Format the Swift sources in place with swift-format (.swift-format)"
-run = "scripts/swift-format.sh format"
+run = ".mise/tasks/swift-format format"
 
 [tasks.format-check]
 description = "Fail on Swift sources swift-format (.swift-format) would change: mise run format fixes them"
-run = "scripts/swift-format.sh lint"
+run = ".mise/tasks/swift-format lint"
 
 [tasks.periphery]
 description = "List code nothing uses, from a Mac build (.periphery.yml)"
@@ -130,6 +130,6 @@ depends = ["generate"]
 run = "xcodebuild -scheme Folio -configuration \"${FOLIO_CONFIGURATION:-Debug}\" -destination 'generic/platform=iOS Simulator' ARCHS=arm64 build -quiet -derivedDataPath \"$FOLIO_DERIVED_DATA\" -skipMacroValidation $FOLIO_XCODEBUILD_FLAGS"
 
 [tasks.build-web]
-description = "Bundle the note page (KaTeX math, code highlighting, diagrams, note CSS) and the edit view's code highlighting into sources/app/resources/web"
+description = "Bundle the note page (KaTeX math, code highlighting, diagrams, note CSS) and the edit view's code highlighting into app/resources/web"
 dir = "sources/web"
 run = ["npm ci --ignore-scripts --no-audit --no-fund", "npm run build"]

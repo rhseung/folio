@@ -3,7 +3,7 @@
 #USAGE flag "--fix" help="Format with shfmt instead of failing on the differences"
 set -euo pipefail
 
-files=(scripts/*.sh sources/tectonic/*.sh .mise/tasks/*)
+files=(sources/tectonic/*.sh .mise/tasks/*)
 shellcheck "${files[@]}"
 if [ "${usage_fix:-false}" = true ]; then
   shfmt -w "${files[@]}"

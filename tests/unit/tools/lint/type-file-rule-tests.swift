@@ -16,7 +16,7 @@ private func found(_ files: [String: String], _ check: String) -> [String] {
         let files = [
             "sources/lms/client.swift": "struct LMSClient {}",
             "sources/lms/lms-pages.swift": "enum LMSPages {}",
-            "sources/app/platform/synctex-view.swift": "final class SyncTeXView {}",
+            "app/platform/synctex-view.swift": "final class SyncTeXView {}",
         ]
         #expect(found(files, "one-type-per-file") == ["LMSClient in client.swift"])
     }
@@ -33,8 +33,8 @@ private func found(_ files: [String: String], _ check: String) -> [String] {
             extension String { var trimmed: String { self } }
             """
         let files = [
-            "sources/app/platform/title-row-edges.swift": source,
-            "sources/command/main.swift": "struct Command {}\nstruct Other {}",
+            "app/platform/title-row-edges.swift": source,
+            "sources/tools/folio/main.swift": "struct Command {}\nstruct Other {}",
             "tests/unit/domain/grade-tests.swift": "struct GradeTests {}\nstruct GPATests {}",
         ]
         #expect(found(files, "one-type-per-file").isEmpty)

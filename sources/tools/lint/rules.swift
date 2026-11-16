@@ -50,7 +50,7 @@ private func isDataMark(_ comment: String) -> Bool {
 }
 
 func isDebugFile(_ path: String) -> Bool {
-    if path.hasPrefix("sources/app/app/debug/") { return true }
+    if path.hasPrefix(RepoPath.appDebug + "/") { return true }
     let name = path.split(separator: "/").last.map(String.init) ?? path
     return name.hasPrefix("debug-") || name.hasSuffix("-snapshots.swift")
 }
