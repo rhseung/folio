@@ -27,6 +27,8 @@ public enum Area {
         ("updates", ["folio-version", "patch-note", "release", "whats-new"]),
     ]
 
+    public static var names: Set<String> { Set(table.map(\.name)) }
+
     // 앞 낱말이 여럿 맞으면 가장 긴 것을 고른다. `class-time`은 courses이고 `class-start`는 sessions다.
     public static func of(_ kebabName: String) -> String? {
         var best: (name: String, length: Int)?
