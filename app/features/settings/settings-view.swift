@@ -254,6 +254,7 @@ private struct AboutSettings: View {
             }
             .buttonStyle(.pointing(.plain))
         }
+        DiagnosticReports(workspace: model.workspace)
     }
 }
 

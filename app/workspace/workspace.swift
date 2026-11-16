@@ -42,6 +42,7 @@ final class Workspace {
     let transcriptions = TranscriptionQueue()
     var releaseNotes = ReleaseNotes()
     var lms = LMSConnection()
+    var diagnostics = DiagnosticLog()
     @ObservationIgnored private var watcher: GISTWatcher?
     @ObservationIgnored private var lastOwnWrite = Date.distantPast
     @ObservationIgnored private var pendingReload: Task<Void, Never>?
@@ -62,6 +63,8 @@ final class Workspace {
         // 테스트 host와 Xcode 미리보기는 저장된 폴더를 열면 안 된다. 그 폴더는 실제 GIST 폴더다.
         let env = ProcessInfo.processInfo.environment
         if LocalFolders.isIsolated(env) { return }
+        // MetricKit은 한 번 보낸 보고를 다시 보내지 않는다. 픽스처로 돌린 앱이 받으면 사용자의 보고가 임시 폴더로 사라진다.
+        if env[Self.environmentKey] == nil { diagnostics.start() }
         if let path = env[Self.environmentKey] {
             open(URL(filePath: path, directoryHint: .isDirectory), remember: false)
         } else if UserDefaults.standard.data(forKey: Self.bookmarkKey) != nil {
