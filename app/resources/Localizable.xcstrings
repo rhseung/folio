@@ -21792,6 +21792,17 @@
         }
       }
     },
+    "whats-new.days": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
+        }
+      }
+    },
     "whats-new.empty": {
       "extractionState": "manual",
       "localizations": {
