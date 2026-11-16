@@ -1,3 +1,4 @@
+import FolioCore
 import SwiftUI
 
 struct NumberField: View {
@@ -85,7 +86,7 @@ extension NumberField {
         self.init(
             value: Binding(
                 get: { Double(value.wrappedValue) },
-                set: { value.wrappedValue = min(max(Int($0.rounded()), bounds.lowerBound), bounds.upperBound) }),
+                set: { value.wrappedValue = Int(rounding: $0, in: bounds) }),
             in: Double(bounds.lowerBound)...Double(bounds.upperBound), step: Double(step), width: width, magnitude: magnitude)
     }
 }

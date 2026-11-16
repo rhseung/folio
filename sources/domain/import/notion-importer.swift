@@ -8,8 +8,9 @@ public enum NotionImporter {
     static let gradingModes: [String: GradingMode] = ["상대평가": .relative, "절대평가": .absolute, "S/U": .passFail]
 
     static func term(of title: String) -> (year: Int, term: Term)? {
-        guard let m = title.firstMatch(of: /(\d{4})\s*(봄|여름|가을|겨울)학기/), let term = termNames[String(m.2)] else { return nil }
-        return (Int(m.1)!, term)
+        guard let m = title.firstMatch(of: /(\d{4})\s*(봄|여름|가을|겨울)학기/), let year = Int(m.1), let term = termNames[String(m.2)]
+        else { return nil }
+        return (year, term)
     }
 
     public static func convert(_ export: NotionExport, gist: FolderTree, device: DeviceID, now: Date) -> NotionImportResult {

@@ -43,6 +43,7 @@ struct RuleTests {
         ("Assignment.componentId", { $0.assignments[0].componentId = UUID() }),
         ("Assignment.componentGroup", { $0.assignments[0].componentGroup = "Reports" }),
         ("GradeComponent.weight", { $0.components[0].weight = -10 }),
+        ("GradeComponent.weight", { $0.components[0].weight = 1e19 }),
         ("GradeComponent.count", { $0.components[0].aggregation = .bestOf(0) }),
         ("GradeComponent.expected", { $0.components[0].expectedCount = 0 }),
         (

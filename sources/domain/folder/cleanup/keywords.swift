@@ -6,8 +6,11 @@ enum Keywords {
 
     static let defaultExam = StandardLayout.midtermFolder
 
+    // Swift Regex의 `\d`는 전각 숫자(`２`)에도 맞지만 `Int("２")`는 nil이다. 번호를 읽는 정규식은 모두 ASCII 숫자로 좁힌다.
     static func examFolder(in lower: String) -> String? {
-        if let m = lower.firstMatch(of: /(?:quiz|퀴즈)[\s_-]*(\d{1,2})(?!\d)/) { return StandardLayout.quizFolderPrefix + String(Int(m.1)!) }
+        if let m = lower.firstMatch(of: /(?:quiz|퀴즈)[\s_-]*(\d{1,2})(?!\d)/.asciiOnlyDigits()), let n = Int(m.1) {
+            return StandardLayout.quizFolderPrefix + String(n)
+        }
         if lower.contains(midterm) { return StandardLayout.midtermFolder }
         if lower.contains(final) { return StandardLayout.finalFolder }
         return nil
@@ -73,12 +76,16 @@ enum Keywords {
         let lower = name.lowercased()
         let words = kinds.flatMap(\.words)
         let keyword =
-            words.isEmpty ? nil : try? Regex<(Substring, Substring)>("(?:" + FileRule.alternation(words) + #")[\s_-]*(\d{1,2})(?!\d)"#)
-        if let m = keyword.flatMap({ lower.firstMatch(of: $0) }) ?? lower.firstMatch(of: /\d{2}h(\d{1,2})(?!\d)/) {
-            return (Int(m.1)!, nil)
+            words.isEmpty
+            ? nil
+            : (try? Regex<(Substring, Substring)>("(?:" + FileRule.alternation(words) + #")[\s_-]*(\d{1,2})(?!\d)"#))?.asciiOnlyDigits()
+        if let m = keyword.flatMap({ lower.firstMatch(of: $0) }) ?? lower.firstMatch(of: /\d{2}h(\d{1,2})(?!\d)/.asciiOnlyDigits()),
+            let n = Int(m.1)
+        {
+            return (n, nil)
         }
-        if let m = lower.firstMatch(of: /^(\d{1,2})[\s_.-]/) {
-            return (Int(m.1)!, .guessedNumber)
+        if let m = lower.firstMatch(of: /^(\d{1,2})[\s_.-]/.asciiOnlyDigits()), let n = Int(m.1) {
+            return (n, .guessedNumber)
         }
         return nil
     }

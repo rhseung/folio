@@ -188,6 +188,7 @@ struct GradesView: View {
         let semester = points.filter { $0.series == .semester }
         let cumulative = points.filter { $0.series == .cumulative }
         let low = GradesModel.floor(points)
+        let axis = GradesModel.axis(from: low, to: model.maxPoints)
         let widest = semester.map(\.credits).max() ?? 0
         func width(_ p: GradesModel.Point) -> MarkDimension { .ratio(widest > 0 ? max(0.08, 0.6 * p.credits / widest) : 0.4) }
         func value(_ series: GradesModel.Series) -> some View {
@@ -277,9 +278,9 @@ struct GradesView: View {
                         .zIndex(-1)
                 }
             }
-            .chartYScale(domain: low...model.maxPoints)
+            .chartYScale(domain: axis.domain)
             .chartYAxis {
-                AxisMarks(position: .leading, values: Array(stride(from: low, through: model.maxPoints, by: 0.5))) {
+                AxisMarks(position: .leading, values: axis.ticks) {
                     AxisGridLine().foregroundStyle(Theme.Palette.lineSoft)
                     AxisValueLabel(format: FloatingPointFormatStyle<Double>.number.precision(.fractionLength(1))).foregroundStyle(
                         Theme.Palette.textTertiary)

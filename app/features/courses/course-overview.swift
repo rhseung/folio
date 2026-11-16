@@ -183,7 +183,7 @@ struct CourseOverview: View {
     func gradesBlock(_ file: CourseFile, score: GradeCalculator.CourseScore) -> some View {
         Block(
             String(localized: .courseSectionGrades),
-            note: file.components.isEmpty ? nil : String(localized: .courseRemainingWeight(Int(score.remainingWeight.rounded())))
+            note: file.components.isEmpty ? nil : String(localized: .courseRemainingWeight(score.remainingPercent))
         ) {
             Card(padding: Theme.Space.l) {
                 if file.components.isEmpty {

@@ -13,7 +13,7 @@ struct ScorePanel: View {
             HStack(alignment: .bottom, spacing: Theme.Space.section) {
                 Stat(String(localized: .courseGradesSecured), result.secured.oneDecimal)
                 Stat(String(localized: .courseGradesProjected), result.projected.map(\.oneDecimal) ?? "-", tint: accent.ink)
-                Stat(String(localized: .courseGradesRemainingWeight), "\(Int(result.remainingWeight.rounded()))%")
+                Stat(String(localized: .courseGradesRemainingWeight), "\(result.remainingPercent)%")
                 Spacer()
                 if relative == nil {
                     VStack(alignment: .leading, spacing: Theme.Space.xs) {

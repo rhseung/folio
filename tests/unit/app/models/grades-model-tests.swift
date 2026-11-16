@@ -65,6 +65,16 @@ struct GradesModelTests {
         #expect(model.expected.isEmpty)
     }
 
+    @Test func theTrendAxisStaysSmallAndForward() {
+        #expect(GradesModel.axis(from: 2.5, to: 4.5).ticks == [2.5, 3, 3.5, 4, 4.5])
+        #expect(GradesModel.axis(from: 0, to: 4.5).ticks.count == 10)
+        let huge = GradesModel.axis(from: 0, to: 1e9)
+        #expect(huge.ticks.count <= 11 && huge.domain == 0...1e9)
+        let negative = GradesModel.axis(from: 0, to: -2)
+        #expect(negative.domain == 0...0.5 && negative.ticks == [0, 0.5])
+        #expect(GradesModel.axis(from: 0, to: .infinity).domain == 0...0.5)
+    }
+
     @Test func trendPointsDashFromTheLastRecordedPoint() {
         let spring = Semester(device: device, at: .now, year: 2026, term: .spring)
         let fall = Semester(device: device, at: .now, year: 2026, term: .fall)

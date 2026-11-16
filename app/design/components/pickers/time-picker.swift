@@ -37,9 +37,14 @@ struct TimePicker: View {
         Calendar.current.date(bySettingHour: m / 60 % 24, minute: m % 60, second: 0, of: .now)!.formatted(date: .omitted, time: .shortened)
     }
 
+    // 24:00(1440)에 끝나는 수업은 다음 날 0시로 그린다. 같은 날의 0시로 두면 범위의 끝이 시작보다 앞서 앱이 멈춘다.
     static func range(_ start: Int, _ end: Int) -> String {
-        let at = { (m: Int) in Calendar.current.date(bySettingHour: m / 60 % 24, minute: m % 60, second: 0, of: .now)! }
-        return end > start ? (at(start)..<at(end)).formatted(date: .omitted, time: .shortened) : label(start)
+        let at = { (m: Int) -> Date? in
+            Calendar.current.date(bySettingHour: m / 60 % 24, minute: m % 60, second: 0, of: .now)
+                .flatMap { Calendar.current.date(byAdding: .day, value: m / 1440, to: $0) }
+        }
+        guard end > start, let from = at(start), let to = at(end), to > from else { return label(start) }
+        return (from..<to).formatted(date: .omitted, time: .shortened)
     }
 
     static var uses12Hour: Bool { DateFormatter.dateFormat(fromTemplate: "j", options: 0, locale: .current)?.contains("a") ?? false }
