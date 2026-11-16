@@ -54,18 +54,18 @@ import UIKit
         ]
         guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
         let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] ?? [:]
-        let edge = max(image.width, image.height)
-        let original = max(
-            properties[kCGImagePropertyPixelWidth] as? Int ?? edge, properties[kCGImagePropertyPixelHeight] as? Int ?? edge)
-        let shrunk = CGFloat(edge) / CGFloat(max(original, 1))
+        var width = properties[kCGImagePropertyPixelWidth] as? Int ?? image.width
+        var height = properties[kCGImagePropertyPixelHeight] as? Int ?? image.height
+        // 원본의 픽셀 크기는 회전하기 전의 것이고 줄인 그림은 EXIF 방향대로 돌린 것이라, 방향이 다르면 바꾼다.
+        if (width > height) != (image.width > image.height) { swap(&width, &height) }
         let bytes = image.bytesPerRow * image.height
         #if os(macOS)
         // `NSImage(contentsOf:)`처럼 DPI로 pt를 정한다. 144dpi 화면 캡처는 픽셀의 절반 크기다.
         let dpi = properties[kCGImagePropertyDPIWidth] as? Double ?? 72
-        let points = 72 / (dpi > 0 ? dpi : 72) / shrunk
-        return (NSImage(cgImage: image, size: CGSize(width: CGFloat(image.width) * points, height: CGFloat(image.height) * points)), bytes)
+        let points = 72 / (dpi > 0 ? dpi : 72)
+        return (NSImage(cgImage: image, size: CGSize(width: Double(width) * points, height: Double(height) * points)), bytes)
         #else
-        return (UIImage(cgImage: image, scale: shrunk, orientation: .up), bytes)
+        return (UIImage(cgImage: image, scale: CGFloat(image.width) / CGFloat(max(width, 1)), orientation: .up), bytes)
         #endif
     }
 }
