@@ -1,6 +1,6 @@
 # 버전과 릴리스
 
-버전을 올리거나 릴리스를 만들 때 읽는다. 작업은 `mise run version-bump`, `release-notes`, `release-tag`, `install-release`이고, 규칙은 `folio-dev`(`sources/dev`)에 있다.
+버전을 올리거나 릴리스를 만들 때 읽는다. 작업은 `mise run version-bump`, `release-notes`, `release-tag`, `install-release`이고, 규칙은 `folio-dev`(`sources/tools/dev`)에 있다.
 
 ## 버전
 

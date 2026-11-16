@@ -9,7 +9,7 @@ extension Rules {
                 + "note-figure-add.swift); private pieces stay in the file that uses them (AGENTS.md \"이름과 주석\")"
         ) { code in
             var hits: [Hit] = []
-            for file in code.files(under: "sources") where !file.path.hasSuffix("/main.swift") {
+            for file in code.files(under: RepoPath.app, RepoPath.packages) where !file.path.hasSuffix("/main.swift") {
                 let types = outsideTypes(in: file)
                 let stem = ((file.path as NSString).lastPathComponent as NSString).deletingPathExtension
                 if types.count > 1 {
@@ -29,10 +29,10 @@ extension Rules {
                 + "front of its name (NoteFigureAdd: note/figure/note-figure-add.swift), so the list folio-gen writes follows"
         ) { code in
             var hits: [Hit] = []
-            for file in code.files(under: "sources/actions") {
+            for file in code.files(under: RepoPath.actions) {
                 for node in file.nodes(StructDeclSyntax.self) where node.attributes.contains(where: isActionAttribute) {
                     let name = node.name.text
-                    let folders = file.path.dropFirst("sources/actions/".count).split(separator: "/").dropLast().map(String.init)
+                    let folders = file.path.dropFirst(RepoPath.actions.count + 1).split(separator: "/").dropLast().map(String.init)
                     let front = folders.joined(separator: "-")
                     if folders.isEmpty || !(kebab(name) == front || kebab(name).hasPrefix(front + "-")) {
                         hits.append(Hit("action-path", file, file.line(of: node), "\(name) in \(folders.joined(separator: "/"))/"))

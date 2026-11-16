@@ -2,7 +2,7 @@
 
 과목을 중심으로 강의 자료, 노트, 손필기, 복습, 퀴즈, 과제, 성적을 관리하는 Apple 기기용 네이티브 앱입니다. 무엇을 만들지와 남은 일은 GitHub 이슈와 [Project](https://github.com/users/rhseung/projects/10)에 있습니다. 이 파일에는 어떻게 만들지에 대한 원칙과 판단 기준을 적습니다. 작업을 시작하기 전에 해당 이슈와 그 상위 이슈를 먼저 읽습니다.
 
-코드나 도구가 원본인 설명은 여기에 되풀이하지 않습니다. 작업 목록과 설명은 `mise tasks`, CLI 명령은 `folio help <명령>`, 검사 규칙은 `sources/lint`의 규칙 이름(`mise run check-code`)이 원본입니다. 영역별 세부는 아래 문서에 있고, 그 영역을 고칠 때만 읽습니다.
+코드나 도구가 원본인 설명은 여기에 되풀이하지 않습니다. 작업 목록과 설명은 `mise tasks`, CLI 명령은 `folio help <명령>`, 검사 규칙은 `sources/tools/lint`의 규칙 이름(`mise run check-code`)이 원본입니다. 영역별 세부는 아래 문서에 있고, 그 영역을 고칠 때만 읽습니다.
 
 | 문서 | 읽을 때 |
 | --- | --- |
@@ -31,32 +31,37 @@
 - UI는 SwiftUI로 만든다. AppKit과 UIKit은 SwiftUI로 할 수 없는 부분(PencilKit 캔버스, PDFKit 뷰)에만 쓴다.
 - 직접 구현보다 잘 관리되는 라이브러리를 먼저 쓴다. 표준 라이브러리와 Apple 프레임워크로 되지 않는 일이면, 직접 짜기 전에 널리 쓰이고 유지되는 Swift 패키지를 찾는다. 라이브러리가 데이터 원칙을 어기는 경우(예: 노트 frontmatter의 원문을 보존하지 못하는 YAML 파서)에만 직접 구현하고 그 이유를 주석에 남긴다.
 - 외부 의존성은 Swift Package Manager로만 추가한다. 새 의존성은 넣은 뒤 사용자에게 무엇을 왜 넣었는지 알리고 커밋 메시지에도 남긴다. 예외는 둘이다.
-    - 웹 번들(`sources/web`): 수식 변환, 코드 하이라이팅, 노트 미리보기, Claude 패널에 쓴다. npm 패키지를 정확한 버전으로 고정하고 `mise run build-web`으로 `sources/app/resources/web/`에 묶는다. 묶은 결과는 커밋해서 앱 빌드에 node가 필요 없게 한다.
+    - 웹 번들(`sources/web`): 수식 변환, 코드 하이라이팅, 노트 미리보기, Claude 패널에 쓴다. npm 패키지를 정확한 버전으로 고정하고 `mise run build-web`으로 `app/resources/web/`에 묶는다. 묶은 결과는 커밋해서 앱 빌드에 node가 필요 없게 한다.
     - TeX 엔진 Tectonic: iPadOS가 다른 프로그램을 띄우지 못하게 해서 정적 라이브러리로 앱 안에 넣는다(`docs/tex.md`).
 
 ## 프로젝트 구조
 
-플랫폼과 무관한 로직은 Swift 패키지의 모듈로 분리해서 `swift test`로 Xcode 없이 테스트한다. 코드는 `sources/<모듈>`, 그 단위 테스트는 `tests/unit/<모듈>`, 앱을 띄워 바깥에서 조작하는 테스트는 `tests/e2e/<모듈>`이다. 언어와 빌드 도구가 달라도(Swift 패키지, Xcode 앱, npm 웹 번들, Rust 브리지) 같다. 폴더 이름에는 `folio-` 접두어를 붙이지 않고, 모듈과 제품 이름(`FolioDomain`)은 Swift 관례대로 둔다.
+플랫폼과 무관한 로직은 Swift 패키지의 모듈로 분리해서 `swift test`로 Xcode 없이 테스트한다. 앱은 패키지 밖에서 Xcode가 빌드하므로 저장소 최상위 `app/`에 둔다. 코드는 `sources/<모듈>`, 그 단위 테스트는 `tests/unit/<모듈>`, 앱을 띄워 바깥에서 조작하는 테스트는 `tests/e2e/<모듈>`이다. 언어와 빌드 도구가 달라도(Swift 패키지, Xcode 앱, npm 웹 번들, Rust 브리지) 같다. 폴더 이름에는 `folio-` 접두어를 붙이지 않고, 모듈과 제품 이름(`FolioDomain`)은 Swift 관례대로 둔다.
 
 ```text
 folio/
-  Package.swift       # Swift 패키지 하나. 앱 밖의 모든 모듈과 테스트, 실행 파일(folio, folio-gen, folio-fixture, folio-lint, folio-dev)
-  project.yml         # 앱의 Xcode 프로젝트(`mise run generate`)
-  mise.toml           # 도구 버전, 환경 변수, 한 줄짜리 작업. 여러 줄 작업은 .mise/tasks/<이름>
-  .swiftlint-baseline.json, .folio-lint-baseline.txt   # 두 린트의 기준선
+  app/                # 멀티플랫폼 앱 타깃(macOS, iPadOS, iOS). project.yml이 읽는다
+    folio-app.swift   # 진입점
+    workspace/        # Workspace와 그 확장, services/(녹음, 시계, 알림 같은 앱 서비스)
+    window/           # 창 틀: 화면 고르기, 탭, 칸, 링크 창, 항목 시트, debug/(창과 칸을 재는 DEBUG 훅)
+    design/ platform/ features/ resources/
   docs/               # 디자인 시스템과 영역별 문서
-  scripts/            # mise 밖(lefthook, CI)에서도 부르는 스크립트
   sources/
-    app/              # 멀티플랫폼 앱 타깃(macOS, iPadOS, iOS)
     core/ domain/ storage/ actions/ index/ lms/ ai/ markdown/ cli/ macros/ fixtures/   # 아래 "레이어"의 모듈
-    command/ gen/ fixture-writer/   # 실행 파일 folio, folio-gen, folio-fixture의 진입점
-    dev/              # 개발 도구 folio-dev(버전, 태그, 릴리스 본문)
-    lint/ lint-command/   # AGENTS.md 규칙 검사기 folio-lint(`mise run check-code`)
+    tools/            # 실행 파일마다 폴더 하나. 이름은 실행 파일 이름에서 folio-를 뺀 것이다
+      folio/          # folio의 진입점(명령은 FolioCLI에 있다)
+      gen/ fixture/   # folio-gen, folio-fixture
+      lint/           # AGENTS.md 규칙 검사기 folio-lint(`mise run check-code`)
+      dev/            # 개발 도구 folio-dev(버전, 태그, 릴리스 본문)
     web/              # 노트 미리보기와 Claude 패널의 웹 번들 원본
     tectonic/         # Tectonic 정적 라이브러리의 원본과 받기(`docs/tex.md`)
   tests/
-    unit/<모듈>/      # sources와 1:1. app/은 화면 모델과 노트 보기 검사(`test-app`), app/ipad/는 iPad 검사(`test-ipad`)
+    unit/<모듈>/      # sources와 1:1(tools/lint, tools/dev 포함). app/은 화면 모델과 노트 보기 검사(`test-app`), app/ipad/는 iPad 검사(`test-ipad`)
     e2e/app/          # 앱을 띄워 접근성을 검사한다(`test-a11y`, CI만 돌린다)
+  Package.swift       # Swift 패키지 하나. 앱 밖의 모든 모듈과 테스트, 실행 파일(folio, folio-gen, folio-fixture, folio-lint, folio-dev)
+  project.yml         # 앱의 Xcode 프로젝트(`mise run generate`)
+  mise.toml           # 도구 버전, 환경 변수, 한 줄짜리 작업. 여러 줄 작업과 lefthook·CI가 부르는 스크립트는 .mise/tasks/<이름>
+  .swiftlint-baseline.json, .folio-lint-baseline.txt   # 두 린트의 기준선
 ```
 
 - 파일 밖에서 쓰는 타입 하나에 파일 하나를 두고, 파일 이름은 타입 이름 전체의 케밥 케이스다(`NoteFigureAdd`: `note-figure-add.swift`). Swift가 한 모듈 안에 같은 파일 이름을 두 번 받지 않아서, 폴더가 이름의 앞부분을 말해도 파일 이름을 줄이지 않는다. 그 파일 안에서만 쓰는 `private` 조각과 한 값의 `extension`은 그 값의 파일에 둔다(`one-type-per-file`). 폴더에 Swift 파일이 20개를 넘으면 역할로 하위 폴더를 나눈다(`folder-size`).
@@ -93,9 +98,9 @@ FolioGen  ->  FolioActions   (액션 목록과 CLI 명령, 명령 트리를 쓴�
 | `FolioGen` | `@Action`과 `@Query` 선언을 읽어 `Actions.all`, `Queries.all`(`#if` 안의 선언은 같은 조건 안에), 생성 명령(명령 하나에 파일 하나), 명령 트리(`command-tree.swift`)를 쓴다. 결과는 커밋한다 | FolioCLI에 의존. 생성 파일이 깨져도 다시 만들 수 있어야 한다 |
 | `FolioDev` | 개발 도구 `folio-dev`. 버전 읽기와 올리기, 태그, 릴리스 본문(`docs/release.md`) | 앱과 CLI에 링크되지 않는다. 앱 작업은 이 도구를 빌드하지 않는다 |
 | `FolioFixtures` | 테스트와 개발 실행에 쓰는 가짜 GIST 폴더. 공개 저장소에 과목 파일 폴더를 두지 않기 위해 파일을 코드에 두고 쓸 때 펼친다. 화면 확인용 상황(`Scenario`)은 고정된 시각 기준으로 액션을 돌려 만든다 | CLI에 링크되지 않는다. 앱에서는 `#if DEBUG`의 `Workspace.scenario`만 쓴다 |
-| App | 화면. `app/`(진입점과 탐색), `design/`(토큰과 공용 구성 요소), `features/<화면>/`, `platform/`(PencilKit, PDFKit, WKWebView 연결, 파일 보기, 노트 미리보기와 편집 보기), `resources/` | 파일 시스템 직접 접근과 `course.json` 값의 직접 변경. 반드시 `FolioActions`를 거친다 |
+| App | 화면. `folio-app.swift`(진입점), `workspace/`(Workspace와 앱 서비스), `window/`(창 틀과 탐색), `design/`(토큰과 공용 구성 요소), `features/<화면>/`, `platform/`(PencilKit, PDFKit, WKWebView 연결, 파일 보기, 노트 미리보기와 편집 보기), `resources/` | 파일 시스템 직접 접근과 `course.json` 값의 직접 변경. 반드시 `FolioActions`를 거친다 |
 
-`sources/app` 밖의 모듈은 SwiftUI를 import하지 않는다. 새 관심사가 생기면 위 표에 모듈을 추가하고 방향을 정한 뒤 만든다.
+앱(`app/`) 밖의 모듈은 SwiftUI를 import하지 않는다. 새 관심사가 생기면 위 표에 모듈을 추가하고 방향을 정한 뒤 만든다.
 
 ### 액션
 
@@ -140,7 +145,7 @@ FolioGen  ->  FolioActions   (액션 목록과 CLI 명령, 명령 트리를 쓴�
 
 ### 화면: 모델과 뷰
 
-화면 하나는 `sources/app/features/<기능>/`의 `<화면>-view.swift`와 `<화면>-model.swift`로 나눈다. 다른 파일에서 쓰는 큰 조각(행, 카드, 시트)은 타입마다 `features/<기능>/<조각>.swift`로 빼고, 그 화면 안에서만 쓰는 조각은 `private`으로 둔다. 본보기는 `features/catalog/`다.
+화면 하나는 `app/features/<기능>/`의 `<화면>-view.swift`와 `<화면>-model.swift`로 나눈다. 다른 파일에서 쓰는 큰 조각(행, 카드, 시트)은 타입마다 `features/<기능>/<조각>.swift`로 빼고, 그 화면 안에서만 쓰는 조각은 `private`으로 둔다. 본보기는 `features/catalog/`다.
 
 - **모델** `<화면>Model`: `@MainActor @Observable final class`이고 `init(workspace:, 대상 ID)`로 만든다. 화면의 상태(검색어, 고른 항목, 지우려는 항목)를 들고, 뷰가 바로 그릴 값(묶고, 거르고, 세고, 문구로 만든 값)과 동작을 내놓는다. 동작은 `workspace.run(액션)`을 부른다.
 - **뷰**: 모델을 읽고 배치만 한다. `body`에서 묶기, 거르기, 세기를 하지 않고 `workspace`를 직접 부르지 않는다(`view-body-logic`, `view-workspace-call`). 뷰는 `@State private var model`을 `init(workspace:)`에서 만들고, `@State`는 시트, 마우스 올림, 포커스 같은 화면 상태에만 쓴다.
@@ -149,7 +154,7 @@ FolioGen  ->  FolioActions   (액션 목록과 CLI 명령, 명령 트리를 쓴�
 - `course.json` 밖의 파일을 읽는 목록(노트, 퀴즈 카드)은 `workspace.notesRevision`과 `quizRevision`이 바뀔 때 다시 읽는다. 두 값은 `Workspace`가 액션 결과의 `changes`와 폴더 전체 다시 읽기로만 올린다. 화면이 직접 올리지 않으므로 어느 화면이나 Claude 패널, CLI로 써도 열린 목록에 나타난다.
 - 열린 편집기(노트, 텍스트 파일)도 `notesRevision`이 바뀌면 디스크를 마지막으로 읽거나 쓴 내용과 비교한다. 저장하지 않은 변경이 없으면 본문과 메타를 다시 읽고, 있으면 덮어쓰지 않고 충돌로 묻는다. 메타는 처음 연 `NoteFile`이 아니라 지금의 `course.json`에서 읽는다.
 - 다른 화면이나 항목으로 옮길 때는 `@Environment(\.openLink)`에 `AppLink`를 넘긴다. 화면이 목적지를 직접 고르거나 링크 여는 법을 따로 구현하지 않는다. 그래야 모든 이동이 창의 기록 하나에 들어간다. 화면은 창이 지금 가리키는 곳을 `\.place`로 받아 따라가고, 자기 안에서 연 것(파일, 단원, 노트)은 다시 링크로 알린다.
-- **화면 계약**: 화면은 앱 링크 하나를 그린다. 링크에서 화면을 고르는 곳은 `sources/app/app/window/screen.swift`의 `Screen(entry)` 하나다. 창의 본문, 칸, iPhone이 모두 이것으로 그린다.
+- **화면 계약**: 화면은 앱 링크 하나를 그린다. 링크에서 화면을 고르는 곳은 `app/window/screen.swift`의 `Screen(entry)` 하나다. 창의 본문, 칸, iPhone이 모두 이것으로 그린다.
     - 화면은 `init(workspace:)`와 링크의 ID만 받는다. 링크가 가리키는 안쪽(과목의 구역, 연 파일·단원·노트, 사람)은 `\.place`로 읽는다. 다른 화면은 `\.openLink`로 열고, 여는 클로저를 인자로 받지 않는다.
     - 화면은 창 틀에 기대지 않는다. 툴바에 항목을 넣지 않고(`screen-toolbar`. 도구는 `PageBar`, 보조 패널은 FAB), 창 크기가 아니라 자기 폭으로 배치를 고르며, 위치 표시에는 `.crumb`로 단계를 알리기만 한다.
     - 화면은 받은 폭 안에 그린다. 옆으로 넘치거나 행을 자르지 않고 접는다. 나란한 블록은 `Fold(wideFrom:)`, 행은 `FormRow`와 `FoldingRow`로 접는다.
@@ -157,11 +162,11 @@ FolioGen  ->  FolioActions   (액션 목록과 CLI 명령, 명령 트리를 쓴�
     - 화면 안의 상태(목록 열 펼치기, 빠른 추가에 넣은 줄, 쪽 열의 범위, 퀴즈 시작, 펼친 학기)를 바깥에서 정할 때는 `ScreenRequest`를 `\.screenRequests`로 내려 준다. 화면은 아는 요청에만 답하고 누가 요청했는지 보지 않는다. 화면 파일에 `SnapshotDriver`를 읽는 `#if DEBUG` 분기를 두지 않는다.
     - `ScreenFitTests`(`mise run test-app`)가 모든 화면을 세 폭으로 그려 넘치는지 본다. `ColumnSplit`의 본문은 평소 0까지 줄어들어 넘친 것을 자르므로, 검사는 `\.revealsOverflow`로 이를 풀어 본다. 바뀐 화면은 `FOLIO_RENDER_SIZES=1440x900,720,390 mise run render`로 그려 눈으로 본다.
 - 모델 테스트는 `tests/unit/app/models/<화면>-model-tests.swift`(과목 화면은 `models/course/`)에 Swift Testing으로 쓰고, `fixtureWorkspace()`로 가짜 GIST 폴더를 연다.
-- `mise run check-code`(`mise run test`에 포함)가 이 절과 아래 규칙 중 구문 트리로 보이는 것을 잡는다. 규칙 이름은 `sources/lint`에 있고 규칙마다 단위 테스트가 있다(`tests/unit/lint`). 검사가 생기기 전부터 있던 곳은 `.folio-lint-baseline.txt`에 있어 통과하고 새로 생긴 곳은 실패한다. 고친 곳이 목록에 남아 있어도 실패하므로 `mise run check-code -- --update`로 목록을 줄인다. 새 위반을 목록에 넣어 통과시키지 않는다. 처음부터 위반이 없던 규칙(디자인 값, `local-folders`, `one-type-per-file`, `doc-comment`)은 기준선이 없어 `--update`로도 통과하지 않는다.
+- `mise run check-code`(`mise run test`에 포함)가 이 절과 아래 규칙 중 구문 트리로 보이는 것을 잡는다. 규칙 이름은 `sources/tools/lint`에 있고 규칙마다 단위 테스트가 있다(`tests/unit/tools/lint`). 규칙이 보는 경로는 `repo-path.swift`의 표 하나에 있다. 검사가 생기기 전부터 있던 곳은 `.folio-lint-baseline.txt`에 있어 통과하고 새로 생긴 곳은 실패한다. 고친 곳이 목록에 남아 있어도 실패하므로 `mise run check-code -- --update`로 목록을 줄인다. 새 위반을 목록에 넣어 통과시키지 않는다. 처음부터 위반이 없던 규칙(디자인 값, `local-folders`, `one-type-per-file`, `doc-comment`)은 기준선이 없어 `--update`로도 통과하지 않는다.
 
 ### 문자열 키
 
-화면과 CLI에 보이는 문구는 코드에 적지 않고 문자열 카탈로그에 키로 넣는다. 카탈로그는 문구를 내놓는 모듈마다 하나다(`sources/app/resources`, `sources/domain`, `sources/actions`, `sources/cli`). 카탈로그에 직접 넣은 키(`extractionState: manual`)마다 Swift 심볼이 생기므로 키를 잘못 쓰면 컴파일이 실패한다.
+화면과 CLI에 보이는 문구는 코드에 적지 않고 문자열 카탈로그에 키로 넣는다. 카탈로그는 문구를 내놓는 모듈마다 하나다(`app/resources`, `sources/domain`, `sources/actions`, `sources/cli`). 카탈로그에 직접 넣은 키(`extractionState: manual`)마다 Swift 심볼이 생기므로 키를 잘못 쓰면 컴파일이 실패한다.
 
 ```swift
 // "sessions.add" = "회차 추가",  "sessions.count" = "회차 %lld개"
@@ -269,7 +274,7 @@ Me/GIST/
 
 - 모든 `xcodebuild` 작업은 체크아웃 안의 `.build/DerivedData`(`FOLIO_DERIVED_DATA`)에 빌드한다. 워크트리마다 몇 GB씩 남지 않고 워크트리를 지우면 함께 지워진다. 디버그 앱은 `.build/DerivedData/Build/Products/Debug/Folio.app`이다. `FolioMacros`는 로컬 패키지라 Xcode가 매크로 신뢰를 묻지 않고, 작업의 `-skipMacroValidation`은 명령줄 빌드가 멈추지 않게 하는 안전장치다.
 - 커밋 전 검사(`lefthook.yml`)는 `mise run hooks`로 한 번 넣는다. 훅은 `.git/hooks`에 들어가고 워크트리가 이 폴더를 함께 쓰므로 세션 워크트리에서도 돈다.
-- 포매팅은 `mise run format`이고 포매터를 부르는 곳은 `scripts/swift-format.sh` 하나다. 한 줄에 여러 문장이나 선언을 쓰는 Folio의 문체를 바꾸는 규칙은 끄고, 그 이유는 `mise.toml`의 `format` 작업에 적었다. main에 올라온 브랜치를 다시 얹다가 모양만 다른 충돌이 나면 손으로 풀지 않고 한쪽을 고른 뒤 `mise run format`을 다시 돌린다.
+- 포매팅은 `mise run format`이고 포매터를 부르는 곳은 mise 작업 `swift-format`(`.mise/tasks/swift-format`) 하나이고, lefthook과 `format`, `format-check`가 이것을 부른다. 한 줄에 여러 문장이나 선언을 쓰는 Folio의 문체를 바꾸는 규칙은 끄고, 그 이유는 `mise.toml`의 `format` 작업에 적었다. main에 올라온 브랜치를 다시 얹다가 모양만 다른 충돌이 나면 손으로 풀지 않고 한쪽을 고른 뒤 `mise run format`을 다시 돌린다.
 - 생성 파일은 모두 `generated` 폴더에 두고 검사가 만든 내용과 그대로 비교하므로, swift-format과 SwiftLint가 그 폴더를 뺀다. `@Action` 선언이나 손 명령을 고치면 `mise run gen-cli`를 돌린다. 생성기는 링크한 액션 목록으로 명령을 쓰므로 목록을 고친 뒤 한 번 더 돈다.
 - SwiftLint의 레이아웃 규칙은 포매터에 맡겨 끈다. `.swiftlint-baseline.json`은 고친 곳을 빼거나 옮긴 파일을 따라갈 때만 `mise run swiftlint-baseline`으로 다시 쓰고, 새 위반을 넣어 통과시키지 않는다.
 - 거의 모든 파일을 건드리는 기계적 변경(옮기기, 포매터 판 올리기)을 머지하면 그 스쿼시 커밋 해시를 주석과 함께 `.git-blame-ignore-revs`에 더한다. 로컬에서는 `git config blame.ignoreRevsFile .git-blame-ignore-revs`를 한 번 실행한다.
@@ -328,7 +333,7 @@ Me/GIST/
 
 - 화면을 만들거나 고치기 전에 `docs/DESIGN.md`와 그 화면 영역의 `docs/design/` 문서를 읽는다.
 - 디자인은 시안 C(밝은 종이 질감, 사이드바·과목 열·본문의 3단)에 리퀴드 글라스를 더한 방향이다. Mac 창은 시안 D처럼 반투명 창 재질 위에 사이드바와 툴바가 평평하게 놓이고 본문이 둥근 패널로 들어간다. 디자인 시스템과 시안 캔버스의 링크는 `docs/DESIGN.md`에 있다. 새 시안은 그 캔버스의 영역 페이지에 그리고 따로 Artifact를 만들지 않는다.
-- 색, 간격, 모서리, 글꼴, 투명도, 그림자, 움직임, 크기는 `sources/app/design/tokens/theme.swift`의 토큰만 쓴다. 라이트와 다크 값을 함께 둔다. 공용 구성 요소는 `sources/app/design/`의 네 층(`tokens/`, `atoms/`, `components/`, `structures/`)에 있다. 기능 화면은 시스템 컨트롤과 버튼 스타일을 직접 쓰지 않고 원자를 쓰며, 기능 안에 `ButtonStyle`을 선언하지 않는다(`design-control`). 화면 코드의 디자인 값은 `design-*` 규칙이 잡는다.
+- 색, 간격, 모서리, 글꼴, 투명도, 그림자, 움직임, 크기는 `app/design/tokens/theme.swift`의 토큰만 쓴다. 라이트와 다크 값을 함께 둔다. 공용 구성 요소는 `app/design/`의 네 층(`tokens/`, `atoms/`, `components/`, `structures/`)에 있다. 기능 화면은 시스템 컨트롤과 버튼 스타일을 직접 쓰지 않고 원자를 쓰며, 기능 안에 `ButtonStyle`을 선언하지 않는다(`design-control`). 화면 코드의 디자인 값은 `design-*` 규칙이 잡는다.
 - 구성 요소와 인자의 이름은 널리 쓰는 UI 라이브러리의 이름을 따른다. Apple(SwiftUI, HIG)을 먼저 보고, 없으면 Radix, shadcn/ui, MUI에서 흔한 이름을 쓰며, SwiftUI 타입과 겹치는 이름은 피한다. 같은 뜻의 인자는 모든 구성 요소에서 같은 이름이다.
 - 리퀴드 글라스는 창 틀(사이드바, 툴바)과 떠 있는 요소(빠른 추가, 팝오버, Claude 패널)에만 쓰고 본문은 종이 색으로 둔다(`docs/design/window.md`).
 - 과목 강조색은 `course.json`의 `color`(프리셋 이름)를 `CourseAccent`로 읽고, 비어 있으면 학기 안 순서로 프리셋을 고른다(무채색 `graphite`는 고르지 않는다). 예전에 고른 `#RRGGBB`는 파일을 바꾸지 않고 가장 가까운 프리셋으로 읽는다. 색은 프리셋 견본에서만 고른다. 과목 화면은 `\.accent` 환경값으로 색을 주입받는다(`course-accent`). 프리셋 이름과 고르는 순서는 `FolioDomain`의 `CourseColor`, 색 값은 `theme.swift`에 있다.

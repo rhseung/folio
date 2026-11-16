@@ -1,9 +1,10 @@
 # 레이아웃은 swift-format이 맡으므로 레이아웃 규칙은 여기서 끈다.
 included:
+  - app
   - sources
   - tests
 excluded:
-  # 생성기의 출력이다(scripts/swift-format.sh의 `generated`와 같은 폴더).
+  # 생성기의 출력이다(.mise/tasks/swift-format의 `generated`와 같은 폴더).
   - "sources/**/generated"
   - sources/web
   - sources/tectonic

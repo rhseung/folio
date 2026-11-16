@@ -1,4 +1,3 @@
-import FolioLint
 import Foundation
 
 // 보고서와 기준선의 경로가 저장소 루트 기준이므로 루트에서 실행한다(mise는 모든 작업을 루트에서 실행한다).

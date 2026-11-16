@@ -28,10 +28,10 @@ targets:
     scheme:
       testTargets: [FolioTests]
     sources:
-      - path: sources/app
+      - path: app
         excludes: ["resources/AppIcon.icon", "resources/info.plist"]
       # XcodeGen은 Icon Composer 문서의 형식을 모르므로, 여기서 따로 지정하지 않으면 보통 폴더로 들어간다.
-      - path: sources/app/resources/AppIcon.icon
+      - path: app/resources/AppIcon.icon
         type: file
         buildPhase: resources
     dependencies:
@@ -70,7 +70,7 @@ targets:
         CODE_SIGN_STYLE: Automatic
         GENERATE_INFOPLIST_FILE: YES
         # 빌드 설정으로 쓸 수 없는 키(folio:// scheme)는 이 파일에 두고, 생성한 Info.plist에 합친다.
-        INFOPLIST_FILE: sources/app/resources/info.plist
+        INFOPLIST_FILE: app/resources/info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_KEY_CFBundleDisplayName: Folio
         INFOPLIST_KEY_NSFaceIDUsageDescription: 성적을 보기 전에 본인인지 확인합니다.

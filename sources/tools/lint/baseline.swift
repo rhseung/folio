@@ -28,7 +28,7 @@ public enum Baseline {
 
     public static func render(_ hits: [Hit]) -> String {
         let header = """
-            # Places that broke a rule of folio-lint (sources/lint) before the rule existed. Fix one and delete its line.
+            # Places that broke a rule of folio-lint (sources/tools/lint) before the rule existed. Fix one and delete its line.
             # Rewrite the list with `mise run check-code -- --update` only to drop fixed places or follow a moved one,
             # never to let a new one in.
             # check\tfile\twhat

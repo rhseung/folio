@@ -6,7 +6,7 @@ extension Rules {
             name: "view-workspace-call",
             advice: "a view reads its model; put the call behind a model property or method (AGENTS.md \"화면: 모델과 뷰\")"
         ) { code in
-            let files = code.files(under: "sources/app/features")
+            let files = code.files(under: RepoPath.features)
             let views = viewNames(files)
             var hits: [Hit] = []
             for file in files {
@@ -29,7 +29,7 @@ extension Rules {
             name: "view-body-logic",
             advice: "group, filter, sort and count in the model (or FolioDomain for a data rule) and give the view the result"
         ) { code in
-            let files = code.files(under: "sources/app/features")
+            let files = code.files(under: RepoPath.features)
             let views = viewNames(files)
             var hits: [Hit] = []
             for file in files {

@@ -31,7 +31,7 @@ struct ActionsCommand: ParsableCommand {
         if schema { return try printJSON(actionSchemas()) }
         let repo = try Self.repository()
         let commands = Set(Self.commandPaths(Folio.self))
-        let app = Self.sources(repo.appending(path: "sources/app"))
+        let app = Self.sources(repo.appending(path: "app"))
         let tests = Self.sources(repo.appending(path: "tests/unit/cli")).map(\.1).joined()
         let rows = Actions.all.map { type in
             let name = String(describing: type)

@@ -5,7 +5,7 @@ pre-commit:
     swift-format:
       priority: 1
       glob: "*.swift"
-      run: mise exec -- scripts/swift-format.sh format {staged_files}
+      run: mise run swift-format -- format {staged_files}
       stage_fixed: true
     swiftlint:
       priority: 2

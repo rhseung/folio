@@ -7,7 +7,7 @@ extension Rules {
             advice: "take type sizes, colours and corner radii from Theme, or mark the line `// design: one-off, <why>`"
         ) { code in
             var hits: [Hit] = []
-            for file in code.files(under: "sources/app/features", "sources/app/app") {
+            for file in code.files(under: RepoPath.app, except: RepoPath.design, RepoPath.platform) {
                 walk(Syntax(file.tree)) { node in
                     guard let found = rawDesignValue(node), !file.oneOff(found.at) else { return }
                     hits.append(Hit("design-value", file, file.line(of: found.at), found.what))
@@ -24,7 +24,7 @@ extension Rules {
                 + "mark a real exception `// design: one-off, <why>`"
         ) { code in
             var hits: [Hit] = []
-            for file in code.files(under: "sources/app") {
+            for file in code.files(under: RepoPath.app) {
                 for token in file.tokens {
                     guard let found = gridValue(after: token), !file.oneOff(found.at) else { continue }
                     hits.append(Hit("design-grid", file, file.line(of: found.at), found.what))
@@ -45,7 +45,7 @@ extension Rules {
             name: "design-opacity", strict: true,
             advice: "take opacities from Theme.Opacity; 0 and 1 (hide and show) stay as numbers"
         ) { code in
-            tokenHits("design-opacity", code.files(under: "sources/app/features", "sources/app/app")) { call in
+            tokenHits("design-opacity", code.files(under: RepoPath.app, except: RepoPath.design, RepoPath.platform)) { call in
                 calledName(call) == "opacity" ? Array(call.arguments) : []
             }
         }
@@ -57,7 +57,7 @@ extension Rules {
             advice: "draw shadows with .shadow(Theme.Shadow.<role>), not colour, radius and offset numbers"
         ) { code in
             var hits: [Hit] = []
-            for file in code.files(under: "sources/app") where file.path != "sources/app/design/tokens/theme.swift" {
+            for file in code.files(under: RepoPath.app) where file.path != RepoPath.theme {
                 for call in file.nodes(FunctionCallExprSyntax.self) where calledName(call) == "shadow" {
                     guard let radius = call.arguments.first(where: { $0.label?.text == "radius" }), !file.oneOff(radius) else { continue }
                     hits.append(
@@ -79,7 +79,7 @@ extension Rules {
             advice: "animate with Theme.Motion, not a curve with its own duration"
         ) { code in
             var hits: [Hit] = []
-            for file in code.files(under: "sources/app") where file.path != "sources/app/design/tokens/theme.swift" {
+            for file in code.files(under: RepoPath.app) where file.path != RepoPath.theme {
                 for call in file.nodes(FunctionCallExprSyntax.self) {
                     guard let name = calledName(call), animationCurves.contains(name),
                         call.calledExpression.is(MemberAccessExprSyntax.self),
@@ -101,7 +101,7 @@ extension Rules {
             name: "design-size", strict: true,
             advice: "take frame and pill widths from Theme.Size; 0 and 1pt lines stay as numbers"
         ) { code in
-            tokenHits("design-size", code.files(under: "sources/app/features", "sources/app/app")) { call in
+            tokenHits("design-size", code.files(under: RepoPath.app, except: RepoPath.design, RepoPath.platform)) { call in
                 switch calledName(call) {
                 case "frame": call.arguments.filter { $0.label.map { frameLabels.contains($0.text) } ?? false }
                 case "pill": call.arguments.filter { $0.label?.text == "width" }
@@ -169,7 +169,7 @@ extension Rules {
             advice: "set a course's colour with .courseAccent(_:), not environment(\\.accent, …)"
         ) { code in
             var hits: [Hit] = []
-            for file in code.files(under: "sources/app") where !file.path.hasPrefix("sources/app/design/") {
+            for file in code.files(under: RepoPath.app) where !file.path.hasPrefix(RepoPath.design + "/") {
                 for call in file.nodes(FunctionCallExprSyntax.self) where calledName(call) == "environment" {
                     guard let path = call.arguments.first?.expression.as(KeyPathExprSyntax.self),
                         path.trimmedDescription == "\\.accent"

@@ -4,10 +4,10 @@ extension Rules {
     static var uiString: Rule {
         Rule(
             name: "ui-string",
-            advice: "put screen copy in sources/app/resources/Localizable.xcstrings as a key; mark data strings `// strings: data, <why>`"
+            advice: "put screen copy in app/resources/Localizable.xcstrings as a key; mark data strings `// strings: data, <why>`"
         ) { code in
             var hits: [Hit] = []
-            for file in code.files(under: "sources/app") where !isDebugFile(file.path) {
+            for file in code.files(under: RepoPath.app) where !isDebugFile(file.path) {
                 let marks = file.dataMarks()
                 for literal in file.nodes(StringLiteralExprSyntax.self) {
                     let start = literal.positionAfterSkippingLeadingTrivia.utf8Offset
@@ -28,9 +28,8 @@ extension Rules {
             advice: "folder and file names come from FolioDomain's standard-layout.swift (Term, SemesterFolder, CourseFolder)"
         ) { code in
             var hits: [Hit] = []
-            for file in code.files(
-                under: "sources", except: "sources/lint", "sources/lint-command")
-            where !standardLayoutFiles.contains(file.path) && !file.path.hasPrefix("sources/fixtures/") {
+            for file in code.files(under: RepoPath.app, RepoPath.packages, except: RepoPath.lint)
+            where !RepoPath.standardLayout.contains(file.path) && !file.path.hasPrefix(RepoPath.fixtures + "/") {
                 for literal in file.nodes(StringLiteralExprSyntax.self) where layoutNames.contains(literal.plainText) {
                     hits.append(Hit("layout-name", file, file.line(of: literal), "\"\(literal.plainText)\""))
                 }
@@ -38,13 +37,6 @@ extension Rules {
             return hits
         }
     }
-
-    // standard-layout.swift를 타입마다 나눈 파일들이다. 표준 구조의 이름은 이 파일들에만 적는다.
-    static let standardLayoutFiles: Set<String> = [
-        "sources/domain/layout/standard-layout.swift", "sources/domain/layout/term.swift",
-        "sources/domain/layout/semester-folder.swift", "sources/domain/layout/course-folder.swift",
-        "sources/domain/layout/assignment-kind.swift",
-    ]
 
     static let layoutNames: Set<String> = [
         "Syllabus", "Lectures", "Exercises", "Textbooks", "Inherited", "Assignments", "Exams", "Study", "Notes", "Ink",

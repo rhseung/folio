@@ -3,7 +3,7 @@ import Foundation
 
 // 생성한 파일은 모두 커밋한다. `--check`는 디스크의 파일이 지금 선언에서 만든 것과 같은지만 본다.
 let check = CommandLine.arguments.dropFirst().contains("--check")
-let root = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../..").standardizedFileURL
+let root = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../..").standardizedFileURL
 let actionsFolder = root.appending(path: "sources/actions")
 let commandsFolder = root.appending(path: "sources/cli/commands")
 let generatedActions = root.appending(path: "sources/actions/generated")

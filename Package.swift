@@ -26,7 +26,7 @@ let package = Package(
         .executable(name: "folio", targets: ["FolioCommand"]),
         .executable(name: "folio-gen", targets: ["FolioGen"]),
         .executable(name: "folio-fixture", targets: ["FolioFixtureWriter"]),
-        .executable(name: "folio-lint", targets: ["FolioLintCommand"]),
+        .executable(name: "folio-lint", targets: ["FolioLint"]),
         .executable(name: "folio-dev", targets: ["FolioDev"]),
         .library(name: "FolioFixtures", targets: ["FolioFixtures"]),
     ],
@@ -70,28 +70,28 @@ let package = Package(
         .target(name: "FolioCLI", dependencies: ["FolioActions", "FolioIndex", .product(name: "ArgumentParser", package: "swift-argument-parser"), .product(name: "GRDB", package: "GRDB.swift")], path: "sources/cli", resources: [.process("Localizable.xcstrings")]),
         // Only the entry point: an executable target's test build gets no string-catalog symbols, so the commands live
         // in the FolioCLI library that the tests import.
-        .executableTarget(name: "FolioCommand", dependencies: ["FolioCLI"], path: "sources/command"),
+        .executableTarget(name: "FolioCommand", dependencies: ["FolioCLI"], path: "sources/tools/folio"),
         // Writes the action list (actions/generated) from the @Action declarations, and the CLI commands and their tree
         // (cli/generated) from the action specs and cli/commands. It must not need FolioCLI, so a broken generated file can
         // always be generated again.
         .executableTarget(name: "FolioGen", dependencies: [
             "FolioActions", .product(name: "SwiftSyntax", package: "swift-syntax"), .product(name: "SwiftParser", package: "swift-syntax"),
-        ], path: "sources/gen"),
+        ], path: "sources/tools/gen"),
         .target(name: "FolioFixtures", dependencies: ["FolioActions"], path: "sources/fixtures"),
-        .executableTarget(name: "FolioFixtureWriter", dependencies: ["FolioFixtures"], path: "sources/fixture-writer"),
+        .executableTarget(name: "FolioFixtureWriter", dependencies: ["FolioFixtures"], path: "sources/tools/fixture"),
         // The code rules of AGENTS.md that a syntax tree can check (`mise run check-code`). It needs swift-syntax alone, so
-        // `--product folio-lint` builds without waiting on the Tectonic library every Storage build needs.
-        .target(name: "FolioLint", dependencies: [
+        // `--product folio-lint` builds without waiting on the Tectonic library every Storage build needs. FolioLintTests
+        // import this executable target directly, as FolioDevTests do FolioDev.
+        .executableTarget(name: "FolioLint", dependencies: [
             .product(name: "SwiftSyntax", package: "swift-syntax"),
             .product(name: "SwiftParser", package: "swift-syntax"),
-        ], path: "sources/lint"),
-        .executableTarget(name: "FolioLintCommand", dependencies: ["FolioLint"], path: "sources/lint-command"),
+        ], path: "sources/tools/lint"),
         // Version and release notes for mise tasks and the release workflow. Release notes reuse PatchNotes, so the app's
         // reading and the release's writing are one type.
         .executableTarget(name: "FolioDev", dependencies: [
             "FolioDomain", .product(name: "ArgumentParser", package: "swift-argument-parser"),
             .product(name: "SwiftSyntax", package: "swift-syntax"), .product(name: "SwiftParser", package: "swift-syntax"),
-        ], path: "sources/dev"),
+        ], path: "sources/tools/dev"),
         // One test target per module, so a module's tests build only what that module needs.
         .testTarget(name: "FolioCoreTests", dependencies: ["FolioCore", .product(name: "PropertyBased", package: "swift-property-based")], path: "tests/unit/core"),
         .testTarget(name: "FolioDomainTests", dependencies: ["FolioDomain", .product(name: "PropertyBased", package: "swift-property-based")], path: "tests/unit/domain"),
@@ -103,7 +103,7 @@ let package = Package(
         .testTarget(name: "FolioLMSTests", dependencies: ["FolioLMS"], path: "tests/unit/lms"),
         .testTarget(name: "FolioCLITests", dependencies: ["FolioFixtures", "FolioCLI"], path: "tests/unit/cli"),
         .testTarget(name: "FolioMacrosTests", dependencies: ["FolioMacros", .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax")], path: "tests/unit/macros"),
-        .testTarget(name: "FolioLintTests", dependencies: ["FolioLint"], path: "tests/unit/lint"),
-        .testTarget(name: "FolioDevTests", dependencies: ["FolioDev"], path: "tests/unit/dev"),
+        .testTarget(name: "FolioLintTests", dependencies: ["FolioLint"], path: "tests/unit/tools/lint"),
+        .testTarget(name: "FolioDevTests", dependencies: ["FolioDev"], path: "tests/unit/tools/dev"),
     ]
 )

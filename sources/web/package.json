@@ -1,7 +1,7 @@
 {
   "name": "folio-web",
   "private": true,
-  "description": "The note preview and Claude panel pages (math, code coloring, diagrams) and the edit view's math and coloring, bundled into sources/app/resources/web by `mise run build-web`.",
+  "description": "The note preview and Claude panel pages (math, code coloring, diagrams) and the edit view's math and coloring, bundled into app/resources/web by `mise run build-web`.",
   "scripts": {
     "build": "node build.mjs"
   },

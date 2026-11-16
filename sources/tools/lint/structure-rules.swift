@@ -10,9 +10,9 @@ extension Rules {
         ) { code in
             let owners = featureTypes(in: code)
             var hits: [Hit] = []
-            for file in code.files(under: "sources/app") where !isDebugFile(file.path) {
+            for file in code.files(under: RepoPath.app) where !isDebugFile(file.path) {
                 let feature = featureName(of: file.path)
-                let lower = file.path.hasPrefix("sources/app/design/") || file.path.hasPrefix("sources/app/platform/")
+                let lower = file.path.hasPrefix(RepoPath.design + "/") || file.path.hasPrefix(RepoPath.platform + "/")
                 guard lower || feature != nil else { continue }
                 for token in file.tokens {
                     guard case .identifier(let name) = token.tokenKind, let owner = owners[name], owner != feature,
@@ -28,7 +28,7 @@ extension Rules {
     static func featureTypes(in code: Codebase) -> [String: String] {
         var owners: [String: String] = [:]
         var elsewhere: Set<String> = []
-        for file in code.files(under: "sources", "tests", except: "tests/unit/app", "tests/e2e/app") {
+        for file in code.files(under: RepoPath.app, RepoPath.packages, RepoPath.tests, except: RepoPath.appTests, RepoPath.appE2E) {
             let feature = featureName(of: file.path)
             for name in declaredTypes(in: file) {
                 if let feature, owners[name] == nil || owners[name] == feature { owners[name] = feature } else { elsewhere.insert(name) }
@@ -51,9 +51,9 @@ extension Rules {
     }
 
     static func featureName(of path: String) -> String? {
-        let parts = path.split(separator: "/")
-        guard parts.count > 4, parts[0] == "sources", parts[1] == "app", parts[2] == "features" else { return nil }
-        return String(parts[3])
+        guard path.hasPrefix(RepoPath.features + "/") else { return nil }
+        let parts = path.dropFirst(RepoPath.features.count + 1).split(separator: "/")
+        return parts.count > 1 ? String(parts[0]) : nil
     }
 
     static var kindDefault: Rule {
@@ -65,7 +65,7 @@ extension Rules {
             let kinds = appLinkKinds(in: code)
             guard !kinds.isEmpty else { return [] }
             var hits: [Hit] = []
-            for file in code.files(under: "sources", "tests", except: "tests/unit/app", "tests/e2e/app") {
+            for file in code.files(under: RepoPath.app, RepoPath.packages, RepoPath.tests, except: RepoPath.appTests, RepoPath.appE2E) {
                 for switchExpr in file.nodes(SwitchExprSyntax.self) {
                     let subject = switchExpr.subject.trimmedDescription
                     guard subject == "kind" || subject.hasSuffix(".kind") else { continue }
@@ -97,7 +97,7 @@ extension Rules {
 
     static func appLinkKinds(in code: Codebase) -> Set<String> {
         var kinds: Set<String> = []
-        for file in code.files(under: "sources", "tests", except: "sources/app", "tests/unit/app", "tests/e2e/app") {
+        for file in code.files(under: RepoPath.packages, RepoPath.tests, except: RepoPath.appTests, RepoPath.appE2E) {
             for declaration in file.nodes(EnumDeclSyntax.self) where declaration.name.text == "Kind" {
                 var parent = declaration.parent
                 while let node = parent, !node.is(StructDeclSyntax.self), !node.is(ExtensionDeclSyntax.self) { parent = node.parent }
@@ -120,7 +120,7 @@ extension Rules {
                 + "timers counting seconds (AGENTS.md \"구조 축\" 라이브 시계)"
         ) { code in
             var hits: [Hit] = []
-            for file in code.files(under: "sources/app") {
+            for file in code.files(under: RepoPath.app) {
                 for call in file.nodes(FunctionCallExprSyntax.self) where calledName(call) == "TimelineView" {
                     guard let schedule = call.arguments.first?.expression, slowSchedule(schedule) else { continue }
                     hits.append(Hit("minute-timeline", file, file.line(of: call), "TimelineView(\(scheduleName(schedule)))"))
@@ -151,7 +151,7 @@ extension Rules {
                 + "(AGENTS.md \"화면: 모델과 뷰\" 화면 계약)"
         ) { code in
             var hits: [Hit] = []
-            for file in code.files(under: "sources/app/features") where !isDebugFile(file.path) {
+            for file in code.files(under: RepoPath.features) where !isDebugFile(file.path) {
                 for call in file.nodes(FunctionCallExprSyntax.self) {
                     guard let member = call.calledExpression.as(MemberAccessExprSyntax.self),
                         member.declName.baseName.text == "toolbar", !file.debugOnly(call)
@@ -167,11 +167,11 @@ extension Rules {
         Rule(
             name: "launch-environment",
             advice: "read the process environment only in the launch files ("
-                + launchFiles.sorted().joined(separator: ", ") + ") and pass the value in"
+                + RepoPath.launchFiles.sorted().joined(separator: ", ") + ") and pass the value in"
         ) { code in
             var hits: [Hit] = []
-            for file in code.files(under: "sources", except: "sources/lint", "sources/lint-command")
-            where !isDebugFile(file.path) && !launchFiles.contains(file.path) {
+            for file in code.files(under: RepoPath.app, RepoPath.packages, except: RepoPath.lint)
+            where !isDebugFile(file.path) && !RepoPath.launchFiles.contains(file.path) {
                 for member in file.nodes(MemberAccessExprSyntax.self) where member.declName.baseName.text == "environment" {
                     guard member.base?.trimmedDescription == "ProcessInfo.processInfo", !file.debugOnly(member) else { continue }
                     hits.append(Hit("launch-environment", file, file.line(of: member), "ProcessInfo.processInfo.environment"))
@@ -180,11 +180,6 @@ extension Rules {
             return hits
         }
     }
-
-    static let launchFiles: Set<String> = [
-        "sources/app/app/folio-app.swift", "sources/app/app/services/local-folders.swift", "sources/app/app/workspace/workspace.swift",
-        "sources/cli/core/environment/cli.swift",
-    ]
 
     static var kebabNames: Rule {
         Rule(name: "kebab-names", advice: "name files and folders in lower kebab case (AGENTS.md \"이름과 주석\")") { code in
