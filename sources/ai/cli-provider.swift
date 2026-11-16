@@ -78,18 +78,25 @@ public struct CLIProvider: ClaudeProvider {
         return text.isEmpty ? nil : text
     }
 
-    static func response(from output: Data, request: MessagesRequest) throws -> MessagesResponse {
+    static func response(from output: Data, request: MessagesRequest, exit: Int32 = 0, stderr: String = "") throws -> MessagesResponse {
         let lines = String(decoding: output, as: UTF8.self).split(separator: "\n")
         guard let line = lines.last(where: { $0.contains(#""type":"result""#) }),
             let result = try? JSONDecoder().decode(JSONValue.self, from: Data(line.utf8))
         else {
-            throw ClaudeError.http(status: 0, body: String(lines.suffix(3).joined(separator: "\n")))
+            let detail = stderr.trimmingCharacters(in: .whitespacesAndNewlines)
+            throw ClaudeError.cli(exit: exit, message: detail.isEmpty ? lines.suffix(3).joined(separator: "\n") : detail)
         }
         func string(_ v: JSONValue?) -> String? { if case .string(let s)? = v { s } else { nil } }
         func int(_ v: JSONValue?) -> Int { if case .number(let n)? = v { Int(n) } else { 0 } }
         if result["is_error"] == .bool(true) {
-            throw ClaudeError.http(
-                status: int(result["api_error_status"]), body: string(result["result"]) ?? string(result["subtype"]) ?? "")
+            // 로그인이 만료되면 claude는 API에 닿기 전에 멈추므로 `api_error_status`가 null이다. 그때 남는 표시는
+            // 합성한 assistant 메시지의 `error`뿐이다(claude 2.1.318).
+            let status = int(result["api_error_status"])
+            if status == 401 || lines.contains(where: { $0.contains(#""error":"authentication_failed""#) }) {
+                throw ClaudeError.signedOut
+            }
+            let message = string(result["result"]) ?? string(result["subtype"]) ?? ""
+            throw status != 0 ? ClaudeError.http(status: status, body: message) : ClaudeError.cli(exit: exit, message: message)
         }
         let text: String
         if let structured = result["structured_output"], structured != .null {
@@ -186,12 +193,8 @@ public struct CLIProvider: ClaudeProvider {
         }
 
         try Task.checkCancellation()
-        do {
-            return try Self.response(from: output, request: request)
-        } catch ClaudeError.http(status: 0, _) where status != 0 {
-            let message = (try? String(contentsOf: errorFile, encoding: .utf8)) ?? ""
-            throw ClaudeError.http(status: Int(status), body: message.isEmpty ? "claude exited with \(status)" : message)
-        }
+        let stderr = (try? String(contentsOf: errorFile, encoding: .utf8)) ?? ""
+        return try Self.response(from: output, request: request, exit: status, stderr: stderr)
     }
 
     static func run(
