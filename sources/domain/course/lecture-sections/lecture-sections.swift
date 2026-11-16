@@ -1,3 +1,4 @@
+import FolioCore
 import Foundation
 
 extension Unit {

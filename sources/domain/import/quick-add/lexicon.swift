@@ -1,3 +1,4 @@
+import FolioCore
 import Foundation
 
 // 라이브러리를 쓰지 않고 직접 짠다. 한국어 마감(`다음 주 수 오후 6시`, `금까지`)을 주어진 시계로 읽는 유지되는

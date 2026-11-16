@@ -1,3 +1,4 @@
+import FolioCore
 import Foundation
 
 public struct ExamPlanItem: Codable, Sendable, Equatable, Identifiable {

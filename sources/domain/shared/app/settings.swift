@@ -1,3 +1,4 @@
+import FolioCore
 import Foundation
 
 public struct Settings: Codable, Sendable, Equatable {

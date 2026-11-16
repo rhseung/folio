@@ -1,3 +1,4 @@
+import FolioCore
 import Foundation
 
 // 점수는 모두 0에서 100 사이이고, 비율은 0에서 1 사이이다.

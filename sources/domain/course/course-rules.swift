@@ -1,3 +1,4 @@
+import FolioCore
 import Foundation
 
 // 앱은 규칙을 어기는 값을 숨기지만 `folio run`은 엔티티 전체를 받아 어느 필드에든 닿는다. 그래서 어느 액션이 썼든

@@ -48,7 +48,7 @@ folio/
   scripts/            # mise 밖(lefthook, CI)에서도 부르는 스크립트
   sources/
     app/              # 멀티플랫폼 앱 타깃(macOS, iPadOS, iOS)
-    domain/ storage/ actions/ index/ lms/ ai/ markdown/ cli/ macros/ fixtures/   # 아래 "레이어"의 모듈
+    core/ domain/ storage/ actions/ index/ lms/ ai/ markdown/ cli/ macros/ fixtures/   # 아래 "레이어"의 모듈
     command/ gen/ fixture-writer/   # 실행 파일 folio, folio-gen, folio-fixture의 진입점
     dev/              # 개발 도구 folio-dev(버전, 태그, 릴리스 본문)
     lint/ lint-command/   # AGENTS.md 규칙 검사기 folio-lint(`mise run check-code`)
@@ -66,10 +66,10 @@ folio/
 
 ### 레이어
 
-의존은 아래 방향으로만 흐른다. 모듈 경계로 나눴으므로 거꾸로 import하면 컴파일이 실패한다. 컴파일러가 막지 못하는 시스템 프레임워크 쪽(패키지의 `import SwiftUI`, `FolioDomain`과 `FolioMarkdown`의 디스크 접근, `app/features`의 `FileManager`)은 `layer` 규칙이 본다.
+의존은 아래 방향으로만 흐른다. 모듈 경계로 나눴으므로 거꾸로 import하면 컴파일이 실패한다. 컴파일러가 막지 못하는 시스템 프레임워크 쪽(패키지의 `import SwiftUI`, `FolioCore`, `FolioDomain`, `FolioMarkdown`의 디스크 접근, `app/features`의 `FileManager`)은 `layer` 규칙이 본다.
 
 ```text
-App (SwiftUI), FolioCLI  ->  FolioActions  ->  FolioAI, FolioStorage  ->  FolioDomain
+App (SwiftUI), FolioCLI  ->  FolioActions  ->  FolioAI, FolioStorage  ->  FolioDomain  ->  FolioCore
 App (SwiftUI), FolioCLI  ->  FolioIndex  ->  FolioStorage   (검색 색인)
 App (SwiftUI)  ->  FolioLMS  ->  FolioDomain   (GIST LMS 읽기)
 FolioStorage, FolioActions, App  ->  FolioMarkdown   (노트 frontmatter와 렌더링)
@@ -80,7 +80,8 @@ FolioGen  ->  FolioActions   (액션 목록과 CLI 명령, 명령 트리를 쓴�
 
 | 모듈 | 맡는 일 | 하지 않는 일 |
 | --- | --- | --- |
-| `FolioDomain` | 엔티티, 값 타입, 표준 구조 규칙, 성적·GPA·복습 계산, 모든 데이터 규칙. 디스크에서 읽은 내용은 `FolderTree` 같은 값으로 받는다 | 파일 입출력, UI, 네트워크 |
+| `FolioCore` | 학업 낱말이 없는 바탕 타입: `Entity`와 `DeviceID`, `LocalDate`, `ClockText`, `WeekdayLetters`, `JSONValue`, `LogEvent`, `StatusTone`, `Korean`, `ContentHash`, `TextDiff`, `FileNameParts`. 쓰는 파일마다 `import FolioCore`를 적는다 | 과목이나 성적표 같은 엔티티를 아는 타입, 파일 입출력, UI. 모델 규칙 엔진은 규칙마다 `World`를 받으므로 Domain에 둔다 |
+| `FolioDomain` | 모델 규칙 엔진(`Model`, `Document`, `World`), 엔티티, 값 타입, 표준 구조 규칙, 성적·GPA·복습 계산, 모든 데이터 규칙. 디스크에서 읽은 내용은 `FolderTree` 같은 값으로 받는다 | 파일 입출력, UI, 네트워크 |
 | `FolioStorage` | GIST 폴더 읽기와 쓰기, JSON 스키마 버전과 마이그레이션, 원자적 쓰기, 기기별 로그, 파일 추적 | 규칙 판단. 판단은 Domain에 맡긴다 |
 | `FolioMarkdown` | 마크다운 파서와 확장 문법, frontmatter, HTML 렌더러, 제목 판단(`NoteOutline`), 편집 보기의 입력 규칙(`editing/`, Mac과 iPad가 함께 쓰는 순수 함수). 세부는 `docs/notes.md` | 다른 Folio 모듈에 의존 |
 | `FolioAI` | Claude API 호출(Swift SDK가 없어 문서화된 HTTP 형식 그대로), 작업별 모델과 effort 표, 맥락 구성, 응답 스키마, 사용량과 비용 | 파일 쓰기. 결과는 제안으로만 돌려준다 |

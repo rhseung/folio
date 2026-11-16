@@ -1,3 +1,4 @@
+import FolioCore
 import Foundation
 
 // 승인하면 `command`의 액션을 `input`으로 실행하는 제안 하나다.

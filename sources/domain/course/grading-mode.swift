@@ -1,3 +1,4 @@
+import FolioCore
 import Foundation
 
 public enum GradingMode: String, Codable, Sendable, CaseIterable {

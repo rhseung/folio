@@ -1,4 +1,5 @@
 import Algorithms
+import FolioCore
 import Foundation
 
 public struct MaterialViewEvent: LogEvent, Equatable {

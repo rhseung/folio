@@ -1,4 +1,5 @@
 import FolioAI
+import FolioCore
 import FolioDomain
 import FolioMarkdown
 import FolioStorage

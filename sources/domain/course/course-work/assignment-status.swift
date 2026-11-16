@@ -1,3 +1,4 @@
+import FolioCore
 import Foundation
 
 public enum AssignmentStatus: String, Codable, Sendable, CaseIterable {
