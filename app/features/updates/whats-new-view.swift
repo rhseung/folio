@@ -21,7 +21,7 @@ struct WhatsNewView: View {
                 }
             case .empty:
                 EmptyCard(systemImage: "doc.text", title: String(localized: .whatsNewEmpty))
-            case .noMatch, .releases:
+            case .noMatch, .series:
                 tools
                 if case .series(let all) = model.state {
                     ForEach(all, id: \.name) { series in
