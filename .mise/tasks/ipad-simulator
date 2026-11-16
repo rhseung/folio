@@ -1,14 +1,36 @@
 #!/usr/bin/env bash
 #MISE description="Print the iPad simulator test-ipad and CI use, preferring one already booted; boot waits until it has booted"
 # test-ipad와 CI가 미리 켜는 시뮬레이터가 같아야 부팅이 빌드와 겹친다. 그래서 이미 켠 iPad를 먼저 고른다.
+# 러너 이미지에는 iOS 런타임이 여럿 들어 있고, 지금 Xcode SDK보다 낮은 런타임의 기기는 xcodebuild의 대상이 되지 못한다.
+# 그래서 SDK와 같은 판의 런타임에서, 없으면 가장 새 런타임에서 고른다.
 set -euo pipefail
-pick() { grep -m1 -E '^ +iPad' | grep -oE '[0-9A-F-]{36}' || true; }
-id=$(xcrun simctl list devices booted available | pick)
-[ -n "$id" ] || id=$(xcrun simctl list devices available | pick)
-[ -n "$id" ] || {
+
+# `-- iOS 27.2 --` 머리 아래의 iPad를 `<런타임 판> <UDID>` 줄로 바꾼다.
+ipads() {
+  local line version=""
+  while IFS= read -r line; do
+    if [[ $line =~ ^--\ iOS\ ([0-9.]+)\ -- ]]; then
+      version=${BASH_REMATCH[1]}
+    elif [[ $line == --* ]]; then
+      version=""
+    elif [[ -n $version && $line =~ ^\ +iPad.*\(([0-9A-F-]{36})\) ]]; then
+      echo "$version ${BASH_REMATCH[1]}"
+    fi
+  done
+}
+first_on() { awk -v r="$1" '$1 == r {print $2; exit}'; }
+
+all=$(xcrun simctl list devices available | ipads)
+[ -n "$all" ] || {
   echo "no available iPad simulator" >&2
   exit 1
 }
+sdk=$(xcrun --sdk iphonesimulator --show-sdk-version 2>/dev/null || true)
+runtime=$(awk -v s="$sdk" '$1 == s {print s; exit}' <<<"$all")
+[ -n "$runtime" ] || runtime=$(cut -d' ' -f1 <<<"$all" | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
+id=$(xcrun simctl list devices booted available | ipads | first_on "$runtime")
+[ -n "$id" ] || id=$(first_on "$runtime" <<<"$all")
+
 case "${1:-}" in
   "") echo "$id" ;;
   boot) xcrun simctl bootstatus "$id" -b >/dev/null ;;
