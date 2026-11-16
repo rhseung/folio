@@ -18,7 +18,8 @@ ipads() {
     fi
   done
 }
-first_on() { awk -v r="$1" '$1 == r {print $2; exit}'; }
+# 첫 줄에서 exit하면 앞의 ipads가 닫힌 파이프에 써서 SIGPIPE로 끝나고, pipefail 때문에 스크립트가 멈춘다. 그래서 끝까지 읽는다.
+first_on() { awk -v r="$1" '$1 == r && !found {print $2; found = 1}'; }
 
 all=$(xcrun simctl list devices available | ipads)
 [ -n "$all" ] || {
