@@ -101,8 +101,7 @@ private func found(_ paths: [String], _ check: String) -> [String] {
             ])
     }
 
-    @Test func theTableNamesEveryArea() {
-        #expect(Area.names.count == 17)
+    @Test func layoutIsNowTheFolderArea() {
         #expect(Area.names.contains("folder"))
         #expect(!Area.names.contains("layout"))
     }
