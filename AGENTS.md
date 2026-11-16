@@ -52,7 +52,7 @@ folio/
       folio/          # folio의 진입점(명령은 FolioCLI에 있다)
       gen/ fixture/   # folio-gen, folio-fixture
       lint/           # AGENTS.md 규칙 검사기 folio-lint(`mise run check-code`)
-      dev/            # 개발 도구 folio-dev(버전, 태그, 릴리스 본문)
+      dev/            # 개발 도구 folio-dev(버전, 태그, 릴리스)
     web/              # 노트 미리보기와 Claude 패널의 웹 번들 원본
     tectonic/         # Tectonic 정적 라이브러리의 원본과 받기(`docs/tex.md`)
   tests/
@@ -115,7 +115,7 @@ FolioGen  ->  FolioActions   (액션 목록과 CLI 명령, 명령 트리를 쓴�
 | `FolioCLI` | 터미널 도구 `folio`의 명령 라이브러리. 실행 파일은 진입점만 있는 `FolioCommand`다(실행 타깃의 테스트 빌드에는 카탈로그 심볼이 생기지 않아서다). 모든 액션을 `<대상> <동작>` 명령으로 열고, 사람용 출력과 `--json` 출력을 만든다. 노트 그림과 위젯의 그려 보기는 macOS에서 화면 밖 `WKWebView`로 그리고, 앱의 노트 색은 링크할 수 없어 생성한 사본(`NoteTheme`)을 쓴다 | 액션 로직. 명령은 인자를 해석해 `FolioActions`를 부르고 결과를 그리기만 한다 |
 | `FolioMacros` | `@Action`과 필드 표시. 선언에서 입력 형식, init, 코딩, `spec`을 만들고 실수(맨 `UUID`, 없는 `{필드}`, 확인 문구 없는 삭제)를 컴파일 오류로 막는다 | 실행 코드. 앱과 CLI에 링크되지 않는다 |
 | `FolioGen` | `@Action`과 `@Query` 선언을 읽어 `Actions.all`, `Queries.all`(`#if` 안의 선언은 같은 조건 안에), 생성 명령(명령 하나에 파일 하나), 명령 트리(`command-tree.swift`)를 쓴다. 결과는 커밋한다 | FolioCLI에 의존. 생성 파일이 깨져도 다시 만들 수 있어야 한다 |
-| `FolioDev` | 개발 도구 `folio-dev`. 버전 읽기와 올리기, 태그, 릴리스 본문(`docs/release.md`) | 앱과 CLI에 링크되지 않는다. 앱 작업은 이 도구를 빌드하지 않는다 |
+| `FolioDev` | 개발 도구 `folio-dev`. 태그에서 버전 읽기, 다음 버전 정하기, 태그, 릴리스 본문(`docs/release.md`) | 앱과 CLI에 링크되지 않는다. 앱 작업은 이 도구를 빌드하지 않는다 |
 | `FolioFixtures` | 테스트와 개발 실행에 쓰는 가짜 GIST 폴더. 공개 저장소에 과목 파일 폴더를 두지 않기 위해 파일을 코드에 두고 쓸 때 펼친다. 화면 확인용 상황(`Scenario`)은 고정된 시각 기준으로 액션을 돌려 만든다 | CLI에 링크되지 않는다. 앱에서는 `#if DEBUG`의 `Workspace.scenario`만 쓴다 |
 | App | 화면. `folio-app.swift`(진입점), `workspace/`(Workspace와 앱 서비스), `window/`(창 틀과 탐색), `design/`(토큰과 공용 구성 요소), `features/<화면>/`, `platform/`(PencilKit, PDFKit, WKWebView 연결, 파일 보기, 노트 미리보기와 편집 보기), `resources/` | 파일 시스템 직접 접근과 `course.json` 값의 직접 변경. 반드시 `FolioActions`를 거친다 |
 
@@ -212,7 +212,7 @@ PageHeader(title: String(localized: .sessionsAdd))   // String을 받는 API
 - 사용자가 바꿀 수 있는 값(하루 경계, 복습 간격, 알림 시점, 학점 규칙)은 코드 상수가 아니라 `settings.json`과 `transcript.json`에서 읽는다. 기본값은 Domain의 한 곳에서만 정의한다.
 - 빌드와 테스트 명령은 mise 작업(`mise.toml`과 `.mise/tasks`)으로만 정의한다. 규칙이 든 일(버전, 릴리스 본문)은 셸이 아니라 Swift 도구 `folio-dev`에 둔다. 문서는 `mise run <작업>`을 가리킨다.
 - Xcode 프로젝트는 `project.yml`에서 생성한다. `Folio.xcodeproj`는 커밋하지 않고 직접 고치지 않는다.
-- 버전은 `FolioVersion.marketing`에서만 정한다(`docs/release.md`).
+- 버전은 `v<X.Y.Z>` 태그에서만 정한다. patch는 패치 노트가 있는 PR이 머지되면 `release.yml`이 올리고, minor는 기능 묶음이 끝나 사용자가 승인하면 올린다. 커밋한 `FolioVersion.marketing`은 자리표시값이고 릴리스 빌드만 태그의 버전을 써넣는다(`docs/release.md`).
 
 ## 데이터 원칙
 

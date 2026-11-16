@@ -18,20 +18,21 @@ description = "Fetch Tectonic as a static library (FolioTectonic.xcframework) pi
 run = "sources/tectonic/fetch.sh"
 
 # 여러 줄이거나 조건이 있는 작업은 .mise/tasks의 파일 작업이다. 버전과 릴리스 노트는 Swift 도구 folio-dev(sources/tools/dev)가 맡는다.
-[tasks.version-bump]
-description = "Raise the version in FolioVersion: mise run version-bump -- major|minor|patch"
-depends = ["tectonic"]
-run = "swift run -q folio-dev version bump"
-
 [tasks.release-notes]
-description = "Print the next release's body from the patch notes of the PRs merged since the last tag: mise run release-notes [-- <since>]"
+description = "Print the next version and its release body from the patch notes of the PRs merged since the latest tag"
 depends = ["tectonic"]
 run = "swift run -q folio-dev release-notes preview"
 
+# patch는 release.yml이 머지마다 단다. 이 작업은 사용자가 승인한 minor를 머지할 PR 없이 바로 낼 때 쓴다.
 [tasks.release-tag]
-description = "Tag origin/main as v<version> and push the tag, which drafts its GitHub release"
+description = "Tag origin/main as the next version and push the tag, which builds and publishes its release: mise run release-tag -- minor|patch|major"
 depends = ["tectonic"]
 run = "swift run -q folio-dev version tag"
+
+[tasks.release-past]
+description = "Tag a past commit and publish a notes-only release dated at that commit: mise run release-past -- <version> <commit> [--dry-run]"
+depends = ["tectonic"]
+run = "swift run -q folio-dev release past"
 
 [tasks.test]
 description = "Run package tests, folio-lint (code, design and Application Support rules), SwiftLint, the swift-format check and the shell checks"
