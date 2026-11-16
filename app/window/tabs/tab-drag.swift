@@ -44,7 +44,7 @@ import AppKit
     func keep(_ open: Set<UUID>) { frames = frames.filter { open.contains($0.key) } }
 
     func changed(_ item: TabDrop.Item, location: CGPoint, start startLocation: CGPoint, translation: CGFloat) {
-        guard let frame = frames[item.tab] else { return }
+        guard !yields(item), let frame = frames[item.tab] else { return }
         if dragged != item {
             dragged = item
             start = (frame.minX, global(startLocation))
@@ -63,6 +63,7 @@ import AppKit
     }
 
     func ended(_ item: TabDrop.Item, location: CGPoint) {
+        guard !yields(item) else { return }
         defer { finish() }
         guard dragged == item else { return }
         let (target, point) = locate(global(location))
@@ -82,6 +83,19 @@ import AppKit
         case .newWindow:
             if let panes = take(item, evenLast: false) { openWindow(with: panes) }
         }
+    }
+
+    // 칸 마디는 앞 탭 캡슐 안에 있어 마디를 끌면 캡슐의 끌기도 함께 인식된다. 마디 끌기가 이기고, 캡슐 쪽 사건은 버린다.
+    // 버리지 않으면 사건마다 끄는 것이 탭과 칸 사이를 오가며 앞 탭의 순서를 바꾸거나 탭 전체를 새 창으로 뗀다.
+    private func yields(_ item: TabDrop.Item) -> Bool {
+        guard case .tab(let id) = item, case .pane(_, of: let owner)? = dragged else { return false }
+        return id == owner
+    }
+
+    // 다른 항목을 끄는 중이면 그 끌기를 끝내지 않는다. 제스처의 상태는 그 항목의 끌기가 끝나기 전에도 풀린다.
+    func cancel(_ item: TabDrop.Item) {
+        guard dragged == nil || dragged == item else { return }
+        finish()
     }
 
     func finish() {

@@ -141,6 +141,38 @@ struct TabDragTests {
         #expect(tabs.ids[1] == tabs.selected && tabs.current.current == codes)
     }
 
+    // 마디를 끌면 그 마디를 담은 앞 탭 캡슐의 끌기도 함께 불린다. 두 순서 모두에서 마디만 떨어져야 한다.
+    @Test func aPaneDragWinsOverItsOwnTabsDrag() throws {
+        for tabFirst in [true, false] {
+            let tabs = window([grades, people, settings])
+            tabs.dragging.find = { [weak tabs] in (tabs?.dragging, $0) }
+            var opened = 0
+            tabs.dragging.openWindow = { _ in opened += 1 }
+            let front = tabs.selected
+            let order = tabs.ids
+            let panes = try #require(tabs.front)
+            panes.openBeside(codes)
+            let pane = panes.ids[1]
+            let from = CGPoint(x: 60, y: 16)
+            func both(_ to: CGPoint) {
+                let calls: [TabDrop.Item] = tabFirst ? [.tab(front), .pane(pane, of: front)] : [.pane(pane, of: front), .tab(front)]
+                for item in calls { tabs.dragging.changed(item, location: to, start: from, translation: to.x - from.x) }
+            }
+            both(CGPoint(x: 64, y: 16))
+            both(CGPoint(x: 330, y: 16))
+            #expect(tabs.ids == order && tabs.dragging.dragged == .pane(pane, of: front))
+            both(CGPoint(x: 700, y: 400))
+            let end = CGPoint(x: 700, y: 400)
+            let ends: [TabDrop.Item] = tabFirst ? [.tab(front), .pane(pane, of: front)] : [.pane(pane, of: front), .tab(front)]
+            for item in ends {
+                tabs.dragging.ended(item, location: end)
+                tabs.dragging.cancel(item)
+            }
+            #expect(opened == 0 && tabs.count == 4 && panes.count == 1 && tabs.current.current == codes)
+            #expect(tabs.dragging.dragged == nil)
+        }
+    }
+
     @Test func aPaneDroppedOnTheStripLandsWhereItWasDropped() throws {
         let tabs = window([grades, people, settings])
         tabs.dragging.find = { [weak tabs] in (tabs?.dragging, $0) }

@@ -27,7 +27,10 @@ private struct TabDragGesture: ViewModifier {
             }
             .zIndex(moving ? 1 : 0)
             .simultaneousGesture(gesture)
-            .onChange(of: active) { _, now in if !now { drag.finish() } }
+            .onChange(of: active) { _, now in
+                // 같은 사건의 `onEnded`가 먼저 놓도록 다음 차례에 정리한다.
+                if !now { Task { @MainActor in drag.cancel(item) } }
+            }
     }
 
     #if os(iOS)
@@ -43,7 +46,7 @@ private struct TabDragGesture: ViewModifier {
                 drag.changed(item, location: value.location, start: value.startLocation, translation: value.translation.width)
             }
             .onEnded { value in
-                guard case .second(true, let value?) = value else { return drag.finish() }
+                guard case .second(true, let value?) = value else { return drag.cancel(item) }
                 drag.ended(item, location: value.location)
             }
     }
