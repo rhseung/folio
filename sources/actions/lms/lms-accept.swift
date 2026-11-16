@@ -10,7 +10,6 @@ import Foundation
         과목을 주면 항목의 강의실(classroom)에 그 과목을 기억한다. 과목을 빼면 강의실마다 기억한 과목에 받는다.
         """,
     effect: .creates, done: "LMS 항목을 받았습니다",
-    examples: ["folio lms accept EC4207 --items items.json", "folio lms accept --items items.json"],
     phrases: ["LMS 과제 추가", "LMS 자료 받기", "LMS 제안 모두 추가", "기억한 과목에 모두 받기"])
 public struct LMSAccept {
     /// 과목. 빼면 항목의 강의실마다 기억한 과목

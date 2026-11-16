@@ -12,9 +12,6 @@ extension GeneratedCommands {
             과제의 files는 과제 페이지에서 받은 첨부이고, 과제 폴더(Assignments/<과제>)에 원래 이름으로 들어가 문제 파일이 된다.
             과목을 주면 항목의 강의실(classroom)에 그 과목을 기억한다. 과목을 빼면 강의실마다 기억한 과목에 받는다.
 
-            예시:
-              folio lms accept EC4207 --items items.json
-              folio lms accept --items items.json
             """)
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("과목. 빼면 항목의 강의실마다 기억한 과목", valueName: "course"), completion: Complete.ref(.course)) var course: String?
