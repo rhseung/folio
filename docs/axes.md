@@ -47,7 +47,7 @@ AGENTS.md "구조 축" 표의 축마다 지킬 규칙이다. 축에 기능을 �
 - 승인 화면에 보이는 제안은 `FolioDomain`의 `Proposal`이다. 종류(`ProposalKind`)가 묶음(`ProposalGroup`), 넣을 과목을 고르는지(`picksCourse`), 여러 제안을 한 액션으로 합칠 목록 필드(`list`)를 정한다. 승인은 `action`, 무시는 `dismissal`이고, 표시(`ProposalFlag`)가 검토할 것을 알리거나 승인을 막는다(LMS 뷰어 전용).
 - 같은 명령의 제안 여럿은 목록 필드를 이어 액션 하나로 승인하고 무시한다(`[Proposal].approvals(in:)`, `dismissals`). 그래서 한 번 묻고, 하나가 막히면 아무것도 쓰지 않는다.
 - 제안의 출처는 셋이고, 출처마다 승인하는 곳이 따로 있다. 종류의 묶음(`ProposalKind.group`)이 없는 제안은 LMS 탭에 오지 않는다.
-    - LMS(`LMSProposal.proposal`, 승인은 `lms accept`, 무시는 `lms mark`): `ProposalBoard`가 강의실로 묶어 LMS 탭(`folio://lms`)에 모은다.
+    - LMS(`LMSProposal.proposal`, 승인은 `lms accept`, 무시는 `lms mark`): `ProposalBoard`가 강의실로 묶어 LMS 탭(`folio://lms`)에 모은다. 받은 과제가 LMS와 다른 것(`LMSDifference`)은 과목이 정해져 있어 과목을 고르지 않고, 승인은 `assignment status`나 `assignment set`이다.
     - 대화 파일(`Chat.pending`): 그 대화의 Claude 패널에서 승인한다. Claude는 LMS에 속하지 않아 LMS 탭에 모으지 않는다(사용자 결정). 패널의 거절은 #515다. CLI와 MCP는 `proposal list`로 모든 과목의 대화에서 기다리는 제안을 읽는다.
     - 폴더 정리 옮기기(`PlannedMove.proposal`, 검토 표시는 `.review` 표시, 승인은 `cleanup apply`): 자료 화면과 `cleanup plan`이 같은 선언을 읽는다.
 - 파일 분류, 자료에서 정보 추출, 렉처 단원 구간 제안은 #90에 남았다. 패널의 제안 단계는 `docs/mcp.md`에 있다.
