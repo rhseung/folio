@@ -49,6 +49,14 @@ struct NoteSectionTests {
         #expect(note.section(heading: "없는 제목", block: nil) == nil)
     }
 
+    // 닫히지 않은 `$$`는 뒤의 줄을 모두 한 줄로 옮겨, 두 제목이 같은 줄에서 시작한다. 거꾸로 된 범위로 멈추지 않아야 한다.
+    @Test func anUnclosedDisplayMathDoesNotReverseTheSection() {
+        let broken = "# 제목\n$$\nx\n```py\ny\n```\n## 앞\n본문\n## 뒤\n끝"
+        #expect(ParsedNote(broken).section(heading: "앞", block: nil) != nil)
+        #expect(ParsedNote(broken).section(heading: "뒤", block: nil) != nil)
+        #expect(!page("![[Broken#앞]]", ["Broken": broken]).isEmpty)
+    }
+
     @Test func aBlockIsItsParagraphItemOrCallout() {
         #expect(note.section(heading: nil, block: "def") == "짝짓기는 간선 집합이다. ^def")
         #expect(note.section(heading: nil, block: "inner") == "- 안쪽 ^inner")

@@ -206,6 +206,15 @@ final class GradesModel {
 
     static func floor(_ points: [Point]) -> Double { max(0, ((points.map(\.gpa).min() ?? 3.5) * 2).rounded(.down) / 2 - 0.5) }
 
+    // 평어표의 평점이 매우 크면 0.5 간격의 눈금이 수백만 개가 되고, 평점이 모두 음수이면 바닥이 꼭대기보다 높아 범위가 거꾸로 된다.
+    static func axis(from low: Double, to top: Double) -> (domain: ClosedRange<Double>, ticks: [Double]) {
+        let low = low.isFinite ? low : 0
+        let top = top.isFinite ? max(top, low + 0.5) : low + 0.5
+        var step = 0.5
+        while (top - low) / step > 10 { step *= 2 }
+        return (low...top, Array(stride(from: low, through: top, by: step)))
+    }
+
     static func dashed(_ cumulative: [Point]) -> [Point] {
         cumulative.firstIndex(where: \.simulated).map { Array(cumulative[max(0, $0 - 1)...]) } ?? []
     }

@@ -9,13 +9,14 @@ public struct ActivitySpan: Sendable, Equatable {
     public init(start: Date, idleMinutes: Int = SettingItem.idleMinutes.int) {
         self.start = start
         self.lastInput = start
-        self.idleLimit = TimeInterval(idleMinutes * 60)
+        self.idleLimit = TimeInterval(Swift.max(0, idleMinutes)) * 60
     }
 
     public mutating func input(at date: Date) -> DateInterval? {
         defer { lastInput = date }
         guard date.timeIntervalSince(lastInput) > idleLimit else { return nil }
-        let done = DateInterval(start: start, end: lastInput + idleLimit)
+        // 시계가 뒤로 가면 `lastInput`이 `start`보다 앞설 수 있다. `DateInterval`은 끝이 시작보다 앞서면 멈춘다.
+        let done = DateInterval(start: start, end: Swift.max(start, lastInput + idleLimit))
         start = date
         return done
     }

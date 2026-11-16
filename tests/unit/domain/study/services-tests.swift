@@ -1,6 +1,7 @@
 import FolioCore
 import FolioDomain
 import Foundation
+import PropertyBased
 import Testing
 
 struct StudyActivityTests {
@@ -20,6 +21,27 @@ struct StudyActivityTests {
         _ = span.input(at: t0 + 100)
         #expect(span.end(at: t0 + 200).end == t0 + 200)
         #expect(span.end(at: t0 + 3600).end == t0 + 400)
+    }
+
+    @Test func aClockThatJumpsBackStillClosesAForwardSpan() {
+        var span = ActivitySpan(start: t0)
+        #expect(span.input(at: t0 - 3600) == nil)
+        #expect(span.input(at: t0 + 600) == DateInterval(start: t0, end: t0))
+        #expect(ActivitySpan(start: t0, idleMinutes: -5).idleLimit == 0)
+    }
+
+    // 시계가 앞뒤로 움직이고 설정이 음수여도 끊어 낸 구간은 모두 시작에서 끝으로 흐른다.
+    @Test func everySpanRunsForward() async {
+        await propertyCheck(input: Gen.int(in: -30...30), Gen.int(in: -7200...7200).array(of: 1...12)) { idle, steps in
+            var span = ActivitySpan(start: t0, idleMinutes: idle)
+            var now = t0
+            for step in steps {
+                now += TimeInterval(step)
+                if let done = span.input(at: now) { #expect(done.start <= done.end) }
+            }
+            let last = span.end(at: now - 10_000)
+            #expect(last.start <= last.end)
+        }
     }
 
     @Test func overlapAcrossDevicesCountsOnceIncludingContainedAndTouching() {

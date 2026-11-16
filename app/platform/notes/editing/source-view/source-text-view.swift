@@ -789,22 +789,31 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
             let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
             // folio:not-an-action a temporary folder for pasted files
             try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-            for promise in promises {
-                promise.receivePromisedFiles(atDestination: folder, options: [:], operationQueue: Self.promiseQueue) {
-                    [weak self] url, error in
-                    guard error == nil, let data = try? Data(contentsOf: url) else { return }
-                    let name = url.lastPathComponent
-                    // folio:not-an-action a temporary folder for pasted files
-                    try? FileManager.default.removeItem(at: url)
-                    Task { @MainActor in
-                        guard let self, let link = self.saveFile(name, data) else { return }
-                        self.insertLinks([link], at: at)
-                    }
+            let reader = Self.promiseReader { [weak self] name, data in
+                Task { @MainActor in
+                    guard let self, let link = self.saveFile(name, data) else { return }
+                    self.insertLinks([link], at: at)
                 }
+            }
+            for promise in promises {
+                promise.receivePromisedFiles(atDestination: folder, options: [:], operationQueue: Self.promiseQueue, reader: reader)
             }
             return true
         }
         return insertFiles(from: board, at: at)
+    }
+
+    // SDK가 reader 블록을 Sendable로 표시하지 않아, 이 클래스 안에서 만든 클로저는 MainActor 격리를 물려받는다.
+    // 그 클로저를 `promiseQueue`에서 부르면 Swift 6의 런타임 격리 검사가 앱을 멈추므로 nonisolated 함수에서 만든다.
+    private nonisolated static func promiseReader(
+        _ received: @escaping @Sendable (String, Data) -> Void
+    ) -> @Sendable (URL, (any Error)?) -> Void {
+        { url, error in
+            guard error == nil, let data = try? Data(contentsOf: url) else { return }
+            // folio:not-an-action a temporary folder for pasted files
+            try? FileManager.default.removeItem(at: url)
+            received(url.lastPathComponent, data)
+        }
     }
 
     private func insertFiles(from board: NSPasteboard, at index: Int) -> Bool {

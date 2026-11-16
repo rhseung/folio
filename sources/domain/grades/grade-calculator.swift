@@ -20,6 +20,9 @@ public enum GradeCalculator {
         public var zEstimated = false
         public var meanGap: Double?
         public var remainingWeight: Double
+
+        // 손으로 고친 파일은 비중 규칙(0...100)을 벗어날 수 있다. 자르지 않고 `Int`로 바꾸면 1e19 같은 비중에서 앱이 멈춘다.
+        public var remainingPercent: Int { Int(rounding: remainingWeight, in: 0...(100 * Swift.max(components.count, 1))) }
     }
 
     // `expected`는 면제한 점수를 뺀 전체 점수 개수이다. 이 값이 있으면 `dropLowest`는 `expected - n`을 넘은 점수만큼만

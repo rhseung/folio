@@ -12,6 +12,16 @@ struct CleanupKeywordTests {
         #expect(Keywords.examFolder(in: "problems.pdf") == nil)
     }
 
+    // 전각 숫자는 Swift Regex의 `\d`에 맞지만 `Int`로 읽히지 않는다. 번호로 읽지 않고 멈추지도 않아야 한다.
+    @Test func fullWidthDigitsAreNotNumbers() {
+        #expect(Keywords.examFolder(in: "퀴즈 ２ 요약.pdf") == nil)
+        #expect(Keywords.examFolder(in: "quiz１２.pdf") == nil)
+        #expect(Keywords.assignmentNumber(in: "hw３.pdf") == nil)
+        #expect(Keywords.assignmentNumber(in: "26h３.pdf") == nil)
+        #expect(Keywords.assignmentNumber(in: "２_report.pdf") == nil)
+        #expect(Keywords.week(in: "３주차.pdf") == nil)
+    }
+
     @Test(arguments: ["Quiz3 대비 정리.pdf", "컴파일러 핵심 요약.md", "01_EC3204_mid_mock.pdf", "컴파일러 압축본.pdf", "Cheat Sheet.pdf"])
     func selfMadeNames(name: String) {
         #expect(Keywords.looksSelfMade(name))

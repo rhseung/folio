@@ -11,8 +11,10 @@ public enum NotionNotesImporter {
     }
 
     static func session(of title: String) -> (week: Int, index: Int, review: Bool)? {
-        guard let m = title.trimmingCharacters(in: .whitespaces).wholeMatch(of: /(\d+)주차-(\d+)(\s*정리)?/) else { return nil }
-        return (Int(m.1)!, Int(m.2)!, m.3 != nil)
+        guard let m = title.trimmingCharacters(in: .whitespaces).wholeMatch(of: /(\d+)주차-(\d+)(\s*정리)?/), let week = Int(m.1),
+            let index = Int(m.2)
+        else { return nil }
+        return (week, index, m.3 != nil)
     }
 
     public static func merge(
