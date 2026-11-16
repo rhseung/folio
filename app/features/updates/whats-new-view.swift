@@ -23,9 +23,9 @@ struct WhatsNewView: View {
                 EmptyCard(systemImage: "doc.text", title: String(localized: .whatsNewEmpty))
             case .noMatch, .releases:
                 tools
-                if case .releases(let releases) = model.state {
-                    ForEach(releases, id: \.version) { release in
-                        ReleaseSection(model: model, release: release)
+                if case .series(let all) = model.state {
+                    ForEach(all, id: \.name) { series in
+                        SeriesSection(model: model, series: series)
                     }
                 } else {
                     EmptyLine(model.noMatch)
@@ -58,30 +58,47 @@ struct WhatsNewView: View {
     }
 }
 
-private struct ReleaseSection: View {
+private struct SeriesSection: View {
     let model: WhatsNewModel
-    let release: PatchNotes.Release
+    let series: PatchNotes.Series
 
     var body: some View {
-        let open = model.isOpen(release)
+        let open = model.isOpen(series)
         VStack(alignment: .leading, spacing: Theme.Space.l) {
             Button {
-                withAnimation(.snappy) { model.toggle(release) }
+                withAnimation(.snappy) { model.toggle(series) }
             } label: {
                 HStack(spacing: Theme.Space.s) {
                     Image(systemName: "chevron.right")
                         .font(Theme.Glyph.small)
                         .foregroundStyle(Theme.Palette.textTertiary)
                         .rotationEffect(.degrees(open ? 90 : 0))
-                    Text(release.version.description).font(Theme.Typeface.figureMedium).monospacedDigit()
-                    if model.isCurrent(release) { Badge(String(localized: .whatsNewCurrent), tone: .accent) }
-                    if let date = model.date(release) { Text(date).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1) }
+                    Text(model.showsReleases(series) ? series.name : series.latest.version.description)
+                        .font(Theme.Typeface.figureMedium).monospacedDigit()
+                    if model.isCurrent(series) { Badge(String(localized: .whatsNewCurrent), tone: .accent) }
+                    if let days = model.days(series) { Text(days).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1) }
                 }
                 .frame(maxWidth: .infinity, minHeight: Theme.Size.touchTarget, alignment: .leading)
                 .contentShape(.rect)
             }
             .buttonStyle(.pointing(.plain))
-            if open { PatchNoteList(items: model.items(release)) }
+            if open {
+                if model.showsReleases(series) {
+                    ForEach(series.releases, id: \.version) { release in
+                        VStack(alignment: .leading, spacing: Theme.Space.s) {
+                            HStack(spacing: Theme.Space.s) {
+                                Text(release.version.description).font(Theme.Typeface.bodyStrong).monospacedDigit()
+                                if let date = model.date(release) {
+                                    Text(date).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
+                                }
+                            }
+                            PatchNoteList(items: model.items(release))
+                        }
+                    }
+                } else {
+                    PatchNoteList(items: model.items(series.latest))
+                }
+            }
         }
     }
 }

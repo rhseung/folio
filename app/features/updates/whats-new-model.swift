@@ -7,7 +7,7 @@ final class WhatsNewModel {
     let workspace: Workspace
     var query = ""
     var kind: PatchNotes.Kind?
-    private var toggled: Set<PatchNotes.Version> = []
+    private var toggled: Set<String> = []
     var width: CGFloat = 0
 
     static let wideFrom: CGFloat = 560
@@ -25,25 +25,37 @@ final class WhatsNewModel {
         case unavailable
         case empty
         case noMatch
-        case releases([PatchNotes.Release])
+        case series([PatchNotes.Series])
     }
 
     var state: State {
         guard let history = notes.history else { return notes.feed == .failed ? .unavailable : .loading }
         guard !history.isEmpty else { return .empty }
         let shown = PatchNotes.filter(history, kind: kind, query: query)
-        return shown.isEmpty ? .noMatch : .releases(shown)
+        return shown.isEmpty ? .noMatch : .series(PatchNotes.series(shown))
     }
 
     var searching: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }
 
-    func isOpen(_ release: PatchNotes.Release) -> Bool {
-        searching || (release.version == notes.current) != toggled.contains(release.version)
+    // 지금 버전이 든 minor만 펼친다. patch는 PR마다 나와서 모두 펼치면 페이지가 끝없이 길어진다.
+    func isOpen(_ series: PatchNotes.Series) -> Bool {
+        searching || series.contains(notes.current) != toggled.contains(series.name)
     }
 
-    func toggle(_ release: PatchNotes.Release) {
+    func toggle(_ series: PatchNotes.Series) {
         guard !searching else { return }
-        if toggled.contains(release.version) { toggled.remove(release.version) } else { toggled.insert(release.version) }
+        if toggled.contains(series.name) { toggled.remove(series.name) } else { toggled.insert(series.name) }
+    }
+
+    func isCurrent(_ series: PatchNotes.Series) -> Bool { series.contains(notes.current) }
+
+    // 릴리스가 하나뿐인 묶음은 묶음 제목이 그 릴리스를 말하므로 릴리스마다의 제목을 두지 않는다.
+    func showsReleases(_ series: PatchNotes.Series) -> Bool { series.releases.count > 1 }
+
+    func days(_ series: PatchNotes.Series) -> String? {
+        let first = date(series.first), last = date(series.latest)
+        guard let first, let last, first != last else { return last ?? first }
+        return String(localized: .whatsNewDays(first, last))
     }
 
     func load() async { await notes.load() }
@@ -55,8 +67,6 @@ final class WhatsNewModel {
     var kindOptions: [(PatchNotes.Kind?, String)] {
         [(nil, String(localized: .whatsNewKindAll))] + PatchNotes.Kind.allCases.map { ($0, $0.label) }
     }
-
-    func isCurrent(_ release: PatchNotes.Release) -> Bool { release.version == notes.current }
 
     func date(_ release: PatchNotes.Release) -> String? {
         release.date.map { Self.day($0, calendar: workspace.calendar) }
