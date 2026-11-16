@@ -111,7 +111,7 @@ FolioGen  ->  FolioActions   (액션 목록과 CLI 명령, 명령 트리를 쓴�
 | `FolioAI` | Claude API 호출(Swift SDK가 없어 문서화된 HTTP 형식 그대로), 작업별 모델과 effort 표, 맥락 구성, 응답 스키마, 사용량과 비용 | 파일 쓰기. 결과는 제안으로만 돌려준다 |
 | `FolioActions` | 데이터를 바꾸는 모든 동작. Domain의 변환과 Storage의 쓰기, 폴더 생성, 로그를 한 액션으로 묶는다. 액션 목록의 단일 출처. 읽기 선언(`@Query`)도 둔다 | UI, 출력 형식. 앱과 CLI가 같은 구현을 부른다 |
 | `FolioIndex` | 기기별 로컬 SQLite 검색 색인(GRDB, FTS5 trigram). 캐시 폴더에 두며 지워도 다시 만든다 | GIST 폴더에 쓰기. 순위와 발췌는 Domain의 `SearchIndex`에 맡긴다 |
-| `FolioLMS` | GIST LMS(Coursemos) 읽기(`docs/lms.md`) | 파일 쓰기와 제안 판단 |
+| `FolioLMS` | GIST LMS(Coursemos) 읽기(`docs/lms.md`), 마지막으로 읽은 내용의 기기 캐시(`LMSCache`, Caches 폴더) | GIST 폴더 쓰기와 제안 판단 |
 | `FolioCLI` | 터미널 도구 `folio`의 명령 라이브러리. 실행 파일은 진입점만 있는 `FolioCommand`다(실행 타깃의 테스트 빌드에는 카탈로그 심볼이 생기지 않아서다). 모든 액션을 `<대상> <동작>` 명령으로 열고, 사람용 출력과 `--json` 출력을 만든다. 노트 그림과 위젯의 그려 보기는 macOS에서 화면 밖 `WKWebView`로 그리고, 앱의 노트 색은 링크할 수 없어 생성한 사본(`NoteTheme`)을 쓴다 | 액션 로직. 명령은 인자를 해석해 `FolioActions`를 부르고 결과를 그리기만 한다 |
 | `FolioMacros` | `@Action`과 필드 표시. 선언에서 입력 형식, init, 코딩, `spec`을 만들고 실수(맨 `UUID`, 없는 `{필드}`, 확인 문구 없는 삭제)를 컴파일 오류로 막는다 | 실행 코드. 앱과 CLI에 링크되지 않는다 |
 | `FolioGen` | `@Action`과 `@Query` 선언을 읽어 `Actions.all`, `Queries.all`(`#if` 안의 선언은 같은 조건 안에), 생성 명령(명령 하나에 파일 하나), 명령 트리(`command-tree.swift`)를 쓴다. 결과는 커밋한다 | FolioCLI에 의존. 생성 파일이 깨져도 다시 만들 수 있어야 한다 |
