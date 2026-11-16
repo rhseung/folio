@@ -42,17 +42,34 @@ private func found(_ files: [String: String], _ check: String) -> [String] {
 }
 
 @Suite struct ActionPathTests {
-    @Test func actionsLiveInTheFoldersOfTheirName() {
+    @Test func actionsLiveInTheAreaOfTheirName() {
         let files = [
-            "sources/actions/note/figure/note-figure-add.swift": "@Action struct NoteFigureAdd {}",
-            "sources/actions/note/note-add.swift": "@Action struct NoteAdd {}",
-            "sources/actions/exam/exam-add.swift": "@Action struct ExamAdd {}",
-            "sources/actions/note/exam-scope.swift": "@Action struct ExamScope {}",
+            "sources/actions/notes/figure/note-figure-add.swift": "@Action struct NoteFigureAdd {}",
+            "sources/actions/notes/note-add.swift": "@Action struct NoteAdd {}",
+            "sources/actions/exams/exam-add.swift": "@Action struct ExamAdd {}",
+            "sources/actions/grades/component/component-add.swift": "@Action struct ComponentAdd {}",
+            "sources/actions/sessions/class-start.swift": "@Action struct ClassStart {}",
+            "sources/actions/courses/class-time-set.swift": "@Action struct ClassTimeSet {}",
+            "sources/actions/notes/exam-scope.swift": "@Action struct ExamScope {}",
             "sources/actions/score-add.swift": "@Action struct ScoreAdd {}",
-            "sources/actions/exam/exam-show.swift": "@Query struct ExamShow {}",
-            "sources/actions/note/exam-summary-show.swift": "@Query struct ExamSummaryShow {}",
-            "sources/actions/note/notes/note-lookup.swift": "enum NoteLookup {}",
+            "sources/actions/exams/exam-show.swift": "@Query struct ExamShow {}",
+            "sources/actions/notes/exam-summary-show.swift": "@Query struct ExamSummaryShow {}",
+            "sources/actions/notes/widget/note-figure-list.swift": "@Query struct NoteFigureList {}",
+            "sources/actions/exam/exam-list.swift": "@Query struct ExamList {}",
+            "sources/actions/notes/notes/note-lookup.swift": "enum NoteLookup {}",
         ]
-        #expect(found(files, "action-path") == ["ExamScope in note/", "ExamSummaryShow in note/", "ScoreAdd in /"])
+        #expect(
+            found(files, "action-path") == [
+                "ExamList in exam/", "ExamScope in notes/", "ExamSummaryShow in notes/", "NoteFigureList in notes/widget/",
+                "ScoreAdd in /",
+            ])
+    }
+
+    @Test func theLongestFrontPicksTheArea() {
+        #expect(Area.of("class-time-set") == "courses")
+        #expect(Area.of("class-start") == "sessions")
+        #expect(Area.of("problem-set-save") == "study")
+        #expect(Area.of("lms-accept") == "lms")
+        #expect(Area.of("classroom") == nil)
     }
 }

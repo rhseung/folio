@@ -25,22 +25,32 @@ extension Rules {
     static var actionPath: Rule {
         Rule(
             name: "action-path", strict: true,
-            advice: "put an @Action in sources/actions/<object>/[<sub>/]<its name in kebab case>.swift, the folders being the "
-                + "front of its name (NoteFigureAdd: note/figure/note-figure-add.swift), so the list folio-gen writes follows"
+            advice: "put an @Action in sources/actions/<area>/[<object>/]<its name in kebab case>.swift, the area being the one "
+                + "the front of its name belongs to in the area table (sources/tools/lint/area.swift) and the object a word of "
+                + "its name (NoteFigureAdd: notes/figure/note-figure-add.swift), so the list folio-gen writes follows"
         ) { code in
             var hits: [Hit] = []
             for file in code.files(under: RepoPath.actions) {
                 for node in file.nodes(StructDeclSyntax.self) where node.attributes.contains(where: isActionAttribute) {
                     let name = node.name.text
+                    let words = kebab(name).split(separator: "-").map(String.init)
                     let folders = file.path.dropFirst(RepoPath.actions.count + 1).split(separator: "/").dropLast().map(String.init)
-                    let front = folders.joined(separator: "-")
-                    if folders.isEmpty || !(kebab(name) == front || kebab(name).hasPrefix(front + "-")) {
+                    let inArea = folders.first.map { $0 == Area.of(kebab(name)) } ?? false
+                    let object =
+                        folders.count < 2 || (folders.count == 2 && hasWords(words, folders[1].split(separator: "-").map(String.init)))
+                    if !inArea || !object {
                         hits.append(Hit("action-path", file, file.line(of: node), "\(name) in \(folders.joined(separator: "/"))/"))
                     }
                 }
             }
             return hits
         }
+    }
+
+    // 대상 폴더의 낱말이 이름의 낱말에 이어서 들어 있는지 본다. `figure`는 note-figure-add에 들어 있다.
+    static func hasWords(_ words: [String], _ part: [String]) -> Bool {
+        guard !part.isEmpty, part.count <= words.count else { return false }
+        return (0...(words.count - part.count)).contains { Array(words[$0..<($0 + part.count)]) == part }
     }
 
     static func isActionAttribute(_ element: AttributeListSyntax.Element) -> Bool {

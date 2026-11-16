@@ -65,7 +65,7 @@ folio/
 ```
 
 - 파일 밖에서 쓰는 타입 하나에 파일 하나를 두고, 파일 이름은 타입 이름 전체의 케밥 케이스다(`NoteFigureAdd`: `note-figure-add.swift`). Swift가 한 모듈 안에 같은 파일 이름을 두 번 받지 않아서, 폴더가 이름의 앞부분을 말해도 파일 이름을 줄이지 않는다. 그 파일 안에서만 쓰는 `private` 조각과 한 값의 `extension`은 그 값의 파일에 둔다(`one-type-per-file`). 폴더에 Swift 파일이 20개를 넘으면 역할로 하위 폴더를 나눈다(`folder-size`).
-- 액션은 `sources/actions/<대상>/[<하위 대상>/]<타입 이름 케밥>.swift`이고 폴더가 이름의 앞부분이다(`action-path`). 여러 액션이 함께 쓰는 도우미는 그 대상 폴더의 이름 있는 파일(`note/note-lookup.swift`)에, 모든 액션의 바탕은 `actions/core/`에 둔다. 읽기 선언(`@Query`)도 같은 규칙이다. CLI의 손 명령은 `sources/cli/commands/<대상>/`에 같은 모양으로 두고, 하위 명령마다 `extension <상위 명령> { struct … }` 파일 하나다.
+- 액션은 `sources/actions/<영역>/[<대상>/]<타입 이름 케밥>.swift`다(`action-path`). 영역은 타입 이름의 앞 낱말로 영역 이름표(`sources/tools/lint/area.swift`)에서 정하고, 대상 폴더는 영역에 파일이 20개를 넘을 때만 이름의 낱말로 둔다(`notes/figure/note-figure-add.swift`). 여러 액션이 함께 쓰는 도우미는 그 영역 폴더의 이름 있는 파일(`notes/note-lookup.swift`)에, 모든 액션의 바탕은 `actions/` 바로 아래에, 읽기의 바탕은 `actions/query/`에 둔다. 읽기 선언(`@Query`)도 같은 규칙이다. CLI의 손 명령은 `sources/cli/commands/<영역>/`에 같은 모양으로 두고, 하위 명령마다 `extension <상위 명령> { struct … }` 파일 하나다.
 - 계산 로직(환산 점수, GPA, 복습 간격, 우선순위)은 순수 함수로 만들고 단위 테스트를 붙인다.
 - Claude 호출은 `FolioAI`의 프로토콜 뒤에 둔다. 테스트에서는 가짜 프로바이더를 쓴다.
 
@@ -128,7 +128,7 @@ FolioGen  ->  FolioActions   (액션 목록과 CLI 명령, 명령 트리를 쓴�
 | --- | --- | --- |
 | 액션 `@Action` | 데이터를 바꾸는 모든 동작. 앱, CLI, MCP가 같은 선언을 쓴다 | 있음 |
 | 읽기 `@Query` | 항목을 읽는 명령. CLI, `--json`, `folio run`, MCP 도구가 같은 선언에서 나온다 | 있음 |
-| 표준 구조 `sources/domain/layout/` | 폴더와 파일 이름 | 있음 |
+| 표준 구조 `sources/domain/folder/` | 폴더와 파일 이름 | 있음 |
 | 앱 링크 `AppLink` | 앱 안의 모든 대상을 가리키는 `folio://` 주소와 종류 표(`AppLink.Kind`). 모든 이동이 `\.openLink`로 간다 | 있음 |
 | 화면 계약 `ScreenView` | 주소 하나를 그리는 화면과 세 폭(1440·720·390) 검사 | 있음 |
 | 칸 배치 `PaneLayout` | 탭 하나의 칸과 접기 규칙, 회차 배치 기억, 이름 붙인 배치 | 있음(#62) |
@@ -145,7 +145,7 @@ FolioGen  ->  FolioActions   (액션 목록과 CLI 명령, 명령 트리를 쓴�
 
 ### 화면: 모델과 뷰
 
-화면 하나는 `app/features/<기능>/`의 `<화면>-view.swift`와 `<화면>-model.swift`로 나눈다. 다른 파일에서 쓰는 큰 조각(행, 카드, 시트)은 타입마다 `features/<기능>/<조각>.swift`로 빼고, 그 화면 안에서만 쓰는 조각은 `private`으로 둔다. 본보기는 `features/catalog/`다.
+화면 하나는 `app/features/<영역>/`의 `<화면>-view.swift`와 `<화면>-model.swift`로 나눈다. 다른 파일에서 쓰는 큰 조각(행, 카드, 시트)은 타입마다 `features/<영역>/<조각>.swift`로 빼고, 그 화면 안에서만 쓰는 조각은 `private`으로 둔다. 본보기는 `features/grades/catalog/`다.
 
 - **모델** `<화면>Model`: `@MainActor @Observable final class`이고 `init(workspace:, 대상 ID)`로 만든다. 화면의 상태(검색어, 고른 항목, 지우려는 항목)를 들고, 뷰가 바로 그릴 값(묶고, 거르고, 세고, 문구로 만든 값)과 동작을 내놓는다. 동작은 `workspace.run(액션)`을 부른다.
 - **뷰**: 모델을 읽고 배치만 한다. `body`에서 묶기, 거르기, 세기를 하지 않고 `workspace`를 직접 부르지 않는다(`view-body-logic`, `view-workspace-call`). 뷰는 `@State private var model`을 `init(workspace:)`에서 만들고, `@State`는 시트, 마우스 올림, 포커스 같은 화면 상태에만 쓴다.
@@ -189,7 +189,7 @@ PageHeader(title: String(localized: .sessionsAdd))   // String을 받는 API
 
 ### 단일 출처(SSOT)
 
-- 폴더와 파일 이름 규칙은 `FolioDomain`의 `sources/domain/layout/`(`StandardLayout`, `Term`, `SemesterFolder`, `CourseFolder`, `AssignmentKind`)에서만 정의한다. 다른 곳에서 `"Lectures"`, `".folio"` 같은 문자열을 다시 쓰지 않는다(`layout-name`).
+- 폴더와 파일 이름 규칙은 `FolioDomain`의 `sources/domain/folder/`(`StandardLayout`, `Term`, `SemesterFolder`, `CourseFolder`, `AssignmentKind`)에서만 정의한다. 다른 곳에서 `"Lectures"`, `".folio"` 같은 문자열을 다시 쓰지 않는다(`layout-name`).
 - 사용자가 바꿀 수 있는 값(하루 경계, 복습 간격, 알림 시점, 학점 규칙)은 코드 상수가 아니라 `settings.json`과 `transcript.json`에서 읽는다. 기본값은 Domain의 한 곳에서만 정의한다.
 - 빌드와 테스트 명령은 mise 작업(`mise.toml`과 `.mise/tasks`)으로만 정의한다. 규칙이 든 일(버전, 릴리스 본문)은 셸이 아니라 Swift 도구 `folio-dev`에 둔다. 문서는 `mise run <작업>`을 가리킨다.
 - Xcode 프로젝트는 `project.yml`에서 생성한다. `Folio.xcodeproj`는 커밋하지 않고 직접 고치지 않는다.
@@ -209,7 +209,7 @@ PageHeader(title: String(localized: .sessionsAdd))   // String을 받는 API
 
 ### 폴더 구조와 이름 규칙
 
-코드의 단일 출처는 `sources/domain/layout/`이고, 이 절은 그 규칙을 사람이 읽는 형태로 적는다. 과목 폴더는 출처로만 나뉜다. 받은 것(`Syllabus`, `Lectures`, `Exercises`, `Textbooks`, `Inherited`), 평가 기록(`Assignments/<과제>`, `Exams/<시험>`), 내가 만든 것(`Study`, `Notes`, `Ink`, `Recordings`, `Archive`)이다. 어느 시험이나 단원을 위한 파일인지는 폴더가 아니라 `course.json`의 연결(ID)로 표시한다.
+코드의 단일 출처는 `sources/domain/folder/`이고, 이 절은 그 규칙을 사람이 읽는 형태로 적는다. 과목 폴더는 출처로만 나뉜다. 받은 것(`Syllabus`, `Lectures`, `Exercises`, `Textbooks`, `Inherited`), 평가 기록(`Assignments/<과제>`, `Exams/<시험>`), 내가 만든 것(`Study`, `Notes`, `Ink`, `Recordings`, `Archive`)이다. 어느 시험이나 단원을 위한 파일인지는 폴더가 아니라 `course.json`의 연결(ID)로 표시한다.
 
 ```text
 Me/GIST/
@@ -285,7 +285,7 @@ Me/GIST/
 - `fixture`는 이미 있는 폴더에 쓰지 않는다. 상황(`busyDay` 등)은 회차와 마감이 채워진 폴더다. 다른 `.pdf`는 열리지 않는 자리표시자지만, `busyDay`와 `manyExams`의 그래프 이론 렉처(`05_Matchings.pdf`)는 단원으로 나눈 24쪽 PDF(`SampleLecture`)다.
 - 앱을 설치할 때는 `install-release`로 커밋된 코드를 깨끗한 임시 워크트리에서 빌드한다(`docs/release.md`).
 - 모든 CLI 쓰기 명령은 `--dry-run`으로 먼저 본다. GIST 폴더는 `--gist <경로>`, `FOLIO_GIST`, 앱이 연 폴더 순으로 정한다.
-- 에이전트 스킬의 원본은 `sources/cli/commands/skill/skill.swift`다. 고친 뒤 `mise run cli -- skill > .claude/skills/folio/SKILL.md`로 사본을 맞춘다(테스트가 확인한다).
+- 에이전트 스킬의 원본은 `sources/cli/commands/skill.swift`다. 고친 뒤 `mise run cli -- skill > .claude/skills/folio/SKILL.md`로 사본을 맞춘다(테스트가 확인한다).
 - `import notion`, `import notes`, `import exams`, `import units`, `import requirements`, `import handbook`이 읽는 파일은 실제 학업 데이터라 저장소에 넣지 않는다.
 - 이름을 바꾸거나 옮기는 일회성 도구(`cleanup apply`, `note retitle`, `recording retitle`, `transcript move`)는 실제 GIST 폴더에 사용자 승인 뒤에만 돌린다. 출처가 불확실한 파일은 `cleanup`이 검토 표시로 두고 `--include-flagged` 없이는 옮기지 않는다.
 
