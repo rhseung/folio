@@ -16,3 +16,17 @@ struct WindowRequest: Codable, Hashable {
     static func == (a: Self, b: Self) -> Bool { a.id == b.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
+
+extension WindowRequest {
+    // 다른 창으로 옮기는 탭은 칸마다 기록과 폭, 초점, 열 설정을 함께 가져간다.
+    @MainActor init(moving panes: TabPanes) {
+        let focused = panes.focused
+        self.init(link: focused.current.link, course: focused.current.course, history: focused.history)
+        if panes.count > 1 {
+            self.panes = panes.navigators.map(\.history)
+            shares = panes.shares
+            focus = panes.focus
+        }
+        columns = panes.columns.map(\.names)
+    }
+}
