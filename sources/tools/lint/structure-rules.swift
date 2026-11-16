@@ -204,19 +204,4 @@ extension Rules {
                 }
         }
     }
-
-    static let folderLimit = 20
-
-    static var folderSize: Rule {
-        Rule(
-            name: "folder-size",
-            advice: "keep a folder to \(folderLimit) Swift files: group them in subfolders by what a reader looks for, "
-                + "at most features/<기능>/<구역> deep, tests shaped like their sources"
-        ) { code in
-            let folders = Dictionary(grouping: code.paths) { ($0 as NSString).deletingLastPathComponent }
-            return folders.filter { $0.value.count > folderLimit }.keys.sorted().map {
-                Hit("folder-size", path: $0, 1, "more than \(folderLimit) files")
-            }
-        }
-    }
 }

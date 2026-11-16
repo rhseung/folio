@@ -6,7 +6,7 @@ public enum Rules {
             viewWorkspaceCall, viewBodyLogic, uiString, layoutName, layer, restatingComment, docComment, designValue, designGrid,
             designOpacity, designShadow, designMotion, designSize, courseAccent, localFolders, appDirection, kindDefault, minuteTimeline,
             screenToolbar, launchEnvironment, designControl, fileName,
-            kebabNames, folderSize, oneTypePerFile, actionPath,
+            kebabNames, folderSize, folderSmall, folderName, areaFolder, oneTypePerFile, actionPath,
         ]
     }
 }

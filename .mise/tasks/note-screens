@@ -11,11 +11,21 @@ trap 'rm -rf "$tmp"' EXIT
 gh run download "$run" --name note-screens --dir "$tmp"
 refs=tests/unit/app/references/notes
 mkdir -p "$refs"
+# 그림이 하나도 바뀌지 않았으면 그 실행의 macOS도 같은 그림을 그린다는 뜻이므로 목록에 더한다. 하나라도 바뀌었으면 목록의
+# 다른 macOS가 새 그림을 그리는지 모르므로 목록을 그 실행의 macOS 하나로 바꾼다.
 n=0
+changed=0
 for f in "$tmp"/*.png; do
   case "$f" in *-diff.png) continue ;; esac
+  cmp -s "$f" "$refs/$(basename "$f")" || changed=1
   cp "$f" "$refs/"
   n=$((n + 1))
 done
-cp "$tmp/machine.txt" "$refs/machine.txt"
-echo "$n pictures from run $run in $refs ($(cat "$refs/machine.txt"))"
+machine="$(cat "$tmp/machine.txt")"
+if [ "$changed" = 0 ] && [ -f "$refs/machine.txt" ]; then
+  grep -qxF "$machine" "$refs/machine.txt" || echo "$machine" >>"$refs/machine.txt"
+else
+  echo "$machine" >"$refs/machine.txt"
+fi
+echo "$n pictures from run $run in $refs, made on:"
+cat "$refs/machine.txt"

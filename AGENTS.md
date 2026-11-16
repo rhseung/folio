@@ -20,7 +20,7 @@
 
 - 사용자와는 한국어로 대화한다. 영어로 답하지 않는다.
 - 식별자와 커밋 메시지는 영어로, 주석은 한국어로 쓴다.
-- PR 본문은 한국어로 쓴다. 사용자가 읽고 무엇이 바뀌었는지 이해해야 하기 때문이다. 기능은 이슈 번호만 쓰지 않고 이름과 함께 쓴다("툴바 탭(#304)"). PR 제목은 스쿼시 커밋 제목이 되므로 커밋 규칙대로 영어로 쓰고, 스쿼시 커밋의 본문은 PR 본문이라 한국어가 된다.
+- PR 본문은 한국어로 쓴다. 사용자가 읽고 무엇이 바뀌었는지 이해해야 하기 때문이다. 기능은 이슈 번호만 쓰지 않고 이름과 함께 쓴다("툴바 탭(#304)"). PR 제목은 스쿼시 커밋 제목이 되므로 커밋 규칙대로 영어로 쓴다. 스쿼시 커밋은 PR 제목과 PR 본문의 `## 패치 노트` 절만 남긴다(매니저가 자동 머지를 걸 때 커밋 본문을 정한다).
 - 앱의 UI 문자열은 한국어로 쓰고 String Catalog(`Localizable.xcstrings`)에 키로 둔다("문자열 키" 절).
 - 이슈와 다르게 구현해야 할 이유가 생기면 구현하기 전에 사용자에게 묻는다. 이슈에 없는 기능을 임의로 추가하지 않는다. 사용자와 새로 정한 동작은 그 이슈 본문에 적는다.
 
@@ -64,7 +64,26 @@ folio/
   .swiftlint-baseline.json, .folio-lint-baseline.txt   # 두 린트의 기준선
 ```
 
-- 파일 밖에서 쓰는 타입 하나에 파일 하나를 두고, 파일 이름은 타입 이름 전체의 케밥 케이스다(`NoteFigureAdd`: `note-figure-add.swift`). Swift가 한 모듈 안에 같은 파일 이름을 두 번 받지 않아서, 폴더가 이름의 앞부분을 말해도 파일 이름을 줄이지 않는다. 그 파일 안에서만 쓰는 `private` 조각과 한 값의 `extension`은 그 값의 파일에 둔다(`one-type-per-file`). 폴더에 Swift 파일이 20개를 넘으면 역할로 하위 폴더를 나눈다(`folder-size`).
+폴더의 깊이는 무게를 따른다. 무게는 담은 Swift 파일 수와 다른 코드가 그 폴더에 기대는 정도다. 많은 코드가 기대는 것(바탕 타입, Workspace, 디자인 토큰)은 얕은 곳에 두고, 한 곳만 쓰는 것은 그곳 안에 둔다. 한 층에는 기준을 하나만 쓴다.
+
+| 층 | 기준 |
+| --- | --- |
+| 저장소 최상위 | 무엇을 만드는가: 앱(`app/`), 패키지 코드(`sources/`), 테스트(`tests/`), 문서(`docs/`) |
+| `sources/` 바로 아래 | 모듈 하나에 폴더 하나. 실행 파일은 `sources/tools/<이름>`에 모은다 |
+| 어느 폴더든 바로 아래의 파일 | 그 폴더의 하위 폴더들이 함께 쓰는 바탕(액션 틀, CLI 출력, 쓰기 바탕). 그래서 모듈 안에 `core`, `shared` 같은 폴더를 만들지 않는다 |
+| 모듈 바로 아래의 폴더 | 학업을 다루는 영역 층(`sources/domain`, `storage`, `actions`, `cli/commands`, `cli/generated`, `app/features`, `app/platform`과 이를 따르는 `tests/unit`)은 영역이다. 그 밖의 모듈(`markdown`, `ai`, `design`)은 그 모듈의 주제다 |
+| 영역 안 | 하위 영역이나 대상. 뷰, 모델, 행 같은 역할은 파일 이름이 말하고 폴더로 나누지 않는다 |
+
+- 영역 이름은 모든 모듈이 같다. 성적은 domain, actions, cli, app, tests 어디서나 `grades/`다. 영역 이름표는 folio-lint의 표(`sources/tools/lint/area.swift`)가 원본이다. 셀 수 있는 영역은 복수(`courses`, `notes`)로 쓰고, 표에 없는 영역이 생기면 표에 먼저 더한다. 영역 층의 폴더는 이름표의 이름이어야 한다(`area-folder`). 층의 바탕인 `actions/query`와 생성 폴더 `generated`는 뺀다.
+- 작은 폴더는 합치고 넘치는 폴더는 나눈다. Swift 파일(하위 폴더 포함)이 하나뿐인 폴더는 두지 않고, 둘뿐인 폴더는 영역 이름일 때만 둔다(`folder-small`). 다음 폴더는 파일 수로 보지 않는다.
+    - 영역 층 바로 아래의 영역 폴더: 자리는 영역 이름표가 정하므로 파일이 하나여도 다른 영역에 옮길 수 없다(`actions/claude`의 `ProposalList`).
+    - 소스 폴더를 따라 만든 `tests/unit`의 폴더: 테스트는 소스와 같은 경로로 나누므로 무게를 소스 폴더가 정한다(`tests/unit/domain/exams`는 `sources/domain/exams`를 따른다).
+    - 모듈 폴더(`sources/<모듈>`, `sources/tools/<도구>`, `tests/unit/<모듈>`, `tests/e2e/<모듈>`)와 `generated`: 모듈 경계는 `Package.swift`와 `project.yml`이, 생성 폴더는 생성기가 정한다.
+- 바로 아래 파일이 20개를 넘으면 하위 영역이나 대상으로 나눈다(`folder-size`). 나눈 폴더의 이름은 하위 영역의 이름이고, 그 안의 타입 이름이나 부모 이름을 되풀이하지 않는다(`sessions/sessions`가 아니라 `sessions/transcription`).
+- `app`, `core`, `shared`처럼 무거운 이름은 최상위나 `sources/` 바로 아래에만 쓴다. 모듈 안에 `core`, `shared`, `common`, `base`, `utils`, `helpers`, `misc`, `app` 폴더를 만들지 않고, `app/features` 아래에 `-view`, `-model`로 끝나는 폴더를 만들지 않는다(`folder-name`).
+- 축의 틀(타입, 등록, 검사)은 그 축을 쓰는 가장 낮은 곳의 바탕에 두고, 종류마다의 선언은 그 종류의 영역 폴더에 둔다. `@Action`의 틀은 `actions/` 바로 아래에, 액션은 영역 폴더에 있다. 항목 메뉴의 `<종류>-menu-command`도 그 종류의 영역에 둔다.
+
+- 파일 밖에서 쓰는 타입 하나에 파일 하나를 두고, 파일 이름은 타입 이름 전체의 케밥 케이스다(`NoteFigureAdd`: `note-figure-add.swift`). Swift가 한 모듈 안에 같은 파일 이름을 두 번 받지 않아서, 폴더가 이름의 앞부분을 말해도 파일 이름을 줄이지 않는다. 그 파일 안에서만 쓰는 `private` 조각과 한 값의 `extension`은 그 값의 파일에 둔다(`one-type-per-file`).
 - 액션은 `sources/actions/<영역>/[<대상>/]<타입 이름 케밥>.swift`다(`action-path`). 영역은 타입 이름의 앞 낱말로 영역 이름표(`sources/tools/lint/area.swift`)에서 정하고, 대상 폴더는 영역에 파일이 20개를 넘을 때만 이름의 낱말로 둔다(`notes/figure/note-figure-add.swift`). 여러 액션이 함께 쓰는 도우미는 그 영역 폴더의 이름 있는 파일(`notes/note-lookup.swift`)에, 모든 액션의 바탕은 `actions/` 바로 아래에, 읽기의 바탕은 `actions/query/`에 둔다. 읽기 선언(`@Query`)도 같은 규칙이다. CLI의 손 명령은 `sources/cli/commands/<영역>/`에 같은 모양으로 두고, 하위 명령마다 `extension <상위 명령> { struct … }` 파일 하나다.
 - 계산 로직(환산 점수, GPA, 복습 간격, 우선순위)은 순수 함수로 만들고 단위 테스트를 붙인다.
 - Claude 호출은 `FolioAI`의 프로토콜 뒤에 둔다. 테스트에서는 가짜 프로바이더를 쓴다.
@@ -302,7 +321,7 @@ Me/GIST/
 - 지금 하지 않기로 미룬 기능에는 `later` 라벨을 붙인다(P3, Backlog). 기능의 일부만 미룰 때는 그 체크리스트 항목에 "(나중에)"를 붙인다.
 - 사용자가 지정한 일을 먼저 한다. 그 밖의 다음 할 일은 Ready 중 상위 이슈의 `Order`가 앞선 것, 같은 상위 이슈 안에서는 `Priority`가 높은 것이다. P0는 순서와 상관없이 먼저 한다. `main`의 CI가 실패하면 P0로 보고 다른 일보다 먼저 고친다.
 - 상태는 손으로 옮긴다(Project 자동화는 하위 이슈 추가만 켜 있다). 시작하면 In progress, PR 본문에 `Closes #번호`를 적고, 닫히면 Done으로 옮긴다. 닫힌 이슈에 막혀 있던 이슈는 남은 막힘이 없으면 Ready로 옮긴다. 일부만 끝냈으면 닫지 않고, 끝낸 항목을 체크하고 남은 일을 체크리스트에 적는다. 한 이슈가 테스트까지 끝나면 커밋하고 다음으로 넘어간다.
-- PR은 `main` 룰셋의 승인 1개와 필수 검사(`packages`, `mac app`, `ipad app`)를 모두 채워야 머지된다. 승인은 리뷰 봇이 하고(Dependabot PR 포함), 문서만 바뀐 PR은 Actions가 한다(`docs/ci.md`). PR은 스쿼시로만 머지되므로 PR 제목을 커밋 규칙대로 짓는다. PR을 열면 `gh pr merge --auto --squash`로 자동 머지를 걸어 둔다. 관리자 권한(`--admin`)으로 룰셋을 우회하지 않는다.
+- PR은 `main` 룰셋의 승인 1개와 필수 검사(`packages`, `mac app`, `ipad app`)를 모두 채워야 머지된다. 승인은 리뷰 봇이 하고(Dependabot PR 포함), 문서만 바뀐 PR은 Actions가 한다(`docs/ci.md`). PR은 스쿼시로만 머지되므로 PR 제목을 커밋 규칙대로 짓는다. 자동 머지는 커밋 제목(`<PR 제목> (#번호)`)과 본문(PR 본문의 `## 패치 노트` 절, 절이 없으면 빈 본문)을 정해서 건다. 정하지 않으면 GitHub가 PR 본문 전체를 커밋 본문으로 쓰기 때문이다. 관리자 권한(`--admin`)으로 룰셋을 우회하지 않는다.
 - 사용자가 이슈 없이 시킨 일은 바로 하고, 남은 범위나 새로 정한 동작은 해당 이슈에 적거나 새 이슈로 만든다.
 
 ### PR 전 점검

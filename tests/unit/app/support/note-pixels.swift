@@ -109,8 +109,9 @@ struct Pixels: Equatable {
     }
 }
 
-// 글꼴은 macOS마다 조금씩 다르게 그려지므로, 그림은 만든 곳에서만 비교한다. 러너의 macOS는 그림 옆의 `machine.txt`에 적는다. 다른 곳에서는 비교를 건너뛰지만, CI처럼
-// `FOLIO_NOTE_SCREENS_STRICT`를 켜면 새 러너 이미지에서 검사를 멈추지 않고 실패한다.
+// 글꼴은 macOS마다 조금씩 다르게 그려지므로, 그림은 같은 그림을 그린다고 확인한 macOS에서만 비교한다. 그 macOS는 그림 옆의
+// `machine.txt`에 한 줄에 하나씩 적는다. CI 러너 풀에는 여러 macOS 빌드가 섞여 있어서 한 빌드만 적으면 다른 빌드의 러너에서 실패한다.
+// 목록에 없는 곳에서는 비교를 건너뛰지만, CI처럼 `FOLIO_NOTE_SCREENS_STRICT`를 켜면 새 러너 이미지에서 검사를 멈추지 않고 실패한다.
 enum NoteScreens {
     static let references = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appending(
         path: "references/notes")
@@ -118,9 +119,9 @@ enum NoteScreens {
     static let out = environment["FOLIO_NOTE_SCREENS"].flatMap { $0.isEmpty ? nil : URL(filePath: $0, directoryHint: .isDirectory) }
     static let strict = !(environment["FOLIO_NOTE_SCREENS_STRICT"] ?? "").isEmpty
     static let machine = "macOS \(ProcessInfo.processInfo.operatingSystemVersionString)"
-    static var recorded: String? {
-        (try? String(contentsOf: references.appending(path: "machine.txt"), encoding: .utf8))?.trimmingCharacters(
-            in: .whitespacesAndNewlines)
+    static var recorded: [String] {
+        let text = (try? String(contentsOf: references.appending(path: "machine.txt"), encoding: .utf8)) ?? ""
+        return text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
     }
 
     // 글꼴 갱신으로 생기는 차이는 그림의 이 비율보다 작고, 빠진 글 한 줄, 1pt 밀린 블록, 다른 색으로 그린 상자는 이 비율을 훨씬 넘는다.
@@ -133,11 +134,13 @@ enum NoteScreens {
             Issue.record("No reference screen \(name).png. \(whereKept)", sourceLocation: sourceLocation)
             return
         }
-        guard recorded == machine else {
+        let made = recorded
+        guard made.contains(machine) else {
             keep(shot, name)
             if strict {
+                let list = made.isEmpty ? "an unknown machine" : made.joined(separator: ", ")
                 Issue.record(
-                    "References were made on \(recorded ?? "an unknown machine"), this is \(machine). \(whereKept)",
+                    "References were made on \(list), this is \(machine). \(whereKept)",
                     sourceLocation: sourceLocation)
             }
             return

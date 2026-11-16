@@ -6,3 +6,5 @@
 4b79e32cb3af101d7bd342e7f46dd08aad78e814
 # refactor: move the app to the root and executables into sources/tools (#522)
 72d3117342ccb60804776747d7a8a2720d1ee647
+# refactor: sort module folders by area (#528)
+d7155de7d08ef162fdc7b39f8838872f451798ad

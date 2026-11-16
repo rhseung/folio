@@ -27,7 +27,20 @@ enum RepoPath {
         "app/folio-app.swift", localFolders, "app/workspace/workspace.swift", "sources/cli/environment/cli.swift",
     ]
 
+    // 학업을 다루는 모듈에서 바로 아래 폴더를 영역(`Area`)으로 나누는 층이다. tests/unit은 sources의 층을 같은 경로로 따른다.
+    static let areaLayers = [
+        "sources/domain", "sources/storage", actions, "sources/cli/commands", "sources/cli/generated", features, platform,
+    ]
+    // 영역 층에 있지만 영역이 아니라 그 층의 바탕을 담는 폴더다. `actions/query`는 모든 읽기의 바탕이다.
+    static let layerBases: Set = ["query", generated]
+    // 도구가 쓰는 폴더라서 무게와 이름을 보지 않는다.
+    static let generated = "generated"
+    // 이 폴더들의 바로 아래 폴더는 모듈(또는 그 테스트) 하나다. 모듈 폴더는 Package.swift와 project.yml이 정하므로 무게와
+    // 이름을 보지 않는다.
+    static let moduleParents: Set = [packages, "sources/tools", unitTests, "tests/unit/tools", "tests/e2e"]
+
     static let tests = "tests"
+    static let unitTests = "tests/unit"
     static let lintTests = "tests/unit/tools/lint"
     static let appTests = "tests/unit/app"
     static let appE2E = "tests/e2e/app"
