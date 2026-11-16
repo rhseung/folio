@@ -6,6 +6,7 @@ public struct LMSProposal: Hashable, Sendable, Identifiable {
         case assignment(LMSAssignment)
         case file(LMSFile)
         case notice(LMSNotice)
+        case difference(LMSDifference)
     }
 
     public var item: Item
@@ -21,6 +22,7 @@ public struct LMSProposal: Hashable, Sendable, Identifiable {
         case .assignment(let a): a.key
         case .file(let f): f.key
         case .notice(let n): n.key
+        case .difference(let d): d.key
         }
     }
 
@@ -31,6 +33,7 @@ public struct LMSProposal: Hashable, Sendable, Identifiable {
         case .assignment(let a): a.title
         case .file(let f): f.title
         case .notice(let n): n.title
+        case .difference(let d): d.lms.title
         }
     }
 
@@ -39,6 +42,7 @@ public struct LMSProposal: Hashable, Sendable, Identifiable {
         case .assignment(let a): a.url
         case .file(let f): f.url
         case .notice(let n): n.url
+        case .difference(let d): d.lms.url
         }
     }
 
@@ -59,22 +63,47 @@ extension LMSProposal {
         case .assignment: .lmsAssignment
         case .file: .lmsFile
         case .notice: .lmsNotice
+        case .difference(let d):
+            switch d.change {
+            case .submitted: .lmsSubmitted
+            case .due: .lmsDue
+            }
         }
     }
 
     // 받기(`lms accept`)의 항목에는 내려받은 파일이 없다. 파일은 승인한 기기가 받아 `file`과 `files`에 넣는다.
     public func proposal(viewerOnly: Bool = false) -> Proposal {
-        var item: [String: JSONValue] = ["key": .string(key.description)]
+        let dismissal = ActionProposal(command: "lms mark", input: ["keys": [.string(key.description)]])
+        if case .difference(let d) = item {
+            return Proposal(kind: kind, source: .lms(self), action: d.action, dismissal: dismissal)
+        }
+        // 강의실을 적어 두면 `lms accept`가 받은 과목을 그 강의실에 기억하고, 과목 없이 받으면 기억한 과목에 넣는다.
+        var item: [String: JSONValue] = ["key": .string(key.description), "classroom": .number(Double(classroom.id))]
         if case .assignment(let a) = self.item {
             item["title"] = .string(a.title)
-            // storage의 JSONFormat이 읽는 날짜 꼴이다.
-            if let due = a.due { item["due"] = .string(due.formatted(Date.ISO8601FormatStyle(includingFractionalSeconds: true))) }
+            if let due = a.due { item["due"] = .string(Self.date(due)) }
         }
         let accept = ActionProposal(command: "lms accept", input: ["items": [.object(item)]])
         return Proposal(
-            kind: kind, source: .lms(self), action: kind.picksCourse ? accept : nil,
-            dismissal: ActionProposal(command: "lms mark", input: ["keys": [.string(key.description)]]),
+            kind: kind, source: .lms(self), action: kind.picksCourse ? accept : nil, dismissal: dismissal,
             flag: viewerOnly ? .viewerOnly : nil)
+    }
+
+    // storage의 JSONFormat이 읽는 날짜 꼴이다.
+    static func date(_ date: Date) -> String { date.formatted(Date.ISO8601FormatStyle(includingFractionalSeconds: true)) }
+}
+
+extension LMSDifference {
+    var action: ActionProposal {
+        var input: [String: JSONValue] = ["course": .string(course.uuidString), "assignment": .string(assignment.uuidString)]
+        switch change {
+        case .submitted:
+            input["status"] = .string(AssignmentStatus.submitted.rawValue)
+            return ActionProposal(command: "assignment status", input: .object(input))
+        case .due(_, let date):
+            input["due"] = .string(LMSProposal.date(date))
+            return ActionProposal(command: "assignment set", input: .object(input))
+        }
     }
 }
 
