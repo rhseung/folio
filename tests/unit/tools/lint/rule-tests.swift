@@ -115,8 +115,8 @@ private let view = "app/features/demo/demo-view.swift"
     @Test func standardNamesOutsideStandardLayout() {
         let files = [
             "sources/storage/store.swift": "let notes = \"Notes\"; let path = \"Notes/assets\"",
-            "sources/domain/layout/standard-layout.swift": "let notes = \"Notes\"",
-            "sources/domain/layout/course-folder.swift": "let notes = \"Notes\"",
+            "sources/domain/folder/standard-layout.swift": "let notes = \"Notes\"",
+            "sources/domain/folder/course-folder.swift": "let notes = \"Notes\"",
             "sources/fixtures/standard.swift": "let notes = \"Notes\"",
         ]
         #expect(found(files, "layout-name") == ["\"Notes\""])
@@ -219,7 +219,7 @@ private let view = "app/features/demo/demo-view.swift"
                 @Arg var exam: Exam.ID
             }
             """
-        #expect(found(["sources/actions/exam/exam-show.swift": source], "doc-comment").isEmpty)
+        #expect(found(["sources/actions/exams/exam-show.swift": source], "doc-comment").isEmpty)
     }
 
     @Test func codeInStringsIsNotAComment() {

@@ -69,11 +69,11 @@ ipad-app:
 # 시뮬레이터에서 테스트한다. 여기서 놓친 것은 모든 검사를 돌리는 main push가 잡는다.
 ipad-simulator:
   - 'tests/unit/app/ipad/**'
-  - 'app/platform/note-text/**'
-  - 'app/platform/pdf-view/**'
+  - 'app/platform/notes/editing/**'
+  - 'app/platform/materials/pdf-view/**'
   - 'app/platform/page-scroll.swift'
   - 'sources/markdown/editing/**'
-  - 'sources/storage/pdf/tex-engine.swift'
+  - 'sources/storage/materials/tex-engine.swift'
   - 'sources/tectonic/pin.json'
   - 'sources/tectonic/fetch.sh'
   - 'project.yml'

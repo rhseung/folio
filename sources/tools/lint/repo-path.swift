@@ -19,12 +19,12 @@ enum RepoPath {
     static let diskFree = ["sources/core", "sources/domain", "sources/markdown"]
     // standard-layout.swift를 타입마다 나눈 파일들이다. 표준 구조의 이름은 이 파일들에만 적는다.
     static let standardLayout: Set = [
-        "sources/domain/layout/standard-layout.swift", "sources/domain/layout/term.swift",
-        "sources/domain/layout/semester-folder.swift", "sources/domain/layout/course-folder.swift",
-        "sources/domain/layout/assignment-kind.swift",
+        "sources/domain/folder/standard-layout.swift", "sources/domain/folder/term.swift",
+        "sources/domain/folder/semester-folder.swift", "sources/domain/folder/course-folder.swift",
+        "sources/domain/folder/assignment-kind.swift",
     ]
     static let launchFiles: Set = [
-        "app/folio-app.swift", localFolders, "app/workspace/workspace.swift", "sources/cli/core/environment/cli.swift",
+        "app/folio-app.swift", localFolders, "app/workspace/workspace.swift", "sources/cli/environment/cli.swift",
     ]
 
     static let tests = "tests"
