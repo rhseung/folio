@@ -15,7 +15,9 @@ struct RecordingMenuSource: ItemMenuSource {
     func row(_ command: RecordingMenuCommand) -> MenuRow {
         switch command {
         case .open:
-            .open(command) { openLink(AppLink(.recording, model.recording.id), course: model.courseId) }
+            .open(command, link: AppLink(.recording, model.recording.id), course: model.courseId) {
+                openLink(AppLink(.recording, model.recording.id), course: model.courseId)
+            }
         case .transcribe:
             MenuRow(
                 command, model.hasLines ? .recordingRetranscribe : .recordingTranscribe, "waveform.badge.magnifyingglass",

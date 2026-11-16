@@ -17,6 +17,8 @@ struct MenuRow: Identifiable {
         case check(Bool, @MainActor (Bool) -> Void)
         case submenu([Leaf])
         case share(AppLink, course: UUID?)
+        // 열기 옆에 새 탭과 옆 칸에서 여는 행을 둔다. ⌘-클릭이 없는 터치에서 다른 자리로 여는 길이다.
+        case open(AppLink?, course: UUID?, @MainActor () -> Void)
     }
 
     let id: AnyHashable
@@ -52,8 +54,10 @@ struct MenuRow: Identifiable {
         MenuRow(command, .commonEditEllipsis, "pencil", .action(action))
     }
 
-    static func open<C: ItemCommand>(_ command: C, _ action: @escaping @MainActor () -> Void) -> MenuRow {
-        MenuRow(command, .commonOpen, "arrow.right.circle", .action(action))
+    static func open<C: ItemCommand>(
+        _ command: C, link: AppLink? = nil, course: UUID? = nil, _ action: @escaping @MainActor () -> Void
+    ) -> MenuRow {
+        MenuRow(command, .commonOpen, "arrow.right.circle", .open(link, course: course, action))
     }
 
     static func share<C: ItemCommand>(_ command: C, _ link: AppLink, course: UUID?) -> MenuRow {

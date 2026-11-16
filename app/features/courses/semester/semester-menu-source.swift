@@ -15,7 +15,7 @@ struct SemesterMenuSource: ItemMenuSource {
     func row(_ command: SemesterMenuCommand) -> MenuRow {
         switch command {
         case .open:
-            .open(command) { openLink(AppLink(.semester, semesterId)) }
+            .open(command, link: AppLink(.semester, semesterId)) { openLink(AppLink(.semester, semesterId)) }
         case .addCourse:
             MenuRow(command, .rootAddCourse, "plus", .action { addCourse?() })
         case .fold(let open):

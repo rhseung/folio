@@ -40,7 +40,7 @@ final class PreviewWebView: WKWebView {
     private func addLinkItems(_ menu: NSMenu, _ link: AppLink) {
         let webKit: Set<String> = ["WKMenuItemIdentifierOpenLink", "WKMenuItemIdentifierCopyLink"]
         for item in menu.items where webKit.contains(item.identifier?.rawValue ?? "") { menu.removeItem(item) }
-        var items = LinkPlacement.allCases.map { placement in
+        var items = LinkPlacement.menu.map { placement in
             LinkMenuItem(placement.title, symbol: placement.symbol) { [weak self] in self?.page?.open(link.string, in: placement) }
         }
         items.append(LinkMenuItem(String(localized: .linkCopy), symbol: "link") { copyLink(link) })

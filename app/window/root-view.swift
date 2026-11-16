@@ -74,6 +74,7 @@ struct RootView: View {
             workspace.error = String(localized: .linkNotFound(link.string))
             return
         }
+        let placement = placement == .here ? LinkPlacement(LinkClicks.current) : placement
         #if os(iOS)
         let pane = (placement == .here ? phoneRoute(entry) : nil) ?? pane ?? navigator
         #else
@@ -89,19 +90,30 @@ struct RootView: View {
             pane.go(entry)
         case .beside:
             (tabs.panes(holding: pane) ?? tabs.front)?.openBeside(entry, from: pane)
-        case .tab:
+        case .tab, .tabBehind:
             #if os(iOS)
             guard sizeClass == .regular else { return openInWindow(entry, else: pane) }
             #endif
             let tab = TabPanes(Navigator(entry))
             restoresSession(entry, in: tab)
-            tabs.open(tab, fromLink: true)
+            if placement == .tabBehind { tabs.openBehind(tab) } else { tabs.open(tab, fromLink: true) }
         case .window:
             openInWindow(entry, else: pane)
         }
     }
 
     func manageLayouts() { open(.settings(.general)) }
+
+    #if os(macOS)
+    func runYielding(_ id: ShortcutID) -> Bool {
+        switch id {
+        case .back: navigator.back()
+        case .forward: navigator.forward()
+        default: return false
+        }
+        return true
+    }
+    #endif
 
     @discardableResult
     func restoresSession(_ entry: Navigator.Entry, in tab: TabPanes) -> Bool {
@@ -202,10 +214,13 @@ struct RootView: View {
                         .environment(\.showSettings) { showSettings($0) }
                         .environment(\.showInputGuide) { showInputGuide($0) }
                         .background {
-                            Button(.commonSearch) { searching = true }.keyboardShortcut("k").opacity(0).accessibilityHidden(true)
+                            Button(.commonSearch) { searching = true }.shortcut(.search).opacity(0).accessibilityHidden(true)
                         }
                 }
                 .environment(\.openLink, openLink)
+                #if os(iOS)
+                .gesture(LinkClickProbe())
+                #endif
                 .environment(\.noteCallouts, callouts)
                 .environment(\.sheetRoom, contentHeight)
                 .onGeometryChange(for: CGFloat.self) {
@@ -264,6 +279,7 @@ struct RootView: View {
                 .focusedSceneValue(\.windowTabs, tabs)
                 .onChange(of: tabs.selected) { host.window?.makeFirstResponder(nil) }
                 .background { SwipeNavigation(back: { navigator.back() }, forward: { navigator.forward() }) }
+                .background { TextYieldingShortcuts(run: runYielding) }
                 .background {
                     WindowReader { window in
                         host.window = window
@@ -557,7 +573,7 @@ struct RootView: View {
     #if os(macOS)
     var sidebarButton: some View {
         Button(sidebarOpen ? .rootSidebarClose : .rootSidebarOpen, systemImage: "sidebar.leading") { sidebarOpen.toggle() }
-            .keyboardShortcut("s", modifiers: [.control, .command])
+            .shortcut(.toggleSidebar)
             .help(Text(sidebarOpen ? .rootSidebarCloseHelp : .rootSidebarOpenHelp))
             .buttonStyle(.toolbar)
             .toolbarGroup()
