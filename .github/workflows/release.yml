@@ -1,16 +1,17 @@
 name: Release
 
+# 버전의 원본은 태그다. `plan`이 게시할 버전을 정하고, `release`가 버전마다 빌드한 뒤 태그를 달고 게시한다. 태그를
+# 게시 바로 앞에서 달아야 빌드가 실패한 실행을 다시 돌려도 같은 버전을 다시 만든다. 사람이 푸시한 태그(`mise run
+# release-tag`)도 같은 길로 게시하고, 그 실행이 대기 중에 취소되면 다음 실행의 `plan`이 게시되지 않은 태그로 찾는다.
 on:
   push:
+    branches: [main]
     tags: ['v*']
   workflow_dispatch:
-    inputs:
-      since:
-        description: Notes from the PRs merged after this ref (default the latest v* tag)
-        required: false
 
+# 다음 버전은 지난 태그 다음 번호이므로 실행이 겹치면 안 된다.
 concurrency:
-  group: release-${{ github.ref }}
+  group: release
   cancel-in-progress: false
 
 permissions:
@@ -19,63 +20,98 @@ permissions:
 env:
   XCODE: /Applications/Xcode_27.1.app
   MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+  MISE_TASK_RUN_AUTO_INSTALL: false
   GH_TOKEN: ${{ github.token }}
+  GIT_COMMITTER_NAME: github-actions[bot]
+  GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
 
 jobs:
-  release:
+  plan:
     runs-on: xcode-27
-    timeout-minutes: 60
+    timeout-minutes: 30
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
     steps:
-      # 빌드 번호가 커밋 수이고 패치 노트가 이전 태그부터 시작하므로, 전체 기록을 받는다.
+      # 패치 노트가 이전 태그부터 시작하므로 전체 기록과 태그를 받는다.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - run: sudo ln -sfn "$XCODE" /Applications/Xcode.app
-      - uses: jdx/mise-action@v5
-      - id: version
+      - id: setup
+        uses: ./.github/actions/xcode-setup
+        with:
+          tools: xcodegen
+      # folio-dev는 packages 작업이 main push마다 남긴 패키지 빌드 캐시에서 시작한다.
+      - uses: actions/cache/restore@v6
+        with:
+          path: |
+            .build
+            !.build/tectonic
+            ~/Library/Caches/org.swift.swiftpm/manifests
+          key: swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.setup.outputs.xcode }}-${{ hashFiles('sources/tectonic/pin.json') }}-${{ hashFiles('Package.resolved') }}-${{ github.sha }}
+          restore-keys: |
+            swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.setup.outputs.xcode }}-${{ hashFiles('sources/tectonic/pin.json') }}-${{ hashFiles('Package.resolved') }}-
+      - id: plan
         run: |
           mise run tectonic
-          v=$(swift run -q folio-dev version get)
-          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$v" ]; then
-            echo "::error::The tag is $GITHUB_REF_NAME but FolioVersion is $v; tag with mise run release-tag."
-            exit 1
-          fi
-          echo "version=$v" >> "$GITHUB_OUTPUT"
-          echo "Folio $v ($(git rev-list --count HEAD))"
+          swift build -q --product folio-dev
+          matrix=$(swift run -q --skip-build folio-dev release plan --at "$GITHUB_SHA")
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "$matrix" >> "$GITHUB_STEP_SUMMARY"
+
+  release:
+    needs: plan
+    if: fromJSON(needs.plan.outputs.matrix).include[0] != null
+    runs-on: xcode-27
+    timeout-minutes: 60
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    env:
+      VERSION: ${{ matrix.version }}
+    steps:
+      # 빌드 번호가 커밋 수이므로 전체 기록을 받는다.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ matrix.ref }}
+          fetch-depth: 0
+      - id: setup
+        uses: ./.github/actions/xcode-setup
+        with:
+          tools: xcodegen
+      - uses: actions/cache/restore@v6
+        with:
+          path: |
+            .build
+            !.build/tectonic
+            ~/Library/Caches/org.swift.swiftpm/manifests
+          key: swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.setup.outputs.xcode }}-${{ hashFiles('sources/tectonic/pin.json') }}-${{ hashFiles('Package.resolved') }}-${{ github.sha }}
+          restore-keys: |
+            swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.setup.outputs.xcode }}-${{ hashFiles('sources/tectonic/pin.json') }}-${{ hashFiles('Package.resolved') }}-
+      - run: |
+          mise run tectonic
+          swift build -q --product folio-dev
+          swift run -q --skip-build folio-dev version stamp "$VERSION"
+          echo "Folio $VERSION ($(git rev-list --count HEAD))"
       - run: mise run build-release
       # TODO(#414): with a Developer ID (after the Apple Developer signup), sign with the hardened runtime here, then
       # notarize (xcrun notarytool submit --wait) and staple, with the certificate and the notary key in secrets.
       # TODO(#414): sign the zip for Sparkle (sign_update with the EdDSA key from a secret) and update the appcast.
-      - name: Zip
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
+      - name: Zip and notes
         run: |
           mkdir -p .build/release
           ditto -c -k --sequesterRsrc --keepParent .build/DerivedData/Build/Products/Release/Folio.app ".build/release/Folio-$VERSION.zip"
-      - name: Notes
-        env:
-          SINCE: ${{ inputs.since }}
-        run: |
-          if [ -z "$SINCE" ]; then
-            # 태그의 부모에서 찾아야 태그가 자기 자신을 이전 태그로 찾지 않는다.
-            SINCE=$(git describe --tags --abbrev=0 --match 'v*' HEAD^ 2>/dev/null || true)
-          fi
-          swift run -q folio-dev release-notes body "$SINCE" > .build/release/body.md
+          swift run -q --skip-build folio-dev release-notes body "$VERSION" HEAD > .build/release/body.md
           cat .build/release/body.md >> "$GITHUB_STEP_SUMMARY"
-      - if: github.ref_type != 'tag'
-        uses: actions/upload-artifact@v7
-        with:
-          name: release-${{ steps.version.outputs.version }}
-          path: .build/release
-      # 같은 태그로 다시 실행하면 이미 있는 릴리스에서 실패하지 않도록, 초안의 파일과 본문을 바꾼다.
-      - if: github.ref_type == 'tag'
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
+      # 같은 버전을 다시 돌리면 이미 있는 태그와 릴리스를 그대로 쓰고, 릴리스의 파일과 본문을 바꿔 게시한다.
+      - name: Tag and publish
         run: |
+          tag="v$VERSION"
           zip=".build/release/Folio-$VERSION.zip"
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" "$zip" --clobber
-            gh release edit "$GITHUB_REF_NAME" --notes-file .build/release/body.md
+          swift run -q --skip-build folio-dev release tag "$VERSION" --at HEAD
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "$zip" --clobber
+            gh release edit "$tag" --notes-file .build/release/body.md --draft=false
           else
-            gh release create "$GITHUB_REF_NAME" "$zip" --draft --verify-tag --title "Folio $VERSION" --notes-file .build/release/body.md
+            gh release create "$tag" "$zip" --verify-tag --title "Folio $VERSION" --notes-file .build/release/body.md
           fi

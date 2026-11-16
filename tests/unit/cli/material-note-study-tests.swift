@@ -53,6 +53,17 @@ struct MaterialNoteStudyTests {
         #expect(past.assignments.first?.status == .submitted)
     }
 
+    @Test func trackFilesOnlyLeavesAssignmentFoldersAlone() throws {
+        try h.expectSame(["material", "track", "EC4207", "--files-only"]) { _ in MaterialTrack(course: course, assignments: false) }
+        let gist = try Harness.fixtureCopy()
+        let before = try h.file(GISTStore(url: gist)).assignments
+        _ = h.cli(["material", "track", "EC4207", "--files-only"], gist: gist)
+        let f = try h.file(GISTStore(url: gist))
+        #expect(f.assignments == before)
+        #expect(f.materials.contains { $0.path == "Assignments/HW03/26h3.pdf" })
+        #expect(f.materials.contains { $0.path == "Lectures/05_Matchings.pdf" })
+    }
+
     @Test func linkSession() throws {
         try h.expectSame(
             ["material", "link", "EC4207/05_Matchings.pdf", "10-28", "--pages", "3-12"], setup: [Self.track, SessionCommandTests.add]

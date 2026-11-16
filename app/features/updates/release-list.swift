@@ -16,6 +16,15 @@ struct ReleaseList: ReleaseFeed {
 extension ReleaseList {
     static let sample: [PatchNotes.Release] = [
         PatchNotes.Release(
+            version: PatchNotes.Version(0, 3, 1), date: Date(timeIntervalSince1970: 1_794_279_600),
+            items: PatchNotes.items(
+                in: """
+                    ## 패치 노트
+                    - change: 칸 경계를 끌면 부드럽게 따라옴
+                    - fix: 칸이 둘 이상인 탭에서 칸을 닫으면 앱이 꺼지던 문제
+                    - fix: 표 칸 안의 [[링크|이름]]이 잘리던 문제
+                    """)),
+        PatchNotes.Release(
             version: PatchNotes.Version(0, 3, 0), date: Date(timeIntervalSince1970: 1_794_193_200),
             items: PatchNotes.items(
                 in: """
@@ -28,15 +37,6 @@ extension ReleaseList {
                     - change: 편집 보기의 수식 말풍선을 미리보기와 같은 KaTeX로 그림
                     - fix: 수식 말풍선 위와 오른쪽의 빈 여백
                     - fix: 여러 줄 칸이 글을 따라 12줄까지 늘어남
-                    """)),
-        PatchNotes.Release(
-            version: PatchNotes.Version(0, 2, 1), date: Date(timeIntervalSince1970: 1_794_106_800),
-            items: PatchNotes.items(
-                in: """
-                    ## 패치 노트
-                    - change: 칸 경계를 끌면 부드럽게 따라옴
-                    - fix: 칸이 둘 이상인 탭에서 칸을 닫으면 앱이 꺼지던 문제
-                    - fix: 표 칸 안의 [[링크|이름]]이 잘리던 문제
                     """)),
         PatchNotes.Release(
             version: PatchNotes.Version(0, 2, 0), date: Date(timeIntervalSince1970: 1_794_020_400),

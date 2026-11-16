@@ -9,30 +9,35 @@ struct ReleaseNotesCommand: ParsableCommand {
         subcommands: [Body.self, Preview.self])
 
     struct Body: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: "The body for the PRs merged after <since> up to <until>.")
+        static let configuration = CommandConfiguration(
+            abstract: "The body of a version: the PRs merged after the previous version's tag up to <until>.")
 
-        @Argument(help: "The previous release's ref; empty for the first release.")
-        var since: String
+        @Argument(help: "The version.")
+        var version: String
 
         @Argument(help: "The last commit of the release.")
         var until = "HEAD"
 
-        func run() throws { try ReleaseNotesCommand.write(since: since.isEmpty ? nil : since, until: until) }
-    }
-
-    struct Preview: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: "The next release's body, since the latest v* tag unless given.")
-
-        @Argument(help: "The previous release's ref.")
+        @Option(help: "The previous release's ref, instead of the tag of the version before.")
         var since: String?
 
         func run() throws {
-            let latest = try? Shell.run("git", "describe", "--tags", "--abbrev=0", "--match", "v*")
-            try ReleaseNotesCommand.write(since: since ?? latest, until: "HEAD")
+            guard let v = PatchNotes.Version(version) else { throw DevError("\(version) is not X.Y.Z") }
+            print(try ReleaseTags.body(for: v, at: until, since: since.flatMap { $0.isEmpty ? nil : $0 }))
         }
     }
 
-    static func write(since: String?, until: String) throws {
-        print(PatchNotes.releaseBody(try MergedPullRequests.between(since, and: until), first: since == nil))
+    struct Preview: ParsableCommand {
+        static let configuration = CommandConfiguration(abstract: "The next release's body: the PRs merged since the latest tag.")
+
+        func run() throws {
+            let latest = try ReleaseTags.latest(at: "HEAD")
+            let prs = try MergedPullRequests.between(latest.map(ReleaseTags.name), and: "HEAD")
+            guard let next = ReleasePlan.next(after: latest, prs: prs) else {
+                print("No PR since \(latest.map(ReleaseTags.name) ?? "the start") has patch notes; nothing to release.")
+                return
+            }
+            print("\(ReleaseTags.name(next))\n\n" + (try ReleaseTags.body(for: next, at: "HEAD")))
+        }
     }
 }

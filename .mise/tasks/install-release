@@ -13,6 +13,9 @@ git worktree add -q --detach "$dir" "$sha"
 trap 'git worktree remove --force "$dir"; rmdir "$tmp"' EXIT
 cd "$dir"
 mise trust -q
+# 커밋한 FolioVersion은 자리표시값이므로, 이 임시 워크트리에서만 그 커밋의 릴리스 태그 버전을 써넣는다.
+mise run tectonic
+swift run -q folio-dev version stamp
 mise run install-mac
 mise run install-cli
 echo "installed $(swift run -q folio-dev version get) ($(git rev-list --count HEAD)) from $(git rev-parse --short HEAD)"

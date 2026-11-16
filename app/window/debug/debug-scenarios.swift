@@ -35,6 +35,7 @@ extension Workspace {
                             due: scenario.now.addingTimeInterval(86_400))
                     ]))
         }
+        workspace.diagnostics = DiagnosticLog.sample(at: scenario.now)
         return workspace
     }
 }
