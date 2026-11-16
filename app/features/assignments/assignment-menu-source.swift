@@ -28,7 +28,7 @@ struct AssignmentMenuSource: ItemMenuSource {
     func row(_ command: AssignmentMenuCommand) -> MenuRow {
         switch command {
         case .open:
-            .open(command) { openLink(link, course: courseId) }
+            .open(command, link: link, course: courseId) { openLink(link, course: courseId) }
         case .addFiles:
             MenuRow(
                 command, .menuAddFilesEllipsis, "doc.badge.plus", .action { sheets.addFiles(FileIntake(course: courseId, folder: folder)) })

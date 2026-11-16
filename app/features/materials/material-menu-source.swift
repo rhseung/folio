@@ -32,7 +32,9 @@ struct MaterialMenuSource: ItemMenuSource {
     func row(_ command: MaterialMenuCommand) -> MenuRow {
         switch command {
         case .open:
-            MenuRow(command, material.isFolder ? .materialsOpenInFinder : .commonOpen, "arrow.right.circle", .action(open))
+            MenuRow(
+                command, material.isFolder ? .materialsOpenInFinder : .commonOpen, "arrow.right.circle",
+                .open(material.isFolder ? nil : AppLink(.material, material.id), course: courseId, open))
         case .openWithDefault:
             MenuRow(command, .materialsOpenWithDefault, "arrow.up.forward.app", .action { if let url { openWithDefault(url) } })
         case .openInEditor:

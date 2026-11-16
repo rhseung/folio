@@ -27,7 +27,8 @@ struct SessionMenuSource: ItemMenuSource {
         }
         switch command {
         case .open:
-            return row(String(localized: .commonOpen), "arrow.right.circle", .action { openLink(link, course: courseId) })
+            return row(
+                String(localized: .commonOpen), "arrow.right.circle", .open(link, course: courseId) { openLink(link, course: courseId) })
         case .join:
             return row(
                 String(localized: .sessionsJoinOnline), "video",

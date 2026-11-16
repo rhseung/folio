@@ -1,3 +1,4 @@
+import FolioDomain
 import SwiftUI
 
 @main
@@ -47,6 +48,7 @@ struct FolioApp: App {
             PaneCommands()
             WhatsNewCommands()
             InputGuideCommands()
+            FormatCommands()
             #if os(macOS)
             TabCommands()
             MathCommands()
@@ -61,7 +63,7 @@ private struct SettingsCommands: Commands {
     var body: some Commands {
         CommandGroup(replacing: .appSettings) {
             Button(.appSettingsMenu) { showSettings?(nil) }
-                .keyboardShortcut(",")
+                .shortcut(.settings)
                 .disabled(showSettings == nil)
         }
     }
@@ -91,7 +93,7 @@ private struct InputGuideCommands: Commands {
                 #endif
                 if !sent { show?(nil) }
             }
-            .keyboardShortcut("/")
+            .shortcut(.inputGuide)
         }
     }
 }
@@ -124,6 +126,28 @@ private struct PaneCommands: Commands {
     }
 }
 
+// 노트 편집기가 응답 사슬에서 받는다. 노트 편집기에 포커스가 없으면 아무 일도 하지 않는다.
+private struct FormatCommands: Commands {
+    var body: some Commands {
+        CommandMenu(Text(.notesFormatMenu)) {
+            CommandButton(.noteBold) { Self.send(.noteBold) }
+            CommandButton(.noteItalic) { Self.send(.noteItalic) }
+        }
+    }
+
+    @MainActor static func send(_ id: ShortcutID) {
+        #if os(macOS)
+        let action = id == .noteBold ? #selector(SourceTextView.toggleBold(_:)) : #selector(SourceTextView.toggleItalic(_:))
+        if !NSApp.sendAction(action, to: nil, from: nil) { NSSound.beep() }
+        #else
+        let action =
+            id == .noteBold
+            ? #selector(UIResponderStandardEditActions.toggleBoldface(_:)) : #selector(UIResponderStandardEditActions.toggleItalics(_:))
+        UIApplication.shared.sendAction(action, to: nil, from: nil, for: nil)
+        #endif
+    }
+}
+
 #if os(macOS)
 private struct MathCommands: Commands {
     var body: some Commands {
@@ -147,7 +171,7 @@ private struct ColumnCommands: Commands {
             ) {
                 column?.toggle()
             }
-            .keyboardShortcut("s", modifiers: [.command, .option])
+            .shortcut(.toggleColumn)
             .disabled(column == nil)
         }
     }

@@ -324,8 +324,56 @@ struct CLIProviderTests {
         let r = try CLIProvider.response(from: ok, request: request)
         #expect(r.text == #"{"answer":2}"# && r.stop_reason == "end_turn" && r.model == "claude-haiku-5-5" && r.usage.output_tokens == 5)
 
-        let failed = Data(#"{"type":"result","is_error":true,"result":"Not logged in","api_error_status":401}"#.utf8)
-        #expect(throws: ClaudeError.http(status: 401, body: "Not logged in")) { try CLIProvider.response(from: failed, request: request) }
+        let overloaded = Data(#"{"type":"result","is_error":true,"result":"Overloaded","api_error_status":529}"#.utf8)
+        #expect(throws: ClaudeError.http(status: 529, body: "Overloaded")) { try CLIProvider.response(from: overloaded, request: request) }
+        let unauthorized = Data(#"{"type":"result","is_error":true,"result":"Not logged in","api_error_status":401}"#.utf8)
+        #expect(throws: ClaudeError.signedOut) { try CLIProvider.response(from: unauthorized, request: request) }
+    }
+
+    // 로그인이 만료된 claude는 HTTP 상태 없이 종료 코드 1로 끝난다. 종료 코드는 HTTP 상태가 아니다(claude 2.1.318의 줄을 줄였다).
+    @Test func anExpiredLoginIsNotAnHTTPStatus() throws {
+        let expired = Data(
+            """
+            {"type":"system","subtype":"init"}
+            {"type":"assistant","message":{"model":"<synthetic>","role":"assistant","content":[{"type":"text","text":"Failed to authenticate"}]},"error":"authentication_failed","is_api_error_message":true}
+            {"type":"result","subtype":"success","is_error":true,"api_error_status":null,"result":"Failed to authenticate","terminal_reason":"api_error"}
+            """.utf8)
+        #expect(throws: ClaudeError.signedOut) { try CLIProvider.response(from: expired, request: request, exit: 1) }
+
+        let failed = Data(
+            #"{"type":"result","subtype":"error_during_execution","is_error":true,"api_error_status":null,"result":"MCP failed"}"#.utf8)
+        #expect(throws: ClaudeError.cli(exit: 1, message: "MCP failed")) {
+            try CLIProvider.response(from: failed, request: request, exit: 1)
+        }
+
+        #expect(throws: ClaudeError.cli(exit: 2, message: "error: unknown option '--x'")) {
+            try CLIProvider.response(from: Data(), request: request, exit: 2, stderr: "error: unknown option '--x'\n")
+        }
+    }
+
+    // 프로세스를 거쳐도 claude가 남긴 실패를 종료 코드로 덮지 않는다.
+    @Test func aFailingProcessKeepsItsReason() async throws {
+        let dir = FileManager.default.temporaryDirectory.appending(path: "folio-cli-fail-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let signedOut = dir.appending(path: "signed-out"), crashed = dir.appending(path: "crashed")
+        try """
+        #!/bin/sh
+        cat > /dev/null
+        echo '{"type":"assistant","message":{"content":[]},"error":"authentication_failed"}'
+        echo '{"type":"result","is_error":true,"api_error_status":null,"result":"Failed to authenticate"}'
+        exit 1
+        """.write(to: signedOut, atomically: true, encoding: .utf8)
+        try """
+        #!/bin/sh
+        cat > /dev/null
+        exit 3
+        """.write(to: crashed, atomically: true, encoding: .utf8)
+        for script in [signedOut, crashed] {
+            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)
+        }
+        await #expect(throws: ClaudeError.signedOut) { try await CLIProvider(executable: signedOut).send(request) }
+        await #expect(throws: ClaudeError.cli(exit: 3, message: "")) { try await CLIProvider(executable: crashed).send(request) }
     }
 
     // 실제 구독을 조금 쓰므로 `FOLIO_LIVE_CLI=1`일 때만 실행한다.

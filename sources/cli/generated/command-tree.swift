@@ -99,6 +99,7 @@ extension LMSCommand {
     static let subcommandTypes: [any ParsableCommand.Type] = alphabetical([
         GeneratedCommands.LMSAccept.self,
         GeneratedCommands.LMSMark.self,
+        GeneratedCommands.LMSRoomSet.self,
         GeneratedCommands.LMSSeen.self,
     ])
 }

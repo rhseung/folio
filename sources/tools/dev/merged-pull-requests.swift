@@ -9,19 +9,29 @@ enum MergedPullRequests {
         var title: String
         var body: String
         var mergeCommit: [String: String]?
+        var labels: [[String: String]]?
     }
 
-    static func between(_ since: String?, and until: String) throws -> [PatchNotes.Merged] {
+    static func between(_ since: String?, and until: String) throws -> [ReleasePlan.PR] {
         let range = since.map { "\($0)..\(until)" } ?? until
         let commits = Set(try Shell.run("git", "rev-list", range).split(separator: "\n").map(String.init))
+        guard !commits.isEmpty else { return [] }
         var search = "base:main"
-        if let since { search += " merged:>=" + (try Shell.run("git", "log", "-1", "--format=%cs", since)) }
+        // 커밋 시각의 시간대와 검색의 UTC가 하루 어긋날 수 있어 하루 앞에서 자른다.
+        if let since {
+            let day = try ReleaseTags.date(of: since).addingTimeInterval(-86_400)
+            search += " merged:>=" + day.formatted(.iso8601.year().month().day())
+        }
         let json = try Shell.run(
             "gh", "pr", "list", "--state", "merged", "--search", search, "--limit", "1000",
-            "--json", "number,title,body,mergeCommit")
+            "--json", "number,title,body,mergeCommit,labels")
         return try JSONDecoder().decode([Row].self, from: Data(json.utf8))
             .filter { $0.mergeCommit?["oid"].map(commits.contains) ?? false }
             .sorted { $0.number < $1.number }
-            .map { PatchNotes.Merged(number: $0.number, title: $0.title, body: $0.body) }
+            .map {
+                ReleasePlan.PR(
+                    merged: PatchNotes.Merged(number: $0.number, title: $0.title, body: $0.body),
+                    labels: ($0.labels ?? []).compactMap { $0["name"] })
+            }
     }
 }

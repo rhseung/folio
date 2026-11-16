@@ -118,53 +118,21 @@ private struct Picks: ViewModifier {
         }
     }
     #else
-    @State private var keys = HeldKeys()
     @State private var holds = 0
 
     func body(content: Content) -> some View {
         content.contentShape(.rect)
             // SwiftUI의 탭을 쓴다. 키를 함께 전하는 UIKit의 탭은 행 안의 버튼과 메뉴 옆에서도 발동한다.
             .onTapGesture {
-                let flags = keys.flags
+                let flags = TouchKeys.held ?? []
                 press(flags.contains(.shift) ? .range : flags.contains(.command) ? .toggle : picking ? touch : .only)
             }
             .onLongPressGesture {
                 holds += 1
                 hold()
             }
-            .gesture(KeyProbe(keys: keys))
+            .gesture(TouchKeyProbe())
             .sensoryFeedback(.selection, trigger: holds)
     }
     #endif
 }
-
-#if os(iOS)
-// SwiftUI의 탭은 수정 키를 전하지 않고 `onModifierKeysChanged`는 Mac에서만 동작하므로, recognizer가 터치 이벤트에서
-// 키를 읽는다.
-@MainActor private final class HeldKeys {
-    var flags: UIKeyModifierFlags = []
-}
-
-private struct KeyProbe: UIGestureRecognizerRepresentable {
-    let keys: HeldKeys
-
-    func makeUIGestureRecognizer(context: Context) -> Probe { Probe(keys: keys) }
-
-    // 다른 제스처의 터치를 가로채거나 취소하지 않도록, 키만 읽고 바로 실패한다.
-    final class Probe: UIGestureRecognizer {
-        let keys: HeldKeys
-
-        init(keys: HeldKeys) {
-            self.keys = keys
-            super.init(target: nil, action: nil)
-            cancelsTouchesInView = false
-            delaysTouchesEnded = false
-        }
-
-        override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
-            keys.flags = event.modifierFlags
-            state = .failed
-        }
-    }
-}
-#endif

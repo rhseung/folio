@@ -21,7 +21,7 @@ public enum Area {
         ("claude", ["chat", "proposal"]),
         ("search", ["search"]),
         ("settings", ["settings", "setting"]),
-        ("window", ["app-link", "link", "pane", "tab", "sidebar", "menu"]),
+        ("window", ["app-link", "link", "pane", "tab", "sidebar", "menu", "shortcut", "key-combo"]),
         ("folder", ["standard-layout", "term", "folder", "cleanup", "backup", "lock", "first-run", "check"]),
         ("import", ["import", "notion", "calendar", "importer", "quick-add"]),
         ("updates", ["folio-version", "patch-note", "release", "whats-new"]),

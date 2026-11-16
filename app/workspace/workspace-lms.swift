@@ -6,7 +6,18 @@ import Foundation
 extension Workspace {
     var lmsInbox: LMSInbox {
         guard let snapshot = lms.snapshot else { return LMSInbox() }
-        return LMSInbox.build(snapshot, settings: settings.lms, courses: courses.map(\.file), now: now)
+        return LMSInbox.build(
+            snapshot, settings: settings.lms, courses: courses.map(\.file), now: now,
+            soonDays: settings.urgency.assignmentSoonDays)
+    }
+
+    // 과목 열 끝의 LMS 강의실 행이다. 받을 때 이 과목을 고른 강의실만 보이고, 수는 그 강의실의 처리할 것이다.
+    func lmsRooms(of course: UUID) -> [(classroom: LMSClassroom, waiting: Int)] {
+        guard let snapshot = lms.snapshot else { return [] }
+        let rooms = settings.lms.classrooms(of: course, in: snapshot)
+        guard !rooms.isEmpty else { return [] }
+        let board = proposalBoard
+        return rooms.map { ($0, board.room($0.id)?.proposals.count ?? 0) }
     }
 
     var lmsLastSync: String {

@@ -53,7 +53,7 @@ struct SessionMenuModelTests {
 
     func perform(_ row: MenuRow) {
         switch row.kind {
-        case .action(let action): action()
+        case .action(let action), .open(_, _, let action): action()
         case .check(let on, let set): set(!on)
         case .submenu, .share: break
         }

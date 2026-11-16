@@ -66,9 +66,9 @@ struct ProposalBoardTests {
     @Test func downloadedFilesGoIntoTheItemThatIsReceived() {
         let p = LMSProposal(item: .assignment(.init(id: 100, classroom: 1, title: "HW5")), classroom: room).proposal()
         let got = p.downloaded(files: ["/tmp/a.pdf"]).action
-        #expect(got?.input["items"] == [["key": "assignment:100", "title": "HW5", "files": ["/tmp/a.pdf"]]])
+        #expect(got?.input["items"] == [["key": "assignment:100", "classroom": 1, "title": "HW5", "files": ["/tmp/a.pdf"]]])
         let file = LMSProposal(item: .file(.init(id: 200, classroom: 1, title: "Flows")), classroom: room).proposal()
-        #expect(file.downloaded(file: "/tmp/f.pdf").action?.input["items"] == [["key": "file:200", "file": "/tmp/f.pdf"]])
+        #expect(file.downloaded(file: "/tmp/f.pdf").action?.input["items"] == [["key": "file:200", "classroom": 1, "file": "/tmp/f.pdf"]])
     }
 
     @Test func chatsListTheProposalsStillWaiting() throws {

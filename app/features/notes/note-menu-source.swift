@@ -44,7 +44,7 @@ struct NoteMenuSource: ItemMenuSource {
     func row(_ command: NoteMenuCommand) -> MenuRow {
         switch command {
         case .open:
-            .open(command) {
+            .open(command, link: note.meta.id.map { AppLink(.note, $0) }, course: courseId) {
                 if let open { open() } else if let id = note.meta.id { openLink(AppLink(.note, id), course: courseId) }
             }
         case .openPDF:

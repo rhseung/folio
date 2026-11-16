@@ -4,12 +4,23 @@ import SwiftUI
 
 // SwiftUI의 `WindowDragGesture`는 두 번 클릭을 다루지 않으므로 AppKit 뷰로 만든다.
 struct TitleDrag: NSViewRepresentable {
+    var hold: TitleDragHold?
+
     func makeNSView(context: Context) -> Band { Band() }
-    func updateNSView(_ view: Band, context: Context) {}
+    func updateNSView(_ view: Band, context: Context) { view.hold = hold }
 
     final class Band: NSView {
+        var hold: TitleDragHold? {
+            didSet { hold?.window = window }
+        }
+
         override var mouseDownCanMoveWindow: Bool { true }
         override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            hold?.window = window
+        }
 
         override func mouseDown(with event: NSEvent) {
             guard let window else { return }

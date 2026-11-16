@@ -24,6 +24,17 @@ extension Workspace {
         workspace.lms = LMSConnection(
             source: FixedLMS(snapshot: lms), logins: MemoryLogins(LMSCredentials(username: "20260000", password: "-")))
         workspace.run(LMSSeen(classrooms: lms.classrooms.map(\.id), items: LMSSnapshot.sampleHandled))
+        // 받은 과제 하나를 두어 강의실이 그래프 이론을 기억하고, 그 과제가 LMS와 다른 것(제출, 마감 변경)으로 보이게 한다.
+        if let graph = workspace.courses.first(where: { $0.file.course.title == "그래프 이론" }) {
+            workspace.run(
+                LMSAccept(
+                    course: graph.file.course.id,
+                    items: [
+                        LMSAcceptItem(
+                            key: "assignment:139940", classroom: 27967, title: "Homework Set #4",
+                            due: scenario.now.addingTimeInterval(86_400))
+                    ]))
+        }
         workspace.diagnostics = DiagnosticLog.sample(at: scenario.now)
         return workspace
     }
@@ -43,6 +54,8 @@ extension LMSSnapshot {
                 LMSClassroom(id: 28020, title: "선형대수학과 응용 (01분반)", kind: "교과"),
             ],
             assignments: [
+                LMSAssignment(
+                    id: 139940, classroom: 27967, title: "Homework Set #4", due: now.addingTimeInterval(2 * day), submitted: true),
                 LMSAssignment(
                     id: 139950, classroom: 27967, title: "Homework Set #5", due: now.addingTimeInterval(3 * day),
                     attachments: [LMSAttachment(name: "hw5.pdf", path: "/pluginfile.php/1/mod_assign/introattachment/0/hw5.pdf")]),

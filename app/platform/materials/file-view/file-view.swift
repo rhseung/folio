@@ -118,9 +118,9 @@ struct FileView: View {
         .background {
             if let c = pdf {
                 Group {
-                    Button("") { c.zoomOut() }.keyboardShortcut("-")
-                    Button("") { c.fit() }.keyboardShortcut("0")
-                    Button("") { c.zoomIn() }.keyboardShortcut("=")
+                    Button("") { c.zoomOut() }.shortcut(.zoomOut)
+                    Button("") { c.fit() }.shortcut(.zoomFit)
+                    Button("") { c.zoomIn() }.shortcut(.zoomIn)
                 }
                 .opacity(0).allowsHitTesting(false).accessibilityHidden(true)
             }
