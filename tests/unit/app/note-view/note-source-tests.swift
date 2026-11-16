@@ -26,6 +26,15 @@ struct NoteSourceTests {
         return Frontmatter.split((try? String(contentsOf: url, encoding: .utf8)) ?? "").body
     }
 
+    // 창의 기록에 남으면 닫은 노트의 텍스트 저장소가 창이 닫힐 때까지 남는다.
+    @Test func typingIsRecordedInTheEditorNotTheWindow() {
+        let (view, window) = Self.editor("본문")
+        view.insertText("더한 글자 ", replacementRange: NSRange(location: 0, length: 0))
+        #expect(view.undoManager?.canUndo == true)
+        #expect(view.undoManager !== window.undoManager)
+        #expect(window.undoManager?.canUndo != true)
+    }
+
     @Test func linesAreOneHeightWithTheCaretOverTheText() throws {
         let text = "본문 줄\n\n`code` 섞인 줄\n> 인용\n## 제목\n끝"
         let (view, _) = Self.editor(text)

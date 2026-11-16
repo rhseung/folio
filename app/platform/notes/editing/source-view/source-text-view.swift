@@ -28,6 +28,11 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     private var hovered: NSRange?
     private var hovering: Task<Void, Never>?
     private var hoverArea: NSTrackingArea?
+    // 창의 되돌리기 관리자에 기록하면 그 기록이 닫은 노트의 텍스트 저장소와 배치를 창이 닫힐 때까지 붙잡는다. 탭을 오래 열고 닫으면 노트마다
+    // 쌓이므로, 편집기마다 하나를 두어 편집기와 함께 사라지게 한다.
+    private let undo = UndoManager()
+
+    func undoManager(for view: NSTextView) -> UndoManager? { undo }
 
     func configure(accent: CourseAccent, syntax: MathSyntax, dark: Bool) {
         accentColors(accent)
