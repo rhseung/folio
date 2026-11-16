@@ -57,7 +57,7 @@ struct LMSInboxTests {
         #expect(handled.map(\.proposable) == [false, true, false, false])
     }
 
-    @Test func attachmentsAreReadOnlyForProposedAssignments() {
+    @Test func pagesAreReadForProposedAndStillOpenReceivedAssignments() {
         var added = Assignment(device: device, at: now, title: "HW3", source: .lms)
         added.lmsId = 104
         var settings = LMSSettings(known: [1])
@@ -73,7 +73,8 @@ struct LMSInboxTests {
                 .init(id: 200, classroom: 2, title: "new room"),
             ])
         let read = LMSInbox.pagesToRead(snapshot, settings: settings, courses: [course("선형대수학", assignments: [added])], now: now)
-        #expect(read.map(\.id) == [100, 200])
+        // 104는 받은 과제인데 Folio에서 아직 할 일이고 마감이 없어, 새 첨부를 보려고 읽는다.
+        #expect(read.map(\.id) == [100, 200, 104])
     }
 
     @Test func proposalsCarryTheirAttachments() {

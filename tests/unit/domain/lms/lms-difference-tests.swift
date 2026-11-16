@@ -98,7 +98,10 @@ struct LMSDifferenceTests {
                 .init(id: 2, classroom: 1, title: "HW2", due: now.addingTimeInterval(86_400)),
                 .init(id: 3, classroom: 1, title: "HW3", due: past, submitted: true),
             ],
-            folio: [added(1, due: past, status: .submitted), added(2, status: .submitted), added(3, due: past, status: .submitted)])
+            folio: [
+                added(1, due: past, status: .submitted), added(2, due: now.addingTimeInterval(86_400), status: .submitted),
+                added(3, due: past, status: .submitted),
+            ])
         #expect(inbox.proposals.map(\.id) == ["unsubmitted:1"])
         let p = inbox.proposals[0].proposal()
         #expect(p.kind == .lmsUnsubmitted && p.kind.group == .differs && !p.kind.picksCourse)

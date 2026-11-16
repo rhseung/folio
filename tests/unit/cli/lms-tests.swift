@@ -157,6 +157,15 @@ struct LMSTests {
         let missing = dir.appending(path: "missing.json")
         try encoder.encode([LMSSubmission(course: course.course.id, assignment: UUID(), lms: 1)]).write(to: missing)
         #expect(h.cli(["lms", "submitted", "--items", missing.path], gist: gist).code != 0)
+
+        // 두 사본에 같은 ID로 과제를 더한 뒤, 앱과 CLI가 같은 결과로 바꾸는지 본다.
+        let open = UUID()
+        let same = [LMSSubmission(course: course.course.id, assignment: open, lms: 139981, at: at)]
+        let sameJSON = dir.appending(path: "same.json")
+        try encoder.encode(same).write(to: sameJSON)
+        try h.expectSame(
+            ["lms", "submitted", "--items", sameJSON.path], setup: [["assignment", "add", "EC4207", "HW 9", "--id", open.uuidString]]
+        ) { _ in LMSSubmitted(items: same) }
     }
 
     @Test func acceptBesideAnAssignmentOfTheSameTitleKeepsBothProblemFiles() throws {
