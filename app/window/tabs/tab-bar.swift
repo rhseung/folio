@@ -184,7 +184,7 @@ struct TabBar: View {
     }
 
     func joined(_ panes: TabPanes, share: CGFloat) -> some View {
-        HStack(spacing: 0) {
+        SegmentRow {
             ForEach(Segment.all(panes, workspace: workspace, playing: tabs.playingPanes)) { segment in
                 if segment.index > 0 { SegmentRule() }
                 TabSegment(
@@ -201,6 +201,7 @@ struct TabBar: View {
                     Divider()
                     LayoutMenu(choices: workspace.layoutChoices(for: panes, save: { nameLayout(panes) }, manage: manageLayouts))
                 }
+                .layoutValue(key: SegmentRow.Shares.self, value: true)
             }
             if tabs.count > 1 { closeButton(tabs.selected).padding(.leading, Theme.Space.xxs) }
         }
@@ -521,7 +522,6 @@ private struct TabSegment: View {
         }
         .padding(.leading, Theme.Space.s)
         .padding(.trailing, Theme.Space.xs)
-        .frame(maxWidth: .infinity)
         .frame(height: Self.height)
         .contentShape(.rect)
         .onTapGesture(perform: select)
@@ -550,6 +550,35 @@ private struct TabName: View {
             if isFile { FileName(name, lineLimit: 1) } else { Text(name).lineLimit(1).truncationMode(.middle) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// 칸 사이의 선과 닫기 버튼은 그려진 폭 그대로 두고, 남는 폭을 칸들이 `TabFit.split`으로 나눈다. `HStack`은 늘어날 수 있는
+// 자식에게 폭을 똑같이 나눠, 짧은 이름 옆에 빈 폭이 남는데도 긴 이름이 줄었다.
+private struct SegmentRow: Layout {
+    struct Shares: LayoutValueKey { static let defaultValue = false }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let ideal = subviews.map { $0.sizeThatFits(.unspecified) }
+        return CGSize(
+            width: proposal.width ?? ideal.map(\.width).reduce(0, +),
+            height: proposal.height ?? ideal.map(\.height).max() ?? 0)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let ideal = subviews.map { $0.sizeThatFits(.unspecified).width }
+        let fixed = subviews.indices.filter { !subviews[$0][Shares.self] }.map { ideal[$0] }.reduce(0, +)
+        let shared = subviews.indices.filter { subviews[$0][Shares.self] }
+        var widths = ideal
+        let split = TabFit.split(max(0, bounds.width - fixed), ideals: shared.map { Double(ideal[$0]) })
+        for (i, width) in zip(shared, split) { widths[i] = width }
+        var x = bounds.minX
+        for (subview, width) in zip(subviews, widths) {
+            subview.place(
+                at: CGPoint(x: x, y: bounds.midY), anchor: .leading,
+                proposal: ProposedViewSize(width: width, height: bounds.height))
+            x += width
+        }
     }
 }
 

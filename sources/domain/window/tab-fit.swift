@@ -85,6 +85,29 @@ public enum TabFit {
             + (layout.hidden > 0 ? gap + more : 0)
     }
 
+    // 칸이 여럿인 탭의 칸 폭이다. 똑같이 나누면 짧은 이름("오늘") 옆에 빈 폭이 남는데도 긴 이름이 줄어든다. 그래서 고른
+    // 몫보다 덜 쓰는 칸은 쓰는 만큼만 받고, 남은 폭을 나머지 칸이 다시 똑같이 나눈다. 모두 들어가면 남는 폭을 똑같이 더한다.
+    public static func split(_ room: Double, ideals: [Double]) -> [Double] {
+        guard !ideals.isEmpty else { return [] }
+        let total = ideals.reduce(0, +)
+        if total <= room { return ideals.map { $0 + (room - total) / Double(ideals.count) } }
+        var widths = ideals
+        var open = Set(ideals.indices)
+        var rest = room
+        while !open.isEmpty {
+            let fair = max(0, rest) / Double(open.count)
+            let small = open.filter { ideals[$0] <= fair }
+            if small.isEmpty {
+                for i in open { widths[i] = fair }
+                break
+            }
+            for i in small { widths[i] = ideals[i] }
+            rest -= small.map { ideals[$0] }.reduce(0, +)
+            open.subtract(small)
+        }
+        return widths
+    }
+
     // 기본 간격만 두면 글리프 둘레의 버튼 여백 때문에 간격이 더 넓어 보인다. 그래서 `button` 폭 버튼의 가운데에
     // 놓인 글리프가 캡슐 사이 간격처럼 마지막 캡슐에서 `gap`만큼 떨어지게 한다. 여백이 `gap`보다 넓으면 값이
     // 음수가 되고, 이때 버튼의 히트 영역이 캡슐 가장자리 아래까지 닿는다.

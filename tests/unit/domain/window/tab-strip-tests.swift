@@ -232,6 +232,24 @@ struct TabFitTests {
         #expect(TabFit.lead(panelEdge: 4, after: 189, gap: 8) == 8)
     }
 
+    @Test func aShortPaneLeavesItsRoomToALongOne() {
+        #expect(TabFit.split(240, ideals: [60, 200]) == [60, 180])
+        #expect(TabFit.split(300, ideals: [60, 200]) == [80, 220])
+        #expect(TabFit.split(240, ideals: [200, 200]) == [120, 120])
+        #expect(TabFit.split(300, ideals: [40, 200, 200]) == [40, 130, 130])
+    }
+
+    @Test func panesFillTheTabAndNeverTakeMoreThanTheyNeedWhenCramped() async {
+        let ideals = Gen.int(in: 0...300).map(Double.init).array(of: 1...4)
+        await propertyCheck(input: ideals, Gen.int(in: 0...800)) { ideals, room in
+            let widths = TabFit.split(Double(room), ideals: ideals)
+            #expect(abs(widths.reduce(0, +) - Double(room)) < 0.001)
+            if ideals.reduce(0, +) > Double(room) {
+                #expect(zip(widths, ideals).allSatisfy { $0 <= $1 + 0.001 })
+            }
+        }
+    }
+
     @Test func theNewTabGlyphSitsOneGapAfterTheLastCapsule() {
         // 32pt 버튼 가운데에 놓인 12pt의 +는 양쪽에 10씩 남으므로, 버튼은 capsule보다 2만큼 앞에서 시작한다.
         #expect(TabFit.newTabSpacing(gap: 8, button: 32, glyph: 12) == -2)
