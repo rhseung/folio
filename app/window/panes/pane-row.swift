@@ -467,7 +467,7 @@ extension Workspace {
         let place = placeCrumb(of: entry)
         let steps = if case .course = Screen(entry) { trail?.crumbs ?? [] } else { [Crumb]() }
         let symbol = steps.last { $0.symbol != nil }?.symbol ?? place.symbol
-        return Crumb(title: tabTitle(of: entry) ?? place.title, symbol: symbol, dot: place.dot)
+        return Crumb(title: tabTitle(of: entry) ?? place.title, symbol: symbol, dot: place.dot, isFile: entry.link.kind == .material)
     }
 }
 

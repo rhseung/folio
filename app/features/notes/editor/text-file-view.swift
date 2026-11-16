@@ -12,7 +12,6 @@ struct TextFileView: View {
     @Binding private var shownPage: Int?
     @State private var links: NoteEditorModel?
     @State private var controller: PDFController?
-    @State private var renaming = false
     private var moves: MoveUndo?
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
@@ -52,19 +51,7 @@ struct TextFileView: View {
             wide = $0
         }
         .background(Theme.Palette.card)
-        // 파일을 곧 옮기므로 먼저 저장한다.
-        .crumb(
-            model.name, level: 2, symbol: model.isTex ? "doc.text" : "chevron.left.forwardslash.chevron.right", isFile: true,
-            rename: links.map { _ in
-                {
-                    model.saveIfDirty()
-                    renaming = true
-                }
-            }
-        )
-        .sheet(isPresented: $renaming) {
-            if let links { NoteEditSheet(workspace: links.workspace, course: links.course, note: links.note, moves: moves) }
-        }
+        .crumb(model.name, level: 2, symbol: model.isTex ? "doc.text" : "chevron.left.forwardslash.chevron.right", isFile: true)
         .onAppear(perform: model.load)
         .rememberingPanes($panes, id: model.isTex ? model.paneId : nil)
         .onChange(of: controller?.page) { _, page in if let page { shownPage = page } }

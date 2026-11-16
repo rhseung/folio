@@ -15,7 +15,6 @@ struct NoteEditor: View {
     @State private var wide = false
     @State private var preview = PreviewLink()
     @State private var showsAssets = false
-    @State private var renaming = false
     @State private var palette: MathPaletteModel
     @State private var showsMath = false
     @State private var outline = NoteOutlineModel()
@@ -131,15 +130,7 @@ struct NoteEditor: View {
         .background {
             Button("") { model.saveNow(force: false) }.keyboardShortcut("s").opacity(0).allowsHitTesting(false).accessibilityHidden(true)
         }
-        // 파일을 곧 옮기므로 먼저 저장한다.
-        .crumb(
-            model.note.title, level: 2, symbol: "doc.text",
-            rename: {
-                model.saveIfDirty()
-                renaming = true
-            }
-        )
-        .sheet(isPresented: $renaming) { NoteEditSheet(workspace: model.workspace, course: model.course, note: model.note, moves: moves) }
+        .crumb(model.note.title, level: 2, symbol: "doc.text")
         .onAppear(perform: model.load)
         .rememberingPanes($panes, id: model.note.meta.id)
         // 타자가 멈춘 직후와 노트가 사라질 때 저장한다. 그러지 않으면 노트나 과목을 바꾸거나, 창을 닫거나, 앱을 끝낼 때

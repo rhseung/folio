@@ -1,25 +1,15 @@
 import FolioDomain
 import SwiftUI
 
+// 나누기에서 빠지는 탭(오늘, 칸이 여럿인 안 고른 탭)과 더 보기 메뉴는 그려진 폭을 잰다.
 @MainActor final class TabSizes {
-    var trail: CGFloat = 0
     var front: CGFloat = 0
-    var compactFront: CGFloat = 0
     var more: CGFloat = 0
-    private var others: [UUID: [TabForm: CGFloat]] = [:]
+    private var others: [UUID: CGFloat] = [:]
 
-    var frontFit: TabFit.Front {
-        TabFit.Front(trail: Double(trail), chrome: Double(front - trail), compactChrome: Double(compactFront - trail))
-    }
+    func set(_ width: CGFloat, _ id: UUID) { others[id] = width }
 
-    func set(_ width: CGFloat, _ id: UUID, _ form: TabForm) { others[id, default: [:]][form] = width }
-
-    func other(_ id: UUID) -> TabFit.Other {
-        let widths = others[id] ?? [:]
-        let icon = TabBar.icon
-        return TabFit.Other(
-            full: Double(widths[.full] ?? icon), icons: Double(widths[.icons] ?? icon), stacked: Double(widths[.stacked] ?? icon))
-    }
+    func other(_ id: UUID) -> CGFloat { others[id] ?? TabBar.icon }
 
     func keep(_ ids: Set<UUID>) { others = others.filter { ids.contains($0.key) } }
 }

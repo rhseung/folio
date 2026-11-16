@@ -537,7 +537,7 @@ struct RootView: View {
                     #endif
             }
             TabBar(
-                tabs: tabs, workspace: workspace, crumbs: crumbs, toolbar: row, moveToWindow: moveToWindow,
+                tabs: tabs, workspace: workspace, toolbar: row, moveToWindow: moveToWindow,
                 nameLayout: { namingLayout = $0 }, manageLayouts: manageLayouts)
         } trailing: {
             HStack(spacing: Theme.Space.s) {
@@ -608,11 +608,6 @@ struct RootView: View {
         .toolbarGroup()
         .buttonStyle(.toolbar)
         .menuStyle(.button)
-    }
-
-    var crumbs: [Crumb] {
-        let steps = if case .course = selection { tabs.trail(tabs.selected)?.crumbs ?? [] } else { [Crumb]() }
-        return [workspace.placeCrumb(of: navigator.current)] + steps
     }
 
     var panelEdge: CGFloat { sidebarOpen ? Theme.Size.sidebar : Theme.Size.panelInset }
