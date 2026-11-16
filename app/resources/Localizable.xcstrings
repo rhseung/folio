@@ -1024,6 +1024,28 @@
         }
       }
     },
+    "claude.error.cli": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Code가 답하지 못했습니다: %@"
+          }
+        }
+      }
+    },
+    "claude.error.cli-exit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Code 실행이 실패했습니다 (종료 코드 %lld)."
+          }
+        }
+      }
+    },
     "claude.error.failed-body": {
       "extractionState": "manual",
       "localizations": {
@@ -1064,6 +1086,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Claude가 이 요청에는 답하지 않았습니다."
+          }
+        }
+      }
+    },
+    "claude.error.signed-out": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Code 로그인이 만료되었습니다. 터미널에서 claude auth login을 실행해 다시 로그인하세요."
           }
         }
       }
