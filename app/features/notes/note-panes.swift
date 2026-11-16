@@ -53,7 +53,7 @@ private struct RememberingPanes: ViewModifier {
                 paneMemory?.remember(mode, note: id)
             }
             .background {
-                Button("") { panes.toggle() }.keyboardShortcut("e")
+                Button("") { panes.toggle() }.shortcut(.noteViewToggle)
                     .opacity(0).allowsHitTesting(false).accessibilityHidden(true)
             }
     }

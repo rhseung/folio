@@ -20307,39 +20307,6 @@
         }
       }
     },
-    "tabs.close-window": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "창 닫기"
-          }
-        }
-      }
-    },
-    "tabs.next": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "다음 탭"
-          }
-        }
-      }
-    },
-    "tabs.previous": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이전 탭"
-          }
-        }
-      }
-    },
     "tabs.pause": {
       "extractionState": "manual",
       "localizations": {
@@ -20362,17 +20329,6 @@
         }
       }
     },
-    "tabs.number": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld번째 탭"
-          }
-        }
-      }
-    },
     "tabs.more": {
       "extractionState": "manual",
       "localizations": {
@@ -20391,17 +20347,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "+%lld"
-          }
-        }
-      }
-    },
-    "tabs.last": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "마지막 탭"
           }
         }
       }
@@ -22866,6 +22811,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "새 항목"
+          }
+        }
+      }
+    },
+    "notes.format-menu": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "서식"
           }
         }
       }

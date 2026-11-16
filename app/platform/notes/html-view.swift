@@ -73,13 +73,13 @@ struct HTMLView {
 
         func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
             guard action.navigationType == .linkActivated, let url = action.request.url else { return .allow }
-            open(url)
+            open(url, modifiers: KeyCombo.Modifiers(action.modifierFlags))
             return .cancel
         }
 
-        func open(_ url: URL) {
+        func open(_ url: URL, modifiers: KeyCombo.Modifiers = []) {
             if AppLink.isAction(url) { return onAction(url) }
-            NoteLinks.open(url.absoluteString, base: nil, openNote: openNote, openLink: openLink)
+            LinkClicks.with(modifiers) { NoteLinks.open(url.absoluteString, base: nil, openNote: openNote, openLink: openLink) }
         }
     }
 }
