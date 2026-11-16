@@ -150,4 +150,15 @@ struct LMSRoomMemoryTests {
         #expect(items[0]["classroom"] == .number(1))
         #expect(settings.classrooms(of: course, in: snapshot).map(\.id) == [1])
     }
+
+    @Test func aRememberedCourseThatIsGoneIsNotRemembered() {
+        var settings = LMSSettings(known: [1])
+        settings.remember(LMSRoom(course: UUID()), for: 1)
+        let snapshot = LMSSnapshot(
+            at: now, classrooms: [.init(id: 1, title: "a")], files: [.init(id: 10, classroom: 1, title: "x")])
+        let board = ProposalBoard.build(
+            lms: LMSInbox.build(snapshot, settings: settings, courses: [], now: now), settings: settings, courses: [UUID()])
+        #expect(board.remembered.isEmpty)
+        #expect(board.room(1)?.memory == nil)
+    }
 }

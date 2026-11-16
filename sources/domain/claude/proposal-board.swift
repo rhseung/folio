@@ -42,13 +42,19 @@ public struct ProposalBoard: Sendable, Equatable {
     public init(rooms: [Room] = []) { self.rooms = rooms }
 
     // 강의실은 숨긴 항목만 남아도 서서 "다시 제안"으로 되돌릴 수 있다(`LMSInbox.build`).
-    public static func build(lms: LMSInbox, settings: LMSSettings = .init(), viewerOnly: Set<Int> = []) -> ProposalBoard {
+    // 기억한 과목이 `courses`에 없으면(폴더를 지운 과목) 기억이 없는 강의실로 둔다. 그대로 두면 "기억한 과목에 모두 받기"가
+    // 없는 과목에 받다가 액션 하나 전체가 실패해서 다른 강의실의 항목도 받지 못한다.
+    public static func build(
+        lms: LMSInbox, settings: LMSSettings = .init(), viewerOnly: Set<Int> = [], courses: Set<UUID>? = nil
+    ) -> ProposalBoard {
         ProposalBoard(
             rooms: lms.sections.map { s in
-                Room(
+                var memory = settings.room(s.classroom.id)
+                if let course = memory?.course, let courses, !courses.contains(course) { memory = nil }
+                return Room(
                     classroom: s.classroom,
                     proposals: s.proposals.map { p in p.proposal(viewerOnly: p.fileID.map(viewerOnly.contains) ?? false) },
-                    hidden: s.handled, deadlines: s.deadlines, memory: settings.room(s.classroom.id))
+                    hidden: s.handled, deadlines: s.deadlines, memory: memory)
             })
     }
 

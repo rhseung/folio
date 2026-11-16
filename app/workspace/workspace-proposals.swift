@@ -4,7 +4,10 @@ import FolioStorage
 import Foundation
 
 extension Workspace {
-    var proposalBoard: ProposalBoard { ProposalBoard.build(lms: lmsInbox, settings: settings.lms, viewerOnly: lms.viewerOnly) }
+    var proposalBoard: ProposalBoard {
+        ProposalBoard.build(
+            lms: lmsInbox, settings: settings.lms, viewerOnly: lms.viewerOnly, courses: Set(courses.map(\.file.course.id)))
+    }
 
     @discardableResult
     func run(_ proposal: ActionProposal) -> ActionContext? {
