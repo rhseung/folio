@@ -105,6 +105,10 @@ struct ClaudeModelTests {
         #expect(ClaudeModel.message(for: ClaudeError.http(status: 401, body: "")) == "인증에 실패했습니다. API 키나 Claude Code 로그인을 확인하세요.")
         #expect(ClaudeModel.message(for: ClaudeError.http(status: 500, body: "")) == "요청이 실패했습니다 (HTTP 500).")
         #expect(ClaudeModel.message(for: ClaudeError.http(status: 0, body: "cli says no")) == "요청이 실패했습니다: cli says no")
+        #expect(ClaudeModel.message(for: ClaudeError.cli(exit: 1, message: "MCP failed")) == "Claude Code가 답하지 못했습니다: MCP failed")
+        #expect(ClaudeModel.message(for: ClaudeError.cli(exit: 3, message: "")) == "Claude Code 실행이 실패했습니다 (종료 코드 3).")
+        #expect(
+            ClaudeModel.message(for: ClaudeError.signedOut) == "Claude Code 로그인이 만료되었습니다. 터미널에서 claude auth login을 실행해 다시 로그인하세요.")
     }
 
     @Test func withoutUnitsTheCardLinkIsOff() {

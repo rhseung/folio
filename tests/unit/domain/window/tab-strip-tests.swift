@@ -311,3 +311,29 @@ struct TabKeepTests {
         }
     }
 }
+
+struct TabStripBehindTests {
+    @Test func tabsOpenedBehindLineUpAfterTheTabTheyCameFrom() {
+        var s = TabStrip("a")
+        s.open("b")
+        s.select("a")
+        s.openBehind("c")
+        s.openBehind("d")
+        #expect(s.tabs == ["a", "c", "d", "b"] && s.selected == "a")
+
+        s.select("b")
+        s.openBehind("e")
+        #expect(s.tabs == ["a", "c", "d", "b", "e"] && s.selected == "b")
+
+        s.select("a")
+        s.openBehind("f")
+        #expect(s.tabs == ["a", "f", "c", "d", "b", "e"])
+    }
+
+    @Test func aTabAlreadyOpenIsNotOpenedAgainBehind() {
+        var s = TabStrip("a")
+        s.open("b")
+        s.openBehind("a")
+        #expect(s.tabs == ["a", "b"] && s.selected == "b")
+    }
+}

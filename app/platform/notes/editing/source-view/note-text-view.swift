@@ -9,10 +9,7 @@ class NoteTextView: NSTextView {
     var openNote: (String) -> Void = { _ in }
     var linkOpener = OpenLinkAction()
     var linkName: (AppLink) -> String? = { _ in nil }
-    // 한국어 입력 소스에서도 단축키가 바뀌지 않도록 키 코드로 받는다.
-    var shortcut: ((Character) -> Bool)?
     private var caretObserver: NSObjectProtocol?
-    static let letters: [UInt16: Character] = [11: "b", 34: "i", 14: "e"]
 
     init() {
         let manager = NSTextLayoutManager()
@@ -76,15 +73,6 @@ class NoteTextView: NSTextView {
                 if fitted != indicator.frame { indicator.frame = fitted }
             }
         }
-    }
-
-    override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        if window?.firstResponder === self, event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
-            let key = Self.letters[event.keyCode], shortcut?(key) == true
-        {
-            return true
-        }
-        return super.performKeyEquivalent(with: event)
     }
 
     func characterIndex(at point: NSPoint) -> Int? {

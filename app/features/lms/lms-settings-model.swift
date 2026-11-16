@@ -17,6 +17,7 @@ final class LMSSettingsModel {
         case .syncing: return String(localized: .lmsSyncing)
         case .needsLogin: return String(localized: .lmsNeedsLogin)
         case .failed(let reason): return reason
+        case .offline: return String(localized: .lmsOfflineDetail(workspace.lmsLastSync))
         case .off, .idle:
             let count = workspace.lmsInbox.proposals.count
             let last = workspace.lmsLastSync
@@ -26,7 +27,7 @@ final class LMSSettingsModel {
 
     var warns: Bool {
         switch lms.status {
-        case .needsLogin, .failed: true
+        case .needsLogin, .failed, .offline: true
         case .off, .idle, .syncing: false
         }
     }

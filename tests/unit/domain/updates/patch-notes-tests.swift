@@ -83,6 +83,29 @@ struct PatchNotesTests {
         #expect(releases[0].date == Date(timeIntervalSince1970: 1_794_106_800))
     }
 
+    @Test func aDatedBodyShowsItsOwnDayNotTheDayItWasPublished() throws {
+        let day = Date(timeIntervalSince1970: 1_794_000_000)
+        let body = PatchNotes.releaseBody(
+            [PatchNotes.Merged(number: 1, title: "t", body: "## 패치 노트\n- feat: 창 탭")], first: false, date: day)
+        #expect(body.hasPrefix("## 패치 노트\n\(PatchNotes.marker)\n\(PatchNotes.dated(day))\n\n### feat\n- feat: 창 탭\n"))
+        #expect(PatchNotes.released(in: body) == day)
+        #expect(PatchNotes.items(in: body) == [Item(kind: .feat, text: "창 탭")])
+
+        let json = try JSONSerialization.data(withJSONObject: [
+            ["tag_name": "v0.2.0", "body": body, "published_at": "2026-11-16T03:00:00Z"],
+            ["tag_name": "v0.1.0", "body": "## 패치 노트\n<!-- folio-patch-notes 1 -->\n- feat: 첫 줄", "published_at": "2026-11-10T18:58:49Z"],
+        ])
+        let releases = try PatchNotes.releases(fromGitHub: json)
+        let published = try Date("2026-11-10T18:58:49Z", strategy: .iso8601)
+        #expect(releases.map(\.date) == [day, published])
+        #expect(releases[1].items == [Item(kind: .feat, text: "첫 줄")])
+    }
+
+    @Test func aBrokenOrMissingDateIsNoDate() {
+        #expect(PatchNotes.released(in: "## 패치 노트\n<!-- folio-released 어제 -->") == nil)
+        #expect(PatchNotes.released(in: "## 패치 노트\n- feat: 날짜 없음") == nil)
+    }
+
     // MARK: After an update
 
     static func release(_ v: V, _ kinds: PatchNotes.Kind...) -> PatchNotes.Release {
@@ -154,6 +177,15 @@ struct PatchNotesTests {
         #expect(ordered.filter { $0.kind == .fix }.map(\.text) == ["수식 말풍선 위와 오른쪽 여백", "회차 노트의 링크", "소제목 뒤의 항목"])
     }
 
+    @Test func thePageFoldsPatchesUnderTheirMinor() {
+        let series = PatchNotes.series(Self.feed + [Self.release(V(1, 0, 0), .feat), Self.release(V(0, 3, 2))])
+        #expect(series.map(\.name) == ["1.0", "0.4", "0.3", "0.2"])
+        #expect(series[2].releases.map(\.version) == [V(0, 3, 2), V(0, 3, 1), V(0, 3, 0)])
+        #expect(series[2].latest.version == V(0, 3, 2) && series[2].first.version == V(0, 3, 0))
+        #expect(series[3].contains(V(0, 2, 1)) && !series[3].contains(V(0, 3, 0)))
+        #expect(PatchNotes.series([]).isEmpty)
+    }
+
     // MARK: Properties
 
     static let kind = Gen.element(of: PatchNotes.Kind.allCases).map { $0! }
@@ -215,6 +247,7 @@ struct PatchNotesTests {
         #expect(body.contains("- fix: margins (#9)\n  말풍선 여백을 고칩니다. 둘째 줄\n- ci: cache (#11)\n\n## 설치"))
         #expect(!body.contains("첫 릴리스"))
         #expect(PatchNotes.releaseBody([], first: true).contains("사용자에게 보이는 변화가 없습니다.\n\n첫 릴리스입니다.\n\n## 설치"))
+        #expect(!PatchNotes.releaseBody(prs, first: false, assets: false).contains("## 설치"))
     }
 
     @Test func theReleaseBodyReadsBackAsItsPRsNotes() async {
@@ -227,6 +260,18 @@ struct PatchNotesTests {
             var items: [Item] = []
             for item in bodies.flatMap(PatchNotes.items(in:)) where !items.contains(item) { items.append(item) }
             #expect(PatchNotes.items(in: PatchNotes.releaseBody(prs, first: false)) == PatchNotes.ordered(items))
+        }
+    }
+
+    @Test func everyReleaseFallsInOneSeriesOfItsMinor() async {
+        await propertyCheck(input: Self.releases) { releases in
+            let series = PatchNotes.series(releases)
+            #expect(series.flatMap(\.releases) == releases.sorted { $0.version > $1.version })
+            for s in series {
+                #expect(!s.releases.isEmpty)
+                #expect(s.releases.allSatisfy { $0.version.major == s.major && $0.version.minor == s.minor })
+            }
+            #expect(Set(series.map(\.name)).count == series.count)
         }
     }
 

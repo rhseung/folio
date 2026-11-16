@@ -9,6 +9,7 @@ struct TitleRow<Leading: View, Trailing: View>: View {
     let lead: CGFloat
     @ViewBuilder let leading: Leading
     @ViewBuilder let trailing: Trailing
+    @State private var hold = TitleDragHold()
 
     var body: some View {
         HStack(spacing: 0) {
@@ -16,10 +17,11 @@ struct TitleRow<Leading: View, Trailing: View>: View {
             Spacer(minLength: 0)
             trailing
         }
+        .environment(\.titleDragHold, hold)
         .padding(.leading, lead)
         .padding(.trailing, TitleRowEdges.trailing)
         .frame(height: Theme.Size.toolbarRow)
-        .background { TitleDrag() }
+        .background { TitleDrag(hold: hold) }
     }
 }
 #endif

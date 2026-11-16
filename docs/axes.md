@@ -47,7 +47,7 @@ AGENTS.md "구조 축" 표의 축마다 지킬 규칙이다. 축에 기능을 �
 - 승인 화면에 보이는 제안은 `FolioDomain`의 `Proposal`이다. 종류(`ProposalKind`)가 묶음(`ProposalGroup`), 넣을 과목을 고르는지(`picksCourse`), 여러 제안을 한 액션으로 합칠 목록 필드(`list`)를 정한다. 승인은 `action`, 무시는 `dismissal`이고, 표시(`ProposalFlag`)가 검토할 것을 알리거나 승인을 막는다(LMS 뷰어 전용).
 - 같은 명령의 제안 여럿은 목록 필드를 이어 액션 하나로 승인하고 무시한다(`[Proposal].approvals(in:)`, `dismissals`). 그래서 한 번 묻고, 하나가 막히면 아무것도 쓰지 않는다.
 - 제안의 출처는 셋이고, 출처마다 승인하는 곳이 따로 있다. 종류의 묶음(`ProposalKind.group`)이 없는 제안은 LMS 탭에 오지 않는다.
-    - LMS(`LMSProposal.proposal`, 승인은 `lms accept`, 무시는 `lms mark`): `ProposalBoard`가 강의실로 묶어 LMS 탭(`folio://lms`)에 모은다.
+    - LMS(`LMSProposal.proposal`, 승인은 `lms accept`, 무시는 `lms mark`): `ProposalBoard`가 강의실로 묶어 LMS 탭(`folio://lms`)에 모은다. 받은 과제가 LMS와 다른 것(`LMSDifference`)은 과목이 정해져 있어 과목을 고르지 않고, 승인은 `assignment status`나 `assignment set`이다.
     - 대화 파일(`Chat.pending`): 그 대화의 Claude 패널에서 승인한다. Claude는 LMS에 속하지 않아 LMS 탭에 모으지 않는다(사용자 결정). 패널의 거절은 #515다. CLI와 MCP는 `proposal list`로 모든 과목의 대화에서 기다리는 제안을 읽는다.
     - 폴더 정리 옮기기(`PlannedMove.proposal`, 검토 표시는 `.review` 표시, 승인은 `cleanup apply`): 자료 화면과 `cleanup plan`이 같은 선언을 읽는다.
 - 파일 분류, 자료에서 정보 추출, 렉처 단원 구간 제안은 #90에 남았다. 패널의 제안 단계는 `docs/mcp.md`에 있다.
@@ -74,6 +74,7 @@ AGENTS.md "구조 축" 표의 축마다 지킬 규칙이다. 축에 기능을 �
 편집 보기의 모든 자동 완성(`/` 블록, 콜아웃 종류, 코드 언어, TeX 명령과 환경, AsciiMath 기호, 스니펫, 링크, 수식의 기호 전체 목록)이 이 메뉴 하나다.
 
 - 무엇을 완성할지는 `FolioMarkdown`의 `Completion`이 원문에서 읽고, 메뉴는 캐럿 옆에 하나만 뜬다. 늦게 오는 후보(링크)는 `more`로 더한다.
+- 후보는 대소문자를 가리지 않고 거른다. 순서는 맞는 등급(같음, 앞부분, 키워드, 포함)이 먼저이고, 같은 등급 안에서는 친 글자와 대소문자까지 같은 후보가 앞에 선다(`Completion.filter`). 링크 대상은 대소문자까지 같은 제목이 그 과목 묶음의 맨 앞에 선다(`LinkCandidates.order`). 메뉴는 맨 위 후보를 고른 채 뜨므로 `\Delta`를 치고 Tab을 누르면 `\Delta`가 들어간다.
 - 수식 기호의 분류와 목록은 `MathSymbols`가 정하고 f(x) 기호 팔레트와 함께 쓴다.
 - 링크 후보는 `NoteLinkCompletion`이 검색 색인과 파일에서 찾고, 보일 것과 순서는 `FolioDomain`의 `LinkCandidates`가 정한다.
 - 한글 조합 중에는 메뉴, 짝 기호, 목록 이어 쓰기가 끼어들지 않는다.
@@ -98,6 +99,12 @@ AGENTS.md "구조 축" 표의 축마다 지킬 규칙이다. 축에 기능을 �
 
 빠른 추가 한 줄을 읽는 법이다. 낱말마다 인식기(`lexicon.swift`)가 읽고, 결합 규칙(`grammar.swift`의 `Rule`)이 이웃을 묶고, 해석(`resolve.swift`)이 줄의 구간 `spans`(마감, 과목, 과제 종류와 번호)와 저장할 값을 낸다. 제목은 어느 구간에도 들지 않은 글이다. 칸의 알약과 칸 아래 칩은 `spans`와 그 값만 읽는다. 새 종류(시험, 메모)는 인식기와 `Span.Field`를 하나씩 더한다. Apple의 날짜 인식기는 실제 시계로 읽으므로 표가 못 읽은 나머지에만 쓴다. CLI의 `folio add`도 같은 `QuickAdd.parse`를 쓴다.
 
-## 단축키
+## 단축키 `ShortcutTable`
 
-명령마다 한 번 등록하고 메뉴, 설정, 팔레트가 읽는 표와 키 녹음 검사다. 아직 없다(#116).
+명령마다 ID(`ShortcutID`), 이름, 묶음, 듣는 자리(`Shortcut.Scope`), 바꿀 수 있는지, 키를 `FolioDomain`의 표 하나에 적는다. 앱은 키를 화면에 적지 않고 `CommandButton(id)`(메뉴 막대 명령)과 `.shortcut(id)`로 표에서 읽는다.
+
+- 관례 키(굵게, 기울임, 줄 처음·끝, 확대·축소, 탭과 창 닫기, 설정)도 고정 항목으로 표에 둔다. 무엇이 예약돼 있는지 한 곳에서 보이게 하기 위해서다.
+- 자리는 안팎이 있다(`within`). 노트 편집은 앱 전체이면서 글 칸이고 노트 화면이다. 두 자리 중 하나가 다른 쪽 안에 있으면 두 키가 함께 듣고, 그때 같은 키를 쓰면 겹침이다(`ShortcutTable.clashes`). 노트 편집의 ⌘B(굵게)와 `.tex` 편집의 ⌘B(빌드)는 함께 열리지 않아 겹치지 않는다. 기본 표에 겹침이 없는지는 테스트가 본다.
+- 한 명령에 키가 여럿일 수 있다. 첫 키가 메뉴에 보이고, 나머지는 같은 명령을 부르는 다른 길이다. 글 칸에 양보하는 키(`yieldsToText`)는 글을 쓰는 칸에 포커스가 있으면 그 칸이 받는다. 뒤로·앞으로의 ⌘←·⌘→가 그렇다. AppKit은 메뉴 키를 글 칸보다 먼저 처리하므로 Mac은 이 키를 메뉴에 두지 않고 `TextYieldingShortcuts`가 받는다. iPad는 메뉴 키를 글 칸보다 늦게 받아 메뉴에 둔다.
+- 링크와 항목을 누를 때 함께 누른 키는 `LinkClick`이 여는 자리로 읽는다(⌘ 새 탭(뒤에서), ⌘⇧ 새 탭, ⌘⌥ 옆 칸). `.here`로 여는 모든 링크가 `LinkClicks.current`에서 이 값을 읽으므로 화면이 키를 따로 보지 않는다. web view는 누르기를 비동기로 넘겨 그 키를 직접 넘긴다(`LinkClicks.with`). 터치에서는 항목 메뉴의 열기 옆에 "새 탭에서 열기"와 "옆 칸에서 열기"가 있다(`MenuRow.Kind.open`).
+- 노트 표의 키(`TableShortcut`)는 `FolioMarkdown`에 있어 아직 이 표에 없다. 설정의 단축키 목록, 키 녹음 검사, 사용자가 바꾼 키(`settings.json`), 팔레트의 키 표시는 #116에 남았다.

@@ -94,34 +94,59 @@ struct WhatsNewModelTests {
 
     // MARK: The page
 
-    func makeModel(fails: Bool = false) throws -> WhatsNewModel {
+    func makeModel(current: V = V(0, 2, 1), fails: Bool = false) throws -> WhatsNewModel {
         let workspace = try fixtureWorkspace()
         workspace.releaseNotes = ReleaseNotes(
-            source: ReleaseList(list: Self.releases, fails: fails), defaults: try defaults(), current: V(0, 2, 1),
-            prompts: false)
+            source: ReleaseList(list: Self.releases, fails: fails), defaults: try defaults(), current: current, prompts: false)
         return WhatsNewModel(workspace: workspace)
     }
 
-    @Test func thePageListsThisVersionsReleasesWithItOpen() async throws {
+    @Test func thePageFoldsPatchesUnderTheirMinorWithThisOneOpen() async throws {
         let model = try makeModel()
         #expect(model.state == .loading)
         await model.load()
-        guard case .releases(let shown) = model.state else { Issue.record("\(model.state)"); return }
-        #expect(shown.map(\.version) == [V(0, 2, 1), V(0, 2, 0)])
+        guard case .series(let shown) = model.state else { Issue.record("\(model.state)"); return }
+        #expect(shown.map(\.name) == ["0.2"])
+        #expect(shown[0].releases.map(\.version) == [V(0, 2, 1), V(0, 2, 0)])
+        #expect(model.isOpen(shown[0]) && model.isCurrent(shown[0]) && model.showsReleases(shown[0]))
+        #expect(model.items(shown[0].latest).map(\.text) == ["칸 닫기"])
+    }
+
+    @Test func olderMinorsStayFoldedUntilToggled() async throws {
+        let model = try makeModel(current: V(0, 3, 0))
+        await model.load()
+        guard case .series(let shown) = model.state else { Issue.record("\(model.state)"); return }
+        #expect(shown.map(\.name) == ["0.3", "0.2"])
         #expect(model.isOpen(shown[0]) && !model.isOpen(shown[1]))
+        #expect(!model.showsReleases(shown[0]))
 
         model.toggle(shown[1])
         model.toggle(shown[0])
         #expect(!model.isOpen(shown[0]) && model.isOpen(shown[1]))
-        #expect(model.items(shown[0]).map(\.text) == ["칸 닫기"])
+        #expect(!model.isCurrent(shown[1]))
+    }
+
+    @Test func aSeriesSpansTheDaysOfItsReleases() throws {
+        let model = try makeModel()
+        let day = Date(timeIntervalSince1970: 1_794_020_400)
+        func release(_ v: V, _ date: Date?) -> PatchNotes.Release { PatchNotes.Release(version: v, date: date, items: []) }
+        let calendar = model.workspace.calendar
+        let first = WhatsNewModel.day(day, calendar: calendar)
+        let later = WhatsNewModel.day(day.addingTimeInterval(2 * 86_400), calendar: calendar)
+        let spanning = PatchNotes.series([release(V(0, 5, 1), day.addingTimeInterval(2 * 86_400)), release(V(0, 5, 0), day)])[0]
+        #expect(model.days(spanning) == "\(first) – \(later)")
+        let sameDay = PatchNotes.series([release(V(0, 5, 1), day.addingTimeInterval(60)), release(V(0, 5, 0), day)])[0]
+        #expect(model.days(sameDay) == first)
+        #expect(model.days(PatchNotes.series([release(V(0, 5, 0), nil)])[0]) == nil)
     }
 
     @Test func searchingOpensEveryMatch() async throws {
-        let model = try makeModel()
+        let model = try makeModel(current: V(0, 3, 0))
         await model.load()
         model.query = "창"
-        guard case .releases(let shown) = model.state else { Issue.record("\(model.state)"); return }
-        #expect(shown.map(\.version) == [V(0, 2, 0)])
+        guard case .series(let shown) = model.state else { Issue.record("\(model.state)"); return }
+        #expect(shown.map(\.name) == ["0.2"])
+        #expect(shown[0].releases.map(\.version) == [V(0, 2, 0)])
         #expect(model.isOpen(shown[0]))
 
         model.kind = .fix

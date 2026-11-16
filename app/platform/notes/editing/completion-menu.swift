@@ -15,7 +15,9 @@ import SwiftUI
 
     func show(_ query: CompletionQuery, _ items: [CompletionItem]) {
         let same = self.query.map { query.continues($0) } ?? false
-        let picked = same ? current?.id : nil
+        // 사용자가 옮긴 선택만 이어 간다. 저절로 맨 위에 있던 후보까지 붙잡으면, 글자를 더 쳐서 친 글자와 대소문자까지
+        // 같은 후보가 맨 위로 올라와도(`Completion.filter`) Tab이 이전 후보를 넣는다.
+        let picked = same && selected != 0 ? current?.id : nil
         let waits = items.isEmpty && more != nil && Self.late(query)
 
         self.query = query
@@ -29,7 +31,7 @@ import SwiftUI
         pending = Task { [weak self] in
             let extra = await more(query)
             guard !Task.isCancelled, let self, self.query == query else { return }
-            let picked = self.current?.id
+            let picked = self.selected != 0 ? self.current?.id : nil
             self.items = items + extra
             self.selected = picked.flatMap { id in self.items.firstIndex { $0.id == id } } ?? 0
             self.arrived()

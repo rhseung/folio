@@ -8,7 +8,7 @@
 - 수식 문법은 노트마다 정하고(`math` frontmatter), 블록 하나만 다르게 쓸 때는 코드 펜스로 고른다(`MathFence`: `math`·`tex`·`latex`는 TeX, `asciimath`·`am`은 AsciiMath. `$$…$$`와 `$…$`은 노트 문법). 렌더러는 그 블록에 `data-math`를 단다. 편집 보기의 자동 완성, 스니펫, 말풍선, 기호 팔레트도 캐럿이 있는 펜스의 문법을 따른다(`SourcePlace`의 `fence`, `CompletionCatalog.at`). Claude 패널의 답은 `tex`·`latex` 펜스를 코드로 둔다(`HTMLRenderer.render(answer:)`).
 - 어느 줄이 제목인지는 `NoteOutline` 하나가 정한다(본문 최상위 제목만. 코드, 수식, frontmatter, 콜아웃 안의 `#`은 제외). 옆 목차, 한 줄에 홀로 쓴 `[TOC]`(미리보기와 PDF에서 목차 카드), 제목 링크와 그 자동 완성이 함께 쓴다.
 - 임베드와 블록 참조는 링크가 가리키는 부분(제목 아래, 블록)을 잘라 그리고, 고리와 깊이를 막는다. 노트는 앱이 찾아 준다(`NoteEmbeds`).
-- 편집 보기의 입력 규칙(`sources/markdown/editing/`: 짝 기호, 목록 이어 쓰기와 번호, 스니펫, 수식 인자 이동, 자동 완성 질의, 표 편집)은 순수 함수로 두어 Mac과 iPad가 함께 쓴다.
+- 편집 보기의 입력 규칙(`sources/markdown/editing/`: 짝 기호, 목록 이어 쓰기와 번호, 스니펫, 수식 인자 이동, 자동 완성 질의, 표 편집, 굵게·기울임 `SourceEditing.toggle`)은 순수 함수로 두어 Mac과 iPad가 함께 쓴다. 굵게(⌘B)와 기울임(⌘I)은 서식 메뉴의 명령이고 키는 단축키 등록표에서 읽는다. iPad의 편집 메뉴와 ⌘B도 글에 속성을 입히지 않고 같은 마크다운 표시를 쓴다.
 - 편집 보기(`app/platform/notes/editing/`, TextKit 2)는 원문에 글꼴과 색만 입힌다. 그림, 수식, 콜아웃, 임베드, 코드의 상자는 미리보기(`note-preview.swift`)만 그린다.
 - 웹 번들(`sources/web`)은 미리보기와 Claude 패널의 페이지(KaTeX, 코드 하이라이팅, mermaid, 노트 CSS, 그림 크게 보기)와 편집 보기가 JavaScriptCore로 부르는 코드 하이라이팅이다. 편집 보기의 수식 말풍선과 자동 완성 미리보기도 같은 KaTeX와 노트 CSS로 숨은 페이지에서 그린다(`NoteMath`). 색은 `theme.swift`의 값을, 크기와 간격은 `app/design/tokens/note-look.swift`의 값을 `NoteStyle`이 CSS 변수로 넘기므로 CSS에 색과 크기를 적지 않는다. `sources/web/src/`를 고치면 `mise run build-web`을 돌린다.
 

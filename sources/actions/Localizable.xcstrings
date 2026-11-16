@@ -254,6 +254,28 @@
         }
       }
     },
+    "error.lms.no-course": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: 과목을 주거나, 이 항목의 강의실에 받을 과목을 먼저 기억해 두세요"
+          }
+        }
+      }
+    },
+    "error.lms.room-choice": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목, --none, --forget 중 하나만 주세요"
+          }
+        }
+      }
+    },
     "error.material.changed": {
       "extractionState": "manual",
       "localizations": {

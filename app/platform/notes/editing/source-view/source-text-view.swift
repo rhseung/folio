@@ -406,9 +406,22 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
 
     @objc func showInputGuide(_ sender: Any?) { openGuide() }
 
+    @objc func toggleBold(_ sender: Any?) { toggle(.bold) }
+    @objc func toggleItalic(_ sender: Any?) { toggle(.italic) }
+
+    private func toggle(_ mark: InlineMark) {
+        guard !hasMarkedText() else { return }
+        apply(SourceEditing.toggle(mark, in: string as NSString, selection: selectedRange()))
+    }
+
     // MARK: Tables
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        // 한국어 입력 소스에서는 ⌘B가 메뉴의 키와 맞지 않을 수 있어 키 코드로도 받는다.
+        if window?.firstResponder === self, let id = NoteFormatKeys.id(of: event) {
+            if id == .noteBold { toggleBold(nil) } else { toggleItalic(nil) }
+            return true
+        }
         if window?.firstResponder === self, !hasMarkedText(), let shortcut = TableCommands.shortcut(of: event),
             let command = TableCommands.command(for: shortcut),
             let table = TableEditing.table(in: string as NSString, selection: selectedRange())
@@ -999,7 +1012,17 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
 
     @objc func showInputGuide(_ sender: Any?) { openGuide() }
 
+    // UITextView의 굵게·기울임(⌘B, ⌘I, 편집 메뉴의 서식)은 글에 속성을 입히므로, 노트에서는 마크다운 표시를 쓴다.
+    override func toggleBoldface(_ sender: Any?) { toggle(.bold) }
+    override func toggleItalics(_ sender: Any?) { toggle(.italic) }
+
+    private func toggle(_ mark: InlineMark) {
+        guard markedTextRange == nil else { return }
+        apply(SourceEditing.toggle(mark, in: textStorage.string as NSString, selection: selectedRange))
+    }
+
     override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
+        if action == #selector(toggleBoldface(_:)) || action == #selector(toggleItalics(_:)) { return isEditable }
         guard action == #selector(runTableCommand(_:)) else { return super.canPerformAction(action, withSender: sender) }
         return markedTextRange == nil && tableEdit(sender) != nil
     }

@@ -366,6 +366,7 @@ extension SettingItem {
     public static let sidebar = SettingItem("sidebar", .custom, encoded(SidebarOrder()), place: .outside, name: .settingItemSidebar)
     public static let lmsKnown = SettingItem("lms.known", .custom, [], place: .outside, name: .settingItemLmsKnown)
     public static let lmsHandled = SettingItem("lms.handled", .custom, [], place: .outside, name: .settingItemLmsHandled)
+    public static let lmsRooms = SettingItem("lms.rooms", .custom, [:], place: .outside, name: .settingItemLmsRooms)
     public static let lmsSyncMinutes = SettingItem(
         "lms.syncMinutes", .number(5...1440), 30, place: .row(.lmsSync), name: .settingItemLmsSyncMinutes, unit: .minutes, step: 5)
     public static let assignmentKinds = SettingItem(
@@ -392,6 +393,6 @@ extension SettingItem {
         classMinutes, classStartMinute, sessionStartMinute,
         classRecording, classRecordingOffset, classStopsRecording, classStopAfter, classRoughNote, classRoughNotePlace,
         classLecture, classLecturePlace, classOpenIn, classAllLectures, classResumesLecture, classScreen, classCourseOff,
-        sidebar, lmsKnown, lmsHandled, lmsSyncMinutes, assignmentKinds,
+        sidebar, lmsKnown, lmsHandled, lmsRooms, lmsSyncMinutes, assignmentKinds,
     ]
 }

@@ -154,7 +154,7 @@ struct TextFileView: View {
                     #if os(macOS)
                 .help(Text(.textFileBuildHelp))
                     #endif
-                    .keyboardShortcut("b")
+                    .shortcut(.texBuild)
                     .disabled(!model.canBuild)
                 if model.building {
                     ProgressView().controlSize(.small).padding(.horizontal, Theme.Space.xs)

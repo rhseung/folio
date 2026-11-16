@@ -30,6 +30,9 @@ final class CourseModel {
     }
     var accent: CourseAccent { workspace.accent(courseId) }
 
+    // 열 끝의 LMS 강의실 행이다. 받을 때 이 과목을 고른 강의실만 보인다.
+    var lmsRooms: [(classroom: LMSClassroom, waiting: Int)] { workspace.lmsRooms(of: courseId) }
+
     func show(note id: UUID) {
         openNote = id
         section = .notes

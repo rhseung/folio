@@ -308,7 +308,9 @@ import WebKit
         // 위젯의 frame은 자기 페이지나 빈 페이지에만 머문다. 다른 주소로 가면 그 주소에 데이터를 실어 내보낼 수 있다.
         guard frame.isMainFrame else { return WidgetFiles.allows(url) ? .allow : .cancel }
         if action.navigationType == .linkActivated {
-            if (action.sourceFrame as WKFrameInfo?)?.isMainFrame ?? true { await open(url) }
+            if (action.sourceFrame as WKFrameInfo?)?.isMainFrame ?? true {
+                await open(url, modifiers: KeyCombo.Modifiers(action.modifierFlags))
+            }
             return .cancel
         }
         return url == Self.shellURL || url.absoluteString == "about:blank" ? .allow : .cancel
@@ -318,13 +320,13 @@ import WebKit
         NoteLinks.open(href, base: nil, in: placement, openNote: openNote, openLink: openLink)
     }
 
-    private func open(_ url: URL) async {
+    private func open(_ url: URL, modifiers: KeyCombo.Modifiers) async {
         if url.scheme == LocalFileScheme.scheme, let fragment = url.fragment, NoteFormat(path: url.path) != .markdown {
             _ = try? await view.callAsyncJavaScript(
                 "document.getElementById(id)?.scrollIntoView()", arguments: ["id": fragment.removingPercentEncoding ?? fragment],
                 contentWorld: .defaultClient)
             return
         }
-        NoteLinks.open(url.absoluteString, base: nil, openNote: openNote, openLink: openLink)
+        LinkClicks.with(modifiers) { NoteLinks.open(url.absoluteString, base: nil, openNote: openNote, openLink: openLink) }
     }
 }
