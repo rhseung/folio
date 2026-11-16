@@ -162,6 +162,25 @@ struct NoteAssistTests {
         #expect(!code.hintShown)
     }
 
+    @Test func tabTakesTheCaseThatWasTyped() {
+        for (typed, taken) in [("Delta", "\\Delta"), ("delta", "\\delta"), ("in", "\\in"), ("D", "\\D")] {
+            let (view, _) = Self.editor("")
+            Self.type(view, "$\\" + typed)
+            #expect(view.completion.current?.title.hasPrefix(taken) == true)
+            Self.tab(view)
+            #expect(Self.caretShown(view).hasPrefix("$" + taken))
+        }
+    }
+
+    @Test func aPickMovedByHandSurvivesTyping() throws {
+        let (view, _) = Self.editor("")
+        Self.type(view, "$\\de")
+        view.doCommand(by: #selector(NSResponder.moveDown(_:)))
+        let moved = try #require(view.completion.current)
+        Self.type(view, String(moved.title.dropFirst(3).prefix(1)))
+        #expect(view.completion.current?.id == moved.id)
+    }
+
     @Test func arrowsMoveThePickAndAClickTakesOne() {
         let (view, _) = Self.editor("")
         Self.type(view, "/")

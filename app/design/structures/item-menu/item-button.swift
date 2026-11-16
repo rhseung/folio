@@ -9,7 +9,7 @@ struct ItemButton<Source: ItemMenuSource>: View {
         if source.commands.contains(command) {
             let row = source.row(command)
             switch row.kind {
-            case .action(let action):
+            case .action(let action), .open(_, _, let action):
                 Button(row.title, systemImage: row.symbol, role: row.role) { action() }.disabled(row.disabled)
             case .check(let on, let set):
                 Button(row.title) { set(!on) }.disabled(row.disabled)

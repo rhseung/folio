@@ -1,9 +1,13 @@
 import Foundation
 
 public enum LinkCandidates {
-    public static func order(_ hits: [SearchHit], course: UUID, excluding own: UUID? = nil) -> [SearchHit] {
+    // 검색은 대소문자를 가리지 않아 `Matrix`를 쳐도 `matrix` 노트가 앞에 설 수 있다. 메뉴는 맨 위 후보를 넣으므로
+    // 친 글자와 대소문자까지 같은 제목을 그 과목 묶음의 맨 앞에 세운다.
+    public static func order(_ hits: [SearchHit], typed: String = "", course: UUID, excluding own: UUID? = nil) -> [SearchHit] {
         let kept = hits.filter { $0.item.id != own }
-        return kept.filter { $0.item.courseId == course } + kept.filter { $0.item.courseId != course }
+        let exact = { (hit: SearchHit) in !typed.isEmpty && hit.item.title == typed }
+        let group = { (hits: [SearchHit]) in hits.filter(exact) + hits.filter { !exact($0) } }
+        return group(kept.filter { $0.item.courseId == course }) + group(kept.filter { $0.item.courseId != course })
     }
 
     public static func pages(count: Int?, last: Int?, typed: String, limit: Int = 100) -> [Int] {

@@ -15,6 +15,11 @@ struct MenuPicture: View {
                     Theme.Palette.lineSoft.frame(height: 1).padding(.vertical, Theme.Space.xs).padding(.horizontal, Theme.Space.s)
                 }
                 line(row)
+                if case .open(.some, _, _) = row.kind {
+                    ForEach([LinkPlacement.tab, .beside], id: \.self) { placement in
+                        line(MenuRow(id: placement, group: row.group, title: placement.title, symbol: placement.symbol, kind: .action {}))
+                    }
+                }
             }
         }
         .padding(.vertical, Theme.Space.xs)
@@ -30,7 +35,7 @@ struct MenuPicture: View {
         switch row.kind {
         case .check(let on, _): (checked, submenu) = (on, false)
         case .submenu, .share: (checked, submenu) = (false, true)
-        case .action: (checked, submenu) = (false, false)
+        case .action, .open: (checked, submenu) = (false, false)
         }
         return HStack(spacing: Theme.Space.s) {
             Image(systemName: "checkmark").font(Theme.Glyph.small).opacity(checked ? 1 : 0).frame(width: 12)

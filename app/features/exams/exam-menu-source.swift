@@ -22,7 +22,7 @@ struct ExamMenuSource: ItemMenuSource {
     func row(_ command: ExamMenuCommand) -> MenuRow {
         switch command {
         case .open:
-            .open(command) { openLink(link, course: courseId) }
+            .open(command, link: link, course: courseId) { openLink(link, course: courseId) }
         case .summary:
             MenuRow(command, hasSummary ? .examsSummaryOpen : .examsSummaryMake, "doc.text", .action(openSummary))
         case .addFiles:

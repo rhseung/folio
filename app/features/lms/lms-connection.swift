@@ -10,6 +10,8 @@ final class LMSConnection {
         case idle
         case syncing
         case needsLogin
+        // 마지막으로 읽은 내용(기기 캐시)을 그대로 보이고, 다음 주기에 다시 읽는다.
+        case offline
         case failed(String)
     }
 
@@ -20,18 +22,24 @@ final class LMSConnection {
     @ObservationIgnored private var source: any LMSSource
     @ObservationIgnored private let logins: any LMSLogins
     @ObservationIgnored private let live: Bool
+    @ObservationIgnored private let cache: LMSCache?
 
-    init(source: (any LMSSource)? = nil, logins: (any LMSLogins)? = nil) {
-        // 테스트나 렌더는 직접 넘기지 않는 한 LMS와 키체인에 닿지 않는다.
-        let isolated = LocalFolders.isIsolated()
+    init(source: (any LMSSource)? = nil, logins: (any LMSLogins)? = nil, cache: LMSCache? = nil) {
+        // 테스트, 렌더, 가짜 폴더로 돌린 앱(`FOLIO_GIST`, 창 스냅숏)은 직접 넘기지 않는 한 LMS, 키체인, 기기 캐시에 닿지
+        // 않는다. 키체인을 읽으면 허락 창이 떠서 창 스냅숏이 멈춘다.
+        let isolated = !Workspace.remembersFolders
         self.logins = logins ?? (isolated ? MemoryLogins() : KeychainLogins())
         self.source = source ?? (isolated ? FixedLMS(snapshot: LMSSnapshot(at: .distantPast)) : Self.live(self.logins))
         live = source == nil && !isolated
+        self.cache = cache ?? (live ? LMSCache(file: Self.cacheFile) : nil)
         let login = self.logins.read()
         username = login?.username
         status = login == nil ? .off : .idle
         if source != nil, let fixed = self.source as? FixedLMS, login != nil { snapshot = fixed.snapshot }
+        if snapshot == nil, let login { snapshot = self.cache?.read(account: login.username) }
     }
+
+    static var cacheFile: URL { URL.cachesDirectory.appending(path: "Folio/lms-snapshot.json") }
 
     var isConnected: Bool { username != nil }
 
@@ -42,6 +50,7 @@ final class LMSConnection {
         try logins.save(login)
         // LMS가 거절하면 그 세션은 다시 쓸 수 없으므로, 이전 세션 대신 새 세션을 만든다.
         if live { source = Self.live(logins) }
+        if login.username != username { snapshot = cache?.read(account: login.username) }
         self.username = login.username
         status = .idle
     }
@@ -49,6 +58,7 @@ final class LMSConnection {
     func disconnect() {
         logins.remove()
         if live { source = Self.live(logins) }
+        cache?.remove()
         username = nil
         snapshot = nil
         status = .off
@@ -61,6 +71,7 @@ final class LMSConnection {
             let read = try await source.read(attachments: attachments)
             snapshot = read
             status = .idle
+            if let username { cache?.write(read, account: username) }
             return read
         } catch {
             status = Self.status(after: error)
@@ -93,6 +104,7 @@ final class LMSConnection {
     static func status(after error: any Error) -> Status {
         switch error {
         case LMSError.needsLogin, LMSError.refused: .needsLogin
+        case _ where LMSOffline.contains(error): .offline
         default: .failed(error.localizedDescription)
         }
     }

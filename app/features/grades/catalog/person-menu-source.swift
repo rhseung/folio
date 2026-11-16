@@ -14,7 +14,7 @@ struct PersonMenuSource: ItemMenuSource {
 
     func row(_ command: PersonMenuCommand) -> MenuRow {
         switch command {
-        case .open: .open(command) { openLink(AppLink(.person, person.id)) }
+        case .open: .open(command, link: AppLink(.person, person.id)) { openLink(AppLink(.person, person.id)) }
         case .mail: MenuRow(command, .peopleMail, "envelope", .action { if let mail { openURL(mail) } })
         case .share: .share(command, AppLink(.person, person.id), course: nil)
         case .remove: .remove(command, remove)

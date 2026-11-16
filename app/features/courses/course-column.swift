@@ -5,6 +5,7 @@ import SwiftUI
 struct CourseColumn: View {
     @Environment(\.accent) private var accent
     @Environment(\.closeColumn) private var closeColumn
+    @Environment(\.openLink) private var openLink
     @Bindable var model: CourseModel
     let course: LoadedCourse
 
@@ -89,6 +90,27 @@ struct CourseColumn: View {
                             }
                             .buttonStyle(.pointing(.plain))
                             .contextMenu { SessionMenu(courseId: course.id, sessionId: session.id, openNote: model.show(note:)) }
+                        }
+                    }
+                }
+
+                let rooms = model.lmsRooms
+                if !rooms.isEmpty {
+                    VStack(alignment: .leading, spacing: Theme.Space.xxs) {
+                        Caption(String(localized: .rootNavLms)).padding(.horizontal, Theme.Space.s).padding(.bottom, Theme.Space.tight)
+                        ForEach(rooms, id: \.classroom.id) { room in
+                            Button {
+                                openLink(.lms(.classroom(room.classroom.id)))
+                                closeColumn()
+                            } label: {
+                                ColumnRow(title: room.classroom.title, symbol: "building.columns", chosen: false) {
+                                    if room.waiting > 0 {
+                                        Text("\(room.waiting)").font(Theme.Typeface.caption).monospacedDigit()
+                                            .foregroundStyle(Theme.Palette.textTertiary)
+                                    }
+                                }
+                            }
+                            .buttonStyle(.pointing(.plain))
                         }
                     }
                 }

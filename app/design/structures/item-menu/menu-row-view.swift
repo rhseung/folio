@@ -3,6 +3,8 @@ import SwiftUI
 
 struct MenuRowView: View {
     let row: MenuRow
+    @Environment(\.openLink) private var openLink
+    @Environment(\.supportsMultipleWindows) private var multipleWindows
 
     var body: some View {
         switch row.kind {
@@ -27,6 +29,15 @@ struct MenuRowView: View {
             .disabled(row.disabled)
         case .share(let link, let course):
             ShareMenu(link: link, course: course)
+        case .open(let link, let course, let action):
+            Button(row.title, systemImage: row.symbol, role: row.role) { action() }.disabled(row.disabled)
+            if let link {
+                ForEach(LinkMenu.placements(multipleWindows: multipleWindows).filter { $0 == .tab || $0 == .beside }, id: \.self) {
+                    placement in
+                    Button(placement.title, systemImage: placement.symbol) { openLink(link, in: placement, course: course) }
+                        .disabled(row.disabled)
+                }
+            }
         }
     }
 }
