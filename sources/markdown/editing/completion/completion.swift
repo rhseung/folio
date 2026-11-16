@@ -123,11 +123,12 @@ public enum Completion {
         return make(.heading, target: target, typed: after)
     }
 
+    // 거르기는 대소문자를 가리지 않아 `Delta`를 쳐도 `delta`가 남는다. 메뉴는 맨 위 후보를 넣으므로, 같은 등급 안에서는
+    // 친 글자와 대소문자까지 같은 후보를 앞에 세워야 `Delta`를 치고 Tab을 누를 때 `\delta`가 들어가지 않는다.
     public static func filter(_ items: [CompletionItem], _ typed: String, prefixOnly: Bool = false) -> [CompletionItem] {
-        let q = typed.lowercased()
-        guard !q.isEmpty else { return items }
-        func score(_ item: CompletionItem) -> Int? {
-            let title = item.title.lowercased(), keys = item.keywords.map { $0.lowercased() }
+        guard !typed.isEmpty else { return items }
+        func score(_ item: CompletionItem, _ fold: (String) -> String) -> Int? {
+            let q = fold(typed), title = fold(item.title), keys = item.keywords.map(fold)
             let bare = title.hasPrefix("\\") ? String(title.dropFirst()) : title
             if bare.hasPrefix(q) { return bare == q ? 0 : 1 }
             if keys.contains(where: { $0.hasPrefix(q) }) { return 2 }
@@ -136,8 +137,11 @@ public enum Completion {
             if keys.contains(where: { $0.contains(q) }) { return 4 }
             return nil
         }
-        return items.enumerated().compactMap { i, item in score(item).map { (item, $0, i) } }
-            .sorted { ($0.1, $0.2) < ($1.1, $1.2) }
+        return items.enumerated()
+            .compactMap { i, item in
+                score(item, { $0.lowercased() }).map { rank in (item, rank, score(item, { $0 }) == rank ? 0 : 1, i) }
+            }
+            .sorted { ($0.1, $0.2, $0.3) < ($1.1, $1.2, $1.3) }
             .map(\.0)
     }
 

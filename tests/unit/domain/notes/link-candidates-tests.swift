@@ -20,6 +20,19 @@ struct LinkCandidatesTests {
         #expect(ordered.map(\.item.title) == ["매칭", "중간고사", "매칭 정리", "05_Matchings.pdf"])
     }
 
+    @Test func aTitleTypedInTheSameCaseComesFirstInItsCourse() {
+        let hits = [
+            hit(.note, there, "Matrix"), hit(.note, here, "matrix"), hit(.note, here, "행렬"), hit(.note, here, "Matrix"),
+            hit(.note, there, "matrix"),
+        ]
+        #expect(
+            LinkCandidates.order(hits, typed: "Matrix", course: here).map(\.item.title) == ["Matrix", "matrix", "행렬", "Matrix", "matrix"])
+        #expect(
+            LinkCandidates.order(hits, typed: "matrix", course: here).map(\.item.title) == ["matrix", "행렬", "Matrix", "matrix", "Matrix"])
+        #expect(
+            LinkCandidates.order(hits, typed: "MATRIX", course: here).map(\.item.title) == ["matrix", "행렬", "Matrix", "Matrix", "matrix"])
+    }
+
     @Test func theLastPageSeenComesFirst() {
         #expect(LinkCandidates.pages(count: 5, last: 3, typed: "") == [3, 1, 2, 4, 5])
         #expect(LinkCandidates.pages(count: 12, last: 3, typed: "1") == [1, 10, 11, 12])
