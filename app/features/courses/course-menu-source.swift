@@ -33,7 +33,7 @@ struct CourseMenuSource: ItemMenuSource {
     func row(_ command: CourseMenuCommand) -> MenuRow {
         switch command {
         case .open:
-            .open(command) { openLink(.course(courseId), course: courseId) }
+            .open(command, link: .course(courseId), course: courseId) { openLink(.course(courseId), course: courseId) }
         case .record:
             MenuRow(
                 command, .sessionsRecord, "record.circle", disabled: workspace.recorder.isActive,

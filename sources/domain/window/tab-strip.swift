@@ -3,6 +3,9 @@ import Foundation
 public struct TabStrip<ID: Hashable & Sendable>: Equatable, Sendable {
     public private(set) var tabs: [ID]
     public private(set) var selected: ID
+    // 뒤에서 연 탭이 이어 설 자리다. 사파리처럼 같은 탭에서 ⌘-클릭으로 연 탭들은 연 순서대로 그 탭 뒤에 줄 선다.
+    private var behindFrom: ID?
+    private var behindLast: ID?
 
     public init(_ first: ID) {
         tabs = [first]
@@ -21,6 +24,14 @@ public struct TabStrip<ID: Hashable & Sendable>: Equatable, Sendable {
         guard !tabs.contains(id) else { return select(id) }
         tabs.insert(id, at: afterSelected ? selectedIndex + 1 : tabs.count)
         selected = id
+    }
+
+    public mutating func openBehind(_ id: ID) {
+        guard !tabs.contains(id) else { return }
+        let after = behindFrom == selected ? behindLast.flatMap { tabs.firstIndex(of: $0) } : nil
+        tabs.insert(id, at: (after ?? selectedIndex) + 1)
+        behindFrom = selected
+        behindLast = id
     }
 
     public mutating func select(_ id: ID) {

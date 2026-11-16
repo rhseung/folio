@@ -24,7 +24,7 @@ struct UnitMenuSource: ItemMenuSource {
     func row(_ command: UnitMenuCommand) -> MenuRow {
         switch command {
         case .open:
-            .open(command) { openLink(link, course: courseId) }
+            .open(command, link: link, course: courseId) { openLink(link, course: courseId) }
         case .review:
             MenuRow(command, .unitsStartReview, "play", .action { sheets.present(.review(course: courseId, unit: unit.id)) })
         case .skipToday:

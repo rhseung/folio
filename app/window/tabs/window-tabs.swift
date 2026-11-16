@@ -64,6 +64,12 @@ final class WindowTabs {
         strip.open(id, afterSelected: fromLink)
     }
 
+    func openBehind(_ panes: TabPanes) {
+        let id = UUID()
+        tabs[id] = panes
+        strip.openBehind(id)
+    }
+
     func select(_ id: UUID) { strip.select(id) }
     func select(number n: Int) { strip.select(number: n) }
     func selectNext() { strip.selectNext() }

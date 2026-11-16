@@ -106,6 +106,10 @@ struct TabBar: View {
                 .offset(x: dragged?.id == id ? dragOffset : 0)
                 .zIndex(dragged?.id == id ? 1 : 0)
                 .simultaneousGesture(drag(id, row: row))
+                // iPad의 창은 위쪽 가운데 손잡이로만 끌려 탭과 겹치지 않는다.
+                #if os(macOS)
+                .holdsTitleDrag(id)
+                #endif
                 .contextMenu { menu(id) }
             }
             if !hidden.isEmpty { more(hidden) }

@@ -101,8 +101,8 @@ struct LMSModelTests {
         let workspace = try workspace(Self.snapshot)
         await workspace.syncLMS()
         let model = LMSModel(workspace: workspace)
-        guard case .all(let groups) = model.shown(in: model.board) else { Issue.record("not everything"); return }
-        #expect(groups.map(\.group) == [.new])
+        guard case .all(let sections) = model.shown(in: model.board) else { Issue.record("not everything"); return }
+        #expect(sections.map(\.id) == ["new", "deadlines"])
         model.follow(.lms(.classroom(1)))
         guard case .room(let room) = model.shown(in: model.board) else { Issue.record("not the room"); return }
         #expect(model.title(of: .room(room)) == "그래프 이론[01]")
@@ -110,5 +110,59 @@ struct LMSModelTests {
         guard case .gone = model.shown(in: model.board) else { Issue.record("a room that is not there"); return }
         model.follow(.place(.today))
         guard case .gone = model.shown(in: model.board) else { Issue.record("another place changed the row"); return }
+    }
+
+    @Test func receivingRemembersTheRoomsCourseForTheNextTime() async throws {
+        let workspace = try workspace { now in
+            var s = Self.snapshot(now)
+            s.assignments.append(LMSAssignment(id: 101, classroom: 1, title: "HW6", due: now.addingTimeInterval(9 * 86_400)))
+            return s
+        }
+        await workspace.syncLMS()
+        let model = LMSModel(workspace: workspace)
+        #expect(model.remembered.isEmpty && model.remembered(1) == nil)
+        await model.add([proposals(model)[0]], into: graphTheory)
+        #expect(workspace.settings.lms.course(of: 1) == graphTheory)
+        #expect(model.remembered(1)?.id == graphTheory)
+        #expect(workspace.lmsRooms(of: graphTheory).map(\.classroom.id) == [1])
+        #expect(model.memoryLabel(try #require(model.board.room(1))) == workspace.course(graphTheory)?.title)
+
+        #expect(model.remembered.map(\.id) == ["lms/assignment:101"])
+        await model.addRemembered()
+        #expect(workspace.course(graphTheory)?.file.assignments.contains { $0.lmsId == 101 } == true)
+
+        model.rememberNoCourse(1)
+        #expect(workspace.settings.lms.room(1) == LMSRoom() && model.remembered(1) == nil)
+        model.forget(1)
+        #expect(workspace.settings.lms.room(1) == nil)
+    }
+
+    @Test func whatDiffersFromTheLMSIsFixedOneByOne() async throws {
+        let workspace = try workspace(Self.snapshot)
+        await workspace.syncLMS()
+        let model = LMSModel(workspace: workspace)
+        await model.add([proposals(model)[0]], into: graphTheory)
+        #expect(proposals(model).isEmpty)
+
+        // 그 뒤 LMS에서 과제를 내고 마감이 미뤄졌다.
+        let later = workspace.now.addingTimeInterval(3 * 86_400)
+        var changed = Self.snapshot(workspace.now)
+        changed.assignments = [LMSAssignment(id: 100, classroom: 1, title: "Homework Set #5", due: later, submitted: true)]
+        workspace.lms = LMSConnection(
+            source: FixedLMS(snapshot: changed), logins: MemoryLogins(LMSCredentials(username: "20260000", password: "x")))
+        await workspace.syncLMS()
+        let fixes = proposals(model)
+        #expect(fixes.map(\.kind) == [.lmsSubmitted, .lmsDue])
+        #expect(fixes.map { model.fixLabel($0) } == ["제출함으로", "반영"])
+        guard case .all(let sections) = model.shown(in: model.board) else { Issue.record("not everything"); return }
+        #expect(sections.first?.id == "differs")
+
+        await model.fix(fixes[0])
+        let assignment = { workspace.course(graphTheory)?.file.assignments.first { $0.lmsId == 100 } }
+        #expect(assignment()?.status == .submitted)
+        #expect(proposals(model).map(\.kind) == [.lmsDue])
+        model.dismiss(proposals(model))
+        #expect(proposals(model).isEmpty)
+        #expect(assignment()?.due != later)
     }
 }

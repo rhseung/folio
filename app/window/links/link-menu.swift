@@ -34,6 +34,6 @@ struct LinkMenu: View {
     }
 
     static func placements(multipleWindows: Bool) -> [LinkPlacement] {
-        multipleWindows ? LinkPlacement.allCases : [.here, .beside]
+        multipleWindows ? LinkPlacement.menu : [.here, .beside]
     }
 }

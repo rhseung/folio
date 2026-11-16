@@ -521,6 +521,9 @@ final class ClaudeModel {
                 ? String(localized: .claudeErrorAuth)
                 : status == 0
                     ? String(localized: .claudeErrorFailedBody(String(body.prefix(200)))) : String(localized: .claudeErrorHttp(status))
+        case .cli(let exit, ""): String(localized: .claudeErrorCliExit(Int(exit)))
+        case .cli(_, let message): String(localized: .claudeErrorCli(String(message.prefix(200))))
+        case .signedOut: String(localized: .claudeErrorSignedOut)
         case .refused: String(localized: .claudeErrorRefused)
         case .truncated: String(localized: .claudeErrorTruncated)
         case .invalidOutput, nil: String(localized: .claudeErrorFailedBody(error.localizedDescription))
