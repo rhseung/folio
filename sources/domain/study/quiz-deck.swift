@@ -1,4 +1,5 @@
 import Algorithms
+import FolioCore
 import Foundation
 
 public typealias AttemptHistory = [(day: LocalDate, verdict: Verdict)]

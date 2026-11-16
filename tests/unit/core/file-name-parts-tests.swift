@@ -1,6 +1,6 @@
 import Testing
 
-@testable import FolioDomain
+@testable import FolioCore
 
 struct FileNamePartsTests {
     static func parts(_ name: String, isFolder: Bool = false) -> String {

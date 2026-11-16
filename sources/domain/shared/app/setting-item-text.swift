@@ -1,3 +1,4 @@
+import FolioCore
 import Foundation
 
 // `settings show`와 MCP 입력 형식이 항목의 값과 모양을 같은 말로 적는다.

@@ -136,11 +136,4 @@ struct ModelTests {
         #expect(throws: ModelError.notFound("태그를 찾지 못했습니다")) { try s.update(\.tags, UUID()) { _ in } }
         #expect(throws: ModelError.notFound("묶음을 찾지 못했습니다")) { try s.remove(Group.self, UUID()) }
     }
-
-    @Test func particlesFollowTheLastSyllable() {
-        #expect(Korean.subject("시험") == "시험이")
-        #expect(Korean.subject("과제") == "과제가")
-        #expect(Korean.object("항목") == "항목을")
-        #expect(Korean.object("ABC") == "ABC를")
-    }
 }

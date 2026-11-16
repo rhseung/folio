@@ -1,3 +1,4 @@
+import FolioCore
 import FolioDomain
 import FolioFixtures
 import FolioStorage

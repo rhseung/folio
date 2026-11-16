@@ -33,8 +33,8 @@ public struct ActionMacro: MemberMacro, ExtensionMacro {
         guard wholeFiles.count <= 1 else { throw MacroError("@WholeFile은 액션에 하나만 둡니다") }
         let current: [DeclSyntax] = wholeFiles.map { f in
             """
-            public static func currentFile(_ ctx: FolioActions.ActionContext) throws -> (field: String, value: FolioDomain.JSONValue)? {
-            (\(raw: f.quoted(f.name)), try FolioDomain.JSONValue(\(raw: f.base).current(in: ctx)))
+            public static func currentFile(_ ctx: FolioActions.ActionContext) throws -> (field: String, value: FolioCore.JSONValue)? {
+            (\(raw: f.quoted(f.name)), try FolioCore.JSONValue(\(raw: f.base).current(in: ctx)))
             }
             """
         }

@@ -1,3 +1,4 @@
+import FolioCore
 import Foundation
 
 public struct PlanCheckEvent: LogEvent, Equatable {

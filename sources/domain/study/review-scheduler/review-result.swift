@@ -1,3 +1,4 @@
+import FolioCore
 import Foundation
 
 public enum ReviewResult: String, Codable, Sendable, CaseIterable {

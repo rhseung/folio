@@ -1,3 +1,4 @@
+import FolioCore
 import Foundation
 
 public enum MaterialStatus: String, Codable, Sendable, CaseIterable {

@@ -1,3 +1,4 @@
+import FolioCore
 import Foundation
 
 // 새 항목을 만들 때 채우는 시각과 길이다. 시각은 자정부터 센 분이다.

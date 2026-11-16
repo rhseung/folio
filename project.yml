@@ -36,6 +36,8 @@ targets:
         buildPhase: resources
     dependencies:
       - package: Folio
+        product: FolioCore
+      - package: Folio
         product: FolioDomain
       - package: Folio
         product: FolioStorage

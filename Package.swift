@@ -2,11 +2,12 @@
 import CompilerPluginSupport
 import PackageDescription
 
-// Layers: CLI, Gen -> Actions -> Storage -> Domain, AI -> Domain (never writes files; results go back to the caller as
-// proposals), App -> LMS -> Domain (reads the school LMS; no writes), Actions -> Macros (compile time only), CLI -> Index ->
-// Storage, Storage and Actions -> Markdown (note frontmatter), and Markdown depends on no other Folio module. Domain must stay
-// free of file I/O and UI (see AGENTS.md "레이어"). Lint reads the codebase, and Dev (version and release notes) reads git and GitHub;
-// neither is linked into anything else.
+// Layers: CLI, Gen -> Actions -> Storage -> Domain -> Core (base types without school words: dates, JSON, IDs, diffs),
+// AI -> Domain (never writes files; results go back to the caller as proposals), App -> LMS -> Domain (reads the school LMS;
+// no writes), Actions -> Macros (compile time only), CLI -> Index -> Storage, Storage and Actions -> Markdown (note
+// frontmatter), and Markdown depends on no other Folio module. Core and Domain must stay free of file I/O and UI (see
+// AGENTS.md "레이어"). Lint reads the codebase, and Dev (version and release notes) reads git and GitHub; neither is linked
+// into anything else.
 let package = Package(
     name: "Folio",
     // UI strings live in each target's Localizable.xcstrings as keys; the catalog generates `.key` symbols.
@@ -14,6 +15,7 @@ let package = Package(
     // Keep in sync with deploymentTarget in project.yml.
     platforms: [.macOS(.v26), .iOS(.v26)],
     products: [
+        .library(name: "FolioCore", targets: ["FolioCore"]),
         .library(name: "FolioDomain", targets: ["FolioDomain"]),
         .library(name: "FolioStorage", targets: ["FolioStorage"]),
         .library(name: "FolioActions", targets: ["FolioActions"]),
@@ -41,7 +43,8 @@ let package = Package(
         .package(url: "https://github.com/swiftlang/swift-syntax", from: "604.0.0"),
     ],
     targets: [
-        .target(name: "FolioDomain", dependencies: [.product(name: "Algorithms", package: "swift-algorithms")], path: "sources/domain", resources: [.process("Localizable.xcstrings")]),
+        .target(name: "FolioCore", path: "sources/core"),
+        .target(name: "FolioDomain", dependencies: ["FolioCore", .product(name: "Algorithms", package: "swift-algorithms")], path: "sources/domain", resources: [.process("Localizable.xcstrings")]),
         .target(name: "FolioMarkdown", dependencies: [.product(name: "Markdown", package: "swift-markdown")], path: "sources/markdown"),
         // Tectonic, the TeX engine, as a static library for the iPad and the Mac (#41). Built in CI from sources/tectonic and
         // fetched by `mise run tectonic`, checked by sources/tectonic/pin.json; a binary target's path must be in the package.
@@ -90,6 +93,7 @@ let package = Package(
             .product(name: "SwiftSyntax", package: "swift-syntax"), .product(name: "SwiftParser", package: "swift-syntax"),
         ], path: "sources/dev"),
         // One test target per module, so a module's tests build only what that module needs.
+        .testTarget(name: "FolioCoreTests", dependencies: ["FolioCore", .product(name: "PropertyBased", package: "swift-property-based")], path: "tests/unit/core"),
         .testTarget(name: "FolioDomainTests", dependencies: ["FolioDomain", .product(name: "PropertyBased", package: "swift-property-based")], path: "tests/unit/domain"),
         .testTarget(name: "FolioMarkdownTests", dependencies: ["FolioMarkdown", .product(name: "PropertyBased", package: "swift-property-based")], path: "tests/unit/markdown"),
         .testTarget(name: "FolioStorageTests", dependencies: ["FolioFixtures", "FolioStorage"], path: "tests/unit/storage"),

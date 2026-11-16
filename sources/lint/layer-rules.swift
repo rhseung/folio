@@ -4,8 +4,8 @@ extension Rules {
     static var layer: Rule {
         Rule(
             name: "layer",
-            advice: "keep each layer to its job (AGENTS.md \"레이어\"): packages draw no UI, FolioDomain and FolioMarkdown don't "
-                + "touch the disk, screens reach files through FolioActions or their model's Workspace"
+            advice: "keep each layer to its job (AGENTS.md \"레이어\"): packages draw no UI, FolioCore, FolioDomain and FolioMarkdown "
+                + "don't touch the disk, screens reach files through FolioActions or their model's Workspace"
         ) { code in
             var hits: [Hit] = []
             for file in code.files(under: "sources", except: "sources/app") {
@@ -14,7 +14,7 @@ extension Rules {
                     hits.append(Hit("layer", file, file.line(of: module), "import SwiftUI"))
                 }
             }
-            for file in code.files(under: "sources/domain", "sources/markdown") {
+            for file in code.files(under: "sources/core", "sources/domain", "sources/markdown") {
                 hits += diskAccess(in: file)
             }
             for file in code.files(under: "sources/app/features") where !isDebugFile(file.path) {
