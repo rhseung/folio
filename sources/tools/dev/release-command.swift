@@ -4,19 +4,27 @@ import Foundation
 
 struct ReleaseCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "release", abstract: "Decide, tag and publish releases.", subcommands: [Next.self, Tag.self, Past.self])
+        commandName: "release", abstract: "Decide, tag and publish releases.", subcommands: [Plan.self, Tag.self, Past.self])
 
-    struct Next: ParsableCommand {
+    struct Plan: ParsableCommand {
         static let configuration = CommandConfiguration(
-            abstract: "Print the next version if the PRs merged since the latest tag have patch notes; print nothing otherwise.")
+            abstract:
+                "Print the releases to build at a commit as a GitHub Actions matrix: tags not yet published, then the next version if the PRs since the latest tag have patch notes."
+        )
 
         @Option(help: "The commit to release.")
         var at = "HEAD"
 
         func run() throws {
-            let latest = try ReleaseTags.latest(at: at)
-            let prs = try MergedPullRequests.between(latest.map(ReleaseTags.name), and: at)
-            if let next = ReleasePlan.next(after: latest, prs: prs) { print(next) }
+            let tags = try ReleaseTags.versions(at: at)
+            let prs = try MergedPullRequests.between(tags.max().map(ReleaseTags.name), and: at)
+            let sha = try Shell.run("git", "rev-parse", "--verify", "\(at)^{commit}")
+            let rows = ReleasePlan.releases(tags: tags, published: try ReleaseTags.published(), prs: prs).map { v in
+                // 이미 단 태그는 그 태그의 커밋을, 새 버전은 이 커밋을 빌드한다.
+                let ref = ReleaseTags.exists(v) ? ReleaseTags.name(v) : sha
+                return #"{"version":"\#(v)","ref":"\#(ref)"}"#
+            }
+            print(#"{"include":["# + rows.joined(separator: ",") + "]}")
         }
     }
 
@@ -29,9 +37,17 @@ struct ReleaseCommand: ParsableCommand {
         @Option(help: "The commit to tag.")
         var at = "HEAD"
 
+        // 다시 돌린 실행이 앞 실행이 단 태그에서 멈추지 않도록, 같은 커밋의 같은 태그는 그대로 둔다.
         func run() throws {
             guard let v = PatchNotes.Version(version) else { throw DevError("\(version) is not X.Y.Z") }
-            try ReleaseTags.create(v, at: at, push: true)
+            if ReleaseTags.exists(v) {
+                let tagged = try Shell.run("git", "rev-parse", "--verify", "\(ReleaseTags.name(v))^{commit}")
+                guard tagged == (try Shell.run("git", "rev-parse", "--verify", "\(at)^{commit}")) else {
+                    throw DevError("\(ReleaseTags.name(v)) is already on another commit")
+                }
+            } else {
+                try ReleaseTags.create(v, at: at, push: true)
+            }
             print(ReleaseTags.name(v))
         }
     }

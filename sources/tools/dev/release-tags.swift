@@ -11,6 +11,18 @@ enum ReleaseTags {
 
     static func latest(at ref: String) throws -> PatchNotes.Version? { try versions(at: ref).max() }
 
+    struct Release: Decodable {
+        var tagName: String
+        var isDraft: Bool
+    }
+
+    // 초안은 앱이 읽지 않으므로 게시하지 않은 것으로 센다.
+    static func published() throws -> Set<PatchNotes.Version> {
+        let json = try Shell.run("gh", "release", "list", "--limit", "1000", "--json", "tagName,isDraft")
+        let rows = try JSONDecoder().decode([Release].self, from: Data(json.utf8))
+        return Set(rows.filter { !$0.isDraft }.compactMap { PatchNotes.Version($0.tagName) })
+    }
+
     static func exists(_ version: PatchNotes.Version) -> Bool {
         (try? Shell.run("git", "rev-parse", "-q", "--verify", "refs/tags/\(name(version))")) != nil
     }

@@ -30,6 +30,15 @@ struct ReleasePlanTests {
         #expect(ReleasePlan.next(after: nil, prs: prs) == V(0, 1, 0))
     }
 
+    @Test func anUnpublishedTagIsReleasedBeforeTheNextVersion() {
+        let tags = [V(0, 5, 0), V(0, 5, 1), V(0, 6, 0)]
+        let published: Set = [V(0, 5, 0), V(0, 5, 1)]
+        #expect(ReleasePlan.releases(tags: tags, published: published, prs: [Self.pr(1, notes: true)]) == [V(0, 6, 0), V(0, 6, 1)])
+        #expect(ReleasePlan.releases(tags: tags, published: published, prs: [Self.pr(1, notes: false)]) == [V(0, 6, 0)])
+        #expect(ReleasePlan.releases(tags: tags, published: published.union([V(0, 6, 0)]), prs: []).isEmpty)
+        #expect(ReleasePlan.releases(tags: [], published: [], prs: [Self.pr(1, notes: true)]) == [V(0, 1, 0)])
+    }
+
     @Test func thePreviousTagIsByVersionSoTwoTagsOnACommitWork() {
         let tags = [V(0, 1, 0), V(0, 5, 4), V(0, 6, 0), V(0, 2, 0)]
         #expect(ReleasePlan.previous(before: V(0, 6, 0), among: tags) == V(0, 5, 4))

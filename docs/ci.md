@@ -10,4 +10,4 @@
 - 리뷰 승인은 `review.yml`이 정한다. 문서(`docs/`, 최상위 `*.md`, `.github/**/*.md`)만 바뀐 PR은 Actions가 승인하고, 그 밖은 리뷰 봇이 리뷰한다(판단은 `check-paths.yml`의 `code` 필터).
 - `quality.yml`은 매주와 설정을 바꾼 PR에서 `periphery`와 `analyze`를 돌려 실행 요약에 적고 실패로 치지 않는다. 이름으로만 닿는 코드가 있어 사람이 보고 지운다.
 - `accessibility.yml`은 매일 밤 main에서, 그리고 `a11y` 라벨이 붙은 PR에서 `test-a11y`를 돌린다. 룰셋의 필수 검사가 아니다. 아직 고치지 못한 결과는 `tests/e2e/app`의 `KnownFindings`에 화면, 종류, 요소로 적고 #471 체크리스트에 남긴다. 모든 결과를 통과시키는 처리기를 두지 않는다.
-- `release.yml`은 `main` push마다 macOS 러너 하나를 쓴다. `packages`가 남긴 패키지 빌드 캐시에서 `folio-dev`만 빌드해 다음 버전을 정하고, 지난 태그 뒤의 PR에 패치 노트가 없으면 앱을 빌드하지 않고 끝난다(`docs/release.md`). 태그를 단 다음 버전을 다시 계산하지 않도록 실행은 하나씩 돈다.
+- `release.yml`은 `main` push마다 macOS 러너에서 `plan` 작업 하나를 돌린다. `packages`가 남긴 패키지 빌드 캐시에서 `folio-dev`만 빌드해 게시할 버전을 고르고, 고른 버전이 없으면 앱을 빌드하지 않고 끝난다(`docs/release.md`). 태그를 단 다음 버전을 다시 계산하지 않도록 실행은 하나씩 돈다.
