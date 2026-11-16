@@ -163,8 +163,6 @@ jobs:
       # 시뮬레이터 부팅은 몇 분 걸리므로 빌드하는 동안 백그라운드에서 켠다.
       - if: env.SIMULATOR == 'true'
         name: Boot the iPad simulator while the app builds
-        env:
-          DEVELOPER_DIR: ${{ env.XCODE }}/Contents/Developer
         run: nohup mise run ipad-simulator boot > "$RUNNER_TEMP/boot.log" 2>&1 &
       - id: run
         run: mise run build-ipad-tests
