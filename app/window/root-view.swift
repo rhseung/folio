@@ -175,15 +175,7 @@ struct RootView: View {
 
     func moveToWindow(_ id: UUID) {
         guard let moved = tabs.take(id) else { return }
-        let focused = moved.focused
-        var request = WindowRequest(link: focused.current.link, course: focused.current.course, history: focused.history)
-        if moved.count > 1 {
-            request.panes = moved.navigators.map(\.history)
-            request.shares = moved.shares
-            request.focus = moved.focus
-        }
-        request.columns = moved.columns.map(\.names)
-        openWindow(id: FolioApp.mainWindow, value: request)
+        openWindow(id: FolioApp.mainWindow, value: WindowRequest(moving: moved))
     }
 
     func openFromOutside(_ link: AppLink) {
@@ -284,6 +276,10 @@ struct RootView: View {
                     WindowReader { window in
                         host.window = window
                         tabs.closeWindow = { [weak window] in window?.performClose(nil) }
+                        // SwiftUI가 새 창을 제자리에 놓은 뒤에 옮겨야 그 자리에 남는다.
+                        if let request, let frame = TabDragHub.shared.placement(for: request.id) {
+                            DispatchQueue.main.async { window.setFrame(window.constrainFrameRect(frame, to: window.screen), display: true) }
+                        }
                     }
                 }
                 .background { WindowWidth { row.windowWidth = $0 } }
@@ -317,6 +313,7 @@ struct RootView: View {
         #if DEBUG && os(macOS)
         .task {
             await TabMemoryProbe.run(tabs: tabs, workspace: workspace)
+            await TabDragProbe.run(tabs: tabs, workspace: workspace)
             await PaneSessionProbe.run(tabs: tabs, workspace: workspace, memory: paneMemory) { open($0, in: .tab) }
             if SnapshotDriver.directory != nil { workspace.gradesUnlocked = true }
             if SnapshotDriver.recording, let course = workspace.currentCourses.first, let session = course.file.sessions.first {
