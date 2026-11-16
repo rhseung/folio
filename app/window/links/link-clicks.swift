@@ -29,14 +29,7 @@ import UIKit
         default: return .here
         }
         #else
-        defer { touched = nil }
-        guard let touched, Date.now.timeIntervalSince(touched.at) < 1 else { return .here }
-        return LinkClick(touched.modifiers)
+        return LinkClick(KeyCombo.Modifiers(TouchKeys.held ?? []))
         #endif
     }
-
-    #if os(iOS)
-    // SwiftUI의 탭은 수정 키를 전하지 않으므로 창 전체에 붙인 recognizer가 터치 이벤트에서 키를 읽어 둔다.
-    static var touched: (modifiers: KeyCombo.Modifiers, at: Date)?
-    #endif
 }

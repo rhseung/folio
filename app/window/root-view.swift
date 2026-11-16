@@ -219,7 +219,7 @@ struct RootView: View {
                 }
                 .environment(\.openLink, openLink)
                 #if os(iOS)
-                .gesture(LinkClickProbe())
+                .gesture(TouchKeyProbe())
                 #endif
                 .environment(\.noteCallouts, callouts)
                 .environment(\.sheetRoom, contentHeight)
