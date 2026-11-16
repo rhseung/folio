@@ -26,6 +26,12 @@ public struct TabStrip<ID: Hashable & Sendable>: Equatable, Sendable {
         selected = id
     }
 
+    public mutating func insert(_ id: ID, at index: Int) {
+        guard !tabs.contains(id) else { return select(id) }
+        tabs.insert(id, at: max(0, min(index, tabs.count)))
+        selected = id
+    }
+
     public mutating func openBehind(_ id: ID) {
         guard !tabs.contains(id) else { return }
         let after = behindFrom == selected ? behindLast.flatMap { tabs.firstIndex(of: $0) } : nil
