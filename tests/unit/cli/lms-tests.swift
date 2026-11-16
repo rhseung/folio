@@ -136,4 +136,49 @@ struct LMSTests {
         #expect(h.cli(["lms", "accept", "EC4207", "--items", json.path], gist: gist).code != 0)
         #expect(try !h.file(GISTStore(url: gist)).assignments.contains { $0.lmsId == 1 })
     }
+
+    @Test func room() throws {
+        try h.expectSame(["lms", "room", "27967", "EC4207"]) { _ in LMSRoomSet(classroom: 27967, course: course) }
+        try h.expectSame(["lms", "room", "28011", "--none"]) { _ in LMSRoomSet(classroom: 28011, course: nil, none: true) }
+        try h.expectSame(["lms", "room", "27967", "--forget"]) { _ in LMSRoomSet(classroom: 27967, course: nil, forget: true) }
+    }
+
+    @Test func roomRemembersACourseNoCourseOrNothing() throws {
+        let gist = try Harness.fixtureCopy()
+        #expect(h.cli(["lms", "room", "27967", "EC4207"], gist: gist).code == 0)
+        #expect(h.cli(["lms", "room", "28011", "--none"], gist: gist).code == 0)
+        var lms = try GISTStore(url: gist).loadSettings().model.lms
+        #expect(lms.course(of: 27967) == course)
+        #expect(lms.room(28011) == LMSRoom())
+        #expect(h.cli(["lms", "room", "27967", "--forget"], gist: gist).code == 0)
+        lms = try GISTStore(url: gist).loadSettings().model.lms
+        #expect(lms.room(27967) == nil)
+        #expect(h.cli(["lms", "room", "27967"], gist: gist).code != 0)
+        #expect(h.cli(["lms", "room", "27967", "EC4207", "--none"], gist: gist).code != 0)
+    }
+
+    // 과목을 주고 받으면 강의실에 그 과목을 기억하고, 과목 없이 받으면 강의실마다 기억한 과목에 받는다.
+    @Test func acceptRemembersTheCourseAndUsesItLater() throws {
+        let gist = try Harness.fixtureCopy()
+        let dir = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let first = dir.appending(path: "first.json")
+        try JSONEncoder().encode([LMSAcceptItem(key: "assignment:1", classroom: 27967, title: "HW1")]).write(to: first)
+        let later = dir.appending(path: "later.json")
+        try JSONEncoder().encode([
+            LMSAcceptItem(key: "assignment:2", classroom: 27967, title: "HW2"), LMSAcceptItem(key: "notice:3", classroom: 27967),
+        ]).write(to: later)
+        let stranger = dir.appending(path: "stranger.json")
+        try JSONEncoder().encode([LMSAcceptItem(key: "assignment:4", classroom: 28011, title: "소방")]).write(to: stranger)
+        try h.expectSame(["lms", "accept", "--items", later.path], setup: [["lms", "room", "27967", "EC4207"]]) { _ in
+            LMSAccept(course: nil, items: try JSONDecoder().decode([LMSAcceptItem].self, from: Data(contentsOf: later)))
+        }
+
+        #expect(h.cli(["lms", "accept", "--items", later.path], gist: gist).code != 0)
+        #expect(h.cli(["lms", "accept", "EC4207", "--items", first.path], gist: gist).code == 0)
+        #expect(try GISTStore(url: gist).loadSettings().model.lms.course(of: 27967) == course)
+        #expect(h.cli(["lms", "accept", "--items", later.path], gist: gist).code == 0)
+        #expect(try h.file(GISTStore(url: gist)).assignments.contains { $0.lmsId == 2 })
+        #expect(h.cli(["lms", "accept", "--items", stranger.path], gist: gist).code != 0)
+    }
 }

@@ -584,6 +584,39 @@
         }
       }
     },
+    "proposal.group.differs": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folio와 다른 것"
+          }
+        }
+      }
+    },
+    "proposal.kind.lms-due": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS 마감 변경"
+          }
+        }
+      }
+    },
+    "proposal.kind.lms-submitted": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS 제출 상태"
+          }
+        }
+      }
+    },
     "rule.assignment.component-group": {
       "extractionState": "manual",
       "localizations": {
@@ -1306,6 +1339,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@: %2$@"
+          }
+        }
+      }
+    },
+    "setting-item.lms.rooms": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS 강의실의 과목"
           }
         }
       }

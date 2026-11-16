@@ -72,6 +72,12 @@ extension [Proposal] {
         Self.joined(filter(\.canApprove).map { ($0.kind.list, $0.action(in: course)) })
     }
 
+    // 과목 없이 받으면 `lms accept`가 항목의 강의실마다 기억한 과목에 넣는다. 그래서 과목이 다른 강의실의 항목도 액션
+    // 하나로 받는다.
+    public var rememberedApprovals: [ActionProposal] {
+        Self.joined(filter(\.canApprove).map { ($0.kind.list, $0.action) })
+    }
+
     public var dismissals: [ActionProposal] {
         Self.joined(map { ($0.kind.dismissList, $0.dismissal) })
     }

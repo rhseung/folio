@@ -6656,6 +6656,248 @@
         }
       }
     },
+    "lms.add-all-to-course": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에 모두 추가"
+          }
+        }
+      }
+    },
+    "lms.add-remembered": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기억한 과목에 모두 받기"
+          }
+        }
+      }
+    },
+    "lms.add-to-course": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에 추가"
+          }
+        }
+      }
+    },
+    "lms.apply-due": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "반영"
+          }
+        }
+      }
+    },
+    "lms.deadlines": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이번 주 기한"
+          }
+        }
+      }
+    },
+    "lms.due-change": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ → %2$@"
+          }
+        }
+      }
+    },
+    "lms.due-changed-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 마감 변경"
+          }
+        }
+      }
+    },
+    "lms.folio-status": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folio는 %@"
+          }
+        }
+      }
+    },
+    "lms.forget-course": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기억 지우기"
+          }
+        }
+      }
+    },
+    "lms.in-course": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에 있음"
+          }
+        }
+      }
+    },
+    "lms.login-ended": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS 로그인 끝남"
+          }
+        }
+      }
+    },
+    "lms.mark-submitted": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제출함으로"
+          }
+        }
+      }
+    },
+    "lms.no-course": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목 없음"
+          }
+        }
+      }
+    },
+    "lms.no-due": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마감 없음"
+          }
+        }
+      }
+    },
+    "lms.not-received": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 받지 않음"
+          }
+        }
+      }
+    },
+    "lms.not-submitted": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS 미제출"
+          }
+        }
+      }
+    },
+    "lms.offline": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오프라인"
+          }
+        }
+      }
+    },
+    "lms.offline-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오프라인 · %@"
+          }
+        }
+      }
+    },
+    "lms.other-course": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 과목"
+          }
+        }
+      }
+    },
+    "lms.read-all": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두 읽음"
+          }
+        }
+      }
+    },
+    "lms.room-course": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "받을 과목"
+          }
+        }
+      }
+    },
+    "lms.submitted-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · LMS에 제출됨"
+          }
+        }
+      }
+    },
     "material-role.archive": {
       "extractionState": "manual",
       "localizations": {
