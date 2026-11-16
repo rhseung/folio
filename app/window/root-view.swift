@@ -316,6 +316,7 @@ struct RootView: View {
         #endif
         #if DEBUG && os(macOS)
         .task {
+            await MemoryProbe.run()
             await TabMemoryProbe.run(tabs: tabs, workspace: workspace)
             await PaneSessionProbe.run(tabs: tabs, workspace: workspace, memory: paneMemory) { open($0, in: .tab) }
             if SnapshotDriver.directory != nil { workspace.gradesUnlocked = true }

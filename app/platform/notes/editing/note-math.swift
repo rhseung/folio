@@ -37,8 +37,19 @@ import UIKit
     @ObservationIgnored private(set) var firstPicture: Duration?
     @ObservationIgnored private(set) var lastPicture: Duration?
 
-    @ObservationIgnored private var cache: [String: Picture] = [:]
+    // 말풍선은 수식 안에서 글자를 칠 때마다 새 수식을 그리므로, 그림을 모두 두면 긴 수식 하나를 쓰는 동안에도 수백 장이 쌓이고 앱이 켜져 있는 내내 남는다. 그래서
+    // 메모리가 부족하면 시스템이 비우는 `NSCache`에 한도를 두고 둔다. 지워진 수식은 다시 요청하면 다시 그린다.
+    @ObservationIgnored private let cache: NSCache<NSString, Cached> = {
+        let cache = NSCache<NSString, Cached>()
+        cache.totalCostLimit = 32 * 1_048_576
+        return cache
+    }()
     @ObservationIgnored private var failed: Set<String> = []
+
+    private final class Cached {
+        let picture: Picture
+        init(_ picture: Picture) { self.picture = picture }
+    }
     @ObservationIgnored private var waiting: [String: [() -> Void]] = [:]
     @ObservationIgnored private var queue: [Job] = []
     @ObservationIgnored private var busy = false
@@ -86,7 +97,7 @@ import UIKit
         let formula = source.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !formula.isEmpty else { return nil }
         let key = "\(syntax.rawValue)|\(display)|\(size)|\(dark)|\(trim)|\(formula)"
-        if let hit = cache[key] { return hit }
+        if let hit = cache.object(forKey: key as NSString) { return hit.picture }
         if failed.contains(key) { return nil }
         if let ready { waiting[key, default: []].append(ready) }
         if !queue.contains(where: { $0.key == key }) {
@@ -94,6 +105,15 @@ import UIKit
         }
         pump()
         return nil
+    }
+
+    static func bytes(of picture: Picture) -> Int {
+        #if os(macOS)
+        let cg = picture.image.cgImage(forProposedRect: nil, context: nil, hints: nil)
+        #else
+        let cg = picture.image.cgImage
+        #endif
+        return cg.map { $0.bytesPerRow * $0.height } ?? Int(picture.size.width * picture.size.height * 16)
     }
 
     private func make() -> MathPage {
@@ -118,8 +138,10 @@ import UIKit
                 room: job.trim ? room : nil)
             guard current == turn else { return }
             switch result {
-            case .picture(let picture): cache[job.key] = picture
-            case .unreadable: failed.insert(job.key)
+            case .picture(let picture): cache.setObject(Cached(picture), forKey: job.key as NSString, cost: Self.bytes(of: picture))
+            case .unreadable:
+                if failed.count >= 1_000 { failed.removeAll() }
+                failed.insert(job.key)
             case .failed: break
             }
             let now = ContinuousClock.now
@@ -305,6 +327,16 @@ import UIKit
         return .picture(Self.inked(image, size: rect.size) ?? taken)
     }
 
+    static func copied(_ image: CGImage) -> CGImage? {
+        guard let space = image.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB),
+            let context = CGContext(
+                data: nil, width: image.width, height: image.height, bitsPerComponent: 8, bytesPerRow: 0, space: space,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return nil }
+        context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        return context.makeImage()
+    }
+
     private static func inked(_ image: PlatformImage, size: CGSize) -> NoteMath.Picture? {
         #if os(macOS)
         guard let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
@@ -342,7 +374,8 @@ import UIKit
             .union(CGRect(x: ceil(CGFloat(maxX + 1) / scale), y: ceil(CGFloat(maxY + 1) / scale), width: 0, height: 0))
         let crop = CGRect(x: points.minX * scale, y: points.minY * scale, width: points.width * scale, height: points.height * scale)
             .integral.intersection(CGRect(x: 0, y: 0, width: w, height: h))
-        guard let cut = cg.cropping(to: crop) else { return nil }
+        // `cropping(to:)`의 그림은 원래 스냅숏의 픽셀을 함께 붙잡으므로, 자른 만큼만 새로 그려 원래 스냅숏을 놓아 준다.
+        guard let cut = cg.cropping(to: crop).flatMap(Self.copied) else { return nil }
         let cutSize = CGSize(width: CGFloat(cut.width) / scale, height: CGFloat(cut.height) / scale)
         #if os(macOS)
         return NoteMath.Picture(image: NSImage(cgImage: cut, size: cutSize), size: cutSize)

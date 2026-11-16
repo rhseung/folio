@@ -59,14 +59,23 @@ actor WhisperTranscriber {
         await showBusy()
         do {
             let transcript = try await run(url, hints: hints, report: report)
-            running -= 1
-            await showBusy()
+            await finishRun()
             return transcript
         } catch {
-            running -= 1
-            await showBusy()
+            await finishRun()
             throw error
         }
+    }
+
+    // 모델은 받아쓰는 동안만 메모리에 둔다. 녹음을 멈추면 받아쓰기가 저절로 돌므로, 들고 있으면 녹음을 켜지 않은 앱도 그 뒤 내내 GB 단위의
+    // 메모리를 쓴다. 다음 받아쓰기는 모델을 다시 올리지만, 받아쓰기는 강의 하나에 한 번이라 그 몇 초보다 메모리가 중요하다.
+    private func finishRun() async {
+        running -= 1
+        if running == 0, let kit {
+            self.kit = nil
+            await kit.unloadModels()
+        }
+        await showBusy()
     }
 
     private func showBusy() async {
