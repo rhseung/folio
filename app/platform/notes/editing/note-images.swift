@@ -43,7 +43,7 @@ import UIKit
         return picture.image
     }
 
-    // 크기는 pt로 돌려준다. 말풍선은 `size`로 배치하므로, 픽셀 크기 그대로 두면 Retina에서 그림이 두 배로 커진다.
+    // 픽셀만 줄이고 크기는 원본을 열었을 때와 같게 둔다. 말풍선은 `size`를 보고 맞추므로, 줄인 픽셀 수로 크기를 정하면 작은 도식까지 작게 보인다.
     static func picture(at url: URL) -> (image: PlatformImage, bytes: Int)? {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
         let options: [CFString: Any] = [
@@ -53,11 +53,19 @@ import UIKit
             kCGImageSourceShouldCacheImmediately: true,
         ]
         guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+        let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] ?? [:]
+        let edge = max(image.width, image.height)
+        let original = max(
+            properties[kCGImagePropertyPixelWidth] as? Int ?? edge, properties[kCGImagePropertyPixelHeight] as? Int ?? edge)
+        let shrunk = CGFloat(edge) / CGFloat(max(original, 1))
         let bytes = image.bytesPerRow * image.height
         #if os(macOS)
-        return (NSImage(cgImage: image, size: CGSize(width: image.width / 2, height: image.height / 2)), bytes)
+        // `NSImage(contentsOf:)`처럼 DPI로 pt를 정한다. 144dpi 화면 캡처는 픽셀의 절반 크기다.
+        let dpi = properties[kCGImagePropertyDPIWidth] as? Double ?? 72
+        let points = 72 / (dpi > 0 ? dpi : 72) / shrunk
+        return (NSImage(cgImage: image, size: CGSize(width: CGFloat(image.width) * points, height: CGFloat(image.height) * points)), bytes)
         #else
-        return (UIImage(cgImage: image, scale: 2, orientation: .up), bytes)
+        return (UIImage(cgImage: image, scale: shrunk, orientation: .up), bytes)
         #endif
     }
 }
