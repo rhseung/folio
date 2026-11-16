@@ -25,6 +25,7 @@ public enum Area {
         ("folder", ["standard-layout", "term", "folder", "cleanup", "backup", "lock", "first-run", "check"]),
         ("import", ["import", "notion", "calendar", "importer", "quick-add"]),
         ("updates", ["folio-version", "patch-note", "release", "whats-new"]),
+        ("diagnostics", ["diagnostic"]),
     ]
 
     public static var names: Set<String> { Set(table.map(\.name)) }

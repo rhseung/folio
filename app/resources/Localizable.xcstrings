@@ -22836,6 +22836,193 @@
           }
         }
       }
+    },
+    "diagnostics.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "진단 보고"
+          }
+        }
+      }
+    },
+    "diagnostics.recent": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "최근 %lld개"
+          }
+        }
+      }
+    },
+    "diagnostics.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "남은 크래시와 멈춤 기록 없음"
+          }
+        }
+      }
+    },
+    "diagnostics.export": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일로 내보내기"
+          }
+        }
+      }
+    },
+    "diagnostics.delete-all": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두 지우기"
+          }
+        }
+      }
+    },
+    "diagnostics.delete-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "진단 보고 모두 지우기"
+          }
+        }
+      }
+    },
+    "diagnostics.new": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 보고"
+          }
+        }
+      }
+    },
+    "diagnostics.times": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$lld회"
+          }
+        }
+      }
+    },
+    "diagnostics.version": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "버전 %@"
+          }
+        }
+      }
+    },
+    "diagnostics.when": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "diagnostics.kind.crash": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앱 종료(크래시)"
+          }
+        }
+      }
+    },
+    "diagnostics.kind.hang": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "화면 멈춤"
+          }
+        }
+      }
+    },
+    "diagnostics.kind.cpu": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CPU 과다 사용"
+          }
+        }
+      }
+    },
+    "diagnostics.kind.disk-write": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "디스크 과다 쓰기"
+          }
+        }
+      }
+    },
+    "diagnostics.kind.memory": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "메모리 한도 초과 종료"
+          }
+        }
+      }
+    },
+    "diagnostics.notice.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 진단 보고 %lld개"
+          }
+        }
+      }
+    },
+    "diagnostics.notice.open": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보기"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

@@ -24,6 +24,7 @@ extension Workspace {
         workspace.lms = LMSConnection(
             source: FixedLMS(snapshot: lms), logins: MemoryLogins(LMSCredentials(username: "20260000", password: "-")))
         workspace.run(LMSSeen(classrooms: lms.classrooms.map(\.id), items: LMSSnapshot.sampleHandled))
+        workspace.diagnostics = DiagnosticLog.sample(at: scenario.now)
         return workspace
     }
 }
