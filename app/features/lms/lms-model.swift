@@ -149,8 +149,9 @@ final class LMSModel {
     func title(_ p: Proposal) -> String {
         guard case .lms(let item) = p.source, case .difference(let d) = item.item else { return p.title ?? "" }
         switch d.change {
-        case .submitted: return String(localized: .lmsSubmittedTitle(d.lms.title))
+        case .unsubmitted: return String(localized: .lmsUnsubmittedTitle(d.lms.title))
         case .due: return String(localized: .lmsDueChangedTitle(d.lms.title))
+        case .attachments: return String(localized: .lmsAttachmentsTitle(d.lms.title))
         }
     }
 
@@ -170,34 +171,37 @@ final class LMSModel {
     private func lmsDetail(_ p: LMSProposal, viewerOnly: Bool) -> [String?] {
         switch p.item {
         case .assignment:
-            let files = LMSAttachment.summary(p.attachments).map {
-                $0.more == 0 ? $0.first : String(localized: .lmsAttachmentsMore($0.first, $0.more))
-            }
-            return [String(localized: .lmsKindAssignment), files]
+            return [String(localized: .lmsKindAssignment), attachmentSummary(p.attachments)]
         case .file(let f):
             return [String(localized: .lmsKindFile), viewerOnly ? nil : "\(CourseFolder.lectures.rawValue)/\(f.lectureName(f.title))"]
         case .notice(let n):
             return [String(localized: .lmsKindNotice), n.posted.map { $0.formatted(.dateTime.month().day()) }, n.author]
         case .difference(let d):
             switch d.change {
-            case .submitted:
-                let status = workspace.course(d.course)?.file.assignments.first { $0.id == d.assignment }?.status ?? .todo
-                return [courseTitle(d.course), String(localized: .lmsFolioStatus(status.label))]
+            case .unsubmitted:
+                let status = workspace.course(d.course)?.file.assignments.first { $0.id == d.assignment }?.status ?? .submitted
+                return [courseTitle(d.course), String(localized: .lmsFolioStatus(status.label)), d.lms.due.map(workspace.lmsTime)]
             case .due(let folio, let lms):
                 let none = String(localized: .lmsNoDue)
                 return [
                     courseTitle(d.course), String(localized: .lmsDueChange(folio.map(workspace.lmsTime) ?? none, workspace.lmsTime(lms))),
                 ]
+            case .attachments(let new):
+                return [courseTitle(d.course), attachmentSummary(new)]
             }
         }
+    }
+
+    private func attachmentSummary(_ attachments: [LMSAttachment]) -> String? {
+        LMSAttachment.summary(attachments).map { $0.more == 0 ? $0.first : String(localized: .lmsAttachmentsMore($0.first, $0.more)) }
     }
 
     // 고칠 것의 단추다. 받을 과목이 정해져 있어 과목을 고르지 않는다.
     func fixLabel(_ p: Proposal) -> String? {
         switch p.kind {
-        case .lmsSubmitted: String(localized: .lmsMarkSubmitted)
         case .lmsDue: String(localized: .lmsApplyDue)
-        case .lmsAssignment, .lmsFile, .lmsNotice, .claude, .cleanupMove: nil
+        case .lmsAttachments: String(localized: .lmsReceiveAttachments)
+        case .lmsAssignment, .lmsFile, .lmsNotice, .lmsUnsubmitted, .claude, .cleanupMove: nil
         }
     }
 

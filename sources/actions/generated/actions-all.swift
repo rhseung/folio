@@ -49,6 +49,7 @@ extension Actions {
         LMSMark.self,
         LMSRoomSet.self,
         LMSSeen.self,
+        LMSSubmitted.self,
         MaterialBuild.self,
         MaterialImport.self,
         MaterialKindSet.self,

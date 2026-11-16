@@ -22,23 +22,110 @@ struct LMSDifferenceTests {
         return (LMSInbox.build(snapshot, settings: settings, courses: [file], now: now), file)
     }
 
-    @Test func submittedInTheLMSButOpenInFolioIsProposedAsSubmitted() throws {
+    @Test func attachmentsMissingFromTheAssignmentFolderAreProposed() throws {
         let day = now.addingTimeInterval(86_400)
-        let (inbox, file) = inbox(
-            [
-                .init(id: 1, classroom: 1, title: "HW1", due: day, submitted: true),
-                .init(id: 2, classroom: 1, title: "HW2", due: day, submitted: true),
-                .init(id: 3, classroom: 1, title: "HW3", due: day),
-            ],
-            folio: [added(1, due: day), added(2, due: day, status: .submitted), added(3, due: day)])
-        #expect(inbox.proposals.map(\.id) == ["submitted:1"])
+        let hw = LMSAttachment(name: "hw.pdf", path: "/a/hw.pdf"), hint = LMSAttachment(name: "hint.pdf", path: "/a/hint.pdf")
+        let a = added(1, due: day)
+        var file = CourseFile(course: Course(device: device, at: now, title: "그래프 이론"), assignments: [a])
+        file.materials = [
+            Material(device: device, at: now, path: "\(AssignmentFiles.path(of: a))/hw.pdf", kind: .problem, status: .classified),
+            Material(device: device, at: now, path: "Lectures/hint.pdf", status: .classified),
+        ]
+        func build(_ attachments: [LMSAttachment]?, settings: LMSSettings = LMSSettings(known: [1])) -> LMSInbox {
+            let lms = LMSAssignment(id: 1, classroom: 1, title: "HW1", due: day, attachments: attachments)
+            return LMSInbox.build(
+                LMSSnapshot(at: now, classrooms: [room], assignments: [lms]), settings: settings, courses: [file], now: now)
+        }
+        #expect(build(nil).proposals.isEmpty)
+        #expect(build([hw]).proposals.isEmpty)
+        let inbox = build([hw, hint])
+        #expect(inbox.proposals.map(\.id) == ["attachments:1:2"])
+        #expect(inbox.proposals[0].attachments == [hint])
         let p = inbox.proposals[0].proposal()
-        #expect(p.kind == .lmsSubmitted && p.kind.group == .differs && !p.kind.picksCourse)
-        #expect(p.action?.command == "assignment status")
+        #expect(p.kind == .lmsAttachments && p.kind.group == .differs && !p.kind.picksCourse)
+        #expect(p.action?.command == "lms accept")
         #expect(p.action?.input["course"] == .string(file.course.id.uuidString))
-        #expect(p.action?.input["assignment"] == .string(file.assignments[0].id.uuidString))
-        #expect(p.action?.input["status"] == "submitted")
-        #expect(p.dismissal?.input["keys"] == ["submitted:1"])
+        #expect(p.downloaded(files: ["/tmp/hint.pdf"]).action?.input["items"] == [["key": "attachments:1:2", "files": ["/tmp/hint.pdf"]]])
+
+        var dismissed = LMSSettings(known: [1])
+        dismissed.mark([inbox.proposals[0].key], handled: true)
+        #expect(build([hw, hint], settings: dismissed).proposals.isEmpty)
+        let more = LMSAttachment(name: "more.pdf", path: "/a/more.pdf")
+        #expect(build([hw, hint, more], settings: dismissed).proposals.map(\.id) == ["attachments:1:3"])
+    }
+
+    @Test func attachmentsAreReadForReceivedAssignmentsStillToDo() {
+        let day = now.addingTimeInterval(86_400)
+        let snapshot = LMSSnapshot(
+            at: now, classrooms: [room],
+            assignments: [
+                .init(id: 1, classroom: 1, title: "HW1", due: day), .init(id: 2, classroom: 1, title: "HW2", due: day),
+                .init(id: 3, classroom: 1, title: "HW3", due: now.addingTimeInterval(-60)),
+            ])
+        let file = CourseFile(
+            course: Course(device: device, at: now, title: "그래프 이론"),
+            assignments: [added(1, due: day), added(2, due: day, status: .submitted), added(3)])
+        let read = LMSInbox.pagesToRead(snapshot, settings: LMSSettings(known: [1]), courses: [file], now: now)
+        #expect(read.map(\.id) == [1])
+    }
+
+    @Test func submittedInTheLMSIsMarkedWithoutAskingOnce() throws {
+        let day = now.addingTimeInterval(86_400)
+        let at = now.addingTimeInterval(-3_600)
+        let assignments: [LMSAssignment] = [
+            .init(id: 1, classroom: 1, title: "HW1", due: day, submitted: true, submittedAt: at),
+            .init(id: 2, classroom: 1, title: "HW2", due: day, submitted: true),
+            .init(id: 3, classroom: 1, title: "HW3", due: day),
+        ]
+        let (inbox, file) = inbox(assignments, folio: [added(1, due: day), added(2, due: day, status: .submitted), added(3, due: day)])
+        // 묻지 않고 바꾸므로 제안에는 없다.
+        #expect(inbox.proposals.isEmpty)
+        let snapshot = LMSSnapshot(at: now, classrooms: [room], assignments: assignments)
+        let found = LMSInbox.submissions(snapshot, settings: LMSSettings(known: [1]), courses: [file])
+        #expect(found == [LMSSubmission(course: file.course.id, assignment: file.assignments[0].id, lms: 1, at: at)])
+        #expect(found[0].key.description == "submitted:1")
+        // 한 번 바꾼 과제는 사용자가 할 일로 되돌려도 또 바꾸지 않는다.
+        var settings = LMSSettings(known: [1])
+        settings.mark([found[0].key], handled: true)
+        #expect(LMSInbox.submissions(snapshot, settings: settings, courses: [file]).isEmpty)
+    }
+
+    @Test func submittedInFolioButNotInTheLMSAfterTheDeadlineIsAWarning() {
+        let past = now.addingTimeInterval(-60)
+        let (inbox, _) = inbox(
+            [
+                .init(id: 1, classroom: 1, title: "HW1", due: past),
+                .init(id: 2, classroom: 1, title: "HW2", due: now.addingTimeInterval(86_400)),
+                .init(id: 3, classroom: 1, title: "HW3", due: past, submitted: true),
+            ],
+            folio: [added(1, due: past, status: .submitted), added(2, status: .submitted), added(3, due: past, status: .submitted)])
+        #expect(inbox.proposals.map(\.id) == ["unsubmitted:1"])
+        let p = inbox.proposals[0].proposal()
+        #expect(p.kind == .lmsUnsubmitted && p.kind.group == .differs && !p.kind.picksCourse)
+        #expect(p.action == nil)
+        #expect(p.dismissal?.input["keys"] == ["unsubmitted:1"])
+    }
+
+    @Test func pastTheLMSDeadlineButNotSubmittedThereIsOverdue() {
+        let past = now.addingTimeInterval(-60)
+        let snapshot = LMSSnapshot(
+            at: now, classrooms: [room],
+            assignments: [
+                .init(id: 1, classroom: 1, title: "HW1", due: past), .init(id: 2, classroom: 1, title: "HW2", due: past),
+                .init(id: 3, classroom: 1, title: "HW3", due: past), .init(id: 4, classroom: 1, title: "HW4", due: past),
+                .init(id: 5, classroom: 1, title: "HW5", due: past, submitted: true),
+                .init(id: 6, classroom: 1, title: "HW6", due: now.addingTimeInterval(60)),
+            ])
+        // Folio의 마감이 아니라 LMS의 마감으로 센다. 4는 못 냄, 5는 LMS에서 냈고 6은 마감 전이다.
+        let file = CourseFile(
+            course: Course(device: device, at: now, title: "그래프 이론"),
+            assignments: [
+                added(1, due: now.addingTimeInterval(86_400)), added(2, status: .submitted), added(3, status: .graded),
+                added(4, status: .missed), added(5), added(6),
+            ])
+        let found = LMSInbox.unsubmitted(snapshot, in: file, now: now)
+        #expect(Set(found.keys) == [file.assignments[0].id, file.assignments[1].id])
+        #expect(found[file.assignments[0].id]?.id == 1)
     }
 
     @Test func aChangedDeadlineIsProposedUntilItPasses() {

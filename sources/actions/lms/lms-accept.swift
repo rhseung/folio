@@ -8,6 +8,7 @@ import Foundation
         항목 파일은 [{"key":"assignment:139950","classroom":27967,"title":"HW5","due":"2026-11-20T14:55:00Z","files":["/tmp/hw5.pdf"]}, {"key":"file:139200","classroom":27967,"file":"/tmp/05_Matchings.pdf"}, {"key":"notice:23464"}] 꼴이다.
         과제의 files는 과제 페이지에서 받은 첨부이고, 과제 폴더(Assignments/<과제>)에 원래 이름으로 들어가 문제 파일이 된다.
         과목을 주면 항목의 강의실(classroom)에 그 과목을 기억한다. 과목을 빼면 강의실마다 기억한 과목에 받는다.
+        이미 받은 과제의 새 첨부는 {"key":"attachments:139950:2","files":["/tmp/hw5-b.pdf"]}이고, 그 과제의 폴더에 원래 이름으로 들어간다.
         """,
     effect: .creates, done: "LMS 항목을 받았습니다",
     phrases: ["LMS 과제 추가", "LMS 자료 받기", "LMS 제안 모두 추가", "기억한 과목에 모두 받기"])
@@ -33,7 +34,9 @@ public struct LMSAccept {
             }
         }
         let planned = try byCourse.map { try plan($0.course, $0.items, ctx) }
-        let paths = planned.flatMap { $0.downloads.map(\.file) + $0.assignments.flatMap { $0.item.files ?? [] } }
+        let paths = planned.flatMap {
+            $0.downloads.map(\.file) + $0.assignments.flatMap { $0.item.files ?? [] } + $0.attachments.flatMap(\.files)
+        }
         for path in paths where !FileManager.default.fileExists(atPath: path) {
             throw ActionError.notFound(String(localized: .errorMaterialImportMissing(path)))
         }
@@ -44,6 +47,7 @@ public struct LMSAccept {
                 try AssignmentAdd(id: id, course: p.course, title: title, due: a.item.due, repeats: nil, lms: a.id).run(ctx)
                 if let files = a.item.files, !files.isEmpty { try attach(files, to: id, title: title, in: p.course, ctx) }
             }
+            for a in p.attachments { try attach(a.files, to: a.assignment.id, title: a.assignment.title, in: p.course, ctx) }
             if !p.downloads.isEmpty { try MaterialImport(course: p.course, items: p.downloads).run(ctx) }
         }
         let keys = byCourse.flatMap { $0.items.map(\.key) }
@@ -63,6 +67,7 @@ public struct LMSAccept {
         var course: Course.ID
         var assignments: [(id: Int, item: LMSAcceptItem)] = []
         var downloads: [ImportItem] = []
+        var attachments: [(assignment: Assignment, files: [String])] = []
     }
 
     // 쓰기 전에 모든 과목의 항목을 검사해, 하나가 막히면 아무것도 쓰지 않는다.
@@ -82,7 +87,15 @@ public struct LMSAccept {
                 plan.downloads.append(ImportItem(file: path, folder: CourseFolder.lectures.rawValue))
             case .notice:
                 break
-            case .submitted, .due:
+            case .attachments:
+                guard let same = file.assignments.first(where: { $0.lmsId == key.id }) else {
+                    throw ActionError.notFound(String(localized: .errorLmsAssignmentMissing(item.key)))
+                }
+                guard let files = item.files, !files.isEmpty else {
+                    throw ActionError.rule(String(localized: .errorLmsFileMissing(item.key)))
+                }
+                plan.attachments.append((same, files))
+            case .submitted, .unsubmitted, .due:
                 throw ActionError.input(String(localized: .errorLmsKey(item.key)))
             }
         }

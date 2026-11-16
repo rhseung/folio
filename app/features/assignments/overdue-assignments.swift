@@ -5,6 +5,7 @@ import SwiftUI
 struct OverdueAssignments: View {
     @State private var model: OverdueAssignmentsModel
     @Environment(\.openLink) private var openLink
+    @Environment(\.openURL) private var openURL
 
     init(workspace: Workspace, course: UUID? = nil) {
         _model = State(initialValue: OverdueAssignmentsModel(workspace: workspace, course: course))
@@ -47,6 +48,7 @@ struct OverdueAssignments: View {
                             Text(model.courseTitle(row)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                                 .lineLimit(1)
                         }
+                        if row.lms != nil { Badge(String(localized: .lmsNotSubmitted), tone: .danger) }
                     }
                     Text(row.due).font(Theme.Typeface.caption).monospacedDigit().foregroundStyle(Theme.Palette.danger).lineLimit(1)
                     if let ceiling = row.ceiling {
@@ -57,7 +59,12 @@ struct OverdueAssignments: View {
             }
         } control: {
             Button(.overdueMarkMissed) { model.miss(row) }.buttonStyle(.ghost)
-            Button(.overdueMarkSubmitted) { model.submit(row) }.buttonStyle(.pointing(.bordered))
+            // Folio에서는 이미 제출함이라 제출함 단추 대신 LMS에서 낼 곳을 연다.
+            if row.submitted, let url = row.lms {
+                Button(.lmsOpen) { openURL(url) }.buttonStyle(.pointing(.bordered))
+            } else {
+                Button(.overdueMarkSubmitted) { model.submit(row) }.buttonStyle(.pointing(.bordered))
+            }
         }
     }
 }

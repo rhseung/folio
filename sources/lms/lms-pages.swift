@@ -44,6 +44,18 @@ public enum LMSPages {
         }
     }
 
+    // Moodle 3.2 과제 보기의 제출 상태 표(`.submissionstatustable`)는 "최종 수정 일시" 줄에 마지막으로 낸 시각을 적는다.
+    // 날짜 꼴은 사용자 언어 설정을 따르므로 숫자와 오전·오후만 읽는다(`looseTime`).
+    public static func submittedAt(_ html: String) throws -> Date? {
+        let doc = try SwiftSoup.parse(html)
+        for tr in try doc.select(".submissionstatustable tr").array() {
+            let cells = try tr.select("th, td").array()
+            guard cells.count >= 2, ["최종 수정 일시", "Last modified"].contains(try cells[0].text()) else { continue }
+            return looseTime(try cells[1].text())
+        }
+        return nil
+    }
+
     public static func files(_ html: String, classroom: Int) throws -> [LMSFile] {
         var week: String?
         return try rows(html).compactMap { cells in
@@ -86,6 +98,33 @@ public enum LMSPages {
 
     static func time(_ text: String) -> Date? { parse(text, "yyyy-MM-dd HH:mm") }
     static func day(_ text: String) -> Date? { parse(text, "yyyy-MM-dd") }
+
+    // "2026년 11월 3일 화요일 오후 11:20"과 "Tuesday, 3 November 2026, 11:20 PM"처럼 꼴이 달라도 연, 월, 일, 시, 분과
+    // 오전·오후는 같은 차례로 나온다. 영어 꼴은 월이 이름이라 숫자가 일, 연 차례이므로 따로 맞춘다.
+    static func looseTime(_ text: String) -> Date? {
+        let months = [
+            "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december",
+        ]
+        let lower = text.lowercased()
+        let numbers = lower.matches(of: /\d+/).compactMap { Int(lower[$0.range]) }
+        guard let clock = lower.firstMatch(of: /(\d{1,2}):(\d{2})/), var hour = Int(clock.1), let minute = Int(clock.2) else { return nil }
+        var year: Int?, month: Int?, day: Int?
+        if let named = months.firstIndex(where: { lower.contains($0) }) {
+            month = named + 1
+            year = numbers.first { $0 >= 1000 }
+            day = numbers.first { $0 >= 1 && $0 <= 31 }
+        } else if numbers.count >= 5 {
+            (year, month, day) = (numbers[0], numbers[1], numbers[2])
+        }
+        let pm = lower.contains("오후") || lower.contains("pm")
+        let am = lower.contains("오전") || lower.contains("am")
+        if pm, hour < 12 { hour += 12 }
+        if am, hour == 12 { hour = 0 }
+        guard let year, let month, let day else { return nil }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = LMS.timeZone
+        return calendar.date(from: DateComponents(year: year, month: month, day: day, hour: hour, minute: minute))
+    }
 
     private static func parse(_ text: String, _ format: String) -> Date? {
         let f = DateFormatter()

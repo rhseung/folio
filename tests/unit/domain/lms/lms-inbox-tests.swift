@@ -72,7 +72,7 @@ struct LMSInboxTests {
                 .init(id: 105, classroom: 1, title: "dismissed"),
                 .init(id: 200, classroom: 2, title: "new room"),
             ])
-        let read = LMSInbox.attachmentsToRead(snapshot, settings: settings, courses: [course("선형대수학", assignments: [added])], now: now)
+        let read = LMSInbox.pagesToRead(snapshot, settings: settings, courses: [course("선형대수학", assignments: [added])], now: now)
         #expect(read.map(\.id) == [100, 200])
     }
 

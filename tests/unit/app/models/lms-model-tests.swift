@@ -144,23 +144,26 @@ struct LMSModelTests {
         await model.add([proposals(model)[0]], into: graphTheory)
         #expect(proposals(model).isEmpty)
 
-        // 그 뒤 LMS에서 과제를 내고 마감이 미뤄졌다.
+        // 그 뒤 LMS에서 과제를 내고 마감이 미뤄졌다. 낸 것은 묻지 않고 제출함으로 바꾸고, 마감은 묻는다.
         let later = workspace.now.addingTimeInterval(3 * 86_400)
         var changed = Self.snapshot(workspace.now)
         changed.assignments = [LMSAssignment(id: 100, classroom: 1, title: "Homework Set #5", due: later, submitted: true)]
         workspace.lms = LMSConnection(
             source: FixedLMS(snapshot: changed), logins: MemoryLogins(LMSCredentials(username: "20260000", password: "x")))
         await workspace.syncLMS()
+        let assignment = { workspace.course(graphTheory)?.file.assignments.first { $0.lmsId == 100 } }
+        #expect(assignment()?.status == .submitted)
+        #expect(workspace.settings.lms.handled.map(\.description).contains("submitted:100"))
         let fixes = proposals(model)
-        #expect(fixes.map(\.kind) == [.lmsSubmitted, .lmsDue])
-        #expect(fixes.map { model.fixLabel($0) } == ["제출함으로", "반영"])
+        #expect(fixes.map(\.kind) == [.lmsDue])
+        #expect(fixes.map { model.fixLabel($0) } == ["반영"])
         guard case .all(let sections) = model.shown(in: model.board) else { Issue.record("not everything"); return }
         #expect(sections.first?.id == "differs")
 
-        await model.fix(fixes[0])
-        let assignment = { workspace.course(graphTheory)?.file.assignments.first { $0.lmsId == 100 } }
-        #expect(assignment()?.status == .submitted)
-        #expect(proposals(model).map(\.kind) == [.lmsDue])
+        // 사용자가 할 일로 되돌리면 다음 동기화가 다시 바꾸지 않는다.
+        workspace.run(AssignmentStatusSet(course: graphTheory, assignment: try #require(assignment()).id, status: .todo))
+        await workspace.syncLMS()
+        #expect(assignment()?.status == .todo)
         model.dismiss(proposals(model))
         #expect(proposals(model).isEmpty)
         #expect(assignment()?.due != later)

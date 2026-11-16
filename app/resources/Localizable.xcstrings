@@ -6700,6 +6700,17 @@
         }
       }
     },
+    "lms.attachments-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 새 첨부"
+          }
+        }
+      }
+    },
     "lms.deadlines": {
       "extractionState": "manual",
       "localizations": {
@@ -6773,17 +6784,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "LMS 로그인 끝남"
-          }
-        }
-      }
-    },
-    "lms.mark-submitted": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "제출함으로"
           }
         }
       }
@@ -6876,6 +6876,17 @@
         }
       }
     },
+    "lms.receive-attachments": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "받기"
+          }
+        }
+      }
+    },
     "lms.room-course": {
       "extractionState": "manual",
       "localizations": {
@@ -6887,13 +6898,13 @@
         }
       }
     },
-    "lms.submitted-title": {
+    "lms.unsubmitted-title": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ · LMS에 제출됨"
+            "value": "%@ · LMS 미제출"
           }
         }
       }

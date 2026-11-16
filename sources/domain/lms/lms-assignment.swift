@@ -8,9 +8,12 @@ public struct LMSAssignment: Codable, Hashable, Sendable, Identifiable {
     public var submitted: Bool
     // 과제 목록 표에는 첨부가 없어 과제 페이지를 따로 읽어야 한다. 읽지 않았으면 nil이다.
     public var attachments: [LMSAttachment]?
+    // 낸 시각도 과제 페이지의 제출 상태 표에만 있다. 읽지 않았거나 표에 시각이 없으면 nil이다.
+    public var submittedAt: Date?
 
     public init(
-        id: Int, classroom: Int, title: String, due: Date? = nil, submitted: Bool = false, attachments: [LMSAttachment]? = nil
+        id: Int, classroom: Int, title: String, due: Date? = nil, submitted: Bool = false, attachments: [LMSAttachment]? = nil,
+        submittedAt: Date? = nil
     ) {
         self.id = id
         self.classroom = classroom
@@ -18,6 +21,7 @@ public struct LMSAssignment: Codable, Hashable, Sendable, Identifiable {
         self.due = due
         self.submitted = submitted
         self.attachments = attachments
+        self.submittedAt = submittedAt
     }
 
     public var key: LMSKey { .init(kind: .assignment, id: id) }

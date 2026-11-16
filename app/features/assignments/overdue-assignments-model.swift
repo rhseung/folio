@@ -28,6 +28,9 @@ final class OverdueAssignmentsModel {
         var ceiling: String?
         // 지금 내도 0점이다.
         var lost: Bool
+        // 마감이 지났는데 LMS에는 아직 내지 않았다. Folio에서 제출함으로 둔 과제도 이것 때문에 여기 온다.
+        var lms: URL?
+        var submitted: Bool { assignment.status == .submitted }
         var id: UUID { assignment.id }
     }
 
@@ -38,11 +41,16 @@ final class OverdueAssignmentsModel {
     }
 
     func rows(now: Date) -> [Row] {
-        courses.flatMap { c in c.file.overdueAssignments(at: now).map { row($0, in: c, now: now) } }
-            .sorted { ($0.assignment.due ?? .distantPast) < ($1.assignment.due ?? .distantPast) }
+        courses.flatMap { c in
+            let unsubmitted = workspace.lms.snapshot.map { LMSInbox.unsubmitted($0, in: c.file, now: now) } ?? [:]
+            let overdue = Set(c.file.overdueAssignments(at: now).map(\.id))
+            return c.file.assignments.filter { overdue.contains($0.id) || unsubmitted[$0.id] != nil }
+                .map { row($0, in: c, lms: unsubmitted[$0.id]?.url, now: now) }
+        }
+        .sorted { ($0.assignment.due ?? .distantPast, $0.assignment.title) < ($1.assignment.due ?? .distantPast, $1.assignment.title) }
     }
 
-    private func row(_ a: Assignment, in course: LoadedCourse, now: Date) -> Row {
+    private func row(_ a: Assignment, in course: LoadedCourse, lms: URL?, now: Date) -> Row {
         let calendar = workspace.calendar
         let due = a.due ?? now
         // 지난 날 수는 감점과 같은 셈(`LateRule.lateDays`)으로 센다. 그래야 "2일 지남"과 "최대 80%"가 어긋나지 않는다.
@@ -57,7 +65,7 @@ final class OverdueAssignmentsModel {
         }
         return Row(
             courseId: course.id, assignment: a, due: String(localized: .overdueDue(when, past)), ceiling: ceiling,
-            lost: late?.ceiling == 0)
+            lost: late?.ceiling == 0, lms: lms)
     }
 
     func courseTitle(_ row: Row) -> String { workspace.course(row.courseId)?.title ?? "" }

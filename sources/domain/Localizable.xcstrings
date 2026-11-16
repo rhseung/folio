@@ -595,6 +595,17 @@
         }
       }
     },
+    "proposal.kind.lms-attachments": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS 새 첨부"
+          }
+        }
+      }
+    },
     "proposal.kind.lms-due": {
       "extractionState": "manual",
       "localizations": {
@@ -606,13 +617,13 @@
         }
       }
     },
-    "proposal.kind.lms-submitted": {
+    "proposal.kind.lms-unsubmitted": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "LMS 제출 상태"
+            "value": "LMS 미제출"
           }
         }
       }
