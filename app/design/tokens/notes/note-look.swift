@@ -14,7 +14,7 @@ typealias PlatformImage = UIImage
 typealias PlatformView = UIView
 #endif
 
-// 편집 보기(app/platform/note-text)는 이 값을 그대로 쓰고, 페이지(미리보기, Claude 패널)는 `NoteStyle`을 거쳐 CSS
+// 편집 보기(app/platform/notes/editing)는 이 값을 그대로 쓰고, 페이지(미리보기, Claude 패널)는 `NoteStyle`을 거쳐 CSS
 // 변수로 받는다.
 enum NoteLook {
     static let body: CGFloat = 16

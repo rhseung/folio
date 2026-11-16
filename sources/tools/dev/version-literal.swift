@@ -5,7 +5,7 @@ import SwiftSyntax
 // 버전은 `FolioVersion.marketing`의 문자열 리터럴 하나다. 읽기와 올리기가 같은 구문 노드를 찾으므로, 그 줄의 모양
 // (공백, 주석, 다른 선언)이 바뀌어도 둘이 어긋나지 않는다.
 enum VersionLiteral {
-    static let path = "sources/domain/shared/app/folio-version.swift"
+    static let path = "sources/domain/updates/folio-version.swift"
 
     static func read(_ source: String) -> String? {
         literal(in: Parser.parse(source: source))?.representedLiteralValue
