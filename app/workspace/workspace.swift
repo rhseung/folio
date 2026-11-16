@@ -261,6 +261,17 @@ final class Workspace {
         }
     }
 
+    // 느린 읽기가 든 액션을 main actor 밖에서 dry run으로 돌려 본다. 쓰기는 부른 쪽이 main actor에서 `run`으로 한다. 밖에서
+    // 쓰면 그사이 다른 액션이 저장한 파일을 덮는다.
+    func wouldChange(_ action: some Action) async -> Bool {
+        guard let gist else { return false }
+        let (device, now, calendar) = (device, now, calendar)
+        return await Task.detached {
+            let ctx = ActionContext(gist: gist, device: device, now: now, calendar: calendar, dryRun: true)
+            return (try? action.run(ctx)) != nil && !ctx.changes.isEmpty
+        }.value
+    }
+
     func can(_ action: some Action) -> Bool { refusal(action) == nil }
 
     func confirmation<A: Action>(_ action: A) -> String? {
