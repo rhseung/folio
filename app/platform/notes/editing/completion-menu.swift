@@ -31,7 +31,7 @@ import SwiftUI
         pending = Task { [weak self] in
             let extra = await more(query)
             guard !Task.isCancelled, let self, self.query == query else { return }
-            let picked = self.current?.id
+            let picked = self.selected != 0 ? self.current?.id : nil
             self.items = items + extra
             self.selected = picked.flatMap { id in self.items.firstIndex { $0.id == id } } ?? 0
             self.arrived()
