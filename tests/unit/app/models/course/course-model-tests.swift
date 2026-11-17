@@ -138,4 +138,10 @@ struct CourseModelTests {
         #expect(model.trailing(.classes, file: try #require(workspace.course(graphTheory)).file)?.text == "1회")
         #expect(AppLink.CoursePage.stats.title == "오답과 통계" && CourseTab.assessment.title == "평가")
     }
+
+    @Test func assignmentsHaveTheirOwnTabApartFromExamsAndGrades() {
+        #expect(CourseTab.assignments.pages == [.assignments])
+        #expect(CourseTab.assessment.pages == [.exams, .grades])
+        #expect(Array(CourseTab.allCases.prefix(3)) == [.overview, .classes, .assignments])
+    }
 }
