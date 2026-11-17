@@ -58,14 +58,15 @@ struct AssetTrayModelTests {
         #expect(tray.dragText(widget).hasPrefix("\n```cb-widget"))
     }
 
-    @Test func filterAndSearchNarrowTheShelf() {
-        tray.filter = .widgets
-        #expect(names(tray.shelf.unused) == ["증가 경로"])
+    @Test func filterAndSearchNarrowOnlyTheExpandedShelf() {
         tray.filter = .figures
         tray.search = "kon"
-        #expect(names(tray.shelf.unused).isSuperset(of: ["hall.svg", "konig.svg"]))
+        #expect(names(tray.shelf.unused).isSuperset(of: ["hall.svg", "konig.svg", "증가 경로"]))
         tray.expanded = true
         #expect(names(tray.shelf.unused) == ["konig.svg"])
+        tray.filter = .widgets
+        tray.search = ""
+        #expect(names(tray.shelf.unused) == ["증가 경로"])
     }
 
     @Test func viewingLargeChoosesByKind() throws {

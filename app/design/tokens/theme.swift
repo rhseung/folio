@@ -262,10 +262,10 @@ enum Theme {
         static let examMarker: CGFloat = 52
         static let problemCell: CGFloat = 40
         static let assetTile = CGSize(width: 112, height: 84)
-        // 머리 줄 40, 위 여백 12, 묶음 이름 16, 간격 8, 타일 84, 아래 여백 16이다.
-        static let assetTray: CGFloat = 176
+        // 위 여백 16, 묶음 이름 14, 간격 8, 타일 84, 아래 여백 16이다. 띠는 가운데에 두므로 남는 높이는 위아래로 나뉜다.
+        static let assetTray: CGFloat = 140
         static let assetTrayGrid: CGFloat = 440
-        static let assetTrayHead: CGFloat = 40
+        static let assetViewerHead: CGFloat = 40
         static let assetBadge: CGFloat = 20
         static let assetName: CGFloat = 22
         static let assetPreview = CGSize(width: 336, height: 252)

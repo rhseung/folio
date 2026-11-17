@@ -36,7 +36,7 @@ struct AssetViewer: View {
             }
             .padding(.leading, Theme.Space.l)
             .padding(.trailing, Theme.Space.s)
-            .frame(height: Theme.Size.assetTrayHead)
+            .frame(height: Theme.Size.assetViewerHead)
             Theme.Palette.lineSoft.frame(height: 1)
             ScrollView(.vertical) {
                 WidgetPageView(id: id, noteFolder: model.editor.baseURL, height: $height)

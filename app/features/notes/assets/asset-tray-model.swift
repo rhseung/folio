@@ -35,7 +35,10 @@ import Observation
             }
     }
 
-    var shelf: NoteAssetShelf { NoteAssetShelf(assets, use: currentUse, filter: filter, search: expanded ? search : "") }
+    // 거르기와 검색은 펼쳤을 때만 보이므로, 접은 띠는 고른 값을 남겨 두되 적용하지 않는다.
+    var shelf: NoteAssetShelf {
+        NoteAssetShelf(assets, use: currentUse, filter: expanded ? filter : .all, search: expanded ? search : "")
+    }
     var isEmpty: Bool { assets.isEmpty }
 
     private var currentUse: NoteAssetUse {

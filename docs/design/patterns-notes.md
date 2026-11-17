@@ -32,8 +32,8 @@
 
 편집 보기의 애셋 버튼은 이 노트에 넣을 그림(`Notes/assets`의 `.svg`), 위젯(`.folio/widgets/<ID>.html`), 파일(`Notes/assets`의 나머지)을 한 서랍에 모은다(`AssetTray`). 어느 애셋을 이 노트가 쓰는지는 `NoteAssetUse`(링크와 `cb-widget`의 `id`), 묶음과 순서는 `NoteAssetShelf`가 정한다.
 
-- **자리.** Mac과 iPad는 PageBar 밑에 높이 `Size.assetTray`의 띠로 연다. 바탕은 `page` 50%이고 아래에 `lineSoft` 선을 긋는다. iPhone은 본문을 밀어내지 않게 시트로 연다. 낮은 높이는 띠 한 줄이고 뒤의 본문에 계속 쓸 수 있으며, 끌어 올린 높이는 검색과 세 열 격자다.
-- **머리 줄.** `assetTrayHead` 높이에 거르기 `SegmentedControl(size: .small)`("전체 · 그림 · 위젯 · 파일"), 펼쳤을 때의 검색("애셋 검색", 폭 `assetSearch`), + 버튼(파일 고르기), 펼침 버튼을 둔다. 거르기는 두 묶음을 그대로 두고 다른 종류만 뺀다. 빈 서랍도 머리 줄을 남겨 + 버튼이 보인다.
+- **자리.** Mac과 iPad는 PageBar 밑에 높이 `Size.assetTray`의 띠로 연다. 바탕은 `page` 50%이고 아래에 `lineSoft` 선을 긋는다. iPhone은 본문을 밀어내지 않게 시트로 연다. 낮은 높이는 띠 한 줄이고 뒤의 본문에 계속 쓸 수 있으며, 끌어 올린 높이는 거르기, 검색과 세 열 격자다.
+- **버튼과 머리 줄.** 접은 띠에는 + 버튼(파일 고르기)과 펼침 버튼만 오른쪽에 세로로 두고, 띠의 내용은 위아래 여백이 같게(`Space.l`) 가운데에 놓는다. 거르기 `SegmentedControl(size: .small)`("전체 · 그림 · 위젯 · 파일")과 검색("애셋 검색", 폭 `assetSearch`)은 격자로 펼쳤을 때만 머리 줄에 보이고, 접으면 고른 거르기와 검색어를 남겨 두되 적용하지 않는다. 머리 줄의 위 여백(`Space.l`)은 그 아래 격자까지의 간격(`Space.m`)보다 작지 않다. 거르기는 두 묶음을 그대로 두고 다른 종류만 뺀다. 빈 서랍도 + 버튼이 보인다.
 - **묶음.** "안 쓴 것"이 먼저, "이 노트에 쓴 것"이 다음이다. 묶음마다 `Caption` 이름과 개수를 달고, 안에서는 새것부터 놓는다. 띠에서는 두 묶음이 가로로 나란하고 사이에 `lineSoft` 세로선을, 격자에서는 위아래로 쌓고 가로선을 둔다.
 - **타일.** `assetTile`(112×84), `Radius.control`, `lineSoft` 테두리다. 왼쪽 위 `assetBadge` 칸에 종류 표시(`scribble.variable` 그림, `slider.horizontal.3` 위젯, `photo` 이미지, `doc` 파일)를 `card` `veil` 바탕으로 둔다. 마우스를 올리면 살짝 떠오르며 `Shadow.lifted`가 깔리고, 아래 `assetName` 띠에 가운데를 줄인 이름(`FileName`)이 뜬다. 터치에서는 길게 눌러 뜨는 미리보기 카드가 이름을 보인다.
 - **썸네일.** 그림은 노트 CSS를 넣은 화면 밖 웹 뷰에서 `card` 바탕으로, 위젯은 노트와 같은 격리된 페이지(`WidgetPage`)에서 처음 그린 화면을 그림으로 남긴다. 라이트와 다크를 따로 그리고 내용 해시와 모양마다 기기의 Caches에 둔다(`AssetThumbnails`). 이미지와 PDF는 QuickLook 썸네일이다. 사진은 타일을 채워 자르고, 문서의 쪽은 다크에서도 흰 쪽으로 둔다.

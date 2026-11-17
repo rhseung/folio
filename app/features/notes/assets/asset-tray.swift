@@ -11,16 +11,23 @@ struct AssetTray: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            head
-            if inSheet && model.expanded {
-                SearchField(prompt: String(localized: .notesAssetsSearch), text: $model.search)
-                    .padding(.horizontal, Theme.Space.l)
-                    .padding(.bottom, Theme.Space.s)
+            if model.expanded {
+                head
+                if inSheet {
+                    SearchField(prompt: String(localized: .notesAssetsSearch), text: $model.search)
+                        .padding(.horizontal, Theme.Space.l)
+                        .padding(.top, Theme.Space.s)
+                }
+                content
+            } else {
+                HStack(spacing: 0) {
+                    content
+                    side
+                }
             }
-            content
         }
-        .frame(maxWidth: .infinity, alignment: .top)
-        .frame(height: height, alignment: .top)
+        .frame(maxWidth: .infinity, maxHeight: inSheet ? .infinity : nil, alignment: alignment)
+        .frame(height: height, alignment: alignment)
         .background(targeted ? accent.tint : inSheet ? Theme.Palette.card : Theme.Palette.page.opacity(Theme.Opacity.soft))
         .overlay {
             if targeted {
@@ -48,40 +55,59 @@ struct AssetTray: View {
         .quickLookPreview($model.quickLook)
     }
 
+    // 접은 띠는 위아래 여백이 같도록 가운데에 두고, 펼친 격자는 위에서부터 채운다.
+    private var alignment: Alignment { model.expanded ? .top : .center }
+
     private var height: CGFloat? {
-        if inSheet { return nil }
-        if model.isEmpty { return Theme.Size.assetTrayHead + Theme.Size.rowHeight }
+        if inSheet || model.isEmpty { return nil }
         return model.expanded ? Theme.Size.assetTrayGrid : Theme.Size.assetTray
     }
 
+    // 거르기와 검색은 격자를 펼쳤을 때만 보인다. 띠 한 줄에서는 고를 것이 적어 거르기가 자리만 차지한다.
     private var head: some View {
         HStack(spacing: Theme.Space.s) {
             SegmentedControl(selection: $model.filter, options: model.filters, size: .small).fixedSize()
             Spacer(minLength: Theme.Space.s)
-            if model.expanded && !inSheet {
+            if !inSheet {
                 SearchField(prompt: String(localized: .notesAssetsSearch), text: $model.search)
                     .frame(maxWidth: Theme.Size.assetSearch)
             }
-            Button {
-                model.picking = true
-            } label: {
-                Label(.notesAssetsAdd, systemImage: "plus")
-            }
-            .buttonStyle(.ghostIcon)
-            .help(Text(.notesAssetsAddHelp))
-            if !inSheet && !model.isEmpty {
-                Button {
-                    model.expanded.toggle()
-                } label: {
-                    Label(model.expanded ? .commonCollapse : .commonExpand, systemImage: model.expanded ? "chevron.up" : "chevron.down")
-                }
-                .buttonStyle(.ghostIcon)
-                .help(Text(.notesAssetsExpandHelp))
-            }
+            addButton
+            if !inSheet { expandButton }
         }
+        .padding(.top, Theme.Space.l)
         .padding(.leading, inSheet ? Theme.Space.l : Theme.Space.xl)
         .padding(.trailing, inSheet ? Theme.Space.s : Theme.Space.l)
-        .frame(height: Theme.Size.assetTrayHead)
+    }
+
+    private var side: some View {
+        VStack(spacing: Theme.Space.xs) {
+            addButton
+            if !inSheet && !model.isEmpty { expandButton }
+        }
+        .padding(.leading, Theme.Space.xs)
+        .padding(.trailing, inSheet ? Theme.Space.s : Theme.Space.l)
+        .padding(.vertical, model.isEmpty ? Theme.Space.s : 0)
+    }
+
+    private var addButton: some View {
+        Button {
+            model.picking = true
+        } label: {
+            Label(.notesAssetsAdd, systemImage: "plus")
+        }
+        .buttonStyle(.ghostIcon)
+        .help(Text(.notesAssetsAddHelp))
+    }
+
+    private var expandButton: some View {
+        Button {
+            model.expanded.toggle()
+        } label: {
+            Label(model.expanded ? .commonCollapse : .commonExpand, systemImage: model.expanded ? "chevron.up" : "chevron.down")
+        }
+        .buttonStyle(.ghostIcon)
+        .help(Text(.notesAssetsExpandHelp))
     }
 
     @ViewBuilder private var content: some View {
@@ -90,6 +116,7 @@ struct AssetTray: View {
             note(Label(.notesAssetsEmpty, systemImage: "square.and.arrow.down"))
         } else if shelf.isEmpty {
             note(Label(.notesAssetsNoMatch, systemImage: "magnifyingglass"))
+                .padding(.top, Theme.Space.s)
         } else if model.expanded {
             grid(shelf)
         } else {
@@ -115,9 +142,9 @@ struct AssetTray: View {
                 group(.notesAssetsUsed, shelf.used) { tiles($0) }
             }
             .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, inSheet ? Theme.Space.l : Theme.Space.xl)
-            .padding(.top, Theme.Space.m)
-            .padding(.bottom, Theme.Space.l)
+            .padding(.leading, inSheet ? Theme.Space.l : Theme.Space.xl)
+            .padding(.trailing, Theme.Space.s)
+            .padding(.vertical, Theme.Space.l)
         }
         .scrollIndicators(.never)
         .overflowFade(.horizontal)
