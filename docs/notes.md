@@ -34,8 +34,16 @@
 ## 그림과 위젯
 
 - 그림은 `Notes/assets/<이름>.svg`, 위젯은 `.folio/widgets/<ID>.html`이다. 고쳐 쓸 때는 `show --json`의 해시와 디스크가 같을 때만 쓴다(`--expect`).
-- 쓰기 전 검사(XML, 스크립트, 바깥 참조, 다크 규칙 `prefers-color-scheme: dark`, 위젯의 바깥 주소)는 `NoteFigure.problems`와 `NoteWidget.problems`다.
-- 그려 보기(`render`)의 색은 앱 테스트 `NoteThemeCopyTests`가 앱의 `NoteWidgets.themeCSS`에서 만든 사본(`sources/cli/render/generated`)이다. `theme.swift`나 `themeCSS`를 바꾸면 `TEST_RUNNER_FOLIO_WRITE_NOTE_THEME=1 mise run test-app`으로 다시 만든다.
+- 그림과 위젯, mermaid 도식은 같은 그림 스타일(`FolioDomain`의 `FigureStyle`)을 쓴다. 모양은 LaTeX 교과서의 그림이다. 색(라이트·다크), 선 굵기, stealth 화살촉, 글꼴 역할이 이 표 하나에 있고, 노트 형식 안내(`NoteWritingGuide`)도 클래스 이름과 선 굵기를 여기서 읽는다. 이 스타일은 새로 쓰는 그림과 위젯에만 들어가고, 그 전에 쓴 파일은 바꾸지 않는다.
+- 그림은 이미지로 보여서 페이지 CSS를 읽지 못한다. 그래서 그림은 이름 있는 클래스(`.ink`, `.p-blue`, 선은 `.s-ink`)로만 칠하고, 쓸 때 `NoteFigureFinish`가 그림 엔진(`sources/web/src/figure.js`)을 JavaScriptCore로 돌려 마무리한다.
+    - 스타일 표의 `<style id="folio-figure">`(다크 규칙 포함)와 쓴 화살촉(`url(#m-ink)`)의 `<marker>`를 `<defs id="folio-figure-defs">`에 넣는다.
+    - `<text>`의 `$…$`를 MathJax SVG 출력(`fontCache: none`, mhchem)으로 LaTeX 글자 path로 바꾼다. 같은 글자는 `<defs>`에 한 번 두고 `<use>`로 가리킨다. 바꾼 라벨은 `<g data-source="원래 text">`에 들어가고, `note figure show`와 고쳐 쓰기는 이것을 걷어 쓴 사람이 쓴 모양으로 되돌린다. 그래서 같은 그림을 두 번 마무리해도 결과가 같다.
+    - 라벨 겹침을 검사한다. 라벨끼리, 라벨과 선(선 굵기 절반 + 1.5px), 칠한 면의 경계, 그림 밖을 본다. 회전한 라벨은 그 좌표계에서 보고, 뒤에 그린 불투명한 도형이 가린 선 조각과 `s-grid` 격자는 뺀다. 낱말 폭은 CoreText의 시스템 글꼴로 잰다.
+- 쓰기 전 검사(XML, 스크립트, 바깥 참조, 클래스 밖의 색, 긴 글, 큰 화살촉)는 `NoteFigure.problems`, 위젯의 바깥 주소는 `NoteWidget.problems`다. 쓸 때 넣은 `<style>`과 `<defs>`는 검사하지 않는다.
+- 위젯 frame에는 위젯 스크립트보다 먼저 `NoteWidgetKit`이 그림 스타일의 CSS 변수(`--ink`, `--p-blue` …), shadcn/ui 모양의 기본 컨트롤 스타일(`:where()`라서 위젯의 스타일이 이긴다), KaTeX(mhchem 포함)와 `$…$` 자동 조판을 넣는다(`sources/web/src/widget.js`, `widget.css`).
+- mermaid 도식은 `mermaid.js`가 beautiful-mermaid의 색 변수를 그림 팔레트로 다시 정의하고 채운 화살촉을 stealth 촉으로, `$…$`를 같은 폭의 자리 글자로 배치한 뒤 LaTeX path로, 코드를 `\texttt` path로 바꾼다. 테마 옵션으로 바꿀 수 없는 라이브러리 상수는 `sources/web/patches/beautiful-mermaid.mjs`가 묶을 때 고친다. 고칠 글이 정확히 한 번 나오지 않거나 판이 다르면 `build-web`이 실패하므로, beautiful-mermaid 판을 올리면 이 파일을 다시 맞춘다. 색이 CSS 변수라서 다크로 바뀌어도 다시 그리지 않는다.
+- 그림 엔진과 위젯 kit은 앱과 CLI가 함께 쓰므로 `build-web`이 `sources/actions/notes/`에 묶고 `FolioActions`의 리소스로 둔다.
+- 그려 보기(`render`)는 쓸 때와 같이 마무리한 그림을 그리고 그 검사 결과를 알린다. 색은 앱 테스트 `NoteThemeCopyTests`가 앱의 `NoteWidgets.themeCSS`에서 만든 사본(`sources/cli/render/generated`)이다. `theme.swift`나 `themeCSS`를 바꾸면 `TEST_RUNNER_FOLIO_WRITE_NOTE_THEME=1 mise run test-app`으로 다시 만든다.
 
 ## 노트 보기 회귀 검사
 
