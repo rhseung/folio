@@ -165,7 +165,7 @@ struct ClaudeModelTests {
         let line = model.describe(add)
         #expect(line.refusal == nil)
         #expect(line.change == .figure(finished))
-        let html = ClaudeModel.figureHTML(svg)
+        let html = ClaudeModel.figureHTML(finished)
         let images = html.matches(of: /data:image\/svg\+xml;base64,([A-Za-z0-9+\/=]+)/).compactMap { Data(base64Encoded: String($0.1)) }
         #expect(images.compactMap { String(bytes: $0, encoding: .utf8) } == [finished])
         #expect(html.contains("<details class=\"change\" open>"))
