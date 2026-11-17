@@ -5,22 +5,22 @@ import SwiftUI
 // 사이드바, 남겨 둔 모든 탭의 화면, 탭을 frame마다 다시 그렸다.
 @MainActor @Observable final class ToolbarRow {
     struct Measures: Equatable {
-        var front = TabFit.Front(trail: 0, chrome: 0)
-        var others: [TabFit.Other] = []
+        var front = TabFit.Tab.single
+        var others: [TabFit.Tab] = []
         var more: CGFloat = 0
     }
 
     struct Placement: Equatable {
         var lead: CGFloat
         var fit: TabFit.Layout
-        var trail: CGFloat?
         var width: CGFloat
         var newTabSpacing: CGFloat
     }
 
+    static let bounds = TabFit.Bounds(min: Theme.Size.tabMin, max: Theme.Size.tabMax, grid: Theme.Space.xs)
+
     private(set) var placement = Placement(
-        lead: 0, fit: TabFit.Layout(iconsOnly: false, shown: 0, hidden: 0), trail: nil, width: 0,
-        newTabSpacing: TabBar.gap)
+        lead: 0, fit: TabFit.Layout(share: 0, shown: 0, hidden: 0), width: 0, newTabSpacing: TabBar.gap)
 
     // 창이 resize 되는 동안 줄이 배치되기 전에 설정되므로(`WindowWidth`) 탭이 같은 frame에 새 폭에 맞는다. 배치된 줄에서
     // 재면 창보다 한 frame 늦고, 줄보다 넓은 strip이 첫 탭을 패널 가장자리 밖으로 밀어냈다.
@@ -45,16 +45,12 @@ import SwiftUI
         let m = measures
         let plus = CGFloat(TabFit.newTabSpacing(gap: TabBar.gap, button: Theme.Size.toolbarButton, glyph: TabBar.plusInk))
         let space = room - Theme.Size.toolbarButton - plus
-        let fit = TabFit.layout(room: space, front: m.front, others: m.others, gap: TabBar.gap, more: m.more)
-        // point 단위로 내린다. 고정한 trail은 어차피 폭을 따르므로 소수점은 더 자주 다시 그리게 할 뿐이고, 올리면 strip이 줄보다
-        // 1point 커질 수 있다.
-        let trail = TabFit.trail(room: space, front: m.front, others: m.others, layout: fit, gap: TabBar.gap, more: m.more)
-            .map { $0.rounded(.down) }
+        let fit = TabFit.layout(room: space, front: m.front, others: m.others, gap: TabBar.gap, more: m.more, bounds: Self.bounds)
         let width =
-            TabFit.width(front: m.front, others: m.others, layout: fit, trail: trail, gap: TabBar.gap, more: m.more)
-            + plus + Theme.Size.toolbarButton
+            TabFit.width(front: m.front, others: m.others, layout: fit, gap: TabBar.gap, more: m.more) + plus + Theme.Size.toolbarButton
+        // point 단위로 내린다. 올리면 strip이 줄보다 1point 커질 수 있다.
         let whole = (lead + width).rounded(.down) - lead
-        let new = Placement(lead: lead, fit: fit, trail: trail.map { CGFloat($0) }, width: whole, newTabSpacing: plus)
+        let new = Placement(lead: lead, fit: fit, width: whole, newTabSpacing: plus)
         if new != placement { placement = new }
     }
 

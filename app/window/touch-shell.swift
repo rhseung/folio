@@ -61,7 +61,7 @@ extension RootView {
                 HistoryButtons(navigator: navigator) { workspace.title(of: $0) }
             }
             TabBar(
-                tabs: tabs, workspace: workspace, crumbs: crumbs, toolbar: row, moveToWindow: moveToWindow,
+                tabs: tabs, workspace: workspace, toolbar: row, moveToWindow: moveToWindow,
                 nameLayout: { namingLayout = $0 }, manageLayouts: manageLayouts)
             Spacer(minLength: 0)
             HStack(spacing: Theme.Space.s) {

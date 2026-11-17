@@ -79,8 +79,6 @@ struct CourseModelTests {
         #expect(model.section == .sessions && model.openRecording?.id == recording.id && model.focus == nil)
         model.moved(link.with(.time(95)))
         #expect(model.place == link.with(.time(95)))
-        model.resetPage()
-        #expect(model.place == .course(graphTheory, page: .sessions) && model.openRecording == nil)
     }
 
     @Test func aFileFollowsOnlyAPageItIsNotOn() throws {

@@ -153,20 +153,24 @@ struct ToolbarRowTests {
         row.leadingX = 84
         // row의 trailing inset을 포함해, 검색 필드의 시작에서 창 가장자리까지 360이다.
         row.trailingWidth = 360 - TitleRowEdges.trailing
-        row.measures = ToolbarRow.Measures(
-            front: TabFit.Front(trail: 256, chrome: 44), others: [120, 120, 32].map { TabFit.Other(single: $0, icon: 32) },
-            more: 60)
+        row.measures = ToolbarRow.Measures(front: .single, others: [.single, .single, .fixed(32)], more: 60)
         row.windowWidth = width
         return row
     }
 
-    @Test func aRoomyRowHoldsItsPlaceAsTheWindowResizes() {
-        let row = row(width: 1400)
+    // 새 탭 +와 그 앞 간격을 뺀, 탭이 쓸 수 있는 폭이다.
+    func space(_ row: ToolbarRow) -> CGFloat {
+        row.room - Theme.Size.toolbarButton
+            - CGFloat(TabFit.newTabSpacing(gap: TabBar.gap, button: Theme.Size.toolbarButton, glyph: TabBar.plusInk))
+    }
+
+    @Test func aRowAtTheWidestHoldsItsPlaceAsTheWindowResizes() {
+        let row = row(width: 2000)
         let wide = row.placement
-        #expect(wide.fit == TabFit.Layout(iconsOnly: false, shown: 3, hidden: 0) && wide.trail == nil)
+        #expect(wide.fit == TabFit.Layout(share: Theme.Size.tabMax, shown: 3, hidden: 0))
         let changes = Changes()
-        // 이름은 1220까지 들어가고, 그 폭에서 탭은 필요한 596만 가진다.
-        for width in stride(from: 1400, through: 1220, by: -4) {
+        // 탭 셋이 280씩 받는 동안에는 창 폭이 바뀌어도 탭이 그대로다.
+        for width in stride(from: 2000, through: 1600, by: -4) {
             withObservationTracking {
                 _ = row.placement
             } onChange: {
@@ -178,19 +182,18 @@ struct ToolbarRowTests {
         #expect(row.placement == wide)
     }
 
-    @Test func itFollowsTheWidthAtOnceWhenTheRowRunsOut() throws {
+    @Test func itSharesTheRowAndFoldsIntoTheMenu() {
         let row = row(width: 1400)
-        row.windowWidth = 1180
-        #expect(row.placement.fit == TabFit.Layout(iconsOnly: true, shown: 3, hidden: 0))
+        // 이름이 있는 탭 셋이 오늘(32)과 간격 셋(24)을 뺀 폭을 나누고, 4의 배수로 내린다.
+        let share = ((space(row) - 32 - TabBar.gap * 3) / 3 / 4).rounded(.down) * 4
+        #expect(row.placement.fit == TabFit.Layout(share: share, shown: 3, hidden: 0))
+        #expect(row.placement.width <= row.room)
 
-        // +는 32와, 그 글리프를 메뉴에서 간격 하나만큼 띄우는 spacing을 차지하고, 나머지는 탭의 몫이다. 앞의 탭 옆에는 메뉴만 남고, 앞의 탭의 꼬리는 메뉴와 그 간격과 크롬을 빼고 남은
-        // 폭으로 제한된다.
+        // 900에서는 다른 탭이 모두 메뉴로 가고, 고른 탭은 메뉴와 그 간격을 뺀 폭을 받는다.
         row.windowWidth = 900
-        #expect(row.placement.fit == TabFit.Layout(iconsOnly: true, stacked: true, compactFront: true, shown: 0, hidden: 3))
-        let spacing = TabFit.newTabSpacing(gap: TabBar.gap, button: Theme.Size.toolbarButton, glyph: TabBar.plusInk)
-        #expect(row.placement.newTabSpacing == CGFloat(spacing))
-        let held: CGFloat = (row.room - Theme.Size.toolbarButton - CGFloat(spacing) - 68 - 44).rounded(.down)
-        #expect(try #require(row.placement.trail) == held)
+        let alone = ((space(row) - TabBar.gap - 60) / 4).rounded(.down) * 4
+        #expect(row.placement.fit == TabFit.Layout(share: min(alone, Theme.Size.tabMax), shown: 0, hidden: 3))
+        #expect(row.placement.width <= row.room)
         #expect(row.placement.lead == CGFloat(TabFit.lead(panelEdge: Theme.Size.sidebar, after: row.historyEnd, gap: Theme.Space.s)))
     }
 

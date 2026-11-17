@@ -69,10 +69,6 @@ final class CourseModel {
         if link != place { place = link }
     }
 
-    func resetPage() {
-        settle()
-    }
-
     private func settle() {
         guard !following else { return }
         noteAnchor = nil

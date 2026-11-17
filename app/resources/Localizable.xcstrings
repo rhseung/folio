@@ -3950,28 +3950,6 @@
         }
       }
     },
-    "design.crumb-rename-help": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이름 바꾸기"
-          }
-        }
-      }
-    },
-    "design.crumb-top-help": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ 처음으로"
-          }
-        }
-      }
-    },
     "design.drag-or-pick-help": {
       "extractionState": "manual",
       "localizations": {
@@ -4023,17 +4001,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "눌러서 고르고, 고른 칸을 다시 누르면 미정"
-          }
-        }
-      }
-    },
-    "design.hidden-path": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "가려진 경로"
           }
         }
       }
