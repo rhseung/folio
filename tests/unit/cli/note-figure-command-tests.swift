@@ -11,7 +11,7 @@ struct NoteFigureCommandTests {
     let h = Harness()
     let course = Harness.graphTheory
     static let svg =
-        #"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40"><style>.a{fill:#222}@media (prefers-color-scheme: dark){.a{fill:#E6E2DB}}</style><rect class="a" width="60" height="40"/></svg>"#
+        #"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40"><rect class="ink" width="60" height="40"/></svg>"#
     static let widget = UUID(uuidString: "A0000000-0000-4000-8000-0000000000A7")!
 
     func scratch(_ name: String, _ text: String) throws -> String {
@@ -31,12 +31,13 @@ struct NoteFigureCommandTests {
     }
 
     @Test func figureWrite() throws {
-        let new = Self.svg.replacing("60", with: "80")
+        // 디스크에는 마무리한 그림이 있으므로 그 해시를 기대한다.
+        let (new, old) = (Self.svg.replacing("60", with: "80"), ContentHash.of(try NoteFigureFinish.finish(Self.svg).svg))
         try h.expectSame(
-            ["note", "figure", "write", "EC4207", "graph.svg", "--svg", try scratch("new.svg", new), "--expect", ContentHash.of(Self.svg)],
+            ["note", "figure", "write", "EC4207", "graph.svg", "--svg", try scratch("new.svg", new), "--expect", old],
             setup: [try addFigure()]
         ) { _ in
-            NoteFigureWrite(course: course, name: "graph.svg", svg: new, expect: ContentHash.of(Self.svg))
+            NoteFigureWrite(course: course, name: "graph.svg", svg: new, expect: old)
         }
     }
 
@@ -61,7 +62,7 @@ struct NoteFigureCommandTests {
         #expect(h.cli(try addWidget(), gist: gist).code == 0)
         let shown = h.cli(["note", "figure", "show", "EC4207", "graph", "--json"], gist: gist)
         let body = try JSONDecoder().decode(JSONValue.self, from: Data(shown.out.utf8))
-        #expect(body["hash"] == .string(ContentHash.of(Self.svg)))
+        #expect(body["hash"] == .string(ContentHash.of(try NoteFigureFinish.finish(Self.svg).svg)))
         #expect(body["path"] == .string("Notes/assets/graph.svg"))
         let widget = h.cli(["note", "widget", "show", "EC4207/\(Self.widget.uuidString)", "--json"], gist: gist)
         #expect(try JSONDecoder().decode(JSONValue.self, from: Data(widget.out.utf8))["hash"] == .string(ContentHash.of("<p>x</p>")))
@@ -73,7 +74,7 @@ struct NoteFigureCommandTests {
 
     @Test func formatPrintsTheGuide() throws {
         let r = h.cli(["note", "format"], gist: try Harness.fixtureCopy())
-        #expect(r.out.contains("prefers-color-scheme: dark"))
+        #expect(r.out.contains("url(#m-ink)"))
         #expect(r.out.contains("cb-widget"))
         #expect(Skill.text.contains("folio note format"))
     }

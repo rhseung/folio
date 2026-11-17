@@ -79,9 +79,14 @@ private final class Engine: @unchecked Sendable {
 
     private func loaded() throws -> JSContext {
         if let context { return context }
-        guard let url = Bundle.module.url(forResource: "figure", withExtension: "js"),
-            let script = try? String(contentsOf: url, encoding: .utf8), let made = JSContext()
-        else { throw NoteFigureFinish.EngineFailure(description: "figure.js를 읽지 못했습니다") }
+        guard let url = Bundle.module.url(forResource: "figure", withExtension: "js") else {
+            throw NoteFigureFinish.EngineFailure(description: "figure.js가 \(Bundle.module.bundlePath)에 없습니다")
+        }
+        let script: String
+        do { script = try String(contentsOf: url, encoding: .utf8) } catch {
+            throw NoteFigureFinish.EngineFailure(description: "figure.js를 읽지 못했습니다: \(error)")
+        }
+        guard let made = JSContext() else { throw NoteFigureFinish.EngineFailure(description: "JSContext를 만들지 못했습니다") }
         let measure: @convention(block) (String, Double, Double) -> Double = { text, px, weight in Self.width(text, px, weight) }
         made.setObject(unsafeBitCast(measure, to: AnyObject.self), forKeyedSubscript: "folioMeasure" as NSString)
         made.evaluateScript(script)
