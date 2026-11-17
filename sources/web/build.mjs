@@ -1,6 +1,6 @@
 // 페이지가 파일에 접근하지 않고도 글꼴을 쓰도록 KaTeX 글꼴은 woff2만 data URL로 넣는다.
 import { build } from "esbuild";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import * as mermaidPatch from "./patches/beautiful-mermaid.mjs";
 
 const out = "../../app/resources/web";
@@ -8,6 +8,14 @@ const out = "../../app/resources/web";
 const actions = "../../sources/actions/notes";
 const common = { bundle: true, minify: true, target: "safari18", legalComments: "eof", logLevel: "warning" };
 const fonts = { ".woff2": "dataurl", ".woff": "empty", ".ttf": "empty" };
+// 빈 글꼴 자리(`url()`)는 페이지 주소로 풀려 보안 정책(font-src data:)에 막히고 콘솔에 남는다. woff2만 둔다.
+const woff2Only = (css) => {
+  const text = css.replace(/,url\(\) format\("(?:woff|truetype)"\)/g, "");
+  if (text.includes("url()")) throw new Error("빈 url()이 남았다: KaTeX CSS의 글꼴 src 모양이 바뀌었다");
+  return text;
+};
+const cssText = async (entry) =>
+  woff2Only((await build({ ...common, entryPoints: [entry], write: false, outfile: "out.css", loader: fonts })).outputFiles[0].text);
 
 const patched = {
   name: "beautiful-mermaid-patch",
@@ -28,13 +36,10 @@ const patched = {
 
 await build({ ...common, entryPoints: ["src/reader.js"], outfile: `${out}/reader.js`, format: "iife", plugins: [patched] });
 await build({ ...common, entryPoints: ["src/native.js"], outfile: `${out}/native.js`, format: "iife", globalName: "folioNative" });
-await build({ ...common, entryPoints: ["src/style.css"], outfile: `${out}/note.css`, loader: fonts });
+await writeFile(`${out}/note.css`, await cssText("src/style.css"));
 await build({ ...common, entryPoints: ["src/figure.js"], outfile: `${actions}/figure/figure.js`, format: "iife", globalName: "folioFigure" });
 
-const widgetCSS = await build({ ...common, entryPoints: ["src/widget.css"], write: false, outfile: "widget.css", loader: fonts });
-// 빈 글꼴 자리(`url()`)는 frame 주소로 풀려 위젯의 보안 정책(font-src data:)에 막히고 콘솔에 남는다. woff2만 둔다.
-const widgetText = widgetCSS.outputFiles[0].text.replace(/,url\(\) format\("(?:woff|truetype)"\)/g, "");
 await build({
   ...common, entryPoints: ["src/widget.js"], outfile: `${actions}/widget/widget-kit.js`, format: "iife",
-  define: { WIDGET_CSS: JSON.stringify(widgetText) },
+  define: { WIDGET_CSS: JSON.stringify(await cssText("src/widget.css")) },
 });
