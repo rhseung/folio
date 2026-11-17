@@ -57,4 +57,4 @@ window.folioReader = {
 };
 
 window.folioPreview = preview({ typeset, redraw: () => renderDiagrams(document.body) });
-figures();
+window.folioFigures = figures({ closed: () => window.webkit?.messageHandlers?.folioPreview?.postMessage({ type: "figureClosed" }) });

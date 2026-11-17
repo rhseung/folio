@@ -7960,7 +7960,40 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "assets 폴더의 파일을 끌어서 본문에 넣습니다. 이미지는 본문에 바로 끌어 놓거나 붙여 넣어도 됩니다"
+            "value": "그림, 위젯, 파일을 골라 본문에 넣습니다"
+          }
+        }
+      }
+    },
+    "notes.assets.add": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일 추가"
+          }
+        }
+      }
+    },
+    "notes.assets.add-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일을 골라 노트 assets 폴더에 복사합니다"
+          }
+        }
+      }
+    },
+    "notes.assets.detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
           }
         }
       }
@@ -7971,7 +8004,73 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Finder에서 이미지나 파일을 여기로 끌어 오면 노트 assets 폴더에 복사됩니다"
+            "value": "이미지나 파일을 여기로 끌어 오거나 +로 고르면 노트 assets 폴더에 복사됩니다"
+          }
+        }
+      }
+    },
+    "notes.assets.expand-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "끌어 내리거나 눌러서 서랍을 펼칩니다"
+          }
+        }
+      }
+    },
+    "notes.assets.filter.all": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전체"
+          }
+        }
+      }
+    },
+    "notes.assets.filter.figures": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그림"
+          }
+        }
+      }
+    },
+    "notes.assets.filter.files": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일"
+          }
+        }
+      }
+    },
+    "notes.assets.filter.widgets": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "위젯"
+          }
+        }
+      }
+    },
+    "notes.assets.in-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 노트에 있음"
           }
         }
       }
@@ -7987,6 +8086,83 @@
         }
       }
     },
+    "notes.assets.kind.figure": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그림"
+          }
+        }
+      }
+    },
+    "notes.assets.kind.file": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일"
+          }
+        }
+      }
+    },
+    "notes.assets.kind.image": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미지"
+          }
+        }
+      }
+    },
+    "notes.assets.kind.widget": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "위젯"
+          }
+        }
+      }
+    },
+    "notes.assets.no-match": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "맞는 애셋이 없습니다"
+          }
+        }
+      }
+    },
+    "notes.assets.not-yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 없음"
+          }
+        }
+      }
+    },
+    "notes.assets.search": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "애셋 검색"
+          }
+        }
+      }
+    },
     "notes.assets.tile-help": {
       "extractionState": "manual",
       "localizations": {
@@ -7994,6 +8170,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "끌어서 본문에 넣거나 눌러서 커서 자리에 넣기"
+          }
+        }
+      }
+    },
+    "notes.assets.unused": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "안 쓴 것"
+          }
+        }
+      }
+    },
+    "notes.assets.used": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 노트에 쓴 것"
+          }
+        }
+      }
+    },
+    "notes.assets.view-large": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "크게 보기"
           }
         }
       }

@@ -82,6 +82,8 @@ enum Theme {
         static let zonePicked = 0.3
         static let folded = 0.32
         static let soft = 0.5
+        // 애셋 타일 위의 종류 표시와 이름 띠다. 썸네일이 비치되 글자가 읽히는 정도다.
+        static let veil = 0.9
         static let faded = 0.4
         static let area = 0.2
         static let areaStrong = 0.6
@@ -259,8 +261,17 @@ enum Theme {
         static let classCard: CGFloat = 60
         static let examMarker: CGFloat = 52
         static let problemCell: CGFloat = 40
-        static let assetTile = CGSize(width: 72, height: 56)
-        static let assetTray: CGFloat = 104
+        static let assetTile = CGSize(width: 112, height: 84)
+        // 머리 줄 40, 위 여백 12, 묶음 이름 16, 간격 8, 타일 84, 아래 여백 16이다.
+        static let assetTray: CGFloat = 176
+        static let assetTrayGrid: CGFloat = 440
+        static let assetTrayHead: CGFloat = 40
+        static let assetBadge: CGFloat = 20
+        static let assetName: CGFloat = 22
+        static let assetPreview = CGSize(width: 336, height: 252)
+        static let assetSearch: CGFloat = 200
+        static let assetViewer = CGSize(width: 720, height: 540)
+        static let grabber = CGSize(width: 36, height: 4)
         static let chart: CGFloat = 220
         static let chartCompact: CGFloat = 200
         static let standingCurve: CGFloat = 104

@@ -31,7 +31,8 @@ function naturalSize(el) {
   return { w: Math.max(1, r.width), h: Math.max(1, r.height) };
 }
 
-export function figures() {
+// `closed`는 보기를 닫을 때 부른다. 애셋 서랍의 크게 보기는 그림 하나만 띄운 페이지라서, 보기를 닫으면 그 창도 닫는다.
+export function figures({ closed } = {}) {
   const bound = new WeakSet();
   let viewer = null, sheet = null, source = null;
   let x = 0, y = 0, s = 1, fit = 1, size = { w: 1, h: 1 };
@@ -165,10 +166,12 @@ export function figures() {
   }
 
   function close() {
+    const was = source != null;
     viewer?.remove();
     source = null;
     pointers.clear();
     drag = lastTap = gesture = null;
+    if (was) closed?.();
   }
 
   function step(by) {
@@ -302,5 +305,15 @@ export function figures() {
     else apply();
   });
 
-  return { close };
+  return {
+    close,
+    // 크기를 읽기 전에 그림을 다 받아야 화면에 맞춘 배율이 맞는다.
+    async openFirst() {
+      const el = all()[0];
+      if (!el) return false;
+      if (el.tagName === "IMG") await el.decode().catch(() => null);
+      open(el);
+      return true;
+    },
+  };
 }
