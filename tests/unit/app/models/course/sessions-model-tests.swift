@@ -14,6 +14,12 @@ struct SessionsModelTests {
         return try #require(workspace.course(graphTheory)?.file.sessions.first { $0.id == id })
     }
 
+    // CLI나 Claude 제안은 24:00(1440)에 끝나는 수업을 넣을 수 있다. 범위의 끝이 시작보다 앞서 멈추지 않아야 한다.
+    @Test func aClassEndingAtMidnightShowsARange() {
+        #expect(TimePicker.range(22 * 60, 1440) != TimePicker.label(22 * 60))
+        #expect(TimePicker.range(600, 600) == TimePicker.label(600))
+    }
+
     @Test func subtitleCountsSessionsAndMissingReviewNotes() throws {
         let workspace = try fixtureWorkspace()
         workspace.run(CourseSet(course: graphTheory, [.schedule([])]))

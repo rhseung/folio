@@ -20,6 +20,7 @@ final class WindowTabs {
     @ObservationIgnored var policy = WindowTabs.keep
     @ObservationIgnored var contentFrame: CGRect = .zero
     var drop: MergeDrop?
+    @ObservationIgnored private(set) lazy var dragging = TabDrag(tabs: self)
 
     enum MergeEdge: Equatable {
         case leading, trailing
@@ -62,6 +63,13 @@ final class WindowTabs {
         let id = UUID()
         tabs[id] = panes
         strip.open(id, afterSelected: fromLink)
+    }
+
+    func insert(_ panes: TabPanes, at index: Int) {
+        let id = UUID()
+        tabs[id] = panes
+        strip.insert(id, at: index)
+        settlePlaying()
     }
 
     func openBehind(_ panes: TabPanes) {
@@ -129,23 +137,47 @@ final class WindowTabs {
         settlePlaying()
     }
 
+    // 다른 창에서 온 칸들을 지금 탭에 합친다. 같은 창의 탭은 `merge(_:into:at:)`가 탭 줄에서도 지운다.
+    func merge(_ panes: TabPanes, at edge: MergeEdge) {
+        guard let front, front !== panes else { return }
+        front.merge(panes, at: edge == .leading ? 0 : front.count)
+        settlePlaying()
+    }
+
     func drop(for id: UUID, at point: CGPoint) -> MergeDrop? {
+        guard id != selected, canMerge(id, into: selected), let source = tabs[id] else { return nil }
+        return drop(adding: source.count, at: point)
+    }
+
+    func drop(adding count: Int, at point: CGPoint) -> MergeDrop? {
         let frame = contentFrame
-        guard id != selected, canMerge(id, into: selected), let source = tabs[id], let front = front, frame.width > 0,
-            frame.minY <= point.y, point.y <= frame.maxY
-        else { return nil }
+        guard let front, count > 0, frame.width > 0, frame.minY <= point.y, point.y <= frame.maxY else { return nil }
         let zone = min(Self.mergeZone, frame.width / 3)
         let edge: MergeEdge
         if point.x <= frame.minX + zone { edge = .leading } else if point.x >= frame.maxX - zone { edge = .trailing } else { return nil }
-        return MergeDrop(edge: edge, share: Double(source.count) / Double(source.count + front.count))
+        return MergeDrop(edge: edge, share: Double(count) / Double(count + front.count))
     }
 
     static let mergeZone = Theme.Size.paneMin / 2
 
-    func take(_ id: UUID) -> TabPanes? {
-        guard count > 1, let panes = tabs[id], strip.close(id) else { return nil }
+    // 창의 마지막 탭은 창이 닫혀야 떠나므로 `evenLast`면 탭 줄에 둔 채 넘긴다. 받는 창에 넣은 뒤 `closeWindow`를 부른다.
+    // 먼저 닫으면 받는 쪽에 넣기 전에 창과 함께 이 모델이 사라질 수 있다.
+    func take(_ id: UUID, evenLast: Bool = false) -> TabPanes? {
+        guard let panes = tabs[id] else { return nil }
+        if count == 1 { return evenLast ? panes : nil }
+        guard strip.close(id) else { return nil }
         tabs[id] = nil
+        settlePlaying()
         return panes
+    }
+
+    func take(pane: UUID, of id: UUID) -> TabPanes? {
+        guard let panes = tabs[id], let i = panes.ids.firstIndex(of: pane), panes.count > 1 else { return nil }
+        let navigator = panes.navigators[i]
+        let columns = panes.columns[i]
+        guard panes.close(i) else { return nil }
+        settlePlaying()
+        return TabPanes(navigator, columns: columns)
     }
 
     func tick() { settle() }

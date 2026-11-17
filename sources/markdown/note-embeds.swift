@@ -78,7 +78,8 @@ extension ParsedNote {
             let start = lines(of: tops[i])?.lowerBound
         else { return nil }
         let next = tops[(i + 1)...].first { ($0 as? Heading).map { $0.level <= level } ?? false }
-        var end = next.flatMap { lines(of: $0)?.lowerBound }.map { $0 - 1 } ?? bodyLines.count
+        // 닫히지 않은 `$$`는 그 뒤의 줄을 모두 같은 원래 줄로 옮기므로, 다음 제목이 이 제목과 같은 줄에서 시작할 수 있다.
+        var end = Swift.max(start, next.flatMap { lines(of: $0)?.lowerBound }.map { $0 - 1 } ?? bodyLines.count)
         while end > start, bodyLines[end - 1].allSatisfy(\.isWhitespace) { end -= 1 }
         return source(start...end)
     }

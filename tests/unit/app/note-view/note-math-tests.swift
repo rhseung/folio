@@ -135,6 +135,14 @@ struct NoteMathTests {
         #expect(await picture(#"\frac{a}"#, display: true) == nil)
     }
 
+    // 자른 그림이 원래 스냅숏의 픽셀을 붙잡으면 한 줄의 바이트 수가 스냅숏의 폭을 따른다. 말풍선은 칠 때마다 그림을 하나씩 남기므로, 그 차이가 그림마다 쌓인다.
+    @Test func trimmedPicturesOwnOnlyTheirPixels() async throws {
+        let picture = try #require(await picture(#"x^2"#))
+        let cg = try #require(picture.image.cgImage(forProposedRect: nil, context: nil, hints: nil))
+        #expect(cg.bytesPerRow <= cg.width * 4 + 64, "\(cg.bytesPerRow) bytes per row for \(cg.width) pixels")
+        #expect(NoteMath.bytes(of: picture) == cg.bytesPerRow * cg.height)
+    }
+
     @Test func picturesKeepTheirInk() async throws {
         let roomy = NoteMath(room: 3)
         let tall = [#"G - T"#, #"\bar S"#, #"\int_0^1 f"#, #"\hat{A}^{T}"#, #"\sqrt{\frac{a}{b}}"#, #"\underbrace{a + b}_{n}"#]

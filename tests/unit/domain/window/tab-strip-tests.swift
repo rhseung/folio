@@ -98,6 +98,20 @@ struct TabStripTests {
         #expect(s.tabs == ["d", "b", "c", "a"])
     }
 
+    @Test func aTabFromAnotherWindowLandsWhereItWasDropped() {
+        var s = TabStrip("a")
+        s.open("b")
+        s.select("a")
+        s.insert("x", at: 1)
+        #expect(s.tabs == ["a", "x", "b"] && s.selected == "x")
+        s.insert("y", at: 99)
+        #expect(s.tabs == ["a", "x", "b", "y"])
+        s.insert("z", at: -3)
+        #expect(s.tabs == ["z", "a", "x", "b", "y"])
+        s.insert("a", at: 3)
+        #expect(s.tabs == ["z", "a", "x", "b", "y"] && s.selected == "a")
+    }
+
     @Test func restoresOnlyAWholeStrip() {
         #expect(TabStrip(tabs: ["a", "b"], selected: "b")?.selectedIndex == 1)
         #expect(TabStrip(tabs: ["a", "b"], selected: "c") == nil)

@@ -865,7 +865,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "성적 항목 '{name}'의 비중이 음수입니다"
+            "value": "성적 항목 '{name}'의 비중은 0에서 100 사이여야 합니다"
           }
         }
       }

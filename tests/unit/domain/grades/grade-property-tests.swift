@@ -158,6 +158,16 @@ struct GradePropertyTests {
         }
     }
 
+    // 손으로 고친 파일의 거대한 비중에서도 남은 비중은 멈추지 않고 0에서 성적 항목 수 × 100 사이의 정수가 된다.
+    @Test func theRemainingPercentFitsAnyWeight() async {
+        let weight = Gen.element(of: [0, 1e-9, 37.5, 100, 1e19, 1e308, -1e19]).map { $0 ?? 0 }
+        await propertyCheck(input: weight.array(of: 1...3)) { weights in
+            let components = weights.map { GradeComponent(device: device, at: now, name: "", weight: $0) }
+            let score = GradeCalculator.score(components: components, entries: [])
+            #expect((0...(100 * components.count)).contains(score.remainingPercent))
+        }
+    }
+
     func build(_ rows: [(Int, Int?, Aggregation, [(Double, Int, Bool)])]) -> ([GradeComponent], [ScoreEntry]) {
         let components = rows.map { weight, count, aggregation, _ in
             GradeComponent(device: device, at: now, name: "", weight: Double(weight), aggregation: aggregation, expectedCount: count)

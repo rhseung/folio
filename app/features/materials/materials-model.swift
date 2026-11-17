@@ -40,6 +40,7 @@ final class MaterialsModel {
     var viewedLink: AppLink? { viewing.map { AppLink(.material, $0, anchor: shownPage.map { .page($0 + 1) }) } }
 
     func load() async {
+        await register()
         assignmentFolders = (try? course.store.assignmentFolders()) ?? []
         suggestions = await cleanupSuggestions()
     }
@@ -130,6 +131,15 @@ final class MaterialsModel {
     }
 
     // MARK: Actions
+
+    // Finder로 넣은 파일이 버튼 없이 보이도록 열 때마다 등록한다. 해시 계산이 느려서 main actor 밖의 dry run으로 바뀔 것이
+    // 있는지 먼저 보고, 그때 계산한 해시는 `FileHash`가 기억해 main actor의 실행이 다시 읽지 않는다. 과제 만들기는 사용자가
+    // 버튼을 누를 때만 한다.
+    private func register() async {
+        guard workspace.course(initial.id) != nil else { return }
+        let action = MaterialTrack(course: course.id, assignments: false)
+        if await workspace.wouldChange(action) { workspace.run(action) }
+    }
 
     func track() {
         workspace.run(MaterialTrack(course: course.id))

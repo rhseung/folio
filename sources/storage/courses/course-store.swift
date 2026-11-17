@@ -89,7 +89,7 @@ public struct CourseStore: Sendable {
                 guard path.hasPrefix(rootPath) else { return nil }
                 return String(path.dropFirst(rootPath.count)).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
             },
-            hash: { try FileHash.sha256(of: root.appending(path: $0)) },
+            hash: { try FileHash.trackedSHA256(of: root.appending(path: $0)) },
             makeBookmark: { try? root.appending(path: $0).bookmarkData() }
         )
     }

@@ -150,7 +150,7 @@ extension CourseFile: Document {
         }
         Items(\.components, noun: ItemKind.gradeComponent.noun, name: \.name) {
             NonEmpty(\.name, String(localized: .ruleGradeComponentNameEmpty))
-            Check("GradeComponent.weight", String(localized: .ruleGradeComponentWeight)) { c, _ in c.weight >= 0 }
+            Check("GradeComponent.weight", String(localized: .ruleGradeComponentWeight)) { c, _ in (0...100).contains(c.weight) }
             Check("GradeComponent.count", String(localized: .ruleGradeComponentCount)) { c, _ in
                 switch c.aggregation {
                 case .dropLowest(let n), .bestOf(let n): n >= 1

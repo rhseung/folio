@@ -27,6 +27,7 @@
 | `FOLIO_SNAPSHOT_OUTLINE=popover` | 목차 칸을 둘 자리가 없는 폭(`FOLIO_SNAPSHOT_WIDTH=1120`)에서 `course-notes`가 목차 팝오버를 연 모습 |
 | `FOLIO_PANE_SESSION=<폴더>` | 회차 배치 기억과 PDF 칸의 폭 변화. 회차에 연결된 첫 노트를 열고, 옆 칸에 렉처를 6쪽으로 열고, 새 탭에서 그 노트를 다시 열고, 칸 경계를 끌고, 셋째 칸을 연다. 단계마다 PNG와 칸 주소(`panes.txt`)를 남긴다. `FOLIO_PANE_SESSION_BEFORE=1`은 배치를 기억하기 전, `FOLIO_PLAIN_PDF=1`은 PDFKit의 기본 보기다 |
 | `FOLIO_PANE_BUNDLES=<폴더>` | 칸 묶음. 한 탭에 칸 다섯 개를 열어 한쪽 묶음, 양쪽 묶음, 칸 하나인 묶음과 그 목록을 연 모습을 남기고, 칸 셋인 둘째 탭에서 가운데 칸을 손으로 접는다(손으로 접는 단계는 폭 1280) |
+| `FOLIO_TAB_DRAG=<폴더>` | 탭 끌기. 탭 넷을 열고 끌기 모델을 직접 움직여 순서 바꾸기, 본문 가장자리의 합칠 자리, 새 창으로 뗄 자리, 합친 탭, 칸 마디를 줄로 끌어낸 모습과 그 결과를 남긴다. 합성한 포인터 사건으로는 `DragGesture`가 불리지 않는다 |
 | `FOLIO_SNAPSHOT_FIRST_RUN=1` | 첫 실행 화면. 폴더를 연 실행에서는 뜨지 않으므로, 첫 실행 창 크기 그대로 모든 단계와 폴더를 다시 연결하는 두 모습(`missing`, `downloading`)을 `first-run-<단계>.png`로 남긴다 |
 
 - `FOLIO_GIST`로 연 앱은 배치 기억을 사용자의 것과 따로 둔다(`PaneMemoryStore.forThisRun`).

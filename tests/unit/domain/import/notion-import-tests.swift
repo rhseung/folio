@@ -188,6 +188,14 @@ struct NotionCleanupTests {
         #expect(NotionNotesImporter.clean("3주차-2 정리") == "3주차-2 정리")
     }
 
+    @Test func numbersThatDontFitAnIntAreNotTitles() throws {
+        #expect(try #require(NotionNotesImporter.session(of: "3주차-2 정리")) == (3, 2, true))
+        #expect(NotionNotesImporter.session(of: "99999999999999999999주차-1") == nil)
+        #expect(NotionNotesImporter.session(of: "３주차-２") == nil)
+        #expect(NotionImporter.term(of: "２０２６ 봄학기") == nil)
+        #expect(try #require(NotionImporter.term(of: "2026 봄학기")) == (2026, .spring))
+    }
+
     @Test func pointWeightsAreScaledToPercent() {
         let rows = [("Assignment", 600.0), ("Midterm", 200.0), ("Final", 200.0)].map {
             NotionCourseDump.ScoreRow(id: UUID(), name: $0.0, weight: $0.1, score: nil, max: nil, parentId: nil)

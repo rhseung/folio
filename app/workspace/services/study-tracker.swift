@@ -83,7 +83,7 @@ final class StudyTracker {
 
     func stopManual() {
         guard let manual else { return }
-        write(manual.courseId, DateInterval(start: manual.start, end: .now), screen: "manual")
+        write(manual.courseId, DateInterval(start: manual.start, end: max(manual.start, .now)), screen: "manual")
         self.manual = nil
     }
 

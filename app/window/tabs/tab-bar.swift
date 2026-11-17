@@ -9,11 +9,6 @@ struct TabBar: View {
     var nameLayout: (TabPanes) -> Void = { _ in }
     var manageLayouts: () -> Void = {}
     @State private var sizes = TabSizes()
-    @State private var frames: [UUID: CGRect] = [:]
-    @State private var dragged: (id: UUID, start: CGFloat)?
-    @State private var dragOffset: CGFloat = 0
-    @State private var stripOrigin: CGPoint = .zero
-    @GestureState private var dragging = false
 
     static let gap = Theme.Space.s
     static let icon = Theme.Size.toolbarButton
@@ -81,11 +76,6 @@ struct TabBar: View {
                 #if os(macOS) && (DEBUG || RESIZE_PROBE)
                 .background { if id == row.first { ResizeMarker(name: "firstTab") } }
                 #endif
-                .onGeometryChange(for: CGRect.self) {
-                    $0.frame(in: .named(Self.space))
-                } action: {
-                    frames[id] = $0
-                }
                 #if DEBUG && os(macOS)
                 .onGeometryChange(for: CGRect.self) {
                     $0.frame(in: .global)
@@ -93,9 +83,7 @@ struct TabBar: View {
                     if id == tabs.selected { LayoutSnapshots.selectedTab = $0 }
                 }
                 #endif
-                .offset(x: dragged?.id == id ? dragOffset : 0)
-                .zIndex(dragged?.id == id ? 1 : 0)
-                .simultaneousGesture(drag(id, row: row))
+                .tabDrag(tabs.dragging, .tab(id))
                 // iPad의 창은 위쪽 가운데 손잡이로만 끌려 탭과 겹치지 않는다.
                 #if os(macOS)
                 .holdsTitleDrag(id)
@@ -113,19 +101,14 @@ struct TabBar: View {
                 #endif
         }
         .coordinateSpace(.named(Self.space))
-        .onGeometryChange(for: CGPoint.self) {
-            $0.frame(in: .global).origin
-        } action: {
-            stripOrigin = $0
-        }
-        .onChange(of: dragging) { _, now in if !now { tabs.drop = nil } }
+        .tabDragStrip(tabs.dragging, row: row)
         .background { measures(others) }
         .onChange(of: kinds, initial: true) { report() }
         .onChange(of: tabs.ids) { _, ids in
             let open = Set(ids)
             sizes.keep(open)
             report()
-            frames = frames.filter { open.contains($0.key) }
+            tabs.dragging.keep(open)
         }
         .animation(Theme.Motion.standard, value: tabs.ids)
         .frame(width: placement.width, alignment: .leading)
@@ -192,6 +175,7 @@ struct TabBar: View {
                     select: { panes.press(pane: segment.id) }, close: { panes.close(pane: segment.id) },
                     pause: { [tabs] in tabs.pause(pane: segment.id) }
                 )
+                .tabDrag(tabs.dragging, .pane(segment.id, of: tabs.selected))
                 .contextMenu {
                     if let i = panes.ids.firstIndex(of: segment.id) {
                         PaneMenu(panes: panes, index: i) { [tabs] navigator, columns in
@@ -436,44 +420,6 @@ struct TabBar: View {
         .hidden()
         .allowsHitTesting(false)
         .accessibilityHidden(true)
-    }
-
-    func drag(_ id: UUID, row: [UUID]) -> some Gesture {
-        DragGesture(minimumDistance: Theme.Space.xs, coordinateSpace: .named(Self.space))
-            .updating($dragging) { _, state, _ in state = true }
-            .onChanged { value in
-                guard let frame = frames[id] else { return }
-                if dragged?.id != id { dragged = (id, frame.minX) }
-                let point = across(value.location)
-                let drop = tabs.drop(for: id, at: point)
-                if drop != tabs.drop { tabs.drop = drop }
-                let content = tabs.contentFrame
-                if content.isEmpty || point.y < content.minY { reorder(id, row: row, to: value.location.x) }
-                dragOffset = value.translation.width - ((frames[id]?.minX ?? frame.minX) - (dragged?.start ?? frame.minX))
-            }
-            .onEnded { value in
-                let drop = tabs.drop(for: id, at: across(value.location))
-                tabs.drop = nil
-                if let drop { tabs.merge(id, into: tabs.selected, at: drop.edge) }
-                withAnimation(Theme.Motion.quick) {
-                    dragged = nil
-                    dragOffset = 0
-                }
-            }
-    }
-
-    func across(_ location: CGPoint) -> CGPoint { CGPoint(x: stripOrigin.x + location.x, y: stripOrigin.y + location.y) }
-
-    func reorder(_ id: UUID, row: [UUID], to x: CGFloat) {
-        let others = row.filter { $0 != id }
-        let before = others.filter { (frames[$0]?.midX ?? 0) < x }.count
-        var rest = tabs.ids.filter { $0 != id }
-        let index: Int =
-            if before < others.count { rest.firstIndex(of: others[before]) ?? 0 } else {
-                others.last.flatMap { rest.firstIndex(of: $0) }.map { $0 + 1 } ?? rest.count
-            }
-        rest.insert(id, at: index)
-        if rest != tabs.ids { tabs.move(id, to: index) }
     }
 }
 

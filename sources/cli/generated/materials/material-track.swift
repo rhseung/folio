@@ -12,17 +12,20 @@ extension GeneratedCommands {
 
             예시:
               folio material track EC4207
+              folio material track EC4207 --files-only
               folio material track --dry-run
             """)
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("과목. 빼면 모든 과목", valueName: "course"), completion: Complete.ref(.course)) var course: String?
+        @Flag(name: .customLong("files-only"), help: "파일만 등록하고 과제 폴더로 과제를 만들지 않기") var filesOnly = false
 
         func run() throws {
             let ctx = try CLI.context(g)
             let r = Resolver(ctx)
             let c = try course.map { try r.course($0) }
             let action = FolioActions.MaterialTrack(
-                course: c?.id
+                course: c?.id,
+                assignments: !filesOnly
             )
             try perform(spec: action, g, ctx: ctx)
         }

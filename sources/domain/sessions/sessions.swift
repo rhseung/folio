@@ -23,12 +23,21 @@ extension CourseFile {
 }
 
 extension LocalDate {
+    // LocalDate는 그레고리력의 날짜다. 시스템 달력이 히브리력이나 이슬람력이면 그 달력의 연월일(13월, 2월 30일)이
+    // 그레고리력에 없으므로, 받은 달력에서는 시간대만 쓴다.
+    static func gregorian(like calendar: Calendar) -> Calendar {
+        guard calendar.identifier != .gregorian else { return calendar }
+        var gregorian = Calendar(identifier: .gregorian)
+        gregorian.timeZone = calendar.timeZone
+        return gregorian
+    }
+
     public func date(in calendar: Calendar) -> Date? {
-        calendar.date(from: DateComponents(year: year, month: month, day: day))
+        Self.gregorian(like: calendar).date(from: DateComponents(year: year, month: month, day: day))
     }
 
     public init(_ date: Date, in calendar: Calendar) {
-        let c = calendar.dateComponents([.year, .month, .day], from: date)
+        let c = Self.gregorian(like: calendar).dateComponents([.year, .month, .day], from: date)
         self.init(year: c.year!, month: c.month!, day: c.day!)!
     }
 }
