@@ -41,6 +41,11 @@ struct NoteAssetTests {
         #expect(use.widgets == [Self.widget])
     }
 
+    @Test func linksKeepParenthesesInTheName() {
+        let use = NoteAssetUse("![image(1)](../assets/image(1).png) 그리고 [스크린샷](assets/스크린샷%20(2).png)")
+        #expect(use.files == ["image(1).png", "스크린샷 (2).png"])
+    }
+
     @Test func codeBlocksAreExamplesNotUses() {
         let body = """
             ````markdown

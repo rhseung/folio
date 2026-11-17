@@ -56,7 +56,8 @@ public struct NoteAssetUse: Equatable, Sendable {
             let target = m.1.trimmingCharacters(in: .whitespaces)
             if let name = target.split(separator: "/").last { names.append(String(name)) }
         }
-        for m in line.matches(of: /\]\(\s*(?:<([^>\n]*)>|([^)\s]+))/) {
+        // 앱이 넣는 링크는 괄호를 인코딩하지 않으므로(`image(1).png`), CommonMark처럼 대상 안의 짝 맞은 괄호를 받는다.
+        for m in line.matches(of: /\]\(\s*(?:<([^>\n]*)>|((?:[^()\s]|\([^()\s]*\))+))/) {
             let raw = String(m.1 ?? m.2 ?? "")
             let path = (raw.removingPercentEncoding ?? raw).split(separator: "/").map(String.init)
             guard path.count >= 2, path[path.count - 2] == StandardLayout.noteAssetsFolder else { continue }
