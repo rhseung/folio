@@ -302,16 +302,5 @@ export function figures() {
     else apply();
   });
 
-  // 화면 모드가 바뀌면 reader.js가 그림을 다시 그리므로, 그다음 프레임에 사본을 다시 만든다.
-  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-    requestAnimationFrame(() => {
-      if (source?.tagName !== "FIGURE") return;
-      const [sx, sy, ss] = [x, y, s];
-      show(source);
-      [x, y, s] = [sx, sy, ss];
-      apply();
-    });
-  });
-
   return { close };
 }
