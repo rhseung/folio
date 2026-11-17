@@ -32,7 +32,7 @@ public struct LMSDifference: Hashable, Sendable {
     }
 
     // LMS 표는 분까지 적으므로 분 단위로 비교한다.
-    static func minute(_ date: Date) -> Int { Int((date.timeIntervalSince1970 / 60).rounded(.down)) }
+    public static func minute(_ date: Date) -> Int { Int((date.timeIntervalSince1970 / 60).rounded(.down)) }
 
     // 마감이 지난 과제는 마감을 고쳐도 할 일이 바뀌지 않으므로, LMS 마감이 지나지 않았을 때만 다르다고 본다.
     // 첨부는 과제 폴더(`files`)에 같은 이름의 파일이 있으면 받은 것으로 본다. 과제 폴더 안의 이름은 바꾸지 않으므로 이름으로

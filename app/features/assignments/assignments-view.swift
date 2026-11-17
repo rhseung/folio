@@ -43,31 +43,11 @@ struct AssignmentsView: View {
         .confirming($model.pending)
     }
 
-    @ViewBuilder func statusItems(_ a: Assignment) -> some View {
-        ForEach(AssignmentStatus.menuOrder, id: \.self) { s in
-            Button {
-                model.setStatus(a, s)
-            } label: {
-                Label(s.label, systemImage: s == a.status ? "checkmark" : s.symbol)
-            }
-        }
-    }
-
     @ViewBuilder func row(_ a: Assignment, now: Date) -> some View {
         let row = model.row(a)
         let due = model.due(a, now: now)
         let done = !a.status.isOpen
-        Menu {
-            statusItems(a)
-        } label: {
-            AssignmentStatusIcon(status: a.status)
-                .contentTransition(.symbolEffect(.replace))
-                .symbolEffect(.bounce, value: a.status)
-                .contentShape(.rect)
-        }
-        .menuButton(indicator: .hidden)
-        .fixedSize()
-        .help(Text(.assignmentsStatusHelp(a.status.label)))
+        AssignmentStatusMenu(status: a.status) { model.setStatus(a, $0) }
         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
             Text(due.date).font(Theme.Typeface.bodyStrong).monospacedDigit()
                 .foregroundStyle(a.due == nil || done ? Theme.Palette.textTertiary : due.tone.foreground)

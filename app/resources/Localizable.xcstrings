@@ -271,7 +271,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "폴더에 파일이 없습니다. 여기에 끌어다 놓거나 파일 추가로 넣으세요."
+            "value": "파일 없음"
           }
         }
       }
@@ -316,28 +316,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "제출함"
-          }
-        }
-      }
-    },
-    "assignments.hours-left": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld시간 남음"
-          }
-        }
-      }
-    },
-    "assignments.just-overdue": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "방금 지남"
           }
         }
       }
@@ -403,18 +381,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ 냄 · 마지막 동기화 %2$@"
-          }
-        }
-      }
-    },
-    "assignments.lms-synced": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "마지막 동기화 %@"
+            "value": "%@ 냄"
           }
         }
       }
@@ -540,17 +507,6 @@
         }
       }
     },
-    "assignments.overdue-days": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld일 지남"
-          }
-        }
-      }
-    },
     "assignments.problem": {
       "extractionState": "manual",
       "localizations": {
@@ -601,7 +557,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "제출로 바꾸면 다음 과제가 %@ 마감으로 생깁니다"
+            "value": "다음 과제 마감 %@"
           }
         }
       }
@@ -613,17 +569,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "점수"
-          }
-        }
-      }
-    },
-    "assignments.score-note": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "넣으면 고른 평가 항목의 점수가 됩니다"
           }
         }
       }
@@ -20098,39 +20043,6 @@
         }
       }
     },
-    "today.deadlines.today-at": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오늘 %@"
-          }
-        }
-      }
-    },
-    "today.deadlines.tomorrow-at": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "내일 %@"
-          }
-        }
-      }
-    },
-    "today.deadlines.in-days": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld일 후"
-          }
-        }
-      }
-    },
     "score-sheet.source": {
       "extractionState": "manual",
       "localizations": {
@@ -22804,50 +22716,6 @@
         }
       }
     },
-    "overdue.ceiling": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "최대 %lld%%"
-          }
-        }
-      }
-    },
-    "overdue.ceiling-zero": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "0점"
-          }
-        }
-      }
-    },
-    "overdue.mark-submitted": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "제출함"
-          }
-        }
-      }
-    },
-    "overdue.mark-missed": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "못 냄"
-          }
-        }
-      }
-    },
     "assignment-status.missed": {
       "extractionState": "manual",
       "localizations": {
@@ -22965,17 +22833,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "지각 제출"
-          }
-        }
-      }
-    },
-    "assignments.late-rule.note": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "비우면 과목 규칙을 따라요"
           }
         }
       }

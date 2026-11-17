@@ -148,7 +148,7 @@ struct AssignmentsModelTests {
         model.due = try #require(workspace.calendar.date(from: DateComponents(year: 2026, month: 11, day: 6, hour: 23, minute: 59)))
         #expect(
             model.repeatDetail
-                == "제출로 바꾸면 다음 과제가 \(CourseFile.deadline(model.due.addingTimeInterval(14 * 86_400), calendar: workspace.calendar)) 마감으로 생깁니다"
+                == "다음 과제 마감 \(CourseFile.deadline(model.due.addingTimeInterval(14 * 86_400), calendar: workspace.calendar))"
         )
 
         model.customizeRepeat()

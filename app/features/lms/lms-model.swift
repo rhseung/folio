@@ -226,7 +226,8 @@ final class LMSModel {
     private func dueChip(_ due: Date) -> (text: String, urgency: DueUrgency) {
         let days = workspace.settings.studyDays(from: workspace.now, until: due, calendar: workspace.calendar)
         let urgency = workspace.settings.urgency
-        return (DueUrgency.text(due, studyDays: days, settings: urgency), DueUrgency(studyDays: days, settings: urgency))
+        let text = RelativeDay.line(until: due, from: workspace.now, settings: workspace.settings, calendar: workspace.calendar)
+        return (text, DueUrgency(studyDays: days, settings: urgency))
     }
 
     // 받을 수 없는 항목(공지, 뷰어 전용 자료)과 과제는 LMS에서 열어 본다.

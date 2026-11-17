@@ -94,7 +94,7 @@ struct AssignmentSheet: View {
                     }
                 }
             }
-            Block(String(localized: .assignmentsScore), note: String(localized: .assignmentsScoreNote)) {
+            Block(String(localized: .assignmentsScore)) {
                 Card {
                     FormRow(label: String(localized: .assignmentsFieldTarget), last: scored.isEmpty) {
                         Combobox(selection: Binding(get: { model.target }, set: { model.pick($0) }), options: model.targetOptions)
@@ -116,12 +116,12 @@ struct AssignmentSheet: View {
                 .sensitive(scored.isEmpty ? nil : .block)
             }
             if model.hasDue {
-                Block(String(localized: .assignmentsLateRule), note: String(localized: .assignmentsLateRuleNote)) {
+                Block(String(localized: .assignmentsLateRule)) {
                     Card { LateRuleRows(draft: $model.lateRule, placeholder: model.courseLateRule, last: true) }
                 }
             }
             TextArea(label: String(localized: .assignmentsMemo), text: $model.memo)
-            Block(title: String(localized: .assignmentsFiles), note: model.folder) {
+            Block(title: String(localized: .assignmentsFiles), note: nil) {
                 Button(.assignmentsAddFiles) { pickingFiles = true }
                     .buttonStyle(.ghost)
                     .fileImporter(isPresented: $pickingFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in

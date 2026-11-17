@@ -20,12 +20,15 @@ struct OverdueAssignments: View {
                     EmptyView()
                 } rows: {
                     ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
-                        // Button으로 두면 안의 제출함과 못 냄 버튼이 클릭을 빼앗긴다.
+                        // Button으로 두면 안의 상태 메뉴가 클릭을 빼앗긴다.
                         CardRow(last: i == rows.count - 1) { content(row) }
                             .linkTarget(row.id)
                             .opens { model.edit(row) }
                             .accessibilityAction(named: Text(.commonEdit)) { model.edit(row) }
-                            .contextMenu { AssignmentMenu(courseId: row.courseId, assignmentId: row.id) }
+                            .contextMenu {
+                                if let url = row.lms { Button(.lmsOpen) { openURL(url) } }
+                                AssignmentMenu(courseId: row.courseId, assignmentId: row.id)
+                            }
                     }
                 }
             }
@@ -38,35 +41,18 @@ struct OverdueAssignments: View {
     }
 
     func content(_ row: OverdueAssignmentsModel.Row) -> some View {
-        FoldingRow(labelRoom: Theme.Size.overdueLabel) {
-            HStack(spacing: Theme.Space.m) {
-                if model.showsCourse { CourseMark(model.workspace, row.courseId) }
-                VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                    HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
-                        Text(row.assignment.title).font(Theme.Typeface.bodyStrong).lineLimit(1).layoutPriority(1)
-                        if model.showsCourse {
-                            Text(model.courseTitle(row)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
-                                .lineLimit(1)
-                        }
-                        if row.lms != nil { Badge(String(localized: .lmsNotSubmitted), tone: .danger) }
-                    }
-                    HStack(spacing: Theme.Space.s) {
-                        Text(row.past).foregroundStyle(Theme.Palette.danger)
-                        if let ceiling = row.ceiling {
-                            Text(ceiling).foregroundStyle(row.lost ? Theme.Palette.danger : Theme.Palette.textTertiary)
-                        }
-                    }
-                    .font(Theme.Typeface.caption).monospacedDigit().lineLimit(1)
+        HStack(spacing: Theme.Space.m) {
+            AssignmentStatusMenu(status: row.assignment.status, tint: model.accent(row).color) {
+                model.set(row, $0)
+            }
+            HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
+                Text(row.assignment.title).font(Theme.Typeface.bodyStrong).lineLimit(1).layoutPriority(1)
+                if model.showsCourse {
+                    Text(model.courseTitle(row)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
                 }
             }
-        } control: {
-            Button(.overdueMarkMissed) { model.miss(row) }.buttonStyle(.ghost)
-            // Folio에서는 이미 제출함이라 제출함 단추 대신 LMS에서 낼 곳을 연다.
-            if row.submitted, let url = row.lms {
-                Button(.lmsOpen) { openURL(url) }.buttonStyle(.pointing(.bordered))
-            } else {
-                Button(.overdueMarkSubmitted) { model.submit(row) }.buttonStyle(.pointing(.bordered))
-            }
+            Spacer(minLength: Theme.Space.s)
+            Text(row.trailing).font(Theme.Typeface.caption).monospacedDigit().foregroundStyle(Theme.Palette.danger).fixedSize()
         }
     }
 }

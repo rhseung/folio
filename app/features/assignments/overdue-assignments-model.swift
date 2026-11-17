@@ -25,13 +25,14 @@ final class OverdueAssignmentsModel {
         var courseId: UUID
         var assignment: Assignment
         var past: String
-        var ceiling: String?
-        // 지금 내도 0점이다.
-        var lost: Bool
         // 마감이 지났는데 LMS에는 아직 내지 않았다. Folio에서 제출함으로 둔 과제도 이것 때문에 여기 온다.
         var lms: URL?
-        var submitted: Bool { assignment.status == .submitted }
         var id: UUID { assignment.id }
+
+        // Folio에서 이미 낸 과제는 지난 때보다 LMS에 아직 안 낸 것이 여기 있는 이유다.
+        var trailing: String {
+            assignment.status.isOpen || lms == nil ? past : String(localized: .lmsNotSubmitted)
+        }
     }
 
     var showsCourse: Bool { courseId == nil }
@@ -51,14 +52,12 @@ final class OverdueAssignmentsModel {
     }
 
     private func row(_ a: Assignment, in course: LoadedCourse, lms: URL?, now: Date) -> Row {
-        // 과제 목록과 같은 셈으로 지난 때를 쓴다. 마감 시각과 감점이 바뀌는 때는 과제 시트에서 본다.
+        // 과제 목록과 같은 셈으로 지난 때를 쓴다. 마감 시각과 감점은 과제 시트에서 본다.
         let past = RelativeDay.text(until: a.due ?? now, from: now, settings: workspace.settings, calendar: workspace.calendar)
-        let ceiling = course.file.lateness(of: a, at: now)?.ceiling
-        let label = ceiling.map { ceiling in
-            ceiling > 0 ? String(localized: .overdueCeiling(Int((ceiling * 100).rounded()))) : String(localized: .overdueCeilingZero)
-        }
-        return Row(courseId: course.id, assignment: a, past: past, ceiling: label, lost: ceiling == 0, lms: lms)
+        return Row(courseId: course.id, assignment: a, past: past, lms: lms)
     }
+
+    func accent(_ row: Row) -> CourseAccent { workspace.accent(row.courseId) }
 
     func courseTitle(_ row: Row) -> String { workspace.course(row.courseId)?.title ?? "" }
 
@@ -67,11 +66,7 @@ final class OverdueAssignmentsModel {
         editing = Editing(course: course, assignment: row.assignment)
     }
 
-    func submit(_ row: Row) { set(row, .submitted) }
-
-    func miss(_ row: Row) { set(row, .missed) }
-
-    private func set(_ row: Row, _ status: AssignmentStatus) {
+    func set(_ row: Row, _ status: AssignmentStatus) {
         workspace.run(AssignmentStatusSet(course: row.courseId, assignment: row.id, status: status))
     }
 }

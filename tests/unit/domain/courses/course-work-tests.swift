@@ -719,19 +719,6 @@ struct AssignmentFilesTests {
         #expect(!AssignmentFiles.suggestsSubmitted(hw, files: mine))
     }
 
-    @Test func dueStates() {
-        let cal = Calendar(identifier: .gregorian)
-        let now = Date(timeIntervalSince1970: 1_790_000_000)
-        #expect(DueState(due: nil, now: now, calendar: cal) == .none)
-        #expect(DueState(due: now.addingTimeInterval(-3 * 86400), now: now, calendar: cal) == .overdue(days: 3))
-        #expect(DueState(due: now.addingTimeInterval(5 * 3600 + 60), now: now, calendar: cal) == .hours(6))
-        if case .days(let d) = DueState(due: now.addingTimeInterval(3 * 86400), now: now, calendar: cal) {
-            #expect(d == 3)
-        } else {
-            Issue.record("expected days")
-        }
-    }
-
     @Test func dueUrgencyCountsStudyDaysAcrossTheBoundary() {
         let settings = Settings()
         var calendar = Calendar(identifier: .gregorian)

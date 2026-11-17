@@ -215,15 +215,19 @@ final class TodayModel {
         }
     }
 
-    func deadlineRows(_ items: [TodaySummary.DeadlineItem], studyDay: LocalDate) -> [DeadlineRow] {
+    func deadlineRows(_ items: [TodaySummary.DeadlineItem], now: Date) -> [DeadlineRow] {
         let calendar = workspace.calendar
+        let settings = workspace.settings
         return items.compactMap { item in
             guard let due = item.assignment.due else { return nil }
-            let days = studyDay.days(until: workspace.settings.studyDay(of: due, calendar: calendar))
-            let urgency = DueUrgency(studyDays: days, settings: workspace.settings.urgency)
             return DeadlineRow(
-                item: item, urgency: urgency, due: DueUrgency.text(due, studyDays: days, settings: workspace.settings.urgency))
+                item: item, urgency: DueUrgency(due: due, now: now, settings: settings, calendar: calendar),
+                due: RelativeDay.line(until: due, from: now, settings: settings, calendar: calendar))
         }
+    }
+
+    func set(_ item: TodaySummary.DeadlineItem, _ status: AssignmentStatus) {
+        workspace.run(AssignmentStatusSet(course: item.courseId, assignment: item.assignment.id, status: status))
     }
 
     static let deadlineLimit = 6
@@ -235,7 +239,7 @@ final class TodayModel {
     }
 
     func shownDeadlines(_ summary: TodaySummary) -> (rows: [DeadlineRow], more: Int) {
-        shownDeadlines(deadlineRows(summary.deadlines, studyDay: summary.studyDay))
+        shownDeadlines(deadlineRows(summary.deadlines, now: workspace.liveNow))
     }
 
     // MARK: Day ribbon
