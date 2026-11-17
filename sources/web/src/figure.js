@@ -13,12 +13,21 @@ const HIDDEN = new Set(["defs", "marker", "clipPath", "mask", "pattern", "symbol
 const SHAPES = new Set(["line", "rect", "circle", "ellipse", "polyline", "polygon", "path"]);
 
 // 마무리한 부분(우리 `<style>`과 `<defs>`, 수식 라벨)을 걷어 쓴 사람이 쓴 모양으로 되돌린다. 고쳐 쓸 때 다시 마무리한다.
+// 펼친 원문 안에 다시 `data-source`가 있을 수 있어 더 펼칠 것이 없을 때까지 돈다. 한 번만 펼치면 쓰기 전 검사는 안쪽을
+// 속성 글자로만 보고 넘기는데, 마무리가 한 번 더 펼쳐 검사하지 않은 `<script>`가 파일에 남는다. 펼친 원문은 속성보다
+// 짧으므로 끝난다.
 function unfinish(doc) {
-  for (const el of [...walk(doc)]) {
-    if ((el.name === "style" && attr(el, "id") === OWN) || (el.name === "defs" && attr(el, "id") === OWN_DEFS)) replace(el);
-    else if (el.name === "g" && attr(el, SOURCE) != null) {
-      const original = elements(parse(attr(el, SOURCE)))[0];
-      if (original) replace(el, original);
+  for (let changed = true; changed; ) {
+    changed = false;
+    for (const el of [...walk(doc)]) {
+      if ((el.name === "style" && attr(el, "id") === OWN) || (el.name === "defs" && attr(el, "id") === OWN_DEFS)) replace(el);
+      else if (el.name === "g" && attr(el, SOURCE) != null) {
+        const original = elements(parse(attr(el, SOURCE)))[0];
+        if (original) {
+          replace(el, original);
+          changed = true;
+        }
+      }
     }
   }
 }

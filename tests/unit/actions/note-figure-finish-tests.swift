@@ -71,6 +71,14 @@ struct NoteFigureFinishTests {
         #expect(found.contains(.tspanMath("합 $n$")))
     }
 
+    @Test func nestedSourcesAreUnfoldedBeforeTheCheck() throws {
+        let svg = """
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 20"><g data-source="&lt;g data-source=&quot;&amp;lt;script&amp;gt;x()&amp;lt;/script&amp;gt;&quot;/&gt;"/></svg>
+            """
+        #expect(try NoteFigureFinish.source(svg).contains("<script>x()</script>"))
+        #expect(try NoteFigureFinish.finish(svg).problems.contains { if case .script = $0 { true } else { false } })
+    }
+
     @Test func brokenXMLIsLeftForTheXMLCheck() throws {
         let done = try NoteFigureFinish.finish("<svg>\n<g>\n</svg>")
         #expect(done.svg == "<svg>\n<g>\n</svg>")
