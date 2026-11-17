@@ -32,7 +32,9 @@ await build({ ...common, entryPoints: ["src/style.css"], outfile: `${out}/note.c
 await build({ ...common, entryPoints: ["src/figure.js"], outfile: `${actions}/figure/figure.js`, format: "iife", globalName: "folioFigure" });
 
 const widgetCSS = await build({ ...common, entryPoints: ["src/widget.css"], write: false, outfile: "widget.css", loader: fonts });
+// 빈 글꼴 자리(`url()`)는 frame 주소로 풀려 위젯의 보안 정책(font-src data:)에 막히고 콘솔에 남는다. woff2만 둔다.
+const widgetText = widgetCSS.outputFiles[0].text.replace(/,url\(\) format\("(?:woff|truetype)"\)/g, "");
 await build({
   ...common, entryPoints: ["src/widget.js"], outfile: `${actions}/widget/widget-kit.js`, format: "iife",
-  define: { WIDGET_CSS: JSON.stringify(widgetCSS.outputFiles[0].text) },
+  define: { WIDGET_CSS: JSON.stringify(widgetText) },
 });
