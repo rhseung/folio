@@ -158,19 +158,21 @@ struct ClaudeModelTests {
         let course = try #require(workspace.course(graphTheory))
         model.load(course)
         let svg =
-            #"<svg xmlns="http://www.w3.org/2000/svg"><style>.a{fill:#222}@media (prefers-color-scheme: dark){.a{fill:#E6E2DB}}</style><rect class="a"/></svg>"#
+            #"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 20"><rect class="ink" width="10" height="10"/><text x="14" y="14">$x$</text></svg>"#
+        let finished = try NoteFigureFinish.finish(svg).svg
         let add = ActionProposal(
             command: NoteFigureAdd.command, input: try JSONValue(NoteFigureAdd(course: graphTheory, name: "graph", svg: svg)))
         let line = model.describe(add)
         #expect(line.refusal == nil)
-        #expect(line.change == .figure(svg))
-        let html = ClaudeModel.figureHTML(svg)
+        #expect(line.change == .figure(finished))
+        let html = ClaudeModel.figureHTML(finished)
         let images = html.matches(of: /data:image\/svg\+xml;base64,([A-Za-z0-9+\/=]+)/).compactMap { Data(base64Encoded: String($0.1)) }
-        #expect(images.map { String(decoding: $0, as: UTF8.self) } == [svg])
+        #expect(images.compactMap { String(bytes: $0, encoding: .utf8) } == [finished])
         #expect(html.contains("<details class=\"change\" open>"))
         #expect(!FileManager.default.fileExists(atPath: course.store.fileURL(NoteFigure.path("graph.svg")).path))
         let bad = ActionProposal(
-            command: NoteFigureAdd.command, input: try JSONValue(NoteFigureAdd(course: graphTheory, name: "g", svg: "<svg/>")))
+            command: NoteFigureAdd.command,
+            input: try JSONValue(NoteFigureAdd(course: graphTheory, name: "g", svg: ##"<svg><rect fill="#222"/></svg>"##)))
         #expect(model.describe(bad).refusal != nil)
     }
 

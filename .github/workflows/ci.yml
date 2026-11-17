@@ -89,6 +89,9 @@ jobs:
           restore-keys: |
             swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.setup.outputs.xcode }}-${{ hashFiles('sources/tectonic/pin.json') }}-${{ hashFiles('Package.resolved') }}-
             swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.setup.outputs.xcode }}-${{ hashFiles('sources/tectonic/pin.json') }}-
+      # 테스트 번들(.xctest)은 모듈의 리소스 번들을 사본으로 담는데, SwiftPM은 리소스 파일이 더해져도 그 사본을 다시 복사하지
+      # 않는다. 캐시의 테스트 번들을 그대로 쓰면 리소스를 더한 브랜치의 테스트가 옛 사본을 읽으므로 테스트 번들만 지운다.
+      - run: rm -rf .build/out/Products/*/*.xctest
       - id: run
         run: mise run test
       - if: ${{ !cancelled() && (github.event_name == 'push' || steps.cache.outputs.cache-matched-key == '') && steps.run.outcome != 'skipped' }}

@@ -64,7 +64,9 @@ let package = Package(
             .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
             .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
         ], path: "sources/macros"),
-        .target(name: "FolioActions", dependencies: ["FolioStorage", "FolioMarkdown", "FolioMacros"], path: "sources/actions", resources: [.process("Localizable.xcstrings")]),
+        .target(name: "FolioActions", dependencies: ["FolioStorage", "FolioMarkdown", "FolioMacros"], path: "sources/actions", resources: [
+            .process("Localizable.xcstrings"), .copy("notes/figure/figure.js"), .copy("notes/widget/widget-kit.js"),
+        ]),
         .target(name: "FolioIndex", dependencies: ["FolioStorage", "FolioMarkdown", .product(name: "GRDB", package: "GRDB.swift")], path: "sources/index"),
         .target(name: "FolioLMS", dependencies: ["FolioDomain", .product(name: "SwiftSoup", package: "SwiftSoup")], path: "sources/lms"),
         .target(name: "FolioCLI", dependencies: ["FolioActions", "FolioIndex", .product(name: "ArgumentParser", package: "swift-argument-parser"), .product(name: "GRDB", package: "GRDB.swift")], path: "sources/cli", resources: [.process("Localizable.xcstrings")]),

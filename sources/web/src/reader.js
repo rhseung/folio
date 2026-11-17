@@ -58,6 +58,3 @@ window.folioReader = {
 
 window.folioPreview = preview({ typeset, redraw: () => renderDiagrams(document.body) });
 figures();
-
-// 그림은 색을 CSS 변수가 아니라 값으로 받으므로, 화면 모드가 바뀌면 다시 그려야 한다.
-matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => renderDiagrams(document.body));

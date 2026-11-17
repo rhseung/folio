@@ -1,3 +1,4 @@
+import FolioDomain
 import FolioMarkdown
 import Foundation
 
@@ -54,6 +55,7 @@ enum NoteStyle {
             .flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? ""
     }
 
-    static let css = resource("note.css")
+    // 그림 스타일의 변수는 mermaid 도식이 읽는다(sources/web/src/mermaid.js).
+    static let css = resource("note.css") + FigureStyle.variables
     static let reader = resource("reader.js")
 }

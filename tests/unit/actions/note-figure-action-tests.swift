@@ -8,8 +8,8 @@ import Testing
 
 struct NoteFigureActionTests {
     static let course = ActionTests.graphTheory
-    static let svg =
-        #"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><style>.a{fill:#222}@media (prefers-color-scheme: dark){.a{fill:#E6E2DB}}</style><rect class="a" width="10" height="10"/></svg>"#
+    static let svg = #"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect class="ink" width="10" height="10"/></svg>"#
+    static let finished = (try? NoteFigureFinish.finish(svg).svg) ?? ""
     static let widget = UUID(uuidString: "A0000000-0000-4000-8000-0000000000A7")!
     let device = UUID()
     let gist: GISTStore
@@ -31,7 +31,8 @@ struct NoteFigureActionTests {
 
     @Test func addWritesTheFigureIntoAssets() throws {
         let ctx = try run(NoteFigureAdd(course: Self.course, name: "graph", svg: Self.svg))
-        #expect(try store.readText("Notes/assets/graph.svg") == Self.svg)
+        #expect(Self.finished.contains("<style id=\"\(FigureStyle.styleID)\">"))
+        #expect(try store.readText("Notes/assets/graph.svg") == Self.finished)
         #expect(ctx.changes.map(\.kind) == [.added])
         #expect(ctx.changes.allSatisfy { $0.touchesNotes })
     }
@@ -43,9 +44,9 @@ struct NoteFigureActionTests {
     }
 
     @Test func aFigureThatWouldDrawWrongIsNotWritten() throws {
-        let light = #"<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>"#
-        #expect(throws: ActionError.rule(NoteFigure.Problem.noDarkRule.message)) {
-            try run(NoteFigureAdd(course: Self.course, name: "g", svg: light))
+        let painted = ##"<svg xmlns="http://www.w3.org/2000/svg"><rect fill="#222"/></svg>"##
+        #expect(throws: ActionError.rule(NoteFigure.Problem.color("#222").message)) {
+            try run(NoteFigureAdd(course: Self.course, name: "g", svg: painted))
         }
         #expect(throws: ActionError.self) { try run(NoteFigureAdd(course: Self.course, name: "../g", svg: Self.svg)) }
         #expect(!exists("Notes/assets/g.svg"))
@@ -57,12 +58,23 @@ struct NoteFigureActionTests {
         #expect(throws: ActionError.conflict("Notes/assets/graph.svg이(가) 읽은 뒤에 바뀌었습니다. 다시 읽고 고칩니다")) {
             try run(NoteFigureWrite(course: Self.course, name: "graph", svg: changed, expect: ContentHash.of("다른 내용")))
         }
-        #expect(try store.readText("Notes/assets/graph.svg") == Self.svg)
-        try run(NoteFigureWrite(course: Self.course, name: "graph.svg", svg: changed, expect: ContentHash.of(Self.svg).uppercased()))
-        #expect(try store.readText("Notes/assets/graph.svg") == changed)
+        #expect(try store.readText("Notes/assets/graph.svg") == Self.finished)
+        try run(NoteFigureWrite(course: Self.course, name: "graph.svg", svg: changed, expect: ContentHash.of(Self.finished).uppercased()))
+        #expect(try store.readText("Notes/assets/graph.svg") == (try NoteFigureFinish.finish(changed).svg))
         #expect(throws: ActionError.self) {
             try run(NoteFigureWrite(course: Self.course, name: "none", svg: changed, expect: ContentHash.of(changed)))
         }
+    }
+
+    // show는 쓴 사람이 쓴 모양을 보이고, 그 해시로 write가 디스크의 마무리한 파일과 견준다.
+    @Test func showGivesTheSourceAndTheFilesHash() throws {
+        try run(NoteFigureAdd(course: Self.course, name: "graph", svg: Self.svg))
+        let ctx = ActionContext(gist: gist, device: device, now: Date(timeIntervalSince1970: 1_790_000_000))
+        let shown = try NoteFigureShow(course: Self.course, name: "graph").read(ReadContext(ctx))
+        #expect(shown.text == Self.svg)
+        #expect(shown.hash == ContentHash.of(Self.finished))
+        try run(NoteFigureWrite(course: Self.course, name: "graph", svg: shown.text, expect: shown.hash))
+        #expect(try store.readText("Notes/assets/graph.svg") == Self.finished)
     }
 
     @Test func aDryRunWritesNothing() throws {

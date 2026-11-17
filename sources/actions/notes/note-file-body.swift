@@ -10,7 +10,7 @@ public struct NoteFileBody: Encodable {
     public var text: String
     public var hash: String
 
-    init(name: String, path: String, text: String) {
-        (self.name, self.path, self.text, hash) = (name, path, text, ContentHash.of(text))
+    init(name: String, path: String, text: String, hash: String? = nil) {
+        (self.name, self.path, self.text, self.hash) = (name, path, text, hash ?? ContentHash.of(text))
     }
 }
