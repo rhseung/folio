@@ -81,9 +81,9 @@ struct AssignmentsView: View {
                 .strikethrough(done, color: Theme.Palette.textTertiary)
                 .foregroundStyle(done ? Theme.Palette.textTertiary : Theme.Palette.text)
                 .animation(Theme.Motion.standard, value: done)
-            // 좁은 폭에서는 줄 끝이 잘리므로 LMS 표시를 맨 앞에 두고 줄이지 않는다.
+            // 좁은 폭에서는 줄 끝이 잘리므로 LMS 표시를 맨 앞에 두고 먼저 자리를 준다. 고정 폭으로 두면 화면이 넘친다.
             let meta = HStack(spacing: Theme.Space.s) {
-                if row.lms { Label(.assignmentsLms, systemImage: "link").fixedSize() }
+                if row.lms { Label(.assignmentsLms, systemImage: "link").layoutPriority(1) }
                 if let repeats = a.repeats { Label(repeats.label, systemImage: "repeat") }
                 if let submitted = row.submittedOn {
                     Label(submitted, systemImage: "paperplane")
@@ -94,7 +94,9 @@ struct AssignmentsView: View {
                 if let component = row.component { Label(component, systemImage: "chart.pie") }
                 if !a.memo.isEmpty { Image(systemName: "text.alignleft").accessibilityLabel(Text(.assignmentsMemo)) }
             }
+            // 아이콘은 줄어들지 않아서, 긴 뱃지 옆에서는 줄의 최소 폭이 행을 넘친다. 자리가 없으면 줄을 자른다.
             meta.labelStyle(.titleAndIcon).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
+                .frame(minWidth: 0, alignment: .leading).clipped()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         if row.suggestsSubmitted {
