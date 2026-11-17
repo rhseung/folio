@@ -25,7 +25,9 @@ public enum NoteFigureFinish {
         guard let result = try? JSONDecoder().decode(EngineResult.self, from: Data(out.utf8)) else {
             throw EngineFailure(description: "figure.js: \(out.prefix(200))")
         }
-        return Finished(svg: result.svg, problems: found + result.problems.compactMap(\.problem))
+        var problems = found
+        for p in result.problems.compactMap(\.problem) where !problems.contains(p) { problems.append(p) }
+        return Finished(svg: result.svg, problems: problems)
     }
 
     // 쓸 때 넣은 것을 걷어 낸, 쓴 사람이 쓴 모양이다. 고쳐 쓸 사람은 이 모양을 읽는다.
