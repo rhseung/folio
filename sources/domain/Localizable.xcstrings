@@ -683,6 +683,61 @@
         }
       }
     },
+    "relative-time.hours-ago": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld시간 전"
+          }
+        }
+      }
+    },
+    "relative-time.hours-later": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld시간 뒤"
+          }
+        }
+      }
+    },
+    "relative-time.minutes-ago": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld분 전"
+          }
+        }
+      }
+    },
+    "relative-time.minutes-later": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld분 뒤"
+          }
+        }
+      }
+    },
+    "relative-time.now": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금"
+          }
+        }
+      }
+    },
     "rule.assignment.component-group": {
       "extractionState": "manual",
       "localizations": {

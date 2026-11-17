@@ -78,7 +78,7 @@ struct AssignmentsModelTests {
     @Test func groupsAndSubtitleFollowStatusAndDeadline() throws {
         let (workspace, course) = try fixtureCourse()
         let now = Date.now
-        workspace.run(AssignmentAdd(course: linearAlgebra, title: "HW 1", due: now - 3600))
+        workspace.run(AssignmentAdd(course: linearAlgebra, title: "HW 1", due: now - 2 * 3600 - 300))
         workspace.run(AssignmentAdd(course: linearAlgebra, title: "HW 2", due: now + 5 * 86_400))
         workspace.run(AssignmentAdd(course: linearAlgebra, title: "HW 3"))
         let model = AssignmentsModel(workspace: workspace, course: course)
@@ -88,10 +88,12 @@ struct AssignmentsModelTests {
         #expect(groups[1].items.map(\.title) == ["HW 2", "HW 3"])
         #expect(groups.map(\.group.label) == ["마감 지남", "진행 중"])
 
-        // 마감은 상대 날짜와 시각으로 보이고, 급한 정도는 색으로만 보인다. 한 시간 전 마감은 공부일 경계에 따라 오늘이거나 어제다.
+        // 하루 안의 마감은 시간 단위로 세고 아래 줄에 날과 시각을 둔다. 그 날은 공부일 경계에 따라 오늘이거나 어제다.
+        // 하루를 넘는 마감은 상대 날짜와 요일, 시각이다. 급한 정도는 색으로만 보인다.
         let late = groups[0].items[0]
         let overdue = model.due(late, now: now)
-        #expect(["오늘", "어제"].contains(overdue.date) && overdue.tone == .danger && overdue.time?.contains(":") == true)
+        #expect(overdue.date == "2시간 전" && overdue.tone == .danger)
+        #expect(["오늘", "어제"].contains { overdue.time?.hasPrefix($0 + " ") == true })
         let soon = model.due(groups[1].items[0], now: now)
         #expect(soon.date == "5일 뒤" && soon.tone == .warning && soon.time?.split(separator: " ").count == 3)
         #expect(model.due(groups[1].items[1], now: now).date == "마감 없음")

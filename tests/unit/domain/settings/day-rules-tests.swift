@@ -1,5 +1,6 @@
 import FolioCore
 import Foundation
+import PropertyBased
 import Testing
 
 @testable import FolioDomain
@@ -59,6 +60,29 @@ struct DayRulesTests {
 
     @Test func relativeDaysReadAsWords() {
         #expect([-3, -1, 0, 1, 4].map(RelativeDay.text) == ["3일 전", "어제", "오늘", "내일", "4일 뒤"])
+    }
+
+    @Test func aDueWithinADayCountsHoursThenMinutes() {
+        let now = Date(timeIntervalSince1970: 1_794_800_000)
+        let read = { (seconds: TimeInterval) in RelativeTime.text(until: now + seconds, from: now) }
+        #expect(read(24 * 3600) == nil)
+        #expect(read(-24 * 3600) == nil)
+        #expect(read(24 * 3600 - 1) == "23시간 뒤")
+        #expect(read(-(3 * 3600 + 59 * 60)) == "3시간 전")
+        #expect(read(3600) == "1시간 뒤")
+        #expect(read(3600 - 1) == "59분 뒤")
+        #expect(read(-(5 * 60 + 59)) == "5분 전")
+        #expect(read(60) == "1분 뒤")
+        #expect(read(59) == "지금")
+        #expect(read(-59) == "지금")
+    }
+
+    @Test func relativeTimeStopsExactlyAtADay() async {
+        await propertyCheck(input: Gen.int(in: -200_000...200_000)) { seconds in
+            let now = Date(timeIntervalSince1970: 1_794_800_000)
+            let text = RelativeTime.text(until: now + TimeInterval(seconds), from: now)
+            #expect((text == nil) == (abs(seconds) >= 24 * 3600))
+        }
     }
 
     @Test func nextClassSkipsCancelledAndPastClasses() {

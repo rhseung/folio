@@ -10,7 +10,8 @@ struct AssignmentsView: View {
     }
 
     var body: some View {
-        let now = model.workspace.now
+        // 분 단위로 세는 마감이 시계를 따라 바뀌도록 매분 바뀌는 시각을 읽는다.
+        let now = model.workspace.liveNow
         let course = model.course
         Page {
             PageHeader(title: String(localized: .assignmentsTitle), subtitle: model.subtitle)
