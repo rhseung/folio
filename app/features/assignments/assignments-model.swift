@@ -73,7 +73,7 @@ final class AssignmentsModel {
             lateSubmitted: !a.status.isOpen && file.lateness(of: a, at: workspace.now) != nil)
     }
 
-    // 마감은 공부일로 센 상대 날짜와 시각으로 보인다. 하루 안이면 시간, 한 시간 안이면 분으로 센다. 급한 정도는 상대 날짜의 색으로만 보이고 칩은 두지 않는다.
+    // 마감은 공부일로 센 상대 날짜와 시각으로 보인다. 하루 안이면 시간, 한 시간 안이면 분, 7일부터는 주, 30일부터는 달로 센다. 급한 정도는 상대 날짜의 색으로만 보이고 칩은 두지 않는다.
     struct Due {
         var date: String
         var time: String?
@@ -102,7 +102,15 @@ final class AssignmentsModel {
         if let left = RelativeTime.text(until: due, from: now) {
             return Due(date: left, time: RelativeDay.text(days) + " " + time, tone: tone)
         }
-        return Due(date: RelativeDay.text(days), time: abs(days) <= 1 ? time : due.formatted(.dateTime.weekday()) + " " + time, tone: tone)
+        // 주나 달로 세면 요일만으로는 어느 날인지 알 수 없어서 날짜를 쓴다. 날짜와 시각을 함께 쓰면 좁은 폭에서
+        // 날짜 칸을 넘어 꺾이므로, 시각은 일주일 안으로 들어올 때부터 보인다.
+        let when =
+            switch abs(days) {
+            case ...1: time
+            case ..<RelativeDay.week: due.formatted(.dateTime.weekday()) + " " + time
+            default: CourseFile.day(due, calendar: c)
+            }
+        return Due(date: RelativeDay.text(days), time: when, tone: tone)
     }
 }
 

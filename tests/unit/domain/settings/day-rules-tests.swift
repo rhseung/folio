@@ -60,6 +60,8 @@ struct DayRulesTests {
 
     @Test func relativeDaysReadAsWords() {
         #expect([-3, -1, 0, 1, 4].map(RelativeDay.text) == ["3일 전", "어제", "오늘", "내일", "4일 뒤"])
+        #expect([6, 7, 13, 14, 29, 30, 59, 60].map(RelativeDay.text) == ["6일 뒤", "1주 뒤", "1주 뒤", "2주 뒤", "4주 뒤", "1달 뒤", "1달 뒤", "2달 뒤"])
+        #expect([-6, -7, -29, -30, -95].map(RelativeDay.text) == ["6일 전", "1주 전", "4주 전", "1달 전", "3달 전"])
     }
 
     @Test func aDueWithinADayCountsHoursThenMinutes() {

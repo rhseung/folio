@@ -650,6 +650,28 @@
         }
       }
     },
+    "relative-day.months-ago": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld달 전"
+          }
+        }
+      }
+    },
+    "relative-day.months-later": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld달 뒤"
+          }
+        }
+      }
+    },
     "relative-day.today": {
       "extractionState": "manual",
       "localizations": {
@@ -668,6 +690,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "내일"
+          }
+        }
+      }
+    },
+    "relative-day.weeks-ago": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld주 전"
+          }
+        }
+      }
+    },
+    "relative-day.weeks-later": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld주 뒤"
           }
         }
       }

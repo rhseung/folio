@@ -102,6 +102,12 @@ struct AssignmentsModelTests {
         // 늦게 낸 과제는 칩 대신 낸 시각을 빨갛게 보인다.
         let hw1 = try #require(model.course.file.assignments.first { $0.title == "HW 1" })
         #expect(model.due(hw1, now: now).tone == .plain && model.row(hw1).lateSubmitted)
+        // 주로 세는 마감은 요일과 시각 대신 날짜만 쓴다.
+        workspace.run(AssignmentAdd(course: linearAlgebra, title: "HW 4", due: now + 10 * 86_400))
+        let hw4 = try #require(model.course.file.assignments.first { $0.title == "HW 4" })
+        let far = model.due(hw4, now: now)
+        let farDue = try #require(hw4.due)
+        #expect(far.date == "1주 뒤" && far.time == CourseFile.day(farDue, calendar: workspace.calendar))
     }
 
     @Test func sheetOffersGroupsAsATreeAndFillsTheLastMax() throws {
