@@ -53,8 +53,8 @@ final class OverdueAssignmentsModel {
     private func row(_ a: Assignment, in course: LoadedCourse, lms: URL?, now: Date) -> Row {
         let calendar = workspace.calendar
         let due = a.due ?? now
-        // 지난 날 수는 감점과 같은 셈(`LateRule.lateDays`)으로 센다. 그래야 "2일 지남"과 "최대 80%"가 어긋나지 않는다.
-        let past = String(localized: .assignmentsOverdueDays(LateRule.lateDays(due: due, at: now)))
+        // 과제 목록과 같은 셈으로 지난 때를 쓴다. 감점은 24시간 단위라 다음 줄의 상한이 언제 바뀌는지 따로 보인다.
+        let past = RelativeDay.text(until: due, from: now, settings: workspace.settings, calendar: calendar)
         let when = CourseFile.deadline(due, calendar: calendar)
         let late = course.file.lateness(of: a, at: now)
         let ceiling = late?.ceiling.map { ceiling in

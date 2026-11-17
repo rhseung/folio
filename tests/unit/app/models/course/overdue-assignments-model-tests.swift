@@ -20,6 +20,9 @@ struct OverdueAssignmentsModelTests {
         #expect(rows.map(\.id).filter { [late, lost].contains($0) } == [lost, late])
         let row = try #require(rows.first { $0.id == late })
         #expect(row.ceiling?.contains("90") == true && !row.lost)
+        // 지난 때는 과제 목록과 같은 표기다. 한 시간 전은 "1시간 전"이고, 5일 전은 공부일로 센다.
+        #expect(row.due.hasSuffix(" · 1시간 전") || row.due.hasSuffix(" · 59분 전"))
+        #expect(try #require(rows.first { $0.id == lost }).due.hasSuffix(" · 5일 전"))
         #expect(try #require(rows.first { $0.id == lost }).lost)
 
         model.submit(row)

@@ -98,9 +98,10 @@ final class AssignmentsModel {
                 case .later: .plain
                 }
             }
-        // 하루 안이면 남은 시간을 시간이나 분으로 세고, 아래 줄에 어느 날의 몇 시인지 둔다.
-        if let left = RelativeTime.text(until: due, from: now) {
-            return Due(date: left, time: RelativeDay.text(days) + " " + time, tone: tone)
+        let date = RelativeDay.text(until: due, from: now, settings: settings, calendar: c)
+        // 하루 안이면 남은 시간을 시간이나 분으로 세므로, 아래 줄에 어느 날의 몇 시인지 둔다.
+        if RelativeTime.text(until: due, from: now) != nil {
+            return Due(date: date, time: RelativeDay.text(days) + " " + time, tone: tone)
         }
         // 주나 달로 세면 요일만으로는 어느 날인지 알 수 없어서 날짜를 쓴다. 날짜와 시각을 함께 쓰면 좁은 폭에서
         // 날짜 칸을 넘어 꺾이므로, 시각은 일주일 안으로 들어올 때부터 보인다.
@@ -110,7 +111,7 @@ final class AssignmentsModel {
             case ..<RelativeDay.week: due.formatted(.dateTime.weekday()) + " " + time
             default: CourseFile.day(due, calendar: c)
             }
-        return Due(date: RelativeDay.text(days), time: when, tone: tone)
+        return Due(date: date, time: when, tone: tone)
     }
 }
 

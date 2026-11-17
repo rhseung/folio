@@ -79,6 +79,14 @@ struct DayRulesTests {
         #expect(read(-59) == "지금")
     }
 
+    @Test func aDueReadsInHoursWithinADayAndInStudyDaysBeyond() {
+        let read = { (due: Date) in RelativeDay.text(until: due, from: at(14, 12), settings: Settings(), calendar: calendar) }
+        #expect(read(at(14, 9)) == "3시간 전")
+        // 하루가 넘으면 공부일로 센다. 16일 새벽 3시는 경계 전이라 15일의 공부일이다.
+        #expect(read(at(16, 3)) == "내일")
+        #expect(read(at(24, 12)) == "1주 뒤")
+    }
+
     @Test func relativeTimeStopsExactlyAtADay() async {
         await propertyCheck(input: Gen.int(in: -200_000...200_000)) { seconds in
             let now = Date(timeIntervalSince1970: 1_794_800_000)

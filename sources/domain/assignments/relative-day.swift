@@ -6,6 +6,11 @@ public enum RelativeDay {
     public static let week = 7
     public static let month = 30
 
+    // 마감까지 남은 때나 지난 때를 쓴다. 하루 안이면 시간이나 분으로, 그보다 멀면 공부일로 센 날, 주, 달로 센다.
+    public static func text(until due: Date, from now: Date, settings: Settings, calendar: Calendar) -> String {
+        RelativeTime.text(until: due, from: now) ?? text(settings.studyDays(from: now, until: due, calendar: calendar))
+    }
+
     public static func text(_ days: Int) -> String {
         let later = days > 0
         let count = abs(days)
