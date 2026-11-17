@@ -105,10 +105,8 @@ struct TabBar: View {
         .background { measures(others) }
         .onChange(of: kinds, initial: true) { report() }
         .onChange(of: tabs.ids) { _, ids in
-            let open = Set(ids)
-            sizes.keep(open)
             report()
-            tabs.dragging.keep(open)
+            tabs.dragging.keep(Set(ids))
         }
         .animation(Theme.Motion.standard, value: tabs.ids)
         .frame(width: placement.width, alignment: .leading)
@@ -121,11 +119,11 @@ struct TabBar: View {
     var kinds: [TabFit.Tab] { tabs.ids.map(kind) }
 
     func kind(_ id: UUID) -> TabFit.Tab {
-        if let panes = tabs.panes(id), panes.count > 1 {
-            return id == tabs.selected ? .shares(panes.count) : .fixed(Double(sizes.other(id)))
-        }
-        guard workspace.tabTitle(of: entry(id)) == nil else { return .single }
-        return .fixed(Double(id == tabs.selected ? sizes.front : Self.icon))
+        // 칸이 여럿인 탭도 다른 탭과 같은 한 몫이다. 칸 수만큼 넓히면 칸을 나눌 때마다 다른 탭이 좁아지고 메뉴로 밀렸다.
+        if let panes = tabs.panes(id), panes.count > 1 { return .single }
+        // 고른 오늘 탭은 이름이 보이므로 다른 탭처럼 한 몫을 받는다. 그려진 폭으로 두면 고른 탭이 다른 탭보다 좁았다.
+        guard workspace.tabTitle(of: entry(id)) == nil, id != tabs.selected else { return .single }
+        return .fixed(Double(Self.icon))
     }
 
     func entry(_ id: UUID) -> Navigator.Entry { tabs.navigator(id)?.current ?? Navigator.Entry(link: .place(.today)) }
@@ -143,8 +141,6 @@ struct TabBar: View {
     @ViewBuilder func front(share: CGFloat) -> some View {
         if let panes = tabs.front, panes.count > 1 {
             joined(panes, share: share)
-        } else if case .fixed = kind(tabs.selected) {
-            frontLabel(width: nil).fixedSize()
         } else {
             frontLabel(width: share)
         }
@@ -167,11 +163,12 @@ struct TabBar: View {
     }
 
     func joined(_ panes: TabPanes, share: CGFloat) -> some View {
-        SegmentRow {
+        let names = Self.namesPanes(panes.count, width: share)
+        return SegmentRow {
             ForEach(Segment.all(panes, workspace: workspace, playing: tabs.playingPanes)) { segment in
                 if segment.index > 0 { SegmentRule() }
                 TabSegment(
-                    mark: segment.mark, focused: segment.index == panes.focus, playing: segment.playing,
+                    mark: segment.mark, focused: segment.index == panes.focus, playing: segment.playing, showsName: names,
                     select: { panes.press(pane: segment.id) }, close: { panes.close(pane: segment.id) },
                     pause: { [tabs] in tabs.pause(pane: segment.id) }
                 )
@@ -190,7 +187,7 @@ struct TabBar: View {
             if tabs.count > 1 { closeButton(tabs.selected).padding(.leading, Theme.Space.xxs) }
         }
         .padding(.horizontal, Theme.Space.xs)
-        .frame(width: share * CGFloat(panes.count), height: Theme.Size.toolbarButton)
+        .frame(width: share, height: Theme.Size.toolbarButton)
         .tabSurface(front: true)
     }
 
@@ -230,7 +227,7 @@ struct TabBar: View {
         let title = workspace.tabTitle(of: entry)
         let name = tabs.panes(id).flatMap(workspace.presetName(of:)) ?? title ?? workspace.placeCrumb(of: entry).title
         if let panes = tabs.panes(id), panes.count > 1 {
-            joinedLabel(id, panes: panes)
+            joinedLabel(id, panes: panes, width: share)
                 .help(name)
                 .accessibilityElement(children: .contain)
                 .accessibilityLabel(name)
@@ -249,49 +246,77 @@ struct TabBar: View {
         }
     }
 
-    func joinedLabel(_ id: UUID, panes: TabPanes) -> some View {
-        HStack(spacing: 0) {
-            ForEach(Segment.all(panes, workspace: workspace, playing: tabs.playingPanes)) { segment in
-                if segment.index > 0 { SegmentRule() }
-                Group {
-                    if segment.playing {
-                        Button {
-                            tabs.pause(pane: segment.id)
-                        } label: {
-                            speakerIcon.contentShape(.rect)
+    // 이름 붙인 배치면 칸 아이콘과 배치 이름을, 아니면 칸마다 아이콘과 이름을 둔다.
+    static func namesPanes(_ count: Int, width: CGFloat) -> Bool {
+        TabFit.namesPanes(count, width: Double(width), least: Double(Theme.Size.paneName))
+    }
+
+    func joinedLabel(_ id: UUID, panes: TabPanes, width: CGFloat) -> some View {
+        let segments = Segment.all(panes, workspace: workspace, playing: tabs.playingPanes)
+        return Group {
+            if let preset = workspace.presetName(of: panes) {
+                HStack(spacing: 0) {
+                    ForEach(segments) { segment in
+                        if segment.index > 0 { SegmentRule() }
+                        segmentIcon(segment, tab: id).padding(.horizontal, Theme.Space.xs)
+                    }
+                    Button {
+                        tabs.select(id)
+                    } label: {
+                        TabName(name: preset, isFile: false)
+                    }
+                    .padding(.leading, Theme.Space.xxs)
+                    .padding(.trailing, Theme.Space.xs)
+                }
+            } else {
+                let names = Self.namesPanes(panes.count, width: width)
+                SegmentRow {
+                    ForEach(segments) { segment in
+                        if segment.index > 0 { SegmentRule() }
+                        HStack(spacing: Theme.Space.tight) {
+                            segmentIcon(segment, tab: id)
+                            if names {
+                                Button {
+                                    tabs.select(id)
+                                } label: {
+                                    TabName(name: segment.mark.title, isFile: segment.mark.isFile)
+                                }
+                            }
                         }
-                        .help(Text(.tabsPause))
-                        .accessibilityLabel(Text(.tabsPause))
-                    } else {
-                        Button {
-                            tabs.select(id)
-                        } label: {
-                            PlaceIcon(place: segment.mark).contentShape(.rect)
-                        }
-                        .accessibilityLabel(segment.mark.title)
+                        .padding(.horizontal, Theme.Space.xs)
+                        .frame(maxWidth: names ? nil : .infinity)
+                        .layoutValue(key: SegmentRow.Shares.self, value: true)
                     }
                 }
-                .buttonStyle(.pointing(.plain))
-                .padding(.horizontal, Theme.Space.xs)
-            }
-            if let preset = workspace.presetName(of: panes) {
-                Button {
-                    tabs.select(id)
-                } label: {
-                    CappedWidth(width: Theme.Size.tabName) { Text(preset).lineLimit(1) }
-                }
-                .buttonStyle(.pointing(.plain))
-                .padding(.leading, Theme.Space.xxs)
-                .padding(.trailing, Theme.Space.xs)
             }
         }
+        .buttonStyle(.pointing(.plain))
         .padding(.horizontal, Theme.Space.xs)
         .font(Theme.Typeface.body)
         .foregroundStyle(Theme.Palette.chromeText)
-        .frame(height: Theme.Size.toolbarButton)
+        .frame(width: width, height: Theme.Size.toolbarButton)
         .tabSurface(front: false)
         .contentShape(.capsule)
         .onTapGesture { tabs.select(id) }
+    }
+
+    @ViewBuilder func segmentIcon(_ segment: Segment, tab id: UUID) -> some View {
+        if segment.playing {
+            Button {
+                tabs.pause(pane: segment.id)
+            } label: {
+                speakerIcon.contentShape(.rect)
+            }
+            .help(Text(.tabsPause))
+            .accessibilityLabel(Text(.tabsPause))
+        } else {
+            Button {
+                tabs.select(id)
+            } label: {
+                PlaceIcon(place: segment.mark).contentShape(.rect)
+            }
+            .accessibilityLabel(segment.mark.title)
+        }
     }
 
     @ViewBuilder func label(_ entry: Navigator.Entry, title: String?, width: CGFloat, playing: Bool = false) -> some View {
@@ -400,18 +425,6 @@ struct TabBar: View {
 
     func measures(_ others: [UUID]) -> some View {
         ZStack {
-            frontLabel(width: nil).fixedSize()
-                .onGeometryChange(for: CGFloat.self, of: \.size.width) {
-                    sizes.front = $0; report()
-                }
-            ForEach(others, id: \.self) { id in
-                if let panes = tabs.panes(id), panes.count > 1 {
-                    joinedLabel(id, panes: panes).fixedSize()
-                        .onGeometryChange(for: CGFloat.self, of: \.size.width) {
-                            sizes.set($0, id); report()
-                        }
-                }
-            }
             moreLabel(max(others.count, 10)).fixedSize()
                 .onGeometryChange(for: CGFloat.self, of: \.size.width) {
                     sizes.more = $0; report()
@@ -427,6 +440,7 @@ private struct TabSegment: View {
     let mark: Crumb
     let focused: Bool
     let playing: Bool
+    let showsName: Bool
     let select: () -> Void
     let close: () -> Void
     let pause: () -> Void
@@ -435,43 +449,59 @@ private struct TabSegment: View {
     static let height = Theme.Size.toolbarButton - Theme.Space.s
     static let close = Theme.Space.l
 
+    // 이름이 없는 칸은 닫기 버튼에 자리를 따로 두지 않고 아이콘 자리에 겹쳐, 마우스를 올리면 아이콘 대신 보인다. 자리를 두면
+    // 안 보이는 버튼 몫만큼 아이콘이 칸 가운데에서 밀려, 고른 탭과 고르지 않은 탭의 아이콘 자리가 달랐다.
     var body: some View {
         HStack(spacing: Theme.Space.xxs) {
-            HStack(spacing: Theme.Space.tight) {
-                if playing {
-                    speakerButton.foregroundStyle(focused ? mark.dot ?? Theme.Palette.chromeSelected : Theme.Palette.textSecondary)
+            if showsName {
+                content
+                closeButton.opacity(hovering ? 1 : 0).allowsHitTesting(hovering)
+            } else {
+                ZStack {
+                    content.opacity(hovering ? 0 : 1)
+                    closeButton.opacity(hovering ? 1 : 0).allowsHitTesting(hovering)
                 }
-                Button(action: select) {
-                    HStack(spacing: Theme.Space.tight) {
-                        if !playing { PlaceIcon(place: mark, tint: focused ? nil : Theme.Palette.textSecondary) }
-                        TabName(name: mark.title, isFile: mark.isFile)
-                    }
-                    .contentShape(.rect)
-                }
-                .buttonStyle(.pointing(.plain))
-                .help(mark.title)
-                .accessibilityLabel(mark.title)
             }
-            .font(focused ? Theme.Typeface.bodyStrong : Theme.Typeface.body)
-            .foregroundStyle(focused ? Theme.Palette.text : Theme.Palette.textSecondary)
-            Button(action: close) {
-                Image(systemName: "xmark").font(Theme.Glyph.small)
-                    .frame(width: Self.close, height: Self.close)
-                    .contentShape(.circle)
-            }
-            .buttonStyle(.pointing(.plain))
-            .foregroundStyle(Theme.Palette.textTertiary)
-            .opacity(hovering ? 1 : 0)
-            .allowsHitTesting(hovering)
-            .help(Text(.panesClose))
-            .accessibilityLabel(Text(.panesClose))
         }
-        .padding(.leading, Theme.Space.s)
+        .padding(.leading, showsName ? Theme.Space.s : Theme.Space.xs)
         .padding(.trailing, Theme.Space.xs)
+        .frame(maxWidth: showsName ? nil : .infinity)
         .frame(height: Self.height)
         .contentShape(.rect)
         .onTapGesture(perform: select)
         .onHover { hovering = $0 }
+    }
+
+    var content: some View {
+        HStack(spacing: Theme.Space.tight) {
+            if playing {
+                speakerButton.foregroundStyle(focused ? mark.dot ?? Theme.Palette.chromeSelected : Theme.Palette.textSecondary)
+            }
+            Button(action: select) {
+                HStack(spacing: Theme.Space.tight) {
+                    if !playing { PlaceIcon(place: mark, tint: focused ? nil : Theme.Palette.textSecondary) }
+                    if showsName { TabName(name: mark.title, isFile: mark.isFile) }
+                }
+                .contentShape(.rect)
+            }
+            .buttonStyle(.pointing(.plain))
+            .help(mark.title)
+            .accessibilityLabel(mark.title)
+        }
+        .font(focused ? Theme.Typeface.bodyStrong : Theme.Typeface.body)
+        .foregroundStyle(focused ? Theme.Palette.text : Theme.Palette.textSecondary)
+    }
+
+    var closeButton: some View {
+        Button(action: close) {
+            Image(systemName: "xmark").font(Theme.Glyph.small)
+                .frame(width: Self.close, height: Self.close)
+                .contentShape(.circle)
+        }
+        .buttonStyle(.pointing(.plain))
+        .foregroundStyle(Theme.Palette.textTertiary)
+        .help(Text(.panesClose))
+        .accessibilityLabel(Text(.panesClose))
     }
 
     var speakerButton: some View {
@@ -533,18 +563,6 @@ private struct SegmentRule: View {
         Theme.Palette.text.opacity(Theme.Opacity.edge)
             .frame(width: 1, height: Theme.Space.l)
             .padding(.horizontal, Theme.Space.xxs)
-    }
-}
-
-private struct CappedWidth: Layout {
-    let width: CGFloat
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        subviews.first?.sizeThatFits(ProposedViewSize(width: min(proposal.width ?? width, width), height: proposal.height)) ?? .zero
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        subviews.first?.place(at: bounds.origin, proposal: ProposedViewSize(bounds.size))
     }
 }
 

@@ -246,6 +246,13 @@ struct TabFitTests {
         #expect(TabFit.lead(panelEdge: 4, after: 189, gap: 8) == 8)
     }
 
+    @Test func panesShowNamesOnlyWhenTwoHaveRoom() {
+        #expect(TabFit.namesPanes(2, width: 280, least: 72))
+        #expect(!TabFit.namesPanes(2, width: 132, least: 72))
+        #expect(!TabFit.namesPanes(3, width: 280, least: 72))
+        #expect(!TabFit.namesPanes(4, width: 1000, least: 72))
+    }
+
     @Test func aShortPaneLeavesItsRoomToALongOne() {
         #expect(TabFit.split(240, ideals: [60, 200]) == [60, 180])
         #expect(TabFit.split(300, ideals: [60, 200]) == [80, 220])

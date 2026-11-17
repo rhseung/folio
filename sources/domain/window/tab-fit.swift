@@ -85,6 +85,12 @@ public enum TabFit {
             + (layout.hidden > 0 ? gap + more : 0)
     }
 
+    // 칸이 여럿인 탭은 칸이 셋 이상이거나 칸 하나에 돌아갈 폭이 `least`보다 좁으면 칸 아이콘만 둔다. 이름을 두면 앞 한두
+    // 글자나 확장자 조각만 남아 칸을 알아보기 더 어려웠다.
+    public static func namesPanes(_ count: Int, width: Double, least: Double) -> Bool {
+        count < 3 && width / Double(max(count, 1)) >= least
+    }
+
     // 칸이 여럿인 탭의 칸 폭이다. 똑같이 나누면 짧은 이름("오늘") 옆에 빈 폭이 남는데도 긴 이름이 줄어든다. 그래서 고른
     // 몫보다 덜 쓰는 칸은 쓰는 만큼만 받고, 남은 폭을 나머지 칸이 다시 똑같이 나눈다. 모두 들어가면 남는 폭을 똑같이 더한다.
     public static func split(_ room: Double, ideals: [Double]) -> [Double] {
