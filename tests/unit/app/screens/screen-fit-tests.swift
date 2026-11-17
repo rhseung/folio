@@ -128,6 +128,36 @@ extension ScreenFitTests {
         }
     }
 
+    // 애셋 서랍은 화면이 아니라 노트 편집기 안의 띠지만, 펼친 격자의 검색과 머리 줄이 좁은 폭에서 넘치지 않는지 본다.
+    @Test func theAssetTrayFitsInStripAndGrid() async throws {
+        let workspace = try Workspace.scenario(.busyDay)
+        let course = try #require(workspace.currentCourses.first)
+        let id = try #require(workspace.run(NoteAdd(course: course.id, title: "서랍", kind: .free))?.made)
+        let svg = #"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect class="ink" width="10" height="10"/></svg>"#
+        for name in ["hall", "konig", "tutte"] { workspace.run(NoteFigureAdd(course: course.id, name: name, svg: svg)) }
+        workspace.run(NoteWidgetAdd(course: course.id, id: UUID(), html: "<title>증가 경로</title><p>x</p>"))
+        let loaded = try #require(workspace.course(course.id))
+        let note = try #require(try loaded.store.note(id: id))
+        let editor = NoteEditorModel(workspace: workspace, course: loaded, note: note)
+        editor.load()
+        editor.body = "![[hall.svg]]"
+        var jobs: [RenderJob] = []
+        for expanded in [false, true] {
+            for width in Self.widths {
+                let tray = AssetTrayModel(editor: editor)
+                tray.reload()
+                tray.expanded = expanded
+                jobs.append(
+                    RenderJob(
+                        name: expanded ? "grid" : "strip", view: AnyView(AssetTray(model: tray).environment(workspace)), width: width,
+                        height: nil, scheme: .light))
+            }
+        }
+        for (job, drawn) in zip(jobs, try await measureOffscreen(jobs)) {
+            #expect(drawn <= (job.width ?? 0) + 0.5, "asset tray \(job.name) at \(Int(job.width ?? 0)) is \(drawn) wide")
+        }
+    }
+
     @Test func aFoldedListWithNothingBesideIsThePageWithNoButton() async throws {
         let workspace = try Workspace.scenario(.busyDay)
         let drawn = try await draw(Navigator.Entry(link: .place(.people)), workspace, width: 390)

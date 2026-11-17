@@ -15,6 +15,10 @@ struct NoteEditor: View {
     @State private var wide = false
     @State private var preview = PreviewLink()
     @State private var showsAssets = false
+    @State private var tray: AssetTrayModel
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    #endif
     @State private var palette: MathPaletteModel
     @State private var showsMath = false
     @State private var outline = NoteOutlineModel()
@@ -34,6 +38,7 @@ struct NoteEditor: View {
         let model = NoteEditorModel(workspace: workspace, course: course, note: note)
         _model = State(initialValue: model)
         _palette = State(initialValue: MathPaletteModel(editor: model))
+        _tray = State(initialValue: AssetTrayModel(editor: model))
         self.moves = moves
         self.anchor = anchor
         self.insert = insert
@@ -82,9 +87,10 @@ struct NoteEditor: View {
                     NoteMenu(courseId: model.course.id, note: model.note, host: .own, moves: moves, save: model.saveIfDirty)
                 }
             }
-            if writing && showsAssets {
-                AssetTray(model: model)
+            if writing && showsAssets && !traySheet {
+                AssetTray(model: tray)
                     .transition(.move(edge: .top).combined(with: .opacity))
+                    .zIndex(1)
                 Theme.Palette.lineSoft.frame(height: 1)
             }
             // 열만 나타났다 사라지는 행 하나로 두어야 보기를 바꿀 때 편집기의 캐럿과 미리보기의 스크롤이 유지된다.
@@ -127,6 +133,12 @@ struct NoteEditor: View {
         }
         .background(Theme.Palette.card)
         .animation(Theme.Motion.standard, value: showsAssets)
+        .sheet(isPresented: traySheetShown) {
+            AssetTray(model: tray, inSheet: true)
+                .presentationDetents([Self.trayLow, .large], selection: trayDetent)
+                .presentationBackgroundInteraction(.enabled(upThrough: Self.trayLow))
+                .presentationDragIndicator(.visible)
+        }
         .background {
             Button("") { model.saveNow(force: false) }.keyboardShortcut("s").opacity(0).allowsHitTesting(false).accessibilityHidden(true)
         }
@@ -142,6 +154,12 @@ struct NoteEditor: View {
         }
         .onChange(of: model.meta.math) { model.saveMath() }
         .onChange(of: requests.contains(.mathPalette)) { _, open in showsMath = open }
+        .onChange(of: requests.viewMode, initial: true) { _, mode in if let mode { panes.choose(mode) } }
+        .onChange(of: requests.assets, initial: true) { _, expanded in
+            guard let expanded else { return }
+            showsAssets = true
+            tray.expanded = expanded
+        }
         .onChange(of: model.notesRevision) { model.refresh() }
         .onChange(of: scenePhase) { _, phase in if phase != .active { model.saveIfDirty() } }
         .onDisappear { model.saveIfDirty() }
@@ -163,6 +181,33 @@ struct NoteEditor: View {
     }
 
     var shown: NotePanes.Mode { panes.shown(wide: wide) }
+
+    // iPhone에서는 서랍이 본문을 밀어내지 않게 시트로 띄운다. 낮은 높이에서는 뒤의 본문에 계속 쓸 수 있다.
+    var traySheet: Bool {
+        #if os(iOS)
+        sizeClass == .compact
+        #else
+        false
+        #endif
+    }
+
+    static let trayLow = PresentationDetent.height(Theme.Size.assetTray)
+
+    var traySheetShown: Binding<Bool> {
+        Binding {
+            writing && showsAssets && traySheet
+        } set: {
+            if !$0 { showsAssets = false }
+        }
+    }
+
+    var trayDetent: Binding<PresentationDetent> {
+        Binding {
+            tray.expanded ? .large : Self.trayLow
+        } set: {
+            tray.expanded = $0 == .large
+        }
+    }
     var writing: Bool { shown != .read }
 
     var outlineDocked: Bool { outlineOn && !outline.isEmpty && outlineFit.docks(shown) }
@@ -213,7 +258,7 @@ struct NoteEditor: View {
                 outline.views.editorScrolled(line)
             },
             assist: model.assist, anchor: anchor, embeds: model.embeds,
-            revision: model.notesRevision, insertMath: $model.pendingMath,
+            revision: model.notesRevision, insertMath: $model.pendingMath, insertBlock: $model.pendingBlock,
             openGuide: { showInputGuide(model.meta.math) },
             views: outline.views)
     }

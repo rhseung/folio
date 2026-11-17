@@ -28,6 +28,7 @@ final class SnapshotDriver {
     static let split = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_SPLIT"]
     static let math = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_MATH"] != nil
     static let outline = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_OUTLINE"]
+    static let assets = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_ASSETS"].flatMap(UUID.init(uuidString:))
 
     @ObservationIgnored var extraCaptures: ((URL) async -> Void)?
     // 창이 열리면 `ItemSheets`가 자기 시트를 띄우는 함수로 채운다.
@@ -283,6 +284,26 @@ final class SnapshotDriver {
             await shot("quick-add-course-\(name)", popovers: true)
             ask()
             try? await Task.sleep(for: .seconds(1))
+        }
+        ask()
+        NSApp.terminate(nil)
+    }
+
+    // 그 노트를 쓰기 보기로 열고 애셋 서랍의 띠와 펼친 격자를 찍는다. 썸네일은 화면 밖 웹 뷰가 그리므로 그만큼 기다린다.
+    func runAssets(open: (AppLink) -> Void, note: UUID) async {
+        guard let directory = Self.directory else { return }
+        // folio:not-an-action debug screenshots, outside the GIST folder
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let window = NSApp.windows.first { $0.isVisible }
+        window?.setContentSize(NSSize(width: Self.width, height: Self.height))
+        window?.center()
+        open(AppLink(.note, note))
+        try? await Task.sleep(for: .seconds(2))
+        for (name, expanded) in [("assets-strip", false), ("assets-grid", true)] {
+            ask(.viewMode(.write), .assets(expanded: expanded))
+            try? await Task.sleep(for: .seconds(6))
+            capture(to: directory.appending(path: "\(name).png"))
+            if Self.holdSteps.contains(name) { try? await Task.sleep(for: .seconds(6)) }
         }
         ask()
         NSApp.terminate(nil)

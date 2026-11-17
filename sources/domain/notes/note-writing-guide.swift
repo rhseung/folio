@@ -41,6 +41,7 @@ public enum NoteWritingGuide {
             ## 위젯
             - `note widget add <과목> --html <파일>`이 `.folio/widgets/<ID>.html`을 쓰고 ID를 돌려준다. 노트에는
               ```` ```cb-widget ```` 펜스 안에 `{"id": "<ID>", "height": 320}`. 고칠 때는 `note widget show`의 `hash`를 `note widget write --expect`에.
+            - `<title>`에 위젯 이름을 쓴다(`<title>증가 경로 단계</title>`). 애셋 서랍과 `note widget list`가 이 이름으로 보이고, 없으면 "위젯"으로만 보인다.
             - HTML 파일 하나가 격리된 frame에서 돈다. 인라인 `<script>`와 `<style>`만 되고, 네트워크·CDN·바깥 파일, 링크와 페이지 이동, 저장(상태는 다시 열면 처음부터)은 안 된다. 이미지는 `data:`/`blob:`.
             - 색은 미리 들어 있는 CSS 변수로만 쓴다. 라이트·다크를 따라간다. 노트 색 `--text --text-2 --text-3 --line --line-soft --fill --code-fill --card --accent --accent-ink`, `--c-definition --c-theorem --c-example --c-warning --c-danger --c-neutral`, 그림 색 \#(variables). 바탕은 투명, `body`는 여백 0, 14px 시스템 글꼴.
             - 컨트롤은 맨 `<button>`, `<input>`, `<select>`를 쓰면 회색 얇은 테두리 스타일이 들어 있다. `button.primary`, `button.ghost`, 켠 상태는 `aria-pressed="true"`, 탭은 `<div class="tabs">` 안의 버튼과 `aria-selected`, 배지 `.badge`(`.good`, `.bad`), 그림 판 `.board`. 안쪽 그림(그래프, 행렬, 좌표)은 위의 그림 스타일을 `var(--p-blue)`처럼 쓴다.

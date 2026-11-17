@@ -24,6 +24,9 @@ import WebKit
     }
     weak var link: PreviewLink?
     weak var views: NoteViews?
+    // 애셋 서랍의 크게 보기다. 처음 그린 뒤 첫 그림을 그림 보기로 열고, 사용자가 그림 보기를 닫으면 부른다.
+    var figureOnly: (@MainActor () -> Void)?
+    private var figureOpened = false
 
     private(set) var ready = false
     private var shown: Shown?
@@ -72,6 +75,11 @@ import WebKit
         toggleMode = nil
         link = nil
         views = nil
+        if figureOpened {
+            figureOpened = false
+            view.callAsyncJavaScript("window.folioFigures?.close()", arguments: [:], in: nil, in: .defaultClient)
+        }
+        figureOnly = nil
         wanted = nil
         following = nil
         widgets.reset()
@@ -201,6 +209,11 @@ import WebKit
                 "window.folioPreview?.show(blocks, options)", arguments: ["blocks": blocks, "options": options],
                 contentWorld: .defaultClient)
             rendering = false
+            if figureOnly != nil, !figureOpened {
+                let opened = try? await view.callAsyncJavaScript(
+                    "return await window.folioFigures?.openFirst() ?? false", arguments: [:], contentWorld: .defaultClient)
+                figureOpened = opened as? Bool == true
+            }
             if ticked { ticked = false } else { link?.refollow() }
             runReveal()
             render()
@@ -280,6 +293,7 @@ import WebKit
                 page?.menuAnchor = anchor
             }
             if body["type"] as? String == "selection" { page?.selectionAnchor = anchor }
+            if body["type"] as? String == "figureClosed" { page?.figureOnly?() }
             if body["type"] as? String == "top", let line = body["line"] as? Int { page?.views?.previewScrolled(line) }
         }
     }

@@ -18,6 +18,7 @@ enum ScreenRequest: Hashable, Sendable {
     case mathPalette
     case quiz
     case expand(UUID)
+    case assets(expanded: Bool)
 
     struct QuickAddRequest: Hashable, Sendable {
         var text: String?
@@ -64,6 +65,10 @@ extension Set<ScreenRequest> {
 
     var expanded: UUID? {
         lazy.compactMap { if case .expand(let id) = $0 { id } else { nil } }.first
+    }
+
+    var assets: Bool? {
+        lazy.compactMap { if case .assets(let expanded) = $0 { expanded } else { nil } }.first
     }
 }
 

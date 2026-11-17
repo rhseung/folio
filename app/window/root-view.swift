@@ -343,6 +343,10 @@ struct RootView: View {
                     named: String(course.title.split(separator: " ").first ?? ""))
                 return
             }
+            if let note = SnapshotDriver.assets {
+                await SnapshotDriver.shared.runAssets(open: { open($0) }, note: note)
+                return
+            }
             if SnapshotDriver.math, let note = workspace.currentCourses.lazy.compactMap({ $0.file.notes.first }).first {
                 await SnapshotDriver.shared.runMath(open: { open($0) }, note: AppLink(.note, note.id))
                 return

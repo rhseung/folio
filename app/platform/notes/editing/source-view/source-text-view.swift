@@ -198,6 +198,11 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         window?.makeFirstResponder(self)
     }
 
+    func insertBlock(_ block: String) {
+        apply(SourceEditing.block(block, in: string as NSString, selection: selectedRange()))
+        window?.makeFirstResponder(self)
+    }
+
     func apply(_ edit: SourceEditing.Edit, reveal: Bool = true) {
         if edit.range.length > 0 || !edit.text.isEmpty {
             guard shouldChangeText(in: edit.range, replacementString: edit.text) else { return }
@@ -947,6 +952,11 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
 
     func insertMath(_ item: CompletionItem) {
         apply(MathSymbols.insertion(item, in: string as NSString, selection: selectedRange))
+    }
+
+    func insertBlock(_ block: String) {
+        apply(SourceEditing.block(block, in: string as NSString, selection: selectedRange))
+        becomeFirstResponder()
     }
 
     override func paste(_ sender: Any?) {
