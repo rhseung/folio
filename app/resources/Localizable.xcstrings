@@ -342,6 +342,94 @@
         }
       }
     },
+    "assignments.lms": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS"
+          }
+        }
+      }
+    },
+    "assignments.lms-due": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS 마감 %@"
+          }
+        }
+      }
+    },
+    "assignments.lms-not-submitted": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 안 냄"
+          }
+        }
+      }
+    },
+    "assignments.lms-submission": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS 제출"
+          }
+        }
+      }
+    },
+    "assignments.lms-submitted": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS 제출됨"
+          }
+        }
+      }
+    },
+    "assignments.lms-submitted-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 냄 · 마지막 동기화 %2$@"
+          }
+        }
+      }
+    },
+    "assignments.lms-synced": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마지막 동기화 %@"
+          }
+        }
+      }
+    },
+    "assignments.lms-unread": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS 과제"
+          }
+        }
+      }
+    },
     "assignments.max": {
       "extractionState": "manual",
       "localizations": {
@@ -602,6 +690,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "제출본 %lld"
+          }
+        }
+      }
+    },
+    "assignments.submitted-on": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 냄"
           }
         }
       }

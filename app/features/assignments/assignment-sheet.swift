@@ -6,6 +6,7 @@ struct AssignmentSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var pickingFiles = false
     @Environment(\.supportsMultipleWindows) private var multipleWindows
+    @Environment(\.openURL) private var openURL
     let openFile: (UUID, LinkPlacement) -> Void
 
     init(workspace: Workspace, course: LoadedCourse, assignment: Assignment, openFile: @escaping (UUID, LinkPlacement) -> Void) {
@@ -70,6 +71,24 @@ struct AssignmentSheet: View {
                                 .help(Text(.assignmentsClearSubmittedAt))
                             } else {
                                 Button(.assignmentsSetSubmittedAt) { model.hasSubmittedAt = true }.buttonStyle(.ghost)
+                            }
+                        }
+                    }
+                }
+            }
+            if let lms = model.lms {
+                Block(String(localized: .assignmentsLms), note: lms.classroom) {
+                    Card {
+                        FormRow(label: lms.title, detail: lms.due, last: lms.submitted == nil) {
+                            Button(.lmsOpen) { openURL(lms.url) }.buttonStyle(.ghost)
+                        }
+                        if let submitted = lms.submitted {
+                            FormRow(label: String(localized: .assignmentsLmsSubmission), detail: lms.detail, last: true) {
+                                if submitted {
+                                    Badge(String(localized: .assignmentsLmsSubmitted), tone: .success)
+                                } else {
+                                    Text(.assignmentsLmsNotSubmitted).foregroundStyle(Theme.Palette.textTertiary)
+                                }
                             }
                         }
                     }

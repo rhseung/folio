@@ -81,10 +81,16 @@ struct AssignmentsView: View {
                 .strikethrough(done, color: Theme.Palette.textTertiary)
                 .foregroundStyle(done ? Theme.Palette.textTertiary : Theme.Palette.text)
                 .animation(Theme.Motion.standard, value: done)
+            // 좁은 폭에서는 줄 끝이 잘리므로 LMS 표시를 맨 앞에 두고 줄이지 않는다.
             let meta = HStack(spacing: Theme.Space.s) {
+                if row.lms { Label(.assignmentsLms, systemImage: "link").fixedSize() }
                 if let repeats = a.repeats { Label(repeats.label, systemImage: "repeat") }
+                if let submitted = row.submittedOn {
+                    Label(submitted, systemImage: "paperplane")
+                } else if row.submissions > 0 {
+                    Label(.assignmentsSubmissions(row.submissions), systemImage: "paperplane")
+                }
                 if row.problems > 0 { Label(.assignmentsProblems(row.problems), systemImage: "doc") }
-                if row.submissions > 0 { Label(.assignmentsSubmissions(row.submissions), systemImage: "paperplane") }
                 if let component = row.component { Label(component, systemImage: "chart.pie") }
                 if !a.memo.isEmpty { Image(systemName: "text.alignleft").accessibilityLabel(Text(.assignmentsMemo)) }
             }

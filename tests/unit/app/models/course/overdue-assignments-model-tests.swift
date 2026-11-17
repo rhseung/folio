@@ -57,4 +57,47 @@ struct OverdueAssignmentsModelTests {
         #expect(rows.map(\.submitted) == [false, true])
         #expect(rows[1].lms == snapshot.assignments[1].url)
     }
+
+    @Test func aReceivedAssignmentShowsItsLMSLinkAndWhenItWasSubmitted() async throws {
+        let workspace = try fixtureWorkspace()
+        let now = workspace.now
+        let room = LMSClassroom(id: 1, title: "그래프 이론[01]")
+        let due = now - 86_400
+        let sent = due - 3_600
+        var snapshot = LMSSnapshot(
+            at: now, classrooms: [room], assignments: [LMSAssignment(id: 12, classroom: 1, title: "HW 12", due: due)])
+        let logins = MemoryLogins(LMSCredentials(username: "20260000", password: "x"))
+        workspace.lms = LMSConnection(source: FixedLMS(snapshot: snapshot), logins: logins)
+        await workspace.syncLMS()
+        workspace.run(LMSAccept(course: graphTheory, items: [LMSAcceptItem(key: "assignment:12", classroom: 1, title: "HW 12", due: due)]))
+        let course = try #require(workspace.course(graphTheory))
+        let unsent = try #require(course.file.assignments.first { $0.lmsId == 12 })
+
+        let sheet = AssignmentSheetModel(workspace: workspace, course: course, assignment: unsent)
+        let link = try #require(sheet.lms)
+        #expect(link.title == "HW 12" && link.classroom == "그래프 이론[01]" && link.url == snapshot.assignments[0].url)
+        #expect(link.submitted == false && link.due?.hasPrefix("LMS 마감") == true)
+        #expect(AssignmentsModel(workspace: workspace, course: course).row(unsent).lms)
+
+        // LMS에서 내면 동기화가 제출함으로 바꾸고, 목록은 제출본 수 대신 낸 시각을, 시트는 LMS 제출됨을 보인다.
+        snapshot.assignments[0].submitted = true
+        snapshot.assignments[0].submittedAt = sent
+        workspace.lms = LMSConnection(source: FixedLMS(snapshot: snapshot), logins: logins)
+        await workspace.syncLMS()
+        let updated = try #require(workspace.course(graphTheory))
+        let done = try #require(updated.file.assignments.first { $0.id == unsent.id })
+        // 파일에 쓰는 날짜는 초 아래를 버린다.
+        let at = try #require(done.submittedAt)
+        #expect(done.status == .submitted && abs(at.timeIntervalSince(sent)) < 1)
+        let on = CourseFile.deadline(at, calendar: workspace.calendar)
+        #expect(AssignmentsModel(workspace: workspace, course: updated).row(done).submittedOn == "\(on) 냄")
+        let after = try #require(AssignmentSheetModel(workspace: workspace, course: updated, assignment: done).lms)
+        #expect(after.submitted == true && after.detail?.contains(" 냄 · ") == true)
+
+        // LMS에서 받지 않은 과제에는 LMS 칸이 없다.
+        let own = try #require(workspace.run(AssignmentAdd(course: graphTheory, title: "HW 13"))?.made)
+        let plain = try #require(workspace.course(graphTheory)?.file.assignments.first { $0.id == own })
+        #expect(AssignmentSheetModel(workspace: workspace, course: updated, assignment: plain).lms == nil)
+        #expect(!AssignmentsModel(workspace: workspace, course: updated).row(plain).lms)
+    }
 }

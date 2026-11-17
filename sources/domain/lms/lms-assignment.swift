@@ -25,5 +25,6 @@ public struct LMSAssignment: Codable, Hashable, Sendable, Identifiable {
     }
 
     public var key: LMSKey { .init(kind: .assignment, id: id) }
-    public var url: URL { LMS.url("/mod/assign/view.php?id=\(id)") }
+    public var url: URL { Self.url(id) }
+    public static func url(_ id: Int) -> URL { LMS.url("/mod/assign/view.php?id=\(id)") }
 }
