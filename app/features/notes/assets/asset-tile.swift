@@ -24,13 +24,17 @@ struct AssetTile: View {
             .animation(Theme.Motion.quick, value: showsName)
     }
 
+    // 썸네일이 있어도 파일이 바뀌면(`asset.modified`) 다시 받도록, 받는 일은 자리표시 대신 타일 전체에 붙인다.
     @ViewBuilder private var sized: some View {
-        if let size {
-            thumbnail.frame(size)
-        } else {
-            Color.clear.aspectRatio(Theme.Size.assetTile.width / Theme.Size.assetTile.height, contentMode: .fit)
-                .overlay { thumbnail }
+        Group {
+            if let size {
+                thumbnail.frame(size)
+            } else {
+                Color.clear.aspectRatio(Theme.Size.assetTile.width / Theme.Size.assetTile.height, contentMode: .fit)
+                    .overlay { thumbnail }
+            }
         }
+        .task(id: asset) { await loadQuickLook() }
     }
 
     @ViewBuilder private var thumbnail: some View {
@@ -47,14 +51,14 @@ struct AssetTile: View {
             if let quickLook {
                 Image(decorative: quickLook, scale: 1).resizable().scaledToFill()
             } else {
-                placeholder.task(id: asset) { await loadQuickLook() }
+                placeholder
             }
         case .file:
             // QuickLook은 문서의 첫 쪽을 종이 색 그대로 그리므로 다크에서도 흰 쪽으로 남는다.
             if let quickLook {
                 Image(decorative: quickLook, scale: 1).resizable().scaledToFit().padding(Theme.Space.s)
             } else {
-                placeholder.task(id: asset) { await loadQuickLook() }
+                placeholder
             }
         }
     }
@@ -88,7 +92,7 @@ struct AssetTile: View {
     }
 
     private func loadQuickLook() async {
-        guard let url = model.fileURL(asset) else { return }
+        guard asset.kind == .image || asset.kind == .file, let url = model.fileURL(asset) else { return }
         let side = size ?? Theme.Size.assetPreview
         let request = QLThumbnailGenerator.Request(fileAt: url, size: side, scale: 2, representationTypes: .thumbnail)
         quickLook = try? await QLThumbnailGenerator.shared.generateBestRepresentation(for: request).cgImage
