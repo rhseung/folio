@@ -42,6 +42,9 @@ extension Workspace {
             if let hw3 = workspace.course(course)?.file.assignments.first(where: { $0.lmsId == 139930 }) {
                 workspace.run(AssignmentStatusSet(course: course, assignment: hw3.id, status: .submitted))
             }
+            // 렌더는 동기화를 돌리지 않으므로, LMS에서 낸 Homework Set #4를 동기화처럼 제출함으로 바꿔 둔다.
+            let submitted = LMSInbox.submissions(lms, settings: workspace.settings.lms, courses: workspace.courses.map(\.file))
+            if !submitted.isEmpty { workspace.run(LMSSubmitted(items: submitted)) }
         }
         workspace.diagnostics = DiagnosticLog.sample(at: scenario.now)
         return workspace
@@ -67,7 +70,7 @@ extension LMSSnapshot {
                     id: 139940, classroom: 27967, title: "Homework Set #4", due: now.addingTimeInterval(2 * day), submitted: true,
                     attachments: [
                         LMSAttachment(name: "hw4-errata.pdf", path: "/pluginfile.php/1/mod_assign/introattachment/0/hw4-errata.pdf")
-                    ]),
+                    ], submittedAt: now.addingTimeInterval(-3 * 3600)),
                 LMSAssignment(
                     id: 139950, classroom: 27967, title: "Homework Set #5", due: now.addingTimeInterval(3 * day),
                     attachments: [LMSAttachment(name: "hw5.pdf", path: "/pluginfile.php/1/mod_assign/introattachment/0/hw5.pdf")]),
