@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180">
+<path d="M40 160 H290" class="s-ink" stroke-width="1.3" fill="none"/>
+<path d="M48 160 l-8 8 M60 160 l-8 8 M72 160 l-8 8 M84 160 l-8 8 M96 160 l-8 8 M108 160 l-8 8 M120 160 l-8 8 M132 160 l-8 8 M144 160 l-8 8 M156 160 l-8 8 M168 160 l-8 8 M180 160 l-8 8 M192 160 l-8 8 M204 160 l-8 8 M216 160 l-8 8 M228 160 l-8 8 M240 160 l-8 8 M252 160 l-8 8 M264 160 l-8 8 M276 160 l-8 8 M288 160 l-8 8" class="s-muted" stroke-width="0.9" fill="none"/>
+<rect x="100" y="110" width="60" height="50" fill="none" class="s-ink" stroke-width="1.1"/>
+<line x1="130" y1="135" x2="230" y2="75" class="s-p-blue" stroke-width="1.7" marker-end="url(#m-p-blue)"/>
+<line x1="130" y1="135" x2="230" y2="135" class="s-p-blue" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#m-p-blue)"/>
+<line x1="130" y1="135" x2="130" y2="75" class="s-p-blue" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#m-p-blue)"/>
+<text x="238" y="74" class="p-blue">$\mathbf{F}$</text>
+<text x="238" y="140" class="p-blue">$F_x$</text>
+<text x="104" y="86" class="p-blue">$F_y$</text>
+<text x="200" y="120" class="sm">$\theta$</text>
+</svg>
