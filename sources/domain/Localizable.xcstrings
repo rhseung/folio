@@ -12,17 +12,6 @@
         }
       }
     },
-    "dday.after": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "D+%lld"
-          }
-        }
-      }
-    },
     "import.notes.no-component": {
       "extractionState": "manual",
       "localizations": {
@@ -635,6 +624,61 @@
           "stringUnit": {
             "state": "translated",
             "value": "LMS 미제출"
+          }
+        }
+      }
+    },
+    "relative-day.ago": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld일 전"
+          }
+        }
+      }
+    },
+    "relative-day.later": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld일 뒤"
+          }
+        }
+      }
+    },
+    "relative-day.today": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘"
+          }
+        }
+      }
+    },
+    "relative-day.tomorrow": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내일"
+          }
+        }
+      }
+    },
+    "relative-day.yesterday": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어제"
           }
         }
       }

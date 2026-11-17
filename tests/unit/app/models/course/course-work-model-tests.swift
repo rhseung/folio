@@ -88,15 +88,18 @@ struct AssignmentsModelTests {
         #expect(groups[1].items.map(\.title) == ["HW 2", "HW 3"])
         #expect(groups.map(\.group.label) == ["마감 지남", "진행 중"])
 
+        // 마감은 상대 날짜와 시각으로 보이고, 급한 정도는 색으로만 보인다. 한 시간 전 마감은 공부일 경계에 따라 오늘이거나 어제다.
         let late = groups[0].items[0]
-        #expect(model.dueChip(late, now: now)?.text == "D+1")
-        let chip = try #require(model.dueChip(groups[1].items[0], now: now))
-        #expect(chip.text == "D-5" && chip.tone == .warning)
-        #expect(model.due(groups[1].items[1]).date == "마감 없음")
+        let overdue = model.due(late, now: now)
+        #expect(["오늘", "어제"].contains(overdue.date) && overdue.tone == .danger && overdue.time?.contains(":") == true)
+        let soon = model.due(groups[1].items[0], now: now)
+        #expect(soon.date == "5일 뒤" && soon.tone == .warning && soon.time?.split(separator: " ").count == 3)
+        #expect(model.due(groups[1].items[1], now: now).date == "마감 없음")
         model.setStatus(late, .submitted)
         #expect(model.groups(now: now).map(\.group) == [.open, .submitted])
-        // 늦게 낸 과제는 늦은 날 수만 보인다.
-        #expect(model.dueChip(try #require(model.course.file.assignments.first { $0.title == "HW 1" }), now: now)?.text == "D+1")
+        // 늦게 낸 과제는 칩 대신 낸 시각을 빨갛게 보인다.
+        let hw1 = try #require(model.course.file.assignments.first { $0.title == "HW 1" })
+        #expect(model.due(hw1, now: now).tone == .plain && model.row(hw1).lateSubmitted)
     }
 
     @Test func sheetOffersGroupsAsATreeAndFillsTheLastMax() throws {

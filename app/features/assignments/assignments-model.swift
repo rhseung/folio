@@ -50,6 +50,7 @@ final class AssignmentsModel {
         var component: String?
         var lms: Bool
         var submittedOn: String?
+        var lateSubmitted: Bool
     }
 
     func row(_ a: Assignment) -> Row {
@@ -68,33 +69,36 @@ final class AssignmentsModel {
             lms: a.lmsId != nil,
             submittedOn: a.status.isOpen
                 ? nil
-                : a.submittedAt.map { String(localized: .assignmentsSubmittedOn(CourseFile.deadline($0, calendar: workspace.calendar))) })
+                : a.submittedAt.map { String(localized: .assignmentsSubmittedOn(CourseFile.deadline($0, calendar: workspace.calendar))) },
+            lateSubmitted: !a.status.isOpen && file.lateness(of: a, at: workspace.now) != nil)
     }
 
-    func due(_ a: Assignment) -> (date: String, time: String?) {
-        guard let due = a.due else { return (String(localized: .assignmentsNoDue), nil) }
+    // 마감은 공부일로 센 상대 날짜와 시각으로 보인다. 급한 정도는 상대 날짜의 색으로만 보이고 칩은 두지 않는다.
+    struct Due {
+        var date: String
+        var time: String?
+        var tone: Tone
+    }
+
+    func due(_ a: Assignment, now: Date) -> Due {
+        guard let due = a.due else { return Due(date: String(localized: .assignmentsNoDue), tone: .plain) }
         let c = workspace.calendar
-        return (
-            due.formatted(.dateTime.month().day()),
-            due.formatted(.dateTime.weekday()) + " " + TimePicker.label(c.minuteOfDay(due))
-        )
-    }
-
-    // 칩은 D-day만 보인다. 늦게 낸 과제는 늦은 날 수를 "D+N"으로 보인다.
-    func dueChip(_ a: Assignment, now: Date) -> (text: String, tone: Tone)? {
-        guard let due = a.due else { return nil }
-        guard a.status.isOpen else {
-            return course.file.lateness(of: a, at: now).map { (DDay.signed(-$0.days), .danger) }
-        }
-        let days = DDay.days(to: due, from: now, calendar: workspace.calendar)
-        guard days >= 0 else { return (DDay.signed(days), .danger) }
+        let settings = workspace.settings
+        let days = settings.studyDays(from: now, until: due, calendar: c)
+        let time = TimePicker.label(c.minuteOfDay(due))
         let tone: Tone =
-            switch DueUrgency(due: due, now: now, settings: workspace.settings, calendar: workspace.calendar) {
-            case .urgent: .danger
-            case .soon: .warning
-            case .later: .plain
+            if !a.status.isOpen {
+                .plain
+            } else if due < now {
+                .danger
+            } else {
+                switch DueUrgency(due: due, now: now, settings: settings, calendar: c) {
+                case .urgent: .danger
+                case .soon: .warning
+                case .later: .plain
+                }
             }
-        return (DDay.signed(days), tone)
+        return Due(date: RelativeDay.text(days), time: abs(days) <= 1 ? time : due.formatted(.dateTime.weekday()) + " " + time, tone: tone)
     }
 }
 

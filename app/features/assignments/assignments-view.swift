@@ -54,7 +54,7 @@ struct AssignmentsView: View {
 
     @ViewBuilder func row(_ a: Assignment, now: Date) -> some View {
         let row = model.row(a)
-        let due = model.due(a)
+        let due = model.due(a, now: now)
         let done = !a.status.isOpen
         Menu {
             statusItems(a)
@@ -69,7 +69,7 @@ struct AssignmentsView: View {
         .help(Text(.assignmentsStatusHelp(a.status.label)))
         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
             Text(due.date).font(Theme.Typeface.bodyStrong).monospacedDigit()
-                .foregroundStyle(a.due == nil || done ? Theme.Palette.textTertiary : Theme.Palette.text)
+                .foregroundStyle(a.due == nil || done ? Theme.Palette.textTertiary : due.tone.foreground)
             if let time = due.time {
                 Text(time)
                     .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()
@@ -87,6 +87,7 @@ struct AssignmentsView: View {
                 if let repeats = a.repeats { Label(repeats.label, systemImage: "repeat") }
                 if let submitted = row.submittedOn {
                     Label(submitted, systemImage: "paperplane")
+                        .foregroundStyle(row.lateSubmitted ? Theme.Palette.danger : Theme.Palette.textTertiary)
                 } else if row.submissions > 0 {
                     Label(.assignmentsSubmissions(row.submissions), systemImage: "paperplane")
                 }
@@ -102,6 +103,5 @@ struct AssignmentsView: View {
         if let score = row.score {
             Badge(score, tone: .accent).sensitive()
         }
-        if let chip = model.dueChip(a, now: now) { Badge(chip.text, tone: chip.tone) }
     }
 }

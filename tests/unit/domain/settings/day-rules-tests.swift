@@ -55,18 +55,10 @@ struct DayRulesTests {
         #expect(DDay.text(0) == "D-day")
         #expect(DDay.text(3) == "D-3")
         #expect(DDay.text(-2) == "D-0")
-        #expect(DDay.signed(-2) == "D+2" && DDay.signed(0) == "D-day" && DDay.signed(4) == "D-4")
     }
 
-    @Test func dueDaysCountPastDeadlinesLikeLateness() throws {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = try #require(TimeZone(identifier: "Asia/Seoul"))
-        let due = try #require(calendar.date(from: DateComponents(year: 2026, month: 11, day: 10, hour: 23, minute: 59)))
-        #expect(DDay.days(to: due, from: due - 3_600, calendar: calendar) == 0)
-        #expect(DDay.days(to: due, from: due - 2 * 3_600 - 86_400, calendar: calendar) == 1)
-        // 1분 늦어도 하루 늦은 것으로 센다. 감점과 같은 셈이다.
-        #expect(DDay.days(to: due, from: due + 60, calendar: calendar) == -1)
-        #expect(DDay.days(to: due, from: due + 86_400 + 60, calendar: calendar) == -2)
+    @Test func relativeDaysReadAsWords() {
+        #expect([-3, -1, 0, 1, 4].map(RelativeDay.text) == ["3일 전", "어제", "오늘", "내일", "4일 뒤"])
     }
 
     @Test func nextClassSkipsCancelledAndPastClasses() {
