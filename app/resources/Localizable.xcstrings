@@ -3400,6 +3400,17 @@
         }
       }
     },
+    "course-tab.assignments": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과제"
+          }
+        }
+      }
+    },
     "course-tab.classes": {
       "extractionState": "manual",
       "localizations": {
