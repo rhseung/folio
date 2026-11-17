@@ -105,4 +105,14 @@ struct NoteFigureActionTests {
         try run(NoteWidgetWrite(course: Self.course, widget: Self.widget, html: "<p>y</p>", expect: ContentHash.of("<p>x</p>")))
         #expect(try store.readText(NoteWidget.path(Self.widget)) == "<p>y</p>")
     }
+
+    @Test func widgetListReadsEachTitle() throws {
+        let untitled = UUID()
+        try run(NoteWidgetAdd(course: Self.course, id: Self.widget, html: "<title>증가 경로</title><p>x</p>"))
+        try run(NoteWidgetAdd(course: Self.course, id: untitled, html: "<p>y</p>"))
+        let ctx = ActionContext(gist: gist, device: device)
+        let items = try NoteWidgetList(course: Self.course).read(ReadContext(ctx))
+        #expect(items.first { $0.name == Self.widget.uuidString }?.title == "증가 경로")
+        #expect(items.first { $0.name == untitled.uuidString }.map { $0.title == nil } == true)
+    }
 }
