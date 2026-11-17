@@ -112,8 +112,12 @@ struct LMSTests {
         }
         let gist = try Harness.fixtureCopy()
         let received = dir.appending(path: "received.json")
-        try JSONEncoder().encode([LMSAcceptItem(key: "assignment:139970", title: "Hint Set", files: [first.path])]).write(to: received)
+        // 첨부 셋 중 하나는 뷰어 전용이라 내려받지 못했다. 받을 때의 첨부 수로 새 첨부 키를 숨긴다.
+        try JSONEncoder().encode([LMSAcceptItem(key: "assignment:139970", title: "Hint Set", files: [first.path], attachmentCount: 2)])
+            .write(to: received)
         #expect(h.cli(["lms", "accept", "EC4207", "--items", received.path], gist: gist).code == 0)
+        let hidden = { try GISTStore(url: gist).loadSettings().model.lms.handled }
+        #expect(try hidden().contains(LMSKey(kind: .attachments, id: 139970, stamp: 2)))
 
         let items = [LMSAcceptItem(key: "attachments:139970:2", files: [later.path])]
         let json = dir.appending(path: "items.json")
@@ -130,6 +134,13 @@ struct LMSTests {
         let missing = dir.appending(path: "missing.json")
         try JSONEncoder().encode([LMSAcceptItem(key: "attachments:1:1", files: [later.path])]).write(to: missing)
         #expect(h.cli(["lms", "accept", "EC4207", "--items", missing.path], gist: gist).code != 0)
+
+        // 새 첨부가 모두 뷰어 전용이라 내려받은 파일이 없으면 실패하지 않고 숨기기만 한다.
+        let viewerOnly = dir.appending(path: "viewer-only.json")
+        try JSONEncoder().encode([LMSAcceptItem(key: "attachments:139970:3")]).write(to: viewerOnly)
+        #expect(h.cli(["lms", "accept", "EC4207", "--items", viewerOnly.path], gist: gist).code == 0)
+        #expect(try hidden().contains(LMSKey(kind: .attachments, id: 139970, stamp: 3)))
+        #expect(AssignmentFiles.materials(of: added, in: try h.file(GISTStore(url: gist)).materials).count == 2)
     }
 
     @Test func submittedInTheLMSMarksTheReceivedAssignmentWithTheLMSTime() throws {

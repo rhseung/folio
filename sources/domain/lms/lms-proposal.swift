@@ -87,6 +87,7 @@ extension LMSProposal {
         if case .assignment(let a) = self.item {
             item["title"] = .string(a.title)
             if let due = a.due { item["due"] = .string(Self.date(due)) }
+            if let n = a.attachments?.count, n > 0 { item["attachmentCount"] = .number(Double(n)) }
         }
         let accept = ActionProposal(command: "lms accept", input: ["items": [.object(item)]])
         return Proposal(

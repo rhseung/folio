@@ -84,6 +84,9 @@ struct LMSInboxTests {
             assignments: [.init(id: 100, classroom: 1, title: "SP2", attachments: files)], files: [.init(id: 10, classroom: 1, title: "a")])
         let inbox = LMSInbox.build(snapshot, settings: LMSSettings(known: [1]), courses: [], now: now)
         #expect(inbox.proposals.map(\.attachments) == [files, []])
+        // 받을 때의 첨부 수를 넘겨, 내려받지 못한 뷰어 전용 첨부가 새 첨부로 다시 제안되지 않게 한다.
+        guard case .array(let items)? = inbox.proposals[0].proposal().action?.input["items"] else { Issue.record("no items"); return }
+        #expect(items.first?["attachmentCount"] == .number(2))
         #expect(LMSAttachment.summary(files)?.first == "slow_problem_2.pdf")
         #expect(LMSAttachment.summary(files)?.more == 1)
         #expect(LMSAttachment.summary([])?.first == nil)

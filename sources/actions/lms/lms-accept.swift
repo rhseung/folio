@@ -9,6 +9,7 @@ import Foundation
         과제의 files는 과제 페이지에서 받은 첨부이고, 과제 폴더(Assignments/<과제>)에 원래 이름으로 들어가 문제 파일이 된다.
         과목을 주면 항목의 강의실(classroom)에 그 과목을 기억한다. 과목을 빼면 강의실마다 기억한 과목에 받는다.
         이미 받은 과제의 새 첨부는 {"key":"attachments:139950:2","files":["/tmp/hw5-b.pdf"]}이고, 그 과제의 폴더에 원래 이름으로 들어간다.
+        files가 비면(뷰어 전용이라 내려받지 못함) 받지 않고 제안에서 숨기기만 한다. 과제의 attachmentCount는 받을 때의 첨부 수이고, 그 수의 새 첨부 키를 함께 숨긴다.
         """,
     effect: .creates, done: "LMS 항목을 받았습니다",
     phrases: ["LMS 과제 추가", "LMS 자료 받기", "LMS 제안 모두 추가", "기억한 과목에 모두 받기"])
@@ -50,7 +51,11 @@ public struct LMSAccept {
             for a in p.attachments { try attach(a.files, to: a.assignment.id, title: a.assignment.title, in: p.course, ctx) }
             if !p.downloads.isEmpty { try MaterialImport(course: p.course, items: p.downloads).run(ctx) }
         }
-        let keys = byCourse.flatMap { $0.items.map(\.key) }
+        let attachmentKeys = byCourse.flatMap(\.items).compactMap { k, item -> LMSKey? in
+            guard k.kind == .assignment, let n = item.attachmentCount, n > 0 else { return nil }
+            return LMSKey(kind: .attachments, id: k.id, stamp: n)
+        }
+        let keys = byCourse.flatMap { $0.items.map(\.key) } + attachmentKeys
         let remembered = course.map { c in Set(items.compactMap(\.classroom)).map { ($0, c) } } ?? []
         try ctx.editSettings { s in
             s.lms.mark(keys, handled: true)
@@ -91,10 +96,8 @@ public struct LMSAccept {
                 guard let same = file.assignments.first(where: { $0.lmsId == key.id }) else {
                     throw ActionError.notFound(String(localized: .errorLmsAssignmentMissing(item.key)))
                 }
-                guard let files = item.files, !files.isEmpty else {
-                    throw ActionError.rule(String(localized: .errorLmsFileMissing(item.key)))
-                }
-                plan.attachments.append((same, files))
+                // 받을 첨부가 모두 뷰어 전용이면 내려받은 파일이 없다. 실패시키면 그 제안을 치울 길이 무시뿐이라 숨기기만 한다.
+                if let files = item.files, !files.isEmpty { plan.attachments.append((same, files)) }
             case .submitted, .unsubmitted, .due:
                 throw ActionError.input(String(localized: .errorLmsKey(item.key)))
             }
