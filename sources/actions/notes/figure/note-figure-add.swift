@@ -4,7 +4,7 @@ import Foundation
 
 @Action(
     "note figure add", "노트 그림(SVG)을 Notes/assets에 새로 쓰기. 같은 이름이 있으면 쓰지 않는다. 노트에는 ![설명](assets/<이름>.svg)로 넣는다",
-    discussion: "XML이 올바른지, 스크립트와 바깥 참조가 없는지, 다크 모드 규칙(prefers-color-scheme: dark)이 있는지 본다. 노트 형식은 folio note format.",
+    discussion: "쓸 때 그림 스타일(다크 포함)과 화살촉을 넣고 $…$를 LaTeX 글자로 바꾼 뒤, 스크립트, 바깥 참조, 칠한 색, 긴 글, 큰 촉, 라벨 겹침을 본다. 형식은 folio note format.",
     effect: .creates, done: "그림 '{name}'을(를) 만들었습니다",
     phrases: ["그림 추가", "SVG 그림 넣기", "노트 그림 만들기", "도식 그리기", "다이어그램 그림"], panel: true)
 public struct NoteFigureAdd {
@@ -18,11 +18,11 @@ public struct NoteFigureAdd {
     public func run(_ ctx: ActionContext) throws {
         let store = try ctx.store(course)
         let path = NoteFigure.path(try Self.fileName(name))
-        try Self.check(svg)
+        let finished = try Self.finish(svg)
         guard !FileManager.default.fileExists(atPath: store.fileURL(path).path) else {
             throw ActionError.conflict(String(localized: .errorFigureTaken(path)))
         }
-        try ctx.io(Change(.added, try ctx.relative(course, path))) { try store.createText(path, text: svg) }
+        try ctx.io(Change(.added, try ctx.relative(course, path))) { try store.createText(path, text: finished) }
     }
 
     static func fileName(_ name: String) throws -> String {
@@ -30,8 +30,9 @@ public struct NoteFigureAdd {
         return file
     }
 
-    static func check(_ svg: String) throws {
-        let problems = NoteFigure.problems(svg)
-        guard problems.isEmpty else { throw ActionError.rule(problems.map(\.message).joined(separator: "\n")) }
+    static func finish(_ svg: String) throws -> String {
+        let finished = try NoteFigureFinish.finish(svg)
+        guard finished.problems.isEmpty else { throw ActionError.rule(finished.problems.map(\.message).joined(separator: "\n")) }
+        return finished.svg
     }
 }

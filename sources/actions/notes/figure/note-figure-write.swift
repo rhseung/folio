@@ -19,9 +19,9 @@ public struct NoteFigureWrite {
     public func run(_ ctx: ActionContext) throws {
         let store = try ctx.store(course)
         let path = NoteFigure.path(try NoteFigureAdd.fileName(name))
-        try NoteFigureAdd.check(svg)
+        let finished = try NoteFigureAdd.finish(svg)
         try Self.match(store, path, expect)
-        try ctx.io(Change(.changed, try ctx.relative(course, path))) { try store.writeText(path, text: svg) }
+        try ctx.io(Change(.changed, try ctx.relative(course, path))) { try store.writeText(path, text: finished) }
     }
 
     static func match(_ store: CourseStore, _ path: String, _ expect: String) throws {

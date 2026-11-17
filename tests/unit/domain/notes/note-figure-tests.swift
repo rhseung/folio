@@ -6,10 +6,10 @@ import Testing
 struct NoteFigureTests {
     static let good = """
         <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 40">
-        <style>.ink{fill:#222}@media (prefers-color-scheme: dark){.ink{fill:#E6E2DB}}</style>
-        <defs><marker id="arrow"><path d="M0 0L4 2L0 4z"/></marker></defs>
-        <path d="M0 0L10 10" marker-end="url(#arrow)"/><use xlink:href="#arrow"/>
-        <image href="data:image/png;base64,iVBORw0KGgo="/><text class="ink" x="4" y="20">매칭</text>
+        <defs><marker id="arrow" markerWidth="6" markerHeight="4"><path d="M0 0L4 2L0 4z"/></marker></defs>
+        <path class="s-ink" fill="none" d="M0 0L10 10" marker-end="url(#m-ink)"/><use xlink:href="#arrow"/>
+        <image href="data:image/png;base64,iVBORw0KGgo="/><text class="p-blue" x="4" y="20">매칭 $M$</text>
+        <rect style="fill:none;stroke-width:1.3" class="s-p-red" width="10" height="10"/>
         </svg>
         """
 
@@ -25,22 +25,49 @@ struct NoteFigureTests {
         #expect(NoteFigure.path("graph.svg") == "Notes/assets/graph.svg")
     }
 
-    @Test func aSelfContainedFigureWithADarkRulePasses() {
+    @Test func aFigureInTheStyleClassesPasses() {
         #expect(NoteFigure.problems(Self.good).isEmpty)
     }
 
-    @Test func aFigureWithoutADarkRuleIsCaught() {
-        let svg = #"<svg xmlns="http://www.w3.org/2000/svg"><style>.a{fill:#222}</style><text class="a">x</text></svg>"#
-        #expect(NoteFigure.problems(svg) == [.noDarkRule])
-        let light = #"<svg xmlns="http://www.w3.org/2000/svg"><style>@media (prefers-color-scheme: light){.a{fill:#222}}</style></svg>"#
-        #expect(NoteFigure.problems(light) == [.noDarkRule])
+    @Test func paintedColorsAreCaught() {
+        let svg = """
+            <svg xmlns="http://www.w3.org/2000/svg"><style>.a{fill:#222} .b{ stroke : rgb(0 0 0) } .c{stroke-width:2;color:red}</style>
+            <rect fill="#ff0000"/><line stroke="var(--ink)"/><path style="fill:hsl(0 0% 0%)"/><stop stop-color="blue"/>
+            <rect fill="none" stroke="currentColor"/><rect fill="url(#grad)"/>
+            </svg>
+            """
+        #expect(
+            Set(NoteFigure.problems(svg)) == [
+                .color("#222"), .color("rgb(0 0 0)"), .color("red"), .color("#ff0000"), .color("var(--ink)"), .color("hsl(0 0% 0%)"),
+                .color("blue"),
+            ])
+    }
+
+    @Test func longTextAndBigArrowheadsAreCaught() {
+        let long = String(repeating: "가", count: FigureStyle.labelLimit + 1)
+        let fits = String(repeating: "가", count: FigureStyle.labelLimit - 2) + " $\\frac{a}{b}$"
+        let svg = """
+            <svg xmlns="http://www.w3.org/2000/svg"><text>\(long)</text><text>\(fits)</text>
+            <marker id="big" markerWidth="12" markerHeight="4"/><marker id="wide" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9"/>
+            <marker id="ok" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="6"/><marker/>
+            </svg>
+            """
+        #expect(Set(NoteFigure.problems(svg)) == [.longText(long), .bigArrow("#big"), .bigArrow("#wide")])
+    }
+
+    // 쓸 때 넣은 스타일에는 hex 색이 있다. 이미 마무리한 그림을 다시 검사해도 걸리지 않아야 한다.
+    @Test func theInsertedStyleIsNotChecked() {
+        let svg = """
+            <svg xmlns="http://www.w3.org/2000/svg"><style id="\(FigureStyle.styleID)">\(FigureStyle.css)</style>\
+            <defs id="\(FigureStyle.defsID)">\(FigureStyle.marker(FigureStyle.ink))</defs><text class="ink">x</text></svg>
+            """
+        #expect(NoteFigure.problems(svg).isEmpty)
     }
 
     @Test func scriptsAndOutsideReferencesAreCaught() {
         let svg = """
             <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-            <style>@import url("https://fonts.example/a.css"); @font-face{src:url(font.woff)}
-            @media (prefers-color-scheme: dark){.a{fill:#fff}}</style>
+            <style>@import url("https://fonts.example/a.css"); @font-face{src:url(font.woff)}</style>
             <script>alert(1)</script><rect onclick="x()" style="fill:url(http://x/p.svg#g)"/>
             <image xlink:href="photo.png"/><a href="https://example.com"><text>t</text></a>
             </svg>
@@ -60,7 +87,7 @@ struct NoteFigureTests {
             return
         }
         #expect(line >= 2)
-        #expect(NoteFigure.problems(#"<html><style>@media (prefers-color-scheme: dark){}</style></html>"#) == [.notSVG(root: "html")])
+        #expect(NoteFigure.problems(#"<html><p>x</p></html>"#) == [.notSVG(root: "html")])
     }
 
     @Test func widgetsLoadNothingFromOutside() {

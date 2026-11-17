@@ -1,3 +1,4 @@
+import FolioActions
 import FolioDomain
 import FolioStorage
 import WebKit
@@ -16,6 +17,7 @@ import WebKit
     init(scripts: WKUserContentController) {
         scripts.addUserScript(WKUserScript(source: NoteWidget.noPeersScript, injectionTime: .atDocumentStart, forMainFrameOnly: false))
         scripts.addUserScript(WKUserScript(source: Self.themeScript, injectionTime: .atDocumentStart, forMainFrameOnly: false))
+        scripts.addUserScript(WKUserScript(source: Self.kitScript, injectionTime: .atDocumentStart, forMainFrameOnly: false))
         scripts.addUserScript(WKUserScript(source: Self.sizeScript, injectionTime: .atDocumentEnd, forMainFrameOnly: false, in: Self.world))
         scripts.add(Reports(self), contentWorld: Self.world, name: Reports.name)
     }
@@ -107,6 +109,9 @@ import WebKit
           if (t !== null) { const s = document.createElement('style'); s.id = 'folio-theme'; s.textContent = t; document.documentElement.prepend(s) }
         }
         """
+
+    // 노트 페이지 frame에는 넣지 않는다. KaTeX와 위젯 스타일이 노트 페이지의 것과 부딪히기 때문이다.
+    private static let kitScript = "if (location.protocol === '\(WidgetFiles.scheme):') {\n\(NoteWidgetKit.script)\n}"
 
     static func themeCSS(_ accent: CourseAccent) -> String {
         NoteStyle.variables(accent: accent)

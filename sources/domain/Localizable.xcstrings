@@ -1761,13 +1761,101 @@
         }
       }
     },
-    "figure.problem.no-dark": {
+    "figure.problem.color": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "다크 모드 규칙(@media (prefers-color-scheme: dark))이 없습니다. 노트 그림은 페이지 색을 읽지 못해 다크 모드에서 선과 글자가 사라집니다"
+            "value": "색을 직접 칠했습니다: %@. 그림의 색은 클래스(.ink, .muted, .grid, .paper, .p-blue, .p-red, .p-green, .p-orange, .p-magenta, .p-cyan, 선은 앞에 s-)로만 칠합니다. 다크 모드 색은 쓸 때 넣습니다"
+          }
+        }
+      }
+    },
+    "figure.problem.long-text": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그림 안의 글이 깁니다(%2$lld자 넘음): %1$@. 그림에는 라벨만 두고 설명은 노트 본문에 씁니다"
+          }
+        }
+      }
+    },
+    "figure.problem.big-arrow": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "화살촉이 너무 큽니다: %@. 화살촉은 직접 그리지 않고 marker-end=\"url(#m-ink)\"처럼 그림 스타일의 화살촉을 씁니다"
+          }
+        }
+      }
+    },
+    "figure.problem.tex": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수식을 그릴 수 없습니다(%2$@): %1$@"
+          }
+        }
+      }
+    },
+    "figure.problem.tspan-math": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "<tspan>이 든 글에는 수식을 넣을 수 없습니다: %@. 수식이 든 라벨은 <text> 하나로 씁니다"
+          }
+        }
+      }
+    },
+    "figure.problem.overlap": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "라벨 두 개가 겹칩니다: %1$@, %2$@"
+          }
+        }
+      }
+    },
+    "figure.problem.on-line": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "라벨이 선에 닿습니다: %1$@, %2$@"
+          }
+        }
+      }
+    },
+    "figure.problem.on-edge": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "라벨이 칠한 면의 경계에 걸칩니다: %1$@, %2$@"
+          }
+        }
+      }
+    },
+    "figure.problem.outside": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "라벨이 그림 밖으로 나갑니다: %@"
           }
         }
       }

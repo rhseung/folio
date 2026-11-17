@@ -8,7 +8,7 @@ import Foundation
 extension GeneratedCommands {
     struct NoteFigureAdd: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "add", abstract: "노트 그림(SVG)을 Notes/assets에 새로 쓰기. 같은 이름이 있으면 쓰지 않는다. 노트에는 ![설명](assets/<이름>.svg)로 넣는다", discussion: """
-            XML이 올바른지, 스크립트와 바깥 참조가 없는지, 다크 모드 규칙(prefers-color-scheme: dark)이 있는지 본다. 노트 형식은 folio note format.
+            쓸 때 그림 스타일(다크 포함)과 화살촉을 넣고 $…$를 LaTeX 글자로 바꾼 뒤, 스크립트, 바깥 참조, 칠한 색, 긴 글, 큰 촉, 라벨 겹침을 본다. 형식은 folio note format.
 
             """)
         @OptionGroup var g: GlobalOptions
