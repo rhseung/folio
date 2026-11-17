@@ -156,7 +156,7 @@ export function finish(source, styleJSON) {
   for (const n of added.kids) n.parent = root;
   root.kids.unshift(...added.kids);
 
-  problems.push(...overlaps(root, style));
+  problems.push(...overlaps(root, style), ...throughs(root));
   return JSON.stringify({ svg: serialize(doc), problems });
 }
 
@@ -335,6 +335,46 @@ function overlaps(root, given) {
     }
   }
   return found;
+}
+
+// 광선이 초점을, 접선이 접점을 지나야 하는 그림은 눈대중으로 그린 좌표가 몇 px만 어긋나도 틀린 그림이 된다. 그래서 쓴 사람이
+// 선에 `data-through="점 id …"`로 지날 점을 적으면, 그 점(id를 단 circle이나 ellipse의 중심)과 선 사이 거리를 잰다.
+const THROUGH = "data-through", REACH = 1.5;
+
+function throughs(root) {
+  const found = [], points = new Map();
+  for (const el of walk(root)) if ((el.name === "circle" || el.name === "ellipse") && attr(el, "id")) points.set(attr(el, "id"), el);
+  for (const el of walk(root)) {
+    const want = (attr(el, THROUGH) ?? "").trim().split(/\s+/).filter(Boolean);
+    if (!want.length) continue;
+    const m = ctm(el);
+    const runs = outline(el).map((r) => ({ closed: r.closed, points: r.points.map((p) => apply(m, p)) }));
+    for (const id of want) {
+      const point = points.get(id);
+      if (!point) {
+        found.push({ kind: "point", a: describe(el), b: id });
+        continue;
+      }
+      const at = apply(ctm(point), [firstNumber(attr(point, "cx")), firstNumber(attr(point, "cy"))]);
+      const gap = distance(runs, at);
+      if (gap > REACH) found.push({ kind: "through", a: describe(el), b: id, text: gap.toFixed(1) });
+    }
+  }
+  return found;
+}
+
+function distance(runs, [x, y]) {
+  let best = Infinity;
+  for (const { points, closed } of runs) {
+    const pts = closed ? [...points, points[0]] : points;
+    for (let k = 0; k < pts.length; k++) {
+      const [ax, ay] = pts[Math.max(0, k - 1)], [bx, by] = pts[k];
+      const len = (bx - ax) ** 2 + (by - ay) ** 2;
+      const t = len ? Math.min(1, Math.max(0, ((x - ax) * (bx - ax) + (y - ay) * (by - ay)) / len)) : 0;
+      best = Math.min(best, Math.hypot(ax + t * (bx - ax) - x, ay + t * (by - ay) - y));
+    }
+  }
+  return best;
 }
 
 function viewBox(root) {

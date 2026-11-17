@@ -34,6 +34,8 @@ public enum NoteFigure {
         case onLine(String, String)
         case onEdge(String, String)
         case outside(String)
+        case notThrough(String, String, gap: String)
+        case noPoint(String, String)
 
         public var message: String {
             switch self {
@@ -50,6 +52,8 @@ public enum NoteFigure {
             case .onLine(let label, let shape): String(localized: .figureProblemOnLine(label, shape))
             case .onEdge(let label, let shape): String(localized: .figureProblemOnEdge(label, shape))
             case .outside(let label): String(localized: .figureProblemOutside(label))
+            case .notThrough(let shape, let point, let gap): String(localized: .figureProblemNotThrough(shape, point, gap))
+            case .noPoint(let shape, let point): String(localized: .figureProblemNoPoint(shape, point))
             }
         }
     }

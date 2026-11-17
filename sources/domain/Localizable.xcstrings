@@ -1860,6 +1860,28 @@
         }
       }
     },
+    "figure.problem.not-through": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선이 지나야 할 점을 지나지 않습니다: %1$@가 %2$@에서 %3$@px 떨어져 있습니다. 좌표를 공식으로 다시 계산합니다"
+          }
+        }
+      }
+    },
+    "figure.problem.no-point": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지나야 할 점이 없습니다: %1$@의 data-through에 적은 %2$@. 점은 그 id를 단 circle이나 ellipse입니다"
+          }
+        }
+      }
+    },
     "widget.problem.empty": {
       "extractionState": "manual",
       "localizations": {

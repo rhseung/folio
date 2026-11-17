@@ -50,6 +50,8 @@ public enum NoteFigureFinish {
             case "line": .onLine(a ?? "", shape ?? "")
             case "fill": .onEdge(a ?? "", shape ?? "")
             case "outside": .outside(a ?? "")
+            case "through": .notThrough(a ?? "", b ?? "", gap: text ?? "")
+            case "point": .noPoint(a ?? "", b ?? "")
             default: nil
             }
         }

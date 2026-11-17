@@ -71,6 +71,21 @@ struct NoteFigureFinishTests {
         #expect(found.contains(.tspanMath("합 $n$")))
     }
 
+    @Test func linesMustPassThroughThePointsTheyName() throws {
+        // 초점 거리 60, 물체 거리 120인 볼록 렌즈. 평행 광선은 렌즈에서 꺾여 F2(220, 90)를 지난다.
+        func lens(_ end: String, through: String = "F2") -> String {
+            """
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180">
+            <circle id="F2" cx="220" cy="90" r="2.5" class="ink"/>
+            <path d="M40 50 L160 50 L\(end)" class="s-p-orange" fill="none" data-through="\(through)"/>
+            </svg>
+            """
+        }
+        #expect(try NoteFigureFinish.finish(lens("280 130")).problems.isEmpty)
+        #expect(try NoteFigureFinish.finish(lens("270 130")).problems == [.notThrough("path.s-p-orange", "F2", gap: "2.9")])
+        #expect(try NoteFigureFinish.finish(lens("280 130", through: "F")).problems == [.noPoint("path.s-p-orange", "F")])
+    }
+
     @Test func nestedSourcesAreUnfoldedBeforeTheCheck() throws {
         let svg = """
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 20"><g data-source="&lt;g data-source=&quot;&amp;lt;script&amp;gt;x()&amp;lt;/script&amp;gt;&quot;/&gt;"/></svg>
