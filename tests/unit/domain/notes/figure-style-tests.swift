@@ -10,9 +10,11 @@ struct FigureStyleTests {
     // sRGB hex를 OKLCH(밝기, 채도, 색조)로 바꾼다. 식은 Björn Ottosson의 OKLab 정의 그대로다.
     static func oklch(_ hex: String) -> LCh {
         let v = UInt32(hex.dropFirst(), radix: 16) ?? 0
-        let rgb = [(v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF].map { Double($0) / 255 }
-            .map { $0 <= 0.04045 ? $0 / 12.92 : pow(($0 + 0.055) / 1.055, 2.4) }
-        let (r, g, b) = (rgb[0], rgb[1], rgb[2])
+        func linear(_ shift: UInt32) -> Double {
+            let c = Double((v >> shift) & 0xFF) / 255
+            return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
+        }
+        let (r, g, b) = (linear(16), linear(8), linear(0))
         let l = cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
         let m = cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
         let s = cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)

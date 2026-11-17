@@ -353,7 +353,8 @@ final class ClaudeModel {
                 } ?? []
             return .edit(replacements, append: string("append").flatMap { $0.isEmpty ? nil : $0 })
         case NoteFigureAdd.command, NoteFigureWrite.command:
-            return string("svg").map(ProposalLine.Change.figure)
+            // 쓸 때와 같이 스타일과 수식 모양을 넣어 보여 준다. 넣지 않으면 다크에서 글자가 사라지고 `$…$`가 그대로 보인다.
+            return string("svg").map { .figure((try? NoteFigureFinish.finish($0).svg) ?? $0) }
         default:
             return nil
         }
@@ -651,7 +652,7 @@ final class ClaudeModel {
             #"<details class="change"><summary>\#(String(localized: .claudeProposalChanges(added, removed)))</summary><div class="diff">\#(rows.joined())</div></details>"#
     }
 
-    // `<img>` 안의 SVG는 페이지의 모양을 따르므로 패널이 다크일 때 다크 규칙이 보인다. 그 안에서는 스크립트를 돌리지
+    // `<img>` 안의 SVG는 페이지의 모양을 따르므로 패널이 다크일 때 그림 스타일의 다크 규칙이 보인다. 그 안에서는 스크립트를 돌리지
     // 않고 아무것도 불러오지 않는다.
     static func figureHTML(_ svg: String) -> String {
         let data = Data(svg.utf8).base64EncodedString()
