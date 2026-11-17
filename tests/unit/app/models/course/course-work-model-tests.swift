@@ -89,13 +89,14 @@ struct AssignmentsModelTests {
         #expect(groups.map(\.group.label) == ["마감 지남", "진행 중"])
 
         let late = groups[0].items[0]
-        #expect(model.dueChip(late, now: now)?.text == "방금 지남")
+        #expect(model.dueChip(late, now: now)?.text == "D+1")
         let chip = try #require(model.dueChip(groups[1].items[0], now: now))
         #expect(chip.text == "D-5" && chip.tone == .warning)
         #expect(model.due(groups[1].items[1]).date == "마감 없음")
         model.setStatus(late, .submitted)
         #expect(model.groups(now: now).map(\.group) == [.open, .submitted])
-        #expect(model.dueChip(try #require(model.course.file.assignments.first { $0.title == "HW 1" }), now: now) == nil)
+        // 늦게 낸 과제는 늦은 날 수만 보인다.
+        #expect(model.dueChip(try #require(model.course.file.assignments.first { $0.title == "HW 1" }), now: now)?.text == "D+1")
     }
 
     @Test func sheetOffersGroupsAsATreeAndFillsTheLastMax() throws {

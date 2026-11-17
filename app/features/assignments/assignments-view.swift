@@ -99,13 +99,9 @@ struct AssignmentsView: View {
                 .frame(minWidth: 0, alignment: .leading).clipped()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        if row.suggestsSubmitted {
-            Button(.assignmentsSuggestSubmitted) { model.setStatus(a, .submitted) }.buttonStyle(.pointing(.bordered))
-        }
         if let score = row.score {
             Badge(score, tone: .accent).sensitive()
         }
-        if let late = row.late { Badge(late, tone: .danger) }
         if let chip = model.dueChip(a, now: now) { Badge(chip.text, tone: chip.tone) }
     }
 }

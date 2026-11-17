@@ -705,17 +705,6 @@
         }
       }
     },
-    "assignments.suggest-submitted": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "제출본 있음 · 제출로"
-          }
-        }
-      }
-    },
     "assignments.title": {
       "extractionState": "manual",
       "localizations": {

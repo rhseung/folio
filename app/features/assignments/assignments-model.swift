@@ -48,9 +48,6 @@ final class AssignmentsModel {
         var submissions: Int
         var score: String?
         var component: String?
-        var suggestsSubmitted: Bool
-        // 늦게 낸 과제다. 아직 내지 않은 과제는 마감 칩이 이미 지남을 보인다.
-        var late: String?
         var lms: Bool
         var submittedOn: String?
     }
@@ -68,8 +65,6 @@ final class AssignmentsModel {
             files: files, problems: files.count - submissions, submissions: submissions,
             score: scores.isEmpty ? nil : "\(scores.map(\.score).reduce(0, +).formatted())/\(scores.map(\.max).reduce(0, +).formatted())",
             component: a.componentGroup ?? file.components.first { $0.id == a.componentId }?.name,
-            suggestsSubmitted: AssignmentFiles.suggestsSubmitted(a, files: files, kinds: workspace.settings.assignmentKindTable),
-            late: a.status.isOpen ? nil : file.lateness(of: a, at: workspace.now)?.label,
             lms: a.lmsId != nil,
             submittedOn: a.status.isOpen
                 ? nil
@@ -85,20 +80,21 @@ final class AssignmentsModel {
         )
     }
 
+    // 칩은 D-day만 보인다. 늦게 낸 과제는 늦은 날 수를 "D+N"으로 보인다.
     func dueChip(_ a: Assignment, now: Date) -> (text: String, tone: Tone)? {
-        guard a.status.isOpen, let due = a.due else { return nil }
+        guard let due = a.due else { return nil }
+        guard a.status.isOpen else {
+            return course.file.lateness(of: a, at: now).map { (DDay.signed(-$0.days), .danger) }
+        }
+        let days = DDay.days(to: due, from: now, calendar: workspace.calendar)
+        guard days >= 0 else { return (DDay.signed(days), .danger) }
         let tone: Tone =
             switch DueUrgency(due: due, now: now, settings: workspace.settings, calendar: workspace.calendar) {
             case .urgent: .danger
             case .soon: .warning
             case .later: .plain
             }
-        switch DueState(due: due, now: now, calendar: workspace.calendar) {
-        case .none: return nil
-        case .overdue(let d): return (String(localized: d == 0 ? .assignmentsJustOverdue : .assignmentsOverdueDays(d)), .danger)
-        case .hours(let h): return (String(localized: .assignmentsHoursLeft(h)), tone)
-        case .days(let d): return (DDay.text(d), tone)
-        }
+        return (DDay.signed(days), tone)
     }
 }
 

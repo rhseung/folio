@@ -12,6 +12,17 @@
         }
       }
     },
+    "dday.after": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "D+%lld"
+          }
+        }
+      }
+    },
     "import.notes.no-component": {
       "extractionState": "manual",
       "localizations": {
