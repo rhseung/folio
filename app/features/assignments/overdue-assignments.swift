@@ -50,11 +50,13 @@ struct OverdueAssignments: View {
                         }
                         if row.lms != nil { Badge(String(localized: .lmsNotSubmitted), tone: .danger) }
                     }
-                    Text(row.due).font(Theme.Typeface.caption).monospacedDigit().foregroundStyle(Theme.Palette.danger).lineLimit(1)
-                    if let ceiling = row.ceiling {
-                        Text(ceiling).font(Theme.Typeface.caption).monospacedDigit()
-                            .foregroundStyle(row.lost ? Theme.Palette.danger : Theme.Palette.textSecondary).lineLimit(1)
+                    HStack(spacing: Theme.Space.s) {
+                        Text(row.past).foregroundStyle(Theme.Palette.danger)
+                        if let ceiling = row.ceiling {
+                            Text(ceiling).foregroundStyle(row.lost ? Theme.Palette.danger : Theme.Palette.textTertiary)
+                        }
                     }
+                    .font(Theme.Typeface.caption).monospacedDigit().lineLimit(1)
                 }
             }
         } control: {

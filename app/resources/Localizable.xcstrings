@@ -22804,35 +22804,13 @@
         }
       }
     },
-    "overdue.due": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ 마감 · %2$@"
-          }
-        }
-      }
-    },
     "overdue.ceiling": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "지금 내면 최대 %lld%%"
-          }
-        }
-      }
-    },
-    "overdue.ceiling-until": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지금 내면 최대 %1$lld%% · %2$@까지"
+            "value": "최대 %lld%%"
           }
         }
       }
@@ -22843,7 +22821,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "지금 내도 0점"
+            "value": "0점"
           }
         }
       }

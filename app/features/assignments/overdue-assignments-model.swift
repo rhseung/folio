@@ -24,7 +24,7 @@ final class OverdueAssignmentsModel {
     struct Row: Identifiable {
         var courseId: UUID
         var assignment: Assignment
-        var due: String
+        var past: String
         var ceiling: String?
         // 지금 내도 0점이다.
         var lost: Bool
@@ -51,21 +51,13 @@ final class OverdueAssignmentsModel {
     }
 
     private func row(_ a: Assignment, in course: LoadedCourse, lms: URL?, now: Date) -> Row {
-        let calendar = workspace.calendar
-        let due = a.due ?? now
-        // 과제 목록과 같은 셈으로 지난 때를 쓴다. 감점은 24시간 단위라 다음 줄의 상한이 언제 바뀌는지 따로 보인다.
-        let past = RelativeDay.text(until: due, from: now, settings: workspace.settings, calendar: calendar)
-        let when = CourseFile.deadline(due, calendar: calendar)
-        let late = course.file.lateness(of: a, at: now)
-        let ceiling = late?.ceiling.map { ceiling in
-            guard ceiling > 0 else { return String(localized: .overdueCeilingZero) }
-            let percent = Int((ceiling * 100).rounded())
-            return late?.nextDrop.map { String(localized: .overdueCeilingUntil(percent, CourseFile.deadline($0, calendar: calendar))) }
-                ?? String(localized: .overdueCeiling(percent))
+        // 과제 목록과 같은 셈으로 지난 때를 쓴다. 마감 시각과 감점이 바뀌는 때는 과제 시트에서 본다.
+        let past = RelativeDay.text(until: a.due ?? now, from: now, settings: workspace.settings, calendar: workspace.calendar)
+        let ceiling = course.file.lateness(of: a, at: now)?.ceiling
+        let label = ceiling.map { ceiling in
+            ceiling > 0 ? String(localized: .overdueCeiling(Int((ceiling * 100).rounded()))) : String(localized: .overdueCeilingZero)
         }
-        return Row(
-            courseId: course.id, assignment: a, due: String(localized: .overdueDue(when, past)), ceiling: ceiling,
-            lost: late?.ceiling == 0, lms: lms)
+        return Row(courseId: course.id, assignment: a, past: past, ceiling: label, lost: ceiling == 0, lms: lms)
     }
 
     func courseTitle(_ row: Row) -> String { workspace.course(row.courseId)?.title ?? "" }
