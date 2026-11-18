@@ -106,6 +106,10 @@ jobs:
           folio-dev version stamp "$VERSION"
           echo "Folio $VERSION ($(git rev-list --count HEAD))"
       - run: mise run build-release
+      # 앱이 자기 버전을 0.0.0으로 알면 새 기능 화면과 업데이트 확인이 깨지므로, 써넣은 버전이 앱에 들어갔는지 본다.
+      - run: |
+          app=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' .build/DerivedData/Build/Products/Release/Folio.app/Contents/Info.plist)
+          [ "$app" = "$VERSION" ] || { echo "::error::the app reports $app, not $VERSION"; exit 1; }
       # TODO(#414): with a Developer ID (after the Apple Developer signup), sign with the hardened runtime here, then
       # notarize (xcrun notarytool submit --wait) and staple, with the certificate and the notary key in secrets.
       # TODO(#414): sign the zip for Sparkle (sign_update with the EdDSA key from a secret) and update the appcast.

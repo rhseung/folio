@@ -46,5 +46,5 @@ mise run release-renumber -- --drop 0.1.1-0.1.8 --past 0.2.0@449 --past 0.3.0@46
 
 ## 설치
 
-- `install-release [-- <ref>]`는 `origin/main`(또는 준 커밋)을 임시 워크트리에 꺼내 그 커밋의 태그 버전을 써넣고 Release로 빌드한 뒤, `/Applications/Folio.app`과 `~/.local/bin/folio`를 바꾸고 워크트리를 지운다. 커밋하지 않은 작업과 다른 세션의 워크트리는 들어가지 않는다. 실행 중인 `/Applications/Folio.app`만 끄고, 같은 번들 ID의 Debug 앱은 건드리지 않는다.
+- `install-release [-- <ref>]`는 `origin/main`(또는 준 커밋)을 임시 워크트리에 꺼내 그 커밋의 태그 버전을 써넣고 Release로 빌드한 뒤, `/Applications/Folio.app`과 `~/.local/bin/folio`를 바꾸고 워크트리를 지운다. 커밋하지 않은 작업과 다른 세션의 워크트리는 들어가지 않는다. 빌드 단계는 설치할 커밋에 든 이 작업의 사본이 맡는다. 부른 체크아웃이 오래됐으면 그 사본의 빌드 단계도 오래됐기 때문이다(버전을 써넣기 전의 사본이 0.0.0을 설치했다). 끝나면 설치한 앱의 `CFBundleShortVersionString`과 `folio --version`이 태그의 버전인지 보고, 다르면 실패한다. `release.yml`도 빌드한 앱의 버전을 같은 식으로 본다. 실행 중인 `/Applications/Folio.app`만 끄고, 같은 번들 ID의 Debug 앱은 건드리지 않는다.
 - 지금 체크아웃을 그대로 설치하는 `install-mac`과 Xcode에서 바로 빌드한 앱은 버전이 자리표시값(`0.0.0`)이다. 새 기능 화면은 지금 버전까지의 릴리스만 보이므로 이 빌드에서는 늘 비어 있고, 고장이 아니다. 화면을 확인할 때는 `Workspace.scenario`의 견본 릴리스로 그린다(`mise run render`).
