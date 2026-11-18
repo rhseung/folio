@@ -155,7 +155,7 @@ final class TodayModel {
         workspace.course(course)?.file.title(of: session, calendar: workspace.calendar) ?? ""
     }
 
-    func dDay(_ item: TodaySummary.ExamItem) -> String { DDay.text(item.dDay) }
+    func dDay(_ item: TodaySummary.ExamItem) -> String { RelativeDate.dday(days: item.dDay) }
 
     func examStart(_ item: TodaySummary.ExamItem) -> String {
         item.exam.start?.formatted(.dateTime.month().day().weekday().hour().minute()) ?? ""
@@ -222,7 +222,7 @@ final class TodayModel {
             guard let due = item.assignment.due else { return nil }
             return DeadlineRow(
                 item: item, urgency: DueUrgency(due: due, now: now, settings: settings, calendar: calendar),
-                due: RelativeDay.line(until: due, from: now, settings: settings, calendar: calendar))
+                due: RelativeDate.line(due, from: now, settings: settings, calendar: calendar))
         }
     }
 
@@ -413,12 +413,7 @@ final class TodayModel {
     }
 
     func sessionWhen(_ item: TodaySummary.SessionItem, today: LocalDate) -> String {
-        let day = workspace.settings.studyDay(of: item.session.date, calendar: workspace.calendar)
-        let gap = day.days(until: today)
-        return gap == 0
-            ? String(localized: .todayWhenToday)
-            : gap == 1
-                ? String(localized: .todayWhenYesterday)
-                : item.session.date.formatted(gap < 7 ? .dateTime.weekday(.wide) : .dateTime.month().day())
+        let s = workspace.settings, c = workspace.calendar
+        return RelativeDate.day(item.session.date, from: s.start(of: today, calendar: c), settings: s, calendar: c)
     }
 }

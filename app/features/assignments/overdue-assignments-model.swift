@@ -53,7 +53,7 @@ final class OverdueAssignmentsModel {
 
     private func row(_ a: Assignment, in course: LoadedCourse, lms: URL?, now: Date) -> Row {
         // 과제 목록과 같은 셈으로 지난 때를 쓴다. 마감 시각과 감점은 과제 시트에서 본다.
-        let past = RelativeDay.text(until: a.due ?? now, from: now, settings: workspace.settings, calendar: workspace.calendar)
+        let past = RelativeDate.distance(a.due ?? now, from: now, settings: workspace.settings, calendar: workspace.calendar)
         return Row(courseId: course.id, assignment: a, past: past, lms: lms)
     }
 

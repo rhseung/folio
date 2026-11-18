@@ -111,7 +111,7 @@ final class QuickAddModel {
     // 옆에 마감 날짜와 시각이 이미 있어서 남은 때만 쓴다.
     func left(_ due: Date) -> (text: String, overdue: Bool) {
         let now = workspace.now
-        return (RelativeDay.text(until: due, from: now, settings: workspace.settings, calendar: workspace.calendar), due < now)
+        return (RelativeDate.distance(due, from: now, settings: workspace.settings, calendar: workspace.calendar), due < now)
     }
 
     var kinds: [AssignmentKind] { workspace.settings.assignmentKindTable }

@@ -84,8 +84,7 @@ final class AssignmentsModel {
         guard let due = a.due else { return Due(date: String(localized: .assignmentsNoDue), tone: .plain) }
         let c = workspace.calendar
         let settings = workspace.settings
-        let days = settings.studyDays(from: now, until: due, calendar: c)
-        let time = TimePicker.label(c.minuteOfDay(due))
+        let days = RelativeDate.days(due, from: now, settings: settings, calendar: c)
         let tone: Tone =
             if !a.status.isOpen {
                 .plain
@@ -98,18 +97,19 @@ final class AssignmentsModel {
                 case .later: .plain
                 }
             }
-        let date = RelativeDay.text(until: due, from: now, settings: settings, calendar: c)
-        // 하루 안이면 남은 시간을 시간이나 분으로 세므로, 아래 줄에 어느 날의 몇 시인지 둔다.
-        if RelativeTime.text(until: due, from: now) != nil {
-            return Due(date: date, time: RelativeDay.text(days) + " " + time, tone: tone)
-        }
-        // 주나 달로 세면 요일만으로는 어느 날인지 알 수 없어서 날짜를 쓴다. 날짜와 시각을 함께 쓰면 좁은 폭에서
-        // 날짜 칸을 넘어 꺾이므로, 시각은 일주일 안으로 들어올 때부터 보인다.
+        let date = RelativeDate.distance(due, from: now, settings: settings, calendar: c)
+        let day = RelativeDate.day(due, from: now, settings: settings, calendar: c, short: true)
+        // 종일 마감은 시각이 없어서 위 줄이 이미 "오늘", "내일"이면 아래 줄을 비운다.
+        guard RelativeDate.hasTime(due, calendar: c) else { return Due(date: date, time: abs(days) <= 1 ? nil : day, tone: tone) }
+        let time = RelativeDate.time(due, calendar: c)
+        // 하루 안이면 위 줄이 남은 시간이므로, 아래 줄에 어느 날의 몇 시인지 둔다.
+        if RelativeDate.within(due, from: now) != nil { return Due(date: date, time: day + " " + time, tone: tone) }
+        // 날짜와 시각을 함께 쓰면 좁은 폭에서 날짜 칸을 넘어 꺾이므로, 시각은 일주일 안으로 들어올 때부터 보인다.
         let when =
             switch abs(days) {
             case ...1: time
-            case ..<RelativeDay.week: due.formatted(.dateTime.weekday()) + " " + time
-            default: CourseFile.day(due, calendar: c)
+            case ..<RelativeDate.week: day + " " + time
+            default: day
             }
         return Due(date: date, time: when, tone: tone)
     }

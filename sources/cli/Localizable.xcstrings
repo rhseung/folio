@@ -5237,39 +5237,6 @@
         }
       }
     },
-    "when.today": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오늘"
-          }
-        }
-      }
-    },
-    "when.tomorrow": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "내일"
-          }
-        }
-      }
-    },
-    "when.yesterday": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "어제"
-          }
-        }
-      }
-    },
     "material.write.abstract": {
       "extractionState": "manual",
       "localizations": {

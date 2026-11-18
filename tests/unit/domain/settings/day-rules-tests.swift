@@ -28,8 +28,8 @@ struct DayRulesTests {
     @Test func dueCountsStudyDaysAcrossTheBoundary() {
         let settings = Settings()
         let due = at(15, 3, 30)
-        #expect(settings.studyDays(from: at(14, 3, 59), until: due, calendar: calendar) == 1)
-        #expect(settings.studyDays(from: at(14, 4), until: due, calendar: calendar) == 0)
+        #expect(RelativeDate.days(due, from: at(14, 3, 59), settings: settings, calendar: calendar) == 1)
+        #expect(RelativeDate.days(due, from: at(14, 4), settings: settings, calendar: calendar) == 0)
         #expect(DueUrgency(due: due, now: at(14, 4), settings: settings, calendar: calendar) == .urgent)
         #expect(DueUrgency(due: at(20, 23), now: at(14, 4), settings: settings, calendar: calendar) == .soon)
         #expect(DueUrgency(due: at(21, 23), now: at(14, 4), settings: settings, calendar: calendar) == .later)
@@ -53,20 +53,23 @@ struct DayRulesTests {
     }
 
     @Test func ddayText() {
-        #expect(DDay.text(0) == "D-day")
-        #expect(DDay.text(3) == "D-3")
-        #expect(DDay.text(-2) == "D-0")
+        #expect(RelativeDate.dday(days: 0) == "D-day")
+        #expect(RelativeDate.dday(days: 3) == "D-3")
+        #expect(RelativeDate.dday(days: -2) == "D-0")
     }
 
     @Test func relativeDaysReadAsWords() {
-        #expect([-3, -1, 0, 1, 4].map(RelativeDay.text) == ["3일 전", "어제", "오늘", "내일", "4일 뒤"])
-        #expect([6, 7, 13, 14, 29, 30, 59, 60].map(RelativeDay.text) == ["6일 뒤", "1주 뒤", "1주 뒤", "2주 뒤", "4주 뒤", "1달 뒤", "1달 뒤", "2달 뒤"])
-        #expect([-6, -7, -29, -30, -95].map(RelativeDay.text) == ["6일 전", "1주 전", "4주 전", "1달 전", "3달 전"])
+        #expect([-3, -1, 0, 1, 4].map { RelativeDate.distance(days: $0) } == ["3일 전", "어제", "오늘", "내일", "4일 뒤"])
+        #expect(
+            [6, 7, 13, 14, 29, 30, 59, 60].map { RelativeDate.distance(days: $0) } == [
+                "6일 뒤", "1주 뒤", "1주 뒤", "2주 뒤", "4주 뒤", "1달 뒤", "1달 뒤", "2달 뒤",
+            ])
+        #expect([-6, -7, -29, -30, -95].map { RelativeDate.distance(days: $0) } == ["6일 전", "1주 전", "4주 전", "1달 전", "3달 전"])
     }
 
     @Test func aDueWithinADayCountsHoursThenMinutes() {
         let now = Date(timeIntervalSince1970: 1_794_800_000)
-        let read = { (seconds: TimeInterval) in RelativeTime.text(until: now + seconds, from: now) }
+        let read = { (seconds: TimeInterval) in RelativeDate.within(now + seconds, from: now) }
         #expect(read(24 * 3600) == nil)
         #expect(read(-24 * 3600) == nil)
         #expect(read(24 * 3600 - 1) == "23시간 뒤")
@@ -80,17 +83,52 @@ struct DayRulesTests {
     }
 
     @Test func aDueReadsInHoursWithinADayAndInStudyDaysBeyond() {
-        let read = { (due: Date) in RelativeDay.text(until: due, from: at(14, 12), settings: Settings(), calendar: calendar) }
+        let read = { (due: Date) in RelativeDate.distance(due, from: at(14, 12), settings: Settings(), calendar: calendar) }
         #expect(read(at(14, 9)) == "3시간 전")
         // 하루가 넘으면 공부일로 센다. 16일 새벽 3시는 경계 전이라 15일의 공부일이다.
         #expect(read(at(16, 3)) == "내일")
         #expect(read(at(24, 12)) == "1주 뒤")
     }
 
+    @Test func anAllDayDateCountsCalendarDaysNotHours() {
+        let settings = Settings()
+        let now = at(14, 12)
+        let read = { (date: Date) in RelativeDate.distance(date, from: now, settings: settings, calendar: calendar) }
+        // 종일 일정의 15일 자정은 하루 경계 앞이지만 15일이다. 12시간 뒤여도 시간으로 세지 않는다.
+        #expect(RelativeDate.days(at(15, 0), from: now, settings: settings, calendar: calendar) == 1)
+        #expect(read(at(15, 0)) == "내일")
+        #expect(read(at(14, 0)) == "오늘")
+        #expect(RelativeDate.line(at(15, 0), from: now, settings: settings, calendar: calendar) == "내일")
+    }
+
+    @Test func aLineAddsTheTimeOnlyNextToTomorrowAndYesterday() {
+        let settings = Settings()
+        let ko = Locale(identifier: "ko_KR")
+        let line = { (date: Date) in RelativeDate.line(date, from: at(14, 12), settings: settings, calendar: calendar, locale: ko) }
+        #expect(line(at(14, 18)) == "6시간 뒤")
+        #expect(line(at(15, 23, 59)) == "내일 오후 11:59")
+        #expect(line(at(13, 9)) == "어제 오전 9:00")
+        #expect(line(at(17, 9)) == "3일 뒤")
+    }
+
+    @Test func aDayReadsAsAWordThenAWeekdayThenADate() {
+        let settings = Settings()
+        let ko = Locale(identifier: "ko_KR")
+        let day = { (date: Date, short: Bool) in
+            RelativeDate.day(date, from: at(14, 12), settings: settings, calendar: calendar, short: short, locale: ko)
+        }
+        #expect(day(at(14, 23), false) == "오늘")
+        #expect(day(at(15, 2), false) == "오늘")
+        #expect(day(at(13, 9), false) == "어제")
+        #expect(day(at(16, 9), false) == "월요일")
+        #expect(day(at(16, 9), true) == "월")
+        #expect(day(at(30, 9), false) == "11/30(월)")
+    }
+
     @Test func relativeTimeStopsExactlyAtADay() async {
         await propertyCheck(input: Gen.int(in: -200_000...200_000)) { seconds in
             let now = Date(timeIntervalSince1970: 1_794_800_000)
-            let text = RelativeTime.text(until: now + TimeInterval(seconds), from: now)
+            let text = RelativeDate.within(now + TimeInterval(seconds), from: now)
             #expect((text == nil) == (abs(seconds) >= 24 * 3600))
         }
     }

@@ -19174,28 +19174,6 @@
         }
       }
     },
-    "today.when.today": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오늘"
-          }
-        }
-      }
-    },
-    "today.when.yesterday": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "어제"
-          }
-        }
-      }
-    },
     "today.ribbon.free": {
       "extractionState": "manual",
       "localizations": {

@@ -6,19 +6,13 @@ func courseHeader(_ c: CourseRef, catalog: Catalog?) {
     say("●".course(c.color) + " " + c.course.title.styled(.bold) + "  " + ([c.code] + people).joined(separator: " · ").styled(.dim))
 }
 
-// 남은 날은 앱처럼 공부일로 센다. 하루 경계 전의 새벽에는 그 밤의 마감이 아직 "오늘"이다.
+// 어느 날인지는 앱과 같은 `RelativeDate.day`로 쓴다. 하루 경계 전의 새벽에는 그 밤의 마감이 아직 "오늘"이다.
 func when(_ date: Date, now: Date, time: Bool = false, calendar: Calendar = .current, settings: Settings = Settings()) -> String {
-    let days = settings.studyDays(from: now, until: date, calendar: calendar)
-    let day =
-        switch days {
-        case 0: String(localized: .whenToday)
-        case 1: String(localized: .whenTomorrow)
-        case -1: String(localized: .whenYesterday)
-        case 2...settings.urgency.examNearDays: DDay.text(days)
-        default: date.formatted(.dateTime.month().day().weekday(.abbreviated).locale(Locale(identifier: "ko_KR")))
-        }
-    // 종일 일정에서 가져온 시험과 마감은 자정에 있으므로, 거기서 `오전 12:00`은 시각이 아니다.
-    let text = time && date != calendar.startOfDay(for: date) ? "\(day) \(date.formatted(date: .omitted, time: .shortened))" : day
+    let ko = Locale(identifier: "ko_KR")
+    let days = RelativeDate.days(date, from: now, settings: settings, calendar: calendar)
+    let day = RelativeDate.day(date, from: now, settings: settings, calendar: calendar, short: true, locale: ko)
+    let text =
+        time && RelativeDate.hasTime(date, calendar: calendar) ? day + " " + RelativeDate.time(date, calendar: calendar, locale: ko) : day
     return switch days {
     case ..<0: text.styled(.dim)
     case 0: text.styled(.red, .bold)

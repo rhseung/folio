@@ -70,7 +70,7 @@ public struct TodayShow {
                     String(localized: .todayMinutesLeft(Int(($0.end.timeIntervalSince(now) / 60).rounded(.up)))))
             },
             exams: summary.exams.map {
-                item($0.courseId, $0.exam.id, $0.exam.title, at: $0.exam.start, DDay.text($0.dDay))
+                item($0.courseId, $0.exam.id, $0.exam.title, at: $0.exam.start, RelativeDate.dday(days: $0.dDay))
             },
             classes: summary.classesToday.map(session),
             reviewNotes: summary.missingReviewNotes.map(session),
