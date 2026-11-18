@@ -21,7 +21,7 @@ struct TabBarTests {
         let row = ToolbarRow()
         row.windowWidth = 1400
         let view = VStack(spacing: 0) {
-            TabBar(tabs: tabs, workspace: workspace, crumbs: [], toolbar: row, moveToWindow: { _ in })
+            TabBar(tabs: tabs, workspace: workspace, toolbar: row, moveToWindow: { _ in })
             TabScreens(tabs: tabs, workspace: workspace) { navigator in
                 OpenLinkAction { link, _, course in navigator.go(Navigator.Entry(link: link, course: course)) }
             }

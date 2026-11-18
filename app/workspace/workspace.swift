@@ -277,6 +277,11 @@ final class Workspace {
 
     func can(_ action: some Action) -> Bool { refusal(action) == nil }
 
+    func read<Q: Query>(_ query: Q) throws -> Q.Result {
+        guard let ctx = checkContext() else { throw ActionError.notFound(String(localized: .workspaceNoGist)) }
+        return try query.read(ReadContext(ctx))
+    }
+
     func confirmation<A: Action>(_ action: A) -> String? {
         guard A.spec.asks(action), let text = A.spec.confirm, let ctx = checkContext() else { return nil }
         return A.spec.render(text, action, ctx: ctx)

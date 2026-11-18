@@ -6,7 +6,7 @@
 
 영역별 규칙은 `docs/design/`에 있다.
 
-- [창 구조](design/window.md): Mac, iPad, iPhone의 창 틀, 탭, 위치 표시, 칸, 유리 위의 구성 요소.
+- [창 구조](design/window.md): Mac, iPad, iPhone의 창 틀, 탭, 칸, 유리 위의 구성 요소.
 - [폼과 컨트롤](design/forms.md): 시트와 설정 페이지, 값에 맞는 컨트롤, 시스템 컨트롤 대신 쓰는 것.
 - [입력 기기](design/input.md): 포인터와 터치를 함께 받는 법, 누르는 표적, 메뉴 막대 명령.
 - [패턴](design/patterns.md): 화면 골격, 좁은 폭과 한 줄, 메뉴와 링크, 모달과 빈 상태, 첫 실행, 패치 노트.
@@ -65,7 +65,7 @@
 | 모서리 | `Radius` | 작은 표식(`mark`) < 썸네일·키캡(`small`) < 타일 < 컨트롤 < 카드 < 떠 있는 것과 본문 패널(`floating`). 캡슐은 모서리 대신 `.capsule`이다 |
 | 글자 | `Typeface` | 본문은 한 크기다. 크기를 키워 강조하지 않고 굵기와 회색 단계로 강조한다. 수치는 모두 고정폭 숫자다 |
 
-- **세로 정렬은 아이콘 열이 맞춘다.** 창 사이드바, 과목 열, 검색 결과, 위치 표시의 팝오버가 모두 `LineIcon` 하나를 쓰므로 아이콘과 이름이 어느 목록에서나 같은 자리에 온다. 하위 항목은 `ColumnRow.titleInset`만큼 들여 상위 항목의 이름 아래에 맞춘다.
+- **세로 정렬은 아이콘 열이 맞춘다.** 창 사이드바, 과목 열, 검색 결과가 모두 `LineIcon` 하나를 쓰므로 아이콘과 이름이 어느 목록에서나 같은 자리에 온다. 하위 항목은 `ColumnRow.titleInset`만큼 들여 상위 항목의 이름 아래에 맞춘다.
 - **가로 정렬은 행의 양 끝이 맞춘다.** 카드 안에서 이름은 왼쪽 여백에, 값과 컨트롤은 오른쪽 여백에 붙는다. 가운데 정렬은 빈 상태 화면 말고는 쓰지 않는다.
 - **수치는 열로 읽힌다.** 표와 행의 숫자는 `figure*` 글꼴의 고정폭 숫자라서 자릿수가 세로로 맞는다. 숫자 칸은 오른쪽 정렬한다.
 
@@ -100,7 +100,7 @@
 | 토큰 | `tokens/` | 뷰가 없는 값. `Theme`, `Tone`, `CourseAccent`, `Swatch`, `WindowSize`, `NoteLook`, `NoteStyle` |
 | 원자 | `atoms/` | 더 쪼갤 수 없는 컨트롤과 표시. `buttons/`(버튼 스타일, `.menuButton`), `fields/`(글 칸, 숫자, 스위치), `chips/`(칩 바탕과 그 위의 칩), `marks/`(아이콘, 꼬리표, 진행 막대, 숨김), `interaction/`(포인터, 누르는 자리, 고르기). 바로 아래에는 여러 원자가 쓰는 배치(`FlowLayout`, 바탕과 흐림 수정자) |
 | 조합 | `components/` | 원자를 묶은 것. `cards/`(카드, 폼 행, 시트, 알림, 수치 줄), `pickers/`(메뉴 고르기, 검색 고르기, 날짜와 시각, 반복, 쪽 구간, 성적 눈금) |
-| 구조물 | `structures/` | 화면 뼈대와 큰 부품. `page/`(`Page`, `PageBar`, 위치 표시), `column-split/`, `item-menu/`, `quick-add/`, `sections/`(렉처 구역 막대와 편집기) |
+| 구조물 | `structures/` | 화면 뼈대와 큰 부품. `page/`(`Page`, `PageBar`, 칸의 단계 `Crumb`), `column-split/`, `item-menu/`, `quick-add/`, `sections/`(렉처 구역 막대와 편집기) |
 
 기능 화면은 시스템 컨트롤(`Toggle`, `Picker`, `TextField`, 시스템 버튼 스타일)을 직접 쓰지 않고 종류마다 정한 원자 하나를 쓰며, 기능 안에 `ButtonStyle`을 선언하지 않는다. 메뉴와 오른쪽 클릭 메뉴의 내용(`Toggle`과 `Picker`가 체크 항목이 되는 자리)과 `.pill(width:)`을 붙인 `TextField`는 예외다. 종류마다 어느 원자를 쓰는지는 [폼과 컨트롤](design/forms.md)에 있다.
 
@@ -112,7 +112,7 @@
 
 ## 구성 요소 고르는 기준
 
-구성 요소의 목록은 `app/design/`의 폴더가 원본이다. 컨트롤과 폼은 [폼과 컨트롤](design/forms.md), 화면 골격, 넘기는 영역(`overflowFade`), 항목 메뉴(`ItemMenu`)는 [패턴](design/patterns.md), 창 틀의 부품(`Breadcrumb`, `PageBar`, `FolderIcon`)은 [창 구조](design/window.md)에 있다. 여기에는 그 밖에서 헷갈리기 쉬운 선택을 적는다.
+구성 요소의 목록은 `app/design/`의 폴더가 원본이다. 컨트롤과 폼은 [폼과 컨트롤](design/forms.md), 화면 골격, 넘기는 영역(`overflowFade`), 항목 메뉴(`ItemMenu`)는 [패턴](design/patterns.md), 창 틀의 부품(`PageBar`, `FolderIcon`)은 [창 구조](design/window.md)에 있다. 여기에는 그 밖에서 헷갈리기 쉬운 선택을 적는다.
 
 - **묶음과 카드.** `Block`은 회색 소제목이 붙은 묶음이고 오른쪽에 작은 동작 하나를 둘 수 있다. 행은 흰 `Card`의 `CardRow`에 두고, 행이 아닌 하나짜리 내용은 `Inset.panel`의 카드다. 결정이 필요한 알림은 `NoticeCard`(행이 없으면 배너만), 묶음 전체가 빈 것은 `EmptyCard`(기호, 무엇이 없는지, 무엇이 채우는지 한 줄. 옆 열이 차 있어도 빈 열이 높게 비지 않는다), 목록 하나가 빈 것은 `EmptyLine`이다.
 - **아이콘.** 앱의 아이콘은 `LineIcon`이다. 배경 없는 선 기호를 아이콘 열의 정사각형에 맞추고, `filled: true`가 고른 행의 속채움이다. 글꼴 크기로 키운 SF Symbol을 쓰지 않는다.

@@ -81,6 +81,8 @@ enum Theme {
         static let zonePicked = 0.3
         static let folded = 0.32
         static let soft = 0.5
+        // 애셋 타일 위의 종류 표시와 이름 띠다. 썸네일이 비치되 글자가 읽히는 정도다.
+        static let veil = 0.9
         static let faded = 0.4
         static let area = 0.2
         static let areaStrong = 0.6
@@ -180,7 +182,11 @@ enum Theme {
         #else
         static let searchField: CGFloat = 120
         #endif
-        static let tabName: CGFloat = 120
+        // 탭은 탭 줄을 이름이 있는 탭 수로 나눈 폭이고, 이 두 값 사이로 묶는다(`TabFit`, 사파리와 같다).
+        static let tabMin: CGFloat = chrome(120)
+        static let tabMax: CGFloat = chrome(280)
+        // 칸이 여럿인 탭에서 칸 하나가 아이콘 옆에 이름 몇 글자를 둘 수 있는 폭이다. 이보다 좁으면 칸 아이콘만 둔다.
+        static let paneName: CGFloat = chrome(72)
         // `windowMin`보다 좁으면 세 열이 페이지의 그림을 가늘게 눌렀다. 고정된 기본 크기가 노트북 화면보다 넓으면
         // macOS가 창을 화면 끝까지 늘였으므로, 새 창은 화면에서 보이는 영역의 `windowShare`만큼 차지하고 큰 화면에서는
         // `windowIdeal`까지만 커진다(`WindowSize`).
@@ -252,8 +258,17 @@ enum Theme {
         static let classCard: CGFloat = 60
         static let examMarker: CGFloat = 52
         static let problemCell: CGFloat = 40
-        static let assetTile = CGSize(width: 72, height: 56)
-        static let assetTray: CGFloat = 104
+        static let assetTile = CGSize(width: 112, height: 84)
+        // 위 여백 16, 묶음 이름 14, 간격 8, 타일 84, 아래 여백 16이다. 띠는 가운데에 두므로 남는 높이는 위아래로 나뉜다.
+        static let assetTray: CGFloat = 140
+        static let assetTrayGrid: CGFloat = 440
+        static let assetViewerHead: CGFloat = 40
+        static let assetBadge: CGFloat = 20
+        static let assetName: CGFloat = 22
+        static let assetPreview = CGSize(width: 336, height: 252)
+        static let assetSearch: CGFloat = 200
+        static let assetViewer = CGSize(width: 720, height: 540)
+        static let grabber = CGSize(width: 36, height: 4)
         static let chart: CGFloat = 220
         static let chartCompact: CGFloat = 200
         static let standingCurve: CGFloat = 104

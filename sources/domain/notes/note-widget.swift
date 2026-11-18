@@ -59,4 +59,13 @@ public enum NoteWidget {
         let r = ref.trimmingCharacters(in: .whitespaces).lowercased()
         return r.isEmpty || r.hasPrefix("#") || r.hasPrefix("data:") || r.hasPrefix("blob:") || r.contains("${")
     }
+
+    // 애셋 서랍에 보일 이름이다. 스크립트가 나중에 바꾼 제목은 읽지 않는다. 서랍은 위젯을 돌리지 않고 파일만 읽기 때문이다.
+    public static func title(_ html: String) -> String? {
+        guard let m = html.firstMatch(of: /<title\b[^>]*>(.*?)<\/title\s*>/.ignoresCase().dotMatchesNewlines()) else { return nil }
+        let entities = [("&lt;", "<"), ("&gt;", ">"), ("&quot;", "\""), ("&#39;", "'"), ("&nbsp;", " "), ("&amp;", "&")]
+        let text = entities.reduce(String(m.1)) { $0.replacingOccurrences(of: $1.0, with: $1.1) }
+            .split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        return text.isEmpty ? nil : text
+    }
 }

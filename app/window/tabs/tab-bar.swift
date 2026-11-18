@@ -4,17 +4,11 @@ import SwiftUI
 struct TabBar: View {
     let tabs: WindowTabs
     let workspace: Workspace
-    let crumbs: [Crumb]
     let toolbar: ToolbarRow
     let moveToWindow: (UUID) -> Void
     var nameLayout: (TabPanes) -> Void = { _ in }
     var manageLayouts: () -> Void = {}
     @State private var sizes = TabSizes()
-    @State private var frames: [UUID: CGRect] = [:]
-    @State private var dragged: (id: UUID, start: CGFloat)?
-    @State private var dragOffset: CGFloat = 0
-    @State private var stripOrigin: CGPoint = .zero
-    @GestureState private var dragging = false
 
     static let gap = Theme.Space.s
     static let icon = Theme.Size.toolbarButton
@@ -66,36 +60,22 @@ struct TabBar: View {
 
     var body: some View {
         let others = tabs.ids.filter { $0 != tabs.selected }
-        // 맞춤이나 앞 탭의 trail이 바뀔 때만 바뀌고, 창이 지나는 모든 폭마다 바뀌지는 않는다. live resize의 frame마다 탭을
-        // 다시 그리는 비용은 frame이 감당하지 못한다(항목의 메뉴 형태를 매번 다시 만들던 AppKit 툴바에서는 창이 초당 몇
-        // frame으로 떨어졌다).
+        // 맞춤이 바뀔 때만 바뀌고, 창이 지나는 모든 폭마다 바뀌지는 않는다. live resize의 frame마다 탭을 다시 그리는 비용은
+        // frame이 감당하지 못한다(항목의 메뉴 형태를 매번 다시 만들던 AppKit 툴바에서는 창이 초당 몇 frame으로 떨어졌다).
         let placement = toolbar.placement
         let fit = placement.fit
+        let share = CGFloat(fit.share)
         let shown = Array(others.prefix(fit.shown))
         let hidden = Array(others.dropFirst(fit.shown))
         let row = tabs.ids.filter { $0 == tabs.selected || shown.contains($0) }
         HStack(spacing: Self.gap) {
             ForEach(row, id: \.self) { id in
                 Group {
-                    if id == tabs.selected {
-                        if let trail = placement.trail {
-                            front(crumbRoom: trail, compact: fit.compactFront)
-                                .frame(width: trail + CGFloat(toolbar.measures.front.chrome(compact: fit.compactFront)))
-                        } else {
-                            front(crumbRoom: .infinity, compact: fit.compactFront).fixedSize()
-                        }
-                    } else {
-                        tab(id, form: TabForm(fit)).fixedSize()
-                    }
+                    if id == tabs.selected { front(share: share) } else { tab(id, share: share) }
                 }
                 #if os(macOS) && (DEBUG || RESIZE_PROBE)
                 .background { if id == row.first { ResizeMarker(name: "firstTab") } }
                 #endif
-                .onGeometryChange(for: CGRect.self) {
-                    $0.frame(in: .named(Self.space))
-                } action: {
-                    frames[id] = $0
-                }
                 #if DEBUG && os(macOS)
                 .onGeometryChange(for: CGRect.self) {
                     $0.frame(in: .global)
@@ -103,9 +83,7 @@ struct TabBar: View {
                     if id == tabs.selected { LayoutSnapshots.selectedTab = $0 }
                 }
                 #endif
-                .offset(x: dragged?.id == id ? dragOffset : 0)
-                .zIndex(dragged?.id == id ? 1 : 0)
-                .simultaneousGesture(drag(id, row: row))
+                .tabDrag(tabs.dragging, .tab(id))
                 // iPad의 창은 위쪽 가운데 손잡이로만 끌려 탭과 겹치지 않는다.
                 #if os(macOS)
                 .holdsTitleDrag(id)
@@ -123,19 +101,12 @@ struct TabBar: View {
                 #endif
         }
         .coordinateSpace(.named(Self.space))
-        .onGeometryChange(for: CGPoint.self) {
-            $0.frame(in: .global).origin
-        } action: {
-            stripOrigin = $0
-        }
-        .onChange(of: dragging) { _, now in if !now { tabs.drop = nil } }
+        .tabDragStrip(tabs.dragging, row: row)
         .background { measures(others) }
-        .onChange(of: tabs.selected) { report() }
+        .onChange(of: kinds, initial: true) { report() }
         .onChange(of: tabs.ids) { _, ids in
-            let open = Set(ids)
-            sizes.keep(open)
             report()
-            frames = frames.filter { open.contains($0.key) }
+            tabs.dragging.keep(Set(ids))
         }
         .animation(Theme.Motion.standard, value: tabs.ids)
         .frame(width: placement.width, alignment: .leading)
@@ -144,41 +115,64 @@ struct TabBar: View {
 
     static let space = "tabs"
 
+    // 탭이 오늘로 가거나 칸을 합치면 그 탭이 나누기에 드는지가 바뀌므로, 잰 폭과 함께 이 값이 바뀔 때도 알린다.
+    var kinds: [TabFit.Tab] { tabs.ids.map(kind) }
+
+    func kind(_ id: UUID) -> TabFit.Tab {
+        // 칸이 여럿인 탭도 다른 탭과 같은 한 몫이다. 칸 수만큼 넓히면 칸을 나눌 때마다 다른 탭이 좁아지고 메뉴로 밀렸다.
+        if let panes = tabs.panes(id), panes.count > 1 { return .single }
+        // 고른 오늘 탭은 이름이 보이므로 다른 탭처럼 한 몫을 받는다. 그려진 폭으로 두면 고른 탭이 다른 탭보다 좁았다.
+        guard workspace.tabTitle(of: entry(id)) == nil, id != tabs.selected else { return .single }
+        return .fixed(Double(Self.icon))
+    }
+
+    func entry(_ id: UUID) -> Navigator.Entry { tabs.navigator(id)?.current ?? Navigator.Entry(link: .place(.today)) }
+
     // 잰 값에서 바로 알린다. 재는 callback에서 설정한 state는 body에 늦게 닿거나 닿지 않았고, 줄이 앞 탭을 오래전 폭에 묶어
     // strip이 검색 칸 위로 넘어갔다.
     func report() {
         let others = tabs.ids.filter { $0 != tabs.selected }
-        let measures = ToolbarRow.Measures(front: sizes.frontFit, others: others.map(sizes.other), more: sizes.more)
+        let measures = ToolbarRow.Measures(front: kind(tabs.selected), others: others.map(kind), more: sizes.more)
         if measures != toolbar.measures { toolbar.measures = measures }
     }
 
     static let closeSize = Theme.Size.tile
 
-    @ViewBuilder func front(crumbRoom: CGFloat, compact: Bool) -> some View {
+    @ViewBuilder func front(share: CGFloat) -> some View {
         if let panes = tabs.front, panes.count > 1 {
-            joined(panes, crumbRoom: crumbRoom, compact: compact)
+            joined(panes, share: share)
         } else {
-            HStack(spacing: Theme.Space.xs) {
-                Breadcrumb(crumbs: crumbs, foldWidth: crumbRoom, maxWidth: crumbRoom)
-                if tabs.count > 1 { closeButton(tabs.selected) }
-            }
-            .padding(.leading, Theme.Space.m)
-            .padding(.trailing, tabs.count > 1 ? Theme.Space.xs : Theme.Space.m)
-            .frame(height: Theme.Size.toolbarButton)
-            .tabSurface(front: true)
+            frontLabel(width: share)
         }
     }
 
-    func joined(_ panes: TabPanes, crumbRoom: CGFloat, compact: Bool) -> some View {
-        HStack(spacing: 0) {
+    func frontLabel(width: CGFloat?) -> some View {
+        let entry = entry(tabs.selected)
+        let place = workspace.placeCrumb(of: entry)
+        return HStack(spacing: Theme.Space.tight) {
+            PlaceIcon(place: place)
+            TabName(name: workspace.tabTitle(of: entry) ?? place.title, isFile: entry.link.kind == .material)
+                .font(Theme.Typeface.bodyStrong)
+                .foregroundStyle(Theme.Palette.text)
+            if tabs.count > 1 { closeButton(tabs.selected) }
+        }
+        .padding(.leading, Theme.Space.s)
+        .padding(.trailing, tabs.count > 1 ? Theme.Space.xs : Theme.Space.m)
+        .frame(width: width, height: Theme.Size.toolbarButton)
+        .tabSurface(front: true)
+    }
+
+    func joined(_ panes: TabPanes, share: CGFloat) -> some View {
+        let names = Self.namesPanes(panes.count, width: share)
+        return SegmentRow {
             ForEach(Segment.all(panes, workspace: workspace, playing: tabs.playingPanes)) { segment in
                 if segment.index > 0 { SegmentRule() }
                 TabSegment(
-                    mark: segment.mark, crumbs: segment.index == panes.focus ? crumbs : nil, crumbRoom: crumbRoom, iconOnly: compact,
-                    playing: segment.playing,
+                    mark: segment.mark, focused: segment.index == panes.focus, playing: segment.playing, showsName: names,
                     select: { panes.press(pane: segment.id) }, close: { panes.close(pane: segment.id) },
                     pause: { [tabs] in tabs.pause(pane: segment.id) }
                 )
+                .tabDrag(tabs.dragging, .pane(segment.id, of: tabs.selected))
                 .contextMenu {
                     if let i = panes.ids.firstIndex(of: segment.id) {
                         PaneMenu(panes: panes, index: i) { [tabs] navigator, columns in
@@ -188,11 +182,12 @@ struct TabBar: View {
                     Divider()
                     LayoutMenu(choices: workspace.layoutChoices(for: panes, save: { nameLayout(panes) }, manage: manageLayouts))
                 }
+                .layoutValue(key: SegmentRow.Shares.self, value: true)
             }
             if tabs.count > 1 { closeButton(tabs.selected).padding(.leading, Theme.Space.xxs) }
         }
         .padding(.horizontal, Theme.Space.xs)
-        .frame(height: Theme.Size.toolbarButton)
+        .frame(width: share, height: Theme.Size.toolbarButton)
         .tabSurface(front: true)
     }
 
@@ -227,12 +222,12 @@ struct TabBar: View {
         .accessibilityLabel(Text(.tabsClose))
     }
 
-    @ViewBuilder func tab(_ id: UUID, form: TabForm) -> some View {
-        let entry = tabs.navigator(id)?.current ?? Navigator.Entry(link: .place(.today))
+    @ViewBuilder func tab(_ id: UUID, share: CGFloat) -> some View {
+        let entry = entry(id)
         let title = workspace.tabTitle(of: entry)
         let name = tabs.panes(id).flatMap(workspace.presetName(of:)) ?? title ?? workspace.placeCrumb(of: entry).title
         if let panes = tabs.panes(id), panes.count > 1 {
-            label(id, form: form)
+            joinedLabel(id, panes: panes, width: share)
                 .help(name)
                 .accessibilityElement(children: .contain)
                 .accessibilityLabel(name)
@@ -241,94 +236,100 @@ struct TabBar: View {
             Button {
                 tabs.select(id)
             } label: {
-                label(entry, title: form == .full ? title : nil, playing: playing)
+                label(entry, title: title, width: share, playing: playing)
             }
             .buttonStyle(.pointing(.plain))
             // 탭의 label 안에 둔 버튼은 탭을 고르므로, label이 남긴 자리 위에 별도의 버튼으로 둔다.
-            .overlay(alignment: .trailing) { if playing && form == .full { speaker(id) } }
+            .overlay(alignment: .trailing) { if playing && title != nil { speaker(id) } }
             .help(name)
             .accessibilityLabel(name)
         }
     }
 
-    @ViewBuilder func label(_ id: UUID, form: TabForm) -> some View {
-        if let panes = tabs.panes(id), panes.count > 1 {
-            let segments = Segment.all(panes, workspace: workspace, playing: tabs.playingPanes)
-            HStack(spacing: 0) {
-                if form == .stacked {
+    // 이름 붙인 배치면 칸 아이콘과 배치 이름을, 아니면 칸마다 아이콘과 이름을 둔다.
+    static func namesPanes(_ count: Int, width: CGFloat) -> Bool {
+        TabFit.namesPanes(count, width: Double(width), least: Double(Theme.Size.paneName))
+    }
+
+    func joinedLabel(_ id: UUID, panes: TabPanes, width: CGFloat) -> some View {
+        let segments = Segment.all(panes, workspace: workspace, playing: tabs.playingPanes)
+        return Group {
+            if let preset = workspace.presetName(of: panes) {
+                HStack(spacing: 0) {
+                    ForEach(segments) { segment in
+                        if segment.index > 0 { SegmentRule() }
+                        segmentIcon(segment, tab: id).padding(.horizontal, Theme.Space.xs)
+                    }
                     Button {
                         tabs.select(id)
                     } label: {
-                        HStack(spacing: Theme.Space.xxs) {
-                            if segments.contains(where: \.playing) {
-                                speakerIcon
-                            } else if let first = segments.first {
-                                PlaceIcon(place: first.mark)
-                            }
-                            Text(.panesMoreCount(segments.count - 1)).font(Theme.Typeface.caption).monospacedDigit()
-                        }
-                        .contentShape(.rect)
+                        TabName(name: preset, isFile: false)
                     }
-                    .buttonStyle(.pointing(.plain))
-                } else {
+                    .padding(.leading, Theme.Space.xxs)
+                    .padding(.trailing, Theme.Space.xs)
+                }
+            } else {
+                let names = Self.namesPanes(panes.count, width: width)
+                SegmentRow {
                     ForEach(segments) { segment in
                         if segment.index > 0 { SegmentRule() }
-                        Group {
-                            if segment.playing {
-                                Button {
-                                    tabs.pause(pane: segment.id)
-                                } label: {
-                                    speakerIcon.contentShape(.rect)
-                                }
-                                .help(Text(.tabsPause))
-                                .accessibilityLabel(Text(.tabsPause))
-                            } else {
+                        HStack(spacing: Theme.Space.tight) {
+                            segmentIcon(segment, tab: id)
+                            if names {
                                 Button {
                                     tabs.select(id)
                                 } label: {
-                                    PlaceIcon(place: segment.mark).contentShape(.rect)
+                                    TabName(name: segment.mark.title, isFile: segment.mark.isFile)
                                 }
-                                .accessibilityLabel(segment.mark.title)
                             }
                         }
-                        .buttonStyle(.pointing(.plain))
                         .padding(.horizontal, Theme.Space.xs)
-                    }
-                    if form == .full, let preset = workspace.presetName(of: panes) {
-                        Button {
-                            tabs.select(id)
-                        } label: {
-                            CappedWidth(width: Theme.Size.tabName) { Text(preset).lineLimit(1) }
-                        }
-                        .buttonStyle(.pointing(.plain))
-                        .padding(.leading, Theme.Space.xxs)
-                        .padding(.trailing, Theme.Space.xs)
+                        .frame(maxWidth: names ? nil : .infinity)
+                        .layoutValue(key: SegmentRow.Shares.self, value: true)
                     }
                 }
             }
-            .padding(.horizontal, Theme.Space.xs)
-            .font(Theme.Typeface.body)
-            .foregroundStyle(Theme.Palette.chromeText)
-            .frame(height: Theme.Size.toolbarButton)
-            .tabSurface(front: false)
-            .contentShape(.capsule)
-            .onTapGesture { tabs.select(id) }
+        }
+        .buttonStyle(.pointing(.plain))
+        .padding(.horizontal, Theme.Space.xs)
+        .font(Theme.Typeface.body)
+        .foregroundStyle(Theme.Palette.chromeText)
+        .frame(width: width, height: Theme.Size.toolbarButton)
+        .tabSurface(front: false)
+        .contentShape(.capsule)
+        .onTapGesture { tabs.select(id) }
+    }
+
+    @ViewBuilder func segmentIcon(_ segment: Segment, tab id: UUID) -> some View {
+        if segment.playing {
+            Button {
+                tabs.pause(pane: segment.id)
+            } label: {
+                speakerIcon.contentShape(.rect)
+            }
+            .help(Text(.tabsPause))
+            .accessibilityLabel(Text(.tabsPause))
         } else {
-            let entry = tabs.navigator(id)?.current ?? Navigator.Entry(link: .place(.today))
-            label(entry, title: form == .full ? workspace.tabTitle(of: entry) : nil, playing: tabs.playing.contains(id))
+            Button {
+                tabs.select(id)
+            } label: {
+                PlaceIcon(place: segment.mark).contentShape(.rect)
+            }
+            .accessibilityLabel(segment.mark.title)
         }
     }
 
-    @ViewBuilder func label(_ entry: Navigator.Entry, title: String?, playing: Bool = false) -> some View {
+    @ViewBuilder func label(_ entry: Navigator.Entry, title: String?, width: CGFloat, playing: Bool = false) -> some View {
         let place = workspace.placeCrumb(of: entry)
         Group {
             if let title {
                 HStack(spacing: Theme.Space.tight) {
                     PlaceIcon(place: place)
-                    CappedWidth(width: Theme.Size.tabName) { Text(title).lineLimit(1) }
+                    TabName(name: title, isFile: entry.link.kind == .material)
                 }
                 .padding(.leading, Theme.Space.s)
                 .padding(.trailing, playing ? Theme.Space.xs + Self.closeSize + Theme.Space.xs : Theme.Space.m)
+                .frame(width: width)
             } else if playing {
                 speakerIcon.frame(width: Self.icon)
             } else {
@@ -362,7 +363,7 @@ struct TabBar: View {
     }
 
     func menuItem(_ id: UUID) -> (name: String, symbol: String) {
-        let entry = tabs.navigator(id)?.current ?? Navigator.Entry(link: .place(.today))
+        let entry = entry(id)
         let place = workspace.placeCrumb(of: entry)
         let name = tabs.panes(id).flatMap(workspace.presetName(of:)) ?? workspace.tabTitle(of: entry) ?? place.title
         return (name, tabs.playing.contains(id) ? Self.speakerSymbol : place.symbol ?? CourseMark.defaultIcon)
@@ -424,26 +425,6 @@ struct TabBar: View {
 
     func measures(_ others: [UUID]) -> some View {
         ZStack {
-            Breadcrumb(crumbs: crumbs, foldWidth: .infinity, maxWidth: .infinity).fixedSize()
-                .onGeometryChange(for: CGFloat.self, of: \.size.width) {
-                    sizes.trail = $0; report()
-                }
-            front(crumbRoom: .infinity, compact: false).fixedSize()
-                .onGeometryChange(for: CGFloat.self, of: \.size.width) {
-                    sizes.front = $0; report()
-                }
-            front(crumbRoom: .infinity, compact: true).fixedSize()
-                .onGeometryChange(for: CGFloat.self, of: \.size.width) {
-                    sizes.compactFront = $0; report()
-                }
-            ForEach(others, id: \.self) { id in
-                ForEach(TabForm.allCases, id: \.self) { form in
-                    label(id, form: form).fixedSize()
-                        .onGeometryChange(for: CGFloat.self, of: \.size.width) {
-                            sizes.set($0, id, form); report()
-                        }
-                }
-            }
             moreLabel(max(others.count, 10)).fixedSize()
                 .onGeometryChange(for: CGFloat.self, of: \.size.width) {
                     sizes.more = $0; report()
@@ -453,52 +434,13 @@ struct TabBar: View {
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
-
-    func drag(_ id: UUID, row: [UUID]) -> some Gesture {
-        DragGesture(minimumDistance: Theme.Space.xs, coordinateSpace: .named(Self.space))
-            .updating($dragging) { _, state, _ in state = true }
-            .onChanged { value in
-                guard let frame = frames[id] else { return }
-                if dragged?.id != id { dragged = (id, frame.minX) }
-                let point = across(value.location)
-                let drop = tabs.drop(for: id, at: point)
-                if drop != tabs.drop { tabs.drop = drop }
-                let content = tabs.contentFrame
-                if content.isEmpty || point.y < content.minY { reorder(id, row: row, to: value.location.x) }
-                dragOffset = value.translation.width - ((frames[id]?.minX ?? frame.minX) - (dragged?.start ?? frame.minX))
-            }
-            .onEnded { value in
-                let drop = tabs.drop(for: id, at: across(value.location))
-                tabs.drop = nil
-                if let drop { tabs.merge(id, into: tabs.selected, at: drop.edge) }
-                withAnimation(Theme.Motion.quick) {
-                    dragged = nil
-                    dragOffset = 0
-                }
-            }
-    }
-
-    func across(_ location: CGPoint) -> CGPoint { CGPoint(x: stripOrigin.x + location.x, y: stripOrigin.y + location.y) }
-
-    func reorder(_ id: UUID, row: [UUID], to x: CGFloat) {
-        let others = row.filter { $0 != id }
-        let before = others.filter { (frames[$0]?.midX ?? 0) < x }.count
-        var rest = tabs.ids.filter { $0 != id }
-        let index: Int =
-            if before < others.count { rest.firstIndex(of: others[before]) ?? 0 } else {
-                others.last.flatMap { rest.firstIndex(of: $0) }.map { $0 + 1 } ?? rest.count
-            }
-        rest.insert(id, at: index)
-        if rest != tabs.ids { tabs.move(id, to: index) }
-    }
 }
 
 private struct TabSegment: View {
     let mark: Crumb
-    let crumbs: [Crumb]?
-    let crumbRoom: CGFloat
-    let iconOnly: Bool
+    let focused: Bool
     let playing: Bool
+    let showsName: Bool
     let select: () -> Void
     let close: () -> Void
     let pause: () -> Void
@@ -507,50 +449,59 @@ private struct TabSegment: View {
     static let height = Theme.Size.toolbarButton - Theme.Space.s
     static let close = Theme.Space.l
 
+    // 이름이 없는 칸은 닫기 버튼에 자리를 따로 두지 않고 아이콘 자리에 겹쳐, 마우스를 올리면 아이콘 대신 보인다. 자리를 두면
+    // 안 보이는 버튼 몫만큼 아이콘이 칸 가운데에서 밀려, 고른 탭과 고르지 않은 탭의 아이콘 자리가 달랐다.
     var body: some View {
         HStack(spacing: Theme.Space.xxs) {
-            if let crumbs {
-                HStack(spacing: Theme.Space.s) {
-                    if playing { speakerButton.foregroundStyle(mark.dot ?? Theme.Palette.chromeSelected) }
-                    Breadcrumb(crumbs: crumbs, foldWidth: crumbRoom, maxWidth: crumbRoom)
-                }
-                .transition(.asymmetric(insertion: .opacity.animation(.snappy), removal: .identity))
+            if showsName {
+                content
+                closeButton.opacity(hovering ? 1 : 0).allowsHitTesting(hovering)
             } else {
-                HStack(spacing: Theme.Space.tight) {
-                    if playing { speakerButton }
-                    Button(action: select) {
-                        HStack(spacing: Theme.Space.tight) {
-                            if !playing { PlaceIcon(place: mark, tint: Theme.Palette.textSecondary) }
-                            if !iconOnly { CappedWidth(width: Theme.Size.tabName) { Text(mark.title).lineLimit(1) } }
-                        }
-                        .contentShape(.rect)
-                    }
-                    .buttonStyle(.pointing(.plain))
-                    .help(mark.title)
-                    .accessibilityLabel(mark.title)
+                ZStack {
+                    content.opacity(hovering ? 0 : 1)
+                    closeButton.opacity(hovering ? 1 : 0).allowsHitTesting(hovering)
                 }
-                .foregroundStyle(Theme.Palette.textSecondary)
-                .transition(.asymmetric(insertion: .opacity.animation(.snappy), removal: .identity))
             }
-            Button(action: close) {
-                Image(systemName: "xmark").font(Theme.Glyph.small)
-                    .frame(width: Self.close, height: Self.close)
-                    .contentShape(.circle)
-            }
-            .buttonStyle(.pointing(.plain))
-            .foregroundStyle(Theme.Palette.textTertiary)
-            .opacity(hovering ? 1 : 0)
-            .allowsHitTesting(hovering)
-            .help(Text(.panesClose))
-            .accessibilityLabel(Text(.panesClose))
         }
-        .font(Theme.Typeface.body)
-        .padding(.leading, Theme.Space.s)
+        .padding(.leading, showsName ? Theme.Space.s : Theme.Space.xs)
         .padding(.trailing, Theme.Space.xs)
+        .frame(maxWidth: showsName ? nil : .infinity)
         .frame(height: Self.height)
         .contentShape(.rect)
         .onTapGesture(perform: select)
         .onHover { hovering = $0 }
+    }
+
+    var content: some View {
+        HStack(spacing: Theme.Space.tight) {
+            if playing {
+                speakerButton.foregroundStyle(focused ? mark.dot ?? Theme.Palette.chromeSelected : Theme.Palette.textSecondary)
+            }
+            Button(action: select) {
+                HStack(spacing: Theme.Space.tight) {
+                    if !playing { PlaceIcon(place: mark, tint: focused ? nil : Theme.Palette.textSecondary) }
+                    if showsName { TabName(name: mark.title, isFile: mark.isFile) }
+                }
+                .contentShape(.rect)
+            }
+            .buttonStyle(.pointing(.plain))
+            .help(mark.title)
+            .accessibilityLabel(mark.title)
+        }
+        .font(focused ? Theme.Typeface.bodyStrong : Theme.Typeface.body)
+        .foregroundStyle(focused ? Theme.Palette.text : Theme.Palette.textSecondary)
+    }
+
+    var closeButton: some View {
+        Button(action: close) {
+            Image(systemName: "xmark").font(Theme.Glyph.small)
+                .frame(width: Self.close, height: Self.close)
+                .contentShape(.circle)
+        }
+        .buttonStyle(.pointing(.plain))
+        .foregroundStyle(Theme.Palette.textTertiary)
+        .help(Text(.panesClose))
+        .accessibilityLabel(Text(.panesClose))
     }
 
     var speakerButton: some View {
@@ -563,23 +514,55 @@ private struct TabSegment: View {
     }
 }
 
+// 끝이 아니라 가운데를 줄여 마지막 글자(확장자, 번호)를 남긴다. 파일 이름은 `FileName`과 같은 규칙으로 확장자를 떼어 둔다.
+// 이름 뒤에 `Spacer`를 두지 않고 이름이 남는 폭을 모두 받는다. `Spacer`를 두면 HStack이 남는 폭을 둘에 나눠, 자리가 있는데도
+// 이름이 줄었다.
+private struct TabName: View {
+    let name: String
+    let isFile: Bool
+
+    var body: some View {
+        Group {
+            if isFile { FileName(name, lineLimit: 1) } else { Text(name).lineLimit(1).truncationMode(.middle) }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// 칸 사이의 선과 닫기 버튼은 그려진 폭 그대로 두고, 남는 폭을 칸들이 `TabFit.split`으로 나눈다. `HStack`은 늘어날 수 있는
+// 자식에게 폭을 똑같이 나눠, 짧은 이름 옆에 빈 폭이 남는데도 긴 이름이 줄었다.
+private struct SegmentRow: Layout {
+    struct Shares: LayoutValueKey { static let defaultValue = false }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let ideal = subviews.map { $0.sizeThatFits(.unspecified) }
+        return CGSize(
+            width: proposal.width ?? ideal.map(\.width).reduce(0, +),
+            height: proposal.height ?? ideal.map(\.height).max() ?? 0)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let ideal = subviews.map { $0.sizeThatFits(.unspecified).width }
+        let fixed = subviews.indices.filter { !subviews[$0][Shares.self] }.map { ideal[$0] }.reduce(0, +)
+        let shared = subviews.indices.filter { subviews[$0][Shares.self] }
+        var widths = ideal
+        let split = TabFit.split(max(0, bounds.width - fixed), ideals: shared.map { Double(ideal[$0]) })
+        for (i, width) in zip(shared, split) { widths[i] = width }
+        var x = bounds.minX
+        for (subview, width) in zip(subviews, widths) {
+            subview.place(
+                at: CGPoint(x: x, y: bounds.midY), anchor: .leading,
+                proposal: ProposedViewSize(width: width, height: bounds.height))
+            x += width
+        }
+    }
+}
+
 private struct SegmentRule: View {
     var body: some View {
         Theme.Palette.text.opacity(Theme.Opacity.edge)
             .frame(width: 1, height: Theme.Space.l)
             .padding(.horizontal, Theme.Space.xxs)
-    }
-}
-
-private struct CappedWidth: Layout {
-    let width: CGFloat
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        subviews.first?.sizeThatFits(ProposedViewSize(width: min(proposal.width ?? width, width), height: proposal.height)) ?? .zero
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        subviews.first?.place(at: bounds.origin, proposal: ProposedViewSize(bounds.size))
     }
 }
 

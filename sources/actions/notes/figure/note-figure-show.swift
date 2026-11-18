@@ -1,3 +1,4 @@
+import FolioCore
 import FolioDomain
 import FolioStorage
 import Foundation
@@ -13,6 +14,8 @@ public struct NoteFigureShow {
 
     public func read(_ ctx: ReadContext) throws -> NoteFileBody {
         let (file, text) = try MaterialText.figure(try ctx.store(course), name)
-        return NoteFileBody(name: file, path: NoteFigure.path(file), text: text)
+        // 쓸 때 넣은 스타일과 수식 모양을 걷어 낸, 쓴 사람이 쓴 모양을 보인다. 해시는 파일 그대로의 것이다. write가
+        // 디스크의 파일과 견주기 때문이다.
+        return NoteFileBody(name: file, path: NoteFigure.path(file), text: try NoteFigureFinish.source(text), hash: ContentHash.of(text))
     }
 }

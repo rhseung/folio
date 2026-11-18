@@ -79,8 +79,6 @@ struct CourseModelTests {
         #expect(model.section == .sessions && model.openRecording?.id == recording.id && model.focus == nil)
         model.moved(link.with(.time(95)))
         #expect(model.place == link.with(.time(95)))
-        model.resetPage()
-        #expect(model.place == .course(graphTheory, page: .sessions) && model.openRecording == nil)
     }
 
     @Test func aFileFollowsOnlyAPageItIsNotOn() throws {
@@ -139,5 +137,11 @@ struct CourseModelTests {
         workspace.run(SessionAdd(course: graphTheory, date: .now))
         #expect(model.trailing(.classes, file: try #require(workspace.course(graphTheory)).file)?.text == "1회")
         #expect(AppLink.CoursePage.stats.title == "오답과 통계" && CourseTab.assessment.title == "평가")
+    }
+
+    @Test func assignmentsHaveTheirOwnTabApartFromExamsAndGrades() {
+        #expect(CourseTab.assignments.pages == [.assignments])
+        #expect(CourseTab.assessment.pages == [.exams, .grades])
+        #expect(Array(CourseTab.allCases.prefix(3)) == [.overview, .classes, .assignments])
     }
 }

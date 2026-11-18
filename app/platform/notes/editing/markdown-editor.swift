@@ -15,6 +15,7 @@ struct MarkdownEditor {
     var embeds: NoteEmbedSource?
     var revision = 0
     var insertMath: Binding<CompletionItem?> = .constant(nil)
+    var insertBlock: Binding<String?> = .constant(nil)
     var openGuide: @MainActor () -> Void = {}
     var views: NoteViews?
 
@@ -68,6 +69,7 @@ struct MarkdownEditor {
 
         afterUpdate($insert) { view.insertAtCaret($0) }
         afterUpdate(insertMath) { view.insertMath($0) }
+        afterUpdate(insertBlock) { view.insertBlock($0) }
     }
 
     // 바인딩 값은 갱신이 끝난 뒤에 넣는다. 갱신 중에 한 편집은 `text`에 닿지 않고(`updating`), 바인딩을 비우면서 생기는 갱신이 텍스트를 되돌리기 때문이다. 넣을 때 값을 다시 확인하므로,

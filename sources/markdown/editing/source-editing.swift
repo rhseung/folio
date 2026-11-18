@@ -71,6 +71,17 @@ public enum SourceEditing {
         return nil
     }
 
+    // 블록(코드 펜스)은 줄 하나를 혼자 차지해야 펜스로 읽힌다. 그래서 캐럿이 줄 가운데에 있으면 앞뒤를 줄바꿈으로 떼고,
+    // 캐럿을 블록 다음 줄의 처음에 둔다.
+    public static func block(_ block: String, in text: NSString, selection: NSRange) -> Edit {
+        let start = selection.location, end = NSMaxRange(selection)
+        let newline = UInt16(UInt8(ascii: "\n"))
+        let before = start > 0 && text.character(at: start - 1) != newline ? "\n" : ""
+        let joins = end < text.length && text.character(at: end) == newline
+        let insert = before + block + (joins ? "" : "\n")
+        return Edit(range: selection, text: insert, caret: start + insert.utf16.count + (joins ? 1 : 0))
+    }
+
     public static func offersBlocks(in text: NSString, selection: NSRange) -> Bool {
         guard selection.length == 0, selection.location <= text.length else { return false }
         let line = SourceLines.content(text.lineRange(for: NSRange(location: selection.location, length: 0)), in: text)

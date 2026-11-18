@@ -28,7 +28,8 @@ extension AppLink.CoursePage: Identifiable {
         case .notes: .notes
         case .materials: .materials
         case .quiz, .cards, .stats, .problems: .quiz
-        case .assignments, .exams, .grades: .assessment
+        case .assignments: .assignments
+        case .exams, .grades: .assessment
         }
     }
 }

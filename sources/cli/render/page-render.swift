@@ -1,3 +1,4 @@
+import FolioActions
 import FolioDomain
 import Foundation
 
@@ -23,6 +24,7 @@ enum PageRender {
         return [
             NoteWidget.noPeersScript,
             "{ const s = document.createElement('style'); s.textContent = \(css); document.documentElement.prepend(s) }",
+            NoteWidgetKit.script,
             consoleScript,
         ]
     }
@@ -43,10 +45,12 @@ enum PageRender {
         })()
         """
 
+    // 쓸 때와 같이 마무리한 그림을 그린다.
     static func figure(_ svg: String, accent: String, widths: [Int]) throws -> RenderResult {
-        let page = figurePage(svg, accent: accent)
+        let finished = try NoteFigureFinish.finish(svg)
+        let page = figurePage(finished.svg, accent: accent)
         let (images, _) = try shots(page, scripts: [], widths: widths, start: 240, settle: 0.1)
-        return RenderResult(images: images, console: [], problems: NoteFigure.problems(svg).map(\.message))
+        return RenderResult(images: images, console: [], problems: finished.problems.map(\.message))
     }
 
     static func widget(_ html: String, accent: String, widths: [Int]) throws -> RenderResult {

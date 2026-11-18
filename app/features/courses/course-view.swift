@@ -4,7 +4,6 @@ import SwiftUI
 
 struct CourseView: View {
     @State private var model: CourseModel
-    @State private var pageReset = 0
     @Environment(\.paneInsert) private var paneInsert
     @Environment(\.place) private var place
     @Environment(\.openLink) private var openLink
@@ -48,15 +47,10 @@ struct CourseView: View {
                     }
                 }
                 .environment(\.linkFocus, model.focus)
-                // identity를 새로 주면 페이지가 연 파일이나 단원이 닫힌다. 구역 crumb이 바라는 동작은 그것뿐이다.
-                .id(pageReset)
                 .paperList()
             }
-            // 열이 아니라 split에 단다. 접으면 열은 사라지지만 구역은 여전히 위치 표시의 맨 앞에 있어야 한다.
-            .crumb(model.section.title, level: 1, symbol: model.section.tab.symbol) {
-                model.resetPage()
-                pageReset += 1
-            }
+            // 열이 아니라 split에 단다. 접으면 열은 사라지지만 칸 마디의 아이콘은 여전히 구역을 따라야 한다.
+            .crumb(model.section.title, level: 1, symbol: model.section.tab.symbol)
             .courseAccent(model.accent)
             .navigationTitle(course.title)
             .navigationSubtitle(model.section.title)

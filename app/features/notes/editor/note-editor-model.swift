@@ -20,8 +20,8 @@ final class NoteEditorModel {
     // 노트를 불러오면 선택기도 바뀌는데, 그것을 문법을 고른 것으로 세면 안 된다.
     private var savedMath = MathSyntax.latex
     var pendingInsert: String?
+    var pendingBlock: String?
     var pendingMath: CompletionItem?
-    private(set) var assets: [URL] = []
     private(set) var assetsRevision = 0
     // 여기서 마지막으로 읽거나 쓴 내용이다. 저장할 때 디스크가 이와 다르면 다른 곳(다른 기기, CLI)에서 바뀐 것이므로
     // 덮어쓰기 전에 묻는다.
@@ -194,9 +194,9 @@ final class NoteEditorModel {
         return isImage ? "![\(name)](\(encoded))" : "[\(file.lastPathComponent)](\(encoded))"
     }
 
-    func assetLink(_ file: URL) -> String { Self.markdown(for: file, path: store.link(to: "assets/" + file.lastPathComponent, from: note)) }
-
-    func reloadAssets() { assets = store.noteAssets() }
+    func assetLink(_ file: URL) -> String {
+        Self.markdown(for: file, path: store.link(to: StandardLayout.noteAssetsFolder + "/" + file.lastPathComponent, from: note))
+    }
 
     func addAssets(_ urls: [URL]) {
         let store = store
@@ -208,7 +208,7 @@ final class NoteEditorModel {
                 try store.addNoteAsset(url)
             }
         }
-        reloadAssets()
+        assetsRevision += 1
     }
 
     func saveFile(_ name: String, _ data: Data) -> String? {

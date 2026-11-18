@@ -16,6 +16,7 @@ struct NotePreview {
     var embeds: NoteEmbedSource?
     var revision = 0
     var views: NoteViews?
+    var figureOnly: (@MainActor () -> Void)?
 
     @MainActor final class Coordinator {
         let page = NotePreviewPage.take()
@@ -37,6 +38,7 @@ struct NotePreview {
         if link?.page !== page { link?.page = page }
         page.link = link
         page.views = views
+        page.figureOnly = figureOnly
         if views?.page !== page { views?.page = page }
         page.show(text, baseURL: baseURL, math: math, accent: accent, callouts: callouts, dark: dark, revision: revision)
         page.reveal(anchor)

@@ -175,15 +175,7 @@ struct RootView: View {
 
     func moveToWindow(_ id: UUID) {
         guard let moved = tabs.take(id) else { return }
-        let focused = moved.focused
-        var request = WindowRequest(link: focused.current.link, course: focused.current.course, history: focused.history)
-        if moved.count > 1 {
-            request.panes = moved.navigators.map(\.history)
-            request.shares = moved.shares
-            request.focus = moved.focus
-        }
-        request.columns = moved.columns.map(\.names)
-        openWindow(id: FolioApp.mainWindow, value: request)
+        openWindow(id: FolioApp.mainWindow, value: WindowRequest(moving: moved))
     }
 
     func openFromOutside(_ link: AppLink) {
@@ -284,6 +276,10 @@ struct RootView: View {
                     WindowReader { window in
                         host.window = window
                         tabs.closeWindow = { [weak window] in window?.performClose(nil) }
+                        // SwiftUI가 새 창을 제자리에 놓은 뒤에 옮겨야 그 자리에 남는다.
+                        if let request, let frame = TabDragHub.shared.placement(for: request.id) {
+                            DispatchQueue.main.async { window.setFrame(window.constrainFrameRect(frame, to: window.screen), display: true) }
+                        }
                     }
                 }
                 .background { WindowWidth { row.windowWidth = $0 } }
@@ -316,7 +312,9 @@ struct RootView: View {
         #endif
         #if DEBUG && os(macOS)
         .task {
+            await MemoryProbe.run()
             await TabMemoryProbe.run(tabs: tabs, workspace: workspace)
+            await TabDragProbe.run(tabs: tabs, workspace: workspace)
             await PaneSessionProbe.run(tabs: tabs, workspace: workspace, memory: paneMemory) { open($0, in: .tab) }
             if SnapshotDriver.directory != nil { workspace.gradesUnlocked = true }
             if SnapshotDriver.recording, let course = workspace.currentCourses.first, let session = course.file.sessions.first {
@@ -343,6 +341,10 @@ struct RootView: View {
                 await SnapshotDriver.shared.runQuickAdd(
                     open: { open($0) }, course: course.id, other: workspace.currentCourses.dropFirst().first?.id,
                     named: String(course.title.split(separator: " ").first ?? ""))
+                return
+            }
+            if let note = SnapshotDriver.assets {
+                await SnapshotDriver.shared.runAssets(open: { open($0) }, note: note)
                 return
             }
             if SnapshotDriver.math, let note = workspace.currentCourses.lazy.compactMap({ $0.file.notes.first }).first {
@@ -553,7 +555,7 @@ struct RootView: View {
                     #endif
             }
             TabBar(
-                tabs: tabs, workspace: workspace, crumbs: crumbs, toolbar: row, moveToWindow: moveToWindow,
+                tabs: tabs, workspace: workspace, toolbar: row, moveToWindow: moveToWindow,
                 nameLayout: { namingLayout = $0 }, manageLayouts: manageLayouts)
         } trailing: {
             HStack(spacing: Theme.Space.s) {
@@ -624,11 +626,6 @@ struct RootView: View {
         .toolbarGroup()
         .buttonStyle(.toolbar)
         .menuStyle(.button)
-    }
-
-    var crumbs: [Crumb] {
-        let steps = if case .course = selection { tabs.trail(tabs.selected)?.crumbs ?? [] } else { [Crumb]() }
-        return [workspace.placeCrumb(of: navigator.current)] + steps
     }
 
     var panelEdge: CGFloat { sidebarOpen ? Theme.Size.sidebar : Theme.Size.panelInset }

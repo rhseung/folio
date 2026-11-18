@@ -286,3 +286,19 @@ struct SnippetTests {
         #expect(Snippet(trigger: "", body: "a$0b$2c$1", inMath: false).expanded == ("abc", 3))
     }
 }
+
+struct BlockInsertTests {
+    func inserted(_ s: String) -> String {
+        let m = Marked(s)
+        return Marked.show(m.text, SourceEditing.block("```b\n```", in: m.text, selection: m.selection))
+    }
+
+    @Test func aBlockTakesItsOwnLines() {
+        #expect(inserted("|") == "```b\n```\n|")
+        #expect(inserted("앞\n|\n뒤") == "앞\n```b\n```\n|뒤")
+        #expect(inserted("앞|뒤") == "앞\n```b\n```\n|뒤")
+        #expect(inserted("앞|") == "앞\n```b\n```\n|")
+        #expect(inserted("|뒤") == "```b\n```\n|뒤")
+        #expect(inserted("앞«고를»뒤") == "앞\n```b\n```\n|뒤")
+    }
+}

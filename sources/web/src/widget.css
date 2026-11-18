@@ -1,0 +1,55 @@
+/* 위젯 frame에 미리 넣는 겉 UI다. shadcn/ui처럼 중립 회색, 얇은 테두리, 작은 모서리, 시스템 산세리프, 포커스 링을 쓴다.
+   색은 노트 변수(--text, --line …)와 그림 스타일 변수(--ink, --p-blue …)에서만 가져온다. 위젯이 자기 스타일로 덮기 쉽게
+   모든 선택자를 :where()로 감싸 우선순위를 0으로 둔다. */
+@import "katex/dist/katex.css";
+
+:where(.katex) { font-size: 1.15em; }
+
+:where(button, .button) {
+  font: inherit; font-size: 13px; font-weight: 500; line-height: 20px; min-height: 32px; padding: 6px 12px;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--text); cursor: pointer;
+  box-shadow: 0 1px 2px rgb(0 0 0 / .04); transition: background-color .15s, color .15s, opacity .15s;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+:where(button, .button):hover { background: var(--fill); }
+:where(button, .button):disabled { opacity: .5; pointer-events: none; }
+:where(button.primary, .button.primary) { background: var(--text); color: var(--card); border-color: var(--text); }
+:where(button.primary, .button.primary):hover { background: var(--text); opacity: .88; }
+:where(button.ghost, .button.ghost) { background: transparent; border-color: transparent; box-shadow: none; color: var(--text-2); }
+:where(button.ghost, .button.ghost):hover { background: var(--fill); color: var(--text); }
+:where(button[aria-pressed="true"], .button[aria-pressed="true"]) { background: var(--fill); color: var(--text); }
+
+:where(.tabs) { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; max-width: 100%; }
+:where(.tabs) :where(button) { border-color: transparent; background: transparent; box-shadow: none; color: var(--text-2); }
+:where(.tabs) :where(button[aria-selected="true"], button[aria-pressed="true"]) { background: var(--fill); color: var(--text); }
+
+:where(input[type="range"]) { accent-color: var(--text); min-height: 32px; }
+:where(input[type="checkbox"], input[type="radio"]) { accent-color: var(--text); width: 16px; height: 16px; }
+:where(input[type="text"], input[type="number"], select, textarea) {
+  font: inherit; font-size: 13px; min-height: 32px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px;
+  background: transparent; color: var(--text); box-sizing: border-box;
+}
+:where(label) { font-size: 13px; color: var(--text-2); }
+
+:where(.badge) {
+  display: inline-flex; align-items: center; font-size: 12px; font-weight: 500; line-height: 16px; padding: 2px 8px;
+  border-radius: 6px; border: 1px solid var(--line); color: var(--text-2);
+}
+:where(.badge.good) { color: var(--p-green); border-color: color-mix(in srgb, var(--p-green) 40%, transparent); background: color-mix(in srgb, var(--p-green) 8%, transparent); }
+:where(.badge.bad) { color: var(--p-red); border-color: color-mix(in srgb, var(--p-red) 40%, transparent); background: color-mix(in srgb, var(--p-red) 8%, transparent); }
+
+:where(.board) { border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+
+:where(button, .button, input, select, textarea, [tabindex]):focus-visible {
+  outline: none; border-color: var(--text-3); box-shadow: 0 0 0 3px color-mix(in srgb, var(--text-3) 35%, transparent);
+}
+
+/* 손가락으로 누르는 기기에서는 앱의 터치 표적 크기를 지킨다(docs/design/input.md). */
+@media (pointer: coarse) {
+  :where(button, .button, input[type="text"], input[type="number"], select) { min-height: 44px; }
+  :where(input[type="range"]) { min-height: 44px; }
+  :where(input[type="checkbox"], input[type="radio"]) { width: 24px; height: 24px; }
+}
+
+/* 위젯 안의 그림(SVG)도 노트 그림과 같은 모양이다. 선과 글자는 --ink, 강조는 --p-* 변수로 칠한다. */
+:where(svg text) { font-family: -apple-system, "SF Pro Text", "Helvetica Neue", "Apple SD Gothic Neo", sans-serif; }

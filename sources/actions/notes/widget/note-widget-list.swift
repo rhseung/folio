@@ -13,6 +13,8 @@ public struct NoteWidgetList {
         let names = (try? FileManager.default.contentsOfDirectory(atPath: store.fileURL(folder).path)) ?? []
         let ids = names.compactMap { n in n.hasSuffix(".html") ? UUID(uuidString: String(n.dropLast(5))) : nil }
             .sorted { $0.uuidString < $1.uuidString }
-        return NoteFileItem.list(store, ids.map { ($0.uuidString, NoteWidget.path($0)) })
+        return NoteFileItem.list(store, ids.map { ($0.uuidString, NoteWidget.path($0)) }) { path in
+            (try? MaterialText.read(store, path)).flatMap(NoteWidget.title)
+        }
     }
 }

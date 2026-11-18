@@ -1,3 +1,4 @@
+import FolioActions
 import FolioDomain
 import FolioStorage
 import WebKit
@@ -14,10 +15,30 @@ import WebKit
     private(set) var frames: [String: WKFrameInfo] = [:]
 
     init(scripts: WKUserContentController) {
-        scripts.addUserScript(WKUserScript(source: NoteWidget.noPeersScript, injectionTime: .atDocumentStart, forMainFrameOnly: false))
-        scripts.addUserScript(WKUserScript(source: Self.themeScript, injectionTime: .atDocumentStart, forMainFrameOnly: false))
-        scripts.addUserScript(WKUserScript(source: Self.sizeScript, injectionTime: .atDocumentEnd, forMainFrameOnly: false, in: Self.world))
+        Self.isolate(scripts)
         scripts.add(Reports(self), contentWorld: Self.world, name: Reports.name)
+    }
+
+    // 위젯 페이지에 넣는 스크립트다. 노트 안의 frame과 애셋 서랍(썸네일, 크게 보기)이 같은 것을 넣어야 위젯이 어디서나
+    // 같은 제약 안에서 같은 모양으로 돈다. 높이는 `size` 처리기에 `{k, h, v}`로 알린다.
+    static func isolate(_ scripts: WKUserContentController) {
+        scripts.addUserScript(WKUserScript(source: NoteWidget.noPeersScript, injectionTime: .atDocumentStart, forMainFrameOnly: false))
+        scripts.addUserScript(WKUserScript(source: themeScript, injectionTime: .atDocumentStart, forMainFrameOnly: false))
+        scripts.addUserScript(WKUserScript(source: kitScript, injectionTime: .atDocumentStart, forMainFrameOnly: false))
+        scripts.addUserScript(WKUserScript(source: sizeScript, injectionTime: .atDocumentEnd, forMainFrameOnly: false, in: world))
+    }
+
+    static func url(_ id: UUID, key: String, accent: CourseAccent) -> URL? {
+        var url = URLComponents()
+        url.scheme = WidgetFiles.scheme
+        url.host = "widget"
+        url.path = "/" + id.uuidString
+        // 글자와 숫자 외의 모든 문자를 이스케이프한다. `+`, `&`, `=`를 그대로 두면 테마 값이 갈라지고, 주소는 그대로 속성에 들어간다.
+        let encode = { (s: String) in s.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? "" }
+        url.percentEncodedQueryItems = [
+            URLQueryItem(name: "k", value: encode(key)), URLQueryItem(name: "t", value: encode(themeCSS(accent))),
+        ]
+        return url.url
     }
 
     func begin(folder: URL?, accent: CourseAccent) {
@@ -54,16 +75,7 @@ import WebKit
         // 두고 위젯이 계속 돌려면 frame의 HTML이 같아야 하기 때문이다.
         let height = max(m.2.flatMap { Int($0) } ?? 320, 16)
         if sizers[key] == nil { sizers[key] = WidgetSizer() }
-        var url = URLComponents()
-        url.scheme = WidgetFiles.scheme
-        url.host = "widget"
-        url.path = "/" + id.uuidString
-        // 글자와 숫자 외의 모든 문자를 이스케이프한다. `+`, `&`, `=`를 그대로 두면 테마 값이 갈라지고, 주소는 그대로 속성에 들어간다.
-        let encode = { (s: String) in s.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? "" }
-        url.percentEncodedQueryItems = [
-            URLQueryItem(name: "k", value: encode(key)), URLQueryItem(name: "t", value: encode(Self.themeCSS(accent))),
-        ]
-        let src = url.url?.absoluteString ?? ""
+        let src = Self.url(id, key: key, accent: accent)?.absoluteString ?? ""
         return
             "<iframe class=\"cb-widget\" sandbox=\"allow-scripts\" data-key=\"\(key)\" data-height=\"\(height)\" src=\"\(src)\"></iframe>\n"
     }
@@ -76,10 +88,10 @@ import WebKit
 
     // MARK: Scripts
 
-    private static let world = WKContentWorld.world(name: "folio-widget")
+    static let world = WKContentWorld.world(name: "folio-widget")
 
     private final class Reports: NSObject, WKScriptMessageHandler {
-        static let name = "size"
+        static let name = NoteWidgets.sizeHandler
         weak var widgets: NoteWidgets?
         init(_ widgets: NoteWidgets) { self.widgets = widgets }
 
@@ -91,11 +103,13 @@ import WebKit
         }
     }
 
+    static let sizeHandler = "size"
+
     // `scrollHeight`가 아니라 루트 요소의 상자를 잰다. `scrollHeight`는 frame보다 작아지지 않아서 커지기만 한다.
     private static let sizeScript = """
         if (location.protocol === '\(WidgetFiles.scheme):') {
           const html = document.documentElement, k = new URLSearchParams(location.search).get('k')
-          const report = () => webkit.messageHandlers.\(Reports.name).postMessage({ k, h: html.getBoundingClientRect().height, v: innerHeight })
+          const report = () => webkit.messageHandlers.\(sizeHandler).postMessage({ k, h: html.getBoundingClientRect().height, v: innerHeight })
           new ResizeObserver(report).observe(html); addEventListener('resize', report); report()
         }
         """
@@ -107,6 +121,9 @@ import WebKit
           if (t !== null) { const s = document.createElement('style'); s.id = 'folio-theme'; s.textContent = t; document.documentElement.prepend(s) }
         }
         """
+
+    // 노트 페이지 frame에는 넣지 않는다. KaTeX와 위젯 스타일이 노트 페이지의 것과 부딪히기 때문이다.
+    private static let kitScript = "if (location.protocol === '\(WidgetFiles.scheme):') {\n\(NoteWidgetKit.script)\n}"
 
     static func themeCSS(_ accent: CourseAccent) -> String {
         NoteStyle.variables(accent: accent)
