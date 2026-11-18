@@ -56,7 +56,8 @@ enum PageRender {
     static func widget(_ html: String, accent: String, widths: [Int]) throws -> RenderResult {
         let page = String(decoding: NoteWidget.withPolicy(Data(html.utf8)), as: UTF8.self)
         let (images, console) = try shots(page, scripts: widgetScripts(accent: accent), widths: widths, start: 320, settle: 0.6)
-        return RenderResult(images: images, console: console, problems: NoteWidget.problems(html).map(\.message))
+        return RenderResult(
+            images: images, console: console, problems: (NoteWidget.problems(html) + NoteWidget.markerProblems(html)).map(\.message))
     }
 
     static func shots(_ page: String, scripts: [String], widths: [Int], start: Int, settle: TimeInterval) throws -> (

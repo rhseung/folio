@@ -121,6 +121,33 @@ struct NoteFigureTests {
         #expect(NoteWidget.problems(own).isEmpty)
     }
 
+    @Test func widgetArrowheadsThatIgnoreTheThemeAreReported() {
+        #expect(NoteWidget.markerProblems(#"<svg><line x2="9" marker-end="url(#m-ink)"/></svg>"#).isEmpty)
+        let page = #"""
+            <svg><defs><marker id="a" viewBox="0 0 10 10"><path d="M0,0 L10,5 L0,10 z"/></marker>
+            <marker id="b"><path d="M0,0 L10,5 z" fill="#1A2FFF"/></marker>
+            <marker id="c"><path style="stroke-width: 1; fill: var(--p-red)"/></marker>
+            <marker id="d" fill="currentColor"><path/></marker>
+            <marker id="e"><path class="head"/></marker>
+            <marker id="f"><path fill="none" stroke="black"/></marker></defs></svg>
+            <script>svg.innerHTML = '<marker id="g"><path d="M0,0"/></marker>' + `<marker id="h"><path fill="${color}"/></marker>`</script>
+            """#
+        #expect(
+            NoteWidget.markerProblems(page) == [
+                .blackMarker("#a"), .fixedMarker("#b", color: "#1A2FFF"), .fixedMarker("#f", color: "black"), .blackMarker("#g"),
+            ])
+        // 촉의 색은 그려 보기에서만 알리고 쓰기를 막지 않는다.
+        #expect(NoteWidget.problems(page).isEmpty)
+
+        let ruled = #"<style>.x{fill:red} marker path { fill: var(--ink) }</style><svg><marker id="a"><path/></marker></svg>"#
+        #expect(NoteWidget.markerProblems(ruled).isEmpty)
+        let fixedRule = #"<style>svg marker > path { fill: #000 }</style><svg><marker id="a"><path/></marker></svg>"#
+        #expect(NoteWidget.markerProblems(fixedRule) == [.fixedMarker("#a", color: "#000")])
+        // `marker-end`를 고르는 규칙은 촉이 아니라 선을 칠한다.
+        let lineRule = #"<style>line[marker-end] { fill: none }</style><svg><marker id="a"><path/></marker></svg>"#
+        #expect(NoteWidget.markerProblems(lineRule) == [.blackMarker("#a")])
+    }
+
     @Test func widgetFilesSitInTheCourseMetadata() {
         let id = UUID(uuidString: "FA090AB5-3039-4DDC-9011-498363A9A2D3")!
         #expect(NoteWidget.path(id) == ".folio/widgets/FA090AB5-3039-4DDC-9011-498363A9A2D3.html")

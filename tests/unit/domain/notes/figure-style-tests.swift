@@ -53,6 +53,19 @@ struct FigureStyleTests {
         #expect(marker.contains("d=\"M0,0 L11.5,4.3 L0,8.6 L2.3,4.3 z\" class=\"p-blue\""))
     }
 
+    // 위젯은 클래스 규칙 없이 변수로 칠한 같은 촉을 받는다. 숨긴 SVG가 `display:none`이면 촉을 그리지 않는 브라우저가 있다.
+    @Test func widgetArrowheadsArePaintedWithTheVariables() {
+        let markers = FigureStyle.widgetMarkers
+        for ink in FigureStyle.inks {
+            let painted = FigureStyle.marker(ink).replacingOccurrences(
+                of: "class=\"\(ink.fill)\"", with: "style=\"fill:var(--\(ink.name))\"")
+            #expect(markers.contains(painted), "\(ink.name)")
+            #expect(FigureStyle.variables.contains("--\(ink.name):"), "\(ink.name)")
+        }
+        #expect(markers.hasPrefix("<svg id=\"folio-figure-markers\""))
+        #expect(!markers.contains("class=") && !markers.contains("display:none") && markers.contains("width:0;height:0"))
+    }
+
     @Test func theEngineGetsTheWholeTable() throws {
         let table = try JSONSerialization.jsonObject(with: Data(FigureStyle.engineJSON.utf8)) as? [String: Any]
         #expect(table?["css"] as? String == FigureStyle.css)

@@ -1992,6 +1992,28 @@
         }
       }
     },
+    "widget.problem.marker-black": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "화살촉(%@)에 색이 없어 라이트와 다크 모두 검정으로 그려집니다. 촉을 직접 그리지 않고 marker-end=\"url(#m-ink)\"처럼 선과 같은 색의 m-이름을 씁니다"
+          }
+        }
+      }
+    },
+    "widget.problem.marker-fixed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "화살촉(%1$@)을 고정 색 %2$@로 칠해서 다크에서 바뀌지 않습니다. 촉을 직접 그리지 않고 marker-end=\"url(#m-ink)\"처럼 선과 같은 색의 m-이름을 씁니다"
+          }
+        }
+      }
+    },
     "model.noun.note-widget": {
       "extractionState": "manual",
       "localizations": {

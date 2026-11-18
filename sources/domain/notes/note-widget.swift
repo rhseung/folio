@@ -31,11 +31,15 @@ public enum NoteWidget {
     public enum Problem: Hashable, Sendable {
         case empty
         case external(String)
+        case blackMarker(String)
+        case fixedMarker(String, color: String)
 
         public var message: String {
             switch self {
             case .empty: String(localized: .widgetProblemEmpty)
             case .external(let ref): String(localized: .widgetProblemExternal(ref))
+            case .blackMarker(let marker): String(localized: .widgetProblemMarkerBlack(marker))
+            case .fixedMarker(let marker, let color): String(localized: .widgetProblemMarkerFixed(marker, color))
             }
         }
     }
@@ -53,6 +57,54 @@ public enum NoteWidget {
         let problems = found.filter { !inside($0) }.map(Problem.external)
         var seen: Set<Problem> = []
         return problems.filter { seen.insert($0).inserted }
+    }
+
+    // 위젯이 직접 그린 화살촉 중 테마를 따르지 않는 것이다. 쓰기를 막지 않고 그려 보기에서만 알린다. 스크립트 문자열
+    // 안의 `<marker>`도 보려고 HTML을 읽지 않고 글로 찾으므로, 놓치는 경우는 있어도 막을 근거로 쓰지 않는다.
+    // 촉의 색은 `<marker>`와 그 안 도형의 fill·stroke, `<style>`에서 `marker` 요소를 고르는 규칙에서 읽는다. fill이 하나도
+    // 없으면 SVG 기본값인 검정이다. class를 단 촉은 위젯의 CSS가 칠한다고 보고 넘어간다.
+    public static func markerProblems(_ html: String) -> [Problem] {
+        let rules = html.matches(of: /<style\b[^>]*>(.*?)<\/style\s*>/.ignoresCase().dotMatchesNewlines()).flatMap { style in
+            String(style.1).matches(of: /([^{}]*(?:^|[^\w-])marker(?![\w-])[^{}]*)\{([^}]*)\}/.ignoresCase()).map { String($0.2) }
+        }
+        let ruled = paints(declarations: rules.joined(separator: ";"))
+        var found: [Problem] = []
+        for m in html.matches(of: /<marker\b([^>]*)>(.*?)<\/marker\s*>/.ignoresCase().dotMatchesNewlines()) {
+            let tags = String(m.0)
+            let id = m.1.firstMatch(of: /\bid\s*=\s*\\?["']([^"'\\]+)/).map { "#" + $0.1 } ?? "<marker>"
+            var fills = ruled.fills, strokes = ruled.strokes
+            for a in tags.matches(of: /\b(fill|stroke)\s*=\s*\\?["']([^"'\\]*)/.ignoresCase()) {
+                if a.1.lowercased() == "fill" { fills.append(String(a.2)) } else { strokes.append(String(a.2)) }
+            }
+            for a in tags.matches(of: /\bstyle\s*=\s*\\?["']([^"'\\]*)/.ignoresCase()) {
+                let declared = paints(declarations: String(a.1))
+                fills += declared.fills
+                strokes += declared.strokes
+            }
+            let fixed = (fills + strokes).map { $0.trimmingCharacters(in: .whitespaces) }.first { !followsTheme($0) }
+            if let fixed {
+                found.append(.fixedMarker(id, color: fixed))
+            } else if fills.isEmpty, tags.firstMatch(of: /\bclass(?:Name)?\s*=/) == nil {
+                found.append(.blackMarker(id))
+            }
+        }
+        var seen: Set<Problem> = []
+        return found.filter { seen.insert($0).inserted }
+    }
+
+    static func paints(declarations css: String) -> (fills: [String], strokes: [String]) {
+        var fills: [String] = [], strokes: [String] = []
+        for d in css.matches(of: /(?:^|[\s;{])(fill|stroke)\s*:\s*([^;}"']+)/.ignoresCase()) {
+            if d.1.lowercased() == "fill" { fills.append(String(d.2)) } else { strokes.append(String(d.2)) }
+        }
+        return (fills, strokes)
+    }
+
+    // CSS 변수와 currentColor는 노트 색을 따른다. `${…}`는 스크립트가 넣는 값이라 알 수 없다.
+    static func followsTheme(_ paint: String) -> Bool {
+        let v = paint.replacing(/\s*!important$/.ignoresCase(), with: "").lowercased()
+        return v.hasPrefix("var(") || v.contains("${") || v.hasPrefix("url(")
+            || ["none", "transparent", "currentcolor", "inherit", "context-fill", "context-stroke", ""].contains(v)
     }
 
     static func inside(_ ref: String) -> Bool {

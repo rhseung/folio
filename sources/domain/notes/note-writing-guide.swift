@@ -45,6 +45,7 @@ public enum NoteWritingGuide {
             - HTML 파일 하나가 격리된 frame에서 돈다. 인라인 `<script>`와 `<style>`만 되고, 네트워크·CDN·바깥 파일, 링크와 페이지 이동, 저장(상태는 다시 열면 처음부터)은 안 된다. 이미지는 `data:`/`blob:`.
             - 색은 미리 들어 있는 CSS 변수로만 쓴다. 라이트·다크를 따라간다. 노트 색 `--text --text-2 --text-3 --line --line-soft --fill --code-fill --card --accent --accent-ink`, `--c-definition --c-theorem --c-example --c-warning --c-danger --c-neutral`, 그림 색 \#(variables). 바탕은 투명, `body`는 여백 0, 14px 시스템 글꼴.
             - 컨트롤은 맨 `<button>`, `<input>`, `<select>`를 쓰면 회색 얇은 테두리 스타일이 들어 있다. `button.primary`, `button.ghost`, 켠 상태는 `aria-pressed="true"`, 탭은 `<div class="tabs">` 안의 버튼과 `aria-selected`, 배지 `.badge`(`.good`, `.bad`), 그림 판 `.board`. 안쪽 그림(그래프, 행렬, 좌표)은 위의 그림 스타일을 `var(--p-blue)`처럼 쓴다.
+            - 화살표는 촉을 직접 그리지 않고 `marker-end="url(#m-ink)"`처럼 선과 같은 색의 `m-이름`을 쓴다. 그림과 같은 촉이 frame에 들어 있고 라이트·다크를 따라간다. 직접 그린 `<marker>`는 색을 주지 않으면 검정이 되고, 그려 보기가 이것을 알린다.
             - KaTeX가 들어 있다. 글과 SVG `<text>`의 `$…$`는 저절로 수식이 되고, 스크립트는 `katex.renderToString`이나 `folioTypeset(요소)`를 부른다. 버튼과 배지의 수식도 `$…$`로 쓰고 유니코드 위·아래 첨자로 흉내 내지 않는다.
             - 대상을 직접 누르거나 끌게 한다(정점을 눌러 고르기, 점을 끌어 벡터 바꾸기). 한 부분을 고르는 컨트롤은 그 부분 옆에, 결과는 누른 자리 가까이에 둔다. 지금 고른 것은 늘 보인다. 모든 조작이 터치로 되고 누를 곳은 44pt 이상이다. 만든 뒤 쓰는 순서대로 눌러 보고 손이 멀리 오가는 곳을 고친다.
             - 높이는 내용을 따라 자라고 위젯 안은 스크롤되지 않는다. `height`는 처음 높이다. `100vh`처럼 frame을 따르는 높이를 쓰면 `height`가 그대로 남는다. 폭은 노트 열(390~720pt)이니 고정 폭 대신 폭에 맞추고, 넓은 것은 가로 스크롤.
