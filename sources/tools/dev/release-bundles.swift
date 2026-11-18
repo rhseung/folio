@@ -12,7 +12,8 @@ enum ReleaseBundles {
     }
 
     static func all() throws -> [ReleasePlan.Bundle] {
-        let labels = try Shell.run("gh", "label", "list", "--search", ReleasePlan.bundlePrefix, "--limit", "200", "--json", "name")
+        // `gh label list --search`는 이름의 앞부분이 아니라 설명의 낱말로도 찾으므로 모두 받아 거른다.
+        let labels = try Shell.run("gh", "label", "list", "--limit", "1000", "--json", "name")
         return try list(Label.self, labels).compactMap { label in
             guard let name = ReleasePlan.bundleName(ofLabel: label.name) else { return nil }
             let json = try Shell.run(
