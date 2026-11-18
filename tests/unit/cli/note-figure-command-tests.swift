@@ -147,4 +147,45 @@ struct NoteFigureCommandTests {
         #expect(result.images.count == 2)
         #expect(result.console.contains { $0.contains("undefinedFn") && $0.contains("line 4") }, "\(result.console)")
     }
+
+    // viewBox 폭 100인 그림을 300pt에 그리면 배율이 3이다. 수식 라벨이 SVG 좌표를 따르면 가운데가 그림 폭의 x/100에
+    // 놓이고, 배율 없이 그려지면 x px(그림 폭의 x/300) 자리에 남는다. 위젯이 나중에 x를 바꿔도 따라가야 한다.
+    @Test(.enabled(if: folio != nil)) func mathLabelsFollowTheWidgetsViewBox() throws {
+        let widget = #"""
+            <!doctype html>
+            <svg viewBox="0 0 100 50" style="width:100%;display:block">
+              <text id="t" x="50" y="25" text-anchor="middle" font-size="10">$x^2$</text>
+            </svg>
+            <script>
+            const t = document.getElementById('t')
+            const where = (label) => {
+              const svg = t.ownerSVGElement.getBoundingClientRect(), g = t.nextElementSibling
+              const box = g?.getBoundingClientRect()
+              console.warn(label + ' ' + JSON.stringify({
+                drawn: t.hasAttribute('data-folio-math'), foreign: document.querySelectorAll('foreignObject').length,
+                center: box ? (box.left + box.width / 2 - svg.left) / svg.width : -1, height: box ? box.height / (svg.width / 100) : -1,
+              }))
+            }
+            setTimeout(() => { where('first'); t.setAttribute('x', '80'); setTimeout(() => where('moved'), 30) }, 30)
+            </script>
+            """#
+        let result = try render(["note", "widget", "render", "--text", widget])
+        struct Place: Decodable {
+            var drawn: Bool
+            var foreign: Int
+            var center: Double
+            var height: Double
+        }
+        func place(_ label: String) throws -> Place {
+            let line = try #require(result.console.first { $0.contains(": \(label) ") }, "\(result.console)")
+            let json = try #require(line.split(separator: " ", maxSplits: 2).last)
+            return try JSONDecoder().decode(Place.self, from: Data(json.utf8))
+        }
+        let first = try place("first"), moved = try place("moved")
+        #expect(first.drawn && first.foreign == 0)
+        #expect(abs(first.center - 0.5) < 0.03, "\(first)")
+        #expect(abs(moved.center - 0.8) < 0.03, "\(moved)")
+        // 글자 크기 10의 x²는 사용자 좌표로 대략 7~14 높이다. 배율을 잃으면 그 1/3이 된다.
+        #expect((7...16).contains(first.height), "\(first)")
+    }
 }
