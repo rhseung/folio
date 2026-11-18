@@ -8,7 +8,7 @@ public enum DueUrgency: Int, Comparable, Sendable {
     }
 
     public init(due: Date, now: Date, settings: Settings, calendar: Calendar) {
-        self.init(studyDays: RelativeDate.days(due, from: now, settings: settings, calendar: calendar), settings: settings.urgency)
+        self.init(studyDays: HumanDate.days(due, from: now, settings: settings, calendar: calendar), settings: settings.urgency)
     }
 
     public static func < (a: Self, b: Self) -> Bool { a.rawValue < b.rawValue }

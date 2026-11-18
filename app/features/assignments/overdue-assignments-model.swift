@@ -24,14 +24,14 @@ final class OverdueAssignmentsModel {
     struct Row: Identifiable {
         var courseId: UUID
         var assignment: Assignment
-        var past: String
+        var due: String
         // 마감이 지났는데 LMS에는 아직 내지 않았다. Folio에서 제출함으로 둔 과제도 이것 때문에 여기 온다.
         var lms: URL?
         var id: UUID { assignment.id }
 
-        // Folio에서 이미 낸 과제는 지난 때보다 LMS에 아직 안 낸 것이 여기 있는 이유다.
+        // Folio에서 이미 낸 과제는 마감보다 LMS에 아직 안 낸 것이 여기 있는 이유다.
         var trailing: String {
-            assignment.status.isOpen || lms == nil ? past : String(localized: .lmsNotSubmitted)
+            assignment.status.isOpen || lms == nil ? due : String(localized: .lmsNotSubmitted)
         }
     }
 
@@ -52,9 +52,9 @@ final class OverdueAssignmentsModel {
     }
 
     private func row(_ a: Assignment, in course: LoadedCourse, lms: URL?, now: Date) -> Row {
-        // 과제 목록과 같은 셈으로 지난 때를 쓴다. 마감 시각과 감점은 과제 시트에서 본다.
-        let past = RelativeDate.distance(a.due ?? now, from: now, settings: workspace.settings, calendar: workspace.calendar)
-        return Row(courseId: course.id, assignment: a, past: past, lms: lms)
+        // 감점과 상한은 과제 시트에서 본다.
+        let due = HumanDate.text(a.due ?? now, from: now, time: true, settings: workspace.settings, calendar: workspace.calendar)
+        return Row(courseId: course.id, assignment: a, due: due, lms: lms)
     }
 
     func accent(_ row: Row) -> CourseAccent { workspace.accent(row.courseId) }

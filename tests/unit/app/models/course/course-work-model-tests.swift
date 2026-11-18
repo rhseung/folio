@@ -88,26 +88,26 @@ struct AssignmentsModelTests {
         #expect(groups[1].items.map(\.title) == ["HW 2", "HW 3"])
         #expect(groups.map(\.group.label) == ["마감 지남", "진행 중"])
 
-        // 하루 안의 마감은 시간 단위로 세고 아래 줄에 날과 시각을 둔다. 그 날은 공부일 경계에 따라 오늘이거나 어제다.
-        // 하루를 넘는 마감은 상대 날짜와 요일, 시각이다. 급한 정도는 색으로만 보인다.
+        // 위 줄은 날, 아래 줄은 시각이다. 오늘이면 날 없이 시각이 위 줄이다. 2시간 전 마감은 공부일 경계에 따라 오늘이거나 어제다.
+        // 일주일 안은 요일이다. 급한 정도는 색으로만 보인다.
         let late = groups[0].items[0]
         let overdue = model.due(late, now: now)
-        #expect(overdue.date == "2시간 전" && overdue.tone == .danger)
-        #expect(["오늘", "어제"].contains { overdue.time?.hasPrefix($0 + " ") == true })
+        #expect(overdue.tone == .danger)
+        #expect(overdue.date == "어제" ? overdue.time != nil : overdue.time == nil && overdue.date.contains(":"))
         let soon = model.due(groups[1].items[0], now: now)
-        #expect(soon.date == "5일 뒤" && soon.tone == .warning && soon.time?.split(separator: " ").count == 3)
+        #expect(soon.date.hasSuffix("요일") && soon.tone == .warning && soon.time != nil)
         #expect(model.due(groups[1].items[1], now: now).date == "마감 없음")
         model.setStatus(late, .submitted)
         #expect(model.groups(now: now).map(\.group) == [.open, .submitted])
         // 늦게 낸 과제는 칩 대신 낸 시각을 빨갛게 보인다.
         let hw1 = try #require(model.course.file.assignments.first { $0.title == "HW 1" })
         #expect(model.due(hw1, now: now).tone == .plain && model.row(hw1).lateSubmitted)
-        // 주로 세는 마감은 요일과 시각 대신 날짜만 쓴다.
+        // 일주일보다 먼 마감은 요일 대신 날짜를 쓴다.
         workspace.run(AssignmentAdd(course: linearAlgebra, title: "HW 4", due: now + 10 * 86_400))
         let hw4 = try #require(model.course.file.assignments.first { $0.title == "HW 4" })
         let far = model.due(hw4, now: now)
         let farDue = try #require(hw4.due)
-        #expect(far.date == "1주 뒤" && far.time == CourseFile.day(farDue, calendar: workspace.calendar))
+        #expect(far.date == CourseFile.day(farDue, calendar: workspace.calendar) && far.time != nil)
     }
 
     @Test func sheetOffersGroupsAsATreeAndFillsTheLastMax() throws {

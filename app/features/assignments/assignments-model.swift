@@ -73,7 +73,7 @@ final class AssignmentsModel {
             lateSubmitted: !a.status.isOpen && file.lateness(of: a, at: workspace.now) != nil)
     }
 
-    // 마감은 공부일로 센 상대 날짜와 시각으로 보인다. 하루 안이면 시간, 한 시간 안이면 분, 7일부터는 주, 30일부터는 달로 센다. 급한 정도는 상대 날짜의 색으로만 보이고 칩은 두지 않는다.
+    // 급한 정도는 날짜의 색으로만 보이고 칩은 두지 않는다.
     struct Due {
         var date: String
         var time: String?
@@ -84,7 +84,6 @@ final class AssignmentsModel {
         guard let due = a.due else { return Due(date: String(localized: .assignmentsNoDue), tone: .plain) }
         let c = workspace.calendar
         let settings = workspace.settings
-        let days = RelativeDate.days(due, from: now, settings: settings, calendar: c)
         let tone: Tone =
             if !a.status.isOpen {
                 .plain
@@ -97,21 +96,9 @@ final class AssignmentsModel {
                 case .later: .plain
                 }
             }
-        let date = RelativeDate.distance(due, from: now, settings: settings, calendar: c)
-        let day = RelativeDate.day(due, from: now, settings: settings, calendar: c, short: true)
-        // 종일 마감은 시각이 없어서 위 줄이 이미 "오늘", "내일"이면 아래 줄을 비운다.
-        guard RelativeDate.hasTime(due, calendar: c) else { return Due(date: date, time: abs(days) <= 1 ? nil : day, tone: tone) }
-        let time = RelativeDate.time(due, calendar: c)
-        // 하루 안이면 위 줄이 남은 시간이므로, 아래 줄에 어느 날의 몇 시인지 둔다.
-        if RelativeDate.within(due, from: now) != nil { return Due(date: date, time: day + " " + time, tone: tone) }
-        // 날짜와 시각을 함께 쓰면 좁은 폭에서 날짜 칸을 넘어 꺾이므로, 시각은 일주일 안으로 들어올 때부터 보인다.
-        let when =
-            switch abs(days) {
-            case ...1: time
-            case ..<RelativeDate.week: day + " " + time
-            default: day
-            }
-        return Due(date: date, time: when, tone: tone)
+        // 날과 시각을 두 줄로 나눈다. 한 줄로 쓰면 좁은 폭에서 날짜 칸을 넘어 꺾인다. 오늘이면 날 없이 시각이 첫 줄이다.
+        let parts = HumanDate.parts(due, from: now, time: true, settings: settings, calendar: c)
+        return Due(date: parts.day ?? parts.time ?? "", time: parts.day == nil ? nil : parts.time, tone: tone)
     }
 }
 

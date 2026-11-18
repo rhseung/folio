@@ -19,10 +19,10 @@ struct OverdueAssignmentsModelTests {
         let rows = model.rows(now: now)
         #expect(rows.map(\.id).filter { [late, lost].contains($0) } == [lost, late])
         let row = try #require(rows.first { $0.id == late })
-        // 지난 때는 과제 목록과 같은 표기다. 한 시간 전은 "1시간 전"이고, 5일 전은 공부일로 센다.
-        #expect(["1시간 전", "59분 전"].contains(row.past))
+        // 마감은 과제 목록과 같은 표기다. 한 시간 전은 시각이고, 5일 전은 공부일로 센 요일과 시각이다.
+        #expect(row.due.contains(":"))
         let gone = try #require(rows.first { $0.id == lost })
-        #expect(gone.past == "5일 전" && gone.trailing == gone.past)
+        #expect(gone.due.contains("요일 ") && gone.trailing == gone.due)
 
         model.set(row, .submitted)
         model.set(gone, .missed)
@@ -56,8 +56,8 @@ struct OverdueAssignmentsModelTests {
         let model = OverdueAssignmentsModel(workspace: workspace)
         let rows = model.rows(now: now).filter { $0.lms != nil }
         #expect(rows.map(\.id) == [try #require(added(10)).id, submitted])
-        // 할 일인 과제는 지난 때를, Folio에서 낸 과제는 LMS에 안 낸 것을 보인다.
-        #expect(rows[0].trailing == rows[0].past && rows[1].trailing == "LMS 미제출")
+        // 할 일인 과제는 마감을, Folio에서 낸 과제는 LMS에 안 낸 것을 보인다.
+        #expect(rows[0].trailing == rows[0].due && rows[1].trailing == "LMS 미제출")
         #expect(rows[1].lms == snapshot.assignments[1].url)
     }
 

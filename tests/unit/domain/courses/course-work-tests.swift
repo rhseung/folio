@@ -729,8 +729,8 @@ struct AssignmentFilesTests {
         func urgency(_ due: Date) -> DueUrgency { DueUrgency(due: due, now: at(29, 2), settings: settings, calendar: calendar) }
 
         // 29일 02:00의 공부일은 아직 28일이다.
-        #expect(RelativeDate.days(at(29, 3), from: at(29, 2), settings: settings, calendar: calendar) == 0)
-        #expect(RelativeDate.days(at(29, 5), from: at(29, 2), settings: settings, calendar: calendar) == 1)
+        #expect(HumanDate.days(at(29, 3), from: at(29, 2), settings: settings, calendar: calendar) == 0)
+        #expect(HumanDate.days(at(29, 5), from: at(29, 2), settings: settings, calendar: calendar) == 1)
         #expect(urgency(at(29, 3)) == .urgent)
         #expect(urgency(at(30, 2)) == .urgent)
         #expect(urgency(at(30, 5)) == .soon)

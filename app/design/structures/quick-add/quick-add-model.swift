@@ -44,7 +44,9 @@ final class QuickAddModel {
     func accent(_ id: UUID) -> CourseAccent { workspace.accent(id) }
 
     func due(_ parsed: QuickAdd) -> String? {
-        parsed.due.map { CourseFile.deadline($0, calendar: workspace.calendar, locale: locale) }
+        parsed.due.map {
+            HumanDate.text($0, from: workspace.now, time: true, settings: workspace.settings, calendar: workspace.calendar, locale: locale)
+        }
     }
 
     enum Chip: Hashable {
@@ -108,11 +110,7 @@ final class QuickAddModel {
         workspace.settings.schedule.due(on: workspace.now, calendar: workspace.calendar)
     }
 
-    // 옆에 마감 날짜와 시각이 이미 있어서 남은 때만 쓴다.
-    func left(_ due: Date) -> (text: String, overdue: Bool) {
-        let now = workspace.now
-        return (RelativeDate.distance(due, from: now, settings: workspace.settings, calendar: workspace.calendar), due < now)
-    }
+    func overdue(_ due: Date) -> Bool { due < workspace.now }
 
     var kinds: [AssignmentKind] { workspace.settings.assignmentKindTable }
 

@@ -106,10 +106,7 @@ struct QuickAddChip: View {
         label(fill: Theme.Palette.readDue) {
             Image(systemName: "clock")
             if let date, let parsed = model.parsed, let text = model.due(parsed) {
-                Text(text)
-                let left = model.left(date)
-                Text(left.text).foregroundStyle(
-                    left.overdue ? Theme.Palette.danger : Theme.Palette.readDueInk.opacity(Theme.Opacity.secondaryInk))
+                Text(text).foregroundStyle(model.overdue(date) ? Theme.Palette.danger : Theme.Palette.readDueInk)
             } else {
                 Text(.quickAddAddDue)
             }

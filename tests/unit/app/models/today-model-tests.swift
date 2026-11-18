@@ -69,7 +69,7 @@ struct TodayModelTests {
         let c = workspace.calendar
         func at(_ day: Int, _ hour: Int) -> Date { c.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour))! }
         let now = at(28, 12)
-        // C는 6일 뒤라서 마지막 "곧"이고, 7일 뒤인 D부터 주로 센다.
+        // C는 6일 뒤라서 마지막 "곧"이고 요일로 쓴다. 7일 뒤인 D부터는 날짜로 쓴다.
         let dues = [("A", at(28, 20)), ("B", at(29, 23)), ("C", at(34, 9)), ("D", at(35, 9)), ("E", at(39, 12)), ("F", at(40, 9))]
         for (title, due) in dues { workspace.run(AssignmentAdd(course: graphTheory, title: title, due: due)) }
         let summary = model.summary(now: now)
@@ -77,11 +77,11 @@ struct TodayModelTests {
         let rows = model.deadlineRows(mine, now: now)
         #expect(rows.map(\.item.assignment.title) == ["A", "B", "C", "D", "E", "F"])
         #expect(rows.map(\.urgency) == [.urgent, .urgent, .soon, .later, .later, .later])
-        // 하루 안이면 남은 시간만, 내일이면 시각을 붙이고, 그보다 멀면 날 수만 쓴다.
-        #expect(rows[0].due == "8시간 뒤")
+        // 오늘은 시각만, 내일은 "내일"과 시각, 일주일 안은 요일과 시각, 그보다 멀면 날짜와 시각이다.
+        #expect(rows[0].due == TimePicker.label(20 * 60))
         #expect(rows[1].due == "내일 " + TimePicker.label(23 * 60))
-        #expect(rows[2].due == "6일 뒤")
-        #expect(rows[3].due == "1주 뒤")
+        #expect(rows[2].due == "화요일 " + TimePicker.label(9 * 60))
+        #expect(rows[3].due == CourseFile.day(at(35, 9), calendar: c) + " " + TimePicker.label(9 * 60))
 
         #expect(model.shownDeadlines(rows).more == 0)
         workspace.run(AssignmentAdd(course: graphTheory, title: "G", due: at(41, 9)))
@@ -110,11 +110,11 @@ struct TodayModelTests {
         let summary = model.summary(now: at(29, 2))
         let rows = model.deadlineRows(summary.deadlines.filter { dues.map(\.0).contains($0.assignment.title) }, now: at(29, 2))
         #expect(rows.map(\.item.assignment.title) == ["before", "after", "nextNight", "third"])
-        // 하루 안의 마감은 시간으로 세고, 꼭 하루 뒤인 nextNight는 공부일로 내일이다.
-        #expect(rows[0].due == "1시간 뒤")
-        #expect(rows[1].due == "3시간 뒤")
+        // before는 꼭 한 시간 뒤라 분으로 세지 않고, 경계 전이라 오늘이다. after와 nextNight는 공부일로 내일이다.
+        #expect(rows[0].due == TimePicker.label(3 * 60))
+        #expect(rows[1].due == "내일 " + TimePicker.label(5 * 60))
         #expect(rows[2].due == "내일 " + TimePicker.label(2 * 60))
-        #expect(rows[3].due == "2일 뒤")
+        #expect(rows[3].due == "금요일 " + TimePicker.label(5 * 60))
         #expect(rows.map(\.urgency) == [.urgent, .urgent, .urgent, .soon])
     }
 
@@ -188,9 +188,9 @@ struct QuickAddModelTests {
         #expect(parsed.courseId.flatMap(model.courseTitle) == "그래프 이론")
 
         model.locale = Locale(identifier: "ko_KR@hours=h23")
-        #expect(model.due(parsed)?.hasSuffix("(금) 23:59") == true)
+        #expect(model.due(parsed)?.hasSuffix("23:59") == true)
         model.locale = Locale(identifier: "ko_KR@hours=h12")
-        #expect(model.due(parsed)?.hasSuffix("(금) 오후 11:59") == true)
+        #expect(model.due(parsed)?.hasSuffix("오후 11:59") == true)
         model.add(parsed)
         #expect(model.text.isEmpty)
         #expect(workspace.course(graphTheory)?.file.assignments.contains { $0.title == "HW5" } == true)

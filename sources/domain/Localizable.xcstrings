@@ -12,6 +12,83 @@
         }
       }
     },
+    "human-date.minutes-ago": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld분 전"
+          }
+        }
+      }
+    },
+    "human-date.minutes-later": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld분 뒤"
+          }
+        }
+      }
+    },
+    "human-date.now": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금"
+          }
+        }
+      }
+    },
+    "human-date.today": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘"
+          }
+        }
+      }
+    },
+    "human-date.tomorrow": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내일"
+          }
+        }
+      }
+    },
+    "human-date.weekday": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@요일"
+          }
+        }
+      }
+    },
+    "human-date.yesterday": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어제"
+          }
+        }
+      }
+    },
     "import.notes.no-component": {
       "extractionState": "manual",
       "localizations": {
@@ -624,160 +701,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "LMS 미제출"
-          }
-        }
-      }
-    },
-    "relative-day.ago": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld일 전"
-          }
-        }
-      }
-    },
-    "relative-day.later": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld일 뒤"
-          }
-        }
-      }
-    },
-    "relative-day.months-ago": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld달 전"
-          }
-        }
-      }
-    },
-    "relative-day.months-later": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld달 뒤"
-          }
-        }
-      }
-    },
-    "relative-day.today": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오늘"
-          }
-        }
-      }
-    },
-    "relative-day.tomorrow": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "내일"
-          }
-        }
-      }
-    },
-    "relative-day.weeks-ago": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld주 전"
-          }
-        }
-      }
-    },
-    "relative-day.weeks-later": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld주 뒤"
-          }
-        }
-      }
-    },
-    "relative-day.yesterday": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "어제"
-          }
-        }
-      }
-    },
-    "relative-time.hours-ago": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld시간 전"
-          }
-        }
-      }
-    },
-    "relative-time.hours-later": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld시간 뒤"
-          }
-        }
-      }
-    },
-    "relative-time.minutes-ago": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld분 전"
-          }
-        }
-      }
-    },
-    "relative-time.minutes-later": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld분 뒤"
-          }
-        }
-      }
-    },
-    "relative-time.now": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지금"
           }
         }
       }

@@ -66,10 +66,7 @@ struct AddCommand: ParsableCommand {
                 ?? String(localized: .addUnread).styled(.red))
         row(String(localized: .addFieldTitle), read.title.isEmpty ? String(localized: .addUnread).styled(.red) : read.title)
         if let due = read.due {
-            let deadline = CourseFile.deadline(due, calendar: calendar, locale: Locale(identifier: "ko_KR"))
-            row(
-                String(localized: .addFieldDue),
-                deadline + " · " + RelativeDate.distance(due, from: now, settings: settings, calendar: calendar))
+            row(String(localized: .addFieldDue), when(due, now: now, time: true, calendar: calendar, settings: settings))
         } else {
             row(String(localized: .addFieldDue), String(localized: .addNoDue).styled(.dim))
         }
