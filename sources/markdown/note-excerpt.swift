@@ -2,7 +2,7 @@ import Foundation
 import Markdown
 
 // 노트 카드에 보이는 본문 앞부분이다. frontmatter와 제목, 코드, 수식 블록, 표를 빼고 문단과 목록의 글만 이어 붙인다.
-public enum NotePreview {
+public enum NoteExcerpt {
     public static func text(of source: String, tex: Bool = false, limit: Int = 240) -> String {
         let words = tex ? texWords(source) : markdownWords(Frontmatter.split(source).body)
         var result = ""

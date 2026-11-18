@@ -112,7 +112,7 @@ final class NoteGalleryModel {
                 Dictionary(
                     notes.map { note in
                         let text = (try? store.read(note)) ?? ""
-                        return (note.url, NotePreview.text(of: text, tex: note.format == .tex))
+                        return (note.url, NoteExcerpt.text(of: text, tex: note.format == .tex))
                     }, uniquingKeysWith: { a, _ in a })
             }.value
             self?.previews = read
