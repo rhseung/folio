@@ -29,6 +29,15 @@ struct NoteFigureActionTests {
 
     func exists(_ path: String) -> Bool { FileManager.default.fileExists(atPath: store.fileURL(path).path) }
 
+    // 촉을 html의 마지막 자식으로 두므로 body를 다 읽은 뒤에 넣는다.
+    @Test func theWidgetKitAddsTheArrowheadsAfterTheBody() throws {
+        let script = NoteWidgetKit.script
+        let markers = try #require(String(data: try JSONEncoder().encode(FigureStyle.widgetMarkers), encoding: .utf8))
+        #expect(script.contains("t.innerHTML = \(markers); document.documentElement.append(t.content)"))
+        #expect(!script.contains("insertAdjacentHTML"))
+        #expect(script.contains("addEventListener('DOMContentLoaded', add)"))
+    }
+
     @Test func addWritesTheFigureIntoAssets() throws {
         let ctx = try run(NoteFigureAdd(course: Self.course, name: "graph", svg: Self.svg))
         #expect(Self.finished.contains("<style id=\"\(FigureStyle.styleID)\">"))
