@@ -181,7 +181,7 @@ public enum PatchNotes {
         }
     }
 
-    // 머지된 PR들(번호 차례)의 패치 노트를 종류마다 `### <종류>`로 묶는다. 두 PR이 똑같이 쓴 줄은 한 번만 넣는다.
+    // 머지된 PR들(머지 차례)의 패치 노트를 종류마다 `### <종류>`로 묶는다. 두 PR이 똑같이 쓴 줄은 한 번만 넣는다.
     // `assets`가 없으면 노트만 있는 릴리스(나중에 단 지난 버전)라 설치 안내를 쓰지 않는다.
     public static func releaseBody(_ prs: [Merged], first: Bool, date: Date? = nil, assets: Bool = true) -> String {
         var items: [Item] = []

@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+#MISE description="Fail a PR that changes app/ or sources/ without a patch notes item or the no-patch-notes label: the changed paths on stdin, the body in PR_BODY, the labels one per line in PR_LABELS; --body-only reads just a body on stdin"
+# 패치 노트 검사는 PR 본문이나 라벨만 바뀌어도 다시 돌아야 해서 Linux 러너에서 돈다(docs/ci.md). Linux에서는 패키지를 빌드할
+# 수 없어(Tectonic xcframework, macOS 플랫폼) PatchNotes.items를 부르지 못하므로 같은 읽기를 여기에 옮겨 둔다. 두 읽기가
+# 같은지는 FolioDevTests(patch-notes-check-tests.swift)가 같은 본문으로 비교한다. 한쪽을 고치면 다른 쪽도 고친다.
+set -euo pipefail
+
+label=no-patch-notes
+
+trim() {
+  local s=$1
+  s="${s#"${s%%[![:space:]]*}"}"
+  printf '%s' "${s%"${s##*[![:space:]]}"}"
+}
+
+# PatchNotes.items(in:)처럼 `## 패치 노트` 절에서 `- <종류>: <글>` 줄을 찾는다. 다음 1, 2단계 제목에서 절이 끝나고,
+# 끝의 앱 링크 `(folio://…)`만 있는 줄은 항목이 아니다.
+has_item() {
+  local line section=false level rest text
+  while IFS= read -r line || [ -n "$line" ]; do
+    line=$(trim "${line%$'\r'}")
+    if [[ $line =~ ^(#{1,6})([[:space:]].*)?$ ]]; then
+      level=${#BASH_REMATCH[1]}
+      if $section && ((level <= 2)); then break; fi
+      if ! $section && [[ $line == "## "* ]]; then
+        rest=$(trim "${line#"## "}")
+        [ "$rest" = "패치 노트" ] && section=true
+      fi
+      continue
+    fi
+    $section || continue
+    [[ $line =~ ^[-*][[:space:]]*(feat|fix|change)\ *:(.*)$ ]] || continue
+    text=$(trim "${BASH_REMATCH[2]}")
+    if [[ $text =~ ^(.*)\(folio://[^[:space:]]*\)$ ]]; then text=$(trim "${BASH_REMATCH[1]}"); fi
+    [ -n "$text" ] && return 0
+  done
+  return 1
+}
+
+# --body-only는 테스트가 본문 하나만 검사할 때 쓴다. Foundation의 Process는 환경 변수의 한글을 풀어 쓴 꼴(NFD)로 넘기므로
+# 이때는 본문을 표준 입력으로 받는다.
+if [ "${1:-}" = --body-only ]; then
+  has_item
+  exit
+fi
+
+touches=false
+while IFS= read -r path; do
+  case $path in app/* | sources/*) touches=true ;; esac
+done
+if [ "$touches" = false ]; then
+  echo "app/과 sources/를 바꾸지 않아 패치 노트가 없어도 됩니다."
+  exit 0
+fi
+if grep -qxF "$label" <<<"${PR_LABELS:-}"; then
+  echo "$label 라벨이 있어 패치 노트 없이 통과합니다."
+  exit 0
+fi
+if has_item <<<"${PR_BODY:-}"; then
+  echo "패치 노트가 있습니다."
+  exit 0
+fi
+echo "::error::app/이나 sources/를 바꾼 PR에 패치 노트 항목이 없습니다. 본문의 '## 패치 노트' 절에 '- feat: …', '- fix: …', '- change: …' 줄을 쓰거나, 사용자에게 보이는 변화가 없으면 $label 라벨을 붙입니다."
+exit 1

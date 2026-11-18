@@ -26,6 +26,7 @@ packages:
     - '!.github/workflows/accessibility.yml'
     - '!.github/workflows/review.yml'
     - '!.github/workflows/release.yml'
+    - '!.github/workflows/patch-notes.yml'
     - '!.github/dependabot.yml'
     - '!.git-blame-ignore-revs'
   # folio-lint, SwiftLint, 액션 검사가 앱 폴더에서 읽는 것은 Swift 파일뿐이다.
@@ -40,7 +41,7 @@ mac-app:
   - &tools
     # packages의 shell-check만 셸 스크립트를 읽는다.
     - '!sources/tectonic/build.sh'
-    - '!.mise/tasks/{analyze,install-cli,install-mac,install-release,note-screens,render,shell-check,swift-format,test-a11y}'
+    - '!.mise/tasks/{analyze,install-cli,install-mac,install-release,note-screens,patch-notes-check,render,shell-check,swift-format,test-a11y}'
     - '!.editorconfig'
     - '!sources/tools/dev/**'
     - '!sources/tools/lint/**'

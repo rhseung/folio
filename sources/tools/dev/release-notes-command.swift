@@ -28,16 +28,25 @@ struct ReleaseNotesCommand: ParsableCommand {
     }
 
     struct Preview: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: "The next release's body: the PRs merged since the latest tag.")
+        static let configuration = CommandConfiguration(
+            abstract: "The next releases and their bodies: one for each PR with patch notes since the latest tag.")
 
         func run() throws {
             let latest = try ReleaseTags.latest(at: "HEAD")
             let prs = try MergedPullRequests.between(latest.map(ReleaseTags.name), and: "HEAD")
-            guard let next = ReleasePlan.next(after: latest, prs: prs) else {
+            let bundles = try ReleaseBundles.all()
+            let steps = ReleasePlan.steps(after: latest, prs: prs, bundles: bundles, released: try ReleaseTags.releasedBundles())
+            guard !steps.isEmpty else {
                 print("No PR since \(latest.map(ReleaseTags.name) ?? "the start") has patch notes; nothing to release.")
                 return
             }
-            print("\(ReleaseTags.name(next))\n\n" + (try ReleaseTags.body(for: next, at: "HEAD")))
+            var since = latest.map(ReleaseTags.name)
+            for step in steps {
+                let body = try ReleaseTags.body(for: step.version, at: step.commit, since: since)
+                let ends = step.bundles.isEmpty ? "" : " (ends \(step.bundles.joined(separator: ", ")))"
+                print("# Folio \(step.version)\(ends) at \(step.commit.prefix(8))\n\n\(body)\n")
+                since = step.commit
+            }
         }
     }
 }
