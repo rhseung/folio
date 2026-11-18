@@ -53,3 +53,5 @@
 
 /* 위젯 안의 그림(SVG)도 노트 그림과 같은 모양이다. 선과 글자는 --ink, 강조는 --p-* 변수로 칠한다. */
 :where(svg text) { font-family: -apple-system, "SF Pro Text", "Helvetica Neue", "Apple SD Gothic Neo", sans-serif; }
+/* 수식으로 그린 `<text>`는 자리만 남기고 숨긴다(widget.js의 svgText). 위젯 스타일이 덮지 못하게 :where()로 감싸지 않는다. */
+svg text[data-folio-math] { visibility: hidden !important; }
