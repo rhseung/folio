@@ -6777,17 +6777,6 @@
         }
       }
     },
-    "lms.in-course": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@에 있음"
-          }
-        }
-      }
-    },
     "lms.login-ended": {
       "extractionState": "manual",
       "localizations": {
@@ -6795,6 +6784,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "LMS 로그인 끝남"
+          }
+        }
+      }
+    },
+    "lms.more": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "더 보기"
           }
         }
       }
@@ -6817,17 +6817,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "마감 없음"
-          }
-        }
-      }
-    },
-    "lms.not-received": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "아직 받지 않음"
           }
         }
       }
@@ -22382,39 +22371,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "마지막 동기화 %@"
-          }
-        }
-      }
-    },
-    "lms.kind.assignment": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과제"
-          }
-        }
-      }
-    },
-    "lms.kind.file": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자료"
-          }
-        }
-      }
-    },
-    "lms.kind.notice": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "공지"
           }
         }
       }

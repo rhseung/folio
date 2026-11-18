@@ -56,11 +56,12 @@ struct LMSModelTests {
         }
         await workspace.syncLMS()
         let model = LMSModel(workspace: workspace)
-        let details = proposals(model).map { model.detail($0, source: false) ?? "" }
-        #expect(details[0].hasSuffix(" · slow_problem_2.pdf"))
-        #expect(details[1].contains("slow_problem_2.pdf") && details[1].contains("1"))
-        #expect(!details[2].contains("·"))
-        #expect(model.detail(proposals(model)[0], source: true)?.hasPrefix("그래프 이론[01] · ") == true)
+        // 강의실 페이지에서는 첨부만, 전체에서는 받을 과목이 없어 강의실 이름을 앞에 붙인다. 종류는 아이콘이 말한다.
+        let details = proposals(model).map { model.detail($0, source: false) }
+        #expect(details[0] == "slow_problem_2.pdf")
+        #expect(details[1]?.contains("slow_problem_2.pdf") == true && details[1]?.contains("1") == true)
+        #expect(details[2] == nil)
+        #expect(model.detail(proposals(model)[0], source: true) == "그래프 이론[01] · slow_problem_2.pdf")
 
         // 내려받지 못한 첨부(뷰어 전용)는 건너뛰고 과제는 받는다.
         await model.add([proposals(model)[0]], into: graphTheory)
@@ -86,7 +87,8 @@ struct LMSModelTests {
         // 받으려 해 보니 뷰어 전용이라 받지 못한 자료는 남고, 이제 받을 수 없다고 표시된다.
         #expect(proposals(model).map(\.id) == ["lms/file:200"])
         let left = try #require(proposals(model).first)
-        #expect(!left.canApprove && left.flag == .viewerOnly && model.showsOpen(left))
+        #expect(!left.canApprove && left.flag == .viewerOnly)
+        #expect(model.detail(left, source: false) == ProposalFlag.viewerOnly.label)
 
         let hidden = model.board.rooms.flatMap(\.hidden)
         let added = try #require(hidden.first { $0.id == "assignment:100" })
@@ -125,6 +127,9 @@ struct LMSModelTests {
         #expect(workspace.settings.lms.course(of: 1) == graphTheory)
         #expect(model.remembered(1)?.id == graphTheory)
         #expect(workspace.lmsRooms(of: graphTheory).map(\.classroom.id) == [1])
+        // 과목을 기억한 강의실의 행은 전체에서 강의실 대신 그 과목 이름을 앞에 붙인다.
+        let title = try #require(workspace.course(graphTheory)?.title)
+        #expect(model.detail(proposals(model)[0], source: true)?.hasPrefix(title) == true)
         #expect(model.memoryLabel(try #require(model.board.room(1))) == workspace.course(graphTheory)?.title)
 
         #expect(model.remembered.map(\.id) == ["lms/assignment:101"])
