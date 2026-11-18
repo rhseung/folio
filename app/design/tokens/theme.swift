@@ -60,7 +60,6 @@ enum Theme {
     enum Opacity {
         static let tint = 0.12
         static let onTint = 0.24
-        static let toneRow = 0.5
         static let projected = 0.28
         static let wash = 0.06
         static let hover = 0.08
@@ -137,8 +136,6 @@ enum Theme {
     enum Size {
         static let pageMaxWidth: CGFloat = 900
         static let foldingLabel: CGFloat = 120
-        // 마감 지난 과제 행의 "11/2(월) 오후 11:59 마감 · 2일 지남"과 "지금 내면 최대 80% · …까지"가 잘리지 않는 폭이다.
-        static let overdueLabel: CGFloat = 280
         static let washHeight: CGFloat = 480
         static let washReach: CGFloat = 220
         static let washReachFocus: CGFloat = 400

@@ -103,6 +103,27 @@ struct LMSPagesTests {
         #expect(try LMSPages.attachments(Self.assignments).isEmpty)
     }
 
+    // 제출 상태 표의 줄 이름과 날짜 꼴은 사용자 언어 설정을 따른다. 값은 지어낸 것이다.
+    @Test func readsWhenTheAssignmentWasLastSubmitted() throws {
+        func page(_ label: String, _ time: String) -> String {
+            """
+            <div class="submissionstatustable"><table class="generaltable"><tbody>
+            <tr><th>제출 여부</th><td>채점을 위해 제출됨</td></tr><tr><th>\(label)</th><td>\(time)</td></tr>
+            </tbody></table></div>
+            """
+        }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = LMS.timeZone
+        let expected = calendar.date(from: DateComponents(year: 2026, month: 11, day: 3, hour: 23, minute: 20))
+        #expect(try LMSPages.submittedAt(page("최종 수정 일시", "2026년 11월 3일 화요일 오후 11:20")) == expected)
+        #expect(try LMSPages.submittedAt(page("Last modified", "Tuesday, 3 November 2026, 11:20 PM")) == expected)
+        #expect(
+            LMSPages.looseTime("2026년 11월 3일 화요일 오전 12:05")
+                == calendar.date(from: DateComponents(year: 2026, month: 11, day: 3, hour: 0, minute: 5)))
+        #expect(try LMSPages.submittedAt(page("제출 여부", "제출 안 함")) == nil)
+        #expect(try LMSPages.submittedAt(Self.assignmentPage) == nil)
+    }
+
     @Test func tellsTheLoginForm() {
         #expect(
             LMSPages.isLogin(

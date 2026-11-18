@@ -10,23 +10,27 @@ extension AssignmentStatus {
 struct AssignmentMenu: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.openLink) private var openLink
+    @Environment(\.openURL) private var openURL
     @Environment(\.itemSheets) private var sheets
     let courseId: UUID
     let assignmentId: UUID
     var host: MenuHost = .elsewhere
 
     var body: some View {
-        if let source = AssignmentMenu.source(workspace, courseId, assignmentId, host: host, openLink: openLink, sheets: sheets) {
+        if let source = AssignmentMenu.source(
+            workspace, courseId, assignmentId, host: host, openLink: openLink, openURL: openURL, sheets: sheets)
+        {
             ItemMenu(source: source)
         }
     }
 
     @MainActor static func source(
-        _ workspace: Workspace, _ courseId: UUID, _ id: UUID, host: MenuHost, openLink: OpenLinkAction,
+        _ workspace: Workspace, _ courseId: UUID, _ id: UUID, host: MenuHost, openLink: OpenLinkAction, openURL: OpenURLAction,
         sheets: ItemSheetsAction
     ) -> AssignmentMenuSource? {
         guard let assignment = workspace.course(courseId)?.file.assignments.first(where: { $0.id == id }) else { return nil }
         return AssignmentMenuSource(
-            workspace: workspace, courseId: courseId, assignment: assignment, host: host, openLink: openLink, sheets: sheets)
+            workspace: workspace, courseId: courseId, assignment: assignment, host: host, openLink: openLink, openURL: openURL,
+            sheets: sheets)
     }
 }

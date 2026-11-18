@@ -101,6 +101,7 @@ extension LMSCommand {
         GeneratedCommands.LMSMark.self,
         GeneratedCommands.LMSRoomSet.self,
         GeneratedCommands.LMSSeen.self,
+        GeneratedCommands.LMSSubmitted.self,
     ])
 }
 

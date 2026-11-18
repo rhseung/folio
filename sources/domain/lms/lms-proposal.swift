@@ -51,9 +51,13 @@ public struct LMSProposal: Hashable, Sendable, Identifiable {
         return nil
     }
 
+    // 받을 때 내려받을 첨부다. 받은 과제의 새 첨부는 과제 폴더에 없는 것만이다.
     public var attachments: [LMSAttachment] {
-        if case .assignment(let a) = item { return a.attachments ?? [] }
-        return []
+        switch item {
+        case .assignment(let a): a.attachments ?? []
+        case .difference(let d): if case .attachments(let new) = d.change { new } else { [] }
+        case .file, .notice: []
+        }
     }
 }
 
@@ -65,8 +69,9 @@ extension LMSProposal {
         case .notice: .lmsNotice
         case .difference(let d):
             switch d.change {
-            case .submitted: .lmsSubmitted
+            case .unsubmitted: .lmsUnsubmitted
             case .due: .lmsDue
+            case .attachments: .lmsAttachments
             }
         }
     }
@@ -82,6 +87,7 @@ extension LMSProposal {
         if case .assignment(let a) = self.item {
             item["title"] = .string(a.title)
             if let due = a.due { item["due"] = .string(Self.date(due)) }
+            if let n = a.attachments?.count, n > 0 { item["attachmentCount"] = .number(Double(n)) }
         }
         let accept = ActionProposal(command: "lms accept", input: ["items": [.object(item)]])
         return Proposal(
@@ -94,15 +100,19 @@ extension LMSProposal {
 }
 
 extension LMSDifference {
-    var action: ActionProposal {
+    // LMS 미제출은 Folio가 고칠 수 없어 LMS에서 열기와 무시만 둔다.
+    var action: ActionProposal? {
         var input: [String: JSONValue] = ["course": .string(course.uuidString), "assignment": .string(assignment.uuidString)]
         switch change {
-        case .submitted:
-            input["status"] = .string(AssignmentStatus.submitted.rawValue)
-            return ActionProposal(command: "assignment status", input: .object(input))
+        case .unsubmitted:
+            return nil
         case .due(_, let date):
             input["due"] = .string(LMSProposal.date(date))
             return ActionProposal(command: "assignment set", input: .object(input))
+        case .attachments:
+            // 파일은 승인한 기기가 내려받아 `files`에 넣는다(`Proposal.downloaded`).
+            let item: [String: JSONValue] = ["key": .string(key.description)]
+            return ActionProposal(command: "lms accept", input: ["course": .string(course.uuidString), "items": [.object(item)]])
         }
     }
 }

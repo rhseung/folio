@@ -6,6 +6,7 @@ struct AssignmentSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var pickingFiles = false
     @Environment(\.supportsMultipleWindows) private var multipleWindows
+    @Environment(\.openURL) private var openURL
     let openFile: (UUID, LinkPlacement) -> Void
 
     init(workspace: Workspace, course: LoadedCourse, assignment: Assignment, openFile: @escaping (UUID, LinkPlacement) -> Void) {
@@ -75,7 +76,25 @@ struct AssignmentSheet: View {
                     }
                 }
             }
-            Block(String(localized: .assignmentsScore), note: String(localized: .assignmentsScoreNote)) {
+            if let lms = model.lms {
+                Block(String(localized: .assignmentsLms), note: lms.classroom) {
+                    Card {
+                        FormRow(label: lms.title, detail: lms.due, last: lms.submitted == nil) {
+                            Button(.lmsOpen) { openURL(lms.url) }.buttonStyle(.ghost)
+                        }
+                        if let submitted = lms.submitted {
+                            FormRow(label: String(localized: .assignmentsLmsSubmission), detail: lms.detail, last: true) {
+                                if submitted {
+                                    Badge(String(localized: .assignmentsLmsSubmitted), tone: .success)
+                                } else {
+                                    Text(.assignmentsLmsNotSubmitted).foregroundStyle(Theme.Palette.textTertiary)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Block(String(localized: .assignmentsScore)) {
                 Card {
                     FormRow(label: String(localized: .assignmentsFieldTarget), last: scored.isEmpty) {
                         Combobox(selection: Binding(get: { model.target }, set: { model.pick($0) }), options: model.targetOptions)
@@ -97,12 +116,12 @@ struct AssignmentSheet: View {
                 .sensitive(scored.isEmpty ? nil : .block)
             }
             if model.hasDue {
-                Block(String(localized: .assignmentsLateRule), note: String(localized: .assignmentsLateRuleNote)) {
+                Block(String(localized: .assignmentsLateRule)) {
                     Card { LateRuleRows(draft: $model.lateRule, placeholder: model.courseLateRule, last: true) }
                 }
             }
             TextArea(label: String(localized: .assignmentsMemo), text: $model.memo)
-            Block(title: String(localized: .assignmentsFiles), note: model.folder) {
+            Block(title: String(localized: .assignmentsFiles), note: nil) {
                 Button(.assignmentsAddFiles) { pickingFiles = true }
                     .buttonStyle(.ghost)
                     .fileImporter(isPresented: $pickingFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in

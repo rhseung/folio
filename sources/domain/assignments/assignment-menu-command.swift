@@ -4,6 +4,7 @@ import Foundation
 
 public enum AssignmentMenuCommand: ItemCommand {
     case open
+    case openInLMS
     case addFiles
     case status(AssignmentStatus)
     case edit, share
@@ -12,7 +13,7 @@ public enum AssignmentMenuCommand: ItemCommand {
 
     public var group: MenuGroup {
         switch self {
-        case .open: .open
+        case .open, .openInLMS: .open
         case .addFiles: .start
         case .status: .state
         case .edit: .edit

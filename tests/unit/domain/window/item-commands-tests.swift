@@ -36,7 +36,9 @@ struct ItemCommandsTests {
         await propertyCheck(input: Gen.int(in: 0...4), Gen.bool, Gen.bool, Gen.bool) { host, a, b, c in
             let host = Self.hosts[host]
             ordered(f.commands(for: f.exams[a ? 0 : 1], host: host))
-            ordered(f.commands(for: f.assignments[0], host: host, revealable: a))
+            var lms = f.assignments[0]
+            lms.lmsId = b ? 139950 : nil
+            ordered(f.commands(for: lms, host: host, revealable: a))
             ordered(f.commands(for: f.units[a ? 0 : 2], host: host, dueToday: b))
             ordered(NoteMenuCommand.commands(host: host, builtPDF: a, builds: b, review: c ? .writing : nil, finder: a))
             ordered(f.commands(for: f.materials[a ? 0 : 1], host: host, pdf: b ? UUID() : nil, mac: c))
@@ -77,6 +79,14 @@ struct ItemCommandsTests {
         f.assignments[0].status = .doing
         #expect(f.commands(for: f.assignments[0], host: .own, revealable: false) == [.addFiles, .status(.doing), .edit, .share, .remove])
         #expect(f.commands(for: f.assignments[0], host: .own, revealable: true).contains(.showInFinder))
+    }
+
+    @Test func anAssignmentFromTheLMSOpensThereRightAfterItsOwnOpen() {
+        var f = course()
+        #expect(!f.commands(for: f.assignments[0], host: .elsewhere, revealable: false).contains(.openInLMS))
+        f.assignments[0].lmsId = 139950
+        #expect(f.commands(for: f.assignments[0], host: .elsewhere, revealable: false).prefix(2) == [.open, .openInLMS])
+        #expect(f.commands(for: f.assignments[0], host: .own, revealable: false).first == .openInLMS)
     }
 
     @Test func aUnitMovesOnlyInTheListAndOnlyWhereItCan() {

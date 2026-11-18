@@ -8,7 +8,7 @@ extension Workspace {
         guard let snapshot = lms.snapshot else { return LMSInbox() }
         return LMSInbox.build(
             snapshot, settings: settings.lms, courses: courses.map(\.file), now: now,
-            soonDays: settings.urgency.assignmentSoonDays)
+            soonDays: settings.urgency.assignmentSoonDays, kinds: settings.assignmentKindTable)
     }
 
     // 과목 열 끝의 LMS 강의실 행이다. 받을 때 이 과목을 고른 강의실만 보이고, 수는 그 강의실의 처리할 것이다.
@@ -33,17 +33,19 @@ extension Workspace {
         return date.formatted(day.hour().minute())
     }
 
+    // LMS에서 낸 받은 과제는 묻지 않고 제출함으로 바꾼다. 파일을 옮기거나 지우지 않고, 기록이 남아 되돌릴 수 있다.
     // 처음 보는 강의실은 지금 있는 자료와 공지를 숨긴다. 그래야 새 학기에 오래된 글 수백 개를 제안하지 않는다. 남은 과제는
     // 계속 제안한다.
     func syncLMS() async {
         let (known, files, at) = (settings.lms, courses.map(\.file), now)
         guard
             let snapshot = await lms.sync(attachments: {
-                LMSInbox.attachmentsToRead($0, settings: known, courses: files, now: at)
+                LMSInbox.pagesToRead($0, settings: known, courses: files, now: at)
             })
         else { return }
         let new = settings.lms.unseen(in: snapshot).map(\.id)
-        guard !new.isEmpty else { return }
-        run(LMSSeen(classrooms: new, items: new.flatMap(snapshot.current(in:)).map(\.description)))
+        if !new.isEmpty { run(LMSSeen(classrooms: new, items: new.flatMap(snapshot.current(in:)).map(\.description))) }
+        let submitted = LMSInbox.submissions(snapshot, settings: settings.lms, courses: courses.map(\.file))
+        if !submitted.isEmpty { run(LMSSubmitted(items: submitted)) }
     }
 }
