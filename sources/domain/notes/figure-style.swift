@@ -67,12 +67,23 @@ public enum FigureStyle {
 
     // viewBox 한 칸이 선 굵기의 0.5배가 되게 두 배로 잡는다. refX를 촉 끝보다 조금 안쪽에 둬서 둥근 선 끝이 촉 밖으로
     // 나오지 않는다.
-    public static func marker(_ ink: Ink) -> String {
+    public static func marker(_ ink: Ink) -> String { marker(ink, paint: "class=\"\(ink.fill)\"") }
+
+    static func marker(_ ink: Ink, paint: String) -> String {
         let (l, w, n) = (arrow.length * 2, arrow.width * 2, arrow.notch * 2)
         return "<marker id=\"\(markerID(ink))\" viewBox=\"0 0 \(g(l)) \(g(w))\" refX=\"\(g(l - 1.6))\" refY=\"\(g(w / 2))\" "
             + "markerWidth=\"\(g(arrow.length))\" markerHeight=\"\(g(arrow.width))\" markerUnits=\"strokeWidth\" orient=\"auto-start-reverse\">"
-            + "<path d=\"M0,0 L\(g(l)),\(g(w / 2)) L0,\(g(w)) L\(g(n)),\(g(w / 2)) z\" class=\"\(ink.fill)\"/></marker>"
+            + "<path d=\"M0,0 L\(g(l)),\(g(w / 2)) L0,\(g(w)) L\(g(n)),\(g(w / 2)) z\" \(paint)/></marker>"
     }
+
+    // 위젯 frame에 넣는 촉이다. 위젯의 클래스와 섞이는 문서라 `.ink` 같은 클래스 규칙을 넣지 않고 `variables`의 변수로
+    // 칠한다. `display:none`인 SVG 안의 참조 대상을 그리지 않는 브라우저가 있어서 크기 0인 SVG에 둔다. 크기는
+    // 위젯의 `svg { width: 100% }` 같은 규칙이 이기지 못하게 인라인 style로 정한다.
+    public static let markersID = "folio-figure-markers"
+    public static let widgetMarkers: String =
+        "<svg id=\"\(markersID)\" aria-hidden=\"true\" focusable=\"false\" "
+        + "style=\"position:absolute;width:0;height:0;overflow:hidden;pointer-events:none\"><defs>"
+        + inks.map { marker($0, paint: "style=\"fill:var(--\($0.name))\"") }.joined() + "</defs></svg>"
 
     // 그림의 `<style>` 내용이다. class 없는 글자도 다크에서 사라지지 않게 글자의 기본색을 둔다.
     public static let css: String = {
