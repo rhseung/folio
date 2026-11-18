@@ -86,6 +86,20 @@ struct ReleasePlanTests {
         #expect(!ReleasePlan.ends(Self.bundle("빈 묶음", closed: []), at: 0, in: [Self.pr(1, notes: true)]))
     }
 
+    @Test func aBundleClosedByHandAfterItsLastPRShippedEndsAtTheNextRelease() {
+        let lms = Self.bundle("LMS 연동", closed: [10, 11])
+        let prs = [Self.pr(1, notes: false), Self.pr(2, notes: true), Self.pr(3, notes: true)]
+        #expect(
+            ReleasePlan.steps(after: V(0, 5, 3), prs: prs, bundles: [lms]) == [
+                Step(version: V(0, 6, 0), commit: "c2", bundles: ["LMS 연동"], prs: [1, 2]),
+                Step(version: V(0, 6, 1), commit: "c3", prs: [3]),
+            ])
+        #expect(
+            ReleasePlan.steps(after: V(0, 6, 1), prs: [Self.pr(4, notes: true)], bundles: [lms], released: ["LMS 연동"]) == [
+                Step(version: V(0, 6, 2), commit: "c4", prs: [4])
+            ])
+    }
+
     @Test func unpublishedTagsComeFirstInOrder() {
         let tags = [V(0, 6, 0), V(0, 5, 0), V(0, 5, 1)]
         #expect(ReleasePlan.pending(tags: tags, published: [V(0, 5, 0)]) == [V(0, 5, 1), V(0, 6, 0)])

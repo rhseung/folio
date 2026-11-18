@@ -75,13 +75,14 @@ enum ReleasePlan {
     }
 
     // 묶음은 열린 이슈가 없고, 그 이슈를 닫은 PR 중 마지막인 PR에서 끝난다. 이슈를 손으로 닫았어도 그 앞의 PR이
-    // 묶음의 이슈를 닫았다면 그 PR에서 끝난다.
+    // 묶음의 이슈를 닫았다면 그 PR에서 끝난다. 그 PR이 이미 지난 태그 앞에 있으면(낸 뒤에 남은 이슈를 손으로 닫았으면)
+    // `prs`에 닫는 PR이 없으므로 첫 PR에서 끝낸다. 그러지 않으면 그 묶음의 minor는 영영 나오지 않는다.
     static func ends(_ bundle: Bundle, at index: Int, in prs: [PR]) -> Bool {
         guard bundle.open.isEmpty, !bundle.issues.isEmpty else { return false }
         let numbers = bundle.numbers
         let closing = { (pr: PR) in pr.closes.contains(where: numbers.contains) }
-        guard closing(prs[index]) else { return false }
-        return !prs[(index + 1)...].contains(where: closing)
+        guard let last = prs.lastIndex(where: closing) else { return index == 0 }
+        return index == last
     }
 
     // 태그는 게시 바로 앞에 달지만, 사람이 단 태그의 실행이 대기 중에 취소되거나 태그와 게시 사이에서 실행이 멈추면
