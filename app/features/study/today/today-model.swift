@@ -155,7 +155,7 @@ final class TodayModel {
         workspace.course(course)?.file.title(of: session, calendar: workspace.calendar) ?? ""
     }
 
-    func dDay(_ item: TodaySummary.ExamItem) -> String { HumanDate.dday(days: item.dDay) }
+    func dDay(_ item: TodaySummary.ExamItem) -> String { DateTimeText.dday(days: item.dDay) }
 
     func examStart(_ item: TodaySummary.ExamItem) -> String {
         item.exam.start?.formatted(.dateTime.month().day().weekday().hour().minute()) ?? ""
@@ -222,7 +222,7 @@ final class TodayModel {
             guard let due = item.assignment.due else { return nil }
             return DeadlineRow(
                 item: item, urgency: DueUrgency(due: due, now: now, settings: settings, calendar: calendar),
-                due: HumanDate.text(due, from: now, time: true, settings: settings, calendar: calendar))
+                due: DateTimeText.text(due, from: now, time: true, settings: settings, calendar: calendar))
         }
     }
 
@@ -414,6 +414,6 @@ final class TodayModel {
 
     func sessionWhen(_ item: TodaySummary.SessionItem, today: LocalDate) -> String {
         let s = workspace.settings, c = workspace.calendar
-        return HumanDate.text(item.session.date, from: s.start(of: today, calendar: c), settings: s, calendar: c)
+        return DateTimeText.text(item.session.date, from: s.start(of: today, calendar: c), settings: s, calendar: c)
     }
 }

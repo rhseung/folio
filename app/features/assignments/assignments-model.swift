@@ -97,7 +97,7 @@ final class AssignmentsModel {
                 }
             }
         // 날과 시각을 두 줄로 나눈다. 한 줄로 쓰면 좁은 폭에서 날짜 칸을 넘어 꺾인다. 오늘이면 날 없이 시각이 첫 줄이다.
-        let parts = HumanDate.parts(due, from: now, time: true, settings: settings, calendar: c)
+        let parts = DateTimeText.parts(due, from: now, time: true, settings: settings, calendar: c)
         return Due(date: parts.day ?? parts.time ?? "", time: parts.day == nil ? nil : parts.time, tone: tone)
     }
 }

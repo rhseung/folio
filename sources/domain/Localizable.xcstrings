@@ -12,7 +12,7 @@
         }
       }
     },
-    "human-date.minutes-ago": {
+    "date-time.minutes-ago": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -23,7 +23,7 @@
         }
       }
     },
-    "human-date.minutes-later": {
+    "date-time.minutes-later": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -34,7 +34,7 @@
         }
       }
     },
-    "human-date.now": {
+    "date-time.now": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -45,7 +45,7 @@
         }
       }
     },
-    "human-date.today": {
+    "date-time.today": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -56,7 +56,7 @@
         }
       }
     },
-    "human-date.tomorrow": {
+    "date-time.tomorrow": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -67,7 +67,7 @@
         }
       }
     },
-    "human-date.weekday": {
+    "date-time.weekday": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -78,7 +78,7 @@
         }
       }
     },
-    "human-date.yesterday": {
+    "date-time.yesterday": {
       "extractionState": "manual",
       "localizations": {
         "ko": {

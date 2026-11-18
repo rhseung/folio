@@ -36,7 +36,7 @@ struct ClassExamCard: ViewModifier {
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    if let days = model.examDays(exam, now: now) { Badge(HumanDate.dday(days: days), tone: .danger, solid: true) }
+                    if let days = model.examDays(exam, now: now) { Badge(DateTimeText.dday(days: days), tone: .danger, solid: true) }
                 }
                 .frame(minHeight: Theme.Size.chipRow)
             }

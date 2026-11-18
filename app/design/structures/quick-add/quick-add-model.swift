@@ -45,7 +45,8 @@ final class QuickAddModel {
 
     func due(_ parsed: QuickAdd) -> String? {
         parsed.due.map {
-            HumanDate.text($0, from: workspace.now, time: true, settings: workspace.settings, calendar: workspace.calendar, locale: locale)
+            DateTimeText.text(
+                $0, from: workspace.now, time: true, settings: workspace.settings, calendar: workspace.calendar, locale: locale)
         }
     }
 

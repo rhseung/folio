@@ -17,7 +17,7 @@ struct DdayBadge: View {
     var body: some View {
         let color = Self.heat(days, urgency)
         let urgent = ExamUrgency(days: days, settings: urgency) == .urgent
-        Badge(HumanDate.dday(days: days), color: color)
+        Badge(DateTimeText.dday(days: days), color: color)
             .phaseAnimator([false, true], trigger: urgent) { chip, lit in
                 chip.scaleEffect(lit && urgent ? 1.06 : 1)
             } animation: { _ in

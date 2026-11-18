@@ -3,7 +3,7 @@ import Foundation
 
 // 날짜를 지금에 견줘 쓰는 표기는 여기 하나다. 오늘·내일·어제, 일주일 안이면 요일("수요일"), 그보다 멀면 날짜("12/2(수)")다.
 // 시각을 함께 쓰면 오늘은 날 없이 시각만 쓰고, 한 시간 안이면 "45분 뒤"처럼 남은 때로 쓴다. 날 수는 공부일(하루 경계)로 센다.
-public enum HumanDate {
+public enum DateTimeText {
     public struct Parts: Equatable, Sendable {
         public var day: String?
         public var time: String?
@@ -38,9 +38,9 @@ public enum HumanDate {
         let day: String? =
             switch abs(days) {
             case 0 where timed: nil
-            case 0: String(localized: .humanDateToday)
-            case 1: String(localized: days > 0 ? .humanDateTomorrow : .humanDateYesterday)
-            case ..<7: String(localized: .humanDateWeekday(ClassTime.weekdayNames[calendar.isoWeekday(of: date) - 1]))
+            case 0: String(localized: .dateTimeToday)
+            case 1: String(localized: days > 0 ? .dateTimeTomorrow : .dateTimeYesterday)
+            case ..<7: String(localized: .dateTimeWeekday(ClassTime.weekdayNames[calendar.isoWeekday(of: date) - 1]))
             default: CourseFile.day(date, calendar: calendar)
             }
         return Parts(day: day, time: timed ? clock(date, calendar: calendar, locale: locale) : nil)
@@ -56,8 +56,8 @@ public enum HumanDate {
         let seconds = date.timeIntervalSince(now)
         let minutes = Int((abs(seconds) / 60).rounded(.down))
         guard minutes < soonMinutes else { return nil }
-        if minutes == 0 { return String(localized: .humanDateNow) }
-        return seconds > 0 ? String(localized: .humanDateMinutesLater(minutes)) : String(localized: .humanDateMinutesAgo(minutes))
+        if minutes == 0 { return String(localized: .dateTimeNow) }
+        return seconds > 0 ? String(localized: .dateTimeMinutesLater(minutes)) : String(localized: .dateTimeMinutesAgo(minutes))
     }
 
     // 시험처럼 그날을 향해 세는 일정은 이 표기 대신 "D-3"으로 쓴다. 지난 날은 쓰지 않는다. 시험 표시는 지나면 사라지기 때문이다.

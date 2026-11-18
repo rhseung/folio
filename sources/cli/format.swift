@@ -6,10 +6,10 @@ func courseHeader(_ c: CourseRef, catalog: Catalog?) {
     say("●".course(c.color) + " " + c.course.title.styled(.bold) + "  " + ([c.code] + people).joined(separator: " · ").styled(.dim))
 }
 
-// 날짜는 앱과 같은 `HumanDate`로 쓴다. 하루 경계 전의 새벽에는 그 밤의 마감이 아직 "오늘"이다.
+// 날짜는 앱과 같은 `DateTimeText`로 쓴다. 하루 경계 전의 새벽에는 그 밤의 마감이 아직 "오늘"이다.
 func when(_ date: Date, now: Date, time: Bool = false, calendar: Calendar = .current, settings: Settings = Settings()) -> String {
-    let days = HumanDate.days(date, from: now, settings: settings, calendar: calendar)
-    let text = HumanDate.text(date, from: now, time: time, settings: settings, calendar: calendar)
+    let days = DateTimeText.days(date, from: now, settings: settings, calendar: calendar)
+    let text = DateTimeText.text(date, from: now, time: time, settings: settings, calendar: calendar)
     return switch days {
     case ..<0: text.styled(.dim)
     case 0: text.styled(.red, .bold)

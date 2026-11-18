@@ -224,9 +224,9 @@ final class LMSModel {
     func due(_ p: Proposal) -> (text: String, urgency: DueUrgency)? { p.due.map(dueChip) }
 
     private func dueChip(_ due: Date) -> (text: String, urgency: DueUrgency) {
-        let days = HumanDate.days(due, from: workspace.now, settings: workspace.settings, calendar: workspace.calendar)
+        let days = DateTimeText.days(due, from: workspace.now, settings: workspace.settings, calendar: workspace.calendar)
         let urgency = workspace.settings.urgency
-        let text = HumanDate.text(due, from: workspace.now, time: true, settings: workspace.settings, calendar: workspace.calendar)
+        let text = DateTimeText.text(due, from: workspace.now, time: true, settings: workspace.settings, calendar: workspace.calendar)
         return (text, DueUrgency(studyDays: days, settings: urgency))
     }
 

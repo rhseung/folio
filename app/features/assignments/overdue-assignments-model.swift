@@ -53,7 +53,7 @@ final class OverdueAssignmentsModel {
 
     private func row(_ a: Assignment, in course: LoadedCourse, lms: URL?, now: Date) -> Row {
         // 감점과 상한은 과제 시트에서 본다.
-        let due = HumanDate.text(a.due ?? now, from: now, time: true, settings: workspace.settings, calendar: workspace.calendar)
+        let due = DateTimeText.text(a.due ?? now, from: now, time: true, settings: workspace.settings, calendar: workspace.calendar)
         return Row(courseId: course.id, assignment: a, due: due, lms: lms)
     }
 

@@ -95,7 +95,7 @@ AGENTS.md "구조 축" 표의 축마다 지킬 규칙이다. 축에 기능을 �
 
 화면이 그리는 지금 시각이다. 분이 바뀔 때, 앱이 앞으로 오거나 Mac이 깨어날 때 갱신한다. 분 단위로 바뀌는 뷰는 `TimelineView` 대신 `workspace.liveNow`나 `LiveTime`으로 읽는다(`minute-timeline`). 초를 세는 타이머만 `TimelineView`를 쓴다.
 
-## 날짜 표기 `HumanDate`
+## 날짜 표기 `DateTimeText`
 
 날짜를 사람이 읽는 말로 쓰는 규칙이다. 과제 목록, 마감 지난 과제, 오늘 화면, LMS 탭, 빠른 추가, 지난 수업의 날 표시, CLI가 모두 이것을 부르고, 화면은 날을 따로 세거나 꾸미지 않는다.
 

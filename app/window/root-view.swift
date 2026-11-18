@@ -772,7 +772,7 @@ struct RootView: View {
             switch hint {
             case .dueToday: Image(systemName: "checklist").foregroundStyle(Theme.Palette.danger)
             case .nextClass(let date): Text(clock(date)).foregroundStyle(Theme.Palette.chromeText)
-            case .exam(let days): Text(HumanDate.dday(days: days)).foregroundStyle(Theme.Palette.warning)
+            case .exam(let days): Text(DateTimeText.dday(days: days)).foregroundStyle(Theme.Palette.warning)
             }
         }
         .font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit()
