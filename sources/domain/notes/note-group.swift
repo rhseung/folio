@@ -1,6 +1,6 @@
 import Foundation
 
-public enum NoteGroup: CaseIterable, Sendable {
+public enum NoteGroup: CaseIterable, Codable, Sendable {
     case classes, exams, units, free
 
     public init(_ kind: NoteKind) {

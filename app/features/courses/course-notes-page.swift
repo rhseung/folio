@@ -5,21 +5,14 @@ import SwiftUI
 struct CourseNotesPage: View {
     @Bindable var model: CourseModel
     let course: LoadedCourse
-    @Environment(\.columnFolded) private var folded
 
     var body: some View {
-        if folded, model.openNote == nil {
-            ScrollView {
-                NoteList(workspace: model.workspace, course: course, selection: $model.openNote, moves: model.noteMoves)
-                    .padding(.horizontal, Theme.Inset.panel)
-                    .padding(.vertical, Theme.Space.l)
-                    .clearOfColumnButtons(inset: Theme.Space.l)
-            }
-            .overflowFade(.vertical)
-        } else {
+        if let note = model.openNoteFile(course) {
             NotesView(
-                workspace: model.workspace, course: course, selection: model.openNote, anchor: model.noteAnchor, insert: $model.noteInsert,
+                workspace: model.workspace, course: course, note: note, anchor: model.noteAnchor, insert: $model.noteInsert,
                 moves: model.noteMoves)
+        } else {
+            NoteGalleryView(workspace: model.workspace, course: course, moves: model.noteMoves) { model.show(note: $0) }
         }
     }
 }
