@@ -13,9 +13,11 @@ public enum NoteWidgetKit {
 
     // 촉은 body를 다 읽은 뒤 html의 마지막 자식으로 둔다. 문서 순서로 위젯의 요소보다 뒤에 있어야 위젯의
     // `document.querySelector('svg')`가 위젯 자신의 그림을 찾고, body 밖이라 위젯이 `body.innerHTML`을 바꿔도 남는다.
-    // 문서를 읽기 전에 html에 넣으면 파서가 head와 body를 그 뒤에 붙인다.
+    // 문서를 읽기 전에 html에 넣으면 파서가 head와 body를 그 뒤에 붙인다. html에 `insertAdjacentHTML`을 쓰면 파서가
+    // html을 context로 읽어 빈 head와 두 번째 body를 만들므로, template에서 읽은 뒤 붙인다.
     static let markersScript =
-        "{ const add = () => document.documentElement.insertAdjacentHTML('beforeend', \(js(FigureStyle.widgetMarkers))); "
+        "{ const add = () => { const t = document.createElement('template'); t.innerHTML = \(js(FigureStyle.widgetMarkers)); "
+        + "document.documentElement.append(t.content) }; "
         + "if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', add); else add() }"
 
     static func js(_ text: String) -> String {

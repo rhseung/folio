@@ -33,7 +33,8 @@ struct NoteFigureActionTests {
     @Test func theWidgetKitAddsTheArrowheadsAfterTheBody() throws {
         let script = NoteWidgetKit.script
         let markers = try #require(String(data: try JSONEncoder().encode(FigureStyle.widgetMarkers), encoding: .utf8))
-        #expect(script.contains("document.documentElement.insertAdjacentHTML('beforeend', \(markers))"))
+        #expect(script.contains("t.innerHTML = \(markers); document.documentElement.append(t.content)"))
+        #expect(!script.contains("insertAdjacentHTML"))
         #expect(script.contains("addEventListener('DOMContentLoaded', add)"))
     }
 
