@@ -28,6 +28,4 @@ final class NotesModel {
     }
 
     var course: LoadedCourse { workspace.course(initial.id) ?? initial }
-
-    func note(_ id: UUID?) -> NoteFile? { id.flatMap { try? course.store.note(id: $0) } }
 }

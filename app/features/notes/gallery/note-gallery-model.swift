@@ -22,6 +22,7 @@ final class NoteGalleryModel {
     var query = "" { didSet { if query != oldValue { find() } } }
     private var found: Set<UUID> = []
     @ObservationIgnored private var finding: Task<Void, Never>?
+    @ObservationIgnored private var reading: Task<Void, Never>?
     @ObservationIgnored private var index: SearchStore?
     var width: CGFloat = 0
     private var prefs: Prefs { didSet { save() } }
@@ -105,9 +106,11 @@ final class NoteGalleryModel {
     }
 
     // 본문을 모두 읽어야 하므로 main actor 밖에서 읽는다. iCloud 파일은 읽기를 조정하느라 늦을 수 있다.
+    // 앞선 읽기가 늦게 끝나 고치기 전 본문으로 덮어쓰지 않게, 새 읽기 전에 취소하고 취소된 결과는 버린다.
     private func readPreviews() {
+        reading?.cancel()
         let (notes, store) = (notes, course.store)
-        Task { [weak self] in
+        reading = Task { [weak self] in
             let read = await Task.detached {
                 Dictionary(
                     notes.map { note in
@@ -115,7 +118,7 @@ final class NoteGalleryModel {
                         return (note.url, NoteExcerpt.text(of: text, tex: note.format == .tex))
                     }, uniquingKeysWith: { a, _ in a })
             }.value
-            self?.previews = read
+            if !Task.isCancelled { self?.previews = read }
         }
     }
 

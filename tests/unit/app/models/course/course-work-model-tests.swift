@@ -438,8 +438,7 @@ struct NotesModelTests {
         let revision = workspace.notesRevision
         #expect(sheet.apply())
         #expect(workspace.notesRevision > revision)
-        let notes = NotesModel(workspace: workspace, course: course)
-        #expect(notes.note(id)?.title == "a-b")
+        #expect(try course.store.note(id: id)?.title == "a-b")
     }
 
     @Test func renamingATexNoteShowsItsBuiltPDF() throws {
