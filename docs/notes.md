@@ -29,7 +29,7 @@
 - 노트를 옮기거나 이름을 바꿀 때(`note mv`) 과목의 다른 노트(어느 폴더든)가 같은 이름이면 ` 2`를 붙인다. 제목 링크가 제목만으로 노트를 찾기 때문이다. course.json 경로, 첫 제목, 제목 링크와 ID 링크의 이름, 노트 안의 상대 경로(그림)가 따라 바뀌고, `cleanup undo`가 함께 되돌린다.
 - `.tex` 노트는 Folio가 빌드한 PDF(`builtHash`가 맞는 `Study/<제목>.pdf`)도 같은 묶음으로 새 이름을 따라간다. 새 이름의 PDF가 이미 있으면 덮어쓰지 않고, Folio가 만들지 않은 같은 이름의 PDF는 옮기지 않는다.
 - 노트를 둘 수 있는 폴더 이름은 `StandardLayout.noteFolderProblem` 하나가 정한다.
-- 앱에서 옮기거나 이름을 바꾼 뒤에는 노트 목록 위에 "방금 옮긴 것 되돌리기"가 나온다(`MoveUndo`, `UndoMoveButton`).
+- 앱에서 옮기거나 이름을 바꾼 뒤에는 노트 페이지 머리에 "방금 옮긴 것 되돌리기"가 나온다(`MoveUndo`, `UndoMoveButton`).
 
 ## 그림과 위젯
 

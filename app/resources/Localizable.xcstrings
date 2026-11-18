@@ -8460,6 +8460,435 @@
         }
       }
     },
+    "notes.gallery.class-kind": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 · %@"
+          }
+        }
+      }
+    },
+    "notes.gallery.collapse-all": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두 접기"
+          }
+        }
+      }
+    },
+    "notes.gallery.count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트 %lld개"
+          }
+        }
+      }
+    },
+    "notes.gallery.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트가 없습니다"
+          }
+        }
+      }
+    },
+    "notes.gallery.expand-all": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두 펼치기"
+          }
+        }
+      }
+    },
+    "notes.gallery.group": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "묶기"
+          }
+        }
+      }
+    },
+    "notes.gallery.group.date": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "날짜별"
+          }
+        }
+      }
+    },
+    "notes.gallery.group.exam": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험별"
+          }
+        }
+      }
+    },
+    "notes.gallery.group.folder": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "폴더별"
+          }
+        }
+      }
+    },
+    "notes.gallery.group.kind": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "종류별"
+          }
+        }
+      }
+    },
+    "notes.gallery.group.none": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "묶지 않음"
+          }
+        }
+      }
+    },
+    "notes.gallery.group.tag": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "태그별"
+          }
+        }
+      }
+    },
+    "notes.gallery.group.unit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원별"
+          }
+        }
+      }
+    },
+    "notes.gallery.group.week": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "주차별"
+          }
+        }
+      }
+    },
+    "notes.gallery.last-week": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지난주"
+          }
+        }
+      }
+    },
+    "notes.gallery.make-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트 만들기"
+          }
+        }
+      }
+    },
+    "notes.gallery.missing-review": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습 노트 없는 수업 %lld"
+          }
+        }
+      }
+    },
+    "notes.gallery.month": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld월"
+          }
+        }
+      }
+    },
+    "notes.gallery.new": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 노트"
+          }
+        }
+      }
+    },
+    "notes.gallery.no-match": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "맞는 노트가 없습니다"
+          }
+        }
+      }
+    },
+    "notes.gallery.no-tag": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "태그 없음"
+          }
+        }
+      }
+    },
+    "notes.gallery.scope": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 범위"
+          }
+        }
+      }
+    },
+    "notes.gallery.search": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트 검색"
+          }
+        }
+      }
+    },
+    "notes.gallery.search-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제목과 본문에서 노트 찾기"
+          }
+        }
+      }
+    },
+    "notes.gallery.segment.class": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업"
+          }
+        }
+      }
+    },
+    "notes.gallery.segment.exam": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험"
+          }
+        }
+      }
+    },
+    "notes.gallery.segment.free": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자유"
+          }
+        }
+      }
+    },
+    "notes.gallery.segment.unit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원"
+          }
+        }
+      }
+    },
+    "notes.gallery.sort": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정렬"
+          }
+        }
+      }
+    },
+    "notes.gallery.sort.course": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 순서"
+          }
+        }
+      }
+    },
+    "notes.gallery.sort.created": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "최근 만든순"
+          }
+        }
+      }
+    },
+    "notes.gallery.sort.modified": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "최근 수정순"
+          }
+        }
+      }
+    },
+    "notes.gallery.sort.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이름순"
+          }
+        }
+      }
+    },
+    "notes.gallery.this-week": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이번 주"
+          }
+        }
+      }
+    },
+    "notes.gallery.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트"
+          }
+        }
+      }
+    },
+    "notes.gallery.two-weeks-ago": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2주 전"
+          }
+        }
+      }
+    },
+    "notes.gallery.view-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정렬과 묶기"
+          }
+        }
+      }
+    },
+    "notes.gallery.week": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld주차"
+          }
+        }
+      }
+    },
+    "notes.gallery.year-month": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@년 %2$lld월"
+          }
+        }
+      }
+    },
     "notes.guide.math-symbols": {
       "extractionState": "manual",
       "localizations": {
@@ -9021,28 +9450,6 @@
         }
       }
     },
-    "notes.choose": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노트를 고르세요"
-          }
-        }
-      }
-    },
-    "notes.choose-detail": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "왼쪽 목록에서 노트를 고르거나 + 로 새로 만듭니다."
-          }
-        }
-      }
-    },
     "notes.conflict": {
       "extractionState": "manual",
       "localizations": {
@@ -9098,17 +9505,6 @@
         }
       }
     },
-    "notes.count": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노트 %lld"
-          }
-        }
-      }
-    },
     "notes.embed-loop": {
       "extractionState": "manual",
       "localizations": {
@@ -9138,17 +9534,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "임베드가 너무 깊이 겹쳐 그리지 않았습니다"
-          }
-        }
-      }
-    },
-    "notes.empty": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노트가 없습니다. + 로 새로 만듭니다."
           }
         }
       }
@@ -9681,39 +10066,6 @@
         }
       }
     },
-    "notes.needs-id": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "열면 ID가 붙습니다"
-          }
-        }
-      }
-    },
-    "notes.new-free": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "새 자유 노트"
-          }
-        }
-      }
-    },
-    "notes.new-kind": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "새 %@ 노트"
-          }
-        }
-      }
-    },
     "notes.no-exam": {
       "extractionState": "manual",
       "localizations": {
@@ -9908,17 +10260,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "복습 노트를 다 썼다고 표시합니다. 그때부터 오늘 복습의 노트 쓰기 항목에서 빠집니다"
-          }
-        }
-      }
-    },
-    "notes.section": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ %2$lld"
           }
         }
       }

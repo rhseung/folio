@@ -358,38 +358,79 @@ struct MaterialsModelTests {
 
 @MainActor
 struct NotesModelTests {
-    @Test func listSectionsByKindAndCreatesIntoTheFilter() throws {
-        let (workspace, course) = try fixtureCourse()
-        let model = NoteListModel(workspace: workspace, course: course)
-        model.reload()
-        #expect(model.parts.map(\.title) == ["수업 노트"])
-        #expect(model.parts[0].rows[0].detail == "러프 · 회차 없음")
+    func headings(_ model: NoteGalleryModel) -> [String] { model.sections.compactMap { $0.heading.map(model.title) } }
 
-        model.filter = .unit
-        #expect(model.emptyLine == "단원 노트가 없습니다")
-        let sheet = NewNoteModel(workspace: workspace, course: course, kind: model.filter ?? .free)
+    @Test func galleryGroupsByKindAndCreatesIntoTheChosenKind() throws {
+        let (workspace, course) = try fixtureCourse()
+        let model = NoteGalleryModel(workspace: workspace, course: course, defaults: nil)
+        model.reload()
+        #expect(model.grouping == .date)
+        model.grouping = .kind
+        #expect(headings(model) == ["수업 노트"])
+        #expect(model.card(model.sections[0].items[0]).kind == "수업 · 러프")
+
+        model.kind = .units
+        #expect(model.grouping == .unit && model.emptyTitle == "단원 노트가 없습니다")
+        let sheet = NewNoteModel(workspace: workspace, course: course, kind: model.newKind)
         #expect(sheet.link == .units && !sheet.canAdd)
         sheet.title = "  행렬식  "
         sheet.format = .tex
         let id = try #require(sheet.add())
         model.reload()
         #expect(model.shown.map(\.title) == ["행렬식"])
-        #expect(model.shown[0].meta.id == id && model.shown[0].format == .tex)
-        #expect(model.parts.first?.rows.first?.detail == "단원 없음")
+        let made = try #require(model.note(model.shown[0]))
+        #expect(made.meta.id == id && made.format == .tex && model.card(model.shown[0]).tex)
+        #expect(headings(model) == ["단원 없음"])
 
-        model.filter = nil
-        #expect(model.parts.map(\.title) == ["수업 노트", "단원 노트"])
+        model.kind = nil
+        #expect(model.grouping == .kind && headings(model) == ["수업 노트", "단원 노트"])
         var closed = false
         var asked: PendingAction?
         let menu = NoteMenuSource(
-            workspace: workspace, courseId: course.id, note: model.shown.first { $0.meta.id == id }!, host: .list,
+            workspace: workspace, courseId: course.id, note: made, host: .list,
             removed: { closed = true }, openLink: OpenLinkAction(), sheets: ItemSheetsAction(confirm: { asked = $0 }))
         let remove = try #require(menu.commands.map(menu.row).first { $0.group == .remove })
         if case .action(let action) = remove.kind { action() }
-        #expect(!closed && model.parts.map(\.title) == ["수업 노트", "단원 노트"])
+        #expect(!closed && headings(model) == ["수업 노트", "단원 노트"])
         try #require(asked).perform()
         model.reload()
-        #expect(closed && model.parts.map(\.title) == ["수업 노트"])
+        #expect(closed && headings(model) == ["수업 노트"])
+    }
+
+    @Test func galleryRemembersItsChoicesAndFoldsPerCourse() throws {
+        let (workspace, course) = try fixtureCourse()
+        let defaults = try #require(UserDefaults(suiteName: "note-gallery-tests-\(UUID().uuidString)"))
+        let model = NoteGalleryModel(workspace: workspace, course: course, defaults: defaults)
+        model.reload()
+        model.kind = .classes
+        model.sort = .title
+        model.grouping = .date
+        let section = try #require(model.sections.first)
+        let wasOpen = model.isOpen(section)
+        model.toggle(section)
+        #expect(model.isOpen(section) != wasOpen)
+
+        let again = NoteGalleryModel(workspace: workspace, course: course, defaults: defaults)
+        again.reload()
+        #expect(again.kind == .classes && again.sort == .title && again.grouping == .date)
+        #expect(again.isOpen(try #require(again.sections.first)) != wasOpen)
+        again.kind = nil
+        #expect(again.grouping == .date)
+        again.setAll(open: true)
+        #expect(again.sections.allSatisfy(again.isOpen))
+    }
+
+    @Test func gallerySearchShowsMatchingNotesWithoutGroups() throws {
+        let (workspace, course) = try fixtureCourse()
+        try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "행렬식")))
+        let model = NoteGalleryModel(workspace: workspace, course: course, defaults: nil)
+        model.reload()
+        model.searching = true
+        model.query = "행렬"
+        #expect(model.sections.count == 1 && model.sections[0].heading == nil)
+        #expect(model.shown.map(\.title) == ["행렬식"])
+        model.searching = false
+        #expect(model.query.isEmpty && model.shown.count > 1)
     }
 
     @Test func renamingShowsTheNewFileNameAndKeepsTheNoteOpen() throws {
@@ -409,8 +450,7 @@ struct NotesModelTests {
         let revision = workspace.notesRevision
         #expect(sheet.apply())
         #expect(workspace.notesRevision > revision)
-        let notes = NotesModel(workspace: workspace, course: course)
-        #expect(notes.note(id)?.title == "a-b")
+        #expect(try course.store.note(id: id)?.title == "a-b")
     }
 
     @Test func renamingATexNoteShowsItsBuiltPDF() throws {
@@ -487,7 +527,7 @@ struct NotesModelTests {
         #expect(sheet.target == "중간 대비/행렬식.md" && sheet.message == "폴더 Notes/중간 대비을(를) 만들고 Notes/중간 대비/행렬식.md(으)로 옮깁니다.")
         #expect(sheet.move())
 
-        let list = NoteListModel(workspace: workspace, course: course)
+        let list = NoteGalleryModel(workspace: workspace, course: course, defaults: nil)
         list.reload()
         let moved = try #require(list.notes.first { $0.meta.id == id })
         #expect(course.store.coursePath(of: moved.url) == "Notes/중간 대비/행렬식.md" && list.folders == ["", "중간 대비"])
@@ -501,7 +541,7 @@ struct NotesModelTests {
         let (workspace, course) = try fixtureCourse()
         let id = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "행렬식"))?.made)
         let moves = MoveUndo()
-        let list = NoteListModel(workspace: workspace, course: course, moves: moves)
+        let list = NoteGalleryModel(workspace: workspace, course: course, moves: moves, defaults: nil)
         list.reload()
         let sheet = NoteEditModel(workspace: workspace, course: course, note: try #require(try course.store.note(id: id)), moves: moves)
         sheet.name = "고윳값"
@@ -521,10 +561,9 @@ struct NotesModelTests {
 
     @Test func editorNamesItsLinkAndFindsNotesByTitle() throws {
         let (workspace, course) = try fixtureCourse()
-        let notes = NotesModel(workspace: workspace, course: course)
         let id = try #require(workspace.noteId(titled: "03-03(화)", in: course))
         #expect(workspace.noteId(titled: "03-03(화)".uppercased(), in: course) == id)
-        let editor = NoteEditorModel(workspace: workspace, course: course, note: try #require(notes.note(id)))
+        let editor = NoteEditorModel(workspace: workspace, course: course, note: try #require(try course.store.note(id: id)))
         editor.load()
         #expect(editor.currentLink == "러프 노트 · 회차 없음")
         #expect(!editor.dirty)
@@ -551,9 +590,13 @@ struct NotesModelTests {
         #expect([first, second].allSatisfy { s in file.sessions.first { $0.id == s }?.reviewNoteId == id })
         let span = try #require(file.sessionSpan(of: id, calendar: workspace.calendar))
         #expect(editor.currentLink == "\(span) 복습 노트")
-        let list = NoteListModel(workspace: workspace, course: course)
+        let list = NoteGalleryModel(workspace: workspace, course: course, defaults: nil)
         list.reload()
-        #expect(list.parts.first?.rows.first { $0.note.meta.id == id }?.detail == "\(span) · 복습")
+        let item = try #require(list.items.first { $0.meta.id == id })
+        let days = [first, second].compactMap { s in file.sessions.first { $0.id == s } }.map {
+            file.day(of: $0, calendar: workspace.calendar)
+        }
+        #expect(list.card(item).kind == "수업 · 복습" && list.card(item).context == days.joined(separator: ", "))
 
         editor.pick(first, as: .review)
         #expect(editor.linkedSessions.map(\.id) == [second])
@@ -593,9 +636,8 @@ struct NotesModelTests {
 
     @Test func readViewEditsReplaceTheirOwnLines() throws {
         let (workspace, course) = try fixtureCourse()
-        let notes = NotesModel(workspace: workspace, course: course)
-        let editor = NoteEditorModel(
-            workspace: workspace, course: course, note: try #require(notes.note(workspace.noteId(titled: "03-03(화)", in: course))))
+        let id = try #require(workspace.noteId(titled: "03-03(화)", in: course))
+        let editor = NoteEditorModel(workspace: workspace, course: course, note: try #require(try course.store.note(id: id)))
         editor.load()
         editor.body += "\n\n문단 하나\n둘째 줄\n"
         let parsed = ParsedNote(editor.body)

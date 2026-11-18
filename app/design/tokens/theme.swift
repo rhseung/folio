@@ -212,6 +212,11 @@ enum Theme {
         static let pageSearch: CGFloat = 320
         static let readingColumn: CGFloat = 720
         static let cardMin: CGFloat = 320
+        // 노트 페이지의 카드다. 본문 900에서 넷, 720 칸에서 셋, iPhone에서 작은 카드 둘이 들어가는 폭이다.
+        static let noteCard: CGFloat = 200
+        static let noteCardCompact: CGFloat = 152
+        static let noteCardHeight: CGFloat = 168
+        static let noteCardHeightCompact: CGFloat = 140
 
         static let countField: CGFloat = 56
         static let numberField: CGFloat = 72

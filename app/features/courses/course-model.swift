@@ -1,4 +1,5 @@
 import FolioDomain
+import FolioStorage
 import Foundation
 import Observation
 
@@ -38,6 +39,17 @@ final class CourseModel {
         section = .notes
     }
 
+    // 노트를 연 채로 노트 행을 누르면 노트 페이지의 카드 격자로 돌아간다.
+    func choose(_ tab: CourseTab) {
+        if section.tab != tab { section = tab.pages[0] }
+        if tab.pages.contains(.notes) { openNote = nil }
+    }
+
+    // 열린 노트가 지워졌으면 노트 페이지의 카드 격자로 돌아간다.
+    func openNoteFile(_ course: LoadedCourse) -> NoteFile? {
+        openNote.flatMap { course.store.note(id: $0, in: course.file) }
+    }
+
     func follow(_ entry: Navigator.Entry) {
         guard entry.course == courseId, entry.link != place else { return }
         let link = entry.link
@@ -46,10 +58,9 @@ final class CourseModel {
         place = link
         noteAnchor = nil
 
-        if link.kind == .note {
-            openNote = link.id
-            noteAnchor = link.anchor
-        }
+        // 노트가 아닌 곳(노트 페이지 자신 포함)으로 가면 노트를 닫는다. 그래야 뒤로와 탭 경로가 카드 격자로 돌아온다.
+        openNote = link.kind == .note ? link.id : nil
+        if link.kind == .note { noteAnchor = link.anchor }
         if link.kind == .course {
             section = link.page ?? .overview
         } else if let page = link.kind.coursePage {

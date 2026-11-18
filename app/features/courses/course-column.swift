@@ -29,7 +29,7 @@ struct CourseColumn: View {
                     ForEach(CourseTab.allCases) { item in
                         let chosen = model.section.tab == item
                         Button {
-                            if !chosen { model.section = item.pages[0] }
+                            model.choose(item)
                             closeColumn()
                         } label: {
                             ColumnRow(title: item.title, symbol: item.symbol, chosen: chosen, tint: accent.color, fill: accent.tint) {
@@ -63,9 +63,7 @@ struct CourseColumn: View {
                     }
                 }
 
-                if model.section == .notes {
-                    NoteList(workspace: model.workspace, course: course, selection: $model.openNote, moves: model.noteMoves)
-                } else if !recent.isEmpty {
+                if !recent.isEmpty {
                     VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                         Caption(String(localized: .courseRecent)).padding(.horizontal, Theme.Space.s).padding(.bottom, Theme.Space.tight)
                         ForEach(recent) { session in
