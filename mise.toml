@@ -34,6 +34,11 @@ description = "Tag a past commit and publish a notes-only release dated at that 
 depends = ["tectonic"]
 run = "swift run -q folio-dev release past"
 
+[tasks.release-renumber]
+description = "Redo released versions: delete a range of tags with their releases, publish notes-only versions and tag one to build at PRs' merge commits: mise run release-renumber -- --drop A-B --past <version>@<PR> --build <version>@<PR> [--dry-run]"
+depends = ["tectonic"]
+run = "swift run -q folio-dev release renumber"
+
 [tasks.test]
 description = "Run package tests, folio-lint (code, design and Application Support rules), SwiftLint, the swift-format check and the shell checks"
 depends = ["tectonic", "shell-check"]

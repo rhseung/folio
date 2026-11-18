@@ -55,11 +55,14 @@ public enum PatchNotes {
         public var version: Version
         public var date: Date?
         public var items: [Item]
+        // 이 minor로 끝난 기능 묶음의 이름이다(`bundle/<이름>` 라벨).
+        public var bundles: [String]
 
-        public init(version: Version, date: Date? = nil, items: [Item]) {
+        public init(version: Version, date: Date? = nil, items: [Item], bundles: [String] = []) {
             self.version = version
             self.date = date
             self.items = items
+            self.bundles = bundles
         }
 
         public var hasNewFeature: Bool { items.contains { $0.kind == .feat } }
@@ -76,6 +79,18 @@ public enum PatchNotes {
     // GitHub 릴리스의 게시일은 과거로 돌릴 수 없다. 나중에 게시한 지난 버전도 제 날짜로 보이도록, 본문에 그 버전의 마지막
     // 커밋 시각을 적는다.
     public static func dated(_ date: Date) -> String { "<!-- folio-released \(date.formatted(.iso8601)) -->" }
+
+    // 묶음 줄은 항목 줄의 모양을 바꾸지 않고 앞선 앱은 모르는 줄을 건너뛰므로 `format`을 올리지 않는다. 올리면 앞선 앱이
+    // 새 릴리스의 항목을 모두 버린다.
+    public static func bundled(_ name: String) -> String { "<!-- folio-bundle \(name) -->" }
+
+    public static func bundles(in body: String) -> [String] {
+        body.split(whereSeparator: \.isNewline).compactMap { raw in
+            let line = raw.trimmingCharacters(in: .whitespaces)
+            guard let m = line.wholeMatch(of: /<!--\s*folio-bundle\s+(.+?)\s*-->/) else { return nil }
+            return String(m.1)
+        }
+    }
 
     public static func released(in body: String) -> Date? {
         for raw in body.split(whereSeparator: \.isNewline) {
@@ -162,7 +177,7 @@ public enum PatchNotes {
         return raws.compactMap { raw -> Release? in
             guard raw.draft != true, raw.prerelease != true, let version = Version(raw.tagName) else { return nil }
             let date = released(in: raw.body ?? "") ?? raw.publishedAt.flatMap { try? Date($0, strategy: .iso8601) }
-            return Release(version: version, date: date, items: items(in: raw.body ?? ""))
+            return Release(version: version, date: date, items: items(in: raw.body ?? ""), bundles: bundles(in: raw.body ?? ""))
         }
         .sorted { $0.version > $1.version }
     }
@@ -181,9 +196,12 @@ public enum PatchNotes {
         }
     }
 
-    // 머지된 PR들(번호 차례)의 패치 노트를 종류마다 `### <종류>`로 묶는다. 두 PR이 똑같이 쓴 줄은 한 번만 넣는다.
-    // `assets`가 없으면 노트만 있는 릴리스(나중에 단 지난 버전)라 설치 안내를 쓰지 않는다.
-    public static func releaseBody(_ prs: [Merged], first: Bool, date: Date? = nil, assets: Bool = true) -> String {
+    // 머지된 PR들(머지 차례)의 패치 노트를 종류마다 `### <종류>`로 묶는다. 두 PR이 똑같이 쓴 줄은 한 번만 넣는다.
+    // `assets`가 없으면 노트만 있는 릴리스(나중에 단 지난 버전)라 설치 안내를 쓰지 않는다. `bundles`의 이름은 줄바꿈과
+    // `-->`가 없어야 한다. GitHub 라벨 이름이 둘 다 받지 않는다.
+    public static func releaseBody(
+        _ prs: [Merged], first: Bool, date: Date? = nil, bundles: [String] = [], assets: Bool = true
+    ) -> String {
         var items: [Item] = []
         for item in prs.flatMap({ Self.items(in: $0.body) }) where !items.contains(item) { items.append(item) }
         let groups = Kind.allCases.compactMap { kind -> String? in
@@ -191,7 +209,7 @@ public enum PatchNotes {
             return lines.isEmpty ? nil : "### \(kind.prefix)\n" + lines.joined(separator: "\n") + "\n"
         }
         var parts = [
-            "## \(heading)\n\(marker)\n" + (date.map { dated($0) + "\n" } ?? "")
+            "## \(heading)\n\(marker)\n" + (date.map { dated($0) + "\n" } ?? "") + bundles.map { bundled($0) + "\n" }.joined()
                 + (groups.isEmpty ? "사용자에게 보이는 변화가 없습니다.\n" : "\n" + groups.joined(separator: "\n"))
         ]
         if first { parts.append("첫 릴리스입니다.\n") }
@@ -293,6 +311,12 @@ public enum PatchNotes {
         public var releases: [Release]
 
         public var name: String { "\(major).\(minor)" }
+        // 묶음은 보통 그 minor의 첫 릴리스(x.y.0)가 끝낸다.
+        public var bundles: [String] {
+            var names: [String] = []
+            for name in releases.reversed().flatMap(\.bundles) where !names.contains(name) { names.append(name) }
+            return names
+        }
         public var latest: Release { releases[0] }
         public var first: Release { releases[releases.count - 1] }
         public func contains(_ version: Version) -> Bool { releases.contains { $0.version == version } }

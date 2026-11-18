@@ -1,0 +1,37 @@
+name: patch notes
+
+# 패치 노트가 있는 PR만 릴리스되므로(docs/release.md), app/이나 sources/를 바꾸고 패치 노트도 no-patch-notes 라벨도 없는 PR을
+# 막는다. 본문과 라벨을 고치면 다시 돌아야 해서 ci.yml과 따로 두고, macOS 러너를 쓰지 않는다.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review, labeled, unlabeled]
+
+concurrency:
+  group: patch-notes-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  check:
+    name: patch notes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: .mise/tasks/patch-notes-check
+          sparse-checkout-cone-mode: false
+      # 파일 목록 API는 3000개까지 돌려준다. 그보다 많이 바꾼 PR은 app/이나 sources/를 바꿨다고 본다.
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          PR_LABELS=$(jq -r '.[]' <<<"$LABELS")
+          export PR_LABELS
+          gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files?per_page=100" --jq '.[].filename' > files.txt
+          if [ "$(wc -l < files.txt)" -ge 3000 ]; then echo app/ >> files.txt; fi
+          .mise/tasks/patch-notes-check < files.txt

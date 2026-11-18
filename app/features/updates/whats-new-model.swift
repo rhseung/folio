@@ -52,6 +52,13 @@ final class WhatsNewModel {
     // 릴리스가 하나뿐인 묶음은 묶음 제목이 그 릴리스를 말하므로 릴리스마다의 제목을 두지 않는다.
     func showsReleases(_ series: PatchNotes.Series) -> Bool { series.releases.count > 1 }
 
+    // 그 minor가 끝낸 기능 묶음을 제목에 붙인다("0.6 · LMS 연동").
+    func title(_ series: PatchNotes.Series) -> String {
+        let version = showsReleases(series) ? series.name : series.latest.version.description
+        guard !series.bundles.isEmpty else { return version }
+        return String(localized: .whatsNewSeriesBundle(version, series.bundles.formatted(.list(type: .and))))
+    }
+
     func days(_ series: PatchNotes.Series) -> String? {
         let first = date(series.first), last = date(series.latest)
         guard let first, let last, first != last else { return last ?? first }
