@@ -241,13 +241,12 @@ final class NoteGalleryModel {
             when: when(sort == .created ? item.created : item.modified))
     }
 
+    // 시각은 오늘과 어제에만 붙인다. 그보다 먼 날에 시각까지 쓰면 좁은 카드의 아래 줄에 들어가지 않는다.
     func when(_ date: Date) -> String {
-        let settings = workspace.settings, calendar = workspace.calendar
+        let (settings, calendar, now) = (workspace.settings, workspace.calendar, workspace.now)
         guard date != .distantPast else { return "" }
-        if settings.studyDay(of: date, calendar: calendar) == settings.studyDay(of: workspace.now, calendar: calendar) {
-            return String(localized: .notesGalleryToday(ClockText.minute(calendar.minuteOfDay(date))))
-        }
-        return CourseFile.day(date, calendar: calendar)
+        let recent = (-1...0).contains(DateTimeText.days(date, from: now, settings: settings, calendar: calendar))
+        return DateTimeText.text(date, from: now, time: recent, settings: settings, calendar: calendar)
     }
 
     // MARK: 복습 노트 없는 수업

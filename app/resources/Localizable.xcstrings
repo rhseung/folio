@@ -8845,17 +8845,6 @@
         }
       }
     },
-    "notes.gallery.today": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오늘 %@"
-          }
-        }
-      }
-    },
     "notes.gallery.two-weeks-ago": {
       "extractionState": "manual",
       "localizations": {
