@@ -25,10 +25,14 @@ final class OverdueAssignmentsModel {
         var courseId: UUID
         var assignment: Assignment
         var due: String
-        var ceiling: String?
-        // 지금 내도 0점이다.
-        var lost: Bool
+        // 마감이 지났는데 LMS에는 아직 내지 않았다. Folio에서 제출함으로 둔 과제도 이것 때문에 여기 온다.
+        var lms: URL?
         var id: UUID { assignment.id }
+
+        // Folio에서 이미 낸 과제는 마감보다 LMS에 아직 안 낸 것이 여기 있는 이유다.
+        var trailing: String {
+            assignment.status.isOpen || lms == nil ? due : String(localized: .lmsNotSubmitted)
+        }
     }
 
     var showsCourse: Bool { courseId == nil }
@@ -38,27 +42,22 @@ final class OverdueAssignmentsModel {
     }
 
     func rows(now: Date) -> [Row] {
-        courses.flatMap { c in c.file.overdueAssignments(at: now).map { row($0, in: c, now: now) } }
-            .sorted { ($0.assignment.due ?? .distantPast) < ($1.assignment.due ?? .distantPast) }
+        courses.flatMap { c in
+            let unsubmitted = workspace.lms.snapshot.map { LMSInbox.unsubmitted($0, in: c.file, now: now) } ?? [:]
+            let overdue = Set(c.file.overdueAssignments(at: now).map(\.id))
+            return c.file.assignments.filter { overdue.contains($0.id) || unsubmitted[$0.id] != nil }
+                .map { row($0, in: c, lms: unsubmitted[$0.id]?.url, now: now) }
+        }
+        .sorted { ($0.assignment.due ?? .distantPast, $0.assignment.title) < ($1.assignment.due ?? .distantPast, $1.assignment.title) }
     }
 
-    private func row(_ a: Assignment, in course: LoadedCourse, now: Date) -> Row {
-        let calendar = workspace.calendar
-        let due = a.due ?? now
-        // 지난 날 수는 감점과 같은 셈(`LateRule.lateDays`)으로 센다. 그래야 "2일 지남"과 "최대 80%"가 어긋나지 않는다.
-        let past = String(localized: .assignmentsOverdueDays(LateRule.lateDays(due: due, at: now)))
-        let when = CourseFile.deadline(due, calendar: calendar)
-        let late = course.file.lateness(of: a, at: now)
-        let ceiling = late?.ceiling.map { ceiling in
-            guard ceiling > 0 else { return String(localized: .overdueCeilingZero) }
-            let percent = Int((ceiling * 100).rounded())
-            return late?.nextDrop.map { String(localized: .overdueCeilingUntil(percent, CourseFile.deadline($0, calendar: calendar))) }
-                ?? String(localized: .overdueCeiling(percent))
-        }
-        return Row(
-            courseId: course.id, assignment: a, due: String(localized: .overdueDue(when, past)), ceiling: ceiling,
-            lost: late?.ceiling == 0)
+    private func row(_ a: Assignment, in course: LoadedCourse, lms: URL?, now: Date) -> Row {
+        // 감점과 상한은 과제 시트에서 본다.
+        let due = DateTimeText.text(a.due ?? now, from: now, time: true, settings: workspace.settings, calendar: workspace.calendar)
+        return Row(courseId: course.id, assignment: a, due: due, lms: lms)
     }
+
+    func accent(_ row: Row) -> CourseAccent { workspace.accent(row.courseId) }
 
     func courseTitle(_ row: Row) -> String { workspace.course(row.courseId)?.title ?? "" }
 
@@ -67,11 +66,7 @@ final class OverdueAssignmentsModel {
         editing = Editing(course: course, assignment: row.assignment)
     }
 
-    func submit(_ row: Row) { set(row, .submitted) }
-
-    func miss(_ row: Row) { set(row, .missed) }
-
-    private func set(_ row: Row, _ status: AssignmentStatus) {
+    func set(_ row: Row, _ status: AssignmentStatus) {
         workspace.run(AssignmentStatusSet(course: row.courseId, assignment: row.id, status: status))
     }
 }

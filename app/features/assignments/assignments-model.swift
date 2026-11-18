@@ -48,9 +48,9 @@ final class AssignmentsModel {
         var submissions: Int
         var score: String?
         var component: String?
-        var suggestsSubmitted: Bool
-        // 늦게 낸 과제다. 아직 내지 않은 과제는 마감 칩이 이미 지남을 보인다.
-        var late: String?
+        var lms: Bool
+        var submittedOn: String?
+        var lateSubmitted: Bool
     }
 
     func row(_ a: Assignment) -> Row {
@@ -66,33 +66,39 @@ final class AssignmentsModel {
             files: files, problems: files.count - submissions, submissions: submissions,
             score: scores.isEmpty ? nil : "\(scores.map(\.score).reduce(0, +).formatted())/\(scores.map(\.max).reduce(0, +).formatted())",
             component: a.componentGroup ?? file.components.first { $0.id == a.componentId }?.name,
-            suggestsSubmitted: AssignmentFiles.suggestsSubmitted(a, files: files, kinds: workspace.settings.assignmentKindTable),
-            late: a.status.isOpen ? nil : file.lateness(of: a, at: workspace.now)?.label)
+            lms: a.lmsId != nil,
+            submittedOn: a.status.isOpen
+                ? nil
+                : a.submittedAt.map { String(localized: .assignmentsSubmittedOn(CourseFile.deadline($0, calendar: workspace.calendar))) },
+            lateSubmitted: !a.status.isOpen && file.lateness(of: a, at: workspace.now) != nil)
     }
 
-    func due(_ a: Assignment) -> (date: String, time: String?) {
-        guard let due = a.due else { return (String(localized: .assignmentsNoDue), nil) }
+    // 급한 정도는 날짜의 색으로만 보이고 칩은 두지 않는다.
+    struct Due {
+        var date: String
+        var time: String?
+        var tone: Tone
+    }
+
+    func due(_ a: Assignment, now: Date) -> Due {
+        guard let due = a.due else { return Due(date: String(localized: .assignmentsNoDue), tone: .plain) }
         let c = workspace.calendar
-        return (
-            due.formatted(.dateTime.month().day()),
-            due.formatted(.dateTime.weekday()) + " " + TimePicker.label(c.minuteOfDay(due))
-        )
-    }
-
-    func dueChip(_ a: Assignment, now: Date) -> (text: String, tone: Tone)? {
-        guard a.status.isOpen, let due = a.due else { return nil }
+        let settings = workspace.settings
         let tone: Tone =
-            switch DueUrgency(due: due, now: now, settings: workspace.settings, calendar: workspace.calendar) {
-            case .urgent: .danger
-            case .soon: .warning
-            case .later: .plain
+            if !a.status.isOpen {
+                .plain
+            } else if due < now {
+                .danger
+            } else {
+                switch DueUrgency(due: due, now: now, settings: settings, calendar: c) {
+                case .urgent: .danger
+                case .soon: .warning
+                case .later: .plain
+                }
             }
-        switch DueState(due: due, now: now, calendar: workspace.calendar) {
-        case .none: return nil
-        case .overdue(let d): return (String(localized: d == 0 ? .assignmentsJustOverdue : .assignmentsOverdueDays(d)), .danger)
-        case .hours(let h): return (String(localized: .assignmentsHoursLeft(h)), tone)
-        case .days(let d): return (DDay.text(d), tone)
-        }
+        // 날과 시각을 두 줄로 나눈다. 한 줄로 쓰면 좁은 폭에서 날짜 칸을 넘어 꺾인다. 오늘이면 날 없이 시각이 첫 줄이다.
+        let parts = DateTimeText.parts(due, from: now, time: true, settings: settings, calendar: c)
+        return Due(date: parts.day ?? parts.time ?? "", time: parts.day == nil ? nil : parts.time, tone: tone)
     }
 }
 

@@ -29,9 +29,3 @@ public enum AssignmentFiles {
             && files.contains { ($0.kind ?? guessKind(fileName: ($0.path as NSString).lastPathComponent, kinds: kinds)) == .submission }
     }
 }
-
-extension Settings {
-    public func studyDays(from now: Date, until date: Date, calendar: Calendar) -> Int {
-        studyDay(of: now, calendar: calendar).days(until: studyDay(of: date, calendar: calendar))
-    }
-}

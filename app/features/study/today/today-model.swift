@@ -155,7 +155,7 @@ final class TodayModel {
         workspace.course(course)?.file.title(of: session, calendar: workspace.calendar) ?? ""
     }
 
-    func dDay(_ item: TodaySummary.ExamItem) -> String { DDay.text(item.dDay) }
+    func dDay(_ item: TodaySummary.ExamItem) -> String { DateTimeText.dday(days: item.dDay) }
 
     func examStart(_ item: TodaySummary.ExamItem) -> String {
         item.exam.start?.formatted(.dateTime.month().day().weekday().hour().minute()) ?? ""
@@ -215,15 +215,19 @@ final class TodayModel {
         }
     }
 
-    func deadlineRows(_ items: [TodaySummary.DeadlineItem], studyDay: LocalDate) -> [DeadlineRow] {
+    func deadlineRows(_ items: [TodaySummary.DeadlineItem], now: Date) -> [DeadlineRow] {
         let calendar = workspace.calendar
+        let settings = workspace.settings
         return items.compactMap { item in
             guard let due = item.assignment.due else { return nil }
-            let days = studyDay.days(until: workspace.settings.studyDay(of: due, calendar: calendar))
-            let urgency = DueUrgency(studyDays: days, settings: workspace.settings.urgency)
             return DeadlineRow(
-                item: item, urgency: urgency, due: DueUrgency.text(due, studyDays: days, settings: workspace.settings.urgency))
+                item: item, urgency: DueUrgency(due: due, now: now, settings: settings, calendar: calendar),
+                due: DateTimeText.text(due, from: now, time: true, settings: settings, calendar: calendar))
         }
+    }
+
+    func set(_ item: TodaySummary.DeadlineItem, _ status: AssignmentStatus) {
+        workspace.run(AssignmentStatusSet(course: item.courseId, assignment: item.assignment.id, status: status))
     }
 
     static let deadlineLimit = 6
@@ -235,7 +239,7 @@ final class TodayModel {
     }
 
     func shownDeadlines(_ summary: TodaySummary) -> (rows: [DeadlineRow], more: Int) {
-        shownDeadlines(deadlineRows(summary.deadlines, studyDay: summary.studyDay))
+        shownDeadlines(deadlineRows(summary.deadlines, now: workspace.liveNow))
     }
 
     // MARK: Day ribbon
@@ -409,12 +413,7 @@ final class TodayModel {
     }
 
     func sessionWhen(_ item: TodaySummary.SessionItem, today: LocalDate) -> String {
-        let day = workspace.settings.studyDay(of: item.session.date, calendar: workspace.calendar)
-        let gap = day.days(until: today)
-        return gap == 0
-            ? String(localized: .todayWhenToday)
-            : gap == 1
-                ? String(localized: .todayWhenYesterday)
-                : item.session.date.formatted(gap < 7 ? .dateTime.weekday(.wide) : .dateTime.month().day())
+        let s = workspace.settings, c = workspace.calendar
+        return DateTimeText.text(item.session.date, from: s.start(of: today, calendar: c), settings: s, calendar: c)
     }
 }

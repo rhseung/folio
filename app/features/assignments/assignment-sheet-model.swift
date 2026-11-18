@@ -58,6 +58,33 @@ final class AssignmentSheetModel {
 
     var showsSubmittedAt: Bool { status == .submitted || status == .graded }
 
+    struct LMSLink {
+        var title: String
+        var classroom: String?
+        var due: String?
+        var url: URL
+        // 아직 동기화로 읽지 못한 과제는 LMS 제출 상태를 모른다.
+        var submitted: Bool?
+        var detail: String?
+    }
+
+    var lms: LMSLink? {
+        guard let id = assignment.lmsId else { return nil }
+        let calendar = workspace.calendar
+        guard let snapshot = workspace.lms.snapshot, let read = snapshot.assignments.first(where: { $0.id == id }) else {
+            return LMSLink(title: String(localized: .assignmentsLmsUnread), url: LMSAssignment.url(id))
+        }
+        // LMS 마감은 과제 마감과 다를 때만 보인다. 같으면 위의 마감 칸과 같은 말을 되풀이한다.
+        return LMSLink(
+            title: read.title, classroom: snapshot.classrooms.first { $0.id == read.classroom }?.title,
+            due: read.due.flatMap {
+                assignment.due.map(LMSDifference.minute) == LMSDifference.minute($0)
+                    ? nil : String(localized: .assignmentsLmsDue(CourseFile.deadline($0, calendar: calendar)))
+            },
+            url: read.url, submitted: read.submitted,
+            detail: read.submittedAt.map { String(localized: .assignmentsLmsSubmittedDetail(CourseFile.deadline($0, calendar: calendar))) })
+    }
+
     var courseLateRule: LateRule? { course.file.policy.lateRule }
 
     var submittedDetail: String? {

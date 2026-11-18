@@ -102,6 +102,83 @@ struct LMSTests {
         #expect(file.materials.first { $0.id == added.problemMaterialId }?.path == "\(folder)/slow_problem_2.pdf")
     }
 
+    @Test func newAttachmentsGoIntoTheAssignmentAlreadyReceived() throws {
+        let dir = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        let first = dir.appending(path: "1/hw.pdf")
+        let later = dir.appending(path: "2/hw-hint.pdf")
+        for url in [first, later] {
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Data("%PDF-1.4".utf8).write(to: url)
+        }
+        let gist = try Harness.fixtureCopy()
+        let received = dir.appending(path: "received.json")
+        // 첨부 셋 중 하나는 뷰어 전용이라 내려받지 못했다. 받을 때의 첨부 수로 새 첨부 키를 숨긴다.
+        try JSONEncoder().encode([LMSAcceptItem(key: "assignment:139970", title: "Hint Set", files: [first.path], attachmentCount: 2)])
+            .write(to: received)
+        #expect(h.cli(["lms", "accept", "EC4207", "--items", received.path], gist: gist).code == 0)
+        let hidden = { try GISTStore(url: gist).loadSettings().model.lms.handled }
+        #expect(try hidden().contains(LMSKey(kind: .attachments, id: 139970, stamp: 2)))
+
+        let items = [LMSAcceptItem(key: "attachments:139970:2", files: [later.path])]
+        let json = dir.appending(path: "items.json")
+        try JSONEncoder().encode(items).write(to: json)
+        #expect(h.cli(["lms", "accept", "EC4207", "--items", json.path], gist: gist).code == 0)
+        let file = try h.file(GISTStore(url: gist))
+        let added = try #require(file.assignments.first { $0.lmsId == 139970 })
+        let folder = AssignmentFiles.path(of: added)
+        let files = AssignmentFiles.materials(of: added, in: file.materials)
+        #expect(Set(files.map(\.path)) == ["\(folder)/hw.pdf", "\(folder)/hw-hint.pdf"])
+        #expect(file.materials.first { $0.id == added.problemMaterialId }?.path == "\(folder)/hw.pdf")
+        #expect(try GISTStore(url: gist).loadSettings().model.lms.handled.contains(LMSKey(kind: .attachments, id: 139970, stamp: 2)))
+
+        let missing = dir.appending(path: "missing.json")
+        try JSONEncoder().encode([LMSAcceptItem(key: "attachments:1:1", files: [later.path])]).write(to: missing)
+        #expect(h.cli(["lms", "accept", "EC4207", "--items", missing.path], gist: gist).code != 0)
+
+        // 새 첨부가 모두 뷰어 전용이라 내려받은 파일이 없으면 실패하지 않고 숨기기만 한다.
+        let viewerOnly = dir.appending(path: "viewer-only.json")
+        try JSONEncoder().encode([LMSAcceptItem(key: "attachments:139970:3")]).write(to: viewerOnly)
+        #expect(h.cli(["lms", "accept", "EC4207", "--items", viewerOnly.path], gist: gist).code == 0)
+        #expect(try hidden().contains(LMSKey(kind: .attachments, id: 139970, stamp: 3)))
+        #expect(AssignmentFiles.materials(of: added, in: try h.file(GISTStore(url: gist)).materials).count == 2)
+    }
+
+    @Test func submittedInTheLMSMarksTheReceivedAssignmentWithTheLMSTime() throws {
+        let dir = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let gist = try Harness.fixtureCopy()
+        let received = dir.appending(path: "received.json")
+        try JSONEncoder().encode([LMSAcceptItem(key: "assignment:139980", title: "Homework Set #6")]).write(to: received)
+        #expect(h.cli(["lms", "accept", "EC4207", "--items", received.path], gist: gist).code == 0)
+        let course = try h.file(GISTStore(url: gist))
+        let added = try #require(course.assignments.first { $0.lmsId == 139980 })
+        let at = Date(timeIntervalSince1970: 1_793_000_000)
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let json = dir.appending(path: "items.json")
+        try encoder.encode([LMSSubmission(course: course.course.id, assignment: added.id, lms: 139980, at: at)]).write(to: json)
+        #expect(h.cli(["lms", "submitted", "--items", json.path, "--dry-run"], gist: gist).code == 0)
+        #expect(try h.file(GISTStore(url: gist)).assignments.first { $0.id == added.id }?.status == .todo)
+        #expect(h.cli(["lms", "submitted", "--items", json.path], gist: gist).code == 0)
+        let after = try #require(try h.file(GISTStore(url: gist)).assignments.first { $0.id == added.id })
+        #expect(after.status == .submitted && after.submittedAt == at)
+        #expect(try GISTStore(url: gist).loadSettings().model.lms.handled.contains(LMSKey(kind: .submitted, id: 139980)))
+
+        let missing = dir.appending(path: "missing.json")
+        try encoder.encode([LMSSubmission(course: course.course.id, assignment: UUID(), lms: 1)]).write(to: missing)
+        #expect(h.cli(["lms", "submitted", "--items", missing.path], gist: gist).code != 0)
+
+        // 두 사본에 같은 ID로 과제를 더한 뒤, 앱과 CLI가 같은 결과로 바꾸는지 본다.
+        let open = UUID()
+        let same = [LMSSubmission(course: course.course.id, assignment: open, lms: 139981, at: at)]
+        let sameJSON = dir.appending(path: "same.json")
+        try encoder.encode(same).write(to: sameJSON)
+        try h.expectSame(
+            ["lms", "submitted", "--items", sameJSON.path], setup: [["assignment", "add", "EC4207", "HW 9", "--id", open.uuidString]]
+        ) { _ in LMSSubmitted(items: same) }
+    }
+
     @Test func acceptBesideAnAssignmentOfTheSameTitleKeepsBothProblemFiles() throws {
         let dir = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)

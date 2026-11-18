@@ -89,6 +89,14 @@ enum FormSnapshots {
             forms.append(
                 ("assignment-repeat-\(name)", AnyView(AssignmentSheet(workspace: workspace, course: course, assignment: a) { _, _ in })))
         }
+        for c in workspace.courses {
+            for a in c.file.assignments {
+                if let lms = a.lmsId {
+                    forms.append(
+                        ("assignment-lms-\(lms)", AnyView(AssignmentSheet(workspace: workspace, course: c, assignment: a) { _, _ in })))
+                }
+            }
+        }
         let users = workspace.allCourses.flatMap(\.codes)
         if let code = workspace.catalog.codes.max(by: { a, b in users.filter { $0 == a.id }.count < users.filter { $0 == b.id }.count }) {
             let courses = workspace.allCourses.filter { $0.codes.contains(code.id) }.map(\.id)
@@ -153,7 +161,8 @@ enum FormSnapshots {
                 add(
                     "menu-assignment",
                     AssignmentMenuSource(
-                        workspace: workspace, courseId: id, assignment: assignment, host: .list, openLink: link, sheets: sheets))
+                        workspace: workspace, courseId: id, assignment: assignment, host: .list, openLink: link,
+                        openURL: OpenURLAction { _ in .handled }, sheets: sheets))
             }
             if let exam = file.exams.first {
                 add(

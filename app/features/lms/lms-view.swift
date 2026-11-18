@@ -273,6 +273,7 @@ private struct RoomActions: View {
     }
 }
 
+// 행을 누르면 LMS에서 연다. 단추는 할 일 하나만 두고, 무시는 그 단추의 메뉴와 행의 메뉴에 둔다.
 private struct ProposalRow: View {
     let model: LMSModel
     let proposal: Proposal
@@ -284,51 +285,69 @@ private struct ProposalRow: View {
         CardRow(last: last) {
             LineIcon(symbol: proposal.kind.symbol).foregroundStyle(Theme.Palette.textSecondary)
             FoldingRow {
-                VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                    // 좁은 칸에서 칩이 제목을 밀어 자르지 않도록 칩을 다음 줄로 넘긴다.
-                    FlowLayout(spacing: Theme.Space.s, centered: true) {
-                        Text(model.title(proposal)).lineLimit(2)
-                        if let flag = proposal.flag { Badge(flag.label, tone: .warning) }
-                        if let due = model.due(proposal) { DueChip(text: due.text, urgency: due.urgency) }
-                    }
-                    if let detail = model.detail(proposal, source: source) {
-                        Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1)
-                            .truncationMode(.middle)
-                    }
-                }
+                RowText(title: model.title(proposal), detail: model.detail(proposal, source: source))
             } control: {
-                HStack(spacing: Theme.Space.s) {
-                    if model.showsOpen(proposal), let url = proposal.url {
-                        Button {
-                            openURL(url)
-                        } label: {
-                            Label(.lmsOpen, systemImage: "arrow.up.forward.app")
-                        }
-                        .buttonStyle(.secondary(iconOnly: true)).help(String(localized: .lmsOpen))
-                    }
-                    if proposal.canDismiss { Button(.lmsDismiss) { model.dismiss([proposal]) }.buttonStyle(.secondary) }
-                    approve
-                    if let label = model.fixLabel(proposal), proposal.canApprove {
-                        Button(label) { Task { await model.fix(proposal) } }.buttonStyle(.secondary(strong: true))
-                            .disabled(model.isAdding([proposal]))
-                    }
+                HStack(spacing: Theme.Space.m) {
+                    if let due = model.due(proposal) { DueText(due: due) }
+                    action
                 }
                 .fixedSize()
             }
         }
+        .opens(proposal.url.map { url in { openURL(url) } })
+        .accessibilityAction(named: Text(.lmsOpen)) { if let url = proposal.url { openURL(url) } }
         .contextMenu {
             if let url = proposal.url { Button(.lmsOpen) { openURL(url) } }
             if proposal.canDismiss { Button(.lmsDismiss) { model.dismiss([proposal]) } }
         }
     }
 
-    @ViewBuilder var approve: some View {
+    @ViewBuilder var action: some View {
         if proposal.kind.picksCourse, proposal.canApprove {
             TargetCourseMenu(model: model, label: String(localized: .commonAdd), remembered: model.remembered(proposal), strong: true) {
                 course in
                 Task { await model.add([proposal], into: course) }
+            } more: {
+                dismiss
             }
             .disabled(model.isAdding([proposal]))
+        } else if let label = model.fixLabel(proposal), proposal.canApprove {
+            HStack(spacing: Theme.Space.xs) {
+                Button(label) { Task { await model.fix(proposal) } }.buttonStyle(.secondary(strong: true))
+                if proposal.canDismiss {
+                    Menu {
+                        dismiss
+                    } label: {
+                        Image(systemName: "chevron.down").font(Theme.Glyph.small).accessibilityLabel(String(localized: .lmsMore))
+                    }
+                    .menuStyle(.button).buttonStyle(.secondary(iconOnly: true)).menuIndicator(.hidden).fixedSize()
+                    .help(String(localized: .lmsMore))
+                }
+            }
+            .disabled(model.isAdding([proposal]))
+        }
+    }
+
+    @ViewBuilder var dismiss: some View {
+        if proposal.canDismiss {
+            Divider()
+            Button(.lmsDismiss, role: .destructive) { model.dismiss([proposal]) }
+        }
+    }
+}
+
+private struct RowText: View {
+    let title: String
+    let detail: String?
+    var dim = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Space.xxs) {
+            Text(title).foregroundStyle(dim ? Theme.Palette.textSecondary : Theme.Palette.text).lineLimit(2)
+            if let detail {
+                Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
+                    .truncationMode(.middle)
+            }
         }
     }
 }
@@ -343,24 +362,13 @@ private struct HiddenRow: View {
         CardRow(last: last) {
             LineIcon(symbol: hidden.proposal.proposal().kind.symbol).foregroundStyle(Theme.Palette.textTertiary)
             FoldingRow {
-                VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                    Text(hidden.proposal.title).foregroundStyle(Theme.Palette.textSecondary).lineLimit(2)
-                    Text(model.detail(hidden)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
-                        .truncationMode(.middle)
-                }
+                RowText(title: hidden.proposal.title, detail: model.detail(hidden), dim: true)
             } control: {
-                HStack(spacing: Theme.Space.s) {
-                    Button {
-                        openURL(hidden.proposal.url)
-                    } label: {
-                        Label(.lmsOpen, systemImage: "arrow.up.forward.app")
-                    }
-                    .buttonStyle(.secondary(iconOnly: true)).help(String(localized: .lmsOpen))
-                    if hidden.proposable { Button(.lmsRestore) { model.proposeAgain(hidden) }.buttonStyle(.secondary) }
-                }
-                .fixedSize()
+                if hidden.proposable { Button(.lmsRestore) { model.proposeAgain(hidden) }.buttonStyle(.secondary).fixedSize() }
             }
         }
+        .opens { openURL(hidden.proposal.url) }
+        .accessibilityAction(named: Text(.lmsOpen)) { openURL(hidden.proposal.url) }
         .contextMenu {
             Button(.lmsOpen) { openURL(hidden.proposal.url) }
             if hidden.proposable { Button(.lmsRestore) { model.proposeAgain(hidden) } }
@@ -368,6 +376,7 @@ private struct HiddenRow: View {
     }
 }
 
+// 이 무리의 행은 모두 LMS에 아직 내지 않은 과제라 따로 표시하지 않는다.
 private struct DeadlineRow: View {
     let model: LMSModel
     let deadline: LMSDeadline
@@ -379,37 +388,22 @@ private struct DeadlineRow: View {
         CardRow(last: last) {
             LineIcon(symbol: ProposalKind.lmsAssignment.symbol).foregroundStyle(Theme.Palette.textSecondary)
             FoldingRow {
-                VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                    FlowLayout(spacing: Theme.Space.s, centered: true) {
-                        Text(deadline.assignment.title).lineLimit(2)
-                        Badge(String(localized: .lmsNotSubmitted), tone: .warning)
-                        if let due = model.due(deadline) { DueChip(text: due.text, urgency: due.urgency) }
-                    }
-                    Text(model.detail(deadline, source: source)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
-                        .lineLimit(1).truncationMode(.middle)
-                }
+                RowText(title: deadline.assignment.title, detail: model.detail(deadline, source: source))
             } control: {
-                Button {
-                    openURL(deadline.assignment.url)
-                } label: {
-                    Label(.lmsOpen, systemImage: "arrow.up.forward.app")
-                }
-                .buttonStyle(.secondary(iconOnly: true)).help(String(localized: .lmsOpen))
+                if let due = model.due(deadline) { DueText(due: due).fixedSize() }
             }
         }
+        .opens { openURL(deadline.assignment.url) }
+        .accessibilityAction(named: Text(.lmsOpen)) { openURL(deadline.assignment.url) }
         .contextMenu { Button(.lmsOpen) { openURL(deadline.assignment.url) } }
     }
 }
 
-private struct DueChip: View {
-    let text: String
-    let urgency: DueUrgency
+private struct DueText: View {
+    let due: LMSModel.Due
 
     var body: some View {
-        switch urgency {
-        case .urgent: Badge(text, tone: .danger, solid: true).monospacedDigit()
-        case .soon: Badge(text, tone: .warning).monospacedDigit()
-        case .later: Badge(text).monospacedDigit()
-        }
+        Text(due.text).font(Theme.Typeface.caption).monospacedDigit()
+            .foregroundStyle(due.tone?.foreground ?? Theme.Palette.textTertiary)
     }
 }

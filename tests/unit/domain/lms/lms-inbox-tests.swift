@@ -57,7 +57,7 @@ struct LMSInboxTests {
         #expect(handled.map(\.proposable) == [false, true, false, false])
     }
 
-    @Test func attachmentsAreReadOnlyForProposedAssignments() {
+    @Test func pagesAreReadForProposedAndStillOpenReceivedAssignments() {
         var added = Assignment(device: device, at: now, title: "HW3", source: .lms)
         added.lmsId = 104
         var settings = LMSSettings(known: [1])
@@ -72,8 +72,9 @@ struct LMSInboxTests {
                 .init(id: 105, classroom: 1, title: "dismissed"),
                 .init(id: 200, classroom: 2, title: "new room"),
             ])
-        let read = LMSInbox.attachmentsToRead(snapshot, settings: settings, courses: [course("선형대수학", assignments: [added])], now: now)
-        #expect(read.map(\.id) == [100, 200])
+        let read = LMSInbox.pagesToRead(snapshot, settings: settings, courses: [course("선형대수학", assignments: [added])], now: now)
+        // 104는 받은 과제인데 Folio에서 아직 할 일이고 마감이 없어, 새 첨부를 보려고 읽는다.
+        #expect(read.map(\.id) == [100, 200, 104])
     }
 
     @Test func proposalsCarryTheirAttachments() {
@@ -83,6 +84,9 @@ struct LMSInboxTests {
             assignments: [.init(id: 100, classroom: 1, title: "SP2", attachments: files)], files: [.init(id: 10, classroom: 1, title: "a")])
         let inbox = LMSInbox.build(snapshot, settings: LMSSettings(known: [1]), courses: [], now: now)
         #expect(inbox.proposals.map(\.attachments) == [files, []])
+        // 받을 때의 첨부 수를 넘겨, 내려받지 못한 뷰어 전용 첨부가 새 첨부로 다시 제안되지 않게 한다.
+        guard case .array(let items)? = inbox.proposals[0].proposal().action?.input["items"] else { Issue.record("no items"); return }
+        #expect(items.first?["attachmentCount"] == .number(2))
         #expect(LMSAttachment.summary(files)?.first == "slow_problem_2.pdf")
         #expect(LMSAttachment.summary(files)?.more == 1)
         #expect(LMSAttachment.summary([])?.first == nil)

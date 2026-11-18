@@ -146,6 +146,10 @@ struct ScreenRenders {
                 entries.append(("lecture-unit", Navigator.Entry(link: AppLink(.unit, unit.id), course: split.id)))
             }
         }
+        if let lms = workspace.currentCourses.first(where: { $0.file.assignments.contains { $0.lmsId != nil } }) {
+            entries.append(
+                ("lms-assignments", Navigator.Entry(link: .course(lms.id, page: AppLink.CoursePage.assignments), course: lms.id)))
+        }
         if let held = workspace.currentCourses.first(where: { !$0.file.recordings.isEmpty }), let recording = held.file.recordings.first {
             entries.append(
                 ("course-recording", Navigator.Entry(link: AppLink(.recording, recording.id, anchor: .time(1700)), course: held.id)))

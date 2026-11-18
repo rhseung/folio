@@ -22,7 +22,7 @@ struct QuickAddCommandTests {
         let gist = try Harness.fixtureCopy()
         let r = h.cli(["add", "그래프 HW5 금 23:59"], gist: gist)
         #expect(r.code == 0, "\(r.err)")
-        for shown in ["그래프 이론", "EC4207", "HW5", "D-2", "Assignments/HW05"] { #expect(r.out.contains(shown), "\(shown) not in \(r.out)") }
+        for shown in ["그래프 이론", "EC4207", "HW5", "금요일", "Assignments/HW05"] { #expect(r.out.contains(shown), "\(shown) not in \(r.out)") }
         #expect(FileManager.default.fileExists(atPath: gist.appending(path: "2026-3/EC4207 그래프 이론/Assignments/HW05").path))
     }
 

@@ -149,55 +149,61 @@ final class LMSModel {
     func title(_ p: Proposal) -> String {
         guard case .lms(let item) = p.source, case .difference(let d) = item.item else { return p.title ?? "" }
         switch d.change {
-        case .submitted: return String(localized: .lmsSubmittedTitle(d.lms.title))
+        case .unsubmitted: return String(localized: .lmsUnsubmittedTitle(d.lms.title))
         case .due: return String(localized: .lmsDueChangedTitle(d.lms.title))
+        case .attachments: return String(localized: .lmsAttachmentsTitle(d.lms.title))
         }
     }
 
-    // 전체에서는 제안이 어느 강의실에서 왔는지 앞에 붙인다.
+    // 회색 줄에는 어디서 왔는지와 꼭 필요한 한 가지만 둔다. 종류는 아이콘이, 마감은 오른쪽 글자가 말한다.
+    // 전체에서만 과목을 앞에 붙이고, 받을 과목을 고르지 않은 강의실은 강의실 이름을 붙인다.
     func detail(_ p: Proposal, source: Bool) -> String? {
-        let parts: [String?]
-        switch p.source {
-        case .lms(let item):
-            parts = [source ? item.classroom.title : nil] + lmsDetail(item, viewerOnly: p.flag == .viewerOnly)
-        case .claude, .cleanup:
-            parts = []
-        }
+        guard case .lms(let item) = p.source else { return nil }
+        return join([source ? place(item) : nil, lmsDetail(item, flag: p.flag)])
+    }
+
+    private func place(_ item: LMSProposal) -> String {
+        if case .difference(let d) = item.item, let title = courseTitle(d.course) { return title }
+        return remembered(item.classroom.id)?.title ?? item.classroom.title
+    }
+
+    private func join(_ parts: [String?]) -> String? {
         let text = parts.compactMap { $0 }.joined(separator: " · ")
         return text.isEmpty ? nil : text
     }
 
-    private func lmsDetail(_ p: LMSProposal, viewerOnly: Bool) -> [String?] {
+    private func lmsDetail(_ p: LMSProposal, flag: ProposalFlag?) -> String? {
+        if let flag { return flag.label }
         switch p.item {
-        case .assignment:
-            let files = LMSAttachment.summary(p.attachments).map {
-                $0.more == 0 ? $0.first : String(localized: .lmsAttachmentsMore($0.first, $0.more))
-            }
-            return [String(localized: .lmsKindAssignment), files]
-        case .file(let f):
-            return [String(localized: .lmsKindFile), viewerOnly ? nil : "\(CourseFolder.lectures.rawValue)/\(f.lectureName(f.title))"]
-        case .notice(let n):
-            return [String(localized: .lmsKindNotice), n.posted.map { $0.formatted(.dateTime.month().day()) }, n.author]
+        case .assignment: return attachmentSummary(p.attachments)
+        case .file(let f): return "\(CourseFolder.lectures.rawValue)/\(f.lectureName(f.title))"
+        case .notice(let n): return n.author
         case .difference(let d):
             switch d.change {
-            case .submitted:
-                let status = workspace.course(d.course)?.file.assignments.first { $0.id == d.assignment }?.status ?? .todo
-                return [courseTitle(d.course), String(localized: .lmsFolioStatus(status.label))]
+            case .unsubmitted:
+                let status = workspace.course(d.course)?.file.assignments.first { $0.id == d.assignment }?.status ?? .submitted
+                return String(localized: .lmsFolioStatus(status.label))
             case .due(let folio, let lms):
-                let none = String(localized: .lmsNoDue)
-                return [
-                    courseTitle(d.course), String(localized: .lmsDueChange(folio.map(workspace.lmsTime) ?? none, workspace.lmsTime(lms))),
-                ]
+                return String(localized: .lmsDueChange(folio.map(dueTime) ?? String(localized: .lmsNoDue), dueTime(lms)))
+            case .attachments(let new): return attachmentSummary(new)
             }
         }
+    }
+
+    private func dueTime(_ date: Date) -> String {
+        DateTimeText.text(date, from: workspace.now, time: true, settings: workspace.settings, calendar: workspace.calendar)
+    }
+
+    private func attachmentSummary(_ attachments: [LMSAttachment]) -> String? {
+        LMSAttachment.summary(attachments).map { $0.more == 0 ? $0.first : String(localized: .lmsAttachmentsMore($0.first, $0.more)) }
     }
 
     // 고칠 것의 단추다. 받을 과목이 정해져 있어 과목을 고르지 않는다.
     func fixLabel(_ p: Proposal) -> String? {
         switch p.kind {
-        case .lmsSubmitted: String(localized: .lmsMarkSubmitted)
         case .lmsDue: String(localized: .lmsApplyDue)
-        case .lmsAssignment, .lmsFile, .lmsNotice, .claude, .cleanupMove: nil
+        case .lmsAttachments: String(localized: .lmsReceiveAttachments)
+        case .lmsAssignment, .lmsFile, .lmsNotice, .lmsUnsubmitted, .claude, .cleanupMove: nil
         }
     }
 
@@ -209,25 +215,30 @@ final class LMSModel {
 
     // MARK: Deadlines
 
-    func detail(_ d: LMSDeadline, source: Bool) -> String {
-        let place = d.course.flatMap(courseTitle).map { String(localized: .lmsInCourse($0)) } ?? String(localized: .lmsNotReceived)
-        return [source ? d.classroom.title : nil, d.assignment.due.map(workspace.lmsTime), place].compactMap { $0 }
-            .joined(separator: " · ")
+    func detail(_ d: LMSDeadline, source: Bool) -> String? {
+        guard source else { return nil }
+        return d.course.flatMap(courseTitle) ?? remembered(d.classroom.id)?.title ?? d.classroom.title
     }
 
-    func due(_ d: LMSDeadline) -> (text: String, urgency: DueUrgency)? { d.assignment.due.map(dueChip) }
+    func due(_ d: LMSDeadline) -> Due? { d.assignment.due.map(due) }
 
-    func due(_ p: Proposal) -> (text: String, urgency: DueUrgency)? { p.due.map(dueChip) }
+    func due(_ p: Proposal) -> Due? { p.due.map(due) }
 
-    private func dueChip(_ due: Date) -> (text: String, urgency: DueUrgency) {
-        let days = workspace.settings.studyDays(from: workspace.now, until: due, calendar: workspace.calendar)
-        let urgency = workspace.settings.urgency
-        return (DueUrgency.text(due, studyDays: days, settings: urgency), DueUrgency(studyDays: days, settings: urgency))
+    // 오늘 화면의 할 일처럼 칩 없이 글자의 색으로 급한 정도를 보인다.
+    struct Due {
+        var text: String
+        var tone: Tone?
     }
 
-    // 받을 수 없는 항목(공지, 뷰어 전용 자료)과 과제는 LMS에서 열어 본다.
-    func showsOpen(_ p: Proposal) -> Bool {
-        p.url != nil && (!p.canApprove || p.kind == .lmsAssignment || p.kind.group == .differs)
+    private func due(_ date: Date) -> Due {
+        let days = DateTimeText.days(date, from: workspace.now, settings: workspace.settings, calendar: workspace.calendar)
+        let tone: Tone? =
+            switch DueUrgency(studyDays: days, settings: workspace.settings.urgency) {
+            case .urgent: .danger
+            case .soon: .warning
+            case .later: nil
+            }
+        return Due(text: dueTime(date), tone: tone)
     }
 
     // MARK: Actions
@@ -248,9 +259,7 @@ final class LMSModel {
     func proposeAgain(_ h: LMSInbox.Handled) { workspace.propose(again: [h]) }
 
     func detail(_ h: LMSInbox.Handled) -> String {
-        let base = lmsDetail(h.proposal, viewerOnly: false).compactMap { $0 }.joined(separator: " · ")
-        guard let id = h.course, let title = courseTitle(id) else { return base }
-        return [base, String(localized: .lmsAddedTo(title))].joined(separator: " · ")
+        join([lmsDetail(h.proposal, flag: nil), h.course.flatMap(courseTitle).map { String(localized: .lmsAddedTo($0)) }]) ?? ""
     }
 
     // MARK: Today
