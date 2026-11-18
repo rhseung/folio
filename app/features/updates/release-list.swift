@@ -37,8 +37,7 @@ extension ReleaseList {
                     - change: 편집 보기의 수식 말풍선을 미리보기와 같은 KaTeX로 그림
                     - fix: 수식 말풍선 위와 오른쪽의 빈 여백
                     - fix: 여러 줄 칸이 글을 따라 12줄까지 늘어남
-                    """),
-            bundles: ["노트 보기"]),
+                    """)),
         PatchNotes.Release(
             version: PatchNotes.Version(0, 2, 0), date: Date(timeIntervalSince1970: 1_794_020_400),
             items: PatchNotes.items(

@@ -8,7 +8,7 @@
 - 커밋한 `FolioVersion.marketing`은 개발 빌드의 자리표시값(`0.0.0`)이다. 릴리스 빌드(`release.yml`, `install-release`)만 빌드하기 전에 `folio-dev version stamp`로 태그의 버전을 써넣고, 그 변경은 커밋하지 않는다. 앱의 `MARKETING_VERSION`은 `mise run generate`가 이 상수에서 읽어 `.build/version.xcconfig`에 쓰고, CLI(`folio --version`)와 MCP는 이 상수를 그대로 쓴다.
 - 빌드 번호는 커밋 수(`git rev-list --count HEAD`)라 파일에 두지 않는다. `main`이 스쿼시 머지뿐이라 머지할 때마다 는다.
 - **PR 하나에 버전 하나다.** `## 패치 노트` 절에 항목이 있는 PR마다 그 머지 커밋에서 다음 patch를 릴리스한다. `feat`가 있어도 patch다. 패치 노트가 없는 PR(리팩터, CI, 문서)은 릴리스하지 않고, 다음 노트 있는 PR의 버전이 그 PR까지 담는다. 머지가 연달아 와서 대기 중인 실행이 취소되어도, 다음 실행이 지난 태그 뒤의 PR을 머지 순서대로 보고 PR마다 따로 낸다(`ReleasePlan.steps`).
-- **minor는 기능 묶음이 끝날 때 올린다.** 묶음은 Project의 상위 이슈 순서와 매니저의 작업 순서를 따른다(예: LMS 전부, 탭 끌기와 단축키, 공부 시스템 1단계). 매니저가 묶음을 시작할 때 그 이슈들에 `bundle/<이름>` 라벨(예: `bundle/LMS 연동`)을 붙여 제안하고, 사용자가 구성을 승인하면 그 묶음의 minor도 승인한 것이다. 라벨의 `bundle/` 뒤가 릴리스와 새 기능 화면에 보이는 묶음 이름이다.
+- **minor는 기능 묶음이 끝날 때 올린다.** 묶음은 Project의 상위 이슈 순서와 매니저의 작업 순서를 따른다(예: LMS 전부, 탭 끌기와 단축키, 공부 시스템 1단계). 매니저가 묶음을 시작할 때 그 이슈들에 `bundle/<이름>` 라벨(예: `bundle/LMS 연동`)을 붙여 제안하고, 사용자가 구성을 승인하면 그 묶음의 minor도 승인한 것이다. 묶음 이름은 릴리스 제목이나 새 기능 화면에 붙이지 않는다. 묶음을 끝낸 minor도 버전만 보인다.
 - 묶음의 이슈가 모두 닫히면, 그 이슈를 닫은 PR(`Closes #…`) 중 마지막 PR의 버전이 patch 대신 다음 minor(`0.5.4` 다음 `0.6.0`)가 된다. 그 PR에 패치 노트가 없으면 다음 노트 있는 PR이 minor가 된다. 그 PR이 이미 나간 뒤에 남은 이슈를 손으로 닫았으면(not planned 포함) 다음 노트 있는 PR이 minor가 된다. minor를 낸 묶음은 태그 메시지(`Bundle: <이름>`)에 남으므로, 끝난 묶음에 이슈를 더 넣고 닫아도 minor를 다시 내지 않는다. 라벨은 지우지 않고 그대로 둔다.
 - 묶음 밖에서 minor를 올릴 때는 PR에 `release/minor` 라벨을 붙이거나, 머지할 PR이 없으면 `mise run release-tag -- minor`로 바로 낸다(사용자 승인 뒤).
 - major는 사용자 데이터 형식과 기능 범위를 굳히는 1.0에만 올린다(`mise run release-tag -- major`, 사용자 승인 뒤).
@@ -17,8 +17,8 @@
 
 - 원본은 PR 본문의 `## 패치 노트` 절이다(#415, AGENTS.md "PR 전 점검"). 릴리스 본문은 앞 버전의 태그 뒤 머지된 PR의 본문을 릴리스할 때 읽으므로 머지 뒤에 고친 본문도 들어간다. 저장소에는 버전별 노트 파일을 두지 않는다. `mise run release-notes`가 다음 버전과 그 본문을 미리 보인다.
 - 스쿼시 커밋은 PR 제목과 PR 본문의 `## 패치 노트` 절만 남긴다. 매니저가 자동 머지를 걸 때 커밋 본문을 정한다(AGENTS.md "이슈와 작업 순서").
-- 릴리스 본문은 `## 패치 노트` 제목, 형식 표시(`<!-- folio-patch-notes 2 -->`), 그 버전의 날짜(`<!-- folio-released <ISO 8601> -->`), minor가 끝낸 묶음마다 한 줄(`<!-- folio-bundle <이름> -->`), 종류별 소제목(`### feat`, `### fix`, `### change` 순)으로 묶은 항목 줄, 머지된 PR 목록, 설치 안내 순이다. 본문을 쓰는 일(`PatchNotes.releaseBody`)과 앱이 GitHub Releases API에서 받아 읽는 일(`PatchNotes.releases`)이 `PatchNotes` 한 타입에 있고 `swift test`가 왕복을 검사한다. 앞선 앱이 읽던 줄의 모양을 바꾸면 `PatchNotes.format`을 올린다. 올리면 앞선 앱은 새 릴리스의 항목을 모두 건너뛰므로, 앞선 앱이 모른 채 건너뛰는 줄(묶음 줄)을 더할 때는 올리지 않는다.
-- 릴리스 제목은 `Folio <버전>`이고, minor가 묶음을 끝내면 `Folio 0.6.0 · LMS 연동`처럼 묶음 이름을 붙인다. 새 기능 화면도 그 minor의 제목에 묶음 이름을 보인다("0.6 · LMS 연동").
+- 릴리스 본문은 `## 패치 노트` 제목, 형식 표시(`<!-- folio-patch-notes 2 -->`), 그 버전의 날짜(`<!-- folio-released <ISO 8601> -->`), 종류별 소제목(`### feat`, `### fix`, `### change` 순)으로 묶은 항목 줄, 머지된 PR 목록, 설치 안내 순이다. 본문을 쓰는 일(`PatchNotes.releaseBody`)과 앱이 GitHub Releases API에서 받아 읽는 일(`PatchNotes.releases`)이 `PatchNotes` 한 타입에 있고 `swift test`가 왕복을 검사한다. 앞선 앱이 읽던 줄의 모양을 바꾸면 `PatchNotes.format`을 올린다. 올리면 앞선 앱은 새 릴리스의 항목을 모두 건너뛰므로, 앞선 앱이 모른 채 건너뛰는 줄을 더할 때는 올리지 않는다.
+- 릴리스 제목은 `Folio <버전>`이다.
 - 버전의 날짜는 그 버전의 마지막 커밋(스쿼시 머지 커밋)의 시각이다. GitHub 릴리스의 게시일은 과거로 돌릴 수 없어서 본문에 적고, 앱은 본문의 날짜를, 없으면 게시일을 보인다. 태그의 시각도 그 커밋의 시각으로 단다.
 - 앞 버전은 커밋이 아니라 버전으로 고른다(`ReleasePlan.previous`). 같은 커밋에 patch와 minor 태그가 함께 있어도 노트가 겹치지 않는다. 첫 릴리스(앞선 태그 없음)는 그때까지 머지된 모든 PR을 모은다.
 

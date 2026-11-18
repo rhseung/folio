@@ -132,7 +132,5 @@ struct ReleasePlanTests {
     @Test func theTagMessageKeepsTheBundles() {
         #expect(ReleaseTags.bundles(inMessage: "Folio 0.6.0\n\nBundle: LMS 연동\nBundle: 단축키\n") == ["LMS 연동", "단축키"])
         #expect(ReleaseTags.bundles(inMessage: "Folio 0.5.1").isEmpty)
-        #expect(ReleaseTags.title(V(0, 6, 0), bundles: ["LMS 연동"]) == "Folio 0.6.0 · LMS 연동")
-        #expect(ReleaseTags.title(V(0, 6, 1), bundles: []) == "Folio 0.6.1")
     }
 }

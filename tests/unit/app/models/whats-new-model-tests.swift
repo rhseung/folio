@@ -140,18 +140,6 @@ struct WhatsNewModelTests {
         #expect(model.days(PatchNotes.series([release(V(0, 5, 0), nil)])[0]) == nil)
     }
 
-    @Test func aMinorThatEndsABundleNamesIt() throws {
-        let model = try makeModel()
-        func release(_ v: V, _ bundles: [String] = []) -> PatchNotes.Release {
-            PatchNotes.Release(version: v, items: [], bundles: bundles)
-        }
-        let series = PatchNotes.series([release(V(0, 6, 1)), release(V(0, 6, 0), ["LMS 연동"]), release(V(0, 5, 0))])
-        #expect(series.map(model.title) == ["0.6 · LMS 연동", "0.5.0"])
-        let alone = PatchNotes.series([release(V(0, 7, 0), ["탭 끌기", "단축키"])])[0]
-        #expect(model.title(alone).hasPrefix("0.7.0 · 탭 끌기"))
-        #expect(model.title(alone).hasSuffix("단축키"))
-    }
-
     @Test func searchingOpensEveryMatch() async throws {
         let model = try makeModel(current: V(0, 3, 0))
         await model.load()

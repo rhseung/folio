@@ -117,18 +117,17 @@ jobs:
         run: |
           mkdir -p .build/release
           ditto -c -k --sequesterRsrc --keepParent .build/DerivedData/Build/Products/Release/Folio.app ".build/release/Folio-$VERSION.zip"
-          folio-dev release-notes body "$VERSION" HEAD --bundles "$BUNDLES" > .build/release/body.md
+          folio-dev release-notes body "$VERSION" HEAD > .build/release/body.md
           cat .build/release/body.md >> "$GITHUB_STEP_SUMMARY"
       # 같은 버전을 다시 돌리면 이미 있는 태그와 릴리스를 그대로 쓰고, 릴리스의 파일과 본문을 바꿔 게시한다.
       - name: Tag and publish
         run: |
           tag="v$VERSION"
           zip=".build/release/Folio-$VERSION.zip"
-          title=$(folio-dev release-notes title "$VERSION" --bundles "$BUNDLES")
           folio-dev release tag "$VERSION" --at HEAD --bundles "$BUNDLES"
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" "$zip" --clobber
-            gh release edit "$tag" --title "$title" --notes-file .build/release/body.md --draft=false
+            gh release edit "$tag" --title "Folio $VERSION" --notes-file .build/release/body.md --draft=false
           else
-            gh release create "$tag" "$zip" --verify-tag --title "$title" --notes-file .build/release/body.md
+            gh release create "$tag" "$zip" --verify-tag --title "Folio $VERSION" --notes-file .build/release/body.md
           fi

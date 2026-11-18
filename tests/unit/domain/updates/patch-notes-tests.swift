@@ -101,34 +101,6 @@ struct PatchNotesTests {
         #expect(releases[1].items == [Item(kind: .feat, text: "첫 줄")])
     }
 
-    @Test func aMinorNamesTheBundlesItEnds() throws {
-        let day = Date(timeIntervalSince1970: 1_794_000_000)
-        let prs = [PatchNotes.Merged(number: 1, title: "t", body: "## 패치 노트\n- feat: LMS 탭")]
-        let body = PatchNotes.releaseBody(prs, first: false, date: day, bundles: ["LMS 연동", "탭 끌기"])
-        #expect(
-            body.hasPrefix(
-                "## 패치 노트\n\(PatchNotes.marker)\n\(PatchNotes.dated(day))\n"
-                    + "\(PatchNotes.bundled("LMS 연동"))\n\(PatchNotes.bundled("탭 끌기"))\n\n### feat\n"))
-        #expect(PatchNotes.bundles(in: body) == ["LMS 연동", "탭 끌기"])
-        #expect(PatchNotes.items(in: body) == [Item(kind: .feat, text: "LMS 탭")])
-        #expect(PatchNotes.released(in: body) == day)
-        #expect(PatchNotes.bundles(in: PatchNotes.releaseBody(prs, first: false)).isEmpty)
-
-        let json = try JSONSerialization.data(withJSONObject: [["tag_name": "v0.6.0", "body": body]])
-        let release = try #require(try PatchNotes.releases(fromGitHub: json).first)
-        #expect(release.bundles == ["LMS 연동", "탭 끌기"])
-        #expect(release.items == [Item(kind: .feat, text: "LMS 탭")])
-    }
-
-    @Test func aSeriesTakesTheBundlesOfItsReleasesOnce() {
-        let series = PatchNotes.series([
-            PatchNotes.Release(version: V(0, 6, 1), items: [], bundles: ["단축키"]),
-            PatchNotes.Release(version: V(0, 6, 0), items: [], bundles: ["LMS 연동", "단축키"]),
-            PatchNotes.Release(version: V(0, 5, 0), items: []),
-        ])
-        #expect(series.map(\.bundles) == [["LMS 연동", "단축키"], []])
-    }
-
     @Test func aBrokenOrMissingDateIsNoDate() {
         #expect(PatchNotes.released(in: "## 패치 노트\n<!-- folio-released 어제 -->") == nil)
         #expect(PatchNotes.released(in: "## 패치 노트\n- feat: 날짜 없음") == nil)

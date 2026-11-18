@@ -6,7 +6,7 @@ import FolioDomain
 struct ReleaseNotesCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "release-notes", abstract: "Write a GitHub release's body from the PRs merged to main.",
-        subcommands: [Body.self, Title.self, Preview.self])
+        subcommands: [Body.self, Preview.self])
 
     struct Body: ParsableCommand {
         static let configuration = CommandConfiguration(
@@ -21,29 +21,9 @@ struct ReleaseNotesCommand: ParsableCommand {
         @Option(help: "The previous release's ref, instead of the tag of the version before.")
         var since: String?
 
-        @Option(help: "The bundles this minor ends, as a JSON array of names.")
-        var bundles = "[]"
-
         func run() throws {
             guard let v = PatchNotes.Version(version) else { throw DevError("\(version) is not X.Y.Z") }
-            print(
-                try ReleaseTags.body(
-                    for: v, at: until, since: since.flatMap { $0.isEmpty ? nil : $0 }, bundles: try ReleaseCommand.names(bundles)))
-        }
-    }
-
-    struct Title: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: "The title of a version's release, with the bundles it ends.")
-
-        @Argument(help: "The version.")
-        var version: String
-
-        @Option(help: "The bundles this minor ends, as a JSON array of names.")
-        var bundles = "[]"
-
-        func run() throws {
-            guard let v = PatchNotes.Version(version) else { throw DevError("\(version) is not X.Y.Z") }
-            print(ReleaseTags.title(v, bundles: try ReleaseCommand.names(bundles)))
+            print(try ReleaseTags.body(for: v, at: until, since: since.flatMap { $0.isEmpty ? nil : $0 }))
         }
     }
 
@@ -62,8 +42,9 @@ struct ReleaseNotesCommand: ParsableCommand {
             }
             var since = latest.map(ReleaseTags.name)
             for step in steps {
-                let body = try ReleaseTags.body(for: step.version, at: step.commit, since: since, bundles: step.bundles)
-                print("# \(ReleaseTags.title(step.version, bundles: step.bundles)) at \(step.commit.prefix(8))\n\n\(body)\n")
+                let body = try ReleaseTags.body(for: step.version, at: step.commit, since: since)
+                let ends = step.bundles.isEmpty ? "" : " (ends \(step.bundles.joined(separator: ", ")))"
+                print("# Folio \(step.version)\(ends) at \(step.commit.prefix(8))\n\n\(body)\n")
                 since = step.commit
             }
         }

@@ -87,15 +87,9 @@ enum ReleaseTags {
         Set(bundles(inMessage: try Shell.run("git", "tag", "-l", "v*", "--format=%(contents)")))
     }
 
-    static func body(
-        for version: PatchNotes.Version, at ref: String, since: String? = nil, bundles: [String] = [], assets: Bool = true
-    ) throws -> String {
+    static func body(for version: PatchNotes.Version, at ref: String, since: String? = nil, assets: Bool = true) throws -> String {
         let start = try since ?? ReleasePlan.previous(before: version, among: versions(at: ref)).map(name)
         let prs = try MergedPullRequests.between(start, and: ref).map(\.merged)
-        return PatchNotes.releaseBody(prs, first: start == nil, date: try date(of: ref), bundles: bundles, assets: assets)
-    }
-
-    static func title(_ version: PatchNotes.Version, bundles: [String]) -> String {
-        (["Folio \(version)"] + bundles).joined(separator: " · ")
+        return PatchNotes.releaseBody(prs, first: start == nil, date: try date(of: ref), assets: assets)
     }
 }

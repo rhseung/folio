@@ -73,7 +73,7 @@ private struct SeriesSection: View {
                         .font(Theme.Glyph.small)
                         .foregroundStyle(Theme.Palette.textTertiary)
                         .rotationEffect(.degrees(open ? 90 : 0))
-                    Text(model.title(series))
+                    Text(model.showsReleases(series) ? series.name : series.latest.version.description)
                         .font(Theme.Typeface.figureMedium).monospacedDigit()
                     if model.isCurrent(series) { Badge(String(localized: .whatsNewCurrent), tone: .accent) }
                     if let days = model.days(series) { Text(days).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1) }
