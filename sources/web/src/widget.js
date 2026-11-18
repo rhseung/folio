@@ -130,6 +130,10 @@ function start() {
       }
     }
   }).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: WATCHED });
+  // 앱은 다크로 바꿀 때 페이지를 다시 읽지 않아 DOM이 그대로다. 계산된 색을 직접 준 묶음은 여기서 다시 칠한다.
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    document.querySelectorAll(`text[${MATH}]`).forEach(svgUpdate);
+  });
 }
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
 else start();
