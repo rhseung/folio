@@ -10,6 +10,7 @@ struct AssignmentMenuSource: ItemMenuSource {
     let assignment: Assignment
     let host: MenuHost
     let openLink: OpenLinkAction
+    let openURL: OpenURLAction
     let sheets: ItemSheetsAction
 
     private var link: AppLink { AppLink(.assignment, assignment.id) }
@@ -29,6 +30,10 @@ struct AssignmentMenuSource: ItemMenuSource {
         switch command {
         case .open:
             .open(command, link: link, course: courseId) { openLink(link, course: courseId) }
+        case .openInLMS:
+            MenuRow(
+                command, .lmsOpen, "arrow.up.forward.app",
+                .action { if let id = assignment.lmsId { openURL(LMSAssignment.url(id)) } })
         case .addFiles:
             MenuRow(
                 command, .menuAddFilesEllipsis, "doc.badge.plus", .action { sheets.addFiles(FileIntake(course: courseId, folder: folder)) })

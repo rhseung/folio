@@ -45,12 +45,14 @@ extension Workspace {
         guard case .lms(let item) = p.source else { return p }
         do {
             switch item.item {
-            case .assignment(let a): return p.downloaded(files: try await lms.download(a.attachments ?? []).map(\.path))
+            case .assignment, .difference:
+                let files = item.attachments
+                return files.isEmpty ? p : p.downloaded(files: try await lms.download(files).map(\.path))
             case .file(let f):
                 // 뷰어 전용이면 받을 파일이 없고, 그 자료는 이제 뷰어 전용으로 표시된다.
                 guard let url = try await lms.download(f) else { return p.downloaded() }
                 return p.downloaded(file: url.path)
-            case .notice, .difference: return p
+            case .notice: return p
             }
         } catch {
             self.error = String(localized: .lmsDownloadFailed(item.title, error.localizedDescription))

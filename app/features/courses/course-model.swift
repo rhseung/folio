@@ -210,7 +210,7 @@ final class CourseModel {
             let d = days(to: start)
             items.append(
                 .init(
-                    title: String(localized: .courseNextExam), value: "\(exam.title) \(DDay.text(d))",
+                    title: String(localized: .courseNextExam), value: "\(exam.title) \(DateTimeText.dday(days: d))",
                     detail: start.formatted(.dateTime.month().day().weekday()),
                     tone: ExamUrgency(days: d, settings: workspace.settings.urgency) <= .soon ? .danger : .plain))
         } else {

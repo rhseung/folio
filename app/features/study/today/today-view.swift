@@ -173,31 +173,24 @@ struct TodayView: View {
 
     func deadlineRow(_ row: TodayModel.DeadlineRow) -> some View {
         let item = row.item
-        let accent = model.workspace.accent(item.courseId)
-        let tone = row.tone
-        return Button {
-            model.edit(item)
-        } label: {
-            HStack(spacing: Theme.Space.s) {
-                AssignmentStatusIcon(status: item.assignment.status, tint: accent.color, size: 18)
-                HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
-                    Text(item.assignment.title).font(Theme.Typeface.bodyStrong).lineLimit(1).layoutPriority(1)
-                    Text(model.title(item.courseId)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
-                }
-                Spacer(minLength: Theme.Space.s)
-                if let tone {
-                    Badge(row.due, tone: tone, solid: row.urgency == .urgent).monospacedDigit()
-                } else {
-                    Text(row.due).font(Theme.Typeface.caption).monospacedDigit().foregroundStyle(Theme.Palette.textTertiary)
-                        .fixedSize().padding(Theme.Inset.tag)
-                }
+        // Button으로 두면 안의 상태 메뉴가 클릭을 빼앗긴다.
+        return HStack(spacing: Theme.Space.s) {
+            AssignmentStatusMenu(status: item.assignment.status, tint: model.workspace.accent(item.courseId).color, size: 18) {
+                model.set(item, $0)
             }
-            .padding(.horizontal, Theme.Space.l)
-            .padding(.vertical, Theme.Space.m)
-            .background(tone.map { $0.fill.opacity(Theme.Opacity.toneRow) } ?? .clear)
-            .contentShape(.rect)
+            HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
+                Text(item.assignment.title).font(Theme.Typeface.bodyStrong).lineLimit(1).layoutPriority(1)
+                Text(model.title(item.courseId)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
+            }
+            Spacer(minLength: Theme.Space.s)
+            Text(row.due).font(Theme.Typeface.caption).monospacedDigit().fixedSize()
+                .foregroundStyle(row.tone?.foreground ?? Theme.Palette.textTertiary)
         }
-        .buttonStyle(.pointing(.plain))
+        .padding(.horizontal, Theme.Space.l)
+        .padding(.vertical, Theme.Space.m)
+        .contentShape(.rect)
+        .opens { model.edit(item) }
+        .accessibilityAction(named: Text(.commonEdit)) { model.edit(item) }
         .contextMenu { AssignmentMenu(courseId: item.courseId, assignmentId: item.assignment.id) }
     }
 

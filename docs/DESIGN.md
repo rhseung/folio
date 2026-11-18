@@ -82,7 +82,7 @@
   - 옅은 바탕: `tint`(같은 색 글자 뒤의 옅은 배경, 유리 위 고른 칸), `wash`(유리 위 칸과 트랙의 바탕)와 `edge`(그 테두리), `soft`(바탕색을 반만 깐 면: 시간표의 오늘 열, 애셋 서랍, 문제 풀이의 답 칸), `folded`(펼친 `DisclosureRow` 아래 행), `planned`(저장하지 않은 예정 수업 카드).
   - 덮개: `scrim`(접힌 열이 본문 위에 열렸을 때 본문을 덮는 검정), `figureScrim`(노트의 그림 크게 보기).
   - 물러난 것: `ended`(끝난 수업, 지난 학기, 휴강한 회차), `faded`(포인터가 다른 막대에 있을 때의 막대, 꺼진 눈금, 진행 고리의 트랙), `projected`(막대의 예상 부분).
-  - 과목색과 상태색 위: `onTint`(과목 `tint` 위의 과목색 캡슐), `toneRow`(상태색 `fill`로 칠한 행. 그 위의 칩이 묻히지 않게 반 세기), `toneEdge`(상태색 바탕을 두르거나 가로지르는 선), `liveEdge`(진행 중인 수업 카드의 테두리), `zoneAlt`·`zonePicked`(목차 막대의 이웃 구역과 고른 구역).
+  - 과목색과 상태색 위: `onTint`(과목 `tint` 위의 과목색 캡슐), `toneEdge`(상태색 바탕을 두르거나 가로지르는 선), `liveEdge`(진행 중인 수업 카드의 테두리), `zoneAlt`·`zonePicked`(목차 막대의 이웃 구역과 고른 구역).
   - 그 밖: `innerFill`·`duotone`(아이콘 속채움), `hover`·`pressed`(틀 위 버튼의 원), `area`·`areaStrong`(차트 면의 위쪽 끝).
 - **`Theme.Shadow`.** 떠 있는 패널과 열은 `floating`, 포인터를 올린 애셋은 `lifted`, 막대 위에 뜨는 말풍선과 캡슐은 `raised`, 막대 위 손잡이는 `knob`이다. 색이 있는 그림자는 `color:`, 포인터를 올릴 때만 보이는 그림자는 `shown:`을 준다.
 - **`Theme.Size`.** 화면의 `.frame`과 `.pill(width:)`에 쓰는 치수는 모두 여기 있다. CGSize 토큰은 `.frame(Theme.Size.assetTile)`로 쓴다.

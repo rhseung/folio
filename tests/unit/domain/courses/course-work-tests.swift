@@ -719,19 +719,6 @@ struct AssignmentFilesTests {
         #expect(!AssignmentFiles.suggestsSubmitted(hw, files: mine))
     }
 
-    @Test func dueStates() {
-        let cal = Calendar(identifier: .gregorian)
-        let now = Date(timeIntervalSince1970: 1_790_000_000)
-        #expect(DueState(due: nil, now: now, calendar: cal) == .none)
-        #expect(DueState(due: now.addingTimeInterval(-3 * 86400), now: now, calendar: cal) == .overdue(days: 3))
-        #expect(DueState(due: now.addingTimeInterval(5 * 3600 + 60), now: now, calendar: cal) == .hours(6))
-        if case .days(let d) = DueState(due: now.addingTimeInterval(3 * 86400), now: now, calendar: cal) {
-            #expect(d == 3)
-        } else {
-            Issue.record("expected days")
-        }
-    }
-
     @Test func dueUrgencyCountsStudyDaysAcrossTheBoundary() {
         let settings = Settings()
         var calendar = Calendar(identifier: .gregorian)
@@ -742,8 +729,8 @@ struct AssignmentFilesTests {
         func urgency(_ due: Date) -> DueUrgency { DueUrgency(due: due, now: at(29, 2), settings: settings, calendar: calendar) }
 
         // 29일 02:00의 공부일은 아직 28일이다.
-        #expect(settings.studyDays(from: at(29, 2), until: at(29, 3), calendar: calendar) == 0)
-        #expect(settings.studyDays(from: at(29, 2), until: at(29, 5), calendar: calendar) == 1)
+        #expect(DateTimeText.days(at(29, 3), from: at(29, 2), settings: settings, calendar: calendar) == 0)
+        #expect(DateTimeText.days(at(29, 5), from: at(29, 2), settings: settings, calendar: calendar) == 1)
         #expect(urgency(at(29, 3)) == .urgent)
         #expect(urgency(at(30, 2)) == .urgent)
         #expect(urgency(at(30, 5)) == .soon)

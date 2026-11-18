@@ -11,6 +11,8 @@ extension GeneratedCommands {
             항목 파일은 [{\"key\":\"assignment:139950\",\"classroom\":27967,\"title\":\"HW5\",\"due\":\"2026-11-20T14:55:00Z\",\"files\":[\"/tmp/hw5.pdf\"]}, {\"key\":\"file:139200\",\"classroom\":27967,\"file\":\"/tmp/05_Matchings.pdf\"}, {\"key\":\"notice:23464\"}] 꼴이다.
             과제의 files는 과제 페이지에서 받은 첨부이고, 과제 폴더(Assignments/<과제>)에 원래 이름으로 들어가 문제 파일이 된다.
             과목을 주면 항목의 강의실(classroom)에 그 과목을 기억한다. 과목을 빼면 강의실마다 기억한 과목에 받는다.
+            이미 받은 과제의 새 첨부는 {\"key\":\"attachments:139950:2\",\"files\":[\"/tmp/hw5-b.pdf\"]}이고, 그 과제의 폴더에 원래 이름으로 들어간다.
+            files가 비면(뷰어 전용이라 내려받지 못함) 받지 않고 제안에서 숨기기만 한다. 과제의 attachmentCount는 받을 때의 첨부 수이고, 그 수의 새 첨부 키를 함께 숨긴다.
 
             """)
         @OptionGroup var g: GlobalOptions

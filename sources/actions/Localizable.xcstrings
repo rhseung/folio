@@ -254,6 +254,17 @@
         }
       }
     },
+    "error.lms.assignment-missing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: 이 과목에 받은 LMS 과제가 없습니다"
+          }
+        }
+      }
+    },
     "error.lms.no-course": {
       "extractionState": "manual",
       "localizations": {

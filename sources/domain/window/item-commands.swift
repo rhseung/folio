@@ -17,6 +17,7 @@ extension ExamPlanItem {
 extension CourseFile {
     public func commands(for assignment: Assignment, host: MenuHost, revealable: Bool) -> [AssignmentMenuCommand] {
         var commands: [AssignmentMenuCommand] = host.opensItem ? [.open] : []
+        if assignment.lmsId != nil { commands.append(.openInLMS) }
         commands += [.addFiles, .status(assignment.status), .edit, .share]
         if revealable { commands.append(.showInFinder) }
         commands.append(.remove)

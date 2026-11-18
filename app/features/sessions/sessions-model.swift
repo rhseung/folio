@@ -35,7 +35,7 @@ final class SessionsModel {
         guard let exam = file.exams.filter({ ($0.start ?? .distantPast) > now }).min(by: { $0.start! < $1.start! }),
             let days = examDays(exam, now: now)
         else { return nil }
-        return String(localized: .sessionsNextExam(exam.title, DDay.text(days)))
+        return String(localized: .sessionsNextExam(exam.title, DateTimeText.dday(days: days)))
     }
 
     private func plan(now: Date) -> [Workspace.SuggestedSession] {

@@ -12,6 +12,83 @@
         }
       }
     },
+    "date-time.minutes-ago": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld분 전"
+          }
+        }
+      }
+    },
+    "date-time.minutes-later": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld분 뒤"
+          }
+        }
+      }
+    },
+    "date-time.now": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금"
+          }
+        }
+      }
+    },
+    "date-time.today": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘"
+          }
+        }
+      }
+    },
+    "date-time.tomorrow": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내일"
+          }
+        }
+      }
+    },
+    "date-time.weekday": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@요일"
+          }
+        }
+      }
+    },
+    "date-time.yesterday": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어제"
+          }
+        }
+      }
+    },
     "import.notes.no-component": {
       "extractionState": "manual",
       "localizations": {
@@ -595,6 +672,17 @@
         }
       }
     },
+    "proposal.kind.lms-attachments": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS 새 첨부"
+          }
+        }
+      }
+    },
     "proposal.kind.lms-due": {
       "extractionState": "manual",
       "localizations": {
@@ -606,13 +694,13 @@
         }
       }
     },
-    "proposal.kind.lms-submitted": {
+    "proposal.kind.lms-unsubmitted": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "LMS 제출 상태"
+            "value": "LMS 미제출"
           }
         }
       }

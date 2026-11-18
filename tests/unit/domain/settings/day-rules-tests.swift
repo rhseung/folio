@@ -1,5 +1,6 @@
 import FolioCore
 import Foundation
+import PropertyBased
 import Testing
 
 @testable import FolioDomain
@@ -27,8 +28,8 @@ struct DayRulesTests {
     @Test func dueCountsStudyDaysAcrossTheBoundary() {
         let settings = Settings()
         let due = at(15, 3, 30)
-        #expect(settings.studyDays(from: at(14, 3, 59), until: due, calendar: calendar) == 1)
-        #expect(settings.studyDays(from: at(14, 4), until: due, calendar: calendar) == 0)
+        #expect(DateTimeText.days(due, from: at(14, 3, 59), settings: settings, calendar: calendar) == 1)
+        #expect(DateTimeText.days(due, from: at(14, 4), settings: settings, calendar: calendar) == 0)
         #expect(DueUrgency(due: due, now: at(14, 4), settings: settings, calendar: calendar) == .urgent)
         #expect(DueUrgency(due: at(20, 23), now: at(14, 4), settings: settings, calendar: calendar) == .soon)
         #expect(DueUrgency(due: at(21, 23), now: at(14, 4), settings: settings, calendar: calendar) == .later)
@@ -52,9 +53,58 @@ struct DayRulesTests {
     }
 
     @Test func ddayText() {
-        #expect(DDay.text(0) == "D-day")
-        #expect(DDay.text(3) == "D-3")
-        #expect(DDay.text(-2) == "D-0")
+        #expect(DateTimeText.dday(days: 0) == "D-day")
+        #expect(DateTimeText.dday(days: 3) == "D-3")
+        #expect(DateTimeText.dday(days: -2) == "D-0")
+    }
+
+    @Test func aDateReadsAsADayWordThenAWeekdayThenADate() {
+        let read = { (date: Date) in DateTimeText.text(date, from: at(14, 12), settings: Settings(), calendar: calendar) }
+        #expect(read(at(14, 23)) == "오늘")
+        // 15일 새벽 2시는 하루 경계 전이라 14일의 공부일이다.
+        #expect(read(at(15, 2)) == "오늘")
+        #expect(read(at(15, 9)) == "내일")
+        #expect(read(at(13, 9)) == "어제")
+        #expect(read(at(16, 9)) == "월요일")
+        #expect(read(at(20, 9)) == "금요일")
+        #expect(read(at(21, 9)) == "11/21(토)")
+        #expect(read(at(8, 9)) == "일요일")
+        #expect(read(at(7, 9)) == "11/7(토)")
+    }
+
+    @Test func withTheClockTodayIsOnlyTheClockAndTheLastHourCountsMinutes() {
+        let h12 = Locale(identifier: "ko_KR@hours=h12")
+        let read = { (date: Date) in
+            DateTimeText.text(date, from: at(14, 12), time: true, settings: Settings(), calendar: calendar, locale: h12)
+        }
+        #expect(read(at(14, 18)) == "오후 6:00")
+        #expect(read(at(14, 13)) == "오후 1:00")
+        #expect(read(at(14, 12, 45)) == "45분 뒤")
+        #expect(read(at(14, 11, 1)) == "59분 전")
+        #expect(read(at(14, 12)) == "지금")
+        #expect(read(at(15, 23, 59)) == "내일 오후 11:59")
+        #expect(read(at(17, 9)) == "화요일 오전 9:00")
+        #expect(read(at(30, 9)) == "11/30(월) 오전 9:00")
+        // 12시간제와 24시간제는 로케일(Mac의 시각 설정)을 따른다.
+        let h23 = Locale(identifier: "ko_KR@hours=h23")
+        #expect(
+            DateTimeText.text(at(15, 23, 59), from: at(14, 12), time: true, settings: Settings(), calendar: calendar, locale: h23)
+                == "내일 23:59")
+    }
+
+    @Test func anAllDayDateCountsCalendarDaysAndHasNoClock() {
+        let now = at(14, 12)
+        // 종일 일정의 15일 자정은 하루 경계 앞이지만 15일이다. 시각을 쓰라고 해도 자정은 쓰지 않는다.
+        #expect(DateTimeText.days(at(15, 0), from: now, settings: Settings(), calendar: calendar) == 1)
+        #expect(DateTimeText.text(at(15, 0), from: now, time: true, settings: Settings(), calendar: calendar) == "내일")
+        #expect(DateTimeText.text(at(14, 0), from: now, time: true, settings: Settings(), calendar: calendar) == "오늘")
+    }
+
+    @Test func theMinuteCountStopsExactlyAtAnHour() async {
+        await propertyCheck(input: Gen.int(in: -10_000...10_000)) { seconds in
+            let now = Date(timeIntervalSince1970: 1_794_800_000)
+            #expect((DateTimeText.soon(now + TimeInterval(seconds), from: now) == nil) == (abs(seconds) >= 3600))
+        }
     }
 
     @Test func nextClassSkipsCancelledAndPastClasses() {

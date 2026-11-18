@@ -5,8 +5,9 @@ public enum ProposalKind: String, Codable, CaseIterable, Sendable {
     case lmsAssignment = "lms-assignment"
     case lmsFile = "lms-file"
     case lmsNotice = "lms-notice"
-    case lmsSubmitted = "lms-submitted"
+    case lmsUnsubmitted = "lms-unsubmitted"
     case lmsDue = "lms-due"
+    case lmsAttachments = "lms-attachments"
     case claude
     case cleanupMove = "cleanup-move"
 
@@ -14,7 +15,7 @@ public enum ProposalKind: String, Codable, CaseIterable, Sendable {
     // LMS 탭은 LMS 항목만 받는다. Claude 제안은 그 대화의 패널에서, 폴더 정리의 이동은 과목의 자료 화면에서 받는다.
     public var group: ProposalGroup? {
         switch self {
-        case .lmsSubmitted, .lmsDue: .differs
+        case .lmsUnsubmitted, .lmsDue, .lmsAttachments: .differs
         case .lmsAssignment, .lmsFile: .new
         case .lmsNotice: .posts
         case .claude, .cleanupMove: nil
@@ -25,7 +26,7 @@ public enum ProposalKind: String, Codable, CaseIterable, Sendable {
     public var picksCourse: Bool {
         switch self {
         case .lmsAssignment, .lmsFile: true
-        case .lmsNotice, .lmsSubmitted, .lmsDue, .claude, .cleanupMove: false
+        case .lmsNotice, .lmsUnsubmitted, .lmsDue, .lmsAttachments, .claude, .cleanupMove: false
         }
     }
 
@@ -35,13 +36,13 @@ public enum ProposalKind: String, Codable, CaseIterable, Sendable {
         switch self {
         case .lmsAssignment, .lmsFile, .lmsNotice: "items"
         case .cleanupMove: "moves"
-        case .lmsSubmitted, .lmsDue, .claude: nil
+        case .lmsUnsubmitted, .lmsDue, .lmsAttachments, .claude: nil
         }
     }
 
     public var dismissList: String? {
         switch self {
-        case .lmsAssignment, .lmsFile, .lmsNotice, .lmsSubmitted, .lmsDue: "keys"
+        case .lmsAssignment, .lmsFile, .lmsNotice, .lmsUnsubmitted, .lmsDue, .lmsAttachments: "keys"
         case .claude, .cleanupMove: nil
         }
     }
@@ -51,8 +52,9 @@ public enum ProposalKind: String, Codable, CaseIterable, Sendable {
         case .lmsAssignment: String(localized: .proposalKindLmsAssignment)
         case .lmsFile: String(localized: .proposalKindLmsFile)
         case .lmsNotice: String(localized: .proposalKindLmsNotice)
-        case .lmsSubmitted: String(localized: .proposalKindLmsSubmitted)
+        case .lmsUnsubmitted: String(localized: .proposalKindLmsUnsubmitted)
         case .lmsDue: String(localized: .proposalKindLmsDue)
+        case .lmsAttachments: String(localized: .proposalKindLmsAttachments)
         case .claude: String(localized: .proposalKindClaude)
         case .cleanupMove: String(localized: .proposalKindCleanupMove)
         }

@@ -44,7 +44,10 @@ final class QuickAddModel {
     func accent(_ id: UUID) -> CourseAccent { workspace.accent(id) }
 
     func due(_ parsed: QuickAdd) -> String? {
-        parsed.due.map { CourseFile.deadline($0, calendar: workspace.calendar, locale: locale) }
+        parsed.due.map {
+            DateTimeText.text(
+                $0, from: workspace.now, time: true, settings: workspace.settings, calendar: workspace.calendar, locale: locale)
+        }
     }
 
     enum Chip: Hashable {
@@ -108,14 +111,7 @@ final class QuickAddModel {
         workspace.settings.schedule.due(on: workspace.now, calendar: workspace.calendar)
     }
 
-    func left(_ due: Date) -> (text: String, overdue: Bool)? {
-        switch DueState(due: due, now: workspace.now, calendar: workspace.calendar) {
-        case .none: nil
-        case .overdue(let d): (String(localized: d == 0 ? .assignmentsJustOverdue : .assignmentsOverdueDays(d)), true)
-        case .hours(let h): (String(localized: .assignmentsHoursLeft(h)), false)
-        case .days(let d): (DDay.text(d), false)
-        }
-    }
+    func overdue(_ due: Date) -> Bool { due < workspace.now }
 
     var kinds: [AssignmentKind] { workspace.settings.assignmentKindTable }
 

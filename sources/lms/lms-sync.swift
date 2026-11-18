@@ -3,7 +3,8 @@ import Foundation
 import Security
 
 public enum LMSSync {
-    // `attachments`는 다 읽은 목록에서 첨부를 읽을 과제를 고른다. 고른 과제마다 과제 페이지를 하나 더 읽는다.
+    // `attachments`는 다 읽은 목록에서 과제 페이지를 읽을 과제를 고른다. 고른 과제마다 과제 페이지를 하나 더 읽어 첨부와
+    // 낸 시각을 읽는다.
     public static func read(
         _ client: LMSClient, at now: Date, attachments: @Sendable (LMSSnapshot) -> [LMSAssignment] = { _ in [] }
     ) async throws -> LMSSnapshot {
@@ -15,6 +16,7 @@ public enum LMSSync {
         for i in snapshot.assignments.indices where wanted.contains(snapshot.assignments[i].id) {
             let page = try await client.page("/mod/assign/view.php?id=\(snapshot.assignments[i].id)")
             snapshot.assignments[i].attachments = try LMSPages.attachments(page)
+            if snapshot.assignments[i].submitted { snapshot.assignments[i].submittedAt = try LMSPages.submittedAt(page) }
         }
         return snapshot
     }

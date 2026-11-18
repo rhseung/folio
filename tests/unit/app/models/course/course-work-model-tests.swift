@@ -78,7 +78,7 @@ struct AssignmentsModelTests {
     @Test func groupsAndSubtitleFollowStatusAndDeadline() throws {
         let (workspace, course) = try fixtureCourse()
         let now = Date.now
-        workspace.run(AssignmentAdd(course: linearAlgebra, title: "HW 1", due: now - 3600))
+        workspace.run(AssignmentAdd(course: linearAlgebra, title: "HW 1", due: now - 2 * 3600 - 300))
         workspace.run(AssignmentAdd(course: linearAlgebra, title: "HW 2", due: now + 5 * 86_400))
         workspace.run(AssignmentAdd(course: linearAlgebra, title: "HW 3"))
         let model = AssignmentsModel(workspace: workspace, course: course)
@@ -88,14 +88,26 @@ struct AssignmentsModelTests {
         #expect(groups[1].items.map(\.title) == ["HW 2", "HW 3"])
         #expect(groups.map(\.group.label) == ["마감 지남", "진행 중"])
 
+        // 위 줄은 날, 아래 줄은 시각이다. 오늘이면 날 없이 시각이 위 줄이다. 2시간 전 마감은 공부일 경계에 따라 오늘이거나 어제다.
+        // 일주일 안은 요일이다. 급한 정도는 색으로만 보인다.
         let late = groups[0].items[0]
-        #expect(model.dueChip(late, now: now)?.text == "방금 지남")
-        let chip = try #require(model.dueChip(groups[1].items[0], now: now))
-        #expect(chip.text == "D-5" && chip.tone == .warning)
-        #expect(model.due(groups[1].items[1]).date == "마감 없음")
+        let overdue = model.due(late, now: now)
+        #expect(overdue.tone == .danger)
+        #expect(overdue.date == "어제" ? overdue.time != nil : overdue.time == nil && overdue.date.contains(":"))
+        let soon = model.due(groups[1].items[0], now: now)
+        #expect(soon.date.hasSuffix("요일") && soon.tone == .warning && soon.time != nil)
+        #expect(model.due(groups[1].items[1], now: now).date == "마감 없음")
         model.setStatus(late, .submitted)
         #expect(model.groups(now: now).map(\.group) == [.open, .submitted])
-        #expect(model.dueChip(try #require(model.course.file.assignments.first { $0.title == "HW 1" }), now: now) == nil)
+        // 늦게 낸 과제는 칩 대신 낸 시각을 빨갛게 보인다.
+        let hw1 = try #require(model.course.file.assignments.first { $0.title == "HW 1" })
+        #expect(model.due(hw1, now: now).tone == .plain && model.row(hw1).lateSubmitted)
+        // 일주일보다 먼 마감은 요일 대신 날짜를 쓴다.
+        workspace.run(AssignmentAdd(course: linearAlgebra, title: "HW 4", due: now + 10 * 86_400))
+        let hw4 = try #require(model.course.file.assignments.first { $0.title == "HW 4" })
+        let far = model.due(hw4, now: now)
+        let farDue = try #require(hw4.due)
+        #expect(far.date == CourseFile.day(farDue, calendar: workspace.calendar) && far.time != nil)
     }
 
     @Test func sheetOffersGroupsAsATreeAndFillsTheLastMax() throws {
@@ -136,7 +148,7 @@ struct AssignmentsModelTests {
         model.due = try #require(workspace.calendar.date(from: DateComponents(year: 2026, month: 11, day: 6, hour: 23, minute: 59)))
         #expect(
             model.repeatDetail
-                == "제출로 바꾸면 다음 과제가 \(CourseFile.deadline(model.due.addingTimeInterval(14 * 86_400), calendar: workspace.calendar)) 마감으로 생깁니다"
+                == "다음 과제 마감 \(CourseFile.deadline(model.due.addingTimeInterval(14 * 86_400), calendar: workspace.calendar))"
         )
 
         model.customizeRepeat()

@@ -17,22 +17,11 @@ struct DdayBadge: View {
     var body: some View {
         let color = Self.heat(days, urgency)
         let urgent = ExamUrgency(days: days, settings: urgency) == .urgent
-        Badge(DDay.text(days), color: color)
+        Badge(DateTimeText.dday(days: days), color: color)
             .phaseAnimator([false, true], trigger: urgent) { chip, lit in
                 chip.scaleEffect(lit && urgent ? 1.06 : 1)
             } animation: { _ in
                 Theme.Motion.pulse
             }
-    }
-}
-
-extension DueUrgency {
-    static func text(_ due: Date, studyDays days: Int, settings: UrgencySettings) -> String {
-        let time = due.formatted(date: .omitted, time: .shortened)
-        return switch DueUrgency(studyDays: days, settings: settings) {
-        case .urgent: String(localized: days == 0 ? .todayDeadlinesTodayAt(time) : .todayDeadlinesTomorrowAt(time))
-        case .soon: String(localized: .todayDeadlinesInDays(days))
-        case .later: due.formatted(.dateTime.month().day().weekday())
-        }
     }
 }
