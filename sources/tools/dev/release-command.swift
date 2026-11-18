@@ -60,12 +60,15 @@ struct ReleaseCommand: ParsableCommand {
     static func table(pending: [PatchNotes.Version], steps: [ReleasePlan.Step], title: String = "릴리스") -> String {
         guard !pending.isEmpty || !steps.isEmpty else { return "## \(title)\n낼 버전이 없습니다.\n" }
         let rows =
-            pending.map { "| \($0) | 게시되지 않은 태그 | |" }
+            pending.map { "| \($0) | 게시되지 않은 태그 | | |" }
             + steps.map { step in
-                "| \(step.version) | " + step.prs.map { "#\($0)" }.joined(separator: " ") + " | "
+                let quiet = step.prs.dropLast().map { "#\($0)" }.joined(separator: " ")
+                return "| \(step.version) | " + (step.prs.last.map { "#\($0)" } ?? "") + " | \(quiet) | "
                     + step.bundles.joined(separator: ", ") + " |"
             }
-        return "## \(title)\n| 버전 | PR | 묶음 |\n| --- | --- | --- |\n" + rows.joined(separator: "\n") + "\n"
+        // 버전마다 그 버전을 낸(노트 있는) PR이 하나이고, 노트 없는 PR은 따로 적어 PR과 버전이 하나씩 맞는지 보이게 한다.
+        return "## \(title)\n| 버전 | 낸 PR | 함께 담긴 노트 없는 PR | 묶음 |\n| --- | --- | --- | --- |\n" + rows.joined(separator: "\n")
+            + "\n"
     }
 
     static func names(_ json: String) throws -> [String] {
@@ -141,7 +144,10 @@ struct ReleaseCommand: ParsableCommand {
                 "Delete a range of release tags with their releases, tag notes-only versions and a version to build at PRs' merge commits, then run the release workflow for the rest."
         )
 
-        @Option(help: "Versions to delete with their releases: one version, or A-B for every tag from A to B.")
+        @Option(
+            help:
+                "Versions to delete with their releases: one version, or A-B for every tag from A to B. B may be X.Y.x for every tag of that minor, so tags released meanwhile go too."
+        )
         var drop: [String] = []
 
         @Option(help: "A notes-only version at a PR's merge commit: <version>@<PR number>. Repeat in any order.")
@@ -203,8 +209,15 @@ struct ReleaseCommand: ParsableCommand {
             let steps = ReleasePlan.steps(
                 after: lastMark.version, prs: after, bundles: try ReleaseBundles.all(), released: try ReleaseTags.releasedBundles())
             report.append("\n" + ReleaseCommand.table(pending: [], steps: steps, title: "그 뒤 release.yml이 낼 버전"))
+            report.append(
+                "\n\(lastMark.version) 뒤 PR \(after.count)개 중 노트 있는 PR \(after.filter(\.hasNotes).count)개가 버전 \(steps.count)개를 냅니다.")
             print(report.joined(separator: "\n"))
             guard !dryRun else { return }
+            // 도는 release.yml이 지울 범위에 새 태그를 달면 지운 뒤에도 남으므로, 실행이 없을 때만 돈다.
+            let running = try Shell.run(
+                "gh", "run", "list", "--workflow", "release.yml", "--json", "status", "--jq",
+                "[.[] | select(.status != \"completed\")] | length")
+            guard running == "0" else { throw DevError("release.yml is running; run this again when it finishes") }
 
             for v in dropped { try ReleaseTags.delete(v, published: published.contains(v)) }
             for mark in marks {
@@ -227,10 +240,15 @@ struct ReleaseCommand: ParsableCommand {
 
         static func range(_ text: String, among tags: [PatchNotes.Version]) throws -> [PatchNotes.Version] {
             let ends = text.split(separator: "-", maxSplits: 1).map(String.init)
-            guard let low = ends.first.flatMap(PatchNotes.Version.init), let high = ends.count == 2 ? PatchNotes.Version(ends[1]) : low,
+            guard let low = ends.first.flatMap(PatchNotes.Version.init), let high = ends.count == 2 ? Self.end(ends[1]) : low,
                 low <= high
-            else { throw DevError("\(text) is not a version or A-B") }
+            else { throw DevError("\(text) is not a version, A-B or A-X.Y.x") }
             return tags.filter { low <= $0 && $0 <= high }
+        }
+
+        private static func end(_ text: String) -> PatchNotes.Version? {
+            guard text.hasSuffix(".x") else { return PatchNotes.Version(text) }
+            return PatchNotes.Version(text.dropLast(2) + ".0").map { PatchNotes.Version($0.major, $0.minor, Int.max) }
         }
     }
 }

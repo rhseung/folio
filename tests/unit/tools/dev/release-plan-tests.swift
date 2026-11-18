@@ -133,4 +133,22 @@ struct ReleasePlanTests {
         #expect(ReleaseTags.bundles(inMessage: "Folio 0.6.0\n\nBundle: LMS 연동\nBundle: 단축키\n") == ["LMS 연동", "단축키"])
         #expect(ReleaseTags.bundles(inMessage: "Folio 0.5.1").isEmpty)
     }
+
+    @Test func aDropRangeCanReachTheEndOfAMinor() throws {
+        let tags = [V(0, 1, 0), V(0, 1, 1), V(0, 1, 8), V(0, 1, 9), V(0, 1, 10), V(0, 2, 0)]
+        #expect(try ReleaseCommand.Renumber.range("0.1.1-0.1.x", among: tags) == [V(0, 1, 1), V(0, 1, 8), V(0, 1, 9), V(0, 1, 10)])
+        #expect(try ReleaseCommand.Renumber.range("0.1.1-0.1.8", among: tags) == [V(0, 1, 1), V(0, 1, 8)])
+        #expect(try ReleaseCommand.Renumber.range("0.1.9", among: tags) == [V(0, 1, 9)])
+        #expect(throws: DevError.self) { try ReleaseCommand.Renumber.range("0.1.x", among: tags) }
+    }
+
+    @Test func theTableShowsEachVersionsPRApartFromTheQuietOnes() {
+        let steps = [
+            Step(version: V(0, 5, 1), commit: "c1", prs: [544]),
+            Step(version: V(0, 6, 0), commit: "c3", bundles: ["LMS 연동"], prs: [550, 552, 554]),
+        ]
+        let table = ReleaseCommand.table(pending: [], steps: steps)
+        #expect(table.contains("| 0.5.1 | #544 |  |  |"))
+        #expect(table.contains("| 0.6.0 | #554 | #550 #552 | LMS 연동 |"))
+    }
 }

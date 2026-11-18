@@ -35,7 +35,7 @@ depends = ["tectonic"]
 run = "swift run -q folio-dev release past"
 
 [tasks.release-renumber]
-description = "Redo released versions: delete a range of tags with their releases, publish notes-only versions and tag one to build at PRs' merge commits: mise run release-renumber -- --drop A-B --past <version>@<PR> --build <version>@<PR> [--dry-run]"
+description = "Redo released versions: delete a range of tags with their releases, publish notes-only versions and tag one to build at PRs' merge commits: mise run release-renumber -- --drop A-B|A-X.Y.x --past <version>@<PR> --build <version>@<PR> [--dry-run]"
 depends = ["tectonic"]
 run = "swift run -q folio-dev release renumber"
 
