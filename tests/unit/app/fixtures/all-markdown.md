@@ -81,6 +81,21 @@ $$
 \end{aligned}
 $$
 
+```latex
+\begin{align}
+x_1'(t) &= 3x_1 + x_2 + x_3 \\
+x_2'(t) &= 2x_1 + 4x_2 + 2x_3 \\
+x_3'(t) &= -x_1 - x_2 + x_3
+\end{align}
+```
+
+$$
+\begin{align}
+x(t) &= a_1 + a_2 + a_3 + a_4 + a_5 + a_6 + a_7 + a_8 + a_9 + a_{10} + a_{11} + a_{12} + a_{13} + a_{14} + a_{15} + a_{16} + a_{17} + a_{18} + a_{19} + a_{20} \\
+y(t) &= b_1 + b_2
+\end{align}
+$$
+
 SwiftMath에 없는 명령: $0, \dots, n-1$, $i \bmod n$, $a \equiv b \pmod{n}$, $p \implies q$, $A \subsetneq B$, $\operatorname{rank} A$, $\therefore$ $\blacksquare$ $\square$.
 
 수식 안 글: $\text{König–Egerváry: } G \text{ has a 1-factor} \implies \text{양이온, 음이온}$, $\textbf{오차 5% 이내} \text{과제 #3 \& 4} \textit{A & B}$

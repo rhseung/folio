@@ -80,6 +80,18 @@ struct NoteMathTests {
         #expect(braced.size.width < plain.size.width + 16, "\(braced.size) vs \(plain.size)")
     }
 
+    // KaTeX는 식 번호를 식 위 오른쪽 끝에 띄워 두므로, 식 폭에 맞춘 말풍선에서는 번호가 식 끝과 겹쳐 그림이 번호 없는 식과 같은 폭이었다.
+    @Test func tagsSitBesideTheFormula() async throws {
+        let rows = #"x_1'(t) &= 3x_1 + x_2 + x_3 \\ x_2'(t) &= 2x_1 + 4x_2 + 2x_3"#
+        let numbered = try #require(await picture("\\begin{align} \(rows) \\end{align}", display: true))
+        let plain = try #require(await picture("\\begin{aligned} \(rows) \\end{aligned}", display: true))
+        #expect(numbered.size.width > plain.size.width + 32, "\(numbered.size) vs \(plain.size)")
+        #expect(abs(numbered.size.height - plain.size.height) < 2, "\(numbered.size) vs \(plain.size)")
+        let tagged = try #require(await picture(#"a + b = c \tag{*}"#, display: true))
+        let bare = try #require(await picture("a + b = c", display: true))
+        #expect(tagged.size.width > bare.size.width + 32, "\(tagged.size) vs \(bare.size)")
+    }
+
     static let shapes: [(name: String, tex: String, ascii: String)] = [
         ("한 글자", "x", "x"),
         ("숫자", "1", "1"),

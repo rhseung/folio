@@ -223,6 +223,8 @@ import UIKit
     private static let css =
         "html,body{background:transparent!important}body.note{margin:0;padding:4em;max-width:none;width:max-content}"
         + "body.note>.math.display{margin:0;overflow:visible}"
+        // 노트 CSS는 번호 붙은 식을 가운데에 두려고 번호만큼의 빈 칸을 왼쪽에도 둔다. 말풍선은 식에 맞춰 자르므로 그 칸을 없앤다.
+        + ".katex-display>.katex>.katex-html.tagged{grid-template-columns:0 max-content max-content}"
 
     func move(to view: PlatformView) {
         guard frame.superview !== view else { return }
