@@ -9,7 +9,9 @@ public enum GradeCalculator {
         public var completion: Double
         public var z: Double?
         public var zEstimated = false
-        public var meanGap: Double?
+        public var curve = SkewNormal.standard
+        public var gap: Double?
+        public var gapFromMedian = false
     }
 
     public struct CourseScore: Sendable, Equatable {
@@ -18,7 +20,9 @@ public enum GradeCalculator {
         public var projected: Double?
         public var z: Double?
         public var zEstimated = false
-        public var meanGap: Double?
+        public var curve = SkewNormal.standard
+        public var gap: Double?
+        public var gapFromMedian = false
         public var remainingWeight: Double
 
         // 손으로 고친 파일은 비중 규칙(0...100)을 벗어날 수 있다. 자르지 않고 `Int`로 바꾸면 1e19 같은 비중에서 앱이 멈춘다.
@@ -63,20 +67,28 @@ public enum GradeCalculator {
             let counted = own.filter { !$0.excused }
             let expected = component.count.map { Swift.max($0 - own.filter(\.excused).count, 1) }
             let completion: Double = counted.isEmpty ? 0 : expected.map { Swift.min(1, Double(counted.count) / Double($0)) } ?? 0
-            let withMean = counted.filter { $0.mean != nil && $0.max > 0 }
-            let zs = withMean.compactMap { e -> (z: Double, estimated: Bool)? in
-                let gap = e.score - e.mean!
-                if let sd = e.stdDev, sd > 0 { return (gap / sd, false) }
-                return spread.map { (gap / ($0 * e.max), true) }
+            let zs = counted.compactMap { e -> Placed? in
+                guard let mean = e.mean, e.max > 0 else { return nil }
+                let given = e.stdDev.flatMap { $0 > 0 ? $0 : nil }
+                guard let sd = given ?? spread.map({ $0 * e.max }) else { return nil }
+                guard let median = e.median, median != mean else { return Placed(z: (e.score - mean) / sd, estimated: given == nil) }
+                // 기운 분포의 점수는 위로 몇 %인지를 같은 백분위의 정규분포 z로 바꿔, 다른 점수의 z와 함께 평균 낸다.
+                let curve = SkewNormal.fit(mean: mean, median: median, stdDev: sd)
+                return Placed(z: SkewNormal.standard.quantile(curve.cdf(e.score)), estimated: given == nil, delta: curve.delta)
             }
-            let gaps = withMean.map { ($0.score - $0.mean!) / $0.max }
+            let gaps = counted.compactMap { e -> (gap: Double, fromMedian: Bool)? in
+                guard let center = e.median ?? e.mean, e.max > 0 else { return nil }
+                return ((e.score - center) / e.max, e.median != nil)
+            }
             return ComponentResult(
                 componentId: component.id,
                 ratio: ratio(of: own, by: component.aggregation, expected: expected),
                 completion: completion,
                 z: zs.isEmpty ? nil : zs.map(\.z).reduce(0, +) / Double(zs.count),
                 zEstimated: zs.contains { $0.estimated },
-                meanGap: gaps.isEmpty ? nil : gaps.reduce(0, +) / Double(gaps.count)
+                curve: zs.isEmpty ? .standard : .standardized(delta: zs.map(\.delta).reduce(0, +) / Double(zs.count)),
+                gap: gaps.isEmpty ? nil : gaps.map(\.gap).reduce(0, +) / Double(gaps.count),
+                gapFromMedian: !gaps.isEmpty && gaps.allSatisfy(\.fromMedian)
             )
         }
         let weights = Dictionary(keepingFirst: components.map { ($0.id, $0.weight) })
@@ -103,13 +115,15 @@ public enum GradeCalculator {
         let withZ = results.filter { $0.z != nil }
         let zWeight = withZ.reduce(0) { $0 + weights[$1.componentId]! }
         let z = zWeight > 0 ? withZ.reduce(0) { $0 + weights[$1.componentId]! * $1.z! } / zWeight : nil
-        let withGap = results.filter { $0.meanGap != nil }
+        let delta = zWeight > 0 ? withZ.reduce(0) { $0 + (weights[$1.componentId] ?? 0) * $1.curve.delta } / zWeight : 0
+        let withGap = results.filter { $0.gap != nil }
         let gapWeight = withGap.reduce(0) { $0 + weights[$1.componentId]! }
-        let gap = gapWeight > 0 ? withGap.reduce(0) { $0 + weights[$1.componentId]! * $1.meanGap! } / gapWeight : nil
+        let gap = gapWeight > 0 ? withGap.reduce(0) { $0 + (weights[$1.componentId] ?? 0) * ($1.gap ?? 0) } / gapWeight : nil
 
         return CourseScore(
             components: results, secured: secured, projected: projected, z: z,
-            zEstimated: withZ.contains { $0.zEstimated }, meanGap: gap, remainingWeight: remainingWeight)
+            zEstimated: withZ.contains { $0.zEstimated }, curve: delta == 0 ? .standard : .standardized(delta: delta), gap: gap,
+            gapFromMedian: !withGap.isEmpty && withGap.allSatisfy(\.gapFromMedian), remainingWeight: remainingWeight)
     }
 
     public static func requiredAverage(for target: Double, given score: CourseScore) -> Double? {
@@ -119,30 +133,30 @@ public enum GradeCalculator {
 
     // MARK: Relative standing
 
+    // `z`와 `cutZ`는 `curve`(반의 분포를 평균 0, 표준편차 1로 옮긴 곡선) 위의 자리이고, 평균에서 표준편차 몇 개만큼 떨어졌는지이다.
     public struct Standing: Sendable, Equatable {
         public var above: Double
         public var cutZ: Double
         public var z: Double
+        public var curve: SkewNormal
         public var inTopGrade: Bool { z >= cutZ }
-
-        static func cdf(_ z: Double) -> Double { 0.5 * (1 + erf(z / 2.squareRoot())) }
     }
 
-    public static func standing(z: Double, topGradeRatio ratio: Double) -> Standing {
+    // 받는 `z`는 위로 몇 %인지를 정규분포의 z로 적은 값이다(`CourseScore.z`). 곡선이 기울어도 위로 몇 %인지는 그대로이고,
+    // 곡선 위에서 같은 백분위의 자리로 옮긴다.
+    public static func standing(z: Double, topGradeRatio ratio: Double, curve: SkewNormal = .standard) -> Standing {
         let share = Swift.min(Swift.max(ratio, 0.001), 0.999)
-        var lo = -8.0, hi = 8.0
-        for _ in 0..<60 {
-            let mid = (lo + hi) / 2
-            if 1 - Standing.cdf(mid) > share { lo = mid } else { hi = mid }
-        }
-        return Standing(above: 1 - Standing.cdf(z), cutZ: (lo + hi) / 2, z: z)
+        let below = SkewNormal.standard.cdf(z)
+        let place = curve.shape == 0 ? z : curve.quantile(below)
+        return Standing(above: 1 - below, cutZ: curve.quantile(1 - share), z: place, curve: curve)
     }
 
-    // 대칭 곡선에서 A 비율이 50%이면 A 기준선은 평균에 있고, 비율이 더 크면 평균 아래, 더 작으면 평균 위에 있다.
-    // 그래서 평균의 한쪽은 이것만으로 정해지고, 다른 쪽은 퍼짐이 있어야 하므로 nil이다.
-    public static func inTopGrade(meanGap: Double, topGradeRatio ratio: Double) -> Bool? {
-        if meanGap >= 0, ratio >= 0.5 { return true }
-        if meanGap <= 0, ratio <= 0.5 { return false }
+    // `gap`은 중앙값이 있으면 중앙값과의, 없으면 평균과의 차이이다. 중앙값 이상이면 정확히 위로 50% 안이고, 평균은 대칭 곡선에서만
+    // 중앙값과 같다. A 비율이 50%이면 A 기준선은 가운데에 있고, 비율이 더 크면 가운데 아래, 더 작으면 가운데 위에 있다.
+    // 그래서 가운데의 한쪽은 이것만으로 정해지고, 다른 쪽은 퍼짐이 있어야 하므로 nil이다.
+    public static func inTopGrade(gap: Double, topGradeRatio ratio: Double) -> Bool? {
+        if gap >= 0, ratio >= 0.5 { return true }
+        if gap <= 0, ratio <= 0.5 { return false }
         return nil
     }
 
@@ -174,6 +188,12 @@ public enum GradeCalculator {
         guard let earned = byScore else { return cap }
         return (earned.points ?? 0) > (cap.points ?? 0) ? cap : earned
     }
+}
+
+private struct Placed {
+    var z: Double
+    var estimated: Bool
+    var delta = 0.0
 }
 
 extension GradeComponent {

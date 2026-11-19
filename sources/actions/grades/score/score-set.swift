@@ -7,7 +7,7 @@ import Foundation
     "score set", "점수 고치기. 준 것만 바꾼다", done: "점수 '{score}'을(를) 고쳤습니다",
     examples: [
         "folio score set EC4207/HW1 --value 10", "folio score set EC4207/HW1 --excused true",
-        "folio score set EC4207/HW1 --date none --dry-run",
+        "folio score set EC4207/HW1 --date none --dry-run", "folio score set EC4207/HW1 --mean 7.5 --median 8",
     ],
     phrases: ["잘못 넣", "틀리게 넣", "점수 고치기", "점수 수정", "점수 정정"], panel: true)
 public struct ScoreSet {
@@ -24,6 +24,8 @@ public struct ScoreSet {
     var max: Patch<Double>
     /// 평균
     var mean: Patch<Double?>
+    /// 중앙값
+    var median: Patch<Double?>
     /// 표준편차
     var stdDev: Patch<Double?>
     /// 날짜
@@ -45,6 +47,7 @@ public struct ScoreSet {
                 value.apply(&e.score)
                 max.apply(&e.max)
                 mean.apply(&e.mean)
+                median.apply(&e.median)
                 stdDev.apply(&e.stdDev)
                 date.apply(&e.date)
                 exam.apply(&e.examId)

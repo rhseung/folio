@@ -3043,7 +3043,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "공개된 평균과 표준편차로 추정한 반 안의 위치입니다. A 비율은 성적 규칙에서 바꿉니다."
+            "value": "공개된 평균과 표준편차로 추정한 반 안의 위치입니다. 중앙값도 있으면 한쪽으로 기운 분포로 셉니다. A 비율은 성적 규칙에서 바꿉니다."
           }
         }
       }
@@ -23354,6 +23354,28 @@
         }
       }
     },
+    "course-grades.standing.above-median": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "중앙값보다 위"
+          }
+        }
+      }
+    },
+    "course-grades.standing.below-median": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "중앙값보다 아래"
+          }
+        }
+      }
+    },
     "notify.overdue": {
       "extractionState": "manual",
       "localizations": {
@@ -23658,6 +23680,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "서식"
+          }
+        }
+      }
+    },
+    "score-sheet.median": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "중앙값"
+          }
+        }
+      }
+    },
+    "score-sheet.median-above": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "중앙값 이상 · 상위 50% 안"
+          }
+        }
+      }
+    },
+    "score-sheet.median-below": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "중앙값 아래 · 상위 50% 밖"
+          }
+        }
+      }
+    },
+    "score-sheet.median-hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "공개되면 넣어 한쪽으로 기운 분포를 반영합니다"
           }
         }
       }

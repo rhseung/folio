@@ -12,6 +12,7 @@ extension GeneratedCommands {
               folio score set EC4207/HW1 --value 10
               folio score set EC4207/HW1 --excused true
               folio score set EC4207/HW1 --date none --dry-run
+              folio score set EC4207/HW1 --mean 7.5 --median 8
             """)
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("<과목>/<점수 제목>", valueName: "score"), completion: Complete.ref(.scoreEntry)) var score: String = ""
@@ -20,6 +21,7 @@ extension GeneratedCommands {
         @Option(help: "받은 점수") var value: Double?
         @Option(help: "만점") var max: Double?
         @Option(help: "평균. none이면 지운다") var mean: Clearable<Double>?
+        @Option(help: "중앙값. none이면 지운다") var median: Clearable<Double>?
         @Option(help: "표준편차. none이면 지운다") var stdDev: Clearable<Double>?
         @Option(help: ArgumentHelp("날짜. none이면 지운다", valueName: "date")) var date: Clearable<LocalDate>?
         @Option(help: ArgumentHelp("점수가 나온 시험. none이면 지운다", valueName: "exam"), completion: Complete.ref(.exam)) var exam: Clearable<String>?
@@ -27,7 +29,7 @@ extension GeneratedCommands {
         @Option(help: "면제 여부") var excused: Toggle?
 
         func run() throws {
-            guard component != nil || title != nil || value != nil || max != nil || mean != nil || stdDev != nil || date != nil || exam != nil || assignment != nil || excused != nil else { throw CLIError(exit: .usage, message: "바꿀 것을 하나 이상 주세요: --component, --title, --value, --max, --mean, --std-dev, --date, --exam, --assignment, --excused") }
+            guard component != nil || title != nil || value != nil || max != nil || mean != nil || median != nil || stdDev != nil || date != nil || exam != nil || assignment != nil || excused != nil else { throw CLIError(exit: .usage, message: "바꿀 것을 하나 이상 주세요: --component, --title, --value, --max, --mean, --median, --std-dev, --date, --exam, --assignment, --excused") }
             let ctx = try CLI.context(g)
             let r = Resolver(ctx)
             let (c, scoreName) = try r.split(score)
@@ -39,6 +41,7 @@ extension GeneratedCommands {
                 value: value.map { Patch.set($0) } ?? .keep,
                 max: max.map { Patch.set($0) } ?? .keep,
                 mean: mean.map { p in Patch.set(p.value) } ?? .keep,
+                median: median.map { p in Patch.set(p.value) } ?? .keep,
                 stdDev: stdDev.map { p in Patch.set(p.value) } ?? .keep,
                 date: date.map { p in Patch.set(p.value) } ?? .keep,
                 exam: try exam.map { p in Patch.set(try p.value.map { try r.id(.exam, $0, in: c) }) } ?? .keep,

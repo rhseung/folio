@@ -41,6 +41,9 @@ struct ScoreEntrySheet: View {
                     TextField(String(localized: .scoreSheetStdDev), text: $model.stdDev).pill(width: Theme.Size.numberField)
                 }
             }
+            FormRow(label: String(localized: .scoreSheetMedian), detail: model.medianDetail) {
+                TextField(String(localized: .scoreSheetMedian), text: $model.median).pill(width: Theme.Size.numberField)
+            }
             FormRow(label: String(localized: .scoreSheetCounts), detail: String(localized: .scoreSheetCountsDetail), last: true) {
                 Select(
                     selection: $model.excused,
