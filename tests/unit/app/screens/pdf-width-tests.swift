@@ -48,6 +48,25 @@ struct PDFWidthTests {
         _ = window
     }
 
+    // 다른 작업이 main 스레드를 붙잡으면 PDFKit이 폭에 맞춰 현재 쪽을 다시 고르는 일이 놓은 뒤로 밀린다. CI의 전체 테스트에서는 다른 suite가 이렇게 붙잡았다.
+    // 이 테스트 안에서 바로 막으면 PDFKit의 다시 고르기가 놓기보다 먼저 끝나서 재현되지 않으므로, 따로 띄운 작업이 막는다.
+    @Test(arguments: [0, 4, 16]) func aBusyMainThreadAfterAWidthChangeKeepsThePage(after delay: Int) async throws {
+        let (controller, view, window) = try await pane(height: 800)
+        for width: CGFloat in [400, 400.3, 400.6] {
+            view.setFrameSize(CGSize(width: width, height: 800))
+            view.layoutSubtreeIfNeeded()
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(delay))
+                usleep(useconds_t((SteadyPDFView.settling + 0.1) * 1_000_000))
+            }
+            try await Task.sleep(for: .milliseconds(8))
+            try await settle(view)
+            #expect(controller.page == 4, "at \(width)pt")
+            #expect(topPage(of: view) == 4, "at \(width)pt")
+        }
+        _ = window
+    }
+
     @Test func aPaneOpenedOnAPageShowsThatPage() async throws {
         let document = try #require(PDFDocument(data: SampleLecture.data()))
         let controller = PDFController(document: document, page: 4)
