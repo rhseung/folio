@@ -74,6 +74,24 @@ struct SkewNormalTests {
         #expect(GradeCalculator.inTopGrade(gap: gap, topGradeRatio: 0.5) == true)
     }
 
+    // 중앙값이 일부 점수에만 있으면 평균과의 차이만 센다. 퀴즈 둘은 (57 - 60) / 100과 (72 - 70) / 100의 평균인 -0.005이다.
+    @Test func mixedMediansFallBackToTheMeanGap() throws {
+        let quiz = GradeComponent(device: device, at: now, name: "퀴즈", weight: 50, aggregation: .mean)
+        let midterm = GradeComponent(device: device, at: now, name: "중간고사", weight: 50, aggregation: .single)
+        let entries = [
+            ScoreEntry(device: device, at: now, componentId: quiz.id, title: "", score: 57, max: 100, mean: 60, median: 55),
+            ScoreEntry(device: device, at: now, componentId: quiz.id, title: "", score: 72, max: 100, mean: 70),
+            ScoreEntry(device: device, at: now, componentId: midterm.id, title: "", score: 50, max: 100, mean: 52, median: 48),
+        ]
+        let score = GradeCalculator.score(components: [quiz, midterm], entries: entries)
+        let quizGap = try #require(score.components[0].gap), midtermGap = try #require(score.components[1].gap)
+        #expect(!score.components[0].gapFromMedian && near(quizGap, -0.005))
+        #expect(score.components[1].gapFromMedian && near(midtermGap, 0.02))
+        // 과목 전체도 섞이므로 중간고사는 평균과의 차이 -0.02로 센다. (-0.005 - 0.02) / 2 = -0.0125이다.
+        let gap = try #require(score.gap)
+        #expect(!score.gapFromMedian && near(gap, -0.0125))
+    }
+
     static let stats = zip(Gen.int(in: 0...1000), Gen.int(in: 1...300), Gen.int(in: -400...400))
 
     // 중앙값이 평균과 같으면 정규분포와 같다.

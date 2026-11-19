@@ -12,6 +12,7 @@ public enum GradeCalculator {
         public var curve = SkewNormal.standard
         public var gap: Double?
         public var gapFromMedian = false
+        public var meanGap: Double?
     }
 
     public struct CourseScore: Sendable, Equatable {
@@ -76,10 +77,13 @@ public enum GradeCalculator {
                 let curve = SkewNormal.fit(mean: mean, median: median, stdDev: sd)
                 return Placed(z: SkewNormal.standard.quantile(curve.cdf(e.score)), estimated: given == nil, delta: curve.delta)
             }
-            let gaps = counted.compactMap { e -> (gap: Double, fromMedian: Bool)? in
-                guard let center = e.median ?? e.mean, e.max > 0 else { return nil }
-                return ((e.score - center) / e.max, e.median != nil)
-            }
+            // 중앙값이 일부 점수에만 있으면 중앙값과의 차이와 평균과의 차이를 섞지 않고 평균과의 차이만 센다. 섞으면 기준을
+            // 말할 수 없어 "평균보다 위"라는 표시가 틀린다.
+            let scored = counted.filter { $0.max > 0 }
+            let medianGaps = scored.compactMap { e in e.median.map { (e.score - $0) / e.max } }
+            let meanGaps = scored.compactMap { e in e.mean.map { (e.score - $0) / e.max } }
+            let fromMedian = !medianGaps.isEmpty && scored.allSatisfy { $0.median != nil || $0.mean == nil }
+            let gaps = fromMedian ? medianGaps : meanGaps
             return ComponentResult(
                 componentId: component.id,
                 ratio: ratio(of: own, by: component.aggregation, expected: expected),
@@ -87,8 +91,9 @@ public enum GradeCalculator {
                 z: zs.isEmpty ? nil : zs.map(\.z).reduce(0, +) / Double(zs.count),
                 zEstimated: zs.contains { $0.estimated },
                 curve: zs.isEmpty ? .standard : .standardized(delta: zs.map(\.delta).reduce(0, +) / Double(zs.count)),
-                gap: gaps.isEmpty ? nil : gaps.map(\.gap).reduce(0, +) / Double(gaps.count),
-                gapFromMedian: !gaps.isEmpty && gaps.allSatisfy(\.fromMedian)
+                gap: gaps.isEmpty ? nil : gaps.reduce(0, +) / Double(gaps.count),
+                gapFromMedian: fromMedian,
+                meanGap: meanGaps.isEmpty ? nil : meanGaps.reduce(0, +) / Double(meanGaps.count)
             )
         }
         let weights = Dictionary(keepingFirst: components.map { ($0.id, $0.weight) })
@@ -116,14 +121,16 @@ public enum GradeCalculator {
         let zWeight = withZ.reduce(0) { $0 + weights[$1.componentId]! }
         let z = zWeight > 0 ? withZ.reduce(0) { $0 + weights[$1.componentId]! * $1.z! } / zWeight : nil
         let delta = zWeight > 0 ? withZ.reduce(0) { $0 + (weights[$1.componentId] ?? 0) * $1.curve.delta } / zWeight : 0
-        let withGap = results.filter { $0.gap != nil }
-        let gapWeight = withGap.reduce(0) { $0 + weights[$1.componentId]! }
-        let gap = gapWeight > 0 ? withGap.reduce(0) { $0 + (weights[$1.componentId] ?? 0) * ($1.gap ?? 0) } / gapWeight : nil
+        let fromMedian = results.contains { $0.gap != nil } && results.allSatisfy { $0.gap == nil || $0.gapFromMedian }
+        let gapOf = { (r: ComponentResult) in fromMedian ? r.gap : r.meanGap }
+        let withGap = results.filter { gapOf($0) != nil }
+        let gapWeight = withGap.reduce(0) { $0 + (weights[$1.componentId] ?? 0) }
+        let gap = gapWeight > 0 ? withGap.reduce(0) { $0 + (weights[$1.componentId] ?? 0) * (gapOf($1) ?? 0) } / gapWeight : nil
 
         return CourseScore(
             components: results, secured: secured, projected: projected, z: z,
             zEstimated: withZ.contains { $0.zEstimated }, curve: delta == 0 ? .standard : .standardized(delta: delta), gap: gap,
-            gapFromMedian: !withGap.isEmpty && withGap.allSatisfy(\.gapFromMedian), remainingWeight: remainingWeight)
+            gapFromMedian: fromMedian, remainingWeight: remainingWeight)
     }
 
     public static func requiredAverage(for target: Double, given score: CourseScore) -> Double? {
@@ -151,7 +158,7 @@ public enum GradeCalculator {
         return Standing(above: 1 - below, cutZ: curve.quantile(1 - share), z: place, curve: curve)
     }
 
-    // `gap`은 중앙값이 있으면 중앙값과의, 없으면 평균과의 차이이다. 중앙값 이상이면 정확히 위로 50% 안이고, 평균은 대칭 곡선에서만
+    // `gap`은 모든 점수에 중앙값이 있으면 중앙값과의, 아니면 평균과의 차이이다. 중앙값 이상이면 정확히 위로 50% 안이고, 평균은 대칭 곡선에서만
     // 중앙값과 같다. A 비율이 50%이면 A 기준선은 가운데에 있고, 비율이 더 크면 가운데 아래, 더 작으면 가운데 위에 있다.
     // 그래서 가운데의 한쪽은 이것만으로 정해지고, 다른 쪽은 퍼짐이 있어야 하므로 nil이다.
     public static func inTopGrade(gap: Double, topGradeRatio ratio: Double) -> Bool? {
