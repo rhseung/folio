@@ -31,7 +31,9 @@ struct ScorePanel: View {
                 }
             }
             if let relative {
-                StandingCurve(z: result.z, estimated: result.zEstimated, gap: result.meanGap, share: relative)
+                StandingCurve(
+                    z: result.z, estimated: result.zEstimated, curve: result.curve, gap: result.gap, gapFromMedian: result.gapFromMedian,
+                    share: relative)
             } else {
                 scoreBar
             }

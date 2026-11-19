@@ -16,6 +16,7 @@ final class ScoreEntryModel {
     var score: String
     var max: String
     var mean: String
+    var median: String
     var stdDev: String
     var excused: Bool
     private(set) var source: ScoreSource
@@ -30,6 +31,7 @@ final class ScoreEntryModel {
         score = isNew ? "" : entry.score.formatted(.number.grouping(.never))
         max = entry.max.formatted(.number.grouping(.never))
         mean = entry.mean?.formatted(.number.grouping(.never)) ?? ""
+        median = entry.median?.formatted(.number.grouping(.never)) ?? ""
         stdDev = entry.stdDev?.formatted(.number.grouping(.never)) ?? ""
         excused = entry.excused
         source = entry.source
@@ -65,7 +67,8 @@ final class ScoreEntryModel {
     var confirmTitle: String { String(localized: isNew ? .commonAdd : .commonSave) }
 
     var valid: Bool {
-        Double(score) != nil && (Double(max) ?? 0) > 0 && (mean.isEmpty || Double(mean) != nil) && (stdDev.isEmpty || Double(stdDev) != nil)
+        Double(score) != nil && (Double(max) ?? 0) > 0 && (mean.isEmpty || Double(mean) != nil)
+            && (median.isEmpty || Double(median) != nil) && (stdDev.isEmpty || Double(stdDev) != nil)
     }
 
     var hasTitle: Bool { course.file.components.first { $0.id == componentId }?.aggregation != .single }
@@ -79,6 +82,11 @@ final class ScoreEntryModel {
         return z.map(\.sigmas) ?? gap.map { String(localized: .scoreSheetGapNoStdDev($0.points)) } ?? String(localized: .scoreSheetMeanHint)
     }
 
+    var medianDetail: String {
+        guard let s = Double(score), let m = Double(median) else { return String(localized: .scoreSheetMedianHint) }
+        return String(localized: s >= m ? .scoreSheetMedianAbove : .scoreSheetMedianBelow)
+    }
+
     func confirm() -> Bool {
         guard let s = Double(score), let m = Double(max) else { return false }
         let saved =
@@ -86,12 +94,14 @@ final class ScoreEntryModel {
             ? workspace.run(
                 ScoreAdd(
                     id: entry.id, course: course.id, component: componentId, title: title, score: s, max: m,
-                    mean: Double(mean), stdDev: Double(stdDev), date: entry.date, exam: links.exam, assignment: links.assignment,
+                    mean: Double(mean), median: Double(median), stdDev: Double(stdDev), date: entry.date, exam: links.exam,
+                    assignment: links.assignment,
                     excused: excused))
             : workspace.run(
                 ScoreSet(
                     course: course.id, score: entry.id, component: .set(componentId), title: .set(title), value: .set(s), max: .set(m),
-                    mean: .set(Double(mean)), stdDev: .set(Double(stdDev)), exam: .set(links.exam), assignment: .set(links.assignment),
+                    mean: .set(Double(mean)), median: .set(Double(median)), stdDev: .set(Double(stdDev)), exam: .set(links.exam),
+                    assignment: .set(links.assignment),
                     excused: .set(excused)))
         return saved != nil
     }

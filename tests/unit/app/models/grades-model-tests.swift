@@ -273,6 +273,13 @@ struct GradeEditingModelTests {
         #expect(model.meanDetail == "평균 +2점 · 표준편차는 없으면 비워 둡니다")
         model.stdDev = "2"
         #expect(model.meanDetail == "평균 +1.0σ")
+        #expect(model.medianDetail == "공개되면 넣어 한쪽으로 기운 분포를 반영합니다")
+        model.median = "y"
+        #expect(!model.valid)
+        model.median = "8"
+        #expect(model.valid && model.medianDetail == "중앙값 이상 · 상위 50% 안")
+        model.median = "8.5"
+        #expect(model.medianDetail == "중앙값 아래 · 상위 50% 밖")
     }
 
     @Test func theCountMenuKeepsTheRule() throws {

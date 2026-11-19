@@ -10,7 +10,7 @@ extension GeneratedCommands {
         static let configuration = CommandConfiguration(commandName: "add", abstract: "점수 추가", discussion: """
             예시:
               folio score add EC4207 --component 과제 --title HW1 --score 9 --max 10
-              folio score add EC4207 --component 중간고사 --score 72 --max 100 --mean 61.5 --std-dev 12 --date 2026-10-21 --dry-run
+              folio score add EC4207 --component 중간고사 --score 72 --max 100 --mean 61.5 --median 63 --std-dev 12 --date 2026-10-21 --dry-run
             """)
         @OptionGroup var g: GlobalOptions
         @Option(name: .customLong("id"), help: .hidden) var id: UUID?
@@ -20,6 +20,7 @@ extension GeneratedCommands {
         @Option(help: "받은 점수") var score: Double
         @Option(help: "만점") var max: Double
         @Option(help: "평균") var mean: Double?
+        @Option(help: "중앙값") var median: Double?
         @Option(help: "표준편차") var stdDev: Double?
         @Option(help: ArgumentHelp("날짜. 2026-10-21", valueName: "date")) var date: LocalDate?
         @Option(help: ArgumentHelp("점수가 나온 시험", valueName: "exam"), completion: Complete.ref(.exam)) var exam: String?
@@ -38,6 +39,7 @@ extension GeneratedCommands {
                 score: score,
                 max: max,
                 mean: mean,
+                median: median,
                 stdDev: stdDev,
                 date: date,
                 exam: try exam.map { try r.id(.exam, $0, in: c) },

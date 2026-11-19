@@ -159,18 +159,18 @@ struct GradingTests {
         #expect(score.components[1].z == 2)
         #expect(score.zEstimated)
         #expect(score.z == 1.5)
-        #expect(abs(score.meanGap! - 0.15) < 1e-9)
+        #expect(abs((score.gap ?? .nan) - 0.15) < 1e-9)
     }
 
     @Test func withoutAnyStandardDeviationOnlyTheSideOfTheMeanCounts() {
         let a = component("Midterm", 100, .single)
         let score = GradeCalculator.score(components: [a], entries: [entry(a, 62, 100, mean: 70)])
         #expect(score.z == nil)
-        #expect(score.meanGap == -0.08)
-        #expect(GradeCalculator.inTopGrade(meanGap: -0.08, topGradeRatio: 0.5) == false)
-        #expect(GradeCalculator.inTopGrade(meanGap: -0.08, topGradeRatio: 0.6) == nil)
-        #expect(GradeCalculator.inTopGrade(meanGap: 0.05, topGradeRatio: 0.5) == true)
-        #expect(GradeCalculator.inTopGrade(meanGap: 0.05, topGradeRatio: 0.3) == nil)
+        #expect(score.gap == -0.08)
+        #expect(GradeCalculator.inTopGrade(gap: -0.08, topGradeRatio: 0.5) == false)
+        #expect(GradeCalculator.inTopGrade(gap: -0.08, topGradeRatio: 0.6) == nil)
+        #expect(GradeCalculator.inTopGrade(gap: 0.05, topGradeRatio: 0.5) == true)
+        #expect(GradeCalculator.inTopGrade(gap: 0.05, topGradeRatio: 0.3) == nil)
     }
 
     @Test func linearAlgebraAttendanceCaps() {

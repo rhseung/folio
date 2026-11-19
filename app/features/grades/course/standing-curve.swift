@@ -5,20 +5,23 @@ struct StandingCurve: View {
     @Environment(\.accent) private var accent
     let z: Double?
     var estimated = false
+    var curve = SkewNormal.standard
     var gap: Double?
+    var gapFromMedian = false
     let share: Double
 
     // z는 -3부터 3까지 그린다. 그 밖에서는 곡선이 평평하고, 넘는 표시는 가장자리에 그린다.
     static let span = 3.0
 
     var body: some View {
-        let cut = GradeCalculator.standing(z: 0, topGradeRatio: share).cutZ
-        let s = z.map { GradeCalculator.standing(z: $0, topGradeRatio: share) }
+        let cut = GradeCalculator.standing(z: 0, topGradeRatio: share, curve: curve).cutZ
+        let s = z.map { GradeCalculator.standing(z: $0, topGradeRatio: share, curve: curve) }
+        let peak = Self.peak(of: curve)
         VStack(alignment: .leading, spacing: Theme.Space.s) {
             GeometryReader { proxy in
                 let w = proxy.size.width, h = proxy.size.height
                 let x = { (t: Double) in w * (min(max(t, -Self.span), Self.span) + Self.span) / (2 * Self.span) }
-                let y = { (t: Double) in h - (h - 26) * exp(-t * t / 2) }
+                let y = { (t: Double) in h - (h - 26) * curve.pdf(t) / peak }
                 let top = Path { p in
                     for i in 0...120 {
                         let t = -Self.span + 2 * Self.span * Double(i) / 120
@@ -94,9 +97,8 @@ struct StandingCurve: View {
                     Text(s.inTopGrade ? .courseGradesStandingInA : .courseGradesStandingOutA).fontWeight(.semibold)
                         .foregroundStyle(s.inTopGrade ? accent.ink : Theme.Palette.warning)
                 } else if let gap {
-                    let inA = GradeCalculator.inTopGrade(meanGap: gap, topGradeRatio: share)
-                    Text(gap >= 0 ? .courseGradesStandingAboveMean : .courseGradesStandingBelowMean).foregroundStyle(
-                        Theme.Palette.textSecondary)
+                    let inA = GradeCalculator.inTopGrade(gap: gap, topGradeRatio: share)
+                    Text(Self.side(gap, fromMedian: gapFromMedian)).foregroundStyle(Theme.Palette.textSecondary)
                     Text(inA.map { $0 ? .courseGradesStandingInA : .courseGradesStandingOutA } ?? .courseGradesStandingUnknown).fontWeight(
                         inA == nil ? .regular : .semibold
                     )
@@ -116,7 +118,23 @@ struct StandingCurve: View {
                         Int(($0.above * 100).rounded()),
                         String(localized: $0.inTopGrade ? .courseGradesStandingInA : .courseGradesStandingOutA)))
             }
-                ?? gap.map { String(localized: $0 >= 0 ? .courseGradesStandingAboveMean : .courseGradesStandingBelowMean) }
+                ?? gap.map { String(localized: Self.side($0, fromMedian: gapFromMedian)) }
                 ?? String(localized: .courseGradesStandingUnknownPlace))
+    }
+
+    // 곡선의 높이를 가장 높은 곳에 맞춘다. 그리는 점과 같은 간격으로 찾으므로 정규분포에서는 t = 0의 높이이다.
+    private static func peak(of curve: SkewNormal) -> Double {
+        var top = 0.0
+        for i in 0...120 { top = max(top, curve.pdf(-span + 2 * span * Double(i) / 120)) }
+        return top
+    }
+
+    private static func side(_ gap: Double, fromMedian: Bool) -> LocalizedStringResource {
+        switch (gap >= 0, fromMedian) {
+        case (true, false): .courseGradesStandingAboveMean
+        case (false, false): .courseGradesStandingBelowMean
+        case (true, true): .courseGradesStandingAboveMedian
+        case (false, true): .courseGradesStandingBelowMedian
+        }
     }
 }

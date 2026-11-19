@@ -323,7 +323,7 @@ private struct Builder {
         }
         try run(
             ScoreAdd(
-                course: course, component: midterm, title: "중간고사", score: 72, max: 100, mean: 61.5, stdDev: 12,
+                course: course, component: midterm, title: "중간고사", score: 72, max: 100, mean: 61.5, median: 59.5, stdDev: 12,
                 date: LocalDate(at(10, 21), in: Scenario.calendar)), at: at(10, 23))
     }
 

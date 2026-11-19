@@ -12,6 +12,7 @@ public struct ScoreEntry: Entity {
     public var score: Double
     public var max: Double
     public var mean: Double?
+    public var median: Double?
     public var stdDev: Double?
     public var date: LocalDate?
     public var assignmentId: UUID?
@@ -20,7 +21,7 @@ public struct ScoreEntry: Entity {
 
     public init(
         id: UUID = UUID(), device: DeviceID, at date: Date, componentId: UUID, title: String, score: Double, max: Double,
-        mean: Double? = nil, stdDev: Double? = nil, excused: Bool = false
+        mean: Double? = nil, median: Double? = nil, stdDev: Double? = nil, excused: Bool = false
     ) {
         self.id = id
         self.createdAt = date
@@ -31,6 +32,7 @@ public struct ScoreEntry: Entity {
         self.score = score
         self.max = max
         self.mean = mean
+        self.median = median
         self.stdDev = stdDev
         self.excused = excused
     }
