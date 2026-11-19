@@ -1,5 +1,5 @@
 import { shareGlyphs } from "./tex-svg.js";
-import { PLACED, MONO, prepare, render, labelPieces, monoPieces, mathBox } from "./mermaid-layout.js";
+import { PLACED, MONO, prepare, render, labelLines, labelPieces, monoPieces, mathBox } from "./mermaid-layout.js";
 
 // mermaid 도식을 노트 그림과 같은 색, 글꼴, 화살촉으로 그린다. 라이브러리는 SVG 속성에 CSS 변수(--_text, --_line …)를
 // 쓰므로 그 변수를 그림 팔레트 변수(--ink, --p-blue …)로 다시 정의한다. 팔레트 변수는 앱이 페이지에 넣고(FigureStyle)
@@ -53,15 +53,21 @@ function mathSVG(tex, x, y, mpx, fill, glyphs) {
 
 const escape = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
 
-// 노드와 선 라벨의 수식 자리를 낱말 `<text>`와 수식 `<svg>`를 늘어놓은 `<g>`로 바꾼다.
+// 노드와 선 라벨의 수식 자리를 낱말 `<text>`와 수식 `<svg>`를 늘어놓은 `<g>`로 바꾼다. 수식이 없는 줄은 그대로 둔다.
 function typesetLabel(text, maths, glyphs, l) {
   const { px, y } = baseline(text);
   const fill = text.getAttribute("fill") ?? "var(--_text)";
   const weight = text.getAttribute("font-weight") ?? 400;
-  const { pieces, mpx } = labelPieces(text.textContent, parseFloat(text.getAttribute("x")), text.getAttribute("text-anchor") ?? "start",
-    px, weight, maths, l.mathScale, (run, size, w) => measure(run, size, w, l.sans));
-  return pieces.map((p) => p.tex != null ? mathSVG(p.tex, p.x, y, mpx, fill, glyphs)
-    : `<text x="${p.x}" y="${y}" font-size="${px}" font-weight="${weight}" fill="${fill}" xml:space="preserve">${escape(p.word)}</text>`).join("");
+  const anchor = text.getAttribute("text-anchor") ?? "start";
+  const spans = [...text.children].filter((s) => s.tagName === "tspan" && s.hasAttribute("x"))
+    .map((s) => ({ x: parseFloat(s.getAttribute("x")), dy: parseFloat(s.getAttribute("dy")) || 0, content: s.textContent }));
+  const word = (x, ly, a, t) =>
+    `<text x="${x}" y="${ly}" font-size="${px}" font-weight="${weight}" fill="${fill}" text-anchor="${a}" xml:space="preserve">${escape(t)}</text>`;
+  return labelLines(text.textContent, parseFloat(text.getAttribute("x")), y, spans).map((line) => {
+    if (!PLACED.test(line.content)) return word(line.x, line.y, anchor, line.content);
+    const { pieces, mpx } = labelPieces(line.content, line.x, anchor, px, weight, maths, l.mathScale, (run, size, w) => measure(run, size, w, l.sans));
+    return pieces.map((p) => (p.tex != null ? mathSVG(p.tex, p.x, line.y, mpx, fill, glyphs) : word(p.x, line.y, "start", p.word))).join("");
+  }).join("");
 }
 
 function typesetMono(text, glyphs, l) {

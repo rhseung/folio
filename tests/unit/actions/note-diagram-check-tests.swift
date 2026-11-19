@@ -8,7 +8,7 @@ import Testing
 struct NoteDiagramCheckTests {
     static let course = ActionTests.graphTheory
     static let note = "Notes/09-08(화) 매칭.md"
-    // 2026-11-19 노트에서 앱이 깨뜨린 도식이다. 마름모 라벨의 수식과 `<br/>`이 한 줄로 이어져 도형 밖으로 넘친다.
+    // 2026-11-19 노트에서 앱이 깨뜨린 도식이다. 줄마다 그려도 마름모 둘째 줄의 긴 수식이 꼭짓점 쪽 변에 닿는다.
     static let broken = #"""
         ```mermaid
         flowchart TD
@@ -53,7 +53,7 @@ struct NoteDiagramCheckTests {
         let body = "# 대각화\n\n" + Self.broken + "\n"
         let message = try #require(refusal(NoteWrite(course: Self.course, note: Self.note, text: body, expected: nil, typed: false)))
         #expect(message.contains("mermaid 도식 1(3번째 줄)"))
-        #expect(message.contains("근이 겹치는"))
+        #expect(message.contains(#"n - \operatorname{rank}("#))
         #expect(message.contains("polygon"))
         #expect(message.contains("note figure add"))
         #expect(try text() == before)
@@ -61,6 +61,19 @@ struct NoteDiagramCheckTests {
 
     @Test func aDiagramWithShortPlainLabelsIsWritten() throws {
         let body = "# 흐름\n\n" + Self.fine + "\n"
+        try run(NoteWrite(course: Self.course, note: Self.note, text: body, expected: nil, typed: false))
+        #expect(try text() == body)
+    }
+
+    // `<br/>`로 나눈 수식 라벨은 줄마다 놓인다. 줄을 이어 한 줄로 두던 때는 이 상자를 넘었다.
+    @Test func aMultiLineLabelWithMathStaysInItsBox() throws {
+        let body = #"""
+            ```mermaid
+            flowchart TD
+              A["diagonalizable<br/>각 $E_\lambda$의 기저를 모아 $Q$"] --> B[끝]
+            ```
+
+            """#
         try run(NoteWrite(course: Self.course, note: Self.note, text: body, expected: nil, typed: false))
         #expect(try text() == body)
     }

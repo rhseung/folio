@@ -27,7 +27,18 @@ export function prepare(source, scale) {
 // 색은 그린 뒤 팔레트 변수로 바꾸므로 라이브러리에는 자리값만 준다.
 export const render = (text) => renderMermaidSVG(text, { bg: "#ffffff", fg: "#000000", font: "-apple-system", transparent: true });
 
-// 수식 자리가 든 라벨을 낱말과 수식 조각으로 왼쪽부터 늘어놓는다. `measure(글, px, 굵기)`는 낱말 폭이다.
+// `<br/>`로 나눈 라벨은 `<text>` 안에 줄마다 `<tspan x dy>`로 온다. `spans`는 그 줄들의 `{x, dy, content}`다. 줄마다
+// 기준선을 쌓아 따로 늘어놓는다. 줄을 이어 `<text>`의 기준선 한 줄에 두면 노드 가운데에 긴 한 줄이 되어 도형 밖으로 넘친다.
+export function labelLines(content, x, y, spans) {
+  if (!spans.length) return [{ content, x, y }];
+  let at = y;
+  return spans.map((s) => {
+    at += s.dy;
+    return { content: s.content, x: s.x, y: at };
+  });
+}
+
+// 수식 자리가 든 라벨 한 줄을 낱말과 수식 조각으로 왼쪽부터 늘어놓는다. `measure(글, px, 굵기)`는 낱말 폭이다.
 export function labelPieces(content, x, anchor, px, weight, maths, mathScale, measure) {
   const pieces = content.split(RUN).filter(Boolean).map((run) => {
     const code = run.charCodeAt(0) - PLACE;

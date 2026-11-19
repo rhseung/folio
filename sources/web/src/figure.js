@@ -6,7 +6,7 @@ import "./jsc-global.js";
 import { texToSVG, shareGlyphs } from "./tex-svg.js";
 import { parse, serialize, attr, classes, local, setAttr, walk, elements, textOf, replace, ancestors, escapeText } from "./svg-tree.js";
 import { identity, multiply, invert, apply, parseTransform, outline, along, inFill } from "./svg-geometry.js";
-import { PLACE, PLACED, prepare, render, labelPieces, monoPieces, mathBox } from "./mermaid-layout.js";
+import { PLACE, PLACED, prepare, render, labelLines, labelPieces, monoPieces, mathBox } from "./mermaid-layout.js";
 
 const OWN = "folio-figure", OWN_DEFS = "folio-figure-defs";
 const SOURCE = "data-source";
@@ -215,8 +215,7 @@ function baseline(el, px) {
   return firstNumber(attr(el, "y")) + (dy.endsWith("em") ? parseFloat(dy) * px : parseFloat(dy) || 0);
 }
 
-// 라벨 하나를 줄마다 `{name, body}`로 돌려준다. body는 낱말 `<text>`와 수식 자리 `<svg>`다. 수식 자리가 든 라벨은
-// 미리보기처럼 모든 줄을 이어 `<text>`의 기준선 한 줄에 늘어놓고, 나머지는 브라우저처럼 `<tspan>`의 줄마다 둔다.
+// 라벨 하나를 줄마다 `{name, body}`로 돌려준다. body는 낱말 `<text>`와 수식 자리 `<svg>`다.
 function diagramLabel(el, maths, style) {
   const px = parseFloat(attr(el, "font-size")) || 14, w = attr(el, "font-weight") ?? 400;
   const at = anchor(el), x = firstNumber(attr(el, "x")), content = textOf(el);
@@ -233,18 +232,13 @@ function diagramLabel(el, maths, style) {
     const { pieces, mpx } = monoPieces(parts, x, at, px, style.mathScale, style.monoEm, (t, size) => t.length * size * 0.6);
     return [{ name: content, body: pieces.map((p) => (p.tex ? math(p.tex, p, y, mpx) : p.word ? line(p.word, p.x, y, "start") : "")).join("") }];
   }
-  if (PLACED.test(content)) {
-    const y = baseline(el, px);
-    const { pieces, mpx } = labelPieces(content, x, at, px, w, maths, style.mathScale, folioMeasure);
-    return [{ name: content, body: pieces.map((p) => (p.tex != null ? math(p.tex, p, y, mpx) : line(p.word, p.x, y, "start"))).join("") }];
-  }
-  const lines = elements(el).filter((k) => k.name === "tspan" && attr(k, "x") != null);
-  if (!lines.length) return content.trim() ? [{ name: content, body: line(content, x, baseline(el, px), at) }] : [];
-  let y = baseline(el, px);
-  return lines.flatMap((k) => {
-    y += parseFloat(attr(k, "dy") ?? "0") || 0;
-    const t = textOf(k);
-    return t.trim() ? [{ name: t, body: line(t, firstNumber(attr(k, "x")), y, at) }] : [];
+  const spans = elements(el).filter((k) => k.name === "tspan" && attr(k, "x") != null)
+    .map((k) => ({ x: firstNumber(attr(k, "x")), dy: parseFloat(attr(k, "dy") ?? "0") || 0, content: textOf(k) }));
+  return labelLines(content, x, baseline(el, px), spans).flatMap((l) => {
+    if (!l.content.trim()) return [];
+    if (!PLACED.test(l.content)) return [{ name: l.content, body: line(l.content, l.x, l.y, at) }];
+    const { pieces, mpx } = labelPieces(l.content, l.x, at, px, w, maths, style.mathScale, folioMeasure);
+    return [{ name: l.content, body: pieces.map((p) => (p.tex != null ? math(p.tex, p, l.y, mpx) : line(p.word, p.x, l.y, "start"))).join("") }];
   });
 }
 
