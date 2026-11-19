@@ -93,4 +93,10 @@ struct NoteDiagramCheckTests {
         try run(NoteEdit(course: Self.course, note: Self.note, replacements: [.init(old: "# 대각화", new: "# 대각화 판정")], append: nil))
         #expect(try text().hasPrefix("# 대각화 판정\n"))
     }
+
+    // Claude 패널의 답을 노트로 남길 때는 사람이 고른 글이라 검사하지 않는다. 패널에서는 답을 고칠 수 없다.
+    @Test func aPanelAnswerSavedAsANoteIsNotChecked() throws {
+        try run(NoteAdd(course: Self.course, title: "대각화", body: Self.broken, typed: true))
+        #expect(try store.readText("Notes/대각화.md").contains("flowchart TD"))
+    }
 }

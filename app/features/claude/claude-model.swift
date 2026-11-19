@@ -486,7 +486,7 @@ final class ClaudeModel {
     }
 
     func createNote(title: String, body: String, course: LoadedCourse) -> UUID? {
-        workspace.run(NoteAdd(course: course.id, title: title, body: body))?.made
+        workspace.run(NoteAdd(course: course.id, title: title, body: body, typed: true))?.made
     }
 
     // MARK: Helpers
