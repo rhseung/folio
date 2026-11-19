@@ -1,15 +1,12 @@
-import { renderMermaidSVG, measureTextWidth } from "beautiful-mermaid";
-import { texToSVG, shareGlyphs } from "./tex-svg.js";
+import { shareGlyphs } from "./tex-svg.js";
+import { PLACED, MONO, prepare, render, labelLines, labelPieces, monoPieces, mathBox } from "./mermaid-layout.js";
 
 // mermaid 도식을 노트 그림과 같은 색, 글꼴, 화살촉으로 그린다. 라이브러리는 SVG 속성에 CSS 변수(--_text, --_line …)를
 // 쓰므로 그 변수를 그림 팔레트 변수(--ink, --p-blue …)로 다시 정의한다. 팔레트 변수는 앱이 페이지에 넣고(FigureStyle)
 // 라이트·다크를 따라가므로 도식은 값을 갖지 않는다. 라이브러리가 바꿀 수 없게 둔 크기 상수는 build.mjs가 고친다.
 const NAMED = { blue: "p-blue", red: "p-red", green: "p-green", orange: "p-orange", magenta: "p-magenta", cyan: "p-cyan" };
 const STEALTH = /^(arrowhead(-start)?(-[\w]+)?|seq-arrow|cls-arrow)$/;
-// 수식 자리는 폭이 같은 키릴 글자로 채워 배치한 뒤 수식으로 바꾼다. 라이브러리가 글자 폭을 어림해 상자 크기를 정하기 때문이다.
-const PLACE = 0x0430, PLACES = 32;
 const SVGNS = "http://www.w3.org/2000/svg";
-const MONO = "ui-monospace, Menlo, monospace";
 
 function look() {
   const style = getComputedStyle(document.documentElement);
@@ -35,20 +32,6 @@ function stealth(id, fill, [length, width, notch]) {
   return marker;
 }
 
-function prepare(source, scale) {
-  const maths = [];
-  const charWidth = (ch) => measureTextWidth(ch, 100, 400) / 100;
-  const text = source.replace(/(?<!\\)\$([^$\n]+?)\$/g, (whole, tex) => {
-    if (maths.length >= PLACES) return whole;
-    const ch = String.fromCharCode(PLACE + maths.length);
-    let em = 1;
-    try { em = (texToSVG(tex).box[2] / 1000) * scale; } catch {}
-    maths.push(tex);
-    return ch.repeat(Math.max(1, Math.round(em / charWidth(ch))));
-  });
-  return { text, maths };
-}
-
 let canvas = null;
 function measure(text, px, weight, sans) {
   canvas ??= document.createElement("canvas").getContext("2d");
@@ -63,65 +46,39 @@ function baseline(text) {
 }
 
 function mathSVG(tex, x, y, mpx, fill, glyphs) {
-  const r = texToSVG(tex);
-  const [bx, by, bw, bh] = r.box, width = (bw / 1000) * mpx;
-  const svg = `<svg x="${x}" y="${y + (by / 1000) * mpx}" width="${width}" height="${(bh / 1000) * mpx}" viewBox="${bx} ${by} ${bw} ${bh}" `
-    + `overflow="visible"><g fill="${fill}">${shareGlyphs(r.body, glyphs)}</g></svg>`;
-  return { svg, width };
+  const b = mathBox(tex, x, y, mpx), [bx, by, bw, bh] = b.r.box;
+  return `<svg x="${b.x}" y="${b.y}" width="${b.width}" height="${b.height}" viewBox="${bx} ${by} ${bw} ${bh}" `
+    + `overflow="visible"><g fill="${fill}">${shareGlyphs(b.r.body, glyphs)}</g></svg>`;
 }
 
 const escape = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
 
-// 노드와 선 라벨의 수식 자리를 낱말 `<text>`와 수식 `<svg>`를 늘어놓은 `<g>`로 바꾼다.
+// 노드와 선 라벨의 수식 자리를 낱말 `<text>`와 수식 `<svg>`를 늘어놓은 `<g>`로 바꾼다. 수식이 없는 줄은 그대로 둔다.
 function typesetLabel(text, maths, glyphs, l) {
   const { px, y } = baseline(text);
   const fill = text.getAttribute("fill") ?? "var(--_text)";
   const weight = text.getAttribute("font-weight") ?? 400;
-  const runs = text.textContent.split(new RegExp(`([${String.fromCharCode(PLACE)}-${String.fromCharCode(PLACE + PLACES - 1)}]+)`));
-  const pieces = runs.filter(Boolean).map((run) => {
-    const code = run.charCodeAt(0) - PLACE;
-    return code >= 0 && code < PLACES ? { tex: maths[code] } : { word: run, width: measure(run, px, weight, l.sans) };
-  });
-  const mpx = px * l.mathScale;
-  for (const p of pieces) if (p.tex != null) p.width = (texToSVG(p.tex).box[2] / 1000) * mpx;
-  const total = pieces.reduce((s, p) => s + p.width, 0);
   const anchor = text.getAttribute("text-anchor") ?? "start";
-  let x = parseFloat(text.getAttribute("x")) - total * ({ middle: 0.5, end: 1 }[anchor] ?? 0);
-  let out = "";
-  for (const p of pieces) {
-    if (p.tex != null) out += mathSVG(p.tex, x, y, mpx, fill, glyphs).svg;
-    else out += `<text x="${x}" y="${y}" font-size="${px}" font-weight="${weight}" fill="${fill}" xml:space="preserve">${escape(p.word)}</text>`;
-    x += p.width;
-  }
-  return out;
+  const spans = [...text.children].filter((s) => s.tagName === "tspan" && s.hasAttribute("x"))
+    .map((s) => ({ x: parseFloat(s.getAttribute("x")), dy: parseFloat(s.getAttribute("dy")) || 0, content: s.textContent }));
+  const word = (x, ly, a, t) =>
+    `<text x="${x}" y="${ly}" font-size="${px}" font-weight="${weight}" fill="${fill}" text-anchor="${a}" xml:space="preserve">${escape(t)}</text>`;
+  return labelLines(text.textContent, parseFloat(text.getAttribute("x")), y, spans).map((line) => {
+    if (!PLACED.test(line.content)) return word(line.x, line.y, anchor, line.content);
+    const { pieces, mpx } = labelPieces(line.content, line.x, anchor, px, weight, maths, l.mathScale, (run, size, w) => measure(run, size, w, l.sans));
+    return pieces.map((p) => (p.tex != null ? mathSVG(p.tex, p.x, line.y, mpx, fill, glyphs) : word(p.x, line.y, "start", p.word))).join("");
+  }).join("");
 }
 
-// 클래스 멤버와 ER 속성은 코드라서 그림의 코드처럼 LaTeX 타자기체(\texttt) path로 그린다. TeX가 공백을 지우므로
-// 공백은 타자기체 한 칸 폭만큼 옮긴다.
 function typesetMono(text, glyphs, l) {
-  const { px, y } = baseline(text), mpx = px * l.mathScale, space = l.monoEm * mpx;
+  const { px, y } = baseline(text);
   const spans = [...text.querySelectorAll("tspan")];
   const parts = spans.length ? spans.map((s) => [s.getAttribute("fill") ?? text.getAttribute("fill") ?? "var(--_text)", s.textContent])
     : [[text.getAttribute("fill") ?? "var(--_text)", text.textContent]];
-  const runs = [];
-  for (const [fill, t] of parts)
-    for (const piece of t.match(/ +|[^ ]+/g) ?? []) {
-      if (piece[0] === " ") runs.push({ width: piece.length * space });
-      // MathJax의 \texttt는 `\`, `^`, `~`를 그대로 쓰지 못하므로 그 조각만 고정폭 글꼴의 글자로 둔다.
-      else if (/[\\^~]/.test(piece)) runs.push({ word: piece, fill, width: measure(piece, px, 400, MONO) });
-      else runs.push({ tex: `\\texttt{${piece.replace(/[_%#&{}$]/g, "\\$&")}}`, fill });
-    }
-  for (const r of runs) if (r.tex) r.width = (texToSVG(r.tex).box[2] / 1000) * mpx;
-  const total = runs.reduce((s, r) => s + r.width, 0);
-  const anchor = text.getAttribute("text-anchor") ?? "start";
-  let x = parseFloat(text.getAttribute("x")) - total * ({ middle: 0.5, end: 1 }[anchor] ?? 0);
-  let out = "";
-  for (const r of runs) {
-    if (r.tex) out += mathSVG(r.tex, x, y, mpx, r.fill, glyphs).svg;
-    else if (r.word) out += `<text x="${x}" y="${y}" font-size="${px}" font-family="${MONO}" fill="${r.fill}" xml:space="preserve">${escape(r.word)}</text>`;
-    x += r.width;
-  }
-  return out;
+  const { pieces, mpx } = monoPieces(parts, parseFloat(text.getAttribute("x")), text.getAttribute("text-anchor") ?? "start", px,
+    l.mathScale, l.monoEm, (piece, size) => measure(piece, size, 400, MONO));
+  return pieces.map((p) => p.tex ? mathSVG(p.tex, p.x, y, mpx, p.fill, glyphs)
+    : p.word ? `<text x="${p.x}" y="${y}" font-size="${px}" font-family="${MONO}" fill="${p.fill}" xml:space="preserve">${escape(p.word)}</text>` : "").join("");
 }
 
 function replaceWith(el, markup) {
@@ -159,8 +116,7 @@ function restyle(svg, maths, l) {
 
   const glyphs = new Map();
   for (const text of [...svg.querySelectorAll("text.mono")]) replaceWith(text, typesetMono(text, glyphs, l));
-  const placed = new RegExp(`[${String.fromCharCode(PLACE)}-${String.fromCharCode(PLACE + PLACES - 1)}]`);
-  for (const text of [...svg.querySelectorAll("text")]) if (placed.test(text.textContent)) replaceWith(text, typesetLabel(text, maths, glyphs, l));
+  for (const text of [...svg.querySelectorAll("text")]) if (PLACED.test(text.textContent)) replaceWith(text, typesetLabel(text, maths, glyphs, l));
   if (glyphs.size) {
     const defs = document.createElementNS(SVGNS, "defs");
     defs.innerHTML = [...glyphs.values()].join("");
@@ -176,9 +132,8 @@ export function renderDiagrams(root) {
     const source = el.dataset.source ?? el.querySelector("code")?.textContent ?? "";
     try {
       const { text, maths } = prepare(source, l.mathScale);
-      // 색은 restyle이 팔레트 변수로 바꾸므로 라이브러리에는 자리값만 준다. 라이브러리가 Google에서 글꼴을 받으려
-      // 하지만 그 `<style>`은 통째로 바뀐다.
-      const svg = renderMermaidSVG(text, { bg: "#ffffff", fg: "#000000", font: "-apple-system", transparent: true });
+      // 라이브러리가 Google에서 글꼴을 받으려 하지만 그 `<style>`은 통째로 바뀐다.
+      const svg = render(text);
       const figure = el.tagName === "FIGURE" ? el : document.createElement("figure");
       figure.innerHTML = svg.replace(/@import url\([^)]*\);?/g, "");
       restyle(figure.querySelector("svg"), maths, l);

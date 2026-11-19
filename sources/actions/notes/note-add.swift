@@ -28,6 +28,9 @@ public struct NoteAdd {
     var exam: Exam.ID?
     /// 단원
     @CLIName("unit") var units: [FolioDomain.Unit.ID] = []
+    // 사람이 고른 글을 그대로 남길 때 켠다(Claude 패널의 답을 노트로). 사람은 그 글을 고칠 수 없고, 도식이 넘치면
+    // 미리보기에서 보고 고친다. NoteWrite의 typed와 같다.
+    @Hidden var typed: Bool = false
 
     public func run(_ ctx: ActionContext) throws {
         let title = title.trimmingCharacters(in: .whitespaces)
@@ -38,6 +41,7 @@ public struct NoteAdd {
         try NoteLinks(kind: kind, session: session, exam: exam, units: units).apply(
             to: &meta, in: try ctx.file(course), calendar: ctx.calendar)
         let body = body ?? NoteTemplate.body(for: kind, title: title, sections: settings.noteSections(for: kind), format: format)
+        if !typed { try NoteDiagramCheck.check(body, format: format) }
         let made = try ctx.createNote(course, title: title, meta: meta, format: format, body: body)
 
         if let session = meta.sessionId {

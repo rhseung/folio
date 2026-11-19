@@ -1881,6 +1881,28 @@
           }
         }
       }
+    },
+    "error.note.diagram": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "mermaid 도식 %1$lld(%2$lld번째 줄): %3$@"
+          }
+        }
+      }
+    },
+    "error.note.diagram-hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트에 쓰지 않았습니다. 라벨을 짧게 줄이거나, 긴 수식이나 판정 조건이 든 도식은 note figure add로 SVG 그림을 그려 넣습니다"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

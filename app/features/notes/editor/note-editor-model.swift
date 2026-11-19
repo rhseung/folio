@@ -82,7 +82,7 @@ final class NoteEditorModel {
         let path = store.notePath(of: note.url)
         let text = frontmatter.render(body: body)
         do {
-            try workspace.runThrowing(NoteWrite(course: course.id, note: path, text: text, expected: force ? nil : onDisk))
+            try workspace.runThrowing(NoteWrite(course: course.id, note: path, text: text, expected: force ? nil : onDisk, typed: true))
             onDisk = text
             saved = body
         } catch ActionError.conflict {

@@ -36,6 +36,7 @@ public enum NoteFigure {
         case outside(String)
         case notThrough(String, String, gap: String)
         case noPoint(String, String)
+        case notDrawn(String)
 
         public var message: String {
             switch self {
@@ -54,6 +55,7 @@ public enum NoteFigure {
             case .outside(let label): String(localized: .figureProblemOutside(label))
             case .notThrough(let shape, let point, let gap): String(localized: .figureProblemNotThrough(shape, point, gap))
             case .noPoint(let shape, let point): String(localized: .figureProblemNoPoint(shape, point))
+            case .notDrawn(let reason): String(localized: .figureProblemNotDrawn(reason))
             }
         }
     }

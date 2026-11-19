@@ -37,7 +37,8 @@ extension GeneratedCommands {
                 body: try body.map(readText),
                 session: try session.map { try r.id(.session, $0, in: c) },
                 exam: try exam.map { try r.id(.exam, $0, in: c) },
-                units: try units.map { try r.id(.unit, $0, in: c) }
+                units: try units.map { try r.id(.unit, $0, in: c) },
+                typed: false
             )
             try perform(spec: action, g, ctx: ctx)
         }

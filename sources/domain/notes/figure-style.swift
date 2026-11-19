@@ -118,11 +118,13 @@ public enum FigureStyle {
             var bold: String
             var sizes: [String: Double]
             var mathScale: Double
+            var monoEm: Double
         }
         let table = Table(
             css: css, markers: Dictionary(uniqueKeysWithValues: inks.map { (markerID($0), marker($0)) }), fills: inks.map(\.fill),
             strokes: inks.map(\.stroke), paper: paper.fill, grid: grid.stroke, ink: ink.fill, bold: Font.bold,
-            sizes: Dictionary(uniqueKeysWithValues: [("", Font.size)] + Font.sizes.map { ($0.name, $0.size) }), mathScale: Font.mathScale)
+            sizes: Dictionary(uniqueKeysWithValues: [("", Font.size)] + Font.sizes.map { ($0.name, $0.size) }), mathScale: Font.mathScale,
+            monoEm: Font.monoEm)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         return (try? encoder.encode(table)).flatMap { String(bytes: $0, encoding: .utf8) } ?? "{}"
