@@ -8,9 +8,29 @@ const textCommand = /\\(text|textrm|textbf|textit|texttt|textsf|mbox)\s*\{([^{}]
 // 옮기므로, 이 변환은 두 문법 모두 TeX로 바꾼 뒤에 한다.
 const textAsWritten = (tex) => tex.replace(textCommand, (_, command, body) => `\\${command}{${body.replace(/(?<!\\)[%#&]/g, "\\$&")}}`);
 
+// KaTeX는 식 번호를 `position: absolute; right: 0`으로 놓아 폭 계산에서 뺀다. 그래서 식이 칸보다 넓거나 상자가 식에 맞춰
+// 좁아지면(편집 보기의 말풍선) 번호가 식 끝 위에 겹친다. 번호를 뺀 나머지를 `.katex-body` 하나로 묶어 두면 note.css가 식과
+// 번호를 나란한 두 칸에 놓을 수 있다.
+function setTagApart(html) {
+  if (!html.includes("katex-tag")) return html;
+  const box = document.createElement("template");
+  box.innerHTML = html;
+  for (const line of box.content.querySelectorAll(".katex-display > .katex > .katex-html")) {
+    const tag = line.querySelector(":scope > .katex-tag");
+    if (!tag) continue;
+    const body = document.createElement("span");
+    body.className = "katex-body";
+    body.append(...[...line.childNodes].filter((node) => node !== tag));
+    line.prepend(body);
+    line.classList.add("tagged");
+  }
+  return box.innerHTML;
+}
+
 export function renderMath(source, display, syntax) {
   try {
-    return katex.renderToString(textAsWritten(toTeX(source, syntax)), { displayMode: display, throwOnError: true, output: "htmlAndMathml", strict: "ignore" });
+    const html = katex.renderToString(textAsWritten(toTeX(source, syntax)), { displayMode: display, throwOnError: true, output: "htmlAndMathml", strict: "ignore" });
+    return display ? setTagApart(html) : html;
   } catch (error) {
     const span = document.createElement("span");
     span.className = "math-error";

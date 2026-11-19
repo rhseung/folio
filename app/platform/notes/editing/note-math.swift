@@ -223,6 +223,10 @@ import UIKit
     private static let css =
         "html,body{background:transparent!important}body.note{margin:0;padding:4em;max-width:none;width:max-content}"
         + "body.note>.math.display{margin:0;overflow:visible}"
+        // 노트 CSS는 번호 붙은 식을 가운데에 두려고 번호만큼의 빈 칸을 왼쪽에도 두고, 넓은 식은 스크롤 상자에 넣는다. 말풍선은 식에 맞춰
+        // 자르고 넓으면 줄이므로 빈 칸을 없애고 스크롤도 끈다. 폭이 식에 딱 맞으면 소수점 픽셀만큼 넘쳐 스크롤 막대 자리가 생겼다.
+        + ".katex-display>.katex>.katex-html.tagged{grid-template-columns:0 max-content max-content}"
+        + ".katex-display>.katex>.katex-html.tagged>.katex-body{overflow:visible;mask-image:none;animation:none}"
 
     func move(to view: PlatformView) {
         guard frame.superview !== view else { return }

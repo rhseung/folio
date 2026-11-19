@@ -95,6 +95,28 @@ body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); 
 .note .math-error { font: .9em var(--mono); color: var(--c-danger); background: color-mix(in srgb, var(--c-danger) 10%, transparent); padding: 1px 5px; border-radius: 5px; }
 .note .katex { font-size: 1.08em; }
 .note .katex-display { margin: 0; }
+/* 번호 붙은 식은 식(`.katex-body`, math.js가 묶는다)만 가로로 스크롤하고 번호는 그 오른쪽 칸에 둔다. KaTeX처럼 번호를 식 위에
+   띄우면 식이 넓을 때 번호와 겹친다. 양쪽 1fr 칸이 짧은 식을 가운데에 두고, 식이 넓어지면 왼쪽 칸부터 줄어든다. 스크롤 상자는
+   세로로도 자르므로 위아래 여백을 두어 높은 악센트를 남기고, 같은 만큼 바깥 여백을 빼서 블록 높이는 그대로 둔다. */
+.katex-display > .katex > .katex-html.tagged { display: grid; grid-template-columns: 1fr minmax(0, max-content) 1fr; align-items: last baseline; }
+/* KaTeX는 첨자 상자(`.vlist-t2`)를 오른쪽 여백 -2px로 2px 밖으로 내민다. 그 2px이 스크롤 범위에 들어가면 넘치지 않은 식도 스크롤
+   타임라인이 생겨 끝이 흐려지므로, 오른쪽 안쪽 여백 2px로 받는다. */
+.katex-display > .katex > .katex-html.tagged > .katex-body { grid-column: 2; overflow-x: auto; overflow-y: hidden; padding: 6px 2px 6px 0; margin-block: -6px; }
+.katex-display > .katex > .katex-html.tagged > .katex-tag { grid-column: 3; justify-self: end; position: static; padding-left: 1em; }
+/* 넘친 식은 가려진 쪽 가장자리를 흐리게 해서 스크롤할 수 있음을 보인다. 넘치지 않으면 스크롤 타임라인이 없어 애니메이션이 멈추고,
+   두 변수는 처음 값(불투명)으로 남는다. */
+@property --fade-left { syntax: "<color>"; inherits: false; initial-value: #000; }
+@property --fade-right { syntax: "<color>"; inherits: false; initial-value: #000; }
+@keyframes math-scroll-fade {
+  from { --fade-left: #000; --fade-right: transparent; }
+  4%, 96% { --fade-left: transparent; --fade-right: transparent; }
+  to { --fade-left: transparent; --fade-right: #000; }
+}
+.katex-display > .katex > .katex-html.tagged > .katex-body {
+  mask-image: linear-gradient(to right, var(--fade-left), #000 var(--fade), #000 calc(100% - var(--fade)), var(--fade-right));
+  animation: math-scroll-fade linear both; animation-timeline: scroll(self inline); }
+/* 줄바꿈이 `.katex-body` 안으로 옮겨져서 KaTeX의 `.katex-html > .katex-newline` 규칙이 닿지 않는다. */
+.katex-html.tagged > .katex-body > .katex-newline { display: block; }
 
 .note .callout { --c: var(--c-neutral); margin: var(--block-gap) 0; padding: 12px 18px 4px; border-radius: var(--radius);
   background: color-mix(in srgb, var(--c) 7%, transparent); border-left: 3px solid color-mix(in srgb, var(--c) 75%, transparent); }

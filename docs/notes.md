@@ -10,6 +10,7 @@
 - 임베드와 블록 참조는 링크가 가리키는 부분(제목 아래, 블록)을 잘라 그리고, 고리와 깊이를 막는다. 노트는 앱이 찾아 준다(`NoteEmbeds`).
 - 편집 보기의 입력 규칙(`sources/markdown/editing/`: 짝 기호, 목록 이어 쓰기와 번호, 스니펫, 수식 인자 이동, 자동 완성 질의, 표 편집, 굵게·기울임 `SourceEditing.toggle`)은 순수 함수로 두어 Mac과 iPad가 함께 쓴다. 굵게(⌘B)와 기울임(⌘I)은 서식 메뉴의 명령이고 키는 단축키 등록표에서 읽는다. iPad의 편집 메뉴와 ⌘B도 글에 속성을 입히지 않고 같은 마크다운 표시를 쓴다.
 - 편집 보기(`app/platform/notes/editing/`, TextKit 2)는 원문에 글꼴과 색만 입힌다. 그림, 수식, 콜아웃, 임베드, 코드의 상자는 미리보기(`note-preview.swift`)만 그린다.
+- 번호 붙은 식(`align`, `gather`, `\tag`)은 식과 번호를 나란한 두 칸에 둔다(`math.js`의 `setTagApart`, `note.css`). KaTeX는 번호를 식 위 오른쪽 끝에 띄워서, 식이 넓으면 번호가 식과 겹친다. 식이 칸보다 넓으면 식만 가로로 스크롤하고 번호는 그 오른쪽에 그대로 있으며, 가려진 쪽 끝을 흐리게 한다. 편집 보기의 말풍선은 번호를 식 바로 다음 칸에 둔다.
 - 웹 번들(`sources/web`)은 미리보기와 Claude 패널의 페이지(KaTeX, 코드 하이라이팅, mermaid, 노트 CSS, 그림 크게 보기)와 편집 보기가 JavaScriptCore로 부르는 코드 하이라이팅이다. 편집 보기의 수식 말풍선과 자동 완성 미리보기도 같은 KaTeX와 노트 CSS로 숨은 페이지에서 그린다(`NoteMath`). 색은 `theme.swift`의 값을, 크기와 간격은 `app/design/tokens/note-look.swift`의 값을 `NoteStyle`이 CSS 변수로 넘기므로 CSS에 색과 크기를 적지 않는다. `sources/web/src/`를 고치면 `mise run build-web`을 돌린다.
 
 ## 노트 링크
@@ -54,7 +55,7 @@
 
 노트 보기(편집 보기와 미리보기)는 `mise run test-app`의 회귀 검사가 지킨다(#265).
 
-- `NoteScreenTests`: `all-markdown.md`(모든 문법)와 화면보다 긴 노트를 라이트·다크, 폭 900과 480으로 그려 기준 이미지와 비교한다.
+- `NoteScreenTests`: `all-markdown.md`(모든 문법. 번호 붙은 짧은 `align`과 열보다 긴 `align`을 포함한다)와 화면보다 긴 노트를 라이트·다크, 폭 900과 480으로 그려 기준 이미지와 비교한다.
 - `NoteLayoutTests`: 블록이 열 안에 있는지, 연 직후와 스크롤한 뒤 끝까지 그려지는지, 노트 끝 아래로 스크롤되는지 픽셀로 본다.
 - `NoteClickGridTests`: 격자의 모든 점이 노트(또는 그 자리의 위젯, 가로 스크롤 블록)에 닿는지, 편집 보기에서는 클릭한 자리에 캐럿이 놓이는지 본다.
 - `NoteHangulTests`: 조합 중인 글자가 SwiftUI 갱신과 저장을 견디고 파일에 들어가는지 본다. iPad 편집 보기는 `NoteHangulPadTests`(`mise run test-ipad`)가 본다.
