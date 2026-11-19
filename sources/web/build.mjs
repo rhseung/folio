@@ -37,7 +37,7 @@ const patched = {
 await build({ ...common, entryPoints: ["src/reader.js"], outfile: `${out}/reader.js`, format: "iife", plugins: [patched] });
 await build({ ...common, entryPoints: ["src/native.js"], outfile: `${out}/native.js`, format: "iife", globalName: "folioNative" });
 await writeFile(`${out}/note.css`, await cssText("src/style.css"));
-await build({ ...common, entryPoints: ["src/figure.js"], outfile: `${actions}/figure/figure.js`, format: "iife", globalName: "folioFigure" });
+await build({ ...common, entryPoints: ["src/figure.js"], outfile: `${actions}/figure/figure.js`, format: "iife", globalName: "folioFigure", plugins: [patched] });
 
 await build({
   ...common, entryPoints: ["src/widget.js"], outfile: `${actions}/widget/widget-kit.js`, format: "iife",

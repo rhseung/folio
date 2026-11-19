@@ -2,9 +2,11 @@
 // 모양이 되도록 그림에 스타일 표의 `<style>`과 화살촉 `<marker>`를 넣고, `$…$`를 LaTeX 글자 모양(path)으로 바꾸고,
 // 라벨 겹침을 검사한다. 스타일 표는 FolioDomain의 FigureStyle이 JSON으로 넘긴다. 낱말 폭은 바깥이 준
 // `folioMeasure(글, px, 굵기)`로 잰다. 노트는 그림을 이미지로 보여서 페이지의 글꼴과 CSS를 쓸 수 없다.
+import "./jsc-global.js";
 import { texToSVG, shareGlyphs } from "./tex-svg.js";
 import { parse, serialize, attr, classes, local, setAttr, walk, elements, textOf, replace, ancestors, escapeText } from "./svg-tree.js";
 import { identity, multiply, invert, apply, parseTransform, outline, along, inFill } from "./svg-geometry.js";
+import { PLACE, PLACED, prepare, render, labelPieces, monoPieces, mathBox } from "./mermaid-layout.js";
 
 const OWN = "folio-figure", OWN_DEFS = "folio-figure-defs";
 const SOURCE = "data-source";
@@ -168,6 +170,82 @@ export function source(text) {
   } catch {
     return text;
   }
+}
+
+// MARK: mermaid 도식
+
+// 노트 본문의 mermaid 블록을 앱 미리보기(mermaid.js)와 같은 배치로 그리고 그림과 같은 겹침 검사를 한다. 미리보기는 DOM에서
+// 라벨을 바꾸지만 여기에는 DOM이 없어서, 같은 배치 함수(mermaid-layout.js)로 라벨 자리만 나무에 옮긴다.
+export function diagram(source, styleJSON) {
+  const style = JSON.parse(styleJSON);
+  const { text, maths } = prepare(source, style.mathScale);
+  let root;
+  try {
+    root = elements(parse(render(text)))[0];
+  } catch (error) {
+    return JSON.stringify({ problems: [{ kind: "diagram", reason: String(error.message ?? error) }] });
+  }
+  settle(root, style);
+  const spell = (s) => s.replace(new RegExp(PLACED.source + "+", "g"), (run) => `$${maths[run.charCodeAt(0) - PLACE]}$`);
+  for (const el of [...walk(root)]) {
+    if (el.name !== "text" || ancestors(el).some((a) => HIDDEN.has(a.name))) continue;
+    const groups = diagramLabel(el, maths, style).map(({ name, body }) => {
+      const g = elements(parse(`<g>${body}</g>`))[0];
+      g.attrs.push([SOURCE, `<text>${escapeText(spell(name))}</text>`]);
+      return g;
+    });
+    replace(el, ...groups);
+  }
+  return JSON.stringify({ problems: overlaps(root, style) });
+}
+
+// mermaid.js의 restyle 중 자리와 칠에 닿는 부분이다. 종이색이 되는 변수는 그림 스타일의 종이색으로 둬서, 그림처럼 노드
+// 안의 라벨은 테두리(선)로만 보고 선 라벨 바탕은 그 밑의 선을 가리는 조각으로 본다.
+const PAPER = new Set(["var(--bg)", "var(--_node-fill)", "var(--_group-fill)", "var(--_group-hdr)"]);
+function settle(root, style) {
+  for (const el of walk(root)) {
+    if (attr(el, "fill") === "var(--bg)" && attr(el, "stroke") === "var(--_inner-stroke)") setAttr(el, "stroke", "none");
+    if (attr(el, "fill") === "var(--_node-fill)" && attr(el, "stroke-width") === "0.75") setAttr(el, "stroke-width", "1.1");
+    if (PAPER.has(attr(el, "fill"))) setAttr(el, "fill", style.paper);
+  }
+}
+
+function baseline(el, px) {
+  const dy = attr(el, "dy") ?? "0";
+  return firstNumber(attr(el, "y")) + (dy.endsWith("em") ? parseFloat(dy) * px : parseFloat(dy) || 0);
+}
+
+// 라벨 하나를 줄마다 `{name, body}`로 돌려준다. body는 낱말 `<text>`와 수식 자리 `<svg>`다. 수식 자리가 든 라벨은
+// 미리보기처럼 모든 줄을 이어 `<text>`의 기준선 한 줄에 늘어놓고, 나머지는 브라우저처럼 `<tspan>`의 줄마다 둔다.
+function diagramLabel(el, maths, style) {
+  const px = parseFloat(attr(el, "font-size")) || 14, w = attr(el, "font-weight") ?? 400;
+  const at = anchor(el), x = firstNumber(attr(el, "x")), content = textOf(el);
+  const line = (t, lx, y, a) =>
+    `<text x="${fmt(lx)}" y="${fmt(y)}" font-size="${px}" font-weight="${w}" text-anchor="${a}">${escapeText(t)}</text>`;
+  const math = (tex, p, y, mpx) => {
+    const b = mathBox(tex, p.x, y, mpx);
+    return `<svg x="${fmt(b.x)}" y="${fmt(b.y)}" width="${fmt(b.width)}" height="${fmt(b.height)}"/>`;
+  };
+  if (classes(el).includes("mono")) {
+    const y = baseline(el, px), spans = elements(el).filter((k) => k.name === "tspan");
+    const parts = (spans.length ? spans : [el]).map((k) => ["", textOf(k)]);
+    // folioMeasure는 시스템 산세리프로만 잰다. 고정폭 글꼴(Menlo)의 한 글자는 0.6em이다.
+    const { pieces, mpx } = monoPieces(parts, x, at, px, style.mathScale, style.monoEm, (t, size) => t.length * size * 0.6);
+    return [{ name: content, body: pieces.map((p) => (p.tex ? math(p.tex, p, y, mpx) : p.word ? line(p.word, p.x, y, "start") : "")).join("") }];
+  }
+  if (PLACED.test(content)) {
+    const y = baseline(el, px);
+    const { pieces, mpx } = labelPieces(content, x, at, px, w, maths, style.mathScale, folioMeasure);
+    return [{ name: content, body: pieces.map((p) => (p.tex != null ? math(p.tex, p, y, mpx) : line(p.word, p.x, y, "start"))).join("") }];
+  }
+  const lines = elements(el).filter((k) => k.name === "tspan" && attr(k, "x") != null);
+  if (!lines.length) return content.trim() ? [{ name: content, body: line(content, x, baseline(el, px), at) }] : [];
+  let y = baseline(el, px);
+  return lines.flatMap((k) => {
+    y += parseFloat(attr(k, "dy") ?? "0") || 0;
+    const t = textOf(k);
+    return t.trim() ? [{ name: t, body: line(t, firstNumber(attr(k, "x")), y, at) }] : [];
+  });
 }
 
 // MARK: 겹침 검사

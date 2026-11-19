@@ -120,7 +120,8 @@ final class TextFileModel {
             switch source {
             case let .material(id):
                 _ = try workspace.runThrowing(MaterialWrite(course: course.id, material: id, text: writing, expected: expected))
-            case .note: _ = try workspace.runThrowing(NoteWrite(course: course.id, note: path, text: writing, expected: expected))
+            case .note:
+                _ = try workspace.runThrowing(NoteWrite(course: course.id, note: path, text: writing, expected: expected, typed: true))
             }
             onDisk = writing
             conflict = false

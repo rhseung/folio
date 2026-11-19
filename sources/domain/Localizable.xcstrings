@@ -3564,6 +3564,17 @@
           }
         }
       }
+    },
+    "figure.problem.not-drawn": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "mermaid가 이 도식을 그리지 못합니다: %@"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

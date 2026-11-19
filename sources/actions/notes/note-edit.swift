@@ -34,7 +34,9 @@ public struct NoteEdit {
         guard !replacements.isEmpty || append?.isEmpty == false else { throw ActionError.rule(String(localized: .errorNoteEditNothing)) }
         let store = try ctx.store(course)
         let file = try FolioActions.note(ctx, course: course, path: note)
-        let text = try Self.edited(try store.read(file), replacements, append: append, note: note)
+        let current = try store.read(file)
+        let text = try Self.edited(current, replacements, append: append, note: note)
+        try NoteDiagramCheck.check(text, format: file.format, before: current)
         try ctx.io(Change(.changed, ctx.relative(file.url))) { try store.write(file, text: text) }
     }
 

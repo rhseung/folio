@@ -38,6 +38,7 @@ public struct NoteAdd {
         try NoteLinks(kind: kind, session: session, exam: exam, units: units).apply(
             to: &meta, in: try ctx.file(course), calendar: ctx.calendar)
         let body = body ?? NoteTemplate.body(for: kind, title: title, sections: settings.noteSections(for: kind), format: format)
+        try NoteDiagramCheck.check(body, format: format)
         let made = try ctx.createNote(course, title: title, meta: meta, format: format, body: body)
 
         if let session = meta.sessionId {

@@ -22,7 +22,9 @@ public enum NoteWritingGuide {
             - ID는 `note list`, `material list` 같은 목록의 `--json`에서 읽는다.
 
             ## 도식
-            ```` ```mermaid ```` 펜스는 앱이 그림과 같은 색, 글꼴, 화살촉으로 그린다. 테마를 적지 않는다. 노드와 선 라벨의 `$…$`는 LaTeX로 그린다. 강조색은 `classDef`와 `linkStyle`에 `blue red green orange magenta cyan`으로만 쓴다. mermaid로 안 되는 그림만 SVG로 그린다.
+            - ```` ```mermaid ```` 펜스는 앱이 그림과 같은 색, 글꼴, 화살촉으로 그린다. 테마를 적지 않는다. 강조색은 `classDef`와 `linkStyle`에 `blue red green orange magenta cyan`으로만 쓴다. mermaid로 안 되는 그림만 SVG로 그린다.
+            - 라벨은 짧은 낱말로 둔다. 노드와 선 라벨의 `$…$`는 LaTeX로 그리지만 노드 크기는 그리기 전에 정해져서, 수식이 든 라벨에 `<br/>`을 쓰면 줄이 이어져 도형 밖으로 넘친다. 수식이 길거나 여러 줄인 라벨, 판정 조건이 든 마름모는 SVG 그림으로 그린다.
+            - `note write`, `note edit`, `note add`는 새로 쓰거나 바뀐 도식을 앱처럼 그려 보고, 그림과 같은 기준(라벨끼리, 라벨과 선·노드 테두리, 그림 밖)으로 검사한다. 걸리면 몇 번째 도식의 어느 라벨인지 알리고 노트를 쓰지 않는다.
 
             ## 그림(SVG)
             - `note figure add <과목> <이름>.svg --svg <파일>`이 `Notes/assets`에 쓴다. 노트에는 `![설명](assets/<이름>.svg)`(하위 폴더의 노트는 `../assets/`). 고칠 때는 `note figure show`의 `text`를 고치고 `hash`를 `note figure write --expect`에.

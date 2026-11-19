@@ -13,11 +13,16 @@ public struct NoteWrite {
     @Arg var note: Note.Path
     var text: String
     var expected: String?
+    // 편집 보기가 사람이 친 글을 저장할 때 켠다. 편집 보기는 타자 중에 저장하므로, 도식 검사를 하면 반쯤 쓴 도식 때문에
+    // 저장이 막힌다. 사람은 미리보기에서 도식을 보고 고친다.
+    @Hidden var typed: Bool = false
 
     public func run(_ ctx: ActionContext) throws {
         let store = try ctx.store(course)
         let file = try FolioActions.note(ctx, course: course, path: note)
-        if let expected, try store.read(file) != expected { throw ActionError.conflict(String(localized: .errorNoteChanged("\(note)"))) }
+        let current = try store.read(file)
+        if let expected, current != expected { throw ActionError.conflict(String(localized: .errorNoteChanged("\(note)"))) }
+        if !typed { try NoteDiagramCheck.check(text, format: file.format, before: current) }
         try ctx.io(Change(.changed, ctx.relative(file.url))) { try store.write(file, text: text) }
     }
 }

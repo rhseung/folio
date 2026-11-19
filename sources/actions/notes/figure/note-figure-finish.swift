@@ -33,8 +33,23 @@ public enum NoteFigureFinish {
     // 쓸 때 넣은 것을 걷어 낸, 쓴 사람이 쓴 모양이다. 고쳐 쓸 사람은 이 모양을 읽는다.
     public static func source(_ svg: String) throws -> String { try engine.call("source", svg) }
 
+    // 노트의 mermaid 블록 하나를 미리보기와 같은 배치로 그려 본 그림 검사 결과다.
+    public static func diagramProblems(_ mermaid: String) throws -> [NoteFigure.Problem] {
+        let out = try engine.call("diagram", mermaid, FigureStyle.engineJSON)
+        guard let result = try? JSONDecoder().decode(DiagramResult.self, from: Data(out.utf8)) else {
+            throw EngineFailure(description: "figure.js: \(out.prefix(200))")
+        }
+        var problems: [NoteFigure.Problem] = []
+        for p in result.problems.compactMap(\.problem) where !problems.contains(p) { problems.append(p) }
+        return problems
+    }
+
     private struct EngineResult: Decodable {
         var svg: String
+        var problems: [Found]
+    }
+
+    private struct DiagramResult: Decodable {
         var problems: [Found]
     }
 
@@ -52,6 +67,7 @@ public enum NoteFigureFinish {
             case "outside": .outside(a ?? "")
             case "through": .notThrough(a ?? "", b ?? "", gap: text ?? "")
             case "point": .noPoint(a ?? "", b ?? "")
+            case "diagram": .notDrawn(reason ?? "")
             default: nil
             }
         }
