@@ -74,6 +74,17 @@ struct SolvePickTests {
         #expect(SolvePick(units: [f.units[0].id], count: 1).pick(from: s, seed: 1).count == 1)
     }
 
+    // 화면에서 푸는 풀기는 서술형을 고르지 않고, 서술형이 섞인 풀기는 필기로 연다(#577).
+    @Test func typingLeavesWrittenProblemsToPaper() {
+        var f = fixture()
+        f.file.problemSets[1].problems[0].format = .trueFalse
+        let picked = SolvePick(onScreenOnly: true).pick(from: study(f), seed: 1)
+        #expect(picked.map(\.problem.id) == [f.exercise.problems[0].id])
+        #expect(SolveMode.fitting(nil, formats: [.trueFalse, .short]) == .typing)
+        #expect(SolveMode.fitting(.typing, formats: [.choice, .written]) == .handwriting)
+        #expect(SolveMode.fitting(.mock, formats: [.choice]) == .mock && SolveMode.mock.onPaper && !SolveMode.typing.onPaper)
+    }
+
     // 무작위 조건에서도 고른 문제는 모두 조건에 맞고, 같은 씨앗이면 같은 순서이며, 개수를 넘지 않는다.
     @Test func pickedProblemsAlwaysMatch() async {
         let f = fixture()

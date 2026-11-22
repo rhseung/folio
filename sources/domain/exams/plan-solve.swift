@@ -39,17 +39,23 @@ extension CourseStudy {
             return nil
         case .problems:
             let records = item.target.problemIds.map { $0.compactMap { problems[$0] } } ?? item.target.id.map(problems(inSet:)) ?? []
-            return records.isEmpty ? nil : PlanSolve(problems: records.map(\.problem.id))
+            return records.isEmpty
+                ? nil : PlanSolve(problems: records.map(\.problem.id), mode: .fitting(nil, formats: records.map(\.problem.format)))
         case .mixed:
             var rng = SeededGenerator(seed: seed)
-            let ids = scopeProblems(of: exam).map(\.problem.id).shuffled(using: &rng)
-            return ids.isEmpty ? nil : PlanSolve(problems: ids, shuffled: true)
+            let records = scopeProblems(of: exam).shuffled(using: &rng)
+            return records.isEmpty
+                ? nil
+                : PlanSolve(
+                    problems: records.map(\.problem.id), mode: .fitting(nil, formats: records.map(\.problem.format)), shuffled: true)
         case .mock:
             let ids = mockProblems(for: exam, seed: seed)
             return ids.isEmpty ? nil : PlanSolve(problems: ids, mode: .mock, shuffled: true, minutes: mockMinutes(for: exam))
         case .wrong:
-            let wrong = scopeProblems(of: exam).filter(\.status.needsWork).map(\.problem.id)
-            if !wrong.isEmpty { return PlanSolve(problems: wrong) }
+            let wrong = scopeProblems(of: exam).filter(\.status.needsWork)
+            if !wrong.isEmpty {
+                return PlanSolve(problems: wrong.map(\.problem.id), mode: .fitting(nil, formats: wrong.map(\.problem.format)))
+            }
             let scope = file.scope(of: exam)
             return allCards.contains { $0.status.needsWork && scope.contains($0.card.unitId) }
                 ? PlanSolve(problems: [], cardScope: scope) : nil
