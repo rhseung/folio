@@ -28,7 +28,7 @@ extension CourseStudy {
     }
 
     public func scopeProblems(of exam: Exam) -> [ProblemRecord] {
-        let scope = Set(exam.scopeUnitIds)
+        let scope = Set(file.scope(of: exam))
         return allProblems.filter { !scope.isDisjoint(with: $0.problem.unitIds) }
     }
 
@@ -50,16 +50,16 @@ extension CourseStudy {
         case .wrong:
             let wrong = scopeProblems(of: exam).filter(\.status.needsWork).map(\.problem.id)
             if !wrong.isEmpty { return PlanSolve(problems: wrong) }
-            let scope = Set(exam.scopeUnitIds)
+            let scope = file.scope(of: exam)
             return allCards.contains { $0.status.needsWork && scope.contains($0.card.unitId) }
-                ? PlanSolve(problems: [], cardScope: exam.scopeUnitIds) : nil
+                ? PlanSolve(problems: [], cardScope: scope) : nil
         }
     }
 
     // 한 벌은 범위에 걸친 족보 묶음 하나다. 덜 푼 묶음을 먼저 고르고, 같으면 먼저 들어온 묶음이다. 범위에 족보가 없으면
     // 범위 문제를 섞어 과목의 족보 한 벌만큼 묶는다. 과목에 족보가 하나도 없으면 길이를 알 수 없으므로 범위 문제를 모두 푼다.
     func mockProblems(for exam: Exam, seed: UInt64) -> [UUID] {
-        let scope = Set(exam.scopeUnitIds)
+        let scope = Set(file.scope(of: exam))
         let pastSets = file.problemSets.filter { $0.source == .pastExam && !$0.problems.isEmpty }
         let inScope = pastSets.filter { set in set.problems.contains { !scope.isDisjoint(with: $0.unitIds) } }
         let solved = { (set: ProblemSet) in problems(inSet: set.id).filter(\.solved).count }

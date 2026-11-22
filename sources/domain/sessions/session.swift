@@ -9,7 +9,10 @@ public struct Session: Entity {
 
     public var week: Int
     public var date: Date
-    public var unitIds: [UUID]
+    // 회차의 단원은 진도 쪽과 단원 쪽 구간에서 계산한다(`CourseFile.units(of:)`). 저장하는 것은 사용자가 계산값에
+    // 더하거나 뺀 단원뿐이다. 그래야 단원 쪽 구간을 고치면 손대지 않은 나머지 단원이 따라 바뀐다.
+    private var addedUnits: [UUID]?
+    private var removedUnits: [UUID]?
     public var roughNoteId: UUID?
     public var reviewNoteId: UUID?
     public var inkIds: [UUID]
@@ -53,6 +56,16 @@ public struct Session: Entity {
         }
     }
 
+    public var addedUnitIds: [UUID] {
+        get { addedUnits ?? [] }
+        set { addedUnits = newValue.isEmpty ? nil : newValue }
+    }
+
+    public var removedUnitIds: [UUID] {
+        get { removedUnits ?? [] }
+        set { removedUnits = newValue.isEmpty ? nil : newValue }
+    }
+
     public var isCancelled: Bool {
         get { kind == .cancelled }
         set { if newValue { kind = .cancelled } else if kind == .cancelled { kind = .lecture } }
@@ -82,7 +95,6 @@ public struct Session: Entity {
         self.updatedBy = device
         self.week = week
         self.date = date
-        self.unitIds = []
         self.inkIds = []
         self.materials = []
     }

@@ -17,10 +17,10 @@ public struct UnitLink {
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
-            let u = try index(unit, in: f.units, .valueUnit)
+            _ = try index(unit, in: f.units, .valueUnit)
             for session in sessions {
                 _ = try index(session, in: f.sessions, .valueSession)
-                if f.units[u].sessionIds.contains(session) != linked { f.toggle(session: session, unit: unit) }
+                if f.isLinked(session: session, unit: unit) != linked { f.toggle(session: session, unit: unit) }
             }
         }
     }

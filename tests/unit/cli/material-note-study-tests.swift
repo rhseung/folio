@@ -115,7 +115,7 @@ struct MaterialNoteStudyTests {
         let f = try h.file(GISTStore(url: gist))
         let s = try #require(f.sessions.first { $0.id == SessionCommandTests.id })
         #expect(s.isWrappedUp)
-        #expect(s.unitIds == [Self.unit])
+        #expect(f.unitIds(of: s) == [Self.unit])
         let entry = try #require(f.attendance.first { $0.sessionId == s.id })
         #expect(entry.state == .absent)
 

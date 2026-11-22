@@ -3,14 +3,16 @@ import FolioDomain
 import Foundation
 
 extension ExamList: QueryLines {
-    func lines(_ exams: [Exam], _ r: Resolver) throws -> [[String]] {
+    func lines(_ linked: [QueryLinks<Exam>], _ r: Resolver) throws -> [[String]] {
+        let exams = linked.map(\.item)
         let c = try r.course(id: course)
         return exams.map { e in
             ["\(c.code)/\(e.title)", e.title, e.start.map { $0.formatted(date: .numeric, time: .shortened) } ?? "", component(e, c.file)]
         }
     }
 
-    func say(_ exams: [Exam], _ r: Resolver) throws {
+    func say(_ linked: [QueryLinks<Exam>], _ r: Resolver) throws {
+        let exams = linked.map(\.item)
         let c = try r.course(id: course)
         courseHeader(c, catalog: try? r.ctx.catalog())
         var t = Table(
@@ -23,7 +25,7 @@ extension ExamList: QueryLines {
             let cells = [
                 e.title, e.start.map { when($0, now: r.ctx.now, time: true, settings: r.settings) } ?? "-", component(e, c.file),
                 e.location,
-                e.scopeUnitIds.isEmpty ? "" : String(localized: .examListUnits(e.scopeUnitIds.count)),
+                c.file.scope(of: e).isEmpty ? "" : String(localized: .examListUnits(c.file.scope(of: e).count)),
             ]
             t.rows.append((e.end ?? e.start).map { $0 < r.ctx.now } ?? false ? cells.map { $0.styled(.dim) } : cells)
         }

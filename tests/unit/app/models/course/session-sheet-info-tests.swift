@@ -22,7 +22,7 @@ struct SessionSheetInfoTests {
         let s = try #require(try file(workspace).sessions.first { $0.date == start })
         #expect(s.end == start.addingTimeInterval(75 * 60))
         #expect(s.link == "https://us06web.zoom.us/j/88470108867?pwd=abc.1")
-        #expect(SessionsModel(workspace: workspace, courseId: graphTheory).link(of: s, in: try file(workspace)) != nil)
+        #expect(s.link(schedule: try file(workspace).course.schedule, calendar: workspace.calendar) != nil)
     }
 
     @Test func aMeetingIDOrAnEarlyEndCannotBeSaved() throws {

@@ -11,8 +11,9 @@ public struct ExamPlanBasis: Codable, Sendable, Equatable, Hashable {
     public var finalDays: Int
     public var dayItems: Int
 
-    public init(exam: Exam, settings: Settings, calendar: Calendar) {
-        scope = exam.scopeUnitIds
+    // 범위는 진도에서 계산하므로 과목 문서에서 읽는다. 진도가 바뀌어 범위가 넓어져도 다시 짠다.
+    public init(exam: Exam, in file: CourseFile, settings: Settings, calendar: Calendar) {
+        scope = file.scope(of: exam)
         examDay = exam.start.map { settings.studyDay(of: $0, calendar: calendar) }
         readyPercent = settings.study.readyPercent
         minProblems = settings.study.minProblems
@@ -21,10 +22,12 @@ public struct ExamPlanBasis: Codable, Sendable, Equatable, Hashable {
     }
 }
 
-extension Exam {
+extension CourseFile {
     // 공부일이 바뀌었거나 기준이 바뀐 다가오는 시험만 다시 짠다.
-    public func needsPlan(today: LocalDate, settings: Settings, calendar: Calendar) -> Bool {
-        guard !scopeUnitIds.isEmpty, let start, settings.studyDay(of: start, calendar: calendar) >= today else { return false }
-        return planDay != today || planBasis != ExamPlanBasis(exam: self, settings: settings, calendar: calendar)
+    public func needsPlan(_ exam: Exam, today: LocalDate, settings: Settings, calendar: Calendar) -> Bool {
+        guard !scope(of: exam).isEmpty, let start = exam.start, settings.studyDay(of: start, calendar: calendar) >= today else {
+            return false
+        }
+        return exam.planDay != today || exam.planBasis != ExamPlanBasis(exam: exam, in: self, settings: settings, calendar: calendar)
     }
 }

@@ -10,6 +10,9 @@ final class ExamEditorModel {
     let workspace: Workspace
     private let initial: LoadedCourse
     var draft: Exam
+    // 범위를 손대지 않으면 지난 시험 이후 배운 단원을 그대로 보인다. 그래야 시작 일시를 바꾸면 범위가 따라 바뀌고,
+    // 저장해도 더한 단원과 뺀 단원이 생기지 않는다.
+    private var editedScope: [UUID]?
 
     init(workspace: Workspace, course: LoadedCourse, exam: Exam) {
         self.workspace = workspace
@@ -34,6 +37,11 @@ final class ExamEditorModel {
     }
     var namePrompt: String { String(localized: .examsEditorName) }
     var units: [(unit: FolioDomain.Unit, depth: Int)] { UnitTree.outline(course.file.units) }
+
+    var scope: [UUID] {
+        get { editedScope ?? course.file.scope(of: draft) }
+        set { editedScope = newValue }
+    }
     var components: [(UUID?, String)] {
         [(nil, String(localized: .examsEditorNoComponent))] + course.file.components.sorted { $0.order < $1.order }.map { ($0.id, $0.name) }
     }
@@ -67,11 +75,11 @@ final class ExamEditorModel {
             ? workspace.run(
                 ExamAdd(
                     id: d.id, course: course.id, title: d.title, start: d.start, end: d.end, location: d.location,
-                    component: d.componentId, scope: d.scopeUnitIds, scopeText: d.scopeText, allowed: d.allowed, memo: d.memo))
+                    component: d.componentId, scope: editedScope ?? [], scopeText: d.scopeText, allowed: d.allowed, memo: d.memo))
             : workspace.run(
                 ExamSet(
                     course: course.id, exam: d.id, title: .set(d.title), start: .set(d.start), end: .set(d.end),
-                    location: .set(d.location), component: .set(d.componentId), scope: .set(d.scopeUnitIds),
+                    location: .set(d.location), component: .set(d.componentId), scope: editedScope.map { .set($0) } ?? .keep,
                     scopeText: .set(d.scopeText), allowed: .set(d.allowed), memo: .set(d.memo)))
         return saved != nil
     }

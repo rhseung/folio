@@ -9,10 +9,11 @@ public struct ExamShow {
     /// 시험
     @Arg public var exam: Exam.ID
 
-    public func read(_ ctx: ReadContext) throws -> Exam {
-        guard let found = try ctx.file(course).exams.first(where: { $0.id == exam }) else {
+    public func read(_ ctx: ReadContext) throws -> QueryLinks<Exam> {
+        let f = try ctx.file(course)
+        guard let found = f.exams.first(where: { $0.id == exam }) else {
             throw ActionError.notFound(String(localized: .errorNotFoundExam))
         }
-        return found
+        return QueryLinks(found, in: f)
     }
 }

@@ -3,8 +3,7 @@ import FolioDomain
 import SwiftUI
 
 struct SessionsView: View {
-    @Environment(\.accent) private var accent
-    @Environment(\.openLink) private var openLink
+    @Environment(\.linkFocus) private var focus
     @State private var model: SessionsModel
     let course: LoadedCourse
     @State private var editingTimes = false
@@ -17,7 +16,8 @@ struct SessionsView: View {
 
     var body: some View {
         let file = course.file
-        Page {
+        let table = model.table(file)
+        Page(anchor: model.anchor) {
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: Theme.Space.s) {
                     Text(.sessionsTitle).font(Theme.Typeface.pageTitle)
@@ -28,6 +28,10 @@ struct SessionsView: View {
                         } ?? Text("")))
                 }
                 Spacer()
+                if !table.weeks.isEmpty {
+                    Button(.sessionsTableToday) { model.showThisWeek(table) }.buttonStyle(.ghost)
+                        .help(Text(.sessionsTableTodayHelp))
+                }
                 Button(.sessionsAdd, systemImage: "plus") { adding = true }.buttonStyle(.ghost)
                     .help(Text(.sessionsAddHelp))
             }
@@ -37,18 +41,21 @@ struct SessionsView: View {
             if !left.isEmpty { leftUnwrappedCard(left, file: file) }
             if !model.untouched.isEmpty { untouchedCard }
 
-            // Lazy로 두어 칸 폭이 바뀔 때 보이는 카드만 배치한다. 구분선을 끄는 동안 폭마다 한 학기의 카드를 모두
-            // 배치하면 초당 30프레임 근처에 머물렀다. 머리와 카드는 각각 항목으로 평평하게 넣어야, 아직 스크롤하지 않은
-            // 카드로도 링크가 스크롤할 수 있다(`linkTarget`).
-            let weeks = model.weeks(file)
-            LazyVStack(alignment: .leading, spacing: 0) {
-                ForEach(weeks) { week in
-                    header(week)
-                        .padding(.top, week.id == weeks.first?.id ? 0 : Theme.Space.section)
-                    ForEach(week.rows) { row in
-                        self.row(row, file: file, top: row.id == week.rows.first?.id ? Theme.Space.s : Theme.Space.xs)
+            // 자기 폭으로 표와 목록을 고른다. 창 크기가 아니라 칸의 폭을 따라야 좁은 칸에서도 넘치지 않는다.
+            Group {
+                if !table.weeks.isEmpty {
+                    if model.form == .list {
+                        SessionAgendaView(model: model, course: course, table: table)
+                    } else {
+                        SessionTableView(model: model, course: course, table: table)
                     }
                 }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .onGeometryChange(for: CGFloat.self) {
+                $0.size.width
+            } action: {
+                model.width = $0
             }
         }
         .sheet(isPresented: $editingTimes) { ClassTimesSheet(workspace: model.workspace, course: course) }
@@ -62,46 +69,8 @@ struct SessionsView: View {
             .id(run.current)
         }
         .task(id: file.sessions) { model.loadUntouched(course) }
+        .onChange(of: focus, initial: true) { model.follow(focus, in: table) }
         .confirming($model.pending)
-    }
-
-    func header(_ week: SessionsModel.Week) -> some View {
-        HStack(spacing: Theme.Space.s) {
-            Text(.sessionsWeek(week.number)).font(Theme.Typeface.sectionTitle)
-                .foregroundStyle(week.thisWeek ? accent.ink : Theme.Palette.textSecondary)
-                // 강조색만 눈에 보이는 표시라서 VoiceOver에는 낱말이 필요하다.
-                .accessibilityValue(week.thisWeek ? String(localized: .sessionsThisWeek) : "")
-            Text(week.range).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()
-            if week.examWeek {
-                Text("· " + String(localized: .sessionsExamWeek)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
-            }
-        }
-        .frame(minHeight: Theme.Size.chipRow)
-    }
-
-    @ViewBuilder func row(_ row: SessionsModel.TimelineRow, file: CourseFile, top: CGFloat) -> some View {
-        switch row.item {
-        case .week, .month:
-            EmptyView()
-        case .exam(let exam, let date):
-            ExamMarkerRow(model: model, exam: exam, date: date).padding(.top, top)
-        case .session(let session, let exams):
-            LiveTime(model.workspace) { now in
-                SessionCard(model: model, course: course, session: session, now: now, openNote: openNote)
-                    .modifier(ClassExamCard(model: model, exams: exams, now: now))
-            }
-            .linkTarget(session.id)
-            .fileDrop { model.importFiles($0, into: session) }
-            .padding(.top, top)
-            // lazy stack이 카드를 만들기 전에 찾을 수 있도록 가장 바깥에 둔다.
-            .id(session.id)
-        case .planned(_, let exams):
-            if let item = row.planned {
-                PlannedSessionCard(model: model, item: item, openNote: openNote, editTimes: { editingTimes = true })
-                    .modifier(ClassExamCard(model: model, exams: exams, now: model.workspace.now))
-                    .padding(.top, top)
-            }
-        }
     }
 
     var schedule: some View {
@@ -118,10 +87,6 @@ struct SessionsView: View {
             .contentShape(.rect)
             .contextMenu { Button(.sessionsClassTimesAddEllipsis) { editingTimes = true } }
         }
-    }
-
-    func openNote(_ id: UUID) {
-        openLink(AppLink(.note, id), course: course.id)
     }
 
     func leftUnwrappedCard(_ left: [Session], file: CourseFile) -> some View {

@@ -72,9 +72,8 @@ struct NoteLinkMigrationTests {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
         let course = Course(device: UUID(), at: .now, title: "그래프 이론")
-        var s = Session(device: UUID(), at: .now, week: 1, date: .now)
+        let s = Session(device: UUID(), at: .now, week: 1, date: .now)
         let note = UUID()
-        s.unitIds = []
         var file = CourseFile(course: course, sessions: [s])
         file.notes = [NoteEntry(id: note, device: UUID(), at: .now, path: "Notes/1주차-1.md", meta: NoteMeta(id: note, kind: .rough))]
         var raw = try JSONFormat.decoder.decode(JSONValue.self, from: JSONFormat.encoder.encode(file))

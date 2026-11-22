@@ -11,7 +11,10 @@ public struct Exam: Entity {
     public var start: Date?
     public var end: Date?
     public var location: String
-    public var scopeUnitIds: [UUID]
+    // 범위는 지난 시험 이후 배운 단원으로 계산하고(`CourseFile.scope(of:)`), 사용자가 더하거나 뺀 단원만 저장한다.
+    // 범위를 고친 뒤에 배운 단원도 계산값으로 들어온다.
+    private var addedScope: [UUID]?
+    private var removedScope: [UUID]?
     public var scopeText: String
     public var allowed: String
     public var componentId: UUID?
@@ -36,12 +39,23 @@ public struct Exam: Entity {
         self.start = start
         self.end = end
         self.location = location
-        self.scopeUnitIds = []
         self.scopeText = ""
         self.allowed = ""
         self.memo = ""
         self.plan = []
         self.folder = folder
+    }
+}
+
+extension Exam {
+    public var addedScopeUnitIds: [UUID] {
+        get { addedScope ?? [] }
+        set { addedScope = newValue.isEmpty ? nil : newValue }
+    }
+
+    public var removedScopeUnitIds: [UUID] {
+        get { removedScope ?? [] }
+        set { removedScope = newValue.isEmpty ? nil : newValue }
     }
 }
 
@@ -57,7 +71,8 @@ extension Exam {
         start = try c.decodeIfPresent(Date.self, forKey: .start)
         end = try c.decodeIfPresent(Date.self, forKey: .end)
         location = try c.decode(String.self, forKey: .location)
-        scopeUnitIds = try c.decode([UUID].self, forKey: .scopeUnitIds)
+        addedScope = try c.decodeIfPresent([UUID].self, forKey: .addedScope)
+        removedScope = try c.decodeIfPresent([UUID].self, forKey: .removedScope)
         scopeText = try c.decode(String.self, forKey: .scopeText)
         allowed = try c.decode(String.self, forKey: .allowed)
         componentId = try c.decodeIfPresent(UUID.self, forKey: .componentId)

@@ -16,7 +16,7 @@ extension CourseFile {
         return WrapUpItem.allCases.filter { item in
             switch item {
             case .progress: !lectures.isEmpty && !session.materials.contains { lectures.contains($0.materialId) && $0.pages != nil }
-            case .units: session.unitIds.isEmpty
+            case .units: unitIds(of: session).isEmpty
             case .note: session.roughNoteId == nil && session.reviewNoteId == nil
             // 출석은 기록이 없는 것으로 저장하므로, 녹음이나 출결 기록, 저장한 정리로만 알 수 있다.
             case .attendance: !attendanceKnown(of: session, recorded: recorded)

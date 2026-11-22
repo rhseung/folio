@@ -61,9 +61,9 @@ struct SessionKindMigrationTests {
 
         let tlc = try #require(file.units.first { $0.labNumber == 4 })
         #expect(file.units.filter { $0.labNumber == 4 }.count == 1)
-        #expect(tlc.sessionIds == [s[5].id, s[6].id] && s[5].unitIds == [tlc.id])
+        #expect(file.sessions(of: tlc.id).map(\.id) == [s[5].id, s[6].id] && file.unitIds(of: s[5]) == [tlc.id])
 
-        #expect(file.units.count == 1 && s[7].unitIds.isEmpty)
+        #expect(file.units.count == 1 && file.unitIds(of: s[7]).isEmpty)
         #expect(file.labWeeks == [4: 3])
         #expect(file.labNumbers["Thin-layer chromatography"] == 4)
     }

@@ -32,9 +32,9 @@ struct QueryTests {
         let file = try ActionContext(gist: gist, device: UUID()).file(Self.graphTheory)
         #expect(try read(CourseShow(course: Self.graphTheory)).id == Self.graphTheory)
         let exam = try #require(file.exams.first)
-        #expect(try read(ExamShow(course: Self.graphTheory, exam: exam.id)) == exam)
+        #expect(try read(ExamShow(course: Self.graphTheory, exam: exam.id)).item == exam)
         let unit = try #require(file.units.first)
-        #expect(try read(UnitShow(course: Self.graphTheory, unit: unit.id)) == unit)
+        #expect(try read(UnitShow(course: Self.graphTheory, unit: unit.id)).item == unit)
     }
 
     @Test func noSemesterMeansTheCurrentOne() throws {

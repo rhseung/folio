@@ -63,7 +63,7 @@ public struct SessionWrapUp {
 
             if case .set(let units) = units {
                 for unit in units { _ = try index(unit, in: f.units, .valueUnit) }
-                for unit in Set(f.sessions[i].unitIds).symmetricDifference(units) { f.toggle(session: session, unit: unit) }
+                f.setUnits(units, session: session)
             }
 
             // 시트는 늘 수업의 출결을 넘기므로, 이미 그 상태인 항목은 시각과 기기를 지킨다.

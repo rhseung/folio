@@ -10,8 +10,6 @@ public struct Unit: Entity {
     public var title: String
     public var order: Int
     public var parentId: UUID?
-    public var sessionIds: [UUID]
-    public var examIds: [UUID]
     private var lectures: [UnitPages]?
     // 사용자가 단원마다 직접 누르는 "다 함"이다. 앱은 활동을 보고 대신 판단하지 않는다.
     private var done: Bool?
@@ -34,8 +32,6 @@ public struct Unit: Entity {
         self.title = title
         self.order = order
         self.parentId = parentId
-        self.sessionIds = []
-        self.examIds = []
     }
 }
 
