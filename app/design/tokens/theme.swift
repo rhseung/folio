@@ -260,8 +260,14 @@ enum Theme {
         static let choiceButton: CGFloat = 96
         static let layoutGlyph = CGSize(width: 40, height: 28)
 
-        static let classCard: CGFloat = 60
-        static let examMarker: CGFloat = 52
+        // 회차 표의 주차 여백이다. 넓으면 "10주차"와 날짜 구간, 좁으면 "10주차"만 들어간다.
+        static let weekGutter: CGFloat = 72
+        static let weekGutterCompact: CGFloat = 48
+        // 표가 날짜 구간을 보이는 폭과, 열을 버리고 날짜 목록이 되는 폭이다.
+        static let sessionTableWide: CGFloat = 800
+        static let sessionTableList: CGFloat = 500
+        static let sessionListBlock: CGFloat = 56
+        static let agendaToday: CGFloat = 32
         static let problemCell: CGFloat = 40
         static let assetTile = CGSize(width: 112, height: 84)
         // 위 여백 16, 묶음 이름 14, 간격 8, 타일 84, 아래 여백 16이다. 띠는 가운데에 두므로 남는 높이는 위아래로 나뉜다.
@@ -313,6 +319,7 @@ enum Theme {
         static let figureCompact = Font.system(size: 22, weight: .bold).monospacedDigit()
         static let figureMedium = Font.system(size: 17, weight: .bold)
         static let figureSmall = Font.system(size: 16, weight: .semibold).monospacedDigit()
+        static let dayFigure = Font.system(size: 18, weight: .semibold).monospacedDigit()
         static let bodyLarge = Font.system(size: bodyLargeSize)
         static let bodyLargeSize = CGFloat(15)
         static let body = Font.system(size: bodySize)

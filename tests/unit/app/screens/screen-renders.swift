@@ -122,13 +122,10 @@ struct ScreenRenders {
         }
         let now = workspace.now
         let live = workspace.currentCourses.first { c in
-            let model = SessionsModel(workspace: workspace, courseId: c.id)
-            return c.file.sessions.contains { s in
-                model.isOngoing(
-                    s,
-                    end: s.expectedEnd(
-                        schedule: c.file.course.schedule, classMinutes: workspace.settings.classMinutes, calendar: workspace.calendar),
-                    now: now)
+            c.file.sessions.contains { s in
+                let end = s.expectedEnd(
+                    schedule: c.file.course.schedule, classMinutes: workspace.settings.classMinutes, calendar: workspace.calendar)
+                return !s.isCancelled && s.date <= now && now < end
             }
         }
         if let course = live ?? workspace.currentCourses.max(by: { $0.file.sessions.count < $1.file.sessions.count }) {

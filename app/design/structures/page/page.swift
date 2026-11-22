@@ -3,6 +3,7 @@ import SwiftUI
 
 struct Page<Content: View, Backdrop: View>: View {
     var maxWidth: CGFloat = Theme.Size.pageMaxWidth
+    var anchor: PageAnchor?
     @ViewBuilder var backdrop: Backdrop
     @ViewBuilder var content: Content
     // private으로 두지 않는다. private 속성이 있으면 memberwise init도 private이 된다.
@@ -34,6 +35,15 @@ struct Page<Content: View, Backdrop: View>: View {
                 try? await Task.sleep(for: .milliseconds(100))
                 withAnimation(.snappy) { proxy.scrollTo(focus, anchor: UnitPoint(x: 0.5, y: 0.2)) }
             }
+            .task(id: anchor) {
+                guard let anchor else { return }
+                try? await Task.sleep(for: .milliseconds(100))
+                if anchor.animated {
+                    withAnimation(Theme.Motion.standard) { proxy.scrollTo(anchor.id, anchor: .top) }
+                } else {
+                    proxy.scrollTo(anchor.id, anchor: .top)
+                }
+            }
         }
         .background(Theme.Palette.page)
         .scrollEdgeEffectHidden(true, for: .top)
@@ -43,7 +53,7 @@ struct Page<Content: View, Backdrop: View>: View {
 }
 
 extension Page where Backdrop == EmptyView {
-    init(maxWidth: CGFloat = Theme.Size.pageMaxWidth, @ViewBuilder content: () -> Content) {
-        self.init(maxWidth: maxWidth, backdrop: { EmptyView() }, content: content)
+    init(maxWidth: CGFloat = Theme.Size.pageMaxWidth, anchor: PageAnchor? = nil, @ViewBuilder content: () -> Content) {
+        self.init(maxWidth: maxWidth, anchor: anchor, backdrop: { EmptyView() }, content: content)
     }
 }
