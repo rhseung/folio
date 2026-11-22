@@ -166,7 +166,10 @@ struct StudyAITests {
     }
 
     @Test func schemasAreStrict() {
-        for schema in [ProblemDrafts.schema, CardDrafts.schema, ProblemGrade.schema, SameAnswer.schema, ProblemSheetDraft.schema] {
+        for schema in [
+            ProblemDrafts.schema, CardDrafts.schema, ProblemGrade.schema, SameAnswer.schema, ProblemSheetDraft.schema,
+            CollectionGrades.schema, ProblemArtDraft.schema,
+        ] {
             #expect(schema["additionalProperties"] == .bool(false))
         }
     }
@@ -217,5 +220,34 @@ struct StudyAITests {
         #expect(second.messages.map(\.role) == [.user, .assistant, .user])
         let fix = second.messages[2].content.compactMap { if case .text(let t, _) = $0 { t } else { nil } }.joined()
         #expect(fix.contains("overlaps a line"))
+    }
+
+    // 문제마다 칸 머리의 이름표를 보내고, 답의 차례를 문제 ID로 바꾼다. 없는 차례와 두 번 온 차례는 버린다.
+    @Test func aCollectionIsGradedFromOnePDF() async throws {
+        let reply = #"""
+            {"grades":[{"item":2,"verdict":"wrong","reason":"time","feedback":["7번을 쓰지 못했어요."],"page":null},
+            {"item":1,"verdict":"correct","reason":"concept","feedback":[],"page":3},
+            {"item":1,"verdict":"wrong","reason":null,"feedback":[],"page":4},
+            {"item":9,"verdict":"correct","reason":null,"feedback":[],"page":1}]}
+            """#
+        let fake = FakeProvider(responses: [FakeProvider.reply(reply)])
+        let first = Problem(number: "1", text: "Prove Hall's theorem.", solution: "By induction on $|X|$.")
+        let second = Problem(number: "2b", parent: "2", text: "Find a perfect matching.")
+        let stem = ProblemGroup(number: "2", text: "Let $G$ be the graph below.")
+        let grades = try await ClaudeClient(provider: fake).gradeCollection(
+            [CollectionProblem(set: "2024 Midterm", problem: first), CollectionProblem(set: "HW03", problem: second, stems: [stem])],
+            submitted: Data("%PDF".utf8), mock: true)
+
+        #expect(grades.map(\.problem) == [second.id, first.id])
+        #expect(grades[0].outcome.grade.reason == .time && grades[0].outcome.basis == .claude && grades[0].page == nil)
+        // 맞은 문제의 이유는 버린다.
+        #expect(grades[1].outcome.grade.reason == nil && grades[1].outcome.basis == .solution && grades[1].page == 3)
+
+        let request = try #require(await fake.requests.first)
+        #expect(request.messages[0].content.contains { if case .pdf = $0 { true } else { false } })
+        let ask = request.messages[0].content.compactMap { if case .text(let t, _) = $0 { t } else { nil } }.joined()
+        #expect(ask.contains(#"label="HW03 – Problem 2b""#) && ask.contains("<stem>\nLet $G$"))
+        let system = (request.system ?? []).compactMap { if case .text(let t, _) = $0 { t } else { nil } }.joined()
+        #expect(system.contains("time: stopped") && system.contains(MathWriting.rule))
     }
 }
