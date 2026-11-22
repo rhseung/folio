@@ -211,8 +211,11 @@ final class SolveModel {
     // 채점한 뒤에는 맞는 답과 고른 답을 색으로 보인다.
     func tone(of option: String, in problem: Problem) -> Tone? {
         guard let graded, !isMock else { return nil }
-        if option == problem.answer { return .success }
-        return option == graded.answer ? .danger : nil
+        switch problem.mark(of: option, picked: graded.answer, verdict: graded.verdict) {
+        case .correct: return .success
+        case .wrong: return .danger
+        case .partial, nil: return nil
+        }
     }
 
     // MARK: Pages
