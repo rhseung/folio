@@ -29,6 +29,7 @@ public enum Readiness {
     public static func state(_ items: [Item], readyScore: Double, minProblems: Int) -> ReadinessState {
         if items.count < minProblems { return .fewProblems }
         guard let score = score(items) else { return .noVerdict }
+        if items.count(where: { $0.verdict != nil }) < minProblems { return .fewVerdicts }
         let clean = !items.contains { $0.status.needsWork }
         return score >= readyScore && clean ? .ready : .weak
     }

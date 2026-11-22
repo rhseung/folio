@@ -17,6 +17,7 @@ struct NotePreview {
     var revision = 0
     var views: NoteViews?
     var figureOnly: (@MainActor () -> Void)?
+    var makeCard: (@MainActor (Int) -> Void)?
 
     @MainActor final class Coordinator {
         let page = NotePreviewPage.take()
@@ -39,6 +40,7 @@ struct NotePreview {
         page.link = link
         page.views = views
         page.figureOnly = figureOnly
+        page.makeCard = makeCard
         if views?.page !== page { views?.page = page }
         page.show(text, baseURL: baseURL, math: math, accent: accent, callouts: callouts, dark: dark, revision: revision)
         page.reveal(anchor)

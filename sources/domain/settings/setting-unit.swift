@@ -2,7 +2,7 @@ import Foundation
 
 // 숫자 항목의 값 뒤에 붙는 단위다. 설정 화면이 값 옆에 보인다.
 public enum SettingUnit: String, Sendable {
-    case minutes, days, daysBefore, hoursBefore, cards, units, percent, problems
+    case minutes, days, daysBefore, hoursBefore, cards, units, percent, problems, items
 
     public var name: LocalizedStringResource {
         switch self {
@@ -14,6 +14,7 @@ public enum SettingUnit: String, Sendable {
         case .units: .settingUnitUnits
         case .percent: .settingUnitPercent
         case .problems: .settingUnitProblems
+        case .items: .settingUnitItems
         }
     }
 }

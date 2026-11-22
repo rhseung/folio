@@ -146,6 +146,10 @@ struct ScreenRenders {
             if let unit = studied.file.units.first(where: \.isDone) ?? studied.file.units.first {
                 entries.append(("study-unit", Navigator.Entry(link: AppLink(.unit, unit.id), course: studied.id)))
             }
+            if let set = studied.file.problemSets.first(where: { !$0.problems.isEmpty }) {
+                let solve = SolveRequest(course: studied.id, set: set.id, problems: set.problems.prefix(3).map(\.id))
+                entries.append(("study-solve", Navigator.Entry(link: solve.link, course: studied.id)))
+            }
         }
         if let split = workspace.currentCourses.first(where: { c in c.file.lectureFiles.contains { c.file.isSplit($0.id) } }) {
             entries.append(

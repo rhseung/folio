@@ -149,7 +149,7 @@ struct ExamsView: View {
                         HStack(spacing: Theme.Space.s) {
                             Text("\(i + 1)").font(Theme.Typeface.label).monospacedDigit().foregroundStyle(accent.ink)
                                 .frame(width: Theme.Size.indexColumn, alignment: .trailing)
-                            Text(top.unit.title).lineLimit(1)
+                            StudyText(text: top.unit.title, look: .title).lineLimit(1)
                             if top.children > 0 {
                                 Text("+\(top.children)").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                                     .monospacedDigit()

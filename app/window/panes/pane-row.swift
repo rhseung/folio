@@ -282,7 +282,16 @@ private struct PaneScreen: View {
     let workspace: Workspace
     let navigator: Navigator
 
-    var body: some View { ScreenView(workspace: workspace, entry: navigator.current) }
+    var body: some View {
+        ScreenView(workspace: workspace, entry: navigator.current)
+            .environment(
+                \.goBack,
+                GoBackAction { [navigator] in
+                    guard navigator.history.canGoBack else { return false }
+                    navigator.back()
+                    return true
+                })
+    }
 }
 
 private struct PaneDivider: View {

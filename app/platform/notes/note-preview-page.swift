@@ -16,6 +16,11 @@ import WebKit
     fileprivate(set) var menuHref: String?
     fileprivate(set) var menuAnchor: AppLink.Anchor?
     fileprivate(set) var selectionAnchor: AppLink.Anchor?
+    // 메뉴를 연 곳과 선택이 시작한 곳의 콜아웃 첫 줄(본문 기준)이다.
+    fileprivate(set) var menuCallout: Int?
+    fileprivate(set) var selectionCallout: Int?
+    // 노트 블록으로 카드를 만든다. 받는 줄은 콜아웃의 첫 줄(본문 기준)이다.
+    var makeCard: (@MainActor (Int) -> Void)?
     private var revealed: AppLink.Anchor?
     private var revealing: AppLink.Anchor?
     var edit: (@MainActor (Int, Int, String, String) -> Bool)?
@@ -67,6 +72,9 @@ import WebKit
         menuHref = nil
         menuAnchor = nil
         selectionAnchor = nil
+        menuCallout = nil
+        selectionCallout = nil
+        makeCard = nil
         noteLink = nil
         embeds = nil
         revealed = nil
@@ -288,14 +296,26 @@ import WebKit
             guard let body = message.body as? [String: Any], message.frameInfo.isMainFrame else { return }
             if body["type"] as? String == "task", let line = body["line"] as? Int, let page { page.tick(line: page.offset + line) }
             let anchor = (body["block"] as? String).map(AppLink.Anchor.block) ?? (body["heading"] as? String).map(AppLink.Anchor.heading)
+            let callout = body["callout"] as? Int
             if body["type"] as? String == "menu" {
                 page?.menuHref = body["href"] as? String
                 page?.menuAnchor = anchor
+                page?.menuCallout = callout
             }
-            if body["type"] as? String == "selection" { page?.selectionAnchor = anchor }
+            if body["type"] as? String == "selection" {
+                page?.selectionAnchor = anchor
+                page?.selectionCallout = callout
+            }
             if body["type"] as? String == "figureClosed" { page?.figureOnly?() }
             if body["type"] as? String == "top", let line = body["line"] as? Int { page?.views?.previewScrolled(line) }
         }
+    }
+
+    // 카드로 만들 수 있는 콜아웃(정의, 정리)일 때만 메뉴에 "카드 만들기"를 넣는다.
+    func cardLine(_ line: Int?) -> Int? {
+        guard let line, makeCard != nil, let shown, NoteBlockCard.at(line: line, in: shown.text, callouts: shown.callouts) != nil
+        else { return nil }
+        return line
     }
 
     @discardableResult func tick(line: Int) -> Bool {

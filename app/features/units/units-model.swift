@@ -23,7 +23,16 @@ final class UnitsModel {
         var days: Int
         var readiness: ExamReadiness
         var line: String
-        var few: [(unit: FolioDomain.Unit, problems: Int)]
+        var few: FewProblems?
+    }
+
+    // 범위의 문제 부족 단원을 한 줄로 모은다. 단원마다 줄을 두면 범위가 넓은 시험에서 같은 경고가 단원 수만큼 쌓인다.
+    // 단원마다의 상태는 아래 범위 목록의 표시가 보인다.
+    struct FewProblems {
+        var units: [UUID]
+        var title: String
+        var detail: String
+        var missing: Int
     }
 
     struct PlanRow: Identifiable {
@@ -34,6 +43,7 @@ final class UnitsModel {
         var done: Bool
         var title: String
         var detail: String
+        var solve: PlanSolve?
         var id: UUID { item.id }
     }
 
@@ -43,8 +53,11 @@ final class UnitsModel {
     var openUnit: UUID?
     var pending: PendingAction?
     var name = ""
+    // 섞어 풀기와 모의시험의 순서를 정하는 씨앗이다. 다시 그려도 같은 순서로 연다.
+    private let seed = UInt64.random(in: 1...UInt64.max)
     private(set) var notes: [NoteFile] = []
     private(set) var noteCounts: [UUID: Int] = [:]
+    private(set) var changedCards: Set<UUID> = []
 
     init(workspace: Workspace, courseId: UUID) {
         self.workspace = workspace
@@ -60,6 +73,7 @@ final class UnitsModel {
         var counts: [UUID: Int] = [:]
         for note in all { for unit in note.meta.unitIds { counts[unit, default: 0] += 1 } }
         noteCounts = counts
+        changedCards = workspace.changedCardSources(in: courseId)
     }
 
     // MARK: The list
@@ -81,8 +95,18 @@ final class UnitsModel {
             String(localized: .unitsExamReady(r.ready, r.units)), String(localized: .unitsExamDone(r.done, r.units)),
             String(localized: .unitsExamSolved(r.problemsTotal, r.problemsSolved)),
         ].joined(separator: " · ")
-        let few = r.fewProblems.compactMap { id in
-            study.file.units.first { $0.id == id }.map { (unit: $0, problems: study.problems(of: id).count) }
+        let units = r.fewProblems.compactMap { id in study.file.units.first { $0.id == id } }
+        var few: FewProblems?
+        if let first = units.first {
+            let count = study.problems(of: first.id).count
+            let title =
+                units.count > 1
+                ? String(localized: .unitsFewProblemsMany(units.count))
+                : String(localized: count == 0 ? .unitsFewProblemsNone(first.title) : .unitsFewProblems(first.title, count))
+            let detail =
+                units.count > 1 ? units.map(\.title).joined(separator: ", ") : String(localized: .unitsFewProblemsDetail)
+            few = FewProblems(
+                units: units.map(\.id), title: title, detail: detail, missing: units.map { study.missingProblems(of: $0.id) }.reduce(0, +))
         }
         return ExamCard(exam: exam, days: max(workspace.days(to: start), 0), readiness: r, line: line, few: few)
     }
@@ -127,7 +151,8 @@ final class UnitsModel {
             let first = i == 0 || items[i - 1].day != item.day
             return PlanRow(
                 item: item, day: first ? dayLabel(item.day) : "", isToday: item.day == today, isPast: item.day < today,
-                done: study.isDone(item, in: exam), title: study.file.title(of: item), detail: planDetail(item, study: study))
+                done: study.isDone(item, in: exam), title: study.file.title(of: item), detail: planDetail(item, in: exam, study: study),
+                solve: study.solve(item, in: exam, seed: seed))
         }
     }
 
@@ -142,23 +167,31 @@ final class UnitsModel {
         return day.date(in: workspace.calendar)?.formatted(.dateTime.month(.defaultDigits).day().weekday()) ?? day.description
     }
 
-    private func planDetail(_ item: ExamPlanItem, study: CourseStudy) -> String {
+    private func planDetail(_ item: ExamPlanItem, in exam: Exam, study: CourseStudy) -> String {
+        let carried = item.isCarried ? [String(localized: .unitsPlanCarried)] : []
+        return (carried + planParts(item, in: exam, study: study)).joined(separator: " · ")
+    }
+
+    private func planParts(_ item: ExamPlanItem, in exam: Exam, study: CourseStudy) -> [String] {
         switch item.target.kind {
         case .unit:
-            guard let id = item.target.id, let unit = study.file.units.first(where: { $0.id == id }) else { return "" }
-            let p = study.progress(of: unit, notes: noteCounts[id] ?? 0)
-            var parts = [String(localized: .unitsLineProblems(p.problemsSolved, p.problemsTotal))]
+            let units = item.target.units.compactMap { id in study.file.units.first { $0.id == id } }
+            guard !units.isEmpty else { return [] }
+            let progress = units.map { study.progress(of: $0, notes: noteCounts[$0.id] ?? 0) }
+            let (solved, total) = (progress.map(\.problemsSolved).reduce(0, +), progress.map(\.problemsTotal).reduce(0, +))
+            var parts = [String(localized: .unitsLineProblems(solved, total))]
             if let pages = item.pages, !pages.isEmpty { parts.append(String(localized: .unitsPlanConceptPages(pages.count))) }
-            return parts.joined(separator: " · ")
+            return parts
         case .problems:
             let records =
                 item.target.problemIds.map { $0.compactMap { study.problems[$0] } } ?? item.target.id.map(study.problems(inSet:)) ?? []
-            return String(localized: .unitsLineProblems(records.filter(\.solved).count, records.count))
+            return [String(localized: .unitsLineProblems(records.filter(\.solved).count, records.count))]
         case .wrong:
-            let wrong = study.allProblems.filter(\.status.needsWork).count, unknown = study.allCards.filter(\.status.needsWork).count
-            return String(localized: .unitsPlanWrong(wrong, unknown))
+            let left = study.wrongLeft(in: exam)
+            if left.problems == 0 && left.cards == 0 { return [String(localized: .unitsPlanNothingLeft)] }
+            return [String(localized: .unitsPlanWrong(left.problems, left.cards))]
         case .mixed, .mock, .custom:
-            return item.isCarried ? String(localized: .unitsPlanCarried) : ""
+            return []
         }
     }
 
@@ -215,6 +248,7 @@ final class UnitsModel {
         var record: CourseStudy.CardRecord
         var detail: String
         var chip: (text: String, tone: Tone)?
+        var changed: Bool
         var id: UUID { record.card.id }
     }
 
@@ -284,7 +318,9 @@ final class UnitsModel {
 
     func cardLines(_ unit: FolioDomain.Unit) -> [CardLine] {
         guard let study else { return [] }
-        return study.cards(of: unit.id).map { CardLine(record: $0, detail: $0.card.source.label, chip: $0.status.cardChip) }
+        return study.cards(of: unit.id).map {
+            CardLine(record: $0, detail: $0.card.source.label, chip: $0.status.cardChip, changed: changedCards.contains($0.card.id))
+        }
     }
 
     func lecturesNote(_ rows: [LectureRow]) -> String {

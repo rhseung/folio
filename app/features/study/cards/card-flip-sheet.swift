@@ -5,8 +5,8 @@ struct CardFlipSheet: View {
     @State private var model: CardFlipModel
     @Environment(\.dismiss) private var dismiss
 
-    init(workspace: Workspace, course: UUID, unit: UUID?) {
-        _model = State(initialValue: CardFlipModel(workspace: workspace, courseId: course, unitId: unit))
+    init(workspace: Workspace, course: UUID, unit: UUID?, scope: [UUID]? = nil) {
+        _model = State(initialValue: CardFlipModel(workspace: workspace, courseId: course, unitId: unit, scope: scope))
     }
 
     var body: some View {
@@ -54,20 +54,20 @@ struct CardFlipSheet: View {
             .contentShape(.rect)
         }
         .buttonStyle(.pointing(.plain))
-        .keyboardShortcut(.space, modifiers: [])
+        .shortcut(.cardFlip)
     }
 
     // 뒤집기 전에는 앎과 모름을 고르지 않는다. 답을 떠올려 본 뒤에 고르게 하기 위해서다.
     var answers: some View {
         HStack(spacing: Theme.Space.m) {
-            big(String(localized: .cardsUnknown), tone: .danger, key: .leftArrow) { model.mark(known: false) }
-            big(String(localized: .cardsKnown), tone: .success, key: .rightArrow) { model.mark(known: true) }
+            big(String(localized: .cardsUnknown), tone: .danger, key: .cardUnknown) { model.mark(known: false) }
+            big(String(localized: .cardsKnown), tone: .success, key: .cardKnown) { model.mark(known: true) }
         }
         .disabled(!model.flipped)
         .opacity(model.flipped ? 1 : Theme.Opacity.disabled)
     }
 
-    func big(_ title: String, tone: Tone, key: KeyEquivalent, action: @escaping () -> Void) -> some View {
+    func big(_ title: String, tone: Tone, key: ShortcutID, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title).font(Theme.Typeface.figureMedium)
                 .frame(maxWidth: .infinity, minHeight: Theme.Size.bigButton)
@@ -76,7 +76,7 @@ struct CardFlipSheet: View {
                 .contentShape(.rect)
         }
         .buttonStyle(.pointing(.plain))
-        .keyboardShortcut(key, modifiers: [])
+        .shortcut(key)
     }
 
     var done: some View {

@@ -107,6 +107,23 @@ import UIKit
         return nil
     }
 
+    // 그림 하나를 기다려 받는다. 그리지 못하면 nil이다. `picture`와 달리 `drawn`을 관찰하지 않으므로, 수식이 많은 화면이 그림이 하나 끝날 때마다 모든
+    // 수식을 다시 요청하지 않는다. 그렇게 하면 그리지 못한 수식이 끝없이 다시 줄을 서서 다른 보기의 수식이 그려지지 않는다.
+    func drawn(_ source: String, syntax: MathSyntax, display: Bool, size: CGFloat, dark: Bool, trim: Bool = false) async -> Picture? {
+        let formula = source.trimmingCharacters(in: .whitespacesAndNewlines)
+        let key = "\(syntax.rawValue)|\(display)|\(size)|\(dark)|\(trim)|\(formula)"
+        guard !formula.isEmpty, !failed.contains(key) else { return nil }
+        if let hit = cache.object(forKey: key as NSString) { return hit.picture }
+        await withCheckedContinuation { (done: CheckedContinuation<Void, Never>) in
+            waiting[key, default: []].append { done.resume() }
+            if !queue.contains(where: { $0.key == key }) {
+                queue.append(Job(key: key, source: formula, syntax: syntax, display: display, size: size, dark: dark, trim: trim))
+            }
+            pump()
+        }
+        return cache.object(forKey: key as NSString)?.picture
+    }
+
     static func bytes(of picture: Picture) -> Int {
         #if os(macOS)
         let cg = picture.image.cgImage(forProposedRect: nil, context: nil, hints: nil)

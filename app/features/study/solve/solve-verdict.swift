@@ -4,6 +4,7 @@ import SwiftUI
 struct SolveVerdict: View {
     @Bindable var model: SolveModel
     let graded: SolveModel.Graded
+    @Environment(\.openLink) private var openLink
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.m) {
@@ -16,12 +17,16 @@ struct SolveVerdict: View {
                     selection: Binding(get: { graded.verdict }, set: { model.override($0) }),
                     options: Verdict.allCases.map { ($0, $0.label) }, size: .small)
             }
+            if model.staysRecheck {
+                Label(String(localized: .solveRecheckNotice), systemImage: "arrow.clockwise")
+                    .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.warning)
+            }
             if !graded.feedback.isEmpty {
                 VStack(alignment: .leading, spacing: Theme.Space.xs) {
                     ForEach(Array(graded.feedback.enumerated()), id: \.offset) { _, line in
                         HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
                             Text(verbatim: "•").foregroundStyle(Theme.Palette.textTertiary)
-                            StudyText(text: line)
+                            StudyText(text: line, look: .prose)
                         }
                     }
                 }
@@ -42,10 +47,10 @@ struct SolveVerdict: View {
             }
             HStack(spacing: Theme.Space.s) {
                 if let page = model.solutionPage {
-                    Button(.solveShowSolution, systemImage: "text.book.closed") { model.show(page) }.buttonStyle(.secondary)
+                    Button(.solveShowSolution, systemImage: "text.book.closed") { model.open(page, openLink) }.buttonStyle(.secondary)
                 }
                 ForEach(model.lecturePages, id: \.self) { page in
-                    Button(String(localized: .solveLecturePage(page.page)), systemImage: "book") { model.show(page) }.buttonStyle(
+                    Button(String(localized: .solveLecturePage(page.page)), systemImage: "book") { model.open(page, openLink) }.buttonStyle(
                         .secondary)
                 }
             }

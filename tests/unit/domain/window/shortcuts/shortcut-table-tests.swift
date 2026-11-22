@@ -15,6 +15,12 @@ struct ShortcutTableTests {
         #expect(ShortcutTable.clashes(in: ShortcutTable.standard).isEmpty)
     }
 
+    @Test func choiceKeysFollowTheOptionsInOrder() {
+        let keys = ShortcutTable.shortcut(.solveChoice).bindings.map(\.combo)
+        #expect(keys.first == KeyCombo("1", []) && keys.last == KeyCombo("9", []) && keys.count == 9)
+        #expect(!Shortcut.Scope.study.isText)
+    }
+
     @Test func boldInANoteIsNotTheTeXBuild() {
         #expect(ShortcutTable.shortcut(.noteBold).key == ShortcutTable.shortcut(.texBuild).key)
         #expect(!Shortcut.Scope.noteEditing.overlaps(.texEditing))

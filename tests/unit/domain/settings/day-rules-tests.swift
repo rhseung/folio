@@ -100,6 +100,14 @@ struct DayRulesTests {
         #expect(DateTimeText.text(at(14, 0), from: now, time: true, settings: Settings(), calendar: calendar) == "오늘")
     }
 
+    @Test func anExamWithoutATimeShowsOnlyItsDate() {
+        let ko = Locale(identifier: "ko_KR@hours=h12")
+        let dateOnly = DateTimeText.date(at(15, 0), calendar: calendar, locale: ko)
+        let timed = DateTimeText.date(at(15, 9), calendar: calendar, locale: ko)
+        #expect(!dateOnly.contains("12:00") && !dateOnly.contains("오전"))
+        #expect(timed.hasPrefix(dateOnly) && timed.contains("9:00"))
+    }
+
     @Test func theMinuteCountStopsExactlyAtAnHour() async {
         await propertyCheck(input: Gen.int(in: -10_000...10_000)) { seconds in
             let now = Date(timeIntervalSince1970: 1_794_800_000)

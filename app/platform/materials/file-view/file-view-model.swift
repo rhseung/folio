@@ -41,6 +41,7 @@ final class FileViewModel {
     private(set) var loaded: Loaded = .loading
     private var openedAt = 0
     let remembersPage: Bool
+    @ObservationIgnored private var dwell: Task<Void, Never>?
 
     init(workspace: Workspace, course: LoadedCourse?, subject: Subject, remembersPage: Bool = true) {
         self.workspace = workspace
@@ -303,6 +304,7 @@ final class FileViewModel {
             // folio:not-an-action page views are activity logs, not data changes
             workspace.perform { try store.log.append(MaterialViewEvent(materialId: m.id, page: page), device: workspace.device, at: .now) }
         }
+        dwell?.cancel()
         workspace.showing(page: nil, of: m, course: course.id)
     }
 
@@ -335,5 +337,18 @@ final class FileViewModel {
     func showing(_ page: Int) {
         guard let m = material, let course else { return }
         workspace.showing(page: page + 1, of: m, course: course.id)
+        dwell(on: page + 1)
+    }
+
+    // 녹음 중 본 쪽(`Recording.viewedPages`)과 같은 규칙으로, 한 쪽에 `pageDwell`보다 오래 머물러야 본 쪽이다. 쪽을 찾으며 넘긴
+    // 쪽은 그 전에 다음 쪽으로 넘어가 취소된다. 이미 본 쪽은 다시 쓰지 않아 로그가 쪽마다 한 줄로 남는다.
+    private func dwell(on page: Int) {
+        dwell?.cancel()
+        dwell = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Recording.pageDwell))
+            guard !Task.isCancelled, let self, let m = self.material, let course = self.course else { return }
+            guard self.workspace.study(of: course.id)?.seenPages(of: m.id).contains(page) != true else { return }
+            self.workspace.run(MaterialViewed(course: course.id, material: m.id, page: page))
+        }
     }
 }

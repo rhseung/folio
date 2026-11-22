@@ -4,11 +4,13 @@ public struct Shortcut: Hashable, Sendable {
     // 단축키가 듣는 자리다. 안쪽 자리에 있으면 바깥 자리의 키도 함께 듣는다. 노트 편집은 노트 화면 안이면서 글 칸 안이다.
     public enum Scope: String, CaseIterable, Hashable, Sendable {
         case app, text, note, noteEditing, texEditing, materialView
+        // 풀기 화면과 카드 넘기기 시트다. 글자 키를 수식 키 없이 쓰므로 글을 쓰는 칸이 열려 있지 않을 때만 듣는다.
+        case study
 
         public var within: Set<Scope> {
             switch self {
             case .app: []
-            case .text, .note, .materialView: [.app]
+            case .text, .note, .materialView, .study: [.app]
             case .noteEditing: [.app, .text, .note]
             case .texEditing: [.app, .text]
             }
@@ -26,7 +28,7 @@ public struct Shortcut: Hashable, Sendable {
     }
 
     public enum Group: String, CaseIterable, Hashable, Sendable {
-        case navigation, tabs, window, notes, materials, app
+        case navigation, tabs, window, notes, materials, study, app
     }
 
     public struct Binding: Hashable, Sendable {
@@ -82,6 +84,13 @@ public struct Shortcut: Hashable, Sendable {
         case .zoomIn: String(localized: .shortcutZoomIn)
         case .zoomOut: String(localized: .shortcutZoomOut)
         case .zoomFit: String(localized: .shortcutZoomFit)
+        case .solveGo: String(localized: .shortcutSolveGo)
+        case .solveTrue: String(localized: .shortcutSolveTrue)
+        case .solveFalse: String(localized: .shortcutSolveFalse)
+        case .solveChoice: String(localized: .shortcutSolveChoice)
+        case .cardFlip: String(localized: .shortcutCardFlip)
+        case .cardUnknown: String(localized: .shortcutCardUnknown)
+        case .cardKnown: String(localized: .shortcutCardKnown)
         }
     }
 }

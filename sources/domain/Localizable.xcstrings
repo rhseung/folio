@@ -3718,6 +3718,138 @@
           }
         }
       }
+    },
+    "shortcut.solve-go": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "채점하고 다음 문제"
+          }
+        }
+      }
+    },
+    "shortcut.solve-true": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "참 고르기"
+          }
+        }
+      }
+    },
+    "shortcut.solve-false": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "거짓 고르기"
+          }
+        }
+      }
+    },
+    "shortcut.solve-choice": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "번호의 보기 고르기"
+          }
+        }
+      }
+    },
+    "shortcut.card-flip": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드 뒤집기"
+          }
+        }
+      }
+    },
+    "shortcut.card-unknown": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모름"
+          }
+        }
+      }
+    },
+    "shortcut.card-known": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앎"
+          }
+        }
+      }
+    },
+    "setting-item.study.plan-day-items": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "하루 계획 항목"
+          }
+        }
+      }
+    },
+    "setting-unit.items": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "개"
+          }
+        }
+      }
+    },
+    "readiness.few-verdicts": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "판정 부족"
+          }
+        }
+      }
+    },
+    "exam-plan.title.units-in": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 단원 %2$lld개"
+          }
+        }
+      }
+    },
+    "exam-plan.title.units-more": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 외 %2$lld개"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

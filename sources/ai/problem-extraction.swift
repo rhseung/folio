@@ -20,7 +20,8 @@ extension ClaudeClient {
                 "solution", and set "solutionPage" to its 1-based page in the solution document. Otherwise leave them null. \
                 Set "units" to the exact titles of the course units the problem tests, most specific first; never invent \
                 a unit title. Skip cover pages, instructions and blank answer space.
-                """, cache: true)
+                """, cache: true),
+            .text(MathWriting.rule, cache: true),
         ]
         var content: [ContentBlock] = [
             .text("<units>\n\(outline.isEmpty ? "(none)" : outline.joined(separator: "\n"))\n</units>\nProblem sheet:"),

@@ -19,6 +19,7 @@ extension GeneratedCommands {
         @Option(help: "채점 근거: key(정답), solution(풀이), claude, user(직접)") var basis: GradeBasis = .user
         @Option(help: "푼 방법: typing, handwriting, mock") var mode: SolveMode = .typing
         @Option(help: "낸 답") var answer: String?
+        @Option(help: "참거짓을 고른 이유 한 줄") var why: String?
         @Option(help: "틀린 이유: concept, method, calculation, misread, time") var reason: WrongReason?
         @Option(help: "채점이 남긴 말. 여러 번 줄 수 있다") var feedback: [String] = []
 
@@ -35,6 +36,7 @@ extension GeneratedCommands {
                 basis: basis,
                 mode: mode,
                 answer: answer,
+                why: why,
                 reason: reason,
                 feedback: feedback,
                 run: nil

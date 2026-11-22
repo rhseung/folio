@@ -117,9 +117,35 @@ struct SolvePickTests {
         #expect(deck == ["다", "나", "가"])
     }
 
+    @Test func aScopedFlipDeckLeavesOtherUnitsOut() {
+        let f = fixture()
+        let cards = [
+            StudyCard(device: device, at: at, unitId: f.units[0].id, front: "범위", back: ""),
+            StudyCard(device: device, at: at, unitId: f.units[1].id, front: "범위 밖", back: ""),
+        ]
+        let flips = cards.map { (time(19, 10), CardFlipEvent(cardId: $0.id, known: false)) }
+        let s = study(f, cards: cards, flips: flips)
+        #expect(s.flipDeck(scope: [f.units[0].id]).map(\.card.front) == ["범위"])
+        #expect(s.flipDeck(unit: nil).count == 2)
+    }
+
     @Test func problemNumbersReadRanges() {
         #expect(ProblemSet.numbers(from: "1-3, 5 8a, 2") == ["1", "2", "3", "5", "8a"])
         #expect(ProblemSet.numbers(from: "") == [])
         #expect(ProblemSet.numbers(from: "1-100000") == ["1-100000"])
+    }
+
+    // 정답이 없는 참거짓을 Claude가 맞음으로 채점하면 고른 보기를 틀림으로 칠하지 않는다.
+    @Test func aPickedOptionFollowsTheVerdict() {
+        let noKey = Problem(number: "1", format: .trueFalse)
+        #expect(noKey.mark(of: "참", picked: "참", verdict: .correct) == .correct)
+        #expect(noKey.mark(of: "거짓", picked: "참", verdict: .correct) == nil)
+        #expect(noKey.mark(of: "참", picked: "참", verdict: .wrong) == .wrong)
+        let keyed = Problem(number: "2", format: .choice, options: ["$K_4$", "$K_5$"], answer: "K_4")
+        #expect(keyed.mark(of: "$K_5$", picked: "$K_5$", verdict: .wrong) == .wrong)
+        #expect(keyed.mark(of: "$K_4$", picked: "$K_5$", verdict: .wrong) == .correct)
+        // 판정을 손으로 맞음으로 고치면 고른 보기도 맞음이다.
+        #expect(keyed.mark(of: "$K_5$", picked: "$K_5$", verdict: .correct) == .correct)
+        #expect(keyed.mark(of: "$K_5$", picked: "$K_5$", verdict: .partial) == nil)
     }
 }

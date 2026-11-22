@@ -15,6 +15,8 @@ struct SheetForm<Rows: View>: View {
     var cancel: String?
     var step: String?
     var cancellable = true
+    // 시트가 아니라 화면에 둔 폼(풀기 고르기)은 닫을 시트가 없으므로 취소가 이 동작을 부르고, 좁은 칸에서는 폭을 줄인다.
+    var onCancel: (() -> Void)?
     @ViewBuilder var rows: Rows
     let onConfirm: () -> Void
     @Environment(\.sheetRoom) private var room
@@ -56,7 +58,10 @@ struct SheetForm<Rows: View>: View {
                         Theme.Palette.danger)
                 }
                 Spacer()
-                if cancellable { Button(cancel ?? String(localized: .commonCancel)) { dismiss() }.keyboardShortcut(.cancelAction) }
+                if cancellable {
+                    Button(cancel ?? String(localized: .commonCancel)) { if let onCancel { onCancel() } else { dismiss() } }
+                        .keyboardShortcut(.cancelAction)
+                }
                 Button(confirm, action: onConfirm).buttonStyle(.prominent).keyboardShortcut(.defaultAction).disabled(isDisabled)
             }
         }
@@ -69,7 +74,8 @@ struct SheetForm<Rows: View>: View {
         } action: {
             chrome = $0 - shown
         }
-        .frame(width: width)
+        .frame(width: onCancel == nil ? width : nil)
+        .frame(maxWidth: onCancel == nil ? nil : width)
         .background(Theme.Palette.page)
         .font(Theme.Typeface.body)
         .controlSize(.large)

@@ -94,8 +94,10 @@ final class ExamsModel {
 
     func when(_ exam: Exam) -> (date: String, time: String?) {
         guard let start = exam.start else { return (String(localized: .examsNoDate), nil) }
+        let weekday = start.formatted(.dateTime.weekday())
+        guard DateTimeText.hasTime(start, calendar: workspace.calendar) else { return (start.formatted(.dateTime.month().day()), weekday) }
         let time = exam.end.map { TimePicker.range(minute(start), minute($0)) } ?? TimePicker.label(minute(start))
-        return (start.formatted(.dateTime.month().day()), start.formatted(.dateTime.weekday()) + " " + time)
+        return (start.formatted(.dateTime.month().day()), weekday + " " + time)
     }
 
     private func minute(_ date: Date) -> Int { workspace.calendar.minuteOfDay(date) }

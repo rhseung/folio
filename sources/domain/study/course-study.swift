@@ -89,8 +89,15 @@ public struct CourseStudy: Sendable {
     public func cards(of unit: UUID) -> [CardRecord] { allCards.filter { $0.card.unitId == unit } }
 
     // 넘겨 보기는 모르는 카드, 처음 보는 카드, 아는 카드 순이다. 같은 무리 안에서는 만든 순서를 지킨다.
-    public func flipDeck(unit: UUID?) -> [CardRecord] {
-        let records = unit.map(cards(of:)) ?? allCards
+    public func flipDeck(unit: UUID?) -> [CardRecord] { ranked(unit.map(cards(of:)) ?? allCards) }
+
+    // 단원 여럿(시험 범위)의 덱이다. 계획의 오답 항목이 범위 밖 단원의 카드까지 넘기지 않게 한다.
+    public func flipDeck(scope units: [UUID]) -> [CardRecord] {
+        let scope = Set(units)
+        return ranked(allCards.filter { scope.contains($0.card.unitId) })
+    }
+
+    private func ranked(_ records: [CardRecord]) -> [CardRecord] {
         func rank(_ s: WrongStatus) -> Int { s.needsWork ? 0 : s == .untried ? 1 : 2 }
         return records.enumerated().sorted { a, b in
             rank(a.element.status) != rank(b.element.status) ? rank(a.element.status) < rank(b.element.status) : a.offset < b.offset
@@ -110,6 +117,9 @@ public struct CourseStudy: Sendable {
             wrong: records.filter(\.status.isOpen).count, recheck: records.filter(\.status.isRecheck).count,
             pastExam: records.filter { $0.source == .pastExam }.count, conceptPages: Array(Set(concept)).sorted { ($0.page) < ($1.page) })
     }
+
+    // 문제 부족인 단원이 준비를 판정받으려면 더 있어야 하는 문제 수다. "문제 만들기"가 이 개수를 먼저 고른다.
+    public func missingProblems(of unit: UUID) -> Int { max(settings.minProblems - problems(of: unit).count, 0) }
 
     public func progress(of unit: Unit, notes: Int) -> UnitProgress {
         let ranges = unit.lecturePages

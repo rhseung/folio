@@ -29,7 +29,7 @@ struct ProblemSetMenuSource: ItemMenuSource {
         case .solve:
             MenuRow(
                 command, .unitsSolve, "pencil.and.list.clipboard",
-                .action { sheets.present(.solve(SolveRequest(course: courseId, set: set.id))) })
+                .action { openLink.solve(SolveRequest(course: courseId, set: set.id)) })
         case .share:
             .share(command, AppLink(.problemSet, set.id), course: courseId)
         case .remove:

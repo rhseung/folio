@@ -50,6 +50,9 @@ struct CardsView: View {
                                                 .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                                         }
                                         Spacer(minLength: Theme.Space.m)
+                                        if model.changed.contains(r.card.id) {
+                                            Badge(String(localized: .cardsSourceChanged), tone: .warning)
+                                        }
                                         if let chip = model.chip(r) { Badge(chip.text, tone: chip.tone) }
                                     }
                                     .contentShape(.rect)
@@ -63,5 +66,6 @@ struct CardsView: View {
                 }
             }
         }
+        .task(id: model.changeKey) { model.loadChanged() }
     }
 }

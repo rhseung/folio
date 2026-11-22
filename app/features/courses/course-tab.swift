@@ -5,7 +5,8 @@ enum CourseTab: CaseIterable, Identifiable {
     case overview, classes, assignments, notes, materials, study, assessment
     var id: Self { self }
 
-    var pages: [AppLink.CoursePage] { AppLink.CoursePage.allCases.filter { $0.tab == self } }
+    // 풀기는 열의 항목이 아니라 문제나 계획에서 여는 화면이다.
+    var pages: [AppLink.CoursePage] { AppLink.CoursePage.allCases.filter { $0.tab == self && $0 != .solve } }
 
     var title: String {
         switch self {

@@ -64,7 +64,7 @@ struct UnitDetail: View {
                     ForEach(problems) { row in
                         CardRow {
                             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                                Text(row.title).lineLimit(1)
+                                StudyText(text: row.title, look: .title).lineLimit(1)
                                 Text(row.detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
                             }
                             Spacer(minLength: Theme.Space.m)
@@ -80,7 +80,7 @@ struct UnitDetail: View {
                         }
                         Spacer(minLength: 0)
                     }
-                    .opens { sheets.present(.makeProblems(course: course.id, unit: unit.id)) }
+                    .opens { sheets.present(.makeProblems(course: course.id, units: [unit.id])) }
                 }
             }
 
@@ -96,6 +96,7 @@ struct UnitDetail: View {
                                 Text(row.detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
                             }
                             Spacer(minLength: Theme.Space.m)
+                            if row.changed { Badge(String(localized: .cardsSourceChanged), tone: .warning) }
                             if let chip = row.chip { Badge(chip.text, tone: chip.tone) }
                         }
                         .opens { sheets.present(.card(course: course.id, draft: CardDraft(row.record.card))) }
@@ -316,7 +317,7 @@ struct UnitDetail: View {
     }
 
     func solve(_ problems: [UUID]) {
-        sheets.present(.solve(SolveRequest(course: course.id, units: [unit.id], problems: problems)))
+        openLink.solve(SolveRequest(course: course.id, units: [unit.id], problems: problems))
     }
 
     func openReview(_ s: Session) {

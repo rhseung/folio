@@ -15,6 +15,7 @@ final class CardsModel {
     let workspace: Workspace
     let courseId: UUID
     var onlyUnknown = false
+    private(set) var changed: Set<UUID> = []
 
     init(workspace: Workspace, courseId: UUID) {
         self.workspace = workspace
@@ -47,4 +48,8 @@ final class CardsModel {
     }
 
     func chip(_ r: CourseStudy.CardRecord) -> (text: String, tone: Tone)? { r.status.cardChip }
+
+    var changeKey: [Int] { [workspace.notesRevision, workspace.studyRevision] }
+
+    func loadChanged() { changed = workspace.changedCardSources(in: courseId) }
 }

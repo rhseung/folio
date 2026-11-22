@@ -327,7 +327,9 @@ struct RenderedBlockTests {
         let text = "# 제목\n\n첫 문단\n둘째 줄\n\n$$\nx^2\n$$\n\n> [!theorem] 정리\n> 본문\n\n> [!proof]\n> 증명"
         let note = ParsedNote(text)
         let blocks = HTMLRenderer.blocks(note)
-        #expect(blocks.map(\.html).joined() == HTMLRenderer.render(note))
+        // 블록으로 그릴 때만 콜아웃이 자기 줄(`data-line`)을 단다. 미리보기가 그 줄로 "카드 만들기"를 찾는다.
+        #expect(blocks.map(\.html).joined().replacing(/\ data-line="\d+"/, with: "") == HTMLRenderer.render(note))
+        #expect(blocks[3].html.contains("data-line=\"10\"") && blocks[4].html.contains("data-line=\"13\""))
         #expect(blocks.map(\.lines) == [1...1, 3...4, 6...8, 10...11, 13...14])
         #expect(blocks[4].html.contains("callout-proof attached"))
     }

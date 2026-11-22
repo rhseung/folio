@@ -181,7 +181,10 @@ final class SessionsModel {
             if entry.offSchedule { parts.append(TimePicker.label(minute)) }
             if let pages = entry.pages { parts.append(String(localized: .sessionsTablePages(pages.lowerBound, pages.upperBound))) }
         case .exam(let exam):
-            parts.append(exam.end.map { TimePicker.range(minute, calendar.minuteOfDay($0)) } ?? TimePicker.label(minute))
+            // 날짜만 정한 시험은 자정을 시각으로 쓰지 않는다.
+            if DateTimeText.hasTime(entry.date, calendar: calendar) {
+                parts.append(exam.end.map { TimePicker.range(minute, calendar.minuteOfDay($0)) } ?? TimePicker.label(minute))
+            }
             if !exam.location.isEmpty { parts.append(exam.location) }
         case .deadline:
             break

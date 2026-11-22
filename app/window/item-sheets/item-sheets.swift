@@ -62,12 +62,13 @@ struct ItemSheets: ViewModifier {
                     if let course = workspace.course(course), let unit = course.file.units.first(where: { $0.id == unit }) {
                         SuggestCardsSheet(workspace: workspace, course: course, unit: unit)
                     }
-                case .flipCards(let course, let unit): CardFlipSheet(workspace: workspace, course: course, unit: unit)
-                case .makeProblems(let course, let unit):
-                    if let course = workspace.course(course), let unit = course.file.units.first(where: { $0.id == unit }) {
-                        MakeProblemsSheet(workspace: workspace, course: course, unit: unit)
+                case .flipCards(let course, let unit, let scope):
+                    CardFlipSheet(workspace: workspace, course: course, unit: unit, scope: scope)
+                case .makeProblems(let course, let ids, let count):
+                    if let course = workspace.course(course) {
+                        let units = UnitTree.outline(course.file.units).map(\.unit).filter { ids.contains($0.id) }
+                        if !units.isEmpty { MakeProblemsSheet(workspace: workspace, course: course, units: units, count: count) }
                     }
-                case .solve(let request): SolveSheet(workspace: workspace, request: request).environment(\.openLink, openLink)
                 case .problemSet(let course):
                     if let course = workspace.course(course) { ProblemSetSheet(workspace: workspace, course: course) }
                 case .problem(let course, let set, let id):

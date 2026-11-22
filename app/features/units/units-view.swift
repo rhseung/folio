@@ -30,7 +30,7 @@ struct UnitsView: View {
                 list
             }
         }
-        .task(id: model.workspace.notesRevision) { model.loadNoteCounts() }
+        .task(id: [model.workspace.notesRevision, model.workspace.studyRevision]) { model.loadNoteCounts() }
         // 페이지는 목록에서 시작하고 지난번에 연 단원은 모델과 함께 사라졌으므로 initial로도 부른다.
         .onChange(of: model.openUnit, initial: true) { _, id in opened(id) }
         .onChange(of: place) { _, link in
@@ -73,7 +73,7 @@ struct UnitsView: View {
 
     func examCard(_ card: UnitsModel.ExamCard) -> some View {
         Card {
-            CardRow(last: card.few.isEmpty) {
+            CardRow(last: card.few == nil) {
                 ExamDateTile(date: card.exam.start, tone: model.examTone(card.days))
                 VStack(alignment: .leading, spacing: Theme.Space.tight) {
                     Text(card.exam.title).font(Theme.Typeface.figureMedium).lineLimit(1)
@@ -83,16 +83,17 @@ struct UnitsView: View {
                 Spacer(minLength: Theme.Space.m)
                 DdayBadge(days: card.days, urgency: model.workspace.settings.urgency)
             }
-            ForEach(Array(card.few.enumerated()), id: \.element.unit.id) { i, few in
-                CardRow(last: i == card.few.count - 1) {
+            if let few = card.few {
+                CardRow(last: true) {
                     Image(systemName: "exclamationmark.triangle").foregroundStyle(Theme.Palette.textTertiary).accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                        Text(.unitsFewProblems(few.unit.title, few.problems)).lineLimit(1)
-                        Text(.unitsFewProblemsDetail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
+                        StudyText(text: few.title, look: .title).lineLimit(1)
+                        StudyText(text: few.detail, look: .title).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+                            .lineLimit(2)
                     }
                     Spacer(minLength: Theme.Space.m)
                     Button(.unitsMakeProblems, systemImage: "sparkle") {
-                        sheets.present(.makeProblems(course: course.id, unit: few.unit.id))
+                        sheets.present(.makeProblems(course: course.id, units: few.units, count: few.missing))
                     }
                     .buttonStyle(.secondary)
                 }
@@ -117,13 +118,14 @@ struct UnitsView: View {
                         Checkbox(isOn: row.done) { model.togglePlan(row) }
                             .help(Text(row.done ? .examsPlanUndo : .examsPlanCheck))
                         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                            Text(row.title).lineLimit(1).strikethrough(row.done, color: Theme.Palette.textTertiary)
+                            StudyText(text: row.title, look: .title).lineLimit(1).strikethrough(row.done, color: Theme.Palette.textTertiary)
                                 .foregroundStyle(row.done ? Theme.Palette.textTertiary : Theme.Palette.text)
                             if !row.detail.isEmpty {
                                 Text(row.detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
                             }
                         }
                         Spacer(minLength: 0)
+                        if let solve = row.solve, !row.done { PlanSolveButton(course: course.id, item: row.item.id, solve: solve) }
                     }
                     .contentShape(.rect)
                     .contextMenu {
@@ -144,7 +146,7 @@ struct UnitsView: View {
                     } label: {
                         HStack(spacing: Theme.Space.m) {
                             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                                Text(row.unit.title).lineLimit(1)
+                                StudyText(text: row.unit.title, look: .title).lineLimit(1)
                                 HStack(spacing: Theme.Space.xs) {
                                     Text(row.parts.joined(separator: " · "))
                                     if let wrong = row.wrong { Text("· " + wrong).foregroundStyle(Theme.Palette.danger) }

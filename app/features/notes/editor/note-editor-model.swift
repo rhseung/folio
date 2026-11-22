@@ -103,6 +103,26 @@ final class NoteEditorModel {
         return true
     }
 
+    // MARK: Cards
+
+    // 노트 블록(정의, 정리)으로 카드를 만든다. 카드가 원본을 다시 찾도록 ID가 없는 블록에는 마지막 줄에 블록 ID를 달고 바로 저장한다.
+    // 저장하지 않으면 디스크의 노트에 ID가 없어 카드가 처음부터 "원본 변경됨"이 된다.
+    func cardDraft(at line: Int, callouts: CalloutTable) -> CardDraft? {
+        guard let id = meta.id, let unit = meta.unitIds.first ?? UnitTree.outline(course.file.units).first?.unit.id,
+            let block = NoteBlockCard.at(line: line, in: body, callouts: callouts)
+        else { return nil }
+        var blockId = block.blockID
+        if blockId == nil {
+            let made = BlockID.make(avoiding: Set(ParsedNote(body).blockIDs))
+            if let tag = block.tagged(body, id: made), replaceLines(tag.line, tag.line, tag.old, tag.new) {
+                blockId = made
+                saveIfDirty()
+            }
+        }
+        return CardDraft(
+            unitId: unit, note: id, block: block, blockId: blockId, source: blockId.flatMap { NoteBlockCard.source(of: $0, in: body) })
+    }
+
     func append(_ text: String) { body += (body.hasSuffix("\n") ? "\n" : "\n\n") + text + "\n" }
 
     // MARK: Review

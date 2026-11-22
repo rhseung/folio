@@ -27,6 +27,10 @@ public struct CalloutKind: Hashable, Sendable {
 
     public var isDefault: Bool { Self.defaults.contains { $0.name == name } }
 
+    // 그대로 기억할 블록(정의, 정리와 그 갈래)이다. 노트 블록 메뉴의 "카드 만들기"가 이 종류에만 뜬다. 같은 색의 `note`나 `info`는
+    // 번호가 없는 안내문이라 뺀다.
+    public var makesCard: Bool { tone == .theorem || (tone == .definition && numbered) }
+
     public static let defaults: [CalloutKind] = [
         CalloutKind("definition", .definition, numbered: true),
         CalloutKind("theorem", .theorem, numbered: true, provable: true),

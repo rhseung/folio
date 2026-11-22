@@ -1,6 +1,7 @@
 import FolioActions
 import FolioCore
 import FolioDomain
+import FolioMarkdown
 import FolioStorage
 import Foundation
 
@@ -25,6 +26,25 @@ extension Workspace {
         (try? store.log.readAll().filter { StudyLog.types.contains($0.type) }) ?? []
     }
 
+    // 노트 블록에서 만든 카드 중 원본 블록이 바뀐 카드다. 노트 파일을 읽으므로 화면은 `notesRevision`이나 `studyRevision`이
+    // 바뀔 때만 다시 부른다. 카드 화면과 단원 페이지가 함께 쓴다.
+    func changedCardSources(in courseId: UUID) -> Set<UUID> {
+        guard let course = course(courseId), let study = study(of: courseId) else { return [] }
+        let cards = study.allCards.map(\.card).filter { $0.noteBlockHash != nil }
+        guard !cards.isEmpty else { return [] }
+        let notes = (try? course.store.notes()) ?? []
+        var texts: [UUID: String] = [:]
+        for id in Set(cards.compactMap(\.noteId)) {
+            if let note = notes.first(where: { $0.meta.id == id }) { texts[id] = try? course.store.read(note) }
+        }
+        return Set(
+            cards.filter { card in
+                let text = card.noteId.flatMap { texts[$0] }
+                return card.sourceChanged(block: card.noteBlockId.flatMap { id in text.flatMap { NoteBlockCard.source(of: id, in: $0) } })
+            }
+            .map(\.id))
+    }
+
     // 계획 체크와 단원의 준비가 `studyRevision`을 읽어야 기록이 바뀔 때 화면이 다시 그려진다.
     func study(of courseId: UUID, now: Date? = nil) -> CourseStudy? {
         guard let course = course(courseId) else { return nil }
@@ -39,16 +59,20 @@ extension Workspace {
         return study
     }
 
-    // 공부일이 바뀐 뒤 처음 열 때 다가오는 시험의 계획을 지금 준비로 다시 짠다(#578). 같은 공부일에 이미 짠 시험은
-    // 건너뛰므로 여러 번 불러도 한 번만 쓴다.
+    // 공부일이 바뀌거나 계획의 기준(범위, 시험 날짜, 공부 설정)이 바뀌면 다가오는 시험의 계획을 지금 준비로 다시 짠다(#578).
+    // 같은 공부일에 같은 기준으로 짠 시험은 건너뛰므로 여러 번 불러도 한 번만 쓴다.
     func replanExams() {
         let today = self.today
         for course in currentCourses {
-            for exam in course.file.exams where exam.planDay != today && !course.file.scope(of: exam).isEmpty {
-                guard let start = exam.start, settings.studyDay(of: start, calendar: calendar) >= today else { continue }
+            for exam in course.file.exams where course.file.needsPlan(exam, today: today, settings: settings, calendar: calendar) {
                 _ = try? runThrowing(ExamPlanMake(course: course.id, exam: exam.id))
             }
         }
+    }
+
+    // 다시 짜야 하는지 볼 값이다. 앱이 이 값을 지켜보다 바뀌면 `replanExams`를 부른다.
+    var planBases: [ExamPlanBasis] {
+        currentCourses.flatMap { c in c.file.exams.map { ExamPlanBasis(exam: $0, in: c.file, settings: settings, calendar: calendar) } }
     }
 
     func notes(for unit: FolioDomain.Unit, in courseId: UUID) -> [NoteFile] {

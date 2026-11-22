@@ -81,7 +81,7 @@ extension ReadinessState {
         case .ready: .success
         case .weak: .warning
         case .fewProblems: .danger
-        case .noVerdict: .plain
+        case .noVerdict, .fewVerdicts: .plain
         }
     }
 }

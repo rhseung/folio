@@ -94,6 +94,8 @@ public struct AppLink: Hashable, Sendable {
 
     public enum CoursePage: String, CaseIterable, Sendable {
         case overview, sessions, units, notes, materials, problems, cards, assignments, exams, grades
+        // 풀기와 모의시험이다. 공부 탭에 속하지만 열의 항목이 아니라 문제나 계획에서 연다.
+        case solve
 
         // 퀴즈 탭이 공부 탭이 되기 전의 페이지 이름이다(#574). 예전 링크는 공부 탭의 단원으로 연다.
         static let formerNames: [String: CoursePage] = ["quiz": .units, "stats": .units]
@@ -132,16 +134,19 @@ public struct AppLink: Hashable, Sendable {
     public private(set) var page: CoursePage?
     public private(set) var settingsPage: SettingsPage?
     public private(set) var lmsPage: LMSPage?
+    public private(set) var solve: Solve?
     public private(set) var anchor: Anchor?
 
-    private init(
-        kind: Kind, id: UUID?, page: CoursePage?, settingsPage: SettingsPage? = nil, lmsPage: LMSPage? = nil, anchor: Anchor?
+    init(
+        kind: Kind, id: UUID?, page: CoursePage?, settingsPage: SettingsPage? = nil, lmsPage: LMSPage? = nil, solve: Solve? = nil,
+        anchor: Anchor?
     ) {
         self.kind = kind
         self.id = kind.isPlace ? nil : id
         self.page = kind == .course && page != .overview ? page : nil
         self.settingsPage = kind == .settings ? settingsPage : nil
         self.lmsPage = kind == .lms ? lmsPage : nil
+        self.solve = kind == .course && page == .solve ? solve ?? Solve() : nil
         self.anchor = anchor.flatMap { kind.anchors.contains($0.kind) && $0.isValid ? $0 : nil }
     }
 
@@ -170,7 +175,7 @@ public struct AppLink: Hashable, Sendable {
     public var withoutAnchor: AppLink { with(nil) }
 
     public func with(_ anchor: Anchor?) -> AppLink {
-        AppLink(kind: kind, id: id, page: page, settingsPage: settingsPage, lmsPage: lmsPage, anchor: anchor)
+        AppLink(kind: kind, id: id, page: page, settingsPage: settingsPage, lmsPage: lmsPage, solve: solve, anchor: anchor)
     }
 
     // MARK: Text
@@ -186,6 +191,7 @@ public struct AppLink: Hashable, Sendable {
         case .classroom(let n): s += "/\(n)"
         case nil: break
         }
+        if let query = solve?.query, !query.isEmpty { s += "?" + query }
         switch anchor {
         case .page(let n): s += "#page=\(n)"
         case .block(let b): s += "#^\(b)"
@@ -222,7 +228,10 @@ public struct AppLink: Hashable, Sendable {
         guard string.count > prefix.count, string.prefix(prefix.count).lowercased() == prefix else { return nil }
         let rest = string.dropFirst(prefix.count)
         let hash = rest.firstIndex(of: "#")
-        var parts = rest[..<(hash ?? rest.endIndex)].split(separator: "/", omittingEmptySubsequences: false).map(String.init)
+        let path = rest[..<(hash ?? rest.endIndex)]
+        let question = path.firstIndex(of: "?")
+        let query = question.map { path[path.index(after: $0)...] }
+        var parts = path[..<(question ?? path.endIndex)].split(separator: "/", omittingEmptySubsequences: false).map(String.init)
         if parts.count > 1, parts.last == "" { parts.removeLast() }
         guard let first = parts.first, let kind = Kind(name: first.lowercased()) else { return nil }
         let fragment = hash.map { String(rest[rest.index(after: $0)...]) } ?? ""
@@ -251,7 +260,8 @@ public struct AppLink: Hashable, Sendable {
         } else if parts.count != 2 {
             return nil
         }
-        self.init(kind: kind, id: id, page: page, anchor: Self.anchor(fragment, of: kind))
+        let solve = page == .solve ? query.map(Solve.init(query:)) : nil
+        self.init(kind: kind, id: id, page: page, solve: solve, anchor: Self.anchor(fragment, of: kind))
     }
 
     static func lmsPage(_ parts: ArraySlice<String>) -> LMSPage? {

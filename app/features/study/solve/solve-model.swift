@@ -18,10 +18,13 @@ final class SolveModel {
         var answer: String
     }
 
-    // 시트 오른쪽에 띄운 자료의 쪽이다. 시트가 창을 가리므로 자료를 창에서 열지 않고 시트 안에서 보인다.
-    struct SidePage: Hashable {
+    // 문제지, 해설, 렉처의 쪽이다. 풀기 화면 옆 칸에 그 자료를 연다.
+    struct PageLink: Hashable {
         var material: UUID
         var page: Int?
+
+        // 문제의 쪽과 링크의 쪽은 모두 1부터 센다.
+        var link: AppLink { AppLink(.material, material, anchor: page.map(AppLink.Anchor.page)) }
     }
 
     struct Outcome: Identifiable {
@@ -37,10 +40,12 @@ final class SolveModel {
     var pick: SolvePick
     var count = 0
     private let seed = UInt64.random(in: 1...UInt64.max)
-    private let runId = UUID()
+    private var runId = UUID()
     private(set) var queue: [UUID] = []
     var index = 0
     var answer = ""
+    // 참거짓에 붙이는 이유 한 줄이다.
+    var why = ""
     var answers: [UUID: String] = [:]
     // 손필기 답은 PNG로 둔다. Claude에 보낼 때 형식을 하나로 맞추기 위해서다.
     var images: [Data] = []
@@ -50,14 +55,19 @@ final class SolveModel {
     var failure: String?
     private(set) var outcomes: [Outcome] = []
     private(set) var started: Date?
-    var side: SidePage?
+    // 모의시험을 멈춘 시각과 지금까지 멈춰 있던 시간이다. 멈춘 동안은 남은 시간이 줄지 않는다.
+    private(set) var pausedAt: Date?
+    private var pausedFor: TimeInterval = 0
+    // 이 과목에서 풀다 둔 차례다. 고르기 화면이 이어 풀기를 권한다.
+    private(set) var resumable: SolveResume?
 
     init(workspace: Workspace, request: SolveRequest) {
         self.workspace = workspace
         self.request = request
         mode = request.mode ?? .typing
-        pick = SolvePick(units: Set(request.units), sets: request.set.map { [$0] } ?? [])
+        pick = SolvePick(units: Set(request.units), sets: request.set.map { [$0] } ?? [], order: request.shuffled ? .shuffled : .byUnit)
         phase = .setup
+        if request.problems.isEmpty, request.planItem == nil { resumable = SolveResume.saved(for: request.course, in: workspace) }
         if !request.problems.isEmpty {
             queue = request.problems
             begin()
@@ -142,9 +152,33 @@ final class SolveModel {
 
     var hidesUnits: Bool { isMock || pick.order == .shuffled }
 
+    var mockMinutes: Int {
+        request.minutes ?? study?.mockMinutes(for: study?.nextExam(now: workspace.now, calendar: workspace.calendar)) ?? 1
+    }
+
     var mockDeadline: Date? {
         guard isMock, let started else { return nil }
-        return started.addingTimeInterval(TimeInterval(workspace.settings.study.mockMinutes * 60))
+        return started.addingTimeInterval(TimeInterval(mockMinutes * 60) + pausedFor)
+    }
+
+    var isPaused: Bool { pausedAt != nil }
+
+    // 멈춘 동안에는 시계를 세우고 시간이 끝나도 내지 않는다.
+    var runningDeadline: Date? { isPaused ? nil : mockDeadline }
+
+    func remaining(at now: Date) -> TimeInterval {
+        guard let deadline = mockDeadline else { return 0 }
+        return max(deadline.timeIntervalSince(pausedAt ?? now), 0)
+    }
+
+    func togglePause() {
+        guard isMock, phase == .solving else { return }
+        if let pausedAt {
+            pausedFor += workspace.now.timeIntervalSince(pausedAt)
+            self.pausedAt = nil
+        } else {
+            pausedAt = workspace.now
+        }
     }
 
     func title(_ r: CourseStudy.ProblemRecord) -> String {
@@ -179,25 +213,28 @@ final class SolveModel {
     // 채점한 뒤에는 맞는 답과 고른 답을 색으로 보인다.
     func tone(of option: String, in problem: Problem) -> Tone? {
         guard let graded, !isMock else { return nil }
-        if option == problem.answer { return .success }
-        return option == graded.answer ? .danger : nil
+        switch problem.mark(of: option, picked: graded.answer, verdict: graded.verdict) {
+        case .correct: return .success
+        case .wrong: return .danger
+        case .partial, nil: return nil
+        }
     }
 
     // MARK: Pages
 
     private func set(of r: CourseStudy.ProblemRecord) -> ProblemSet? { study?.file.problemSets.first { $0.id == r.setId } }
 
-    var problemPage: SidePage? {
+    var problemPage: PageLink? {
         guard let r = current, let set = set(of: r), let material = set.materialId else { return nil }
-        return SidePage(material: material, page: r.problem.page)
+        return PageLink(material: material, page: r.problem.page)
     }
 
     // 모의시험 중에는 해설을 숨긴다. 시험장에서 볼 수 없기 때문이다.
-    var solutionPage: SidePage? {
+    var solutionPage: PageLink? {
         guard !(isMock && phase == .solving), let r = current, let set = set(of: r), let material = set.solutionMaterialId,
             r.problem.solutionPage != nil
         else { return nil }
-        return SidePage(material: material, page: r.problem.solutionPage)
+        return PageLink(material: material, page: r.problem.solutionPage)
     }
 
     var solutionText: String? {
@@ -210,16 +247,24 @@ final class SolveModel {
         return current?.problem.lecturePages ?? []
     }
 
-    func show(_ page: SidePage?) { side = side == page ? nil : page }
+    // 문제지 쪽은 풀기 화면 옆 칸에 연다. 같은 칸에 열면 풀던 문제를 가리고, 옆 칸은 넓히거나 접을 수 있다.
+    func open(_ page: PageLink, _ openLink: OpenLinkAction) { openLink(page.link, in: .beside, course: request.course) }
 
-    func show(_ page: ProblemPage) { show(SidePage(material: page.materialId, page: page.page)) }
+    func open(_ page: ProblemPage, _ openLink: OpenLinkAction) {
+        open(PageLink(material: page.materialId, page: page.page), openLink)
+    }
+
+    // 끝내거나 닫으면 풀기를 연 곳으로 돌아간다. 돌아갈 곳이 없으면(주소로 바로 연 풀기) 단원 페이지로 간다.
+    func close(_ goBack: GoBackAction, _ openLink: OpenLinkAction) {
+        if !goBack() { openLink(.course(request.course, page: .units), course: request.course) }
+    }
 
     private func load() {
         answer = current.flatMap { answers[$0.problem.id] } ?? ""
+        why = ""
         images = current.flatMap { savedImages[$0.problem.id] } ?? []
         graded = nil
         failure = nil
-        side = nil
     }
 
     func choose(_ option: String) {
@@ -266,6 +311,25 @@ final class SolveModel {
 
     func setReason(_ reason: WrongReason) { graded?.reason = reason }
 
+    // 오답을 같은 공부일에 다시 맞혔다. 오답에서 빠지지 않고 "다시 확인"으로 남는다는 것을 알린다.
+    var staysRecheck: Bool {
+        guard let graded, graded.verdict == .correct, !isMock, let status = current?.status else { return false }
+        return WrongFlow.staysRecheck(status, rightOn: workspace.today)
+    }
+
+    var asksWhy: Bool { !isMock && graded != nil && current?.problem.format == .trueFalse }
+
+    // 한 키(`solveGo`)로 채점하고 넘긴다. 채점할 것이 없으면 아무것도 하지 않는다.
+    func go() {
+        if isMock {
+            if isLast { submitMock() } else { next() }
+        } else if graded == nil {
+            if canGrade { grade() }
+        } else {
+            next()
+        }
+    }
+
     var reasons: [WrongReason] { WrongReason.choices(mock: isMock) }
 
     var isLast: Bool { index >= queue.count - 1 }
@@ -303,7 +367,8 @@ final class SolveModel {
             ProblemSolve(
                 id: nil, course: request.course, set: record.setId, problem: record.problem.id, verdict: g.verdict, basis: g.basis,
                 mode: mode,
-                answer: g.answer.isEmpty ? nil : g.answer, reason: g.reason, feedback: g.feedback, run: runId))
+                answer: g.answer.isEmpty ? nil : g.answer, why: record.problem.format == .trueFalse ? why : nil, reason: g.reason,
+                feedback: g.feedback, run: runId))
         outcomes.append(Outcome(record: record, graded: g))
     }
 
@@ -338,7 +403,45 @@ final class SolveModel {
 
     private func finish() {
         if let item = request.planItem { workspace.setPlanItem(item, done: true, course: request.course) }
+        SolveResume.clear(for: request.course)
         phase = .done
+    }
+
+    // MARK: Resume
+
+    // 풀기 화면을 떠날 때 부른다. 모의시험은 시간을 재므로 남기지 않는다. 채점까지 한 문제는 이미 로그에 있으므로, 채점하지 않은 문제부터 다시 연다.
+    // 이어 풀기는 과목 전체의 풀기에서만 묻으므로(`init`), 문제를 정해 연 풀기(계획 항목, 문제 묶음)는 남기지 않는다. 남기면 과목 전체의 풀기가
+    // 계획의 차례를 권하고, 끝까지 풀어도 그 계획 항목은 체크되지 않는다.
+    func leave() {
+        guard phase == .solving, !isMock, !queue.isEmpty, request.problems.isEmpty, request.planItem == nil else { return }
+        let from = graded == nil ? index : index + 1
+        if let record = current, let g = graded { log(record, g) }
+        guard from < queue.count else { return SolveResume.clear(for: request.course) }
+        SolveResume.remember(
+            SolveResume(queue: queue, index: from, mode: mode, order: pick.order, runId: runId),
+            for: request.course)
+    }
+
+    var resumeLine: String? {
+        resumable.map { String(localized: .solveResumeLine($0.index + 1, $0.queue.count)) }
+    }
+
+    func resume() {
+        guard let saved = resumable else { return }
+        queue = saved.queue
+        mode = saved.mode
+        pick.order = saved.order
+        runId = saved.runId
+        resumable = nil
+        phase = .solving
+        started = workspace.now
+        index = saved.index
+        load()
+    }
+
+    func dropResume() {
+        SolveResume.clear(for: request.course)
+        resumable = nil
     }
 
     // MARK: Result

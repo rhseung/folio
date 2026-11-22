@@ -51,3 +51,14 @@ public struct StudyCard: Entity {
         noteBlockHash = try c.decodeIfPresent(String.self, forKey: .noteBlockHash)
     }
 }
+
+extension StudyCard {
+    // 앞뒤 공백만 다른 블록은 같은 블록이다. 편집기가 줄 끝 공백을 지우거나 블록 뒤에 빈 줄을 더해도 "원본 변경됨"이 뜨지 않게 한다.
+    public static func blockHash(_ source: String) -> String { ContentHash.of(source.trimmingCharacters(in: .whitespacesAndNewlines)) }
+
+    // 원본 블록을 찾지 못해도(블록을 지웠거나 블록 ID를 바꿨다) 바뀐 것이다. 노트 블록에서 만들지 않은 카드는 바뀌지 않는다.
+    public func sourceChanged(block: String?) -> Bool {
+        guard let noteBlockHash else { return false }
+        return block.map { Self.blockHash($0) != noteBlockHash } ?? true
+    }
+}

@@ -21996,7 +21996,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "못 한 것을 옮김"
+            "value": "어제에서 옮김"
           }
         }
       }
@@ -22062,7 +22062,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ · 문제 %2$lld개뿐"
+            "value": "%1$@ · 문제 %2$lld개"
           }
         }
       }
@@ -23592,6 +23592,237 @@
           "stringUnit": {
             "state": "translated",
             "value": "시험 범위를 정하면 날마다 할 일이 생기고, 수업이 끝나면 그 회차의 복습 노트가 여기 생겨요."
+          }
+        }
+      }
+    },
+    "solve.resume": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "풀던 차례"
+          }
+        }
+      }
+    },
+    "solve.resume-line": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld번째 문제부터, 모두 %2$lld개"
+          }
+        }
+      }
+    },
+    "solve.resume-drop": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "버리기"
+          }
+        }
+      }
+    },
+    "solve.resume-go": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이어 풀기"
+          }
+        }
+      }
+    },
+    "solve.recheck-notice": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "같은 공부일에 다시 맞혀 '다시 확인'으로 남습니다. 다음 공부일에 맞히면 오답에서 빠집니다."
+          }
+        }
+      }
+    },
+    "solve.why-prompt": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이유 한 줄(선택)"
+          }
+        }
+      }
+    },
+    "solve.pause": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "멈춤"
+          }
+        }
+      }
+    },
+    "solve.resume-mock": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이어서"
+          }
+        }
+      }
+    },
+    "solve.paused-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "멈춤"
+          }
+        }
+      }
+    },
+    "plan-solve.problems": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "풀기"
+          }
+        }
+      }
+    },
+    "plan-solve.mock": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모의시험"
+          }
+        }
+      }
+    },
+    "plan-solve.cards": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드 넘기기"
+          }
+        }
+      }
+    },
+    "cards.source-changed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "원본 변경됨"
+          }
+        }
+      }
+    },
+    "notes.make-card": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드 만들기"
+          }
+        }
+      }
+    },
+    "cards.source-refresh": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "원본에 맞추기"
+          }
+        }
+      }
+    },
+    "cards.source-changed-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드를 만든 뒤 노트의 원본 블록이 바뀌었습니다"
+          }
+        }
+      }
+    },
+    "units.few-problems-none": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · 문제 없음"
+          }
+        }
+      }
+    },
+    "units.few-problems-many": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제 부족 단원 %lld개"
+          }
+        }
+      }
+    },
+    "make-problems.units": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 외 %2$lld단원"
+          }
+        }
+      }
+    },
+    "units.plan-nothing-left": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "할 것 없음"
+          }
+        }
+      }
+    },
+    "course-section.solve": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제 풀기"
           }
         }
       }
