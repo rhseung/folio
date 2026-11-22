@@ -180,13 +180,15 @@ final class CourseModel {
             ? nil : String(localized: .courseAssignmentsNote(file.assignments.count, file.assignments.count - openAssignments(file).count))
     }
 
+    func sessionCount(of unit: FolioDomain.Unit) -> Int { workspace.course(courseId)?.file.sessions(of: unit.id).count ?? 0 }
+
     // 다가오는 시험이 있으면 그 범위 단원을, 없으면 최근에 다룬 단원을 보인다.
     func glanceUnits(_ file: CourseFile, study: CourseStudy?) -> [(unit: FolioDomain.Unit, readiness: UnitReadiness?)] {
         let outline = UnitTree.outline(file.units).map(\.unit)
         let exam = study?.nextExam(now: workspace.now, calendar: workspace.calendar)
         let units =
-            exam.map { e in outline.filter { e.scopeUnitIds.contains($0.id) } }
-            ?? Array(outline.filter { !$0.sessionIds.isEmpty }.suffix(8).reversed())
+            exam.map { file.scopeUnits(of: $0) }
+            ?? Array(outline.filter { !file.sessions(of: $0.id).isEmpty }.suffix(8).reversed())
         return units.prefix(8).map { ($0, study?.readiness(of: $0.id)) }
     }
 

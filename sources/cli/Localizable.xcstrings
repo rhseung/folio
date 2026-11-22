@@ -1310,6 +1310,28 @@
         }
       }
     },
+    "course-gaps.header-gap": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빠진 연결"
+          }
+        }
+      }
+    },
+    "course-gaps.none": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빠진 연결이 없습니다"
+          }
+        }
+      }
+    },
     "course.abstract": {
       "extractionState": "manual",
       "localizations": {
@@ -1878,6 +1900,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "  범위 단원"
+          }
+        }
+      }
+    },
+    "exam.show.scope-edited": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "  범위 단원 (배운 단원에서 고침)"
+          }
+        }
+      }
+    },
+    "exam.show.scope-no-date": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "  날짜가 없어 범위를 계산할 수 없습니다"
           }
         }
       }

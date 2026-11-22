@@ -66,7 +66,7 @@ final class SessionSheetModel {
         // 모든 저장 속성을 정하기 전에는 관찰되는 속성을 읽을 수 없으므로 지역 변수에서 읽는다. 출석은 항목 없음으로
         // 저장하므로, 항목이 없는 수업은 녹음 여부와 상관없이 출석으로 시작한다.
         let initial = (
-            units: s?.unitIds ?? [],
+            units: s.flatMap { s in file?.unitIds(of: s) } ?? [],
             attendance: s.flatMap { s in file?.attendance.first { $0.sessionId == s.id }?.state } ?? AttendanceState.present,
             review: s.flatMap { file?.review(of: $0) }
         )

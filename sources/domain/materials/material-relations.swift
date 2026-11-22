@@ -42,13 +42,11 @@ extension CourseFile {
     }
 
     func sessions(inUnit id: UUID) -> [Session] {
-        sessions.filter { s in s.unitIds.contains(id) || units.contains { $0.id == id && $0.sessionIds.contains(s.id) } }.sorted(
-            by: Session.inOrder)
+        sessions(of: id)
     }
 
     func unitsCovering(session id: UUID) -> [UUID] {
-        let session = sessions.first { $0.id == id }
-        let direct = UnitTree.outline(units).map(\.unit).filter { $0.sessionIds.contains(id) || session?.unitIds.contains($0.id) == true }
+        let direct = sessions.first { $0.id == id }.map { units(of: $0) } ?? []
         var seen = Set(direct.map(\.id)), chain = direct.map(\.id)
         var next = direct.compactMap(\.parentId)
         while let parent = next.popLast() {

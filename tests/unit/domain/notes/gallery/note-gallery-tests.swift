@@ -83,9 +83,9 @@ struct NoteGalleryTests {
         let hall = Unit(device: device, at: now, title: "König–Hall", order: 1)
         let coloring = Unit(device: device, at: now, title: "채색", order: 2)
         var quiz = Exam(device: device, at: now, title: "Quiz 3", start: at(2026, 11, 24, 10, 0))
-        quiz.scopeUnitIds = [hall.id]
+        quiz.addedScopeUnitIds = [hall.id]
         var midterm = Exam(device: device, at: now, title: "중간고사", start: at(2026, 10, 20, 10, 0))
-        midterm.scopeUnitIds = [coloring.id, matching.id]
+        midterm.addedScopeUnitIds = [coloring.id, matching.id]
         let file = CourseFile(
             course: Course(device: device, at: now, title: ""), units: [coloring, hall, matching], exams: [quiz, midterm])
         let notes = [

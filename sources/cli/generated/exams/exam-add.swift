@@ -20,7 +20,7 @@ extension GeneratedCommands {
         @Option(help: ArgumentHelp("끝 일시", valueName: "date")) var end: DateArg?
         @Option(help: "장소") var location: String = ""
         @Option(help: ArgumentHelp("반영되는 성적 항목", valueName: "component"), completion: Complete.ref(.gradeComponent)) var component: String?
-        @Option(help: ArgumentHelp("범위 단원. 여러 번 줄 수 있다. 여러 번 줄 수 있다", valueName: "scope"), completion: Complete.ref(.unit)) var scope: [String] = []
+        @Option(help: ArgumentHelp("범위 단원. 여러 번 줄 수 있다. 빼면 지난 시험 이후 배운 단원. 여러 번 줄 수 있다", valueName: "scope"), completion: Complete.ref(.unit)) var scope: [String] = []
         @Option(help: "범위 설명. 예: 3장까지") var scopeText: String = ""
         @Option(help: "허용 자료. 예: 계산기") var allowed: String = ""
         @Option(help: "메모") var memo: String = ""

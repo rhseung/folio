@@ -28,6 +28,10 @@ struct ProblemIDMigrationTests {
                             "target": .object(["kind": .string("quiz"), "id": .string(unit.uuidString)]),
                         ]),
                         .object(["id": .string(UUID().uuidString), "day": .string("2026-10-21"), "title": .string("족보")]),
+                        .object([
+                            "id": .string(UUID().uuidString), "day": .string("2026-10-22"), "title": .string("연습 1"),
+                            "target": .object(["kind": .string("problem_set"), "id": .string(set.uuidString)]),
+                        ]),
                     ]),
                 ])
             ]),
@@ -51,12 +55,22 @@ struct ProblemIDMigrationTests {
         }
         #expect(plan[0]["target"] == .object(["kind": .string("unit"), "id": .string(unit.uuidString)]))
         #expect(plan[1]["target"] == .object(["kind": .string("custom")]))
+        #expect(plan[2]["target"] == .object(["kind": .string("problems"), "id": .string(set.uuidString)]))
         #expect(plan.allSatisfy { $0["edited"] == .bool(true) })
     }
 
-    @Test func theMigratedFileDecodes() throws {
+    // v7 파일은 v7 마이그레이션에서 이미 바꾸고, main에서 v8이 된 파일은 v8 마이그레이션에서 바꾼다. v7 파일은 두 번 거친다.
+    @Test func identifyingTwiceChangesNothing() throws {
+        var once = v7
+        try CourseFile.identifyProblems(&once)
+        var twice = once
+        try CourseFile.identifyProblems(&twice)
+        #expect(once == twice)
+    }
+
+    @Test(arguments: [7, 8]) func theMigratedFileDecodes(version: Int) throws {
         var raw = v7
-        raw["schemaVersion"] = .number(7)
+        raw["schemaVersion"] = .number(Double(version))
         raw["course"] = try JSONFormat.decoder.decode(
             JSONValue.self, from: JSONFormat.encoder.encode(Course(device: UUID(), at: .now, title: "그래프 이론")))
         if case .array(var exams)? = raw["exams"] {
@@ -64,7 +78,7 @@ struct ProblemIDMigrationTests {
             exams[0]["updatedAt"] = .string("2026-10-01T00:00:00Z")
             exams[0]["updatedBy"] = .string(UUID().uuidString)
             exams[0]["title"] = .string("중간고사")
-            exams[0]["scopeUnitIds"] = .array([])
+            if version == 7 { exams[0]["scopeUnitIds"] = .array([]) }
             exams[0]["scopeText"] = .string("")
             exams[0]["allowed"] = .string("")
             exams[0]["memo"] = .string("")
@@ -83,7 +97,7 @@ struct ProblemIDMigrationTests {
         try JSONFormat.encoder.encode(raw).write(to: url)
         let doc = try StoredDocument<CourseFile>.read(from: url)
         #expect(doc.model.problemSets[0].problems.count == 2)
-        #expect(doc.model.exams[0].plan.map(\.target.kind) == [.unit, .custom])
+        #expect(doc.model.exams[0].plan.map(\.target.kind) == [.unit, .custom, .problems])
         #expect(doc.model.exams[0].plan.allSatisfy { $0.isEdited })
     }
 }

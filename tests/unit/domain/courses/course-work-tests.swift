@@ -105,12 +105,18 @@ struct CourseWorkTests {
         #expect(plan.map(\.date) == ["2026-11-09 13:00", "2026-11-11 13:00"].map(date))
     }
 
-    @Test func plannedClassesSitInTheirWeeksOnTheTimeline() {
+    @Test func plannedClassesSitInTheirWeeksOnTheTable() {
         let made = Session(device: device, at: .now, week: 10, date: date("2026-11-04 13:00"))
         let planned = Session(device: device, at: .now, week: 10, date: date("2026-11-02 13:00"))
-        let items = SessionTimeline.items(
-            CourseFile(course: courses[0], sessions: [made]), planned: [planned], classMinutes: 75, calendar: calendar)
-        #expect(items.map(\.id) == ["week-10", "planned-\(planned.date.timeIntervalSinceReferenceDate)", made.id.uuidString])
+        let table = SessionTable(
+            CourseFile(course: Course(device: device, at: .now, title: "", schedule: monWed), sessions: [made]), planned: [planned],
+            now: date("2026-11-01 09:00"), settings: Settings(),
+            calendar: calendar)
+        #expect(table.weeks.count == 1)
+        #expect(
+            table.weeks[0].cells.flatMap(\.entries).map(\.id) == [
+                "planned-\(planned.date.timeIntervalSinceReferenceDate)", made.id.uuidString,
+            ])
     }
 
     @Test func newSessionsCountWeeksFromTheTermStart() {
@@ -137,15 +143,15 @@ struct CourseWorkTests {
     @Test func untouchedFutureSessionsLeaveAnythingUsedAlone() {
         let now = date("2026-10-26 12:00")
         func at(_ s: String) -> Session { Session(device: device, at: .now, week: 9, date: date(s)) }
-        let past = at("2026-10-19 13:00"), empty = at("2026-11-02 13:00"), noted = at("2026-11-04 13:00"),
-            unitLinked = at("2026-11-09 13:00")
+        let past = at("2026-10-19 13:00"), empty = at("2026-11-02 13:00"), noted = at("2026-11-04 13:00")
+        var unitLinked = at("2026-11-09 13:00")
         var online = at("2026-11-12 21:00"); online.link = "https://zoom.us/j/1"
         var makeup = at("2026-11-13 21:00"); makeup.end = date("2026-11-13 22:15")
         var cancelled = Session(device: device, at: .now, week: 10, date: date("2026-11-16 13:00"))
         cancelled.isCancelled = true
         var marked = at("2026-11-18 13:00"); marked.kind = .makeup
-        var unit = Unit(device: device, at: .now, title: "고윳값", order: 1)
-        unit.sessionIds = [unitLinked.id]
+        let unit = Unit(device: device, at: .now, title: "고윳값", order: 1)
+        unitLinked.addedUnitIds = [unit.id]
         let file = CourseFile(
             course: courses[0], units: [unit], sessions: [past, empty, noted, unitLinked, online, makeup, cancelled, marked])
 
@@ -302,42 +308,41 @@ struct CourseWorkTests {
     @Test func titleIsTheDayAndTheClassUnits() {
         let s = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
         var file = CourseFile(course: courses[0], sessions: [s])
-        #expect(file.title(of: s, calendar: calendar) == "11/3(화)")
+        #expect(file.title(of: file.sessions[0], calendar: calendar) == "11/3(화)")
 
-        var parent = Unit(device: device, at: .now, title: "행복", order: 1)
-        var child = Unit(device: device, at: .now, title: "습관", order: 1, parentId: parent.id)
-        child.sessionIds = [s.id]
-        parent.sessionIds = [s.id]
+        let parent = Unit(device: device, at: .now, title: "행복", order: 1)
+        let child = Unit(device: device, at: .now, title: "습관", order: 1, parentId: parent.id)
         file.units = [parent, child]
-        #expect(file.title(of: s, calendar: calendar) == "11/3(화): 습관")
+        file.setUnits([parent.id, child.id], session: s.id)
+        #expect(file.title(of: file.sessions[0], calendar: calendar) == "11/3(화): 습관")
 
-        var other = Unit(device: device, at: .now, title: "몰입", order: 2)
-        other.sessionIds = [s.id]
+        let other = Unit(device: device, at: .now, title: "몰입", order: 2)
         file.units.append(other)
-        #expect(file.title(of: s, calendar: calendar) == "11/3(화): 습관 · 몰입")
+        file.toggle(session: s.id, unit: other.id)
+        #expect(file.title(of: file.sessions[0], calendar: calendar) == "11/3(화): 습관 · 몰입")
 
-        #expect(file.subject(of: s, besides: child.id) == "몰입")
-        #expect(file.subject(of: s, besides: parent.id) == "습관 · 몰입")
+        #expect(file.subject(of: file.sessions[0], besides: child.id) == "몰입")
+        #expect(file.subject(of: file.sessions[0], besides: parent.id) == "습관 · 몰입")
     }
 
     @Test func aSessionNoteIsNamedByTheDayAndTheClassUnits() {
         let s = Session(device: device, at: .now, week: 10, date: date("2026-11-05 10:30"))
         var file = CourseFile(course: courses[0], sessions: [s])
-        #expect(file.noteTitle(for: s, kind: .rough, calendar: calendar) == "11-05(목)")
-        #expect(file.noteTitle(for: s, kind: .review, calendar: calendar) == "11-05(목) 정리")
+        #expect(file.noteTitle(for: file.sessions[0], kind: .rough, calendar: calendar) == "11-05(목)")
+        #expect(file.noteTitle(for: file.sessions[0], kind: .review, calendar: calendar) == "11-05(목) 정리")
 
         let parent = Unit(device: device, at: .now, title: "Transport layer", order: 1)
-        var child = Unit(device: device, at: .now, title: "Reliable data transfer", order: 1, parentId: parent.id)
-        child.sessionIds = [s.id]
+        let child = Unit(device: device, at: .now, title: "Reliable data transfer", order: 1, parentId: parent.id)
         file.units = [parent, child]
-        #expect(file.noteTitle(for: s, kind: .rough, calendar: calendar) == "11-05(목) Reliable data transfer")
-        #expect(file.noteTitle(for: s, kind: .review, calendar: calendar) == "11-05(목) Reliable data transfer 정리")
+        file.toggle(session: s.id, unit: child.id)
+        #expect(file.noteTitle(for: file.sessions[0], kind: .rough, calendar: calendar) == "11-05(목) Reliable data transfer")
+        #expect(file.noteTitle(for: file.sessions[0], kind: .review, calendar: calendar) == "11-05(목) Reliable data transfer 정리")
     }
 
     func covering(_ title: String, at day: String = "2026-11-03 10:30") -> (Session, CourseFile) {
-        let s = Session(device: device, at: .now, week: 10, date: date(day))
-        var u = Unit(device: device, at: .now, title: title, order: 1)
-        u.sessionIds = [s.id]
+        var s = Session(device: device, at: .now, week: 10, date: date(day))
+        let u = Unit(device: device, at: .now, title: title, order: 1)
+        s.addedUnitIds = [u.id]
         return (s, CourseFile(course: courses[0], units: [u], sessions: [s]))
     }
 
@@ -373,13 +378,11 @@ struct CourseWorkTests {
         let s = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
         var file = CourseFile(course: courses[0], sessions: [s])
         let titles = ["Minimum Degree Two Forces a Cycle", "Eulerian Circuits", "Degree-Sum Formula"]
-        file.units = titles.enumerated().map { i, t in
-            var u = Unit(device: device, at: .now, title: t, order: i + 1)
-            u.sessionIds = [s.id]
-            return u
-        }
+        file.units = titles.enumerated().map { i, t in Unit(device: device, at: .now, title: t, order: i + 1) }
+        file.setUnits(file.units.map(\.id), session: s.id)
         #expect(
-            file.noteTitle(for: s, kind: .rough, calendar: calendar) == "11-03(화) Minimum Degree Two Forces a Cycle · Eulerian Circuits")
+            file.noteTitle(for: file.sessions[0], kind: .rough, calendar: calendar)
+                == "11-03(화) Minimum Degree Two Forces a Cycle · Eulerian Circuits")
     }
 
     @Test func aLateClassIsNamedByItsCalendarDay() {
@@ -391,8 +394,8 @@ struct CourseWorkTests {
     @Test func oldSessionNoteNamesAreRetitled() {
         var s = Session(device: device, at: .now, week: 10, date: date("2026-11-05 10:30"))
         var t = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
-        var unit = Unit(device: device, at: .now, title: "Reliable data transfer", order: 1)
-        unit.sessionIds = [s.id]
+        let unit = Unit(device: device, at: .now, title: "Reliable data transfer", order: 1)
+        s.addedUnitIds = [unit.id]
         let rough = UUID(), review = UUID(), mine = UUID(), loose = UUID(), copy = UUID()
         s.roughNoteId = rough
         s.reviewNoteId = review

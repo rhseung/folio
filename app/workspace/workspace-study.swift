@@ -44,7 +44,7 @@ extension Workspace {
     func replanExams() {
         let today = self.today
         for course in currentCourses {
-            for exam in course.file.exams where exam.planDay != today && !exam.scopeUnitIds.isEmpty {
+            for exam in course.file.exams where exam.planDay != today && !course.file.scope(of: exam).isEmpty {
                 guard let start = exam.start, settings.studyDay(of: start, calendar: calendar) >= today else { continue }
                 _ = try? runThrowing(ExamPlanMake(course: course.id, exam: exam.id))
             }

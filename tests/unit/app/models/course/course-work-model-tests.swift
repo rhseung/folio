@@ -66,6 +66,8 @@ struct ExamsModelTests {
         let (workspace, course) = try fixtureCourse()
         let model = ExamsModel(workspace: workspace, course: course)
         var exam = Exam(device: workspace.device, at: .now, title: "Midterm")
+        #expect(model.scopeLine(exam, units: 0) == "날짜를 정하면 범위를 계산합니다")
+        exam.start = .now
         #expect(model.scopeLine(exam, units: 0) == "범위 단원을 고르지 않았습니다")
         exam.scopeText = "3장까지"
         #expect(model.scopeLine(exam, units: 0) == "3장까지")

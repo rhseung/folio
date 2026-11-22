@@ -94,9 +94,9 @@ struct SolvePickTests {
     @Test func examReadinessCountsTheScopeOnly() {
         let f = fixture()
         var file = f.file
-        var exam = Exam(device: device, at: at, title: "중간고사", start: time(25, 10), end: time(25, 12))
-        exam.scopeUnitIds = [f.units[0].id]
-        file.exams = [exam]
+        file.exams = [Exam(device: device, at: at, title: "중간고사", start: time(25, 10), end: time(25, 12))]
+        file.setScope([f.units[0].id], exam: file.exams[0].id)
+        let exam = file.exams[0]
         let s = CourseStudy(
             file: file, cards: [], log: StudyLog(solves: [solve(f.past, 1, .correct)]), settings: Settings(), calendar: calendar,
             now: time(20, 12))

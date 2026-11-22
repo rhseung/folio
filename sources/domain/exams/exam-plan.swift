@@ -40,7 +40,7 @@ extension CourseStudy {
                 ?? item.target.id.map { problems(inSet: $0) } ?? []
             return !records.isEmpty && records.allSatisfy(\.solved)
         case .wrong:
-            let scope = Set(exam.scopeUnitIds)
+            let scope = Set(file.scope(of: exam))
             let problemsLeft = allProblems.contains { $0.status.needsWork && !scope.isDisjoint(with: $0.problem.unitIds) }
             let cardsLeft = allCards.contains { $0.status.needsWork && scope.contains($0.card.unitId) }
             return !problemsLeft && !cardsLeft
@@ -50,7 +50,7 @@ extension CourseStudy {
     }
 
     public func planInputs(for exam: Exam) -> [ExamPlanner.UnitInput] {
-        UnitTree.outline(file.units).map(\.unit).filter { exam.scopeUnitIds.contains($0.id) }.map { u in
+        file.scopeUnits(of: exam).map { u in
             let r = readiness(of: u.id)
             return ExamPlanner.UnitInput(id: u.id, weight: r.planWeight, pages: r.conceptPages)
         }

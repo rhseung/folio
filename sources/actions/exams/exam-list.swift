@@ -8,7 +8,8 @@ public struct ExamList {
     /// 과목. 강의 코드, 폴더 이름, 과목 이름, UUID
     @Arg public var course: Course.ID
 
-    public func read(_ ctx: ReadContext) throws -> [Exam] {
-        try ctx.file(course).exams.sorted { ($0.start ?? .distantFuture) < ($1.start ?? .distantFuture) }
+    public func read(_ ctx: ReadContext) throws -> [QueryLinks<Exam>] {
+        let f = try ctx.file(course)
+        return f.exams.sorted { ($0.start ?? .distantFuture) < ($1.start ?? .distantFuture) }.map { QueryLinks($0, in: f) }
     }
 }

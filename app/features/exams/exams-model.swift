@@ -108,7 +108,7 @@ final class ExamsModel {
     }
 
     func scope(_ exam: Exam) -> Scope {
-        let units = UnitTree.outline(course.file.units).map(\.unit).filter { exam.scopeUnitIds.contains($0.id) }
+        let units = course.file.scopeUnits(of: exam)
         let ids = Set(units.map(\.id))
         let tops = units.filter { $0.parentId.map { !ids.contains($0) } ?? true }
         let readiness = Dictionary(uniqueKeysWithValues: units.compactMap { u in study.map { (u.id, $0.readiness(of: u.id)) } })
@@ -118,8 +118,12 @@ final class ExamsModel {
     }
 
     func scopeLine(_ exam: Exam, units: Int) -> String {
-        if units == 0 { return exam.scopeText.isEmpty ? String(localized: .examsScopeNone) : exam.scopeText }
-        return String(localized: .examsScopeUnits(units)) + (exam.scopeText.isEmpty ? "" : " · \(exam.scopeText)")
+        let edited = course.file.isEdited(scopeOf: exam) ? " · " + String(localized: .examsScopeEdited) : ""
+        if units == 0 {
+            if !exam.scopeText.isEmpty { return exam.scopeText }
+            return String(localized: exam.start == nil ? .examsScopeNoDate : .examsScopeNone)
+        }
+        return String(localized: .examsScopeUnits(units)) + edited + (exam.scopeText.isEmpty ? "" : " · \(exam.scopeText)")
     }
 
     var canPickScope: Bool { !course.file.units.isEmpty }
@@ -129,7 +133,7 @@ final class ExamsModel {
     }
 
     func pastFacts(_ exam: Exam) -> String {
-        let scoped = exam.scopeUnitIds.count
+        let scoped = course.file.scope(of: exam).count
         let checked = exam.plan.filter { isDone($0, in: exam) }.count
         let files = fileCount(exam)
         let facts =
@@ -182,7 +186,8 @@ final class ExamsModel {
 
     func targets(_ exam: Exam) -> [SelectOption<UUID?>] {
         let outline = UnitTree.outline(course.file.units)
-        let scoped = outline.filter { exam.scopeUnitIds.contains($0.unit.id) }
+        let scope = Set(course.file.scope(of: exam))
+        let scoped = outline.filter { scope.contains($0.unit.id) }
         return [SelectOption(id: UUID?.none, label: String(localized: .examsPlanNoTarget))]
             + (scoped.isEmpty ? outline : scoped).map {
                 SelectOption(id: Optional($0.unit.id), label: $0.unit.title, depth: scoped.isEmpty ? $0.depth : 0)

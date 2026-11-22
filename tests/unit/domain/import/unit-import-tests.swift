@@ -31,8 +31,8 @@ struct UnitImportTests {
         let spanning = r.file.units.first { $0.title == "Spanning trees" }!
         #expect(spanning.parentId == trees.id)
         #expect(r.file.units.first { $0.title == "Matchings" }?.order == 1)
-        #expect(r.file.units.first { $0.id == trees.id }?.sessionIds == [s1.id])
-        #expect(r.file.sessions.first { $0.id == s2.id }?.unitIds == [spanning.id])
+        #expect(r.file.sessions(of: trees.id).map(\.id) == [s1.id])
+        #expect(r.file.sessions.first { $0.id == s2.id }.map { r.file.unitIds(of: $0) } == [spanning.id])
         let again = UnitImporter.merge(specs, into: r.file, calendar: calendar, device: device, now: now)
         #expect(again.added.isEmpty && again.linked.isEmpty)
     }
@@ -44,7 +44,7 @@ struct UnitImportTests {
         let r = UnitImporter.merge(
             [UnitSpec(title: "역학", sessions: ["09-08", "09-08 14:30"])], into: file, calendar: calendar, device: device, now: now)
         #expect(r.unknownSessions == ["09-08"])
-        #expect(r.file.units.first?.sessionIds == [lab.id])
+        #expect(r.file.units.first.map { r.file.sessions(of: $0.id).map(\.id) } == [lab.id])
     }
 }
 
@@ -53,26 +53,26 @@ struct ExamScopeTests {
     let now = Date(timeIntervalSince1970: 1_000_000)
 
     @Test func midtermScopeIsWhatWasTaughtBeforeIt() {
-        let before = Session(device: device, at: now, week: 2, date: now - 86_400)
+        let chapter = Unit(device: device, at: now, title: "Ch1", order: 0)
+        let section = Unit(device: device, at: now, title: "1.1", order: 0, parentId: chapter.id)
+        let skipped = Unit(device: device, at: now, title: "1.2", order: 1, parentId: chapter.id)
+        let later = Unit(device: device, at: now, title: "Ch2", order: 1)
+        var before = Session(device: device, at: now, week: 2, date: now - 86_400)
+        before.addedUnitIds = [section.id]
         var cancelled = Session(device: device, at: now, week: 3, date: now - 3600)
         cancelled.isCancelled = true
-        let after = Session(device: device, at: now, week: 9, date: now + 86_400)
-        let chapter = Unit(device: device, at: now, title: "Ch1", order: 0)
-        var section = Unit(device: device, at: now, title: "1.1", order: 0, parentId: chapter.id)
-        section.sessionIds = [before.id]
-        var skipped = Unit(device: device, at: now, title: "1.2", order: 1, parentId: chapter.id)
-        skipped.sessionIds = [cancelled.id]
-        var later = Unit(device: device, at: now, title: "Ch2", order: 1)
-        later.sessionIds = [after.id]
+        cancelled.addedUnitIds = [skipped.id]
+        var after = Session(device: device, at: now, week: 9, date: now + 86_400)
+        after.addedUnitIds = [later.id]
         let exam = Exam(device: device, at: now, title: "Midterm", start: now)
         var file = CourseFile(
             course: Course(device: device, at: now, title: ""), units: [later, section, chapter, skipped],
             sessions: [before, cancelled, after], exams: [exam])
 
-        let taught = file.unitsTaught(before: exam.start!)
-        #expect(taught == [chapter.id, section.id])
-        #expect(file.addScope(taught, exam: exam.id) == taught)
-        #expect(file.units.first { $0.id == section.id }?.examIds == [exam.id])
+        let taught = [chapter.id, section.id]
+        #expect(file.computedScope(of: exam) == taught)
         #expect(file.addScope(taught, exam: exam.id).isEmpty)
+        #expect(file.exams(scoping: section.id).map(\.id) == [exam.id])
+        #expect(file.addScope([skipped.id], exam: exam.id) == [skipped.id] && file.exams[0].addedScopeUnitIds == [skipped.id])
     }
 }

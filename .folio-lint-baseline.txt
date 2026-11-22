@@ -70,7 +70,6 @@ view-workspace-call	app/features/materials/material-menu.swift	workspace.course(
 view-workspace-call	app/features/search/search-palette.swift	workspace.accent(
 view-workspace-call	app/features/search/search-palette.swift	workspace.course(
 view-workspace-call	app/features/search/search-palette.swift	workspace.course(
-view-workspace-call	app/features/sessions/class-card/planned-session-card.swift	workspace.isStudyToday(
 view-workspace-call	app/features/sessions/session-menu.swift	workspace.course(
 view-workspace-call	app/features/sessions/suggested/suggested-session-row.swift	workspace.course(
 view-workspace-call	app/features/sessions/suggested/suggested-session-row.swift	workspace.isStudyToday(

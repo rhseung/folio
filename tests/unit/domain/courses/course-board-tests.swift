@@ -46,14 +46,13 @@ struct CourseBoardTests {
 
     @Test func aNotesLinksAreReadFromItsSessionAndExam() {
         let review = UUID(), topic = UUID(), summary = UUID(), loose = UUID()
-        var taught = Unit(device: device, at: now, title: "매칭", order: 0)
+        let taught = Unit(device: device, at: now, title: "매칭", order: 0)
         let tested = Unit(device: device, at: now, title: "트리", order: 1)
         var session = Session(device: device, at: now, week: 3, date: now)
         session.reviewNoteId = review
-        session.unitIds = [taught.id]
-        taught.sessionIds = [session.id]
+        session.addedUnitIds = [taught.id]
         var exam = Exam(device: device, at: now, title: "중간")
-        exam.scopeUnitIds = [tested.id]
+        exam.addedScopeUnitIds = [tested.id]
         func entry(_ id: UUID, _ kind: NoteKind, units: [UUID] = [], exam: UUID? = nil) -> NoteEntry {
             NoteEntry(
                 id: id, device: device, at: now, path: "Notes/\(id).md", meta: NoteMeta(id: id, kind: kind, unitIds: units, examId: exam))

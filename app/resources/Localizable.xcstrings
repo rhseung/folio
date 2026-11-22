@@ -4841,6 +4841,28 @@
         }
       }
     },
+    "exams.scope-edited": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고친 범위"
+          }
+        }
+      }
+    },
+    "exams.scope-no-date": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "날짜를 정하면 범위를 계산합니다"
+          }
+        }
+      }
+    },
     "exams.scope-none": {
       "extractionState": "manual",
       "localizations": {
@@ -14462,6 +14484,171 @@
           "stringUnit": {
             "state": "translated",
             "value": "녹음, 결석, 휴강"
+          }
+        }
+      }
+    },
+    "sessions.table.add-on": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에 회차 추가"
+          }
+        }
+      }
+    },
+    "sessions.table.due": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 마감 %2$@"
+          }
+        }
+      }
+    },
+    "sessions.table.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일정 없음"
+          }
+        }
+      }
+    },
+    "sessions.table.next": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음 수업"
+          }
+        }
+      }
+    },
+    "sessions.table.no-review-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습 노트 없음"
+          }
+        }
+      }
+    },
+    "sessions.table.other": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그 밖"
+          }
+        }
+      }
+    },
+    "sessions.table.other-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보강, 시험, 마감"
+          }
+        }
+      }
+    },
+    "sessions.table.pages": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "진도 p.%1$lld–%2$lld"
+          }
+        }
+      }
+    },
+    "sessions.table.planned": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "예정"
+          }
+        }
+      }
+    },
+    "sessions.table.recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음 %@"
+          }
+        }
+      }
+    },
+    "sessions.table.review-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습 노트"
+          }
+        }
+      }
+    },
+    "sessions.table.today": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘"
+          }
+        }
+      }
+    },
+    "sessions.table.today-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이번 주로 스크롤"
+          }
+        }
+      }
+    },
+    "sessions.table.unwrapped": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정리 안 함"
+          }
+        }
+      }
+    },
+    "sessions.table.wrap-up": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 정리"
           }
         }
       }
