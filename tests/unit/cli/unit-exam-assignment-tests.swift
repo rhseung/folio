@@ -84,7 +84,8 @@ struct UnitExamAssignmentTests {
         }
         let gist = try Harness.fixtureCopy()
         for line in setup + [["exam", "scope", "EC4207/중간고사", "--taught"]] { #expect(h.cli(line, gist: gist).code == 0) }
-        #expect(try h.file(GISTStore(url: gist)).exams[0].scopeUnitIds == [Self.tree])
+        let f = try h.file(GISTStore(url: gist))
+        #expect(f.scope(of: f.exams[0]) == [Self.tree])
     }
 
     @Test func examPlan() throws {

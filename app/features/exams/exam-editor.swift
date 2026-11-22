@@ -64,7 +64,7 @@ struct ExamEditor: View {
                 Card {
                     FormRow(label: String(localized: .examsEditorUnits)) {
                         MultiCombobox(
-                            selection: $model.draft.scopeUnitIds,
+                            selection: $model.scope,
                             options: units.map { SelectOption(id: $0.unit.id, label: $0.unit.title, depth: $0.depth) },
                             prompt: String(localized: units.isEmpty ? .examsEditorNoUnits : .examsEditorPick),
                             subtree: { UnitTree.subtree(of: $0, in: course.file.units) }

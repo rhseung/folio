@@ -6,6 +6,7 @@ extension Queries {
         AssignmentList.self,
         AssignmentShow.self,
         ProposalList.self,
+        CourseGaps.self,
         CourseList.self,
         CourseShow.self,
         SemesterList.self,

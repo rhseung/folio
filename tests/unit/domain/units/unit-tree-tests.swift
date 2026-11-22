@@ -62,18 +62,18 @@ struct UnitTreeTests {
         let child = unit("K", 1, parent: removed)
         var session = Session(device: device, at: now, week: 1, date: now)
         var exam = Exam(device: device, at: now, title: "중간고사")
-        session.unitIds = [removed.id]
-        exam.scopeUnitIds = [removed.id, parent.id]
+        session.addedUnitIds = [removed.id]
+        exam.addedScopeUnitIds = [removed.id, parent.id]
         var file = CourseFile(
             course: Course(device: device, at: now, title: "T"), units: [parent, removed, child], sessions: [session], exams: [exam])
         try file.remove(Unit.self, removed.id)
 
         #expect(titles(file.units) == ["P", "-K"])
-        #expect(file.sessions[0].unitIds.isEmpty)
-        #expect(file.exams[0].scopeUnitIds == [parent.id])
+        #expect(file.sessions[0].addedUnitIds.isEmpty)
+        #expect(file.scope(of: file.exams[0]) == [parent.id])
     }
 
-    @Test func togglesKeepBothSidesInStep() {
+    @Test func togglesStoreTheHandPickedLinks() {
         let u = unit("U", 1)
         let s = Session(device: device, at: now, week: 1, date: now)
         let e = Exam(device: device, at: now, title: "기말고사")
@@ -81,13 +81,13 @@ struct UnitTreeTests {
         file.toggle(session: s.id, unit: u.id)
         file.toggle(exam: e.id, unit: u.id)
 
-        #expect(file.units[0].sessionIds == [s.id] && file.sessions[0].unitIds == [u.id])
-        #expect(file.units[0].examIds == [e.id] && file.exams[0].scopeUnitIds == [u.id])
+        #expect(file.sessions(of: u.id).map(\.id) == [s.id] && file.unitIds(of: file.sessions[0]) == [u.id])
+        #expect(file.exams(scoping: u.id).map(\.id) == [e.id] && file.scope(of: file.exams[0]) == [u.id])
 
         file.toggle(session: s.id, unit: u.id)
         file.toggle(exam: e.id, unit: u.id)
-        #expect(file.units[0].sessionIds.isEmpty && file.sessions[0].unitIds.isEmpty)
-        #expect(file.units[0].examIds.isEmpty && file.exams[0].scopeUnitIds.isEmpty)
+        #expect(file.sessions(of: u.id).isEmpty && file.sessions[0].addedUnitIds.isEmpty)
+        #expect(file.exams(scoping: u.id).isEmpty && file.exams[0].addedScopeUnitIds.isEmpty)
     }
 
     @Test func anExamOnAChapterTakesItsSections() {
@@ -96,10 +96,10 @@ struct UnitTreeTests {
         let e = Exam(device: device, at: now, title: "Quiz1")
         var file = CourseFile(course: Course(device: device, at: now, title: "T"), units: [b, chapter, other, a], exams: [e])
         file.toggle(exam: e.id, unit: chapter.id)
-        #expect(file.exams[0].scopeUnitIds == [chapter.id, a.id, b.id])
-        #expect(file.units.filter { $0.examIds == [e.id] }.count == 3)
+        #expect(file.scope(of: file.exams[0]) == [chapter.id, a.id, b.id])
+        #expect(file.units.filter { u in file.exams(scoping: u.id).map(\.id) == [e.id] }.count == 3)
         file.toggle(exam: e.id, unit: chapter.id)
-        #expect(file.exams[0].scopeUnitIds.isEmpty && file.units.allSatisfy(\.examIds.isEmpty))
+        #expect(file.scope(of: file.exams[0]).isEmpty && file.exams[0].addedScopeUnitIds.isEmpty)
     }
 }
 
@@ -110,13 +110,13 @@ struct NoteUnitTests {
     @Test func aNoteBelongsToItsLinkedUnitThenItsSessionsThenItsExams() {
         // `later`는 배열에서 먼저지만 목차에서는 둘째이므로, 배열 순서로 대신 고르면 이것을 고른다.
         let later = Unit(device: device, at: now, title: "B", order: 2), first = Unit(device: device, at: now, title: "A", order: 1)
-        var bySession = Unit(device: device, at: now, title: "C", order: 3)
+        let bySession = Unit(device: device, at: now, title: "C", order: 3)
         var session = Session(device: device, at: now, week: 2, date: now)
-        bySession.sessionIds = [session.id]
+        session.addedUnitIds = [bySession.id]
         let rough = UUID()
         session.roughNoteId = rough
         var exam = Exam(device: device, at: now, title: "Midterm", start: now)
-        exam.scopeUnitIds = [UUID(), later.id]
+        exam.addedScopeUnitIds = [UUID(), later.id]
         var file = CourseFile(
             course: Course(device: device, at: now, title: ""), units: [later, first, bySession], sessions: [session], exams: [exam])
         let topic = UUID(), examNote = UUID(), free = UUID()

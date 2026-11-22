@@ -180,9 +180,13 @@ final class CourseModel {
             ? nil : String(localized: .courseAssignmentsNote(file.assignments.count, file.assignments.count - openAssignments(file).count))
     }
 
+    func sessionCount(of unit: FolioDomain.Unit) -> Int { workspace.course(courseId)?.file.sessions(of: unit.id).count ?? 0 }
+
     func glanceUnits(_ file: CourseFile, reviews: [Workspace.ReviewEntry]) -> [FolioDomain.Unit] {
         let due = reviews.compactMap { r in file.units.first { $0.id == r.item.unitId } }
-        let covered = UnitTree.outline(file.units).map(\.unit).filter { u in !u.sessionIds.isEmpty && !due.contains { $0.id == u.id } }
+        let covered = UnitTree.outline(file.units).map(\.unit).filter { u in
+            !file.sessions(of: u.id).isEmpty && !due.contains { $0.id == u.id }
+        }
         return Array((due + covered.suffix(8).reversed()).prefix(8))
     }
 

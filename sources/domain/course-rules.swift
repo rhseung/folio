@@ -92,15 +92,14 @@ extension CourseFile: Document {
         Items(\.units, noun: ItemKind.unit.noun, name: \.title) {
             NonEmpty(\.title, String(localized: .ruleUnitTitleEmpty))
             Ref(\.parentId, to: Unit.self, as: String(localized: .modelLabelParentUnit), onDelete: .reparent)
-            Refs(\.sessionIds, to: Session.self, onDelete: .nullify)
-            Refs(\.examIds, to: Exam.self, onDelete: .nullify)
             Refs(\.lectureMaterialIds, to: Material.self, onDelete: .nullify)
             Check("Unit.pages", String(localized: .ruleUnitPages)) { u, _ in
                 u.lecturePages.allSatisfy { $0.firstPage >= 1 && $0.firstPage <= $0.lastPage }
             }
         }
         Items(\.sessions, noun: ItemKind.session.noun, name: { s, f in f.title(of: s, calendar: .current) }) {
-            Refs(\.unitIds, to: Unit.self, onDelete: .nullify)
+            Refs(\.addedUnitIds, to: Unit.self, onDelete: .nullify)
+            Refs(\.removedUnitIds, to: Unit.self, onDelete: .nullify)
             Refs(\.materialIds, to: Material.self, onDelete: .nullify)
             Ref(\.roughNoteId, to: NoteEntry.self, onDelete: .nullify)
             Ref(\.reviewNoteId, to: NoteEntry.self, onDelete: .nullify)
@@ -127,7 +126,8 @@ extension CourseFile: Document {
                 }
             }
             Ref(\.componentId, to: GradeComponent.self, onDelete: .nullify)
-            Refs(\.scopeUnitIds, to: Unit.self, as: String(localized: .modelLabelScopeUnit), onDelete: .nullify)
+            Refs(\.addedScopeUnitIds, to: Unit.self, as: String(localized: .modelLabelScopeUnit), onDelete: .nullify)
+            Refs(\.removedScopeUnitIds, to: Unit.self, as: String(localized: .modelLabelScopeUnit), onDelete: .nullify)
         }
         Items(\.exams, \.plan, noun: ItemKind.examPlanItem.noun, name: \.title) {
             NonEmpty(\.title, String(localized: .ruleExamPlanItemTitleEmpty))
@@ -221,8 +221,6 @@ extension CourseFile: Document {
                 )
             }
         }
-        Pair(\.exams, \.scopeUnitIds, \.units, \.examIds)
-        Pair(\.sessions, \.unitIds, \.units, \.sessionIds)
         Pair(\.sessions, \.materialIds, \.materials, \.sessionIds)
         Rule("GradePolicy.topGradeRatio", String(localized: .ruleGradePolicyTopGradeRatio)) { f, _ in
             f.policy.topGradeRatio.map { $0 > 0 && $0 < 1 } ?? true

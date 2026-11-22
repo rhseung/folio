@@ -14,10 +14,52 @@ extension Transcript: StoredModel {
 }
 
 extension CourseFile: StoredModel {
-    public static let schemaVersion = 7
+    public static let schemaVersion = 8
     public static let migrations: [Int: @Sendable (inout JSONValue) throws -> Void] = [
         1: dropSessionKind, 2: dropSessionIndex, 3: dropExamKind, 4: splitRolesByOrigin, 5: keepNoteLinksOnSessions, 6: spellOutRepeats,
+        7: keepOnlyEditedLinks,
     ]
+
+    // 회차의 단원과 시험 범위를 저장하지 않고 계산하게 되면서, 저장된 연결을 계산값과 비교해 차이만 남긴다. 계산값에
+    // 없는 단원은 더한 단원, 계산값에만 있는 단원은 뺀 단원이 되므로 화면에 보이는 연결은 그대로다. 단원 쪽의 짝
+    // (`sessionIds`, `examIds`)도 함께 읽는다. 짝 규칙이 생기기 전 파일에는 한쪽에만 적힌 연결이 있다.
+    static func keepOnlyEditedLinks(_ raw: inout JSONValue) throws {
+        func ids(_ value: JSONValue?) -> [UUID] {
+            guard case .array(let items)? = value else { return [] }
+            return items.compactMap { if case .string(let s) = $0 { UUID(uuidString: s) } else { nil } }
+        }
+        func id(_ value: JSONValue?) -> UUID? { if case .string(let s)? = value { UUID(uuidString: s) } else { nil } }
+        var sessions: [JSONValue] = if case .array(let a)? = raw["sessions"] { a } else { [] }
+        var units: [JSONValue] = if case .array(let a)? = raw["units"] { a } else { [] }
+        var exams: [JSONValue] = if case .array(let a)? = raw["exams"] { a } else { [] }
+
+        var sessionUnits: [UUID: Set<UUID>] = [:]
+        var examUnits: [UUID: Set<UUID>] = [:]
+        for s in sessions { if let sid = id(s["id"]) { sessionUnits[sid, default: []].formUnion(ids(s["unitIds"])) } }
+        for e in exams { if let eid = id(e["id"]) { examUnits[eid, default: []].formUnion(ids(e["scopeUnitIds"])) } }
+        for u in units {
+            guard let uid = id(u["id"]) else { continue }
+            for sid in ids(u["sessionIds"]) { sessionUnits[sid, default: []].insert(uid) }
+            for eid in ids(u["examIds"]) { examUnits[eid, default: []].insert(uid) }
+        }
+        for i in sessions.indices { sessions[i]["unitIds"] = nil }
+        for i in units.indices {
+            units[i]["sessionIds"] = nil
+            units[i]["examIds"] = nil
+        }
+        for i in exams.indices { exams[i]["scopeUnitIds"] = nil }
+        if raw["sessions"] != nil { raw["sessions"] = .array(sessions) }
+        if raw["units"] != nil { raw["units"] = .array(units) }
+        if raw["exams"] != nil { raw["exams"] = .array(exams) }
+
+        var file = try JSONFormat.decoder.decode(CourseFile.self, from: JSONFormat.encoder.encode(raw))
+        // 시험 범위의 계산값은 회차의 단원을 읽으므로 회차를 먼저 맞춘다. 앞 마이그레이션(`dropSessionKind`)이 이
+        // 모양으로 이미 더한 실험 단원도 지킨다.
+        for s in file.sessions { file.setUnits(Array(sessionUnits[s.id, default: []].union(s.addedUnitIds)), session: s.id) }
+        for e in file.exams { file.setScope(Array(examUnits[e.id, default: []].union(e.addedScopeUnitIds)), exam: e.id) }
+        let encoded = try JSONFormat.decoder.decode(JSONValue.self, from: JSONFormat.encoder.encode(file))
+        raw = JSONValue.preservingUnknownKeys(old: raw, new: encoded, model: file)
+    }
 
     static func spellOutRepeats(_ raw: inout JSONValue) throws {
         guard case .array(var assignments)? = raw["assignments"] else { return }

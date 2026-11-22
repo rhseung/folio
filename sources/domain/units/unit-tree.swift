@@ -70,65 +70,38 @@ public enum UnitTree {
 }
 
 extension CourseFile {
-    public mutating func toggle(session: UUID, unit: UUID) {
-        guard let u = units.firstIndex(where: { $0.id == unit }), let s = sessions.firstIndex(where: { $0.id == session }) else { return }
-        let linked = units[u].sessionIds.contains(session)
-        units[u].sessionIds.removeAll { $0 == session }
-        sessions[s].unitIds.removeAll { $0 == unit }
-        if !linked {
-            units[u].sessionIds.append(session)
-            sessions[s].unitIds.append(unit)
-        }
+    // 시험 범위도 계산값과 다른 단원만 저장한다. 그래서 고친 범위가 계산값과 같아지면 아무것도 남지 않는다.
+    public mutating func setScope(_ unitIds: [UUID], exam: UUID) {
+        guard let e = exams.firstIndex(where: { $0.id == exam }) else { return }
+        let wanted = Set(unitIds).intersection(units.map(\.id))
+        let computed = Set(computedScope(of: exams[e]) ?? [])
+        let order = UnitTree.outline(units).map(\.unit.id)
+        exams[e].addedScopeUnitIds = order.filter { wanted.contains($0) && !computed.contains($0) }
+        exams[e].removedScopeUnitIds = order.filter { computed.contains($0) && !wanted.contains($0) }
     }
 
     public mutating func toggle(exam: UUID, unit: UUID) {
-        guard units.contains(where: { $0.id == unit }), let e = exams.firstIndex(where: { $0.id == exam }) else { return }
+        guard units.contains(where: { $0.id == unit }), let e = exams.first(where: { $0.id == exam }) else { return }
         let group = UnitTree.subtree(of: unit, in: units)
-        let on = !exams[e].scopeUnitIds.contains(unit)
-        for id in UnitTree.outline(units).map(\.unit.id) where group.contains(id) { setScope(exam: e, unit: id, on: on) }
-    }
-
-    private mutating func setScope(exam e: Int, unit: UUID, on: Bool) {
-        let exam = exams[e].id
-        exams[e].scopeUnitIds.removeAll { $0 == unit }
-        if on { exams[e].scopeUnitIds.append(unit) }
-        for u in units.indices where units[u].id == unit {
-            units[u].examIds.removeAll { $0 == exam }
-            if on { units[u].examIds.append(exam) }
-        }
-    }
-
-    public func unitsTaught(before date: Date) -> [UUID] {
-        let held = Set(sessions.filter { !$0.isCancelled && $0.date < date }.map(\.id))
-        var ids = Set(units.filter { !held.isDisjoint(with: $0.sessionIds) }.map(\.id))
-        for id in Array(ids) {
-            var parent = units.first { $0.id == id }?.parentId
-            var steps = 0
-            // 손으로 고친 JSON의 부모 순환에서 멈추도록 걸음 수를 제한한다.
-            while let p = parent, steps < units.count {
-                ids.insert(p)
-                parent = units.first { $0.id == p }?.parentId
-                steps += 1
-            }
-        }
-        return UnitTree.outline(units).map(\.unit.id).filter(ids.contains)
-    }
-
-    public mutating func setScope(_ unitIds: [UUID], exam: UUID) {
-        guard let e = exams.firstIndex(where: { $0.id == exam }) else { return }
-        for id in exams[e].scopeUnitIds where !unitIds.contains(id) { setScope(exam: e, unit: id, on: false) }
-        for id in unitIds where !exams[e].scopeUnitIds.contains(id) && units.contains(where: { $0.id == id }) {
-            setScope(exam: e, unit: id, on: true)
-        }
+        var scope = Set(scope(of: e))
+        if scope.contains(unit) { scope.subtract(group) } else { scope.formUnion(group) }
+        setScope(Array(scope), exam: exam)
     }
 
     @discardableResult
     public mutating func addScope(_ unitIds: [UUID], exam: UUID) -> [UUID] {
-        guard let e = exams.firstIndex(where: { $0.id == exam }) else { return [] }
-        let added = unitIds.filter { !exams[e].scopeUnitIds.contains($0) }
+        guard let e = exams.first(where: { $0.id == exam }) else { return [] }
+        let had = scope(of: e)
         // 고른 단원만 넣는다. 장이 범위에 들어도 수업에서 건너뛴 절은 빠진다.
-        for id in added { setScope(exam: e, unit: id, on: true) }
+        let added = unitIds.filter { id in !had.contains(id) && units.contains { $0.id == id } }
+        setScope(had + added, exam: exam)
         return added
+    }
+
+    public mutating func resetScope(exam: UUID) {
+        guard let e = exams.firstIndex(where: { $0.id == exam }) else { return }
+        exams[e].addedScopeUnitIds = []
+        exams[e].removedScopeUnitIds = []
     }
 }
 

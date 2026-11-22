@@ -9,10 +9,11 @@ public struct SessionShow {
     /// 회차
     @Arg public var session: Session.ID
 
-    public func read(_ ctx: ReadContext) throws -> Session {
-        guard let s = try ctx.file(course).sessions.first(where: { $0.id == session }) else {
+    public func read(_ ctx: ReadContext) throws -> QueryLinks<Session> {
+        let f = try ctx.file(course)
+        guard let s = f.sessions.first(where: { $0.id == session }) else {
             throw ActionError.notFound(String(localized: .errorNotFoundItem(ItemKind.session.noun)))
         }
-        return s
+        return QueryLinks(s, in: f)
     }
 }

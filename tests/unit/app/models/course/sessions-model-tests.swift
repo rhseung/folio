@@ -101,8 +101,10 @@ struct SessionsModelTests {
 
         let unit = try #require(workspace.run(UnitAdd(course: graphTheory, title: "매칭"))?.made)
         workspace.run(UnitLink(course: graphTheory, unit: unit, sessions: [s.id]))
-        #expect(model.title(of: s, in: try #require(workspace.course(graphTheory)).file) == "매칭")
-        #expect(model.hasSubject(s, in: try #require(workspace.course(graphTheory)).file))
+        let file = try #require(workspace.course(graphTheory)).file
+        let linked = try #require(file.sessions.first { $0.id == s.id })
+        #expect(model.title(of: linked, in: file) == "매칭")
+        #expect(model.hasSubject(linked, in: file))
     }
 
     @Test func untouchedFutureSessionsAreListedAndRemovedTogether() throws {

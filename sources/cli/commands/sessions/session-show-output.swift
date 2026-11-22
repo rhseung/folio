@@ -3,7 +3,8 @@ import FolioDomain
 import Foundation
 
 extension SessionShow: QueryOutput {
-    func say(_ s: Session, _ r: Resolver) throws {
+    func say(_ linked: QueryLinks<Session>, _ r: Resolver) throws {
+        let s = linked.item
         let c = try r.course(id: course)
         let f = c.file
         courseHeader(c, catalog: try? r.ctx.catalog())
@@ -20,7 +21,7 @@ extension SessionShow: QueryOutput {
         if let link = s.link(schedule: f.course.schedule, calendar: r.ctx.calendar) {
             FolioCLI.say(String(localized: .sessionShowLink(link.absoluteString)))
         }
-        let units = s.unitIds.compactMap { id in f.units.first { $0.id == id }?.title }
+        let units = f.units(of: s).map(\.title)
         if !units.isEmpty {
             FolioCLI.say(String(localized: .sessionShowUnits))
             for u in units { FolioCLI.say("    \(u)") }

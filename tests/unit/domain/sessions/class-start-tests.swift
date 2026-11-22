@@ -187,9 +187,9 @@ struct ClassStartTests {
         ]
         let (last, now) = (file.sessions[0], file.sessions[1])
         file.linkMaterial(matchings, session: last.id, firstPage: 1, lastPage: 12)
-        var unit = Unit(device: device, at: at(1, 9), title: "흐름", order: 0)
-        unit.sessionIds = [now.id]
+        let unit = Unit(device: device, at: at(1, 9), title: "흐름", order: 0)
         file.units = [unit]
+        file.toggle(session: now.id, unit: unit.id)
         file.materials[0].unitIds = [unit.id]
         file.linkMaterial(matchings, session: now.id)
         file.linkMaterial(book, session: now.id)

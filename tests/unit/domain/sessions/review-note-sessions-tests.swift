@@ -94,13 +94,11 @@ struct ReviewNoteSessionsTests {
         let s = sessions(2), note = UUID()
         let now = start.addingTimeInterval(10 * 86_400)
         var f = file(s, notes: [(note, .review)])
-        var first = FolioDomain.Unit(device: device, at: start, title: "rdt", order: 0)
-        var second = FolioDomain.Unit(device: device, at: start, title: "Go-Back-N", order: 1)
-        first.sessionIds = [s[0].id]
-        second.sessionIds = [s[1].id]
+        let first = FolioDomain.Unit(device: device, at: start, title: "rdt", order: 0)
+        let second = FolioDomain.Unit(device: device, at: start, title: "Go-Back-N", order: 1)
         f.units = [first, second]
-        f.sessions[0].unitIds = [first.id]
-        f.sessions[1].unitIds = [second.id]
+        f.sessions[0].addedUnitIds = [first.id]
+        f.sessions[1].addedUnitIds = [second.id]
         func needs() -> [Bool] {
             UnitReviewInput.all(for: f, reviews: [], settings: Settings(), calendar: calendar, now: now).map(\.needsReviewNote)
         }

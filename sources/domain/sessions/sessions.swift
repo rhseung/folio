@@ -13,9 +13,8 @@ extension CourseFile {
     }
 
     public func isUnlinked(_ s: Session, notedSessions: Set<UUID>) -> Bool {
-        s.roughNoteId == nil && s.reviewNoteId == nil && s.inkIds.isEmpty && s.materials.isEmpty && s.unitIds.isEmpty
+        s.roughNoteId == nil && s.reviewNoteId == nil && s.inkIds.isEmpty && s.materials.isEmpty && unitIds(of: s).isEmpty
             && !notedSessions.contains(s.id)
-            && !units.contains { $0.sessionIds.contains(s.id) }
             && !materials.contains { $0.sessionIds.contains(s.id) }
             && !attendance.contains { $0.sessionId == s.id }
             && !recordings.contains { $0.sessionId == s.id }
@@ -83,7 +82,7 @@ extension CourseFile {
     public var labWeeks: [Int: Int] {
         Dictionary(
             units.compactMap { u in
-                guard let n = u.labNumber, let first = sessions.filter({ u.sessionIds.contains($0.id) }).min(by: { $0.date < $1.date })
+                guard let n = u.labNumber, let first = sessions(of: u.id).min(by: { $0.date < $1.date })
                 else { return nil }
                 return (n, first.week)
             }, uniquingKeysWith: { a, _ in a })
@@ -97,7 +96,7 @@ extension CourseFile {
                 units.append(Unit(id: id, device: device, at: now, title: title, order: UnitTree.nextOrder(under: nil, in: units)))
                 return id
             }()
-        if !units.contains(where: { $0.id == unit && $0.sessionIds.contains(session) }) { toggle(session: session, unit: unit) }
+        if !isLinked(session: session, unit: unit) { toggle(session: session, unit: unit) }
     }
 }
 
@@ -256,11 +255,7 @@ extension CourseFile {
 
     public func needsUnits(_ session: Session, at now: Date) -> Bool {
         course.reviews != false && !session.isCancelled && !session.skipsReview && session.date <= now
-            && !units.contains { $0.sessionIds.contains(session.id) }
-    }
-
-    public func units(of session: Session) -> [Unit] {
-        UnitTree.outline(units).map(\.unit).filter { $0.sessionIds.contains(session.id) }
+            && unitIds(of: session).isEmpty
     }
 }
 

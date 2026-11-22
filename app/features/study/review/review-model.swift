@@ -54,7 +54,7 @@ final class ReviewModel {
     func note(for source: Source) -> NoteFile? { notes.first { .note($0.url) == source.id } }
 
     func sessionLine(_ course: LoadedCourse, _ unit: FolioDomain.Unit) -> String? {
-        let sessions = course.file.sessions.filter { unit.sessionIds.contains($0.id) }.sorted { $0.date < $1.date }
+        let sessions = course.file.sessions(of: unit.id).sorted { $0.date < $1.date }
         return sessions.isEmpty ? nil : sessions.map { course.file.day(of: $0, calendar: workspace.calendar) }.joined(separator: ", ")
     }
 
