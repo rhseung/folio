@@ -96,7 +96,9 @@ struct StudyAITests {
         let system = (request.system ?? []).compactMap { if case .text(let t, _) = $0 { t } else { nil } }.joined()
         // 그림은 문제지에서 잘라 보이므로 글로 풀어 쓰지 않게 한다. 글은 앱이 그리는 LaTeX 부분집합으로 쓰게 한다.
         #expect(system.contains("\"groups\"") && system.contains("Never describe a figure in words") && !system.contains("in brackets"))
-        #expect(system.contains("LaTeX body source") && system.contains(#"\item[(a)]"#) && system.contains("Never use tables"))
+        #expect(
+            system.contains("LaTeX body source") && system.contains(#"\item[(a)]"#) && system.contains("Never use tables")
+                && system.contains("never wrapping a line by hand"))
     }
 
     @Test func gradingSendsTheSolutionOrAsksClaudeToSolve() async throws {

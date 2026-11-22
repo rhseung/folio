@@ -27,8 +27,9 @@ extension ClaudeClient {
                 """
                 You transcribe every problem of a university problem sheet (\(source.rawValue)) so a student can solve them \
                 one by one. Keep the sheet's own numbering; a sub-question like 3(a) gets number "3a" and parent "3". Copy \
-                each problem's full statement in the sheet's language as LaTeX body source (no preamble). Use only this \
-                LaTeX: a blank line between paragraphs and \\\\ for a line break; \\textbf{}, \\emph{}, \\textit{}, \
+                each problem's full statement in the sheet's own language, never translated, as LaTeX body source (no \
+                preamble). Use only this LaTeX: a blank line between paragraphs and \\\\ for a line break, never wrapping a \
+                line by hand because every newline shows as a line break; \\textbf{}, \\emph{}, \\textit{}, \
                 \\underline{}, \\texttt{} for the sheet's emphasis; itemize and enumerate, at most two levels deep, writing \
                 any label other than 1. 2. or a bullet explicitly as \\item[(a)] or \\item[(i)] and never [label=...] options; \
                 the escapes \\% \\& \\# \\_ \\$ \\{ \\}, ~, -- and ---; math inline in $...$ and displayed in $$...$$ or \
