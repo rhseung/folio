@@ -129,6 +129,11 @@ struct ItemCommandsTests {
         #expect(
             f.commands(for: f.materials[1], host: .elsewhere, pdf: nil, mac: true)
                 == [.open, .openInEditor, .edit, .move, .showInFinder, .remove])
+        // PDF는 문제를 뽑을 수 있고 폴더는 뽑지 못한다.
+        #expect(
+            f.commands(for: f.materials[0], host: .elsewhere, pdf: nil, mac: false) == [
+                .open, .extractProblems, .edit, .move, .share, .remove,
+            ])
         let exam = f.exams[0].id
         #expect(!f.commands(for: f.materials[0], host: .exam(exam), pdf: nil, mac: false).contains(.unlink(.exam(exam))))
         f.materials[0].examIds = [exam]

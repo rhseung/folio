@@ -77,6 +77,8 @@ struct ItemSheets: ViewModifier {
                     {
                         ProblemEditorSheet(workspace: workspace, course: course, set: set, problem: problem)
                     }
+                case .problemDraft(let course, let material):
+                    if let course = workspace.course(course) { ProblemDraftSheet(workspace: workspace, course: course, material: material) }
                 case .note(let request):
                     if let course = workspace.course(request.course) {
                         NoteEditSheet(workspace: workspace, course: course, note: request.note, moves: request.moves)

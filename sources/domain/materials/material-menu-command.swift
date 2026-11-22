@@ -7,6 +7,7 @@ public enum MaterialMenuCommand: ItemCommand {
     case openWithDefault
     case openInEditor
     case openPDF(UUID)
+    case extractProblems
     case edit
     case move
     case unlink(MenuHost)
@@ -17,6 +18,7 @@ public enum MaterialMenuCommand: ItemCommand {
     public var group: MenuGroup {
         switch self {
         case .open, .openWithDefault, .openInEditor, .openPDF: .open
+        case .extractProblems: .start
         case .edit, .relink: .edit
         case .move, .unlink: .arrange
         case .share, .showInFinder: .share

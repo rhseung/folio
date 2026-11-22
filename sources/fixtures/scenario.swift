@@ -59,6 +59,7 @@ private struct Builder {
     let linearAlgebra = UUID(uuidString: "C0000000-0000-4000-8000-000000000001")!
     static let graphFolder = "2026-3/EC4207 그래프 이론"
     static let matchingSlides = "Lectures/05_Matchings.pdf"
+    static let midtermSheet = "Inherited/소순범/2024 Midterm.pdf"
 
     func at(_ m: Int, _ d: Int, _ h: Int = 0, _ min: Int = 0) -> Date { Scenario.at(2026, m, d, h, min) }
 
@@ -143,6 +144,17 @@ private struct Builder {
             for page in 1...8 { try run(MaterialViewed(course: course, material: slides.id, page: page), at: at(11, 1, 13)) }
         }
         try run(ExamPlanMake(course: course, exam: exam), at: at(11, 4, 8))
+
+        // 2024 중간고사는 Claude가 뽑아 둔 초안으로 남아 문제 페이지에 알림 카드가 뜬다.
+        if let sheet = try ctx.file(course).materials.first(where: { $0.path == Self.midtermSheet }) {
+            let drafted = [
+                problem("1", "$K_{3,3}$는 평면 그래프인가?", .trueFalse, "거짓", coloring, page: 1),
+                problem("2a", "홀의 정리를 쓰시오.", .written, nil, matching, page: 2),
+                problem("2b", "홀의 정리를 증명하시오.", .written, nil, matching, page: 2),
+                problem("3", "페테르센 그래프의 채색수를 구하시오.", .short, "3", coloring, page: 3),
+            ]
+            try run(ProblemSetPropose(course: course, material: sheet.id, problems: drafted), at: at(11, 4, 9))
+        }
     }
 
     func busyDay(extraExams: Bool = false) throws {

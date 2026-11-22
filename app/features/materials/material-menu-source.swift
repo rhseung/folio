@@ -41,6 +41,14 @@ struct MaterialMenuSource: ItemMenuSource {
             MenuRow(command, .fileViewOpenInEditor, "chevron.left.forwardslash.chevron.right", .submenu(editorLeaves))
         case .openPDF(let id):
             MenuRow(command, .materialsOpenPdf, "doc.richtext", .action { openLink(AppLink(.material, id), course: courseId) })
+        case .extractProblems:
+            // 진행과 결과는 문제 페이지의 알림 카드에 뜨므로 그 페이지를 연다.
+            MenuRow(
+                command, .problemExtractMenu, "sparkles",
+                .action {
+                    workspace.extractProblems(from: material.id, in: courseId)
+                    openLink(.course(courseId, page: .problems), course: courseId)
+                })
         case .edit:
             .edit(command) { sheets.present(.material(MaterialSheetRequest(course: courseId, material: material.id, moves: moves))) }
         case .move:

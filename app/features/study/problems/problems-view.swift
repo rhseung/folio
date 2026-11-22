@@ -21,6 +21,9 @@ struct ProblemsView: View {
                 Button(.unitsSolve, systemImage: "pencil.and.list.clipboard") { sheets.present(.solve(model.solveRequest())) }
                     .buttonStyle(.prominent).disabled(model.isEmpty)
             }
+            ForEach(model.extractions) { e in
+                ExtractionNotice(extraction: e, model: model) { sheets.present(.problemDraft(course: course.id, material: e.material)) }
+            }
             if model.isEmpty {
                 Card { CardRow(last: true) { EmptyLine(String(localized: .problemsEmpty)) } }
             } else {
@@ -55,6 +58,37 @@ struct ProblemsView: View {
                         }
                     }
                     .linkTarget(group.set.id)
+                }
+            }
+        }
+    }
+}
+
+private struct ExtractionNotice: View {
+    let extraction: ProblemsModel.Extraction
+    let model: ProblemsModel
+    let review: () -> Void
+
+    var body: some View {
+        switch extraction.phase {
+        case .working:
+            NoticeCard(title: extraction.title, systemImage: "sparkles", tone: .info) { ProgressView().controlSize(.small) }
+        case .failed:
+            NoticeCard(title: extraction.title, detail: extraction.detail, systemImage: "exclamationmark.triangle.fill") {
+                HStack(spacing: Theme.Space.s) {
+                    Button(.commonClose) { model.dismiss(extraction) }.buttonStyle(.ghost)
+                    Button(.problemExtractRetry) { model.retry(extraction) }.buttonStyle(.secondary)
+                }
+            }
+        case .ready:
+            NoticeCard(title: extraction.title, systemImage: "sparkles") {
+                HStack(spacing: Theme.Space.s) {
+                    Button(.problemExtractReview, action: review).buttonStyle(.secondary)
+                    Button(.problemExtractAcceptAll) { model.acceptAll(extraction) }.buttonStyle(.prominent)
+                }
+            } rows: {
+                if let detail = extraction.detail {
+                    CardRow(last: true) { Text(detail).foregroundStyle(Theme.Palette.textSecondary) }
                 }
             }
         }

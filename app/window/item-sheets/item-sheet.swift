@@ -15,6 +15,8 @@ enum ItemSheet: Identifiable {
     case solve(SolveRequest)
     case problemSet(course: UUID)
     case problem(course: UUID, set: UUID, problem: UUID)
+    // 자료에서 뽑은 문제 초안이다. 초안은 자료마다 하나라 자료로 가리킨다.
+    case problemDraft(course: UUID, material: UUID)
     case note(NoteSheetRequest)
     case noteFolder(NoteSheetRequest)
     case material(MaterialSheetRequest)
@@ -27,7 +29,7 @@ enum ItemSheet: Identifiable {
         case .flipCards(let course, let unit, _): unit ?? course
         case .solve(let request): request.id
         case .problemSet(let course): course
-        case .problem(_, _, let id): id
+        case .problem(_, _, let id), .problemDraft(_, let id): id
         case .card(_, let draft): draft.id
         case .note(let request), .noteFolder(let request): request.id
         case .material(let request): request.material
