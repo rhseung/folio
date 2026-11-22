@@ -97,4 +97,25 @@ struct SessionUnitsTests {
             #expect(f.sessions[0].addedUnitIds.isEmpty && f.sessions[0].removedUnitIds.isEmpty)
         }
     }
+
+    // 노트의 단원은 노트가 가리키는 회차들이 배운 단원을 단원 순서대로 모은 것이다. 노트 메타는 회차마다 단원을 한 번만
+    // 구하므로, 단원마다 모든 회차를 다시 보는 정의와 같은 답을 내는지 본다.
+    @Test func reviewNoteUnitsAreTheUnionOfItsClasses() async {
+        await propertyCheck(input: Gen.int(in: 1...30), Gen.int(in: 1...30), Gen.int(in: 0...2), Gen.int(in: 0...2)) {
+            a, b, added, removed in
+            var f = course()
+            let note = UUID()
+            f.notes = [NoteEntry(id: note, device: device, at: now, path: "Notes/복습.md", meta: NoteMeta(id: note, kind: .review))]
+            f.linkMaterial(lecture(f), session: f.sessions[0].id, firstPage: min(a, b), lastPage: max(a, b))
+            f.linkMaterial(lecture(f), session: f.sessions[1].id, firstPage: b, lastPage: 30)
+            f.sessions[0].addedUnitIds = [f.units[added].id]
+            f.sessions[1].removedUnitIds = [f.units[removed].id]
+            f.linkNote(note, to: f.sessions[0].id, as: .review)
+            f.linkNote(note, to: f.sessions[1].id, as: .review)
+            let linked = f.sessions(pointingAt: note)
+            let expected = UnitTree.outline(f.units).map(\.unit.id).filter { u in linked.contains { f.unitIds(of: $0).contains(u) } }
+            #expect(f.meta(of: f.notes[0]).unitIds == expected)
+            #expect(f.units.map(\.id).filter { f.sessions(of: $0).contains { $0.id == f.sessions[0].id } } == f.unitIds(of: f.sessions[0]))
+        }
+    }
 }
