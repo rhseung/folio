@@ -15,11 +15,13 @@ struct SheetForm<Rows: View>: View {
     var cancel: String?
     var step: String?
     var cancellable = true
+    var stretches = false
     // 시트가 아니라 화면에 둔 폼(풀기 고르기)은 닫을 시트가 없으므로 취소가 이 동작을 부르고, 좁은 칸에서는 폭을 줄인다.
     var onCancel: (() -> Void)?
     @ViewBuilder var rows: Rows
     let onConfirm: () -> Void
     @Environment(\.sheetRoom) private var room
+    @Environment(\.sheetWidthRoom) private var widthRoom
     @State private var rowsHeight: CGFloat = 0
     @State private var chrome: CGFloat = 0
 
@@ -74,11 +76,28 @@ struct SheetForm<Rows: View>: View {
         } action: {
             chrome = $0 - shown
         }
-        .frame(width: onCancel == nil ? width : nil)
-        .frame(maxWidth: onCancel == nil ? nil : width)
+        .frame(width: fixedWidth)
+        .frame(maxWidth: widest)
         .background(Theme.Palette.page)
         .font(Theme.Typeface.body)
         .controlSize(.large)
+    }
+
+    // 시트는 고정 폭이고 창 안쪽 폭보다 넓어지지 않는다. 화면에 둔 폼은 칸의 폭을 따른다. iPad에서 쪽 크기로 띄운 시트(`stretches`)는
+    // 시트의 폭을 채운다. 고정 폭이 시트보다 넓으면 잘리기 때문이다.
+    private var fixedWidth: CGFloat? {
+        #if os(iOS)
+        if stretches { return nil }
+        #endif
+        guard onCancel == nil else { return nil }
+        return min(width, widthRoom.map { $0 - Theme.Space.xl * 2 } ?? width)
+    }
+
+    private var widest: CGFloat? {
+        #if os(iOS)
+        if stretches { return .infinity }
+        #endif
+        return onCancel == nil ? nil : width
     }
 
     @ViewBuilder private var form: some View {

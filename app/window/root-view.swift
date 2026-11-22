@@ -29,6 +29,7 @@ struct RootView: View {
     #endif
     @State private var inputGuide: InputGuideRequest?
     @State private var contentHeight: CGFloat?
+    @State private var contentWidth: CGFloat?
     @Environment(\.colorScheme) private var colorScheme
     #if os(macOS)
     @State private var madeAt = Date.now
@@ -215,10 +216,16 @@ struct RootView: View {
                 #endif
                 .environment(\.noteCallouts, callouts)
                 .environment(\.sheetRoom, contentHeight)
+                .environment(\.sheetWidthRoom, contentWidth)
                 .onGeometryChange(for: CGFloat.self) {
                     $0.size.height - $0.safeAreaInsets.top - $0.safeAreaInsets.bottom
                 } action: {
                     contentHeight = $0
+                }
+                .onGeometryChange(for: CGFloat.self) {
+                    $0.size.width - $0.safeAreaInsets.leading - $0.safeAreaInsets.trailing
+                } action: {
+                    contentWidth = $0
                 }
                 .classStartPrompt(
                     workspace, open: { open($0.link, in: $0.placement) }, openSplit: { openTab($0, course: $1) },

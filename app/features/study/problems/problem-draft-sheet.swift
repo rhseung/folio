@@ -12,49 +12,50 @@ struct ProblemDraftSheet: View {
 
     var body: some View {
         SheetForm(
-            title: model.sheetTitle, confirm: model.confirmTitle, isDisabled: !model.canAccept, carded: false, width: Theme.Size.solveSetup,
-            deleteTitle: String(localized: .problemDraftDiscard), onDelete: model.discard
+            title: model.sheetTitle, confirm: model.confirmTitle, isDisabled: !model.canAccept, carded: false,
+            width: Theme.Size.problemDraft,
+            deleteTitle: String(localized: .problemDraftDiscard), onDelete: model.discard, stretches: true
         ) {
             Card {
                 FormRow(label: String(localized: .problemSetFieldTitle), last: true) {
                     InlineField(String(localized: .problemSetFieldTitleExample), text: $model.title)
                 }
             }
+            // 문제 목록은 따로 스크롤하지 않는다. 시트가 창 높이까지 자라고 그 안에서 제목 칸과 함께 스크롤해야 한 번에 많은 문제가 보인다.
             Card {
-                ScrollView {
-                    VStack(spacing: 0) {
-                        let lines = model.lines
-                        ForEach(lines) { line in
-                            let last = line.id == lines.last?.id
-                            switch line {
-                            case .group(let group, let depth, let leaves):
-                                DraftGroupRow(
-                                    group: group, depth: depth, check: model.check(leaves), caption: model.groupCaption(leaves),
-                                    expanded: !model.collapsed.contains(group.id), sheet: model.sheet, accent: accent.color, last: last,
-                                    toggle: { model.toggle(group: leaves) },
-                                    disclose: { withAnimation(.snappy) { model.toggleCollapsed(group.id) } })
-                            case .problem(let id, let depth):
-                                if let i = model.index(of: id) {
-                                    DraftRow(
-                                        row: $model.rows[i], depth: depth, sheet: model.sheet,
-                                        caption: model.caption(model.rows[i].problem),
-                                        units: model.unitOptions, accent: accent.color, last: last
-                                    ) {
-                                        model.toggle(id)
-                                    }
+                VStack(spacing: 0) {
+                    let lines = model.lines
+                    ForEach(lines) { line in
+                        let last = line.id == lines.last?.id
+                        switch line {
+                        case .group(let group, let depth, let leaves):
+                            DraftGroupRow(
+                                group: group, depth: depth, check: model.check(leaves), caption: model.groupCaption(leaves),
+                                expanded: !model.collapsed.contains(group.id), sheet: model.sheet, accent: accent.color, last: last,
+                                toggle: { model.toggle(group: leaves) },
+                                disclose: { withAnimation(.snappy) { model.toggleCollapsed(group.id) } })
+                        case .problem(let id, let depth):
+                            if let i = model.index(of: id) {
+                                DraftRow(
+                                    row: $model.rows[i], depth: depth, sheet: model.sheet,
+                                    caption: model.caption(model.rows[i].problem),
+                                    units: model.unitOptions, accent: accent.color, last: last
+                                ) {
+                                    model.toggle(id)
                                 }
                             }
                         }
                     }
                 }
-                .overflowFade(.vertical)
-                .frame(maxHeight: Theme.Size.cardDrafts)
             }
         } onConfirm: {
             if model.accept() { dismiss() }
         }
         .confirming($model.pending)
         .onChange(of: model.finished) { if model.finished { dismiss() } }
+        #if os(iOS)
+        .presentationSizing(.page)
+        #endif
     }
 }
 

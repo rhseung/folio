@@ -24046,6 +24046,17 @@
           }
         }
       }
+    },
+    "study.figure-zoom": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그림 크게 보기"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

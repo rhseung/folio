@@ -1,72 +1,94 @@
-import CoreImage
 import FolioDomain
-import PDFKit
 import SwiftUI
 
-// 문제지 PDF의 한 칸(문제의 그림)을 PDF에서 바로 잘라 그린다. 다시 그린 그림이 아니라 원본 쪽의 그 자리다. 다크 모드에서는
-// PDF 보기와 같은 `DarkPaper`로 종이와 잉크의 밝기를 뒤집는다.
+// 문제지 PDF의 한 칸(문제의 그림)을 PDF에서 바로 잘라 그린다. 다시 그린 그림이 아니라 원본 쪽의 그 자리다. 누르면 크게 보는
+// 시트가 뜬다.
 struct PDFRegionImage: View {
     let url: URL?
     let region: ProblemRegion
+    // 그림의 이름표(PDF의 10–11pt 글자)를 앱 본문 크기로 읽게 적어도 이만큼 키운다. 자리가 좁으면 그 폭에 맞춰 줄인다.
+    var least: CGFloat = 1.5  // design: one-off, 거리가 아니라 확대 배율이다
+    // 작은 칸(그림 하나, 70pt 남짓)은 너비나 높이가 이만큼이 될 때까지 더 키운다.
+    var readable: CGFloat = Theme.Size.figureReadable
+    var zoomable = true
     @Environment(\.colorScheme) private var scheme
     @Environment(\.displayScale) private var displayScale
-    @State private var image: CGImage?
+    @State private var picture: Picture?
+    @State private var zoomed = false
 
     var body: some View {
-        let scale = Self.pixelsPerPoint(displayScale)
+        let key = Key(
+            url: url, region: region, dark: scheme == .dark, displayScale: max(displayScale, 1), least: least, readable: readable)
         Group {
-            if let image {
-                Image(decorative: image, scale: scale).resizable().scaledToFit()
-                    .frame(maxWidth: CGFloat(image.width) / scale, alignment: .leading)
+            if let picture {
+                let image = Image(decorative: picture.image, scale: CGFloat(picture.image.width) / picture.width).resizable()
+                    .scaledToFit().frame(maxWidth: picture.width, alignment: .leading)
+                if zoomable {
+                    Button {
+                        zoomed = true
+                    } label: {
+                        image.contentShape(.rect)
+                    }
+                    .buttonStyle(.pointing(.plain))
+                    .help(Text(.studyFigureZoom))
+                    .accessibilityLabel(Text(.studyFigureZoom))
+                } else {
+                    image
+                }
             } else {
                 Color.clear.frame(height: Theme.Size.touchTarget)
             }
         }
-        .task(id: Key(url: url, region: region, dark: scheme == .dark, scale: scale)) {
-            let key = Key(url: url, region: region, dark: scheme == .dark, scale: scale)
-            image = await Task.detached(priority: .userInitiated) { Self.render(key) }.value
-        }
+        .task(id: key) { picture = await Task.detached(priority: .userInitiated) { Self.render(key) }.value }
+        .sheet(isPresented: $zoomed) { RegionZoom(url: url, region: region) }
     }
 
-    // 그림을 PDF의 크기보다 키워 보일 때도 흐리지 않게 화면 배율의 1.5배로 그린다.
-    private static func pixelsPerPoint(_ displayScale: CGFloat) -> CGFloat { max(displayScale, 1) * 1.5 }
+    private struct Picture: Sendable {
+        var image: CGImage
+        // 화면에 보이는 가장 큰 너비(pt)다.
+        var width: CGFloat
+    }
 
     private struct Key: Equatable, Sendable {
         var url: URL?
         var region: ProblemRegion
         var dark: Bool
-        var scale: CGFloat
+        var displayScale: CGFloat
+        var least: CGFloat
+        var readable: CGFloat
     }
 
-    nonisolated private static func render(_ key: Key) -> CGImage? {
-        guard let url = key.url, let page = PDFDocument(url: url)?.page(at: key.region.page - 1) else { return nil }
-        // 칸은 쪽을 돌려 보이는 모양을 기준으로 한다. `draw(with:to:)`가 쪽의 회전을 적용해 그 모양으로 그린다.
-        let box = page.bounds(for: .cropBox)
-        let size = page.rotation % 180 == 0 ? box.size : CGSize(width: box.height, height: box.width)
-        let r = key.region
-        let crop = CGRect(x: r.x * size.width, y: r.y * size.height, width: r.width * size.width, height: r.height * size.height)
-        let width = Int((crop.width * key.scale).rounded(.up)), height = Int((crop.height * key.scale).rounded(.up))
-        guard width > 0, height > 0, let space = CGColorSpace(name: CGColorSpace.sRGB),
-            let context = CGContext(
-                data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: space,
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+    // 너비와 높이 중 먼저 `readable`에 닿는 쪽까지 키운다. 길쭉한 칸이 한 방향으로 너무 커지지 않게 하기 위해서다.
+    nonisolated private static func render(_ key: Key) -> Picture? {
+        guard let url = key.url,
+            let drawn = PDFRegionRenderer.render(
+                url, region: key.region, dark: key.dark, pixelsPerPoint: key.displayScale,
+                grow: { size in max(key.least, min(key.readable / size.width, key.readable / size.height)) })
         else { return nil }
-        context.setFillColor(CGColor(gray: 1, alpha: 1))
-        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
-        context.scaleBy(x: key.scale, y: key.scale)
-        context.translateBy(x: -crop.minX, y: -(size.height - crop.maxY))
-        page.draw(with: .cropBox, to: context)
-        guard let drawn = context.makeImage() else { return nil }
-        return key.dark ? darkened(drawn) : drawn
+        return Picture(image: drawn.crop.image, width: drawn.crop.size.width * drawn.grow)
     }
+}
 
-    nonisolated private static func darkened(_ image: CGImage) -> CGImage? {
-        var output = CIImage(cgImage: image)
-        for filter in DarkPaper.theme.filters {
-            filter.setValue(output, forKey: kCIInputImageKey)
-            guard let next = filter.outputImage else { return image }
-            output = next
+// 그림 하나를 크게 보는 시트다. 그림이 시트보다 크면 스크롤한다.
+private struct RegionZoom: View {
+    let url: URL?
+    let region: ProblemRegion
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: Theme.Space.m) {
+            Button(.commonClose) { dismiss() }.keyboardShortcut(.cancelAction)
+            ScrollView([.horizontal, .vertical]) {
+                PDFRegionImage(url: url, region: region, least: 2.5, readable: Theme.Size.figureZoom, zoomable: false)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
-        return CIContext().createCGImage(output, from: output.extent)
+        .padding(Theme.Space.xl)
+        #if os(macOS)
+        .frame(minWidth: Theme.Size.figureZoom, minHeight: Theme.Size.figureZoom * 3 / 4)
+        #else
+        .presentationSizing(.page)
+        #endif
+        .background(Theme.Palette.page)
     }
 }
