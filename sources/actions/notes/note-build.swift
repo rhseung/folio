@@ -38,7 +38,7 @@ public struct NoteBuild {
             return
         }
 
-        let built = try pdf.map { try MaterialBuild.output($0, of: file.url) } ?? MaterialBuild.compile(file.url, ctx)
+        let built = try pdf.map { try MaterialBuild.output($0, of: file.url) } ?? MaterialBuild.compile(file.url, ctx.now, ctx.calendar)
         try ctx.io(change) {
             try FileManager.default.createDirectory(
                 at: store.fileURL(target).deletingLastPathComponent(), withIntermediateDirectories: true)

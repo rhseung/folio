@@ -65,14 +65,8 @@ public struct ProblemCollectionFiles: Sendable {
             try? FileManager.default.removeItem(at: target)
             try FileManager.default.copyItem(at: source, to: target)
         }
-        return (try Self.compile(problemsTeX, now, calendar), try Self.compile(solutionsTeX, now, calendar))
-    }
-
-    private static func compile(_ source: URL, _ now: Date, _ calendar: Calendar) throws -> URL {
-        let build = try TexEngine.shared.compile(source, into: TexEngine.outputFolder(for: source), at: now, calendar: calendar)
-        guard let pdf = build.pdf else {
-            throw ActionError.rule(String(localized: .errorTexFailed(build.errors.map(\.description).joined(separator: "\n"))))
-        }
-        return pdf
+        return (
+            try MaterialBuild.compile(problemsTeX, now, calendar), try MaterialBuild.compile(solutionsTeX, now, calendar)
+        )
     }
 }
