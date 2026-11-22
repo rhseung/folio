@@ -56,4 +56,11 @@ struct SolveModelTests {
         model.back()
         #expect(model.answer == "참")
     }
+
+    // 문제지 1쪽 단추는 PDF의 첫 쪽(0번)을 연다.
+    @Test func aSidePageOpensTheProblemsOwnPage() {
+        #expect(SolveModel.SidePage(material: UUID(), page: 1).index == 0)
+        #expect(SolveModel.SidePage(material: UUID(), page: 3).index == 2)
+        #expect(SolveModel.SidePage(material: UUID(), page: nil).index == nil)
+    }
 }

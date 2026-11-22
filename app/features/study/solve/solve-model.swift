@@ -22,6 +22,9 @@ final class SolveModel {
     struct SidePage: Hashable {
         var material: UUID
         var page: Int?
+
+        // 문제의 쪽은 1부터 세고 `FileView`는 0부터 센다. 그대로 넘기면 한 쪽 뒤가 열린다.
+        var index: Int? { page.map { max($0 - 1, 0) } }
     }
 
     struct Outcome: Identifiable {

@@ -131,7 +131,7 @@ struct SolveRun: View {
             .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.s)
             // PDF 뷰는 처음 받은 문서를 계속 쓰므로 자료가 바뀌면 새 뷰를 만든다.
             FileView(
-                workspace: model.workspace, course: course, material: side.material, requestedPage: .constant(side.page),
+                workspace: model.workspace, course: course, material: side.material, requestedPage: .constant(side.index),
                 remembersPage: false
             )
             .id(side)
