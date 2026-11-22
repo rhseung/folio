@@ -99,8 +99,7 @@ extension CourseFile {
         if !item.title.isEmpty { return item.title }
         switch item.target.kind {
         case .unit:
-            let titles = item.target.units.compactMap { id in units.first { $0.id == id }?.title }
-            return titles.isEmpty ? String(localized: .examPlanTitleUnit) : titles.joined(separator: ", ")
+            return unitsTitle(item.target.units)
         case .problems:
             let set = item.target.id.flatMap { id in problemSets.first { $0.id == id } }
             let count = item.target.problemIds?.count
@@ -114,5 +113,21 @@ extension CourseFile {
         case .wrong: return String(localized: .examPlanTitleWrong)
         case .custom: return item.title
         }
+    }
+
+    // 묶음 항목은 단원 이름을 모두 이으면 무엇을 하는 날인지 읽히지 않는다. 한 부모의 단원이면 부모 이름으로, 아니면 첫 단원과 나머지
+    // 개수로 부른다. 둘까지는 이어도 짧으므로 잇는다.
+    func unitsTitle(_ ids: [UUID]) -> String {
+        let bundled = ids.compactMap { id in units.first { $0.id == id } }
+        guard let first = bundled.first else { return String(localized: .examPlanTitleUnit) }
+        if bundled.count == 1 { return first.title }
+        let parents = Set(bundled.map { UnitTree.parent(of: $0, in: units) })
+        if parents.count == 1, let parentId = parents.first ?? nil, let parent = units.first(where: { $0.id == parentId }) {
+            let siblings = units.filter { UnitTree.parent(of: $0, in: units) == parentId }
+            if Set(siblings.map(\.id)) == Set(bundled.map(\.id)) { return parent.title }
+            return String(localized: .examPlanTitleUnitsIn(parent.title, bundled.count))
+        }
+        if bundled.count == 2 { return bundled.map(\.title).joined(separator: ", ") }
+        return String(localized: .examPlanTitleUnitsMore(first.title, bundled.count - 1))
     }
 }

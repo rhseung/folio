@@ -160,6 +160,28 @@ struct PlanInputTests {
         #expect(study([matching, done]).file.title(of: bundle) == "매칭, 채색")
     }
 
+    // 묶음 항목의 이름은 한 줄에 읽혀야 한다. 한 부모의 단원이면 부모 이름이고, 아니면 첫 단원과 나머지 개수다.
+    @Test func aBundleIsNamedByItsParentOrItsFirstUnit() {
+        let device = UUID(), at = Date(timeIntervalSince1970: 1_790_000_000)
+        let connectivity = FolioDomain.Unit(device: device, at: at, title: "연결도", order: 0)
+        let kids = ["Menger의 정리", "귀 분해", "2-연결 그래프"].enumerated().map { i, title in
+            FolioDomain.Unit(device: device, at: at, title: title, order: i, parentId: connectivity.id)
+        }
+        let coloring = FolioDomain.Unit(device: device, at: at, title: "채색", order: 1)
+        let matching = FolioDomain.Unit(device: device, at: at, title: "매칭", order: 2)
+        let file = CourseFile(
+            course: Course(device: device, at: at, title: "그래프 이론"), units: [connectivity] + kids + [coloring, matching])
+        let day = LocalDate(at, in: Calendar(identifier: .gregorian))
+        func title(_ units: [FolioDomain.Unit]) -> String {
+            file.title(of: ExamPlanItem(day: day, target: .units(units.map(\.id))))
+        }
+        #expect(title([kids[0]]) == "Menger의 정리")
+        #expect(title(kids) == "연결도")
+        #expect(title(Array(kids.prefix(2))) == "연결도 단원 2개")
+        #expect(title([coloring, matching]) == "채색, 매칭")
+        #expect(title([kids[0], coloring, matching]) == "Menger의 정리 외 2개")
+    }
+
     // 남은 오답이 없어도 오지 않은 날의 오답 항목은 체크하지 않는다. 세는 것은 시험 범위의 오답과 카드뿐이다.
     @Test func aFutureWrongItemIsNotCheckedEvenWithNothingLeft() throws {
         let device = UUID(), at = Date(timeIntervalSince1970: 1_790_000_000)
