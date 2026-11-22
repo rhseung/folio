@@ -11,12 +11,12 @@ import Foundation
         """,
     done: "설정을 바꿨습니다",
     examples: [
-        "folio settings set dayBoundaryMinutes 300", #"folio settings set review.intervals "[1, 3, 7, 14, 30]" --dry-run"#,
+        "folio settings set dayBoundaryMinutes 300", "folio settings set study.readyPercent 90 --dry-run",
         "folio settings set --file settings.json --dry-run",
     ],
     phrases: ["설정 변경", "하루 경계", "복습 간격", "알림 시간"])
 public struct SettingsSet {
-    /// 필드. 예: review.intervals
+    /// 필드. 예: study.readyPercent
     @Arg var field: String?
     /// 새 값
     @Arg var value: JSONValue?

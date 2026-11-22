@@ -5,7 +5,7 @@ struct TodayHeader: View {
     let model: TodayModel
     let summary: TodaySummary
     let classes: [TodayModel.RibbonClass]
-    let reviews: TodayModel.Reviews
+    let study: TodayModel.Study
 
     var body: some View {
         let now = model.workspace.liveNow
@@ -27,7 +27,7 @@ struct TodayHeader: View {
     func heading(now: Date) -> some View {
         VStack(alignment: .leading, spacing: Theme.Space.s) {
             Text(model.heading(summary, now: now)).font(Theme.Typeface.pageTitle)
-            let pieces = model.summaryLine(classes: classes, summary: summary, reviews: reviews, now: now)
+            let pieces = model.summaryLine(classes: classes, summary: summary, study: study, now: now)
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: Theme.Space.m) {
                     ForEach(Array(pieces.enumerated()), id: \.offset) { i, piece in

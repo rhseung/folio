@@ -16,7 +16,6 @@ enum ScreenRequest: Hashable, Sendable {
     case viewMode(NoteViewMode)
     case outlinePopover
     case mathPalette
-    case quiz
     case expand(UUID)
     case assets(expanded: Bool)
 

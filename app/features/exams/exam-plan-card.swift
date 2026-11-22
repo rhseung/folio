@@ -15,14 +15,14 @@ struct ExamPlanCard: View {
         Card {
             CardRow {
                 Text(.examsPlan).font(Theme.Typeface.bodyStrong)
-                Text(model.planLine(items))
+                Text(model.planLine(items, in: exam))
                     .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()
                 Spacer(minLength: 0)
             }
             ForEach(Array(items.enumerated()), id: \.element.id) { i, item in
-                let on = model.done.contains(item.id)
+                let on = model.isDone(item, in: exam)
                 CardRow {
-                    Checkbox(isOn: on) { model.toggle(item.id) }.help(Text(on ? .examsPlanUndo : .examsPlanCheck))
+                    Checkbox(isOn: on) { model.toggle(item, in: exam) }.help(Text(on ? .examsPlanUndo : .examsPlanCheck))
                     Text(model.dayLabel(items, at: i))
                         .font(Theme.Typeface.caption.weight(item.day == today ? .semibold : .regular)).monospacedDigit()
                         .foregroundStyle(
@@ -34,7 +34,7 @@ struct ExamPlanCard: View {
                         )
                         .lineLimit(1)
                         .frame(width: ExamsView.dateColumn, alignment: .leading)
-                    Text(item.title).lineLimit(1)
+                    Text(model.itemTitle(item)).lineLimit(1)
                         .strikethrough(on, color: Theme.Palette.textTertiary)
                         .foregroundStyle(on ? Theme.Palette.textTertiary : Theme.Palette.text)
                     if let target = model.targetTitle(item) {
@@ -51,7 +51,7 @@ struct ExamPlanCard: View {
                 }
                 .contentShape(.rect)
                 .contextMenu {
-                    PlanItemMenu(courseId: model.course.id, examId: exam.id, item: item.id, done: on) { model.toggle(item.id) }
+                    PlanItemMenu(courseId: model.course.id, examId: exam.id, item: item.id, done: on) { model.toggle(item, in: exam) }
                 }
             }
             CardRow(last: true) {

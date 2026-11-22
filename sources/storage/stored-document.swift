@@ -14,11 +14,69 @@ extension Transcript: StoredModel {
 }
 
 extension CourseFile: StoredModel {
-    public static let schemaVersion = 8
+    public static let schemaVersion = 9
     public static let migrations: [Int: @Sendable (inout JSONValue) throws -> Void] = [
         1: dropSessionKind, 2: dropSessionIndex, 3: dropExamKind, 4: splitRolesByOrigin, 5: keepNoteLinksOnSessions, 6: spellOutRepeats,
-        7: keepOnlyEditedLinks,
+        7: identifyThenKeepOnlyEditedLinks, 8: identifyProblems,
     ]
+
+    // main의 v7 마이그레이션(`keepOnlyEditedLinks`)은 지금 모델로 파일을 읽는다. 예전 계획 항목의 종류("quiz")는 지금
+    // 모델로 읽히지 않으므로 문제와 계획을 먼저 지금 모양으로 바꾼다. main에서 이미 v8이 된 파일은 v8 마이그레이션이
+    // 같은 일을 하므로 `identifyProblems`는 두 번 돌아도 같은 결과를 내야 한다.
+    static func identifyThenKeepOnlyEditedLinks(_ raw: inout JSONValue) throws {
+        try identifyProblems(&raw)
+        try keepOnlyEditedLinks(&raw)
+    }
+
+    // v7 문제에는 id가 없어 풀이 기록이 문제를 가리킬 수 없다. 저장하기 전에 다시 읽어도 같은 문제가 나와야 하므로 id를
+    // 묶음 id와 순서에서 만든다. 예전 계획 항목은 사용자가 쓴 것이라 고친 항목으로 남겨 다시 짜도 지워지지 않게 한다.
+    static func identifyProblems(_ raw: inout JSONValue) throws {
+        if case .array(var sets)? = raw["problemSets"] {
+            for s in sets.indices {
+                if sets[s]["source"] == nil { sets[s]["source"] = .string(ProblemSource.exercise.rawValue) }
+                guard case .string(let setText)? = sets[s]["id"], let setId = UUID(uuidString: setText),
+                    case .array(var problems)? = sets[s]["problems"]
+                else { continue }
+                for p in problems.indices where problems[p]["id"] == nil {
+                    problems[p]["id"] = .string(problemID(setId, p).uuidString)
+                }
+                sets[s]["problems"] = .array(problems)
+            }
+            raw["problemSets"] = .array(sets)
+        }
+        guard case .array(var exams)? = raw["exams"] else { return }
+        for e in exams.indices {
+            guard case .array(var plan)? = exams[e]["plan"] else { continue }
+            for i in plan.indices {
+                let old = plan[i]["target"]
+                // 이미 바꾼 항목은 그대로 둔다. "unit"은 예전과 지금 이름이 같아 다시 바꿔도 같은 값이 된다.
+                if case .string(let name)? = old?["kind"], name != ExamPlanTarget.Kind.unit.rawValue,
+                    ExamPlanTarget.Kind(rawValue: name) != nil, plan[i]["edited"] == .bool(true)
+                {
+                    continue
+                }
+                let kind: String =
+                    switch old?["kind"] {
+                    case .string("unit")?, .string("quiz")?: ExamPlanTarget.Kind.unit.rawValue
+                    case .string("problem_set")?: ExamPlanTarget.Kind.problems.rawValue
+                    default: ExamPlanTarget.Kind.custom.rawValue
+                    }
+                var target: [String: JSONValue] = ["kind": .string(kind)]
+                if kind != ExamPlanTarget.Kind.custom.rawValue, let id = old?["id"] { target["id"] = id }
+                plan[i]["target"] = .object(target)
+                plan[i]["edited"] = .bool(true)
+            }
+            exams[e]["plan"] = .array(plan)
+        }
+        raw["exams"] = .array(exams)
+    }
+
+    static func problemID(_ set: UUID, _ index: Int) -> UUID {
+        var bytes = set.uuid
+        bytes.14 ^= UInt8(truncatingIfNeeded: index >> 8) ^ 0xA5
+        bytes.15 ^= UInt8(truncatingIfNeeded: index)
+        return UUID(uuid: bytes)
+    }
 
     // 회차의 단원과 시험 범위를 저장하지 않고 계산하게 되면서, 저장된 연결을 계산값과 비교해 차이만 남긴다. 계산값에
     // 없는 단원은 더한 단원, 계산값에만 있는 단원은 뺀 단원이 되므로 화면에 보이는 연결은 그대로다. 단원 쪽의 짝
@@ -246,7 +304,7 @@ extension Settings: StoredModel {
     }
 }
 
-extension QuizFile: StoredModel {
+extension CardFile: StoredModel {
     public static let schemaVersion = 1
 }
 

@@ -131,7 +131,7 @@ extension SearchKind {
         case .exam: String(localized: .searchKindExam)
         case .session: String(localized: .searchKindSession)
         case .unit: String(localized: .searchKindUnit)
-        case .quiz: String(localized: .searchKindQuiz)
+        case .card: String(localized: .searchKindCard)
         }
     }
 
@@ -143,7 +143,7 @@ extension SearchKind {
         case .exam: "pencil.and.list.clipboard"
         case .session: "calendar"
         case .unit: "list.bullet"
-        case .quiz: "rectangle.on.rectangle"
+        case .card: "rectangle.on.rectangle"
         }
     }
 }

@@ -57,18 +57,13 @@ extension Session {
 
 extension ExamPlanItem {
     var unitTarget: UUID? {
-        get { target.flatMap { $0.kind == .problemSet ? nil : $0.id } }
-        set { pointTarget(unitTarget, to: newValue) }
+        get { target.kind == .unit ? target.id : nil }
+        set { if target.kind == .unit { target.id = newValue } }
     }
 
     var problemSetTarget: UUID? {
-        get { target.flatMap { $0.kind == .problemSet ? $0.id : nil } }
-        set { pointTarget(problemSetTarget, to: newValue) }
-    }
-
-    private mutating func pointTarget(_ old: UUID?, to new: UUID?) {
-        guard old != nil else { return }
-        if let new { target?.id = new } else { target = nil }
+        get { target.kind == .problems ? target.id : nil }
+        set { if target.kind == .problems { target.id = newValue } }
     }
 }
 
@@ -130,9 +125,14 @@ extension CourseFile: Document {
             Refs(\.removedScopeUnitIds, to: Unit.self, as: String(localized: .modelLabelScopeUnit), onDelete: .nullify)
         }
         Items(\.exams, \.plan, noun: ItemKind.examPlanItem.noun, name: \.title) {
-            NonEmpty(\.title, String(localized: .ruleExamPlanItemTitleEmpty))
-            Ref(\.unitTarget, to: Unit.self, onDelete: .nullify)
-            Ref(\.problemSetTarget, to: ProblemSet.self, onDelete: .nullify)
+            Check("ExamPlanItem.title", String(localized: .ruleExamPlanItemTitleEmpty)) { i, _ in
+                i.target.kind != .custom || !i.title.trimmingCharacters(in: .whitespaces).isEmpty
+            }
+            Check("ExamPlanItem.target", String(localized: .ruleExamPlanItemTarget)) { i, _ in
+                i.target.kind != .unit && i.target.kind != .problems || i.target.id != nil
+            }
+            Ref(\.unitTarget, to: Unit.self, onDelete: .cascade)
+            Ref(\.problemSetTarget, to: ProblemSet.self, onDelete: .cascade)
         }
         Items(\.assignments, noun: ItemKind.assignment.noun, name: \.title) {
             NonEmpty(\.title, String(localized: .ruleAssignmentTitleEmpty))
@@ -328,11 +328,11 @@ extension Settings: Document {
             SettingItem.dayBoundary.range.contains(s.dayBoundaryMinutes)
         }
         Rule("Settings.classMinutes", String(localized: .ruleSettingsClassMinutes)) { s, _ in (10...300).contains(s.classMinutes) }
-        Rule("Settings.dailyLimit", String(localized: .ruleSettingsDailyLimit)) { s, _ in
-            s.review.dailyLimit.map { (1...50).contains($0) } ?? true
-        }
-        Rule("Settings.intervals", String(localized: .ruleSettingsIntervals)) { s, _ in
-            !s.review.intervals.isEmpty && s.review.intervals.allSatisfy { (1...365).contains($0) }
+        Rule("Settings.study", String(localized: .ruleSettingsStudy)) { s, _ in
+            SettingItem.studyReadyPercent.range.contains(s.study.readyPercent)
+                && SettingItem.studyMinProblems.range.contains(s.study.minProblems)
+                && SettingItem.studyFinalDays.range.contains(s.study.finalDays)
+                && SettingItem.studyMockMinutes.range.contains(s.study.mockMinutes)
         }
         Rule("Settings.assignmentLeadHours", String(localized: .ruleSettingsAssignmentLeadHours)) { s, _ in
             (s.notifications[.assignmentDue].leadHours ?? []).allSatisfy { SettingItem.assignmentLeadHours.range.contains($0) }
@@ -344,19 +344,12 @@ extension Settings: Document {
     }
 }
 
-extension QuizFile: Document {
-    public static let model = Model<QuizFile>(place: String(localized: .modelPlaceUnit)) {
-        Items(\.cards, noun: ItemKind.quizCard.noun, name: \.prompt) {
-            NonEmpty(\.prompt, String(localized: .ruleQuizCardPromptEmpty))
-            Check("QuizCard.answer", String(localized: .ruleQuizCardAnswer)) { c, _ in
-                guard !c.answer.isEmpty else { return false }
-                return switch c.type {
-                case .choice: c.options.contains(c.answer)
-                case .trueFalse: QuizCard.trueFalseOptions.contains(c.answer)
-                default: true
-                }
-            }
-            Check("QuizCard.unit", String(localized: .ruleQuizCardUnit)) { c, f in c.unitId == f.unitId }
+extension CardFile: Document {
+    public static let model = Model<CardFile>(place: String(localized: .modelPlaceUnit)) {
+        Items(\.cards, noun: ItemKind.studyCard.noun, name: \.front) {
+            NonEmpty(\.front, String(localized: .ruleCardFrontEmpty))
+            NonEmpty(\.back, String(localized: .ruleCardBackEmpty))
+            Check("Card.unit", String(localized: .ruleCardUnit)) { c, f in c.unitId == f.unitId }
         }
     }
 }

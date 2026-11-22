@@ -109,7 +109,7 @@ struct AppLinkCoverageTests {
                 case .app: preconditionFailure()
                 case .transcript: .semester(id)
                 case .catalog: .people
-                case .course, .quiz: .course(course)
+                case .course, .study: .course(course)
                 }
             let base = AppLink(kind, id)
             out.append(Sample(link: base, screen: screen))
@@ -148,13 +148,10 @@ struct AppLinkCoverageTests {
             material = try #require(workspace.course(course)?.file.materials.first).id
             assignment = try #require(workspace.run(AssignmentAdd(course: course, title: "HW03"))?.made)
             exam = try #require(workspace.run(ExamAdd(course: course, title: "중간고사"))?.made)
-            let quiz = QuizCard(
-                device: workspace.device, at: .now, unitId: unit, type: .free, category: .definition, prompt: "p", answer: "a")
-            workspace.run(QuizCardSave(course: course, cards: [quiz]))
-            card = quiz.id
-            let set = ProblemSet(device: workspace.device, at: .now, title: "Exercise 1", problems: [.init(number: "1")])
-            workspace.run(ProblemSetSave(course: course, set: set))
-            problemSet = set.id
+            let flashcard = StudyCard(device: workspace.device, at: .now, unitId: unit, front: "p", back: "a")
+            workspace.run(CardSave(course: course, cards: [flashcard], movedFrom: nil))
+            card = flashcard.id
+            problemSet = try #require(workspace.run(ProblemSetAdd(course: course, title: "Exercise 1", numbers: ["1"]))?.made)
             var catalog = workspace.catalog
             let someone = Person(device: workspace.device, at: .now, name: "김교수")
             catalog.people.append(someone)

@@ -449,7 +449,7 @@ struct ClaudeModelTests {
         #expect(draftUnit(note: nil, unit: second) == second)
         #expect(draftUnit(note: note, unit: nil) == second)
         #expect(draftUnit(note: nil, unit: nil) == first)
-        #expect(model.cardDraft?.prompt == "매칭이란?")
+        #expect(model.cardDraft?.front == "매칭이란?")
     }
 }
 

@@ -55,7 +55,7 @@ extension AppLink {
             switch item.home {
             case .course: .course
             case .catalog: .people
-            case .app, .transcript, .quiz: nil
+            case .app, .transcript, .study: nil
             }
         return kind == list ? .some(nil) : nil
     }

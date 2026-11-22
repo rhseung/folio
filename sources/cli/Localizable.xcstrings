@@ -925,17 +925,6 @@
         }
       }
     },
-    "common.help.card": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "카드 ID 또는 문제 글"
-          }
-        }
-      }
-    },
     "common.help.course": {
       "extractionState": "manual",
       "localizations": {
@@ -1064,17 +1053,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "<과목>/<단원>"
-          }
-        }
-      }
-    },
-    "common.help.verdict": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "판정. correct, partial, wrong"
           }
         }
       }
@@ -2097,7 +2075,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "복습과 퀴즈"
+            "value": "공부"
           }
         }
       }
@@ -3252,51 +3230,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "문제 묶음: 연습 문제와 과제의 문제 번호, 단원 연결, 풀이 기록"
-          }
-        }
-      }
-    },
-    "problem-set.add.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "문제 번호로 문제 묶음 만들기"
-          }
-        }
-      }
-    },
-    "problem-set.add.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "있는 묶음을 고치려면 folio run problem-set add --input으로 묶음 전체를 준다.\n\n예시:\n  folio problem-set add EC4207 \"Exercise 1\" --problems 1 2 3a 3b"
-          }
-        }
-      }
-    },
-    "problem-set.add.help.problems": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "문제 번호들"
-          }
-        }
-      }
-    },
-    "problem-set.add.help.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "제목"
+            "value": "문제 묶음: 족보, 교재, 연습 문제, 과제의 문제와 단원 연결"
           }
         }
       }
@@ -3330,160 +3264,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld문제"
-          }
-        }
-      }
-    },
-    "problem-set.record.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "문제 풀이 결과를 기록"
-          }
-        }
-      }
-    },
-    "problem-set.record.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio problem-set record \"EC4207/Exercise 1\" 3a wrong"
-          }
-        }
-      }
-    },
-    "problem-set.record.help.number": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "문제 번호"
-          }
-        }
-      }
-    },
-    "problem-set.record.help.set": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "<과목>/<묶음>"
-          }
-        }
-      }
-    },
-    "problem-set.record.not-found": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "문제 %@을(를) 찾지 못했습니다"
-          }
-        }
-      }
-    },
-    "quiz.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "퀴즈 카드: 목록, 추가와 고치기, 지우기, 풀이 기록"
-          }
-        }
-      }
-    },
-    "quiz.list.header.category": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "분류"
-          }
-        }
-      }
-    },
-    "quiz.list.header.kind": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "종류"
-          }
-        }
-      }
-    },
-    "quiz.list.header.prompt": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "문제"
-          }
-        }
-      }
-    },
-    "quiz.list.header.unit": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "단원"
-          }
-        }
-      }
-    },
-    "quiz.record.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "카드 풀이 결과를 기록"
-          }
-        }
-      }
-    },
-    "quiz.record.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio quiz record EC4207/매칭 \"최대 매칭의 정의\" correct --grader self\n  folio quiz record EC4207/매칭 3F2A9C1E-0000-4000-8000-000000000001 wrong --grader ai --answer \"모름\""
-          }
-        }
-      }
-    },
-    "quiz.record.help.answer": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "쓴 답"
-          }
-        }
-      }
-    },
-    "quiz.record.help.grader": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "채점한 쪽. ai 또는 self"
           }
         }
       }
@@ -4159,72 +3939,6 @@
         }
       }
     },
-    "review.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "단원 복습: 결과 기록, 복습 건너뛰기"
-          }
-        }
-      }
-    },
-    "review.skip.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "단원을 복습하지 않아도 되는 것으로 표시. 여러 개면 확인을 받는다"
-          }
-        }
-      }
-    },
-    "review.skip.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio review skip EC4207/매칭\n  folio review skip EC4207/매칭 EC4321/기구학"
-          }
-        }
-      }
-    },
-    "review.skip.help.units": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "<과목>/<단원>. 여러 과목을 섞어도 된다"
-          }
-        }
-      }
-    },
-    "review.skip.help.start": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "단원을 연 시각. --end와 함께, 단원 하나에만 준다. 그 시간을 공부 시간으로 남긴다"
-          }
-        }
-      }
-    },
-    "review.skip.help.end": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "건너뛴 시각"
-          }
-        }
-      }
-    },
     "run.abstract": {
       "extractionState": "manual",
       "localizations": {
@@ -4407,7 +4121,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "모든 낱말이 제목이나 본문에 있는 항목을 찾는다. 제목에 맞은 항목이 먼저 나온다.\n색인은 이 기기의 캐시이고, 검색할 때마다 바뀐 과목만 다시 읽는다.\n\n예시:\n  folio search 매칭\n  folio search \"Hall theorem\" --kind material\n  folio search 트리 --course EC4207 --lines\n  folio search 중간 --semester 2026-3 --json\n  folio search 매칭 --kind quiz"
+            "value": "모든 낱말이 제목이나 본문에 있는 항목을 찾는다. 제목에 맞은 항목이 먼저 나온다.\n색인은 이 기기의 캐시이고, 검색할 때마다 바뀐 과목만 다시 읽는다.\n\n예시:\n  folio search 매칭\n  folio search \"Hall theorem\" --kind material\n  folio search 트리 --course EC4207 --lines\n  folio search 중간 --semester 2026-3 --json\n  folio search 매칭 --kind card"
           }
         }
       }
@@ -4874,17 +4588,6 @@
         }
       }
     },
-    "today.section.deferred": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "하루 상한을 넘어 내일로 미룸"
-          }
-        }
-      }
-    },
     "today.section.exams": {
       "extractionState": "manual",
       "localizations": {
@@ -4925,17 +4628,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "복습 노트 쓰기"
-          }
-        }
-      }
-    },
-    "today.section.reviews": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오늘 복습"
           }
         }
       }
@@ -6553,6 +6245,182 @@
           "stringUnit": {
             "state": "translated",
             "value": "Claude 대화에서 승인을 기다리는 제안"
+          }
+        }
+      }
+    },
+    "card.abstract": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드: 목록, 추가와 고치기, 지우기, 넘긴 기록"
+          }
+        }
+      }
+    },
+    "problem.abstract": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제: 묶음 안의 문제 고치기와 지우기, 풀이와 판정 기록"
+          }
+        }
+      }
+    },
+    "study.abstract": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "공부 상태: 단원마다 준비 정도, 진척, 오답"
+          }
+        }
+      }
+    },
+    "card.list.header.unit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원"
+          }
+        }
+      }
+    },
+    "card.list.header.front": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앞면"
+          }
+        }
+      }
+    },
+    "card.list.header.back": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "뒷면"
+          }
+        }
+      }
+    },
+    "study.show.header.unit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원"
+          }
+        }
+      }
+    },
+    "study.show.header.state": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "준비"
+          }
+        }
+      }
+    },
+    "study.show.header.problems": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제"
+          }
+        }
+      }
+    },
+    "study.show.header.cards": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드"
+          }
+        }
+      }
+    },
+    "study.show.header.pages": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "본 쪽"
+          }
+        }
+      }
+    },
+    "study.show.wrong": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오답 %lld"
+          }
+        }
+      }
+    },
+    "study.show.section.wrong": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "남은 오답"
+          }
+        }
+      }
+    },
+    "study.show.recheck": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 확인"
+          }
+        }
+      }
+    },
+    "study.show.open": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오답"
+          }
+        }
+      }
+    },
+    "today.section.wrong": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오답"
           }
         }
       }

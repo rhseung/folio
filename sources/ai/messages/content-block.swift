@@ -5,6 +5,8 @@ import Foundation
 public enum ContentBlock: Codable, Sendable, Equatable {
     case text(String, cache: Bool = false)
     case image(Data, mediaType: String, cache: Bool = false)
+    // 문제지와 풀이 PDF를 쪽 그림과 글을 함께 읽게 그대로 보낸다.
+    case pdf(Data, cache: Bool = false)
     case other(JSONValue)
 
     enum CodingKeys: String, CodingKey { case type, text, source, cache_control }
@@ -21,6 +23,10 @@ public enum ContentBlock: Codable, Sendable, Equatable {
         case .image(let data, let mediaType, let cache):
             try c.encode("image", forKey: .type)
             try c.encode(ImageSource(media_type: mediaType, data: data.base64EncodedString()), forKey: .source)
+            if cache { try c.encode(CacheControl(), forKey: .cache_control) }
+        case .pdf(let data, let cache):
+            try c.encode("document", forKey: .type)
+            try c.encode(ImageSource(media_type: "application/pdf", data: data.base64EncodedString()), forKey: .source)
             if cache { try c.encode(CacheControl(), forKey: .cache_control) }
         case .other:
             break

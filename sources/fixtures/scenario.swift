@@ -86,17 +86,63 @@ private struct Builder {
         return id
     }
 
+    // 공부 시간은 앱이 화면을 본 시간을 적는 줄이라 액션이 없다. 오늘 화면의 공부 시간 막대가 비지 않게 같은 줄을 직접 쓴다.
+    func studied(_ course: UUID, _ start: Date, minutes: Int) throws {
+        let end = start.addingTimeInterval(TimeInterval(minutes * 60))
+        let ctx = ActionContext(gist: gist, device: device, now: end, calendar: Scenario.calendar)
+        try ctx.log(StudySessionEvent(courseId: course, start: start, end: end, screen: "course"), course: course, at: end)
+    }
+
     func unit(_ course: UUID, _ title: String, _ sessions: [UUID], at date: Date) throws -> UUID {
         let id = try run(UnitAdd(course: course, title: title), at: date)
         try run(UnitLink(course: course, unit: id, sessions: sessions), at: date)
         return id
     }
 
-    func review(_ course: UUID, _ unit: UUID, _ result: ReviewResult, _ start: Date, minutes: Int) throws {
-        try run(
-            ReviewRecord(
-                course: course, unit: unit, result: result, start: start, end: start.addingTimeInterval(TimeInterval(minutes * 60))),
-            at: start)
+    // 그래프 이론의 족보 한 부를 풀고 카드를 넘긴 기록이다. 매칭은 다 했지만 다시 확인할 문제가 남았고, 그래프 채색은 틀린
+    // 문제가 있어 부족으로 보인다.
+    func practice(_ course: UUID, matching: UUID, coloring: UUID, exam: UUID) throws {
+        let made = at(10, 30, 20)
+        func problem(_ n: String, _ text: String, _ format: ProblemFormat, _ answer: String?, _ unit: UUID, page: Int) -> Problem {
+            Problem(number: n, page: page, text: text, format: format, answer: answer, unitIds: [unit], solution: answer.map { "답: \($0)" })
+        }
+        let problems = [
+            problem("1", "$K_{3,3}$의 최대 매칭의 크기를 구하시오.", .short, "3", matching, page: 1),
+            problem("2", "모든 정규 이분 그래프는 완전 매칭을 가진다.", .trueFalse, "참", matching, page: 1),
+            problem("3", "홀의 정리를 증명하시오.", .written, nil, matching, page: 2),
+            problem("4", "베르주의 정리를 이용해 증가 경로가 없으면 최대 매칭임을 보이시오.", .written, nil, matching, page: 2),
+            problem("5", "페테르센 그래프의 채색수를 구하시오.", .short, "3", coloring, page: 3),
+            problem("6", "평면 그래프는 4색으로 칠할 수 있다.", .trueFalse, "참", coloring, page: 3),
+            problem("7", "브룩스 정리의 조건을 쓰시오.", .written, nil, coloring, page: 4),
+        ]
+        let set = try run(ProblemSetAdd(course: course, title: "2025 기말", source: .pastExam, problems: problems), at: made)
+        func solve(_ i: Int, _ verdict: Verdict, _ basis: GradeBasis, at date: Date, reason: WrongReason? = nil) throws {
+            try run(
+                ProblemSolve(course: course, set: set, problem: problems[i].id, verdict: verdict, basis: basis, reason: reason), at: date)
+        }
+        try solve(0, .correct, .key, at: at(11, 1, 14))
+        try solve(1, .correct, .key, at: at(11, 1, 14, 5))
+        try solve(2, .partial, .claude, at: at(11, 1, 14, 30), reason: .method)
+        try solve(2, .correct, .claude, at: at(11, 1, 15))
+        try solve(3, .correct, .solution, at: at(11, 3, 21))
+        try solve(4, .wrong, .key, at: at(11, 3, 22), reason: .concept)
+        try solve(5, .correct, .key, at: at(11, 3, 22, 5))
+        try run(UnitDone(course: course, unit: matching), at: at(11, 3, 23))
+
+        let cards = [
+            StudyCard(device: device, at: made, unitId: matching, front: "증가 경로", back: "매칭에 들지 않은 두 꼭짓점을 잇고 매칭 간선과 아닌 간선을 번갈아 지나는 경로"),
+            StudyCard(device: device, at: made, unitId: matching, front: "홀의 조건", back: "모든 $S \\subseteq X$에 대해 $|N(S)| \\ge |S|$"),
+            StudyCard(device: device, at: made, unitId: coloring, front: "채색수", back: "인접한 꼭짓점이 다른 색이 되도록 칠하는 데 필요한 최소 색 수"),
+        ]
+        try run(CardSave(course: course, cards: cards), at: made)
+        try run(CardFlip(course: course, unit: matching, card: cards[0].id), at: at(11, 2, 21))
+        try run(CardFlip(course: course, unit: matching, card: cards[1].id, known: false), at: at(11, 2, 21, 2))
+
+        let ctx = ActionContext(gist: gist, device: device, now: made, calendar: Scenario.calendar)
+        if let slides = try ctx.file(course).materials.first(where: { $0.path == Self.matchingSlides }) {
+            for page in 1...8 { try run(MaterialViewed(course: course, material: slides.id, page: page), at: at(11, 1, 13)) }
+        }
+        try run(ExamPlanMake(course: course, exam: exam), at: at(11, 4, 8))
     }
 
     func busyDay(extraExams: Bool = false) throws {
@@ -182,22 +228,22 @@ private struct Builder {
         try recording(graph, session: s(graph, 11, 2), start: at(11, 2, 9))
         let coloring = try unit(graph, "그래프 채색", [s(graph, 10, 26), s(graph, 10, 28)], at: at(10, 28, 11))
         try lectureSections(graph, matching: matching, classes: [s(graph, 10, 19), s(graph, 10, 21), s(graph, 11, 2)])
-        let scheduling = try unit(os, "프로세스 스케줄링", [s(os, 10, 19), s(os, 10, 21)], at: at(10, 21, 15))
+        _ = try unit(os, "프로세스 스케줄링", [s(os, 10, 19), s(os, 10, 21)], at: at(10, 21, 15))
         _ = try unit(os, "교착 상태", [s(os, 10, 26)], at: at(10, 26, 15))
         let conditional = try unit(prob, "조건부 확률", [s(prob, 10, 26), s(prob, 10, 28)], at: at(10, 28, 16))
         let makeup = try run(SessionAdd(course: robotics, date: at(10, 30, 19), end: at(10, 30, 20, 15), kind: .makeup), at: at(10, 28, 12))
         try run(SessionNote(course: robotics, session: makeup, kind: .review), at: at(10, 30, 21))
         try run(SessionSet(course: robotics, session: makeup, reviewUnfinished: .set(false)), at: at(10, 30, 21))
-        let kinematics = try unit(robotics, "순기구학", [s(robotics, 10, 21), s(robotics, 10, 26), makeup], at: at(10, 26, 12))
+        _ = try unit(robotics, "순기구학", [s(robotics, 10, 21), s(robotics, 10, 26), makeup], at: at(10, 26, 12))
         _ = try unit(robotics, "역기구학과 야코비안", [s(robotics, 10, 28)], at: at(10, 28, 12))
         _ = try unit(physics, "전기장과 가우스 법칙", [s(physics, 10, 26), s(physics, 10, 28)], at: at(10, 28, 18))
 
-        try review(graph, matching, .good, at(10, 23, 21), minutes: 40)
-        try review(os, scheduling, .hard, at(10, 30, 20), minutes: 55)
-        try review(graph, matching, .good, at(11, 1, 14), minutes: 30)
-        try review(robotics, kinematics, .again, at(11, 2, 21), minutes: 45)
-        try review(prob, conditional, .good, at(11, 3, 22), minutes: 35)
-        try review(graph, coloring, .easy, at(11, 4, 8), minutes: 25)
+        try studied(graph, at(10, 23, 21), minutes: 40)
+        try studied(os, at(10, 30, 20), minutes: 55)
+        try studied(graph, at(11, 1, 14), minutes: 30)
+        try studied(robotics, at(11, 2, 21), minutes: 45)
+        try studied(prob, at(11, 3, 22), minutes: 35)
+        try studied(graph, at(11, 4, 8), minutes: 25)
 
         let deadlines: [(UUID, String, Date, AssignmentStatus)] = [
             (writing, "에세이 초안", at(11, 4, 18), .todo),
@@ -235,7 +281,10 @@ private struct Builder {
             ExamAdd(course: prob, title: "Quiz 3", start: at(11, 6, 14, 30), end: at(11, 6, 15), location: "A203"), at: setup)
         try run(ExamAdd(course: physics, title: "2차 시험", start: at(11, 13, 19), end: at(11, 13, 21), location: "Physics 101"), at: setup)
         try run(ExamAdd(course: os, title: "기말고사", start: at(12, 2, 13), end: at(12, 2, 15), location: "B115"), at: setup)
-        try run(ExamAdd(course: graph, title: "기말고사", start: at(12, 14, 9), end: at(12, 14, 11), location: "A101"), at: setup)
+        let graphFinal = try run(
+            ExamAdd(course: graph, title: "기말고사", start: at(12, 14, 9), end: at(12, 14, 11), location: "A101"), at: setup)
+        for unit in [matching, coloring] { try run(ExamScope(course: graph, exam: graphFinal, unit: unit), at: setup) }
+        try practice(graph, matching: matching, coloring: coloring, exam: graphFinal)
         if extraExams {
             try run(ExamAdd(course: writing, title: "에세이 발표", start: at(11, 11, 19), end: at(11, 11, 21), location: "N210"), at: setup)
             try run(ExamAdd(course: robotics, title: "중간 발표", start: at(11, 18, 10, 30), end: at(11, 18, 12), location: "C204"), at: setup)

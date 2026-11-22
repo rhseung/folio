@@ -26,7 +26,7 @@ struct TodayView: View {
         return Page {
             TodayWash(model: model, courses: day.wash)
         } content: {
-            TodayHeader(model: model, summary: day.summary, classes: day.classes, reviews: day.reviews)
+            TodayHeader(model: model, summary: day.summary, classes: day.classes, study: day.study)
             OverdueAssignments(workspace: model.workspace)
             DayRibbonCard(model: model, summary: day.summary, classes: day.classes, go: go, openNote: openNote)
             QuickAddField(workspace: model.workspace, showsEmptyChips: true)
@@ -36,8 +36,7 @@ struct TodayView: View {
             LMSTodayNotice(workspace: model.workspace)
             DiagnosticNotice(workspace: model.workspace)
             agenda(day.summary)
-            ExamPlanTodayBlock(workspace: model.workspace)
-            reviewBlock(day.reviews, today: day.summary.studyDay)
+            studyBlock(day.study, today: day.summary.studyDay)
             StudyTimeBlock(workspace: model.workspace)
         }
         .navigationSubtitle(day.summary.studyDay.description)
@@ -194,57 +193,20 @@ struct TodayView: View {
         .contextMenu { AssignmentMenu(courseId: item.courseId, assignmentId: item.assignment.id) }
     }
 
-    // MARK: Reviews
+    // MARK: Study
 
-    func reviewBlock(_ reviews: TodayModel.Reviews, today: LocalDate) -> some View {
-        let left = reviews.left, done = reviews.doneToday
-        return VStack(alignment: .leading, spacing: Theme.Space.l) {
-            HStack(spacing: Theme.Space.m) {
-                Text(.todayReviews).font(Theme.Typeface.sectionTitle).foregroundStyle(Theme.Palette.textSecondary)
-                if reviews.total > 0 {
-                    Text(.todayReviewsProgress(done, reviews.total)).font(Theme.Typeface.caption).monospacedDigit()
-                        .foregroundStyle(left == 0 ? Theme.Palette.success : Theme.Palette.textSecondary)
-                    progress(reviews.fraction)
-                } else {
-                    Spacer(minLength: 0)
-                }
-                if reviews.streak > 0 {
-                    Label(.todayProgressStreak(reviews.streak), systemImage: "flame.fill").labelStyle(.titleAndIcon)
-                        .font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit()
-                        .foregroundStyle(Theme.Palette.warning)
-                        .symbolEffect(.bounce, value: reviews.streak)
-                }
-                if !reviews.all.isEmpty {
-                    Button(.todayReviewsSkipAll) { model.skip(reviews.all) }
-                        .buttonStyle(.ghost)
-                        .font(Theme.Typeface.caption)
-                }
-            }
-            if left == 0 {
-                if done > 0 {
-                    EmptyCard(systemImage: "checkmark", tone: .success, title: String(localized: .todayReviewsDone))
-                } else {
-                    EmptyCard(
-                        systemImage: CourseMark.defaultIcon, title: String(localized: .todayReviewsEmpty),
-                        detail: String(localized: .todayReviewsEmptyDetail))
-                }
+    func studyBlock(_ study: TodayModel.Study, today: LocalDate) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Space.l) {
+            Text(.todayStudying).font(Theme.Typeface.sectionTitle).foregroundStyle(Theme.Palette.textSecondary)
+            if study.isEmpty {
+                EmptyCard(
+                    systemImage: CourseMark.defaultIcon, title: String(localized: .todayStudyingEmpty),
+                    detail: String(localized: .todayStudyingEmptyDetail))
             } else {
-                Fold(wideFrom: Self.pairWidth) {
-                    notesList(reviews.notes, today: today).frame(maxWidth: .infinity, alignment: .topLeading)
-                    unitsList(reviews.queue).frame(maxWidth: .infinity, alignment: .topLeading)
-                }
+                ExamPlanTodayBlock(workspace: model.workspace)
+                if !study.notes.isEmpty { notesList(study.notes, today: today) }
             }
-            deferredList(reviews.deferred)
         }
-    }
-
-    func progress(_ fraction: Double) -> some View {
-        Capsule().fill(Theme.Palette.fill)
-            .overlay(alignment: .leading) {
-                GeometryReader { proxy in Capsule().fill(Theme.Palette.success).frame(width: proxy.size.width * fraction) }
-            }
-            .frame(height: Theme.Space.xs)
-            .animation(Theme.Motion.settle, value: fraction)
     }
 
     func listGroupHeader<Label: View>(first: Bool, @ViewBuilder label: () -> Label) -> some View {
@@ -338,87 +300,6 @@ struct TodayView: View {
         .contextMenu {
             SessionMenu(courseId: item.courseId, sessionId: item.session.id, openNote: openNote(in: item.courseId))
         }
-    }
-
-    func unitsList(_ queue: [Workspace.ReviewEntry]) -> some View {
-        let groups = model.unitGroups(queue)
-        return Block(String(localized: .todayReviewsUnits), note: queue.isEmpty ? nil : "\(queue.count)") {
-            if queue.isEmpty {
-                EmptyCard(systemImage: "checkmark", tone: .success, title: String(localized: .todayReviewsUnitsEmpty))
-            } else {
-                Card {
-                    ForEach(Array(groups.enumerated()), id: \.element.id) { i, group in
-                        let (shown, more) = model.shownUnits(group)
-                        listGroupHeader(first: i == 0) {
-                            CourseMark(model.workspace, group.courseId, inline: true)
-                            Text(model.title(group.courseId)).foregroundStyle(Theme.Palette.text).lineLimit(1).layoutPriority(1)
-                            if group.writeNoteFirst {
-                                Text(.todayReviewsAfterNote).fontWeight(.regular).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
-                            }
-                            Spacer(minLength: Theme.Space.s)
-                            if group.overdue > 0 {
-                                Text(.todayReviewsOverdue(group.overdue)).fontWeight(.bold).foregroundStyle(Theme.Palette.danger)
-                                    .fixedSize()
-                            }
-                        }
-                        ForEach(Array(shown.enumerated()), id: \.element.entry.item.unitId) { n, pair in
-                            unitRow(pair.entry, number: n + 1, then: queue[(pair.index + 1)...])
-                        }
-                        if more > 0 {
-                            listMore(more) { model.expandedUnitGroups.insert(group.courseId) }
-                        }
-                    }
-                    if let last = groups.last, model.shownUnits(last).more == 0 { Color.clear.frame(height: Theme.Space.s) }
-                }
-            }
-        }
-    }
-
-    func unitRow(_ entry: Workspace.ReviewEntry, number: Int, then rest: ArraySlice<Workspace.ReviewEntry>) -> some View {
-        let waiting = entry.item.writeNoteFirst
-        return ReviewOpener(
-            courseId: entry.courseId, unitId: entry.item.unitId,
-            then: rest.map { .init(courseId: $0.courseId, unitId: $0.item.unitId) }
-        ) {
-            HStack(spacing: Theme.Space.s) {
-                Text("\(number)").font(Theme.Typeface.caption).monospacedDigit().foregroundStyle(Theme.Palette.textTertiary)
-                    .frame(width: Theme.Size.tile, height: Theme.Size.tile)
-                Text(entry.unitTitle).lineLimit(1)
-                Spacer(minLength: Theme.Space.s)
-                if !waiting { Image(systemName: "chevron.right").font(Theme.Glyph.small).foregroundStyle(Theme.Palette.textTertiary) }
-            }
-            .padding(.horizontal, Theme.Space.l)
-            .padding(.vertical, Theme.Space.tight)
-            .opacity(waiting ? Theme.Opacity.ended : 1)
-            .contentShape(.rect)
-        }
-        .contextMenu { reviewMenu(entry) }
-    }
-
-    @ViewBuilder func deferredList(_ deferred: [Workspace.ReviewEntry]) -> some View {
-        if !deferred.isEmpty {
-            VStack(alignment: .leading, spacing: Theme.Space.s) {
-                Text(.todayReviewsDeferred).font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(Theme.Palette.textSecondary)
-                ForEach(deferred, id: \.item.unitId) { entry in
-                    ReviewOpener(courseId: entry.courseId, unitId: entry.item.unitId) {
-                        HStack(spacing: Theme.Space.m) {
-                            CourseMark(model.workspace, entry.courseId)
-                            Text(entry.unitTitle)
-                            Spacer()
-                            Text(model.title(entry.courseId)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
-                        }
-                    }
-                    .contextMenu { reviewMenu(entry) }
-                }
-            }
-            .padding(.horizontal, Theme.Inset.panel)
-            .padding(.vertical, Theme.Space.m)
-            .background(Theme.Palette.column, in: .rect(cornerRadius: Theme.Radius.card))
-        }
-    }
-
-    func reviewMenu(_ entry: Workspace.ReviewEntry) -> some View {
-        UnitMenu(courseId: entry.courseId, unitId: entry.item.unitId)
     }
 
     func go(_ course: UUID, _ section: AppLink.CoursePage) {

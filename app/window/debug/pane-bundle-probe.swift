@@ -37,7 +37,7 @@ import UIKit
         #endif
         let links: [AppLink] = [
             AppLink(.note, course.file.notes[0].id), second,
-            .course(course.id, page: .quiz), .course(course.id, page: .units), .place(.today),
+            .course(course.id, page: .problems), .course(course.id, page: .units), .place(.today),
         ]
         let entries = links.compactMap { workspace.entry(for: $0, hint: course.id) }
         guard entries.count == links.count else {

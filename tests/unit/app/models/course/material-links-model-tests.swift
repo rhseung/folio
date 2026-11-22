@@ -64,17 +64,6 @@ struct MaterialLinksModelTests {
         #expect(model.unitsViaSessions(of: slides.id).isEmpty)
     }
 
-    @Test func reviewOpensTheUnitsOwnFilesToo() throws {
-        let slides = try material("Lectures/05_Matchings.pdf"), study = try material("Study/Problems.pdf")
-        workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: session, firstPage: 4))
-        workspace.run(MaterialLinkUnit(course: graphTheory, material: study.id, unit: unit, linked: true))
-        let model = ReviewModel(workspace: workspace, items: [.init(courseId: graphTheory, unitId: unit)])
-        let current = try #require(model.current)
-        model.load(course: current.course, unit: current.unit)
-        #expect(model.sources.map(\.id) == [.lecture(slides.id), .lecture(study.id)])
-        #expect(model.sources.map(\.page) == [4, nil])
-    }
-
     @Test func anExamCardLinksFilesFromOutsideItsFolder() throws {
         let exam = try #require(workspace.run(ExamAdd(course: graphTheory, title: "Midterm"))?.made)
         let model = ExamsModel(workspace: workspace, course: try #require(workspace.course(graphTheory)))

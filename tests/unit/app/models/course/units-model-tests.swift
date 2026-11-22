@@ -45,7 +45,6 @@ struct UnitsModelTests {
         let unit = try #require(f.units.first)
         let names = model.sessions(of: unit, in: f).map { f.day(of: $0, calendar: workspace.calendar) }
         #expect(model.sessionsLine(unit, in: f) == "\(names.prefix(3).joined(separator: ", ")) 외 1")
-        #expect(model.detail(unit, state: nil, in: f) == model.sessionsLine(unit, in: f))
     }
 
     @Test func linkMenuLeavesOutCancelledClassesUnlessLinked() throws {
@@ -61,12 +60,15 @@ struct UnitsModelTests {
         #expect(try menu() == [cancelled, held])
     }
 
-    @Test func subtitleCountsUnitsDueAndUnlinkedClasses() throws {
+    @Test func subtitleCountsUnitsDoneAndUnlinkedClasses() throws {
         let workspace = try fixtureWorkspace()
         let model = UnitsModel(workspace: workspace, courseId: graphTheory)
         workspace.run(UnitAdd(course: graphTheory, title: "매칭"))
         workspace.run(SessionAdd(course: graphTheory, date: Calendar.current.date(byAdding: .day, value: -1, to: .now)!))
-        #expect(model.subtitle(try file(workspace), states: [:]) == "단원 1개 · 오늘 복습 0개 · 단원 없는 회차 1")
+        #expect(model.subtitle(try file(workspace)) == "단원 1개 · 다 함 0 · 단원 없는 회차 1")
+        let unit = try #require(try file(workspace).units.first)
+        model.toggleDone(unit)
+        #expect(model.subtitle(try file(workspace)).hasPrefix("단원 1개 · 다 함 1"))
     }
 
     @Test func aClassNoteLeavesTheUnitWithItsClass() throws {
@@ -83,10 +85,5 @@ struct UnitsModelTests {
         workspace.run(UnitLink(course: graphTheory, unit: unitId, sessions: [session], linked: false))
         model.loadNotes(try #require(try file(workspace).units.first))
         #expect(model.notes.isEmpty)
-    }
-
-    @Test func reviewTimeReadsInSecondsThenMinutes() {
-        #expect(UnitsModel.minutes(42) == "42초")
-        #expect(UnitsModel.minutes(150) == "2분")
     }
 }

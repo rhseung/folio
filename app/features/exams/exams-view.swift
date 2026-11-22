@@ -17,7 +17,6 @@ struct ExamsView: View {
     var body: some View {
         let now = model.workspace.now
         let (coming, past) = model.exams(now: now)
-        let states = model.reviewStates(now: now)
         Page {
             HStack(alignment: .bottom) {
                 PageHeader(title: String(localized: .examsTitle), subtitle: model.subtitle(coming: coming.count, past: past.count))
@@ -29,7 +28,7 @@ struct ExamsView: View {
                 Card { CardRow(last: true) { EmptyLine(String(localized: .examsEmpty)) } }
             }
             ForEach(coming) { exam in
-                section(exam, states: states).linkTarget(exam.id)
+                section(exam).linkTarget(exam.id)
             }
             if !past.isEmpty {
                 Block(String(localized: .examsPast), note: "\(past.count)") {
@@ -51,7 +50,7 @@ struct ExamsView: View {
         .onChange(of: model.workspace.notesRevision) { model.load() }
     }
 
-    func section(_ exam: Exam, states: [UUID: ReviewState]) -> some View {
+    func section(_ exam: Exam) -> some View {
         Block(title: exam.title, note: model.component(of: exam)) {
             if let start = exam.start { DdayBadge(days: model.days(to: start), urgency: model.workspace.settings.urgency) }
         } content: {
@@ -72,7 +71,7 @@ struct ExamsView: View {
                     summaryButton(exam)
                     menu(exam)
                 }
-                scope(exam, states: states)
+                scope(exam)
                 let linked = model.linkedMaterials(exam)
                 CardRow(last: linked.isEmpty) {
                     if let folder = model.folder(of: exam) {
@@ -119,9 +118,8 @@ struct ExamsView: View {
         .frame(width: Self.dateColumn, alignment: .leading)
     }
 
-    @ViewBuilder func scope(_ exam: Exam, states: [UUID: ReviewState]) -> some View {
-        let scope = model.scope(exam, states: states)
-        let today = model.today
+    @ViewBuilder func scope(_ exam: Exam) -> some View {
+        let scope = model.scope(exam)
         if scope.units.isEmpty {
             CardRow {
                 Text(.examsScope).font(Theme.Typeface.bodyStrong)
@@ -137,12 +135,12 @@ struct ExamsView: View {
                     Text(model.scopeLine(exam, units: scope.units.count))
                         .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
                     Spacer(minLength: Theme.Space.m)
-                    Text(.examsOnTrack(scope.onTrack, scope.units.count)).font(Theme.Typeface.caption).foregroundStyle(
+                    Text(.examsOnTrack(scope.ready, scope.units.count)).font(Theme.Typeface.caption).foregroundStyle(
                         Theme.Palette.textSecondary
                     ).monospacedDigit()
                         .help(Text(.examsOnTrackHelp))
                 }
-                ProgressBar(value: Double(scope.onTrack) / Double(scope.units.count), height: 4)
+                ProgressBar(value: Double(scope.ready) / Double(scope.units.count), height: 4)
                 LazyVGrid(
                     columns: [GridItem(.adaptive(minimum: 300), spacing: Theme.Space.l, alignment: .leading)], alignment: .leading,
                     spacing: 0
@@ -157,7 +155,7 @@ struct ExamsView: View {
                                     .monospacedDigit()
                             }
                             Spacer(minLength: 0)
-                            ReviewDot(state: states[top.unit.id], today: today)
+                            if let readiness = scope.readiness[top.unit.id] { ReadinessBadge(readiness: readiness) }
                         }
                         .padding(.vertical, Theme.Space.tight)
                     }
@@ -217,31 +215,5 @@ struct ExamsView: View {
         Label(text.isEmpty ? empty : text, systemImage: symbol)
             .font(Theme.Typeface.caption).lineLimit(1)
             .foregroundStyle(text.isEmpty ? Theme.Palette.textTertiary : Theme.Palette.textSecondary)
-    }
-}
-
-private struct ReviewDot: View {
-    let state: ReviewState?
-    let today: LocalDate
-
-    var body: some View {
-        let (color, label): (Color?, String) = {
-            guard let state else { return (nil, String(localized: .examsReviewNotYet)) }
-            if state.settled && state.due == nil { return (Theme.Palette.success, String(localized: .examsReviewSettled)) }
-            guard let due = state.due else { return (Theme.Palette.textTertiary, String(localized: .examsReviewOngoing)) }
-            let late = due.days(until: today)
-            let note = state.writeNoteFirst ? String(localized: .examsReviewNoNote) + " · " : ""
-            return late > 0
-                ? (Theme.Palette.danger, note + String(localized: .examsReviewLate(late)))
-                : late == 0
-                    ? (Theme.Palette.warning, note + String(localized: .examsReviewToday))
-                    : (Theme.Palette.textTertiary, String(localized: .examsReviewNext(due.shortLabel)))
-        }()
-        Group {
-            if let color { Circle().fill(color) } else { Circle().strokeBorder(Theme.Palette.line, lineWidth: 1.5) }
-        }
-        .frame(width: Theme.Size.dot, height: Theme.Size.dot)
-        .help(label)
-        .accessibilityLabel(label)
     }
 }

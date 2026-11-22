@@ -30,17 +30,16 @@ struct NoteActionTests {
     @Test func changesSayWhetherNotesOrCardsWereTouched() throws {
         let id = UUID(), unit = UUID()
         let added = try run(NoteAdd(id: id, course: Self.graphTheory, title: "매칭 정리"))
-        #expect(added.changes.filter(\.touchesNotes).count == 2 && !added.changes.contains(where: \.touchesQuizzes))
+        #expect(added.changes.filter(\.touchesNotes).count == 2 && !added.changes.contains(where: \.touchesStudy))
         let unitAdded = try run(UnitAdd(id: unit, course: Self.graphTheory, title: "매칭"))
-        #expect(!unitAdded.changes.contains { $0.touchesNotes || $0.touchesQuizzes })
+        #expect(!unitAdded.changes.contains { $0.touchesNotes || $0.touchesStudy })
         let linked = try run(NoteLink(course: Self.graphTheory, note: id, kind: .unit, units: [unit]))
         #expect(linked.changes.map(\.touchesNotes) == [true])
-        let card = QuizCard(device: device, at: now, unitId: unit, type: .free, category: .definition, prompt: "p", answer: "a")
-        let saved = try run(QuizCardSave(course: Self.graphTheory, cards: [card]))
-        #expect(saved.changes.map(\.touchesQuizzes) == [true] && !saved.changes.contains(where: \.touchesNotes))
-        let answered = try run(
-            QuizRecord(course: Self.graphTheory, attempt: QuizAttemptEvent(cardId: card.id, verdict: .wrong, grader: .self)))
-        #expect(answered.changes.map(\.touchesQuizzes) == [true])
+        let card = StudyCard(device: device, at: now, unitId: unit, front: "p", back: "a")
+        let saved = try run(CardSave(course: Self.graphTheory, cards: [card]))
+        #expect(saved.changes.map(\.touchesStudy) == [true] && !saved.changes.contains(where: \.touchesNotes))
+        let answered = try run(CardFlip(course: Self.graphTheory, unit: unit, card: card.id, known: false))
+        #expect(answered.changes.map(\.touchesStudy) == [true])
     }
 
     @Test func aTexNoteIsAFileWithAnEntry() throws {
@@ -574,7 +573,7 @@ struct NoteActionTests {
         #expect(Actions.targets[NoteLink.command]?.effect == .sets)
         #expect(Actions.targets[MaterialWrite.command]?.effect == .replaces(covers: []))
         for additive in [
-            NoteEdit.command, NoteAdd.command, ExamAdd.command, SessionAdd.command, ScoreAdd.command, QuizRecord.command,
+            NoteEdit.command, NoteAdd.command, ExamAdd.command, SessionAdd.command, ScoreAdd.command, ProblemSolve.command,
             ExamRemove.command, MaterialTrack.command, UnitLink.command,
         ] {
             #expect(Actions.targets[additive] == nil, "\(additive)")

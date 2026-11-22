@@ -50,7 +50,7 @@ struct NotificationTableTests {
         let f = ISO8601DateFormatter()
         f.timeZone = calendar.timeZone
         let plan = NotificationPlan.build(
-            courses: [file], reviewCount: { $0 < at(26, 0) ? 2 : 0 }, settings: settings, now: at(23, 12), calendar: calendar)
+            courses: [file], settings: settings, now: at(23, 12), calendar: calendar)
         return plan.map { "\($0.id.replacingOccurrences(of: "-\(file.course.id)", with: "")) \(f.string(from: $0.date)) \($0.kind)" }
             .joined(separator: "\n")
     }
@@ -60,7 +60,6 @@ struct NotificationTableTests {
         custom[.assignmentDue].leadHours = [48, 6, 1]
         custom[.examDayBefore].minute = 20 * 60 + 30
         custom[.examMorning].minute = 8 * 60
-        custom[.dailyReview].minute = 22 * 60
         var off = NotificationSettings()
         off[.examDayBefore].on = false
         off[.attendance].on = false
@@ -71,9 +70,7 @@ struct NotificationTableTests {
                 == """
                 attendance-5 2026-10-23T12:00:00+09:00 attendanceOneAway(absences: 5)
                 due-00000000-0000-0000-0000-0000000000A2-3 2026-10-23T15:00:00+09:00 assignmentDue(hoursBefore: 3)
-                review-2026-10-24 2026-10-24T09:00:00+09:00 dailyReview(count: 2)
                 due-00000000-0000-0000-0000-0000000000A1-24 2026-10-24T23:59:00+09:00 assignmentDue(hoursBefore: 24)
-                review-2026-10-25 2026-10-25T09:00:00+09:00 dailyReview(count: 2)
                 due-00000000-0000-0000-0000-0000000000A1-3 2026-10-25T20:59:00+09:00 assignmentDue(hoursBefore: 3)
                 exam-eve-00000000-0000-0000-0000-0000000000E1 2026-10-25T21:00:00+09:00 examDayBefore
                 exam-morning-00000000-0000-0000-0000-0000000000E1 2026-10-26T08:00:00+09:00 examMorning
@@ -82,20 +79,15 @@ struct NotificationTableTests {
                 due-00000000-0000-0000-0000-0000000000A2-6 2026-10-23T12:00:00+09:00 assignmentDue(hoursBefore: 6)
                 attendance-5 2026-10-23T12:00:00+09:00 attendanceOneAway(absences: 5)
                 due-00000000-0000-0000-0000-0000000000A2-1 2026-10-23T17:00:00+09:00 assignmentDue(hoursBefore: 1)
-                review-2026-10-23 2026-10-23T22:00:00+09:00 dailyReview(count: 2)
                 due-00000000-0000-0000-0000-0000000000A1-48 2026-10-23T23:59:00+09:00 assignmentDue(hoursBefore: 48)
-                review-2026-10-24 2026-10-24T22:00:00+09:00 dailyReview(count: 2)
                 due-00000000-0000-0000-0000-0000000000A1-6 2026-10-25T17:59:00+09:00 assignmentDue(hoursBefore: 6)
                 exam-eve-00000000-0000-0000-0000-0000000000E1 2026-10-25T20:30:00+09:00 examDayBefore
-                review-2026-10-25 2026-10-25T22:00:00+09:00 dailyReview(count: 2)
                 due-00000000-0000-0000-0000-0000000000A1-1 2026-10-25T22:59:00+09:00 assignmentDue(hoursBefore: 1)
                 exam-morning-00000000-0000-0000-0000-0000000000E1 2026-10-26T08:00:00+09:00 examMorning
                 exam-eve-00000000-0000-0000-0000-0000000000E2 2026-10-26T20:30:00+09:00 examDayBefore
                 ---
                 due-00000000-0000-0000-0000-0000000000A2-3 2026-10-23T15:00:00+09:00 assignmentDue(hoursBefore: 3)
-                review-2026-10-24 2026-10-24T09:00:00+09:00 dailyReview(count: 2)
                 due-00000000-0000-0000-0000-0000000000A1-24 2026-10-24T23:59:00+09:00 assignmentDue(hoursBefore: 24)
-                review-2026-10-25 2026-10-25T09:00:00+09:00 dailyReview(count: 2)
                 due-00000000-0000-0000-0000-0000000000A1-3 2026-10-25T20:59:00+09:00 assignmentDue(hoursBefore: 3)
                 exam-morning-00000000-0000-0000-0000-0000000000E1 2026-10-26T07:00:00+09:00 examMorning
                 exam-morning-00000000-0000-0000-0000-0000000000E2 2026-10-27T07:00:00+09:00 examMorning

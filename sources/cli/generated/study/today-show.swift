@@ -7,7 +7,7 @@ import Foundation
 
 extension GeneratedCommands {
     struct TodayShow: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "today", abstract: "오늘 화면과 같은 요약: 시험, 수업, 복습, 마감, 시험 계획", discussion: """
+        static let configuration = CommandConfiguration(commandName: "today", abstract: "오늘 화면과 같은 요약: 시험, 수업, 마감, 시험 계획, 남은 오답", discussion: """
             이번 학기 과목만 본다. 오늘의 범위는 설정의 하루 경계를 따른다.
 
             예시:

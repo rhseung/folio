@@ -54,7 +54,7 @@ AGENTS.md "구조 축" 표의 축마다 지킬 규칙이다. 축에 기능을 �
 
 ## 파일 보기 렌더러
 
-`FolioDomain`의 `MaterialFormat`이 확장자로 형식을 정하고(`material show`도 같은 값을 쓴다) `renderer`가 보기를 고른다. `app/platform/materials/file-view/`의 `FileView` 하나가 그린다. PDF는 PDFKit(`PDFPane`), 마크다운은 노트 미리보기, `.tex`·코드·텍스트는 편집기(자료와 노트) 또는 읽기 전용 소스, 이미지와 오디오는 네이티브 보기, 나머지는 같은 칸 안의 Quick Look이고, 그것도 못 보이면 "열 수 없음"과 다른 앱으로 열기다. 자료는 `folio://material` 링크로 자료 탭에서 연다(과제, 문제집, 시험, 단원, 검색이 모두 이 길). 복습의 원본과 학기의 `_Admin` 파일도 `FileView`로 보인다. 화면이 파일을 따로 열지 않는다.
+`FolioDomain`의 `MaterialFormat`이 확장자로 형식을 정하고(`material show`도 같은 값을 쓴다) `renderer`가 보기를 고른다. `app/platform/materials/file-view/`의 `FileView` 하나가 그린다. PDF는 PDFKit(`PDFPane`), 마크다운은 노트 미리보기, `.tex`·코드·텍스트는 편집기(자료와 노트) 또는 읽기 전용 소스, 이미지와 오디오는 네이티브 보기, 나머지는 같은 칸 안의 Quick Look이고, 그것도 못 보이면 "열 수 없음"과 다른 앱으로 열기다. 자료는 `folio://material` 링크로 자료 탭에서 연다(과제, 문제집, 시험, 단원, 검색이 모두 이 길). 풀이 화면의 문제 쪽과 해설 쪽, 학기의 `_Admin` 파일도 `FileView`로 보인다. 화면이 파일을 따로 열지 않는다.
 
 ## 파일 분류 `FileRule`
 

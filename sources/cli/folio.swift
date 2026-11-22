@@ -22,7 +22,8 @@ struct Folio: ParsableCommand {
                     UnlockCommand.self, LockCommand.self,
                 ]),
             CommandGroup(
-                name: String(localized: .folioGroupStudy), subcommands: [ReviewCommand.self, QuizCommand.self, ProblemSetCommand.self]),
+                name: String(localized: .folioGroupStudy),
+                subcommands: [StudyCommand.self, ProblemSetCommand.self, ProblemCommand.self, CardCommand.self]),
             CommandGroup(
                 name: String(localized: .folioGroupMaterials),
                 subcommands: [MaterialCommand.self, NoteCommand.self, SearchCommand.self, LinkCommand.self, OpenCommand.self]),

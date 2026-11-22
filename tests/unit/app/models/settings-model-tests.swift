@@ -10,14 +10,14 @@ struct SettingsModelTests {
     @Test func nothingIsSavedBeforeTheCopyIsLoaded() throws {
         let workspace = try fixtureWorkspace()
         let model = SettingsModel(workspace: workspace)
-        model.settings.review.intervals = [99]
+        model.settings.study.mockMinutes = 99
         model.saveNow()
-        #expect(workspace.settings.review.intervals != [99])
+        #expect(workspace.settings.study.mockMinutes != 99)
 
         model.load()
-        model.settings.review.intervals = [99]
+        model.settings.study.mockMinutes = 99
         model.saveNow()
-        #expect(workspace.settings.review.intervals == [99])
+        #expect(workspace.settings.study.mockMinutes == 99)
     }
 
     @Test func backupFolderInsideGistIsRefused() throws {
@@ -36,11 +36,11 @@ struct SettingsModelTests {
 
     @Test func showsTheTabTheLinkNames() throws {
         let model = SettingsModel(workspace: try fixtureWorkspace(), tab: .notes)
-        model.follow(.settings(.review))
-        #expect(model.tab == .review)
+        model.follow(.settings(.study))
+        #expect(model.tab == .study)
         model.follow(.place(.settings))
         model.follow(.place(.grades))
-        #expect(model.tab == .review)
+        #expect(model.tab == .study)
 
         model.follow(try #require(AppLink(string: "folio://settings/letters")))
         #expect(model.tab == .record)
@@ -52,21 +52,11 @@ struct SettingsModelTests {
         let saved = UserDefaults.standard.string(forKey: AppLink.SettingsPage.storageKey)
         defer { UserDefaults.standard.set(saved, forKey: AppLink.SettingsPage.storageKey) }
         for (stored, tab) in [
-            ("녹음", AppLink.SettingsPage.classes), ("평어", .record), ("알림", .notifications), ("review", .review), ("없는 탭", .general),
+            ("녹음", AppLink.SettingsPage.classes), ("평어", .record), ("알림", .notifications), ("review", .study), ("없는 탭", .general),
         ] {
             UserDefaults.standard.set(stored, forKey: AppLink.SettingsPage.storageKey)
             #expect(AppLink.SettingsPage.remembered == tab)
         }
-    }
-
-    @Test func reviewDaysCountFromToday() throws {
-        let workspace = try fixtureWorkspace()
-        let model = SettingsModel(workspace: workspace)
-        model.load()
-        model.settings.review.intervals = [1, 3]
-        let today = workspace.today
-        let days = [today.adding(days: 1), today.adding(days: 4)].map(SettingsModel.monthDay).joined(separator: " · ")
-        #expect(model.reviewDays == "\(SettingsModel.monthDay(today)) → \(days)")
     }
 
     @Test func aRowWritesItsDeclaredKey() throws {
@@ -74,10 +64,9 @@ struct SettingsModelTests {
         model.set(.examMinutes, .number(150))
         #expect(model.settings.schedule.examMinutes == 150)
         #expect(model.value(.examMinutes) == .number(150))
-        model.set(.reviewDailyLimit, .number(20))
-        #expect(model.settings.review.dailyLimit == 20)
-        model.set(.reviewDailyLimit, .null)
-        #expect(model.settings.review.dailyLimit == nil)
+        model.set(.studyMinProblems, .number(5))
+        #expect(model.settings.study.minProblems == 5)
+        #expect(model.value(.studyMinProblems) == .number(5))
     }
 
     @Test func calloutKindsAreAddedChangedAndRemoved() throws {

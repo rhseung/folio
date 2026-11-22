@@ -45,7 +45,8 @@ extension Resolver {
         case .person: let p = try person(ref); return (p.id, p.name)
         case .category: let c = try category(ref); return (c.id, c.name)
         case .examPlanItem: let i = try planItem(ref, exam: parent, in: scoped()); return (i.id, i.title)
-        case .quizCard: let q = try card(ref, unit: parent, in: scoped()); return (q.id, q.prompt)
+        case .studyCard: let q = try card(ref, unit: parent, in: scoped()); return (q.id, q.front)
+        case .problem: let p = try problem(ref, set: parent, in: scoped()); return (p.id, p.number)
         case .noteWidget: let w = try widget(ref, in: scoped()); return (w, w.uuidString)
         case .moveBatch:
             guard let id = UUID(uuidString: ref) else { throw CLIError(exit: .usage, message: String(localized: .resolveNotBatch(ref))) }
@@ -68,13 +69,26 @@ extension Resolver {
         ).1
     }
 
-    func card(_ ref: String, unit: UUID?, in c: CourseRef) throws -> QuizCard {
+    func card(_ ref: String, unit: UUID?, in c: CourseRef) throws -> StudyCard {
         let units = unit.map { id in c.file.units.filter { $0.id == id } } ?? c.file.units
         if let unit, units.isEmpty {
             throw CLIError(exit: .notFound, message: String(localized: .resolveNotFound(ItemKind.unit.noun, unit.uuidString)))
         }
-        let cards = try units.flatMap { try c.store.loadQuiz(unit: $0.id).model.cards }
-        return try pick(ref, cards, what: ItemKind.quizCard.noun, names: { [$0.prompt] }, ref: { $0.id.uuidString })
+        let cards = try units.flatMap { try c.store.loadCards(unit: $0.id).model.cards }
+        return try pick(ref, cards, what: ItemKind.studyCard.noun, names: { [$0.front] }, ref: { $0.id.uuidString })
+    }
+
+    // 문제는 묶음 안의 번호로 부른다. 묶음 없이 부르면 과목의 모든 묶음에서 찾는다.
+    func problem(_ ref: String, set: UUID?, in c: CourseRef) throws -> Problem {
+        let sets = set.map { id in c.file.problemSets.filter { $0.id == id } } ?? c.file.problemSets
+        if let set, sets.isEmpty {
+            throw CLIError(exit: .notFound, message: String(localized: .resolveNotFound(ItemKind.problemSet.noun, set.uuidString)))
+        }
+        let problems = sets.flatMap { s in s.problems.map { (s, $0) } }
+        return try pick(
+            ref, problems, what: ItemKind.problem.noun, id: { $0.1.id }, names: { [$0.1.number] },
+            ref: { "\(c.code)/\($0.0.title) \($0.1.number)" }
+        ).1
     }
 
     func widget(_ ref: String, in c: CourseRef) throws -> UUID {
@@ -196,7 +210,8 @@ extension Complete {
         case .material: materials
         case .problemSet: problemSets
         case .note, .notePath: notes
-        case .scoreEntry, .noteWidget, .recording, .examPlanItem, .quizCard, .letterGrade, .courseCode, .person, .category, .moveBatch:
+        case .scoreEntry, .noteWidget, .recording, .examPlanItem, .studyCard, .problem, .letterGrade, .courseCode, .person, .category,
+            .moveBatch:
             .default
         }
     }

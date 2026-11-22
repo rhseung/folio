@@ -12,21 +12,17 @@ final class TodayModel {
 
     init(workspace: Workspace) { self.workspace = workspace }
 
-    struct Reviews {
-        var queue: [Workspace.ReviewEntry]
-        var deferred: [Workspace.ReviewEntry]
+    // 오늘의 공부는 시험 계획의 오늘 항목과 복습 노트가 없는 수업이다(#575).
+    struct Study {
+        var plan: [ExamPlan.DayItem]
         var notes: [TodaySummary.SessionItem]
-        var doneToday: Int
-        var streak: Int
-        var all: [Workspace.ReviewEntry] { queue + deferred }
-        var left: Int { queue.count + notes.count }
-        var total: Int { doneToday + left }
-        var fraction: Double { total == 0 ? 0 : Double(doneToday) / Double(total) }
+        var left: Int
+        var isEmpty: Bool { plan.isEmpty && notes.isEmpty }
     }
 
     struct Day {
         let summary: TodaySummary
-        let reviews: Reviews
+        let study: Study
         let classes: [RibbonClass]
         let wash: [UUID]
     }
@@ -34,7 +30,7 @@ final class TodayModel {
     func day(now: Date) -> Day {
         let summary = self.summary(now: now)
         return Day(
-            summary: summary, reviews: reviews(summary, now: now), classes: ribbonClasses(summary, now: now),
+            summary: summary, study: study(summary), classes: ribbonClasses(summary, now: now),
             wash: washCourses(summary, now: now))
     }
 
@@ -54,30 +50,10 @@ final class TodayModel {
         (summary.studyDay.date(in: workspace.calendar) ?? now).formatted(.dateTime.month().day().weekday(.wide))
     }
 
-    func reviews(_ summary: TodaySummary, now: Date) -> Reviews {
-        let queue = workspace.reviewQueue(now: now)
-        let progress = reviewProgress(now: now)
-        return Reviews(
-            queue: queue.filter { $0.item.deferred == nil }, deferred: queue.filter { $0.item.deferred != nil },
-            notes: summary.missingReviewNotes, doneToday: progress.doneToday, streak: progress.streak)
-    }
-
-    func reviewProgress(now: Date) -> (doneToday: Int, streak: Int) {
-        let today = workspace.settings.studyDay(of: now, calendar: workspace.calendar)
-        var done = Set<UUID>()
-        var days = Set<LocalDate>()
-        for courseId in workspace.reviewEvents.keys {
-            for r in workspace.reviews(of: courseId) where r.event.result != .skip {
-                let day = workspace.settings.studyDay(of: r.at, calendar: workspace.calendar)
-                days.insert(day)
-                if day == today { done.insert(r.event.unitId) }
-            }
-        }
-        return (done.count, ReviewStreak.days(days, today: today))
-    }
-
-    func skip(_ entries: [Workspace.ReviewEntry]) {
-        pending = workspace.skipReviews(entries.map { ($0.courseId, $0.item.unitId) })
+    func study(_ summary: TodaySummary) -> Study {
+        let plan = ExamPlan.items(on: summary.studyDay, courses: current.map(\.file))
+        let open = plan.filter { entry in !(workspace.study(of: entry.courseId)?.isDone(entry.item, in: entry.exam) ?? false) }
+        return Study(plan: plan, notes: summary.missingReviewNotes, left: open.count + summary.missingReviewNotes.count)
     }
 
     // 자정 뒤 하루 경계 전에는 내일의 제안이 오늘의 것이 아니다.
@@ -355,8 +331,7 @@ final class TodayModel {
         }
     }
 
-    func summaryLine(classes: [RibbonClass], summary: TodaySummary, reviews: Reviews, now: Date) -> [(text: AttributedString, urgent: Bool)]
-    {
+    func summaryLine(classes: [RibbonClass], summary: TodaySummary, study: Study, now: Date) -> [(text: AttributedString, urgent: Bool)] {
         var pieces: [(AttributedString, Bool)] = []
 
         let ended = classes.filter { $0.end <= now }.count
@@ -374,42 +349,12 @@ final class TodayModel {
         let due = summary.deadlines.filter(\.isToday).count
         if due > 0 { pieces.append((AttributedString(localized: .todayLineDue(due)), true)) }
 
-        if reviews.left > 0 {
-            pieces.append((AttributedString(localized: .todayLineReviews(reviews.left)), false))
-        } else if reviews.doneToday > 0 {
-            pieces.append((AttributedString(localized: .todayLineReviewsDone), false))
+        if study.left > 0 {
+            pieces.append((AttributedString(localized: .todayLineStudy(study.left)), false))
+        } else if !study.isEmpty {
+            pieces.append((AttributedString(localized: .todayLineStudyDone), false))
         }
         return pieces
-    }
-
-    // MARK: Reviews
-
-    struct UnitGroup: Identifiable {
-        var courseId: UUID
-        var entries: [(index: Int, entry: Workspace.ReviewEntry)]
-        var id: UUID { courseId }
-        var overdue: Int { entries.map(\.entry.item.overdueDays).max() ?? 0 }
-        var writeNoteFirst: Bool { entries.contains { $0.entry.item.writeNoteFirst } }
-    }
-
-    func unitGroups(_ queue: [Workspace.ReviewEntry]) -> [UnitGroup] {
-        var groups: [UnitGroup] = []
-        for (i, entry) in queue.enumerated() {
-            if let g = groups.firstIndex(where: { $0.courseId == entry.courseId }) {
-                groups[g].entries.append((i, entry))
-            } else {
-                groups.append(UnitGroup(courseId: entry.courseId, entries: [(i, entry)]))
-            }
-        }
-        return groups
-    }
-
-    static let unitLimit = 6
-    var expandedUnitGroups: Set<UUID> = []
-
-    func shownUnits(_ group: UnitGroup) -> (entries: [(index: Int, entry: Workspace.ReviewEntry)], more: Int) {
-        guard !expandedUnitGroups.contains(group.courseId), group.entries.count > Self.unitLimit else { return (group.entries, 0) }
-        return (Array(group.entries.prefix(Self.unitLimit)), group.entries.count - Self.unitLimit)
     }
 
     func sessionWhen(_ item: TodaySummary.SessionItem, today: LocalDate) -> String {

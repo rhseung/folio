@@ -28,10 +28,9 @@ extension TodayShow: QueryOutput {
         section(String(localized: .todaySectionExams), out.exams)
         section(String(localized: .todaySectionClasses), out.classes)
         section(String(localized: .todaySectionReviewNotes), out.reviewNotes)
-        section(String(localized: .todaySectionReviews), out.reviews, time: false)
-        section(String(localized: .todaySectionDeferred), out.deferredReviews, time: false)
         section(String(localized: .todaySectionDeadlines), out.deadlines)
         section(String(localized: .todaySectionPlan), out.plan, time: false)
+        section(String(localized: .todaySectionWrong), out.wrong, time: false)
         section(String(localized: .todaySectionAttendance), out.attendance, time: false)
         section(String(localized: .todaySectionStudyTime), out.studyTime, time: false)
     }

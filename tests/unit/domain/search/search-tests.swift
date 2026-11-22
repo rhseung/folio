@@ -59,14 +59,12 @@ struct SearchTests {
         let covers = Unit(device: device, at: now, title: "Covers", order: 1)
         file.units = [covers]
         file.toggle(session: session.id, unit: covers.id)
-        let card = QuizCard(
-            device: device, at: now, unitId: file.units[0].id, type: .free, category: .definition, prompt: "덮개의 정의",
-            answer: "모든 꼭짓점을 덮는 변 집합")
+        let card = StudyCard(device: device, at: now, unitId: file.units[0].id, front: "덮개의 정의", back: "모든 꼭짓점을 덮는 변 집합")
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
         let items = SearchIndex.items(for: file, notes: [(UUID(), "09-08(화) 매칭", "본문")], cards: [card], calendar: calendar)
 
-        #expect(items.map(\.kind) == [.note, .material, .assignment, .exam, .session, .unit, .quiz])
+        #expect(items.map(\.kind) == [.note, .material, .assignment, .exam, .session, .unit, .card])
 
         #expect(
             items.map(\.title) == [

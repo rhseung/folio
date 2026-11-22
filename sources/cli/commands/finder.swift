@@ -29,7 +29,7 @@ enum Finder {
         ("점수", ["score"]), ("성적 항목", ["component"]), ("비율", ["component"]), ("성적표", ["transcript"]), ("학점", ["gpa", "transcript"]),
         ("평점", ["gpa"]), ("졸업", ["requirement"]), ("잠금 해제", ["unlock"]), ("잠금 풀", ["unlock"]), ("잠그", ["lock"]),
         ("노트", ["note"]), ("메모", ["note"]), ("자료", ["material"]), ("파일", ["material"]), ("pdf", ["material"]),
-        ("복습", ["review"]), ("카드", ["quiz"]), ("퀴즈 카드", ["quiz"]), ("문제", ["problem-set"]),
+        ("공부", ["study"]), ("오답", ["study"]), ("카드", ["card"]), ("문제", ["problem", "problem-set"]),
         ("학기", ["semester"]), ("과목", ["course"]), ("교수", ["catalog"]), ("설정", ["settings"]),
         ("백업", ["backup"]), ("되돌", ["undo", "restore"]), ("검색", ["search"]), ("찾", ["search"]), ("오늘", ["today"]),
         ("가져오", ["import"]), ("노션", ["import", "notion"]), ("캘린더", ["import", "calendar"]), ("점검", ["check"]), ("정리 도구", ["cleanup"]),
@@ -37,7 +37,7 @@ enum Finder {
         ("바꾸", ["set"]), ("바꿔", ["set"]), ("수정", ["set"]), ("변경", ["set"]), ("고치", ["set"]), ("고쳐", ["set"]), ("이름", ["set", "rename"]),
         ("지우", ["rm"]), ("지워", ["rm"]), ("삭제", ["rm"]), ("제거", ["rm"]), ("없애", ["rm"]),
         ("보기", ["show", "list"]), ("보여", ["show", "list"]), ("확인", ["show", "list"]), ("조회", ["show", "list"]), ("목록", ["list"]),
-        ("기록", ["record", "add"]), ("옮기", ["move"]), ("순서", ["move"]),
+        ("기록", ["solve", "add"]), ("풀었", ["solve"]), ("채점", ["solve", "verdict"]), ("옮기", ["move"]), ("순서", ["move"]),
     ]
 
     static let phrases: [String: [String]] = written.merging(

@@ -20,7 +20,7 @@ extension Workspace {
             return transcript.semesters.contains { $0.id == link.id } ? Navigator.Entry(link: link) : nil
         case .catalog:
             return catalog.people.contains { $0.id == link.id } ? Navigator.Entry(link: link) : nil
-        case .quiz:
+        case .study:
             return course(holdingCard: link.id, hint: hint).map { Navigator.Entry(link: link, course: $0) }
         case .course:
             let files = (hint.flatMap(course).map { [$0] } ?? []) + courses
@@ -32,7 +32,7 @@ extension Workspace {
         guard let id else { return nil }
         let ordered = (hint.flatMap(course).map { [$0] } ?? []) + courses.filter { $0.id != hint }
         for c in ordered {
-            for unit in c.file.units where (try? c.store.loadQuiz(unit: unit.id).model.cards.contains { $0.id == id }) == true {
+            for unit in c.file.units where (try? c.store.loadCards(unit: unit.id).model.cards.contains { $0.id == id }) == true {
                 return c.id
             }
         }

@@ -127,7 +127,7 @@ final class CourseModel {
         file.courseScore(at: workspace.now)
     }
     func unclassified(_ file: CourseFile) -> [FolioDomain.Material] { file.materials.filter { $0.status == .unclassified } }
-    func reviews(now: Date) -> [Workspace.ReviewEntry] { workspace.reviewQueue(now: now).filter { $0.courseId == courseId } }
+    var study: CourseStudy? { workspace.study(of: courseId) }
     func suggested(_ course: LoadedCourse, now: Date) -> Workspace.SuggestedSession? { workspace.suggestedSession(for: course, now: now) }
     func days(to date: Date) -> Int { workspace.days(to: date) }
 
@@ -182,23 +182,24 @@ final class CourseModel {
 
     func sessionCount(of unit: FolioDomain.Unit) -> Int { workspace.course(courseId)?.file.sessions(of: unit.id).count ?? 0 }
 
-    func glanceUnits(_ file: CourseFile, reviews: [Workspace.ReviewEntry]) -> [FolioDomain.Unit] {
-        let due = reviews.compactMap { r in file.units.first { $0.id == r.item.unitId } }
-        let covered = UnitTree.outline(file.units).map(\.unit).filter { u in
-            !file.sessions(of: u.id).isEmpty && !due.contains { $0.id == u.id }
-        }
-        return Array((due + covered.suffix(8).reversed()).prefix(8))
+    // 다가오는 시험이 있으면 그 범위 단원을, 없으면 최근에 다룬 단원을 보인다.
+    func glanceUnits(_ file: CourseFile, study: CourseStudy?) -> [(unit: FolioDomain.Unit, readiness: UnitReadiness?)] {
+        let outline = UnitTree.outline(file.units).map(\.unit)
+        let exam = study?.nextExam(now: workspace.now, calendar: workspace.calendar)
+        let units =
+            exam.map { file.scopeUnits(of: $0) }
+            ?? Array(outline.filter { !file.sessions(of: $0.id).isEmpty }.suffix(8).reversed())
+        return units.prefix(8).map { ($0, study?.readiness(of: $0.id)) }
     }
 
-    func stats(_ file: CourseFile, reviews: [Workspace.ReviewEntry], suggested: Workspace.SuggestedSession?, now: Date) -> [StatGroup.Item]
-    {
+    func stats(_ file: CourseFile, study: CourseStudy?, suggested: Workspace.SuggestedSession?, now: Date) -> [StatGroup.Item] {
         let nextClass = file.nextClass(after: now, suggested: suggested.map { [$0.suggestion.date] } ?? []).map {
             (date: $0.date, subject: $0.session.flatMap { file.subject(of: $0) })
         }
         let nextExam = file.exams.compactMap { e in e.start.map { (e, $0) } }.filter { $0.1 > now }.min { $0.1 < $1.1 }
         let nextDue = file.assignments.compactMap { a in a.due.map { (a, $0) } }
             .filter { $0.1 > now && $0.0.status.isOpen }.min { $0.1 < $1.1 }
-        let maxOverdue = reviews.map(\.item.overdueDays).max() ?? 0
+        let ready = study.flatMap { s in s.nextExam(now: now, calendar: workspace.calendar).map { s.readiness(for: $0) } }
 
         var items: [StatGroup.Item] = []
         if let next = nextClass {
@@ -222,8 +223,10 @@ final class CourseModel {
         }
         items.append(
             .init(
-                title: String(localized: .courseReviewToday), value: String(localized: .courseUnitsValue(reviews.count)),
-                detail: maxOverdue > 0 ? String(localized: .courseMaxOverdue(maxOverdue)) : nil, tone: maxOverdue > 0 ? .warning : .plain))
+                title: String(localized: .courseReadyUnits),
+                value: ready.map { String(localized: .courseReadyValue($0.ready, $0.units)) } ?? "-",
+                detail: ready.map { String(localized: .unitsExamSolved($0.problemsTotal, $0.problemsSolved)) },
+                tone: ready.map { $0.ready < $0.units ? .warning : .success } ?? .plain))
         items.append(
             .init(
                 title: String(localized: .courseNearestDue), value: nextDue?.0.title ?? "-",

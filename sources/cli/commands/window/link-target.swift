@@ -84,12 +84,12 @@ struct LinkTarget: ParsableArguments {
         guard let id = UUID(uuidString: rest) else { throw usage(.linkCardNeedsId) }
         for course in c.map({ [$0] }) ?? r.courses {
             for unit in course.file.units {
-                if let card = try? course.store.loadQuiz(unit: unit.id).model.cards.first(where: { $0.id == id }) {
-                    return done(AppLink(.card, card.id), title: "\(course.code)/\(card.prompt)")
+                if let card = try? course.store.loadCards(unit: unit.id).model.cards.first(where: { $0.id == id }) {
+                    return done(AppLink(.card, card.id), title: "\(course.code)/\(card.front)")
                 }
             }
         }
-        throw CLIError(exit: .notFound, message: String(localized: .resolveNotFound(ItemKind.quizCard.noun, rest)))
+        throw CLIError(exit: .notFound, message: String(localized: .resolveNotFound(ItemKind.studyCard.noun, rest)))
     }
 
     func page<Page: RawRepresentable & CaseIterable>(_: Page.Type) throws -> Page? where Page.RawValue == String {

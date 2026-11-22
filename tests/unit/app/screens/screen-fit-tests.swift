@@ -15,12 +15,9 @@ struct ScreenFitTests {
         let course = try #require(workspace.currentCourses.first)
         if course.file.materials.isEmpty { workspace.run(MaterialTrack(course: course.id)) }
         let unit = try #require(course.file.units.first?.id ?? workspace.run(UnitAdd(course: course.id, title: "매칭"))?.made)
-        let card = QuizCard(device: workspace.device, at: .now, unitId: unit, type: .free, category: .definition, prompt: "p", answer: "a")
-        workspace.run(QuizCardSave(course: course.id, cards: [card]))
-        workspace.run(
-            ProblemSetSave(
-                course: course.id, set: ProblemSet(device: workspace.device, at: .now, title: "Exercise 1", problems: [.init(number: "1")]))
-        )
+        let card = StudyCard(device: workspace.device, at: .now, unitId: unit, front: "p", back: "a")
+        workspace.run(CardSave(course: course.id, cards: [card], movedFrom: nil))
+        workspace.run(ProblemSetAdd(course: course.id, title: "Exercise 1", numbers: ["1"]))
         if course.file.recordings.isEmpty {
             let recording = Recording(
                 device: workspace.device, at: .now, sessionId: course.file.sessions.first?.id, file: "Recordings/a.m4a")
@@ -50,7 +47,7 @@ struct ScreenFitTests {
             case .recording: link = try first(.recording, file.recordings.map(\.id))
             }
             let entry = try #require(workspace.entry(for: link), "\(kind): \(link) is found nowhere")
-            let inCourse = kind.home == .course || kind.home == .quiz
+            let inCourse = kind.home == .course || kind.home == .study
             #expect(entry.course == (inCourse ? course.id : nil), "\(kind)")
             #expect(Screen(entry) != .missing, "\(kind) has no screen")
             #expect(Screen(entry).link != nil)

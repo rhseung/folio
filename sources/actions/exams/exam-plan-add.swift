@@ -17,6 +17,8 @@ public struct ExamPlanAdd {
     var day: LocalDate
     /// 이 단원을 공부하는 일
     var unit: FolioDomain.Unit.ID?
+    /// 이 문제 묶음을 푸는 일
+    var set: ProblemSet.ID?
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
@@ -24,7 +26,11 @@ public struct ExamPlanAdd {
                 guard !e.plan.contains(where: { $0.id == id }) else {
                     throw ActionError.rule(String(localized: .errorIdTakenPlanItem("\(id)")))
                 }
-                e.plan.append(ExamPlanItem(id: id, day: day, title: title, target: unit.map { ExamPlanTarget(kind: .unit, id: $0) }))
+                let target =
+                    if let unit { ExamPlanTarget.unit(unit) } else if let set { ExamPlanTarget(kind: .problems, id: set) } else {
+                        ExamPlanTarget(kind: .custom)
+                    }
+                e.plan.append(ExamPlanItem(id: id, day: day, target: target, title: title, edited: true))
                 e.touch(by: ctx.device, at: ctx.now)
             }
         }

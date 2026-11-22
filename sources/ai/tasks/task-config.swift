@@ -12,11 +12,15 @@ public struct TaskConfig: Codable, Sendable, Equatable {
     public static func defaults(for task: ClaudeTask) -> TaskConfig {
         switch task {
         case .classifyFile, .extractAssignment: TaskConfig(model: small, effort: .low, maxTokens: 4_000)
+        // 단답 두 개가 같은 답인지만 묻는다.
+        case .sameAnswer: TaskConfig(model: small, effort: .low, maxTokens: 1_000)
+        // 시험지 한 부의 문제를 모두 옮겨 쓰므로 출력이 길다.
+        case .extractProblems, .problemSheet: TaskConfig(model: large, effort: .medium, maxTokens: 32_000)
         // 모든 쪽의 글을 읽으므로 107쪽 덱이면 약 20k token이다. low에서 작은 모델은 경계 몇 개를 한 슬라이드씩
         // 어긋나게 잡았고, medium에서는 큰 모델과 같은 경계를 30분의 1 비용으로 잡았다.
         case .lectureSections: TaskConfig(model: small, effort: .medium, maxTokens: 8_000)
         case .grading: TaskConfig(model: large, effort: .high, maxTokens: 16_000)
-        case .chat, .reviewNoteDraft, .examSummaryDraft, .quizCards, .extractGradingPolicy, .examPlan, .widget:
+        case .chat, .reviewNoteDraft, .examSummaryDraft, .cardSuggestions, .extractGradingPolicy, .examPlan, .widget:
             TaskConfig(model: large, effort: .medium, maxTokens: 16_000)
         }
     }

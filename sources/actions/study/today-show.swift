@@ -4,7 +4,7 @@ import FolioStorage
 import Foundation
 
 @Query(
-    "today", "오늘 화면과 같은 요약: 시험, 수업, 복습, 마감, 시험 계획",
+    "today", "오늘 화면과 같은 요약: 시험, 수업, 마감, 시험 계획, 남은 오답",
     discussion: "이번 학기 과목만 본다. 오늘의 범위는 설정의 하루 경계를 따른다.", examples: ["folio today", "folio today --json"],
     phrases: ["오늘 할 일", "오늘 일정", "지금 뭐 해야", "하루 요약"], panel: true)
 public struct TodayShow {
@@ -23,8 +23,7 @@ public struct TodayShow {
         public var exams: [Item]
         public var classes: [Item]
         public var reviewNotes: [Item]
-        public var reviews: [Item]
-        public var deferredReviews: [Item]
+        public var wrong: [Item]
         public var deadlines: [Item]
         public var plan: [Item]
         public var attendance: [Item]
@@ -45,10 +44,17 @@ public struct TodayShow {
         let now = ctx.now, calendar = ctx.calendar
 
         let summary = TodaySummary.build(courses: files, now: now, settings: settings, calendar: calendar)
-        let queue = ReviewScheduler.queue(
-            courses: courses.map { ($0.file, (logs[$0.id] ?? []).events(ReviewEvent.self)) },
-            settings: settings, calendar: calendar, now: now)
-        let done = ExamPlan.done(logs.values.flatMap { $0 }.events(PlanCheckEvent.self))
+        let study = Dictionary(
+            courses.compactMap { c in
+                (try? c.file.units.flatMap { try c.store.loadCards(unit: $0.id).model.cards }).map { cards in
+                    (
+                        c.id,
+                        CourseStudy(
+                            file: c.file, cards: cards, log: (logs[c.id] ?? []).studyLog, settings: settings, calendar: calendar, now: now)
+                    )
+                }
+            }
+        ) { a, _ in a }
         let first = summary.studyDay.adding(days: -13)
         func item(_ course: UUID, _ id: UUID, _ title: String, at: Date? = nil, _ detail: String? = nil) -> Item {
             Item(course: code[course] ?? "", courseId: course, id: id, title: title, at: at, detail: detail)
@@ -57,10 +63,6 @@ public struct TodayShow {
             item(
                 s.courseId, s.session.id, file[s.courseId]?.reference(of: s.session, calendar: calendar) ?? "", at: s.session.date,
                 file[s.courseId]?.subject(of: s.session))
-        }
-        let review = { (e: ReviewEntry) in
-            item(
-                e.courseId, e.item.unitId, e.unitTitle, e.item.overdueDays > 0 ? String(localized: .todayOverdue(e.item.overdueDays)) : nil)
         }
         return Summary(
             studyDay: summary.studyDay.description,
@@ -74,13 +76,16 @@ public struct TodayShow {
             },
             classes: summary.classesToday.map(session),
             reviewNotes: summary.missingReviewNotes.map(session),
-            reviews: queue.filter { $0.item.deferred == nil }.map(review),
-            deferredReviews: queue.filter { $0.item.deferred != nil }.map(review),
+            wrong: courses.compactMap { c in
+                let left = study[c.id]?.allProblems.count { $0.status.needsWork } ?? 0
+                return left > 0 ? item(c.id, c.id, c.file.course.title, String(localized: .todayWrongLeft(left))) : nil
+            },
             deadlines: summary.deadlines.map { item($0.courseId, $0.assignment.id, $0.assignment.title, at: $0.assignment.due) },
             plan: ExamPlan.items(on: summary.studyDay, courses: files).map {
-                item(
-                    $0.courseId, $0.item.id, $0.item.title,
-                    $0.exam.title + (done.contains($0.item.id) ? String(localized: .todayPlanDone) : ""))
+                let done = study[$0.courseId]?.isDone($0.item, in: $0.exam) ?? false
+                return item(
+                    $0.courseId, $0.item.id, file[$0.courseId]?.title(of: $0.item) ?? $0.item.title,
+                    $0.exam.title + (done ? String(localized: .todayPlanDone) : ""))
             },
             attendance: courses.compactMap { c in
                 c.file.capOneAway(at: now).map { w in
@@ -105,6 +110,6 @@ public struct TodayShow {
 
 extension TodayShow.Summary {
     private enum CodingKeys: String, CodingKey {
-        case studyDay, ongoing, exams, classes, reviewNotes, reviews, deferredReviews, deadlines, plan, attendance, studyTime
+        case studyDay, ongoing, exams, classes, reviewNotes, wrong, deadlines, plan, attendance, studyTime
     }
 }

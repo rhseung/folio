@@ -322,7 +322,6 @@ struct LectureSectionsModelTests {
         let row = try #require(units.materials(unit, in: file).first { $0.material.id == slides.id })
         #expect(row.pages == 3...8)
         #expect(row.own)
-        #expect(ReviewModel.lectures(of: unit, in: file).first { $0.material.id == slides.id }?.page == 3)
     }
 
     @Test func theMaterialsPageShowsASplitUnitAsTheFilesOwnNotAsThroughAClass() throws {

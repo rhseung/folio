@@ -6,6 +6,13 @@ extension Sequence<LoggedEvent> {
     public func events<E: LogEvent>(_: E.Type) -> [(at: Date, event: E)] {
         compactMap { e in (try? e.decode(E.self)).flatMap { $0 }.map { (at: e.at, event: $0) } }
     }
+
+    public var studyLog: StudyLog {
+        let study = filter { StudyLog.types.contains($0.type) }
+        return StudyLog(
+            solves: study.events(ProblemSolveEvent.self), changes: study.events(ProblemVerdictEvent.self),
+            flips: study.events(CardFlipEvent.self), views: study.events(PageViewEvent.self), checks: study.events(PlanCheckEvent.self))
+    }
 }
 
 public struct EventLog: Sendable {

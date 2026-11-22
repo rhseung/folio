@@ -7,7 +7,7 @@ import Foundation
 
 extension GeneratedCommands {
     struct ExamPlanRemove: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "rm", abstract: "공부 계획 항목 지우기", discussion: """
+        static let configuration = CommandConfiguration(commandName: "rm", abstract: "공부 계획 항목 지우기. 앱이 짠 항목은 다시 짜도 돌아오지 않게 빼 둔다", discussion: """
             실행하기 전에 확인을 받는다.
 
             예시:

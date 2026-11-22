@@ -14,13 +14,13 @@ struct RuleTests {
 
     static var course: CourseFile {
         var exam = Exam(device: device, at: now, title: "중간고사", start: now, end: now.addingTimeInterval(3600))
-        exam.plan = [ExamPlanItem(day: LocalDate(year: 2026, month: 10, day: 20)!, title: "트리 복습")]
+        exam.plan = [ExamPlanItem(day: ymd("2026-10-20"), target: ExamPlanTarget(kind: .custom), title: "트리 복습")]
         return CourseFile(
             course: Course(device: device, at: now, title: "그래프 이론"), units: [unit], sessions: [session], exams: [exam],
             assignments: [Assignment(device: device, at: now, title: "HW1")], components: [component],
             scores: [ScoreEntry(device: device, at: now, componentId: component.id, title: "HW1", score: 8, max: 10)],
             attendance: [Attendance(device: device, at: now, sessionId: session.id, state: .present)],
-            problemSets: [ProblemSet(device: device, at: now, title: "연습", problems: [.init(number: "1")])])
+            problemSets: [ProblemSet(device: device, at: now, title: "연습", source: .exercise, problems: [.init(number: "1")])])
     }
 
     static let courseCases: [(String, @Sendable (inout CourseFile) -> Void)] = [
@@ -34,9 +34,10 @@ struct RuleTests {
         ("Exam.time", { $0.exams[0].end = $0.exams[0].start }),
         ("Exam.addedScopeUnitIds", { $0.exams[0].addedScopeUnitIds = [UUID()] }),
         ("Session.removedUnitIds", { $0.sessions[0].removedUnitIds = [UUID()] }),
-        ("ExamPlanItem.title.empty", { $0.exams[0].plan[0].title = "" }),
-        ("ExamPlanItem.problemSetTarget", { $0.exams[0].plan[0].target = ExamPlanTarget(kind: .problemSet, id: UUID()) }),
-        ("ExamPlanItem.unitTarget", { $0.exams[0].plan[0].target = ExamPlanTarget(kind: .quiz, id: UUID()) }),
+        ("ExamPlanItem.title", { $0.exams[0].plan[0].title = "" }),
+        ("ExamPlanItem.target", { $0.exams[0].plan[0].target = ExamPlanTarget(kind: .unit) }),
+        ("ExamPlanItem.problemSetTarget", { $0.exams[0].plan[0].target = ExamPlanTarget(kind: .problems, id: UUID()) }),
+        ("ExamPlanItem.unitTarget", { $0.exams[0].plan[0].target = .unit(UUID()) }),
         ("Course.syllabusMaterialId", { $0.course.syllabusMaterialId = UUID() }),
         ("Assignment.title.empty", { $0.assignments[0].title = "" }),
         ("Assignment.componentId", { $0.assignments[0].componentId = UUID() }),
@@ -101,19 +102,20 @@ struct RuleTests {
     @Test func settingsStayInRange() {
         #expect(Settings().violations.isEmpty)
         var s = Settings()
-        s.review.dailyLimit = 0
+        s.study.readyPercent = 10
         s.dayBoundaryMinutes = 2000
         #expect(s.violations.count == 2)
     }
 
-    @Test func choiceAnswerIsAnOption() {
+    @Test func cardsBelongToTheirUnitsFile() {
         let unit = UUID()
-        var card = QuizCard(
-            device: Self.device, at: Self.now, unitId: unit, type: .choice, category: .concept, prompt: "?", options: ["a", "b"],
-            answer: "a")
-        #expect(QuizFile(unitId: unit, cards: [card]).violations.isEmpty)
-        card.answer = "c"
-        #expect(QuizFile(unitId: unit, cards: [card]).violations.map(\.rule.name) == ["QuizCard.answer"])
+        var card = StudyCard(device: Self.device, at: Self.now, unitId: unit, front: "트리", back: "사이클 없는 연결 그래프")
+        #expect(CardFile(unitId: unit, cards: [card]).violations.isEmpty)
+        card.unitId = UUID()
+        #expect(CardFile(unitId: unit, cards: [card]).violations.map(\.rule.name) == ["Card.unit"])
+        card.unitId = unit
+        card.back = " "
+        #expect(CardFile(unitId: unit, cards: [card]).violations.count == 1)
     }
 
     @Test func removingAComponentTakesItsScoresAndFreesItsExams() throws {
@@ -124,4 +126,9 @@ struct RuleTests {
         #expect(f.exams[0].componentId == nil)
         #expect(f.violations.isEmpty)
     }
+}
+
+private func ymd(_ text: String) -> LocalDate {
+    guard let day = LocalDate(text) else { preconditionFailure(text) }
+    return day
 }

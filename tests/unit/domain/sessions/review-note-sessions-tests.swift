@@ -90,26 +90,6 @@ struct ReviewNoteSessionsTests {
         #expect(!f.sessions[1].reviewNoteUnfinished)
     }
 
-    @Test func theSchedulerSeesTheSharedNoteOnEachClass() {
-        let s = sessions(2), note = UUID()
-        let now = start.addingTimeInterval(10 * 86_400)
-        var f = file(s, notes: [(note, .review)])
-        let first = FolioDomain.Unit(device: device, at: start, title: "rdt", order: 0)
-        let second = FolioDomain.Unit(device: device, at: start, title: "Go-Back-N", order: 1)
-        f.units = [first, second]
-        f.sessions[0].addedUnitIds = [first.id]
-        f.sessions[1].addedUnitIds = [second.id]
-        func needs() -> [Bool] {
-            UnitReviewInput.all(for: f, reviews: [], settings: Settings(), calendar: calendar, now: now).map(\.needsReviewNote)
-        }
-
-        #expect(needs() == [true, true])
-        f.linkNote(note, to: s[0].id, as: .review)
-        f.linkNote(note, to: s[1].id, as: .review)
-        #expect(needs() == [false, false])
-        #expect(f.meta(of: f.notes[0]).unitIds == [first.id, second.id])
-    }
-
     // MARK: Properties
 
     static let picks = Gen.int(in: 0...1).array(of: 1...8)

@@ -86,8 +86,8 @@ struct WorkspaceLinkTests {
     @Test func aCardIsFoundInItsUnitsQuiz() throws {
         let workspace = try fixtureWorkspace()
         let unit = try #require(workspace.run(UnitAdd(course: graphTheory, title: "매칭"))?.made)
-        let card = QuizCard(device: workspace.device, at: .now, unitId: unit, type: .free, category: .definition, prompt: "p", answer: "a")
-        workspace.run(QuizCardSave(course: graphTheory, cards: [card]))
+        let card = StudyCard(device: workspace.device, at: .now, unitId: unit, front: "p", back: "a")
+        workspace.run(CardSave(course: graphTheory, cards: [card], movedFrom: nil))
         #expect(workspace.entry(for: AppLink(.card, card.id))?.course == graphTheory)
         #expect(workspace.entry(for: AppLink(.card, UUID())) == nil)
     }
@@ -174,7 +174,7 @@ struct PlaceTableTests {
     }
 
     @Test func courseItemsOpenAPageOfTheirCourse() {
-        for kind in AppLink.Kind.allCases where kind.home == .course || kind.home == .quiz {
+        for kind in AppLink.Kind.allCases where kind.home == .course || kind.home == .study {
             #expect((kind.coursePage != nil) == (kind != .course), "\(kind)")
         }
         #expect(AppLink.Kind.allCases.filter(\.focusesRow).allSatisfy { $0.coursePage != nil })

@@ -13,11 +13,11 @@ extension GeneratedCommands {
 
             예시:
               folio settings set dayBoundaryMinutes 300
-              folio settings set review.intervals \"[1, 3, 7, 14, 30]\" --dry-run
+              folio settings set study.readyPercent 90 --dry-run
               folio settings set --file settings.json --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: "필드. 예: review.intervals") var field: String?
+        @Argument(help: "필드. 예: study.readyPercent") var field: String?
         @Argument(help: "새 값") var value: JSONValue?
         @Option(name: .customLong("file"), help: ArgumentHelp("settings.json 형식의 파일. 필드 대신 설정 전체를 바꾼다", valueName: "path"), completion: .file(extensions: ["json"])) var settings: String?
 

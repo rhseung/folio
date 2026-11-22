@@ -7,7 +7,7 @@ import Foundation
 
 extension GeneratedCommands {
     struct UnitRemove: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "rm", abstract: "단원 지우기. 하위 단원은 한 단계 올라간다. 회차, 시험 범위, 자료, 노트, 문제의 연결은 풀리고, 노트와 퀴즈 파일은 남는다", discussion: """
+        static let configuration = CommandConfiguration(commandName: "rm", abstract: "단원 지우기. 하위 단원은 한 단계 올라간다. 회차, 시험 범위, 자료, 노트, 문제의 연결은 풀린다. 앱이 짠 그 단원의 계획 항목은 지워지고 직접 쓴 항목은 대상 없이 남는다. 노트와 카드 파일은 남는다", discussion: """
             실행하기 전에 확인을 받는다.
 
             예시:

@@ -21,7 +21,6 @@ enum NotificationScheduler {
         let current = workspace.currentCourses
         let plan = NotificationPlan.build(
             courses: current.map(\.file),
-            reviewCount: { date in workspace.reviewQueue(now: date).filter { $0.item.deferred == nil }.count },
             settings: workspace.settings.notifications, now: now, calendar: workspace.calendar
         )
         center.removeAllPendingNotificationRequests()
@@ -76,9 +75,6 @@ enum NotificationScheduler {
         case .examMorning:
             content.title = String(localized: .notifyExamToday(course, item.subject))
             content.body = when
-        case .dailyReview(let count):
-            content.title = String(localized: .notifyReview(count))
-            content.body = String(localized: .notifyReviewDetail)
         case .attendanceOneAway(let absences):
             content.title = String(localized: .notifyAbsences(course, absences))
             content.body = String(localized: .notifyAbsencesDetail)

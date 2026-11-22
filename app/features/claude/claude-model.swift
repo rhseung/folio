@@ -290,8 +290,8 @@ final class ClaudeModel {
                 let i = messages.firstIndex(where: { $0.id == id })
             else { break }
             var draft = CardDraft(unitId: unit)
-            draft.prompt = messages[..<i].last { $0.role == .user }?.text ?? ""
-            draft.answer = message.text
+            draft.front = messages[..<i].last { $0.role == .user }?.text ?? ""
+            draft.back = message.text
             cardDraft = draft
         default:
             break

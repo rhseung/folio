@@ -1,6 +1,6 @@
 ---
 name: folio
-description: Folio 데이터(과목, 회차, 출석, 단원, 시험, 과제, 점수, 노트, 자료, 복습, 퀴즈)를 읽거나 바꿀 때 쓴다. GIST 폴더의 course.json, transcript.json, 노트, 로그를 직접 고치지 않고 명령줄 도구 folio를 거친다. "과제 추가해 줘", "노트 만들어 줘", "이번 주 결석 표시", "중간고사 범위 넣어 줘", "점수 기록", "이 과목 HUS야 PPE야?", "새 학사편람 나왔어" 같은 요청에 쓴다.
+description: Folio 데이터(과목, 회차, 출석, 단원, 시험, 과제, 점수, 노트, 자료, 문제, 카드, 오답)를 읽거나 바꿀 때 쓴다. GIST 폴더의 course.json, transcript.json, 노트, 로그를 직접 고치지 않고 명령줄 도구 folio를 거친다. "과제 추가해 줘", "노트 만들어 줘", "이번 주 결석 표시", "중간고사 범위 넣어 줘", "점수 기록", "이 과목 HUS야 PPE야?", "새 학사편람 나왔어" 같은 요청에 쓴다.
 ---
 
 # folio
@@ -54,9 +54,12 @@ folio note edit EC4207/09-08 --old "non-adjacent" --new "서로 이웃하지 않
 # 인정학기 과목은 _Credited/<출처>에 두므로 학기에 출처가 있어야 한다
 folio semester add 2024 credited --source "군 복무" --credited-hours 9 --dry-run
 folio transcript add "영재고 AP" "일반물리학 및 연습 II" --code GS --number 1102 --mode pass_fail --dry-run
-# 복습 기록과 건너뛰기. 단원을 열어 본 시간이 있을 때만 --start와 --end를 준다
-folio review record EC4207/매칭 good --start "2026-10-28 20:00" --end "2026-10-28 20:40" --dry-run
-folio review skip EC4207/매칭 --dry-run
+# 문제를 풀면 풀이 기록을 남긴다. 틀린 이유는 틀렸거나 부분 점수일 때만 남는다
+folio problem solve "EC4207/Exercise 1" 3a wrong --reason concept --dry-run
+# 어느 단원이 준비됐고 어떤 오답이 남았는지는 공부 상태로 본다. 판정을 고칠 때는 --json의 attempts에서 ID를 찾는다
+folio study show EC4207 --dry-run
+# 시험 공부 계획은 앱이 짠다. 사용자가 옮긴 항목은 다시 짜도 그대로 둔다
+folio exam plan make EC4207/중간고사 --dry-run
 ```
 
 노트를 쓰거나 그림(SVG), 위젯을 넣기 전에 `folio note format`으로 노트 형식(수식, 콜아웃, 링크, 도식, 그림, 위젯, 그려 보기)을 읽는다. 그림은 LaTeX 교과서의 그림처럼 그린다. 그림에는 라벨만 두고 설명은 노트 본문에 쓰며, 수식은 `$…$`로, 색은 그림 스타일의 클래스(`ink`, `p-blue` …)로만 칠한다. 그림과 위젯의 화살표 촉은 직접 그리지 않고 `marker-end="url(#m-ink)"`처럼 선과 같은 색의 스타일 촉을 쓴다. 위젯 HTML에는 `<title>`로 이름을 붙인다.

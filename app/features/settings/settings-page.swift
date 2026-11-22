@@ -11,7 +11,7 @@ extension AppLink.SettingsPage: Identifiable {
         case .record: String(localized: .settingsTabRecord)
         case .classes: String(localized: .settingsTabClass)
         case .notes: String(localized: .settingsTabNotes)
-        case .review: String(localized: .settingsTabReview)
+        case .study: String(localized: .settingsTabStudy)
         case .notifications: String(localized: .settingsTabNotifications)
         case .claude: "Claude"
         case .lms: "LMS"
@@ -26,7 +26,7 @@ extension AppLink.SettingsPage: Identifiable {
         case .record: "graduationcap"
         case .classes: "display"
         case .notes: "doc.text"
-        case .review: "repeat"
+        case .study: "book.closed"
         case .notifications: "bell"
         case .claude: "sparkle"
         case .lms: "link"
@@ -38,7 +38,7 @@ extension AppLink.SettingsPage: Identifiable {
     var run: Int {
         switch self {
         case .general, .record: 0
-        case .classes, .notes, .review: 1
+        case .classes, .notes, .study: 1
         case .notifications, .claude, .lms, .backup, .about: 2
         }
     }

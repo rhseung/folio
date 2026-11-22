@@ -26,11 +26,9 @@ extension CourseFile {
 }
 
 extension CourseFile {
-    public func commands(for unit: Unit, host: MenuHost, dueToday: Bool) -> [UnitMenuCommand] {
+    public func commands(for unit: Unit, host: MenuHost) -> [UnitMenuCommand] {
         var commands: [UnitMenuCommand] = host.opensItem ? [.open] : []
-        commands.append(.review)
-        if dueToday { commands.append(.skipToday) }
-        commands.append(.addCard)
+        commands += [.solve, .done(unit.isDone), .addCard]
         if host.orders {
             let siblings = units.filter { $0.parentId == unit.parentId }.sorted { $0.order < $1.order }
             if siblings.first?.id != unit.id { commands.append(.moveUp) }

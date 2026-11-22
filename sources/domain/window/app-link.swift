@@ -15,7 +15,7 @@ public struct AppLink: Hashable, Sendable {
             case transcript
             case catalog
             case course
-            case quiz
+            case study
         }
 
         // 아래 switch에는 default를 두지 않는다. 그래야 새 종류는 어디에 있는지, `#` 뒤에 무엇이 오는지, 페이지가
@@ -26,7 +26,7 @@ public struct AppLink: Hashable, Sendable {
             case .semester: .transcript
             case .person: .catalog
             case .course, .session, .unit, .note, .material, .assignment, .exam, .problemSet, .recording: .course
-            case .card: .quiz
+            case .card: .study
             }
         }
 
@@ -93,17 +93,27 @@ public struct AppLink: Hashable, Sendable {
     }
 
     public enum CoursePage: String, CaseIterable, Sendable {
-        case overview, sessions, units, notes, materials, quiz, cards, stats, problems, assignments, exams, grades
+        case overview, sessions, units, notes, materials, problems, cards, assignments, exams, grades
+
+        // 퀴즈 탭이 공부 탭이 되기 전의 페이지 이름이다(#574). 예전 링크는 공부 탭의 단원으로 연다.
+        static let formerNames: [String: CoursePage] = ["quiz": .units, "stats": .units]
+
+        public init?(rawValue: String) {
+            guard let page = Self.allCases.first(where: { $0.rawValue == rawValue }) ?? Self.formerNames[rawValue] else { return nil }
+            self = page
+        }
     }
 
     // 창의 기록은 앵커를 빼고 링크를 비교하므로, 탭을 앵커로 두면 두 탭을 한 걸음으로 본다. 그래서 탭은 과목의
     // 페이지처럼 경로로 둔다.
     public enum SettingsPage: String, CaseIterable, Sendable {
-        case general, record, classes = "class", notes, review, notifications, claude, lms, backup, about
+        case general, record, classes = "class", notes, study, notifications, claude, lms, backup, about
 
         // 합치거나 이름을 바꾸기 전의 탭 이름이다. 패치 노트, 노트, 기억한 탭의 링크가 아직 이 이름을 쓰므로, 이어받은
         // 탭으로 읽고 새 이름으로 쓴다.
-        static let formerNames: [String: SettingsPage] = ["profile": .record, "letters": .record, "recording": .classes]
+        static let formerNames: [String: SettingsPage] = [
+            "profile": .record, "letters": .record, "recording": .classes, "review": .study,
+        ]
 
         public init?(rawValue: String) {
             guard let page = Self.allCases.first(where: { $0.rawValue == rawValue }) ?? Self.formerNames[rawValue] else { return nil }
@@ -332,7 +342,7 @@ extension AppLink {
             case .exam: .exam
             case .session: .session
             case .unit: .unit
-            case .quiz: .card
+            case .card: .card
             }
         self.init(kind, item.id)
     }

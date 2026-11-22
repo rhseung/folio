@@ -9,11 +9,13 @@ public struct ExamPlanCheck {
     @Arg var course: Course.ID
     @Arg var item: ExamPlanItem.ID
     @Off("undo") var done = true
+    /// 앱이 풀기를 끝내며 남긴 체크
+    @Hidden var auto = false
 
     public func run(_ ctx: ActionContext) throws {
         guard try ctx.file(course).exams.contains(where: { $0.plan.contains { $0.id == item } }) else {
             throw ActionError.notFound(String(localized: .errorNotFoundPlanItem))
         }
-        try ctx.log(PlanCheckEvent(itemId: item, done: done), course: course)
+        try ctx.log(PlanCheckEvent(itemId: item, done: done, auto: auto), course: course)
     }
 }

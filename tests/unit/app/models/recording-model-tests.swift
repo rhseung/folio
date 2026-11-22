@@ -7,6 +7,18 @@ import Testing
 @testable import Folio
 
 @MainActor
+private struct CourseFixture {
+    let workspace: Workspace
+    let course: LoadedCourse
+    var courseId: UUID { course.id }
+
+    init() throws {
+        workspace = try fixtureWorkspace()
+        course = try #require(workspace.courses.first)
+    }
+}
+
+@MainActor
 struct RecordingPlayerModelTests {
     let linearAlgebra = UUID(uuidString: "C0000000-0000-4000-8000-000000000001")!
 
@@ -26,7 +38,7 @@ struct RecordingPlayerModelTests {
     }
 
     @Test func searchKeepsTranscriptIndicesAndMarksBookmarks() throws {
-        let f = try QuizFixture()
+        let f = try CourseFixture()
         let recording = Recording(device: f.workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a", bookmarks: [10])
         let model = RecordingPlayerModel(workspace: f.workspace, courseId: f.courseId, store: f.course.store, recording: recording)
         model.transcript = LectureTranscript(
@@ -63,7 +75,7 @@ struct RecordingPlayerModelTests {
     }
 
     func picking(_ texts: [String]) throws -> RecordingPlayerModel {
-        let f = try QuizFixture()
+        let f = try CourseFixture()
         let recording = Recording(device: f.workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a")
         let model = RecordingPlayerModel(workspace: f.workspace, courseId: f.courseId, store: f.course.store, recording: recording)
         model.transcript = LectureTranscript(
@@ -157,7 +169,7 @@ struct RecordingPlayerModelTests {
 
     // 시트의 높이는 줄이 있는지에 따라 정해지므로, `load` 뒤가 아니라 시트가 열리기 전에 줄을 알아야 한다.
     @Test func readsTheTranscriptBeforeLoading() throws {
-        let f = try QuizFixture()
+        let f = try CourseFixture()
         let heard = Recording(device: f.workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a")
         try f.course.store.saveTranscript(LectureTranscript(locale: "ko-KR", lines: [.init(start: 0, end: 5, text: "그래프 정의")]), of: heard)
         #expect(RecordingPlayerModel(workspace: f.workspace, courseId: f.courseId, store: f.course.store, recording: heard).hasLines)

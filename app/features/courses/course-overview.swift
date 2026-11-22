@@ -4,6 +4,7 @@ import SwiftUI
 
 struct CourseOverview: View {
     @Environment(\.accent) private var accent
+    @Environment(\.openLink) private var openLink
     @Bindable var model: CourseModel
     let course: LoadedCourse
     @State private var editing = false
@@ -13,7 +14,7 @@ struct CourseOverview: View {
         let file = course.file
         let now = model.workspace.now
         let score = model.score(file)
-        let reviews = model.reviews(now: now)
+        let study = model.study
         let suggested = model.suggested(course, now: now)
         let unclassified = model.unclassified(file)
         let layout =
@@ -35,7 +36,7 @@ struct CourseOverview: View {
 
             OverdueAssignments(workspace: model.workspace, course: course.id)
 
-            StatGroup(items: model.stats(file, reviews: reviews, suggested: suggested, now: now))
+            StatGroup(items: model.stats(file, study: study, suggested: suggested, now: now))
 
             if !unclassified.isEmpty {
                 NoticeCard(
@@ -54,7 +55,7 @@ struct CourseOverview: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .topLeading)
                 VStack(alignment: .leading, spacing: Theme.Space.xl) {
-                    unitsBlock(file, reviews: reviews)
+                    unitsBlock(file, study: study)
                     gradesBlock(file, score: score)
                 }
                 .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -145,8 +146,8 @@ struct CourseOverview: View {
         }
     }
 
-    func unitsBlock(_ file: CourseFile, reviews: [Workspace.ReviewEntry]) -> some View {
-        let shown = model.glanceUnits(file, reviews: reviews)
+    func unitsBlock(_ file: CourseFile, study: CourseStudy?) -> some View {
+        let shown = model.glanceUnits(file, study: study)
         return Block(
             String(localized: .courseSectionUnits),
             note: file.units.count > shown.count ? String(localized: .courseUnitsNote(file.units.count, shown.count)) : nil
@@ -155,25 +156,19 @@ struct CourseOverview: View {
                 if shown.isEmpty {
                     CardRow(last: true) { EmptyLine(String(localized: file.units.isEmpty ? .courseNoUnits : .courseNoCoveredUnits)) }
                 }
-                ForEach(Array(shown.enumerated()), id: \.element.id) { i, unit in
-                    let entry = reviews.first { $0.item.unitId == unit.id }
-                    ReviewOpener(courseId: course.id, unitId: unit.id) {
+                ForEach(Array(shown.enumerated()), id: \.element.unit.id) { i, row in
+                    Button {
+                        openLink(AppLink(.unit, row.unit.id), course: course.id)
+                    } label: {
                         CardRow(last: i == shown.count - 1) {
-                            Text(unit.title).lineLimit(1)
+                            Text(row.unit.title).lineLimit(1)
                             Spacer(minLength: Theme.Space.s)
-                            if let entry {
-                                Badge(
-                                    String(
-                                        localized: entry.item.overdueDays > 0 ? .unitsDaysLate(entry.item.overdueDays) : .courseReviewToday),
-                                    tone: entry.item.overdueDays > 0 ? .danger : .accent)
-                            } else {
-                                Text(.sessionsCount(model.sessionCount(of: unit))).font(Theme.Typeface.caption).foregroundStyle(
-                                    Theme.Palette.textTertiary
-                                ).fixedSize()
-                            }
+                            if let readiness = row.readiness { ReadinessBadge(readiness: readiness) }
                         }
+                        .contentShape(.rect)
                     }
-                    .contextMenu { UnitMenu(courseId: course.id, unitId: unit.id) }
+                    .buttonStyle(.pointing(.plain))
+                    .contextMenu { UnitMenu(courseId: course.id, unitId: row.unit.id) }
                 }
             }
             .opens { model.section = .units }

@@ -54,15 +54,27 @@ struct ItemSheets: ViewModifier {
                         }
                         .environment(\.openLink, openLink)
                     }
-                case .review(let course, let unit):
-                    ReviewView(workspace: workspace, courseId: course, unitId: unit)
                 case .card(let course, let draft):
                     if let course = workspace.course(course) {
-                        CardEditorSheet(workspace: workspace, course: course, draft: draft, units: course.file.units) {}
+                        CardEditorSheet(workspace: workspace, course: course, draft: draft)
                     }
-                case .generateCards(let course, let unit):
+                case .suggestCards(let course, let unit):
                     if let course = workspace.course(course), let unit = course.file.units.first(where: { $0.id == unit }) {
-                        GenerateCardsSheet(workspace: workspace, course: course, unit: unit) {}
+                        SuggestCardsSheet(workspace: workspace, course: course, unit: unit)
+                    }
+                case .flipCards(let course, let unit): CardFlipSheet(workspace: workspace, course: course, unit: unit)
+                case .makeProblems(let course, let unit):
+                    if let course = workspace.course(course), let unit = course.file.units.first(where: { $0.id == unit }) {
+                        MakeProblemsSheet(workspace: workspace, course: course, unit: unit)
+                    }
+                case .solve(let request): SolveSheet(workspace: workspace, request: request).environment(\.openLink, openLink)
+                case .problemSet(let course):
+                    if let course = workspace.course(course) { ProblemSetSheet(workspace: workspace, course: course) }
+                case .problem(let course, let set, let id):
+                    if let course = workspace.course(course),
+                        let problem = course.file.problemSets.first(where: { $0.id == set })?.problem(id)
+                    {
+                        ProblemEditorSheet(workspace: workspace, course: course, set: set, problem: problem)
                     }
                 case .note(let request):
                     if let course = workspace.course(request.course) {

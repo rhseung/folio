@@ -27,7 +27,6 @@ struct SettingsMigrationTests {
         #expect(n[.assignmentDue] == .init(on: false, leadHours: [48, 6]))
         #expect(n[.examDayBefore] == .init(on: true, minute: 1230))
         #expect(n[.examMorning] == .init(on: false, minute: 420))
-        #expect(n[.dailyReview] == .init(on: true, minute: 1320))
         #expect(n[.attendance] == .init(on: false))
         #expect(doc.model.dayBoundaryMinutes == 300)
 
@@ -36,6 +35,8 @@ struct SettingsMigrationTests {
         #expect(saved["schemaVersion"] == .number(2))
         #expect(saved["kept"] == .number(1))
         #expect(saved["notifications"]?["later"] == .string("kept"))
+        // 매일 복습 알림은 없어졌지만, 예전 판이 읽도록 파일에는 남긴다.
+        #expect(saved["notifications"]?["dailyReview"] == .object(["on": .bool(true), "minute": .number(1320)]))
         #expect(saved["notifications"]?["examMorning"] == .object(["on": .bool(false), "minute": .number(420)]))
         #expect(saved["notifications"]?["assignmentLeadHours"] == nil && saved["notifications"]?["examMorningMinute"] == nil)
         #expect(try StoredDocument<Settings>.read(from: url).model == doc.model)

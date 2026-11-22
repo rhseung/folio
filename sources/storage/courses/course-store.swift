@@ -27,18 +27,18 @@ public struct CourseStore: Sendable {
         return path
     }
 
-    public func quizURL(unit: UUID) -> URL {
-        metadataURL.appending(path: StandardLayout.quizzesFolder).appending(path: "\(unit.uuidString).json")
+    public func cardsURL(unit: UUID) -> URL {
+        metadataURL.appending(path: StandardLayout.cardsFolder).appending(path: "\(unit.uuidString).json")
     }
 
-    public func loadQuiz(unit: UUID) throws -> StoredDocument<QuizFile> {
-        let url = quizURL(unit: unit)
+    public func loadCards(unit: UUID) throws -> StoredDocument<CardFile> {
+        let url = cardsURL(unit: unit)
         return FileManager.default.fileExists(atPath: url.path)
-            ? try StoredDocument.read(from: url) : StoredDocument(new: QuizFile(unitId: unit))
+            ? try StoredDocument.read(from: url) : StoredDocument(new: CardFile(unitId: unit))
     }
 
-    public func save(_ quiz: StoredDocument<QuizFile>) throws {
-        try quiz.write(to: quizURL(unit: quiz.model.unitId))
+    public func save(_ cards: StoredDocument<CardFile>) throws {
+        try cards.write(to: cardsURL(unit: cards.model.unitId))
     }
 
     public func load() throws -> StoredDocument<CourseFile> {

@@ -1,4 +1,5 @@
 import FolioActions
+import FolioCore
 import FolioDomain
 import FolioFixtures
 import FolioStorage
@@ -100,24 +101,42 @@ struct ActionTests {
         #expect(try !file().attendance.contains { $0.sessionId == present })
     }
 
-    @Test func aSkipCountsOnlyTheTimeTheUnitWasOpen() throws {
-        let a = UUID(), b = UUID()
+    @Test func aSolveKeepsItsReasonOnlyForAMistakeAndAVerdictNeedsTheAttempt() throws {
+        let set = UUID()
+        try run(ProblemSetAdd(id: set, course: Self.graphTheory, title: "연습 1", numbers: ["1", "2"]))
+        let problems = try #require(try file().problemSets.first { $0.id == set }?.problems)
+        let wrong = UUID(), right = UUID()
+        try run(ProblemSolve(id: wrong, course: Self.graphTheory, set: set, problem: problems[0].id, verdict: .wrong, reason: .concept))
+        try run(ProblemSolve(id: right, course: Self.graphTheory, set: set, problem: problems[1].id, verdict: .correct, reason: .concept))
         let log = try ActionContext(gist: gist, device: device).store(Self.graphTheory).log
-        try run(ReviewSkip(units: [.init(course: Self.graphTheory, unit: a)]))
-        try run(ReviewSkip(units: [.init(course: Self.graphTheory, unit: b)], start: now.addingTimeInterval(-90), end: now))
-        let reviews = try log.readAll().events(ReviewEvent.self).map(\.event)
-        #expect(reviews.allSatisfy { $0.result == .skip })
-        #expect(Dictionary(uniqueKeysWithValues: reviews.map { ($0.unitId, $0.seconds) }) == [a: 0, b: 90])
-        #expect(
-            try log.readAll().events(StudySessionEvent.self).map(\.event)
-                == [StudySessionEvent(courseId: Self.graphTheory, start: now.addingTimeInterval(-90), end: now, screen: "review")])
+        let solves = try log.readAll().events(ProblemSolveEvent.self).map(\.event)
+        // 두 줄은 같은 시각에 남으므로 순서가 아니라 ID로 견준다.
+        #expect(Dictionary(uniqueKeysWithValues: solves.map { ($0.id, $0.reason) }) == [wrong: .concept, right: nil])
 
-        let both = [ReviewSkip.Target(course: Self.graphTheory, unit: a), .init(course: Self.graphTheory, unit: b)]
-        #expect(throws: ActionError.self) { try run(ReviewSkip(units: both, start: now, end: now)) }
-        #expect(throws: ActionError.self) { try run(ReviewSkip(units: [both[0]], start: now)) }
-        #expect(throws: ActionError.self) { try run(ReviewSkip(units: [both[0]], start: now, end: now.addingTimeInterval(-1))) }
-        #expect(throws: ActionError.self) { try run(ReviewRecord(course: Self.graphTheory, unit: a, result: .skip, start: now, end: now)) }
-        #expect(try log.readAll().events(ReviewEvent.self).count == 2)
+        #expect(throws: ActionError.self) {
+            try run(ProblemVerdict(course: Self.graphTheory, attempt: UUID().uuidString, verdict: .correct))
+        }
+        #expect(throws: ActionError.self) { try run(ProblemVerdict(course: Self.graphTheory, attempt: "3번", verdict: .correct)) }
+        try run(ProblemVerdict(course: Self.graphTheory, attempt: wrong.uuidString, verdict: .partial, reason: .calculation))
+        #expect(try log.readAll().events(ProblemVerdictEvent.self).map(\.event.reason) == [.calculation])
+        #expect(throws: ActionError.self) {
+            try run(ProblemSolve(course: Self.graphTheory, set: set, problem: UUID(), verdict: .correct))
+        }
+    }
+
+    @Test func removingAnAppMadePlanItemLeavesATombstone() throws {
+        let unit = UUID(), exam = UUID()
+        try run(UnitAdd(id: unit, course: Self.graphTheory, title: "매칭"))
+        try run(ExamAdd(id: exam, course: Self.graphTheory, title: "기말고사"))
+        let made = ExamPlanItem(day: ymd("2026-12-01"), target: .unit(unit))
+        let own = ExamPlanItem(day: ymd("2026-12-01"), target: .init(kind: .custom), title: "필기 정리")
+        try ActionContext(gist: gist, device: device).edit(Self.graphTheory) { f in
+            try f.update(\.exams, exam) { $0.plan = [made, own] }
+        }
+        try run(ExamPlanRemove(course: Self.graphTheory, exam: exam, item: made.id))
+        try run(ExamPlanRemove(course: Self.graphTheory, exam: exam, item: own.id))
+        let plan = try #require(try file().exams.first { $0.id == exam }?.plan)
+        #expect(plan.map(\.id) == [made.id] && plan.first?.removed == true)
     }
 
     @Test func aClassTimeLinkIsTrimmedAndABlankOneIsNone() throws {
@@ -192,4 +211,9 @@ struct ActionTests {
         let commands = Actions.all.map { $0.command }
         #expect(Set(commands).count == commands.count)
     }
+}
+
+private func ymd(_ text: String) -> LocalDate {
+    guard let day = LocalDate(text) else { preconditionFailure(text) }
+    return day
 }

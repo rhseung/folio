@@ -25,7 +25,7 @@ enum LayoutSnapshots {
                 for: AppLink(.material, lecture.materialId, anchor: lecture.firstPage.map(AppLink.Anchor.page)), hint: course)
         {
             panes.focused.go(entry)
-            workspace.apply(PanePreset(name: nil, slots: [.role(.lecture), .role(.quiz)], shares: [0.6, 0.4]), to: panes)
+            workspace.apply(PanePreset(name: nil, slots: [.role(.lecture), .role(.study)], shares: [0.6, 0.4]), to: panes)
         } else {
             NSLog("layouts: no class with a lecture")
         }

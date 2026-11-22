@@ -39,7 +39,7 @@ struct ItemCommandsTests {
             var lms = f.assignments[0]
             lms.lmsId = b ? 139950 : nil
             ordered(f.commands(for: lms, host: host, revealable: a))
-            ordered(f.commands(for: f.units[a ? 0 : 2], host: host, dueToday: b))
+            ordered(f.commands(for: f.units[a ? 0 : 2], host: host))
             ordered(NoteMenuCommand.commands(host: host, builtPDF: a, builds: b, review: c ? .writing : nil, finder: a))
             ordered(f.commands(for: f.materials[a ? 0 : 1], host: host, pdf: b ? UUID() : nil, mac: c))
             ordered(CourseMenuCommand.commands(host: host, recordable: a, order: (b ? 0 : 1, 2), finder: c), removes: false)
@@ -49,9 +49,9 @@ struct ItemCommandsTests {
         }
         ordered(ComponentMenuCommand.commands(addsScore: true, index: 1, count: 3))
         ordered(ScoreMenuCommand.commands(excused: false))
-        ordered(CardMenuCommand.commands(solvesWrong: true))
+        ordered(CardMenuCommand.all)
         ordered(ProblemSetMenuCommand.commands(hasSheet: true, hasSolution: true))
-        ordered(ProblemMenuCommand.commands(hasSheet: true, hasUnits: true), removes: false)
+        ordered(ProblemMenuCommand.commands(hasPage: true))
         ordered(RequirementMenuCommand.commands)
         ordered(CodeMenuCommand.commands)
         ordered(ExamPlanItem.commands(done: true))
@@ -62,7 +62,7 @@ struct ItemCommandsTests {
         #expect(f.commands(for: f.exams[0], host: .elsewhere).first == .open)
         #expect(!f.commands(for: f.exams[0], host: .own).contains(.open))
         #expect(f.commands(for: f.assignments[0], host: .elsewhere, revealable: false).first == .open)
-        #expect(!f.commands(for: f.units[0], host: .own, dueToday: false).contains(.open))
+        #expect(!f.commands(for: f.units[0], host: .own).contains(.open))
         #expect(NoteMenuCommand.commands(host: .elsewhere, builtPDF: false, builds: false, review: nil, finder: false).first == .open)
     }
 
@@ -91,16 +91,18 @@ struct ItemCommandsTests {
 
     @Test func aUnitMovesOnlyInTheListAndOnlyWhereItCan() {
         let f = course()
-        let first = f.commands(for: f.units[0], host: .list, dueToday: false)
+        let first = f.commands(for: f.units[0], host: .list)
         #expect(first.contains(.moveDown) && !first.contains(.moveUp))
-        let last = f.commands(for: f.units[1], host: .list, dueToday: false)
+        let last = f.commands(for: f.units[1], host: .list)
         #expect(last.contains(.moveUp) && !last.contains(.moveDown))
 
-        let child = f.commands(for: f.units[2], host: .list, dueToday: false)
+        let child = f.commands(for: f.units[2], host: .list)
         #expect(!child.contains(.moveUp) && !child.contains(.moveDown))
-        #expect(!f.commands(for: f.units[0], host: .elsewhere, dueToday: false).contains(.moveDown))
-        #expect(f.commands(for: f.units[0], host: .elsewhere, dueToday: true).contains(.skipToday))
-        #expect(!f.commands(for: f.units[0], host: .elsewhere, dueToday: false).contains(.skipToday))
+        #expect(!f.commands(for: f.units[0], host: .elsewhere).contains(.moveDown))
+        var done = f.units[0]
+        done.isDone = true
+        #expect(f.commands(for: done, host: .elsewhere).contains(.done(true)))
+        #expect(f.commands(for: f.units[0], host: .elsewhere).contains(.done(false)))
     }
 
     @Test func aNoteHasTheReviewRowOnlyWhenItReviewsAClass() {

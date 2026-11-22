@@ -5,7 +5,8 @@ public struct PanePreset: Hashable, Sendable, Identifiable {
         case lecture
         case classNote
         case reviewNote
-        case quiz
+        // 퀴즈 탭이 공부 탭이 되기 전에 저장한 배치가 이 이름을 쓴다.
+        case study = "quiz"
     }
 
     public enum Slot: Hashable, Sendable {
@@ -51,7 +52,7 @@ public struct PanePreset: Hashable, Sendable, Identifiable {
             .lecture: session.materials.map { AppLink(.material, $0.materialId, anchor: $0.firstPage.map(AppLink.Anchor.page)) },
             .classNote: session.roughNoteId.map { [AppLink(.note, $0)] } ?? [],
             .reviewNote: session.reviewNoteId.map { [AppLink(.note, $0)] } ?? [],
-            .quiz: [.course(course, page: .quiz)],
+            .study: [.course(course, page: .units)],
         ]
     }
 
@@ -117,7 +118,7 @@ public struct PanePreset: Hashable, Sendable, Identifiable {
 
     public static func saving(_ layout: PaneLayout, name: String, session: Session?, course: UUID?) -> PanePreset {
         let links = if let session, let course { Self.links(session: session, course: course) } else { [Role: [AppLink]]() }
-        let order: [Role] = [.classNote, .reviewNote, .lecture, .quiz]
+        let order: [Role] = [.classNote, .reviewNote, .lecture, .study]
         let slots: [Slot] = layout.panes.map { pane in
             let role = order.first { role in (links[role] ?? []).contains { $0.withoutAnchor == pane.link.withoutAnchor } }
             return role.map(Slot.role) ?? .link(pane.link)

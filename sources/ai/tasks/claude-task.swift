@@ -2,6 +2,6 @@ import FolioDomain
 import Foundation
 
 public enum ClaudeTask: String, Codable, Sendable, CaseIterable {
-    case chat, reviewNoteDraft, examSummaryDraft, quizCards, grading, classifyFile, extractAssignment, extractGradingPolicy, examPlan,
-        widget, lectureSections
+    case chat, reviewNoteDraft, examSummaryDraft, cardSuggestions, grading, sameAnswer, extractProblems, problemSheet, classifyFile,
+        extractAssignment, extractGradingPolicy, examPlan, widget, lectureSections
 }
