@@ -149,9 +149,9 @@ struct ScreenRenders {
             if let set = studied.file.problemSets.first(where: { !$0.problems.isEmpty }) {
                 let solve = SolveRequest(course: studied.id, set: set.id, problems: set.problems.prefix(3).map(\.id))
                 entries.append(("study-solve", Navigator.Entry(link: solve.link, course: studied.id)))
-                // 필기로 풀 때만 고르기 화면에 문제집 PDF 행이 나온다.
-                let handwriting = SolveRequest(course: studied.id, set: set.id, mode: .handwriting)
-                entries.append(("study-solve-handwriting", Navigator.Entry(link: handwriting.link, course: studied.id)))
+                // 문제를 정해 필기로 열면 고르기를 건너뛰고 문제집 페이지가 바로 뜬다.
+                let paper = SolveRequest(course: studied.id, set: set.id, problems: set.problems.prefix(3).map(\.id), mode: .handwriting)
+                entries.append(("study-solve-sheet", Navigator.Entry(link: paper.link, course: studied.id)))
             }
         }
         if let split = workspace.currentCourses.first(where: { c in c.file.lectureFiles.contains { c.file.isSplit($0.id) } }) {

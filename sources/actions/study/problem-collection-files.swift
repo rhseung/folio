@@ -80,6 +80,8 @@ public struct ProblemCollectionFiles: Sendable {
 
     var problemsName: String { "\(code)-Practice-Problems" }  // strings: data, 파일 이름
     var solutionsName: String { "\(code)-Practice-Solutions" }  // strings: data, 파일 이름
+    // 손으로 푼 문제집을 Study에 들여올 때의 이름이다. 같은 이름이 있으면 들여오기가 " 2"를 붙인다.
+    public var answersFileName: String { "\(code)-Practice-Answers.pdf" }  // strings: data, 파일 이름
 
     public var problemsPath: String { "\(CourseFolder.study.rawValue)/\(problemsName).pdf" }
     public var solutionsPath: String { "\(CourseFolder.study.rawValue)/\(solutionsName).pdf" }

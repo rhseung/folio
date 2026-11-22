@@ -14,7 +14,12 @@ struct SolveScreen: View {
             switch model.phase {
             case .setup:
                 ScrollView { SolveSetup(model: model).frame(maxWidth: .infinity) }.scrollBounceBehavior(.basedOnSize)
-            case .solving: SolveRun(model: model)
+            case .solving:
+                if let sheet = model.sheet {
+                    SolveSheet(model: sheet, onClose: { model.close($0, $1) })
+                } else {
+                    SolveRun(model: model)
+                }
             case .done: SolveResult(model: model).frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }

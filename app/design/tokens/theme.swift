@@ -250,8 +250,8 @@ enum Theme {
         // 문제 그림을 키워 보이는 크기다. 작은 그림은 너비나 높이가 `figureReadable`이 될 때까지 키우고, 누르면 `figureZoom`으로 본다.
         static let figureReadable: CGFloat = 280
         static let figureZoom: CGFloat = 720
-        static let solveSplit: CGFloat = 720
-        static let inkPad: CGFloat = 320
+        // 필기와 모의시험의 문제집 페이지 폭이다. 행 하나에 문제 이름, 판정, 단추 셋이 들어가는 폭이다.
+        static let solveSheet: CGFloat = 720
         static let solveStep = CGSize(width: 16, height: 6)
         static let dateColumn: CGFloat = 84
         static let courseLabel: CGFloat = 88
