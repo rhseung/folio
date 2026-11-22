@@ -100,9 +100,7 @@ final class SessionsModel {
 
     func weekLabel(_ week: SessionTable.Week) -> String { String(localized: .sessionsWeek(week.number)) }
 
-    func weekRange(_ week: SessionTable.Week, broken: Bool = false) -> String {
-        shortDay(week.start) + (broken ? "–\n" : "–") + shortDay(week.end)
-    }
+    func weekRange(_ week: SessionTable.Week) -> String { shortDay(week.start) + "–" + shortDay(week.end) }
 
     func shortDay(_ day: LocalDate) -> String { "\(day.month)/\(day.day)" }
 

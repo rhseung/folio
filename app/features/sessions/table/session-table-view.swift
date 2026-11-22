@@ -58,16 +58,9 @@ struct SessionTableView: View {
         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
             Text(model.weekLabel(week)).font(Theme.Typeface.bodyStrong)
                 .foregroundStyle(week.isThisWeek ? accent.ink : Theme.Palette.textSecondary).lineLimit(1)
-            if wide {
-                // 두 달에 걸친 구간("10/26–11/1")은 72pt 여백에 한 줄로 들어가지 않는다. 잘라 끝 날짜를 숨기지 않고 대시 뒤에서 줄을 바꾼다.
-                ViewThatFits(in: .horizontal) {
-                    Text(model.weekRange(week)).lineLimit(1)
-                    Text(model.weekRange(week, broken: true)).lineLimit(2)
-                }
-                .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()
-                if week.isExamWeek {
-                    Text(.sessionsExamWeek).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.danger).lineLimit(1)
-                }
+            // 날짜는 칸마다 있으므로 주차 여백에 구간을 다시 쓰지 않는다.
+            if wide && week.isExamWeek {
+                Text(.sessionsExamWeek).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.danger).lineLimit(1)
             }
         }
         .padding(.vertical, Theme.Space.m)
