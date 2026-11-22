@@ -20,12 +20,23 @@ public struct ExamPlanTarget: Codable, Sendable, Hashable {
     public var kind: Kind
     public var id: UUID?
     public var problemIds: [UUID]?
+    // 하루 항목 수(`study.planDayItems`)를 넘는 날의 단원을 한 항목으로 묶은 것이다. `id`는 그 첫 단원이라, 단원 하나를 읽는 곳과 첫
+    // 단원을 지울 때 항목을 지우는 규칙이 그대로 맞는다.
+    public var unitIds: [UUID]?
 
-    public init(kind: Kind, id: UUID? = nil, problemIds: [UUID]? = nil) {
+    public init(kind: Kind, id: UUID? = nil, problemIds: [UUID]? = nil, unitIds: [UUID]? = nil) {
         self.kind = kind
         self.id = id
         self.problemIds = problemIds
+        self.unitIds = unitIds
     }
 
     public static func unit(_ id: UUID) -> ExamPlanTarget { ExamPlanTarget(kind: .unit, id: id) }
+
+    public static func units(_ ids: [UUID]) -> ExamPlanTarget {
+        ids.count == 1 ? .unit(ids[0]) : ExamPlanTarget(kind: .unit, id: ids.first, unitIds: ids)
+    }
+
+    // 단원 항목이 가리키는 단원 모두다. 다른 종류는 비어 있다.
+    public var units: [UUID] { kind == .unit ? unitIds ?? id.map { [$0] } ?? [] : [] }
 }

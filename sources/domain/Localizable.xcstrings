@@ -3740,6 +3740,28 @@
           }
         }
       }
+    },
+    "setting-item.study.plan-day-items": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "하루 계획 항목"
+          }
+        }
+      }
+    },
+    "setting-unit.items": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "개"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

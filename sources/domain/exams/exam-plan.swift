@@ -33,7 +33,9 @@ extension CourseStudy {
         if manualChecks.contains(item.id) { return true }
         switch item.target.kind {
         case .unit:
-            return item.target.id.flatMap { id in file.units.first { $0.id == id } }?.isDone ?? false
+            // 묶음 항목은 안의 단원이 모두 다 함이어야 체크된다.
+            let units = item.target.units.compactMap { id in file.units.first { $0.id == id } }
+            return !units.isEmpty && units.allSatisfy(\.isDone)
         case .problems:
             let records =
                 item.target.problemIds.map { ids in ids.compactMap { problems[$0] } }
@@ -49,8 +51,11 @@ extension CourseStudy {
         }
     }
 
+    // 부모와 자식이 함께 범위에 있으면 자식만 넣는다. 부모 단원을 공부하는 일은 자식 단원을 공부하는 일이라, 둘을 따로 넣으면 같은 내용이
+    // 계획에 두 번 나온다. 범위는 그대로 둔다.
     public func planInputs(for exam: Exam) -> [ExamPlanner.UnitInput] {
-        UnitTree.outline(file.units).map(\.unit).filter { exam.scopeUnitIds.contains($0.id) }.map { u in
+        let scoped = UnitTree.outline(file.units).map(\.unit).filter { exam.scopeUnitIds.contains($0.id) }
+        return UnitTree.deepest(scoped, in: file.units).map { u in
             let r = readiness(of: u.id)
             return ExamPlanner.UnitInput(id: u.id, weight: r.planWeight, pages: r.conceptPages)
         }
@@ -61,7 +66,7 @@ extension CourseStudy {
         let examDay = settings.studyDay(of: start, calendar: calendar)
         return ExamPlanner.plan(
             current: exam.plan, units: planInputs(for: exam), today: today, examDay: examDay, finalDays: self.settings.finalDays,
-            isDone: { isDone($0, in: exam) })
+            dayItems: self.settings.planDayItems, isDone: { isDone($0, in: exam) })
     }
 }
 
@@ -86,7 +91,8 @@ extension CourseFile {
         if !item.title.isEmpty { return item.title }
         switch item.target.kind {
         case .unit:
-            return item.target.id.flatMap { id in units.first { $0.id == id }?.title } ?? String(localized: .examPlanTitleUnit)
+            let titles = item.target.units.compactMap { id in units.first { $0.id == id }?.title }
+            return titles.isEmpty ? String(localized: .examPlanTitleUnit) : titles.joined(separator: ", ")
         case .problems:
             let set = item.target.id.flatMap { id in problemSets.first { $0.id == id } }
             let count = item.target.problemIds?.count
