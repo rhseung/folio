@@ -5,8 +5,8 @@ struct CardFlipSheet: View {
     @State private var model: CardFlipModel
     @Environment(\.dismiss) private var dismiss
 
-    init(workspace: Workspace, course: UUID, unit: UUID?) {
-        _model = State(initialValue: CardFlipModel(workspace: workspace, courseId: course, unitId: unit))
+    init(workspace: Workspace, course: UUID, unit: UUID?, scope: [UUID]? = nil) {
+        _model = State(initialValue: CardFlipModel(workspace: workspace, courseId: course, unitId: unit, scope: scope))
     }
 
     var body: some View {

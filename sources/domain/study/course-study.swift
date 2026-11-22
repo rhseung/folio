@@ -89,8 +89,15 @@ public struct CourseStudy: Sendable {
     public func cards(of unit: UUID) -> [CardRecord] { allCards.filter { $0.card.unitId == unit } }
 
     // 넘겨 보기는 모르는 카드, 처음 보는 카드, 아는 카드 순이다. 같은 무리 안에서는 만든 순서를 지킨다.
-    public func flipDeck(unit: UUID?) -> [CardRecord] {
-        let records = unit.map(cards(of:)) ?? allCards
+    public func flipDeck(unit: UUID?) -> [CardRecord] { ranked(unit.map(cards(of:)) ?? allCards) }
+
+    // 단원 여럿(시험 범위)의 덱이다. 계획의 오답 항목이 범위 밖 단원의 카드까지 넘기지 않게 한다.
+    public func flipDeck(scope units: [UUID]) -> [CardRecord] {
+        let scope = Set(units)
+        return ranked(allCards.filter { scope.contains($0.card.unitId) })
+    }
+
+    private func ranked(_ records: [CardRecord]) -> [CardRecord] {
         func rank(_ s: WrongStatus) -> Int { s.needsWork ? 0 : s == .untried ? 1 : 2 }
         return records.enumerated().sorted { a, b in
             rank(a.element.status) != rank(b.element.status) ? rank(a.element.status) < rank(b.element.status) : a.offset < b.offset

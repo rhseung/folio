@@ -9,7 +9,6 @@ struct SolveResume: Equatable {
     var mode: SolveMode
     var order: SolvePick.Order
     var runId: UUID
-    var done: Int
 
     @MainActor private static var store: [UUID: SolveResume] = [:]
 

@@ -7,15 +7,16 @@ public struct PlanSolve: Sendable, Equatable {
     public var mode: SolveMode
     public var shuffled: Bool
     public var minutes: Int?
-    // 오답 항목에 남은 오답 문제는 없고 모른 카드만 있으면 카드를 넘긴다.
-    public var cards: Bool
+    // 오답 항목에 남은 오답 문제는 없고 모른 카드만 있으면 카드를 넘긴다. 넘기는 덱은 시험 범위 단원의 카드다.
+    public var cardScope: [UUID]?
+    public var cards: Bool { cardScope != nil }
 
-    public init(problems: [UUID], mode: SolveMode = .typing, shuffled: Bool = false, minutes: Int? = nil, cards: Bool = false) {
+    public init(problems: [UUID], mode: SolveMode = .typing, shuffled: Bool = false, minutes: Int? = nil, cardScope: [UUID]? = nil) {
         self.problems = problems
         self.mode = mode
         self.shuffled = shuffled
         self.minutes = minutes
-        self.cards = cards
+        self.cardScope = cardScope
     }
 }
 
@@ -50,7 +51,8 @@ extension CourseStudy {
             let wrong = scopeProblems(of: exam).filter(\.status.needsWork).map(\.problem.id)
             if !wrong.isEmpty { return PlanSolve(problems: wrong) }
             let scope = Set(exam.scopeUnitIds)
-            return allCards.contains { $0.status.needsWork && scope.contains($0.card.unitId) } ? PlanSolve(problems: [], cards: true) : nil
+            return allCards.contains { $0.status.needsWork && scope.contains($0.card.unitId) }
+                ? PlanSolve(problems: [], cardScope: exam.scopeUnitIds) : nil
         }
     }
 

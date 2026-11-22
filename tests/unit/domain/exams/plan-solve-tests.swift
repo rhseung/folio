@@ -71,7 +71,7 @@ struct PlanSolveTests {
         let card = StudyCard(device: device, at: at, unitId: f.scoped.id, front: "매칭", back: "공통 끝점이 없는 변의 집합")
         let flips = [(at, CardFlipEvent(cardId: card.id, known: false))]
         let cards = try #require(study(f, log: StudyLog(flips: flips), cards: [card]).solve(item(.wrong), in: f.exam, seed: 1))
-        #expect(cards.problems.isEmpty && cards.cards)
+        #expect(cards.problems.isEmpty && cards.cardScope == [f.scoped.id])
         #expect(study(f).solve(item(.wrong), in: f.exam, seed: 1) == nil)
     }
 

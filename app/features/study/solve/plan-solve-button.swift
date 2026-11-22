@@ -10,8 +10,8 @@ struct PlanSolveButton: View {
 
     var body: some View {
         Button(title, systemImage: symbol) {
-            if solve.cards {
-                sheets.present(.flipCards(course: course, unit: nil))
+            if let scope = solve.cardScope {
+                sheets.present(.flipCards(course: course, unit: nil, scope: scope))
             } else {
                 sheets.present(.solve(SolveRequest(plan: solve, course: course, item: item)))
             }

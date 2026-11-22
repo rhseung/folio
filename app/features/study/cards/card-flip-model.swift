@@ -15,11 +15,12 @@ final class CardFlipModel {
     private(set) var known: [UUID] = []
     private(set) var unknown: [UUID] = []
 
-    init(workspace: Workspace, courseId: UUID, unitId: UUID?) {
+    init(workspace: Workspace, courseId: UUID, unitId: UUID?, scope: [UUID]? = nil) {
         self.workspace = workspace
         self.courseId = courseId
         self.unitId = unitId
-        deck = workspace.study(of: courseId)?.flipDeck(unit: unitId).map(\.card) ?? []
+        let study = workspace.study(of: courseId)
+        deck = (scope.map { study?.flipDeck(scope: $0) } ?? study?.flipDeck(unit: unitId))?.map(\.card) ?? []
     }
 
     var title: String {

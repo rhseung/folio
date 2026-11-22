@@ -398,13 +398,15 @@ final class SolveModel {
     // MARK: Resume
 
     // 시트를 닫을 때 부른다. 모의시험은 시간을 재므로 남기지 않는다. 채점까지 한 문제는 이미 로그에 있으므로, 채점하지 않은 문제부터 다시 연다.
+    // 이어 풀기는 과목의 풀기 시트에서만 묻으므로(`init`), 문제를 정해 연 풀기(계획 항목, 문제 묶음)는 남기지 않는다. 남기면 과목의 풀기 시트가
+    // 계획의 차례를 권하고, 끝까지 풀어도 그 계획 항목은 체크되지 않는다.
     func leave() {
-        guard phase == .solving, !isMock, !queue.isEmpty else { return }
+        guard phase == .solving, !isMock, !queue.isEmpty, request.problems.isEmpty, request.planItem == nil else { return }
         let from = graded == nil ? index : index + 1
         if let record = current, let g = graded { log(record, g) }
         guard from < queue.count else { return SolveResume.clear(for: request.course) }
         SolveResume.remember(
-            SolveResume(queue: queue, index: from, mode: mode, order: pick.order, runId: runId, done: outcomes.count),
+            SolveResume(queue: queue, index: from, mode: mode, order: pick.order, runId: runId),
             for: request.course)
     }
 

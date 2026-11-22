@@ -117,6 +117,18 @@ struct SolvePickTests {
         #expect(deck == ["다", "나", "가"])
     }
 
+    @Test func aScopedFlipDeckLeavesOtherUnitsOut() {
+        let f = fixture()
+        let cards = [
+            StudyCard(device: device, at: at, unitId: f.units[0].id, front: "범위", back: ""),
+            StudyCard(device: device, at: at, unitId: f.units[1].id, front: "범위 밖", back: ""),
+        ]
+        let flips = cards.map { (time(19, 10), CardFlipEvent(cardId: $0.id, known: false)) }
+        let s = study(f, cards: cards, flips: flips)
+        #expect(s.flipDeck(scope: [f.units[0].id]).map(\.card.front) == ["범위"])
+        #expect(s.flipDeck(unit: nil).count == 2)
+    }
+
     @Test func problemNumbersReadRanges() {
         #expect(ProblemSet.numbers(from: "1-3, 5 8a, 2") == ["1", "2", "3", "5", "8a"])
         #expect(ProblemSet.numbers(from: "") == [])
