@@ -13,7 +13,6 @@ app-direction	app/platform/materials/file-view/file-view-model.swift	NoteEmbedSo
 app-direction	app/platform/materials/file-view/file-view.swift	MaterialMenu from features/materials
 app-direction	app/platform/materials/file-view/file-view.swift	TextFileView from features/notes
 app-direction	app/platform/materials/file-view/file-view.swift	TextFileView from features/notes
-app-direction	app/platform/materials/lecture-reader/lecture-reader.swift	ClaudeModel from features/claude
 app-direction	app/platform/notes/editing/markdown-editor.swift	NoteEmbedSource from features/notes
 app-direction	app/platform/notes/editing/source-view/source-text-view.swift	NoteEmbedSource from features/notes
 app-direction	app/platform/notes/note-preview-page.swift	NoteEmbedSource from features/notes

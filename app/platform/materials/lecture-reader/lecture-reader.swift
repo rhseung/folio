@@ -56,7 +56,7 @@ enum LectureReader {
             return try await claude.lectureSections(file: url.lastPathComponent, pages: pages, units: units).map(ClaudeFinding.found)
                 ?? .nothing
         } catch {
-            return .failed(ClaudeModel.message(for: error))
+            return .failed(ClaudeFailure.message(for: error))
         }
     }
 

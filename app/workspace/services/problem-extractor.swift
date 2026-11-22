@@ -1,4 +1,5 @@
 import FolioAI
+import FolioActions
 import Foundation
 import Observation
 
@@ -37,7 +38,7 @@ final class ProblemExtractor {
                 try await work()
                 self?.states[material] = nil
             } catch {
-                self?.states[material] = .failed("\(error)")
+                self?.states[material] = .failed(Self.message(for: error))
             }
         }
         last = job
@@ -45,6 +46,12 @@ final class ProblemExtractor {
 
     // 테스트가 뽑기가 끝나기를 기다린다.
     func finish() async { await last?.value }
+
+    // 규칙에 막힌 액션(뽑은 문제 없음, 자료 없음)은 액션의 문구를, Claude 호출의 실패는 Claude 패널과 같은 문구를 보인다.
+    nonisolated static func message(for error: any Error) -> String {
+        if let refusal = error as? ActionError { return refusal.description }
+        return ClaudeFailure.message(for: error)
+    }
 
     private func isFailed(_ state: State) -> Bool {
         if case .failed = state { return true }

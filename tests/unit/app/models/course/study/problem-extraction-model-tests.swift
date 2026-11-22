@@ -94,6 +94,8 @@ struct ProblemExtractionModelTests {
         workspace.extractProblems(from: sheet.id, in: graphTheory)
         await workspace.extractor.finish()
         #expect(model.extractions.map(\.phase) == [.failed])
+        // 실패 카드는 오류 값의 기본 표기가 아니라 Claude 패널과 같은 문구를 보인다.
+        #expect(model.extractions.first?.detail == ClaudeFailure.message(for: ClaudeError.http(status: 500, body: "")))
 
         let fake = answer(1)
         workspace.extractor.standIn = { _ in ClaudeClient(provider: fake) }
