@@ -24057,6 +24057,105 @@
           }
         }
       }
+    },
+    "solve.collection": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제집 PDF"
+          }
+        }
+      }
+    },
+    "solve.collection-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고른 문제로 문제집과 풀이집을 만들어요. 다른 필기 앱에서 손으로 풀어요."
+          }
+        }
+      }
+    },
+    "solve.collection-build": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "만들기"
+          }
+        }
+      }
+    },
+    "solve.collection-rebuild": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 만들기"
+          }
+        }
+      }
+    },
+    "solve.collection-building": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "만드는 중"
+          }
+        }
+      }
+    },
+    "solve.collection-share": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보내기"
+          }
+        }
+      }
+    },
+    "solve.collection-solutions": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "풀이집"
+          }
+        }
+      }
+    },
+    "solve.collection-replace": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "덮어쓰기"
+          }
+        }
+      }
+    },
+    "solve.collection-replace-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Study에 같은 이름의 PDF가 있고 Folio가 만든 것이 아니에요."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

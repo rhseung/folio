@@ -2,6 +2,7 @@ import FolioAI
 import FolioActions
 import FolioCore
 import FolioDomain
+import FolioStorage
 import Foundation
 import Observation
 
@@ -267,6 +268,89 @@ final class SolveModel {
 
     func open(_ page: ProblemPage, _ openLink: OpenLinkAction) {
         open(PageLink(material: page.materialId, page: page.page), openLink)
+    }
+
+    // MARK: Collection
+
+    // 필기로 풀 문제집과 풀이집이다. 만든 뒤 고른 문제가 바뀌면 다시 만들게 한다.
+    struct Collection: Equatable {
+        var problems: [UUID]
+        var url: URL
+        var problemsMaterial: UUID?
+        var solutionsMaterial: UUID?
+    }
+
+    private(set) var collection: Collection?
+    private(set) var buildingCollection = false
+    private(set) var collectionFailure: String?
+    // 같은 이름의 PDF가 Folio가 만든 것이 아니라서 묻는 중인 빌드다. 덮어쓰기를 누르면 이 PDF로 바꾼다.
+    private struct HeldCollection {
+        var problems: URL
+        var solutions: URL
+        var ids: [UUID]
+    }
+    private var heldCollection: HeldCollection?
+
+    var collectionIsCurrent: Bool { collection?.problems == picked.map(\.problem.id) }
+
+    var asksToReplaceCollection: Bool { heldCollection != nil }
+
+    var collectionTitle: String {
+        if buildingCollection { return String(localized: .solveCollectionBuilding) }
+        return String(localized: collection == nil ? .solveCollectionBuild : .solveCollectionRebuild)
+    }
+
+    // Tectonic 컴파일은 몇 초가 걸려서 화면 밖에서 하고, 만든 PDF를 액션에 넘긴다.
+    func buildCollection() async {
+        guard !buildingCollection, let course = workspace.course(request.course) else { return }
+        let ids = picked.map(\.problem.id)
+        guard !ids.isEmpty else { return }
+        let files = ProblemCollectionFiles(
+            store: course.store, file: course.file,
+            semester: workspace.transcript.semesters.first { $0.id == course.file.course.semesterId },
+            author: workspace.settings.study.coverName, problems: ids)
+        buildingCollection = true
+        collectionFailure = nil
+        heldCollection = nil
+        defer { buildingCollection = false }
+        let (now, calendar) = (workspace.now, workspace.calendar)
+        do {
+            let built = try await Task.detached { try files.build(at: now, calendar: calendar) }.value
+            place(built.problems, built.solutions, ids: ids, overwrite: false)
+        } catch {
+            collectionFailure = "\(error)"
+        }
+    }
+
+    func replaceCollection() {
+        guard let held = heldCollection else { return }
+        heldCollection = nil
+        place(held.problems, held.solutions, ids: held.ids, overwrite: true)
+    }
+
+    private func place(_ problems: URL, _ solutions: URL, ids: [UUID], overwrite: Bool) {
+        do {
+            _ = try workspace.runThrowing(
+                ProblemCollectionBuild(
+                    course: request.course, problems: ids, pdf: problems.path, solutionsPDF: solutions.path, overwrite: overwrite))
+        } catch ActionError.conflict {
+            heldCollection = HeldCollection(problems: problems, solutions: solutions, ids: ids)
+            return
+        } catch {
+            collectionFailure = "\(error)"
+            return
+        }
+        guard let course = workspace.course(request.course) else { return }
+        let files = ProblemCollectionFiles(store: course.store, file: course.file, semester: nil, author: "", problems: ids)
+        let material = { (path: String) in course.file.materials.first { $0.path == path }?.id }
+        collection = Collection(
+            problems: ids, url: course.store.fileURL(files.problemsPath), problemsMaterial: material(files.problemsPath),
+            solutionsMaterial: material(files.solutionsPath))
+    }
+
+    func openCollection(solutions: Bool, _ openLink: OpenLinkAction) {
+        guard let id = solutions ? collection?.solutionsMaterial : collection?.problemsMaterial else { return }
+        openLink(AppLink(.material, id), in: .beside, course: request.course)
     }
 
     // 끝내거나 닫으면 풀기를 연 곳으로 돌아간다. 돌아갈 곳이 없으면(주소로 바로 연 풀기) 단원 페이지로 간다.

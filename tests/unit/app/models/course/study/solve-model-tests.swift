@@ -36,6 +36,23 @@ struct SolveModelTests {
         #expect(model.phase == .solving && model.current?.problem.number == "2")
     }
 
+    // 필기로 풀 때 고른 문제로 문제집과 풀이집 PDF를 Study에 만들고, 고른 문제가 바뀌면 다시 만들게 한다.
+    @Test func handwritingBuildsTheCollectionOfThePickedProblems() async throws {
+        let (workspace, unit) = try solvable()
+        let model = SolveModel(workspace: workspace, request: SolveRequest(course: graphTheory, units: [unit], mode: .handwriting))
+        await model.buildCollection()
+        #expect(model.collectionFailure == nil)
+        let collection = try #require(model.collection)
+        #expect(collection.url.lastPathComponent == "EC4207-Practice-Problems.pdf")
+        #expect(model.collectionIsCurrent && collection.problemsMaterial != nil && collection.solutionsMaterial != nil)
+        let materials = try #require(workspace.course(graphTheory)?.file.materials)
+        #expect(materials.contains { $0.id == collection.problemsMaterial && $0.builtHash == $0.hash })
+
+        #expect(collection.problems.count == 2)
+        model.count = 1
+        #expect(!model.collectionIsCurrent)
+    }
+
     @Test func aSkippedProblemLeavesNoRecord() throws {
         let (workspace, unit) = try solvable()
         let model = SolveModel(workspace: workspace, request: SolveRequest(course: graphTheory, units: [unit]))

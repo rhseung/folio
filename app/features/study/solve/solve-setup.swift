@@ -28,9 +28,11 @@ struct SolveSetup: View {
             FormRow(label: String(localized: .solveUnit)) { Combobox(selection: $model.unit, options: model.unitOptions) }
             FormRow(label: String(localized: .solveSource)) { Select(selection: $model.source, options: model.sourceOptions) }
             FormRow(label: String(localized: .solveCount)) { Select(selection: $model.count, options: model.countOptions) }
-            FormRow(label: String(localized: .solveOrder), last: true) {
+            FormRow(label: String(localized: .solveOrder), last: model.mode != .handwriting) {
                 Select(selection: $model.pick.order, options: model.orderOptions)
             }
+            // 문제집은 위에서 고른 문제로 만들므로 고르기 행 아래에 둔다.
+            if model.mode == .handwriting { SolveCollectionRow(model: model) }
         } onConfirm: {
             model.start()
         }
