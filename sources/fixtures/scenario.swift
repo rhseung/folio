@@ -106,16 +106,20 @@ private struct Builder {
     func practice(_ course: UUID, matching: UUID, coloring: UUID, exam: UUID) throws {
         let made = at(10, 30, 20)
         func problem(_ n: String, _ text: String, _ format: ProblemFormat, _ answer: String?, _ unit: UUID, page: Int) -> Problem {
-            Problem(number: n, page: page, text: text, format: format, answer: answer, unitIds: [unit], solution: answer.map { "답: \($0)" })
+            Problem(
+                number: n, page: page, text: text, format: format, answer: answer, unitIds: [unit],
+                solution: answer.map { format == .trueFalse ? "The statement is \($0 == "참" ? "true" : "false")." : "The answer is \($0)." }
+            )
         }
         let problems = [
-            problem("1", "$K_{3,3}$의 최대 매칭의 크기를 구하시오.", .short, "3", matching, page: 1),
-            problem("2", "모든 정규 이분 그래프는 완전 매칭을 가진다.", .trueFalse, "참", matching, page: 1),
-            problem("3", "홀의 정리를 증명하시오.", .written, nil, matching, page: 2),
-            problem("4", "베르주의 정리를 이용해 증가 경로가 없으면 최대 매칭임을 보이시오.", .written, nil, matching, page: 2),
-            problem("5", "페테르센 그래프의 채색수를 구하시오.", .short, "3", coloring, page: 3),
-            problem("6", "평면 그래프는 4색으로 칠할 수 있다.", .trueFalse, "참", coloring, page: 3),
-            problem("7", "브룩스 정리의 조건을 쓰시오.", .written, nil, coloring, page: 4),
+            problem("1", "Find the size of a maximum matching in $K_{3,3}$.", .short, "3", matching, page: 1),
+            problem("2", "Every regular bipartite graph has a perfect matching.", .trueFalse, "참", matching, page: 1),
+            problem("3", "Prove Hall's theorem.", .written, nil, matching, page: 2),
+            problem(
+                "4", "Using Berge's theorem, show that a matching with no augmenting path is maximum.", .written, nil, matching, page: 2),
+            problem("5", "Find the chromatic number of the Petersen graph.", .short, "3", coloring, page: 3),
+            problem("6", "Every planar graph is 4-colorable.", .trueFalse, "참", coloring, page: 3),
+            problem("7", "State the hypotheses of Brooks' theorem.", .written, nil, coloring, page: 4),
         ]
         let set = try run(ProblemSetAdd(course: course, title: "2025 기말", source: .pastExam, problems: problems), at: made)
         func solve(_ i: Int, _ verdict: Verdict, _ basis: GradeBasis, at date: Date, reason: WrongReason? = nil) throws {
@@ -146,7 +150,7 @@ private struct Builder {
         }
         try run(ExamPlanMake(course: course, exam: exam), at: at(11, 4, 8))
 
-        // 2024 중간고사는 Claude가 뽑아 둔 초안으로 남아 문제 페이지에 알림 카드가 뜬다. 문제지가 영어라 뽑은 글도 영어다.
+        // 2024 중간고사는 Claude가 뽑아 둔 초안으로 남아 문제 페이지에 알림 카드가 뜬다. 뽑은 문제와 풀이는 문제지의 언어와 상관없이 영어다.
         if let sheet = try ctx.file(course).materials.first(where: { $0.path == Self.midtermSheet }) {
             var drafted = [
                 problem("1", "Is the graph $K_{3,3}$ below planar? Answer true or false.", .trueFalse, "거짓", coloring, page: 1),
