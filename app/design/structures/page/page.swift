@@ -9,6 +9,8 @@ struct Page<Content: View, Backdrop: View>: View {
     // private으로 두지 않는다. private 속성이 있으면 memberwise init도 private이 된다.
     @Environment(\.linkFocus) var focus
     @Environment(\.pageGutter) var gutter
+    @Environment(\.accessibilityReduceMotion) var reduceMotion
+    @Environment(\.jumpsToAnchor) var jumpsToAnchor
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -39,7 +41,7 @@ struct Page<Content: View, Backdrop: View>: View {
                 guard let anchor else { return }
                 try? await Task.sleep(for: .milliseconds(100))
                 // 처음 열 때도 바로 옮기지 않고 미끄러져 간다. 어디서 출발해 어디에 닿았는지 보여야 위아래에 무엇이 있는지 안다.
-                withAnimation(Theme.Motion.scroll) { proxy.scrollTo(anchor.id, anchor: .top) }
+                withAnimation(reduceMotion || jumpsToAnchor ? nil : Theme.Motion.scroll) { proxy.scrollTo(anchor.id, anchor: .top) }
             }
         }
         .background(Theme.Palette.page)

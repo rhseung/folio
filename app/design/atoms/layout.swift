@@ -9,6 +9,11 @@ extension EnvironmentValues {
     @Entry var revealsOverflow = false
 }
 
+// 화면 밖에서 그림을 그릴 때 켠다. `Page`가 앵커로 미끄러져 가지 않고 바로 옮긴다. 시스템의 동작 줄이기 값은 바꿀 수 없다.
+extension EnvironmentValues {
+    @Entry var jumpsToAnchor = false
+}
+
 extension FocusedValues {
     @Entry var outlineCommand: OutlineCommand?
 }
