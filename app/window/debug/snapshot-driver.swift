@@ -88,6 +88,13 @@ final class SnapshotDriver {
             }
             await courseSteps(course, workspace: workspace, open: open, step: step)
         }
+        let drafted = workspace.currentCourses.lazy.compactMap { c in
+            ((try? c.store.drafts()) ?? []).first { $0.model.kind == .problems }?.model.materialId.map { (c.id, $0) }
+        }.first
+        if let (course, material) = drafted {
+            await step(
+                "course-problem-draft", .course(course, page: .problems), sheet: .problemDraft(course: course, material: material), wait: 3)
+        }
         for (name, link) in links { await step(name, link) }
         if let note = Self.noteLink {
             open(AppLink(.note, note))

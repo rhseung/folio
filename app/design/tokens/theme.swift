@@ -242,6 +242,8 @@ enum Theme {
         static let bigButton: CGFloat = 52
         static let flipCardMin: CGFloat = 280
         static let solveSetup: CGFloat = 520
+        // 뽑은 문제 검토 시트에서 문제 글이 단원 칸 옆에 남겨야 하는 폭이다. 이보다 좁으면 단원 칸을 글 아래로 내린다.
+        static let draftProblemText: CGFloat = 240
         static let solveSplit: CGFloat = 720
         static let inkPad: CGFloat = 320
         static let solveStep = CGSize(width: 16, height: 6)

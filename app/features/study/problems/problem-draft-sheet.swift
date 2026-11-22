@@ -44,7 +44,8 @@ struct ProblemDraftSheet: View {
     }
 }
 
-// 줄을 누르면 받을지 고르고, 오른쪽에서 단원을 고친다. 단원을 고치는 칸은 줄의 단추 밖에 두어 누르면 받기가 바뀌지 않는다.
+// 받기 표시와 번호, 문제 글을 누르면 받을지 고르고, 단원은 그 옆의 칸에서 고친다. 글과 단원 칸을 `FoldingRow` 하나에 두어,
+// 글이 `draftProblemText`보다 좁아지면 단원 칸이 글 아래로 내려간다.
 private struct DraftRow: View {
     @Binding var row: ProblemDraftModel.Row
     let caption: String
@@ -55,24 +56,32 @@ private struct DraftRow: View {
 
     var body: some View {
         CardRow(last: last) {
-            Button(action: toggle) {
-                HStack(alignment: .top, spacing: Theme.Space.m) {
-                    Image(systemName: row.kept ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(row.kept ? accent : Theme.Palette.textTertiary).accessibilityHidden(true)
-                    Text(verbatim: row.problem.number).font(Theme.Typeface.bodyStrong).monospacedDigit()
-                        .frame(width: Theme.Size.solveCell, alignment: .leading)
+            HStack(alignment: .top, spacing: Theme.Space.m) {
+                Button(action: toggle) {
+                    HStack(spacing: Theme.Space.m) {
+                        Image(systemName: row.kept ? "checkmark.circle.fill" : "circle")
+                            .foregroundStyle(row.kept ? accent : Theme.Palette.textTertiary).accessibilityHidden(true)
+                        Text(verbatim: row.problem.number).font(Theme.Typeface.bodyStrong).monospacedDigit()
+                            .frame(width: Theme.Size.solveCell, alignment: .leading)
+                    }
+                    .frame(minHeight: Theme.Size.touchTarget, alignment: .top)
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.pointing(.plain))
+                .accessibilityAddTraits(row.kept ? .isSelected : [])
+                FoldingRow(labelRoom: Theme.Size.draftProblemText) {
                     VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                        StudyText(text: row.problem.text).lineLimit(3)
+                        StudyText(text: row.problem.text).lineLimit(4)
                         Text(caption).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                     }
-                    Spacer(minLength: 0)
+                    .contentShape(.rect)
+                    .onTapGesture(perform: toggle)
+                    .accessibilityAddTraits(.isButton).accessibilityAddTraits(row.kept ? .isSelected : [])
+                } control: {
+                    MultiCombobox(selection: $row.problem.unitIds, options: units, prompt: String(localized: .commonNone))
+                        .fixedSize()
                 }
-                .contentShape(.rect)
             }
-            .buttonStyle(.pointing(.plain))
-            .accessibilityAddTraits(row.kept ? .isSelected : [])
-            MultiCombobox(selection: $row.problem.unitIds, options: units, prompt: String(localized: .commonNone))
-                .fixedSize()
         }
     }
 }

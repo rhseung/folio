@@ -22997,7 +22997,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "문제 묶음이 없어요. 족보나 연습 문제를 묶음으로 넣으면 번호마다 맞았는지 기록할 수 있어요."
+            "value": "문제 묶음이 없어요. 족보, 교재, 연습, 과제 PDF에서 문제를 뽑거나 묶음을 직접 넣으면 번호마다 맞았는지 기록할 수 있어요."
           }
         }
       }
@@ -23779,6 +23779,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld쪽"
+          }
+        }
+      }
+    },
+    "problem-extract.pick": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자료에서 문제 뽑기"
+          }
+        }
+      }
+    },
+    "problem-extract.pick-prompt": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제지 찾기"
           }
         }
       }

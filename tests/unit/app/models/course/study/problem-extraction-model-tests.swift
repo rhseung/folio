@@ -86,6 +86,22 @@ struct ProblemExtractionModelTests {
         #expect(await fake.requests.count == expected.count)
     }
 
+    @Test func thePagePicksASheetToExtract() async throws {
+        track()
+        let fake = answer(1)
+        workspace.extractor.standIn = { _ in ClaudeClient(provider: fake) }
+        let model = ProblemsModel(workspace: workspace, courseId: graphTheory)
+        let sheet = try material("Inherited/소순범/2024 Midterm.pdf"), solution = try material("Inherited/소순범/2024 Midterm Solution.pdf")
+        let ids = model.sheetOptions.map(\.id)
+        #expect(ids.contains(sheet.id) && !ids.contains(solution.id))
+
+        model.extract(sheet.id)
+        await workspace.extractor.finish()
+        model.acceptAll(try #require(model.extractions.first))
+        // 묶음을 만든 문제지는 목록의 뒤로 간다.
+        #expect(model.sheetOptions.last?.id == sheet.id)
+    }
+
     @Test func aFailureCanBeRetriedOrDismissed() async throws {
         track()
         workspace.extractor.standIn = { _ in ClaudeClient(provider: FakeProvider(responses: [])) }

@@ -17,15 +17,24 @@ struct ProblemsView: View {
             FoldingRow(labelRoom: Theme.Size.pageHeaderRoom) {
                 PageHeader(title: String(localized: .problemsTitle), subtitle: model.subtitle)
             } control: {
-                Button(.problemSetAdd, systemImage: "plus") { sheets.present(.problemSet(course: course.id)) }.buttonStyle(.secondary)
-                Button(.unitsSolve, systemImage: "pencil.and.list.clipboard") { sheets.present(.solve(model.solveRequest())) }
-                    .buttonStyle(.prominent).disabled(model.isEmpty)
+                // 접힌 줄에도 세 단추가 다 들어가지 않으면 뽑기 단추만 아이콘으로 줄인다. 다른 두 단추가 잘리지 않게 하려는 것이다.
+                ViewThatFits(in: .horizontal) {
+                    headerActions(compact: false)
+                    headerActions(compact: true)
+                }
             }
             ForEach(model.extractions) { e in
                 ExtractionNotice(extraction: e, model: model) { sheets.present(.problemDraft(course: course.id, material: e.material)) }
             }
             if model.isEmpty {
-                Card { CardRow(last: true) { EmptyLine(String(localized: .problemsEmpty)) } }
+                Card {
+                    CardRow(last: true) {
+                        VStack(alignment: .leading, spacing: Theme.Space.m) {
+                            EmptyLine(String(localized: .problemsEmpty))
+                            ExtractPick(model: model)
+                        }
+                    }
+                }
             } else {
                 FoldingRow {
                     SegmentedControl(selection: $model.filter, options: model.filterOptions)
@@ -59,6 +68,33 @@ struct ProblemsView: View {
                     }
                     .linkTarget(group.set.id)
                 }
+            }
+        }
+    }
+
+    private func headerActions(compact: Bool) -> some View {
+        HStack(spacing: Theme.Space.m) {
+            ExtractPick(model: model, compact: compact)
+            Button(.problemSetAdd, systemImage: "plus") { sheets.present(.problemSet(course: course.id)) }.buttonStyle(.secondary)
+            Button(.unitsSolve, systemImage: "pencil.and.list.clipboard") { sheets.present(.solve(model.solveRequest())) }
+                .buttonStyle(.prominent).disabled(model.isEmpty)
+        }
+    }
+}
+
+// 과목의 문제지 하나를 골라 뽑는다. 목록이 길어질 수 있어 찾기 칸이 있는 목록으로 연다.
+private struct ExtractPick: View {
+    let model: ProblemsModel
+    var compact = false
+    @State private var open = false
+
+    var body: some View {
+        let options = model.sheetOptions
+        if !options.isEmpty {
+            CommandList(options: options, onSelect: model.extract, prompt: String(localized: .problemExtractPickPrompt), isPresented: $open)
+            {
+                let button = Button(.problemExtractPick, systemImage: "sparkles") { open = true }.buttonStyle(.secondary)
+                if compact { button.labelStyle(.iconOnly) } else { button }
             }
         }
     }

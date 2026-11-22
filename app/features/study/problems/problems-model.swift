@@ -138,6 +138,22 @@ final class ProblemsModel {
         ].compactMap { $0 }.joined(separator: " · ")
     }
 
+    // 문제를 뽑을 수 있는 자료다. 아직 묶음이 없는 문제지를 먼저 보인다.
+    var sheetOptions: [SelectOption<UUID>] {
+        guard let file = workspace.course(courseId)?.file else { return [] }
+        let sheets = file.materials.filter(ProblemExtraction.accepts).sorted { a, b in
+            let (doneA, doneB) = (ProblemExtraction.extracted(a, in: file), ProblemExtraction.extracted(b, in: file))
+            return doneA != doneB ? !doneA : a.path.localizedStandardCompare(b.path) == .orderedAscending
+        }
+        return sheets.map { m in
+            SelectOption(
+                id: m.id, label: (m.path as NSString).lastPathComponent, detail: (m.path as NSString).deletingLastPathComponent,
+                isFile: true)
+        }
+    }
+
+    func extract(_ material: UUID) { workspace.extractProblems(from: material, in: courseId) }
+
     func acceptAll(_ e: Extraction) { workspace.run(ProblemSetAccept(course: courseId, material: e.material)) }
 
     func retry(_ e: Extraction) { workspace.extractProblems(from: e.material, in: courseId) }

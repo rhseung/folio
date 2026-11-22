@@ -10,6 +10,8 @@ struct CommandList<ID: Hashable, Label: View>: View {
     var flexible = false
     var onCreate: ((String) -> Void)?
     var createLabel: (String) -> String = { $0 }
+    // 바깥에서 여닫으면 `label`을 단추로 감싸지 않는다. 단추 모양(`.secondary`)을 부르는 쪽이 정하게 하려는 것이다.
+    var isPresented: Binding<Bool>?
     @ViewBuilder let label: Label
     @State private var open = false
     @State private var query = ""
@@ -30,15 +32,21 @@ struct CommandList<ID: Hashable, Label: View>: View {
         return q
     }
 
+    private var shown: Binding<Bool> { isPresented ?? $open }
+
     var body: some View {
-        Button {
-            open.toggle()
-        } label: {
-            label
+        if let isPresented {
+            label.popover(isPresented: isPresented, arrowEdge: .bottom) { panel }
+        } else {
+            Button {
+                open.toggle()
+            } label: {
+                label
+            }
+            .buttonStyle(.pointing(.plain))
+            .fixedSize(horizontal: !flexible, vertical: true)
+            .popover(isPresented: $open, arrowEdge: .bottom) { panel }
         }
-        .buttonStyle(.pointing(.plain))
-        .fixedSize(horizontal: !flexible, vertical: true)
-        .popover(isPresented: $open, arrowEdge: .bottom) { panel }
     }
 
     var panel: some View {
@@ -151,7 +159,7 @@ struct CommandList<ID: Hashable, Label: View>: View {
     func make(_ title: String) {
         onCreate?(title)
         query = ""
-        if !multiple { open = false }
+        if !multiple { shown.wrappedValue = false }
     }
 
     func step(_ delta: Int, in rows: [SelectOption<ID>]) {
@@ -164,6 +172,6 @@ struct CommandList<ID: Hashable, Label: View>: View {
         // 강조한 행에서 Return을 누르면 버튼을 거치지 않고 여기로 오므로, isDisabled 검사를 한 번 더 한다.
         if options.first(where: { $0.id == id })?.isDisabled == true, !isSelected(id) { return }
         onSelect(id)
-        if !multiple { open = false }
+        if !multiple { shown.wrappedValue = false }
     }
 }
