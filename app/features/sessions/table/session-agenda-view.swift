@@ -11,12 +11,16 @@ struct SessionAgendaView: View {
     let table: SessionTable
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Space.xl) {
+        VStack(alignment: .leading, spacing: 0) {
             ForEach(table.weeks) { week in
                 VStack(alignment: .leading, spacing: Theme.Space.s) {
                     head(week)
                     ForEach(week.agenda) { day in self.day(day) }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, Theme.Space.l)
+                // 주 사이에 선을 그어, 일정 없는 주가 이어져도 어느 줄이 어느 주인지 갈린다.
+                .overlay(alignment: .top) { if week.id != table.weeks.first?.id { Theme.Palette.lineSoft.frame(height: 1) } }
                 .id(week.id)
             }
         }
