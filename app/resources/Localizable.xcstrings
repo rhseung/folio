@@ -21864,7 +21864,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ · 문제 %2$lld개뿐"
+            "value": "%1$@ · 문제 %2$lld개"
           }
         }
       }
@@ -23801,6 +23801,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "문제지 찾기"
+          }
+        }
+      }
+    },
+    "units.few-problems-none": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · 문제 없음"
+          }
+        }
+      }
+    },
+    "units.few-problems-many": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제 부족 단원 %lld개"
+          }
+        }
+      }
+    },
+    "make-problems.units": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 외 %2$lld단원"
           }
         }
       }

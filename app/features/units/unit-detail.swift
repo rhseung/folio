@@ -80,7 +80,7 @@ struct UnitDetail: View {
                         }
                         Spacer(minLength: 0)
                     }
-                    .opens { sheets.present(.makeProblems(course: course.id, unit: unit.id)) }
+                    .opens { sheets.present(.makeProblems(course: course.id, units: [unit.id])) }
                 }
             }
 

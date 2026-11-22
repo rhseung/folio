@@ -46,6 +46,12 @@ public enum DateTimeText {
         return Parts(day: day, time: timed ? clock(date, calendar: calendar, locale: locale) : nil)
     }
 
+    // 날을 견주지 않고 날짜를 그대로 쓰는 곳(다가오는 시험)의 표기다. 시각 없이 만든 시험은 자정에 놓이므로 "오전 12:00"을 쓰지 않고 날짜만 쓴다.
+    public static func date(_ date: Date, calendar: Calendar, locale: Locale = .autoupdatingCurrent) -> String {
+        let style = Date.FormatStyle(locale: locale, calendar: calendar, timeZone: calendar.timeZone).month().day().weekday()
+        return date.formatted(hasTime(date, calendar: calendar) ? style.hour().minute() : style)
+    }
+
     // 12시간제와 24시간제는 Mac의 시각 설정을 따른다. 그래서 기본값은 고정한 로케일이 아니라 지금 로케일이다.
     public static func clock(_ date: Date, calendar: Calendar, locale: Locale = .autoupdatingCurrent) -> String {
         date.formatted(Date.FormatStyle(date: .omitted, time: .shortened, locale: locale, calendar: calendar, timeZone: calendar.timeZone))
