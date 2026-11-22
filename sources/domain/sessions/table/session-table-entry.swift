@@ -23,7 +23,9 @@ public struct SessionTableEntry: Sendable, Identifiable {
         case recording(TimeInterval)
         case reviewNote
         case noReviewNote
+        // 사용자가 적은 시험 범위다. 연결한 단원은 이름을 늘어놓으면 칸을 넘으므로 `linkedUnits`로 따로 두고 화면은 아이콘만 그린다.
         case scope(String)
+        case linkedUnits([String])
     }
 
     public let item: Item
@@ -95,10 +97,10 @@ extension SessionTableEntry {
 
     static func exam(_ exam: Exam, at date: Date, in file: CourseFile, calendar: Calendar) -> SessionTableEntry {
         let units = file.scopeUnits(of: exam).map(\.title)
-        let scope = exam.scopeText.isEmpty ? units.joined(separator: ", ") : exam.scopeText
+        let tags: [Tag] = (exam.scopeText.isEmpty ? [] : [.scope(exam.scopeText)]) + (units.isEmpty ? [] : [.linkedUnits(units)])
         return SessionTableEntry(
             item: .exam(exam), date: date, day: LocalDate(date, in: calendar), look: .exam, isMakeup: false,
-            tags: scope.isEmpty ? [] : [.scope(scope)], subject: exam.title, pages: nil, offSchedule: true)
+            tags: tags, subject: exam.title, pages: nil, offSchedule: true)
     }
 
     // 낸 과제와 마감이 지난 과제는 지운 줄로 그린다.

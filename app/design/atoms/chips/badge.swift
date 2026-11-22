@@ -7,11 +7,13 @@ struct Badge: View {
     var tone: Tone = .plain
     var solid = false
     var color: Color?
+    var truncates = false
 
-    init(_ text: String, tone: Tone = .plain, solid: Bool = false) {
+    init(_ text: String, tone: Tone = .plain, solid: Bool = false, truncates: Bool = false) {
         self.text = text
         self.tone = tone
         self.solid = solid
+        self.truncates = truncates
     }
 
     // 상태의 뜻이 아니라 값으로 색이 정해지는 칩(시험까지 남은 날)이다. 글자는 그 색, 바탕은 그 색을 옅게 깐다.
@@ -26,7 +28,7 @@ struct Badge: View {
             .monospacedDigit()
             .foregroundStyle(ink)
             .lineLimit(1)
-            .fixedSize()
+            .fixedSize(horizontal: !truncates, vertical: true)
             .chip(.small, fill: fill)
     }
 

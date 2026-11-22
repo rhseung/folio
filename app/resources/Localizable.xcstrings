@@ -16787,6 +16787,17 @@
         }
       }
     },
+    "sessions.table.linked-units": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결한 단원: %@"
+          }
+        }
+      }
+    },
     "sessions.table.next": {
       "extractionState": "manual",
       "localizations": {

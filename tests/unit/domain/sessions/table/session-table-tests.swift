@@ -167,6 +167,27 @@ struct SessionTableTests {
         #expect(!elsewhere.weeks.flatMap(\.cells).flatMap(\.entries).contains { $0.tags.contains(.unwrapped) })
     }
 
+    @Test func examsKeepTypedScopeAsTextAndLinkedUnitsAsTheirOwnTag() {
+        let trees = Unit(device: device, at: .now, title: "Trees", order: 0)
+        let matchings = Unit(device: device, at: .now, title: "Matchings", order: 1)
+        var linked = Exam(device: device, at: .now, title: "Quiz4", start: date("2026-10-22 13:00"))
+        linked.addedScopeUnitIds = [trees.id, matchings.id]
+        var typed = linked
+        typed.id = UUID()
+        typed.title = "Quiz1"
+        typed.scopeText = "HW#1, 처음 ~ bipartite graph"
+        let bare = Exam(device: device, at: .now, title: "Quiz5", start: date("2026-10-21 13:00"))
+        var f = file(exams: [linked, typed, bare])
+        f.units = [trees, matchings]
+        let table = SessionTable(f, now: date("2026-11-04 11:20"), settings: settings, calendar: calendar)
+        let all = table.weeks.flatMap(\.cells).flatMap(\.entries)
+        func tags(_ title: String) -> [SessionTableEntry.Tag]? { all.first { $0.subject == title }?.tags }
+
+        #expect(tags("Quiz4") == [.linkedUnits(["Trees", "Matchings"])])
+        #expect(tags("Quiz1") == [.scope("HW#1, 처음 ~ bipartite graph"), .linkedUnits(["Trees", "Matchings"])])
+        #expect(tags("Quiz5") == [])
+    }
+
     @Test func theNextClassIsTheFirstFutureOneAndPlannedClassesGiveWayToSavedOnes() throws {
         let saved = session("2026-11-09 09:00")
         let planned = [session("2026-11-09 09:00"), session("2026-11-11 09:00")]
