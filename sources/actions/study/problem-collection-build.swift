@@ -4,9 +4,10 @@ import Foundation
 
 @Action(
     "problem collect", "고른 문제로 문제집과 풀이집 PDF를 Tectonic으로 만들어 Study에 둔다",
-    discussion: "문제집은 문제마다 풀이 자리를 둔 PDF이고, 풀이집은 같은 문제 아래에 답과 풀이를 둔 PDF다. 그림은 문제지 PDF에서 잘라 온다.",
+    discussion: "문제집은 문제마다 풀이 자리를 둔 PDF이고, 풀이집은 같은 문제 아래에 답과 풀이를 둔 PDF다. 그림은 problem figure로 다시 그린 그림을 넣고, 없으면 문제지 PDF에서 잘라 온다.",
     done: "'{course}'의 문제집과 풀이집을 만들었습니다", examples: [#"folio problem collect EC4207 --set "EC4207/Exercise 1""#],
-    phrases: ["문제집 만들기", "문제집 PDF", "풀이집 만들기", "시험 대비 문제집", "필기로 풀 문제"], panel: true)
+    phrases: ["문제집 만들기", "문제집 PDF", "풀이집 만들기", "시험 대비 문제집", "필기로 풀 문제"],
+    cli: .manual(reason: "다시 그린 그림(SVG)을 WebKit으로 PDF로 그려 빌드에 넘긴다"), panel: true)
 public struct ProblemCollectionBuild {
     /// 과목
     @Arg var course: Course.ID

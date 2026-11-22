@@ -23,18 +23,32 @@ public struct ProblemCollection: Sendable, Equatable {
         }
     }
 
+    // 다시 그린 그림의 빌드 폴더 안 PDF 이름이다. 문제나 지문의 ID마다 있고, 그림이 있으면 문제지에서 자른 그림 대신 넣는다.
+    public struct Art: Sendable, Equatable {
+        public var figure: String?
+        // 답을 그림 위에 그린 풀이용 그림이다. 풀이집의 풀이 앞에 둔다.
+        public var solution: String?
+
+        public init(figure: String? = nil, solution: String? = nil) {
+            self.figure = figure
+            self.solution = solution
+        }
+    }
+
     // 표지와 머리말에 쓰는 과목 이름이다("EC4207 Graph Theory").
     public var course: String
     public var term: String?
     // 표지의 이름이다. 비어 있으면 표지에서 뺀다.
     public var author: String?
     public var sections: [Section]
+    public var art: [UUID: Art]
 
-    public init(course: String, term: String? = nil, author: String? = nil, sections: [Section]) {
+    public init(course: String, term: String? = nil, author: String? = nil, sections: [Section], art: [UUID: Art] = [:]) {
         self.course = course
         self.term = term
         self.author = author
         self.sections = sections
+        self.art = art
     }
 
     public var problemCount: Int {
@@ -78,10 +92,10 @@ public struct ProblemCollection: Sendable, Equatable {
                 + section.items.map { item in
                     switch item {
                     case .stem(let g):
-                        "\\stem{\(Self.escaped(section.title))}{\(Self.stemName(g))}{%\n\(Self.body(g.text, g.figures, sheet: section.sheet))}"
+                        "\\stem{\(Self.escaped(section.title))}{\(Self.stemName(g))}{%\n\(body(g.text, g.figures, sheet: section.sheet, art: art[g.id]))}"
                     case .problem(let p):
                         "\\prob[\(p.layoutSize.rawValue)]{\(Self.escaped(section.title))}{\(Self.escaped(p.number))}{\(Self.tag(p))}{%\n"
-                            + Self.statement(p, sheet: section.sheet) + "}"
+                            + statement(p, sheet: section.sheet) + "}"
                     }
                 }
         }
@@ -95,10 +109,10 @@ public struct ProblemCollection: Sendable, Equatable {
                 + section.items.map { item in
                     switch item {
                     case .stem(let g):
-                        "\\solstem{\(Self.escaped(section.title))}{\(Self.stemName(g))}{%\n\(Self.body(g.text, g.figures, sheet: section.sheet))}"
+                        "\\solstem{\(Self.escaped(section.title))}{\(Self.stemName(g))}{%\n\(body(g.text, g.figures, sheet: section.sheet, art: art[g.id]))}"
                     case .problem(let p):
                         "\\sol{\(Self.escaped(section.title))}{\(Self.escaped(p.number))}{\(Self.tag(p))}{%\n"
-                            + Self.statement(p, sheet: section.sheet) + "}{%\n" + Self.solution(p) + "}"
+                            + statement(p, sheet: section.sheet) + "}{%\n" + Self.solution(p, figure: art[p.id]?.solution) + "}"
                     }
                 }
         }
@@ -133,31 +147,38 @@ public struct ProblemCollection: Sendable, Equatable {
         return "(\(n)pt)"  // strings: data, 문제집 PDF의 배점 표시
     }
 
-    static func statement(_ p: Problem, sheet: String?) -> String {
+    func statement(_ p: Problem, sheet: String?) -> String {
         var parts = [p.text.trimmingCharacters(in: .whitespacesAndNewlines)]
         if p.format == .choice, !p.options.isEmpty {
             parts.append(
                 (["\\begin{enumerate}[label=(\\alph*),leftmargin=8mm,topsep=2mm,itemsep=1mm]"]
                     + p.options.map { "\\item " + $0 } + ["\\end{enumerate}"]).joined(separator: "\n"))
         }
-        return body(parts.joined(separator: "\n\n"), p.figures, sheet: sheet)
+        return body(parts.joined(separator: "\n\n"), p.figures, sheet: sheet, art: art[p.id])
     }
 
-    static func body(_ text: String, _ figures: [ProblemRegion], sheet: String?) -> String {
+    // 다시 그린 그림은 문제의 그림을 모두 한 장에 담으므로, 있으면 자른 그림을 넣지 않는다.
+    func body(_ text: String, _ figures: [ProblemRegion], sheet: String?, art: Art?) -> String {
         var parts = [text.trimmingCharacters(in: .whitespacesAndNewlines)].filter { !$0.isEmpty }
-        if let sheet { parts += figures.map { ProblemCollectionTeX.figure(sheet, $0) } }
+        if let figure = art?.figure {
+            parts.append(ProblemCollectionTeX.art(figure))
+        } else if let sheet {
+            parts += figures.map { ProblemCollectionTeX.figure(sheet, $0) }
+        }
         return parts.joined(separator: "\n\n") + "\n"
     }
 
-    static func solution(_ p: Problem) -> String {
+    static func solution(_ p: Problem, figure: String? = nil) -> String {
         var parts: [String] = []
         if let answer = p.answer?.trimmingCharacters(in: .whitespacesAndNewlines), !answer.isEmpty {
             parts.append("\\answer{\(p.format == .trueFalse ? ProblemCollectionTeX.trueFalse(answer) : answer)}")
         }
         if let solution = p.solution?.trimmingCharacters(in: .whitespacesAndNewlines), !solution.isEmpty {
-            parts.append("\\method{}\n" + solution + "\n\n\\qedsym")
+            parts.append("\\method{}\n" + (figure.map { ProblemCollectionTeX.art($0) + "\n\n" } ?? "") + solution + "\n\n\\qedsym")
         } else if let page = p.solutionPage {
-            parts.append(ProblemCollectionTeX.solutionPage(page))
+            parts += (figure.map { [ProblemCollectionTeX.art($0)] } ?? []) + [ProblemCollectionTeX.solutionPage(page)]
+        } else if let figure {
+            parts.append(ProblemCollectionTeX.art(figure))
         }
         return (parts.isEmpty ? [ProblemCollectionTeX.noSolution] : parts).joined(separator: "\n\n") + "\n"
     }

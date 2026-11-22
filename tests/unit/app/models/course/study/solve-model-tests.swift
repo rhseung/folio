@@ -1,5 +1,7 @@
+import FolioAI
 import FolioActions
 import FolioDomain
+import FolioStorage
 import Foundation
 import Testing
 
@@ -51,6 +53,40 @@ struct SolveModelTests {
         #expect(collection.problems.count == 2)
         model.count = 1
         #expect(!model.collectionIsCurrent)
+    }
+
+    // Claude가 있으면 문제집을 만들기 전에 문제지 PDF가 있는 문제의 그림을 다시 그리고, 풀이가 없는 문제의 풀이를 쓴다.
+    // 다시 그린 그림은 문제집에 자른 그림 대신 들어간다.
+    @Test func handwritingRedrawsFiguresAndWritesMissingSolutions() async throws {
+        let workspace = try fixtureWorkspace()
+        workspace.run(MaterialTrack(course: graphTheory, assignments: false))
+        let unit = try #require(workspace.run(UnitAdd(course: graphTheory, title: "매칭"))?.made)
+        let sheet = try #require(workspace.course(graphTheory)?.file.materials.first { $0.path == "Inherited/소순범/2024 Midterm.pdf" })
+        let figure = try #require(ProblemRegion(page: 1, x: 0.1, y: 0.2, width: 0.4, height: 0.3))
+        let problems = [
+            Problem(number: "1", text: "Find a perfect matching of $G$.", format: .written, unitIds: [unit], figures: [figure]),
+            Problem(number: "2", text: "State Hall's theorem.", format: .written, unitIds: [unit]),
+        ]
+        workspace.run(ProblemSetAdd(course: graphTheory, title: "2024 Midterm", material: sheet.id, problems: problems))
+
+        let svg =
+            #"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 40 20\"><line class=\"s-ink\" x1=\"2\" y1=\"10\" x2=\"38\" y2=\"10\"/></svg>"#
+        let reply = #"{"figure":"\#(svg)","solutionFigure":"\#(svg)","solution":"By Hall's theorem."}"#
+        let fake = FakeProvider(responses: Array(repeating: FakeProvider.reply(reply), count: 2))
+        let model = SolveModel(workspace: workspace, request: SolveRequest(course: graphTheory, units: [unit], mode: .handwriting))
+        model.claudeStandIn = ClaudeClient(provider: fake)
+        await model.buildCollection()
+        #expect(model.collectionFailure == nil && model.undrawn == 0 && model.collection != nil)
+        #expect(await fake.requests.count == 2)
+
+        let course = try #require(workspace.course(graphTheory))
+        let saved = try #require(course.file.problemSets.first { $0.title == "2024 Midterm" })
+        #expect(saved.problems.allSatisfy { $0.solution == "By Hall's theorem." })
+        let art = course.store.problemArt()
+        #expect(art.keys.sorted() == [saved.problems[0].id] && art.values.first?.model.solutionFigure != nil)
+        let files = ProblemCollectionFiles(store: course.store, file: course.file, semester: nil, author: "", problems: [])
+        let tex = try String(contentsOf: files.problemsTeX, encoding: .utf8)
+        #expect(tex.contains("\\artfigure{art-\(saved.problems[0].id.uuidString).pdf}"))
     }
 
     @Test func aSkippedProblemLeavesNoRecord() throws {

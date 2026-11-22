@@ -9,10 +9,7 @@ struct SolveCollectionRow: View {
     var body: some View {
         FormRow(
             label: String(localized: .solveCollection),
-            detail: model.collectionFailure
-                ?? (model.asksToReplaceCollection
-                    ? String(localized: .solveCollectionReplaceDetail) : String(localized: .solveCollectionDetail)),
-            warns: model.collectionFailure != nil || model.asksToReplaceCollection, last: true
+            detail: model.collectionDetail, warns: model.collectionFailure != nil || model.asksToReplaceCollection, last: true
         ) {
             HStack(spacing: Theme.Space.s) {
                 if model.asksToReplaceCollection {

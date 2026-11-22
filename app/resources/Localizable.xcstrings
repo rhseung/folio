@@ -24113,6 +24113,17 @@
         }
       }
     },
+    "solve.collection-drawing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그림 그리는 중 %1$lld/%2$lld"
+          }
+        }
+      }
+    },
     "solve.collection-share": {
       "extractionState": "manual",
       "localizations": {
@@ -24131,6 +24142,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "풀이집"
+          }
+        }
+      }
+    },
+    "solve.collection-undrawn": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그림 %lld개는 다시 그리지 못해 문제지에서 자른 그림을 넣었어요."
           }
         }
       }

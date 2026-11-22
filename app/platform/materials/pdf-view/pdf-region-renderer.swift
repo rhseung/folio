@@ -1,6 +1,8 @@
 import CoreImage
 import FolioDomain
+import ImageIO
 import PDFKit
+import UniformTypeIdentifiers
 
 // 문제지 PDF의 칸(문제의 그림)을 비트맵으로 그린다. 쪽의 회전과 다크 종이를 PDF 보기와 같게 다룬다.
 enum PDFRegionRenderer {
@@ -45,5 +47,16 @@ enum PDFRegionRenderer {
             output = next
         }
         return CIContext().createCGImage(output, from: output.extent)
+    }
+}
+
+extension PDFRegionRenderer {
+    // Claude에게 보낼 그림 칸이다. 작은 칸도 글자를 읽을 수 있게 3배로 그린다.
+    nonisolated static func png(_ url: URL, region: ProblemRegion) -> Data? {
+        guard let crop = render(url, region: region, pixelsPerPoint: 3)?.crop else { return nil }
+        let data = NSMutableData()
+        guard let target = CGImageDestinationCreateWithData(data, UTType.png.identifier as CFString, 1, nil) else { return nil }
+        CGImageDestinationAddImage(target, crop.image, nil)
+        return CGImageDestinationFinalize(target) ? data as Data : nil
     }
 }

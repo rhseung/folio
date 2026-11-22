@@ -191,4 +191,31 @@ struct StudyAITests {
             #expect(system.contains(MathWriting.rule))
         }
     }
+
+    // 문제집 그림은 자른 그림을 이미지로 보내고, 지문의 다시 그린 그림 위에 답을 그리게 한다. 검사에 걸린 그림은 그 결과를 붙여
+    // 한 번 더 묻는다.
+    @Test func problemArtSendsTheCropsAndRetriesWithTheCheck() async throws {
+        let reply = #"{"figure":null,"solutionFigure":"<svg viewBox=\"0 0 1 1\"/>","solution":"Match $a_1b_2$."}"#
+        let fake = FakeProvider(responses: [FakeProvider.reply(reply), FakeProvider.reply(reply)])
+        let stem = ProblemGroup(number: "2", text: "Let $G$ be the graph below.")
+        let p = Problem(number: "2b", parent: "2", text: "Find a perfect matching.")
+        let job = ProblemArt.Job(id: p.id, set: UUID(), number: "2b", problem: p, stems: [stem], draws: true, writesSolution: true)
+        let client = ClaudeClient(provider: fake)
+        let draft = try await client.drawProblemArt(job, crops: [Data("png".utf8)], stemFigure: "<svg id=\"stem\"/>")
+        #expect(draft.figure == nil && draft.solution == "Match $a_1b_2$.")
+        _ = try await client.drawProblemArt(
+            job, crops: [], stemFigure: nil, previous: draft, problems: ["label 'a_1' overlaps a line"])
+
+        let requests = await fake.requests
+        let first = try #require(requests.first), second = try #require(requests.last)
+        #expect(first.model == TaskConfig.large && first.output_config?.format?.schema == ProblemArtDraft.schema)
+        let images = first.messages[0].content.filter { if case .image = $0 { true } else { false } }
+        let ask = first.messages[0].content.compactMap { if case .text(let t, _) = $0 { t } else { nil } }.joined()
+        #expect(images.count == 1 && ask.contains("<stem_figure>") && ask.contains("Write \"solution\""))
+        let system = (first.system ?? []).compactMap { if case .text(let t, _) = $0 { t } else { nil } }
+        #expect(system.contains(NoteWritingGuide.figureRules) && system.contains(MathWriting.rule))
+        #expect(second.messages.map(\.role) == [.user, .assistant, .user])
+        let fix = second.messages[2].content.compactMap { if case .text(let t, _) = $0 { t } else { nil } }.joined()
+        #expect(fix.contains("overlaps a line"))
+    }
 }

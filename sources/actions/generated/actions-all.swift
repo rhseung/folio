@@ -99,6 +99,7 @@ extension Actions {
         CardRemove.self,
         CardSave.self,
         ProblemCollectionBuild.self,
+        ProblemFigureWrite.self,
         ProblemLinkUnit.self,
         ProblemRemove.self,
         ProblemSave.self,

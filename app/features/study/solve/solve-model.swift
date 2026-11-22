@@ -290,29 +290,59 @@ final class SolveModel {
         var ids: [UUID]
     }
     private var heldCollection: HeldCollection?
+    // Claude에게 그림과 풀이를 맡긴 항목 수와 끝낸 수다. 맡기는 동안만 있다.
+    private(set) var drawing: (done: Int, total: Int)?
+    // 다시 그리지 못해 자른 그림을 넣은 항목 수다.
+    private(set) var undrawn = 0
+    // 테스트는 가짜 프로바이더를 준다. 테스트 host는 이 Mac의 Claude에 닿지 않는다(`Workspace.claudeReady`).
+    @ObservationIgnored var claudeStandIn: ClaudeClient?
 
     var collectionIsCurrent: Bool { collection?.problems == picked.map(\.problem.id) }
 
     var asksToReplaceCollection: Bool { heldCollection != nil }
 
     var collectionTitle: String {
+        if let drawing { return String(localized: .solveCollectionDrawing(drawing.done, drawing.total)) }
         if buildingCollection { return String(localized: .solveCollectionBuilding) }
         return String(localized: collection == nil ? .solveCollectionBuild : .solveCollectionRebuild)
     }
 
-    // Tectonic 컴파일은 몇 초가 걸려서 화면 밖에서 하고, 만든 PDF를 액션에 넘긴다.
+    var collectionDetail: String {
+        if let collectionFailure { return collectionFailure }
+        if asksToReplaceCollection { return String(localized: .solveCollectionReplaceDetail) }
+        if undrawn > 0, collectionIsCurrent { return String(localized: .solveCollectionUndrawn(undrawn)) }
+        return String(localized: .solveCollectionDetail)
+    }
+
+    // Claude가 있으면 먼저 그림을 다시 그리고 빠진 풀이를 쓴다. Tectonic 컴파일은 몇 초가 걸려서 화면 밖에서 하고, 만든 PDF를
+    // 액션에 넘긴다.
     func buildCollection() async {
         guard !buildingCollection, let course = workspace.course(request.course) else { return }
         let ids = picked.map(\.problem.id)
         guard !ids.isEmpty else { return }
-        let files = ProblemCollectionFiles(
-            store: course.store, file: course.file,
-            semester: workspace.transcript.semesters.first { $0.id == course.file.course.semesterId },
-            author: workspace.settings.study.coverName, problems: ids)
         buildingCollection = true
         collectionFailure = nil
         heldCollection = nil
+        undrawn = 0
         defer { buildingCollection = false }
+
+        if let client = claudeStandIn ?? (workspace.claudeReady ? workspace.claude(for: course) : nil) {
+            let jobs = ProblemArtDrawing.jobs(course, picked: ids)
+            if !jobs.isEmpty {
+                drawing = (0, jobs.count)
+                let outcome = await ProblemArtDrawing(workspace: workspace, course: request.course, client: client).run(jobs) {
+                    [weak self] done in self?.drawing?.done = done
+                }
+                drawing = nil
+                undrawn = outcome.failed
+            }
+        }
+
+        guard let course = workspace.course(request.course) else { return }
+        let files = ProblemCollectionFiles(
+            store: course.store, file: course.file,
+            semester: workspace.transcript.semesters.first { $0.id == course.file.course.semesterId },
+            author: workspace.settings.study.coverName, problems: ids, art: await Self.art(course, picked: ids))
         let (now, calendar) = (workspace.now, workspace.calendar)
         do {
             let built = try await Task.detached { try files.build(at: now, calendar: calendar) }.value
@@ -320,6 +350,21 @@ final class SolveModel {
         } catch {
             collectionFailure = "\(error)"
         }
+    }
+
+    // 고른 문제와 그 지문의 다시 그린 그림을 PDF로 그린다. 그리지 못한 그림은 빼서 자른 그림이 들어가게 한다.
+    private static func art(_ course: LoadedCourse, picked: [UUID]) async -> [UUID: ProblemCollectionFiles.Art] {
+        let wanted = Set(picked + course.file.problemSets.flatMap { s in picked.flatMap { ProblemTree(s).stems(of: $0).map(\.id) } })
+        var art: [UUID: ProblemCollectionFiles.Art] = [:]
+        for (id, doc) in course.store.problemArt() where wanted.contains(id) {
+            func pdf(_ svg: String?) async -> Data? {
+                guard let svg else { return nil }
+                return try? await FigurePDF.render(svg)
+            }
+            let a = ProblemCollectionFiles.Art(figure: await pdf(doc.model.figure), solution: await pdf(doc.model.solutionFigure))
+            if a.figure != nil || a.solution != nil { art[id] = a }
+        }
+        return art
     }
 
     func replaceCollection() {

@@ -53,6 +53,16 @@ enum PageRender {
         return RenderResult(images: images, console: [], problems: finished.problems.map(\.message))
     }
 
+    // 다시 그린 문제 그림을 문제집의 TeX이 넣을 벡터 PDF로 그린다. 그리지 못하면 nil이고 문제집은 자른 그림을 쓴다.
+    static func figurePDF(_ svg: String) -> Data? {
+        #if os(macOS)
+        guard Thread.isMainThread, let page = ProblemArt.printPage(svg) else { return nil }
+        return MainActor.assumeIsolated { try? OffscreenPage.pdf(page) }
+        #else
+        return nil
+        #endif
+    }
+
     static func widget(_ html: String, accent: String, widths: [Int]) throws -> RenderResult {
         let page = String(decoding: NoteWidget.withPolicy(Data(html.utf8)), as: UTF8.self)
         let (images, console) = try shots(page, scripts: widgetScripts(accent: accent), widths: widths, start: 320, settle: 0.6)
@@ -139,6 +149,35 @@ private final class OffscreenPage: NSObject, WKNavigationDelegate, WKScriptMessa
 
         guard let image = snapshot(view) else { throw failed(String(localized: .renderNoImage)) }
         return Shot(png: try png(image, width: width, height: height), height: height, console: handler.console)
+    }
+
+    static func pdf(_ page: ProblemArt.PrintPage) throws -> Data {
+        NSApplication.shared.setActivationPolicy(.prohibited)
+        let frame = NSRect(x: 0, y: 0, width: page.width, height: page.height)
+        let config = WKWebViewConfiguration()
+        config.websiteDataStore = .nonPersistent()
+        let view = WKWebView(frame: frame, configuration: config)
+        let handler = OffscreenPage()
+        view.navigationDelegate = handler
+        // 그림의 style은 다크 색을 prefers-color-scheme으로 고르고, 그 값은 뷰의 모양을 따른다. 인쇄물이라 라이트로 둔다.
+        view.appearance = NSAppearance(named: .aqua)
+        // 풀이집은 그림을 회색 상자 안에 넣으므로 바탕을 칠하지 않는다. WKWebView는 이 값을 KVC로만 연다.
+        view.setValue(false, forKey: "drawsBackground")
+        view.loadHTMLString(page.html, baseURL: OffscreenPage.base)
+        guard spin(10, until: { handler.loaded || handler.failure != nil }) else { throw failed(String(localized: .renderTimedOut)) }
+        if let failure = handler.failure { throw failed(failure) }
+        let box = Box<Data>()
+        let pdf = WKPDFConfiguration()
+        pdf.rect = frame
+        view.createPDF(configuration: pdf) { result in
+            MainActor.assumeIsolated {
+                box.value = try? result.get()
+                box.done = true
+            }
+        }
+        spin(10) { box.done }
+        guard let data = box.value else { throw failed(String(localized: .renderNoImage)) }
+        return data
     }
 
     static let base = URL(string: "folio-render://page/")!

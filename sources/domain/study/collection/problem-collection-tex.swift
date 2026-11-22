@@ -1,12 +1,14 @@
 import Foundation
 
 // 문제집과 풀이집의 머리말과 매크로다. 사용자의 `exam-problem-collection` 형식(§7.1, §7.2)을 그대로 따르고, 거기에 없는 것만 더했다.
-// 더한 것은 셋이다.
+// 더한 것은 넷이다.
 // - kotex: 묶음 제목과 과목 이름은 한글이고, 영어로 옮겨 쓰기 전에 뽑은 문제도 한국어다. Tectonic은 XeTeX라서 kotex가 xetexko를 쓴다.
 // - `\stem`: 지문을 소문제 앞에 한 번 둔다. 지문이 쓴 높이(`\stemroom`)를 다음 문제 칸에서 빼고, 반 쪽 문제 아래에서는 새 쪽을
 //   연다. 그러지 않으면 지문 뒤의 half 두 개가 한 쪽에 들어가지 않아 다음 쪽으로 밀리고 쪽 나눔이 모두 어긋난다.
 // - `\sheetfigure`: 그림을 다시 그리지 않고 문제지 PDF의 칸을 잘라 넣는다. 칸은 쪽 크기의 비율이라 TeX이 쪽을 한 번 읽어 크기를
 //   잰 뒤 trim으로 바꾼다. PDF를 그대로 넣으므로 그림은 벡터로 남는다.
+// - `\artfigure`: Claude가 노트 그림 스타일로 다시 그린 그림(`ProblemArt`)을 PDF로 넣는다. 그림의 글자는 14px이라 1px을 1pt로
+//   읽으면 본문(11pt)보다 크므로 0.8배로 줄인다.
 enum ProblemCollectionTeX {
     static let problemsSubtitle = "Problem Collection for Exam Review"  // strings: data, 문제집 PDF의 표지
     static let solutionsSubtitle = "Solutions to the Problem Collection"  // strings: data, 풀이집 PDF의 표지
@@ -38,6 +40,8 @@ enum ProblemCollectionTeX {
     }
 
     static let figureMargin = 0.01
+
+    static func art(_ file: String) -> String { "\\artfigure{\(file)}" }
 
     static func cover(title: String, subtitle: String, line: String?) -> String {
         var lines = [  // strings: data, LaTeX 표지
@@ -73,7 +77,7 @@ enum ProblemCollectionTeX {
         // strings: data, LaTeX 머리 주석
         """
         % Folio가 고른 문제로 만든 파일이다. 다시 만들면 바뀌므로 손으로 고치려면 다른 이름으로 저장한다.
-        % 빌드: tectonic 또는 xelatex 두 번(목차 쪽 번호). 그림은 같은 폴더의 문제지 PDF(sheet-*.pdf)에서 잘라 온다.
+        % 빌드: tectonic 또는 xelatex 두 번(목차 쪽 번호). 그림은 같은 폴더의 다시 그린 그림(art-*.pdf)이거나, 문제지 PDF(sheet-*.pdf)에서 잘라 온다.
         \(how)
 
         """
@@ -114,6 +118,11 @@ enum ProblemCollectionTeX {
             trim={\the\dimexpr#3\sheetw\relax} {\the\dimexpr\sheeth-#4\sheeth-#6\sheeth\relax}
                  {\the\dimexpr\sheetw-#3\sheetw-#5\sheetw\relax} {\the\dimexpr#4\sheeth\relax}]{#1}}%
           \par\vspace{1mm}{\centering\sheetnext\par}\vspace{1mm}}
+        \newlength{\artw}
+        \NewDocumentCommand{\artfigure}{m}{%
+          \sbox{\sheetpage}{\includegraphics{#1}}%
+          \setlength{\artw}{0.8\wd\sheetpage}\ifdim\artw>\linewidth\setlength{\artw}{\linewidth}\fi
+          \par\vspace{1mm}{\centering\includegraphics[width=\artw,height=0.35\textheight,keepaspectratio]{#1}\par}\vspace{1mm}}
 
         """#
     }
