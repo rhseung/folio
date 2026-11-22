@@ -42,13 +42,22 @@ extension CourseStudy {
                 ?? item.target.id.map { problems(inSet: $0) } ?? []
             return !records.isEmpty && records.allSatisfy(\.solved)
         case .wrong:
-            let scope = Set(exam.scopeUnitIds)
-            let problemsLeft = allProblems.contains { $0.status.needsWork && !scope.isDisjoint(with: $0.problem.unitIds) }
-            let cardsLeft = allCards.contains { $0.status.needsWork && scope.contains($0.card.unitId) }
-            return !problemsLeft && !cardsLeft
+            // 남은 오답이 없다는 것은 그날까지 바뀔 수 있는 상태라, 오지 않은 날의 항목은 저절로 체크하지 않는다.
+            guard item.day <= today else { return false }
+            let left = wrongLeft(in: exam)
+            return left.problems == 0 && left.cards == 0
         case .mixed, .mock, .custom:
             return false
         }
+    }
+
+    // 시험 범위에 남은 오답 문제와 모르는 카드 수다. 오답 항목의 체크와 화면의 세부 줄이 같은 수를 쓴다.
+    public func wrongLeft(in exam: Exam) -> (problems: Int, cards: Int) {
+        let scope = Set(exam.scopeUnitIds)
+        return (
+            allProblems.filter { $0.status.needsWork && !scope.isDisjoint(with: $0.problem.unitIds) }.count,
+            allCards.filter { $0.status.needsWork && scope.contains($0.card.unitId) }.count
+        )
     }
 
     // 부모와 자식이 함께 범위에 있으면 자식만 넣는다. 부모 단원을 공부하는 일은 자식 단원을 공부하는 일이라, 둘을 따로 넣으면 같은 내용이
