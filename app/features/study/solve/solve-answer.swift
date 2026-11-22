@@ -33,7 +33,11 @@ struct SolveAnswer: View {
                 } label: {
                     HStack(spacing: Theme.Space.m) {
                         KeyCap(key(i))
-                        StudyText(text: problem.format == .trueFalse ? label(i) : option)
+                        if problem.format == .trueFalse {
+                            Text(label(i))
+                        } else {
+                            StudyText(text: option)
+                        }
                         Spacer(minLength: 0)
                     }
                     .padding(Theme.Inset.listRow)
@@ -85,7 +89,7 @@ struct SolveAnswer: View {
                     size: .small)
             }
             if preview {
-                StudyText(text: model.answer).frame(maxWidth: .infinity, alignment: .leading)
+                StudyText(text: model.answer, look: .prose).frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 Card(padding: Theme.Space.m) { GrowingTextEditor(text: $model.answer, room: nil) }
                     .disabled(model.graded != nil)

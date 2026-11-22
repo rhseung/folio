@@ -21,7 +21,8 @@ struct ExamPlanTodayBlock: View {
                                 .courseAccent(model.workspace.accent(entry.courseId))
                             CourseMark(model.workspace, entry.courseId)
                             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                                Text(model.title(entry)).font(Theme.Typeface.bodyStrong).strikethrough(done).lineLimit(1)
+                                StudyText(text: model.title(entry), look: .title).font(Theme.Typeface.bodyStrong).strikethrough(done)
+                                    .lineLimit(1)
                                 Text(model.detail(entry))
                                     .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1)
                             }

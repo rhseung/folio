@@ -71,8 +71,8 @@ struct SolveRun: View {
     func header(_ record: CourseStudy.ProblemRecord) -> some View {
         HStack(spacing: Theme.Space.m) {
             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                Text(model.title(record)).font(Theme.Typeface.columnTitle).lineLimit(1)
-                Text(model.subtitle(record)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
+                StudyText(text: model.title(record), look: .title).font(Theme.Typeface.columnTitle).lineLimit(1)
+                StudyText(text: model.subtitle(record), look: .title).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
             }
             Spacer(minLength: Theme.Space.m)
             if model.mockDeadline != nil {

@@ -22,7 +22,7 @@ struct SolveResult: View {
                                 ForEach(Array(units.enumerated()), id: \.element.unit.id) { i, row in
                                     CardRow(last: i == units.count - 1) {
                                         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                                            Text(row.unit.title).lineLimit(1)
+                                            StudyText(text: row.unit.title, look: .title).lineLimit(1)
                                             Text(row.line).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                                         }
                                         Spacer(minLength: Theme.Space.m)

@@ -25,7 +25,7 @@ struct SolveVerdict: View {
                     ForEach(Array(graded.feedback.enumerated()), id: \.offset) { _, line in
                         HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
                             Text(verbatim: "•").foregroundStyle(Theme.Palette.textTertiary)
-                            StudyText(text: line)
+                            StudyText(text: line, look: .prose)
                         }
                     }
                 }

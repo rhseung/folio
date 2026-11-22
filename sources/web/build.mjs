@@ -1,6 +1,6 @@
 // 페이지가 파일에 접근하지 않고도 글꼴을 쓰도록 KaTeX 글꼴은 woff2만 data URL로 넣는다.
 import { build } from "esbuild";
-import { readFile, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import * as mermaidPatch from "./patches/beautiful-mermaid.mjs";
 
 const out = "../../app/resources/web";
@@ -37,6 +37,11 @@ const patched = {
 await build({ ...common, entryPoints: ["src/reader.js"], outfile: `${out}/reader.js`, format: "iife", plugins: [patched] });
 await build({ ...common, entryPoints: ["src/native.js"], outfile: `${out}/native.js`, format: "iife", globalName: "folioNative" });
 await writeFile(`${out}/note.css`, await cssText("src/style.css"));
+// 앱의 문제와 카드 글은 KaTeX의 본문 글꼴(Computer Modern 모양)로 쓴다. SwiftUI가 이 글꼴을 쓰도록 ttf를 앱에 넣는다.
+await mkdir("../../app/resources/fonts", { recursive: true });
+for (const [face, name] of [["Regular", "regular"], ["Italic", "italic"], ["Bold", "bold"], ["BoldItalic", "bold-italic"]]) {
+  await copyFile(`node_modules/katex/dist/fonts/KaTeX_Main-${face}.ttf`, `../../app/resources/fonts/katex-main-${name}.ttf`);
+}
 await build({ ...common, entryPoints: ["src/figure.js"], outfile: `${actions}/figure/figure.js`, format: "iife", globalName: "folioFigure", plugins: [patched] });
 
 await build({

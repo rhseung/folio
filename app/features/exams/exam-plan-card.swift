@@ -34,7 +34,7 @@ struct ExamPlanCard: View {
                         )
                         .lineLimit(1)
                         .frame(width: ExamsView.dateColumn, alignment: .leading)
-                    Text(model.itemTitle(item)).lineLimit(1)
+                    StudyText(text: model.itemTitle(item), look: .title).lineLimit(1)
                         .strikethrough(on, color: Theme.Palette.textTertiary)
                         .foregroundStyle(on ? Theme.Palette.textTertiary : Theme.Palette.text)
                     if item.isCarried {

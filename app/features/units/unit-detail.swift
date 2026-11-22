@@ -64,7 +64,7 @@ struct UnitDetail: View {
                     ForEach(problems) { row in
                         CardRow {
                             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                                Text(row.title).lineLimit(1)
+                                StudyText(text: row.title, look: .title).lineLimit(1)
                                 Text(row.detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
                             }
                             Spacer(minLength: Theme.Space.m)
