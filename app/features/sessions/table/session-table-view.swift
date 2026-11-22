@@ -103,9 +103,13 @@ struct SessionTableView: View {
             .font(Theme.Typeface.caption.weight(today || has ? .semibold : .regular))
             .monospacedDigit()
             .foregroundStyle(today ? Theme.Palette.onFill : has ? Theme.Palette.textSecondary : Theme.Palette.textTertiary)
-            .padding(.horizontal, Theme.Space.xs)
-            .frame(minWidth: Theme.Size.inlineButton, minHeight: Theme.Size.inlineButton)
-            .background { if today { Capsule().fill(accent.fill) } }
+            // 숫자는 칸의 왼쪽 끝에 붙인다. 오늘의 원은 글자 높이 밖으로 넘쳐 그리고 자리를 차지하지 않는다.
+            // 원이 줄 높이를 늘리면 같은 줄 다른 요일의 블록과 높이가 어긋난다.
+            .padding(.horizontal, today ? Theme.Space.tight : 0)
+            .frame(minWidth: today ? Theme.Size.inlineButton : nil)
+            .background {
+                if today { Capsule().fill(accent.fill).frame(height: Theme.Size.inlineButton) }
+            }
             .accessibilityHidden(true)
     }
 }
