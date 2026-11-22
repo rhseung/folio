@@ -23617,6 +23617,17 @@
           }
         }
       }
+    },
+    "course-section.solve": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제 풀기"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

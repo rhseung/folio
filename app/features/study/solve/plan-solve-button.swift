@@ -7,13 +7,14 @@ struct PlanSolveButton: View {
     let item: UUID
     let solve: PlanSolve
     @Environment(\.itemSheets) private var sheets
+    @Environment(\.openLink) private var openLink
 
     var body: some View {
         Button(title, systemImage: symbol) {
             if let scope = solve.cardScope {
                 sheets.present(.flipCards(course: course, unit: nil, scope: scope))
             } else {
-                sheets.present(.solve(SolveRequest(plan: solve, course: course, item: item)))
+                openLink.solve(SolveRequest(plan: solve, course: course, item: item))
             }
         }
         .buttonStyle(.secondary)

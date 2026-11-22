@@ -15,39 +15,16 @@ struct CourseView: View {
     var body: some View {
         if let course = model.course {
             let workspace = model.workspace
-            ColumnSplit(kind: .courseSections) {
-                CourseColumn(model: model, course: course)
-            } content: {
-                Group {
-                    switch model.section {
-                    case .overview: CourseOverview(model: model, course: course)
-                    case .sessions:
-                        if let recording = model.openRecording {
-                            RecordingPage(
-                                workspace: workspace, course: course, recording: recording, place: model.place, moved: model.moved
-                            )
-                            .id(recording.id)
-                        } else {
-                            SessionsView(workspace: workspace, course: course)
-                        }
-                    case .units:
-                        UnitsView(workspace: workspace, course: course, place: model.place) { id in
-                            model.openUnit = id
-                            model.moved(id.map { AppLink(.unit, $0) })
-                        }
-                    case .notes: CourseNotesPage(model: model, course: course)
-                    case .problems: ProblemsView(workspace: workspace, course: course)
-                    case .cards: CardsView(workspace: workspace, course: course)
-                    case .materials: MaterialsView(workspace: workspace, course: course, place: model.place, moved: model.moved)
-                    case .assignments: AssignmentsView(workspace: workspace, course: course)
-                    case .grades: CourseGradesView(workspace: workspace, course: course)
-                    case .exams: ExamsView(workspace: workspace, course: course)
-                    }
+            Group {
+                // 풀기는 과목 열 없이 칸 전체를 쓴다. 문제와 답, 옆 칸의 문제지가 자리를 나눠야 하기 때문이다.
+                if model.section == .solve, let query = model.place.solve {
+                    SolveScreen(workspace: workspace, request: SolveRequest(course: course.id, query: query))
+                        .id(query)
+                } else {
+                    sections(course, workspace: workspace)
                 }
-                .environment(\.linkFocus, model.focus)
-                .paperList()
             }
-            // 열이 아니라 split에 단다. 접으면 열은 사라지지만 칸 마디의 아이콘은 여전히 구역을 따라야 한다.
+            // 열이 아니라 화면 전체에 단다. 열을 접거나 풀기 화면이 열을 가려도 칸 마디의 아이콘은 여전히 구역을 따라야 한다.
             .crumb(model.section.title, level: 1, symbol: model.section.tab.symbol)
             .courseAccent(model.accent)
             .navigationTitle(course.title)
@@ -62,6 +39,42 @@ struct CourseView: View {
             }
         } else {
             ContentUnavailableView(String(localized: .courseNotFound), systemImage: "questionmark.folder")
+        }
+    }
+
+    func sections(_ course: LoadedCourse, workspace: Workspace) -> some View {
+        ColumnSplit(kind: .courseSections) {
+            CourseColumn(model: model, course: course)
+        } content: {
+            Group {
+                switch model.section {
+                case .overview: CourseOverview(model: model, course: course)
+                case .sessions:
+                    if let recording = model.openRecording {
+                        RecordingPage(
+                            workspace: workspace, course: course, recording: recording, place: model.place, moved: model.moved
+                        )
+                        .id(recording.id)
+                    } else {
+                        SessionsView(workspace: workspace, course: course)
+                    }
+                case .units:
+                    UnitsView(workspace: workspace, course: course, place: model.place) { id in
+                        model.openUnit = id
+                        model.moved(id.map { AppLink(.unit, $0) })
+                    }
+                case .notes: CourseNotesPage(model: model, course: course)
+                case .problems: ProblemsView(workspace: workspace, course: course)
+                case .cards: CardsView(workspace: workspace, course: course)
+                case .materials: MaterialsView(workspace: workspace, course: course, place: model.place, moved: model.moved)
+                case .assignments: AssignmentsView(workspace: workspace, course: course)
+                case .grades: CourseGradesView(workspace: workspace, course: course)
+                case .exams: ExamsView(workspace: workspace, course: course)
+                case .solve: EmptyView()
+                }
+            }
+            .environment(\.linkFocus, model.focus)
+            .paperList()
         }
     }
 }

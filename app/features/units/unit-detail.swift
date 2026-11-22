@@ -317,7 +317,7 @@ struct UnitDetail: View {
     }
 
     func solve(_ problems: [UUID]) {
-        sheets.present(.solve(SolveRequest(course: course.id, units: [unit.id], problems: problems)))
+        openLink.solve(SolveRequest(course: course.id, units: [unit.id], problems: problems))
     }
 
     func openReview(_ s: Session) {

@@ -9,6 +9,7 @@ import UniformTypeIdentifiers
 extension EnvironmentValues {
     @Entry var openLink = OpenLinkAction()
     @Entry var place: Navigator.Entry?
+    @Entry var goBack = GoBackAction()
 }
 
 extension Workspace {

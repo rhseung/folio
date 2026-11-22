@@ -3,7 +3,7 @@ import SwiftUI
 
 struct SolveResult: View {
     @Bindable var model: SolveModel
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.goBack) private var goBack
     @Environment(\.openLink) private var openLink
 
     var body: some View {
@@ -49,19 +49,15 @@ struct SolveResult: View {
             }
             .scrollBounceBehavior(.basedOnSize)
             HStack(spacing: Theme.Space.s) {
-                Button(.solvePlan) {
-                    dismiss()
-                    openLink(.course(model.request.course, page: .units), course: model.request.course)
-                }
+                Button(.solvePlan) { openLink(.course(model.request.course, page: .units), course: model.request.course) }
                 Spacer()
                 if model.wrongCount > 0 { Button(.solveRetryWrong) { model.retryWrong() } }
-                Button(.commonDone) { dismiss() }.buttonStyle(.prominent).keyboardShortcut(.defaultAction)
+                Button(.commonDone) { model.close(goBack, openLink) }.buttonStyle(.prominent).keyboardShortcut(.defaultAction)
             }
             .controlSize(.large)
         }
         .padding(Theme.Space.xl)
-        .frame(width: Theme.Size.solveSetup)
-        .frame(minHeight: Theme.Size.emptyWindow.height)
+        .frame(maxWidth: Theme.Size.solveSetup)
         .background(Theme.Palette.page)
         .font(Theme.Typeface.body)
     }

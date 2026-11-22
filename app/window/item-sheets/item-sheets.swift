@@ -69,7 +69,6 @@ struct ItemSheets: ViewModifier {
                         let units = UnitTree.outline(course.file.units).map(\.unit).filter { ids.contains($0.id) }
                         if !units.isEmpty { MakeProblemsSheet(workspace: workspace, course: course, units: units, count: count) }
                     }
-                case .solve(let request): SolveSheet(workspace: workspace, request: request).environment(\.openLink, openLink)
                 case .problemSet(let course):
                     if let course = workspace.course(course) { ProblemSetSheet(workspace: workspace, course: course) }
                 case .problem(let course, let set, let id):

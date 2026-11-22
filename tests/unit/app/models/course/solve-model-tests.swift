@@ -58,9 +58,21 @@ struct SolveModelTests {
     }
 
     // 문제지 1쪽 단추는 PDF의 첫 쪽(0번)을 연다.
-    @Test func aSidePageOpensTheProblemsOwnPage() {
-        #expect(SolveModel.SidePage(material: UUID(), page: 1).index == 0)
-        #expect(SolveModel.SidePage(material: UUID(), page: 3).index == 2)
-        #expect(SolveModel.SidePage(material: UUID(), page: nil).index == nil)
+    // 문제의 쪽과 링크의 쪽은 모두 1부터 센다. 한쪽만 0부터 세면 문제지 1쪽 단추가 2쪽을 연다.
+    @Test func aPageLinkOpensTheProblemsOwnPage() {
+        let material = UUID()
+        #expect(SolveModel.PageLink(material: material, page: 1).link == AppLink(.material, material, anchor: .page(1)))
+        #expect(SolveModel.PageLink(material: material, page: 3).link.anchor == .page(3))
+        #expect(SolveModel.PageLink(material: material, page: nil).link == AppLink(.material, material))
+    }
+
+    // 풀기는 주소로 열리므로, 주소로 다시 만든 요청이 처음 요청과 같아야 기록이 같은 풀기로 돌아온다.
+    @Test func aSolveRequestSurvivesItsLink() throws {
+        let request = SolveRequest(
+            course: UUID(), units: [UUID()], set: UUID(), problems: [UUID(), UUID()], planItem: UUID(), mode: .mock, shuffled: true,
+            minutes: 40)
+        let link = try #require(AppLink(string: request.link.string))
+        let query = try #require(link.solve)
+        #expect(SolveRequest(course: request.course, query: query) == request)
     }
 }

@@ -24,7 +24,7 @@ struct UnitMenuSource: ItemMenuSource {
         case .solve:
             MenuRow(
                 command, .unitsSolve, "play",
-                .action { sheets.present(.solve(SolveRequest(course: courseId, units: [unit.id], problems: []))) })
+                .action { openLink.solve(SolveRequest(course: courseId, units: [unit.id])) })
         case .done(let done):
             MenuRow(
                 command, done ? .unitsDoneUndo : .unitsDone, done ? "arrow.uturn.backward" : "checkmark",

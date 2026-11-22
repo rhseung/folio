@@ -27,7 +27,7 @@ struct ProblemMenuSource: ItemMenuSource {
             MenuRow(
                 command, .unitsSolve, "pencil.and.list.clipboard",
                 .action {
-                    sheets.present(.solve(SolveRequest(course: courseId, set: set.id, problems: [problem.id])))
+                    openLink.solve(SolveRequest(course: courseId, set: set.id, problems: [problem.id]))
                 })
         case .edit:
             .edit(command) { sheets.present(.problem(course: courseId, set: set.id, problem: problem.id)) }

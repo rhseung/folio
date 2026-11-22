@@ -16,6 +16,7 @@ extension AppLink.CoursePage: Identifiable {
         case .assignments: String(localized: .courseSectionAssignments)
         case .exams: String(localized: .courseSectionExams)
         case .grades: String(localized: .courseSectionGrades)
+        case .solve: String(localized: .courseSectionSolve)
         }
     }
 
@@ -25,7 +26,7 @@ extension AppLink.CoursePage: Identifiable {
         case .sessions: .classes
         case .notes: .notes
         case .materials: .materials
-        case .units, .problems, .cards: .study
+        case .units, .problems, .cards, .solve: .study
         case .assignments: .assignments
         case .exams, .grades: .assessment
         }
