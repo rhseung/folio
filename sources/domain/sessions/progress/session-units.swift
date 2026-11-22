@@ -38,7 +38,10 @@ extension CourseFile {
     }
 
     public func units(of session: Session) -> [Unit] {
-        let outline = UnitTree.outline(units).map(\.unit)
+        units(of: session, outline: UnitTree.outline(units).map(\.unit))
+    }
+
+    func units(of session: Session, outline: [Unit]) -> [Unit] {
         let ids = Set(unitIds(of: session, outline: outline))
         return outline.filter { ids.contains($0.id) }
     }

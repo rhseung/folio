@@ -118,4 +118,32 @@ struct SessionUnitsTests {
             #expect(f.units.map(\.id).filter { f.sessions(of: $0).contains { $0.id == f.sessions[0].id } } == f.unitIds(of: f.sessions[0]))
         }
     }
+
+    // 회차 표와 정리하지 않은 수업 카드는 단원 순서와 렉처 파일을 한 번만 만들어 회차와 시험마다 넘긴다. 하나씩 구한 값과
+    // 같은지 본다.
+    @Test func theTableAndTheLeftOverCardAgreeWithEachClass() async {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul") ?? .gmt
+        await propertyCheck(input: Gen.int(in: 1...30), Gen.int(in: 1...30), Gen.int(in: 0...2), Gen.bool) { a, b, added, noted in
+            var f = course()
+            f.linkMaterial(lecture(f), session: f.sessions[0].id, firstPage: min(a, b), lastPage: max(a, b))
+            f.linkMaterial(lecture(f), session: f.sessions[1].id)
+            f.sessions[2].addedUnitIds = [f.units[added].id]
+            if noted { f.sessions[0].reviewNoteId = UUID() }
+            f.exams = [Exam(device: device, at: now, title: "중간고사", start: now + 30 * day)]
+            let later = now + 60 * day
+            let entries = SessionTable(f, now: later, settings: Settings(), calendar: calendar).weeks.flatMap(\.cells).flatMap(\.entries)
+            for s in f.sessions {
+                let entry = entries.first { $0.session?.id == s.id }
+                #expect(entry?.subject == f.subject(of: s))
+                #expect(entry?.tags.contains(.unwrapped) == !f.wrapUpGaps(of: s).isEmpty)
+            }
+            let scope = f.scopeUnits(of: f.exams[0]).map(\.title)
+            #expect(entries.first { $0.look == .exam }?.tags == (scope.isEmpty ? [] : [.linkedUnits(scope)]))
+            let left = f.leftUnwrapped(at: later, settings: Settings(), calendar: calendar)
+            let each = f.sessions.filter { f.isLeftUnwrapped($0, at: later, settings: Settings(), calendar: calendar) }
+            #expect(left.map(\.session.id) == each.sorted(by: Session.inOrder).map(\.id))
+            #expect(left.allSatisfy { $0.gaps == f.wrapUpGaps(of: $0.session) })
+        }
+    }
 }
