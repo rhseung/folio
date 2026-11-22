@@ -3,7 +3,8 @@ import FolioDomain
 import Foundation
 
 extension SessionList: QueryLines {
-    func lines(_ sessions: [Session], _ r: Resolver) throws -> [[String]] {
+    func lines(_ linked: [QueryLinks<Session>], _ r: Resolver) throws -> [[String]] {
+        let sessions = linked.map(\.item)
         let c = try r.course(id: course)
         let f = c.file
         return sessions.map { s in
@@ -14,7 +15,8 @@ extension SessionList: QueryLines {
         }
     }
 
-    func say(_ sessions: [Session], _ r: Resolver) throws {
+    func say(_ linked: [QueryLinks<Session>], _ r: Resolver) throws {
+        let sessions = linked.map(\.item)
         let c = try r.course(id: course)
         let f = c.file
         courseHeader(c, catalog: try? r.ctx.catalog())

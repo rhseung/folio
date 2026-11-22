@@ -25,7 +25,7 @@ public struct ExamAdd {
     var location: String = ""
     /// 반영되는 성적 항목
     var component: GradeComponent.ID?
-    /// 범위 단원. 여러 번 줄 수 있다
+    /// 범위 단원. 여러 번 줄 수 있다. 빼면 지난 시험 이후 배운 단원
     var scope: [FolioDomain.Unit.ID] = []
     /// 범위 설명. 예: 3장까지
     var scopeText: String = ""
@@ -41,7 +41,7 @@ public struct ExamAdd {
             guard !f.exams.contains(where: { $0.id == id }) else { throw ActionError.rule(String(localized: .errorIdTakenExam("\(id)"))) }
             exam.folder = MaterialIntake.examFolder(title: title, among: f.exams)
             f.exams.append(exam)
-            f.setScope(scope, exam: id)
+            if !scope.isEmpty { f.setScope(scope, exam: id) }
         }
         ctx.made(id)
     }

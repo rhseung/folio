@@ -130,14 +130,14 @@ struct PlanInputTests {
         let paths = FolioDomain.Unit(device: device, at: at, title: "증가 경로", order: 1, parentId: matching.id)
         let coloring = FolioDomain.Unit(device: device, at: at, title: "채색", order: 1)
         var exam = Exam(device: device, at: at, title: "기말고사", start: at.addingTimeInterval(86_400 * 10))
-        exam.scopeUnitIds = [matching.id, hall.id, paths.id, coloring.id]
+        exam.addedScopeUnitIds = [matching.id, hall.id, paths.id, coloring.id]
         let file = CourseFile(
             course: Course(device: device, at: at, title: "그래프 이론"), units: [matching, hall, paths, coloring], exams: [exam])
         let study = CourseStudy(
             file: file, cards: [], log: StudyLog(), settings: Settings(), calendar: Calendar(identifier: .gregorian), now: at)
         #expect(study.planInputs(for: exam).map(\.id) == [hall.id, paths.id, coloring.id])
         // 자식이 범위에 없으면 부모가 그대로 들어간다.
-        exam.scopeUnitIds = [matching.id, coloring.id]
+        exam.addedScopeUnitIds = [matching.id, coloring.id]
         #expect(study.planInputs(for: exam).map(\.id) == [matching.id, coloring.id])
     }
 
@@ -167,7 +167,7 @@ struct PlanInputTests {
         let inScope = FolioDomain.Unit(device: device, at: at, title: "매칭", order: 0)
         let outside = FolioDomain.Unit(device: device, at: at, title: "채색", order: 1)
         var exam = Exam(device: device, at: at, title: "기말고사", start: at.addingTimeInterval(86_400 * 10))
-        exam.scopeUnitIds = [inScope.id]
+        exam.addedScopeUnitIds = [inScope.id]
         let set = ProblemSet(
             device: device, at: at, title: "연습", source: .exercise, problems: [Problem(number: "1", unitIds: [outside.id])])
         let file = CourseFile(
@@ -182,7 +182,7 @@ struct PlanInputTests {
         #expect(!study.isDone(later, in: exam))
         // 범위 밖 단원의 오답은 범위를 넓히면 센다.
         var wider = exam
-        wider.scopeUnitIds = [inScope.id, outside.id]
+        wider.addedScopeUnitIds = [inScope.id, outside.id]
         #expect(study.wrongLeft(in: wider).problems == 1)
         #expect(!study.isDone(today, in: wider))
     }
@@ -193,26 +193,30 @@ struct PlanInputTests {
         let calendar = Calendar(identifier: .gregorian)
         var settings = Settings()
         let today = settings.studyDay(of: at, calendar: calendar)
+        let matching = FolioDomain.Unit(device: device, at: at, title: "매칭", order: 0)
+        let coloring = FolioDomain.Unit(device: device, at: at, title: "채색", order: 1)
         var exam = Exam(device: device, at: at, title: "기말고사", start: at.addingTimeInterval(86_400 * 10))
-        exam.scopeUnitIds = [UUID()]
-        #expect(exam.needsPlan(today: today, settings: settings, calendar: calendar))
+        exam.addedScopeUnitIds = [matching.id]
+        var file = CourseFile(course: Course(device: device, at: at, title: "그래프 이론"), units: [matching, coloring], exams: [exam])
+        #expect(file.needsPlan(exam, today: today, settings: settings, calendar: calendar))
         exam.planDay = today
-        exam.planBasis = ExamPlanBasis(exam: exam, settings: settings, calendar: calendar)
-        #expect(!exam.needsPlan(today: today, settings: settings, calendar: calendar))
-        #expect(exam.needsPlan(today: today.adding(days: 1), settings: settings, calendar: calendar))
+        exam.planBasis = ExamPlanBasis(exam: exam, in: file, settings: settings, calendar: calendar)
+        file.exams = [exam]
+        #expect(!file.needsPlan(exam, today: today, settings: settings, calendar: calendar))
+        #expect(file.needsPlan(exam, today: today.adding(days: 1), settings: settings, calendar: calendar))
 
-        var scoped = exam
-        scoped.scopeUnitIds.append(UUID())
-        #expect(scoped.needsPlan(today: today, settings: settings, calendar: calendar))
+        var scoped = file
+        scoped.setScope([matching.id, coloring.id], exam: exam.id)
+        #expect(scoped.needsPlan(scoped.exams[0], today: today, settings: settings, calendar: calendar))
         var moved = exam
         moved.start = at.addingTimeInterval(86_400 * 12)
-        #expect(moved.needsPlan(today: today, settings: settings, calendar: calendar))
+        #expect(file.needsPlan(moved, today: today, settings: settings, calendar: calendar))
         settings.study.planDayItems = 3
-        #expect(exam.needsPlan(today: today, settings: settings, calendar: calendar))
+        #expect(file.needsPlan(exam, today: today, settings: settings, calendar: calendar))
         // 지난 시험과 범위 없는 시험은 짜지 않는다.
         settings = Settings()
-        #expect(!exam.needsPlan(today: today.adding(days: 11), settings: settings, calendar: calendar))
-        exam.scopeUnitIds = []
-        #expect(!exam.needsPlan(today: today.adding(days: 1), settings: settings, calendar: calendar))
+        #expect(!file.needsPlan(exam, today: today.adding(days: 11), settings: settings, calendar: calendar))
+        file.setScope([], exam: exam.id)
+        #expect(!file.needsPlan(file.exams[0], today: today.adding(days: 1), settings: settings, calendar: calendar))
     }
 }

@@ -35,7 +35,7 @@ struct TranscriptionHintsTests {
         var file = course(["Lectures/03 Syntax-analysis.pdf", "Lectures/04 Semantic-analysis.pdf"])
         let unit = Unit(device: device, at: now, title: "LR Parsing", order: 0)
         file.units = [unit]
-        file.sessions[0].unitIds = [unit.id]
+        file.sessions[0].addedUnitIds = [unit.id]
         file.materials[0].unitIds = [unit.id]
         let slides = file.lectureSlides(for: file.sessions[0])
         #expect(slides.source == .tagged)
@@ -65,9 +65,9 @@ struct TranscriptionHintsTests {
     @Test func unitsComeBeforeTheSlides() {
         var file = course([])
         let parent = Unit(device: device, at: now, title: "Syntax Analysis", order: 0)
-        var child = Unit(device: device, at: now, title: "LR Parsing", order: 1, parentId: parent.id)
-        child.sessionIds = [file.sessions[0].id]
+        let child = Unit(device: device, at: now, title: "LR Parsing", order: 1, parentId: parent.id)
         file.units = [parent, child]
+        file.sessions[0].addedUnitIds = [child.id]
         let hints = file.transcriptionContext(for: file.sessions[0]).reading("lookahead, lookahead, syntax analysis, syntax analysis, LALR")
             .hints(course: file.course.title)
         #expect(hints.title == "컴파일러")
@@ -146,9 +146,9 @@ struct TranscriptionHintsTests {
         #expect(linked.differs(from: file.transcriptionContext(for: file.sessions[0])))
 
         file.sessions[0].materials[0].lastPage = 5
-        var unit = Unit(device: device, at: now, title: "LR", order: 0)
-        unit.sessionIds = [file.sessions[0].id]
+        let unit = Unit(device: device, at: now, title: "LR", order: 0)
         file.units.append(unit)
+        file.sessions[0].addedUnitIds = [unit.id]
         #expect(linked.differs(from: file.transcriptionContext(for: file.sessions[0])))
     }
 

@@ -16,7 +16,7 @@ public struct ExamReadiness: Sendable, Equatable {
 
 extension CourseStudy {
     public func readiness(for exam: Exam) -> ExamReadiness {
-        let scope = UnitTree.outline(file.units).map(\.unit).filter { exam.scopeUnitIds.contains($0.id) }
+        let scope = file.scopeUnits(of: exam)
         let states = scope.map { (unit: $0, readiness: readiness(of: $0.id)) }
         let ids = Set(scope.map(\.id))
         let records = allProblems.filter { !ids.isDisjoint(with: $0.problem.unitIds) }
@@ -29,7 +29,7 @@ extension CourseStudy {
     // 범위가 정해진 다가오는 시험 중 가장 가까운 것이다. 단원 페이지는 이 시험을 기준으로 단원을 나눈다.
     public func nextExam(now: Date, calendar: Calendar) -> Exam? {
         file.exams
-            .filter { !$0.scopeUnitIds.isEmpty && $0.start != nil && !$0.isOver(now: now, today: today, calendar: calendar) }
+            .filter { !file.scope(of: $0).isEmpty && $0.start != nil && !$0.isOver(now: now, today: today, calendar: calendar) }
             .min { ($0.start ?? .distantFuture) < ($1.start ?? .distantFuture) }
     }
 

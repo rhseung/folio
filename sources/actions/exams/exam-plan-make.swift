@@ -16,15 +16,16 @@ public struct ExamPlanMake {
     public func run(_ ctx: ActionContext) throws {
         let study = try ctx.study(course)
         let settings = try ctx.settings()
-        guard let e = try ctx.file(course).exams.first(where: { $0.id == exam }) else {
+        let file = try ctx.file(course)
+        guard let e = file.exams.first(where: { $0.id == exam }) else {
             throw ActionError.notFound(String(localized: .errorNotFoundItem(String(localized: .valueExam))))
         }
         guard let plan = study.replan(e, calendar: ctx.calendar, settings: settings) else {
             throw ActionError.rule(String(localized: .errorPlanNeedsExamTime))
         }
+        let basis = ExamPlanBasis(exam: e, in: file, settings: settings, calendar: ctx.calendar)
         try ctx.edit(course) { f in
             try f.update(\.exams, exam) { e in
-                let basis = ExamPlanBasis(exam: e, settings: settings, calendar: ctx.calendar)
                 guard e.plan != plan || e.planDay != study.today || e.planBasis != basis else { return }
                 e.plan = plan
                 e.planDay = study.today

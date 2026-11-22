@@ -3,7 +3,8 @@ import FolioDomain
 import Foundation
 
 extension ExamShow: QueryOutput {
-    func say(_ e: Exam, _ r: Resolver) throws {
+    func say(_ linked: QueryLinks<Exam>, _ r: Resolver) throws {
+        let e = linked.item
         guard let c = r.courses.first(where: { $0.id == course }) else { return }
         let f = c.file
         courseHeader(c, catalog: try? r.ctx.catalog())
@@ -17,10 +18,12 @@ extension ExamShow: QueryOutput {
         if let comp = e.componentId.flatMap({ id in f.components.first { $0.id == id } }) {
             FolioCLI.say(String(localized: .examShowComponent(comp.name)))
         }
-        let units = UnitTree.outline(f.units).map(\.unit).filter { e.scopeUnitIds.contains($0.id) }
+        let units = f.scopeUnits(of: e)
         if !units.isEmpty {
-            FolioCLI.say(String(localized: .examShowScope))
+            FolioCLI.say(String(localized: f.isEdited(scopeOf: e) ? .examShowScopeEdited : .examShowScope))
             for u in units { FolioCLI.say("    \(u.title)") }
+        } else if e.start == nil {
+            FolioCLI.say(String(localized: .examShowScopeNoDate))
         }
         if !e.plan.isEmpty {
             FolioCLI.say(String(localized: .examShowPlan))

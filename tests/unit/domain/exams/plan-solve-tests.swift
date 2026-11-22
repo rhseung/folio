@@ -25,7 +25,7 @@ struct PlanSolveTests {
             device: device, at: at, title: "연습", source: .exercise,
             problems: (1...4).map { Problem(number: "\($0)", unitIds: [scoped.id]) })
         var exam = Exam(device: device, at: at, title: "중간고사", start: at, end: end)
-        exam.scopeUnitIds = [scoped.id]
+        exam.addedScopeUnitIds = [scoped.id]
         let file = CourseFile(
             course: Course(device: device, at: at, title: "그래프 이론"), units: [scoped, other], exams: [exam], problemSets: [past, exercise])
         return Fixture(file: file, exam: exam, past: past, exercise: exercise, scoped: scoped)

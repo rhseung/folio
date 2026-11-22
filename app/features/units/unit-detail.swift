@@ -178,7 +178,7 @@ struct UnitDetail: View {
             editBlock(file)
         }
         .task(id: unit.id) { model.open(unit) }
-        .onChange(of: unit.sessionIds) { model.loadNotes(unit) }
+        .onChange(of: file.sessions(of: unit.id).map(\.id)) { model.loadNotes(unit) }
         .onChange(of: model.workspace.notesRevision) { model.loadNotes(unit) }
         .onDisappear { model.rename(unit) }
         .crumb(unit.title, level: 2, symbol: "list.bullet.indent")
@@ -239,7 +239,7 @@ struct UnitDetail: View {
     }
 
     func scopeChip(_ exam: Exam) -> some View {
-        let on = exam.scopeUnitIds.contains(unit.id)
+        let on = model.isScoped(unit, in: exam)
         return Button {
             model.toggleScope(exam, unit: unit)
         } label: {

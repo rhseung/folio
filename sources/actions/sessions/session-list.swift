@@ -10,7 +10,8 @@ public struct SessionList {
     /// 휴강한 회차까지
     public var all = false
 
-    public func read(_ ctx: ReadContext) throws -> [Session] {
-        try ctx.file(course).sessions.sorted { $0.date < $1.date }.filter { all || !$0.isCancelled }
+    public func read(_ ctx: ReadContext) throws -> [QueryLinks<Session>] {
+        let f = try ctx.file(course)
+        return f.sessions.sorted { $0.date < $1.date }.filter { all || !$0.isCancelled }.map { QueryLinks($0, in: f) }
     }
 }

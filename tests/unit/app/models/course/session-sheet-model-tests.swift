@@ -60,7 +60,7 @@ struct SessionSheetModelTests {
         let s = saved
         #expect(s.isWrappedUp)
         #expect(s.materials == [SessionMaterial(materialId: slides.id, firstPage: 3, lastPage: 9)])
-        #expect(s.unitIds == [unit])
+        #expect(file.unitIds(of: s) == [unit])
         #expect(file.attendance.first { $0.sessionId == session }?.state == .late)
         let note = try #require(s.roughNoteId.flatMap { id in file.notes.first { $0.id == id } })
         #expect(note.path.contains("매칭"))
@@ -141,7 +141,7 @@ struct SessionSheetModelTests {
         model.makeUnit("  네트워크 흐름 ")
         let made = try #require(file.units.first { $0.title == "네트워크 흐름" })
         #expect(model.units == [made.id])
-        #expect(saved.unitIds.isEmpty)
+        #expect(file.unitIds(of: saved).isEmpty)
     }
 
     @Test func theTodayCardListsTheClassUntilItIsWrappedUp() throws {
@@ -207,7 +207,7 @@ struct SessionSheetModelTests {
         model.removeUnit(flows)
         #expect(model.units == [unit])
         model.submit()
-        #expect(saved.unitIds == [unit])
+        #expect(file.unitIds(of: saved) == [unit])
     }
 
     @Test func theLinkedNoteCanBeSwappedUnlinkedOrMadeAnew() throws {
@@ -267,7 +267,7 @@ struct SessionSheetModelTests {
         model.pick(unit)
         #expect(model.submit())
         let s = try #require(file.sessions.first { $0.id == current })
-        #expect(s.unitIds == [unit] && s.materials.isEmpty)
+        #expect(file.unitIds(of: s) == [unit] && s.materials.isEmpty)
         #expect(!s.isWrappedUp)
 
         let again = SessionSheetModel(workspace: workspace, course: graphTheory, session: current)
@@ -309,7 +309,7 @@ struct SessionSheetModelTests {
         model.setKind(.makeup)
         model.pick(unit)
         #expect(model.submit())
-        #expect(saved.skipsReview && saved.link == "https://zoom.us/j/9" && saved.kind == .makeup && saved.unitIds == [unit])
+        #expect(saved.skipsReview && saved.link == "https://zoom.us/j/9" && saved.kind == .makeup && file.unitIds(of: saved) == [unit])
         #expect(saved.isWrappedUp)
     }
 
@@ -333,7 +333,7 @@ struct SessionSheetModelTests {
         model.attendance = .excused
         #expect(model.submit())
         let s = try #require(file.sessions.first { $0.date == start })
-        #expect(s.unitIds == [unit])
+        #expect(file.unitIds(of: s) == [unit])
         #expect(file.attendance.first { $0.sessionId == s.id }?.state == .excused)
     }
 

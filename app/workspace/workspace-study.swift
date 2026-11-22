@@ -64,7 +64,7 @@ extension Workspace {
     func replanExams() {
         let today = self.today
         for course in currentCourses {
-            for exam in course.file.exams where exam.needsPlan(today: today, settings: settings, calendar: calendar) {
+            for exam in course.file.exams where course.file.needsPlan(exam, today: today, settings: settings, calendar: calendar) {
                 _ = try? runThrowing(ExamPlanMake(course: course.id, exam: exam.id))
             }
         }
@@ -72,7 +72,7 @@ extension Workspace {
 
     // 다시 짜야 하는지 볼 값이다. 앱이 이 값을 지켜보다 바뀌면 `replanExams`를 부른다.
     var planBases: [ExamPlanBasis] {
-        currentCourses.flatMap { c in c.file.exams.map { ExamPlanBasis(exam: $0, settings: settings, calendar: calendar) } }
+        currentCourses.flatMap { c in c.file.exams.map { ExamPlanBasis(exam: $0, in: c.file, settings: settings, calendar: calendar) } }
     }
 
     func notes(for unit: FolioDomain.Unit, in courseId: UUID) -> [NoteFile] {

@@ -53,7 +53,7 @@ extension CourseStudy {
 
     // 시험 범위에 남은 오답 문제와 모르는 카드 수다. 오답 항목의 체크와 화면의 세부 줄이 같은 수를 쓴다.
     public func wrongLeft(in exam: Exam) -> (problems: Int, cards: Int) {
-        let scope = Set(exam.scopeUnitIds)
+        let scope = Set(file.scope(of: exam))
         return (
             allProblems.filter { $0.status.needsWork && !scope.isDisjoint(with: $0.problem.unitIds) }.count,
             allCards.filter { $0.status.needsWork && scope.contains($0.card.unitId) }.count
@@ -63,8 +63,7 @@ extension CourseStudy {
     // 부모와 자식이 함께 범위에 있으면 자식만 넣는다. 부모 단원을 공부하는 일은 자식 단원을 공부하는 일이라, 둘을 따로 넣으면 같은 내용이
     // 계획에 두 번 나온다. 범위는 그대로 둔다.
     public func planInputs(for exam: Exam) -> [ExamPlanner.UnitInput] {
-        let scoped = UnitTree.outline(file.units).map(\.unit).filter { exam.scopeUnitIds.contains($0.id) }
-        return UnitTree.deepest(scoped, in: file.units).map { u in
+        UnitTree.deepest(file.scopeUnits(of: exam), in: file.units).map { u in
             let r = readiness(of: u.id)
             return ExamPlanner.UnitInput(id: u.id, weight: r.planWeight, pages: r.conceptPages)
         }

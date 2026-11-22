@@ -26,13 +26,13 @@ struct SessionReferenceTests {
     @Test func aClassIsItsDay() {
         let tue = session(at(11, 3))
         var f = file([tue, session(at(11, 5))])
-        var unit = Unit(device: device, at: .now, title: "Matchings", order: 1)
-        unit.sessionIds = [tue.id]
+        let unit = Unit(device: device, at: .now, title: "Matchings", order: 1)
         f.units = [unit]
-        #expect(f.reference(of: tue, calendar: calendar) == "11-03")
-        #expect(f.title(of: tue, calendar: calendar) == "11/3(화): Matchings")
-        #expect(f.recordingName(of: tue, calendar: calendar) == "11-03(화)")
-        #expect(f.references(of: tue, calendar: calendar) == ["11-03", "11/3", "11-03", "2026-11-03", "Matchings"])
+        f.toggle(session: tue.id, unit: unit.id)
+        #expect(f.reference(of: f.sessions[0], calendar: calendar) == "11-03")
+        #expect(f.title(of: f.sessions[0], calendar: calendar) == "11/3(화): Matchings")
+        #expect(f.recordingName(of: f.sessions[0], calendar: calendar) == "11-03(화)")
+        #expect(f.references(of: f.sessions[0], calendar: calendar) == ["11-03", "11/3", "11-03", "2026-11-03", "Matchings"])
     }
 
     @Test func twoClassesOneDayTakeTheirTimes() {
@@ -178,13 +178,10 @@ struct SessionReferenceTests {
             let s = session(at(11, 3))
             var f = file([s])
             let titles = picks.map { $0.map { Self.words[$0] }.joined(separator: " ") }
-            f.units = titles.enumerated().map { i, t in
-                var u = Unit(device: device, at: .now, title: t, order: i + 1)
-                u.sessionIds = [s.id]
-                return u
-            }
+            f.units = titles.enumerated().map { i, t in Unit(device: device, at: .now, title: t, order: i + 1) }
+            f.setUnits(f.units.map(\.id), session: s.id)
 
-            let name = f.noteTitle(for: s, kind: .rough, calendar: calendar)
+            let name = f.noteTitle(for: f.sessions[0], kind: .rough, calendar: calendar)
             let day = "11-03(화)"
             #expect(name.hasPrefix(day))
             guard let first = titles.first else {

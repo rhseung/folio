@@ -42,79 +42,6 @@ final class SessionsModel {
         workspace.course(courseId).map { workspace.plannedSessions(for: $0, now: now) } ?? []
     }
 
-    struct TimelineRow: Identifiable {
-        let item: SessionTimeline.Item
-        var planned: Workspace.SuggestedSession?
-        var id: String { item.id }
-    }
-
-    struct Week: Identifiable {
-        let number: Int
-        let start: Date
-        let range: String
-        let thisWeek: Bool
-        let examWeek: Bool
-        var rows: [TimelineRow]
-        var id: String { "week-\(start.timeIntervalSinceReferenceDate)" }
-    }
-
-    func weeks(_ file: CourseFile, now: Date? = nil) -> [Week] {
-        let now = now ?? workspace.now
-        let plan = plan(now: now)
-        let byDate = Dictionary(plan.map { ($0.draft.date, $0) }, uniquingKeysWith: { a, _ in a })
-        let semester = workspace.course(courseId).flatMap { workspace.semester(of: $0.file.course) }
-        let anchor = semester?.start?.date(in: calendar) ?? file.sessions.map(\.date).min() ?? now
-        let thisWeek = calendar.startOfWeek(containing: now)
-        var weeks: [Week] = []
-        func open(_ number: Int, _ date: Date) {
-            let start = calendar.startOfWeek(containing: date)
-            weeks.append(
-                Week(
-                    number: number, start: start, range: range(from: start), thisWeek: start == thisWeek,
-                    examWeek: semester?.examWeeks.contains(number) ?? false, rows: []))
-        }
-
-        for item in SessionTimeline.items(
-            file, planned: plan.map(\.draft), classMinutes: workspace.settings.classMinutes, calendar: calendar)
-        {
-            switch item {
-            case .week(let sessions, _):
-                open(sessions[0].week, sessions[0].date)
-            case .month:
-                continue
-            case .exam(_, let date):
-                if weeks.last?.start != calendar.startOfWeek(containing: date) {
-                    open(SessionPlanner.week(of: date, anchor: anchor, calendar: calendar), date)
-                }
-                weeks[weeks.count - 1].rows.append(TimelineRow(item: item))
-            case .session:
-                weeks[weeks.count - 1].rows.append(TimelineRow(item: item))
-            case .planned(let s, _):
-                weeks[weeks.count - 1].rows.append(TimelineRow(item: item, planned: byDate[s.date]))
-            }
-        }
-
-        return weeks
-    }
-
-    func range(from start: Date) -> String {
-        let end = calendar.date(byAdding: .day, value: 6, to: start) ?? start
-        let sameMonth = calendar.component(.month, from: start) == calendar.component(.month, from: end)
-        return start.formatted(.dateTime.month().day()) + " – " + end.formatted(sameMonth ? .dateTime.day() : .dateTime.month().day())
-    }
-
-    func dayLine(_ date: Date, end: Date?) -> String {
-        let weekday = date.formatted(.dateTime.weekday(.wide))
-        let time = calendar.dateComponents([.hour, .minute], from: date)
-        if time == DateComponents(hour: 0, minute: 0) && end == nil { return weekday }
-        return weekday + " " + clock(date, end: end)
-    }
-
-    private func clock(_ start: Date, end: Date?) -> String {
-        let minute = { (d: Date) in Self.minute(of: d, in: self.calendar) }
-        return end.map { TimePicker.range(minute(start), minute($0)) } ?? TimePicker.label(minute(start))
-    }
-
     static func minute(of date: Date, in calendar: Calendar) -> Int {
         calendar.minuteOfDay(date)
     }
@@ -123,33 +50,189 @@ final class SessionsModel {
         date.formatted(.dateTime.weekday()) + " " + TimePicker.label(minute(of: date, in: calendar))
     }
 
-    func examLine(_ exam: Exam, _ date: Date) -> String {
-        ([dayLine(date, end: exam.end)] + (exam.location.isEmpty ? [] : [exam.location])).joined(separator: " · ")
-    }
-
-    func month(_ date: Date) -> String { String(localized: .sessionsMonth(calendar.component(.month, from: date))) }
-    func day(_ date: Date) -> String { String(calendar.component(.day, from: date)) }
-
-    func plannedLine(_ item: Workspace.SuggestedSession) -> String {
-        ([dayLine(item.suggestion.date, end: item.suggestion.end)] + (item.suggestion.room.isEmpty ? [] : [item.suggestion.room])).joined(
-            separator: " · ")
-    }
-
-    func examTime(_ exam: Exam) -> String? {
-        exam.start.flatMap { DateTimeText.hasTime($0, calendar: calendar) ? clock($0, end: exam.end) : nil }
-    }
-
     func examDays(_ exam: Exam, now: Date) -> Int? {
         exam.start.flatMap { $0 > now ? max(workspace.days(to: $0), 0) : nil }
     }
 
-    func end(of session: Session, in file: CourseFile) -> Date? { session.end(schedule: file.course.schedule, calendar: calendar) }
+    // MARK: The week table
 
-    func link(of session: Session, in file: CourseFile) -> URL? { session.link(schedule: file.course.schedule, calendar: calendar) }
+    // 자기 폭으로 꼴을 고른다. 재기 전(0)에는 가장 좁은 꼴로 그려, 처음 그릴 때 넓은 표가 좁은 칸을 넘치지 않게 한다.
+    var width: CGFloat = 0
+    var popover: UUID?
+    var anchor: PageAnchor?
+    @ObservationIgnored private var placed = false
 
-    func offersJoin(_ session: Session, in file: CourseFile, now: Date) -> Bool {
-        !session.isCancelled && isToday(session.date)
-            && now < session.expectedEnd(schedule: file.course.schedule, classMinutes: workspace.settings.classMinutes, calendar: calendar)
+    enum Form { case list, compact, wide }
+
+    var form: Form {
+        width < Theme.Size.sessionTableList ? .list : width < Theme.Size.sessionTableWide ? .compact : .wide
+    }
+
+    func table(_ file: CourseFile, now: Date? = nil) -> SessionTable {
+        let now = now ?? workspace.now
+        return SessionTable(
+            file, planned: plan(now: now).map(\.draft), semester: workspace.semester(of: file.course), now: now,
+            settings: workspace.settings, asksWrapUp: isCurrent(file), calendar: calendar)
+    }
+
+    // 처음 열면 이번 주로 스크롤한다. 링크가 회차를 가리키면 그 주로 스크롤하고 그 회차를 연다.
+    func follow(_ focus: UUID?, in table: SessionTable) {
+        if let focus, let week = table.week(containing: focus) {
+            anchor = PageAnchor(week)
+            popover = focus
+        } else if !placed {
+            anchor = PageAnchor(table.thisWeek)
+        }
+        placed = true
+    }
+
+    func showThisWeek(_ table: SessionTable) { anchor = PageAnchor(table.thisWeek) }
+
+    func open(_ session: UUID) { popover = session }
+
+    func columnTitle(_ column: SessionTable.Column) -> String { ClassTime.weekdayNames[column.weekday - 1] }
+
+    func columnDetail(_ column: SessionTable.Column) -> String {
+        let times = column.slots.map { TimePicker.range($0.startMinute, $0.endMinute) }
+        let rooms = Array(Set(column.slots.map(\.room).filter { !$0.isEmpty })).sorted()
+        return (times + rooms).joined(separator: " · ")
+    }
+
+    func weekLabel(_ week: SessionTable.Week) -> String { String(localized: .sessionsWeek(week.number)) }
+
+    func weekRange(_ week: SessionTable.Week) -> String { shortDay(week.start) + "–" + shortDay(week.end) }
+
+    func shortDay(_ day: LocalDate) -> String { "\(day.month)/\(day.day)" }
+
+    func weekday(_ day: LocalDate) -> String {
+        ClassTime.weekdayNames[(day.date(in: calendar).map(calendar.isoWeekday(of:)) ?? 1) - 1]
+    }
+
+    func dayNumber(_ day: LocalDate) -> String { String(day.day) }
+
+    // 칸의 날짜는 달의 첫날에만 달을 붙인다. 주가 두 달에 걸칠 때 어디서 달이 바뀌는지 보인다.
+    func chipDay(_ day: LocalDate) -> String { day.day == 1 ? shortDay(day) : String(day.day) }
+
+    func month(_ month: Int) -> String { String(localized: .sessionsMonth(month)) }
+
+    func spokenDay(_ day: LocalDate) -> String {
+        day.date(in: calendar)?.formatted(.dateTime.month().day().weekday(.wide)) ?? shortDay(day)
+    }
+
+    func title(_ entry: SessionTableEntry) -> String {
+        if let subject = entry.subject { return subject }
+        return String(localized: entry.look == .next ? .sessionsTableNext : .sessionsClass)
+    }
+
+    func isUntitled(_ entry: SessionTableEntry) -> Bool { entry.subject == nil && entry.look != .next }
+
+    // 블록의 줄 하나다. "그 밖" 칸은 앞에 요일과 날짜를 붙인다. 회차의 시각은 시간표와 다를 때만 쓴다.
+    func line(_ entry: SessionTableEntry, other: Bool) -> String? {
+        var parts: [String] = other ? [weekday(entry.day) + " " + shortDay(entry.day)] : []
+        let minute = calendar.minuteOfDay(entry.date)
+        switch entry.item {
+        case .session, .planned:
+            if entry.offSchedule { parts.append(TimePicker.label(minute)) }
+            if let pages = entry.pages { parts.append(String(localized: .sessionsTablePages(pages.lowerBound, pages.upperBound))) }
+        case .exam(let exam):
+            // 날짜만 정한 시험은 자정을 시각으로 쓰지 않는다.
+            if DateTimeText.hasTime(entry.date, calendar: calendar) {
+                parts.append(exam.end.map { TimePicker.range(minute, calendar.minuteOfDay($0)) } ?? TimePicker.label(minute))
+            }
+            if !exam.location.isEmpty { parts.append(exam.location) }
+        case .deadline:
+            break
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    func deadline(_ entry: SessionTableEntry, other: Bool) -> String {
+        let text = String(localized: .sessionsTableDue(entry.subject ?? "", TimePicker.label(calendar.minuteOfDay(entry.date))))
+        return other ? weekday(entry.day) + " " + shortDay(entry.day) + " " + text : text
+    }
+
+    struct BlockTag: Hashable {
+        let text: String?
+        let symbol: String?
+        let tone: Tone
+        let spoken: String
+    }
+
+    func tags(_ entry: SessionTableEntry) -> [BlockTag] {
+        entry.tags.map { tag in
+            switch tag {
+            case .attendance(let state):
+                BlockTag(
+                    text: state.label, symbol: nil, tone: state == .late ? .warning : state == .absent ? .danger : .plain,
+                    spoken: state.label)
+            case .makeup: word(String(localized: .sessionsMakeup), .accent)
+            case .cancelled: word(String(localized: .sessionsCancelled), .plain)
+            case .unwrapped: word(String(localized: .sessionsTableUnwrapped), .warning)
+            case .noReviewNote: word(String(localized: .sessionsTableNoReviewNote), .danger)
+            case .scope(let scope): word(scope, .plain)
+            case .recording(let seconds):
+                BlockTag(
+                    text: nil, symbol: "waveform", tone: .plain,
+                    spoken: String(localized: .sessionsTableRecording(RecordingTime.label(seconds))))
+            case .reviewNote:
+                BlockTag(text: nil, symbol: "doc.text", tone: .plain, spoken: String(localized: .sessionsTableReviewNote))
+            }
+        }
+    }
+
+    private func word(_ text: String, _ tone: Tone) -> BlockTag { BlockTag(text: text, symbol: nil, tone: tone, spoken: text) }
+
+    // 아이콘만 보이는 태그도 낭독기에는 글로 남긴다.
+    func spoken(_ entry: SessionTableEntry) -> String {
+        let name: String = if case .deadline = entry.item { deadline(entry, other: false) } else { title(entry) }
+        let planned = entry.look == .upcoming || entry.look == .next ? [String(localized: .sessionsTablePlanned)] : []
+        return ([spokenDay(entry.day), name] + [line(entry, other: false)].compactMap { $0 } + tags(entry).map(\.spoken) + planned)
+            .joined(separator: ", ")
+    }
+
+    func spokenEmpty(_ day: LocalDate) -> String { String(localized: .sessionsTableAddOn(spokenDay(day))) }
+
+    func popoverTitle(_ session: Session, in file: CourseFile) -> String {
+        let day = LocalDate(session.date, in: calendar)
+        return shortDay(day) + "(" + weekday(day) + "): " + (file.subject(of: session) ?? String(localized: .sessionsClass))
+    }
+
+    // 주차는 표가 정한 번호를 그대로 쓴다. 따로 세면 학기 시작이 없을 때 표와 팝오버의 번호가 달라진다.
+    func popoverDetail(_ session: Session, in file: CourseFile, table: SessionTable) -> String {
+        let monday = table.week(containing: session.id)
+        let week = table.weeks.first { $0.start == monday }.map { String(localized: .sessionsWeek($0.number)) }
+        let start = calendar.minuteOfDay(session.date)
+        let time =
+            session.end(schedule: file.course.schedule, calendar: calendar).map { TimePicker.range(start, calendar.minuteOfDay($0)) }
+            ?? TimePicker.label(start)
+        let room = session.slot(in: file.course.schedule, calendar: calendar)?.room ?? ""
+        return ([week, session.date.formatted(.dateTime.weekday(.wide)) + " " + time].compactMap { $0 } + (room.isEmpty ? [] : [room]))
+            .joined(separator: " · ")
+    }
+
+    func asksWrapUp(_ session: Session, in table: SessionTable) -> Bool {
+        table.weeks.lazy.flatMap(\.cells).flatMap(\.entries).first { $0.session?.id == session.id }?.tags.contains(.unwrapped) ?? false
+    }
+
+    func planned(_ entry: SessionTableEntry) -> Workspace.SuggestedSession? {
+        guard case .planned(let draft) = entry.item else { return nil }
+        return plan(now: workspace.now).first { $0.draft.date == draft.date }
+    }
+
+    func link(_ entry: SessionTableEntry) -> AppLink? {
+        switch entry.item {
+        case .exam(let exam): AppLink(.exam, exam.id)
+        case .deadline(let assignment): AppLink(.assignment, assignment.id)
+        case .session, .planned: nil
+        }
+    }
+
+    // 그날로 회차 추가 시트를 연다. 그 요일에 수업이 있으면 첫 수업 시각으로 연다.
+    func addRequest(on day: LocalDate, in table: SessionTable) -> SessionSheetRequest? {
+        guard let midnight = day.date(in: calendar) else { return nil }
+        let weekday = calendar.isoWeekday(of: midnight)
+        let minute = table.columns.first { $0.weekday == weekday }?.slots.first?.startMinute ?? 0
+        return SessionSheetRequest(course: courseId, start: calendar.date(byAdding: .minute, value: minute, to: midnight))
     }
 
     func importFiles(_ urls: [URL], into session: Session) {
@@ -214,65 +297,6 @@ final class SessionsModel {
     func step(of run: WrapUpRun) -> String? {
         run.sessions.count > 1 ? String(localized: .wrapUpStep(run.index + 1, run.sessions.count)) : nil
     }
-
-    // MARK: A session's row
-
-    struct CardTiming {
-        let expectedEnd: Date
-        let live: Bool
-        let progress: Double?
-        let offersStart: Bool
-    }
-
-    func timing(of session: Session, in file: CourseFile, now: Date) -> CardTiming {
-        let end = session.expectedEnd(schedule: file.course.schedule, classMinutes: workspace.settings.classMinutes, calendar: calendar)
-        return CardTiming(
-            expectedEnd: end, live: isOngoing(session, end: end, now: now), progress: progress(session, end: end, now: now),
-            offersStart: offersJoin(session, in: file, now: now))
-    }
-
-    func isOngoing(_ session: Session, end: Date?, now: Date) -> Bool {
-        !session.isCancelled && end.map { now >= session.date && now < $0 } ?? false
-    }
-
-    func progress(_ session: Session, end: Date?, now: Date) -> Double? {
-        guard isOngoing(session, end: end, now: now), let end else { return nil }
-        return now.timeIntervalSince(session.date) / end.timeIntervalSince(session.date)
-    }
-
-    func minutesLeft(until end: Date, now: Date) -> String {
-        String(localized: .sessionsMinutesLeft(Int(end.timeIntervalSince(now) / 60) + 1))
-    }
-
-    func lateMark(_ session: Session, in file: CourseFile) -> StepToggle<AttendanceState>.Option? {
-        let attendance = menu.attendance(of: session)
-        return session.isCancelled || attendance == .present ? nil : AttendanceState.steps.first { $0.value == attendance }
-    }
-
-    func isToday(_ date: Date) -> Bool { workspace.isStudyToday(date) }
-
-    func title(of session: Session, in file: CourseFile) -> String { file.subject(of: session) ?? String(localized: .sessionsClass) }
-
-    func hasSubject(_ session: Session, in file: CourseFile) -> Bool { file.subject(of: session) != nil }
-
-    enum Review: Equatable {
-        case done(UUID), writing(UUID), missing
-    }
-
-    func review(of session: Session, in file: CourseFile, now: Date) -> Review? {
-        switch (file.review(of: session), session.reviewNoteId) {
-        case (.written?, let id?): .done(id)
-        case (.writing?, let id?): .writing(id)
-        case (.needed?, nil) where session.date <= now: .missing
-        default: nil
-        }
-    }
-
-    func recordingsLabel(_ count: Int) -> String {
-        String(localized: count > 1 ? .sessionsRecordingCount(count) : .sessionsRecordingShort)
-    }
-
-    func offersWrapUp(_ session: Session) -> Bool { !session.isCancelled && session.date <= workspace.now }
 
     // MARK: A session's actions
 

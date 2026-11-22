@@ -23,7 +23,7 @@ public struct ExamStudy: Sendable, Equatable {
 
 extension CourseStudy {
     public func study(of exam: Exam) -> ExamStudy {
-        let units = UnitTree.outline(file.units).map(\.unit).filter { exam.scopeUnitIds.contains($0.id) }
+        let units = file.scopeUnits(of: exam)
         let ids = Set(units.map(\.id))
         let scoped = allProblems.filter { !ids.isDisjoint(with: $0.problem.unitIds) }
         let readiness = units.map { readiness(of: $0.id) }

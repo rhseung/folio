@@ -13,11 +13,13 @@ public struct UnitList {
     // 사람용 출력이 트리를 그리도록 깊이를 함께 두고, JSON은 단원만 차례로 쓴다.
     public struct Outline: Encodable {
         public var items: [(unit: FolioDomain.Unit, depth: Int)]
+        public var file: CourseFile
 
-        public func encode(to encoder: Encoder) throws { try items.map(\.unit).encode(to: encoder) }
+        public func encode(to encoder: Encoder) throws { try items.map { QueryLinks($0.unit, in: file) }.encode(to: encoder) }
     }
 
     public func read(_ ctx: ReadContext) throws -> Outline {
-        Outline(items: UnitTree.outline(try ctx.file(course).units).filter { item in depth.map { item.depth < $0 } ?? true })
+        let f = try ctx.file(course)
+        return Outline(items: UnitTree.outline(f.units).filter { item in depth.map { item.depth < $0 } ?? true }, file: f)
     }
 }
