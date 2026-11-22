@@ -115,21 +115,4 @@ struct SessionMenuModelTests {
         perform(try row(menu, .unitsUnlinkSession))
         #expect(try file(workspace).sessions.first { $0.id == id }?.unitIds.isEmpty == true)
     }
-
-    @Test func skippingFromTheReviewScreenKeepsTheTimeOpen() throws {
-        let workspace = try fixtureWorkspace()
-        let a = try #require(workspace.run(UnitAdd(course: graphTheory, title: "매칭"))?.made)
-        let b = try #require(workspace.run(UnitAdd(course: graphTheory, title: "채색"))?.made)
-        let review = ReviewModel(workspace: workspace, items: [.init(courseId: graphTheory, unitId: a)])
-        review.started = .now.addingTimeInterval(-120)
-        review.record(.skip)
-        _ = workspace.skipReviews([(graphTheory, b)])
-
-        let events = workspace.reviews(of: graphTheory).map(\.event)
-        #expect(events.map(\.result) == [.skip, .skip])
-        #expect(events.first { $0.unitId == a }.map { $0.seconds >= 120 } == true)
-        #expect(events.first { $0.unitId == b }?.seconds == 0)
-        let log = try #require(workspace.course(graphTheory)).store.log
-        #expect(try log.readAll().events(StudySessionEvent.self).map(\.event.screen) == ["review"])
-    }
 }

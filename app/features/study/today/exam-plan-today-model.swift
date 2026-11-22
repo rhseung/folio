@@ -5,7 +5,6 @@ import Observation
 @MainActor @Observable
 final class ExamPlanTodayModel {
     let workspace: Workspace
-    private(set) var done: Set<UUID> = []
 
     init(workspace: Workspace) { self.workspace = workspace }
 
@@ -17,17 +16,13 @@ final class ExamPlanTodayModel {
         String(localized: .examsPlanDone(items.filter { isDone($0) }.count, items.count))
     }
 
-    func isDone(_ entry: ExamPlan.DayItem) -> Bool { done.contains(entry.item.id) }
+    func isDone(_ entry: ExamPlan.DayItem) -> Bool { workspace.study(of: entry.courseId)?.isDone(entry.item, in: entry.exam) ?? false }
 
     func detail(_ entry: ExamPlan.DayItem) -> String {
         "\(workspace.course(entry.courseId)?.title ?? "") · \(entry.exam.title)"
     }
 
-    func load() { done = workspace.donePlanItems(in: courseIds) }
-
     func toggle(_ entry: ExamPlan.DayItem) {
-        let new = !isDone(entry)
-        workspace.setPlanItem(entry.item.id, done: new, course: entry.courseId)
-        if new { done.insert(entry.item.id) } else { done.remove(entry.item.id) }
+        workspace.setPlanItem(entry.item.id, done: !isDone(entry), course: entry.courseId)
     }
 }

@@ -233,6 +233,18 @@ enum Theme {
         static let numberColumn: CGFloat = 56
         static let ddayColumn: CGFloat = 64
         static let pagesColumn: CGFloat = 72
+        static let readinessColumn: CGFloat = 80
+        static let seenPages = CGSize(width: 180, height: 8)
+        // 쪽 머리의 제목과 부제가 단추와 나란히 설 때 가져야 하는 폭이다. 이보다 좁으면 단추를 아래 줄로 내린다.
+        static let pageHeaderRoom: CGFloat = 280
+        static let examMeter: CGFloat = 180
+        static let solveCell: CGFloat = 44
+        static let bigButton: CGFloat = 52
+        static let flipCardMin: CGFloat = 280
+        static let solveSetup: CGFloat = 520
+        static let solveSplit: CGFloat = 720
+        static let inkPad: CGFloat = 320
+        static let solveStep = CGSize(width: 16, height: 6)
         static let dateColumn: CGFloat = 84
         static let courseLabel: CGFloat = 88
         static let dateTimeColumn: CGFloat = 96

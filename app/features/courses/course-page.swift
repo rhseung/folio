@@ -11,10 +11,8 @@ extension AppLink.CoursePage: Identifiable {
         case .units: String(localized: .courseSectionUnits)
         case .notes: String(localized: .courseSectionNotes)
         case .materials: String(localized: .courseSectionMaterials)
-        case .quiz: String(localized: .courseSectionQuizSolve)
-        case .cards: String(localized: .courseSectionQuizCards)
-        case .stats: String(localized: .courseSectionQuizStats)
-        case .problems: String(localized: .courseSectionQuizProblems)
+        case .problems: String(localized: .courseSectionProblems)
+        case .cards: String(localized: .courseSectionCards)
         case .assignments: String(localized: .courseSectionAssignments)
         case .exams: String(localized: .courseSectionExams)
         case .grades: String(localized: .courseSectionGrades)
@@ -24,10 +22,10 @@ extension AppLink.CoursePage: Identifiable {
     var tab: CourseTab {
         switch self {
         case .overview: .overview
-        case .sessions, .units: .classes
+        case .sessions: .classes
         case .notes: .notes
         case .materials: .materials
-        case .quiz, .cards, .stats, .problems: .quiz
+        case .units, .problems, .cards: .study
         case .assignments: .assignments
         case .exams, .grades: .assessment
         }

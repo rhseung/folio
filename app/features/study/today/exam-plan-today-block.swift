@@ -36,7 +36,6 @@ struct ExamPlanTodayBlock: View {
                     }
                 }
             }
-            .task(id: model.courseIds) { model.load() }
         }
     }
 }

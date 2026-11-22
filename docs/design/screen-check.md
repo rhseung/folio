@@ -12,14 +12,14 @@
 ## 창 스냅숏
 
 - 디버그 빌드(`mise run build-mac`의 `.build/DerivedData/Build/Products/Debug/Folio.app`)를 `FOLIO_GIST`에 `mise run fixture -- <폴더>`로 만든 가짜 폴더, `FOLIO_SNAPSHOT_DIR`에 저장할 폴더를 주고 `open -n --env …`로 열면 실제 창으로 모든 화면을 PNG로 남기고 종료한다.
-- 스냅숏의 단계는 주소(`AppLink`), 창이 띄우는 시트(`ItemSheet`), 화면 상태 요청(`ScreenRequest`: 목록 열 펼치기, 빠른 추가에 줄 넣기, 쪽 열의 범위 고르기, 퀴즈 시작)으로만 화면을 움직인다. 화면은 `\.screenRequests`로 받은 요청에 답할 뿐 스냅숏인지 모르므로, 화면 파일에 스냅숏 분기(`SnapshotDriver`)를 두지 않는다. `ScreenFitTests`도 같은 요청으로 화면을 연다.
+- 스냅숏의 단계는 주소(`AppLink`), 창이 띄우는 시트(`ItemSheet`), 화면 상태 요청(`ScreenRequest`: 목록 열 펼치기, 빠른 추가에 줄 넣기, 쪽 열의 범위 고르기)으로만 화면을 움직인다. 화면은 `\.screenRequests`로 받은 요청에 답할 뿐 스냅숏인지 모르므로, 화면 파일에 스냅숏 분기(`SnapshotDriver`)를 두지 않는다. `ScreenFitTests`도 같은 요청으로 화면을 연다.
 - 모양과 사이드바는 앱 인자 `-appearance dark`, `-sidebarOpen NO`로 고른다.
 
 | 변수 | 보는 것 |
 | --- | --- |
 | `FOLIO_SNAPSHOT_WIDTH`, `FOLIO_SNAPSHOT_HEIGHT` | 창의 폭과 높이. 낮은 창에서 시트가 넘기는 모습은 긴 메모로 연 과제 시트 `course-assignment-edit`로 본다 |
 | `FOLIO_SNAPSHOT_TABS` | 툴바의 탭. 그 수(예: `4`, `14`)만큼 탭을 열어 둔다 |
-| `FOLIO_SNAPSHOT_PANES` | 칸. `2`, `3`은 앞의 두 탭에 렉처와 퀴즈 칸을 더하고, `courses`는 첫 탭에 두 과목을 나란히 둔다 |
+| `FOLIO_SNAPSHOT_PANES` | 칸. `2`, `3`은 앞의 두 탭에 렉처와 공부 칸을 더하고, `courses`는 첫 탭에 두 과목을 나란히 둔다 |
 | `FOLIO_SNAPSHOT_COLUMN=open` | 접힌 목록 열을 연 모습 |
 | `FOLIO_SNAPSHOT_HOLD` | 적은 단계(쉼표로 여러 개)에서 몇 초 머물러, 그 사이 실제 창(유리 포함)을 `screencapture -l`로 찍게 한다. `screen`을 주면 단계마다 `<단계>.ready`를 써서 바깥 스크립트가 유리와 팝오버까지 찍게 한다 |
 | `FOLIO_SNAPSHOT_QUICK_ADD=1` | 빠른 추가 칸의 여러 줄(긴 줄, 과목을 찾지 못한 줄, 오늘 화면과 과목 화면의 툴바 팝오버, 칩과 달력, 반복의 직접 설정)만 `quick-add-*.png`로 남긴다 |

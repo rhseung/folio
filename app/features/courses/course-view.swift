@@ -36,10 +36,8 @@ struct CourseView: View {
                             model.moved(id.map { AppLink(.unit, $0) })
                         }
                     case .notes: CourseNotesPage(model: model, course: course)
-                    // 퀴즈 페이지를 옮겨 다녀도 퀴즈 모델과 대기 중인 풀기 요청이 남도록, 모든 퀴즈 페이지를 한 갈래로
-                    // 둔다.
-                    case .quiz, .cards, .stats, .problems:
-                        QuizView(workspace: model.workspace, course: course, section: $model.section)
+                    case .problems: ProblemsView(workspace: workspace, course: course)
+                    case .cards: CardsView(workspace: workspace, course: course)
                     case .materials: MaterialsView(workspace: workspace, course: course, place: model.place, moved: model.moved)
                     case .assignments: AssignmentsView(workspace: workspace, course: course)
                     case .grades: CourseGradesView(workspace: workspace, course: course)

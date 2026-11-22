@@ -127,7 +127,7 @@ enum FormSnapshots {
             forms.append(
                 (
                     "card",
-                    AnyView(CardEditorSheet(workspace: workspace, course: course, draft: CardDraft(unitId: unit.id), units: file.units) {})
+                    AnyView(CardEditorSheet(workspace: workspace, course: course, draft: CardDraft(unitId: unit.id)))
                 ))
         }
         forms += lectureSections(workspace, places: importPlaces)

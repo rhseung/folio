@@ -2,7 +2,7 @@ import FolioDomain
 import Foundation
 
 enum CourseTab: CaseIterable, Identifiable {
-    case overview, classes, assignments, notes, materials, quiz, assessment
+    case overview, classes, assignments, notes, materials, study, assessment
     var id: Self { self }
 
     var pages: [AppLink.CoursePage] { AppLink.CoursePage.allCases.filter { $0.tab == self } }
@@ -14,7 +14,7 @@ enum CourseTab: CaseIterable, Identifiable {
         case .assignments: String(localized: .courseTabAssignments)
         case .notes: String(localized: .courseTabNotes)
         case .materials: String(localized: .courseTabMaterials)
-        case .quiz: String(localized: .courseTabQuiz)
+        case .study: String(localized: .courseTabStudy)
         case .assessment: String(localized: .courseTabAssessment)
         }
     }
@@ -26,7 +26,7 @@ enum CourseTab: CaseIterable, Identifiable {
         case .assignments: "checklist"
         case .notes: "doc.text"
         case .materials: "folder"
-        case .quiz: "questionmark.square"
+        case .study: "book.closed"
         case .assessment: "graduationcap"
         }
     }

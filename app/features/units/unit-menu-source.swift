@@ -13,31 +13,31 @@ struct UnitMenuSource: ItemMenuSource {
 
     private var link: AppLink { AppLink(.unit, unit.id) }
 
-    private var dueToday: Bool {
-        workspace.reviewStates(of: courseId, now: workspace.liveNow)[unit.id]?.isDue(on: workspace.today) ?? false
-    }
-
     var commands: [UnitMenuCommand] {
-        workspace.course(courseId)?.file.commands(for: unit, host: host, dueToday: dueToday) ?? []
+        workspace.course(courseId)?.file.commands(for: unit, host: host) ?? []
     }
 
     func row(_ command: UnitMenuCommand) -> MenuRow {
         switch command {
         case .open:
             .open(command, link: link, course: courseId) { openLink(link, course: courseId) }
-        case .review:
-            MenuRow(command, .unitsStartReview, "play", .action { sheets.present(.review(course: courseId, unit: unit.id)) })
-        case .skipToday:
-            MenuRow(command, .todayReviewsSkip, "forward", .action { sheets.confirm(workspace.skipReviews([(courseId, unit.id)])) })
+        case .solve:
+            MenuRow(
+                command, .unitsSolve, "play",
+                .action { sheets.present(.solve(SolveRequest(course: courseId, units: [unit.id], problems: []))) })
+        case .done(let done):
+            MenuRow(
+                command, done ? .unitsDoneUndo : .unitsDone, done ? "arrow.uturn.backward" : "checkmark",
+                .action { workspace.run(UnitDone(course: courseId, unit: unit.id, done: !done)) })
         case .addCard:
             MenuRow(
                 command, .menuAddCard, "rectangle.stack.badge.plus",
                 .submenu([
-                    MenuRow.Leaf(id: "manual", title: String(localized: .quizCardsAddManual), symbol: "square.and.pencil") {
+                    MenuRow.Leaf(id: "manual", title: String(localized: .cardsAddManual), symbol: "square.and.pencil") {
                         sheets.present(.card(course: courseId, draft: CardDraft(unitId: unit.id)))
                     },
-                    MenuRow.Leaf(id: "claude", title: String(localized: .quizCardsAddClaude), symbol: "sparkles") {
-                        sheets.present(.generateCards(course: courseId, unit: unit.id))
+                    MenuRow.Leaf(id: "claude", title: String(localized: .cardsAddClaude), symbol: "sparkles") {
+                        sheets.present(.suggestCards(course: courseId, unit: unit.id))
                     },
                 ]))
         case .moveUp:

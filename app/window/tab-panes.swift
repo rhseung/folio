@@ -317,7 +317,7 @@ extension PanePreset.Role {
         case .lecture: String(localized: .panesRoleLecture)
         case .classNote: String(localized: .panesRoleClassNote)
         case .reviewNote: String(localized: .panesRoleReviewNote)
-        case .quiz: String(localized: .panesRoleQuiz)
+        case .study: String(localized: .panesRoleStudy)
         }
     }
 }

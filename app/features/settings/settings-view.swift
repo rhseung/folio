@@ -54,11 +54,11 @@ struct SettingsView: View {
             SettingBlock(.school, model: model)
         case .classes: ClassSettings(model: model)
         case .notes: NoteSettingsForm(model: model)
-        case .review: SettingBlock(.review, model: model)
+        case .study: SettingBlock(.study, model: model)
         case .notifications:
             SettingBlock(.assignmentAlerts, model: model)
             SettingBlock(.examAlerts, model: model)
-            SettingBlock(.reviewAlerts, model: model)
+            SettingBlock(.attendanceAlerts, model: model)
         case .claude: ClaudeSettings(model: model)
         case .lms:
             LMSSettingsForm(workspace: model.workspace)

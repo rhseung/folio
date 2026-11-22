@@ -233,7 +233,7 @@ struct SearchPalette: View {
             case .assignment: AssignmentMenu(courseId: item.courseId, assignmentId: item.id)
             case .exam: ExamMenu(courseId: item.courseId, examId: item.id)
             case .unit: UnitMenu(courseId: item.courseId, unitId: item.id)
-            case .quiz:
+            case .card:
                 Button(.commonOpen, systemImage: "arrow.right.circle") { open(hit) }
                 Divider()
                 ShareMenu(link: AppLink(item), course: item.courseId)

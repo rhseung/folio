@@ -14,7 +14,10 @@ final class Workspace {
     private(set) var catalogLoaded = true
     private(set) var settings = Settings()
     private(set) var courses: [LoadedCourse] = []
-    private(set) var reviewEvents: [UUID: [LoggedEvent]] = [:]
+    // 공부 기록(풀이, 카드, 본 쪽, 계획 체크)만 과목마다 들고 있다. 화면이 그릴 때마다 로그 전체를 읽지 않기 위해서다.
+    private(set) var studyEvents: [UUID: [LoggedEvent]] = [:]
+    // `study(of:)`는 그릴 때마다 불리고 카드 파일을 단원마다 읽으므로, 입력이 그대로인 동안 같은 값을 돌려준다.
+    @ObservationIgnored var studyCache: [UUID: (key: StudyKey, study: CourseStudy)] = [:]
     var error: String?
     var showsFirstRun = false
     var folderTrouble: FolderTrouble?
@@ -24,7 +27,7 @@ final class Workspace {
     var claudeRevision = 0
     // 노트와 카드 목록은 디스크에서 파일을 읽으므로 `courses`만 관찰해서는 바뀐 것을 알 수 없다.
     private(set) var notesRevision = 0
-    private(set) var quizRevision = 0
+    private(set) var studyRevision = 0
     private(set) var dataRevision = 0
     var gradesUnlocked = false
     @ObservationIgnored var gradeRelock: Task<Void, Never>?
@@ -144,14 +147,11 @@ final class Workspace {
             return course
         }
 
-        reviewEvents = Dictionary(
-            keepingFirst: courses.map { c in
-                (c.id, (try? c.store.log.readAll().filter { $0.type == ReviewEvent.type }) ?? [])
-            })
+        studyEvents = Dictionary(keepingFirst: courses.map { c in (c.id, Self.studyEvents(c.store)) })
 
         if !problems.isEmpty { error = String(localized: .workspaceUnreadableFiles) + "\n" + problems.joined(separator: "\n") }
         notesRevision += 1
-        quizRevision += 1
+        studyRevision += 1
         dataRevision += 1
         recoverRecordings()
     }
@@ -194,16 +194,8 @@ final class Workspace {
 
     var allCourses: [Course] { courses.map(\.file.course) }
 
-    typealias ReviewEntry = FolioDomain.ReviewEntry
-
     func ongoingClass(at now: Date) -> TodaySummary.OngoingClass? {
         TodaySummary.ongoingClass(in: currentCourses.map(\.file), at: now, calendar: calendar)
-    }
-
-    func reviewQueue(now: Date) -> [ReviewEntry] {
-        ReviewScheduler.queue(
-            courses: currentCourses.map { ($0.file, (reviewEvents[$0.id] ?? []).events(ReviewEvent.self)) },
-            settings: settings, calendar: calendar, now: now)
     }
 
     // MARK: Semesters and courses
@@ -318,7 +310,7 @@ final class Workspace {
         lastOwnWrite = .now
         dataRevision += 1
         if ctx.changes.contains(where: \.touchesNotes) { notesRevision += 1 }
-        if ctx.changes.contains(where: \.touchesQuizzes) { quizRevision += 1 }
+        if ctx.changes.contains(where: \.touchesStudy) { studyRevision += 1 }
         if ctx.needsReload {
             reload()
             return
@@ -328,7 +320,7 @@ final class Workspace {
         }
         for id in ctx.loggedCourses {
             guard let course = course(id) else { continue }
-            reviewEvents[id] = (try? course.store.log.readAll().filter { $0.type == ReviewEvent.type }) ?? []
+            studyEvents[id] = Self.studyEvents(course.store)
         }
     }
 

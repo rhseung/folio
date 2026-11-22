@@ -12,7 +12,6 @@ final class ExamsModel {
     var editing: Exam?
     var pending: PendingAction?
     private(set) var notes: [UUID: UUID] = [:]
-    private(set) var done: Set<UUID> = []
 
     init(workspace: Workspace, course: LoadedCourse) {
         self.workspace = workspace
@@ -29,7 +28,6 @@ final class ExamsModel {
                 guard n.meta.kind == .examSummary, let exam = n.meta.examId, let note = n.meta.id else { return nil }
                 return (exam, note)
             }, uniquingKeysWith: { a, _ in a })
-        done = workspace.donePlanItems(in: [course.id])
     }
 
     // MARK: Page
@@ -47,7 +45,10 @@ final class ExamsModel {
             + (past == 0 ? [] : [String(localized: .examsPastCount(past))])).joined(separator: " · ")
     }
 
-    func reviewStates(now: Date) -> [UUID: ReviewState] { workspace.reviewStates(of: course.id, now: now) }
+    var study: CourseStudy? { workspace.study(of: course.id) }
+
+    // 계획 항목은 공부 기록으로 저절로 체크된다. 규칙은 CourseStudy에 있다.
+    func isDone(_ item: ExamPlanItem, in exam: Exam) -> Bool { study?.isDone(item, in: exam) ?? false }
 
     func add() {
         let start = workspace.settings.schedule.examStart(after: workspace.now, calendar: workspace.calendar)
@@ -102,16 +103,18 @@ final class ExamsModel {
     struct Scope {
         var units: [FolioDomain.Unit]
         var tops: [(unit: FolioDomain.Unit, children: Int)]
-        var onTrack: Int
+        var ready: Int
+        var readiness: [UUID: UnitReadiness]
     }
 
-    func scope(_ exam: Exam, states: [UUID: ReviewState]) -> Scope {
+    func scope(_ exam: Exam) -> Scope {
         let units = UnitTree.outline(course.file.units).map(\.unit).filter { exam.scopeUnitIds.contains($0.id) }
         let ids = Set(units.map(\.id))
         let tops = units.filter { $0.parentId.map { !ids.contains($0) } ?? true }
+        let readiness = Dictionary(uniqueKeysWithValues: units.compactMap { u in study.map { (u.id, $0.readiness(of: u.id)) } })
         return Scope(
             units: units, tops: tops.map { u in (u, units.filter { $0.parentId == u.id }.count) },
-            onTrack: units.filter { states[$0.id]?.isOnTrack(today: today) ?? false }.count)
+            ready: readiness.values.filter { $0.state == .ready }.count, readiness: readiness)
     }
 
     func scopeLine(_ exam: Exam, units: Int) -> String {
@@ -127,7 +130,7 @@ final class ExamsModel {
 
     func pastFacts(_ exam: Exam) -> String {
         let scoped = exam.scopeUnitIds.count
-        let checked = exam.plan.filter { done.contains($0.id) }.count
+        let checked = exam.plan.filter { isDone($0, in: exam) }.count
         let files = fileCount(exam)
         let facts =
             (component(of: exam).map { [$0] } ?? [])
@@ -156,10 +159,10 @@ final class ExamsModel {
 
     func plan(_ exam: Exam) -> [ExamPlanItem] { exam.plan.sorted { ($0.day, $0.title) < ($1.day, $1.title) } }
 
-    func planLine(_ items: [ExamPlanItem]) -> String {
+    func planLine(_ items: [ExamPlanItem], in exam: Exam) -> String {
         items.isEmpty
             ? String(localized: .examsPlanHint)
-            : String(localized: .examsPlanDone(items.filter { done.contains($0.id) }.count, items.count))
+            : String(localized: .examsPlanDone(items.filter { isDone($0, in: exam) }.count, items.count))
     }
 
     func dayLabel(_ items: [ExamPlanItem], at i: Int) -> String {
@@ -169,8 +172,12 @@ final class ExamsModel {
         return day.date(in: workspace.calendar)?.formatted(.dateTime.month().day().weekday()) ?? day.description
     }
 
+    func itemTitle(_ item: ExamPlanItem) -> String { course.file.title(of: item) }
+
+    // 손으로 이름을 붙인 항목만 대상 단원을 옆에 적는다. 앱이 짠 항목은 이름이 곧 단원 이름이다.
     func targetTitle(_ item: ExamPlanItem) -> String? {
-        item.target.flatMap { target in course.file.units.first { $0.id == target.id }?.title }
+        guard item.target.kind == .unit, !item.title.isEmpty else { return nil }
+        return item.target.id.flatMap { id in course.file.units.first { $0.id == id }?.title }
     }
 
     func targets(_ exam: Exam) -> [SelectOption<UUID?>] {
@@ -194,10 +201,8 @@ final class ExamsModel {
 
     func add(_ item: ExamPlanAdd) -> Bool { workspace.run(item) != nil }
 
-    func toggle(_ id: UUID) {
-        let new = !done.contains(id)
-        workspace.setPlanItem(id, done: new, course: course.id)
-        if new { done.insert(id) } else { done.remove(id) }
+    func toggle(_ item: ExamPlanItem, in exam: Exam) {
+        workspace.setPlanItem(item.id, done: !isDone(item, in: exam), course: course.id)
     }
 
     func removePlanItem(_ id: UUID, of exam: Exam) {

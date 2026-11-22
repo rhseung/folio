@@ -19,30 +19,30 @@ struct WorkspaceRevisionTests {
         #expect(workspace.notesRevision == after)
     }
 
-    @Test func savingOrAnsweringACardBumpsOnlyTheQuizRevision() throws {
+    @Test func savingOrFlippingACardBumpsOnlyTheStudyRevision() throws {
         let workspace = try fixtureWorkspace()
         let unit = UUID()
         workspace.run(UnitAdd(id: unit, course: graphTheory, title: "그래프"))
-        let (notes, quiz) = (workspace.notesRevision, workspace.quizRevision)
-        let card = QuizCard(device: workspace.device, at: .now, unitId: unit, type: .free, category: .definition, prompt: "p", answer: "a")
-        workspace.run(QuizCardSave(course: graphTheory, cards: [card]))
-        #expect(workspace.quizRevision == quiz + 1 && workspace.notesRevision == notes)
+        let (notes, study) = (workspace.notesRevision, workspace.studyRevision)
+        let card = StudyCard(device: workspace.device, at: .now, unitId: unit, front: "p", back: "a")
+        workspace.run(CardSave(course: graphTheory, cards: [card], movedFrom: nil))
+        #expect(workspace.studyRevision == study + 1 && workspace.notesRevision == notes)
 
-        workspace.run(QuizRecord(course: graphTheory, attempt: QuizAttemptEvent(cardId: card.id, verdict: .wrong, grader: .self)))
-        #expect(workspace.quizRevision == quiz + 2)
+        workspace.run(CardFlip(course: graphTheory, unit: unit, card: card.id, known: false))
+        #expect(workspace.studyRevision == study + 2)
     }
 
     @Test func aWriteThatTouchesNeitherLeavesBothAlone() throws {
         let workspace = try fixtureWorkspace()
-        let (notes, quiz) = (workspace.notesRevision, workspace.quizRevision)
+        let (notes, study) = (workspace.notesRevision, workspace.studyRevision)
         workspace.run(ExamAdd(course: graphTheory, title: "중간고사"))
-        #expect(workspace.notesRevision == notes && workspace.quizRevision == quiz)
+        #expect(workspace.notesRevision == notes && workspace.studyRevision == study)
     }
 
     @Test func aReloadBumpsBoth() throws {
         let workspace = try fixtureWorkspace()
-        let (notes, quiz) = (workspace.notesRevision, workspace.quizRevision)
+        let (notes, study) = (workspace.notesRevision, workspace.studyRevision)
         workspace.reload()
-        #expect(workspace.notesRevision > notes && workspace.quizRevision > quiz)
+        #expect(workspace.notesRevision > notes && workspace.studyRevision > study)
     }
 }

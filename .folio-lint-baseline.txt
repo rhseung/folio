@@ -40,10 +40,8 @@ layout-name	app/workspace/workspace.swift	"settings.json"
 layout-name	app/workspace/workspace.swift	"transcript.json"
 minute-timeline	app/features/study/today/today-view.swift	TimelineView(.periodic)
 screen-toolbar	app/features/courses/semester/semester-view.swift	.toolbar
-screen-toolbar	app/features/study/review/review-view.swift	.toolbar
 ui-string	app/features/grades/grades-model.swift	"학기"
 ui-string	app/features/sessions/suggested/suggested-session.swift	"오후 12:00"
-ui-string	app/features/study/quiz/generate-cards-model.swift	"노트 "
 view-body-logic	app/features/courses/edit/codes-menu.swift	body: .sorted
 view-body-logic	app/features/courses/semester/add-course-sheet.swift	body: .filter
 view-body-logic	app/features/courses/weight-bar.swift	body: .reduce
@@ -79,8 +77,6 @@ view-workspace-call	app/features/sessions/suggested/suggested-session-row.swift	
 view-workspace-call	app/features/settings/catalog-editing.swift	workspace.saveCatalog(
 view-workspace-call	app/features/settings/catalog-editing.swift	workspace.saveCatalog(
 view-workspace-call	app/features/settings/settings-view.swift	workspace.open(
-view-workspace-call	app/features/study/quiz/quiz-view.swift	workspace.course(
-view-workspace-call	app/features/study/review/review-view.swift	workspace.accent(
 view-workspace-call	app/features/study/today/day-ribbon-card.swift	workspace.accent(
 view-workspace-call	app/features/study/today/day-ribbon-card.swift	workspace.accent(
 view-workspace-call	app/features/study/today/day-ribbon-card.swift	workspace.accent(
@@ -95,4 +91,3 @@ view-workspace-call	app/features/study/today/today-view.swift	workspace.accent(
 view-workspace-call	app/features/study/today/today-wash.swift	workspace.accent(
 view-workspace-call	app/features/study/today/today-wash.swift	workspace.accent(
 view-workspace-call	app/features/units/unit-menu.swift	workspace.course(
-view-workspace-call	app/features/units/units-view.swift	workspace.course(

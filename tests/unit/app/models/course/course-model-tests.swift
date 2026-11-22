@@ -124,8 +124,8 @@ struct CourseModelTests {
     @Test func eachStatOpensThePageItSumsUp() throws {
         let workspace = try fixtureWorkspace()
         let model = CourseModel(workspace: workspace, courseId: graphTheory)
-        let items = model.stats(try #require(workspace.course(graphTheory)).file, reviews: [], suggested: nil, now: .now)
-        #expect(items.map(\.title) == ["다음 수업", "다음 시험", "오늘 복습", "가까운 마감"])
+        let items = model.stats(try #require(workspace.course(graphTheory)).file, study: nil, suggested: nil, now: .now)
+        #expect(items.map(\.title) == ["다음 수업", "다음 시험", "준비된 단원", "가까운 마감"])
         items[2].action?()
         #expect(model.section == .units)
     }
@@ -136,7 +136,7 @@ struct CourseModelTests {
         #expect(model.trailing(.classes, file: try #require(workspace.course(graphTheory)).file) == nil)
         workspace.run(SessionAdd(course: graphTheory, date: .now))
         #expect(model.trailing(.classes, file: try #require(workspace.course(graphTheory)).file)?.text == "1회")
-        #expect(AppLink.CoursePage.stats.title == "오답과 통계" && CourseTab.assessment.title == "평가")
+        #expect(AppLink.CoursePage.problems.title == "문제" && CourseTab.assessment.title == "평가")
     }
 
     @Test func assignmentsHaveTheirOwnTabApartFromExamsAndGrades() {

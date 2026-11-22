@@ -7,9 +7,34 @@ import Observation
 
 @MainActor @Observable
 final class UnitsModel {
-    struct QuizStats: Equatable {
-        var cards = 0
-        var openWrong = 0
+    // 단원 행 하나가 그릴 값이다. 둘째 줄은 낱말 조각으로 두고 오답 수만 따로 위험색으로 그린다.
+    struct Row: Identifiable {
+        var unit: FolioDomain.Unit
+        var depth: Int
+        var parts: [String]
+        var wrong: String?
+        var pages: [Bool]
+        var readiness: UnitReadiness
+        var id: UUID { unit.id }
+    }
+
+    struct ExamCard {
+        var exam: Exam
+        var days: Int
+        var readiness: ExamReadiness
+        var line: String
+        var few: [(unit: FolioDomain.Unit, problems: Int)]
+    }
+
+    struct PlanRow: Identifiable {
+        var item: ExamPlanItem
+        var day: String
+        var isToday: Bool
+        var isPast: Bool
+        var done: Bool
+        var title: String
+        var detail: String
+        var id: UUID { item.id }
     }
 
     let workspace: Workspace
@@ -17,9 +42,9 @@ final class UnitsModel {
     var newTitle = ""
     var openUnit: UUID?
     var pending: PendingAction?
-    private(set) var quiz: [UUID: QuizStats] = [:]
     var name = ""
     private(set) var notes: [NoteFile] = []
+    private(set) var noteCounts: [UUID: Int] = [:]
 
     init(workspace: Workspace, courseId: UUID) {
         self.workspace = workspace
@@ -27,56 +52,118 @@ final class UnitsModel {
     }
 
     var today: LocalDate { workspace.today }
-    func states(now: Date? = nil) -> [UUID: ReviewState] { workspace.reviewStates(of: courseId, now: now ?? workspace.now) }
+    var study: CourseStudy? { workspace.study(of: courseId) }
+    var file: CourseFile? { workspace.course(courseId)?.file }
 
-    func loadQuiz(_ course: LoadedCourse) {
-        let settings = workspace.settings, calendar = workspace.calendar
-        var attempts: [UUID: [(day: LocalDate, verdict: Verdict)]] = [:]
-        for (at, attempt) in ((try? course.store.log.readAll()) ?? []).events(QuizAttemptEvent.self) {
-            attempts[attempt.cardId, default: []].append((settings.studyDay(of: at, calendar: calendar), attempt.verdict))
-        }
-
-        var result: [UUID: QuizStats] = [:]
-        for unit in course.file.units {
-            let cards = (try? course.store.loadQuiz(unit: unit.id).model.cards) ?? []
-            guard !cards.isEmpty else { continue }
-            result[unit.id] = QuizStats(
-                cards: cards.count, openWrong: cards.filter { WrongFlow.isOpen(WrongFlow.status(attempts[$0.id] ?? [])) }.count)
-        }
-        quiz = result
+    func loadNoteCounts() {
+        let all = (workspace.course(courseId).flatMap { try? $0.store.notes() }) ?? []
+        var counts: [UUID: Int] = [:]
+        for note in all { for unit in note.meta.unitIds { counts[unit, default: 0] += 1 } }
+        noteCounts = counts
     }
 
     // MARK: The list
 
-    func subtitle(_ file: CourseFile, states: [UUID: ReviewState]) -> String {
-        let due = states.values.filter { ($0.due.map { $0 <= today }) == true }.count
+    func subtitle(_ file: CourseFile) -> String {
+        let done = file.units.filter(\.isDone).count
         let unlinked = file.sessionsNeedingUnits(at: workspace.now).count
         return
-            ([String(localized: .unitsCount(file.units.count)), String(localized: .unitsDueToday(due))]
+            ([String(localized: .unitsCount(file.units.count)), String(localized: .unitsDoneCount(done))]
             + (unlinked == 0 ? [] : [String(localized: .unitsUnlinkedCount(unlinked))])).joined(separator: " · ")
     }
 
-    func exams(of unit: FolioDomain.Unit, in file: CourseFile) -> [Exam] { file.exams.filter { $0.scopeUnitIds.contains(unit.id) } }
+    var nextExam: Exam? { study?.nextExam(now: workspace.now, calendar: workspace.calendar) }
 
-    func sessionsLine(_ unit: FolioDomain.Unit, in file: CourseFile) -> String {
-        let names = sessions(of: unit, in: file).map { file.day(of: $0, calendar: workspace.calendar) }
-        return names.isEmpty
-            ? String(localized: .unitsNoSessions)
-            : names.count > 3
-                ? String(localized: .unitsSessionsMore(names.prefix(3).joined(separator: ", "), names.count - 3))
-                : names.joined(separator: ", ")
+    func examCard(_ exam: Exam) -> ExamCard? {
+        guard let study, let start = exam.start else { return nil }
+        let r = study.readiness(for: exam)
+        let line = [
+            String(localized: .unitsExamReady(r.ready, r.units)), String(localized: .unitsExamDone(r.done, r.units)),
+            String(localized: .unitsExamSolved(r.problemsTotal, r.problemsSolved)),
+        ].joined(separator: " · ")
+        let few = r.fewProblems.compactMap { id in
+            study.file.units.first { $0.id == id }.map { (unit: $0, problems: study.problems(of: id).count) }
+        }
+        return ExamCard(exam: exam, days: max(workspace.days(to: start), 0), readiness: r, line: line, few: few)
     }
 
-    func detail(_ unit: FolioDomain.Unit, state: ReviewState?, in file: CourseFile) -> String {
-        var parts = [sessionsLine(unit, in: file)]
-        if let state, !state.settled {
-            parts.append(String(localized: .unitsInterval(workspace.settings.review.interval(atStep: state.step))))
+    func examTone(_ days: Int) -> Tone {
+        ExamUrgency(days: days, settings: workspace.settings.urgency) <= .soon ? .danger : .accent
+    }
+
+    func rows(in exam: Exam?) -> (scope: [Row], rest: [Row]) {
+        guard let study else { return ([], []) }
+        let outline = UnitTree.outline(study.file.units)
+        let scoped = Set(exam?.scopeUnitIds ?? [])
+        let all = outline.map { row(row: $0, study: study) }
+        guard exam != nil else { return ([], all) }
+        return (all.filter { scoped.contains($0.unit.id) }, all.filter { !scoped.contains($0.unit.id) })
+    }
+
+    private func row(row: (unit: FolioDomain.Unit, depth: Int), study: CourseStudy) -> Row {
+        let p = study.progress(of: row.unit, notes: noteCounts[row.unit.id] ?? 0)
+        var parts: [String] = []
+        if p.pagesTotal > 0 { parts.append(String(localized: .unitsLinePages(p.pagesSeen, p.pagesTotal))) }
+        if p.notes > 0 { parts.append(String(localized: .unitsLineNotes(p.notes))) }
+        parts.append(String(localized: .unitsLineProblems(p.problemsSolved, p.problemsTotal)))
+        if p.cardsTotal > 0 { parts.append(String(localized: .unitsLineCards(p.cardsTotal))) }
+        if p.readiness.pastExam > 0 { parts.append(String(localized: .unitsLinePastExam(p.readiness.pastExam))) }
+        return Row(
+            unit: row.unit, depth: row.depth, parts: parts,
+            wrong: p.problemsWrong > 0 ? String(localized: .unitsLineWrong(p.problemsWrong)) : nil, pages: study.pageMarks(of: row.unit),
+            readiness: p.readiness)
+    }
+
+    func toggleDone(_ unit: FolioDomain.Unit) {
+        workspace.run(UnitDone(course: courseId, unit: unit.id, done: !unit.isDone))
+    }
+
+    // MARK: Plan
+
+    func planRows(_ exam: Exam) -> [PlanRow] {
+        guard let study else { return [] }
+        let items = exam.plan.filter { !$0.isRemoved }.sorted { ($0.day, $0.title) < ($1.day, $1.title) }
+        return items.enumerated().map { i, item in
+            let first = i == 0 || items[i - 1].day != item.day
+            return PlanRow(
+                item: item, day: first ? dayLabel(item.day) : "", isToday: item.day == today, isPast: item.day < today,
+                done: study.isDone(item, in: exam), title: study.file.title(of: item), detail: planDetail(item, study: study))
         }
-        if let q = quiz[unit.id] {
-            parts.append(String(localized: .unitsQuizCards(q.cards)))
-            if q.openWrong > 0 { parts.append(String(localized: .unitsWrong(q.openWrong))) }
+    }
+
+    func planNote(_ exam: Exam) -> String {
+        guard let start = exam.start else { return "" }
+        let days = String(localized: .unitsPlanDays(exam.title, max(workspace.days(to: start), 0)))
+        return exam.planDay == today ? days + " · " + String(localized: .unitsPlanToday) : days
+    }
+
+    private func dayLabel(_ day: LocalDate) -> String {
+        if day == today { return String(localized: .commonToday) }
+        return day.date(in: workspace.calendar)?.formatted(.dateTime.month(.defaultDigits).day().weekday()) ?? day.description
+    }
+
+    private func planDetail(_ item: ExamPlanItem, study: CourseStudy) -> String {
+        switch item.target.kind {
+        case .unit:
+            guard let id = item.target.id, let unit = study.file.units.first(where: { $0.id == id }) else { return "" }
+            let p = study.progress(of: unit, notes: noteCounts[id] ?? 0)
+            var parts = [String(localized: .unitsLineProblems(p.problemsSolved, p.problemsTotal))]
+            if let pages = item.pages, !pages.isEmpty { parts.append(String(localized: .unitsPlanConceptPages(pages.count))) }
+            return parts.joined(separator: " · ")
+        case .problems:
+            let records =
+                item.target.problemIds.map { $0.compactMap { study.problems[$0] } } ?? item.target.id.map(study.problems(inSet:)) ?? []
+            return String(localized: .unitsLineProblems(records.filter(\.solved).count, records.count))
+        case .wrong:
+            let wrong = study.allProblems.filter(\.status.needsWork).count, unknown = study.allCards.filter(\.status.needsWork).count
+            return String(localized: .unitsPlanWrong(wrong, unknown))
+        case .mixed, .mock, .custom:
+            return item.isCarried ? String(localized: .unitsPlanCarried) : ""
         }
-        return parts.joined(separator: " · ")
+    }
+
+    func togglePlan(_ row: PlanRow) {
+        workspace.setPlanItem(row.item.id, done: !row.done, course: courseId)
     }
 
     var canAdd: Bool { workspace.can(UnitAdd(course: courseId, title: newTitle)) }
@@ -114,33 +201,122 @@ final class UnitsModel {
         return notes.filter { $0.meta.id.map(classNotes.contains) != true }
     }
 
-    func history(_ unit: FolioDomain.Unit) -> [(at: Date, event: ReviewEvent)] {
-        workspace.reviews(of: courseId).filter { $0.event.unitId == unit.id }.reversed()
+    // MARK: The open unit's study
+
+    struct ProblemRow: Identifiable {
+        var record: CourseStudy.ProblemRecord
+        var title: String
+        var detail: String
+        var chip: (text: String, tone: Tone)?
+        var id: UUID { record.problem.id }
     }
 
-    func stats(_ unit: FolioDomain.Unit, state: ReviewState?, reviews: Int) -> [StatGroup.Item] {
-        let review = workspace.settings.review
-        let next =
-            state?.due.map {
-                $0 < today
-                    ? String(localized: .unitsDaysLate($0.days(until: today)))
-                    : $0 == today ? String(localized: .unitsToday) : $0.shortLabel
-            }
-            ?? (state?.settled == true ? String(localized: .unitsReviewDone) : "-")
-        let q = quiz[unit.id]
+    struct CardLine: Identifiable {
+        var record: CourseStudy.CardRecord
+        var detail: String
+        var chip: (text: String, tone: Tone)?
+        var id: UUID { record.card.id }
+    }
+
+    struct LectureRow: Identifiable {
+        var material: FolioDomain.Material
+        var range: ClosedRange<Int>
+        var seen: [Bool]
+        var id: String { "\(material.id)-\(range.lowerBound)" }
+        var firstUnseen: Int { range.lowerBound + (seen.firstIndex(of: false) ?? 0) }
+    }
+
+    func readinessLine(_ r: UnitReadiness) -> String {
+        let bar = String(localized: .unitReadinessBar(workspace.settings.study.readyPercent))
+        guard let score = r.score else { return r.state.label + " · " + bar }
+        return String(localized: .unitReadinessScore(Int((score * 100).rounded()))) + " · " + bar
+    }
+
+    func readinessDetail(_ unit: FolioDomain.Unit) -> String {
+        guard let study else { return "" }
+        let records = study.problems(of: unit.id)
+        let right = records.filter { $0.last?.verdict == .correct }.count
+        let r = study.readiness(of: unit.id)
         return [
-            .init(
-                title: String(localized: .unitsNextReview), value: next, tone: (state?.due.map { $0 < today }) == true ? .danger : .plain),
-            .init(
-                title: String(localized: .unitsIntervalTitle),
-                value: state.map { String(localized: .unitsDays(review.interval(atStep: $0.step))) } ?? "-",
-                detail: state.map { String(localized: .unitsStep($0.step + 1, review.intervals.count)) }),
-            .init(title: String(localized: .unitsReviewsTitle), value: String(localized: .unitsTimes(reviews))),
-            .init(
-                title: String(localized: .unitsQuiz), value: q.map { String(localized: .unitsCards($0.cards)) } ?? "-",
-                detail: q.flatMap { $0.openWrong > 0 ? String(localized: .unitsWrong($0.openWrong)) : nil },
-                tone: (q?.openWrong ?? 0) > 0 ? .warning : .plain),
-        ]
+            String(localized: .unitReadinessProblems(records.count)), String(localized: .unitReadinessRight(right)),
+            String(localized: .unitReadinessWrong(r.wrong)), String(localized: .unitReadinessRecheck(r.recheck)),
+            String(localized: .unitReadinessUntried(records.count - r.judged)), String(localized: .unitReadinessPastExam(r.pastExam)),
+        ].joined(separator: " · ")
+    }
+
+    func conceptRows(_ r: UnitReadiness, in file: CourseFile) -> [(material: FolioDomain.Material, pages: [Int])] {
+        Dictionary(grouping: r.conceptPages, by: \.materialId).compactMap { id, pages in
+            file.materials.first { $0.id == id }.map { (material: $0, pages: pages.map(\.page).sorted()) }
+        }
+        .sorted { $0.material.path.localizedStandardCompare($1.material.path) == .orderedAscending }
+    }
+
+    static func pageList(_ pages: [Int]) -> String {
+        guard let first = pages.first, let last = pages.last else { return "" }
+        return pages.count > 1 && last - first == pages.count - 1 ? "\(first)–\(last)" : pages.map(String.init).joined(separator: ", ")
+    }
+
+    func lectureRows(_ unit: FolioDomain.Unit, in file: CourseFile) -> [LectureRow] {
+        guard let study else { return [] }
+        return unit.lecturePages.compactMap { r in
+            guard let m = file.materials.first(where: { $0.id == r.materialId }) else { return nil }
+            let seen = study.seenPages(of: m.id)
+            return LectureRow(material: m, range: r.pages, seen: r.pages.map { seen.contains($0) })
+        }
+    }
+
+    func problemRows(_ unit: FolioDomain.Unit) -> [ProblemRow] {
+        guard let study else { return [] }
+        return study.problems(of: unit.id).map { record in
+            let set = study.file.problemSets.first { $0.id == record.setId }
+            let title = String(localized: .problemsNumbered(set?.title ?? "", record.problem.number))
+            var detail = [record.problem.format.label]
+            if let last = record.last {
+                detail.append(last.day.shortLabel)
+                if let reason = last.reason { detail.append(reason.label) }
+            } else {
+                detail.append(String(localized: .problemsUntried))
+            }
+            let chip = record.status.problemChip ?? record.last.map { ($0.verdict.label, $0.verdict.tone) }
+            return ProblemRow(record: record, title: title, detail: detail.joined(separator: " · "), chip: chip)
+        }
+    }
+
+    func cardLines(_ unit: FolioDomain.Unit) -> [CardLine] {
+        guard let study else { return [] }
+        return study.cards(of: unit.id).map { CardLine(record: $0, detail: $0.card.source.label, chip: $0.status.cardChip) }
+    }
+
+    func lecturesNote(_ rows: [LectureRow]) -> String {
+        let seen = rows.reduce(0) { $0 + $1.seen.filter { $0 }.count }, total = rows.reduce(0) { $0 + $1.seen.count }
+        return String(localized: .unitsLecturesNote(seen, total))
+    }
+
+    func problemsNote(_ rows: [ProblemRow]) -> String {
+        let wrong = rows.filter(\.record.status.isOpen).count, recheck = rows.filter(\.record.status.isRecheck).count
+        return
+            ([String(localized: .problemsCount(rows.count))] + (wrong > 0 ? [String(localized: .unitsLineWrong(wrong))] : [])
+            + (recheck > 0 ? [String(localized: .unitReadinessRecheck(recheck))] : [])).joined(separator: " · ")
+    }
+
+    func cardsNote(_ rows: [CardLine]) -> String {
+        let unknown = rows.filter(\.record.status.needsWork).count
+        return ([String(localized: .cardsCount(rows.count))] + (unknown > 0 ? [String(localized: .cardsUnknownCount(unknown))] : []))
+            .joined(separator: " · ")
+    }
+
+    func studySubtitle(_ unit: FolioDomain.Unit, in file: CourseFile) -> String {
+        let scopes = file.exams.filter { $0.scopeUnitIds.contains(unit.id) }.map { String(localized: .unitsScope($0.title)) }
+        return (scopes + [sessionsLine(unit, in: file)]).joined(separator: " · ")
+    }
+
+    func sessionsLine(_ unit: FolioDomain.Unit, in file: CourseFile) -> String {
+        let names = sessions(of: unit, in: file).map { file.day(of: $0, calendar: workspace.calendar) }
+        return names.isEmpty
+            ? String(localized: .unitsNoSessions)
+            : names.count > 3
+                ? String(localized: .unitsSessionsMore(names.prefix(3).joined(separator: ", "), names.count - 3))
+                : names.joined(separator: ", ")
     }
 
     func parentPath(_ unit: FolioDomain.Unit, in file: CourseFile) -> String? {
@@ -195,10 +371,6 @@ final class UnitsModel {
     func examsByDate(_ file: CourseFile) -> [Exam] { file.exams.sorted { ($0.start ?? .distantFuture) < ($1.start ?? .distantFuture) } }
 
     func studyDay(_ date: Date) -> LocalDate { workspace.settings.studyDay(of: date, calendar: workspace.calendar) }
-
-    static func minutes(_ seconds: Int) -> String {
-        String(localized: seconds < 60 ? .unitsSeconds(seconds) : .unitsMinutes(seconds / 60))
-    }
 
     func rename(_ unit: FolioDomain.Unit) {
         let new = name.trimmingCharacters(in: .whitespaces)

@@ -75,9 +75,7 @@ final class SettingsModel {
         if case .string(let s) = value(item) { s } else { "" }
     }
 
-    func detail(of item: SettingItem) -> String? {
-        item.key == SettingItem.reviewIntervals.key ? reviewDays : nil
-    }
+    func detail(of item: SettingItem) -> String? { nil }
 
     // MARK: Class start
 
@@ -221,16 +219,6 @@ final class SettingsModel {
         setCallout(CalloutKind(newCalloutName, .neutral))
         newCallout = ""
     }
-
-    // MARK: Review
-
-    var reviewDays: String {
-        let today = workspace.today
-        let days = settings.review.reviewDays(after: today).map(Self.monthDay).joined(separator: " · ")
-        return String(localized: .settingsIntervalsDays(Self.monthDay(today), days))
-    }
-
-    static func monthDay(_ day: LocalDate) -> String { "\(day.month)/\(day.day)" }
 
     // MARK: Backup
 

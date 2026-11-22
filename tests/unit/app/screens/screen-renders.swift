@@ -139,6 +139,17 @@ struct ScreenRenders {
                 entries.append(("course-units-detail", Navigator.Entry(link: AppLink(.unit, unit.id), course: course.id)))
             }
         }
+        // 진행 중인 과목에는 공부 기록이 없어 공부 페이지가 빈 모습만 그려진다. 문제가 쌓인 과목으로 한 번 더 그린다.
+        if let studied = workspace.currentCourses.max(by: { $0.file.problemSets.count < $1.file.problemSets.count }),
+            !studied.file.problemSets.isEmpty
+        {
+            for page in [AppLink.CoursePage.units, .problems, .cards, .exams] {
+                entries.append(("study-\(page)", Navigator.Entry(link: .course(studied.id, page: page), course: studied.id)))
+            }
+            if let unit = studied.file.units.first(where: \.isDone) ?? studied.file.units.first {
+                entries.append(("study-unit", Navigator.Entry(link: AppLink(.unit, unit.id), course: studied.id)))
+            }
+        }
         if let split = workspace.currentCourses.first(where: { c in c.file.lectureFiles.contains { c.file.isSplit($0.id) } }) {
             entries.append(
                 ("lecture-sessions", Navigator.Entry(link: .course(split.id, page: AppLink.CoursePage.sessions), course: split.id)))
@@ -165,8 +176,6 @@ struct ScreenRenders {
         if let course = workspace.currentCourses.first {
             entries.append(("course", Navigator.Entry(link: .course(course.id), course: course.id)))
             entries.append(("course-notes", Navigator.Entry(link: .course(course.id, page: AppLink.CoursePage.notes), course: course.id)))
-            entries.append(
-                ("course-quiz", Navigator.Entry(link: .course(course.id, page: AppLink.CoursePage.quiz), course: course.id)))
         }
         return entries
     }

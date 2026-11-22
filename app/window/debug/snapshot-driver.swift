@@ -40,7 +40,7 @@ final class SnapshotDriver {
     static let claude = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_CLAUDE"] != nil
     static let standing: Set<ScreenRequest> = {
         guard directory != nil else { return [] }
-        var standing: Set<ScreenRequest> = [.quiz]
+        var standing: Set<ScreenRequest> = []
         if ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_COLUMN"] == "open" { standing.insert(.column) }
         if claude { standing.insert(.claude) }
         if outline == "popover" { standing.insert(.outlinePopover) }
@@ -120,7 +120,8 @@ final class SnapshotDriver {
         guard let directory = Self.directory, var file = workspace.course(course)?.file else { return }
         if let unit = UnitTree.outline(file.units).first?.unit.id {
             await step("course-units-detail", AppLink(.unit, unit), nil, [], 1.5)
-            await step("course-units-review", nil, .review(course: course, unit: unit), [], 1.5)
+            await step("course-units-solve", nil, .solve(SolveRequest(course: course, units: [unit])), [], 1.5)
+            await step("course-units-flip", nil, .flipCards(course: course, unit: unit), [], 1.5)
         }
         await step("course-edit", .course(course), .course(course), [], 1.5)
         if let exam = file.exams.first {

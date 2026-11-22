@@ -39,28 +39,18 @@ struct TodayModelTests {
         #expect(model.noteGroups(many, today: today).more == 0)
     }
 
-    @Test func aReviewCountsTowardTodayOnceAndSkipsDoNot() throws {
+    // 오늘 계획 항목은 공부 기록으로 저절로 체크되고, 남은 공부에서 빠진다.
+    @Test func todaysPlanCountsWhatIsLeft() throws {
         let workspace = try fixtureWorkspace()
         let model = TodayModel(workspace: workspace)
         let unit = try #require(workspace.run(UnitAdd(course: graphTheory, title: "매칭"))?.made)
-        let other = try #require(workspace.run(UnitAdd(course: graphTheory, title: "채색"))?.made)
-        #expect(model.reviewProgress(now: .now).doneToday == 0)
-        workspace.run(ReviewRecord(course: graphTheory, unit: unit, result: .good, start: .now.addingTimeInterval(-60), end: .now))
-        workspace.run(ReviewRecord(course: graphTheory, unit: unit, result: .easy, start: .now.addingTimeInterval(-60), end: .now))
-        _ = workspace.skipReviews([(graphTheory, other)])
-
-        let progress = model.reviewProgress(now: .now)
-        #expect(progress.doneToday == 1)
-        #expect(progress.streak == 1)
-    }
-
-    @Test func skippingSeveralReviewsAsksButOneDoesNot() throws {
-        let workspace = try fixtureWorkspace()
-        let unit = try #require(workspace.run(UnitAdd(course: graphTheory, title: "매칭"))?.made)
-        let other = try #require(workspace.run(UnitAdd(course: graphTheory, title: "채색"))?.made)
-        #expect(workspace.skipReviews([(graphTheory, unit)]) == nil)
-        let pending = try #require(workspace.skipReviews([(graphTheory, unit), (graphTheory, other)]))
-        #expect(pending.question.hasPrefix("단원 ") && pending.question.hasSuffix("의 복습을 건너뜁니다.") && pending.role == nil)
+        let exam = try #require(workspace.run(ExamAdd(course: graphTheory, title: "중간고사"))?.made)
+        workspace.run(ExamPlanAdd(course: graphTheory, exam: exam, title: "매칭 정리", day: workspace.today, unit: unit))
+        let before = model.study(model.summary(now: workspace.now))
+        #expect(before.plan.count == 1)
+        workspace.run(UnitDone(course: graphTheory, unit: unit, done: true))
+        let after = model.study(model.summary(now: workspace.now))
+        #expect(after.left == before.left - 1)
     }
 
     @Test func deadlinesReadLikeTheAssignmentListOnOneLine() throws {
@@ -116,18 +106,6 @@ struct TodayModelTests {
         #expect(rows[2].due == "내일 " + TimePicker.label(2 * 60))
         #expect(rows[3].due == "금요일 " + TimePicker.label(5 * 60))
         #expect(rows.map(\.urgency) == [.urgent, .urgent, .urgent, .soon])
-    }
-
-    @Test func unitGroupsKeepQueueOrderAndEachUnitsPlaceInIt() throws {
-        let workspace = try fixtureWorkspace()
-        let model = TodayModel(workspace: workspace)
-        let queue = workspace.reviewQueue(now: .now)
-        let groups = model.unitGroups(queue)
-        #expect(Set(groups.map(\.courseId)).count == groups.count)
-        #expect(groups.flatMap(\.entries).count == queue.count)
-        for group in groups { for pair in group.entries { #expect(queue[pair.index].item.unitId == pair.entry.item.unitId) } }
-        let firsts = groups.compactMap { $0.entries.first?.index }
-        #expect(firsts == firsts.sorted())
     }
 
     @Test func theWeekStripRunsMondayToSundayAroundTheStudyDay() throws {

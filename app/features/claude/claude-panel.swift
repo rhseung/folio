@@ -65,7 +65,7 @@ struct ClaudePanel: View {
             Button(.claudeProposalApply, role: .destructive) { model.confirm(pending, course: course) }
         }
         .sheet(item: $model.cardDraft) { draft in
-            CardEditorSheet(workspace: model.workspace, course: course, draft: draft, units: course.file.units) {
+            CardEditorSheet(workspace: model.workspace, course: course, draft: draft) {
                 model.status = String(localized: .claudeStatusCardMade)
             }
         }

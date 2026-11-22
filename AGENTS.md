@@ -1,6 +1,6 @@
 # Folio
 
-과목을 중심으로 강의 자료, 노트, 손필기, 복습, 퀴즈, 과제, 성적을 관리하는 Apple 기기용 네이티브 앱입니다. 무엇을 만들지와 남은 일은 GitHub 이슈와 [Project](https://github.com/users/rhseung/projects/10)에 있습니다. 이 파일에는 어떻게 만들지에 대한 원칙과 판단 기준을 적습니다. 작업을 시작하기 전에 해당 이슈와 그 상위 이슈를 먼저 읽습니다.
+과목을 중심으로 강의 자료, 노트, 손필기, 문제 풀이, 카드, 과제, 성적을 관리하는 Apple 기기용 네이티브 앱입니다. 무엇을 만들지와 남은 일은 GitHub 이슈와 [Project](https://github.com/users/rhseung/projects/10)에 있습니다. 이 파일에는 어떻게 만들지에 대한 원칙과 판단 기준을 적습니다. 작업을 시작하기 전에 해당 이슈와 그 상위 이슈를 먼저 읽습니다.
 
 코드나 도구가 원본인 설명은 여기에 되풀이하지 않습니다. 작업 목록과 설명은 `mise tasks`, CLI 명령은 `folio help <명령>`, 검사 규칙은 `sources/tools/lint`의 규칙 이름(`mise run check-code`)이 원본입니다. 영역별 세부는 아래 문서에 있고, 그 영역을 고칠 때만 읽습니다.
 
@@ -85,7 +85,7 @@ folio/
 
 - 파일 밖에서 쓰는 타입 하나에 파일 하나를 두고, 파일 이름은 타입 이름 전체의 케밥 케이스다(`NoteFigureAdd`: `note-figure-add.swift`). Swift가 한 모듈 안에 같은 파일 이름을 두 번 받지 않아서, 폴더가 이름의 앞부분을 말해도 파일 이름을 줄이지 않는다. 그 파일 안에서만 쓰는 `private` 조각과 한 값의 `extension`은 그 값의 파일에 둔다(`one-type-per-file`).
 - 액션은 `sources/actions/<영역>/[<대상>/]<타입 이름 케밥>.swift`다(`action-path`). 영역은 타입 이름의 앞 낱말로 영역 이름표(`sources/tools/lint/area.swift`)에서 정하고, 대상 폴더는 영역에 파일이 20개를 넘을 때만 이름의 낱말로 둔다(`notes/figure/note-figure-add.swift`). 여러 액션이 함께 쓰는 도우미는 그 영역 폴더의 이름 있는 파일(`notes/note-lookup.swift`)에, 모든 액션의 바탕은 `actions/` 바로 아래에, 읽기의 바탕은 `actions/query/`에 둔다. 읽기 선언(`@Query`)도 같은 규칙이다. CLI의 손 명령은 `sources/cli/commands/<영역>/`에 같은 모양으로 두고, 하위 명령마다 `extension <상위 명령> { struct … }` 파일 하나다.
-- 계산 로직(환산 점수, GPA, 복습 간격, 우선순위)은 순수 함수로 만들고 단위 테스트를 붙인다.
+- 계산 로직(환산 점수, GPA, 단원 준비, 우선순위)은 순수 함수로 만들고 단위 테스트를 붙인다.
 - Claude 호출은 `FolioAI`의 프로토콜 뒤에 둔다. 테스트에서는 가짜 프로바이더를 쓴다.
 
 ### 레이어
@@ -172,15 +172,15 @@ FolioGen  ->  FolioActions   (액션 목록과 CLI 명령, 명령 트리를 쓴�
 - **뷰**: 모델을 읽고 배치만 한다. `body`에서 묶기, 거르기, 세기를 하지 않고 `workspace`를 직접 부르지 않는다(`view-body-logic`, `view-workspace-call`). 뷰는 `@State private var model`을 `init(workspace:)`에서 만들고, `@State`는 시트, 마우스 올림, 포커스 같은 화면 상태에만 쓴다.
 - **Workspace**: 폴더 읽기, 파일 감시, 액션 실행, `can`/`refusal`/`confirmation`만 맡는다. 한 기능만 쓰는 함수는 그 기능의 모델에 둔다. 한 기능이 다른 기능의 모델을 쓰지 않는다(`app-direction`).
 - 파생 계산 중 데이터의 규칙(주차 묶기, 빠진 복습 노트 판단)은 `FolioDomain`에 두고 `swift test`로 검사한다. 화면에만 필요한 계산은 모델에 둔다.
-- `course.json` 밖의 파일을 읽는 목록(노트, 퀴즈 카드)은 `workspace.notesRevision`과 `quizRevision`이 바뀔 때 다시 읽는다. 두 값은 `Workspace`가 액션 결과의 `changes`와 폴더 전체 다시 읽기로만 올린다. 화면이 직접 올리지 않으므로 어느 화면이나 Claude 패널, CLI로 써도 열린 목록에 나타난다.
+- `course.json` 밖의 파일을 읽는 목록(노트, 카드, 풀이 기록)은 `workspace.notesRevision`과 `studyRevision`이 바뀔 때 다시 읽는다. 두 값은 `Workspace`가 액션 결과의 `changes`와 폴더 전체 다시 읽기로만 올린다. 화면이 직접 올리지 않으므로 어느 화면이나 Claude 패널, CLI로 써도 열린 목록에 나타난다.
 - 열린 편집기(노트, 텍스트 파일)도 `notesRevision`이 바뀌면 디스크를 마지막으로 읽거나 쓴 내용과 비교한다. 저장하지 않은 변경이 없으면 본문과 메타를 다시 읽고, 있으면 덮어쓰지 않고 충돌로 묻는다. 메타는 처음 연 `NoteFile`이 아니라 지금의 `course.json`에서 읽는다.
 - 다른 화면이나 항목으로 옮길 때는 `@Environment(\.openLink)`에 `AppLink`를 넘긴다. 화면이 목적지를 직접 고르거나 링크 여는 법을 따로 구현하지 않는다. 그래야 모든 이동이 창의 기록 하나에 들어간다. 화면은 창이 지금 가리키는 곳을 `\.place`로 받아 따라가고, 자기 안에서 연 것(파일, 단원, 노트)은 다시 링크로 알린다.
 - **화면 계약**: 화면은 앱 링크 하나를 그린다. 링크에서 화면을 고르는 곳은 `app/window/screen.swift`의 `Screen(entry)` 하나다. 창의 본문, 칸, iPhone이 모두 이것으로 그린다.
     - 화면은 `init(workspace:)`와 링크의 ID만 받는다. 링크가 가리키는 안쪽(과목의 구역, 연 파일·단원·노트, 사람)은 `\.place`로 읽는다. 다른 화면은 `\.openLink`로 열고, 여는 클로저를 인자로 받지 않는다.
     - 화면은 창 틀에 기대지 않는다. 툴바에 항목을 넣지 않고(`screen-toolbar`. 도구는 `PageBar`, 보조 패널은 FAB), 창 크기가 아니라 자기 폭으로 배치를 고르며, 칸 마디의 아이콘을 위해 `.crumb`로 자기 단계를 알리기만 한다.
     - 화면은 받은 폭 안에 그린다. 옆으로 넘치거나 행을 자르지 않고 접는다. 나란한 블록은 `Fold(wideFrom:)`, 행은 `FormRow`와 `FoldingRow`로 접는다.
-    - 목록 열과 본문이 나란한 화면은 `ColumnSplit`으로 둔다. 본문이 `ColumnSplit.pageRoom`보다 좁아지거나 사용자가 손으로 접으면 열은 열 버튼 뒤로 접히고, 버튼을 누르면 같은 열이 본문 위에 유리 판으로 뜬다. 칸이 하나든 여럿이든 같다. 항목이 늘어나는 목록(사람, 퀴즈 범위)은 자리가 없고 본문에 보일 것이 없으면 목록이 본문이 된다(`.list(showingPage:)`). 링크를 가진 고르기는 `\.openLink`로 가서 창의 기록에 남고, 주소가 그대로인 고르기는 `ColumnPick`으로 떠 있는 열을 닫는다. 탭 없는 `folio://settings`는 `Workspace.entry(for:)`가 마지막으로 고른 탭으로 채우므로 기록의 모든 칸이 탭을 가진다.
-    - 화면 안의 상태(목록 열 펼치기, 빠른 추가에 넣은 줄, 쪽 열의 범위, 퀴즈 시작, 펼친 학기)를 바깥에서 정할 때는 `ScreenRequest`를 `\.screenRequests`로 내려 준다. 화면은 아는 요청에만 답하고 누가 요청했는지 보지 않는다. 화면 파일에 `SnapshotDriver`를 읽는 `#if DEBUG` 분기를 두지 않는다.
+    - 목록 열과 본문이 나란한 화면은 `ColumnSplit`으로 둔다. 본문이 `ColumnSplit.pageRoom`보다 좁아지거나 사용자가 손으로 접으면 열은 열 버튼 뒤로 접히고, 버튼을 누르면 같은 열이 본문 위에 유리 판으로 뜬다. 칸이 하나든 여럿이든 같다. 항목이 늘어나는 목록(사람)은 자리가 없고 본문에 보일 것이 없으면 목록이 본문이 된다(`.list(showingPage:)`). 링크를 가진 고르기는 `\.openLink`로 가서 창의 기록에 남고, 주소가 그대로인 고르기는 `ColumnPick`으로 떠 있는 열을 닫는다. 탭 없는 `folio://settings`는 `Workspace.entry(for:)`가 마지막으로 고른 탭으로 채우므로 기록의 모든 칸이 탭을 가진다.
+    - 화면 안의 상태(목록 열 펼치기, 빠른 추가에 넣은 줄, 쪽 열의 범위, 펼친 학기)를 바깥에서 정할 때는 `ScreenRequest`를 `\.screenRequests`로 내려 준다. 화면은 아는 요청에만 답하고 누가 요청했는지 보지 않는다. 화면 파일에 `SnapshotDriver`를 읽는 `#if DEBUG` 분기를 두지 않는다.
     - `ScreenFitTests`(`mise run test-app`)가 모든 화면을 세 폭으로 그려 넘치는지 본다. `ColumnSplit`의 본문은 평소 0까지 줄어들어 넘친 것을 자르므로, 검사는 `\.revealsOverflow`로 이를 풀어 본다. 바뀐 화면은 `FOLIO_RENDER_SIZES=1440x900,720,390 mise run render`로 그려 눈으로 본다.
 - 모델 테스트는 `tests/unit/app/models/<화면>-model-tests.swift`(과목 화면은 `models/course/`)에 Swift Testing으로 쓰고, `fixtureWorkspace()`로 가짜 GIST 폴더를 연다.
 - `mise run check-code`(`mise run test`에 포함)가 이 절과 아래 규칙 중 구문 트리로 보이는 것을 잡는다. 규칙 이름은 `sources/tools/lint`에 있고 규칙마다 단위 테스트가 있다(`tests/unit/tools/lint`). 규칙이 보는 경로는 `repo-path.swift`의 표 하나에 있다. 검사가 생기기 전부터 있던 곳은 `.folio-lint-baseline.txt`에 있어 통과하고 새로 생긴 곳은 실패한다. 고친 곳이 목록에 남아 있어도 실패하므로 `mise run check-code -- --update`로 목록을 줄인다. 새 위반을 목록에 넣어 통과시키지 않는다. 처음부터 위반이 없던 규칙(디자인 값, `local-folders`, `one-type-per-file`, `doc-comment`)은 기준선이 없어 `--update`로도 통과하지 않는다.
@@ -211,7 +211,7 @@ PageHeader(title: String(localized: .sessionsAdd))   // String을 받는 API
 ### 단일 출처(SSOT)
 
 - 폴더와 파일 이름 규칙은 `FolioDomain`의 `sources/domain/folder/`(`StandardLayout`, `Term`, `SemesterFolder`, `CourseFolder`, `AssignmentKind`)에서만 정의한다. 다른 곳에서 `"Lectures"`, `".folio"` 같은 문자열을 다시 쓰지 않는다(`layout-name`).
-- 사용자가 바꿀 수 있는 값(하루 경계, 복습 간격, 알림 시점, 학점 규칙)은 코드 상수가 아니라 `settings.json`과 `transcript.json`에서 읽는다. 기본값은 Domain의 한 곳에서만 정의한다.
+- 사용자가 바꿀 수 있는 값(하루 경계, 단원 준비 기준, 알림 시점, 학점 규칙)은 코드 상수가 아니라 `settings.json`과 `transcript.json`에서 읽는다. 기본값은 Domain의 한 곳에서만 정의한다.
 - 빌드와 테스트 명령은 mise 작업(`mise.toml`과 `.mise/tasks`)으로만 정의한다. 규칙이 든 일(버전, 릴리스 본문)은 셸이 아니라 Swift 도구 `folio-dev`에 둔다. 문서는 `mise run <작업>`을 가리킨다.
 - Xcode 프로젝트는 `project.yml`에서 생성한다. `Folio.xcodeproj`는 커밋하지 않고 직접 고치지 않는다.
 - 버전은 `v<X.Y.Z>` 태그에서만 정한다. patch는 패치 노트가 있는 PR마다 `release.yml`이 그 머지 커밋에서 하나씩 올리고, minor는 기능 묶음(`bundle/<이름>` 라벨)의 마지막 이슈를 닫는 PR에서 올린다. 사용자가 묶음 구성을 승인하면 그 minor도 승인한 것이다. 커밋한 `FolioVersion.marketing`은 자리표시값이고 릴리스 빌드만 태그의 버전을 써넣는다(`docs/release.md`).
@@ -253,7 +253,7 @@ Me/GIST/
       Ink/                     # PencilKit 필기 (.drawing)
       Recordings/              # 강의 녹음(.m4a)과 받아쓰기(.transcript.json)
       Archive/                 # 이전 필기
-      .folio/                  # course.json, quizzes/, chats/, widgets/, moves.jsonl, logs/<기기 ID>.jsonl
+      .folio/                  # course.json, cards/, drafts/, chats/, widgets/, moves.jsonl, logs/<기기 ID>.jsonl
   _Credited/
     영재고 AP/                 # 인정학기의 출처. 그 학기의 과목 폴더가 여기 들어간다
 ```

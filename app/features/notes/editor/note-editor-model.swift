@@ -122,7 +122,7 @@ final class NoteEditorModel {
             .sorted { $0.date > $1.date }
     }
     var linkExams: [Exam] { course.file.exams.sorted { ($0.start ?? .distantFuture) < ($1.start ?? .distantFuture) } }
-    var outline: [(unit: FolioDomain.Unit, depth: Int)] { course.outline }
+    var outline: [(unit: FolioDomain.Unit, depth: Int)] { UnitTree.outline(course.file.units) }
     var linkedSessions: [Session] { course.file.sessions(pointingAt: meta.id) }
 
     func sessionName(_ s: Session) -> String { course.file.title(of: s, calendar: workspace.calendar) }
