@@ -33,30 +33,32 @@ public enum SampleSheet {
             context.fill(box)
         }
         begin()
-        draw("2024 Midterm", size: 20, bold: true, at: CGPoint(x: 72, y: 730), in: context)
+        draw([.bold("2024 Midterm")], size: 17, at: CGPoint(x: 72, y: 730), in: context)
         draw(
-            "1. (10 pts) Is the graph K3,3 below planar? Answer true or false.", size: 12, bold: false, at: CGPoint(x: 72, y: 690),
-            in: context)
-        let top = [0, 1, 2].map { CGPoint(x: planar.minX + 50 + CGFloat($0) * 80, y: planar.maxY - 30) }
-        let bottom = [0, 1, 2].map { CGPoint(x: planar.minX + 50 + CGFloat($0) * 80, y: planar.minY + 30) }
+            [.roman("1. (10 pts) Is the graph "), .math("K"), .sub("3,3"), .roman(" below planar? Answer true or false.")], size: 11,
+            at: CGPoint(x: 72, y: 690), in: context)
+        let top = [0, 1, 2].map { CGPoint(x: planar.minX + 50 + CGFloat($0) * 80, y: planar.maxY - 40) }
+        let bottom = [0, 1, 2].map { CGPoint(x: planar.minX + 50 + CGFloat($0) * 80, y: planar.minY + 40) }
         graph(
             top + bottom, edges: top.indices.flatMap { i in bottom.indices.map { (i, 3 + $0) } },
-            labels: ["u1", "u2", "u3", "v1", "v2", "v3"], in: context)
+            labels: ["u", "u", "u", "v", "v", "v"], sides: [.above, .above, .above, .below, .below, .below], in: context)
         context.endPDFPage()
 
         begin()
-        draw("2. Let G be the bipartite graph below.", size: 12, bold: false, at: CGPoint(x: 72, y: 730), in: context)
-        let left = [0, 1, 2].map { CGPoint(x: bipartite.minX + 50, y: bipartite.maxY - 30 - CGFloat($0) * 70) }
-        let right = [0, 1, 2].map { CGPoint(x: bipartite.maxX - 50, y: bipartite.maxY - 30 - CGFloat($0) * 70) }
-        graph(left + right, edges: [(0, 3), (0, 4), (1, 3), (2, 4), (2, 5)], labels: ["a1", "a2", "a3", "b1", "b2", "b3"], in: context)
-        draw("(a) (5 pts) State Hall's theorem.", size: 12, bold: false, at: CGPoint(x: 72, y: 460), in: context)
+        draw([.roman("2. Let "), .math("G"), .roman(" be the bipartite graph below.")], size: 11, at: CGPoint(x: 72, y: 730), in: context)
+        let left = [0, 1, 2].map { CGPoint(x: bipartite.minX + 70, y: bipartite.maxY - 40 - CGFloat($0) * 60) }
+        let right = [0, 1, 2].map { CGPoint(x: bipartite.maxX - 70, y: bipartite.maxY - 40 - CGFloat($0) * 60) }
+        graph(
+            left + right, edges: [(0, 3), (0, 4), (1, 3), (2, 4), (2, 5)], labels: ["a", "a", "a", "b", "b", "b"],
+            sides: [.left, .left, .left, .right, .right, .right], in: context)
+        draw([.roman("(a) (5 pts) State Hall\u{2019}s theorem.")], size: 11, at: CGPoint(x: 72, y: 460), in: context)
         draw(
-            "(b) (5 pts) Use it to decide whether G has a perfect matching.", size: 12, bold: false, at: CGPoint(x: 72, y: 430), in: context
-        )
+            [.roman("(b) (5 pts) Use it to decide whether "), .math("G"), .roman(" has a perfect matching.")], size: 11,
+            at: CGPoint(x: 72, y: 436), in: context)
         context.endPDFPage()
 
         begin()
-        draw("3. Find the chromatic number of the Petersen graph.", size: 12, bold: false, at: CGPoint(x: 72, y: 730), in: context)
+        draw([.roman("3. Find the chromatic number of the Petersen graph.")], size: 11, at: CGPoint(x: 72, y: 730), in: context)
         context.endPDFPage()
         context.closePDF()
         return data as Data
@@ -66,31 +68,102 @@ public enum SampleSheet {
         try data().write(to: url)
     }
 
-    private static func graph(_ points: [CGPoint], edges: [(Int, Int)], labels: [String], in context: CGContext) {
+    // 글자 하나의 모양이다. 문제지는 LaTeX로 짠 것처럼 Computer Modern(KaTeX 글꼴)으로 쓰고, 수식은 이탤릭, 아래 첨자는 작은
+    // 로만체다. 노트 그림의 스타일(`FigureStyle`)과 같다.
+    enum Run {
+        case roman(String), bold(String), math(String), sub(String)
+
+        var text: String {
+            switch self {
+            case .roman(let t), .bold(let t), .math(let t), .sub(let t): t
+            }
+        }
+
+        var face: String {
+            switch self {
+            case .roman, .sub: "KaTeX_Main-Regular"
+            case .bold: "KaTeX_Main-Bold"
+            case .math: "KaTeX_Main-Italic"
+            }
+        }
+
+        // 아래 첨자는 본문의 0.7배 크기로 기준선 아래 0.15배에 둔다.
+        var scale: CGFloat { if case .sub = self { 0.7 } else { 1 } }
+        var rise: CGFloat { if case .sub = self { -0.15 } else { 0 } }
+    }
+
+    enum Side { case above, below, left, right }
+
+    // 꼭짓점은 작은 점이고 이름은 선과 겹치지 않게 그래프 바깥쪽에 둔다. 선 굵기는 노트 그림의 선(`FigureStyle.lineWidth`)이다.
+    private static func graph(_ points: [CGPoint], edges: [(Int, Int)], labels: [String], sides: [Side], in context: CGContext) {
         context.setStrokeColor(CGColor(gray: 0, alpha: 1))
-        context.setLineWidth(1)
+        context.setLineWidth(FigureStyle.lineWidth)
+        context.setLineCap(.round)
         for (a, b) in edges {
             context.move(to: points[a])
             context.addLine(to: points[b])
         }
         context.strokePath()
         context.setFillColor(CGColor(gray: 0, alpha: 1))
-        for (point, label) in zip(points, labels) {
-            context.fillEllipse(in: CGRect(x: point.x - 4, y: point.y - 4, width: 8, height: 8))
-            draw(label, size: 11, bold: false, at: CGPoint(x: point.x + 8, y: point.y + 6), in: context)
+        let size = 11 * FigureStyle.Font.mathScale
+        var counts: [String: Int] = [:]
+        for (i, point) in points.enumerated() {
+            context.fillEllipse(in: CGRect(x: point.x - 2.5, y: point.y - 2.5, width: 5, height: 5))
+            counts[labels[i], default: 0] += 1
+            let runs: [Run] = [.math(labels[i]), .sub(String(counts[labels[i]] ?? 1))]
+            let width = self.width(runs, size: size)
+            let at: CGPoint =
+                switch sides[i] {
+                case .above: CGPoint(x: point.x - width / 2, y: point.y + 8)
+                case .below: CGPoint(x: point.x - width / 2, y: point.y - 8 - size * 0.7)
+                case .left: CGPoint(x: point.x - 8 - width, y: point.y - size * 0.3)
+                case .right: CGPoint(x: point.x + 8, y: point.y - size * 0.3)
+                }
+            draw(runs, size: size, at: at, in: context)
         }
     }
 
-    private static func draw(_ text: String, size: CGFloat, bold: Bool, at point: CGPoint, in context: CGContext) {
-        let font =
-            CTFontCreateUIFontForLanguage(bold ? .emphasizedSystem : .system, size, nil)
-            ?? CTFontCreateWithName("Helvetica" as CFString, size, nil)
-        let attributes: [NSAttributedString.Key: Any] = [
-            NSAttributedString.Key(kCTFontAttributeName as String): font,
-            NSAttributedString.Key(kCTForegroundColorAttributeName as String): CGColor(gray: 0, alpha: 1),
-        ]
-        let line = CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: attributes))
-        context.textPosition = point
-        CTLineDraw(line, context)
+    private static func line(_ runs: [Run], size: CGFloat) -> [(CTLine, CGFloat)] {
+        runs.map { run in
+            let font = Fonts.font(run.face, size: size * run.scale)
+            let attributes: [NSAttributedString.Key: Any] = [
+                NSAttributedString.Key(kCTFontAttributeName as String): font,
+                NSAttributedString.Key(kCTForegroundColorAttributeName as String): CGColor(gray: 0, alpha: 1),
+            ]
+            return (CTLineCreateWithAttributedString(NSAttributedString(string: run.text, attributes: attributes)), run.rise * size)
+        }
+    }
+
+    private static func width(_ runs: [Run], size: CGFloat) -> CGFloat {
+        line(runs, size: size).reduce(0) { $0 + CGFloat(CTLineGetTypographicBounds($1.0, nil, nil, nil)) }
+    }
+
+    private static func draw(_ runs: [Run], size: CGFloat, at point: CGPoint, in context: CGContext) {
+        var x = point.x
+        for (line, rise) in line(runs, size: size) {
+            context.textPosition = CGPoint(x: x, y: point.y + rise)
+            CTLineDraw(line, context)
+            x += CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
+        }
+    }
+
+    // KaTeX 글꼴은 앱 묶음에 있다. 픽스처를 쓰는 명령줄 도구와 테스트에는 앱 묶음이 없어서 저장소의 같은 파일을 읽는다. 둘 다
+    // 없으면 Times로 그린다.
+    private enum Fonts {
+        static let registered: Bool = {
+            let repo = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            let urls = ["regular", "italic", "bold"].compactMap { name -> URL? in
+                if let url = Bundle.main.url(forResource: "katex-main-\(name)", withExtension: "ttf") { return url }
+                let url = repo.appending(path: "app/resources/fonts/katex-main-\(name).ttf")
+                return FileManager.default.fileExists(atPath: url.path) ? url : nil
+            }
+            for url in urls { CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil) }
+            return urls.count == 3
+        }()
+
+        static func font(_ name: String, size: CGFloat) -> CTFont {
+            let fallback = name.hasSuffix("Italic") ? "Times-Italic" : name.hasSuffix("Bold") ? "Times-Bold" : "Times-Roman"
+            return CTFontCreateWithName((registered ? name : fallback) as CFString, size, nil)
+        }
     }
 }

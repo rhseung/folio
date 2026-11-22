@@ -146,19 +146,20 @@ private struct Builder {
         }
         try run(ExamPlanMake(course: course, exam: exam), at: at(11, 4, 8))
 
-        // 2024 중간고사는 Claude가 뽑아 둔 초안으로 남아 문제 페이지에 알림 카드가 뜬다.
+        // 2024 중간고사는 Claude가 뽑아 둔 초안으로 남아 문제 페이지에 알림 카드가 뜬다. 문제지가 영어라 뽑은 글도 영어다.
         if let sheet = try ctx.file(course).materials.first(where: { $0.path == Self.midtermSheet }) {
             var drafted = [
-                problem("1", "아래 그래프 $K_{3,3}$는 평면 그래프인가?", .trueFalse, "거짓", coloring, page: 1),
-                problem("2a", "홀의 정리를 쓰시오.", .written, nil, matching, page: 2),
-                problem("2b", "홀의 정리로 $G$에 완전 매칭이 있는지 판단하시오.", .written, nil, matching, page: 2),
-                problem("3", "페테르센 그래프의 채색수를 구하시오.", .short, "3", coloring, page: 3),
+                problem("1", "Is the graph $K_{3,3}$ below planar? Answer true or false.", .trueFalse, "거짓", coloring, page: 1),
+                problem("2a", "State Hall's theorem.", .written, nil, matching, page: 2),
+                problem("2b", "Use it to decide whether $G$ has a perfect matching.", .written, nil, matching, page: 2),
+                problem("3", "Find the chromatic number of the Petersen graph.", .short, "3", coloring, page: 3),
             ]
             drafted[0].figures = SampleSheet.planarFigure.map { [$0] } ?? []
             drafted[1].parent = "2"
             drafted[2].parent = "2"
             let stem = ProblemGroup(
-                number: "2", page: 2, text: "$G$는 아래 이분 그래프이다.", figures: SampleSheet.bipartiteFigure.map { [$0] } ?? [])
+                number: "2", page: 2, text: "Let $G$ be the bipartite graph below.", figures: SampleSheet.bipartiteFigure.map { [$0] } ?? []
+            )
             try run(ProblemSetPropose(course: course, material: sheet.id, problems: drafted, groups: [stem]), at: at(11, 4, 9))
         }
     }
