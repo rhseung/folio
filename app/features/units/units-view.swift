@@ -73,7 +73,7 @@ struct UnitsView: View {
 
     func examCard(_ card: UnitsModel.ExamCard) -> some View {
         Card {
-            CardRow(last: card.few.isEmpty) {
+            CardRow(last: card.few == nil) {
                 ExamDateTile(date: card.exam.start, tone: model.examTone(card.days))
                 VStack(alignment: .leading, spacing: Theme.Space.tight) {
                     Text(card.exam.title).font(Theme.Typeface.figureMedium).lineLimit(1)
@@ -83,16 +83,16 @@ struct UnitsView: View {
                 Spacer(minLength: Theme.Space.m)
                 DdayBadge(days: card.days, urgency: model.workspace.settings.urgency)
             }
-            ForEach(Array(card.few.enumerated()), id: \.element.unit.id) { i, few in
-                CardRow(last: i == card.few.count - 1) {
+            if let few = card.few {
+                CardRow(last: true) {
                     Image(systemName: "exclamationmark.triangle").foregroundStyle(Theme.Palette.textTertiary).accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                        Text(.unitsFewProblems(few.unit.title, few.problems)).lineLimit(1)
-                        Text(.unitsFewProblemsDetail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
+                        Text(few.title).lineLimit(1)
+                        Text(few.detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(2)
                     }
                     Spacer(minLength: Theme.Space.m)
                     Button(.unitsMakeProblems, systemImage: "sparkle") {
-                        sheets.present(.makeProblems(course: course.id, unit: few.unit.id, count: few.missing))
+                        sheets.present(.makeProblems(course: course.id, units: few.units, count: few.missing))
                     }
                     .buttonStyle(.secondary)
                 }

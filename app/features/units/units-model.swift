@@ -23,12 +23,15 @@ final class UnitsModel {
         var days: Int
         var readiness: ExamReadiness
         var line: String
-        var few: [FewProblems]
+        var few: FewProblems?
     }
 
+    // 범위의 문제 부족 단원을 한 줄로 모은다. 단원마다 줄을 두면 범위가 넓은 시험에서 같은 경고가 단원 수만큼 쌓인다.
+    // 단원마다의 상태는 아래 범위 목록의 표시가 보인다.
     struct FewProblems {
-        var unit: FolioDomain.Unit
-        var problems: Int
+        var units: [UUID]
+        var title: String
+        var detail: String
         var missing: Int
     }
 
@@ -92,10 +95,18 @@ final class UnitsModel {
             String(localized: .unitsExamReady(r.ready, r.units)), String(localized: .unitsExamDone(r.done, r.units)),
             String(localized: .unitsExamSolved(r.problemsTotal, r.problemsSolved)),
         ].joined(separator: " · ")
-        let few = r.fewProblems.compactMap { id in
-            study.file.units.first { $0.id == id }.map {
-                FewProblems(unit: $0, problems: study.problems(of: id).count, missing: study.missingProblems(of: id))
-            }
+        let units = r.fewProblems.compactMap { id in study.file.units.first { $0.id == id } }
+        var few: FewProblems?
+        if let first = units.first {
+            let count = study.problems(of: first.id).count
+            let title =
+                units.count > 1
+                ? String(localized: .unitsFewProblemsMany(units.count))
+                : String(localized: count == 0 ? .unitsFewProblemsNone(first.title) : .unitsFewProblems(first.title, count))
+            let detail =
+                units.count > 1 ? units.map(\.title).joined(separator: ", ") : String(localized: .unitsFewProblemsDetail)
+            few = FewProblems(
+                units: units.map(\.id), title: title, detail: detail, missing: units.map { study.missingProblems(of: $0.id) }.reduce(0, +))
         }
         return ExamCard(exam: exam, days: max(workspace.days(to: start), 0), readiness: r, line: line, few: few)
     }
@@ -164,9 +175,11 @@ final class UnitsModel {
     private func planParts(_ item: ExamPlanItem, study: CourseStudy) -> [String] {
         switch item.target.kind {
         case .unit:
-            guard let id = item.target.id, let unit = study.file.units.first(where: { $0.id == id }) else { return [] }
-            let p = study.progress(of: unit, notes: noteCounts[id] ?? 0)
-            var parts = [String(localized: .unitsLineProblems(p.problemsSolved, p.problemsTotal))]
+            let units = item.target.units.compactMap { id in study.file.units.first { $0.id == id } }
+            guard !units.isEmpty else { return [] }
+            let progress = units.map { study.progress(of: $0, notes: noteCounts[$0.id] ?? 0) }
+            let (solved, total) = (progress.map(\.problemsSolved).reduce(0, +), progress.map(\.problemsTotal).reduce(0, +))
+            var parts = [String(localized: .unitsLineProblems(solved, total))]
             if let pages = item.pages, !pages.isEmpty { parts.append(String(localized: .unitsPlanConceptPages(pages.count))) }
             return parts
         case .problems:
