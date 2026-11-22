@@ -12,9 +12,33 @@ public enum ProblemExtraction {
             && m.kind != .submission
     }
 
+    // 문제 페이지에서 골라 뽑을 자료다. 낸 답안은 빼고, 문제다운 자료(족보, 연습 문제, 과제 문제지)를 먼저 보인다.
+    // 이미 묶음이 된 자료는 맨 뒤다.
+    public static func sheets(in file: CourseFile, kinds: [AssignmentKind] = AssignmentKind.builtIn) -> [Material] {
+        let sheets = file.materials.filter { accepts($0) && !submitted($0, in: file, kinds: kinds) }
+        return sheets.map { m in (m, extracted(m, in: file), rank(m, in: file)) }
+            .sorted { a, b in
+                if a.1 != b.1 { return !a.1 }
+                if a.2 != b.2 { return a.2 < b.2 }
+                return a.0.path.localizedStandardCompare(b.0.path) == .orderedAscending
+            }
+            .map(\.0)
+    }
+
+    // 낸 답안이다. 과제에 제출본으로 이었거나, 종류가 없으면 과제 폴더에서 "HW1-이름.pdf"처럼 제출본 이름을 가진 파일이다.
+    // 과제의 문제지로 이은 파일은 이름이 그래도 문제지다.
+    public static func submitted(_ m: Material, in file: CourseFile, kinds: [AssignmentKind] = AssignmentKind.builtIn) -> Bool {
+        if m.kind == .submission || file.assignments.contains(where: { $0.submissionMaterialIds.contains(m.id) }) { return true }
+        guard m.kind == nil, folder(of: m) == .assignments, !file.assignments.contains(where: { $0.problemMaterialId == m.id }) else {
+            return false
+        }
+        return AssignmentFiles.guessKind(fileName: (m.path as NSString).lastPathComponent, kinds: kinds) == .submission
+    }
+
     // 새로 등록된 자료 중 저절로 뽑는 것이다. `Inherited`는 선배의 노트도 담으므로 시험지로 보이는 파일만 뽑는다.
-    public static func automatic(_ m: Material, in file: CourseFile) -> Bool {
-        guard accepts(m), m.isPDF, !excludedKinds.contains(m.kind), !extracted(m, in: file) else { return false }
+    public static func automatic(_ m: Material, in file: CourseFile, kinds: [AssignmentKind] = AssignmentKind.builtIn) -> Bool {
+        guard accepts(m), m.isPDF, !excludedKinds.contains(m.kind), !submitted(m, in: file, kinds: kinds), !extracted(m, in: file)
+        else { return false }
         switch folder(of: m) {
         case .inherited: return m.kind == .pastExam || (m.kind == nil && looksLikeExam(m.path))
         case .textbooks, .exercises, .assignments: return true
@@ -83,6 +107,21 @@ public enum ProblemExtraction {
 
     private static func holders(of page: ProblemPage, in outline: [(unit: Unit, depth: Int)]) -> [(unit: Unit, depth: Int)] {
         outline.filter { row in row.unit.lecturePages.contains { $0.materialId == page.materialId && $0.pages.contains(page.page) } }
+    }
+
+    // 골라 뽑기 목록의 순서다. 족보, 연습 문제, 과제 문제지, 교재, 나머지 순이다. 시험 폴더에는 안내와 좌석표도 있으므로
+    // `Inherited`처럼 시험지로 보이는 이름만 족보로 친다. 과제 폴더의 `.tex`는 과제 문제지로 치지 않는다. 받은 문제지는
+    // PDF이고, `.tex`는 대개 직접 쓰는 답안이나 양식이기 때문이다.
+    private static func rank(_ m: Material, in file: CourseFile) -> Int {
+        switch folder(of: m) {
+        case _ where m.kind == .pastExam: 0
+        case .exams, .inherited: m.kind == nil && looksLikeExam(m.path) ? 0 : 4
+        case .exercises: 1
+        case .assignments:
+            m.kind == .problem || file.assignments.contains(where: { $0.problemMaterialId == m.id }) || (m.kind == nil && m.isPDF) ? 2 : 4
+        case .textbooks: 3
+        default: m.kind == .problem ? 2 : 4
+        }
     }
 
     private static let excludedKinds: Set<MaterialKind?> = [.solution, .submission, .slides, .syllabus]

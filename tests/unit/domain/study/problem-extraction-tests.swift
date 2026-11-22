@@ -39,6 +39,32 @@ struct ProblemExtractionTests {
         #expect(!ProblemExtraction.automatic(exam, in: done))
     }
 
+    @Test func thePickerLeavesOutAnswersAndListsProblemSourcesFirst() {
+        let book = material("Textbooks/West.pdf", kind: .book)
+        let slides = material("Lectures/05_Matchings.pdf")
+        let guideline = material("Exams/Midterm/Guideline.pdf")
+        let homework = material("Assignments/HW01/hw1.pdf")
+        let template = material("Assignments/HW01/templateHW.tex")
+        let exercise = material("Exercises/Exercise 1.pdf")
+        let exam = material("Inherited/소순범/2024 Midterm.pdf")
+        let scan = material("Inherited/scan01.pdf", kind: .pastExam)
+        let named = material("Assignments/HW01/HW1-5070.pdf")
+        let linked = material("Assignments/HW01/final answer.pdf")
+        let tagged = material("Assignments/HW01/report.pdf", kind: .submission)
+        let solution = material("Exercises/Exercise 1 Solution.pdf")
+        var f = file([book, slides, guideline, homework, template, exercise, exam, scan, named, linked, tagged, solution])
+        var hw = Assignment(device: device, at: now, title: "HW01")
+        hw.submissionMaterialIds = [linked.id]
+        f.assignments = [hw]
+        // 낸 답안(이름, 과제의 제출본, 종류)과 해설은 빠진다.
+        #expect(
+            ProblemExtraction.sheets(in: f).map(\.path) == [exam, scan, exercise, homework, book, template, guideline, slides].map(\.path))
+        // 과제의 문제지로 이은 파일은 제출본 같은 이름이어도 문제지다.
+        hw.problemMaterialId = named.id
+        f.assignments = [hw]
+        #expect(ProblemExtraction.sheets(in: f).map(\.path).contains(named.path))
+    }
+
     @Test func theSourceAndTitleComeFromTheFolder() {
         #expect(ProblemExtraction.source(of: material("Inherited/a.pdf")) == .pastExam)
         #expect(ProblemExtraction.source(of: material("Exams/중간고사/시험지.pdf")) == .pastExam)

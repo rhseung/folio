@@ -92,8 +92,12 @@ struct ProblemExtractionModelTests {
         workspace.extractor.standIn = { _ in ClaudeClient(provider: fake) }
         let model = ProblemsModel(workspace: workspace, courseId: graphTheory)
         let sheet = try material("Inherited/소순범/2024 Midterm.pdf"), solution = try material("Inherited/소순범/2024 Midterm Solution.pdf")
+        let submission = try material("Assignments/HW03/HW3-5070류현승.pdf"), homework = try material("Assignments/HW03/26h3.pdf")
+        let exercise = try material("Exercises/Exercise 1.pdf")
         let ids = model.sheetOptions.map(\.id)
-        #expect(ids.contains(sheet.id) && !ids.contains(solution.id))
+        #expect(!ids.contains(solution.id) && !ids.contains(submission.id))
+        // 족보, 연습 문제, 과제 문제지가 맨 앞이다.
+        #expect(ids.prefix(3) == [sheet.id, exercise.id, homework.id])
 
         model.extract(sheet.id)
         await workspace.extractor.finish()

@@ -22,7 +22,9 @@ extension Workspace {
         guard settings.study.autoExtract, let course = course(courseId), let client = extractionClient(for: course) else { return }
         let drafts = Set(((try? course.store.drafts()) ?? []).compactMap(\.model.materialId))
         for id in added where extractor.state(of: id) == nil && !drafts.contains(id) {
-            guard let m = course.file.materials.first(where: { $0.id == id }), ProblemExtraction.automatic(m, in: course.file) else {
+            guard let m = course.file.materials.first(where: { $0.id == id }),
+                ProblemExtraction.automatic(m, in: course.file, kinds: settings.assignmentKindTable)
+            else {
                 continue
             }
             extractor.enqueue(id) { [weak self] in try await self?.extract(id, in: courseId, client: client, automatic: true) }
