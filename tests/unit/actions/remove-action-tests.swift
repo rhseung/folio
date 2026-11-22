@@ -82,8 +82,8 @@ struct RemoveActionTests {
             f.assignments.append(a)
             var e = exam
             e.plan = [
-                ExamPlanItem(day: LocalDate(year: 2026, month: 12, day: 1)!, title: "트리 복습", target: .init(kind: .unit, id: unit.id)),
-                ExamPlanItem(day: LocalDate(year: 2026, month: 12, day: 2)!, title: "트리 카드", target: .init(kind: .quiz, id: unit.id)),
+                ExamPlanItem(day: ymd("2026-12-01"), target: .unit(unit.id), title: "트리 복습"),
+                ExamPlanItem(day: ymd("2026-12-02"), target: .init(kind: .custom), title: "트리 카드"),
             ]
             f.exams.append(e)
         }
@@ -99,8 +99,7 @@ struct RemoveActionTests {
         #expect(f.problemSets.first { $0.title == "트리 연습" }?.problems.count == 2)
         #expect(f.assignments.allSatisfy { !$0.unitIds.contains(unit.id) })
         let plan = try #require(f.exams.first { $0.id == exam.id }?.plan)
-        #expect(plan.map(\.title) == ["트리 복습", "트리 카드"])
-        #expect(plan.allSatisfy { $0.target == nil })
+        #expect(plan.map(\.title) == ["트리 카드"])
     }
 
     @Test func aSessionNoteKeepsItsUnitsUntilTheUnitGoes() throws {
@@ -152,11 +151,11 @@ struct RemoveActionTests {
         try expectNoPointer(at: material)
     }
 
-    @Test func removingAProblemSetClearsPlanItemsOnIt() throws {
+    @Test func removingAProblemSetRemovesPlanItemsOnIt() throws {
         let set = problems("연습 2", units: [])
         var exam = Exam(device: device, at: now, title: "기말고사")
         exam.plan = [
-            ExamPlanItem(day: LocalDate(year: 2026, month: 12, day: 1)!, title: "연습 2 풀기", target: .init(kind: .problemSet, id: set.id))
+            ExamPlanItem(day: ymd("2026-12-01"), target: .init(kind: .problems, id: set.id), title: "연습 2 풀기")
         ]
         try edit { f in
             f.problemSets.append(set)
@@ -167,7 +166,7 @@ struct RemoveActionTests {
 
         let f = try file()
         #expect(!f.problemSets.contains { $0.id == set.id })
-        #expect(f.exams.first { $0.id == exam.id }?.plan.first?.target == nil)
+        #expect(f.exams.first { $0.id == exam.id }?.plan.isEmpty == true)
     }
 
     @Test func relinkingOntoADuplicateMovesProblemSetPointers() {
@@ -187,4 +186,9 @@ struct RemoveActionTests {
         #expect(f.problemSets[0].solutionMaterialId == original.id)
         #expect(f.violations.isEmpty)
     }
+}
+
+private func ymd(_ text: String) -> LocalDate {
+    guard let day = LocalDate(text) else { preconditionFailure(text) }
+    return day
 }

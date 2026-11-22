@@ -26,6 +26,15 @@ extension BackupCommand {
     ])
 }
 
+extension CardCommand {
+    static let subcommandTypes: [any ParsableCommand.Type] = alphabetical([
+        GeneratedCommands.CardFlip.self,
+        GeneratedCommands.CardList.self,
+        GeneratedCommands.CardRemove.self,
+        GeneratedCommands.CardSave.self,
+    ])
+}
+
 extension CatalogCommand {
     static let subcommandTypes: [any ParsableCommand.Type] = alphabetical([
         GeneratedCommands.CatalogSet.self,
@@ -79,6 +88,8 @@ extension ExamCommand {
 extension ExamCommand.Plan {
     static let subcommandTypes: [any ParsableCommand.Type] = alphabetical([
         GeneratedCommands.ExamPlanAdd.self,
+        GeneratedCommands.ExamPlanMake.self,
+        GeneratedCommands.ExamPlanMove.self,
         GeneratedCommands.ExamPlanRemove.self,
     ])
 }
@@ -119,6 +130,7 @@ extension MaterialCommand {
         GeneratedCommands.MaterialTrack.self,
         GeneratedCommands.MaterialTrash.self,
         GeneratedCommands.MaterialUntrack.self,
+        GeneratedCommands.MaterialViewed.self,
         MaterialCommand.Import.self,
         MaterialCommand.Link.self,
         MaterialCommand.Read.self,
@@ -171,28 +183,28 @@ extension NoteCommand.Widget {
     ])
 }
 
+extension ProblemCommand {
+    static let subcommandTypes: [any ParsableCommand.Type] = alphabetical([
+        GeneratedCommands.ProblemRemove.self,
+        GeneratedCommands.ProblemSave.self,
+        GeneratedCommands.ProblemSolve.self,
+        GeneratedCommands.ProblemVerdict.self,
+    ])
+}
+
 extension ProblemSetCommand {
     static let subcommandTypes: [any ParsableCommand.Type] = alphabetical([
         GeneratedCommands.ProblemLinkUnit.self,
+        GeneratedCommands.ProblemSetAdd.self,
         GeneratedCommands.ProblemSetList.self,
         GeneratedCommands.ProblemSetRemove.self,
-        ProblemSetCommand.Add.self,
-        ProblemSetCommand.Record.self,
+        GeneratedCommands.ProblemSetSet.self,
     ])
 }
 
 extension ProposalCommand {
     static let subcommandTypes: [any ParsableCommand.Type] = alphabetical([
         GeneratedCommands.ProposalList.self,
-    ])
-}
-
-extension QuizCommand {
-    static let subcommandTypes: [any ParsableCommand.Type] = alphabetical([
-        GeneratedCommands.QuizCardRemove.self,
-        GeneratedCommands.QuizCardSave.self,
-        GeneratedCommands.QuizList.self,
-        QuizCommand.Record.self,
     ])
 }
 
@@ -210,13 +222,6 @@ extension RequirementCommand {
         GeneratedCommands.RequirementShow.self,
         RequirementCommand.Accept.self,
         RequirementCommand.Check.self,
-    ])
-}
-
-extension ReviewCommand {
-    static let subcommandTypes: [any ParsableCommand.Type] = alphabetical([
-        GeneratedCommands.ReviewRecord.self,
-        ReviewCommand.Skip.self,
     ])
 }
 
@@ -260,6 +265,12 @@ extension SettingsCommand {
     ])
 }
 
+extension StudyCommand {
+    static let subcommandTypes: [any ParsableCommand.Type] = alphabetical([
+        GeneratedCommands.StudyShow.self,
+    ])
+}
+
 extension TranscriptCommand {
     static let subcommandTypes: [any ParsableCommand.Type] = alphabetical([
         GeneratedCommands.TranscriptAdd.self,
@@ -273,6 +284,7 @@ extension TranscriptCommand {
 extension UnitCommand {
     static let subcommandTypes: [any ParsableCommand.Type] = alphabetical([
         GeneratedCommands.UnitAdd.self,
+        GeneratedCommands.UnitDone.self,
         GeneratedCommands.UnitLink.self,
         GeneratedCommands.UnitList.self,
         GeneratedCommands.UnitRemove.self,

@@ -72,7 +72,7 @@ struct AppLinkTests {
     @Test func settingsTabsArePathsLikeACoursesPages() {
         #expect(AppLink.settings(.claude).string == "folio://settings/claude")
         #expect(AppLink.settings(nil) == .place(.settings))
-        #expect(AppLink(string: "folio://Settings/Review") == .settings(.review))
+        #expect(AppLink(string: "folio://Settings/Review") == .settings(.study))
         #expect(AppLink(string: "folio://settings/class#x") == .settings(.classes))
 
         #expect(AppLink.settings(.claude).withoutAnchor != AppLink.settings(.general).withoutAnchor)
@@ -165,7 +165,7 @@ struct AppLinkTests {
 
     @Test func searchResultsOpenTheirItem() {
         let course = UUID()
-        #expect(AppLink(SearchItem(kind: .quiz, courseId: course, id: id, title: "")) == AppLink(.card, id))
+        #expect(AppLink(SearchItem(kind: .card, courseId: course, id: id, title: "")) == AppLink(.card, id))
         #expect(AppLink(SearchItem(kind: .note, courseId: course, id: id, title: "")) == AppLink(.note, id))
         #expect(AppLink(SearchItem(kind: .exam, courseId: course, id: id, title: "")) == AppLink(.exam, id))
     }

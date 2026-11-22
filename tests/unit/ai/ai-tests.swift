@@ -117,17 +117,16 @@ struct ClaudeClientTests {
     }
 
     @Test func schemaMismatchIsRetriedOnceThenReported() async throws {
-        let good = #"{"verdict":"partial","missing":["귀납 가정"],"feedback":"가정을 쓰세요.","lines":[{"line":3,"note":"비약"}]}"#
+        let good = #"{"verdict":"partial","reason":"method","feedback":["가정을 쓰세요."],"lines":[{"line":3,"note":"비약"}]}"#
         let fake = FakeProvider(responses: [FakeProvider.reply("not json"), FakeProvider.reply(good)])
-        let result = try await ClaudeClient(provider: fake).grade(
-            question: "Q", modelAnswer: "A", rubric: ["귀납 가정"], answer: "x", rules: "")
+        let result = try await ClaudeClient(provider: fake).gradeProblem(Problem(number: "1", text: "Q"), answer: "x")
         #expect(result.verdict == .partial && result.lines.first?.line == 3)
         #expect(await fake.requests.count == 2)
         #expect(await fake.requests.first?.output_config?.effort == .high)
 
         let bad = FakeProvider(responses: [FakeProvider.reply("nope"), FakeProvider.reply("still nope")])
         await #expect(throws: ClaudeError.self) {
-            try await ClaudeClient(provider: bad).run(.grading, GradingResult.self, system: [], messages: [])
+            try await ClaudeClient(provider: bad).run(.grading, ProblemGrade.self, system: [], messages: [])
         }
     }
 
@@ -202,7 +201,10 @@ struct ContextTests {
     }
 
     @Test func schemasRequireEveryPropertyAndForbidExtras() {
-        for schema in [GradingResult.schema, FileClassification.schema, AssignmentExtraction.schema, GradingPolicyExtraction.schema] {
+        for schema in [
+            ProblemGrade.schema, ProblemDrafts.schema, CardDrafts.schema, SameAnswer.schema, FileClassification.schema,
+            AssignmentExtraction.schema, GradingPolicyExtraction.schema,
+        ] {
             #expect(schema["additionalProperties"] == .bool(false))
             guard case .object(let props)? = schema["properties"], case .array(let required)? = schema["required"] else {
                 Issue.record("shape"); continue

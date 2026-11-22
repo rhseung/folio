@@ -91,7 +91,7 @@ struct ServiceSettingsTests {
         #expect(s.dayBoundaryMinutes == 300)
         #expect(s.notifications[.examMorning].on == false)
         #expect(s.notifications[.examMorning].minute == 8 * 60)
-        #expect(s.notifications[.assignmentDue].leadHours == [24, 3] && s.notifications[.dailyReview].on)
+        #expect(s.notifications[.assignmentDue].leadHours == [24, 3])
         #expect(s.backup == BackupSettings())
         #expect(s.noteSections(for: .review) == NoteTemplate.defaultSections(for: .review))
     }
@@ -130,26 +130,23 @@ struct NotificationPlanTests {
         file.attendance = sessions.map { Attendance(device: device, at: now, sessionId: $0.id, state: .absent) }
 
         let plan = NotificationPlan.build(
-            courses: [file], reviewCount: { $0 < at(25, 0) ? 2 : 0 }, settings: NotificationSettings(),
-            now: now, calendar: calendar)
+            courses: [file], settings: NotificationSettings(), now: now, calendar: calendar)
         let ids = plan.map(\.id)
         #expect(plan.first?.kind == .attendanceOneAway(absences: 5))
         #expect(plan.filter { if case .assignmentDue = $0.kind { true } else { false } }.map(\.date) == [at(23, 23), at(24, 20)])
         #expect(ids.contains("exam-eve-\(exam.id)") && ids.contains("exam-morning-\(exam.id)"))
         #expect(plan.first { $0.id == "exam-eve-\(exam.id)" }?.date == at(25, 21))
-        #expect(plan.filter { if case .dailyReview = $0.kind { true } else { false } }.map(\.date) == [at(24, 9)])
         #expect(plan.map(\.date) == plan.map(\.date).sorted())
     }
 
     @Test func turnedOffKindsAreLeftOut() {
         var off = NotificationSettings()
         off[.assignmentDue].on = false
-        off[.dailyReview].on = false
         off[.assignmentOverdue].on = false
         let now = at(23, 12)
         var file = CourseFile(course: Course(device: device, at: now, title: "x"))
         file.assignments = [Assignment(device: device, at: now, title: "HW5", due: at(24, 23))]
-        #expect(NotificationPlan.build(courses: [file], reviewCount: { _ in 3 }, settings: off, now: now, calendar: calendar).isEmpty)
+        #expect(NotificationPlan.build(courses: [file], settings: off, now: now, calendar: calendar).isEmpty)
     }
 }
 

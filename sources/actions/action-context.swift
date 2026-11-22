@@ -152,14 +152,14 @@ public final class ActionContext {
         }
     }
 
-    public func editQuiz(_ course: UUID, unit: UUID, _ change: (inout [QuizCard]) throws -> Void) throws {
+    public func editCards(_ course: UUID, unit: UUID, _ change: (inout [StudyCard]) throws -> Void) throws {
         let store = try store(course)
-        var doc = try store.loadQuiz(unit: unit)
+        var doc = try store.loadCards(unit: unit)
         let before = doc.model
         try change(&doc.model.cards)
         guard doc.model != before else { return }
         try refuseNewViolation(before, doc.model, World())
-        changes += diff(before, doc.model, path: relative(store.quizURL(unit: unit)))
+        changes += diff(before, doc.model, path: relative(store.cardsURL(unit: unit)))
         if !dryRun { try store.save(doc) }
     }
 

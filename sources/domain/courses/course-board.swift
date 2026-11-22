@@ -27,9 +27,3 @@ extension CourseFile {
         UnitTree.outline(units).map(\.unit).filter { note.unitIds.contains($0.id) }
     }
 }
-
-extension ReviewState {
-    public func isOnTrack(today: LocalDate) -> Bool {
-        !writeNoteFirst && (due.map { $0 >= today } ?? true)
-    }
-}

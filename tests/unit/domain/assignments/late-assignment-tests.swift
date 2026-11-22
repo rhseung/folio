@@ -274,7 +274,7 @@ struct LateAssignmentTests {
         var settings = NotificationSettings()
         settings[.assignmentDue].on = false
         let plan = NotificationPlan.build(
-            courses: [f], reviewCount: { _ in 0 }, settings: settings, now: at(15, 10, 30), calendar: Self.calendar, days: 3)
+            courses: [f], settings: settings, now: at(15, 10, 30), calendar: Self.calendar, days: 3)
         #expect(plan.map(\.date) == [at(16, 10), at(17, 10), at(18, 10)])
         #expect(plan.map(\.kind) == [.assignmentOverdue(count: 1), .assignmentOverdue(count: 2), .assignmentOverdue(count: 2)])
         #expect(plan[0].subject == "HW3" && plan[0].courseId == f.course.id && plan[1].subject.isEmpty)
@@ -282,12 +282,12 @@ struct LateAssignmentTests {
 
         settings[.assignmentOverdue].minute = 9 * 60
         let earlier = NotificationPlan.build(
-            courses: [f], reviewCount: { _ in 0 }, settings: settings, now: at(15, 8), calendar: Self.calendar, days: 1)
+            courses: [f], settings: settings, now: at(15, 8), calendar: Self.calendar, days: 1)
         #expect(earlier.map(\.date) == [at(15, 9), at(16, 9)])
 
         settings[.assignmentOverdue].on = false
         #expect(
-            NotificationPlan.build(courses: [f], reviewCount: { _ in 0 }, settings: settings, now: at(15, 10), calendar: Self.calendar)
+            NotificationPlan.build(courses: [f], settings: settings, now: at(15, 10), calendar: Self.calendar)
                 .isEmpty)
     }
 }

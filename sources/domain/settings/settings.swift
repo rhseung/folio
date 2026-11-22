@@ -3,7 +3,8 @@ import Foundation
 
 public struct Settings: Codable, Sendable, Equatable {
     public var dayBoundaryMinutes: Int
-    public var review: ReviewSettings
+    // 예전 앱의 `review`(간격 복습)는 모르는 키로 읽어 보존하고 더 쓰지 않는다.
+    public var study: StudySettings
     public var noteRules: String
     public var notifications: NotificationSettings
     public var backup: BackupSettings
@@ -31,7 +32,7 @@ public struct Settings: Codable, Sendable, Equatable {
     public static let defaultNoteRules = SettingItem.noteRules.text
 
     public init(
-        dayBoundaryMinutes: Int = SettingItem.dayBoundary.int, review: ReviewSettings = .init(),
+        dayBoundaryMinutes: Int = SettingItem.dayBoundary.int, study: StudySettings = .init(),
         noteRules: String = Settings.defaultNoteRules, notifications: NotificationSettings = .init(), backup: BackupSettings = .init(),
         noteTemplates: [String: [String]] = [:], newNoteMath: MathSyntax = SettingItem.newNoteMath.choice(),
         sidebar: SidebarOrder = .init(), classMinutes: Int = SettingItem.classMinutes.int, mathSnippets: [MathSnippet]? = nil,
@@ -42,7 +43,7 @@ public struct Settings: Codable, Sendable, Equatable {
         assignmentKinds: [AssignmentKind]? = nil
     ) {
         self.dayBoundaryMinutes = dayBoundaryMinutes
-        self.review = review
+        self.study = study
         self.noteRules = noteRules
         self.notifications = notifications
         self.backup = backup
@@ -69,7 +70,7 @@ public struct Settings: Codable, Sendable, Equatable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let d = Settings()
         dayBoundaryMinutes = try c.value(.dayBoundaryMinutes, or: d.dayBoundaryMinutes)
-        review = try c.value(.review, or: d.review)
+        study = try c.value(.study, or: d.study)
         noteRules = try c.value(.noteRules, or: d.noteRules)
         notifications = try c.value(.notifications, or: d.notifications)
         backup = try c.value(.backup, or: d.backup)

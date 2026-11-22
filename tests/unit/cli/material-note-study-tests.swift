@@ -1,4 +1,5 @@
 import FolioActions
+import FolioCore
 import FolioDomain
 import FolioStorage
 import Foundation
@@ -14,7 +15,7 @@ struct MaterialNoteStudyTests {
     static let addUnit = ["run", "unit", "add", "--input", #"{"course":"EC4207","title":"매칭","id":"\#(unit.uuidString)"}"#]
     static let card = UUID(uuidString: "A0000000-0000-4000-8000-0000000000C1")!
     static let set = UUID(uuidString: "A0000000-0000-4000-8000-0000000000D1")!
-    static let addSet = ["problem-set", "add", "EC4207", "Exercise 1", "--problems", "1", "3a", "--id", set.uuidString]
+    static let addSet = ["problem-set", "add", "EC4207", "Exercise 1", "1", "3a", "--id", set.uuidString]
     static let noteID = UUID(uuidString: "6f1d2c4e-8a3b-4f5e-9c1d-2b7a8e0f3d41")!
     static let exam = UUID(uuidString: "A0000000-0000-4000-8000-0000000000E7")!
     static let addExam = ["exam", "add", "EC4207", "Midterm", "--id", exam.uuidString]
@@ -31,9 +32,7 @@ struct MaterialNoteStudyTests {
     }
 
     func cardsFile() throws -> String {
-        let card = QuizCard(
-            id: Self.card, device: h.device, at: h.now, unitId: Self.unit, type: .free, category: .definition,
-            prompt: "최대 매칭의 정의", answer: "더 큰 매칭이 없는 매칭")
+        let card = StudyCard(id: Self.card, device: h.device, at: h.now, unitId: Self.unit, front: "최대 매칭의 정의", back: "더 큰 매칭이 없는 매칭")
         return try scratch("cards.json", String(decoding: try JSONEncoder.folio.encode([card]), as: UTF8.self))
     }
 
@@ -478,39 +477,93 @@ struct MaterialNoteStudyTests {
         }
     }
 
-    // MARK: Quiz and problem sets
+    // MARK: Cards and problems
 
-    @Test func quizAdd() throws {
+    static func addCards(_ file: String) -> [String] { ["card", "add", "EC4207", "--file", file] }
+
+    @Test func cardAdd() throws {
         let file = try cardsFile()
-        let cards = try JSONDecoder.folio.decode([QuizCard].self, from: Data(contentsOf: URL(filePath: file)))
-        try h.expectSame(["quiz", "add", "EC4207", "--file", file], setup: [Self.addUnit]) { _ in QuizCardSave(course: course, cards: cards)
+        let cards = try JSONDecoder.folio.decode([StudyCard].self, from: Data(contentsOf: URL(filePath: file)))
+        try h.expectSame(Self.addCards(file), setup: [Self.addUnit]) { _ in CardSave(course: course, cards: cards) }
+    }
+
+    @Test func cardRemove() throws {
+        try h.expectSame(["card", "rm", "EC4207/매칭", "최대 매칭의 정의", "--yes"], setup: [Self.addUnit, Self.addCards(try cardsFile())]) {
+            _ in CardRemove(course: course, unit: Self.unit, card: Self.card)
         }
     }
 
-    @Test func quizRemove() throws {
-        try h.expectSame(
-            ["quiz", "rm", "EC4207/매칭", Self.card.uuidString, "--yes"],
-            setup: [Self.addUnit, ["quiz", "add", "EC4207", "--file", try cardsFile()]]
-        ) { _ in
-            QuizCardRemove(course: course, unit: Self.unit, card: Self.card)
-        }
-    }
-
-    @Test func quizRecord() throws {
-        try h.expectSame(
-            ["quiz", "record", "EC4207/매칭", "최대 매칭의 정의", "correct"],
-            setup: [Self.addUnit, ["quiz", "add", "EC4207", "--file", try cardsFile()]]
-        ) { _ in
-            QuizRecord(course: course, attempt: QuizAttemptEvent(cardId: Self.card, verdict: .correct, grader: .self))
+    @Test func cardFlip() throws {
+        try h.expectSame(["card", "flip", "EC4207/매칭", "최대 매칭의 정의", "--unknown"], setup: [Self.addUnit, Self.addCards(try cardsFile())]) {
+            _ in CardFlip(course: course, unit: Self.unit, card: Self.card, known: false)
         }
     }
 
     @Test func problemSetAdd() throws {
-        try h.expectSame(Self.addSet) { _ in
-            ProblemSetSave(
-                course: course,
-                set: ProblemSet(
-                    id: Self.set, device: h.device, at: h.now, title: "Exercise 1", problems: [.init(number: "1"), .init(number: "3a")]))
+        try h.expectSame(Self.addSet) { _ in ProblemSetAdd(id: Self.set, course: course, title: "Exercise 1", numbers: ["1", "3a"]) }
+        let gist = try Harness.fixtureCopy()
+        #expect(h.cli(Self.addSet, gist: gist).code == 0)
+        let set = try #require(try h.file(GISTStore(url: gist)).problemSets.first { $0.id == Self.set })
+        #expect(set.title == "Exercise 1" && set.source == .exercise && set.problems.map(\.number) == ["1", "3a"])
+    }
+
+    @Test func problemSetSet() throws {
+        try h.expectSame(["problem-set", "set", "EC4207/Exercise 1", "--source", "past_exam", "--title", "2022 중간"], setup: [Self.addSet]) {
+            _ in ProblemSetSet(course: course, set: Self.set, title: .set("2022 중간"), source: .set(.pastExam))
+        }
+    }
+
+    @Test func problemSave() throws {
+        let problems = [Problem(number: "4", text: "Hall 정리를 증명하시오.")]
+        let file = try scratch("problems.json", String(bytes: try JSONEncoder.folio.encode(problems), encoding: .utf8) ?? "")
+        try h.expectSame(["problem", "save", "EC4207/Exercise 1", "--file", file], setup: [Self.addSet]) { _ in
+            ProblemSave(course: course, set: Self.set, problems: problems)
+        }
+    }
+
+    static let attempt = uuid("A0000000-0000-4000-8000-0000000000F1")
+
+    @Test func problemVerdict() throws {
+        let solved: (URL) throws -> Void = { gist in
+            try h.direct(ProblemSetAdd(id: Self.set, course: course, title: "Exercise 1", numbers: ["1"]), gist: gist)
+            let problem = try #require(try h.file(GISTStore(url: gist)).problemSets.first?.problems.first?.id)
+            try h.direct(ProblemSolve(id: Self.attempt, course: course, set: Self.set, problem: problem, verdict: .wrong), gist: gist)
+        }
+        try h.expectSame(["problem", "verdict", "EC4207", Self.attempt.uuidString, "correct"], prepare: solved) { _ in
+            ProblemVerdict(course: course, attempt: Self.attempt.uuidString, verdict: .correct)
+        }
+    }
+
+    @Test func materialViewed() throws {
+        try h.expectSame(["material", "viewed", "EC4207/Lectures/05_Matchings.pdf", "7"], setup: [Self.track]) { gist in
+            let material = try #require(try h.file(gist).materials.first { $0.path == "Lectures/05_Matchings.pdf" }?.id)
+            return MaterialViewed(course: course, material: material, page: 7)
+        }
+    }
+
+    static func examWithScope(_ gist: URL, _ h: Harness) throws {
+        try h.direct(UnitAdd(id: unit, course: Harness.graphTheory, title: "매칭"), gist: gist)
+        try h.direct(
+            ExamAdd(id: exam, course: Harness.graphTheory, title: "Midterm", start: h.now.addingTimeInterval(7 * 86_400), scope: [unit]),
+            gist: gist)
+    }
+
+    @Test func examPlanMake() throws {
+        try h.expectSame(
+            ["exam", "plan", "make", "EC4207/Midterm"], prepare: { try Self.examWithScope($0, h) },
+            { _ in
+                ExamPlanMake(course: course, exam: Self.exam)
+            })
+    }
+
+    @Test func examPlanMove() throws {
+        let item = uuid("A0000000-0000-4000-8000-0000000000F2")
+        let planned: (URL) throws -> Void = { gist in
+            try Self.examWithScope(gist, h)
+            try h.direct(ExamPlanAdd(id: item, course: course, exam: Self.exam, title: "정리", day: ymd("2026-10-30")), gist: gist)
+        }
+        try h.expectSame(["exam", "plan", "move", "EC4207/Midterm", "정리", "--day", "2026-10-31"], prepare: planned) { _ in
+            ExamPlanMove(course: course, exam: Self.exam, item: item, day: ymd("2026-10-31"))
         }
     }
 
@@ -526,37 +579,33 @@ struct MaterialNoteStudyTests {
         }
     }
 
-    @Test func problemSetRecord() throws {
-        try h.expectSame(["problem-set", "record", "EC4207/Exercise 1", "3a", "wrong"], setup: [Self.addSet]) { _ in
-            ProblemRecord(course: course, attempt: ProblemAttemptEvent(problemSetId: Self.set, number: "3a", verdict: .wrong))
+    func problemID(_ gist: GISTStore, _ number: String) throws -> UUID {
+        try #require(try h.file(gist).problemSets.first { $0.id == Self.set }?.problems.first { $0.number == number }?.id)
+    }
+
+    @Test func problemSolve() throws {
+        try h.expectSame(["problem", "solve", "EC4207/Exercise 1", "3a", "wrong", "--reason", "concept"], setup: [Self.addSet]) { gist in
+            ProblemSolve(course: course, set: Self.set, problem: try problemID(gist, "3a"), verdict: .wrong, reason: .concept)
         }
     }
 
-    // MARK: Review
-
-    @Test func reviewRecord() throws {
-        try h.expectSame(
-            ["review", "record", "EC4207/매칭", "good", "--start", "2026-10-28 20:00", "--end", "2026-10-28 20:40"], setup: [Self.addUnit]
-        ) { _ in
-            ReviewRecord(
-                course: course, unit: Self.unit, result: .good, start: DateArg(argument: "2026-10-28 20:00")!.date,
-                end: DateArg(argument: "2026-10-28 20:40")!.date)
+    @Test func problemRemove() throws {
+        try h.expectSame(["problem", "rm", "EC4207/Exercise 1", "3a", "--yes"], setup: [Self.addSet]) { gist in
+            ProblemRemove(course: course, set: Self.set, problem: try problemID(gist, "3a"))
         }
     }
 
-    @Test func reviewSkip() throws {
-        try h.expectSame(["review", "skip", "EC4207/매칭"], setup: [Self.addUnit]) { _ in
-            ReviewSkip(units: [.init(course: course, unit: Self.unit)])
-        }
+    @Test func unitDone() throws {
+        try h.expectSame(["unit", "done", "EC4207/매칭"], setup: [Self.addUnit]) { _ in UnitDone(course: course, unit: Self.unit) }
     }
+}
 
-    @Test func reviewSkipWithTheTimeOpen() throws {
-        try h.expectSame(
-            ["review", "skip", "EC4207/매칭", "--start", "2026-10-28 20:00", "--end", "2026-10-28 20:05"], setup: [Self.addUnit]
-        ) { _ in
-            ReviewSkip(
-                units: [.init(course: course, unit: Self.unit)], start: DateArg(argument: "2026-10-28 20:00")!.date,
-                end: DateArg(argument: "2026-10-28 20:05")!.date)
-        }
-    }
+private func ymd(_ text: String) -> LocalDate {
+    guard let day = LocalDate(text) else { preconditionFailure(text) }
+    return day
+}
+
+private func uuid(_ text: String) -> UUID {
+    guard let id = UUID(uuidString: text) else { preconditionFailure(text) }
+    return id
 }

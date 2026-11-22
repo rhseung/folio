@@ -72,17 +72,6 @@ struct CourseBoardTests {
         #expect(file.sessions(pointingAt: nil).isEmpty)
     }
 
-    @Test func reviewOnTrackNeedsANoteAndAFutureDueDay() {
-        let today = LocalDate("2026-10-20")!
-        let unit = UUID()
-        #expect(ReviewState(unitId: unit, step: 0, due: today, settled: false, writeNoteFirst: false).isOnTrack(today: today))
-        #expect(ReviewState(unitId: unit, step: 0, due: nil, settled: true, writeNoteFirst: false).isOnTrack(today: today))
-        #expect(
-            !ReviewState(unitId: unit, step: 0, due: LocalDate("2026-10-19")!, settled: false, writeNoteFirst: false).isOnTrack(
-                today: today))
-        #expect(!ReviewState(unitId: unit, step: 0, due: today, settled: false, writeNoteFirst: true).isOnTrack(today: today))
-    }
-
     // MARK: Notes page
 
     struct Listed {

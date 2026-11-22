@@ -17,7 +17,8 @@ public enum ItemKind: String, CaseIterable, Codable, Sendable {
     case noteWidget = "NoteWidget"
     case recording = "Recording"
     case examPlanItem = "ExamPlanItem"
-    case quizCard = "QuizCard"
+    case problem = "Problem"
+    case studyCard = "StudyCard"
     case letterGrade = "LetterGrade"
     case courseCode = "CourseCode"
     case person = "Person"
@@ -28,7 +29,7 @@ public enum ItemKind: String, CaseIterable, Codable, Sendable {
     public var inCourse: Bool {
         switch self {
         case .session, .exam, .unit, .assignment, .gradeComponent, .scoreEntry, .material, .problemSet, .note, .notePath, .noteWidget,
-            .recording, .examPlanItem, .quizCard:
+            .recording, .examPlanItem, .problem, .studyCard:
             true
         case .course, .semester, .letterGrade, .courseCode, .person, .category, .moveBatch: false
         }
@@ -38,7 +39,8 @@ public enum ItemKind: String, CaseIterable, Codable, Sendable {
     public var parent: ItemKind? {
         switch self {
         case .examPlanItem: .exam
-        case .quizCard: .unit
+        case .problem: .problemSet
+        case .studyCard: .unit
         case .course, .semester, .session, .exam, .unit, .assignment, .gradeComponent, .scoreEntry, .material, .problemSet, .note,
             .notePath, .noteWidget, .recording, .letterGrade, .courseCode, .person, .category, .moveBatch:
             nil
@@ -63,9 +65,9 @@ public enum ItemKind: String, CaseIterable, Codable, Sendable {
         case .problemSet: .problemSet
         case .note, .notePath: .note
         case .recording: .recording
-        case .quizCard: .card
+        case .studyCard: .card
         case .person: .person
-        case .gradeComponent, .scoreEntry, .noteWidget, .examPlanItem, .letterGrade, .courseCode, .category, .moveBatch: nil
+        case .gradeComponent, .scoreEntry, .noteWidget, .examPlanItem, .problem, .letterGrade, .courseCode, .category, .moveBatch: nil
         }
     }
 
@@ -90,7 +92,8 @@ public enum ItemKind: String, CaseIterable, Codable, Sendable {
         case .noteWidget: String(localized: .modelNounNoteWidget)
         case .recording: String(localized: .modelNounRecording)
         case .examPlanItem: String(localized: .modelNounExamPlanItem)
-        case .quizCard: String(localized: .modelNounQuizCard)
+        case .problem: String(localized: .modelNounProblem)
+        case .studyCard: String(localized: .modelNounCard)
         case .letterGrade: String(localized: .modelNounLetterGrade)
         case .courseCode: String(localized: .modelNounCourseCode)
         case .person: String(localized: .modelNounPerson)

@@ -5,7 +5,7 @@ import Testing
 
 private let lecture = AppLink(.material, UUID(), anchor: .page(12))
 private let note = AppLink(.note, UUID())
-private let quiz = AppLink.course(UUID(), page: .quiz)
+private let quiz = AppLink.course(UUID(), page: .units)
 private let other = AppLink(.note, UUID())
 
 private func approx(_ a: Double, _ b: Double) -> Bool { abs(a - b) < 1e-9 }
@@ -90,7 +90,7 @@ struct PaneLayoutTests {
     @Test func aPaneFollowsItsOwnHistory() {
         var l = Self.three()
         l.show(.write, in: 2)
-        l.open(AppLink.course(UUID(), page: .quiz), in: 2)
+        l.open(AppLink.course(UUID(), page: .units), in: 2)
         #expect(l.links[1] == note && l.focus == 1)
         #expect(l.panes[2].noteMode == nil)
         l.show(.read, in: 0)
@@ -437,21 +437,21 @@ struct PanePresetTests {
 
     @Test func aClassStartsOnlyInALayoutWithItsLectureOrNote() {
         #expect(PanePreset.builtIn.allSatisfy { $0.opensClass })
-        #expect(!PanePreset(name: "성적", slots: [.link(.place(.grades)), .role(.quiz)], shares: [0.5, 0.5]).opensClass)
+        #expect(!PanePreset(name: "성적", slots: [.link(.place(.grades)), .role(.study)], shares: [0.5, 0.5]).opensClass)
     }
 
     @Test func aClassWithoutItsLectureOrNoteStartsThePlainWay() throws {
         let course = UUID(), lecture = AppLink(.material, UUID()), note = AppLink(.note, UUID())
-        let quiz = AppLink.course(course, page: .quiz)
-        let concepts = PanePreset(name: "개념", slots: [.role(.lecture), .role(.quiz)], shares: [0.6, 0.4])
+        let quiz = AppLink.course(course, page: .units)
+        let concepts = PanePreset(name: "개념", slots: [.role(.lecture), .role(.study)], shares: [0.6, 0.4])
 
-        #expect(concepts.startLayout([.quiz: [quiz], .classNote: [note]]) == nil)
+        #expect(concepts.startLayout([.study: [quiz], .classNote: [note]]) == nil)
         let mine = PanePreset(name: "성적과 노트", slots: [.link(.place(.grades)), .role(.classNote)], shares: [0.3, 0.7])
-        #expect(mine.startLayout([.quiz: [quiz]]) == nil)
+        #expect(mine.startLayout([.study: [quiz]]) == nil)
         let opened = try #require(mine.startLayout([.classNote: [note]]))
         #expect(opened.links == [.place(.grades), note])
         #expect(opened.focus == 1)
-        #expect(concepts.startLayout([.lecture: [lecture], .quiz: [quiz]])?.links == [lecture, quiz])
+        #expect(concepts.startLayout([.lecture: [lecture], .study: [quiz]])?.links == [lecture, quiz])
     }
 
     @Test func aFreeNameCountsUp() {

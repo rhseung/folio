@@ -29,7 +29,7 @@ struct HelpExampleTests {
         ["exam", "add", "EC4207", "Quiz1", "--start", "2026-09-30 10:00"],
         ["assignment", "add", "EC4207", "HW3", "--due", "2026-11-04 23:59"],
         ["score", "add", "EC4207", "--component", "과제", "--title", "HW1", "--score", "9", "--max", "10"],
-        ["problem-set", "add", "EC4207", "Exercise 1", "--problems", "1", "2", "3a"],
+        ["problem-set", "add", "EC4207", "Exercise 1", "1", "2", "3a"],
         ["material", "track", "EC4207"],
         ["note", "add", "EC4207", "매칭 정리", "--kind", "topic"],
         ["note", "add", "EC4207", "시험 메모"],
@@ -71,10 +71,8 @@ struct HelpExampleTests {
         try FileManager.default.moveItem(at: backups.appending(path: "Folio-2026-10-28"), to: backups.appending(path: "Folio-2026-10-27"))
         for line in Self.world { #expect(h.cli(line, gist: gist).code == 0, "\(line): \(h.cli(line + ["--dry-run"], gist: gist).err)") }
         let matching = try #require(try h.file(GISTStore(url: gist)).units.first { $0.title == "매칭" })
-        let card = QuizCard(
-            device: h.device, at: h.now, unitId: matching.id, type: .free, category: .definition, prompt: "최대 매칭의 정의", answer: "크기가 가장 큰 매칭"
-        )
-        try h.direct(QuizCardSave(course: Harness.graphTheory, cards: [card], movedFrom: nil), gist: gist)
+        let card = StudyCard(device: h.device, at: h.now, unitId: matching.id, front: "최대 매칭의 정의", back: "크기가 가장 큰 매칭")
+        try h.direct(CardSave(course: Harness.graphTheory, cards: [card], movedFrom: nil), gist: gist)
 
         let ctx = ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now)
         let file = try ctx.file(Harness.graphTheory)

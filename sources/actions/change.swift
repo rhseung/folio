@@ -40,10 +40,12 @@ extension Change {
         return inNotes(path) || inNotes(to) || widget || courseFile && item?.hasPrefix(Self.notesItem) == true
     }
 
-    public var touchesQuizzes: Bool {
+    // 카드 파일과 공부 기록(풀이, 카드 넘기기, 본 쪽, 계획 체크)이 바뀌면 공부 화면이 다시 읽는다.
+    public var touchesStudy: Bool {
         let parts = path.split(separator: "/").map(String.init)
-        return zip(parts, parts.dropFirst()).contains { $0 == (StandardLayout.metadataFolder, StandardLayout.quizzesFolder) }
-            || item == QuizAttemptEvent.type
+        let folders = [StandardLayout.cardsFolder, StandardLayout.draftsFolder]
+        return zip(parts, parts.dropFirst()).contains { $0 == StandardLayout.metadataFolder && folders.contains($1) }
+            || item.map(StudyLog.types.contains) == true
     }
 
     // `diff`는 항목을 그것이 든 배열의 JSON 키로 부른다. `CourseFile.notes`는 `notes`로 인코딩된다.

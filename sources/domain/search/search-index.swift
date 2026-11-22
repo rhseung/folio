@@ -47,7 +47,7 @@ public struct SearchIndex: Sendable {
     }
 
     public static func items(
-        for file: CourseFile, notes: [(id: UUID, title: String, body: String)], cards: [QuizCard] = [],
+        for file: CourseFile, notes: [(id: UUID, title: String, body: String)], cards: [StudyCard] = [],
         calendar: Calendar = .current
     ) -> [SearchItem] {
         let course = file.course.id
@@ -63,6 +63,6 @@ public struct SearchIndex: Sendable {
                     body: file.reference(of: $0, calendar: calendar))
             }
             + file.units.map { SearchItem(kind: .unit, courseId: course, id: $0.id, title: $0.title) }
-            + cards.map { SearchItem(kind: .quiz, courseId: course, id: $0.id, title: $0.prompt, body: $0.answer) }
+            + cards.map { SearchItem(kind: .card, courseId: course, id: $0.id, title: $0.front, body: $0.back) }
     }
 }

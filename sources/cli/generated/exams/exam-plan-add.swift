@@ -17,6 +17,7 @@ extension GeneratedCommands {
         @Argument(help: "할 일") var title: String
         @Option(help: ArgumentHelp("날짜. 2026-10-18", valueName: "date")) var day: LocalDate
         @Option(help: ArgumentHelp("이 단원을 공부하는 일", valueName: "unit"), completion: Complete.ref(.unit)) var unit: String?
+        @Option(help: ArgumentHelp("이 문제 묶음을 푸는 일", valueName: "set"), completion: Complete.ref(.problemSet)) var set: String?
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -28,7 +29,8 @@ extension GeneratedCommands {
                 exam: try r.id(.exam, examName, in: c),
                 title: title,
                 day: day,
-                unit: try unit.map { try r.id(.unit, $0, in: c) }
+                unit: try unit.map { try r.id(.unit, $0, in: c) },
+                set: try set.map { try r.id(.problemSet, $0, in: c) }
             )
             try perform(spec: action, g, ctx: ctx)
         }

@@ -18,7 +18,11 @@ extension AssignmentRepeat: ExpressibleByArgument {
 extension MaterialStatus: ExpressibleByArgument {}
 extension GradingMode: ExpressibleByArgument {}
 extension Term: ExpressibleByArgument {}
-extension ReviewResult: ExpressibleByArgument {}
+extension ProblemSource: ExpressibleByArgument {}
+extension SolveMode: ExpressibleByArgument {}
+extension GradeBasis: ExpressibleByArgument {}
+extension WrongReason: ExpressibleByArgument {}
+extension Verdict: ExpressibleByArgument {}
 
 extension Session.Kind: ExpressibleByArgument {
     public init?(argument: String) { self.init(word: argument) }

@@ -46,22 +46,21 @@ struct WriteCommandTests {
     }
 
     @Test func settingsField() throws {
-        try h.expectSame(["settings", "set", "review.intervals", "[1, 2, 4]"]) { _ in
-            SettingsSet(field: "review.intervals", value: .array([1.0, 2, 4].map { .number($0) }))
+        try h.expectSame(["settings", "set", "study.readyPercent", "90"]) { _ in
+            SettingsSet(field: "study.readyPercent", value: .number(90))
         }
 
-        try h.expectSame(["settings", "set", "review.intervals", "[1, 2, 4]"]) { gist in
+        try h.expectSame(["settings", "set", "study.readyPercent", "90"]) { gist in
             var s = try ActionContext(gist: gist, device: h.device).settings()
-            s.review.intervals = [1, 2, 4]
+            s.study.readyPercent = 90
             return SettingsSet(settings: s)
         }
         let gist = try Harness.fixtureCopy()
-        #expect(h.cli(["settings", "set", "review.intervalz", "[1]"], gist: gist).code == 2)
+        #expect(h.cli(["settings", "set", "study.readyPercentz", "90"], gist: gist).code == 2)
         #expect(h.cli(["settings", "set", "dayBoundaryMinutes", "새벽"], gist: gist).code == 2)
-        #expect(h.cli(["settings", "set", "review.settleAfterPasses", "9"], gist: gist).code == 2)
-        #expect(h.cli(["settings", "set", "review.intervals", "[]"], gist: gist).code == 2)
-        #expect(h.cli(["settings", "set", "review.dailyLimit", "20"], gist: gist).code == 0)
-        #expect(try ActionContext(gist: GISTStore(url: gist), device: h.device).settings().review.dailyLimit == 20)
+        #expect(h.cli(["settings", "set", "study.readyPercent", "30"], gist: gist).code == 2)
+        #expect(h.cli(["settings", "set", "study.minProblems", "5"], gist: gist).code == 0)
+        #expect(try ActionContext(gist: GISTStore(url: gist), device: h.device).settings().study.minProblems == 5)
     }
 
     @Test func settingsFieldKeepsTheOthers() throws {
@@ -69,7 +68,7 @@ struct WriteCommandTests {
         #expect(h.cli(["settings", "set", "dayBoundaryMinutes", "300"], gist: gist).code == 0)
         #expect(h.cli(["run", "settings", "set", "--input", #"{"field":"classMinutes","value":80}"#], gist: gist).code == 0)
         let s = try ActionContext(gist: GISTStore(url: gist), device: h.device).settings()
-        #expect(s.dayBoundaryMinutes == 300 && s.classMinutes == 80 && s.review == Settings().review)
+        #expect(s.dayBoundaryMinutes == 300 && s.classMinutes == 80 && s.study == Settings().study)
         #expect(h.cli(["settings", "set", "classMinutes"], gist: gist).code == 2)
         let file = FileManager.default.temporaryDirectory.appending(path: "settings-\(UUID()).json")
         try JSONEncoder.folio.encode(Settings()).write(to: file)

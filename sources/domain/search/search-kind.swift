@@ -1,5 +1,5 @@
 import Foundation
 
 public enum SearchKind: String, CaseIterable, Sendable {
-    case note, material, assignment, exam, session, unit, quiz
+    case note, material, assignment, exam, session, unit, card
 }

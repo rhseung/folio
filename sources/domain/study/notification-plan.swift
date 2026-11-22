@@ -3,7 +3,7 @@ import Foundation
 
 public enum NotificationPlan {
     public static func build(
-        courses: [CourseFile], reviewCount: (Date) -> Int, settings: NotificationSettings,
+        courses: [CourseFile], settings: NotificationSettings,
         now: Date, calendar: Calendar, days: Int = 7
     ) -> [PlannedNotification] {
         func at(_ minute: Int, dayOffset: Int, from date: Date) -> Date {
@@ -14,7 +14,6 @@ public enum NotificationPlan {
         let deadline = settings[.assignmentDue]
         let eve = settings[.examDayBefore]
         let morning = settings[.examMorning]
-        let review = settings[.dailyReview]
         var out: [PlannedNotification] = []
         for file in courses {
             let course = file.course.id
@@ -70,20 +69,6 @@ public enum NotificationPlan {
                         id: "overdue-\(LocalDate(date, in: calendar))", date: date, kind: .assignmentOverdue(count: late.count),
                         courseId: one ? first.course : nil, subject: one ? first.assignment.title : "", at: one ? first.assignment.due : nil
                     ))
-            }
-        }
-
-        if review.on, let minute = review.minute {
-            for day in 0...days {
-                let date = at(minute, dayOffset: day, from: now)
-                guard date > now else { continue }
-                let count = reviewCount(date)
-                if count > 0 {
-                    out.append(
-                        .init(
-                            id: "review-\(LocalDate(date, in: calendar))", date: date, kind: .dailyReview(count: count),
-                            courseId: nil, subject: "", at: nil))
-                }
             }
         }
 

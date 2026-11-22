@@ -474,17 +474,6 @@
         }
       }
     },
-    "error.not-found.card": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "퀴즈 카드를 찾지 못했습니다"
-          }
-        }
-      }
-    },
     "error.not-found.component": {
       "extractionState": "manual",
       "localizations": {
@@ -591,17 +580,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "문제 %@을(를) 찾지 못했습니다"
-          }
-        }
-      }
-    },
-    "error.not-found.problem-set": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "문제 묶음을 찾지 못했습니다"
           }
         }
       }
@@ -822,39 +800,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "과목 '%@'에는 학사편람 분류 제안이 없습니다"
-          }
-        }
-      }
-    },
-    "error.review.end-before-start": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "끝난 시각이 시작보다 이릅니다"
-          }
-        }
-      }
-    },
-    "error.review.record-skip": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "건너뛰기는 review skip으로 기록합니다"
-          }
-        }
-      }
-    },
-    "error.review.skip-times": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "시작과 끝 시각은 함께, 단원 하나에만 줍니다"
           }
         }
       }
@@ -1794,17 +1739,6 @@
         }
       }
     },
-    "today.overdue": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld일 밀림"
-          }
-        }
-      }
-    },
     "today.minutes-left": {
       "extractionState": "manual",
       "localizations": {
@@ -1900,6 +1834,83 @@
           "stringUnit": {
             "state": "translated",
             "value": "노트에 쓰지 않았습니다. 라벨을 짧게 줄이거나, 긴 수식이나 판정 조건이 든 도식은 note figure add로 SVG 그림을 그려 넣습니다"
+          }
+        }
+      }
+    },
+    "value.plan-item": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "공부 계획 항목"
+          }
+        }
+      }
+    },
+    "value.problem": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제"
+          }
+        }
+      }
+    },
+    "error.page-number": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "쪽 번호는 1부터 셉니다"
+          }
+        }
+      }
+    },
+    "error.plan-needs-exam-time": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험 일시가 없어 계획을 짤 수 없습니다. 먼저 folio exam set으로 시작 일시를 넣으세요"
+          }
+        }
+      }
+    },
+    "error.id-taken.problem-set": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미 쓰는 문제 묶음 ID입니다: %@"
+          }
+        }
+      }
+    },
+    "error.not-found.attempt": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그 풀이 기록이 없습니다"
+          }
+        }
+      }
+    },
+    "today.wrong-left": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "남은 오답 %lld개"
           }
         }
       }

@@ -13,11 +13,15 @@ struct ExamPlanTests {
         return e
     }
 
+    func custom(_ day: LocalDate, _ title: String) -> ExamPlanItem {
+        ExamPlanItem(day: day, target: ExamPlanTarget(kind: .custom), title: title, edited: true)
+    }
+
     @Test func planRoundTrips() throws {
         let unit = UUID()
         let original = exam(plan: [
-            ExamPlanItem(day: LocalDate("2026-10-18")!, title: "1-3단원 복습", target: ExamPlanTarget(kind: .unit, id: unit)),
-            ExamPlanItem(day: LocalDate("2026-10-19")!, title: "족보 풀기"),
+            ExamPlanItem(day: ymd("2026-10-18"), target: .unit(unit)),
+            ExamPlanItem(day: ymd("2026-10-19"), target: ExamPlanTarget(kind: .custom), title: "족보 풀기", edited: true),
         ])
         let data = try JSONEncoder().encode(original)
         let json = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
@@ -52,16 +56,21 @@ struct ExamPlanTests {
     }
 
     @Test func todaysItemsAcrossCourses() {
-        let today = LocalDate("2026-10-19")!
+        let today = ymd("2026-10-19")
         let early = exam(
-            "Quiz1", start: at, plan: [ExamPlanItem(day: today, title: "카드 풀기"), ExamPlanItem(day: LocalDate("2026-10-20")!, title: "내일")])
+            "Quiz1", start: at, plan: [custom(today, "카드 풀기"), custom(ymd("2026-10-20"), "내일")])
         let late = exam(
             "Midterm", start: at.addingTimeInterval(86400),
-            plan: [ExamPlanItem(day: today, title: "족보"), ExamPlanItem(day: LocalDate("2026-10-18")!, title: "어제")])
+            plan: [custom(today, "족보"), custom(ymd("2026-10-18"), "어제")])
         let one = CourseFile(course: Course(device: device, at: at, title: "그래프 이론"), exams: [late])
         let two = CourseFile(course: Course(device: device, at: at, title: "선형대수학"), exams: [early, exam("Final")])
         let items = ExamPlan.items(on: today, courses: [one, two])
         #expect(items.map(\.item.title) == ["카드 풀기", "족보"])
         #expect(items.map(\.courseId) == [two.course.id, one.course.id])
     }
+}
+
+private func ymd(_ text: String) -> LocalDate {
+    guard let day = LocalDate(text) else { preconditionFailure(text) }
+    return day
 }

@@ -77,15 +77,14 @@ struct SearchStoreTests {
         try UnitAdd(id: unit, course: graphTheory, title: "매칭").run(ctx)
         let index = try SearchStore(url: nil)
         try index.refresh(gist)
-        #expect(try index.search("augmenting", kinds: [.quiz]).isEmpty)
+        #expect(try index.search("augmenting", kinds: [.card]).isEmpty)
 
-        let card = QuizCard(
-            device: ctx.device, at: ctx.now, unitId: unit, type: .free, category: .theorem, prompt: "Berge의 정리",
-            answer: "augmenting path가 없으면 최대 매칭")
-        try QuizCardSave(course: graphTheory, cards: [card], movedFrom: nil).run(ctx)
+        let card = StudyCard(
+            device: ctx.device, at: ctx.now, unitId: unit, front: "Berge의 정리", back: "augmenting path가 없으면 최대 매칭")
+        try CardSave(course: graphTheory, cards: [card], movedFrom: nil).run(ctx)
         #expect(try index.refresh(gist) == 1)
         let hit = try #require(try index.search("augmenting").first)
-        #expect(hit.item.kind == .quiz && hit.item.id == card.id && hit.item.title == "Berge의 정리")
+        #expect(hit.item.kind == .card && hit.item.id == card.id && hit.item.title == "Berge의 정리")
     }
 
     @Test func filtersAndForgetsRemovedCourses() throws {

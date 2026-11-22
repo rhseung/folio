@@ -40,6 +40,23 @@ extension LocalDate {
         let c = Self.gregorian(like: calendar).dateComponents([.year, .month, .day], from: date)
         self.init(year: c.year!, month: c.month!, day: c.day!)!
     }
+
+    // UTC에서는 모든 날이 24시간이므로 날짜 계산은 UTC로 한다.
+    static let utc: Calendar = {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = .gmt
+        return c
+    }()
+
+    public func adding(days: Int) -> LocalDate {
+        guard let start = date(in: Self.utc), let moved = Self.utc.date(byAdding: .day, value: days, to: start) else { return self }
+        return LocalDate(moved, in: Self.utc)
+    }
+
+    public func days(until other: LocalDate) -> Int {
+        guard let a = date(in: Self.utc), let b = other.date(in: Self.utc) else { return 0 }
+        return Self.utc.dateComponents([.day], from: a, to: b).day ?? 0
+    }
 }
 
 extension CourseFile {

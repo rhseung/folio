@@ -529,17 +529,6 @@
         }
       }
     },
-    "model.noun.quiz-card": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "퀴즈 카드"
-          }
-        }
-      }
-    },
     "model.noun.recording": {
       "extractionState": "manual",
       "localizations": {
@@ -876,7 +865,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "공부 계획 항목 제목이 비었습니다"
+            "value": "직접 쓴 공부 계획 항목의 글이 비었습니다"
           }
         }
       }
@@ -1112,39 +1101,6 @@
         }
       }
     },
-    "rule.quiz-card.answer": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "퀴즈 카드 '{name}'의 정답이 비었거나 보기에 없습니다"
-          }
-        }
-      }
-    },
-    "rule.quiz-card.prompt.empty": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "퀴즈 카드의 문제가 비었습니다"
-          }
-        }
-      }
-    },
-    "rule.quiz-card.unit": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "퀴즈 카드 '{name}'의 단원이 이 파일의 단원이 아닙니다"
-          }
-        }
-      }
-    },
     "rule.score-entry.max": {
       "extractionState": "manual",
       "localizations": {
@@ -1277,17 +1233,6 @@
         }
       }
     },
-    "rule.settings.daily-limit": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "하루 복습 개수는 1에서 50 사이여야 합니다"
-          }
-        }
-      }
-    },
     "rule.settings.day-boundary": {
       "extractionState": "manual",
       "localizations": {
@@ -1295,17 +1240,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "하루 경계는 0시부터 8시 사이여야 합니다"
-          }
-        }
-      }
-    },
-    "rule.settings.intervals": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "복습 간격은 1일에서 365일 사이여야 합니다"
           }
         }
       }
@@ -2223,83 +2157,6 @@
         }
       }
     },
-    "setting-item.review.intervals": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "복습 간격"
-          }
-        }
-      }
-    },
-    "setting-item.review.daily-limit": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "하루 복습 상한"
-          }
-        }
-      }
-    },
-    "setting-item.review.exam-window-days": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "시험 앞 간격 줄이기"
-          }
-        }
-      }
-    },
-    "setting-item.review.cards-per-review": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "한 번에 볼 카드"
-          }
-        }
-      }
-    },
-    "setting-item.review.settle-after-passes": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "정착 기준"
-          }
-        }
-      }
-    },
-    "setting-item.review.quiz-recheck-days": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "틀린 문제 다시 확인"
-          }
-        }
-      }
-    },
-    "setting-item.review.weights": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "복습 우선순위 가중치"
-          }
-        }
-      }
-    },
     "setting-item.notifications.assignment-due.on": {
       "extractionState": "manual",
       "localizations": {
@@ -2362,28 +2219,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "시험 당일 아침 알림 시각"
-          }
-        }
-      }
-    },
-    "setting-item.notifications.daily-review.on": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오늘 복습 알림"
-          }
-        }
-      }
-    },
-    "setting-item.notifications.daily-review.minute": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오늘 복습 알림 시각"
           }
         }
       }
@@ -2938,17 +2773,6 @@
         }
       }
     },
-    "setting-group.review-alerts": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "복습과 출석"
-          }
-        }
-      }
-    },
     "setting-group.auto-backup": {
       "extractionState": "manual",
       "localizations": {
@@ -3022,17 +2846,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "장"
-          }
-        }
-      }
-    },
-    "setting-unit.passes": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "번 통과"
           }
         }
       }
@@ -3572,6 +3385,281 @@
           "stringUnit": {
             "state": "translated",
             "value": "mermaid가 이 도식을 그리지 못합니다: %@"
+          }
+        }
+      }
+    },
+    "setting-group.attendance-alerts": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "출석"
+          }
+        }
+      }
+    },
+    "setting-item.study.ready-percent": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "준비됨 기준 점수"
+          }
+        }
+      }
+    },
+    "setting-item.study.min-problems": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원의 최소 문제 수"
+          }
+        }
+      }
+    },
+    "setting-item.study.final-days": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험 직전 마무리 날"
+          }
+        }
+      }
+    },
+    "setting-item.study.mock-minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모의시험 기본 시간"
+          }
+        }
+      }
+    },
+    "setting-item.study.auto-extract": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 문제지에서 문제 저절로 뽑기"
+          }
+        }
+      }
+    },
+    "setting-unit.percent": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%"
+          }
+        }
+      }
+    },
+    "setting-unit.problems": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제"
+          }
+        }
+      }
+    },
+    "model.noun.problem": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제"
+          }
+        }
+      }
+    },
+    "model.noun.card": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드"
+          }
+        }
+      }
+    },
+    "rule.card.front.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드의 앞면이 비었습니다"
+          }
+        }
+      }
+    },
+    "rule.card.back.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드의 뒷면이 비었습니다"
+          }
+        }
+      }
+    },
+    "rule.card.unit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드 '{name}'의 단원이 이 파일의 단원이 아닙니다"
+          }
+        }
+      }
+    },
+    "rule.settings.study": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "공부 설정 값이 범위를 벗어났습니다"
+          }
+        }
+      }
+    },
+    "rule.exam-plan-item.target": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "공부 계획 항목의 대상이 없습니다"
+          }
+        }
+      }
+    },
+    "exam-plan.title.unit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원 공부"
+          }
+        }
+      }
+    },
+    "exam-plan.title.some-problems": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 중 %2$lld문제"
+          }
+        }
+      }
+    },
+    "exam-plan.title.problems": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제 풀기"
+          }
+        }
+      }
+    },
+    "exam-plan.title.mixed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "범위 섞어 풀기"
+          }
+        }
+      }
+    },
+    "exam-plan.title.mock": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모의시험"
+          }
+        }
+      }
+    },
+    "exam-plan.title.wrong": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오답과 모른 카드 다시 보기"
+          }
+        }
+      }
+    },
+    "readiness.ready": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "준비됨"
+          }
+        }
+      }
+    },
+    "readiness.weak": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "약함"
+          }
+        }
+      }
+    },
+    "readiness.no-verdict": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "판정 없음"
+          }
+        }
+      }
+    },
+    "readiness.few-problems": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제 부족"
           }
         }
       }

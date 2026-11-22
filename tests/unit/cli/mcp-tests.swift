@@ -54,8 +54,8 @@ struct MCPTests {
         let all = try toolNames(MCPServer(gist: nil, propose: false), gist)
         #expect(panel.isSubset(of: all))
         for tool in [
-            "note_edit", "note_write", "note_show", "session_list", "exam_scope_taught", "attendance_set", "review_record",
-            "problem-set_record", "search", "today", "course_show", "course_list", "note_figure_add", "note_figure_write",
+            "note_edit", "note_write", "note_show", "session_list", "exam_scope_taught", "attendance_set", "problem_solve",
+            "card_flip", "search", "today", "course_show", "course_list", "note_figure_add", "note_figure_write",
             "note_figure_render", "note_widget_add", "note_widget_write", "note_widget_render", "note_format",
         ] {
             #expect(panel.contains(tool), "\(tool) is not in the panel")
@@ -85,9 +85,9 @@ struct MCPTests {
             "note_format", "note_images", "note_link", "note_link-sessions", "note_list", "note_migrate", "note_mv", "note_retitle",
             "note_rm", "note_show", "note_unlink-session", "note_widget_add", "note_widget_list", "note_widget_render",
             "note_widget_show", "note_widget_write", "note_write", "problem-set_add", "problem-set_link", "problem-set_list",
-            "problem-set_record", "problem-set_rm", "proposal_list", "quiz_add", "quiz_list", "quiz_record", "quiz_rm",
-            "recording_transcript",
-            "review_record", "review_skip", "score_add", "score_list", "score_rm", "score_set", "search", "session_add",
+            "problem-set_rm", "problem-set_set", "problem_rm", "problem_save", "problem_solve", "problem_verdict", "proposal_list",
+            "card_add", "card_flip", "card_list", "card_rm", "recording_transcript", "study_show", "unit_done", "material_viewed",
+            "exam_plan_make", "exam_plan_move", "score_add", "score_list", "score_rm", "score_set", "search", "session_add",
             "session_link-viewed", "session_list", "session_note", "session_progress", "session_rm", "session_set", "session_show",
             "session_wrap-up", "today", "unit_add", "unit_link", "unit_list", "unit_move", "unit_pages_add", "unit_pages_rm",
             "unit_pages_set", "unit_rm", "unit_set", "unit_show",

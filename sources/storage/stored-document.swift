@@ -14,10 +14,55 @@ extension Transcript: StoredModel {
 }
 
 extension CourseFile: StoredModel {
-    public static let schemaVersion = 7
+    public static let schemaVersion = 8
     public static let migrations: [Int: @Sendable (inout JSONValue) throws -> Void] = [
         1: dropSessionKind, 2: dropSessionIndex, 3: dropExamKind, 4: splitRolesByOrigin, 5: keepNoteLinksOnSessions, 6: spellOutRepeats,
+        7: identifyProblems,
     ]
+
+    // v7 문제에는 id가 없어 풀이 기록이 문제를 가리킬 수 없다. 저장하기 전에 다시 읽어도 같은 문제가 나와야 하므로 id를
+    // 묶음 id와 순서에서 만든다. 예전 계획 항목은 사용자가 쓴 것이라 고친 항목으로 남겨 다시 짜도 지워지지 않게 한다.
+    static func identifyProblems(_ raw: inout JSONValue) throws {
+        if case .array(var sets)? = raw["problemSets"] {
+            for s in sets.indices {
+                if sets[s]["source"] == nil { sets[s]["source"] = .string(ProblemSource.exercise.rawValue) }
+                guard case .string(let setText)? = sets[s]["id"], let setId = UUID(uuidString: setText),
+                    case .array(var problems)? = sets[s]["problems"]
+                else { continue }
+                for p in problems.indices where problems[p]["id"] == nil {
+                    problems[p]["id"] = .string(problemID(setId, p).uuidString)
+                }
+                sets[s]["problems"] = .array(problems)
+            }
+            raw["problemSets"] = .array(sets)
+        }
+        guard case .array(var exams)? = raw["exams"] else { return }
+        for e in exams.indices {
+            guard case .array(var plan)? = exams[e]["plan"] else { continue }
+            for i in plan.indices {
+                let old = plan[i]["target"]
+                let kind: String =
+                    switch old?["kind"] {
+                    case .string("unit")?, .string("quiz")?: ExamPlanTarget.Kind.unit.rawValue
+                    case .string("problem_set")?: ExamPlanTarget.Kind.problems.rawValue
+                    default: ExamPlanTarget.Kind.custom.rawValue
+                    }
+                var target: [String: JSONValue] = ["kind": .string(kind)]
+                if kind != ExamPlanTarget.Kind.custom.rawValue, let id = old?["id"] { target["id"] = id }
+                plan[i]["target"] = .object(target)
+                plan[i]["edited"] = .bool(true)
+            }
+            exams[e]["plan"] = .array(plan)
+        }
+        raw["exams"] = .array(exams)
+    }
+
+    static func problemID(_ set: UUID, _ index: Int) -> UUID {
+        var bytes = set.uuid
+        bytes.14 ^= UInt8(truncatingIfNeeded: index >> 8) ^ 0xA5
+        bytes.15 ^= UInt8(truncatingIfNeeded: index)
+        return UUID(uuid: bytes)
+    }
 
     static func spellOutRepeats(_ raw: inout JSONValue) throws {
         guard case .array(var assignments)? = raw["assignments"] else { return }
@@ -197,7 +242,7 @@ extension Settings: StoredModel {
     }
 }
 
-extension QuizFile: StoredModel {
+extension CardFile: StoredModel {
     public static let schemaVersion = 1
 }
 

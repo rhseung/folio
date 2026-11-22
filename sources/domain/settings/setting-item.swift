@@ -265,21 +265,16 @@ extension SettingItem {
     public static let studentMailDomain = SettingItem(
         "school.studentMailDomain", .text, "gm.gist.ac.kr", place: .row(.school), name: .settingItemSchoolStudentMailDomain)
 
-    public static let reviewIntervals = SettingItem(
-        "review.intervals", .numbers(1...365), [1, 3, 7, 14, 30], place: .row(.review), name: .settingItemReviewIntervals, unit: .days)
-    public static let reviewDailyLimit = SettingItem(
-        "review.dailyLimit", .number(1...50), .null, optional: true, place: .row(.review), name: .settingItemReviewDailyLimit,
-        unit: .units, starting: 10)
-    public static let reviewExamWindow = SettingItem(
-        "review.examWindowDays", .number(0...30), 7, place: .more(.review), name: .settingItemReviewExamWindowDays, unit: .daysBefore)
-    public static let reviewCardsPerReview = SettingItem(
-        "review.cardsPerReview", .number(1...20), 5, place: .more(.review), name: .settingItemReviewCardsPerReview, unit: .cards)
-    public static let reviewSettleAfter = SettingItem(
-        "review.settleAfterPasses", .number(1...5), 2, place: .more(.review), name: .settingItemReviewSettleAfterPasses, unit: .passes)
-    public static let quizRecheckDays = SettingItem(
-        "review.quizRecheckDays", .number(1...60), 7, place: .more(.review), name: .settingItemReviewQuizRecheckDays, unit: .days)
-    public static let reviewWeights = SettingItem(
-        "review.weights", .custom, encoded(PriorityWeights()), place: .outside, name: .settingItemReviewWeights)
+    public static let studyReadyPercent = SettingItem(
+        "study.readyPercent", .number(50...100), 80, place: .row(.study), name: .settingItemStudyReadyPercent, unit: .percent, step: 5)
+    public static let studyMinProblems = SettingItem(
+        "study.minProblems", .number(1...20), 3, place: .row(.study), name: .settingItemStudyMinProblems, unit: .problems)
+    public static let studyFinalDays = SettingItem(
+        "study.finalDays", .number(0...3), 3, place: .row(.study), name: .settingItemStudyFinalDays, unit: .days)
+    public static let studyMockMinutes = SettingItem(
+        "study.mockMinutes", .number(10...300), 90, place: .row(.study), name: .settingItemStudyMockMinutes, unit: .minutes, step: 10)
+    public static let studyAutoExtract = SettingItem(
+        "study.autoExtract", .toggle, true, place: .row(.study), name: .settingItemStudyAutoExtract)
     public static let callouts = SettingItem("callouts", .custom, .null, optional: true, place: .own(.notes), name: .settingItemCallouts)
 
     // 알림 종류마다 `notifications.<종류>.<칸>`이다. `NotificationSettings.Kind.item`이 이 키로 종류의 칸과 기본값을 찾는다.
@@ -304,13 +299,8 @@ extension SettingItem {
     public static let examMorningMinute = SettingItem(
         "notifications.examMorning.minute", .time(hours: 0...23), .number(8 * 60), place: .row(.examAlerts),
         name: .settingItemNotificationsExamMorningMinute, switchedBy: examMorning)
-    public static let dailyReview = SettingItem(
-        "notifications.dailyReview.on", .toggle, true, place: .row(.reviewAlerts), name: .settingItemNotificationsDailyReviewOn)
-    public static let dailyReviewMinute = SettingItem(
-        "notifications.dailyReview.minute", .time(hours: 0...23), .number(9 * 60), place: .row(.reviewAlerts),
-        name: .settingItemNotificationsDailyReviewMinute, switchedBy: dailyReview)
     public static let attendance = SettingItem(
-        "notifications.attendance.on", .toggle, true, place: .row(.reviewAlerts), name: .settingItemNotificationsAttendanceOn)
+        "notifications.attendance.on", .toggle, true, place: .row(.attendanceAlerts), name: .settingItemNotificationsAttendanceOn)
 
     public static let backupEnabled = SettingItem(
         "backup.enabled", .toggle, true, place: .row(.autoBackup), name: .settingItemBackupEnabled)
@@ -384,10 +374,9 @@ extension SettingItem {
         todayExamDays, assignmentUrgentDays, assignmentSoonDays, examUrgentDays, examSoonDays, examNearDays,
         dueMinute, examStartMinute, examMinutes,
         gradesUnlockMinutes, staffMailDomain, studentMailDomain,
-        reviewIntervals, reviewDailyLimit, reviewExamWindow, reviewCardsPerReview, reviewSettleAfter, quizRecheckDays, reviewWeights,
+        studyReadyPercent, studyMinProblems, studyFinalDays, studyMockMinutes, studyAutoExtract,
         assignmentDue, assignmentLeadHours, assignmentOverdue, assignmentOverdueMinute, examDayBefore, examDayBeforeMinute, examMorning,
-        examMorningMinute, dailyReview,
-        dailyReviewMinute, attendance,
+        examMorningMinute, attendance,
         backupEnabled, backupDailyDays, backupFolder,
         noteRules, newNoteMath, noteTemplates, mathSnippets, asciiMathSnippets, callouts,
         classMinutes, classStartMinute, sessionStartMinute,
