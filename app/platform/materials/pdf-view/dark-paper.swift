@@ -3,7 +3,6 @@ import Observation
 import PDFKit
 import SwiftUI
 
-#if os(macOS)
 // PDF의 다크 모드를 색 행렬 하나로 만든다. 색마다 색상은 그대로 두고 밝기만 뒤집으며(빨강은 빨강으로 남는다), 흰 종이와 검은 글자는 순수한 검정과 흰색 대신 테마의 다크 카드와 잉크 색이 된다. 뒤집기는
 // 모든 채널에 `v + (1 - 2 luma(v))`이다. luma만으로 만들었으므로 색을 회색 축 방향으로만 옮겨 채도를 지킨다. 또 자기 자신의 역함수라서, `source(of:)`가 원하는 출력을 내는 입력을
 // 이것으로 구한다. layer 필터는 선형 광도에서 돌므로 행렬을 tone curve로 감싸 sRGB 값에서 동작하게 한다. 토큰의 hex 값이 sRGB이고, sRGB에서는 뒤집은 중간 회색이 여전히 중간 회색으로
@@ -31,10 +30,12 @@ struct DarkPaper {
         paper + (ink - paper) * Self.flip(v)
     }
 
+    #if os(macOS)
     func source(of hex: UInt32) -> NSColor {
         let v = Self.flip((Self.rgb(hex) - paper) / (ink - paper))
         return NSColor(srgbRed: v.x, green: v.y, blue: v.z, alpha: 1)
     }
+    #endif
 
     var filters: [CIFilter] {
         let scale = ink - paper
@@ -55,4 +56,3 @@ struct DarkPaper {
         ]
     }
 }
-#endif

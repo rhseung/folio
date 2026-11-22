@@ -86,6 +86,69 @@ struct ProblemExtractionModelTests {
         #expect(await fake.requests.count == expected.count)
     }
 
+    @Test func aStemAndTheFigureItsSubProblemsShareShowOnceAboveTheFirst() async throws {
+        track()
+        let box = #"{"page":1,"x":0.1,"y":0.3,"width":0.5,"height":0.25}"#
+        func sub(_ n: String) -> String {
+            #"{"number":""# + n
+                + #"","parent":"W","points":null,"page":1,"text":"Apply it.","format":"written","options":[],"answer":null,"units":[],"solution":null,"solutionPage":null,"lecturePages":[],"region":null,"figures":["#
+                + box + "]}"
+        }
+        let reply =
+            #"{"problems":["# + sub("W1") + "," + sub("W2")
+            + #"],"groups":[{"number":"W","title":"Warm-up","parent":null,"page":1,"text":"Warm-up Problems (Do not submit)","region":null,"figures":[]}]}"#
+        let fake = FakeProvider(responses: [FakeProvider.reply(reply)])
+        workspace.extractor.standIn = { _ in ClaudeClient(provider: fake) }
+        let sheet = try material("Assignments/HW03/26h3.pdf")
+        workspace.extractProblems(from: sheet.id, in: graphTheory)
+        await workspace.extractor.finish()
+
+        let model = ProblemDraftModel(workspace: workspace, course: try #require(workspace.course(graphTheory)), material: sheet.id)
+        #expect(model.sheet?.lastPathComponent == "26h3.pdf")
+        // 두 소문제가 함께 보는 그림은 지문으로 가고, 지문은 폴더처럼 소문제 위에 한 번 보인다.
+        func shape() -> [String] {
+            model.lines.map { line in
+                switch line {
+                case .group(let g, let depth, let leaves): "\(depth) \(g.name) \(leaves.count)"
+                case .problem(let id, let depth): "\(depth) " + (model.rows.first { $0.id == id }?.problem.number ?? "")
+                }
+            }
+        }
+        #expect(shape() == ["0 Warm-up 2", "1 W1", "1 W2"])
+        #expect(model.groups.first?.figures.count == 1 && model.rows.allSatisfy { $0.problem.figures.isEmpty })
+        let group = try #require(model.groups.first?.id), leaves = model.rows.map(\.id)
+        model.toggleCollapsed(group)
+        #expect(shape() == ["0 Warm-up 2"])
+        model.toggleCollapsed(group)
+        // 지문의 표시는 그 아래를 모두 빼고, 일부만 받은 지문을 누르면 모두 받는다.
+        model.toggle(group: leaves)
+        #expect(model.check(leaves) == .none && !model.canAccept)
+        model.toggle(leaves[0])
+        #expect(model.check(leaves) == .some)
+        model.toggle(group: leaves)
+        #expect(model.check(leaves) == .all)
+
+        #expect(model.accept())
+        let set = try #require(workspace.course(graphTheory)?.file.problemSets.first { $0.materialId == sheet.id })
+        #expect(set.groups.map(\.number) == ["W"] && ProblemTree(set).stems(of: set.problems[1].id).first?.figures.count == 1)
+
+        // 문제 페이지는 지문을 폴더 줄로, 그 아래 번호 칸을 한 층 들여 보인다. 거른 문제가 없는 지문은 숨긴다.
+        let page = ProblemsModel(workspace: workspace, courseId: graphTheory)
+        func layout() -> [String] {
+            (page.groups.first { $0.set.id == set.id }?.lines ?? []).map { line in
+                switch line {
+                case .cells(let records, let depth): "\(depth) " + records.map(\.problem.number).joined(separator: ",")
+                case .folder(let g, let depth, _): "\(depth) [\(g.name)]"
+                }
+            }
+        }
+        #expect(layout() == ["0 [Warm-up]", "1 W1,W2"])
+        page.toggleCollapsed(set.groups[0].id)
+        #expect(layout() == ["0 [Warm-up]"])
+        page.filter = .wrong
+        #expect(layout() == [])
+    }
+
     @Test func thePagePicksASheetToExtract() async throws {
         track()
         let fake = answer(1)

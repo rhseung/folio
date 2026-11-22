@@ -9,7 +9,21 @@ final class ProblemsModel {
         var set: ProblemSet
         var note: String
         var records: [CourseStudy.ProblemRecord]
+        var lines: [Line]
         var id: UUID { self.set.id }
+    }
+
+    // 묶음의 나무를 펼친 줄이다. 한 층의 이어진 문제는 번호 칸 한 줄로, 지문은 접고 펴는 폴더 줄로 보인다.
+    enum Line: Identifiable {
+        case cells([CourseStudy.ProblemRecord], depth: Int)
+        case folder(ProblemGroup, depth: Int, note: String)
+
+        var id: UUID {
+            switch self {
+            case .cells(let records, _): records.first?.problem.id ?? UUID()
+            case .folder(let g, _, _): g.id
+            }
+        }
     }
 
     // 문제 뽑기 하나의 알림 카드다. 뽑는 중, 실패, 받을 초안을 자료마다 하나씩 보인다.
@@ -31,6 +45,7 @@ final class ProblemsModel {
     let courseId: UUID
     var filter = SolvePick.Filter.all
     var unit: UUID?
+    var collapsed: Set<UUID> = []
     // 초안은 `.folio/drafts`의 파일이라, 그릴 때마다 읽지 않고 `studyRevision`이 바뀔 때만 다시 읽는다.
     @ObservationIgnored private var draftCache: (revision: Int, drafts: [StudyDraft])?
 
@@ -77,8 +92,35 @@ final class ProblemsModel {
             let solved = records.filter(\.solved).count
             return Group(
                 set: set, note: [set.source.label, String(localized: .problemsSolvedOf(solved, records.count))].joined(separator: " · "),
-                records: records)
+                records: records, lines: lines(ProblemTree(set).roots, shown: records, depth: 0))
         }
+    }
+
+    // 거른 문제가 하나도 없는 지문은 숨긴다. 문제 아래에 매달린 소문제(3 아래 3a)는 같은 줄의 칸으로 잇는다.
+    private func lines(_ nodes: [ProblemTree.Node], shown: [CourseStudy.ProblemRecord], depth: Int) -> [Line] {
+        let byId = Dictionary(shown.map { ($0.problem.id, $0) }, uniquingKeysWith: { a, _ in a })
+        var out: [Line] = [], run: [CourseStudy.ProblemRecord] = []
+        func flush() {
+            if !run.isEmpty { out.append(.cells(run, depth: depth)) }
+            run = []
+        }
+        for n in nodes {
+            guard let g = n.group else {
+                run += n.questions.compactMap { byId[$0.id] }
+                continue
+            }
+            let inside = n.questions.compactMap { byId[$0.id] }
+            guard !inside.isEmpty else { continue }
+            flush()
+            out.append(.folder(g, depth: depth, note: String(localized: .problemsSolvedOf(inside.filter(\.solved).count, inside.count))))
+            if !collapsed.contains(g.id) { out += lines(n.children, shown: shown, depth: depth + 1) }
+        }
+        flush()
+        return out
+    }
+
+    func toggleCollapsed(_ id: UUID) {
+        if collapsed.contains(id) { collapsed.remove(id) } else { collapsed.insert(id) }
     }
 
     var isEmpty: Bool { study?.file.problemSets.isEmpty ?? true }

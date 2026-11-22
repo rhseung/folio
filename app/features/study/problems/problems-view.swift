@@ -54,12 +54,27 @@ struct ProblemsView: View {
                             if group.records.isEmpty {
                                 EmptyLine(String(localized: .problemsSetEmpty))
                             } else {
-                                FlowLayout(spacing: Theme.Space.s) {
-                                    ForEach(group.records, id: \.problem.id) { r in
-                                        ProblemCell(number: r.problem.number, tone: model.tone(r), help: model.help(r)) {
-                                            sheets.present(.solve(model.solveRequest(r)))
+                                VStack(alignment: .leading, spacing: Theme.Space.s) {
+                                    ForEach(group.lines) { line in
+                                        switch line {
+                                        case .cells(let records, let depth):
+                                            FlowLayout(spacing: Theme.Space.s) {
+                                                ForEach(records, id: \.problem.id) { r in
+                                                    ProblemCell(number: r.problem.number, tone: model.tone(r), help: model.help(r)) {
+                                                        sheets.present(.solve(model.solveRequest(r)))
+                                                    }
+                                                    .contextMenu { ProblemMenu(courseId: course.id, set: group.set, problem: r.problem) }
+                                                }
+                                            }
+                                            .padding(.leading, CGFloat(depth) * Theme.Space.xl)
+                                        case .folder(let folder, let depth, let note):
+                                            ProblemFolderRow(
+                                                group: folder, note: note, expanded: !model.collapsed.contains(folder.id)
+                                            ) {
+                                                withAnimation(.snappy) { model.toggleCollapsed(folder.id) }
+                                            }
+                                            .padding(.leading, CGFloat(depth) * Theme.Space.xl)
                                         }
-                                        .contextMenu { ProblemMenu(courseId: course.id, set: group.set, problem: r.problem) }
                                     }
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -128,5 +143,30 @@ private struct ExtractionNotice: View {
                 }
             }
         }
+    }
+}
+
+// 지문 하나의 폴더 줄이다. 누르면 그 아래 번호 칸을 접거나 편다.
+private struct ProblemFolderRow: View {
+    let group: ProblemGroup
+    let note: String
+    let expanded: Bool
+    let toggle: () -> Void
+
+    var body: some View {
+        Button(action: toggle) {
+            HStack(spacing: Theme.Space.s) {
+                Image(systemName: "chevron.right").font(Theme.Glyph.small).foregroundStyle(Theme.Palette.textTertiary)
+                    .rotationEffect(.degrees(expanded ? 90 : 0)).accessibilityHidden(true)
+                Image(systemName: expanded ? "folder" : "folder.fill").foregroundStyle(Theme.Palette.textSecondary)
+                    .accessibilityHidden(true)
+                Text(verbatim: group.name).font(Theme.Typeface.bodyStrong).lineLimit(1)
+                Text(note).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
+            }
+            .frame(minHeight: Theme.Size.touchTarget, alignment: .leading)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.pointing(.plain))
+        .accessibilityValue(Text(expanded ? .designExpanded : .designCollapsed))
     }
 }

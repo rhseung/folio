@@ -52,11 +52,14 @@ extension Workspace {
                 sheet: document, solution: try solution.map { try Self.document($0, store: store) }, lectures: store.lectureOutline(file))
         }.value
         guard let read else { return }
-        let problems = try await client.extractProblems(
+        let extracted = try await client.extractProblems(
             sheet: read.sheet, solution: read.solution, units: file.units, lectures: read.lectures,
             source: ProblemExtraction.source(of: sheet))
-        guard !problems.isEmpty else { throw ActionError.rule(String(localized: .problemExtractEmpty)) }
-        _ = try runThrowing(ProblemSetPropose(course: courseId, material: materialId, solution: solution?.id, problems: problems))
+        guard !extracted.problems.isEmpty else { throw ActionError.rule(String(localized: .problemExtractEmpty)) }
+        _ = try runThrowing(
+            ProblemSetPropose(
+                course: courseId, material: materialId, solution: solution?.id, problems: extracted.problems,
+                groups: extracted.groups.isEmpty ? nil : extracted.groups))
     }
 
     nonisolated private static func document(_ m: FolioDomain.Material, store: CourseStore) throws -> ProblemDocument {
