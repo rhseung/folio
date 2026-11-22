@@ -84,6 +84,7 @@ struct RemoveActionTests {
             e.plan = [
                 ExamPlanItem(day: ymd("2026-12-01"), target: .unit(unit.id), title: "트리 복습"),
                 ExamPlanItem(day: ymd("2026-12-02"), target: .init(kind: .custom), title: "트리 카드"),
+                ExamPlanItem(day: ymd("2026-12-03"), target: .unit(unit.id), edited: true),
             ]
             f.exams.append(e)
         }
@@ -99,7 +100,9 @@ struct RemoveActionTests {
         #expect(f.problemSets.first { $0.title == "트리 연습" }?.problems.count == 2)
         #expect(f.assignments.allSatisfy { !$0.unitIds.contains(unit.id) })
         let plan = try #require(f.exams.first { $0.id == exam.id }?.plan)
-        #expect(plan.map(\.title) == ["트리 카드"])
+        // 직접 쓴 항목은 단원 이름을 제목으로 받아 대상 없이 남는다.
+        #expect(plan.map(\.title) == ["트리 카드", unit.title])
+        #expect(plan.allSatisfy { $0.target.kind == .custom })
     }
 
     @Test func aSessionNoteKeepsItsUnitsUntilTheUnitGoes() throws {
@@ -151,11 +154,12 @@ struct RemoveActionTests {
         try expectNoPointer(at: material)
     }
 
-    @Test func removingAProblemSetRemovesPlanItemsOnIt() throws {
+    @Test func removingAProblemSetRemovesPlannedItemsAndKeepsWrittenOnes() throws {
         let set = problems("연습 2", units: [])
         var exam = Exam(device: device, at: now, title: "기말고사")
         exam.plan = [
-            ExamPlanItem(day: ymd("2026-12-01"), target: .init(kind: .problems, id: set.id), title: "연습 2 풀기")
+            ExamPlanItem(day: ymd("2026-12-01"), target: .init(kind: .problems, id: set.id), title: "연습 2 풀기"),
+            ExamPlanItem(day: ymd("2026-12-02"), target: .init(kind: .problems, id: set.id), title: "2번만 다시", edited: true),
         ]
         try edit { f in
             f.problemSets.append(set)
@@ -166,7 +170,8 @@ struct RemoveActionTests {
 
         let f = try file()
         #expect(!f.problemSets.contains { $0.id == set.id })
-        #expect(f.exams.first { $0.id == exam.id }?.plan.isEmpty == true)
+        let plan = try #require(f.exams.first { $0.id == exam.id }?.plan)
+        #expect(plan.map(\.title) == ["2번만 다시"] && plan.first?.target.kind == .custom)
     }
 
     @Test func relinkingOntoADuplicateMovesProblemSetPointers() {

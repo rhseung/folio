@@ -24,9 +24,12 @@ public enum ExamPlanner {
         current: [ExamPlanItem], units: [UnitInput], today: LocalDate, examDay: LocalDate, finalDays: Int,
         isDone: (ExamPlanItem) -> Bool
     ) -> [ExamPlanItem] {
-        let kept = current.filter { $0.isEdited || $0.isRemoved || ($0.day < today && isDone($0)) }
+        // 오늘 끝낸 항목도 남긴다. 체크 기록이 항목 id를 가리키므로, 같은 날 다시 짜며 새로 만들면 체크가 사라진다.
+        let finished = current.filter { !$0.isEdited && !$0.isRemoved && $0.day <= today && isDone($0) }
+        let kept = current.filter { $0.isEdited || $0.isRemoved } + finished
         let removed = Set(current.filter(\.isRemoved).map(\.target))
         let pinned = current.filter { $0.isEdited && !$0.isRemoved }
+        let finishedToday = Set(finished.filter { $0.day == today }.map(\.target))
         let carried = Set(
             current.filter { !$0.isEdited && !$0.isRemoved && $0.day < today && !isDone($0) && $0.target.kind == .unit }
                 .compactMap(\.target.id))
@@ -35,11 +38,14 @@ public enum ExamPlanner {
         guard n > 0 else { return kept }
         var out = kept
 
-        let finals = min(max(finalDays, 0), max(0, n - 1))
         let finalKinds: [ExamPlanTarget.Kind] = [.wrong, .mock, .mixed]
+        // 설정 항목은 0~3일이지만 settings.json을 손으로 고치면 더 클 수 있다. 마지막 날의 할 일은 세 가지뿐이라 그 수에서 자른다.
+        let finals = min(max(finalDays, 0), finalKinds.count, max(0, n - 1))
         for i in 0..<finals {
             let target = ExamPlanTarget(kind: finalKinds[i])
-            guard !removed.contains(target), !pinned.contains(where: { $0.target == target }) else { continue }
+            guard !removed.contains(target), !finishedToday.contains(target), !pinned.contains(where: { $0.target == target }) else {
+                continue
+            }
             out.append(ExamPlanItem(day: examDay.adding(days: -(i + 1)), target: target))
         }
 
@@ -55,6 +61,8 @@ public enum ExamPlanner {
         }
         let total = max(sequence.count, 1)
         for (i, (unit, first)) in sequence.enumerated() {
+            // 오늘 끝낸 단원은 남긴 항목이 첫 자리를 차지한다. 자리를 건너뛰기만 하므로 나머지 항목의 날은 바뀌지 않는다.
+            if first && finishedToday.contains(.unit(unit.id)) { continue }
             let day = today.adding(days: i * unitDays / total)
             out.append(
                 ExamPlanItem(

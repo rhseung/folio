@@ -66,6 +66,21 @@ extension CourseStudy {
 }
 
 extension CourseFile {
+    // 단원이나 문제 묶음을 지우면 그것을 가리키는 계획 항목도 지워진다(`course-rules.swift`의 `.cascade`). 사용자가 쓴
+    // 항목은 할 일의 글을 잃지 않도록 지우기 전에 대상 없는 항목으로 바꿔 남긴다.
+    public mutating func keepWrittenPlanItems(pointingTo target: UUID) {
+        for e in exams.indices {
+            for i in exams[e].plan.indices {
+                let item = exams[e].plan[i]
+                guard item.isEdited, !item.isRemoved, item.target.id == target,
+                    item.target.kind == .unit || item.target.kind == .problems
+                else { continue }
+                exams[e].plan[i].title = title(of: item)
+                exams[e].plan[i].target = ExamPlanTarget(kind: .custom)
+            }
+        }
+    }
+
     // 앱이 짠 항목은 제목을 저장하지 않고 대상에서 이름을 만든다. 단원 이름을 바꾸면 계획에도 바로 보이게 하기 위해서다.
     public func title(of item: ExamPlanItem) -> String {
         if !item.title.isEmpty { return item.title }
