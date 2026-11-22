@@ -521,6 +521,12 @@ struct MaterialNoteStudyTests {
         }
     }
 
+    @Test func problemCollect() throws {
+        try h.expectSame(["problem", "collect", "EC4207", "--set", "EC4207/Exercise 1"], setup: [Self.addSet]) { _ in
+            ProblemCollectionBuild(course: course, sets: [Self.set])
+        }
+    }
+
     static let attempt = uuid("A0000000-0000-4000-8000-0000000000F1")
 
     @Test func problemVerdict() throws {

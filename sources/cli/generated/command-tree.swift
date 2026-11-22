@@ -186,6 +186,7 @@ extension NoteCommand.Widget {
 
 extension ProblemCommand {
     static let subcommandTypes: [any ParsableCommand.Type] = alphabetical([
+        GeneratedCommands.ProblemCollectionBuild.self,
         GeneratedCommands.ProblemRemove.self,
         GeneratedCommands.ProblemSave.self,
         GeneratedCommands.ProblemSolve.self,
