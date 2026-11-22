@@ -132,17 +132,20 @@ struct ProblemExtractionModelTests {
         let set = try #require(workspace.course(graphTheory)?.file.problemSets.first { $0.materialId == sheet.id })
         #expect(set.groups.map(\.number) == ["W"] && ProblemTree(set).stems(of: set.problems[1].id).first?.figures.count == 1)
 
-        // 문제 페이지는 지문을 폴더 줄로, 그 아래 번호 칸을 한 층 들여 보인다. 거른 문제가 없는 지문은 숨긴다.
+        // 문제 페이지는 편 지문을 머리와 소문제 칸을 담은 상자로 두고, 접은 지문은 칸 하나로 둔다. 거른 문제가 없는 지문은
+        // 숨긴다.
         let page = ProblemsModel(workspace: workspace, courseId: graphTheory)
-        func layout() -> [String] {
-            (page.groups.first { $0.set.id == set.id }?.lines ?? []).map { line in
-                switch line {
-                case .cells(let records, let depth): "\(depth) " + records.map(\.problem.number).joined(separator: ",")
-                case .folder(let g, let depth, _): "\(depth) [\(g.name)]"
+        func draw(_ items: [ProblemsModel.Item]) -> String {
+            items.map { item in
+                switch item {
+                case .cell(let r): r.problem.number
+                case .stem(let g, _, nil): g.name + "›"
+                case .stem(let g, _, let children?): "[" + ([g.name + "⌄"] + [draw(children)]).joined(separator: " ") + "]"
                 }
-            }
+            }.joined(separator: " ")
         }
-        #expect(layout() == ["0 [Warm-up]", "1 W1,W2"])
+        func layout() -> String { draw(page.groups.first { $0.set.id == set.id }?.items ?? []) }
+        #expect(layout() == "[Warm-up⌄ W1 W2]")
         // 풀기 화면은 소문제의 번호 자리에 지문의 경로를 쓰고, 지문과 그 그림을 먼저 보인다.
         let solve = SolveModel(
             workspace: workspace, request: SolveRequest(course: graphTheory, set: set.id, problems: [set.problems[0].id]))
@@ -150,9 +153,9 @@ struct ProblemExtractionModelTests {
         #expect(solve.title(w1).contains("Warm-up › W1") && solve.stems(w1).map(\.number) == ["W"])
         #expect(solve.sheet(w1)?.lastPathComponent == "26h3.pdf")
         page.toggleCollapsed(set.groups[0].id)
-        #expect(layout() == ["0 [Warm-up]"])
+        #expect(layout() == "Warm-up›")
         page.filter = .wrong
-        #expect(layout() == [])
+        #expect(layout() == "")
     }
 
     @Test func thePagePicksASheetToExtract() async throws {

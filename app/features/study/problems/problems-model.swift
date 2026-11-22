@@ -9,19 +9,20 @@ final class ProblemsModel {
         var set: ProblemSet
         var note: String
         var records: [CourseStudy.ProblemRecord]
-        var lines: [Line]
+        var items: [Item]
         var id: UUID { self.set.id }
     }
 
-    // 묶음의 나무를 펼친 줄이다. 한 층의 이어진 문제는 번호 칸 한 줄로, 지문은 접고 펴는 폴더 줄로 보인다.
-    enum Line: Identifiable {
-        case cells([CourseStudy.ProblemRecord], depth: Int)
-        case folder(ProblemGroup, depth: Int, note: String)
+    // 묶음의 나무를 그릴 칸이다. 지문은 편 동안 그 소문제(`children`)를 담은 상자이고, 접으면 칸 하나다(`children`이 nil).
+    // 모두 한 흐름에 놓여서 상자가 작으면 번호 칸 사이에 끼고, 크면 다음 줄로 넘어가 접힌다.
+    indirect enum Item: Identifiable {
+        case cell(CourseStudy.ProblemRecord)
+        case stem(ProblemGroup, note: String, children: [Item]?)
 
         var id: UUID {
             switch self {
-            case .cells(let records, _): records.first?.problem.id ?? UUID()
-            case .folder(let g, _, _): g.id
+            case .cell(let r): r.problem.id
+            case .stem(let g, _, _): g.id
             }
         }
     }
@@ -92,31 +93,21 @@ final class ProblemsModel {
             let solved = records.filter(\.solved).count
             return Group(
                 set: set, note: [set.source.label, String(localized: .problemsSolvedOf(solved, records.count))].joined(separator: " · "),
-                records: records, lines: lines(ProblemTree(set).roots, shown: records, depth: 0))
+                records: records,
+                items: items(
+                    ProblemTree(set).roots, shown: Dictionary(records.map { ($0.problem.id, $0) }, uniquingKeysWith: { a, _ in a })))
         }
     }
 
-    // 거른 문제가 하나도 없는 지문은 숨긴다. 문제 아래에 매달린 소문제(3 아래 3a)는 같은 줄의 칸으로 잇는다.
-    private func lines(_ nodes: [ProblemTree.Node], shown: [CourseStudy.ProblemRecord], depth: Int) -> [Line] {
-        let byId = Dictionary(shown.map { ($0.problem.id, $0) }, uniquingKeysWith: { a, _ in a })
-        var out: [Line] = [], run: [CourseStudy.ProblemRecord] = []
-        func flush() {
-            if !run.isEmpty { out.append(.cells(run, depth: depth)) }
-            run = []
+    // 거른 문제가 하나도 없는 지문은 숨긴다. 문제 아래에 매달린 소문제(3 아래 3a)는 같은 흐름의 칸으로 잇는다.
+    private func items(_ nodes: [ProblemTree.Node], shown: [UUID: CourseStudy.ProblemRecord]) -> [Item] {
+        nodes.flatMap { n -> [Item] in
+            guard let g = n.group else { return n.questions.compactMap { shown[$0.id] }.map(Item.cell) }
+            let inside = n.questions.compactMap { shown[$0.id] }
+            guard !inside.isEmpty else { return [] }
+            let note = String(localized: .problemsSolvedOf(inside.filter(\.solved).count, inside.count))
+            return [.stem(g, note: note, children: collapsed.contains(g.id) ? nil : items(n.children, shown: shown))]
         }
-        for n in nodes {
-            guard let g = n.group else {
-                run += n.questions.compactMap { byId[$0.id] }
-                continue
-            }
-            let inside = n.questions.compactMap { byId[$0.id] }
-            guard !inside.isEmpty else { continue }
-            flush()
-            out.append(.folder(g, depth: depth, note: String(localized: .problemsSolvedOf(inside.filter(\.solved).count, inside.count))))
-            if !collapsed.contains(g.id) { out += lines(n.children, shown: shown, depth: depth + 1) }
-        }
-        flush()
-        return out
     }
 
     func toggleCollapsed(_ id: UUID) {

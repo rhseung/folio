@@ -55,30 +55,8 @@ struct ProblemsView: View {
                             if group.records.isEmpty {
                                 EmptyLine(String(localized: .problemsSetEmpty))
                             } else {
-                                VStack(alignment: .leading, spacing: Theme.Space.s) {
-                                    ForEach(group.lines) { line in
-                                        switch line {
-                                        case .cells(let records, let depth):
-                                            FlowLayout(spacing: Theme.Space.s) {
-                                                ForEach(records, id: \.problem.id) { r in
-                                                    ProblemCell(number: r.problem.number, tone: model.tone(r), help: model.help(r)) {
-                                                        openLink.solve(model.solveRequest(r))
-                                                    }
-                                                    .contextMenu { ProblemMenu(courseId: course.id, set: group.set, problem: r.problem) }
-                                                }
-                                            }
-                                            .padding(.leading, CGFloat(depth) * Theme.Space.xl)
-                                        case .folder(let folder, let depth, let note):
-                                            ProblemFolderRow(
-                                                group: folder, note: note, expanded: !model.collapsed.contains(folder.id)
-                                            ) {
-                                                withAnimation(.snappy) { model.toggleCollapsed(folder.id) }
-                                            }
-                                            .padding(.leading, CGFloat(depth) * Theme.Space.xl)
-                                        }
-                                    }
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                                ProblemItems(items: group.items, model: model, courseId: course.id, set: group.set)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                             }
                         }
                     }
@@ -147,8 +125,45 @@ private struct ExtractionNotice: View {
     }
 }
 
-// 지문 하나의 폴더 줄이다. 누르면 그 아래 번호 칸을 접거나 편다.
-private struct ProblemFolderRow: View {
+// 묶음의 나무를 한 흐름으로 그린다. 편 지문은 옅은 상자 안에 머리와 소문제 칸을 다시 한 흐름으로 두고, 접은 지문은 칸 하나다.
+// 상자 안의 상자가 겹친 지문이다.
+private struct ProblemItems: View {
+    let items: [ProblemsModel.Item]
+    var head: (ProblemGroup, String)?
+    let model: ProblemsModel
+    let courseId: UUID
+    let set: ProblemSet
+    @Environment(\.openLink) private var openLink
+
+    var body: some View {
+        FlowLayout(spacing: Theme.Space.s, centered: true) {
+            if let (g, note) = head { chip(g, note: note, expanded: true) }
+            ForEach(items) { item($0) }
+        }
+    }
+
+    private func chip(_ g: ProblemGroup, note: String, expanded: Bool) -> some View {
+        StemChip(group: g, note: note, expanded: expanded) { withAnimation(.snappy) { model.toggleCollapsed(g.id) } }
+    }
+
+    @ViewBuilder private func item(_ item: ProblemsModel.Item) -> some View {
+        switch item {
+        case .cell(let r):
+            ProblemCell(number: r.problem.number, tone: model.tone(r), help: model.help(r)) { openLink.solve(model.solveRequest(r)) }
+                .contextMenu { ProblemMenu(courseId: courseId, set: set, problem: r.problem) }
+        case .stem(let g, let note, nil):
+            chip(g, note: note, expanded: false)
+        case .stem(let g, let note, let children?):
+            AnyView(ProblemItems(items: children, head: (g, note), model: model, courseId: courseId, set: set))
+                // 상자의 모서리는 안의 칸 모서리와 동심원이 되게 칸의 반지름에 안쪽 여백을 더한 값이다.
+                .padding(Theme.Space.xs)
+                .background(Theme.Palette.fill.opacity(Theme.Opacity.folded), in: .rect(cornerRadius: Theme.Radius.strip))
+        }
+    }
+}
+
+// 지문의 칸이다. 편 지문에서는 상자의 머리로 이름과 푼 수를 보이고, 접으면 번호 칸처럼 채운 칸 하나가 된다. 누르면 접고 편다.
+private struct StemChip: View {
     let group: ProblemGroup
     let note: String
     let expanded: Bool
@@ -156,15 +171,15 @@ private struct ProblemFolderRow: View {
 
     var body: some View {
         Button(action: toggle) {
-            HStack(spacing: Theme.Space.s) {
-                Image(systemName: "chevron.right").font(Theme.Glyph.small).foregroundStyle(Theme.Palette.textTertiary)
-                    .rotationEffect(.degrees(expanded ? 90 : 0)).accessibilityHidden(true)
-                Image(systemName: expanded ? "folder" : "folder.fill").foregroundStyle(Theme.Palette.textSecondary)
-                    .accessibilityHidden(true)
+            HStack(spacing: Theme.Space.xs) {
                 Text(verbatim: group.name).font(Theme.Typeface.bodyStrong).lineLimit(1)
                 Text(note).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
+                Image(systemName: "chevron.right").font(Theme.Glyph.small).foregroundStyle(Theme.Palette.textTertiary)
+                    .rotationEffect(.degrees(expanded ? 90 : 0)).accessibilityHidden(true)
             }
-            .frame(minHeight: Theme.Size.touchTarget, alignment: .leading)
+            .padding(.horizontal, Theme.Space.s)
+            .frame(minHeight: Theme.Size.solveCell)
+            .background(Theme.Palette.fill.opacity(expanded ? 0 : 1), in: .rect(cornerRadius: Theme.Radius.control))
             .contentShape(.rect)
         }
         .buttonStyle(.pointing(.plain))
