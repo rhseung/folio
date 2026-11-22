@@ -58,19 +58,19 @@ struct ProblemArtDrawing {
 
         do {
             var draft = try await client.drawProblemArt(job, crops: crops, stemFigure: stemFigure)
-            let problems = Self.problems(draft)
+            // 그리지 않는 항목은 그림을 쓰지 않으므로 검사도, 고쳐 달라는 재요청도 하지 않는다.
+            let problems = job.draws ? Self.problems(draft) : []
             if !problems.isEmpty {
                 draft = try await client.drawProblemArt(job, crops: crops, stemFigure: stemFigure, previous: draft, problems: problems)
             }
-            // 고쳐도 검사에 걸리는 그림은 버린다. 문제집에는 자른 그림이 들어간다.
-            func checked(_ svg: String?) -> String? {
-                svg.flatMap { (try? NoteFigureFinish.finish($0))?.problems.isEmpty == true ? $0 : nil }
-            }
-            if job.draws {
+            // 고쳐도 검사에 걸리는 그림이 있으면 쓰지 않는다. 파일이 있으면 다음 문제집이 다시 그리지 않으므로, 한 번의 실패가
+            // 굳지 않게 실패로만 세어 다음에 다시 맡긴다. 이번 문제집에는 자른 그림이 들어간다. 그릴 것이 없다는 답(null)은 쓴다.
+            let rejected = job.draws && !Self.problems(draft).isEmpty
+            if job.draws, !rejected {
                 _ = try workspace.runThrowing(
                     ProblemFigureWrite(
-                        course: course, set: job.set, number: job.number, figure: checked(draft.figure),
-                        solutionFigure: checked(draft.solutionFigure)))
+                        course: course, set: job.set, number: job.number, figure: draft.figure,
+                        solutionFigure: draft.solutionFigure))
             }
             if job.writesSolution, var p = job.problem,
                 let solution = draft.solution?.trimmingCharacters(in: .whitespacesAndNewlines), !solution.isEmpty
@@ -78,7 +78,7 @@ struct ProblemArtDrawing {
                 p.solution = solution
                 _ = try workspace.runThrowing(ProblemSave(course: course, set: job.set, problems: [p]))
             }
-            return !job.draws || checked(draft.figure) != nil || draft.figure == nil
+            return !rejected
         } catch {
             return false
         }

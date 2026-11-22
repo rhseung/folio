@@ -89,6 +89,36 @@ struct SolveModelTests {
         #expect(tex.contains("\\artfigure{art-\(saved.problems[0].id.uuidString).pdf}"))
     }
 
+    // 고쳐도 검사에 걸리는 그림은 파일로 남기지 않는다. 파일이 있으면 다음 문제집이 그 문제를 다시 그리지 않는다.
+    @Test func aRejectedFigureIsDrawnAgainNextTime() async throws {
+        let workspace = try fixtureWorkspace()
+        workspace.run(MaterialTrack(course: graphTheory, assignments: false))
+        let unit = try #require(workspace.run(UnitAdd(course: graphTheory, title: "매칭"))?.made)
+        let sheet = try #require(workspace.course(graphTheory)?.file.materials.first { $0.path == "Inherited/소순범/2024 Midterm.pdf" })
+        let figure = try #require(ProblemRegion(page: 1, x: 0.1, y: 0.2, width: 0.4, height: 0.3))
+        let problems = [
+            Problem(number: "1", text: "Find a perfect matching of $G$.", format: .written, unitIds: [unit], figures: [figure]),
+            Problem(number: "2", text: "State Hall's theorem.", format: .written, unitIds: [unit]),
+        ]
+        workspace.run(ProblemSetAdd(course: graphTheory, title: "2024 Midterm", material: sheet.id, problems: problems))
+
+        let reply = #"{"figure":"<div/>","solutionFigure":null,"solution":"By Hall's theorem."}"#
+        let fake = FakeProvider(responses: Array(repeating: FakeProvider.reply(reply), count: 3))
+        let model = SolveModel(workspace: workspace, request: SolveRequest(course: graphTheory, units: [unit], mode: .handwriting))
+        model.claudeStandIn = ClaudeClient(provider: fake)
+        await model.buildCollection()
+        // 픽스처의 문제지 PDF는 열리지 않는 자리표시자라 자른 그림으로 돌아간 문제집은 TeX이 만들지 못한다. 그래서 문제집은 보지 않는다.
+        #expect(model.undrawn == 1)
+        // 그리는 문제는 처음과 고쳐 달라는 재요청, 풀이만 쓰는 문제는 한 번이다.
+        #expect(await fake.requests.count == 3)
+
+        let course = try #require(workspace.course(graphTheory))
+        #expect(course.store.problemArt().isEmpty)
+        let saved = try #require(course.file.problemSets.first { $0.title == "2024 Midterm" })
+        #expect(saved.problems.allSatisfy { $0.solution == "By Hall's theorem." })
+        #expect(ProblemArtDrawing.jobs(course, picked: saved.problems.map(\.id)).map(\.number) == ["1"])
+    }
+
     @Test func aSkippedProblemLeavesNoRecord() throws {
         let (workspace, unit) = try solvable()
         let model = SolveModel(workspace: workspace, request: SolveRequest(course: graphTheory, units: [unit]))
