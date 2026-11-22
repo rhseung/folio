@@ -131,6 +131,7 @@ enum Theme {
         static let card: CGFloat = 14
         static let floating: CGFloat = 16
         static let strip: CGFloat = 12
+        static let block: CGFloat = 12
     }
 
     enum Size {

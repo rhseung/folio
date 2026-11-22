@@ -82,7 +82,7 @@ struct SessionBlock: View {
         .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .topLeading)
         .background { fill }
         .overlay(alignment: .leading) { if let stripe { stripe.frame(width: Theme.Size.stripe) } }
-        .clipShape(.rect(cornerRadius: Theme.Radius.tile))
+        .clipShape(.rect(cornerRadius: Theme.Radius.block))
         .overlay { border }
         .opacity(entry.look == .cancelled ? Theme.Opacity.ended : 1)
         .contentShape(.rect)
@@ -121,7 +121,7 @@ struct SessionBlock: View {
     }
 
     @ViewBuilder var border: some View {
-        let shape = RoundedRectangle(cornerRadius: Theme.Radius.tile)
+        let shape = RoundedRectangle(cornerRadius: Theme.Radius.block)
         switch entry.look {
         case .upcoming: shape.strokeBorder(Theme.Palette.lineStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
         case .next: shape.strokeBorder(accent.color, style: StrokeStyle(lineWidth: Theme.Size.line, dash: [4, 4]))
