@@ -2,8 +2,6 @@
 public enum NoteWritingGuide {
     // 콜아웃 종류는 설정에 따라 달라지므로 FolioMarkdown의 표를 읽는 쪽이 넘긴다.
     public static func text(callouts: [String], numbered: [String]) -> String {
-        let inks = FigureStyle.inks.map { "`\($0.name)`" }.joined(separator: " ")
-        let strokes = FigureStyle.strokes.map { "\($0.role) \(FigureStyle.g($0.width))" }.joined(separator: ", ")
         let variables = FigureStyle.inks.map { "`--\($0.name)`" }.joined(separator: " ")
         return #"""
             # Folio 노트 형식
@@ -28,17 +26,7 @@ public enum NoteWritingGuide {
 
             ## 그림(SVG)
             - `note figure add <과목> <이름>.svg --svg <파일>`이 `Notes/assets`에 쓴다. 노트에는 `![설명](assets/<이름>.svg)`(하위 폴더의 노트는 `../assets/`). 고칠 때는 `note figure show`의 `text`를 고치고 `hash`를 `note figure write --expect`에.
-            - 모양은 LaTeX 교과서의 그림이다. 선과 글자는 검정, 강조만 원색, 바탕은 투명하다. 노트는 그림을 이미지로 보여서 스크립트, 바깥 파일·글꼴·이미지를 쓸 수 없다. 이미지는 `data:` 주소로 넣는다.
-            - 색은 클래스로만 칠한다. 면과 글자는 `class="이름"`, 선은 `class="s-이름"`: \#(inks). `muted`는 보조 선과 흐린 글자, `grid`는 격자, `paper`는 라벨 뒤를 가리는 종이색이다. hex·rgb·색 이름, 직접 쓴 다크 규칙은 쓰지 않는다. 라이트·다크 값은 쓸 때 들어간다.
-            - 선 굵기(`stroke-width`): \#(strokes). 선에는 `fill="none"`.
-            - 화살표는 촉을 그리지 않고 `marker-end="url(#m-ink)"`처럼 선과 같은 색의 `m-이름`을 쓴다. 촉은 선 굵기를 따라 커지고 점선이어도 실선이다.
-            - 그림의 글은 라벨만 둔다(\#(FigureStyle.labelLimit)자까지): 정점과 집합 이름, 축, 짧은 수식, (a)(b). 설명, 범례 문장, 증명은 노트 본문에 쓰고, 색의 뜻은 라벨 색으로 알린다.
-            - 수식, 화학식, 미지수는 `<text>` 안에 `$…$`로 쓴다(`$v_1$`, `$\ce{H2O}$`, 벡터는 `$\mathbf{F}$`). 쓸 때 LaTeX 글자 모양이 된다. 낱말은 그대로 두면 산세리프다. 수식이 든 라벨은 `<tspan>` 없이 `<text>` 하나로 쓴다.
-            - 글자는 14px, `class="sm"` 12px, `class="lg"` 17px, `class="bd"` 굵게. 글꼴과 크기를 따로 적지 않는다.
-            - 물리 그림: 힘과 속도는 색 화살표, 분해한 성분은 같은 색 점선, 고정된 면은 빗금, 치수는 양쪽 화살표와 `muted` 점선 보조선, 광선은 가운데 촉(`marker-mid`).
-            - 좌표는 눈대중하지 않고 공식으로 계산한다(렌즈의 상, 접점, 교점). 정해진 점을 지나야 하는 선은 그 점의 좌표를 꺾이는 점으로 그대로 쓰고, 점을 `<circle id="F2" …>`로 두고 선에 `data-through="F2"`를 단다. 쓸 때 선이 그 점을 1.5px 안으로 지나는지 본다. 쓴 뒤에는 `note figure render`로 그려 본다.
-            - `viewBox`를 두고 `width`/`height`는 빼거나 `viewBox`와 같게 둔다. 노트 열 폭(390~720pt)에 맞춰 줄어든다.
-            - 쓸 때 라벨끼리, 라벨과 선(선 굵기 절반 + 1.5px 간격), 칠한 면의 경계, 그림 밖으로 나간 라벨을 검사한다. `s-grid` 격자와 불투명한 도형이 가린 선은 보지 않으니, 선 위 라벨은 아래에 `class="paper"` 상자를 깐다.
+            \#(figureRules)
 
             ## 위젯
             - `note widget add <과목> --html <파일>`이 `.folio/widgets/<ID>.html`을 쓰고 ID를 돌려준다. 노트에는
@@ -56,4 +44,23 @@ public enum NoteWritingGuide {
             쓰기 전에 `note figure render <과목> --text <SVG>`, `note widget render <과목> --text <HTML>`로 라이트·다크, 폭 480·900에서 그린 그림을 본다(이미 쓴 것은 이름이나 ID로). 겹친 글자, 잘린 부분, 다크에서 사라진 색, 위젯의 콘솔 오류를 고친 뒤 쓴다.
             """#
     }
+
+    // 그림 하나의 SVG 규칙이다. 노트 그림과 문제집 그림(`ProblemArt`)이 같은 스타일과 검사를 쓴다.
+    public static let figureRules: String = {
+        let inks = FigureStyle.inks.map { "`\($0.name)`" }.joined(separator: " ")
+        let strokes = FigureStyle.strokes.map { "\($0.role) \(FigureStyle.g($0.width))" }.joined(separator: ", ")
+        return #"""
+            - 모양은 LaTeX 교과서의 그림이다. 선과 글자는 검정, 강조만 원색, 바탕은 투명하다. 노트는 그림을 이미지로 보여서 스크립트, 바깥 파일·글꼴·이미지를 쓸 수 없다. 이미지는 `data:` 주소로 넣는다.
+            - 색은 클래스로만 칠한다. 면과 글자는 `class="이름"`, 선은 `class="s-이름"`: \#(inks). `muted`는 보조 선과 흐린 글자, `grid`는 격자, `paper`는 라벨 뒤를 가리는 종이색이다. hex·rgb·색 이름, 직접 쓴 다크 규칙은 쓰지 않는다. 라이트·다크 값은 쓸 때 들어간다.
+            - 선 굵기(`stroke-width`): \#(strokes). 선에는 `fill="none"`.
+            - 화살표는 촉을 그리지 않고 `marker-end="url(#m-ink)"`처럼 선과 같은 색의 `m-이름`을 쓴다. 촉은 선 굵기를 따라 커지고 점선이어도 실선이다.
+            - 그림의 글은 라벨만 둔다(\#(FigureStyle.labelLimit)자까지): 정점과 집합 이름, 축, 짧은 수식, (a)(b). 설명, 범례 문장, 증명은 노트 본문에 쓰고, 색의 뜻은 라벨 색으로 알린다.
+            - 수식, 화학식, 미지수는 `<text>` 안에 `$…$`로 쓴다(`$v_1$`, `$\ce{H2O}$`, 벡터는 `$\mathbf{F}$`). 쓸 때 LaTeX 글자 모양이 된다. 낱말은 그대로 두면 산세리프다. 수식이 든 라벨은 `<tspan>` 없이 `<text>` 하나로 쓴다.
+            - 글자는 14px, `class="sm"` 12px, `class="lg"` 17px, `class="bd"` 굵게. 글꼴과 크기를 따로 적지 않는다.
+            - 물리 그림: 힘과 속도는 색 화살표, 분해한 성분은 같은 색 점선, 고정된 면은 빗금, 치수는 양쪽 화살표와 `muted` 점선 보조선, 광선은 가운데 촉(`marker-mid`).
+            - 좌표는 눈대중하지 않고 공식으로 계산한다(렌즈의 상, 접점, 교점). 정해진 점을 지나야 하는 선은 그 점의 좌표를 꺾이는 점으로 그대로 쓰고, 점을 `<circle id="F2" …>`로 두고 선에 `data-through="F2"`를 단다. 쓸 때 선이 그 점을 1.5px 안으로 지나는지 본다. 쓴 뒤에는 `note figure render`로 그려 본다.
+            - `viewBox`를 두고 `width`/`height`는 빼거나 `viewBox`와 같게 둔다. 노트 열 폭(390~720pt)에 맞춰 줄어든다.
+            - 쓸 때 라벨끼리, 라벨과 선(선 굵기 절반 + 1.5px 간격), 칠한 면의 경계, 그림 밖으로 나간 라벨을 검사한다. `s-grid` 격자와 불투명한 도형이 가린 선은 보지 않으니, 선 위 라벨은 아래에 `class="paper"` 상자를 깐다.
+            """#
+    }()
 }
