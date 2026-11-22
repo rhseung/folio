@@ -53,7 +53,8 @@ extension ClaudeClient {
                 a unit title. Set "lecturePages" to the one to three lecture pages (from <lectures>, inside the unit's page \
                 range) where the concept the problem needs is taught, or [] when none fits. Skip cover pages, instructions \
                 that belong to no problem, and blank answer space. For a LaTeX source, region is null and figures are empty.
-                """, cache: true)
+                """, cache: true),
+            .text(MathWriting.rule, cache: true),
         ]
         var content: [ContentBlock] = [
             .text(

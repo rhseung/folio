@@ -152,4 +152,25 @@ struct StudyAITests {
             #expect(schema["additionalProperties"] == .bool(false))
         }
     }
+
+    // 공부 글을 쓰는 작업은 모두 수식을 `$…$`로 쓰라는 규칙을 받는다. 유니코드 기호로 쓴 수식은 앱이 그리지 못한다.
+    @Test func everyStudyTaskAsksForLaTeXMath() async throws {
+        let fake = FakeProvider(responses: [
+            FakeProvider.reply(#"{"verdict":"correct","reason":null,"feedback":["$\\kappa(G) = 4$이므로 맞습니다."],"lines":[]}"#),
+            FakeProvider.reply(#"{"problems":[]}"#),
+            FakeProvider.reply(#"{"cards":[]}"#),
+            FakeProvider.reply(#"{"title":"모의","problems":[]}"#),
+        ])
+        let client = ClaudeClient(provider: fake)
+        _ = try await client.gradeProblem(Problem(number: "1", text: "$\\kappa(G) = 4$이면 $G$는 2-연결인가?"), answer: "참")
+        _ = try await client.extractProblems(sheet: .pdf(Data("%PDF".utf8)), solution: nil, units: [], source: .exercise)
+        _ = try await client.suggestCards(unitTitle: "연결도", count: 1, existing: [], context: [])
+        _ = try await client.writeProblemSheet(units: [], examples: [], wrong: [], count: 1, context: [])
+        let requests = await fake.requests
+        #expect(requests.count == 4)
+        for request in requests {
+            let system = (request.system ?? []).compactMap { if case .text(let t, _) = $0 { t } else { nil } }
+            #expect(system.contains(MathWriting.rule))
+        }
+    }
 }

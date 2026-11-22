@@ -107,6 +107,14 @@ extension Problem {
         return format == .short ? nil : .wrong
     }
 
+    // 채점 뒤 보기 하나에 붙일 판정이다. 고른 보기는 마지막 판정을 따른다. 정답이 없는 문제(뽑은 문제는 대개 없다)는 Claude가
+    // 채점하고, 손으로 판정을 고칠 수도 있어서 정답과 비교하면 맞은 답을 틀렸다고 칠하게 된다. 부분 점수는 칠하지 않는다.
+    public func mark(of option: String, picked: String, verdict: Verdict) -> Verdict? {
+        if option == picked { return verdict == .partial ? nil : verdict }
+        guard let key = answer, Self.normalized(key) == Self.normalized(option) else { return nil }
+        return .correct
+    }
+
     // 공백, 대소문자, 수식 구분자 `$`는 답을 바꾸지 않는다.
     static func normalized(_ text: String) -> String {
         text.lowercased().filter { !$0.isWhitespace && $0 != "$" }

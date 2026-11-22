@@ -18,10 +18,13 @@ final class SolveModel {
         var answer: String
     }
 
-    // 시트 오른쪽에 띄운 자료의 쪽이다. 시트가 창을 가리므로 자료를 창에서 열지 않고 시트 안에서 보인다.
-    struct SidePage: Hashable {
+    // 문제지, 해설, 렉처의 쪽이다. 풀기 화면 옆 칸에 그 자료를 연다.
+    struct PageLink: Hashable {
         var material: UUID
         var page: Int?
+
+        // 문제의 쪽과 링크의 쪽은 모두 1부터 센다.
+        var link: AppLink { AppLink(.material, material, anchor: page.map(AppLink.Anchor.page)) }
     }
 
     struct Outcome: Identifiable {
@@ -55,7 +58,6 @@ final class SolveModel {
     // 모의시험을 멈춘 시각과 지금까지 멈춰 있던 시간이다. 멈춘 동안은 남은 시간이 줄지 않는다.
     private(set) var pausedAt: Date?
     private var pausedFor: TimeInterval = 0
-    var side: SidePage?
     // 이 과목에서 풀다 둔 차례다. 고르기 화면이 이어 풀기를 권한다.
     private(set) var resumable: SolveResume?
 
@@ -211,25 +213,28 @@ final class SolveModel {
     // 채점한 뒤에는 맞는 답과 고른 답을 색으로 보인다.
     func tone(of option: String, in problem: Problem) -> Tone? {
         guard let graded, !isMock else { return nil }
-        if option == problem.answer { return .success }
-        return option == graded.answer ? .danger : nil
+        switch problem.mark(of: option, picked: graded.answer, verdict: graded.verdict) {
+        case .correct: return .success
+        case .wrong: return .danger
+        case .partial, nil: return nil
+        }
     }
 
     // MARK: Pages
 
     private func set(of r: CourseStudy.ProblemRecord) -> ProblemSet? { study?.file.problemSets.first { $0.id == r.setId } }
 
-    var problemPage: SidePage? {
+    var problemPage: PageLink? {
         guard let r = current, let set = set(of: r), let material = set.materialId else { return nil }
-        return SidePage(material: material, page: r.problem.page)
+        return PageLink(material: material, page: r.problem.page)
     }
 
     // 모의시험 중에는 해설을 숨긴다. 시험장에서 볼 수 없기 때문이다.
-    var solutionPage: SidePage? {
+    var solutionPage: PageLink? {
         guard !(isMock && phase == .solving), let r = current, let set = set(of: r), let material = set.solutionMaterialId,
             r.problem.solutionPage != nil
         else { return nil }
-        return SidePage(material: material, page: r.problem.solutionPage)
+        return PageLink(material: material, page: r.problem.solutionPage)
     }
 
     var solutionText: String? {
@@ -242,9 +247,17 @@ final class SolveModel {
         return current?.problem.lecturePages ?? []
     }
 
-    func show(_ page: SidePage?) { side = side == page ? nil : page }
+    // 문제지 쪽은 풀기 화면 옆 칸에 연다. 같은 칸에 열면 풀던 문제를 가리고, 옆 칸은 넓히거나 접을 수 있다.
+    func open(_ page: PageLink, _ openLink: OpenLinkAction) { openLink(page.link, in: .beside, course: request.course) }
 
-    func show(_ page: ProblemPage) { show(SidePage(material: page.materialId, page: page.page)) }
+    func open(_ page: ProblemPage, _ openLink: OpenLinkAction) {
+        open(PageLink(material: page.materialId, page: page.page), openLink)
+    }
+
+    // 끝내거나 닫으면 풀기를 연 곳으로 돌아간다. 돌아갈 곳이 없으면(주소로 바로 연 풀기) 단원 페이지로 간다.
+    func close(_ goBack: GoBackAction, _ openLink: OpenLinkAction) {
+        if !goBack() { openLink(.course(request.course, page: .units), course: request.course) }
+    }
 
     private func load() {
         answer = current.flatMap { answers[$0.problem.id] } ?? ""
@@ -252,7 +265,6 @@ final class SolveModel {
         images = current.flatMap { savedImages[$0.problem.id] } ?? []
         graded = nil
         failure = nil
-        side = nil
     }
 
     func choose(_ option: String) {
@@ -397,8 +409,8 @@ final class SolveModel {
 
     // MARK: Resume
 
-    // 시트를 닫을 때 부른다. 모의시험은 시간을 재므로 남기지 않는다. 채점까지 한 문제는 이미 로그에 있으므로, 채점하지 않은 문제부터 다시 연다.
-    // 이어 풀기는 과목의 풀기 시트에서만 묻으므로(`init`), 문제를 정해 연 풀기(계획 항목, 문제 묶음)는 남기지 않는다. 남기면 과목의 풀기 시트가
+    // 풀기 화면을 떠날 때 부른다. 모의시험은 시간을 재므로 남기지 않는다. 채점까지 한 문제는 이미 로그에 있으므로, 채점하지 않은 문제부터 다시 연다.
+    // 이어 풀기는 과목 전체의 풀기에서만 묻으므로(`init`), 문제를 정해 연 풀기(계획 항목, 문제 묶음)는 남기지 않는다. 남기면 과목 전체의 풀기가
     // 계획의 차례를 권하고, 끝까지 풀어도 그 계획 항목은 체크되지 않는다.
     func leave() {
         guard phase == .solving, !isMock, !queue.isEmpty, request.problems.isEmpty, request.planItem == nil else { return }

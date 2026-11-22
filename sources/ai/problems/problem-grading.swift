@@ -33,7 +33,8 @@ extension ClaudeClient {
                 (stopped before finishing). Otherwise null. Write "feedback" in Korean as at most three short sentences, \
                 naming the first wrong step. For handwriting, number lines top to bottom across the images and point at \
                 the lines that cause the problem in "lines".
-                """, cache: true)
+                """, cache: true),
+            .text(MathWriting.rule, cache: true),
         ]
         return try await run(.grading, ProblemGrade.self, system: system, messages: [Message(role: .user, content: content)])
     }

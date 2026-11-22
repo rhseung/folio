@@ -51,6 +51,15 @@ struct ReadinessTests {
         #expect(Readiness.score([item(nil)]) == nil)
     }
 
+    // 넷 중 하나만 Claude가 맞음으로 채점한 단원은 점수가 낮아도 약함이 아니라 판정 부족이다.
+    @Test func fewJudgedProblemsAreNotWeak() {
+        let items = [item(.correct, .claude), item(nil), item(nil), item(nil)]
+        #expect(Readiness.state(items, readyScore: 0.8, minProblems: 3) == .fewVerdicts)
+        #expect(Readiness.score(items) == 0.5 / 3.5)
+        let judged = [item(.correct), item(.wrong), item(.correct), item(nil)]
+        #expect(Readiness.state(judged, readyScore: 0.8, minProblems: 3) == .weak)
+    }
+
     @Test func unsolvedProblemsCountAsZero() {
         let items = [item(.correct), item(.correct), item(.correct), item(nil)]
         #expect(Readiness.score(items) == 0.75)
@@ -183,7 +192,7 @@ struct CourseStudyTests {
         let p = study.progress(of: unit, notes: 1)
         #expect(p.pagesSeen == 2 && p.pagesTotal == 4)
         #expect(p.problemsSolved == 1 && p.problemsTotal == 3 && p.problemsWrong == 1)
-        #expect(p.readiness.state == .weak && p.readiness.pastExam == 3)
+        #expect(p.readiness.state == .fewVerdicts && p.readiness.pastExam == 3)
         #expect(study.missingProblems(of: unit.id) == 0)
         #expect(study.missingProblems(of: UUID()) == Settings().study.minProblems)
     }

@@ -334,6 +334,9 @@ enum Theme {
         static let bodyStrong = Font.system(size: 13, weight: .semibold)
         static let sidebar = Font.system(size: (bodySize * Size.chromeScale).rounded())
         static let caption = Font.system(size: 12)
+        // 문제, 보기, 풀이, 카드 면의 글이다. Computer Modern은 같은 점 크기에서 SF보다 작아 보여 한 단계 키운다.
+        static let study = StudyFont.font(size: studySize)
+        static let studySize = CGFloat(15)
         static let mono = Font.system(size: 12, design: .monospaced)
         static let label = Font.system(size: 11, weight: .semibold)
     }

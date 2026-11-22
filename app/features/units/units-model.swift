@@ -151,7 +151,7 @@ final class UnitsModel {
             let first = i == 0 || items[i - 1].day != item.day
             return PlanRow(
                 item: item, day: first ? dayLabel(item.day) : "", isToday: item.day == today, isPast: item.day < today,
-                done: study.isDone(item, in: exam), title: study.file.title(of: item), detail: planDetail(item, study: study),
+                done: study.isDone(item, in: exam), title: study.file.title(of: item), detail: planDetail(item, in: exam, study: study),
                 solve: study.solve(item, in: exam, seed: seed))
         }
     }
@@ -167,12 +167,12 @@ final class UnitsModel {
         return day.date(in: workspace.calendar)?.formatted(.dateTime.month(.defaultDigits).day().weekday()) ?? day.description
     }
 
-    private func planDetail(_ item: ExamPlanItem, study: CourseStudy) -> String {
+    private func planDetail(_ item: ExamPlanItem, in exam: Exam, study: CourseStudy) -> String {
         let carried = item.isCarried ? [String(localized: .unitsPlanCarried)] : []
-        return (carried + planParts(item, study: study)).joined(separator: " · ")
+        return (carried + planParts(item, in: exam, study: study)).joined(separator: " · ")
     }
 
-    private func planParts(_ item: ExamPlanItem, study: CourseStudy) -> [String] {
+    private func planParts(_ item: ExamPlanItem, in exam: Exam, study: CourseStudy) -> [String] {
         switch item.target.kind {
         case .unit:
             let units = item.target.units.compactMap { id in study.file.units.first { $0.id == id } }
@@ -187,8 +187,9 @@ final class UnitsModel {
                 item.target.problemIds.map { $0.compactMap { study.problems[$0] } } ?? item.target.id.map(study.problems(inSet:)) ?? []
             return [String(localized: .unitsLineProblems(records.filter(\.solved).count, records.count))]
         case .wrong:
-            let wrong = study.allProblems.filter(\.status.needsWork).count, unknown = study.allCards.filter(\.status.needsWork).count
-            return [String(localized: .unitsPlanWrong(wrong, unknown))]
+            let left = study.wrongLeft(in: exam)
+            if left.problems == 0 && left.cards == 0 { return [String(localized: .unitsPlanNothingLeft)] }
+            return [String(localized: .unitsPlanWrong(left.problems, left.cards))]
         case .mixed, .mock, .custom:
             return []
         }

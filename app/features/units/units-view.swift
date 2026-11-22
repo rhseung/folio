@@ -87,8 +87,9 @@ struct UnitsView: View {
                 CardRow(last: true) {
                     Image(systemName: "exclamationmark.triangle").foregroundStyle(Theme.Palette.textTertiary).accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                        Text(few.title).lineLimit(1)
-                        Text(few.detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(2)
+                        StudyText(text: few.title, look: .title).lineLimit(1)
+                        StudyText(text: few.detail, look: .title).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+                            .lineLimit(2)
                     }
                     Spacer(minLength: Theme.Space.m)
                     Button(.unitsMakeProblems, systemImage: "sparkle") {
@@ -117,7 +118,7 @@ struct UnitsView: View {
                         Checkbox(isOn: row.done) { model.togglePlan(row) }
                             .help(Text(row.done ? .examsPlanUndo : .examsPlanCheck))
                         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                            Text(row.title).lineLimit(1).strikethrough(row.done, color: Theme.Palette.textTertiary)
+                            StudyText(text: row.title, look: .title).lineLimit(1).strikethrough(row.done, color: Theme.Palette.textTertiary)
                                 .foregroundStyle(row.done ? Theme.Palette.textTertiary : Theme.Palette.text)
                             if !row.detail.isEmpty {
                                 Text(row.detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
@@ -145,7 +146,7 @@ struct UnitsView: View {
                     } label: {
                         HStack(spacing: Theme.Space.m) {
                             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                                Text(row.unit.title).lineLimit(1)
+                                StudyText(text: row.unit.title, look: .title).lineLimit(1)
                                 HStack(spacing: Theme.Space.xs) {
                                     Text(row.parts.joined(separator: " · "))
                                     if let wrong = row.wrong { Text("· " + wrong).foregroundStyle(Theme.Palette.danger) }

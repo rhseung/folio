@@ -23837,6 +23837,28 @@
           }
         }
       }
+    },
+    "units.plan-nothing-left": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "할 것 없음"
+          }
+        }
+      }
+    },
+    "course-section.solve": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제 풀기"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

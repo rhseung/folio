@@ -4,6 +4,7 @@ import SwiftUI
 struct ProblemsView: View {
     @State private var model: ProblemsModel
     @Environment(\.itemSheets) private var sheets
+    @Environment(\.openLink) private var openLink
     let course: LoadedCourse
 
     init(workspace: Workspace, course: LoadedCourse) {
@@ -46,7 +47,7 @@ struct ProblemsView: View {
                     Block(
                         title: group.set.title, note: group.note
                     ) {
-                        Button(.unitsSolve) { sheets.present(.solve(model.solveRequest(group))) }.buttonStyle(.ghost)
+                        Button(.unitsSolve) { openLink.solve(model.solveRequest(group)) }.buttonStyle(.ghost)
                             .disabled(group.records.isEmpty)
                         PageMenuButton { ProblemSetMenu(courseId: course.id, set: group.set) }
                     } content: {
@@ -61,7 +62,7 @@ struct ProblemsView: View {
                                             FlowLayout(spacing: Theme.Space.s) {
                                                 ForEach(records, id: \.problem.id) { r in
                                                     ProblemCell(number: r.problem.number, tone: model.tone(r), help: model.help(r)) {
-                                                        sheets.present(.solve(model.solveRequest(r)))
+                                                        openLink.solve(model.solveRequest(r))
                                                     }
                                                     .contextMenu { ProblemMenu(courseId: course.id, set: group.set, problem: r.problem) }
                                                 }
@@ -91,7 +92,7 @@ struct ProblemsView: View {
         HStack(spacing: Theme.Space.m) {
             ExtractPick(model: model, compact: compact)
             Button(.problemSetAdd, systemImage: "plus") { sheets.present(.problemSet(course: course.id)) }.buttonStyle(.secondary)
-            Button(.unitsSolve, systemImage: "pencil.and.list.clipboard") { sheets.present(.solve(model.solveRequest())) }
+            Button(.unitsSolve, systemImage: "pencil.and.list.clipboard") { openLink.solve(model.solveRequest()) }
                 .buttonStyle(.prominent).disabled(model.isEmpty)
         }
     }

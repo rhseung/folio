@@ -1,7 +1,7 @@
 import FolioCore
 import Foundation
 
-// 풀기 시트의 "문제" 고르기다(#576). 화면은 이 값을 바꾸기만 하고 어떤 문제가 들어가는지는 여기서 정한다.
+// 풀기 화면의 "문제" 고르기다. 화면은 이 값을 바꾸기만 하고 어떤 문제가 들어가는지는 여기서 정한다.
 public struct SolvePick: Sendable, Equatable {
     public enum Filter: String, Sendable, CaseIterable {
         // 오답과 다시 확인할 문제다.

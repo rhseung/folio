@@ -15,6 +15,24 @@ struct AppLinkTests {
         #expect(AppLink(.problemSet, id).string.hasPrefix("folio://problem-set/"))
     }
 
+    @Test func aSolveLinkKeepsWhatItSolves() {
+        let problem = UUID(), plan = UUID(), run = UUID()
+        let solve = AppLink.Solve(run: run, problems: [problem, id], plan: plan, mode: .mock, shuffled: true, minutes: 50)
+        let link = AppLink.solve(id, solve)
+        #expect(link.string.hasPrefix("folio://course/\(id.uuidString)/solve?run=\(run.uuidString)&problems="))
+        #expect(AppLink(string: link.string) == link)
+        #expect(AppLink(string: link.string)?.solve == solve)
+        #expect(AppLink(string: link.string + "#page=2")?.solve == solve)
+
+        // 쿼리가 없으면 과목 전체에서 고르기부터 시작하고, 읽지 못한 값은 버린다.
+        #expect(AppLink.course(id, page: .solve).solve == AppLink.Solve())
+        #expect(AppLink.course(id, page: .solve).string.hasSuffix("/solve"))
+        let rough = AppLink(string: "folio://course/\(id.uuidString)/solve?mode=dance&minutes=-3&units=x,\(id.uuidString)&who=1")
+        #expect(rough?.solve == AppLink.Solve(units: [id]))
+        // 풀기 페이지가 아닌 곳의 쿼리는 값을 갖지 않는다.
+        #expect(AppLink(string: "folio://course/\(id.uuidString)/units?mode=mock")?.solve == nil)
+    }
+
     @Test func aRecordingKeepsItsMoment() {
         #expect(AppLink(.recording, id, anchor: .time(750)).string.hasSuffix("#t=12:30"))
         #expect(AppLink(.recording, id, anchor: .time(3723)).string.hasSuffix("#t=1:02:03"))

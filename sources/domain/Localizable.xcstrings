@@ -3762,6 +3762,17 @@
           }
         }
       }
+    },
+    "readiness.few-verdicts": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "판정 부족"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

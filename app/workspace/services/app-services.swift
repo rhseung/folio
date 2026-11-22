@@ -56,6 +56,9 @@ private struct AppServices: ViewModifier {
             .onChange(of: workspace.gist == nil ? nil : workspace.liveToday, initial: true) { _, day in
                 if day != nil { workspace.replanExams() }
             }
+            // 범위, 시험 날짜, 공부 설정을 바꾸면 다음 공부일을 기다리지 않고 다시 짠다. 앱 밖(CLI)에서 바꾼 것도 폴더를 다시
+            // 읽을 때 여기 걸린다.
+            .onChange(of: workspace.gist == nil ? [] : workspace.planBases) { workspace.replanExams() }
             .onChange(of: LMSInputs(gist: workspace.gist?.url, connected: workspace.lms.isConnected)) {
                 lmsTried = nil
                 syncLMSIfDue()

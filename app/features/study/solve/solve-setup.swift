@@ -3,11 +3,13 @@ import SwiftUI
 
 struct SolveSetup: View {
     @Bindable var model: SolveModel
+    @Environment(\.goBack) private var goBack
+    @Environment(\.openLink) private var openLink
 
     var body: some View {
         SheetForm(
             title: String(localized: .solveTitle), confirm: model.startTitle, isDisabled: model.picked.isEmpty, note: model.setupNote,
-            width: Theme.Size.solveSetup
+            width: Theme.Size.solveSetup, onCancel: close
         ) {
             if let line = model.resumeLine {
                 FormRow(label: String(localized: .solveResume), detail: line) {
@@ -33,4 +35,6 @@ struct SolveSetup: View {
             model.start()
         }
     }
+
+    func close() { model.close(goBack, openLink) }
 }

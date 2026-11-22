@@ -159,4 +159,60 @@ struct PlanInputTests {
         #expect(study([matching, done]).isDone(bundle, in: exam))
         #expect(study([matching, done]).file.title(of: bundle) == "매칭, 채색")
     }
+
+    // 남은 오답이 없어도 오지 않은 날의 오답 항목은 체크하지 않는다. 세는 것은 시험 범위의 오답과 카드뿐이다.
+    @Test func aFutureWrongItemIsNotCheckedEvenWithNothingLeft() throws {
+        let device = UUID(), at = Date(timeIntervalSince1970: 1_790_000_000)
+        let calendar = Calendar(identifier: .gregorian)
+        let inScope = FolioDomain.Unit(device: device, at: at, title: "매칭", order: 0)
+        let outside = FolioDomain.Unit(device: device, at: at, title: "채색", order: 1)
+        var exam = Exam(device: device, at: at, title: "기말고사", start: at.addingTimeInterval(86_400 * 10))
+        exam.scopeUnitIds = [inScope.id]
+        let set = ProblemSet(
+            device: device, at: at, title: "연습", source: .exercise, problems: [Problem(number: "1", unitIds: [outside.id])])
+        let file = CourseFile(
+            course: Course(device: device, at: at, title: "그래프 이론"), units: [inScope, outside], exams: [exam], problemSets: [set])
+        let wrong = ProblemSolveEvent(setId: set.id, problemId: set.problems[0].id, verdict: .wrong, basis: .solution)
+        let study = CourseStudy(
+            file: file, cards: [], log: StudyLog(solves: [(at, wrong)]), settings: Settings(), calendar: calendar, now: at)
+        #expect(study.wrongLeft(in: exam) == (problems: 0, cards: 0))
+        let today = ExamPlanItem(day: study.today, target: ExamPlanTarget(kind: .wrong))
+        let later = ExamPlanItem(day: study.today.adding(days: 3), target: ExamPlanTarget(kind: .wrong))
+        #expect(study.isDone(today, in: exam))
+        #expect(!study.isDone(later, in: exam))
+        // 범위 밖 단원의 오답은 범위를 넓히면 센다.
+        var wider = exam
+        wider.scopeUnitIds = [inScope.id, outside.id]
+        #expect(study.wrongLeft(in: wider).problems == 1)
+        #expect(!study.isDone(today, in: wider))
+    }
+
+    // 같은 공부일이라도 범위, 시험 날짜, 계획에 쓰는 공부 설정이 바뀌면 다시 짠다.
+    @Test func aChangedBasisAsksForANewPlanOnTheSameDay() {
+        let device = UUID(), at = Date(timeIntervalSince1970: 1_790_000_000)
+        let calendar = Calendar(identifier: .gregorian)
+        var settings = Settings()
+        let today = settings.studyDay(of: at, calendar: calendar)
+        var exam = Exam(device: device, at: at, title: "기말고사", start: at.addingTimeInterval(86_400 * 10))
+        exam.scopeUnitIds = [UUID()]
+        #expect(exam.needsPlan(today: today, settings: settings, calendar: calendar))
+        exam.planDay = today
+        exam.planBasis = ExamPlanBasis(exam: exam, settings: settings, calendar: calendar)
+        #expect(!exam.needsPlan(today: today, settings: settings, calendar: calendar))
+        #expect(exam.needsPlan(today: today.adding(days: 1), settings: settings, calendar: calendar))
+
+        var scoped = exam
+        scoped.scopeUnitIds.append(UUID())
+        #expect(scoped.needsPlan(today: today, settings: settings, calendar: calendar))
+        var moved = exam
+        moved.start = at.addingTimeInterval(86_400 * 12)
+        #expect(moved.needsPlan(today: today, settings: settings, calendar: calendar))
+        settings.study.planDayItems = 3
+        #expect(exam.needsPlan(today: today, settings: settings, calendar: calendar))
+        // 지난 시험과 범위 없는 시험은 짜지 않는다.
+        settings = Settings()
+        #expect(!exam.needsPlan(today: today.adding(days: 11), settings: settings, calendar: calendar))
+        exam.scopeUnitIds = []
+        #expect(!exam.needsPlan(today: today.adding(days: 1), settings: settings, calendar: calendar))
+    }
 }

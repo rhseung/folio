@@ -21,7 +21,8 @@ extension ClaudeClient {
                     statements in the language of the examples with math in LaTeX. For every problem give the answer (for \
                     true_false, choice and short) and a complete worked solution. Set "units" to the exact unit titles. \
                     Give the sheet a short title.
-                    """)
+                    """),
+                .text(MathWriting.rule),
             ]
         let ask = ContentBlock.text(
             """
