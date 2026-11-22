@@ -20,10 +20,14 @@ final class SessionsModel {
     var calendar: Calendar { workspace.calendar }
 
     func subtitle(_ file: CourseFile, now: Date? = nil) -> String {
-        let now = now ?? workspace.now
+        guard let now else { return shown(file).subtitle }
+        return subtitle(file, now: now, planned: plan(now: now).map(\.draft))
+    }
+
+    private func subtitle(_ file: CourseFile, now: Date, planned: [Session]) -> String {
         guard !file.sessions.isEmpty else { return String(localized: .sessionsEmpty) }
         let missing = file.missingReviewNotes(at: now)
-        let remaining = file.remainingClasses(after: now, planned: plan(now: now).map(\.draft))
+        let remaining = file.remainingClasses(after: now, planned: planned)
         return
             ([String(localized: .sessionsCount(file.sessions.count))]
             + (remaining > 0 ? [String(localized: .sessionsRemaining(remaining))] : [])
@@ -56,7 +60,8 @@ final class SessionsModel {
 
     // MARK: The week table
 
-    // 자기 폭으로 꼴을 고른다. 재기 전(0)에는 가장 좁은 꼴로 그려, 처음 그릴 때 넓은 표가 좁은 칸을 넘치지 않게 한다.
+    // 자기 폭으로 꼴을 고른다. 재기 전(0)에는 표도 목록도 그리지 않는다. 넓은 표를 먼저 그리면 좁은 칸을 넘치고, 좁은 목록을
+    // 먼저 그리면 첫 프레임에 목록을 만들었다가 폭을 잰 뒤 표를 다시 만든다.
     var width: CGFloat = 0
     var popover: UUID?
     var anchor: PageAnchor?
@@ -64,15 +69,56 @@ final class SessionsModel {
 
     enum Form { case list, compact, wide }
 
-    var form: Form {
-        width < Theme.Size.sessionTableList ? .list : width < Theme.Size.sessionTableWide ? .compact : .wide
+    var form: Form? {
+        guard width > 0 else { return nil }
+        return width < Theme.Size.sessionTableList ? .list : width < Theme.Size.sessionTableWide ? .compact : .wide
     }
 
     func table(_ file: CourseFile, now: Date? = nil) -> SessionTable {
-        let now = now ?? workspace.now
-        return SessionTable(
-            file, planned: plan(now: now).map(\.draft), semester: workspace.semester(of: file.course), now: now,
-            settings: workspace.settings, asksWrapUp: isCurrent(file), calendar: calendar)
+        guard let now else { return shown(file).table }
+        return table(file, now: now, planned: plan(now: now).map(\.draft))
+    }
+
+    private func table(_ file: CourseFile, now: Date, planned: [Session]) -> SessionTable {
+        SessionTable(
+            file, planned: planned, semester: workspace.semester(of: file.course), now: now, settings: workspace.settings,
+            asksWrapUp: isCurrent(file), calendar: calendar)
+    }
+
+    // 팝오버를 열거나 폭이 바뀌어 페이지를 다시 그릴 때마다 표를 다시 만들지 않는다. 시각은 분 단위로 키에 넣는다. 페이지는
+    // 시계를 따라 다시 그리지 않으므로(`Workspace.now`), 다른 일로 다시 그릴 때 그사이 끝난 수업이 끝난 것으로 보이면 된다.
+    private struct ShownKey: Equatable {
+        let file: CourseFile
+        let semester: Semester?
+        let current: Bool
+        let settings: Settings
+        let calendar: Calendar
+        let minute: Date
+    }
+
+    private struct Shown {
+        let key: ShownKey
+        let plan: [Workspace.SuggestedSession]
+        let table: SessionTable
+        let subtitle: String
+        let left: [(session: Session, gaps: [WrapUpItem])]
+    }
+
+    @ObservationIgnored private var cached: Shown?
+
+    private func shown(_ file: CourseFile) -> Shown {
+        let now = workspace.now
+        let key = ShownKey(
+            file: file, semester: workspace.semester(of: file.course), current: isCurrent(file), settings: workspace.settings,
+            calendar: calendar, minute: LiveClock.nextMinute(after: now))
+        if let cached, cached.key == key { return cached }
+        let plan = plan(now: now)
+        let planned = plan.map(\.draft)
+        let shown = Shown(
+            key: key, plan: plan, table: table(file, now: now, planned: planned), subtitle: subtitle(file, now: now, planned: planned),
+            left: key.current ? file.leftUnwrapped(at: now, settings: workspace.settings, calendar: calendar) : [])
+        cached = shown
+        return shown
     }
 
     // 처음 열면 이번 주로 스크롤한다. 링크가 회차를 가리키면 그 주로 스크롤하고 그 회차를 연다.
@@ -219,7 +265,7 @@ final class SessionsModel {
 
     func planned(_ entry: SessionTableEntry) -> Workspace.SuggestedSession? {
         guard case .planned(let draft) = entry.item else { return nil }
-        return plan(now: workspace.now).first { $0.draft.date == draft.date }
+        return (cached?.plan ?? plan(now: workspace.now)).first { $0.draft.date == draft.date }
     }
 
     func link(_ entry: SessionTableEntry) -> AppLink? {
@@ -273,14 +319,13 @@ final class SessionsModel {
     private func isCurrent(_ file: CourseFile) -> Bool { file.course.semesterId == workspace.currentSemester?.id }
 
     func leftUnwrapped(_ file: CourseFile, now: Date? = nil) -> [Session] {
+        guard let now else { return shown(file).left.map(\.session) }
         guard isCurrent(file) else { return [] }
-        return file.unwrappedPastSessions(at: now ?? workspace.now, settings: workspace.settings, calendar: calendar)
+        return file.unwrappedPastSessions(at: now, settings: workspace.settings, calendar: calendar)
     }
 
-    func leftGaps(_ session: Session, in file: CourseFile, now: Date? = nil) -> [WrapUpItem] {
-        guard isCurrent(file), file.isLeftUnwrapped(session, at: now ?? workspace.now, settings: workspace.settings, calendar: calendar)
-        else { return [] }
-        return file.wrapUpGaps(of: session)
+    func leftGaps(_ session: Session, in file: CourseFile) -> [WrapUpItem] {
+        shown(file).left.first { $0.session.id == session.id }?.gaps ?? []
     }
 
     func gapsLine(_ gaps: [WrapUpItem]) -> String { gaps.map(\.label).joined(separator: ", ") }
