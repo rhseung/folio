@@ -10,8 +10,6 @@ public struct Unit: Entity {
     public var title: String
     public var order: Int
     public var parentId: UUID?
-    public var sessionIds: [UUID]
-    public var examIds: [UUID]
     private var lectures: [UnitPages]?
 
     public var lecturePages: [UnitPages] {
@@ -27,8 +25,6 @@ public struct Unit: Entity {
         self.title = title
         self.order = order
         self.parentId = parentId
-        self.sessionIds = []
-        self.examIds = []
     }
 }
 

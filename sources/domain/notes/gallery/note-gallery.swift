@@ -128,9 +128,9 @@ public enum NoteGallery {
                 ($0.start ?? .distantPast) > ($1.start ?? .distantPast)
             }
             let reach = { (exam: Exam) in
-                exam.scopeUnitIds.reduce(into: Set<UUID>()) { $0.formUnion(UnitTree.subtree(of: $1, in: file.units)) }
+                file.scope(of: exam).reduce(into: Set<UUID>()) { $0.formUnion(UnitTree.subtree(of: $1, in: file.units)) }
             }
-            let next = upcoming.first { !$0.scopeUnitIds.isEmpty }.map(reach)
+            let next = upcoming.first { !file.scope(of: $0).isEmpty }.map(reach)
             let known = Set(file.units.map(\.id))
             var sections = UnitTree.outline(file.units).map(\.unit).compactMap { unit -> Section? in
                 let members = items.filter { $0.meta.unitIds.contains(unit.id) }

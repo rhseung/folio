@@ -36,9 +36,9 @@ extension UnitReviewInput {
     ) -> [UnitReviewInput] {
         guard file.course.reviews != false else { return [] }
         return file.units.compactMap { unit in
-            let sessions = file.sessions.filter { unit.sessionIds.contains($0.id) && !$0.isCancelled && !$0.skipsReview && $0.date <= now }
+            let sessions = file.sessions(of: unit.id).filter { !$0.isCancelled && !$0.skipsReview && $0.date <= now }
             guard let last = sessions.max(by: { $0.date < $1.date }) else { return nil }
-            let examDays = file.exams.filter { $0.scopeUnitIds.contains(unit.id) }.compactMap(\.start).filter { $0 > now }
+            let examDays = file.exams(scoping: unit.id).compactMap(\.start).filter { $0 > now }
                 .map { LocalDate($0, in: calendar) }
             return UnitReviewInput(
                 unitId: unit.id,

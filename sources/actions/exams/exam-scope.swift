@@ -17,7 +17,7 @@ public struct ExamScope {
         try ctx.edit(course) { f in
             let e = try index(exam, in: f.exams, .valueExam)
             _ = try index(unit, in: f.units, .valueUnit)
-            if f.exams[e].scopeUnitIds.contains(unit) != included { f.toggle(exam: exam, unit: unit) }
+            if f.scope(of: f.exams[e]).contains(unit) != included { f.toggle(exam: exam, unit: unit) }
         }
     }
 }

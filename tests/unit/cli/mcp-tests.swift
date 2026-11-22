@@ -76,7 +76,8 @@ struct MCPTests {
         let pinned: Set<String> = [
             "action_run", "action_search", "assignment_add", "assignment_list", "assignment_rm", "assignment_set", "assignment_show",
             "assignment_status", "attendance_set", "component_add", "component_list", "component_move", "component_policy",
-            "component_rm", "component_set", "course_list", "course_show", "exam_add", "exam_list", "exam_plan-check", "exam_plan_add",
+            "component_rm", "component_set", "course_gaps", "course_list", "course_show", "exam_add", "exam_list", "exam_plan-check",
+            "exam_plan_add",
             "exam_plan_rm", "exam_rm", "exam_scope", "exam_scope_taught", "exam_set", "exam_show", "exam_summary", "material_build",
             "material_import", "material_kind", "material_link", "material_link-exam", "material_link-unit", "material_list",
             "material_mv", "material_new", "material_read", "material_relink", "material_rm", "material_show", "material_split",

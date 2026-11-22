@@ -7,10 +7,11 @@ public struct UnitShow {
     /// 단원
     @Arg public var unit: FolioDomain.Unit.ID
 
-    public func read(_ ctx: ReadContext) throws -> FolioDomain.Unit {
-        guard let found = try ctx.file(course).units.first(where: { $0.id == unit }) else {
+    public func read(_ ctx: ReadContext) throws -> QueryLinks<FolioDomain.Unit> {
+        let f = try ctx.file(course)
+        guard let found = f.units.first(where: { $0.id == unit }) else {
             throw ActionError.notFound(String(localized: .errorNotFoundUnit))
         }
-        return found
+        return QueryLinks(found, in: f)
     }
 }

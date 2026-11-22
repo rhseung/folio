@@ -30,7 +30,6 @@ struct SessionTableTests {
         var session = Session(device: device, at: .now, week: 1, date: date(s))
         session.kind = kind
         session.isWrappedUp = wrapped
-        session.unitIds = []
         return session
     }
 

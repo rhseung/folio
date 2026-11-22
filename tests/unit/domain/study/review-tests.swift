@@ -248,9 +248,10 @@ struct TodayTests {
         var grading = Session(device: device, at: now, week: 7, date: at(22, 10))
         grading.skipsReview = true
         file.sessions = [taught, grading]
-        var unit = Unit(device: device, at: now, title: "파싱", order: 1)
-        unit.sessionIds = [taught.id, grading.id]
+        let unit = Unit(device: device, at: now, title: "파싱", order: 1)
         file.units = [unit]
+        file.setUnits([unit.id], session: taught.id)
+        file.setUnits([unit.id], session: grading.id)
 
         #expect(!grading.needsReviewNote(at: now))
         #expect(!file.needsReviewNote(grading, at: now))
@@ -271,8 +272,8 @@ struct TodayTests {
             var file = CourseFile(course: Course(device: device, at: now, title: title))
             var s = Session(device: device, at: now, week: 1, date: at(10, 10))
             s.reviewNoteId = UUID()
-            var u = Unit(device: device, at: now, title: unit, order: 1)
-            u.sessionIds = [s.id]
+            let u = Unit(device: device, at: now, title: unit, order: 1)
+            s.addedUnitIds = [u.id]
             (file.sessions, file.units) = ([s], [u])
             return file
         }
@@ -312,10 +313,10 @@ struct TodayTests {
         #expect(!file.needsUnits(file.sessions[0], at: now))
         #expect(file.units(of: file.sessions[0]).map(\.title) == ["고윳값"])
 
-        var chapter = Unit(device: device, at: now, title: "5장", order: 0)
+        let chapter = Unit(device: device, at: now, title: "5장", order: 0)
         file.units[0].parentId = chapter.id
-        chapter.sessionIds = [held.id]
         file.units.append(chapter)
+        file.toggle(session: held.id, unit: chapter.id)
         #expect(file.units(of: file.sessions[0]).map(\.title) == ["5장", "고윳값"])
         #expect(UnitTree.deepest(file.units(of: file.sessions[0]), in: file.units).map(\.title) == ["고윳값"])
     }
@@ -352,9 +353,9 @@ struct TodayTests {
     @Test func courseWithReviewsOffHasNoReviewsOrMissingNotes() {
         let now = at(23, 12)
         var file = CourseFile(course: Course(device: device, at: now, title: "행복의 조건"))
-        let session = Session(device: device, at: now, week: 7, date: at(20, 10))
-        var unit = Unit(device: device, at: now, title: "행복", order: 0)
-        unit.sessionIds = [session.id]
+        var session = Session(device: device, at: now, week: 7, date: at(20, 10))
+        let unit = Unit(device: device, at: now, title: "행복", order: 0)
+        session.addedUnitIds = [unit.id]
         file.sessions = [session]
         file.units = [unit]
         let inputs = { UnitReviewInput.all(for: file, reviews: [], settings: Settings(), calendar: calendar, now: now) }

@@ -131,8 +131,8 @@ struct LabUnitTests {
             calendar: c, device: device, now: now)
 
         #expect(r.file.units.map(\.title) == ["Lab04 TLC"])
-        #expect(r.file.units[0].sessionIds == r.file.sessions.prefix(2).map(\.id))
-        #expect(r.file.sessions[2].unitIds.isEmpty)
+        #expect(r.file.sessions(of: r.file.units[0].id).map(\.id) == r.file.sessions.prefix(2).map(\.id))
+        #expect(r.file.unitIds(of: r.file.sessions[2]).isEmpty)
         let again = CalendarImporter.merge(
             [meet(15, 4), meet(17, 4), meet(22, nil)], into: r.file, semesterStart: LocalDate("2026-08-31")!,
             calendar: c, device: device, now: now)

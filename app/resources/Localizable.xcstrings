@@ -5017,6 +5017,28 @@
         }
       }
     },
+    "exams.scope-edited": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고친 범위"
+          }
+        }
+      }
+    },
+    "exams.scope-no-date": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "날짜를 정하면 범위를 계산합니다"
+          }
+        }
+      }
+    },
     "exams.scope-none": {
       "extractionState": "manual",
       "localizations": {

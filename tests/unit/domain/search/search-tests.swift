@@ -56,9 +56,9 @@ struct SearchTests {
         file.exams = [Exam(device: device, at: now, title: "중간고사")]
         let session = Session(device: device, at: now, week: 2, date: now)
         file.sessions = [session]
-        var covers = Unit(device: device, at: now, title: "Covers", order: 1)
-        covers.sessionIds = [session.id]
+        let covers = Unit(device: device, at: now, title: "Covers", order: 1)
         file.units = [covers]
+        file.toggle(session: session.id, unit: covers.id)
         let card = QuizCard(
             device: device, at: now, unitId: file.units[0].id, type: .free, category: .definition, prompt: "덮개의 정의",
             answer: "모든 꼭짓점을 덮는 변 집합")
@@ -70,7 +70,7 @@ struct SearchTests {
 
         #expect(
             items.map(\.title) == [
-                "09-08(화) 매칭", "05_Matchings.pdf", "HW3", "중간고사", file.title(of: session, calendar: calendar), "Covers", "덮개의 정의",
+                "09-08(화) 매칭", "05_Matchings.pdf", "HW3", "중간고사", file.title(of: file.sessions[0], calendar: calendar), "Covers", "덮개의 정의",
             ])
         #expect(items[4].title.hasSuffix(": Covers") && items[4].body == file.reference(of: session, calendar: calendar))
         #expect(items.last?.body == "모든 꼭짓점을 덮는 변 집합")

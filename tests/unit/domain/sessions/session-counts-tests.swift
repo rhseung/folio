@@ -36,9 +36,9 @@ struct SessionCountsTests {
 
         #expect(file.sessionsNeedingUnits(at: now).isEmpty)
 
-        var unit = Unit(device: device, at: .now, title: "그래프", order: 1)
-        unit.sessionIds = [reviewed.id]
+        let unit = Unit(device: device, at: .now, title: "그래프", order: 1)
         file.units = [unit]
+        file.toggle(session: reviewed.id, unit: unit.id)
         #expect(file.sessionsNeedingUnits(at: now).map(\.id) == [owing.id])
         file.course.reviews = false
         #expect(file.missingReviewNotes(at: now) == 0)

@@ -113,7 +113,8 @@ struct SessionMenuModelTests {
         let menu = try source(workspace, id, host: .unit(unit))
         #expect(menu.commands.contains(.unlink(unit: unit)))
         perform(try row(menu, .unitsUnlinkSession))
-        #expect(try file(workspace).sessions.first { $0.id == id }?.unitIds.isEmpty == true)
+        let f = try file(workspace)
+        #expect(f.sessions.first { $0.id == id }.map { f.unitIds(of: $0).isEmpty } == true)
     }
 
     @Test func skippingFromTheReviewScreenKeepsTheTimeOpen() throws {

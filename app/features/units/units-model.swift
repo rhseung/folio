@@ -56,7 +56,7 @@ final class UnitsModel {
             + (unlinked == 0 ? [] : [String(localized: .unitsUnlinkedCount(unlinked))])).joined(separator: " · ")
     }
 
-    func exams(of unit: FolioDomain.Unit, in file: CourseFile) -> [Exam] { file.exams.filter { $0.scopeUnitIds.contains(unit.id) } }
+    func exams(of unit: FolioDomain.Unit, in file: CourseFile) -> [Exam] { file.exams(scoping: unit.id) }
 
     func sessionsLine(_ unit: FolioDomain.Unit, in file: CourseFile) -> String {
         let names = sessions(of: unit, in: file).map { file.day(of: $0, calendar: workspace.calendar) }
@@ -99,7 +99,7 @@ final class UnitsModel {
     // MARK: The open unit
 
     func sessions(of unit: FolioDomain.Unit, in file: CourseFile) -> [Session] {
-        file.sessions.filter { unit.sessionIds.contains($0.id) }.sorted { $0.date < $1.date }
+        file.sessions(of: unit.id).sorted { $0.date < $1.date }
     }
 
     func open(_ unit: FolioDomain.Unit) {
@@ -213,13 +213,17 @@ final class UnitsModel {
     func classTitle(_ s: Session, besides unit: FolioDomain.Unit, in file: CourseFile) -> String? { file.subject(of: s, besides: unit.id) }
 
     func linkMenu(_ unit: FolioDomain.Unit, in file: CourseFile) -> [(id: UUID, label: String, on: Bool)] {
-        file.linkableSessions { unit.sessionIds.contains($0.id) }.reversed().map {
-            (id: $0.id, label: file.title(of: $0, calendar: workspace.calendar), on: unit.sessionIds.contains($0.id))
+        let linked = Set(file.sessions(of: unit.id).map(\.id))
+        return file.linkableSessions { linked.contains($0.id) }.reversed().map {
+            (id: $0.id, label: file.title(of: $0, calendar: workspace.calendar), on: linked.contains($0.id))
         }
     }
 
     func toggle(session: UUID, in unit: FolioDomain.Unit) {
-        workspace.run(UnitLink(course: courseId, unit: unit.id, sessions: [session], linked: !unit.sessionIds.contains(session)))
+        workspace.run(
+            UnitLink(
+                course: courseId, unit: unit.id, sessions: [session],
+                linked: !(workspace.course(courseId)?.file.isLinked(session: session, unit: unit.id) ?? false)))
     }
 
     func unlink(_ session: Session, from unit: FolioDomain.Unit) {
@@ -227,7 +231,11 @@ final class UnitsModel {
     }
 
     func toggleScope(_ exam: Exam, unit: FolioDomain.Unit) {
-        workspace.run(ExamScope(course: courseId, exam: exam.id, unit: unit.id, included: !exam.scopeUnitIds.contains(unit.id)))
+        workspace.run(ExamScope(course: courseId, exam: exam.id, unit: unit.id, included: !isScoped(unit, in: exam)))
+    }
+
+    func isScoped(_ unit: FolioDomain.Unit, in exam: Exam) -> Bool {
+        workspace.course(courseId)?.file.scope(of: exam).contains(unit.id) ?? false
     }
 
     func reviewNote(of session: Session) -> UUID? { workspace.note(.review, of: session.id, in: courseId) }

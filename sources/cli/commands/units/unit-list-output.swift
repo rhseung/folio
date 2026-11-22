@@ -5,7 +5,9 @@ import Foundation
 extension UnitList: QueryLines {
     func lines(_ outline: Outline, _ r: Resolver) throws -> [[String]] {
         let c = try r.course(id: course)
-        return outline.items.map { u, _ in ["\(c.code)/\(u.title)", u.title, String(localized: .unitListSessions(u.sessionIds.count))] }
+        return outline.items.map { u, _ in
+            ["\(c.code)/\(u.title)", u.title, String(localized: .unitListSessions(outline.file.sessions(of: u.id).count))]
+        }
     }
 
     func say(_ outline: Outline, _ r: Resolver) throws {
@@ -14,9 +16,11 @@ extension UnitList: QueryLines {
         for (i, item) in items.enumerated() {
             FolioCLI.say(
                 treePrefix(items.map(\.depth), at: i) + item.unit.title
-                    + (item.unit.sessionIds.isEmpty
-                        ? "" : String(localized: .unitListSessionsIndented(item.unit.sessionIds.count)).styled(.dim)))
+                    + (sessions(item.unit, outline).isEmpty
+                        ? "" : String(localized: .unitListSessionsIndented(sessions(item.unit, outline).count)).styled(.dim)))
         }
         footer(items.count)
     }
+
+    private func sessions(_ unit: FolioDomain.Unit, _ outline: Outline) -> [Session] { outline.file.sessions(of: unit.id) }
 }

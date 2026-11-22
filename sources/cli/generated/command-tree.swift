@@ -56,6 +56,7 @@ extension CourseCommand {
     static let subcommandTypes: [any ParsableCommand.Type] = alphabetical([
         CourseCommand.Set.self,
         GeneratedCommands.CourseAdd.self,
+        GeneratedCommands.CourseGaps.self,
         GeneratedCommands.CourseList.self,
         GeneratedCommands.CourseRename.self,
         GeneratedCommands.CourseShow.self,

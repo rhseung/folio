@@ -75,7 +75,7 @@ final class QuizSolveModel {
         let cards = quiz.cards
         let byUnit = QuizStats.tally(cards, keys: { [$0.unitId] }, history: { self.quiz.history(of: $0.id) })
         let today = workspace.today
-        let exam = course.file.exams.filter { ($0.start ?? .distantPast) > workspace.now && !$0.scopeUnitIds.isEmpty }.min {
+        let exam = course.file.exams.filter { ($0.start ?? .distantPast) > workspace.now && !course.file.scope(of: $0).isEmpty }.min {
             $0.start! < $1.start!
         }
         let reviewUnits = Set(workspace.reviewQueue(now: workspace.now).filter { $0.courseId == course.id }.map(\.item.unitId))
@@ -91,7 +91,8 @@ final class QuizSolveModel {
                 WrongFlow.isDue(quiz.history(of: $0.id), today: today, recheckDays: workspace.settings.review.quizRecheckDays)
             }.count,
             exam: exam,
-            examCards: exam.map { e in cards.filter { e.scopeUnitIds.contains($0.unitId) }.count } ?? 0,
+            examCards: exam.map { e in Set(course.file.scope(of: e)) }.map { scope in cards.filter { scope.contains($0.unitId) }.count }
+                ?? 0,
             reviewUnits: reviewUnits,
             reviewCards: cards.filter { reviewUnits.contains($0.unitId) }.count,
             groups: groups,
@@ -127,7 +128,7 @@ final class QuizSolveModel {
     }
 
     func solveExam(_ pane: Pane, course: LoadedCourse) {
-        scope = QuizScope(unitIds: Set(pane.exam?.scopeUnitIds ?? []))
+        scope = QuizScope(unitIds: Set(pane.exam.map { course.file.scope(of: $0) } ?? []))
         start(label: String(localized: .quizSolveExamScope), course: course)
     }
 

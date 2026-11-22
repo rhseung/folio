@@ -167,7 +167,7 @@ struct CourseOverview: View {
                                         localized: entry.item.overdueDays > 0 ? .unitsDaysLate(entry.item.overdueDays) : .courseReviewToday),
                                     tone: entry.item.overdueDays > 0 ? .danger : .accent)
                             } else {
-                                Text(.sessionsCount(unit.sessionIds.count)).font(Theme.Typeface.caption).foregroundStyle(
+                                Text(.sessionsCount(model.sessionCount(of: unit))).font(Theme.Typeface.caption).foregroundStyle(
                                     Theme.Palette.textTertiary
                                 ).fixedSize()
                             }

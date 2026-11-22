@@ -1,4 +1,5 @@
 import ArgumentParser
+import FolioActions
 import FolioDomain
 import Foundation
 
@@ -17,7 +18,15 @@ struct CheckCommand: ParsableCommand, HandRead {
     }
 
     func run() throws {
-        let issues = try CLI.gist(g).layoutIssues().map { Issue(kind: String(describing: $0.kind), path: $0.path) }
+        var issues = try CLI.gist(g).layoutIssues().map { Issue(kind: String(describing: $0.kind), path: $0.path) }
+        // 비어 있는 연결은 계산이나 사용자가 채울 빈자리라서 `course gaps`가 보이고, 틀린 곳을 가리키는 연결만 여기서 문제로 본다.
+        let ctx = ReadContext(try CLI.context(g))
+        for c in ctx.courses() {
+            for gap in c.file.linkGaps(now: ctx.now, today: ctx.today, calendar: ctx.calendar) where gap.isDangling {
+                let path = c.store.url.lastPathComponent + ": " + c.file.describe(gap, calendar: ctx.calendar)
+                issues.append(Issue(kind: "danglingLink", path: path))  // strings: data, JSON의 종류 이름
+            }
+        }
         if g.json {
             try printJSON(issues)
         } else if issues.isEmpty {

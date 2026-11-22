@@ -94,7 +94,7 @@ extension SessionTableEntry {
     }
 
     static func exam(_ exam: Exam, at date: Date, in file: CourseFile, calendar: Calendar) -> SessionTableEntry {
-        let units = file.units.filter { exam.scopeUnitIds.contains($0.id) }.map(\.title)
+        let units = file.scopeUnits(of: exam).map(\.title)
         let scope = exam.scopeText.isEmpty ? units.joined(separator: ", ") : exam.scopeText
         return SessionTableEntry(
             item: .exam(exam), date: date, day: LocalDate(date, in: calendar), look: .exam, isMakeup: false,
