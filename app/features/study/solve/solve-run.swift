@@ -94,7 +94,7 @@ struct SolveRun: View {
     func problemPane(_ record: CourseStudy.ProblemRecord) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Space.l) {
-                StudyText(text: record.problem.text).textSelection(.enabled)
+                ProblemStatement(problem: record.problem, stems: model.stems(record), sheet: model.sheet(record)).textSelection(.enabled)
                 if let page = model.problemPage {
                     Button(String(localized: .solveProblemPage(page.page ?? 1)), systemImage: "doc.text") { model.open(page, openLink) }
                         .buttonStyle(.ghost)

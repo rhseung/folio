@@ -95,6 +95,16 @@ final class SnapshotDriver {
             await step(
                 "course-problem-draft", .course(course, page: .problems), sheet: .problemDraft(course: course, material: material), wait: 3)
         }
+        // 지문이 있는 묶음이면 지문 아래 첫 소문제를 풀기 화면으로 연다. 경로, 지문, 잘라 온 그림을 본다.
+        let stemmed = workspace.currentCourses.lazy.compactMap { c in
+            c.file.problemSets.lazy.compactMap { set -> SolveRequest? in
+                let tree = ProblemTree(set)
+                return tree.questions.first { !tree.stems(of: $0.id).isEmpty }.map {
+                    SolveRequest(course: c.id, set: set.id, problems: [$0.id])
+                }
+            }.first
+        }.first
+        if let stemmed { await step("course-solve-stem", stemmed.link, wait: 3) }
         for (name, link) in links { await step(name, link) }
         if let note = Self.noteLink {
             open(AppLink(.note, note))

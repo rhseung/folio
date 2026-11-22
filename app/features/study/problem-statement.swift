@@ -5,15 +5,18 @@ import SwiftUI
 // 칸을 잘라 그린다. 문제지 파일이 없으면(Claude가 쓴 문제지) 그림 칸도 없다.
 struct ProblemStatement: View {
     let problem: Problem
-    var group: ProblemGroup?
+    // 바깥 지문부터 차례로 보인다.
+    var stems: [ProblemGroup] = []
     var sheet: URL?
     var lineLimit: Int?
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.s) {
-            if let group {
+            ForEach(stems) { group in
                 VStack(alignment: .leading, spacing: Theme.Space.s) {
-                    StudyText(text: group.text).lineLimit(lineLimit).foregroundStyle(Theme.Palette.textSecondary)
+                    if !group.text.isEmpty {
+                        StudyText(text: group.text).lineLimit(lineLimit).foregroundStyle(Theme.Palette.textSecondary)
+                    }
                     ForEach(group.figures, id: \.self) { PDFRegionImage(url: sheet, region: $0) }
                 }
             }

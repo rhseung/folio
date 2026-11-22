@@ -181,9 +181,24 @@ final class SolveModel {
         }
     }
 
+    // 소문제의 번호 자리에는 지문의 경로를 쓴다("Warm-up › W1").
     func title(_ r: CourseStudy.ProblemRecord) -> String {
         let set = study?.file.problemSets.first { $0.id == r.setId }
-        return String(localized: .problemsNumbered(set?.title ?? "", r.problem.number))
+        let path = set.map { ProblemTree($0).path(to: r.problem.id) } ?? []
+        return String(localized: .problemsNumbered(set?.title ?? "", path.isEmpty ? r.problem.number : path.joined(separator: " › ")))
+    }
+
+    func stems(_ r: CourseStudy.ProblemRecord) -> [ProblemGroup] {
+        study?.file.problemSets.first { $0.id == r.setId }.map { ProblemTree($0).stems(of: r.problem.id) } ?? []
+    }
+
+    // 그림 칸을 잘라 올 문제지 PDF다.
+    func sheet(_ r: CourseStudy.ProblemRecord) -> URL? {
+        guard let course = workspace.course(request.course),
+            let id = course.file.problemSets.first(where: { $0.id == r.setId })?.materialId,
+            let material = course.file.materials.first(where: { $0.id == id && $0.isPDF })
+        else { return nil }
+        return course.store.fileURL(material.path)
     }
 
     func subtitle(_ r: CourseStudy.ProblemRecord) -> String {

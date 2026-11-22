@@ -143,6 +143,12 @@ struct ProblemExtractionModelTests {
             }
         }
         #expect(layout() == ["0 [Warm-up]", "1 W1,W2"])
+        // 풀기 화면은 소문제의 번호 자리에 지문의 경로를 쓰고, 지문과 그 그림을 먼저 보인다.
+        let solve = SolveModel(
+            workspace: workspace, request: SolveRequest(course: graphTheory, set: set.id, problems: [set.problems[0].id]))
+        let w1 = try #require(workspace.study(of: graphTheory)?.problems[set.problems[0].id])
+        #expect(solve.title(w1).contains("Warm-up › W1") && solve.stems(w1).map(\.number) == ["W"])
+        #expect(solve.sheet(w1)?.lastPathComponent == "26h3.pdf")
         page.toggleCollapsed(set.groups[0].id)
         #expect(layout() == ["0 [Warm-up]"])
         page.filter = .wrong
