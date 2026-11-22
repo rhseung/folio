@@ -83,6 +83,32 @@ struct ProblemDraftTests {
         #expect(throws: ActionError.self) { try run(ProblemSetAccept(course: Self.graphTheory, material: sheet.id)) }
     }
 
+    @Test func theStemAndItsFigureTravelWithTheProposalAndLeaveWithTheirSubProblems() throws {
+        let sheet = try material("Assignments/HW03/26h3.pdf")
+        let graph = try #require(ProblemRegion(page: 1, x: 0.1, y: 0.4, width: 0.5, height: 0.2))
+        let stem = ProblemGroup(number: "2", page: 2, text: "Let $G$ be the graph below.")
+        let drawn = problems.map { p in
+            var p = p; if p.parent == "2" { p.figures = [graph] }; return p
+        }
+        try run(ProblemSetPropose(course: Self.graphTheory, material: sheet.id, problems: drawn, groups: [stem]))
+        let draft = try #require(try drafts().first)
+        // 두 소문제가 함께 보는 그림은 지문으로 간다.
+        #expect(draft.groups.map(\.number) == ["2"] && draft.groups[0].figures == [graph])
+        #expect(draft.problems.allSatisfy { $0.figures.isEmpty })
+
+        try run(ProblemSetAccept(course: Self.graphTheory, material: sheet.id))
+        let set = try #require(try file().problemSets.first { $0.materialId == sheet.id })
+        let tree = ProblemTree(set)
+        #expect(tree.stems(of: set.problems[1].id).map(\.text) == [stem.text] && tree.stems(of: set.problems[0].id).isEmpty)
+
+        // 소문제를 모두 빼고 받으면 지문도 남지 않는다.
+        let other = try material("Exercises/Exercise 1.pdf")
+        try run(ProblemSetPropose(course: Self.graphTheory, material: other.id, problems: drawn, groups: [stem]))
+        try run(ProblemSetAccept(course: Self.graphTheory, material: other.id, problems: Array(drawn.prefix(1))))
+        let kept = try #require(try file().problemSets.first { $0.materialId == other.id })
+        #expect(kept.groups.isEmpty)
+    }
+
     @Test func discardingLeavesNothingInTheCourse() throws {
         let sheet = try material("Exercises/Exercise 1.pdf")
         try run(ProblemSetPropose(course: Self.graphTheory, material: sheet.id, problems: problems))

@@ -33,6 +33,7 @@ public enum Scenario: String, CaseIterable, Sendable {
             // 과목이 이 파일의 hash를 갖도록 슬라이드를 추적하기 전에 쓴다. 아래에서 단원으로 나누므로 열 수 있는 쪽이
             // 필요하다. 자리표시자로는 나누기 화면과 구간 막대에 보일 것이 없었다.
             try SampleLecture.write(to: folder.appending(path: Builder.graphFolder).appending(path: Builder.matchingSlides))
+            try SampleSheet.write(to: folder.appending(path: Builder.graphFolder).appending(path: Builder.midtermSheet))
             try build.busyDay(extraExams: self == .manyExams)
         case .quietDay: try build.quietDay()
         case .empty: break
@@ -147,13 +148,18 @@ private struct Builder {
 
         // 2024 중간고사는 Claude가 뽑아 둔 초안으로 남아 문제 페이지에 알림 카드가 뜬다.
         if let sheet = try ctx.file(course).materials.first(where: { $0.path == Self.midtermSheet }) {
-            let drafted = [
-                problem("1", "$K_{3,3}$는 평면 그래프인가?", .trueFalse, "거짓", coloring, page: 1),
+            var drafted = [
+                problem("1", "아래 그래프 $K_{3,3}$는 평면 그래프인가?", .trueFalse, "거짓", coloring, page: 1),
                 problem("2a", "홀의 정리를 쓰시오.", .written, nil, matching, page: 2),
-                problem("2b", "홀의 정리를 증명하시오.", .written, nil, matching, page: 2),
+                problem("2b", "홀의 정리로 $G$에 완전 매칭이 있는지 판단하시오.", .written, nil, matching, page: 2),
                 problem("3", "페테르센 그래프의 채색수를 구하시오.", .short, "3", coloring, page: 3),
             ]
-            try run(ProblemSetPropose(course: course, material: sheet.id, problems: drafted), at: at(11, 4, 9))
+            drafted[0].figures = SampleSheet.planarFigure.map { [$0] } ?? []
+            drafted[1].parent = "2"
+            drafted[2].parent = "2"
+            let stem = ProblemGroup(
+                number: "2", page: 2, text: "$G$는 아래 이분 그래프이다.", figures: SampleSheet.bipartiteFigure.map { [$0] } ?? [])
+            try run(ProblemSetPropose(course: course, material: sheet.id, problems: drafted, groups: [stem]), at: at(11, 4, 9))
         }
     }
 

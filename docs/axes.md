@@ -50,7 +50,7 @@ AGENTS.md "구조 축" 표의 축마다 지킬 규칙이다. 축에 기능을 �
     - LMS(`LMSProposal.proposal`, 승인은 `lms accept`, 무시는 `lms mark`): `ProposalBoard`가 강의실로 묶어 LMS 탭(`folio://lms`)에 모은다. 받은 과제가 LMS와 다른 것(`LMSDifference`)은 과목이 정해져 있어 과목을 고르지 않고, 승인은 `assignment status`나 `assignment set`이다.
     - 대화 파일(`Chat.pending`): 그 대화의 Claude 패널에서 승인한다. Claude는 LMS에 속하지 않아 LMS 탭에 모으지 않는다(사용자 결정). 패널의 거절은 #515다. CLI와 MCP는 `proposal list`로 모든 과목의 대화에서 기다리는 제안을 읽는다.
     - 폴더 정리 옮기기(`PlannedMove.proposal`, 검토 표시는 `.review` 표시, 승인은 `cleanup apply`): 자료 화면과 `cleanup plan`이 같은 선언을 읽는다.
-    - 공부 초안(`StudyDraft.proposal`, `.folio/drafts/`): 자료에서 뽑은 문제(`problem-set propose`)는 문제 페이지의 알림 카드에서 받거나(`problem-set accept`) 버린다(`problem-set discard`). 초안은 자료마다 하나이고, 다시 뽑으면 앞의 초안을 바꾼다. 받으면 초안을 지우고, 다른 기기가 먼저 받은 초안은 과목 문서에 남은 제안 ID로 거른다.
+    - 공부 초안(`StudyDraft.proposal`, `.folio/drafts/`): 자료에서 뽑은 문제(`problem-set propose`)는 문제 페이지의 알림 카드에서 받거나(`problem-set accept`) 버린다(`problem-set discard`). 초안은 자료마다 하나이고, 다시 뽑으면 앞의 초안을 바꾼다. 소문제들이 함께 딸린 지문은 문제가 아니라 묶음의 `groups`(`ProblemGroup`)에 두고, 그림은 문제지 PDF의 칸(`ProblemRegion`)으로 적어 앱이 PDF에서 잘라 보인다. 받으면 초안을 지우고, 다른 기기가 먼저 받은 초안은 과목 문서에 남은 제안 ID로 거른다.
 - 파일 분류, 자료에서 정보 추출, 렉처 단원 구간 제안은 #90에 남았다. 패널의 제안 단계는 `docs/mcp.md`에 있다.
 
 ## 파일 보기 렌더러

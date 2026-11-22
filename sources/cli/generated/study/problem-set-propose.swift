@@ -8,7 +8,7 @@ import Foundation
 extension GeneratedCommands {
     struct ProblemSetPropose: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "propose", abstract: "PDF에서 뽑은 문제를 문제 묶음 제안으로 두기. 앱의 문제 페이지에서 검토하고 받는다", discussion: """
-            파일은 Problem 배열이다. 단원을 적지 않은 문제는 렉처 쪽(lecturePages)이 든 단원에 잇고, 렉처 쪽도 없으면 문제지 자료에 이어진 단원이 하나일 때 그 단원에 잇는다. 받기 전에는 course.json을 바꾸지 않는다. 같은 자료의 제안이 있으면 바꾼다.
+            파일은 Problem 배열이다. 소문제들이 함께 딸린 지문은 --groups에 ProblemGroup 배열로 주고, 그림은 문제와 지문의 figures에 쪽과 칸(왼쪽 위 기준 0–1 비율)으로 준다. 단원을 적지 않은 문제는 렉처 쪽(lecturePages)이 든 단원에 잇고, 렉처 쪽도 없으면 문제지 자료에 이어진 단원이 하나일 때 그 단원에 잇는다. 받기 전에는 course.json을 바꾸지 않는다. 같은 자료의 제안이 있으면 바꾼다.
 
             예시:
               folio problem-set propose \"EC4207/2024 Midterm.pdf\" --file problems.json
@@ -19,6 +19,7 @@ extension GeneratedCommands {
         @Option(help: "묶음 제목. 빼면 파일 이름") var title: String?
         @Option(help: "출처: past_exam, textbook, exercise, assignment. 빼면 자료의 폴더로 정한다") var source: ProblemSource?
         @Option(name: .customLong("file"), help: ArgumentHelp("문제 JSON 파일(Problem 배열). -이면 표준 입력", valueName: "file"), completion: .file(extensions: ["json"])) var problems: String
+        @Option(name: .customLong("groups"), help: ArgumentHelp("지문 JSON 파일(ProblemGroup 배열). 소문제의 parent가 지문의 number다", valueName: "file"), completion: .file(extensions: ["json"])) var groups: String?
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -30,7 +31,8 @@ extension GeneratedCommands {
                 solution: try solution.map { try r.id(.material, $0, in: c) },
                 title: title,
                 source: source,
-                problems: try readJSONFile([Problem].self, problems)
+                problems: try readJSONFile([Problem].self, problems),
+                groups: try groups.map { try readJSONFile([ProblemGroup].self, $0) }
             )
             try perform(spec: action, g, ctx: ctx)
         }

@@ -9,7 +9,7 @@ extension ClaudeClient {
     public func extractProblems(
         sheet: ProblemDocument, solution: ProblemDocument?, units: [FolioDomain.Unit], lectures: LectureOutline = LectureOutline(),
         source: ProblemSource
-    ) async throws -> [Problem] {
+    ) async throws -> ExtractedProblems {
         let names = Dictionary(uniqueKeysWithValues: lectures.lectures.enumerated().map { ("L\($0.offset + 1)", $0.element) })
         let key = Dictionary(uniqueKeysWithValues: names.map { ($0.value.materialId, $0.key) })
         let outline = UnitTree.outline(units).map { row in
@@ -27,16 +27,32 @@ extension ClaudeClient {
                 """
                 You transcribe every problem of a university problem sheet (\(source.rawValue)) so a student can solve them \
                 one by one. Keep the sheet's own numbering; a sub-question like 3(a) gets number "3a" and parent "3". Copy \
-                each problem's full statement in the sheet's language with math in LaTeX ($...$ and $$...$$); describe a \
-                figure in one sentence in brackets when the statement needs it. "page" is the 1-based PDF page the problem \
-                starts on. Pick "format": true_false, choice (copy the options), short (a single value, expression or word) \
+                each problem's full statement in the sheet's language as LaTeX body source (no preamble). Use only this \
+                LaTeX: a blank line between paragraphs and \\\\ for a line break; \\textbf{}, \\emph{}, \\textit{}, \
+                \\underline{}, \\texttt{} for the sheet's emphasis; itemize and enumerate, at most two levels deep, writing \
+                any label other than 1. 2. or a bullet explicitly as \\item[(a)] or \\item[(i)] and never [label=...] options; \
+                the escapes \\% \\& \\# \\_ \\$ \\{ \\}, ~, -- and ---; math inline in $...$ and displayed in $$...$$ or \
+                align, align* or gather. Never use tables, \\includegraphics or figure, \\section, spacing commands, footnotes, \
+                verbatim, custom macros or Markdown. "groups" text and "solution" use the same LaTeX; each option is one line \
+                without lists. Never describe \
+                a figure in words (no "[Figure: ...]"): the app shows the figure itself, cut from the PDF, from the boxes you \
+                give. "page" is the 1-based PDF page the problem starts on. Boxes locate things on a PDF page: "page" is \
+                1-based and x, y, width, height are fractions of the page's width and height measured from its top-left \
+                corner. "region" is the box holding the whole problem; "figures" are the boxes of each drawing, graph, table \
+                or diagram the problem needs to be solved, drawn tightly around the figure with its labels. The sheet is a \
+                tree like folders: a stem that sub-problems hang under (a heading such as "Warm-up Problems", instructions, \
+                or the numbered statement or figure that introduces sub-questions (a), (b)) goes in "groups", with "number" \
+                the value its children use as "parent", a short "title" for the heading ("Warm-up") or null, its text, \
+                region and figures, and "parent" set to the enclosing stem's number when stems nest (W -> W1 -> W1a). List \
+                only the actual questions in "problems", in sheet order, and do not repeat a stem or its figures in its \
+                children. Pick "format": true_false, choice (copy the options), short (a single value, expression or word) \
                 or written (a derivation, proof or explanation). When a solution document is given, set "answer" for \
                 true_false (참 or 거짓), choice (the exact option text) and short problems, copy the worked solution into \
                 "solution", and set "solutionPage" to its 1-based page in the solution document. Otherwise leave them null. \
                 Set "units" to the exact titles of the course units the problem tests, most specific first; never invent \
                 a unit title. Set "lecturePages" to the one to three lecture pages (from <lectures>, inside the unit's page \
                 range) where the concept the problem needs is taught, or [] when none fits. Skip cover pages, instructions \
-                and blank answer space.
+                that belong to no problem, and blank answer space. For a LaTeX source, region is null and figures are empty.
                 """, cache: true)
         ]
         var content: [ContentBlock] = [
@@ -54,6 +70,7 @@ extension ClaudeClient {
         if let solution { content += solution.blocks("Solution document") }
         let drafts = try await run(.extractProblems, ProblemDrafts.self, system: system, messages: [Message(role: .user, content: content)])
         let ids = names.mapValues(\.materialId)
-        return drafts.problems.map { $0.problem(units: units, lectures: ids) }
+        return ExtractedProblems(
+            problems: drafts.problems.map { $0.problem(units: units, lectures: ids) }, groups: (drafts.groups ?? []).map(\.group))
     }
 }

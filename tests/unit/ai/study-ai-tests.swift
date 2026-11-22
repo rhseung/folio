@@ -36,7 +36,8 @@ struct StudyAITests {
         let fake = FakeProvider(responses: [FakeProvider.reply(reply)])
         let units = ["매칭", "평면 그래프"].enumerated().map { FolioDomain.Unit(device: device, at: now, title: $0.element, order: $0.offset) }
         let problems = try await ClaudeClient(provider: fake).extractProblems(
-            sheet: .pdf(Data("%PDF".utf8)), solution: nil, units: units, source: .pastExam)
+            sheet: .pdf(Data("%PDF".utf8)), solution: nil, units: units, source: .pastExam
+        ).problems
         #expect(problems.map(\.number) == ["1", "2"])
         #expect(problems[0].unitIds == [units[1].id] && problems[0].options == Problem.trueFalseOptions)
         #expect(problems[1].options.isEmpty && problems[1].answer == nil && problems[1].solution == "귀납법")
@@ -58,7 +59,8 @@ struct StudyAITests {
         ])
         let problems = try await ClaudeClient(provider: fake).extractProblems(
             sheet: .tex("\\begin{problem}Hall\\end{problem}"), solution: .pdf(Data("%PDF".utf8)), units: [matching],
-            lectures: lectures, source: .exercise)
+            lectures: lectures, source: .exercise
+        ).problems
         // 프롬프트에 없는 렉처 이름은 버린다.
         #expect(problems[0].lecturePages == [ProblemPage(materialId: deck, page: 9)])
 
@@ -69,6 +71,32 @@ struct StudyAITests {
                 && texts[0].contains("L1 p.9: Hall's theorem"))
         #expect(texts[1].contains("<latex>") && texts.last == "Solution document:")
         #expect(request.messages[0].content.filter { if case .pdf = $0 { true } else { false } }.count == 1)
+    }
+
+    @Test func extractionKeepsTheStemAndTheFigureBoxes() async throws {
+        let box = #"{"page":1,"x":0.1,"y":0.2,"width":0.5,"height":0.3}"#
+        let outside = #"{"page":1,"x":0.8,"y":0.9,"width":0.5,"height":0.3}"#
+        let empty = #"{"page":1,"x":0.1,"y":0.2,"width":0,"height":0.3}"#
+        let reply =
+            #"{"problems":[{"number":"W1","parent":"W","points":null,"page":1,"text":"Apply the augmenting path algorithm.","format":"written","options":[],"answer":null,"units":[],"solution":null,"solutionPage":null,"lecturePages":[],"region":"#
+            + box + #","figures":["# + outside + "," + empty
+            + #"]}],"groups":[{"number":"W","title":"Warm-up","parent":null,"page":1,"text":"Warm-up Problems (Do not submit)","region":null,"figures":["#
+            + box + "]}]}"
+        let fake = FakeProvider(responses: [FakeProvider.reply(reply)])
+        let extracted = try await ClaudeClient(provider: fake).extractProblems(
+            sheet: .pdf(Data("%PDF".utf8)), solution: nil, units: [], source: .assignment)
+        let w1 = try #require(extracted.problems.first)
+        #expect(w1.parent == "W" && w1.region == ProblemRegion(page: 1, x: 0.1, y: 0.2, width: 0.5, height: 0.3))
+        // 쪽 밖으로 나간 칸은 쪽 안으로 줄이고, 넓이가 없는 칸은 버린다.
+        #expect(w1.figures == [ProblemRegion(page: 1, x: 0.8, y: 0.9, width: 0.2, height: 0.1)].compactMap { $0 })
+        let group = try #require(extracted.groups.first)
+        #expect(group.number == "W" && group.name == "Warm-up" && group.text.hasPrefix("Warm-up") && group.figures.count == 1)
+
+        let request = try #require(await fake.requests.first)
+        let system = (request.system ?? []).compactMap { if case .text(let t, _) = $0 { t } else { nil } }.joined()
+        // 그림은 문제지에서 잘라 보이므로 글로 풀어 쓰지 않게 한다. 글은 앱이 그리는 LaTeX 부분집합으로 쓰게 한다.
+        #expect(system.contains("\"groups\"") && system.contains("Never describe a figure in words") && !system.contains("in brackets"))
+        #expect(system.contains("LaTeX body source") && system.contains(#"\item[(a)]"#) && system.contains("Never use tables"))
     }
 
     @Test func gradingSendsTheSolutionOrAsksClaudeToSolve() async throws {

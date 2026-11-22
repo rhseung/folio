@@ -52,8 +52,9 @@ public struct CourseStudy: Sendable {
             attempts[e.problemId, default: []].append(ProblemAttempt(e, at: at, day: day(at), change: changes[e.id]))
             if let run = e.runId { runs.insert(run) }
         }
+        // 풀 문제는 묶음의 나무를 깊이 우선으로 걷는 차례다. 지문은 풀 문제가 아니라서 세지 않는다.
         for set in file.problemSets {
-            for p in set.problems {
+            for p in ProblemTree(set).questions {
                 let tries = attempts[p.id] ?? []
                 problems[p.id] = ProblemRecord(
                     setId: set.id, problem: p, source: set.source, attempts: tries,

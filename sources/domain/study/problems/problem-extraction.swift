@@ -105,6 +105,32 @@ public enum ProblemExtraction {
         }
     }
 
+    // 뽑은 문제를 나무로 정리한다. 문제는 나무의 깊이 우선 차례(풀기 순서)로 놓고, 풀 문제가 없거나 번호가 문제와 겹치는
+    // 지문은 버린다. 바로 아래 소문제 모두(둘 이상)가 같은 그림을 가지면 그 그림을 지문으로 옮기고, 지문에 있는 그림은 그
+    // 소문제에서 뺀다. Claude가 지문의 그림을 소문제마다 되풀이해도 그림이 한 번만 보이게 하려는 것이다.
+    public static func grouped(_ extracted: ExtractedProblems) -> ExtractedProblems {
+        let numbers = Set(extracted.problems.map(\.number))
+        let tree = ProblemTree(problems: extracted.problems, groups: extracted.groups.filter { !numbers.contains($0.number) })
+        var problems = tree.questions, groups = tree.groups
+        for g in groups.indices {
+            let children = problems.indices.filter { problems[$0].parent == groups[g].number }
+            guard let first = children.first else { continue }
+            for figure in problems[first].figures
+            where children.count > 1 && children.allSatisfy({ i in problems[i].figures.contains { $0.overlaps(figure) } })
+                && !groups[g].figures.contains(where: { $0.overlaps(figure) })
+            {
+                groups[g].figures.append(figure)
+            }
+            for i in children { problems[i].figures.removeAll { f in groups[g].figures.contains { $0.overlaps(f) } } }
+        }
+        return ExtractedProblems(problems: problems, groups: groups)
+    }
+
+    // 받는 문제 중 풀 문제가 남은 지문만 남긴다. 검토에서 소문제를 모두 뺀 지문은 묶음에 들어가지 않는다.
+    public static func groups(_ groups: [ProblemGroup], usedBy problems: [Problem]) -> [ProblemGroup] {
+        ProblemTree(problems: problems, groups: groups).groups
+    }
+
     private static func holders(of page: ProblemPage, in outline: [(unit: Unit, depth: Int)]) -> [(unit: Unit, depth: Int)] {
         outline.filter { row in row.unit.lecturePages.contains { $0.materialId == page.materialId && $0.pages.contains(page.page) } }
     }

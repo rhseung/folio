@@ -21,6 +21,7 @@ extension GeneratedCommands {
         @Option(help: ArgumentHelp("풀이 자료", valueName: "solution"), completion: Complete.ref(.material)) var solution: String?
         @Argument(help: "문제 번호. 1 2 3a. 여러 번 줄 수 있다") var numbers: [String] = []
         @Option(name: .customLong("file"), help: ArgumentHelp("문제 JSON 파일(Problem 배열). -이면 표준 입력", valueName: "file"), completion: .file(extensions: ["json"])) var problems: String?
+        @Option(name: .customLong("groups"), help: ArgumentHelp("지문 JSON 파일(ProblemGroup 배열). 소문제의 parent가 지문의 number다", valueName: "file"), completion: .file(extensions: ["json"])) var groups: String?
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -34,7 +35,8 @@ extension GeneratedCommands {
                 material: try material.map { try r.id(.material, $0, in: c) },
                 solution: try solution.map { try r.id(.material, $0, in: c) },
                 numbers: numbers,
-                problems: try problems.map { try readJSONFile([Problem].self, $0) }
+                problems: try problems.map { try readJSONFile([Problem].self, $0) },
+                groups: try groups.map { try readJSONFile([ProblemGroup].self, $0) }
             )
             try perform(spec: action, g, ctx: ctx)
         }

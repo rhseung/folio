@@ -47,7 +47,7 @@ struct ProblemExtractionTests {
         let template = material("Assignments/HW01/templateHW.tex")
         let exercise = material("Exercises/Exercise 1.pdf")
         let exam = material("Inherited/소순범/2024 Midterm.pdf")
-        let scan = material("Inherited/scan01.pdf", kind: .pastExam)
+        let scan = material("Inherited/소순범/scan01.pdf", kind: .pastExam)
         let named = material("Assignments/HW01/HW1-5070.pdf")
         let linked = material("Assignments/HW01/final answer.pdf")
         let tagged = material("Assignments/HW01/report.pdf", kind: .submission)
@@ -63,6 +63,42 @@ struct ProblemExtractionTests {
         hw.problemMaterialId = named.id
         f.assignments = [hw]
         #expect(ProblemExtraction.sheets(in: f).map(\.path).contains(named.path))
+    }
+
+    @Test func aFigureEverySubProblemSharesMovesToTheStem() throws {
+        let graph = try #require(ProblemRegion(page: 1, x: 0.1, y: 0.3, width: 0.4, height: 0.2))
+        // 소문제마다 따로 어림해 조금 다른 칸도 같은 그림이다.
+        let nudged = try #require(ProblemRegion(page: 1, x: 0.11, y: 0.31, width: 0.39, height: 0.2))
+        let own = try #require(ProblemRegion(page: 1, x: 0.6, y: 0.3, width: 0.3, height: 0.2))
+        let w1 = Problem(number: "W1", parent: "W", figures: [graph, own]), w2 = Problem(number: "W2", parent: "W", figures: [nudged])
+        let stems = [
+            ProblemGroup(number: "W", text: "Warm-up Problems"), ProblemGroup(number: "W", text: "중복"),
+            ProblemGroup(number: "9", text: "소문제 없음"), ProblemGroup(number: "1", text: "문제와 같은 번호"),
+        ]
+        let tidy = ProblemExtraction.grouped(ExtractedProblems(problems: [w1, w2, Problem(number: "1")], groups: stems))
+        #expect(tidy.groups.map(\.text) == ["Warm-up Problems"])
+        #expect(tidy.groups[0].figures == [graph])
+        #expect(tidy.problems.map(\.figures) == [[own], [], []])
+
+        // 소문제가 하나뿐이면 그 그림은 소문제의 것이다.
+        let single = ProblemExtraction.grouped(ExtractedProblems(problems: [w1], groups: [stems[0]]))
+        #expect(single.groups[0].figures.isEmpty && single.problems[0].figures == [graph, own])
+        #expect(ProblemExtraction.groups(tidy.groups, usedBy: [Problem(number: "1")]).isEmpty)
+    }
+
+    @Test func aRegionStaysOnThePage() {
+        #expect(ProblemRegion(page: 0, x: 0, y: 0, width: 1, height: 1) == nil)
+        #expect(ProblemRegion(page: 1, x: 0.5, y: 0.5, width: 0, height: 0.2) == nil)
+        let edge = ProblemRegion(page: 2, x: -0.1, y: 0.9, width: 0.5, height: 0.5)
+        #expect(edge.map { [$0.x, $0.y, $0.width] } == [0, 0.9, 0.4])
+        #expect(edge?.padded(by: 0.05).x == 0)
+    }
+
+    @Test func oldFilesWithoutStemsOrFiguresStayTheSame() throws {
+        let set = ProblemSet(device: device, at: now, title: "HW", problems: [Problem(number: "1")])
+        let json = try #require(String(data: JSONEncoder().encode(set), encoding: .utf8))
+        #expect(!json.contains("groups") && !json.contains("figures") && !json.contains("region"))
+        #expect(try JSONDecoder().decode(ProblemSet.self, from: JSONEncoder().encode(set)) == set)
     }
 
     @Test func theSourceAndTitleComeFromTheFolder() {

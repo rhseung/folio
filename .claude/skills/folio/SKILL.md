@@ -57,7 +57,9 @@ folio transcript add "영재고 AP" "일반물리학 및 연습 II" --code GS --
 # 문제를 풀면 풀이 기록을 남긴다. 틀린 이유는 틀렸거나 부분 점수일 때만 남는다
 folio problem solve "EC4207/Exercise 1" 3a wrong --reason concept --dry-run
 # 자료에서 뽑은 문제는 묶음으로 바로 만들지 않고 `folio problem-set propose <과목>/<자료> --file <문제 JSON>`으로 제안해
-# 둔다. 사용자가 앱의 문제 페이지에서 검토하고 받는다
+# 둔다. 사용자가 앱의 문제 페이지에서 검토하고 받는다. 그림은 문제의 figures에 쪽과 칸(왼쪽 위 기준 0–1 비율)으로 적고,
+# 소문제들이 함께 딸린 지문과 그 그림은 --groups <지문 JSON>으로 준다. 글은 LaTeX 본문 원문(\textbf, enumerate, $…$)이고 그림을
+# 글로 풀어 쓰지 않는다
 # 어느 단원이 준비됐고 어떤 오답이 남았는지는 공부 상태로 본다. 판정을 고칠 때는 --json의 attempts에서 ID를 찾는다
 folio study show EC4207 --dry-run
 # 시험 공부 계획은 앱이 짠다. 사용자가 옮긴 항목은 다시 짜도 그대로 둔다

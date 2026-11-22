@@ -26,6 +26,8 @@ public struct ProblemSetAdd {
     @Arg var numbers: [String] = []
     /// 문제 JSON 파일(Problem 배열). -이면 표준 입력
     @CLIName("file") @FromFile var problems: [Problem]?
+    /// 지문 JSON 파일(ProblemGroup 배열). 소문제의 parent가 지문의 number다
+    @CLIName("groups") @FromFile var groups: [ProblemGroup]?
 
     public func run(_ ctx: ActionContext) throws {
         let all = (problems ?? []) + numbers.map { Problem(number: $0) }
@@ -36,7 +38,8 @@ public struct ProblemSetAdd {
             f.problemSets.append(
                 ProblemSet(
                     id: id, device: ctx.device, at: ctx.now, title: title.trimmingCharacters(in: .whitespaces), source: source,
-                    materialId: material, solutionMaterialId: solution, problems: all))
+                    materialId: material, solutionMaterialId: solution, problems: all,
+                    groups: ProblemExtraction.groups(groups ?? [], usedBy: all)))
         }
         ctx.made(id)
     }

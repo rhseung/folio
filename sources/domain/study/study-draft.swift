@@ -56,6 +56,11 @@ extension StudyDraft {
         }
     }
 
+    public var groups: [ProblemGroup] {
+        guard let value = proposal.input["groups"], let data = try? JSONEncoder().encode(value) else { return [] }
+        return (try? JSONDecoder().decode([ProblemGroup].self, from: data)) ?? []
+    }
+
     public var solutionMaterialId: UUID? {
         if case .string(let s)? = proposal.input["solution"] { return UUID(uuidString: s) }
         return nil
