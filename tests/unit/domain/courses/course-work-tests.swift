@@ -105,12 +105,18 @@ struct CourseWorkTests {
         #expect(plan.map(\.date) == ["2026-11-09 13:00", "2026-11-11 13:00"].map(date))
     }
 
-    @Test func plannedClassesSitInTheirWeeksOnTheTimeline() {
+    @Test func plannedClassesSitInTheirWeeksOnTheTable() {
         let made = Session(device: device, at: .now, week: 10, date: date("2026-11-04 13:00"))
         let planned = Session(device: device, at: .now, week: 10, date: date("2026-11-02 13:00"))
-        let items = SessionTimeline.items(
-            CourseFile(course: courses[0], sessions: [made]), planned: [planned], classMinutes: 75, calendar: calendar)
-        #expect(items.map(\.id) == ["week-10", "planned-\(planned.date.timeIntervalSinceReferenceDate)", made.id.uuidString])
+        let table = SessionTable(
+            CourseFile(course: Course(device: device, at: .now, title: "", schedule: monWed), sessions: [made]), planned: [planned],
+            now: date("2026-11-01 09:00"), settings: Settings(),
+            calendar: calendar)
+        #expect(table.weeks.count == 1)
+        #expect(
+            table.weeks[0].cells.flatMap(\.entries).map(\.id) == [
+                "planned-\(planned.date.timeIntervalSinceReferenceDate)", made.id.uuidString,
+            ])
     }
 
     @Test func newSessionsCountWeeksFromTheTermStart() {

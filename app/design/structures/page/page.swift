@@ -3,11 +3,14 @@ import SwiftUI
 
 struct Page<Content: View, Backdrop: View>: View {
     var maxWidth: CGFloat = Theme.Size.pageMaxWidth
+    var anchor: PageAnchor?
     @ViewBuilder var backdrop: Backdrop
     @ViewBuilder var content: Content
     // private으로 두지 않는다. private 속성이 있으면 memberwise init도 private이 된다.
     @Environment(\.linkFocus) var focus
     @Environment(\.pageGutter) var gutter
+    @Environment(\.accessibilityReduceMotion) var reduceMotion
+    @Environment(\.jumpsToAnchor) var jumpsToAnchor
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -34,6 +37,12 @@ struct Page<Content: View, Backdrop: View>: View {
                 try? await Task.sleep(for: .milliseconds(100))
                 withAnimation(.snappy) { proxy.scrollTo(focus, anchor: UnitPoint(x: 0.5, y: 0.2)) }
             }
+            .task(id: anchor) {
+                guard let anchor else { return }
+                try? await Task.sleep(for: .milliseconds(100))
+                // 처음 열 때도 바로 옮기지 않고 미끄러져 간다. 어디서 출발해 어디에 닿았는지 보여야 위아래에 무엇이 있는지 안다.
+                withAnimation(reduceMotion || jumpsToAnchor ? nil : Theme.Motion.scroll) { proxy.scrollTo(anchor.id, anchor: .top) }
+            }
         }
         .background(Theme.Palette.page)
         .scrollEdgeEffectHidden(true, for: .top)
@@ -43,7 +52,7 @@ struct Page<Content: View, Backdrop: View>: View {
 }
 
 extension Page where Backdrop == EmptyView {
-    init(maxWidth: CGFloat = Theme.Size.pageMaxWidth, @ViewBuilder content: () -> Content) {
-        self.init(maxWidth: maxWidth, backdrop: { EmptyView() }, content: content)
+    init(maxWidth: CGFloat = Theme.Size.pageMaxWidth, anchor: PageAnchor? = nil, @ViewBuilder content: () -> Content) {
+        self.init(maxWidth: maxWidth, anchor: anchor, backdrop: { EmptyView() }, content: content)
     }
 }
