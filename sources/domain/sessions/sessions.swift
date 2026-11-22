@@ -20,6 +20,18 @@ extension CourseFile {
             && !attendance.contains { $0.sessionId == s.id }
             && !recordings.contains { $0.sessionId == s.id }
     }
+
+    public func missingReviewNotes(at now: Date) -> Int {
+        sessions.filter { needsReviewNote($0, at: now) }.count
+    }
+
+    public func remainingClasses(after now: Date, planned: [Session]) -> Int {
+        sessions.filter { $0.date > now && !$0.isCancelled }.count + planned.filter { $0.date > now && !$0.isCancelled }.count
+    }
+
+    public func sessionsNeedingUnits(at now: Date) -> [Session] {
+        units.isEmpty ? [] : sessions.filter { needsUnits($0, at: now) }.sorted { $0.date > $1.date }
+    }
 }
 
 extension LocalDate {

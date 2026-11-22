@@ -122,13 +122,10 @@ struct ScreenRenders {
         }
         let now = workspace.now
         let live = workspace.currentCourses.first { c in
-            let model = SessionsModel(workspace: workspace, courseId: c.id)
-            return c.file.sessions.contains { s in
-                model.isOngoing(
-                    s,
-                    end: s.expectedEnd(
-                        schedule: c.file.course.schedule, classMinutes: workspace.settings.classMinutes, calendar: workspace.calendar),
-                    now: now)
+            c.file.sessions.contains { s in
+                let end = s.expectedEnd(
+                    schedule: c.file.course.schedule, classMinutes: workspace.settings.classMinutes, calendar: workspace.calendar)
+                return !s.isCancelled && s.date <= now && now < end
             }
         }
         if let course = live ?? workspace.currentCourses.max(by: { $0.file.sessions.count < $1.file.sessions.count }) {
@@ -205,7 +202,10 @@ func measureOffscreen(_ jobs: [RenderJob]) async throws -> [CGFloat] {
 @MainActor
 private func withOffscreenWindows<T>(_ jobs: [RenderJob], _ body: ([(RenderJob, NSView)]) throws -> T) async throws -> T {
     let open = jobs.map { job in
-        let host = NSHostingView(rootView: job.view.environment(\.colorScheme, job.scheme))
+        // 페이지가 앵커로 미끄러져 가지 않게 한다. 회차 표가 열리며 이번 주로 미끄러져 가는 동안 아래에서 창 높이를 키우면, 스크롤
+        // 위치가 바뀔 때마다 배치가 다시 요청되어 AppKit이 배치 횟수 초과 예외로 멈췄다. `.transaction`으로 애니메이션을 지워도
+        // `scrollTo`의 움직임은 남았다. 그림은 움직임이 끝난 모습만 필요하다.
+        let host = NSHostingView(rootView: job.view.environment(\.colorScheme, job.scheme).environment(\.jumpsToAnchor, true))
         let fitting = host.fittingSize
         let size = CGSize(width: job.width ?? fitting.width, height: job.height ?? (job.width == nil ? fitting.height : 900))
         // SwiftUI는 화면에 있는 뷰에만 `.task`를 실행하므로, 완전히 투명한 창을 화면 밖 먼 곳에 두고 order in만 한다.

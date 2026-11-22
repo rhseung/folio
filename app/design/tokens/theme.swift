@@ -131,6 +131,7 @@ enum Theme {
         static let card: CGFloat = 14
         static let floating: CGFloat = 16
         static let strip: CGFloat = 12
+        static let block: CGFloat = 12
     }
 
     enum Size {
@@ -251,6 +252,7 @@ enum Theme {
         // 이보다 좁으면 `FileName`이 확장자를 따로 둔다. 여러 줄의 가운데 줄임이 13pt 글자에서 확장자의 점을 지키는 가장 좁은 폭이다.
         static let fileNameRoom: CGFloat = 64
         static let inlineButton: CGFloat = 24
+        static let dayMark: CGFloat = 20
         static let chipRow: CGFloat = 24
         static let scrubTrack: CGFloat = 20
         static let legendLine = CGSize(width: 16, height: 2)
@@ -260,8 +262,14 @@ enum Theme {
         static let choiceButton: CGFloat = 96
         static let layoutGlyph = CGSize(width: 40, height: 28)
 
-        static let classCard: CGFloat = 60
-        static let examMarker: CGFloat = 52
+        // 회차 표의 주차 여백이다. 넓으면 "10주차"와 "시험 주간", 좁으면 "10주차"만 들어간다.
+        static let weekGutter: CGFloat = 72
+        static let weekGutterCompact: CGFloat = 48
+        // 표가 "시험 주간"과 열 머리의 시각, 강의실을 보이는 폭과, 열을 버리고 날짜 목록이 되는 폭이다.
+        static let sessionTableWide: CGFloat = 800
+        static let sessionTableList: CGFloat = 500
+        static let sessionListBlock: CGFloat = 56
+        static let agendaToday: CGFloat = 32
         static let problemCell: CGFloat = 40
         static let assetTile = CGSize(width: 112, height: 84)
         // 위 여백 16, 묶음 이름 14, 간격 8, 타일 84, 아래 여백 16이다. 띠는 가운데에 두므로 남는 높이는 위아래로 나뉜다.
@@ -295,6 +303,7 @@ enum Theme {
         static let quick = Animation.snappy(duration: 0.2)
         static let standard = Animation.snappy(duration: 0.25)
         static let settle = Animation.snappy(duration: 0.35)
+        static let scroll = Animation.smooth(duration: 0.6)
         // `PaneGlide`는 칸 폭을 이 곡선으로 움직이고, `PaneRow`가 나머지를 애니메이션한다. 두 곳이 다른 타이밍을 쓰면
         // 칸의 가장자리가 이웃이 멈추기 전에 도착하므로 같은 값을 쓴다.
         static let paneSpring = Spring.smooth(duration: 0.34)
@@ -313,6 +322,7 @@ enum Theme {
         static let figureCompact = Font.system(size: 22, weight: .bold).monospacedDigit()
         static let figureMedium = Font.system(size: 17, weight: .bold)
         static let figureSmall = Font.system(size: 16, weight: .semibold).monospacedDigit()
+        static let dayFigure = Font.system(size: 18, weight: .semibold).monospacedDigit()
         static let bodyLarge = Font.system(size: bodyLargeSize)
         static let bodyLargeSize = CGFloat(15)
         static let body = Font.system(size: bodySize)
