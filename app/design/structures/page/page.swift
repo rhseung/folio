@@ -38,11 +38,8 @@ struct Page<Content: View, Backdrop: View>: View {
             .task(id: anchor) {
                 guard let anchor else { return }
                 try? await Task.sleep(for: .milliseconds(100))
-                if anchor.animated {
-                    withAnimation(Theme.Motion.standard) { proxy.scrollTo(anchor.id, anchor: .top) }
-                } else {
-                    proxy.scrollTo(anchor.id, anchor: .top)
-                }
+                // 처음 열 때도 바로 옮기지 않고 미끄러져 간다. 어디서 출발해 어디에 닿았는지 보여야 위아래에 무엇이 있는지 안다.
+                withAnimation(Theme.Motion.scroll) { proxy.scrollTo(anchor.id, anchor: .top) }
             }
         }
         .background(Theme.Palette.page)

@@ -301,6 +301,7 @@ enum Theme {
         static let quick = Animation.snappy(duration: 0.2)
         static let standard = Animation.snappy(duration: 0.25)
         static let settle = Animation.snappy(duration: 0.35)
+        static let scroll = Animation.smooth(duration: 0.6)
         // `PaneGlide`는 칸 폭을 이 곡선으로 움직이고, `PaneRow`가 나머지를 애니메이션한다. 두 곳이 다른 타이밍을 쓰면
         // 칸의 가장자리가 이웃이 멈추기 전에 도착하므로 같은 값을 쓴다.
         static let paneSpring = Spring.smooth(duration: 0.34)

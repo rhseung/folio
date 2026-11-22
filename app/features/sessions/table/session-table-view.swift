@@ -23,9 +23,9 @@ struct SessionTableView: View {
                 head(String(localized: .sessionsTableOther), detail: String(localized: .sessionsTableOtherDetail), strong: false)
             }
             .frame(minHeight: Theme.Size.rowHeight)
-            // 줄을 lazy로 두어 칸 폭이 바뀔 때 보이는 주만 다시 배치한다. 주마다 `.id`를 주어 아직 그리지 않은 주로도
-            // 스크롤할 수 있게 한다.
-            LazyVStack(spacing: 0) {
+            // LazyVStack을 쓰지 않는다. 아직 그리지 않은 줄의 높이를 어림해서, 이번 주로 미끄러져 가는 스크롤이
+            // 엉뚱한 곳에 멈추거나 도착한 뒤 튀었다. 한 학기는 20주 안팎이라 모두 그려도 무겁지 않다.
+            VStack(spacing: 0) {
                 ForEach(table.weeks) { week in row(week).id(week.id) }
             }
         }

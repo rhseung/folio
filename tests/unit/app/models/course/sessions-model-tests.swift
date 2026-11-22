@@ -121,11 +121,11 @@ struct SessionsModelTests {
         let s = try session(workspace, daysFromNow: -21)
         let table = model.table(try #require(workspace.course(graphTheory)).file)
         model.follow(nil, in: table)
-        #expect(model.anchor?.id == AnyHashable(table.thisWeek) && model.anchor?.animated == false)
+        #expect(model.anchor?.id == AnyHashable(table.thisWeek))
         #expect(model.popover == nil)
         model.follow(s.id, in: table)
         #expect(model.popover == s.id)
-        #expect(model.anchor?.id == table.week(containing: s.id).map(AnyHashable.init) && model.anchor?.animated == true)
+        #expect(model.anchor?.id == table.week(containing: s.id).map(AnyHashable.init))
     }
 
     @Test func untouchedFutureSessionsAreListedAndRemovedTogether() throws {

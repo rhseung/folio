@@ -78,10 +78,10 @@ final class SessionsModel {
     // 처음 열면 이번 주로 스크롤한다. 링크가 회차를 가리키면 그 주로 스크롤하고 그 회차를 연다.
     func follow(_ focus: UUID?, in table: SessionTable) {
         if let focus, let week = table.week(containing: focus) {
-            anchor = PageAnchor(week, animated: placed)
+            anchor = PageAnchor(week)
             popover = focus
         } else if !placed {
-            anchor = PageAnchor(table.thisWeek, animated: false)
+            anchor = PageAnchor(table.thisWeek)
         }
         placed = true
     }
