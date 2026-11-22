@@ -141,3 +141,47 @@ struct MathSpansTests {
         #expect(!MathSpans.hasMath("값은 \\$5") && MathSpans.hasMath("$x$"))
     }
 }
+
+// 문제와 카드의 LaTeX 글은 StudyText가 그리기 전에 마크다운과 `$…$`로 바뀐다.
+struct LaTeXTextTests {
+    @Test func oldMarkdownProblemsStayAsTheyAre() {
+        let old = "**굵게**와 *기울임*, $x_1 + y$\n다음 줄"
+        #expect(LaTeXText.markdown(old) == old)
+    }
+
+    @Test func textCommandsBecomeMarkdown() {
+        #expect(LaTeXText.markdown(#"\textbf{정의} \emph{매칭}과 \textit{덮개}, \texttt{code}"#) == "**정의** *매칭*과 *덮개*, `code`")
+        #expect(LaTeXText.markdown(#"\underline{밑줄} 50\% \& a\_b"#) == #"밑줄 50% & a\_b"#)
+        #expect(LaTeXText.markdown(#"A--B---C ``인용'' a~b"#) == "A\u{2013}B\u{2014}C \u{201C}인용\u{201D} a\u{00A0}b")
+        #expect(LaTeXText.markdown(#"첫 줄\\둘째 줄"#) == "첫 줄\n둘째 줄")
+    }
+
+    // 수식 안은 KaTeX가 읽으므로 건드리지 않고, `\(…\)`와 `\[…\]`, 수식 환경은 `$`로 바꾼다.
+    @Test func mathIsKeptForKaTeX() {
+        #expect(LaTeXText.markdown(#"$\textbf{x}_1 -- y$와 \( a^2 \)"#) == #"$\textbf{x}_1 -- y$와 $a^2$"#)
+        #expect(LaTeXText.markdown(#"\[ \sum_i x_i \]"#) == #"$$\sum_i x_i$$"#)
+        let align = #"\begin{align*} a &= b \\ c &= d \end{align*}"#
+        #expect(LaTeXText.markdown(align) == "$$\(align)$$")
+        #expect(LaTeXText.markdown(#"\textbf{정리 $K_{3,3}$}"#) == "**정리 $K_{3,3}$**")
+    }
+
+    @Test func listsBecomeNumberedLines() {
+        let source = #"""
+            다음을 구하시오.
+            \begin{enumerate}
+              \item 최대 매칭
+              \item[(b)] 최소
+                덮개
+              \begin{itemize}
+                \item 안쪽
+              \end{itemize}
+            \end{enumerate}
+            끝.
+            """#
+        #expect(LaTeXText.markdown(source) == "다음을 구하시오.\n1. 최대 매칭\n(b) 최소 덮개\n\u{2003}\u{2022} 안쪽\n끝.")
+    }
+
+    @Test func unknownCommandsStayAsSource() {
+        #expect(LaTeXText.markdown(#"\hspace{1cm}x \foo"#) == #"\hspace{1cm}x \foo"#)
+    }
+}

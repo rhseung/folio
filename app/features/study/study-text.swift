@@ -1,7 +1,7 @@
 import FolioMarkdown
 import SwiftUI
 
-// 카드와 문제의 글은 마크다운이다. 줄 단위 문법만 읽어 줄바꿈과 공백을 그대로 둔다. `$…$`와 `$$…$$`는 노트 미리보기와 같은 KaTeX 그림으로 글 사이에 넣는다.
+// 카드와 문제의 글은 LaTeX 본문의 작은 부분집합이다(`LaTeXText`). 마크다운으로 바꾼 뒤 줄 단위 문법만 읽어 줄바꿈과 공백을 그대로 둔다. `$…$`와 `$$…$$`는 노트 미리보기와 같은 KaTeX 그림으로 글 사이에 넣는다.
 // 그림이 아직 없으면 원문을 보이고, 수식마다 그림을 한 번 받아 둔다.
 struct StudyText: View {
     // 문제, 보기, 풀이, 카드 면은 문제지처럼 LaTeX 글꼴로 쓴다(`typeset`). 채점 의견과 내가 친 답은 앱 글꼴로 쓰고(`prose`), 단원과
@@ -16,18 +16,22 @@ struct StudyText: View {
     @State private var pictures: [String: NoteMath.Picture] = [:]
 
     var body: some View {
-        if MathSpans.hasMath(text) {
-            typeset(withMath).background(MathHost()).task(id: [text, "\(scheme)"]) { await draw() }
+        let source = source
+        if MathSpans.hasMath(source) {
+            typeset(withMath(source)).background(MathHost()).task(id: [source, "\(scheme)"]) { await draw(source) }
         } else {
-            typeset(plain(text))
+            typeset(plain(source))
         }
     }
+
+    // 이름은 사용자가 쓴 글자 그대로 둔다.
+    private var source: String { look == .title ? text : LaTeXText.markdown(text) }
 
     // 앱 글꼴은 둘러싼 뷰의 글꼴(본문, 캡션)을 그대로 따른다.
     private func typeset(_ text: Text) -> Text { look == .typeset ? text.font(Theme.Typeface.study) : text }
 
-    private var withMath: Text {
-        MathSpans.split(text).reduce(Text(verbatim: "")) { line, span in Text("\(line)\(piece(span))") }
+    private func withMath(_ source: String) -> Text {
+        MathSpans.split(source).reduce(Text(verbatim: "")) { line, span in Text("\(line)\(piece(span))") }
     }
 
     private func plain(_ text: String) -> Text { look == .title ? Text(verbatim: text) : Self.markdown(text) }
@@ -50,9 +54,9 @@ struct StudyText: View {
 
     private var size: CGFloat { look == .typeset ? Theme.Typeface.studySize : Theme.Typeface.bodySize }
 
-    private func draw() async {
+    private func draw(_ source: String) async {
         let dark = scheme == .dark
-        for span in MathSpans.split(text) {
+        for span in MathSpans.split(source) {
             let (formula, display): (String, Bool)
             switch span {
             case .text: continue
