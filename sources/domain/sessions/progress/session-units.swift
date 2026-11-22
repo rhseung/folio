@@ -11,29 +11,41 @@ extension CourseFile {
     }
 
     public func computedUnitIds(of session: Session) -> [UUID] {
+        computedUnitIds(of: session, outline: UnitTree.outline(units).map(\.unit))
+    }
+
+    // 단원 순서는 부르는 쪽이 한 번 만들어 넘긴다. 노트와 회차 표가 회차마다, 단원마다 순서를 다시 만들면 단원 수의 제곱이
+    // 넘게 늘어서, 단원 69개인 과목에서 노트 목록 하나를 읽는 데 Release로 0.7초가 걸렸다.
+    func computedUnitIds(of session: Session, outline: [Unit]) -> [UUID] {
         guard !session.isCancelled else { return [] }
         let taught = session.materials.compactMap { m in m.pages.map { (material: m.materialId, pages: $0) } }
         guard !taught.isEmpty else { return [] }
-        return UnitTree.outline(units).map(\.unit).filter { u in
+        return outline.filter { u in
             u.lecturePages.contains { held in taught.contains { $0.material == held.materialId && Self.covers($0.pages, unit: held.pages) }
             }
         }.map(\.id)
     }
 
     public func unitIds(of session: Session) -> [UUID] {
-        let computed = Set(computedUnitIds(of: session))
+        unitIds(of: session, outline: UnitTree.outline(units).map(\.unit))
+    }
+
+    func unitIds(of session: Session, outline: [Unit]) -> [UUID] {
+        let computed = Set(computedUnitIds(of: session, outline: outline))
         let added = Set(session.addedUnitIds)
         let removed = Set(session.removedUnitIds)
-        return UnitTree.outline(units).map(\.unit.id).filter { (computed.contains($0) || added.contains($0)) && !removed.contains($0) }
+        return outline.map(\.id).filter { (computed.contains($0) || added.contains($0)) && !removed.contains($0) }
     }
 
     public func units(of session: Session) -> [Unit] {
-        let ids = Set(unitIds(of: session))
-        return UnitTree.outline(units).map(\.unit).filter { ids.contains($0.id) }
+        let outline = UnitTree.outline(units).map(\.unit)
+        let ids = Set(unitIds(of: session, outline: outline))
+        return outline.filter { ids.contains($0.id) }
     }
 
     public func sessions(of unit: UUID) -> [Session] {
-        sessions.filter { unitIds(of: $0).contains(unit) }.sorted(by: Session.inOrder)
+        let outline = UnitTree.outline(units).map(\.unit)
+        return sessions.filter { unitIds(of: $0, outline: outline).contains(unit) }.sorted(by: Session.inOrder)
     }
 
     public func isLinked(session: UUID, unit: UUID) -> Bool {

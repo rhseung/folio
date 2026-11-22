@@ -240,8 +240,8 @@ final class SessionsModel {
 
     func loadUntouched(_ course: LoadedCourse, now: Date? = nil) {
         let now = now ?? workspace.now
-        // 읽지 못한 노트가 어느 회차든 가리킬 수 있으므로 그때는 아무것도 제시하지 않는다.
-        guard let notes = try? course.store.notes() else { untouched = []; return }
+        // 이미 읽은 문서로 노트를 고른다. `notes()`는 메인 스레드에서 course.json을 한 번 더 읽는다.
+        let notes = course.store.notes(in: course.file)
         untouched = course.file.untouchedFutureSessions(now: now, notedSessions: Set(notes.flatMap(\.meta.sessionIds)))
     }
 
