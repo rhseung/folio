@@ -38,6 +38,12 @@ extension KeyCombo {
 extension View {
     // 키는 화면에 적지 않고 등록표에서 읽는다.
     func shortcut(_ id: ShortcutID) -> some View { keyboardShortcut(ShortcutTable.shortcut(id).key?.keyboardShortcut) }
+
+    // 키가 여럿인 명령에서 `index`번째 키다. 보기 고르기처럼 키의 차례가 대상의 차례인 명령에 쓴다.
+    func shortcut(_ id: ShortcutID, at index: Int) -> some View {
+        let bindings = ShortcutTable.shortcut(id).bindings
+        return keyboardShortcut(bindings.indices.contains(index) ? bindings[index].combo.keyboardShortcut : nil)
+    }
 }
 
 extension KeyCombo.Modifiers {

@@ -9,6 +9,14 @@ struct SolveSetup: View {
             title: String(localized: .solveTitle), confirm: model.startTitle, isDisabled: model.picked.isEmpty, note: model.setupNote,
             width: Theme.Size.solveSetup
         ) {
+            if let line = model.resumeLine {
+                FormRow(label: String(localized: .solveResume), detail: line) {
+                    HStack(spacing: Theme.Space.s) {
+                        Button(.solveResumeDrop) { model.dropResume() }.buttonStyle(.ghost)
+                        Button(.solveResumeGo) { model.resume() }.buttonStyle(.prominent)
+                    }
+                }
+            }
             FormRow(label: String(localized: .solveMode), detail: model.isMock ? String(localized: .solveModeMockDetail) : nil) {
                 SegmentedControl(selection: $model.mode, options: model.modeOptions)
             }

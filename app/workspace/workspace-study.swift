@@ -1,6 +1,7 @@
 import FolioActions
 import FolioCore
 import FolioDomain
+import FolioMarkdown
 import FolioStorage
 import Foundation
 
@@ -23,6 +24,25 @@ extension Workspace {
 
     nonisolated static func studyEvents(_ store: CourseStore) -> [LoggedEvent] {
         (try? store.log.readAll().filter { StudyLog.types.contains($0.type) }) ?? []
+    }
+
+    // 노트 블록에서 만든 카드 중 원본 블록이 바뀐 카드다. 노트 파일을 읽으므로 화면은 `notesRevision`이나 `studyRevision`이
+    // 바뀔 때만 다시 부른다. 카드 화면과 단원 페이지가 함께 쓴다.
+    func changedCardSources(in courseId: UUID) -> Set<UUID> {
+        guard let course = course(courseId), let study = study(of: courseId) else { return [] }
+        let cards = study.allCards.map(\.card).filter { $0.noteBlockHash != nil }
+        guard !cards.isEmpty else { return [] }
+        let notes = (try? course.store.notes()) ?? []
+        var texts: [UUID: String] = [:]
+        for id in Set(cards.compactMap(\.noteId)) {
+            if let note = notes.first(where: { $0.meta.id == id }) { texts[id] = try? course.store.read(note) }
+        }
+        return Set(
+            cards.filter { card in
+                let text = card.noteId.flatMap { texts[$0] }
+                return card.sourceChanged(block: card.noteBlockId.flatMap { id in text.flatMap { NoteBlockCard.source(of: id, in: $0) } })
+            }
+            .map(\.id))
     }
 
     // 계획 체크와 단원의 준비가 `studyRevision`을 읽어야 기록이 바뀔 때 화면이 다시 그려진다.

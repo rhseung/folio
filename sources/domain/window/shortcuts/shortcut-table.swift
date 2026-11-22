@@ -39,6 +39,16 @@ public enum ShortcutTable {
         Shortcut(.zoomIn, .materials, .materialView, .fixed, keys: [.init(KeyCombo("="))]),
         Shortcut(.zoomOut, .materials, .materialView, .fixed, keys: [.init(KeyCombo("-"))]),
         Shortcut(.zoomFit, .materials, .materialView, .fixed, keys: [.init(KeyCombo("0"))]),
+
+        // 채점하기 전에는 채점, 채점한 뒤에는 다음 문제, 모의시험에서는 다음 문제와 내기다. 한 키로 이어 푼다.
+        Shortcut(.solveGo, .study, .study, keys: [.init(KeyCombo(.return))]),
+        Shortcut(.solveTrue, .study, .study, keys: [.init(KeyCombo("t", []))]),
+        Shortcut(.solveFalse, .study, .study, keys: [.init(KeyCombo("f", []))]),
+        // 키의 차례가 보기의 차례다. 첫 키가 첫 보기다.
+        Shortcut(.solveChoice, .study, .study, keys: (1...9).map { .init(KeyCombo(Character("\($0)"), [])) }),
+        Shortcut(.cardFlip, .study, .study, keys: [.init(KeyCombo(.space, []))]),
+        Shortcut(.cardUnknown, .study, .study, keys: [.init(KeyCombo(.leftArrow, []))]),
+        Shortcut(.cardKnown, .study, .study, keys: [.init(KeyCombo(.rightArrow, []))]),
     ]
 
     public static func shortcut(_ id: ShortcutID, in table: [Shortcut] = standard) -> Shortcut {

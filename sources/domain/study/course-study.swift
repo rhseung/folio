@@ -111,6 +111,9 @@ public struct CourseStudy: Sendable {
             pastExam: records.filter { $0.source == .pastExam }.count, conceptPages: Array(Set(concept)).sorted { ($0.page) < ($1.page) })
     }
 
+    // 문제 부족인 단원이 준비를 판정받으려면 더 있어야 하는 문제 수다. "문제 만들기"가 이 개수를 먼저 고른다.
+    public func missingProblems(of unit: UUID) -> Int { max(settings.minProblems - problems(of: unit).count, 0) }
+
     public func progress(of unit: Unit, notes: Int) -> UnitProgress {
         let ranges = unit.lecturePages
         let total = ranges.reduce(0) { $0 + $1.pages.count }

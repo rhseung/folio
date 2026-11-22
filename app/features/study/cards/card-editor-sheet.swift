@@ -25,8 +25,16 @@ struct CardEditorSheet: View {
             onDelete: remove
         ) {
             Card {
-                FormRow(label: String(localized: .cardsUnit), last: true) {
+                FormRow(label: String(localized: .cardsUnit), last: !model.sourceChanged) {
                     Combobox(selection: $model.draft.unitId, options: model.unitOptions)
+                }
+                if model.sourceChanged {
+                    FormRow(
+                        label: String(localized: .cardsSourceChanged), detail: String(localized: .cardsSourceChangedDetail), warns: true,
+                        last: true
+                    ) {
+                        Button(.cardsSourceRefresh) { model.refreshFromSource() }.buttonStyle(.secondary).disabled(!model.canRefresh)
+                    }
                 }
             }
             TextArea(label: String(localized: .cardsFront), text: $model.draft.front)

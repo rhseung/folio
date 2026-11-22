@@ -41,6 +41,7 @@ export function preview({ typeset, redraw }) {
       href: at("a[href]")?.getAttribute("href") ?? null,
       heading: own ? at("h1, h2, h3, h4, h5, h6")?.textContent ?? null : null,
       block: at("[id^='^']")?.id.slice(1) ?? null,
+      callout: own ? Number(at("details.callout[data-line]")?.dataset.line) || null : null,
     });
   }, true);
 
@@ -55,10 +56,11 @@ export function preview({ typeset, redraw }) {
     const own = el && !at(".embed, .ref-popover");
     const heading = own ? at("h1, h2, h3, h4, h5, h6")?.textContent ?? null : null;
     const block = el ? at("[id^='^']")?.id.slice(1) ?? null : null;
-    const key = JSON.stringify([heading, block]);
+    const callout = own ? Number(at("details.callout[data-line]")?.dataset.line) || null : null;
+    const key = JSON.stringify([heading, block, callout]);
     if (key === selected) return;
     selected = key;
-    post({ type: "selection", heading, block });
+    post({ type: "selection", heading, block, callout });
   });
 
   // 렌더러는 블록 참조가 가리키는 블록을 링크 바로 다음의 template에 넣는다. 카드 안의 링크를 누를 수 있도록, 포인터가

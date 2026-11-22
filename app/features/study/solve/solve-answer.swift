@@ -20,7 +20,8 @@ struct SolveAnswer: View {
         }
     }
 
-    // 참거짓은 T와 F, 객관식은 번호 키로 고른다. 수식 키 없이 누르므로 글을 쓰는 칸이 없는 형식에만 단다.
+    // 참거짓은 T와 F, 객관식은 번호 키로 고른다. 수식 키 없이 누르므로 글을 쓰는 칸이 없는 형식에만 단다. 이유 한 줄은 고른 뒤에
+    // 열린다. 그때는 단추가 꺼져 있어 칸에 치는 T와 F가 단추를 누르지 않는다.
     var choices: some View {
         let options = model.options(of: problem)
         return VStack(alignment: .leading, spacing: Theme.Space.s) {
@@ -42,15 +43,26 @@ struct SolveAnswer: View {
                     .contentShape(.rect)
                 }
                 .buttonStyle(.pointing(.plain))
-                .keyboardShortcut(KeyEquivalent(Character(key(i).lowercased())), modifiers: [])
+                .shortcut(command(i).id, at: command(i).index)
                 .disabled(model.graded != nil || model.grading)
+            }
+            if model.asksWhy {
+                TextField(String(localized: .solveWhyPrompt), text: $model.why)
+                    .pill(width: nil, alignment: .leading)
+                    .frame(minHeight: Theme.Size.solveCell)
             }
         }
     }
 
+    func command(_ i: Int) -> (id: ShortcutID, index: Int) {
+        problem.format == .trueFalse ? (i == 0 ? .solveTrue : .solveFalse, 0) : (.solveChoice, i)
+    }
+
     func key(_ i: Int) -> String {
-        if problem.format == .trueFalse { return i == 0 ? "T" : "F" }  // strings: data, 참거짓 단축키
-        return "\(i + 1)"
+        let c = command(i)
+        let bindings = ShortcutTable.shortcut(c.id).bindings
+        guard bindings.indices.contains(c.index), case .character(let ch) = bindings[c.index].combo.key else { return "" }
+        return String(ch).uppercased()
     }
 
     func label(_ i: Int) -> String { String(localized: i == 0 ? .solveTrue : .solveFalse) }

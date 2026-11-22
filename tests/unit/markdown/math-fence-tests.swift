@@ -126,3 +126,18 @@ struct MathFenceCompletionTests {
         #expect(ascii.at(.math(display: true, content: NSRange(), fence: .asciimath)).tex == false)
     }
 }
+
+struct MathSpansTests {
+    @Test func splitsInlineAndDisplayMath() {
+        #expect(
+            MathSpans.split("변 $e$의 수는 $$\\sum_v d(v)/2$$이다")
+                == [.text("변 "), .inline("e"), .text("의 수는 "), .display("\\sum_v d(v)/2"), .text("이다")])
+    }
+
+    @Test func escapedAndUnclosedDollarsStayText() {
+        #expect(MathSpans.split("\\$5와 $3") == [.text("$5와 $3")])
+        #expect(MathSpans.split("$a\nb$") == [.text("$a\nb$")])
+        #expect(MathSpans.split("$ $") == [.text("$ $")])
+        #expect(!MathSpans.hasMath("값은 \\$5") && MathSpans.hasMath("$x$"))
+    }
+}

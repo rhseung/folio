@@ -96,6 +96,7 @@ struct UnitDetail: View {
                                 Text(row.detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
                             }
                             Spacer(minLength: Theme.Space.m)
+                            if row.changed { Badge(String(localized: .cardsSourceChanged), tone: .warning) }
                             if let chip = row.chip { Badge(chip.text, tone: chip.tone) }
                         }
                         .opens { sheets.present(.card(course: course.id, draft: CardDraft(row.record.card))) }

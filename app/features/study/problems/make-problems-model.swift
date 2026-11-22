@@ -15,17 +15,20 @@ final class MakeProblemsModel {
     var failure: String?
     var keyRejected = false
 
-    init(workspace: Workspace, course: LoadedCourse, unit: FolioDomain.Unit) {
+    init(workspace: Workspace, course: LoadedCourse, unit: FolioDomain.Unit, count: Int? = nil) {
         self.workspace = workspace
         self.course = course
         self.unit = unit
+        if let count, count > 0 { self.count = count }
     }
 
     var hasKey: Bool { workspace.claudeReady && !keyRejected }
     var title: String { String(localized: .makeProblemsTitle(unit.title)) }
     var confirmTitle: String { String(localized: draft == nil ? .makeProblemsMake : .makeProblemsSave) }
     var canConfirm: Bool { hasKey && !busy && draft?.problems.isEmpty != true }
-    var countOptions: [(Int, String)] { [3, 5, 10].map { ($0, String(localized: .problemsCount($0))) } }
+    var countOptions: [(Int, String)] {
+        Set([3, 5, 10, count]).sorted().map { ($0, String(localized: .problemsCount($0))) }
+    }
 
     // 본보기가 얼마나 있는지 알린다. 족보가 없으면 문제의 모양을 과목 자료에서만 짐작한다.
     var note: String {

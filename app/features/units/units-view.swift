@@ -30,7 +30,7 @@ struct UnitsView: View {
                 list
             }
         }
-        .task(id: model.workspace.notesRevision) { model.loadNoteCounts() }
+        .task(id: [model.workspace.notesRevision, model.workspace.studyRevision]) { model.loadNoteCounts() }
         // 페이지는 목록에서 시작하고 지난번에 연 단원은 모델과 함께 사라졌으므로 initial로도 부른다.
         .onChange(of: model.openUnit, initial: true) { _, id in opened(id) }
         .onChange(of: place) { _, link in
@@ -92,7 +92,7 @@ struct UnitsView: View {
                     }
                     Spacer(minLength: Theme.Space.m)
                     Button(.unitsMakeProblems, systemImage: "sparkle") {
-                        sheets.present(.makeProblems(course: course.id, unit: few.unit.id))
+                        sheets.present(.makeProblems(course: course.id, unit: few.unit.id, count: few.missing))
                     }
                     .buttonStyle(.secondary)
                 }
@@ -124,6 +124,7 @@ struct UnitsView: View {
                             }
                         }
                         Spacer(minLength: 0)
+                        if let solve = row.solve, !row.done { PlanSolveButton(course: course.id, item: row.item.id, solve: solve) }
                     }
                     .contentShape(.rect)
                     .contextMenu {

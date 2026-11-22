@@ -1,4 +1,5 @@
 import FolioDomain
+import FolioMarkdown
 import FolioStorage
 import SwiftUI
 
@@ -9,6 +10,8 @@ struct NoteEditor: View {
     @Environment(\.showInputGuide) private var showInputGuide
     @Environment(\.openLink) private var openLink
     @Environment(\.screenRequests) private var requests
+    @Environment(\.itemSheets) private var sheets
+    @Environment(\.noteCallouts) private var callouts
     var anchor: AppLink.Anchor?
     var insert: Binding<String?> = .constant(nil)
     @State private var panes = NotePanes()
@@ -102,7 +105,8 @@ struct NoteEditor: View {
                         text: model.body, baseURL: model.baseURL, math: model.meta.math, openNote: openNote, anchor: anchor,
                         noteLink: model.note.meta.id.map { AppLink(.note, $0) }, edit: model.replaceLines,
                         link: shown == .split ? preview : nil, toggleMode: toggleMode, embeds: model.embeds,
-                        revision: model.notesRevision, views: outline.views)
+                        revision: model.notesRevision, views: outline.views,
+                        makeCard: makeCard)
                 }
                 if outlineDocked {
                     Theme.Palette.lineSoft.frame(width: 1)
@@ -225,6 +229,13 @@ struct NoteEditor: View {
         guard let trail else { return }
         guard paneFocused, !outline.isEmpty else { return trail.clearOutline(owner: outlineOwner) }
         trail.setOutline(OutlineCommand(shown: outlineShown, toggle: toggleOutline), owner: outlineOwner)
+    }
+
+    var makeCard: (@MainActor (Int) -> Void)? {
+        guard model.meta.id != nil else { return nil }
+        return { line in
+            if let draft = model.cardDraft(at: line, callouts: callouts) { sheets.present(.card(course: model.course.id, draft: draft)) }
+        }
     }
 
     var outlineButton: some View {

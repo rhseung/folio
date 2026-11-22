@@ -16,6 +16,7 @@ struct SolveRun: View {
                 let layout = split ? AnyLayout(HStackLayout(spacing: 0)) : AnyLayout(VStackLayout(spacing: 0))
                 layout {
                     problemPane(record)
+                        .overlay { if model.isPaused { paused } }
                     if let side = model.side {
                         divider(split)
                         sidePane(side, course: course)
@@ -44,11 +45,23 @@ struct SolveRun: View {
         .background(Theme.Palette.card)
         .foregroundStyle(Theme.Palette.text)
         .font(Theme.Typeface.body)
-        .task(id: model.mockDeadline) {
-            guard let deadline = model.mockDeadline else { return }
+        .task(id: model.runningDeadline) {
+            guard let deadline = model.runningDeadline else { return }
             try? await Task.sleep(for: .seconds(max(deadline.timeIntervalSinceNow, 0)))
             if !Task.isCancelled, model.phase == .solving { model.submitMock() }
         }
+    }
+
+    // 멈춘 동안에는 문제를 가린다. 시계만 세우고 문제를 계속 볼 수 있으면 멈춤이 시간을 늘리는 길이 된다.
+    var paused: some View {
+        VStack(spacing: Theme.Space.m) {
+            Image(systemName: "pause.circle").font(Theme.Glyph.large).foregroundStyle(Theme.Palette.textTertiary)
+                .accessibilityHidden(true)
+            Text(.solvePausedTitle).font(Theme.Typeface.columnTitle)
+            Button(.solveResumeMock, systemImage: "play.fill") { model.togglePause() }.buttonStyle(.prominent)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Theme.Palette.card)
     }
 
     func divider(_ split: Bool) -> some View {
@@ -62,14 +75,18 @@ struct SolveRun: View {
                 Text(model.subtitle(record)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
             }
             Spacer(minLength: Theme.Space.m)
-            if let deadline = model.mockDeadline {
+            if model.mockDeadline != nil {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     Label(
-                        Duration.seconds(max(deadline.timeIntervalSince(context.date), 0)).formatted(.time(pattern: .minuteSecond)),
-                        systemImage: "timer"
+                        Duration.seconds(model.remaining(at: context.date)).formatted(.time(pattern: .minuteSecond)),
+                        systemImage: model.isPaused ? "pause.fill" : "timer"
                     )
                     .monospacedDigit().chip()
                 }
+                Button(model.isPaused ? .solveResumeMock : .solvePause, systemImage: model.isPaused ? "play.fill" : "pause.fill") {
+                    model.togglePause()
+                }
+                .buttonStyle(.secondary)
             }
             Button(.commonClose) { dismiss() }.keyboardShortcut(.cancelAction)
         }
@@ -134,20 +151,15 @@ struct SolveRun: View {
             .overflowFade(.horizontal)
             Spacer(minLength: Theme.Space.m)
             if model.isMock {
-                Button(.solveBack) { model.back() }.disabled(model.index == 0)
-                if model.isLast {
-                    Button(.solveSubmit) { model.submitMock() }.buttonStyle(.prominent).keyboardShortcut(.return, modifiers: .command)
-                        .disabled(model.grading)
-                } else {
-                    Button(.solveNext) { model.next() }.buttonStyle(.prominent).keyboardShortcut(.rightArrow, modifiers: .command)
-                }
+                Button(.solveBack) { model.back() }.disabled(model.index == 0 || model.isPaused)
+                Button(model.isLast ? .solveSubmit : .solveNext) { model.go() }.buttonStyle(.prominent).shortcut(.solveGo)
+                    .disabled(model.grading || model.isPaused)
             } else if model.graded == nil {
                 Button(.solveSkip) { model.next() }.disabled(model.grading)
-                Button(.solveGrade) { model.grade() }.buttonStyle(.prominent).keyboardShortcut(.return, modifiers: .command)
+                Button(.solveGrade) { model.go() }.buttonStyle(.prominent).shortcut(.solveGo)
                     .disabled(!model.canGrade)
             } else {
-                Button(model.isLast ? .solveFinish : .solveNext) { model.next() }.buttonStyle(.prominent)
-                    .keyboardShortcut(.rightArrow, modifiers: .command)
+                Button(model.isLast ? .solveFinish : .solveNext) { model.go() }.buttonStyle(.prominent).shortcut(.solveGo)
             }
         }
         .controlSize(.large)

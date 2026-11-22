@@ -21,6 +21,14 @@ struct WrongFlowTests {
         #expect(WrongFlow.status([(d1, false), (d1, true), (d2, true)]) == .resolved(on: d2))
     }
 
+    @Test func onlyARightAnswerOnTheWrongDayStaysForRecheck() {
+        #expect(WrongFlow.staysRecheck(.open(since: d1), rightOn: d1))
+        #expect(WrongFlow.staysRecheck(.recheck(since: d1), rightOn: d1))
+        #expect(!WrongFlow.staysRecheck(.open(since: d1), rightOn: d2))
+        #expect(!WrongFlow.staysRecheck(.untried, rightOn: d1))
+        #expect(!WrongFlow.staysRecheck(.resolved(on: d1), rightOn: d1))
+    }
+
     @Test func rightOnALaterDayLeavesTheWrongList() {
         #expect(WrongFlow.status([(d1, false), (d2, true)]) == .resolved(on: d2))
         #expect(WrongFlow.status([(d1, false), (d2, true), (d3, false)]) == .open(since: d3))
@@ -140,6 +148,18 @@ struct CourseStudyTests {
         #expect(after.problems[set.problems[0].id]?.status == .resolved(on: ymd("2026-11-18")))
     }
 
+    // 전날 23시에 틀린 문제를 새벽 3시 59분에 맞히면 아직 같은 공부일이라 "다시 확인"을 알리고, 4시에 맞히면 알리지 않는다.
+    @Test func theRecheckNoticeFollowsTheDayBoundary() throws {
+        let f = fixture()
+        let study = CourseStudy(
+            file: f.file, cards: [], log: StudyLog(solves: [solve(f.set, 0, .wrong, at: time(17, 23))]), settings: Settings(),
+            calendar: calendar, now: time(18, 3, 59))
+        let status = try #require(study.problems[f.set.problems[0].id]?.status)
+        let day = { (date: Date) in Settings().studyDay(of: date, calendar: calendar) }
+        #expect(WrongFlow.staysRecheck(status, rightOn: day(time(18, 3, 59))))
+        #expect(!WrongFlow.staysRecheck(status, rightOn: day(time(18, 4))))
+    }
+
     @Test func aChangedVerdictIsFinalAndKeepsItsDay() {
         let f = fixture()
         let (file, set, unit) = (f.file, f.set, f.unit)
@@ -164,6 +184,8 @@ struct CourseStudyTests {
         #expect(p.pagesSeen == 2 && p.pagesTotal == 4)
         #expect(p.problemsSolved == 1 && p.problemsTotal == 3 && p.problemsWrong == 1)
         #expect(p.readiness.state == .weak && p.readiness.pastExam == 3)
+        #expect(study.missingProblems(of: unit.id) == 0)
+        #expect(study.missingProblems(of: UUID()) == Settings().study.minProblems)
     }
 
     @Test func cardsFollowTheSameRule() {
@@ -177,6 +199,25 @@ struct CourseStudyTests {
             file: file, cards: [card], log: StudyLog(flips: flips), settings: Settings(), calendar: calendar, now: time(18, 3))
         #expect(study.cards[card.id]?.status == .recheck(since: ymd("2026-11-17")))
         #expect(study.progress(of: unit, notes: 0).cardsUnknown == 1)
+    }
+}
+
+struct CardSourceTests {
+    let card: StudyCard = {
+        var c = StudyCard(device: UUID(), at: .distantPast, unitId: UUID(), front: "매칭", back: "공통 끝점이 없는 변의 집합", source: .note)
+        c.noteBlockHash = StudyCard.blockHash("> [!definition] 매칭\n> 공통 끝점이 없는 변의 집합 ^m1")
+        return c
+    }()
+
+    @Test func onlyAChangedOrMissingBlockIsChanged() {
+        #expect(!card.sourceChanged(block: "> [!definition] 매칭\n> 공통 끝점이 없는 변의 집합 ^m1\n"))
+        #expect(card.sourceChanged(block: "> [!definition] 매칭\n> 끝점을 나누지 않는 변의 집합 ^m1"))
+        #expect(card.sourceChanged(block: nil))
+    }
+
+    @Test func handMadeCardsNeverChange() {
+        let plain = StudyCard(device: UUID(), at: .distantPast, unitId: UUID(), front: "a", back: "b")
+        #expect(!plain.sourceChanged(block: nil))
     }
 }
 

@@ -37,6 +37,9 @@ struct ExamPlanCard: View {
                     Text(model.itemTitle(item)).lineLimit(1)
                         .strikethrough(on, color: Theme.Palette.textTertiary)
                         .foregroundStyle(on ? Theme.Palette.textTertiary : Theme.Palette.text)
+                    if item.isCarried {
+                        Text(.unitsPlanCarried).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.warning).lineLimit(1)
+                    }
                     if let target = model.targetTitle(item) {
                         Text(target).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
                     }
@@ -54,11 +57,15 @@ struct ExamPlanCard: View {
                     PlanItemMenu(courseId: model.course.id, examId: exam.id, item: item.id, done: on) { model.toggle(item, in: exam) }
                 }
             }
+            // 좁은 칸에서 한 줄에 두면 날짜 칩이 눌려 날짜가 여러 줄로 꺾인다. 그래서 글 칸 아래로 접는다.
             CardRow(last: true) {
-                DateChip(selection: $day, showsTime: false)
-                TextField(String(localized: .examsPlanPrompt), text: $title).textFieldStyle(.plain).onSubmit(add)
-                Combobox(selection: $unit, options: model.targets(exam))
-                Button(.commonAdd, action: add).buttonStyle(.pointing(.bordered)).disabled(!model.canAdd(item))
+                FoldingRow {
+                    TextField(String(localized: .examsPlanPrompt), text: $title).textFieldStyle(.plain).onSubmit(add)
+                } control: {
+                    DateChip(selection: $day, showsTime: false).fixedSize()
+                    Combobox(selection: $unit, options: model.targets(exam))
+                    Button(.commonAdd, action: add).buttonStyle(.pointing(.bordered)).disabled(!model.canAdd(item))
+                }
             }
         }
         .onAppear { day = model.firstPlanDay }

@@ -26,6 +26,8 @@ public struct ProblemSolve {
     var mode: SolveMode = .typing
     /// 낸 답
     var answer: String?
+    /// 참거짓을 고른 이유 한 줄
+    var why: String?
     /// 틀린 이유: concept, method, calculation, misread, time
     var reason: WrongReason?
     /// 채점이 남긴 말
@@ -39,7 +41,8 @@ public struct ProblemSolve {
         let id = id ?? UUID()
         try ctx.log(
             ProblemSolveEvent(
-                id: id, setId: set, problemId: problem, mode: mode, runId: run, answer: answer, verdict: verdict, basis: basis,
+                id: id, setId: set, problemId: problem, mode: mode, runId: run, answer: answer,
+                why: why?.isEmpty == false ? why : nil, verdict: verdict, basis: basis,
                 reason: verdict.isMistake ? reason : nil, feedback: feedback),
             course: course)
         ctx.made(id)

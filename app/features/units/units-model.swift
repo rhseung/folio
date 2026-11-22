@@ -23,7 +23,13 @@ final class UnitsModel {
         var days: Int
         var readiness: ExamReadiness
         var line: String
-        var few: [(unit: FolioDomain.Unit, problems: Int)]
+        var few: [FewProblems]
+    }
+
+    struct FewProblems {
+        var unit: FolioDomain.Unit
+        var problems: Int
+        var missing: Int
     }
 
     struct PlanRow: Identifiable {
@@ -34,6 +40,7 @@ final class UnitsModel {
         var done: Bool
         var title: String
         var detail: String
+        var solve: PlanSolve?
         var id: UUID { item.id }
     }
 
@@ -43,8 +50,11 @@ final class UnitsModel {
     var openUnit: UUID?
     var pending: PendingAction?
     var name = ""
+    // 섞어 풀기와 모의시험의 순서를 정하는 씨앗이다. 다시 그려도 같은 순서로 연다.
+    private let seed = UInt64.random(in: 1...UInt64.max)
     private(set) var notes: [NoteFile] = []
     private(set) var noteCounts: [UUID: Int] = [:]
+    private(set) var changedCards: Set<UUID> = []
 
     init(workspace: Workspace, courseId: UUID) {
         self.workspace = workspace
@@ -60,6 +70,7 @@ final class UnitsModel {
         var counts: [UUID: Int] = [:]
         for note in all { for unit in note.meta.unitIds { counts[unit, default: 0] += 1 } }
         noteCounts = counts
+        changedCards = workspace.changedCardSources(in: courseId)
     }
 
     // MARK: The list
@@ -82,7 +93,9 @@ final class UnitsModel {
             String(localized: .unitsExamSolved(r.problemsTotal, r.problemsSolved)),
         ].joined(separator: " · ")
         let few = r.fewProblems.compactMap { id in
-            study.file.units.first { $0.id == id }.map { (unit: $0, problems: study.problems(of: id).count) }
+            study.file.units.first { $0.id == id }.map {
+                FewProblems(unit: $0, problems: study.problems(of: id).count, missing: study.missingProblems(of: id))
+            }
         }
         return ExamCard(exam: exam, days: max(workspace.days(to: start), 0), readiness: r, line: line, few: few)
     }
@@ -127,7 +140,8 @@ final class UnitsModel {
             let first = i == 0 || items[i - 1].day != item.day
             return PlanRow(
                 item: item, day: first ? dayLabel(item.day) : "", isToday: item.day == today, isPast: item.day < today,
-                done: study.isDone(item, in: exam), title: study.file.title(of: item), detail: planDetail(item, study: study))
+                done: study.isDone(item, in: exam), title: study.file.title(of: item), detail: planDetail(item, study: study),
+                solve: study.solve(item, in: exam, seed: seed))
         }
     }
 
@@ -143,22 +157,27 @@ final class UnitsModel {
     }
 
     private func planDetail(_ item: ExamPlanItem, study: CourseStudy) -> String {
+        let carried = item.isCarried ? [String(localized: .unitsPlanCarried)] : []
+        return (carried + planParts(item, study: study)).joined(separator: " · ")
+    }
+
+    private func planParts(_ item: ExamPlanItem, study: CourseStudy) -> [String] {
         switch item.target.kind {
         case .unit:
-            guard let id = item.target.id, let unit = study.file.units.first(where: { $0.id == id }) else { return "" }
+            guard let id = item.target.id, let unit = study.file.units.first(where: { $0.id == id }) else { return [] }
             let p = study.progress(of: unit, notes: noteCounts[id] ?? 0)
             var parts = [String(localized: .unitsLineProblems(p.problemsSolved, p.problemsTotal))]
             if let pages = item.pages, !pages.isEmpty { parts.append(String(localized: .unitsPlanConceptPages(pages.count))) }
-            return parts.joined(separator: " · ")
+            return parts
         case .problems:
             let records =
                 item.target.problemIds.map { $0.compactMap { study.problems[$0] } } ?? item.target.id.map(study.problems(inSet:)) ?? []
-            return String(localized: .unitsLineProblems(records.filter(\.solved).count, records.count))
+            return [String(localized: .unitsLineProblems(records.filter(\.solved).count, records.count))]
         case .wrong:
             let wrong = study.allProblems.filter(\.status.needsWork).count, unknown = study.allCards.filter(\.status.needsWork).count
-            return String(localized: .unitsPlanWrong(wrong, unknown))
+            return [String(localized: .unitsPlanWrong(wrong, unknown))]
         case .mixed, .mock, .custom:
-            return item.isCarried ? String(localized: .unitsPlanCarried) : ""
+            return []
         }
     }
 
@@ -215,6 +234,7 @@ final class UnitsModel {
         var record: CourseStudy.CardRecord
         var detail: String
         var chip: (text: String, tone: Tone)?
+        var changed: Bool
         var id: UUID { record.card.id }
     }
 
@@ -284,7 +304,9 @@ final class UnitsModel {
 
     func cardLines(_ unit: FolioDomain.Unit) -> [CardLine] {
         guard let study else { return [] }
-        return study.cards(of: unit.id).map { CardLine(record: $0, detail: $0.card.source.label, chip: $0.status.cardChip) }
+        return study.cards(of: unit.id).map {
+            CardLine(record: $0, detail: $0.card.source.label, chip: $0.status.cardChip, changed: changedCards.contains($0.card.id))
+        }
     }
 
     func lecturesNote(_ rows: [LectureRow]) -> String {

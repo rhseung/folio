@@ -10,6 +10,8 @@ public enum ShortcutID: String, CaseIterable, Hashable, Sendable {
     case texBuild
     case lineStart, lineEnd
     case zoomIn, zoomOut, zoomFit
+    case solveGo, solveTrue, solveFalse, solveChoice
+    case cardFlip, cardUnknown, cardKnown
 
     // ⌘1~⌘8은 그 번호의 탭이다. ⌘9는 사파리처럼 몇 번째든 마지막 탭이다.
     public static func tab(number n: Int) -> ShortcutID? {

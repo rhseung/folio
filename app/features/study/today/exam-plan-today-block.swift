@@ -21,11 +21,14 @@ struct ExamPlanTodayBlock: View {
                                 .courseAccent(model.workspace.accent(entry.courseId))
                             CourseMark(model.workspace, entry.courseId)
                             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                                Text(entry.item.title).font(Theme.Typeface.bodyStrong).strikethrough(done)
+                                Text(model.title(entry)).font(Theme.Typeface.bodyStrong).strikethrough(done).lineLimit(1)
                                 Text(model.detail(entry))
-                                    .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
+                                    .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1)
                             }
-                            Spacer()
+                            Spacer(minLength: Theme.Space.m)
+                            if let solve = model.solve(entry) {
+                                PlanSolveButton(course: entry.courseId, item: entry.item.id, solve: solve)
+                            }
                         }
                         .contentShape(.rect)
                         .contextMenu {

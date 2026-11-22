@@ -15,5 +15,6 @@ struct SolveSheet: View {
             }
         }
         .courseAccent(model.accent)
+        .onDisappear { model.leave() }
     }
 }

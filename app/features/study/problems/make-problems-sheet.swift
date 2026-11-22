@@ -5,8 +5,8 @@ struct MakeProblemsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var model: MakeProblemsModel
 
-    init(workspace: Workspace, course: LoadedCourse, unit: FolioDomain.Unit) {
-        _model = State(initialValue: MakeProblemsModel(workspace: workspace, course: course, unit: unit))
+    init(workspace: Workspace, course: LoadedCourse, unit: FolioDomain.Unit, count: Int? = nil) {
+        _model = State(initialValue: MakeProblemsModel(workspace: workspace, course: course, unit: unit, count: count))
     }
 
     var body: some View {

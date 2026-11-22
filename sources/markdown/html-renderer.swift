@@ -268,8 +268,10 @@ public struct HTMLRenderer {
 
         let open = attached ? false : !header.folded
         let classes = "callout callout-\(header.type)" + (attached ? " attached" : "")
+        // 미리보기의 블록 메뉴("카드 만들기")가 원문의 콜아웃을 찾는 줄이다.
+        let line = nested ? "" : note?.lines(of: quote).map { " data-line=\"\($0.lowerBound)\"" } ?? ""
         let titleHTML = title.isEmpty ? "" : " <span class=\"callout-title\">\(inlineMarkdown(title))</span>"
-        return "<details class=\"\(classes)\"\(idAttribute(id))\(open ? " open" : "")>"
+        return "<details class=\"\(classes)\"\(idAttribute(id))\(line)\(open ? " open" : "")>"
             + "<summary><span class=\"callout-label\">\(Self.escape(label))</span>\(titleHTML)</summary>\n\(body)</details>\n"
     }
 

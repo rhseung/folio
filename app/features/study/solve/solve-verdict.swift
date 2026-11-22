@@ -16,6 +16,10 @@ struct SolveVerdict: View {
                     selection: Binding(get: { graded.verdict }, set: { model.override($0) }),
                     options: Verdict.allCases.map { ($0, $0.label) }, size: .small)
             }
+            if model.staysRecheck {
+                Label(String(localized: .solveRecheckNotice), systemImage: "arrow.clockwise")
+                    .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.warning)
+            }
             if !graded.feedback.isEmpty {
                 VStack(alignment: .leading, spacing: Theme.Space.xs) {
                     ForEach(Array(graded.feedback.enumerated()), id: \.offset) { _, line in

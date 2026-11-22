@@ -25,6 +25,10 @@ final class PreviewWebView: WKWebView {
             "WKMenuItemIdentifierDownloadImage", "WKMenuItemIdentifierOpenFrameInNewWindow", "WKMenuItemIdentifierInspectElement",
         ]
         for item in menu.items where dropped.contains(item.identifier?.rawValue ?? "") { menu.removeItem(item) }
+        if let line = page?.cardLine(page?.menuCallout), let make = page?.makeCard {
+            menu.insertItem(LinkMenuItem(String(localized: .notesMakeCard), symbol: "rectangle.on.rectangle.angled") { make(line) }, at: 0)
+            menu.insertItem(.separator(), at: 1)
+        }
         if let href = page?.menuHref, let link = AppLink(string: href) {
             addLinkItems(menu, link)
         } else if let note = page?.noteLink, let anchor = page?.menuAnchor, note.with(anchor) != note {
@@ -57,8 +61,17 @@ final class PreviewWebView: WKWebView {
     // 앞에 그곳의 링크를 넣는다.
     override func buildMenu(with builder: any UIMenuBuilder) {
         super.buildMenu(with: builder)
-        guard builder.system == .context, let action = Self.anchorAction(page) else { return }
-        builder.insertChild(UIMenu(options: .displayInline, children: [action]), atStartOfMenu: .root)
+        guard builder.system == .context else { return }
+        let actions = [Self.cardAction(page), Self.anchorAction(page)].compactMap { $0 }
+        guard !actions.isEmpty else { return }
+        builder.insertChild(UIMenu(options: .displayInline, children: actions), atStartOfMenu: .root)
+    }
+
+    static func cardAction(_ page: NotePreviewPage?) -> UIAction? {
+        guard let line = page?.cardLine(page?.selectionCallout), let make = page?.makeCard else { return nil }
+        return UIAction(title: String(localized: .notesMakeCard), image: UIImage(systemName: "rectangle.on.rectangle.angled")) { _ in
+            make(line)
+        }
     }
 
     static func anchorAction(_ page: NotePreviewPage?) -> UIAction? {
