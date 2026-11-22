@@ -134,7 +134,7 @@ final class TodayModel {
     func dDay(_ item: TodaySummary.ExamItem) -> String { DateTimeText.dday(days: item.dDay) }
 
     func examStart(_ item: TodaySummary.ExamItem) -> String {
-        item.exam.start?.formatted(.dateTime.month().day().weekday().hour().minute()) ?? ""
+        item.exam.start.map { DateTimeText.date($0, calendar: workspace.calendar) } ?? ""
     }
 
     struct WrapUp: Identifiable {

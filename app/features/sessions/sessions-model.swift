@@ -136,7 +136,7 @@ final class SessionsModel {
     }
 
     func examTime(_ exam: Exam) -> String? {
-        exam.start.map { clock($0, end: exam.end) }
+        exam.start.flatMap { DateTimeText.hasTime($0, calendar: calendar) ? clock($0, end: exam.end) : nil }
     }
 
     func examDays(_ exam: Exam, now: Date) -> Int? {
