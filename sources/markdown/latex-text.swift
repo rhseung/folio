@@ -7,7 +7,11 @@ import Foundation
 // 모르는 명령은 원문 그대로 둔다.
 public enum LaTeXText {
     public static func markdown(_ source: String) -> String {
-        guard source.contains("\\") || source.contains("~") || source.contains("--") || source.contains("``") else { return source }
+        // LaTeX 명령이 하나도 없는 글은 예전 마크다운이다. 한국어 마크다운은 범위를 `1~3`으로 쓰므로, `~`와 `--`만 보고 LaTeX로 읽으면
+        // 글이 바뀐다.
+        // 수식 안의 명령(`$\\alpha$`)은 마크다운 글에도 있으므로 수식 밖만 본다.
+        let prose = MathSpans.split(source).compactMap { span -> String? in if case .text(let t) = span { t } else { nil } }
+        guard prose.contains(where: { $0.contains(/\\[A-Za-z()\[\]\\%&#_{}]/) }) else { return source }
         var reader = Reader(text: Array(source))
         return reader.read(until: nil).trimmingCharacters(in: .newlines)
     }
@@ -38,6 +42,8 @@ public enum LaTeXText {
                 if let close, c == close { return out }
                 if c == "$" {
                     out += math()
+                } else if c == "`", !peek("``") {
+                    out += code()
                 } else if c == "\\" {
                     var piece = command()
                     // 목록의 첫 항목이 줄 끝 뒤에 오면 빈 줄이 생기지 않게 한다.
@@ -75,6 +81,19 @@ public enum LaTeXText {
                 }
             }
             return out
+        }
+
+        // 마크다운의 코드 조각은 글자 그대로 옮긴다. 코드의 `--`나 `~`는 기호가 아니다.
+        mutating func code() -> String {
+            var j = i + 1
+            while j < text.count, text[j] != "`", text[j] != "\n" { j += 1 }
+            guard j < text.count, text[j] == "`" else {
+                i += 1
+                return "`"
+            }
+            let s = String(text[i...j])
+            i = j + 1
+            return s
         }
 
         // `$…$`와 `$$…$$`는 닫는 곳까지 그대로 옮긴다. 수식 안의 `\`와 `_`는 KaTeX가 읽는다.

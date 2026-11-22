@@ -147,12 +147,17 @@ struct LaTeXTextTests {
     @Test func oldMarkdownProblemsStayAsTheyAre() {
         let old = "**굵게**와 *기울임*, $x_1 + y$\n다음 줄"
         #expect(LaTeXText.markdown(old) == old)
+        // 명령이 없는 글의 `~`와 `--`는 마크다운의 글자다.
+        for text in ["1~3번을 푸시오.", "`--verbose` 옵션", "A--B ``x''", #"$\\alpha$ ~ $\\beta$"#] {
+            #expect(LaTeXText.markdown(text) == text)
+        }
+        #expect(LaTeXText.markdown(#"\textbf{옵션} `--verbose ~x`"#) == "**옵션** `--verbose ~x`")
     }
 
     @Test func textCommandsBecomeMarkdown() {
         #expect(LaTeXText.markdown(#"\textbf{정의} \emph{매칭}과 \textit{덮개}, \texttt{code}"#) == "**정의** *매칭*과 *덮개*, `code`")
         #expect(LaTeXText.markdown(#"\underline{밑줄} 50\% \& a\_b"#) == #"밑줄 50% & a\_b"#)
-        #expect(LaTeXText.markdown(#"A--B---C ``인용'' a~b"#) == "A\u{2013}B\u{2014}C \u{201C}인용\u{201D} a\u{00A0}b")
+        #expect(LaTeXText.markdown(#"\emph{x} A--B---C ``인용'' a~b"#) == "*x* A\u{2013}B\u{2014}C \u{201C}인용\u{201D} a\u{00A0}b")
         #expect(LaTeXText.markdown(#"첫 줄\\둘째 줄"#) == "첫 줄\n둘째 줄")
     }
 
