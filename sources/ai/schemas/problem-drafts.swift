@@ -79,11 +79,13 @@ public struct ProblemDrafts: StructuredResult, Equatable {
         // 문제지를 뽑을 때만 채운다. Claude가 쓴 문제지에는 그림이 없다.
         public var region: RegionRef?
         public var figures: [RegionRef]?
+        // 문제집 PDF의 칸 크기(half, full)다. 문제지를 뽑을 때만 채운다.
+        public var size: String?
 
         public init(
             number: String, parent: String? = nil, points: Double? = nil, page: Int? = nil, text: String, format: String = "written",
             options: [String] = [], answer: String? = nil, units: [String] = [], solution: String? = nil, solutionPage: Int? = nil,
-            lecturePages: [LecturePageRef]? = nil, region: RegionRef? = nil, figures: [RegionRef]? = nil
+            lecturePages: [LecturePageRef]? = nil, region: RegionRef? = nil, figures: [RegionRef]? = nil, size: String? = nil
         ) {
             self.number = number
             self.parent = parent
@@ -99,6 +101,7 @@ public struct ProblemDrafts: StructuredResult, Equatable {
             self.lecturePages = lecturePages
             self.region = region
             self.figures = figures
+            self.size = size
         }
 
         // 단원은 제목으로, 렉처는 프롬프트에 적은 이름(`lectures`의 키)으로 받는다. 없는 제목과 이름은 버린다. Claude가 지어내도
@@ -115,7 +118,7 @@ public struct ProblemDrafts: StructuredResult, Equatable {
                 solution: solution.flatMap { $0.isEmpty ? nil : $0 }, solutionPage: solutionPage,
                 lecturePages: (lecturePages ?? []).compactMap { ref in
                     lectures[ref.lecture].map { ProblemPage(materialId: $0, page: ref.page) }
-                }, region: region?.region, figures: (figures ?? []).compactMap(\.region))
+                }, region: region?.region, figures: (figures ?? []).compactMap(\.region), size: size.flatMap(ProblemSize.init(rawValue:)))
         }
     }
 
@@ -150,7 +153,10 @@ public struct ProblemDrafts: StructuredResult, Equatable {
 
     // 문제지에서 뽑을 때만 칸과 그림, 지문을 받는다. Claude가 쓰는 문제지(`ProblemSheetDraft`)는 `draft`를 그대로 쓴다.
     static let sheetDraft = Schema.object(
-        properties.merging(["region": Schema.nullable(region), "figures": Schema.array(region)]) { a, _ in a })
+        properties.merging([
+            "region": Schema.nullable(region), "figures": Schema.array(region),
+            "size": Schema.nullable(Schema.enumeration(ProblemSize.allCases.map(\.rawValue))),
+        ]) { a, _ in a })
 
     static let group = Schema.object([
         "number": Schema.string, "title": Schema.nullable(Schema.string), "parent": Schema.nullable(Schema.string),

@@ -18,7 +18,7 @@ extension ClaudeClient {
                     You write a practice problem sheet for a university exam. Match the style, difficulty and length of the \
                     past exam problems you are given, cover the listed units in proportion, and include variations of the \
                     problems the student got wrong that test the same idea in a new setting. Number problems from 1. Write \
-                    statements in the language of the examples with math in LaTeX. For every problem give the answer (for \
+                    statements and solutions in English, whatever the language of the examples, with math in LaTeX. For every problem give the answer (for \
                     true_false, choice and short) and a complete worked solution. Set "units" to the exact unit titles. \
                     Give the sheet a short title.
                     """),

@@ -47,6 +47,22 @@ struct StudyAITests {
         #expect(documents.count == 1)
     }
 
+    // 문제집 PDF의 칸 크기는 Claude가 풀이 분량으로 정한다. 모르는 값과 빠진 값은 정하지 않은 것으로 읽는다. 문제와 풀이는 문제지의
+    // 언어와 상관없이 영어로 받는다.
+    @Test func extractionReadsTheSizeAndAsksForEnglish() async throws {
+        let reply =
+            #"{"problems":[{"number":"1","text":"Prove it.","format":"written","options":[],"units":[],"size":"half"},{"number":"2","text":"x","format":"short","options":[],"units":[],"size":"huge"},{"number":"3","text":"y","format":"short","options":[],"units":[]}]}"#
+        let fake = FakeProvider(responses: [FakeProvider.reply(reply)])
+        let problems = try await ClaudeClient(provider: fake).extractProblems(
+            sheet: .pdf(Data("%PDF".utf8)), solution: nil, units: [], source: .pastExam
+        ).problems
+        #expect(problems.map(\.size) == [.half, nil, nil])
+        let request = try #require(await fake.requests.first)
+        let system = (request.system ?? []).compactMap { if case .text(let t, _) = $0 { t } else { nil } }.joined()
+        #expect(system.contains("full statement in English") && system.contains("Pick \"size\""))
+        #expect(ProblemDrafts.schema["properties"]?["problems"]?["items"]?["properties"]?["size"] != nil)
+    }
+
     @Test func extractionNamesEachUnitsLecturePagesAndMapsThePicksBack() async throws {
         let reply =
             #"{"problems":[{"number":"1","parent":null,"points":null,"page":null,"text":"Hall 정리를 쓰시오.","format":"written","options":[],"answer":null,"units":[],"solution":null,"solutionPage":null,"lecturePages":[{"lecture":"L1","page":9},{"lecture":"L9","page":2}]}]}"#
