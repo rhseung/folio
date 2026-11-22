@@ -59,16 +59,20 @@ extension Workspace {
         return study
     }
 
-    // 공부일이 바뀐 뒤 처음 열 때 다가오는 시험의 계획을 지금 준비로 다시 짠다(#578). 같은 공부일에 이미 짠 시험은
-    // 건너뛰므로 여러 번 불러도 한 번만 쓴다.
+    // 공부일이 바뀌거나 계획의 기준(범위, 시험 날짜, 공부 설정)이 바뀌면 다가오는 시험의 계획을 지금 준비로 다시 짠다(#578).
+    // 같은 공부일에 같은 기준으로 짠 시험은 건너뛰므로 여러 번 불러도 한 번만 쓴다.
     func replanExams() {
         let today = self.today
         for course in currentCourses {
-            for exam in course.file.exams where exam.planDay != today && !exam.scopeUnitIds.isEmpty {
-                guard let start = exam.start, settings.studyDay(of: start, calendar: calendar) >= today else { continue }
+            for exam in course.file.exams where exam.needsPlan(today: today, settings: settings, calendar: calendar) {
                 _ = try? runThrowing(ExamPlanMake(course: course.id, exam: exam.id))
             }
         }
+    }
+
+    // 다시 짜야 하는지 볼 값이다. 앱이 이 값을 지켜보다 바뀌면 `replanExams`를 부른다.
+    var planBases: [ExamPlanBasis] {
+        currentCourses.flatMap { c in c.file.exams.map { ExamPlanBasis(exam: $0, settings: settings, calendar: calendar) } }
     }
 
     func notes(for unit: FolioDomain.Unit, in courseId: UUID) -> [NoteFile] {

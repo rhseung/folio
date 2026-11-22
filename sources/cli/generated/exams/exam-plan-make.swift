@@ -8,7 +8,7 @@ import Foundation
 extension GeneratedCommands {
     struct ExamPlanMake: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "make", abstract: "범위 단원의 준비 정도로 시험까지 공부 계획을 다시 짜기. 직접 고치거나 더한 항목은 그대로 둔다", discussion: """
-            앱은 공부일이 바뀐 뒤 처음 열 때 이것을 부른다. 못 한 지난 단원은 오늘로 옮기고, 마지막 날들은 섞어 풀기, 모의시험, 오답 다시 보기로 둔다.
+            앱은 공부일이 바뀐 뒤 처음 열 때와 범위, 시험 날짜, 계획에 쓰는 공부 설정이 바뀔 때 이것을 부른다. 못 한 지난 단원은 오늘로 옮기고, 마지막 날들은 섞어 풀기, 모의시험, 오답 다시 보기로 둔다.
 
             예시:
               folio exam plan make EC4207/중간고사 --dry-run
