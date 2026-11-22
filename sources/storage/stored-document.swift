@@ -54,9 +54,16 @@ extension CourseFile: StoredModel {
 
         var file = try JSONFormat.decoder.decode(CourseFile.self, from: JSONFormat.encoder.encode(raw))
         // 시험 범위의 계산값은 회차의 단원을 읽으므로 회차를 먼저 맞춘다. 앞 마이그레이션(`dropSessionKind`)이 이
-        // 모양으로 이미 더한 실험 단원도 지킨다.
-        for s in file.sessions { file.setUnits(Array(sessionUnits[s.id, default: []].union(s.addedUnitIds)), session: s.id) }
-        for e in file.exams { file.setScope(Array(examUnits[e.id, default: []].union(e.addedScopeUnitIds)), exam: e.id) }
+        // 모양으로 이미 더한 실험 단원도 지킨다. 빈 연결은 고른 적이 없다는 뜻이라 계산값을 모두 뺀 단원으로 옮기지
+        // 않고 계산값 그대로 둔다. `ExamAdd`도 빈 범위를 같은 뜻으로 읽는다.
+        for s in file.sessions {
+            let stored = sessionUnits[s.id, default: []].union(s.addedUnitIds)
+            if !stored.isEmpty { file.setUnits(Array(stored), session: s.id) }
+        }
+        for e in file.exams {
+            let stored = examUnits[e.id, default: []].union(e.addedScopeUnitIds)
+            if !stored.isEmpty { file.setScope(Array(stored), exam: e.id) }
+        }
         let encoded = try JSONFormat.decoder.decode(JSONValue.self, from: JSONFormat.encoder.encode(file))
         raw = JSONValue.preservingUnknownKeys(old: raw, new: encoded, model: file)
     }

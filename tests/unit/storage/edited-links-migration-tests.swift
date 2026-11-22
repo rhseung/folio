@@ -14,6 +14,7 @@ struct EditedLinksMigrationTests {
     let units: [UUID]
     let sessions: [UUID]
     let exam: UUID
+    let extra: UUID
 
     // 렉처 하나(쪽 1~30)를 10쪽씩 단원 셋으로 나눈다. 첫 수업은 1~15쪽, 둘째 수업은 16~30쪽을 배웠고 그 뒤에
     // 중간고사가 있다. 계산값은 첫 수업 [단원 1, 2], 둘째 수업 [단원 2, 3]이다.
@@ -32,8 +33,20 @@ struct EditedLinksMigrationTests {
         file.sessions = (0..<2).map { Session(device: device, at: start, week: $0 + 1, date: start + Double($0) * 7 * day) }
         file.linkMaterial(lecture.id, session: file.sessions[0].id, firstPage: 1, lastPage: 15)
         file.linkMaterial(lecture.id, session: file.sessions[1].id, firstPage: 16, lastPage: 30)
-        file.exams = [Exam(device: device, at: start, title: "중간고사", start: start + 10 * day)]
+        file.exams = [
+            Exam(device: device, at: start, title: "중간고사", start: start + 10 * day),
+            Exam(device: device, at: start, title: "기말고사", start: start + 40 * day),
+        ]
         units = file.units.map(\.id)
+        // 중간고사 뒤에는 둘째 렉처를 배운 셋째 수업이 있고 기말고사가 그 뒤에 있다. 둘 다 단원을 고른 적이 없다.
+        let flows = Material(device: device, at: start, path: "Lectures/06_Flows.pdf", role: .lecture, status: .classified)
+        file.materials.append(flows)
+        var flow = Unit(device: device, at: start, title: "흐름", order: 4)
+        flow.lecturePages = [UnitPages(materialId: flows.id, firstPage: 1, lastPage: 10)]
+        file.units.append(flow)
+        extra = flow.id
+        file.sessions.append(Session(device: device, at: start, week: 3, date: start + 14 * day))
+        file.linkMaterial(flows.id, session: file.sessions[2].id, firstPage: 1, lastPage: 10)
         sessions = file.sessions.map(\.id)
         exam = file.exams[0].id
 
@@ -72,6 +85,17 @@ struct EditedLinksMigrationTests {
         #expect(file.computedScope(of: midterm) == units)
         #expect(file.scope(of: midterm) == [units[0], units[1]])
         #expect(midterm.addedScopeUnitIds.isEmpty && midterm.removedScopeUnitIds == [units[2]])
+    }
+
+    // 빈 연결은 뺀 단원이 아니라 계산값 그대로다.
+    @Test func linksNeverPickedFollowTheComputedValue() throws {
+        let file = try StoredDocument<CourseFile>.read(from: url).model
+        let third = try #require(file.sessions.first { $0.id == sessions[2] })
+        #expect(third.addedUnitIds.isEmpty && third.removedUnitIds.isEmpty)
+        #expect(file.unitIds(of: third) == [extra])
+        let final = try #require(file.exams.first { $0.title == "기말고사" })
+        #expect(final.addedScopeUnitIds.isEmpty && final.removedScopeUnitIds.isEmpty)
+        #expect(file.scope(of: final) == [extra] && !file.isEdited(scopeOf: final))
     }
 
     @Test func writingDropsTheOldKeysAndKeepsUnknownOnes() throws {
