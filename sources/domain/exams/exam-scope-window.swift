@@ -11,10 +11,14 @@ extension CourseFile {
     // 지난 시험 이후 배운 단원이다. 지난 시험 전에 시작해 그 뒤에도 이어 배운 단원도 넣는다. 날짜가 없는 시험은
     // 언제까지 배운 것인지 몰라 계산하지 않는다.
     public func computedScope(of exam: Exam) -> [UUID]? {
+        computedScope(of: exam, outline: UnitTree.outline(units).map(\.unit))
+    }
+
+    func computedScope(of exam: Exam, outline: [Unit]) -> [UUID]? {
         guard let end = exam.start else { return nil }
         let from = previousExam(before: exam)?.start
         let window = sessions.filter { s in !s.isCancelled && s.date < end && from.map { s.date >= $0 } ?? true }
-        var ids = Set(window.flatMap { unitIds(of: $0) })
+        var ids = Set(window.flatMap { unitIds(of: $0, outline: outline) })
 
         var reaches: [UUID: (from: Int, to: Int)] = [:]
         for material in Set(units.flatMap(\.lecturePages).map(\.materialId)) {
@@ -38,19 +42,27 @@ extension CourseFile {
             if learned { ids.insert(unit.id) }
         }
         for id in Array(ids) { ids.formUnion(ancestors(of: id)) }
-        return UnitTree.outline(units).map(\.unit.id).filter(ids.contains)
+        return outline.map(\.id).filter(ids.contains)
     }
 
     public func scope(of exam: Exam) -> [UUID] {
-        let computed = Set(computedScope(of: exam) ?? [])
+        scope(of: exam, outline: UnitTree.outline(units).map(\.unit))
+    }
+
+    func scope(of exam: Exam, outline: [Unit]) -> [UUID] {
+        let computed = Set(computedScope(of: exam, outline: outline) ?? [])
         let added = Set(exam.addedScopeUnitIds)
         let removed = Set(exam.removedScopeUnitIds)
-        return UnitTree.outline(units).map(\.unit.id).filter { (computed.contains($0) || added.contains($0)) && !removed.contains($0) }
+        return outline.map(\.id).filter { (computed.contains($0) || added.contains($0)) && !removed.contains($0) }
     }
 
     public func scopeUnits(of exam: Exam) -> [Unit] {
-        let ids = Set(scope(of: exam))
-        return UnitTree.outline(units).map(\.unit).filter { ids.contains($0.id) }
+        scopeUnits(of: exam, outline: UnitTree.outline(units).map(\.unit))
+    }
+
+    func scopeUnits(of exam: Exam, outline: [Unit]) -> [Unit] {
+        let ids = Set(scope(of: exam, outline: outline))
+        return outline.filter { ids.contains($0.id) }
     }
 
     public func exams(scoping unit: UUID) -> [Exam] {

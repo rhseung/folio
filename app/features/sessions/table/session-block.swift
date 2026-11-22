@@ -72,7 +72,8 @@ struct SessionBlock: View {
                 Text(line).font(Theme.Typeface.caption).foregroundStyle(ink.opacity(Theme.Opacity.secondaryInk)).lineLimit(1)
             }
             if !tags.isEmpty {
-                FlowLayout(spacing: Theme.Space.xs) { ForEach(tags, id: \.self) { BlockTagView(tag: $0) } }
+                // 아이콘은 칩보다 낮아서, 줄 위쪽에 맞추면 칩 옆에서 떠 보인다.
+                FlowLayout(spacing: Theme.Space.xs, centered: true) { ForEach(tags, id: \.self) { BlockTagView(tag: $0) } }
                     .padding(.top, Theme.Space.xxs)
             }
         }
@@ -140,7 +141,7 @@ private struct BlockTagView: View {
                 Image(systemName: symbol).font(Theme.Glyph.small).foregroundStyle(Theme.Palette.textSecondary)
                     .frame(minWidth: Theme.Size.smallIcon, minHeight: Theme.Size.smallIcon).accessibilityLabel(tag.spoken)
             } else if let text = tag.text {
-                Badge(text, tone: tag.tone)
+                Badge(text, tone: tag.tone, truncates: tag.truncates)
             }
         }
         .help(tag.spoken)

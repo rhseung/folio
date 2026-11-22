@@ -23,7 +23,9 @@ public struct SessionTableEntry: Sendable, Identifiable {
         case recording(TimeInterval)
         case reviewNote
         case noReviewNote
+        // 사용자가 적은 시험 범위다. 연결한 단원은 이름을 늘어놓으면 칸을 넘으므로 `linkedUnits`로 따로 두고 화면은 아이콘만 그린다.
         case scope(String)
+        case linkedUnits([String])
     }
 
     public let item: Item
@@ -55,7 +57,8 @@ public struct SessionTableEntry: Sendable, Identifiable {
 
 extension SessionTableEntry {
     static func session(
-        _ s: Session, planned: Bool, next: Bool, in file: CourseFile, now: Date, settings: Settings, asksWrapUp: Bool, calendar: Calendar
+        _ s: Session, planned: Bool, next: Bool, in file: CourseFile, outline: [Unit], lectures: Set<UUID>, now: Date, settings: Settings,
+        asksWrapUp: Bool, calendar: Calendar
     ) -> SessionTableEntry {
         let schedule = file.course.schedule
         let attendance = planned ? nil : file.attendance.first { $0.sessionId == s.id }?.state
@@ -71,7 +74,9 @@ extension SessionTableEntry {
         } else if !planned {
             if let attendance, attendance != .present { tags.append(.attendance(attendance)) }
             if s.kind == .makeup { tags.append(.makeup) }
-            if asksWrapUp, over, !s.isWrappedUp, !file.wrapUpGaps(of: s).isEmpty { tags.append(.unwrapped) }
+            if asksWrapUp, over, !s.isWrappedUp, !file.wrapUpGaps(of: s, outline: outline, lectures: lectures).isEmpty {
+                tags.append(.unwrapped)
+            }
             let recordings = file.recordings(of: s)
             if !recordings.isEmpty { tags.append(.recording(recordings.reduce(0) { $0 + $1.duration })) }
             switch file.review(of: s) {
@@ -81,7 +86,6 @@ extension SessionTableEntry {
             }
         }
 
-        let lectures = Set(file.lectureFiles.map(\.id))
         let pages = s.materials.lazy.filter { lectures.contains($0.materialId) }.compactMap { m -> ClosedRange<Int>? in
             guard let first = m.firstPage, let last = m.lastPage, first <= last else { return nil }
             return first...last
@@ -89,16 +93,16 @@ extension SessionTableEntry {
 
         return SessionTableEntry(
             item: planned ? .planned(s) : .session(s), date: s.date, day: LocalDate(s.date, in: calendar), look: look,
-            isMakeup: s.kind == .makeup, tags: tags, subject: planned ? nil : file.subject(of: s), pages: pages,
+            isMakeup: s.kind == .makeup, tags: tags, subject: planned ? nil : file.subject(of: s, outline: outline), pages: pages,
             offSchedule: s.slot(in: schedule, calendar: calendar) == nil)
     }
 
-    static func exam(_ exam: Exam, at date: Date, in file: CourseFile, calendar: Calendar) -> SessionTableEntry {
-        let units = file.scopeUnits(of: exam).map(\.title)
-        let scope = exam.scopeText.isEmpty ? units.joined(separator: ", ") : exam.scopeText
+    static func exam(_ exam: Exam, at date: Date, in file: CourseFile, outline: [Unit], calendar: Calendar) -> SessionTableEntry {
+        let units = file.scopeUnits(of: exam, outline: outline).map(\.title)
+        let tags: [Tag] = (exam.scopeText.isEmpty ? [] : [.scope(exam.scopeText)]) + (units.isEmpty ? [] : [.linkedUnits(units)])
         return SessionTableEntry(
             item: .exam(exam), date: date, day: LocalDate(date, in: calendar), look: .exam, isMakeup: false,
-            tags: scope.isEmpty ? [] : [.scope(scope)], subject: exam.title, pages: nil, offSchedule: true)
+            tags: tags, subject: exam.title, pages: nil, offSchedule: true)
     }
 
     // 낸 과제와 마감이 지난 과제는 지운 줄로 그린다.
