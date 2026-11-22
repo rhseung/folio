@@ -153,6 +153,8 @@ final class SessionsModel {
         let symbol: String?
         let tone: Tone
         let spoken: String
+        // 사용자가 적은 범위는 길이를 알 수 없어서, 칸보다 길면 한 줄에서 자른다.
+        var truncates = false
     }
 
     func tags(_ entry: SessionTableEntry) -> [BlockTag] {
@@ -166,7 +168,11 @@ final class SessionsModel {
             case .cancelled: word(String(localized: .sessionsCancelled), .plain)
             case .unwrapped: word(String(localized: .sessionsTableUnwrapped), .warning)
             case .noReviewNote: word(String(localized: .sessionsTableNoReviewNote), .danger)
-            case .scope(let scope): word(scope, .plain)
+            case .scope(let scope): BlockTag(text: scope, symbol: nil, tone: .plain, spoken: scope, truncates: true)
+            case .linkedUnits(let units):
+                BlockTag(
+                    text: nil, symbol: "link", tone: .plain,
+                    spoken: String(localized: .sessionsTableLinkedUnits(units.joined(separator: ", "))))
             case .recording(let seconds):
                 BlockTag(
                     text: nil, symbol: "waveform", tone: .plain,
