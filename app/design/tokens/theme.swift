@@ -262,10 +262,10 @@ enum Theme {
         static let choiceButton: CGFloat = 96
         static let layoutGlyph = CGSize(width: 40, height: 28)
 
-        // 회차 표의 주차 여백이다. 넓으면 "10주차"와 날짜 구간, 좁으면 "10주차"만 들어간다.
+        // 회차 표의 주차 여백이다. 넓으면 "10주차"와 "시험 주간", 좁으면 "10주차"만 들어간다.
         static let weekGutter: CGFloat = 72
         static let weekGutterCompact: CGFloat = 48
-        // 표가 날짜 구간을 보이는 폭과, 열을 버리고 날짜 목록이 되는 폭이다.
+        // 표가 "시험 주간"과 열 머리의 시각, 강의실을 보이는 폭과, 열을 버리고 날짜 목록이 되는 폭이다.
         static let sessionTableWide: CGFloat = 800
         static let sessionTableList: CGFloat = 500
         static let sessionListBlock: CGFloat = 56

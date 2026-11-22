@@ -126,6 +126,10 @@ struct SessionsModelTests {
         model.follow(s.id, in: table)
         #expect(model.popover == s.id)
         #expect(model.anchor?.id == table.week(containing: s.id).map(AnyHashable.init))
+        // 팝오버의 주차는 표가 센 번호와 같다.
+        let week = try #require(table.weeks.first { $0.start == table.week(containing: s.id) })
+        let file = try #require(workspace.course(graphTheory)).file
+        #expect(model.popoverDetail(s, in: file, table: table).hasPrefix(String(localized: .sessionsWeek(week.number))))
     }
 
     @Test func untouchedFutureSessionsAreListedAndRemovedTogether() throws {

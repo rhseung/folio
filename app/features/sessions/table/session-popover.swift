@@ -12,7 +12,7 @@ struct SessionPopover: View {
     let model: SessionsModel
     let course: LoadedCourse
     let session: Session
-    let asksWrapUp: Bool
+    let table: SessionTable
 
     var body: some View {
         let file = course.file
@@ -20,13 +20,13 @@ struct SessionPopover: View {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                     Text(model.popoverTitle(session, in: file)).font(Theme.Typeface.figureMedium).lineLimit(2)
-                    Text(model.popoverDetail(session, in: file)).font(Theme.Typeface.caption)
+                    Text(model.popoverDetail(session, in: file, table: table)).font(Theme.Typeface.caption)
                         .foregroundStyle(Theme.Palette.textTertiary).lineLimit(2)
                 }
                 .padding(.horizontal, Theme.Space.l)
                 .padding(.top, Theme.Space.l)
                 .padding(.bottom, Theme.Space.s)
-                if asksWrapUp { wrapUp }
+                if model.asksWrapUp(session, in: table) { wrapUp }
                 if let source = SessionMenu.source(
                     model.workspace, model.courseId, session.id, host: .own, openNote: openNote, openLink: openLink, openURL: openURL,
                     sheets: sheets)

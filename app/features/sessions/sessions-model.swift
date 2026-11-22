@@ -194,15 +194,16 @@ final class SessionsModel {
         return shortDay(day) + "(" + weekday(day) + "): " + (file.subject(of: session) ?? String(localized: .sessionsClass))
     }
 
-    func popoverDetail(_ session: Session, in file: CourseFile) -> String {
-        let first = workspace.semester(of: file.course)?.start?.date(in: calendar) ?? file.sessions.map(\.date).min() ?? session.date
-        let week = String(localized: .sessionsWeek(SessionPlanner.week(of: session.date, anchor: first, calendar: calendar)))
+    // 주차는 표가 정한 번호를 그대로 쓴다. 따로 세면 학기 시작이 없을 때 표와 팝오버의 번호가 달라진다.
+    func popoverDetail(_ session: Session, in file: CourseFile, table: SessionTable) -> String {
+        let monday = table.week(containing: session.id)
+        let week = table.weeks.first { $0.start == monday }.map { String(localized: .sessionsWeek($0.number)) }
         let start = calendar.minuteOfDay(session.date)
         let time =
             session.end(schedule: file.course.schedule, calendar: calendar).map { TimePicker.range(start, calendar.minuteOfDay($0)) }
             ?? TimePicker.label(start)
         let room = session.slot(in: file.course.schedule, calendar: calendar)?.room ?? ""
-        return ([week, session.date.formatted(.dateTime.weekday(.wide)) + " " + time] + (room.isEmpty ? [] : [room]))
+        return ([week, session.date.formatted(.dateTime.weekday(.wide)) + " " + time].compactMap { $0 } + (room.isEmpty ? [] : [room]))
             .joined(separator: " · ")
     }
 

@@ -23,7 +23,7 @@ struct SessionBlock: View {
             .buttonStyle(.pointing(.plain))
             .contextMenu { SessionMenu(courseId: model.courseId, sessionId: session.id, host: .own, openNote: openNote) }
             .popover(isPresented: shows(session.id), arrowEdge: .trailing) {
-                SessionPopover(model: model, course: course, session: session, asksWrapUp: model.asksWrapUp(session, in: table))
+                SessionPopover(model: model, course: course, session: session, table: table)
             }
             .fileDrop { model.importFiles($0, into: session) }
             .linkTarget(session.id)

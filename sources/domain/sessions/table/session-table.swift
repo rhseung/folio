@@ -109,7 +109,7 @@ public struct SessionTable: Sendable {
         .map(\.element)
     }
 
-    static func weekday(of day: LocalDate) -> Int {
+    public static func weekday(of day: LocalDate) -> Int {
         // Sakamoto의 요일 공식이다. 결과 0이 일요일이므로 월요일이 1, 일요일이 7이 되게 옮긴다.
         let offsets = [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4]
         let y = day.month < 3 ? day.year - 1 : day.year
@@ -117,5 +117,5 @@ public struct SessionTable: Sendable {
         return (sunday + 6) % 7 + 1
     }
 
-    static func monday(of day: LocalDate) -> LocalDate { day.adding(days: 1 - weekday(of: day)) }
+    public static func monday(of day: LocalDate) -> LocalDate { day.adding(days: 1 - weekday(of: day)) }
 }

@@ -1,6 +1,7 @@
 import FolioCore
 import FolioDomain
 import Foundation
+import PropertyBased
 import Testing
 
 struct SessionTableTests {
@@ -190,6 +191,28 @@ struct SessionTableTests {
         let looks = Dictionary(
             uniqueKeysWithValues: table.weeks.flatMap(\.cells).flatMap(\.entries).map { ($0.subject ?? "", $0.look) })
         #expect(looks == ["HW4": .deadlineClosed, "HW2": .deadlineClosed, "HW5": .deadline])
+    }
+
+    // 1월과 2월은 전해로 셈하는 보정, 윤년 2월 29일, 세기 윤년(2000)이 손으로 고른 예시다.
+    @Test func weekdaysMatchTheCalendarOnHandPickedDays() {
+        #expect(SessionTable.weekday(of: day("2026-11-02")) == 1)
+        #expect(SessionTable.weekday(of: day("2026-11-08")) == 7)
+        #expect(SessionTable.weekday(of: day("2024-02-29")) == 4)
+        #expect(SessionTable.weekday(of: day("2027-01-01")) == 5)
+        #expect(SessionTable.weekday(of: day("2000-03-01")) == 3)
+        #expect(SessionTable.monday(of: day("2026-11-01")) == day("2026-10-26"))
+    }
+
+    @Test func weekdaysAndMondaysAgreeWithTheGregorianCalendar() async {
+        let calendar = calendar
+        await propertyCheck(input: Gen.int(in: 1900...2200), Gen.int(in: 1...12), Gen.int(in: 1...31)) { year, month, d in
+            guard let day = LocalDate(year: year, month: month, day: d), let date = day.date(in: calendar) else { return }
+            let iso = (calendar.component(.weekday, from: date) + 5) % 7 + 1
+            #expect(SessionTable.weekday(of: day) == iso, "\(day)")
+            let monday = SessionTable.monday(of: day)
+            #expect(SessionTable.weekday(of: monday) == 1, "\(day)")
+            #expect((0...6).contains(monday.days(until: day)), "\(day)")
+        }
     }
 
     @Test func aCourseWithNothingDatedHasNoRows() {
