@@ -12,11 +12,16 @@ extension CourseFile {
     }
 
     public func wrapUpGaps(of session: Session, recorded: Bool = false) -> [WrapUpItem] {
-        let lectures = Set(lectureFiles.map(\.id))
-        return WrapUpItem.allCases.filter { item in
+        wrapUpGaps(of: session, recorded: recorded, outline: UnitTree.outline(units).map(\.unit), lectures: Set(lectureFiles.map(\.id)))
+    }
+
+    // 단원 순서와 렉처 파일은 부르는 쪽이 한 번 만들어 넘긴다. 회차마다 만들면 회차 표 하나에 단원 순서를 회차 수만큼 만들고
+    // 렉처 파일을 그만큼 경로로 정렬한다.
+    func wrapUpGaps(of session: Session, recorded: Bool = false, outline: [Unit], lectures: Set<UUID>) -> [WrapUpItem] {
+        WrapUpItem.allCases.filter { item in
             switch item {
             case .progress: !lectures.isEmpty && !session.materials.contains { lectures.contains($0.materialId) && $0.pages != nil }
-            case .units: unitIds(of: session).isEmpty
+            case .units: unitIds(of: session, outline: outline).isEmpty
             case .note: session.roughNoteId == nil && session.reviewNoteId == nil
             // 출석은 기록이 없는 것으로 저장하므로, 녹음이나 출결 기록, 저장한 정리로만 알 수 있다.
             case .attendance: !attendanceKnown(of: session, recorded: recorded)
@@ -30,18 +35,32 @@ extension CourseFile {
     }
 
     public func classesToWrapUp(at now: Date, classMinutes: Int, calendar: Calendar) -> [Session] {
-        sessions.filter { s in
+        let outline = UnitTree.outline(units).map(\.unit)
+        let lectures = Set(lectureFiles.map(\.id))
+        return sessions.filter { s in
             guard !s.isCancelled, !s.isWrappedUp,
                 s.expectedEnd(schedule: course.schedule, classMinutes: classMinutes, calendar: calendar) <= now
             else { return false }
             if let next = nextClassStart(after: s, calendar: calendar), next <= now { return false }
-            return !wrapUpGaps(of: s).isEmpty
+            return !wrapUpGaps(of: s, outline: outline, lectures: lectures).isEmpty
         }
         .sorted(by: Session.inOrder)
     }
 
     public func unwrappedPastSessions(at now: Date, settings: Settings, calendar: Calendar) -> [Session] {
-        sessions.filter { isLeftUnwrapped($0, at: now, settings: settings, calendar: calendar) }.sorted(by: Session.inOrder)
+        leftUnwrapped(at: now, settings: settings, calendar: calendar).map(\.session)
+    }
+
+    // 정리하지 않은 지난 수업과 그 수업에 빠진 것을 함께 구한다. 카드가 줄마다 빠진 것을 다시 구하지 않게 한다.
+    public func leftUnwrapped(at now: Date, settings: Settings, calendar: Calendar) -> [(session: Session, gaps: [WrapUpItem])] {
+        let outline = UnitTree.outline(units).map(\.unit)
+        let lectures = Set(lectureFiles.map(\.id))
+        let today = settings.studyDay(of: now, calendar: calendar)
+        return sessions.sorted(by: Session.inOrder).compactMap { s in
+            guard !s.isCancelled, !s.isWrappedUp, settings.studyDay(of: s.date, calendar: calendar) < today else { return nil }
+            let gaps = wrapUpGaps(of: s, outline: outline, lectures: lectures)
+            return gaps.isEmpty ? nil : (s, gaps)
+        }
     }
 
     public func isLeftUnwrapped(_ s: Session, at now: Date, settings: Settings, calendar: Calendar) -> Bool {
