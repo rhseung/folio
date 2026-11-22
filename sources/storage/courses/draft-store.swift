@@ -17,12 +17,16 @@ extension CourseStore {
     }
 
     public func save(_ draft: StoredDocument<StudyDraft>) throws {
-        try draft.write(to: draftsURL.appending(path: "\(draft.model.id.uuidString).json"))
+        try draft.write(to: draftURL(draft.model.id))
     }
 
     public func discard(draft id: UUID) throws {
-        let url = draftsURL.appending(path: "\(id.uuidString).json")
+        let url = draftURL(id)
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         try CoordinatedFile.trash(url)
     }
+}
+
+extension CourseStore {
+    public func draftURL(_ id: UUID) -> URL { draftsURL.appending(path: "\(id.uuidString).json") }
 }

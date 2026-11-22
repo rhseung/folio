@@ -21,3 +21,19 @@ extension CourseStore {
         return context.reading(lectureText(context.slides))
     }
 }
+
+extension CourseStore {
+    // 쪽 제목을 읽으려고 PDF를 열므로 main actor 밖에서 부른다. 열지 못한 렉처는 뺀다.
+    public func lectureOutline(_ file: CourseFile) -> LectureOutline {
+        let wanted = LectureOutline.pages(of: file.units)
+        let lectures = file.materials.filter { wanted[$0.id] != nil }.sorted { $0.path < $1.path }.compactMap {
+            m -> LectureOutline.Lecture? in
+            guard let pdf = PDFPages.open(fileURL(m.path)) else { return nil }
+            let pages = (wanted[m.id] ?? []).prefix(ReadingLimit.titles).filter { $0 >= 1 && $0 <= pdf.pageCount }.map { n in
+                LectureOutline.Page(number: n, title: pdf.page(at: n - 1).flatMap { PDFPages.text(of: $0, number: n).title })
+            }
+            return LectureOutline.Lecture(materialId: m.id, name: (m.path as NSString).lastPathComponent, pages: pages)
+        }
+        return LectureOutline(lectures: lectures)
+    }
+}

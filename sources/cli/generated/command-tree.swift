@@ -195,8 +195,11 @@ extension ProblemCommand {
 extension ProblemSetCommand {
     static let subcommandTypes: [any ParsableCommand.Type] = alphabetical([
         GeneratedCommands.ProblemLinkUnit.self,
+        GeneratedCommands.ProblemSetAccept.self,
         GeneratedCommands.ProblemSetAdd.self,
+        GeneratedCommands.ProblemSetDiscard.self,
         GeneratedCommands.ProblemSetList.self,
+        GeneratedCommands.ProblemSetPropose.self,
         GeneratedCommands.ProblemSetRemove.self,
         GeneratedCommands.ProblemSetSet.self,
     ])

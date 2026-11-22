@@ -76,6 +76,11 @@ struct HelpExampleTests {
 
         let ctx = ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now)
         let file = try ctx.file(Harness.graphTheory)
+        // 문제 제안을 받고 버리는 예시가 쓸 초안이다.
+        let midterm = try #require(file.materials.first { $0.path == "Inherited/소순범/2024 Midterm.pdf" })
+        try h.direct(
+            ProblemSetPropose(course: Harness.graphTheory, material: midterm.id, problems: [Problem(number: "1", text: "홀의 정리를 쓰시오.")]),
+            gist: gist)
         let session = try #require(file.sessions(matching: "10-26", calendar: ctx.calendar).first)
         let recording = Recording(device: h.device, at: h.now, sessionId: session.id, file: "Recordings/10-26(월).m4a", duration: 4500)
         try ctx.edit(Harness.graphTheory) { $0.recordings.append(recording) }
