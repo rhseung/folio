@@ -325,7 +325,7 @@ struct CourseWorkTests {
         #expect(file.subject(of: file.sessions[0], besides: parent.id) == "습관 · 몰입")
     }
 
-    @Test func aSessionNoteIsNamedByTheDayAndTheClassUnits() {
+    @Test func aSessionNoteIsNamedByItsDayAlone() {
         let s = Session(device: device, at: .now, week: 10, date: date("2026-11-05 10:30"))
         var file = CourseFile(course: courses[0], sessions: [s])
         #expect(file.noteTitle(for: file.sessions[0], kind: .rough, calendar: calendar) == "11-05(목)")
@@ -334,55 +334,9 @@ struct CourseWorkTests {
         let parent = Unit(device: device, at: .now, title: "Transport layer", order: 1)
         let child = Unit(device: device, at: .now, title: "Reliable data transfer", order: 1, parentId: parent.id)
         file.units = [parent, child]
-        file.toggle(session: s.id, unit: child.id)
-        #expect(file.noteTitle(for: file.sessions[0], kind: .rough, calendar: calendar) == "11-05(목) Reliable data transfer")
-        #expect(file.noteTitle(for: file.sessions[0], kind: .review, calendar: calendar) == "11-05(목) Reliable data transfer 정리")
-    }
-
-    func covering(_ title: String, at day: String = "2026-11-03 10:30") -> (Session, CourseFile) {
-        var s = Session(device: device, at: .now, week: 10, date: date(day))
-        let u = Unit(device: device, at: .now, title: title, order: 1)
-        s.addedUnitIds = [u.id]
-        return (s, CourseFile(course: courses[0], units: [u], sessions: [s]))
-    }
-
-    @Test func aSessionNoteNameHoldsNoPathOrLinkCharacters() {
-        let (s, file) = covering("..TCP: flow/congestion [ch. 3] #1")
-        #expect(file.noteTitle(for: s, kind: .rough, calendar: calendar) == "11-03(화) TCP flow-congestion ch. 3 1")
-    }
-
-    @Test func aLongSubjectIsCutAtAWord() {
-        let (s, file) = covering("Principles of reliable data transfer with pipelined protocols, Go-Back-N and selective repeat")
-        let title = file.noteTitle(for: s, kind: .review, calendar: calendar)
-        #expect(title == "11-03(화) Principles of reliable data transfer with pipelined 정리")
-
-        let (t, long) = covering(String(repeating: "가", count: 100))
-        let unbroken = long.noteTitle(for: t, kind: .rough, calendar: calendar)
-        #expect(unbroken == "11-03(화) " + String(repeating: "가", count: 60))
-    }
-
-    @Test func aCutSubjectLeavesNothingHanging() {
-        let title = { (unit: String) in
-            let (s, file) = covering(unit)
-            return file.noteTitle(for: s, kind: .rough, calendar: calendar)
-        }
-        #expect(
-            title("Forest, Tree, Leaf, Cut-Edge and Equivalent Definitions of a Tree in General")
-                == "11-03(화) Forest, Tree, Leaf, Cut-Edge and Equivalent Definitions")
-        #expect(
-            title("Walk, Trail, Path, Cycle and Bipartite Graphs (König's Theorem on Cycles)")
-                == "11-03(화) Walk, Trail, Path, Cycle and Bipartite Graphs")
-    }
-
-    @Test func aSubjectOfUnitsKeepsWholeUnits() {
-        let s = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
-        var file = CourseFile(course: courses[0], sessions: [s])
-        let titles = ["Minimum Degree Two Forces a Cycle", "Eulerian Circuits", "Degree-Sum Formula"]
-        file.units = titles.enumerated().map { i, t in Unit(device: device, at: .now, title: t, order: i + 1) }
-        file.setUnits(file.units.map(\.id), session: s.id)
-        #expect(
-            file.noteTitle(for: file.sessions[0], kind: .rough, calendar: calendar)
-                == "11-03(화) Minimum Degree Two Forces a Cycle · Eulerian Circuits")
+        file.setUnits([parent.id, child.id], session: s.id)
+        #expect(file.noteTitle(for: file.sessions[0], kind: .rough, calendar: calendar) == "11-05(목)")
+        #expect(file.noteTitle(for: file.sessions[0], kind: .review, calendar: calendar) == "11-05(목) 정리")
     }
 
     @Test func aLateClassIsNamedByItsCalendarDay() {
@@ -414,7 +368,7 @@ struct CourseWorkTests {
         let retitles = file.legacySessionNoteRetitles(calendar: calendar)
         #expect(
             retitles == [
-                NoteRetitle(note: rough, path: "Notes/10주차-2.md", title: "11-05(목) Reliable data transfer"),
+                NoteRetitle(note: rough, path: "Notes/10주차-2.md", title: "11-05(목)"),
                 NoteRetitle(note: review, path: "Notes/10주차-1 정리 2.md", title: "11-03(화) 정리"),
             ])
 

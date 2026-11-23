@@ -4,10 +4,10 @@ import FolioStorage
 import Foundation
 
 @Action(
-    "note retitle", "예전 이름(10주차-2)의 회차 노트를 날짜와 단원 이름으로 바꾸기. 노트의 첫 제목과 다른 노트의 링크도 따라 바뀐다",
+    "note retitle", "예전 이름(10주차-2)의 회차 노트를 수업 날짜 이름으로 바꾸기. 노트의 첫 제목과 다른 노트의 링크도 따라 바뀐다",
     discussion:
         "회차에 연결된 러프 노트와 복습 노트 중 이름이 아직 `10주차-2`, `10주차-2 정리`인 것만 바꾼다. 직접 지은 이름은 그대로 둔다. 이동은 moves.jsonl에 한 묶음으로 남고, folio cleanup undo로 이름과 제목, 링크를 함께 되돌린다. 실제 폴더에서는 folio backup create로 백업한 뒤 --dry-run으로 먼저 본다.",
-    effect: .moves, confirm: "회차 노트의 이름을 날짜와 단원으로 바꿉니다.", done: "회차 노트의 이름을 바꿨습니다",
+    effect: .moves, confirm: "회차 노트의 이름을 수업 날짜로 바꿉니다.", done: "회차 노트의 이름을 바꿨습니다",
     examples: ["folio note retitle --dry-run", "folio note retitle EC4207"],
     phrases: ["노트 이름 날짜로", "예전 노트 이름 바꾸기", "주차 이름 노트"], undoable: true, panel: true)
 public struct NoteRetitleSessions {

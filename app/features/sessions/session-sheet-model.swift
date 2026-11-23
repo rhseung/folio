@@ -396,7 +396,7 @@ final class SessionSheetModel {
 
     @discardableResult func submit() -> Bool {
         guard let result = workspace.run(action) else { return false }
-        // 노트 이름이 수업 날짜와 단원을 따르도록 단원을 저장한 뒤에 만든다.
+        // 노트 이름이 저장한 수업 날짜를 따르도록 저장한 뒤에 만든다. 새 회차는 저장해야 ID도 생긴다.
         if makesNote && !hasNote, let id = sessionId ?? result.made { _ = workspace.note(.rough, of: id, in: courseId) }
         return true
     }
