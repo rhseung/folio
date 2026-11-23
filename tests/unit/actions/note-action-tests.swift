@@ -333,7 +333,7 @@ struct NoteActionTests {
 
         let s = try #require(try file().sessions.first { $0.id == session })
         let rough = try file().noteTitle(for: s, kind: .rough, calendar: .current)
-        #expect(rough.hasSuffix(" Matchings"))
+        #expect(try rough == file().recordingName(of: s, calendar: .current))
         let dry = ActionContext(gist: gist, device: device, now: now, dryRun: true)
         try NoteRetitleSessions(course: Self.graphTheory).run(dry)
         #expect(

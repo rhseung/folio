@@ -170,31 +170,16 @@ struct SessionReferenceTests {
         }
     }
 
-    static let words = ["Matching", "Hall", "Tree", "Euler", "Cut", "and", "of", "그래프", "평면성", "Go-Back-N"]
-    static let unitTitles = Gen.int(in: 0...9).array(of: 1...12).array(of: 0...4)
-
-    @Test func aNoteTitleIsTheDayAndTheUnitsThatFit() async {
-        await propertyCheck(input: Self.unitTitles) { picks in
-            let s = session(at(11, 3))
-            var f = file([s])
-            let titles = picks.map { $0.map { Self.words[$0] }.joined(separator: " ") }
-            f.units = titles.enumerated().map { i, t in Unit(device: device, at: .now, title: t, order: i + 1) }
-            f.setUnits(f.units.map(\.id), session: s.id)
-
-            let name = f.noteTitle(for: f.sessions[0], kind: .rough, calendar: calendar)
-            let day = "11-03(화)"
-            #expect(name.hasPrefix(day))
-            guard let first = titles.first else {
-                #expect(name == day)
-                return
+    @Test func aNoteTitleIsTheFilesDayWhateverItCovers() async {
+        await propertyCheck(input: Self.sessions) { rows in
+            var f = make(rows)
+            f.units = (1...3).map { Unit(device: device, at: .now, title: "Matching \($0)", order: $0) }
+            for s in f.sessions { f.setUnits(f.units.map(\.id), session: s.id) }
+            for s in f.sessions {
+                let day = f.recordingName(of: s, calendar: calendar)
+                #expect(f.noteTitle(for: s, kind: .rough, calendar: calendar) == day)
+                #expect(f.noteTitle(for: s, kind: .review, calendar: calendar) == day + " 정리")
             }
-
-            let subject = String(name.dropFirst(day.count + 1))
-            #expect(!subject.isEmpty && subject.count <= 60)
-            guard first.count <= 60 else { return }
-            let parts = subject.components(separatedBy: " · ")
-            #expect(parts == Array(titles.prefix(parts.count)))
-            if parts.count < titles.count { #expect((parts + [titles[parts.count]]).joined(separator: " · ").count > 60) }
         }
     }
 }

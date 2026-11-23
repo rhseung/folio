@@ -201,11 +201,11 @@ extension CourseFile {
 
     public func recordingName(of session: Session, calendar: Calendar) -> String { fileDay(of: session, calendar: calendar) }
 
+    // 단원 이름을 넣지 않는다. 단원을 여럿 이으면 이름이 길어져 앱의 목록과 탭에서 읽히지 않고, 무엇을 다뤘는지는 회차의
+    // 단원 연결이 이미 말한다. 같은 날 둘째 수업의 노트는 저장소가 ` 2`를 붙인다.
     public func noteTitle(for session: Session, kind: NoteKind, calendar: Calendar) -> String {
         let day = fileDay(of: session, calendar: calendar)
-        let subject = subject(of: session).map(Self.noteSubject).flatMap { $0.isEmpty ? nil : $0 }
-        let title = subject.map { "\(day) \($0)" } ?? day
-        return kind == .review ? "\(title) 정리" : title
+        return kind == .review ? "\(day) 정리" : day
     }
 
     public func legacySessionNoteRetitles(calendar: Calendar) -> [NoteRetitle] {
@@ -231,55 +231,6 @@ extension CourseFile {
     func fileDay(of session: Session, calendar: Calendar) -> String {
         let day = LocalDate(session.date, in: calendar)
         return String(format: "%02d-%02d", day.month, day.day) + "(\(WeekdayLetters.letter(calendar.isoWeekday(of: session.date))))"
-    }
-
-    static let noteSubjectLimit = 60
-
-    // 경로와 Obsidian 링크 문자는 빼거나 `-`로 바꾼다. 그대로 두면 저장소가 `TCP: flow`를 `TCP- flow`로 바꾼다. Finder가
-    // 이름을 줄이지 않을 만큼 짧게 자른다. ` · `로 이은 단원은 들어가는 만큼 통째로 둔다. 낱말 단위로 자르면 끝에 남은
-    // `and`, `of`, `(` 때문에 이름이 깨진 것처럼 보인다.
-    static func noteSubject(_ subject: String) -> String {
-        let parts = subject.components(separatedBy: " · ").map(fileNameSafe).filter { !$0.isEmpty }
-        var kept: [String] = []
-        for part in parts {
-            guard (kept + [part]).joined(separator: " · ").count <= noteSubjectLimit else { break }
-            kept.append(part)
-        }
-        if kept.isEmpty, let first = parts.first { kept = [shortened(first)] }
-        return kept.joined(separator: " · ")
-    }
-
-    static func fileNameSafe(_ text: String) -> String {
-        let s = String(
-            text.map { ch -> Character in
-                if "/\\|".contains(ch) { return "-" }
-                if ":#^[]".contains(ch) || ch.isNewline { return " " }
-                return ch
-            })
-        return String(s.split(whereSeparator: \.isWhitespace).joined(separator: " ").drop { $0 == "." })
-    }
-
-    static let danglingWords: Set<String> = [
-        "a", "an", "and", "as", "at", "by", "for", "from", "in", "into", "of", "on", "or", "the", "to", "under", "vs", "with", "&",
-    ]
-
-    static func shortened(_ text: String) -> String {
-        var words: [Substring] = []
-        for word in text.split(separator: " ") {
-            guard (words + [word]).joined(separator: " ").count <= noteSubjectLimit else { break }
-            words.append(word)
-        }
-        guard !words.isEmpty else { return String(text.prefix(noteSubjectLimit)) }
-
-        var s = words.joined(separator: " ")
-        while true {
-            let before = s
-            s = s.trimmingCharacters(in: CharacterSet(charactersIn: " ,;-·."))
-            if let last = s.split(separator: " ").last, danglingWords.contains(last.lowercased()) { s = String(s.dropLast(last.count)) }
-            if s.filter({ $0 == "(" }).count > s.filter({ $0 == ")" }).count, let open = s.lastIndex(of: "(") { s = String(s[..<open]) }
-            if s == before { break }
-        }
-        return s.isEmpty ? String(text.prefix(noteSubjectLimit)) : s
     }
 
     public func needsReviewNote(_ session: Session, at now: Date) -> Bool {

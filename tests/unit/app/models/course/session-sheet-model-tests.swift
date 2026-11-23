@@ -63,7 +63,7 @@ struct SessionSheetModelTests {
         #expect(file.unitIds(of: s) == [unit])
         #expect(file.attendance.first { $0.sessionId == session }?.state == .late)
         let note = try #require(s.roughNoteId.flatMap { id in file.notes.first { $0.id == id } })
-        #expect(note.path.contains("매칭"))
+        #expect(note.path == "Notes/\(file.noteTitle(for: s, kind: .rough, calendar: workspace.calendar)).md" && !note.path.contains("매칭"))
         #expect(file.wrapUpGaps(of: s).isEmpty)
     }
 
