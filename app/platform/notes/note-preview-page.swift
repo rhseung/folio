@@ -162,6 +162,7 @@ import WebKit
     private func load() {
         ready = false
         shown = nil
+        files.forgetServed()
         view.loadHTMLString(
             Self.shell(theme: Self.theme(accent: wanted?.accent ?? .gray, callouts: wanted?.callouts ?? .standard)), baseURL: Self.shellURL)
     }
@@ -198,10 +199,13 @@ import WebKit
             return out
         }
         widgets.end()
+        // 입력마다 파일 시각을 재지 않도록, 노트를 새로 열거나 폴더의 파일이 바뀌었을 때만 본다.
+        if shown == nil || shown?.revision != wanted.revision { files.checkServed() }
 
         let options: [String: Any] = [
             "math": wanted.math.rawValue, "editable": wanted.editable,
             "base": LocalFileScheme.base(for: wanted.baseURL)?.absoluteString ?? Self.shellURL.absoluteString,
+            "versions": files.versions,
         ]
 
         let theme = Self.theme(accent: wanted.accent, callouts: wanted.callouts)

@@ -256,6 +256,36 @@ struct NotePreviewTests {
         #expect(try await rig.number("return document.images[1].naturalWidth") == 0)
     }
 
+    // 페이지는 같은 주소의 파일을 다시 요청하지 않으므로, 다시 쓴 그림은 주소에 판이 붙어야 새로 읽힌다.
+    @Test func aRewrittenPictureIsReadAgain() async throws {
+        let folder = FileManager.default.temporaryDirectory.appending(path: "preview-\(UUID().uuidString)")
+        let file = folder.appending(path: "assets/fig.svg")
+        try FileManager.default.createDirectory(at: folder.appending(path: "assets"), withIntermediateDirectories: true)
+        func write(width: Int, at date: Date) throws {
+            try "<svg xmlns='http://www.w3.org/2000/svg' width='\(width)' height='10'/>".write(to: file, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes([.modificationDate: date], ofItemAtPath: file.path)
+        }
+        try write(width: 10, at: Date(timeIntervalSinceNow: -60))
+        let rig = PreviewRig("![](assets/fig.svg)", baseURL: folder)
+        defer { rig.close() }
+        func width() async throws -> Double {
+            for _ in 0..<40 {
+                if let w = try await rig.number("return document.images[0].naturalWidth"), w > 0 { return w }
+                try await Task.sleep(for: .milliseconds(50))
+            }
+            return 0
+        }
+        await rig.settle()
+        #expect(try await width() == 10)
+
+        try write(width: 20, at: Date())
+        rig.revision += 1
+        rig.show(rig.text)
+        await rig.settle()
+        for _ in 0..<40 where try await width() != 20 { try await Task.sleep(for: .milliseconds(50)) }
+        #expect(try await width() == 20)
+    }
+
     @Test func aPictureOpensLargeAndCloses() async throws {
         let folder = FileManager.default.temporaryDirectory.appending(path: "preview-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: folder.appending(path: "assets"), withIntermediateDirectories: true)
