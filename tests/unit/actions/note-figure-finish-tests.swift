@@ -84,6 +84,15 @@ struct NoteFigureFinishTests {
         let expected = try placed(own)
         #expect(expected.count == 4)
         for svg in variants { #expect(try placed(svg) == expected) }
+
+        // 굵기도 낱말 폭을 정하므로 어디서 오든 같게 재야 한다. 굵은 글을 보통 굵기로 재면 수식이 낱말에 붙는다.
+        let bold = try placed(figure(#"<text x="10" y="40" class="bd">matching $M$ 굵게</text>"#))
+        #expect(bold != (try placed(figure(#"<text x="10" y="40">matching $M$ 굵게</text>"#))))
+        for svg in [
+            figure(#"<text x="10" y="40" style="font-weight: bold">matching $M$ 굵게</text>"#),
+            figure(#"<g font-weight="700"><text x="10" y="40">matching $M$ 굵게</text></g>"#),
+            figure(#"<text x="10" y="40" class="heavy">matching $M$ 굵게</text>"#, style: "<style>.heavy{font-weight:700}</style>"),
+        ] { #expect(try placed(svg) == bold) }
     }
 
     @Test func brokenMathAndMathInTspansAreCaught() throws {

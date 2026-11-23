@@ -48,23 +48,20 @@ const mathRuns = (text) => {
 
 const hasMath = (text) => mathRuns(text).some((p) => p.tex != null);
 
+// 글자 크기와 굵기는 낱말 폭을 정한다. style 속성이나 쓴 사람의 CSS 규칙에서 온 값을 빠뜨리면 낱말을 좁게 재서 뒤의
+// 수식이 낱말에 붙거나 겹친다.
 function font(el, style) {
-  for (const a of [el, ...ancestors(el)]) {
-    const px = parseFloat(attr(a, "font-size") ?? /font-size\s*:\s*([\d.]+)/.exec(attr(a, "style") ?? "")?.[1]);
-    if (Number.isFinite(px)) return px;
+  const size = property(el, "font-size", style, (a) => {
     const named = classes(a).find((c) => style.sizes[c]);
-    if (named) return style.sizes[named];
-  }
-  return style.sizes[""];
+    return named ? String(style.sizes[named]) : null;
+  });
+  const px = parseFloat(size);
+  return Number.isFinite(px) ? px : style.sizes[""];
 }
 
 function weight(el, style) {
-  for (const a of [el, ...ancestors(el)]) {
-    const w = attr(a, "font-weight");
-    if (w) return w === "bold" ? 700 : +w || 400;
-    if (classes(a).includes(style.bold)) return 700;
-  }
-  return 400;
+  const w = property(el, "font-weight", style, (a) => (classes(a).includes(style.bold) ? "700" : null));
+  return w === "bold" || w === "bolder" ? 700 : +w || 400;
 }
 
 // 정렬은 물려받는 속성이라 부모 `<g>`나 쓴 사람의 CSS 규칙에서 올 수 있다. 렌더러와 같은 순서로 찾아야 배치와 검사가
