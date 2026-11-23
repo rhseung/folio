@@ -59,6 +59,42 @@ struct NoteFigureFinishTests {
         #expect(try NoteFigureFinish.finish(svg).problems.isEmpty)
     }
 
+    // 정렬은 `<text>` 자신, 부모 `<g>`, 쓴 사람의 CSS 규칙 어디서 와도 같은 자리에 놓여야 한다. 조각이 부모의 정렬을
+    // 물려받으면 낱말만 가운데로 옮겨져 수식과 겹친다.
+    @Test func anInheritedAnchorPlacesMixedLabelsLikeItsOwn() throws {
+        func figure(_ label: String, style: String = "") -> String {
+            """
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 80">\(style)
+            \(label)
+            </svg>
+            """
+        }
+        let own = figure(#"<text x="120" y="40" text-anchor="middle">간선 $e$ 의 무게 $w(e)$</text>"#)
+        let variants = [
+            figure(#"<g text-anchor="middle"><text x="120" y="40">간선 $e$ 의 무게 $w(e)$</text></g>"#),
+            figure(#"<text x="120" y="40" style="text-anchor: middle">간선 $e$ 의 무게 $w(e)$</text>"#),
+            figure(#"<g class="mid"><text x="120" y="40">간선 $e$ 의 무게 $w(e)$</text></g>"#, style: "<style>.mid{text-anchor:middle}</style>"),
+        ]
+        func placed(_ svg: String) throws -> [String] {
+            let done = try NoteFigureFinish.finish(svg)
+            #expect(done.problems.isEmpty)
+            let pieces = /<(?:text|svg) x="([-\d.]+)"/
+            return done.svg.matches(of: pieces).map { String($0.output.1) }
+        }
+        let expected = try placed(own)
+        #expect(expected.count == 4)
+        for svg in variants { #expect(try placed(svg) == expected) }
+
+        // 굵기도 낱말 폭을 정하므로 어디서 오든 같게 재야 한다. 굵은 글을 보통 굵기로 재면 수식이 낱말에 붙는다.
+        let bold = try placed(figure(#"<text x="10" y="40" class="bd">matching $M$ 굵게</text>"#))
+        #expect(bold != (try placed(figure(#"<text x="10" y="40">matching $M$ 굵게</text>"#))))
+        for svg in [
+            figure(#"<text x="10" y="40" style="font-weight: bold">matching $M$ 굵게</text>"#),
+            figure(#"<g font-weight="700"><text x="10" y="40">matching $M$ 굵게</text></g>"#),
+            figure(#"<text x="10" y="40" class="heavy">matching $M$ 굵게</text>"#, style: "<style>.heavy{font-weight:700}</style>"),
+        ] { #expect(try placed(svg) == bold) }
+    }
+
     @Test func brokenMathAndMathInTspansAreCaught() throws {
         let svg = """
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100">

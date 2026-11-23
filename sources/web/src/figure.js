@@ -48,32 +48,25 @@ const mathRuns = (text) => {
 
 const hasMath = (text) => mathRuns(text).some((p) => p.tex != null);
 
+// 글자 크기와 굵기는 낱말 폭을 정한다. style 속성이나 쓴 사람의 CSS 규칙에서 온 값을 빠뜨리면 낱말을 좁게 재서 뒤의
+// 수식이 낱말에 붙거나 겹친다.
 function font(el, style) {
-  for (const a of [el, ...ancestors(el)]) {
-    const px = parseFloat(attr(a, "font-size") ?? /font-size\s*:\s*([\d.]+)/.exec(attr(a, "style") ?? "")?.[1]);
-    if (Number.isFinite(px)) return px;
+  const size = property(el, "font-size", style, (a) => {
     const named = classes(a).find((c) => style.sizes[c]);
-    if (named) return style.sizes[named];
-  }
-  return style.sizes[""];
+    return named ? String(style.sizes[named]) : null;
+  });
+  const px = parseFloat(size);
+  return Number.isFinite(px) ? px : style.sizes[""];
 }
 
 function weight(el, style) {
-  for (const a of [el, ...ancestors(el)]) {
-    const w = attr(a, "font-weight");
-    if (w) return w === "bold" ? 700 : +w || 400;
-    if (classes(a).includes(style.bold)) return 700;
-  }
-  return 400;
+  const w = property(el, "font-weight", style, (a) => (classes(a).includes(style.bold) ? "700" : null));
+  return w === "bold" || w === "bolder" ? 700 : +w || 400;
 }
 
-function anchor(el) {
-  for (const a of [el, ...ancestors(el)]) {
-    const v = attr(a, "text-anchor") ?? /text-anchor\s*:\s*(\w+)/.exec(attr(a, "style") ?? "")?.[1];
-    if (v) return v;
-  }
-  return "start";
-}
+// 정렬은 물려받는 속성이라 부모 `<g>`나 쓴 사람의 CSS 규칙에서 올 수 있다. 렌더러와 같은 순서로 찾아야 배치와 검사가
+// 보이는 자리와 맞는다.
+const anchor = (el, style = { rules: new Map() }) => property(el, "text-anchor", style) ?? "start";
 
 const firstNumber = (v) => parseFloat((v ?? "0").trim().split(/[\s,]+/)[0]) || 0;
 const shift = { start: 0, middle: 0.5, end: 1 };
@@ -100,12 +93,18 @@ function typeset(el, style, glyphs, problems) {
   }
   const total = runs.reduce((sum, r) => sum + r.width, 0);
   const y = firstNumber(attr(el, "y"));
-  let x = firstNumber(attr(el, "x")) - total * (shift[anchor(el)] ?? 0);
-  const keep = new Set(["x", "y", "dx", "dy", "text-anchor", "transform", "id", "opacity"]);
-  const own = el.attrs.filter(([k]) => !keep.has(k)).map(([k, v]) => ` ${k}="${v.replace(/&/g, "&amp;").replace(/"/g, "&quot;")}"`).join("");
+  let x = firstNumber(attr(el, "x")) - total * (shift[anchor(el, style)] ?? 0);
+  const keep = new Set(["x", "y", "dx", "dy", "text-anchor", "transform", "id", "opacity", "style"]);
+  const quote = (v) => v.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+  const own = el.attrs.filter(([k]) => !keep.has(k)).map(([k, v]) => ` ${k}="${quote(v)}"`).join("");
+  // 조각은 원래 `<text>`의 자리에 놓여 그 부모의 정렬을 물려받는다. 정렬은 위에서 이미 x에 셈했으므로 낱말 조각은 왼쪽
+  // 정렬이어야 한다. 그렇지 않으면 낱말만 다시 가운데로 옮겨져, 정렬을 따르지 않는 수식 `<svg>`와 겹친다. 쓴 사람의 CSS
+  // 규칙은 표시 속성보다 우선하므로 style 속성으로 준다.
+  const inline = (attr(el, "style") ?? "").split(";").map((d) => d.trim()).filter((d) => d && !/^text-anchor\s*:/.test(d));
+  const pieceStyle = ` style="${quote([...inline, "text-anchor:start"].join(";"))}"`;
   let body = "";
   for (const r of runs) {
-    if (r.word != null) body += `<text x="${fmt(x)}" y="${fmt(y)}"${own} xml:space="preserve">${escapeText(r.word)}</text>`;
+    if (r.word != null) body += `<text x="${fmt(x)}" y="${fmt(y)}"${own}${pieceStyle} xml:space="preserve">${escapeText(r.word)}</text>`;
     else {
       const [bx, by, bw, bh] = r.svg.box;
       body += `<svg x="${fmt(x)}" y="${fmt(y + (by / 1000) * mpx)}" width="${fmt(r.width)}" height="${fmt((bh / 1000) * mpx)}" `
@@ -134,6 +133,7 @@ export function finish(source, styleJSON) {
   unfinish(doc);
 
   const problems = [], glyphs = new Map();
+  const ruled = { ...style, rules: rules(root) };
   for (const el of [...walk(root)]) {
     if (el.name !== "text" || ancestors(el).some((a) => HIDDEN.has(a.name))) continue;
     const children = el.kids.filter((k) => k.t === "el");
@@ -141,7 +141,7 @@ export function finish(source, styleJSON) {
       if (children.some((c) => hasMath(textOf(c)))) problems.push({ kind: "tspan", text: textOf(el).trim() });
       continue;
     }
-    if (hasMath(textOf(el))) typeset(el, style, glyphs, problems);
+    if (hasMath(textOf(el))) typeset(el, ruled, glyphs, problems);
   }
 
   const used = new Set();
@@ -259,7 +259,7 @@ function ctm(el) {
 
 function textBox(el, text, style, x, y) {
   const px = font(el, style), w = folioMeasure(text, px, weight(el, style));
-  const left = x - w * (shift[anchor(el)] ?? 0);
+  const left = x - w * (shift[anchor(el, style)] ?? 0);
   return { x: left, y: y - ASCENT * px, w, h: (ASCENT + DESCENT) * px };
 }
 
@@ -268,23 +268,33 @@ function union(boxes) {
   return { x, y, w: Math.max(...boxes.map((b) => b.x + b.w)) - x, h: Math.max(...boxes.map((b) => b.y + b.h)) - y };
 }
 
+const labelName = (text, m, box) => {
+  const [x, y] = apply(m, [box.x, box.y]);
+  return `${text.trim().slice(0, 24) || "$"} @(${Math.round(x)}, ${Math.round(y)})`;
+};
+
+// 수식이 든 라벨 하나의 조각(낱말 `<text>`, 수식 `<svg>`)이 실제로 놓인 상자다. 조각은 원래 라벨을 나눈 순서대로 있다.
+function pieces(group, style) {
+  const runs = mathRuns(textOf(parse(attr(group, SOURCE)))).filter((p) => p.tex != null || p.word);
+  const kids = elements(group);
+  return kids.map((k, i) => ({
+    box: k.name === "text"
+      ? textBox(k, textOf(k), style, firstNumber(attr(k, "x")), firstNumber(attr(k, "y")))
+      : { x: firstNumber(attr(k, "x")), y: firstNumber(attr(k, "y")), w: firstNumber(attr(k, "width")), h: firstNumber(attr(k, "height")) },
+    text: k.name === "text" ? textOf(k) : runs.length === kids.length ? `$${runs[i].tex}$` : "$",
+  }));
+}
+
 function labels(root, style) {
   const out = [];
-  const name = (text, m, box) => {
-    const [x, y] = apply(m, [box.x, box.y]);
-    return `${text.trim().slice(0, 24) || "$"} @(${Math.round(x)}, ${Math.round(y)})`;
-  };
   const push = (el, box, text) => {
     const m = ctm(el);
-    out.push({ el, box, m, inv: invert(m), name: name(text, m, box) });
+    out.push({ el, box, m, inv: invert(m), name: labelName(text, m, box) });
   };
   for (const el of walk(root)) {
     if (ancestors(el).some((a) => HIDDEN.has(a.name) || attr(a, SOURCE) != null)) continue;
     if (el.name === "g" && attr(el, SOURCE) != null) {
-      const boxes = elements(el).map((k) =>
-        k.name === "text"
-          ? textBox(k, textOf(k), style, firstNumber(attr(k, "x")), firstNumber(attr(k, "y")))
-          : { x: firstNumber(attr(k, "x")), y: firstNumber(attr(k, "y")), w: firstNumber(attr(k, "width")), h: firstNumber(attr(k, "height")) });
+      const boxes = pieces(el, style).map((p) => p.box);
       if (boxes.length) push(el, union(boxes), textOf(parse(attr(el, SOURCE))).replace(/\$/g, ""));
       continue;
     }
@@ -358,9 +368,26 @@ function grid(label, nx = 8, ny = 4) {
   return out;
 }
 
+// 한 라벨의 조각은 왼쪽부터 맞닿게 놓인다. 라벨끼리만 견주면 조각끼리 겹쳐 그려진 라벨을 놓친다.
+function crowded(root, style) {
+  const found = [];
+  for (const el of walk(root)) {
+    if (el.name !== "g" || attr(el, SOURCE) == null || ancestors(el).some((a) => HIDDEN.has(a.name) || attr(a, SOURCE) != null)) continue;
+    const m = ctm(el), all = pieces(el, style);
+    for (let a = 0; a < all.length; a++)
+      for (let c = a + 1; c < all.length; c++) {
+        const p = all[a].box, q = all[c].box;
+        const across = Math.min(p.x + p.w, q.x + q.w) - Math.max(p.x, q.x);
+        const down = Math.min(p.y + p.h, q.y + q.h) - Math.max(p.y, q.y);
+        if (across > PAD && down > PAD) found.push({ kind: "labels", a: labelName(all[a].text, m, p), b: labelName(all[c].text, m, q) });
+      }
+  }
+  return found;
+}
+
 function overlaps(root, given) {
   const style = { ...given, rules: rules(root) };
-  const found = [];
+  const found = crowded(root, style);
   const all = labels(root, style);
   for (let a = 0; a < all.length; a++)
     for (let c = a + 1; c < all.length; c++)
