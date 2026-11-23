@@ -119,6 +119,12 @@ enum FormSnapshots {
         if let exam = file.exams.first {
             forms.append(("exam-edit", AnyView(ExamEditor(workspace: workspace, course: course, exam: exam))))
         }
+        let drafted = workspace.currentCourses.lazy.compactMap { c in
+            ((try? c.store.drafts()) ?? []).first { $0.model.kind == .problems }?.model.materialId.map { (c, $0) }
+        }.first
+        if let (c, material) = drafted {
+            forms.append(("problem-draft", AnyView(ProblemDraftSheet(workspace: workspace, course: c, material: material))))
+        }
         if let note = try? course.store.notes().first {
             forms.append(("note-edit", AnyView(NoteEditSheet(workspace: workspace, course: course, note: note))))
             forms.append(("note-folder", AnyView(NoteFolderSheet(workspace: workspace, course: course, note: note))))

@@ -243,6 +243,13 @@ enum Theme {
         static let bigButton: CGFloat = 52
         static let flipCardMin: CGFloat = 280
         static let solveSetup: CGFloat = 520
+        // 뽑은 문제 검토 시트에서 문제 글이 단원 칸 옆에 남겨야 하는 폭이다. 이보다 좁으면 단원 칸을 글 아래로 내린다.
+        static let draftProblemText: CGFloat = 240
+        // 뽑은 문제 검토 시트의 폭이다. 문제 글과 그림이 읽히고 단원 칸이 옆에 서는 폭이고, 창이 더 좁으면 창 폭을 따른다.
+        static let problemDraft: CGFloat = 880
+        // 문제 그림을 키워 보이는 크기다. 작은 그림은 너비나 높이가 `figureReadable`이 될 때까지 키우고, 누르면 `figureZoom`으로 본다.
+        static let figureReadable: CGFloat = 280
+        static let figureZoom: CGFloat = 720
         static let solveSplit: CGFloat = 720
         static let inkPad: CGFloat = 320
         static let solveStep = CGSize(width: 16, height: 6)

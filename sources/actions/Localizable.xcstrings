@@ -1914,6 +1914,39 @@
           }
         }
       }
+    },
+    "error.not-found.problem-draft": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에서 뽑은 문제 제안이 없습니다"
+          }
+        }
+      }
+    },
+    "error.problem-draft.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "뽑은 문제가 없습니다"
+          }
+        }
+      }
+    },
+    "error.problem-draft.unreadable": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "'%@' 제안을 읽지 못했습니다. 이 Folio가 모르는 형식입니다"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

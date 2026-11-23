@@ -11,6 +11,11 @@ extension CourseStore {
         return file
     }
 
+    // iCloud 자리표시 파일은 내려받은 뒤 읽는다.
+    public func contents(of material: Material) throws -> Data {
+        try CoordinatedFile.read(try download(material))
+    }
+
     public func relink(_ id: UUID, to picked: URL, in file: inout CourseFile, device: DeviceID, now: Date) throws {
         guard let path = coursePath(of: picked) else { throw MaterialFileError.outsideCourseFolder(picked.lastPathComponent) }
         let size = try picked.resourceValues(forKeys: [.fileSizeKey]).fileSize.map(Int64.init)

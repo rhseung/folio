@@ -224,7 +224,7 @@ final class ClaudeModel {
                 failed = question
                 // API 프로바이더는 취소된 요청을 `CancellationError`가 아니라 URL 오류로 알린다.
                 stopped = Task.isCancelled
-                status = stopped ? String(localized: .claudeStatusStopped) : Self.message(for: error)
+                status = stopped ? String(localized: .claudeStatusStopped) : ClaudeFailure.message(for: error)
             }
 
             if doc.model.messages.isEmpty {
@@ -512,23 +512,6 @@ final class ClaudeModel {
 
     static func noteTitle(_ markdown: String) -> String? {
         markdown.split(separator: "\n").first { $0.hasPrefix("# ") }.map { $0.dropFirst(2).trimmingCharacters(in: .whitespaces) }
-    }
-
-    nonisolated static func message(for error: any Error) -> String {
-        switch error as? ClaudeError {
-        case .missingAPIKey: String(localized: .claudeErrorMissingKey)
-        case .http(let status, let body):
-            status == 401
-                ? String(localized: .claudeErrorAuth)
-                : status == 0
-                    ? String(localized: .claudeErrorFailedBody(String(body.prefix(200)))) : String(localized: .claudeErrorHttp(status))
-        case .cli(let exit, ""): String(localized: .claudeErrorCliExit(Int(exit)))
-        case .cli(_, let message): String(localized: .claudeErrorCli(String(message.prefix(200))))
-        case .signedOut: String(localized: .claudeErrorSignedOut)
-        case .refused: String(localized: .claudeErrorRefused)
-        case .truncated: String(localized: .claudeErrorTruncated)
-        case .invalidOutput, nil: String(localized: .claudeErrorFailedBody(error.localizedDescription))
-        }
     }
 
     static func html(

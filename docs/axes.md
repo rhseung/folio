@@ -46,10 +46,11 @@ AGENTS.md "구조 축" 표의 축마다 지킬 규칙이다. 축에 기능을 �
 - iCloud 충돌 사본은 과목을 읽을 때 항목 ID와 적용한 제안 ID로 합친다(`CourseFile.merged(with:)`, `CourseStore.resolveConflicts`). 같은 항목은 나중에 고친 쪽을 남기므로 액션은 저장할 때 바뀐 항목을 모두 찍는다(`touchChanged`). 합친 사본은 지우지 않고 해결됨으로만 둔다.
 - 승인 화면에 보이는 제안은 `FolioDomain`의 `Proposal`이다. 종류(`ProposalKind`)가 묶음(`ProposalGroup`), 넣을 과목을 고르는지(`picksCourse`), 여러 제안을 한 액션으로 합칠 목록 필드(`list`)를 정한다. 승인은 `action`, 무시는 `dismissal`이고, 표시(`ProposalFlag`)가 검토할 것을 알리거나 승인을 막는다(LMS 뷰어 전용).
 - 같은 명령의 제안 여럿은 목록 필드를 이어 액션 하나로 승인하고 무시한다(`[Proposal].approvals(in:)`, `dismissals`). 그래서 한 번 묻고, 하나가 막히면 아무것도 쓰지 않는다.
-- 제안의 출처는 셋이고, 출처마다 승인하는 곳이 따로 있다. 종류의 묶음(`ProposalKind.group`)이 없는 제안은 LMS 탭에 오지 않는다.
+- 제안의 출처는 넷이고, 출처마다 승인하는 곳이 따로 있다. 종류의 묶음(`ProposalKind.group`)이 없는 제안은 LMS 탭에 오지 않는다.
     - LMS(`LMSProposal.proposal`, 승인은 `lms accept`, 무시는 `lms mark`): `ProposalBoard`가 강의실로 묶어 LMS 탭(`folio://lms`)에 모은다. 받은 과제가 LMS와 다른 것(`LMSDifference`)은 과목이 정해져 있어 과목을 고르지 않고, 승인은 `assignment status`나 `assignment set`이다.
     - 대화 파일(`Chat.pending`): 그 대화의 Claude 패널에서 승인한다. Claude는 LMS에 속하지 않아 LMS 탭에 모으지 않는다(사용자 결정). 패널의 거절은 #515다. CLI와 MCP는 `proposal list`로 모든 과목의 대화에서 기다리는 제안을 읽는다.
     - 폴더 정리 옮기기(`PlannedMove.proposal`, 검토 표시는 `.review` 표시, 승인은 `cleanup apply`): 자료 화면과 `cleanup plan`이 같은 선언을 읽는다.
+    - 공부 초안(`StudyDraft.proposal`, `.folio/drafts/`): 자료에서 뽑은 문제(`problem-set propose`)는 문제 페이지의 알림 카드에서 받거나(`problem-set accept`) 버린다(`problem-set discard`). 초안은 자료마다 하나이고, 다시 뽑으면 앞의 초안을 바꾼다. 소문제들이 함께 딸린 지문은 문제가 아니라 묶음의 `groups`(`ProblemGroup`)에 두고, 그림은 문제지 PDF의 칸(`ProblemRegion`)으로 적어 앱이 PDF에서 잘라 보인다. 받으면 초안을 지우고, 다른 기기가 먼저 받은 초안은 과목 문서에 남은 제안 ID로 거른다.
 - 파일 분류, 자료에서 정보 추출, 렉처 단원 구간 제안은 #90에 남았다. 패널의 제안 단계는 `docs/mcp.md`에 있다.
 
 ## 파일 보기 렌더러

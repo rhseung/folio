@@ -573,6 +573,48 @@ struct MaterialNoteStudyTests {
         }
     }
 
+    static let midterm = "Inherited/소순범/2024 Midterm.pdf"
+
+    static let midtermID = uuid("A0000000-0000-4000-8000-0000000000F3")
+
+    // 초안 파일 이름이 자료 ID이므로, 두 사본이 같은 파일을 쓰게 등록한 자료의 ID를 정해 둔다.
+    func tracked(_ gist: URL) throws {
+        try h.direct(MaterialTrack(course: course, assignments: false), gist: gist)
+        let ctx = ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now)
+        try ctx.edit(course) { file in
+            if let i = file.materials.firstIndex(where: { $0.path == Self.midterm }) { file.materials[i].id = Self.midtermID }
+        }
+    }
+
+    func proposed(_ gist: URL) throws {
+        try tracked(gist)
+        try h.direct(
+            ProblemSetPropose(course: course, material: Self.midtermID, problems: [Problem(number: "1", text: "홀의 정리를 쓰시오.")]),
+            gist: gist)
+    }
+
+    @Test func problemSetPropose() throws {
+        let problems = [Problem(number: "1", page: 1, text: "홀의 정리를 쓰시오.")]
+        let file = try scratch("drafted.json", String(bytes: try JSONEncoder.folio.encode(problems), encoding: .utf8) ?? "")
+        try h.expectSame(
+            ["problem-set", "propose", "EC4207/2024 Midterm.pdf", "--file", file], prepare: tracked
+        ) { _ in
+            ProblemSetPropose(course: course, material: Self.midtermID, problems: problems)
+        }
+    }
+
+    @Test func problemSetAccept() throws {
+        try h.expectSame(["problem-set", "accept", "EC4207/2024 Midterm.pdf", "--title", "2024 중간"], prepare: proposed) { _ in
+            ProblemSetAccept(course: course, material: Self.midtermID, title: "2024 중간")
+        }
+    }
+
+    @Test func problemSetDiscard() throws {
+        try h.expectSame(["problem-set", "discard", "EC4207/2024 Midterm.pdf", "--yes"], prepare: proposed) { _ in
+            ProblemSetDiscard(course: course, material: Self.midtermID)
+        }
+    }
+
     @Test func problemSetLink() throws {
         try h.expectSame(["problem-set", "link", "EC4207/Exercise 1", "3a", "매칭"], setup: [Self.addUnit, Self.addSet]) { _ in
             ProblemLinkUnit(course: course, set: Self.set, number: "3a", unit: Self.unit, linked: true)

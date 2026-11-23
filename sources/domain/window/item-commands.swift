@@ -48,6 +48,7 @@ extension CourseFile {
         if mac && !material.isFolder { commands.append(.openWithDefault) }
         if mac && material.isFolder { commands.append(.openInEditor) }
         if let pdf { commands.append(.openPDF(pdf)) }
+        if ProblemExtraction.accepts(material) { commands.append(.extractProblems) }
         commands += [.edit, .move]
         switch host {
         case .exam(let exam) where material.examIds.contains(exam): commands.append(.unlink(host))

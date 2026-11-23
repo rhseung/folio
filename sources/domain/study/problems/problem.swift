@@ -9,7 +9,7 @@ public struct Problem: Codable, Sendable, Equatable, Identifiable {
     public var points: Double?
     // 문제지 PDF에서 이 문제가 시작하는 쪽(1부터)이다.
     public var page: Int?
-    // 마크다운이고 수식은 LaTeX(`$...$`)다.
+    // LaTeX 본문 원문이고 `StudyText`가 그리는 부분집합만 쓴다. 예전에 쓴 마크다운 강조(`**`, `*`)도 그대로 읽힌다.
     public var text: String
     public var format: ProblemFormat
     public var options: [String]
@@ -19,11 +19,16 @@ public struct Problem: Codable, Sendable, Equatable, Identifiable {
     // 해설 PDF에서 이 문제의 해설이 있는 쪽이다.
     public var solutionPage: Int?
     public var lecturePages: [ProblemPage]
+    // 문제지 PDF에서 이 문제 전체가 있는 칸과, 풀 때 봐야 하는 그림의 칸이다. 글로 옮긴 문제에는 그림이 없어서 앱이 PDF의 이
+    // 칸을 잘라 보인다. 소문제들이 함께 보는 그림은 소문제가 아니라 지문(`ProblemGroup`)에 있다.
+    public var region: ProblemRegion?
+    public var figures: [ProblemRegion]
 
     public init(
         id: UUID = UUID(), number: String, parent: String? = nil, points: Double? = nil, page: Int? = nil, text: String = "",
         format: ProblemFormat = .written, options: [String] = [], answer: String? = nil, unitIds: [UUID] = [],
-        solution: String? = nil, solutionPage: Int? = nil, lecturePages: [ProblemPage] = []
+        solution: String? = nil, solutionPage: Int? = nil, lecturePages: [ProblemPage] = [], region: ProblemRegion? = nil,
+        figures: [ProblemRegion] = []
     ) {
         self.id = id
         self.number = number
@@ -38,6 +43,8 @@ public struct Problem: Codable, Sendable, Equatable, Identifiable {
         self.solution = solution
         self.solutionPage = solutionPage
         self.lecturePages = lecturePages
+        self.region = region
+        self.figures = figures
     }
 
     // Claude와 사람이 쓴 파일에서 오므로 빠진 칸은 빈 값으로 읽는다.
@@ -56,6 +63,32 @@ public struct Problem: Codable, Sendable, Equatable, Identifiable {
         solution = try c.decodeIfPresent(String.self, forKey: .solution)
         solutionPage = try c.decodeIfPresent(Int.self, forKey: .solutionPage)
         lecturePages = try c.decodeIfPresent([ProblemPage].self, forKey: .lecturePages) ?? []
+        region = try c.decodeIfPresent(ProblemRegion.self, forKey: .region)
+        figures = try c.decodeIfPresent([ProblemRegion].self, forKey: .figures) ?? []
+    }
+
+    // 그림이 없는 문제에 빈 `figures`를 쓰지 않는다. 그림 칸이 생기기 전에 받은 모든 문제의 course.json이 바뀌지 않게 하려는 것이다.
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(number, forKey: .number)
+        try c.encodeIfPresent(parent, forKey: .parent)
+        try c.encodeIfPresent(points, forKey: .points)
+        try c.encodeIfPresent(page, forKey: .page)
+        try c.encode(text, forKey: .text)
+        try c.encode(format, forKey: .format)
+        try c.encode(options, forKey: .options)
+        try c.encodeIfPresent(answer, forKey: .answer)
+        try c.encode(unitIds, forKey: .unitIds)
+        try c.encodeIfPresent(solution, forKey: .solution)
+        try c.encodeIfPresent(solutionPage, forKey: .solutionPage)
+        try c.encode(lecturePages, forKey: .lecturePages)
+        try c.encodeIfPresent(region, forKey: .region)
+        if !figures.isEmpty { try c.encode(figures, forKey: .figures) }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, number, parent, points, page, text, format, options, answer, unitIds, solution, solutionPage, lecturePages, region, figures
     }
 
     public var hasSolution: Bool { !(solution ?? "").isEmpty || solutionPage != nil }

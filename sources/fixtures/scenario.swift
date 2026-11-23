@@ -33,6 +33,7 @@ public enum Scenario: String, CaseIterable, Sendable {
             // 과목이 이 파일의 hash를 갖도록 슬라이드를 추적하기 전에 쓴다. 아래에서 단원으로 나누므로 열 수 있는 쪽이
             // 필요하다. 자리표시자로는 나누기 화면과 구간 막대에 보일 것이 없었다.
             try SampleLecture.write(to: folder.appending(path: Builder.graphFolder).appending(path: Builder.matchingSlides))
+            try SampleSheet.write(to: folder.appending(path: Builder.graphFolder).appending(path: Builder.midtermSheet))
             try build.busyDay(extraExams: self == .manyExams)
         case .quietDay: try build.quietDay()
         case .empty: break
@@ -59,6 +60,7 @@ private struct Builder {
     let linearAlgebra = UUID(uuidString: "C0000000-0000-4000-8000-000000000001")!
     static let graphFolder = "2026-3/EC4207 그래프 이론"
     static let matchingSlides = "Lectures/05_Matchings.pdf"
+    static let midtermSheet = "Inherited/소순범/2024 Midterm.pdf"
 
     func at(_ m: Int, _ d: Int, _ h: Int = 0, _ min: Int = 0) -> Date { Scenario.at(2026, m, d, h, min) }
 
@@ -143,6 +145,23 @@ private struct Builder {
             for page in 1...8 { try run(MaterialViewed(course: course, material: slides.id, page: page), at: at(11, 1, 13)) }
         }
         try run(ExamPlanMake(course: course, exam: exam), at: at(11, 4, 8))
+
+        // 2024 중간고사는 Claude가 뽑아 둔 초안으로 남아 문제 페이지에 알림 카드가 뜬다. 문제지가 영어라 뽑은 글도 영어다.
+        if let sheet = try ctx.file(course).materials.first(where: { $0.path == Self.midtermSheet }) {
+            var drafted = [
+                problem("1", "Is the graph $K_{3,3}$ below planar? Answer true or false.", .trueFalse, "거짓", coloring, page: 1),
+                problem("2a", "State Hall's theorem.", .written, nil, matching, page: 2),
+                problem("2b", "Use it to decide whether $G$ has a perfect matching.", .written, nil, matching, page: 2),
+                problem("3", "Find the chromatic number of the Petersen graph.", .short, "3", coloring, page: 3),
+            ]
+            drafted[0].figures = SampleSheet.planarFigure.map { [$0] } ?? []
+            drafted[1].parent = "2"
+            drafted[2].parent = "2"
+            let stem = ProblemGroup(
+                number: "2", page: 2, text: "Let $G$ be the bipartite graph below.", figures: SampleSheet.bipartiteFigure.map { [$0] } ?? []
+            )
+            try run(ProblemSetPropose(course: course, material: sheet.id, problems: drafted, groups: [stem]), at: at(11, 4, 9))
+        }
     }
 
     func busyDay(extraExams: Bool = false) throws {

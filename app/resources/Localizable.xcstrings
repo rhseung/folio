@@ -23195,7 +23195,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "문제 묶음이 없어요. 족보나 연습 문제를 묶음으로 넣으면 번호마다 맞았는지 기록할 수 있어요."
+            "value": "문제 묶음이 없어요. 족보, 교재, 연습, 과제 PDF에서 문제를 뽑거나 묶음을 직접 넣으면 번호마다 맞았는지 기록할 수 있어요."
           }
         }
       }
@@ -23772,6 +23772,237 @@
         }
       }
     },
+    "problem-extract.menu": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제 뽑기"
+          }
+        }
+      }
+    },
+    "problem-extract.no-claude": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제를 뽑으려면 Claude를 연결해야 해요. 설정의 Claude 탭에서 연결해요."
+          }
+        }
+      }
+    },
+    "problem-extract.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제를 찾지 못했어요"
+          }
+        }
+      }
+    },
+    "problem-extract.waiting": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 문제 뽑기 대기"
+          }
+        }
+      }
+    },
+    "problem-extract.running": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에서 문제 뽑는 중"
+          }
+        }
+      }
+    },
+    "problem-extract.failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에서 문제를 뽑지 못함"
+          }
+        }
+      }
+    },
+    "problem-extract.ready": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@에서 문제 %2$lld개"
+          }
+        }
+      }
+    },
+    "problem-extract.number": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@번"
+          }
+        }
+      }
+    },
+    "problem-extract.numbers": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@–%2$@번"
+          }
+        }
+      }
+    },
+    "problem-extract.units": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원 %lld개에 이음"
+          }
+        }
+      }
+    },
+    "problem-extract.no-units": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원 없음"
+          }
+        }
+      }
+    },
+    "problem-extract.solution": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "해설 %@"
+          }
+        }
+      }
+    },
+    "problem-extract.review": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "검토"
+          }
+        }
+      }
+    },
+    "problem-extract.accept-all": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두 받기"
+          }
+        }
+      }
+    },
+    "problem-extract.retry": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 뽑기"
+          }
+        }
+      }
+    },
+    "problem-draft.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에서 뽑은 문제"
+          }
+        }
+      }
+    },
+    "problem-draft.accept": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제 %lld개 받기"
+          }
+        }
+      }
+    },
+    "problem-draft.discard": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제안 버리기"
+          }
+        }
+      }
+    },
+    "problem-draft.page": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld쪽"
+          }
+        }
+      }
+    },
+    "problem-extract.pick": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자료에서 문제 뽑기"
+          }
+        }
+      }
+    },
+    "problem-extract.pick-prompt": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제지 찾기"
+          }
+        }
+      }
+    },
     "units.few-problems-none": {
       "extractionState": "manual",
       "localizations": {
@@ -23823,6 +24054,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "문제 풀기"
+          }
+        }
+      }
+    },
+    "study.figure-zoom": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그림 크게 보기"
           }
         }
       }

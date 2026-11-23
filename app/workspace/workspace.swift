@@ -43,6 +43,7 @@ final class Workspace {
     // 픽스처로 복구하지 않고 그 자리에서 멈춘다(`LocalFolders`).
     @ObservationIgnored lazy var pendingRecordings = PendingRecordings(url: LocalFolders.applicationSupport("Recording", perGIST: true))
     let transcriptions = TranscriptionQueue()
+    let extractor = ProblemExtractor()
     var releaseNotes = ReleaseNotes()
     var lms = LMSConnection()
     var diagnostics = DiagnosticLog()
@@ -315,13 +316,18 @@ final class Workspace {
             reload()
             return
         }
+        var added: [UUID: [UUID]] = [:]
         for (id, doc) in ctx.savedCourses {
-            if let i = courses.firstIndex(where: { $0.id == id }) { courses[i].document = doc }
+            guard let i = courses.firstIndex(where: { $0.id == id }) else { continue }
+            let before = Set(courses[i].file.materials.map(\.id))
+            added[id] = doc.model.materials.map(\.id).filter { !before.contains($0) }
+            courses[i].document = doc
         }
         for id in ctx.loggedCourses {
             guard let course = course(id) else { continue }
             studyEvents[id] = Self.studyEvents(course.store)
         }
+        for (id, materials) in added where !materials.isEmpty { extractNewSheets(materials, in: id) }
     }
 
     func perform(_ action: () throws -> Void) {

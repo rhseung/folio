@@ -39,3 +39,30 @@ public struct StudyDraft: Entity {
 
     public var isApplied: Bool { proposal.applied == true }
 }
+
+extension StudyDraft {
+    // 문제 초안의 문제는 받으면 실행할 `problem-set add` 입력의 `problems`에 있다. 따로 두면 검토에서 고친 문제와 받을 때
+    // 실행하는 입력이 어긋난다.
+    public var problems: [Problem] {
+        get {
+            guard let value = proposal.input["problems"], let data = try? JSONEncoder().encode(value) else { return [] }
+            return (try? JSONDecoder().decode([Problem].self, from: data)) ?? []
+        }
+        set {
+            guard let data = try? JSONEncoder().encode(newValue), let value = try? JSONDecoder().decode(JSONValue.self, from: data) else {
+                return
+            }
+            proposal.input["problems"] = value
+        }
+    }
+
+    public var groups: [ProblemGroup] {
+        guard let value = proposal.input["groups"], let data = try? JSONEncoder().encode(value) else { return [] }
+        return (try? JSONDecoder().decode([ProblemGroup].self, from: data)) ?? []
+    }
+
+    public var solutionMaterialId: UUID? {
+        if case .string(let s)? = proposal.input["solution"] { return UUID(uuidString: s) }
+        return nil
+    }
+}
