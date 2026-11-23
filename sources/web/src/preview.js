@@ -126,6 +126,25 @@ export function preview({ typeset, redraw }) {
     }
   }
 
+  // 이 문서는 노트가 바뀌어도 그대로라서 WebKit은 같은 주소의 파일을 다시 요청하지 않는다. 앱이 다시 쓴 파일의 판을 주면
+  // 주소에 붙여 새로 읽는다. 바뀌지 않은 블록은 다시 만들지 않으므로 페이지의 모든 요소를 본다.
+  const stamp = (versions) => {
+    for (const el of document.body.querySelectorAll("img[src], video[src], source[src]")) {
+      const raw = el.dataset.file ?? el.getAttribute("src");
+      let url;
+      try {
+        url = new URL(raw, document.baseURI);
+      } catch {
+        continue;
+      }
+      const version = url.protocol === "folio-file:" && versions?.[decodeURIComponent(url.pathname)];
+      if (!version) continue;
+      el.dataset.file = raw;
+      url.searchParams.set("v", version);
+      if (el.getAttribute("src") !== url.href) el.setAttribute("src", url.href);
+    }
+  };
+
   const margin = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--margin")) || 0;
   const top = (node) => node.getBoundingClientRect().top + scrollY;
 
@@ -194,6 +213,7 @@ export function preview({ typeset, redraw }) {
       prepare(made.flatMap((b) => b.nodes));
       shown = [...shown.slice(0, head), ...middle, ...shown.slice(shown.length - tail)];
       if (editable) prepare(shown.flatMap((b) => b.nodes));
+      stamp(next.versions);
       if (cardFor && !cardFor.isConnected) hideCard();
       // 블록 위쪽을 고치면 블록의 HTML은 그대로여도 줄 번호는 바뀌므로, 모든 블록의 줄을 다시 적는다.
       shown.forEach((block, i) => {
