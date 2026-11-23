@@ -135,7 +135,11 @@ extension CourseFile {
     }
 
     public func subject(of session: Session, besides: UUID? = nil) -> String? {
-        let units = UnitTree.deepest(units(of: session), in: units).filter { $0.id != besides }
+        subject(of: session, besides: besides, outline: UnitTree.outline(units).map(\.unit))
+    }
+
+    func subject(of session: Session, besides: UUID? = nil, outline: [Unit]) -> String? {
+        let units = UnitTree.deepest(units(of: session, outline: outline), in: units).filter { $0.id != besides }
         return units.isEmpty ? nil : units.map(\.title).joined(separator: " · ")
     }
 
