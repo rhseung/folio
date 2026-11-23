@@ -82,7 +82,9 @@ struct SolveRun: View {
             }
         }
         .controlSize(.large)
-        .padding(.horizontal, Theme.Space.xl)
+        .padding(.leading, Theme.Space.xl)
+        // 창의 오른쪽 아래에는 Claude 단추가 떠 있다. 그 자리를 비워야 채점과 내기 단추가 가려지지 않는다.
+        .padding(.trailing, Theme.Size.fab + Theme.Space.l * 2)
         .padding(.vertical, Theme.Space.m)
     }
 }

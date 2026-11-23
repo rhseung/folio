@@ -41,13 +41,14 @@ struct SessionsView: View {
             if !left.isEmpty { leftUnwrappedCard(left, file: file) }
             if !model.untouched.isEmpty { untouchedCard }
 
-            // 자기 폭으로 표와 목록을 고른다. 창 크기가 아니라 칸의 폭을 따라야 좁은 칸에서도 넘치지 않는다.
+            // 자기 폭으로 표와 목록을 고른다. 창 크기가 아니라 칸의 폭을 따라야 좁은 칸에서도 넘치지 않는다. 재기 전에도 폭을 잴
+            // 빈 뷰를 둔다. 비어 있는 Group에는 `onGeometryChange`가 붙지 않는다.
             Group {
                 if !table.weeks.isEmpty {
-                    if model.form == .list {
-                        SessionAgendaView(model: model, course: course, table: table)
-                    } else {
-                        SessionTableView(model: model, course: course, table: table)
+                    switch model.form {
+                    case .list: SessionAgendaView(model: model, course: course, table: table)
+                    case .compact, .wide: SessionTableView(model: model, course: course, table: table)
+                    case nil: Color.clear.frame(height: 0)
                     }
                 }
             }

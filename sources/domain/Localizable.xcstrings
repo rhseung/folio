@@ -3839,6 +3839,28 @@
           }
         }
       }
+    },
+    "exam-plan.title.units-in": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 단원 %2$lld개"
+          }
+        }
+      }
+    },
+    "exam-plan.title.units-more": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 외 %2$lld개"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

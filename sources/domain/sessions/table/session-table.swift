@@ -50,19 +50,23 @@ public struct SessionTable: Sendable {
 
         let classes = (file.sessions + planned).filter { !$0.isCancelled && $0.date > now }
         let next = classes.min(by: Session.inOrder).map(\.date)
+        let outline = UnitTree.outline(file.units).map(\.unit)
+        let lectures = Set(file.lectureFiles.map(\.id))
         var entries = file.sessions.map {
             SessionTableEntry.session(
-                $0, planned: false, next: $0.date == next, in: file, now: now, settings: settings, asksWrapUp: asksWrapUp,
-                calendar: calendar)
+                $0, planned: false, next: $0.date == next, in: file, outline: outline, lectures: lectures, now: now, settings: settings,
+                asksWrapUp: asksWrapUp, calendar: calendar)
         }
         // 저장한 회차와 같은 시각의 예정 수업은 그 회차가 대신한다.
         let saved = Set(file.sessions.map(\.date))
         entries += planned.filter { !saved.contains($0.date) }.map {
             SessionTableEntry.session(
-                $0, planned: true, next: $0.date == next && !saved.contains($0.date), in: file, now: now, settings: settings,
-                asksWrapUp: false, calendar: calendar)
+                $0, planned: true, next: $0.date == next && !saved.contains($0.date), in: file, outline: outline, lectures: lectures,
+                now: now, settings: settings, asksWrapUp: false, calendar: calendar)
         }
-        entries += file.exams.compactMap { e in e.start.map { SessionTableEntry.exam(e, at: $0, in: file, calendar: calendar) } }
+        entries += file.exams.compactMap { e in
+            e.start.map { SessionTableEntry.exam(e, at: $0, in: file, outline: outline, calendar: calendar) }
+        }
         entries += file.assignments.compactMap { a in a.due.map { SessionTableEntry.deadline(a, at: $0, now: now, calendar: calendar) } }
         entries = Self.ordered(entries)
 
