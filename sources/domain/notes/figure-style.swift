@@ -48,6 +48,10 @@ public enum FigureStyle {
         // 클래스 이름과 글자 크기다. 노트 열이 좁아져도 읽히는 가장 작은 크기가 12px다.
         public static let sizes: [(name: String, size: Double)] = [("sm", 12), ("lg", 17)]
         public static let bold = "bd"
+        // 코드 라벨의 클래스다. 쓸 때 낱말을 LaTeX 타자기체(`\texttt`) path로 바꾸고, `\texttt`로 쓸 수 없는 글자만
+        // 이 글꼴로 둔다. mermaid 도식의 코드와 같은 모양이다.
+        public static let mono = "mono"
+        public static let monoFamily = #"ui-monospace,"SF Mono",Menlo,monospace"#
         // KaTeX가 수식을 본문의 1.21배로 그리는 것과 같은 비율이다. Computer Modern의 x-height가 SF보다 작아서 이만큼
         // 키워야 낱말과 높이가 맞는다.
         public static let mathScale = 1.21
@@ -57,6 +61,10 @@ public enum FigureStyle {
 
     // 그림 안의 글은 라벨만 둔다. 설명 문단은 노트 본문이 맡는다. 수식 하나는 한 글자로 센다.
     public static let labelLimit = 32
+    // 글자로만 된 두 글자 이상의 낱말이 이만큼 있으면 라벨이 아니라 문장이다. 정점·집합 이름, 축, 짧은 태그("augmenting path",
+    // "back edge to ancestor")는 네 낱말 안에 든다. 한 글자 변수, 숫자가 든 이름(`t1`), 기호는 세지 않아서
+    // 코드 줄(`t1 = y + z`)은 걸리지 않는다. 코드 클래스(`mono`)의 라벨은 세지 않는다.
+    public static let proseWords = 5
 
     // 쓸 때 넣는 `<style>`과 `<defs>`의 id다. 고쳐 쓸 때 이 id로 찾아 걷어 내고 다시 넣는다. 그림 엔진(figure.js)도
     // 같은 id를 쓴다.
@@ -85,13 +93,16 @@ public enum FigureStyle {
         + "style=\"position:absolute;width:0;height:0;overflow:hidden;pointer-events:none\"><defs>"
         + inks.map { marker($0, paint: "style=\"fill:var(--\($0.name))\"") }.joined() + "</defs></svg>"
 
-    // 그림의 `<style>` 내용이다. class 없는 글자도 다크에서 사라지지 않게 글자의 기본색을 둔다.
+    // 그림의 `<style>` 내용이다. 글꼴과 글자색은 루트 `svg`에 두어 물려받게 한다. `text{…}`처럼 글자에 바로 걸면
+    // `<g class="p-blue">`나 `<g class="sm">` 아래의 글자가 그 클래스를 물려받지 못한다. 루트의 fill은 class 없는 글자와
+    // 면이 다크에서 사라지지 않게 하는 기본색이다.
     public static let css: String = {
         let fonts =
-            "text{font-family:\(Font.sans);font-size:\(g(Font.size))px}"
+            "svg{font-family:\(Font.sans);font-size:\(g(Font.size))px}"
             + Font.sizes.map { ".\($0.name){font-size:\(g($0.size))px}" }.joined() + ".\(Font.bold){font-weight:700}"
+            + ".\(Font.mono){font-family:\(Font.monoFamily)}"
         func colors(_ pick: (Ink) -> String) -> String {
-            "text{fill:\(pick(ink))}" + inks.map { ".\($0.fill){fill:\(pick($0))}.\($0.stroke){stroke:\(pick($0))}" }.joined()
+            "svg{fill:\(pick(ink))}" + inks.map { ".\($0.fill){fill:\(pick($0))}.\($0.stroke){stroke:\(pick($0))}" }.joined()
         }
         return fonts + colors(\.light) + "@media (prefers-color-scheme: dark){\(colors(\.dark))}"
     }()
@@ -116,13 +127,14 @@ public enum FigureStyle {
             var grid: String
             var ink: String
             var bold: String
+            var mono: String
             var sizes: [String: Double]
             var mathScale: Double
             var monoEm: Double
         }
         let table = Table(
             css: css, markers: Dictionary(uniqueKeysWithValues: inks.map { (markerID($0), marker($0)) }), fills: inks.map(\.fill),
-            strokes: inks.map(\.stroke), paper: paper.fill, grid: grid.stroke, ink: ink.fill, bold: Font.bold,
+            strokes: inks.map(\.stroke), paper: paper.fill, grid: grid.stroke, ink: ink.fill, bold: Font.bold, mono: Font.mono,
             sizes: Dictionary(uniqueKeysWithValues: [("", Font.size)] + Font.sizes.map { ($0.name, $0.size) }), mathScale: Font.mathScale,
             monoEm: Font.monoEm)
         let encoder = JSONEncoder()

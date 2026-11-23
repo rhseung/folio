@@ -8,7 +8,7 @@ struct NoteFigureTests {
         <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 40">
         <defs><marker id="arrow" markerWidth="6" markerHeight="4"><path d="M0 0L4 2L0 4z"/></marker></defs>
         <path class="s-ink" fill="none" d="M0 0L10 10" marker-end="url(#m-ink)"/><use xlink:href="#arrow"/>
-        <image href="data:image/png;base64,iVBORw0KGgo="/><text class="p-blue" x="4" y="20">매칭 $M$</text>
+        <image href="data:image/png;base64,iVBORw0KGgo="/><text class="p-blue" x="4" y="20">matching $M$</text>
         <rect style="fill:none;stroke-width:1.3" class="s-p-red" width="10" height="10"/>
         </svg>
         """
@@ -44,8 +44,8 @@ struct NoteFigureTests {
     }
 
     @Test func longTextAndBigArrowheadsAreCaught() {
-        let long = String(repeating: "가", count: FigureStyle.labelLimit + 1)
-        let fits = String(repeating: "가", count: FigureStyle.labelLimit - 2) + " $\\frac{a}{b}$"
+        let long = String(repeating: "x", count: FigureStyle.labelLimit + 1)
+        let fits = String(repeating: "x", count: FigureStyle.labelLimit - 2) + " $\\frac{a}{b}$"
         let svg = """
             <svg xmlns="http://www.w3.org/2000/svg"><text>\(long)</text><text>\(fits)</text>
             <marker id="big" markerWidth="12" markerHeight="4"/><marker id="wide" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9"/>
@@ -53,6 +53,27 @@ struct NoteFigureTests {
             </svg>
             """
         #expect(Set(NoteFigure.problems(svg)) == [.longText(long), .bigArrow("#big"), .bigArrow("#wide")])
+    }
+
+    // 그림에는 기호와 영어 라벨만 둔다. 한국어와 문장은 노트 본문으로 보낸다. 코드 줄과 짧은 태그는 라벨이다.
+    @Test func koreanAndSentencesStayInTheNoteBody() {
+        let svg = """
+            <svg xmlns="http://www.w3.org/2000/svg">
+            <text>씨앗 $: start symbol</text><text>$v_1$ 정점</text><text>ㄱ</text>
+            <text>the shortest path from s to t</text><text>Sum of all the degrees is $2|E|$</text>
+            <text>t1 = y + z</text><text>if x &lt; 3 goto L1</text><text>back edge to ancestor</text><text>(a) augmenting path</text>
+            <text>$\\text{the long way round to the end}$</text><text class="mono">for each vertex in the graph</text>
+            <g class="mono"><text>return the value of node</text></g>
+            </svg>
+            """
+        #expect(
+            Set(NoteFigure.problems(svg)) == [
+                .hangul("씨앗 $: start symbol"), .hangul("$v_1$ 정점"), .hangul("ㄱ"), .prose("the shortest path from s to t"),
+                .prose("Sum of all the degrees is $2|E|$"),
+            ])
+        #expect(NoteFigure.proseWords("the shortest path from s to t") == 5)
+        #expect(NoteFigure.proseWords("t1 = y + z") == 0)
+        #expect(NoteFigure.proseWords("zig-zag u's edge") == 3)
     }
 
     // 쓸 때 넣은 스타일에는 hex 색이 있다. 이미 마무리한 그림을 다시 검사해도 걸리지 않아야 한다.

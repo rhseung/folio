@@ -27,6 +27,8 @@ public enum NoteFigure {
         case external(String)
         case color(String)
         case longText(String)
+        case hangul(String)
+        case prose(String)
         case bigArrow(String)
         case tex(String, reason: String)
         case tspanMath(String)
@@ -36,6 +38,8 @@ public enum NoteFigure {
         case outside(String)
         case notThrough(String, String, gap: String)
         case noPoint(String, String)
+        case outOfCell(String, String)
+        case looseEnd(String, String, gap: String)
         case notDrawn(String)
 
         public var message: String {
@@ -46,6 +50,8 @@ public enum NoteFigure {
             case .external(let ref): String(localized: .figureProblemExternal(ref))
             case .color(let value): String(localized: .figureProblemColor(value))
             case .longText(let text): String(localized: .figureProblemLongText(text, FigureStyle.labelLimit))
+            case .hangul(let text): String(localized: .figureProblemHangul(text))
+            case .prose(let text): String(localized: .figureProblemProse(text))
             case .bigArrow(let marker): String(localized: .figureProblemBigArrow(marker))
             case .tex(let tex, let reason): String(localized: .figureProblemTex(tex, reason))
             case .tspanMath(let text): String(localized: .figureProblemTspanMath(text))
@@ -55,6 +61,8 @@ public enum NoteFigure {
             case .outside(let label): String(localized: .figureProblemOutside(label))
             case .notThrough(let shape, let point, let gap): String(localized: .figureProblemNotThrough(shape, point, gap))
             case .noPoint(let shape, let point): String(localized: .figureProblemNoPoint(shape, point))
+            case .outOfCell(let item, let cell): String(localized: .figureProblemOutOfCell(item, cell))
+            case .looseEnd(let edge, let vertex, let gap): String(localized: .figureProblemLooseEnd(edge, vertex, gap))
             case .notDrawn(let reason): String(localized: .figureProblemNotDrawn(reason))
             }
         }
@@ -93,8 +101,30 @@ public enum NoteFigure {
         }
         cssProblems(reader.styles).forEach(add)
         colorProblems(declarations: reader.styles).forEach(add)
-        for label in reader.labels where visibleLength(label) > FigureStyle.labelLimit { add(.longText(label)) }
+        for label in reader.labels {
+            if visibleLength(label.text) > FigureStyle.labelLimit { add(.longText(label.text)) }
+            if hasHangul(label.text) { add(.hangul(label.text)) }
+            if !label.classes.contains(FigureStyle.Font.mono), proseWords(label.text) >= FigureStyle.proseWords { add(.prose(label.text)) }
+        }
         return found
+    }
+
+    // 그림은 노트 언어와 상관없이 기호와 영어 라벨만 둔다. 한국어 설명은 노트 본문에 둔다.
+    static func hasHangul(_ text: String) -> Bool {
+        text.unicodeScalars.contains {
+            (0xAC00...0xD7A3).contains($0.value) || (0x1100...0x11FF).contains($0.value) || (0x3130...0x318F).contains($0.value)
+        }
+    }
+
+    // 수식 밖에서 공백으로 나눈 조각 중 글자로만 된 두 글자 이상의 낱말 수다. 앞뒤의 문장부호와 괄호는 떼고 본다.
+    // 한 글자 변수, 숫자나 `_`, `.`, `(`가 든 조각(`t1`, `make_pkt(ACK)`, `gaia.cs.umass.edu`)은 코드라서 세지 않는다.
+    public static func proseWords(_ text: String) -> Int {
+        let outside = text.replacing("\\$", with: " ").replacing(/\$[^$]+\$/, with: " ")
+        let edges = CharacterSet.punctuationCharacters.union(.symbols)
+        return outside.split(whereSeparator: \.isWhitespace).filter { token in
+            let word = String(token).trimmingCharacters(in: edges)
+            return word.count >= 2 && word.allSatisfy { $0.isLetter || $0 == "'" || $0 == "-" } && word.contains(where: \.isLetter)
+        }.count
     }
 
     static func cssProblems(_ css: String) -> [Problem] {
@@ -146,10 +176,13 @@ private final class SVGReader: NSObject, XMLParserDelegate {
     var root: String?
     var elements: [(String, [String: String])] = []
     var styles = ""
-    var labels: [String] = []
+    var labels: [(text: String, classes: Set<String>)] = []
     private var inStyle = 0
     private var inText = 0
     private var label = ""
+    private var labelClasses: Set<String> = []
+    // 열린 요소마다의 class다. `<g class="mono">` 아래 글자도 코드다.
+    private var classes: [Set<String>] = []
     // 쓸 때 넣은 `<style>`과 `<defs>` 안이다.
     private var own = 0
 
@@ -162,9 +195,13 @@ private final class SVGReader: NSObject, XMLParserDelegate {
             return
         }
         elements.append((name, attributes))
+        classes.append(Set((attributes["class"] ?? "").split(whereSeparator: \.isWhitespace).map(String.init)))
         if NoteFigure.local(name) == "style" { inStyle += 1 }
         if NoteFigure.local(name) == "text" {
-            if inText == 0 { label = "" }
+            if inText == 0 {
+                label = ""
+                labelClasses = classes.reduce(into: []) { $0.formUnion($1) }
+            }
             inText += 1
         }
     }
@@ -174,10 +211,11 @@ private final class SVGReader: NSObject, XMLParserDelegate {
             own -= 1
             return
         }
+        classes.removeLast()
         if NoteFigure.local(name) == "style" { inStyle -= 1 }
         if NoteFigure.local(name) == "text" {
             inText -= 1
-            if inText == 0 { labels.append(label.trimmingCharacters(in: .whitespacesAndNewlines)) }
+            if inText == 0 { labels.append((label.trimmingCharacters(in: .whitespacesAndNewlines), labelClasses)) }
         }
     }
 

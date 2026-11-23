@@ -41,7 +41,7 @@ struct FigureStyleTests {
         let css = FigureStyle.css
         #expect(css.contains(".p-blue{fill:#1A2FFF}.s-p-blue{stroke:#1A2FFF}"))
         let dark = css.split(separator: "@media (prefers-color-scheme: dark)").last.map(String.init) ?? ""
-        #expect(dark.contains(".ink{fill:#E6E2DB}") && dark.contains("text{fill:#E6E2DB}"))
+        #expect(dark.contains(".ink{fill:#E6E2DB}") && dark.contains("svg{fill:#E6E2DB}"))
         #expect(css.contains(".sm{font-size:12px}") && css.contains(".bd{font-weight:700}"))
         #expect(FigureStyle.variables.contains("--p-red:#E8141C;") && FigureStyle.variables.contains("--figure-math-scale:1.21;"))
     }

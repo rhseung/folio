@@ -67,6 +67,8 @@ public enum NoteFigureFinish {
             case "outside": .outside(a ?? "")
             case "through": .notThrough(a ?? "", b ?? "", gap: text ?? "")
             case "point": .noPoint(a ?? "", b ?? "")
+            case "cell": .outOfCell(a ?? "", b ?? "")
+            case "loose": .looseEnd(a ?? "", b ?? "", gap: text ?? "")
             case "diagram": .notDrawn(reason ?? "")
             default: nil
             }
