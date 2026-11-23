@@ -26,8 +26,9 @@ public struct ProblemFigureWrite {
         let wanted = number.trimmingCharacters(in: .whitespaces)
         guard let id = s.problems.first(where: { $0.number == wanted })?.id ?? s.groups.first(where: { $0.number == wanted })?.id
         else { throw ActionError.notFound(String(localized: .errorNotFoundProblem(wanted))) }
-        let finished = try figure.map(NoteFigureAdd.finish)
-        let solution = try solutionFigure.map(NoteFigureAdd.finish)
+        let korean = FigureStyle.allowsKorean(file.course, catalog: try ctx.catalog())
+        let finished = try figure.map { try NoteFigureAdd.finish($0, korean: korean) }
+        let solution = try solutionFigure.map { try NoteFigureAdd.finish($0, korean: korean) }
 
         let path = ProblemArt.path(id)
         let old = store.problemArt()[id]

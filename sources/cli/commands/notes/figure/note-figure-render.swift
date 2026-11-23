@@ -32,8 +32,10 @@ extension NoteCommand.Figure {
                 let (file, read) = try reporting { try MaterialText.figure(c.store, name) }
                 source = ((file as NSString).deletingPathExtension, read)
             }
+            let korean = try c.map { FigureStyle.allowsKorean($0.course, catalog: try r.ctx.catalog()) } ?? false
             try out.report(
-                try PageRender.figure(source.text, accent: c?.color ?? CourseColor.neutral, widths: out.sizes), label: source.label,
+                try PageRender.figure(source.text, accent: c?.color ?? CourseColor.neutral, korean: korean, widths: out.sizes),
+                label: source.label,
                 json: g.json)
         }
     }

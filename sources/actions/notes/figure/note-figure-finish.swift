@@ -15,9 +15,10 @@ public enum NoteFigureFinish {
         public let description: String
     }
 
-    public static func finish(_ svg: String) throws -> Finished {
+    // `korean`은 한국어 라벨을 받는 과목(`FigureStyle.allowsKorean`)의 그림이다.
+    public static func finish(_ svg: String, korean: Bool = false) throws -> Finished {
         let source = try engine.call("source", svg)
-        let found = NoteFigure.problems(source)
+        let found = NoteFigure.problems(source, korean: korean)
         if found.contains(where: { if case .notXML = $0 { true } else if case .notSVG = $0 { true } else { false } }) {
             return Finished(svg: svg, problems: found)
         }
@@ -67,6 +68,8 @@ public enum NoteFigureFinish {
             case "outside": .outside(a ?? "")
             case "through": .notThrough(a ?? "", b ?? "", gap: text ?? "")
             case "point": .noPoint(a ?? "", b ?? "")
+            case "cell": .outOfCell(a ?? "", b ?? "")
+            case "loose": .looseEnd(a ?? "", b ?? "", gap: text ?? "")
             case "diagram": .notDrawn(reason ?? "")
             default: nil
             }

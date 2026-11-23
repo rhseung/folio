@@ -56,16 +56,17 @@ struct ProblemArtDrawing {
         let art = loaded.store.problemArt()
         let stemFigure = job.stems.reversed().lazy.compactMap { art[$0.id]?.model.figure }.first
 
+        let korean = FigureStyle.allowsKorean(loaded.file.course, catalog: workspace.catalog)
         do {
             var draft = try await client.drawProblemArt(job, crops: crops, stemFigure: stemFigure)
             // 그리지 않는 항목은 그림을 쓰지 않으므로 검사도, 고쳐 달라는 재요청도 하지 않는다.
-            let problems = job.draws ? Self.problems(draft) : []
+            let problems = job.draws ? Self.problems(draft, korean: korean) : []
             if !problems.isEmpty {
                 draft = try await client.drawProblemArt(job, crops: crops, stemFigure: stemFigure, previous: draft, problems: problems)
             }
             // 고쳐도 검사에 걸리는 그림이 있으면 쓰지 않는다. 파일이 있으면 다음 문제집이 다시 그리지 않으므로, 한 번의 실패가
             // 굳지 않게 실패로만 세어 다음에 다시 맡긴다. 이번 문제집에는 자른 그림이 들어간다. 그릴 것이 없다는 답(null)은 쓴다.
-            let rejected = job.draws && !Self.problems(draft).isEmpty
+            let rejected = job.draws && !Self.problems(draft, korean: korean).isEmpty
             if job.draws, !rejected {
                 _ = try workspace.runThrowing(
                     ProblemFigureWrite(
@@ -84,9 +85,9 @@ struct ProblemArtDrawing {
         }
     }
 
-    private static func problems(_ draft: ProblemArtDraft) -> [String] {
+    private static func problems(_ draft: ProblemArtDraft, korean: Bool) -> [String] {
         [draft.figure, draft.solutionFigure].compactMap { $0 }.flatMap { svg -> [String] in
-            do { return try NoteFigureFinish.finish(svg).problems.map(\.message) } catch { return ["\(error)"] }
+            do { return try NoteFigureFinish.finish(svg, korean: korean).problems.map(\.message) } catch { return ["\(error)"] }
         }
     }
 }

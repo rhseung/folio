@@ -19,6 +19,8 @@ const SHAPES = new Set(["line", "rect", "circle", "ellipse", "polyline", "polygo
 // 속성 글자로만 보고 넘기는데, 마무리가 한 번 더 펼쳐 검사하지 않은 `<script>`가 파일에 남는다. 펼친 원문은 속성보다
 // 짧으므로 끝난다.
 function unfinish(doc) {
+  const root = elements(doc)[0];
+  if (root) unsize(root);
   for (let changed = true; changed; ) {
     changed = false;
     for (const el of [...walk(doc)]) {
@@ -48,6 +50,34 @@ const mathRuns = (text) => {
 
 const hasMath = (text) => mathRuns(text).some((p) => p.tex != null);
 
+// 크기가 없는 SVG 이미지는 노트 열 전체 폭으로 늘어나서 작은 그림이 크게 보인다. 그래서 쓸 때 viewBox의 크기를 넣고,
+// 노트는 열보다 넓은 그림만 열 폭으로 줄인다. 넣은 값은 viewBox와 같으므로 걷을 때 뺀다.
+function size(root) {
+  const box = viewBox(root);
+  if (!box || !(box[2] > 0 && box[3] > 0)) return;
+  const w = attr(root, "width"), h = attr(root, "height");
+  if (w == null && h == null) {
+    setAttr(root, "width", String(fmt(box[2])));
+    setAttr(root, "height", String(fmt(box[3])));
+  } else if (w == null && Number.isFinite(+h)) setAttr(root, "width", String(fmt((+h * box[2]) / box[3])));
+  else if (h == null && Number.isFinite(+w)) setAttr(root, "height", String(fmt((+w * box[3]) / box[2])));
+}
+
+function unsize(root) {
+  const v = (attr(root, "viewBox") ?? "").trim().split(/[\s,]+/).map(Number);
+  if (v.length !== 4 || +attr(root, "width") !== fmt(v[2]) || +attr(root, "height") !== fmt(v[3])) return;
+  root.attrs = root.attrs.filter(([k]) => k !== "width" && k !== "height");
+}
+
+// 코드 클래스는 `<g class="mono">`에서도 물려받는다.
+const isMono = (el, style) => [el, ...ancestors(el)].some((a) => classes(a).includes(style.mono));
+
+// 글자색 클래스도 부모 `<g>`에서 물려받는다. 수식 조각은 자기 색을 class로 받으므로 원래 `<text>`가 실제로 보이는 색을 찾는다.
+const inkOf = (el, style) => [el, ...ancestors(el)].map((a) => classes(a).find((c) => style.fills.includes(c))).find(Boolean) ?? style.ink;
+
+// 고정폭 글꼴(Menlo, SF Mono)의 한 글자 폭이다. folioMeasure는 시스템 산세리프로만 잰다.
+const MONO_EM = 0.6;
+
 // 글자 크기와 굵기는 낱말 폭을 정한다. style 속성이나 쓴 사람의 CSS 규칙에서 온 값을 빠뜨리면 낱말을 좁게 재서 뒤의
 // 수식이 낱말에 붙거나 겹친다.
 function font(el, style) {
@@ -76,7 +106,6 @@ const fmt = (n) => +n.toFixed(2);
 // `data-source`에 남긴다.
 function typeset(el, style, glyphs, problems) {
   const px = font(el, style), bold = weight(el, style), mpx = px * style.mathScale;
-  const color = classes(el).find((c) => style.fills.includes(c)) ?? style.ink;
   const runs = [];
   for (const part of mathRuns(textOf(el))) {
     if (part.word != null) {
@@ -91,6 +120,23 @@ function typeset(el, style, glyphs, problems) {
       return;
     }
   }
+  lay(el, style, runs, { px, bold, mpx }, glyphs);
+}
+
+// 코드 라벨을 mermaid 도식의 코드와 같이 `\texttt` path로 바꾼다. `\texttt`로 쓸 수 없는 글자(`\`, `^`, `~`)는 고정폭
+// 글꼴의 낱말로 남는다. 공백은 폭만 차지한다.
+function typesetMono(el, style, glyphs) {
+  const px = font(el, style), mpx = px * style.mathScale;
+  const preserve = [el, ...ancestors(el)].some((a) => attr(a, "xml:space") === "preserve");
+  const text = preserve ? textOf(el) : textOf(el).replace(/\s+/g, " ").trim();
+  if (!text) return;
+  const { pieces } = monoPieces([["", text]], 0, "start", px, style.mathScale, style.monoEm, (t, size) => t.length * size * MONO_EM);
+  const runs = pieces.map((p) => (p.tex ? { svg: texToSVG(p.tex), width: p.width } : p.word ? { word: p.word, width: p.width } : { width: p.width }));
+  lay(el, style, runs, { px, bold: weight(el, style), mpx }, glyphs);
+}
+
+function lay(el, style, runs, { px, bold, mpx }, glyphs) {
+  const color = inkOf(el, style);
   const total = runs.reduce((sum, r) => sum + r.width, 0);
   const y = firstNumber(attr(el, "y"));
   let x = firstNumber(attr(el, "x")) - total * (shift[anchor(el, style)] ?? 0);
@@ -105,7 +151,7 @@ function typeset(el, style, glyphs, problems) {
   let body = "";
   for (const r of runs) {
     if (r.word != null) body += `<text x="${fmt(x)}" y="${fmt(y)}"${own}${pieceStyle} xml:space="preserve">${escapeText(r.word)}</text>`;
-    else {
+    else if (r.svg) {
       const [bx, by, bw, bh] = r.svg.box;
       body += `<svg x="${fmt(x)}" y="${fmt(y + (by / 1000) * mpx)}" width="${fmt(r.width)}" height="${fmt((bh / 1000) * mpx)}" `
         + `viewBox="${bx} ${by} ${bw} ${bh}" overflow="visible"><g class="${color}">${shareGlyphs(r.svg.body, glyphs)}</g></svg>`;
@@ -131,12 +177,17 @@ export function finish(source, styleJSON) {
   const root = elements(doc)[0];
   if (!root || local(root.name) !== "svg") return JSON.stringify({ svg: source, problems: [] });
   unfinish(doc);
+  size(root);
 
   const problems = [], glyphs = new Map();
   const ruled = { ...style, rules: rules(root) };
   for (const el of [...walk(root)]) {
     if (el.name !== "text" || ancestors(el).some((a) => HIDDEN.has(a.name))) continue;
     const children = el.kids.filter((k) => k.t === "el");
+    if (isMono(el, ruled) && !children.length) {
+      typesetMono(el, ruled, glyphs);
+      continue;
+    }
     if (children.length) {
       if (children.some((c) => hasMath(textOf(c)))) problems.push({ kind: "tspan", text: textOf(el).trim() });
       continue;
@@ -158,7 +209,7 @@ export function finish(source, styleJSON) {
   for (const n of added.kids) n.parent = root;
   root.kids.unshift(...added.kids);
 
-  problems.push(...overlaps(root, style), ...throughs(root));
+  problems.push(...overlaps(root, style, true), ...throughs(root));
   return JSON.stringify({ svg: serialize(doc), problems });
 }
 
@@ -258,7 +309,8 @@ function ctm(el) {
 }
 
 function textBox(el, text, style, x, y) {
-  const px = font(el, style), w = folioMeasure(text, px, weight(el, style));
+  const px = font(el, style);
+  const w = style.mono && isMono(el, style) ? text.length * px * MONO_EM : folioMeasure(text, px, weight(el, style));
   const left = x - w * (shift[anchor(el, style)] ?? 0);
   return { x: left, y: y - ASCENT * px, w, h: (ASCENT + DESCENT) * px };
 }
@@ -385,7 +437,7 @@ function crowded(root, style) {
   return found;
 }
 
-function overlaps(root, given) {
+function overlaps(root, given, figure = false) {
   const style = { ...given, rules: rules(root) };
   const found = crowded(root, style);
   const all = labels(root, style);
@@ -402,17 +454,17 @@ function overlaps(root, given) {
     const runs = outline(el).map((r) => ({ closed: r.closed, points: r.points.map((p) => apply(m, p)) }));
     const fill = el.name === "line" ? "none" : paint(el, "fill", style);
     const filled = fill !== "none" && fill !== "transparent";
-    shapes.push({ el, runs, fill, filled, cover: filled && opaque(el, style) });
+    const stroke = paint(el, "stroke", style), width = number(el, "stroke-width", style, 1);
+    const grid = classes(el).includes(style.grid) || ancestors(el).some((a) => classes(a).includes(style.grid));
+    shapes.push({ el, runs, fill, filled, cover: filled && opaque(el, style), stroke: stroke !== "none" && width > 0, width, grid, hits: new Set() });
   }
   // 불투명하게 칠한 도형(종이색 정점 원과 상자)은 먼저 그린 선을 가린다. 가린 선 조각은 겹침이 아니다.
   const hidden = (k, p) => shapes.some((s, j) => j > k && s.cover && inFill(s.runs, p));
   shapes.forEach((s, k) => {
-    if (classes(s.el).includes(style.grid) || ancestors(s.el).some((a) => classes(a).includes(style.grid))) return;
-    const hits = new Set();
-    const stroke = paint(s.el, "stroke", style);
-    const width = number(s.el, "stroke-width", style, 1);
-    if (stroke !== "none" && width > 0) {
-      const gap = GAP + width / 2;
+    if (s.grid) return;
+    const hits = s.hits;
+    if (s.stroke) {
+      const gap = GAP + s.width / 2;
       for (const p of along(s.runs)) for (const label of all) if (!hits.has(label) && inside(label, p, gap) && !hidden(k, p)) hits.add(label);
       for (const label of hits) found.push({ kind: "line", a: label.name, shape: describe(s.el) });
     }
@@ -421,7 +473,10 @@ function overlaps(root, given) {
       for (const label of all) {
         if (hits.has(label)) continue;
         const ins = grid(label).map((p) => inFill(s.runs, p));
-        if (ins.some(Boolean) && !ins.every(Boolean)) found.push({ kind: "fill", a: label.name, shape: describe(s.el) });
+        if (ins.some(Boolean) && !ins.every(Boolean)) {
+          hits.add(label);
+          found.push({ kind: "fill", a: label.name, shape: describe(s.el) });
+        }
       }
     }
   });
@@ -433,7 +488,114 @@ function overlaps(root, given) {
         found.push({ kind: "outside", a: label.name });
     }
   }
+  // mermaid 도식의 칸과 선은 라이브러리가 놓으므로 그림에만 본다.
+  if (figure) found.push(...outOfCells(shapes, all, style), ...looseEnds(shapes));
   return found;
+}
+
+// MARK: 칸과 변
+
+const SLACK = 1;
+const bounds = (points) => {
+  const xs = points.map((p) => p[0]), ys = points.map((p) => p[1]);
+  return { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
+};
+const at = ([x, y]) => `@(${Math.round(x)}, ${Math.round(y)})`;
+const named = (el) => describe(el) + (attr(el, "id") ? "#" + attr(el, "id") : "");
+
+// 여러 칸 그림의 칸은 테두리나 칠이 보이는 rect다. 라벨과 도형은 가운데가 든 가장 작은 칸에 속하고, 그 칸의 테두리를
+// 넘으면 칸 밖으로 나간 것이다. 칸 사이를 잇는 선은 두 끝이 다른 칸에 있으므로, 선은 두 끝이 같은 칸에 있을 때만 본다.
+// 칸의 테두리나 칠한 면에 걸린 라벨은 위의 검사가 이미 알렸으므로 다시 알리지 않는다. 칸의 테두리에 걸쳐 그린 rect(프로세스
+// 경계의 소켓, 겹쳐 그린 집합)는 일부러 그린 것이어서 보지 않는다.
+function outOfCells(shapes, labels, style) {
+  const cells = shapes.filter((s) => s.el.name === "rect" && !s.grid && (s.stroke || (s.filled && s.fill !== style.paper)))
+    .map((s) => {
+      const b = bounds(s.runs.flatMap((r) => r.points));
+      return { ...s, area: b.w * b.h };
+    });
+  if (!cells.length) return [];
+  const out = (cell, p) => !inFill(cell.runs, p) && distance(cell.runs, p) > SLACK + cell.width / 2;
+  const home = (p, self, area) =>
+    cells.filter((c) => c.el !== self && c.area > area && inFill(c.runs, p)).sort((a, b) => a.area - b.area)[0];
+  const found = [];
+  for (const label of labels) {
+    const b = label.box, center = apply(label.m, [b.x + b.w / 2, b.y + b.h / 2]);
+    const cell = home(center, null, 0);
+    if (cell && !cell.hits.has(label) && grid(label, 2, 1).some((p) => out(cell, p)))
+      found.push({ kind: "cell", a: label.name, b: `${named(cell.el)} ${at([bounds(cell.runs[0].points).x, bounds(cell.runs[0].points).y])}` });
+  }
+  for (const s of shapes) {
+    if (s.grid || !s.runs.length || s.el.name === "rect") continue;
+    const points = [...along(s.runs, 2)];
+    const open = s.runs.every((r) => !r.closed);
+    let cell;
+    if (open) {
+      const ends = s.runs.filter((r) => r.points.length).flatMap((r) => [r.points[0], r.points[r.points.length - 1]]);
+      const homes = new Set(ends.map((p) => home(p, s.el, 0)));
+      if (homes.size !== 1) continue;
+      cell = [...homes][0];
+    } else {
+      const b = bounds(points);
+      cell = home([b.x + b.w / 2, b.y + b.h / 2], s.el, b.w * b.h);
+    }
+    if (!cell) continue;
+    const outside = points.find((p) => out(cell, p));
+    if (outside) {
+      const box = bounds(cell.runs[0].points);
+      found.push({ kind: "cell", a: `${named(s.el)} ${at(outside)}`, b: `${named(cell.el)} ${at([box.x, box.y])}` });
+    }
+  }
+  return found;
+}
+
+// 그래프의 변은 정점(작은 circle, ellipse)의 경계나 중심에서 끝나야 한다. 정점을 향해 가다가 가까이에서 멈춘 끝은 변이
+// 허공에서 끊긴 그림이고, 먼저 그린 정점 안으로 조금 들어간 끝은 정점 안에 선이 보이는 그림이다. 뒤에 그린 불투명한
+// 정점이 가린 끝은 경계에서 끝난 것으로 보인다. 정점을 향하지 않는 끝(정점 옆을 나란히 지나는 벡터, 정점 위에 그은 X
+// 표시)과 정점보다 큰 원(집합, 영역)은 보지 않는다.
+const VERTEX = 30, NEAR = 6, TOUCH = 2;
+// 촉 끝은 선 끝보다 선 굵기의 0.8배 앞에 있고, 촉 앞에 선 굵기만큼 띄우는 것(TikZ의 shorten)은 흔한 모양이다.
+const ARROW_REACH = 2;
+
+function looseEnds(shapes) {
+  const vertices = shapes.flatMap((s, k) => {
+    if ((s.el.name !== "circle" && s.el.name !== "ellipse") || s.grid || !s.runs.length) return [];
+    const b = bounds(s.runs[0].points), r = Math.max(b.w, b.h) / 2;
+    return r > VERTEX ? [] : [{ ...s, k, r, center: [b.x + b.w / 2, b.y + b.h / 2] }];
+  });
+  const marked = (el, end) => attr(el, `marker-${end}`) != null || attr(el, "marker") != null;
+  const found = [];
+  shapes.forEach((s, k) => {
+    if (!["line", "polyline", "path"].includes(s.el.name) || !s.stroke || s.grid) return;
+    for (const run of s.runs) {
+      // 점이 하나인 run(`M`만 있는 조각)은 변의 방향을 알 수 없다.
+      if (run.closed || run.points.length < 2) continue;
+      const pts = run.points, n = pts.length;
+      for (const [end, from, arrow] of [[pts[n - 1], pts[n - 2], marked(s.el, "end")], [pts[0], pts[1], marked(s.el, "start")]]) {
+        const reach = TOUCH + s.width / 2 + (arrow ? ARROW_REACH * s.width : 0);
+        let nearest = null, touches = false;
+        for (const v of vertices) {
+          const edge = distance(v.runs, end), inside = inFill(v.runs, end);
+          if (edge <= reach || Math.hypot(end[0] - v.center[0], end[1] - v.center[1]) <= TOUCH || (inside && v.cover && v.k > k)) {
+            touches = true;
+            break;
+          }
+          if (edge >= NEAR || (inside ? pts.every((p) => inFill(v.runs, p)) : !heading(from, end, v))) continue;
+          if (!nearest || edge < nearest.edge) nearest = { v, edge };
+        }
+        if (!touches && nearest)
+          found.push({ kind: "loose", a: `${describe(s.el)} ${at(end)}`, b: `${named(nearest.v.el)} ${at(nearest.v.center)}`, text: nearest.edge.toFixed(1) });
+      }
+    }
+  });
+  return found;
+}
+
+// 끝 선분을 앞으로 늘이면 정점을 지나는가.
+function heading(from, end, v) {
+  const length = Math.hypot(end[0] - from[0], end[1] - from[1]);
+  if (!length) return false;
+  const d = [(end[0] - from[0]) / length, (end[1] - from[1]) / length], w = [v.center[0] - end[0], v.center[1] - end[1]];
+  return w[0] * d[0] + w[1] * d[1] > 0 && Math.abs(w[0] * d[1] - w[1] * d[0]) < v.r;
 }
 
 // 광선이 초점을, 접선이 접점을 지나야 하는 그림은 눈대중으로 그린 좌표가 몇 px만 어긋나도 틀린 그림이 된다. 그래서 쓴 사람이
