@@ -59,6 +59,33 @@ struct NoteFigureFinishTests {
         #expect(try NoteFigureFinish.finish(svg).problems.isEmpty)
     }
 
+    // 정렬은 `<text>` 자신, 부모 `<g>`, 쓴 사람의 CSS 규칙 어디서 와도 같은 자리에 놓여야 한다. 조각이 부모의 정렬을
+    // 물려받으면 낱말만 가운데로 옮겨져 수식과 겹친다.
+    @Test func anInheritedAnchorPlacesMixedLabelsLikeItsOwn() throws {
+        func figure(_ label: String, style: String = "") -> String {
+            """
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 80">\(style)
+            \(label)
+            </svg>
+            """
+        }
+        let own = figure(#"<text x="120" y="40" text-anchor="middle">간선 $e$ 의 무게 $w(e)$</text>"#)
+        let variants = [
+            figure(#"<g text-anchor="middle"><text x="120" y="40">간선 $e$ 의 무게 $w(e)$</text></g>"#),
+            figure(#"<text x="120" y="40" style="text-anchor: middle">간선 $e$ 의 무게 $w(e)$</text>"#),
+            figure(#"<g class="mid"><text x="120" y="40">간선 $e$ 의 무게 $w(e)$</text></g>"#, style: "<style>.mid{text-anchor:middle}</style>"),
+        ]
+        func placed(_ svg: String) throws -> [String] {
+            let done = try NoteFigureFinish.finish(svg)
+            #expect(done.problems.isEmpty)
+            let pieces = /<(?:text|svg) x="([-\d.]+)"/
+            return done.svg.matches(of: pieces).map { String($0.output.1) }
+        }
+        let expected = try placed(own)
+        #expect(expected.count == 4)
+        for svg in variants { #expect(try placed(svg) == expected) }
+    }
+
     @Test func brokenMathAndMathInTspansAreCaught() throws {
         let svg = """
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100">
