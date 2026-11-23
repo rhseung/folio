@@ -5,18 +5,13 @@ struct SolveAnswer: View {
     @Bindable var model: SolveModel
     let problem: Problem
     @Environment(\.accent) private var accent
-    @State private var preview = false
-    @State private var attaching = false
 
     var body: some View {
-        if model.handwriting {
-            handwriting
-        } else {
-            switch problem.format {
-            case .trueFalse, .choice: choices
-            case .short: short
-            case .written: written
-            }
+        switch problem.format {
+        case .trueFalse, .choice: choices
+        case .short: short
+        // 서술형은 화면에서 풀지 않는다(#577). 화면이 서술형을 받는 것은 그 전에 남겨 둔 이어 풀기뿐이다.
+        case .written: Caption(String(localized: .solveWrittenOnPaper))
         }
     }
 
@@ -79,60 +74,4 @@ struct SolveAnswer: View {
             .disabled(model.graded != nil)
     }
 
-    var written: some View {
-        VStack(alignment: .leading, spacing: Theme.Space.m) {
-            HStack {
-                Caption(String(localized: .solveAnswer))
-                Spacer()
-                SegmentedControl(
-                    selection: $preview, options: [(false, String(localized: .solveEdit)), (true, String(localized: .solvePreview))],
-                    size: .small)
-            }
-            if preview {
-                StudyText(text: model.answer, look: .prose).frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                Card(padding: Theme.Space.m) { GrowingTextEditor(text: $model.answer, room: nil) }
-                    .disabled(model.graded != nil)
-            }
-        }
-    }
-
-    var handwriting: some View {
-        VStack(alignment: .leading, spacing: Theme.Space.m) {
-            HStack {
-                Caption(String(localized: .solveAnswer))
-                Spacer()
-                if !model.images.isEmpty {
-                    Button(.solveClearInk) { model.images = [] }.buttonStyle(.ghost).disabled(model.graded != nil)
-                }
-            }
-            #if os(iOS)
-            InkPad(images: $model.images)
-                .frame(minHeight: Theme.Size.inkPad)
-                .background(Theme.Palette.page, in: .rect(cornerRadius: Theme.Radius.control))
-                .disabled(model.graded != nil)
-            #else
-            // Mac에는 펜이 없으므로 종이에 푼 답을 찍은 사진이나 PDF를 붙인다.
-            Button {
-                attaching = true
-            } label: {
-                Label(
-                    model.images.isEmpty ? String(localized: .solveAttach) : String(localized: .solveAttached(model.images.count)),
-                    systemImage: "photo.badge.plus"
-                )
-                .frame(maxWidth: .infinity, minHeight: Theme.Size.inkPad / 2)
-                .background(Theme.Palette.fill, in: .rect(cornerRadius: Theme.Radius.control))
-                .contentShape(.rect)
-            }
-            .buttonStyle(.pointing(.plain))
-            .disabled(model.graded != nil)
-            .fileImporter(isPresented: $attaching, allowedContentTypes: AnswerImages.types, allowsMultipleSelection: true) { result in
-                if case .success(let urls) = result { model.attach(urls) }
-            }
-            #endif
-            Caption(String(localized: .solveInkNote))
-            Card(padding: Theme.Space.m) { GrowingTextEditor(text: $model.answer, room: nil) }
-                .disabled(model.graded != nil)
-        }
-    }
 }

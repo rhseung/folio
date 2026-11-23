@@ -277,6 +277,9 @@ extension SettingItem {
         "study.planDayItems", .number(1...5), 2, place: .row(.study), name: .settingItemStudyPlanDayItems, unit: .items)
     public static let studyAutoExtract = SettingItem(
         "study.autoExtract", .toggle, true, place: .row(.study), name: .settingItemStudyAutoExtract)
+    // 이름은 사람마다 달라서 기본값이 비어 있다. 저장소가 공개라 픽스처에도 넣지 않는다.
+    public static let studyCoverName = SettingItem(
+        "study.coverName", .text, "", place: .row(.study), name: .settingItemStudyCoverName)
     public static let callouts = SettingItem("callouts", .custom, .null, optional: true, place: .own(.notes), name: .settingItemCallouts)
 
     // 알림 종류마다 `notifications.<종류>.<칸>`이다. `NotificationSettings.Kind.item`이 이 키로 종류의 칸과 기본값을 찾는다.
@@ -376,7 +379,7 @@ extension SettingItem {
         todayExamDays, assignmentUrgentDays, assignmentSoonDays, examUrgentDays, examSoonDays, examNearDays,
         dueMinute, examStartMinute, examMinutes,
         gradesUnlockMinutes, staffMailDomain, studentMailDomain,
-        studyReadyPercent, studyMinProblems, studyFinalDays, studyMockMinutes, studyPlanDayItems, studyAutoExtract,
+        studyReadyPercent, studyMinProblems, studyFinalDays, studyMockMinutes, studyPlanDayItems, studyAutoExtract, studyCoverName,
         assignmentDue, assignmentLeadHours, assignmentOverdue, assignmentOverdueMinute, examDayBefore, examDayBeforeMinute, examMorning,
         examMorningMinute, attendance,
         backupEnabled, backupDailyDays, backupFolder,

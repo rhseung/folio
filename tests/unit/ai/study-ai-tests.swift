@@ -47,6 +47,22 @@ struct StudyAITests {
         #expect(documents.count == 1)
     }
 
+    // 문제집 PDF의 칸 크기는 Claude가 풀이 분량으로 정한다. 모르는 값과 빠진 값은 정하지 않은 것으로 읽는다. 문제와 풀이는 문제지의
+    // 언어와 상관없이 영어로 받는다.
+    @Test func extractionReadsTheSizeAndAsksForEnglish() async throws {
+        let reply =
+            #"{"problems":[{"number":"1","text":"Prove it.","format":"written","options":[],"units":[],"size":"half"},{"number":"2","text":"x","format":"short","options":[],"units":[],"size":"huge"},{"number":"3","text":"y","format":"short","options":[],"units":[]}]}"#
+        let fake = FakeProvider(responses: [FakeProvider.reply(reply)])
+        let problems = try await ClaudeClient(provider: fake).extractProblems(
+            sheet: .pdf(Data("%PDF".utf8)), solution: nil, units: [], source: .pastExam
+        ).problems
+        #expect(problems.map(\.size) == [.half, nil, nil])
+        let request = try #require(await fake.requests.first)
+        let system = (request.system ?? []).compactMap { if case .text(let t, _) = $0 { t } else { nil } }.joined()
+        #expect(system.contains("full statement in English") && system.contains("Pick \"size\""))
+        #expect(ProblemDrafts.schema["properties"]?["problems"]?["items"]?["properties"]?["size"] != nil)
+    }
+
     @Test func extractionNamesEachUnitsLecturePagesAndMapsThePicksBack() async throws {
         let reply =
             #"{"problems":[{"number":"1","parent":null,"points":null,"page":null,"text":"Hall 정리를 쓰시오.","format":"written","options":[],"answer":null,"units":[],"solution":null,"solutionPage":null,"lecturePages":[{"lecture":"L1","page":9},{"lecture":"L9","page":2}]}]}"#
@@ -150,7 +166,10 @@ struct StudyAITests {
     }
 
     @Test func schemasAreStrict() {
-        for schema in [ProblemDrafts.schema, CardDrafts.schema, ProblemGrade.schema, SameAnswer.schema, ProblemSheetDraft.schema] {
+        for schema in [
+            ProblemDrafts.schema, CardDrafts.schema, ProblemGrade.schema, SameAnswer.schema, ProblemSheetDraft.schema,
+            CollectionGrades.schema, ProblemArtDraft.schema,
+        ] {
             #expect(schema["additionalProperties"] == .bool(false))
         }
     }
@@ -174,5 +193,61 @@ struct StudyAITests {
             let system = (request.system ?? []).compactMap { if case .text(let t, _) = $0 { t } else { nil } }
             #expect(system.contains(MathWriting.rule))
         }
+    }
+
+    // 문제집 그림은 자른 그림을 이미지로 보내고, 지문의 다시 그린 그림 위에 답을 그리게 한다. 검사에 걸린 그림은 그 결과를 붙여
+    // 한 번 더 묻는다.
+    @Test func problemArtSendsTheCropsAndRetriesWithTheCheck() async throws {
+        let reply = #"{"figure":null,"solutionFigure":"<svg viewBox=\"0 0 1 1\"/>","solution":"Match $a_1b_2$."}"#
+        let fake = FakeProvider(responses: [FakeProvider.reply(reply), FakeProvider.reply(reply)])
+        let stem = ProblemGroup(number: "2", text: "Let $G$ be the graph below.")
+        let p = Problem(number: "2b", parent: "2", text: "Find a perfect matching.")
+        let job = ProblemArt.Job(id: p.id, set: UUID(), number: "2b", problem: p, stems: [stem], draws: true, writesSolution: true)
+        let client = ClaudeClient(provider: fake)
+        let draft = try await client.drawProblemArt(job, crops: [Data("png".utf8)], stemFigure: "<svg id=\"stem\"/>")
+        #expect(draft.figure == nil && draft.solution == "Match $a_1b_2$.")
+        _ = try await client.drawProblemArt(
+            job, crops: [], stemFigure: nil, previous: draft, problems: ["label 'a_1' overlaps a line"])
+
+        let requests = await fake.requests
+        let first = try #require(requests.first), second = try #require(requests.last)
+        #expect(first.model == TaskConfig.large && first.output_config?.format?.schema == ProblemArtDraft.schema)
+        let images = first.messages[0].content.filter { if case .image = $0 { true } else { false } }
+        let ask = first.messages[0].content.compactMap { if case .text(let t, _) = $0 { t } else { nil } }.joined()
+        #expect(images.count == 1 && ask.contains("<stem_figure>") && ask.contains("Write \"solution\""))
+        let system = (first.system ?? []).compactMap { if case .text(let t, _) = $0 { t } else { nil } }
+        #expect(system.contains(NoteWritingGuide.figureRules) && system.contains(MathWriting.rule))
+        #expect(second.messages.map(\.role) == [.user, .assistant, .user])
+        let fix = second.messages[2].content.compactMap { if case .text(let t, _) = $0 { t } else { nil } }.joined()
+        #expect(fix.contains("overlaps a line"))
+    }
+
+    // 문제마다 칸 머리의 이름표를 보내고, 답의 차례를 문제 ID로 바꾼다. 없는 차례와 두 번 온 차례는 버린다.
+    @Test func aCollectionIsGradedFromOnePDF() async throws {
+        let reply = #"""
+            {"grades":[{"item":2,"verdict":"wrong","reason":"time","feedback":["7번을 쓰지 못했어요."],"page":null},
+            {"item":1,"verdict":"correct","reason":"concept","feedback":[],"page":3},
+            {"item":1,"verdict":"wrong","reason":null,"feedback":[],"page":4},
+            {"item":9,"verdict":"correct","reason":null,"feedback":[],"page":1}]}
+            """#
+        let fake = FakeProvider(responses: [FakeProvider.reply(reply)])
+        let first = Problem(number: "1", text: "Prove Hall's theorem.", solution: "By induction on $|X|$.")
+        let second = Problem(number: "2b", parent: "2", text: "Find a perfect matching.")
+        let stem = ProblemGroup(number: "2", text: "Let $G$ be the graph below.")
+        let grades = try await ClaudeClient(provider: fake).gradeCollection(
+            [CollectionProblem(set: "2024 Midterm", problem: first), CollectionProblem(set: "HW03", problem: second, stems: [stem])],
+            submitted: Data("%PDF".utf8), mock: true)
+
+        #expect(grades.map(\.problem) == [second.id, first.id])
+        #expect(grades[0].outcome.grade.reason == .time && grades[0].outcome.basis == .claude && grades[0].page == nil)
+        // 맞은 문제의 이유는 버린다.
+        #expect(grades[1].outcome.grade.reason == nil && grades[1].outcome.basis == .solution && grades[1].page == 3)
+
+        let request = try #require(await fake.requests.first)
+        #expect(request.messages[0].content.contains { if case .pdf = $0 { true } else { false } })
+        let ask = request.messages[0].content.compactMap { if case .text(let t, _) = $0 { t } else { nil } }.joined()
+        #expect(ask.contains(#"label="HW03 – Problem 2b""#) && ask.contains("<stem>\nLet $G$"))
+        let system = (request.system ?? []).compactMap { if case .text(let t, _) = $0 { t } else { nil } }.joined()
+        #expect(system.contains("time: stopped") && system.contains(MathWriting.rule))
     }
 }

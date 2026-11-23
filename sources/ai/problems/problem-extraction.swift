@@ -27,15 +27,15 @@ extension ClaudeClient {
                 """
                 You transcribe every problem of a university problem sheet (\(source.rawValue)) so a student can solve them \
                 one by one. Keep the sheet's own numbering; a sub-question like 3(a) gets number "3a" and parent "3". Copy \
-                each problem's full statement in the sheet's own language, never translated, as LaTeX body source (no \
-                preamble). Use only this LaTeX: a blank line between paragraphs and \\\\ for a line break, never wrapping a \
+                each problem's full statement in English as LaTeX body source (no preamble); when the sheet is in another \
+                language, translate it faithfully, keeping every formula, symbol, number and label as it is. Use only this LaTeX: a blank line between paragraphs and \\\\ for a line break, never wrapping a \
                 line by hand because every newline shows as a line break; \\textbf{}, \\emph{}, \\textit{}, \
                 \\underline{}, \\texttt{} for the sheet's emphasis; itemize and enumerate, at most two levels deep, writing \
                 any label other than 1. 2. or a bullet explicitly as \\item[(a)] or \\item[(i)] and never [label=...] options; \
                 the escapes \\% \\& \\# \\_ \\$ \\{ \\}, ~, -- and ---; math inline in $...$ and displayed in $$...$$ or \
                 align, align* or gather. Never use tables, \\includegraphics or figure, \\section, spacing commands, footnotes, \
-                verbatim, custom macros or Markdown. "groups" text and "solution" use the same LaTeX; each option is one line \
-                without lists. Never describe \
+                verbatim, custom macros or Markdown. "groups" text, options and "solution" are in English too and use the same \
+                LaTeX; each option is one line without lists. Never describe \
                 a figure in words (no "[Figure: ...]"): the app shows the figure itself, cut from the PDF, from the boxes you \
                 give. "page" is the 1-based PDF page the problem starts on. Boxes locate things on a PDF page: "page" is \
                 1-based and x, y, width, height are fractions of the page's width and height measured from its top-left \
@@ -47,7 +47,9 @@ extension ClaudeClient {
                 region and figures, and "parent" set to the enclosing stem's number when stems nest (W -> W1 -> W1a). List \
                 only the actual questions in "problems", in sheet order, and do not repeat a stem or its figures in its \
                 children. Pick "format": true_false, choice (copy the options), short (a single value, expression or word) \
-                or written (a derivation, proof or explanation). When a solution document is given, set "answer" for \
+                or written (a derivation, proof or explanation). Pick "size" by how much writing a full answer takes, not by \
+                format: half when the answer fits in half an A4 page, including short proofs, and full for long proofs, \
+                case analyses or big computations. When a solution document is given, set "answer" for \
                 true_false (참 or 거짓), choice (the exact option text) and short problems, copy the worked solution into \
                 "solution", and set "solutionPage" to its 1-based page in the solution document. Otherwise leave them null. \
                 Set "units" to the exact titles of the course units the problem tests, most specific first; never invent \

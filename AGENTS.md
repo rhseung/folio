@@ -162,7 +162,7 @@ FolioGen  ->  FolioActions   (액션 목록과 CLI 명령, 명령 트리를 쓴�
 | 라이브 시계 `LiveClock` | 화면이 그리는 지금 시각 | 있음 |
 | 빠른 추가 인식기 `QuickAdd` | 빠른 추가 한 줄을 읽는 법 | 있음 |
 | 날짜 표기 `DateTimeText` | 날짜를 읽는 말("오늘", "내일 오후 11:59", "수요일", "12/2(수)", "45분 뒤")과 그 날 수, 시험의 D-day | 있음 |
-| 그림 스타일 `FigureStyle` | 노트 그림, 위젯, mermaid 도식의 색(라이트·다크), 선 굵기, 화살촉, 글꼴 역할. 그림은 쓸 때 이 표의 스타일과 화살촉을 넣고 `$…$`를 LaTeX path로 바꾼다 | 있음 |
+| 그림 스타일 `FigureStyle` | 노트 그림, 위젯, mermaid 도식, 문제집에 다시 그린 문제 그림(`ProblemArt`)의 색(라이트·다크), 선 굵기, 화살촉, 글꼴 역할. 그림은 쓸 때 이 표의 스타일과 화살촉을 넣고 `$…$`를 LaTeX path로 바꾼다 | 있음 |
 
 ### 화면: 모델과 뷰
 
@@ -253,7 +253,7 @@ Me/GIST/
       Ink/                     # PencilKit 필기 (.drawing)
       Recordings/              # 강의 녹음(.m4a)과 받아쓰기(.transcript.json)
       Archive/                 # 이전 필기
-      .folio/                  # course.json, cards/, drafts/, chats/, widgets/, moves.jsonl, logs/<기기 ID>.jsonl
+      .folio/                  # course.json, cards/, drafts/, chats/, widgets/, problem-figures/, moves.jsonl, logs/<기기 ID>.jsonl
   _Credited/
     영재고 AP/                 # 인정학기의 출처. 그 학기의 과목 폴더가 여기 들어간다
 ```

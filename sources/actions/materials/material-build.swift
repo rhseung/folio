@@ -39,7 +39,7 @@ public struct MaterialBuild {
         }
 
         let source = store.fileURL(m.path)
-        let output = try pdf.map { try Self.output($0, of: source) } ?? Self.compile(source, ctx)
+        let output = try pdf.map { try Self.output($0, of: source) } ?? Self.compile(source, ctx.now, ctx.calendar)
         try ctx.io(change) { try store.replaceFile(target, with: output, keepOld: exists && !ours) }
 
         try ctx.edit(course) { f in
@@ -60,8 +60,9 @@ public struct MaterialBuild {
         return url
     }
 
-    static func compile(_ source: URL, _ ctx: ActionContext) throws -> URL {
-        let build = try TexEngine.shared.compile(source, into: TexEngine.outputFolder(for: source), at: ctx.now, calendar: ctx.calendar)
+    // 노트, 자료, 문제집의 빌드가 함께 쓴다. TeX 오류를 알리는 문구가 한 곳에서 나오게 하기 위해서다.
+    static func compile(_ source: URL, _ now: Date, _ calendar: Calendar) throws -> URL {
+        let build = try TexEngine.shared.compile(source, into: TexEngine.outputFolder(for: source), at: now, calendar: calendar)
         guard let pdf = build.pdf else {
             throw ActionError.rule(String(localized: .errorTexFailed(build.errors.map(\.description).joined(separator: "\n"))))
         }

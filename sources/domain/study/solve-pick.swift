@@ -22,10 +22,12 @@ public struct SolvePick: Sendable, Equatable {
     public var sets: Set<UUID>
     public var count: Int?
     public var order: Order
+    // 화면에서 푸는 풀기(타이핑)는 화면에서 푸는 형식만 고른다.
+    public var onScreenOnly: Bool
 
     public init(
         filter: Filter = .all, units: Set<UUID> = [], sources: Set<ProblemSource> = [], sets: Set<UUID> = [], count: Int? = nil,
-        order: Order = .byUnit
+        order: Order = .byUnit, onScreenOnly: Bool = false
     ) {
         self.filter = filter
         self.units = units
@@ -33,6 +35,7 @@ public struct SolvePick: Sendable, Equatable {
         self.sets = sets
         self.count = count
         self.order = order
+        self.onScreenOnly = onScreenOnly
     }
 
     public func matches(_ r: CourseStudy.ProblemRecord) -> Bool {
@@ -44,6 +47,7 @@ public struct SolvePick: Sendable, Equatable {
         if !units.isEmpty, units.isDisjoint(with: r.problem.unitIds) { return false }
         if !sources.isEmpty, !sources.contains(r.source) { return false }
         if !sets.isEmpty, !sets.contains(r.setId) { return false }
+        if onScreenOnly, !r.problem.format.onScreen { return false }
         return true
     }
 

@@ -124,8 +124,9 @@ AGENTS.md "구조 축" 표의 축마다 지킬 규칙이다. 축에 기능을 �
 
 ## 그림 스타일 `FigureStyle`
 
-노트 그림(SVG), 위젯, mermaid 도식이 함께 읽는 색(라이트·다크), 선 굵기, 화살촉, 글꼴 역할의 표다. 값을 고칠 곳은 이 표 하나다.
+노트 그림(SVG), 위젯, mermaid 도식, 문제집에 다시 그린 문제 그림이 함께 읽는 색(라이트·다크), 선 굵기, 화살촉, 글꼴 역할의 표다. 값을 고칠 곳은 이 표 하나다.
 
 - 그림은 이미지라서 표를 `<style>`과 `<marker>`로 그림 안에 넣고(`NoteFigureFinish`), 위젯과 노트 페이지는 같은 값을 CSS 변수(`FigureStyle.variables`)로 받는다. 그림 엔진(`figure.js`)은 표를 JSON(`engineJSON`)으로 받으므로 JS에 색을 적지 않는다.
 - 쓸 때 넣은 `<style>`과 `<defs>`는 id(`styleID`, `defsID`)로 찾아 고쳐 쓸 때 걷어 내고 다시 넣는다. 표를 바꿔도 이미 쓴 그림은 다시 쓸 때만 새 값을 받는다.
+- 문제집 그림(`ProblemArt`, `.folio/problem-figures/<문제나 지문 ID>.json`)은 노트 그림과 같은 규칙(`NoteWritingGuide.figureRules`)으로 쓰고 같은 검사(`NoteFigureFinish`)를 거친다. 문제집은 인쇄물이라 라이트 색으로만 PDF로 그린다(`ProblemArt.printPage`). SVG를 PDF로 그리는 일은 WebKit이 하므로 앱(`FigurePDF`)과 macOS의 CLI가 그려서 `ProblemCollectionFiles`에 넘긴다.
 - 다크의 원색은 OKLCH에서 같은 색조로 밝기를 올리고 채도를 70%로 낮춘 값이다. 이 성질은 테스트가 본다.

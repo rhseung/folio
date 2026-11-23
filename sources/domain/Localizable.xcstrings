@@ -3829,6 +3829,17 @@
         }
       }
     },
+    "setting-item.study.cover-name": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제집 표지 이름"
+          }
+        }
+      }
+    },
     "exam-plan.title.units-in": {
       "extractionState": "manual",
       "localizations": {

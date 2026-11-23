@@ -23,12 +23,14 @@ public struct Problem: Codable, Sendable, Equatable, Identifiable {
     // 칸을 잘라 보인다. 소문제들이 함께 보는 그림은 소문제가 아니라 지문(`ProblemGroup`)에 있다.
     public var region: ProblemRegion?
     public var figures: [ProblemRegion]
+    // 문제집 PDF의 칸 크기다. 정하지 않았으면 `layoutSize`가 형식으로 고른다.
+    public var size: ProblemSize?
 
     public init(
         id: UUID = UUID(), number: String, parent: String? = nil, points: Double? = nil, page: Int? = nil, text: String = "",
         format: ProblemFormat = .written, options: [String] = [], answer: String? = nil, unitIds: [UUID] = [],
         solution: String? = nil, solutionPage: Int? = nil, lecturePages: [ProblemPage] = [], region: ProblemRegion? = nil,
-        figures: [ProblemRegion] = []
+        figures: [ProblemRegion] = [], size: ProblemSize? = nil
     ) {
         self.id = id
         self.number = number
@@ -45,6 +47,7 @@ public struct Problem: Codable, Sendable, Equatable, Identifiable {
         self.lecturePages = lecturePages
         self.region = region
         self.figures = figures
+        self.size = size
     }
 
     // Claude와 사람이 쓴 파일에서 오므로 빠진 칸은 빈 값으로 읽는다.
@@ -65,6 +68,7 @@ public struct Problem: Codable, Sendable, Equatable, Identifiable {
         lecturePages = try c.decodeIfPresent([ProblemPage].self, forKey: .lecturePages) ?? []
         region = try c.decodeIfPresent(ProblemRegion.self, forKey: .region)
         figures = try c.decodeIfPresent([ProblemRegion].self, forKey: .figures) ?? []
+        size = try c.decodeIfPresent(ProblemSize.self, forKey: .size)
     }
 
     // 그림이 없는 문제에 빈 `figures`를 쓰지 않는다. 그림 칸이 생기기 전에 받은 모든 문제의 course.json이 바뀌지 않게 하려는 것이다.
@@ -85,11 +89,15 @@ public struct Problem: Codable, Sendable, Equatable, Identifiable {
         try c.encode(lecturePages, forKey: .lecturePages)
         try c.encodeIfPresent(region, forKey: .region)
         if !figures.isEmpty { try c.encode(figures, forKey: .figures) }
+        try c.encodeIfPresent(size, forKey: .size)
     }
 
     private enum CodingKeys: String, CodingKey {
         case id, number, parent, points, page, text, format, options, answer, unitIds, solution, solutionPage, lecturePages, region, figures
+        case size
     }
+
+    public var layoutSize: ProblemSize { size ?? .fallback(for: format) }
 
     public var hasSolution: Bool { !(solution ?? "").isEmpty || solutionPage != nil }
 

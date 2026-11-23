@@ -13,11 +13,14 @@ public struct StudySettings: Codable, Sendable, Equatable {
     public var planDayItems: Int
     // 새 문제지 PDF가 들어오면 Claude가 저절로 문제를 뽑는다.
     public var autoExtract: Bool
+    // 문제집 PDF의 표지에 쓰는 이름이다. 비어 있으면 표지에서 뺀다.
+    public var coverName: String
 
     public init(
         readyPercent: Int = SettingItem.studyReadyPercent.int, minProblems: Int = SettingItem.studyMinProblems.int,
         finalDays: Int = SettingItem.studyFinalDays.int, mockMinutes: Int = SettingItem.studyMockMinutes.int,
-        planDayItems: Int = SettingItem.studyPlanDayItems.int, autoExtract: Bool = SettingItem.studyAutoExtract.bool
+        planDayItems: Int = SettingItem.studyPlanDayItems.int, autoExtract: Bool = SettingItem.studyAutoExtract.bool,
+        coverName: String = SettingItem.studyCoverName.text
     ) {
         self.readyPercent = readyPercent
         self.minProblems = minProblems
@@ -25,6 +28,7 @@ public struct StudySettings: Codable, Sendable, Equatable {
         self.mockMinutes = mockMinutes
         self.planDayItems = planDayItems
         self.autoExtract = autoExtract
+        self.coverName = coverName
     }
 
     public init(from decoder: any Decoder) throws {
@@ -36,6 +40,7 @@ public struct StudySettings: Codable, Sendable, Equatable {
         mockMinutes = try c.value(.mockMinutes, or: d.mockMinutes)
         planDayItems = try c.value(.planDayItems, or: d.planDayItems)
         autoExtract = try c.value(.autoExtract, or: d.autoExtract)
+        coverName = try c.value(.coverName, or: d.coverName)
     }
 
     public var readyScore: Double { Double(readyPercent) / 100 }

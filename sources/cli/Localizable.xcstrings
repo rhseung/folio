@@ -6271,6 +6271,50 @@
         }
       }
     },
+    "problem.collect.abstract": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고른 문제로 문제집과 풀이집 PDF를 Tectonic으로 만들어 Study에 둔다"
+          }
+        }
+      }
+    },
+    "problem.collect.discussion": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제집은 문제마다 풀이 자리를 둔 PDF이고, 풀이집은 같은 문제 아래에 답과 풀이를 둔 PDF다. 그림은 problem figure로 다시 그린 그림을 넣고, 없으면 문제지 PDF에서 잘라 온다. 다시 그린 그림은 macOS에서만 넣는다.\n\n예시:\n  folio problem collect EC4207 --set \"EC4207/Exercise 1\""
+          }
+        }
+      }
+    },
+    "problem.collect.help.set": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "넣을 묶음. 빼면 모든 묶음. 여러 번 줄 수 있다"
+          }
+        }
+      }
+    },
+    "problem.collect.help.overwrite": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "같은 이름의 PDF가 Folio가 만든 것이 아니어도 바꾼다"
+          }
+        }
+      }
+    },
     "study.abstract": {
       "extractionState": "manual",
       "localizations": {

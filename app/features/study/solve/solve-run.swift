@@ -6,61 +6,22 @@ struct SolveRun: View {
     @Environment(\.goBack) private var goBack
     @Environment(\.openLink) private var openLink
     @Environment(\.accent) private var accent
-    @State private var width: CGFloat = 0
 
     var body: some View {
         VStack(spacing: 0) {
             if let record = model.current {
                 header(record)
                 Theme.Palette.lineSoft.frame(height: 1)
-                let split = width >= Theme.Size.solveSplit
-                let layout = split ? AnyLayout(HStackLayout(spacing: 0)) : AnyLayout(VStackLayout(spacing: 0))
-                layout {
-                    problemPane(record)
-                        .overlay { if model.isPaused { paused } }
-                    if model.answersBeside {
-                        divider(split)
-                        ScrollView {
-                            SolveAnswer(model: model, problem: record.problem).padding(Theme.Space.xl)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
-                }
-                .id(model.index)
+                problemPane(record)
+                    .id(model.index)
                 Theme.Palette.lineSoft.frame(height: 1)
                 footer
             }
-        }
-        .onGeometryChange(for: CGFloat.self) {
-            $0.size.width
-        } action: {
-            width = $0
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.Palette.card)
         .foregroundStyle(Theme.Palette.text)
         .font(Theme.Typeface.body)
-        .task(id: model.runningDeadline) {
-            guard let deadline = model.runningDeadline else { return }
-            try? await Task.sleep(for: .seconds(max(deadline.timeIntervalSinceNow, 0)))
-            if !Task.isCancelled, model.phase == .solving { model.submitMock() }
-        }
-    }
-
-    // 멈춘 동안에는 문제를 가린다. 시계만 세우고 문제를 계속 볼 수 있으면 멈춤이 시간을 늘리는 길이 된다.
-    var paused: some View {
-        VStack(spacing: Theme.Space.m) {
-            Image(systemName: "pause.circle").font(Theme.Glyph.large).foregroundStyle(Theme.Palette.textTertiary)
-                .accessibilityHidden(true)
-            Text(.solvePausedTitle).font(Theme.Typeface.columnTitle)
-            Button(.solveResumeMock, systemImage: "play.fill") { model.togglePause() }.buttonStyle(.prominent)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.Palette.card)
-    }
-
-    func divider(_ split: Bool) -> some View {
-        Theme.Palette.lineSoft.frame(width: split ? 1 : nil, height: split ? nil : 1)
     }
 
     func header(_ record: CourseStudy.ProblemRecord) -> some View {
@@ -72,19 +33,6 @@ struct SolveRun: View {
                 ).lineLimit(1)
             }
             Spacer(minLength: Theme.Space.m)
-            if model.mockDeadline != nil {
-                TimelineView(.periodic(from: .now, by: 1)) { context in
-                    Label(
-                        Duration.seconds(model.remaining(at: context.date)).formatted(.time(pattern: .minuteSecond)),
-                        systemImage: model.isPaused ? "pause.fill" : "timer"
-                    )
-                    .monospacedDigit().chip()
-                }
-                Button(model.isPaused ? .solveResumeMock : .solvePause, systemImage: model.isPaused ? "play.fill" : "pause.fill") {
-                    model.togglePause()
-                }
-                .buttonStyle(.secondary)
-            }
             Button(.commonClose) { model.close(goBack, openLink) }.keyboardShortcut(.cancelAction)
         }
         .padding(.horizontal, Theme.Space.xl)
@@ -99,9 +47,7 @@ struct SolveRun: View {
                     Button(String(localized: .solveProblemPage(page.page ?? 1)), systemImage: "doc.text") { model.open(page, openLink) }
                         .buttonStyle(.ghost)
                 }
-                if !model.answersBeside {
-                    SolveAnswer(model: model, problem: record.problem)
-                }
+                SolveAnswer(model: model, problem: record.problem)
                 if model.grading { ProgressView().controlSize(.small) }
                 if let failure = model.failure {
                     Text(failure).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.warning)
@@ -127,11 +73,7 @@ struct SolveRun: View {
             }
             .overflowFade(.horizontal)
             Spacer(minLength: Theme.Space.m)
-            if model.isMock {
-                Button(.solveBack) { model.back() }.disabled(model.index == 0 || model.isPaused)
-                Button(model.isLast ? .solveSubmit : .solveNext) { model.go() }.buttonStyle(.prominent).shortcut(.solveGo)
-                    .disabled(model.grading || model.isPaused)
-            } else if model.graded == nil {
+            if model.graded == nil {
                 Button(.solveSkip) { model.next() }.disabled(model.grading)
                 Button(.solveGrade) { model.go() }.buttonStyle(.prominent).shortcut(.solveGo)
                     .disabled(!model.canGrade)

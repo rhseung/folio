@@ -20,6 +20,10 @@ public struct TaskConfig: Codable, Sendable, Equatable {
         // 어긋나게 잡았고, medium에서는 큰 모델과 같은 경계를 30분의 1 비용으로 잡았다.
         case .lectureSections: TaskConfig(model: small, effort: .medium, maxTokens: 8_000)
         case .grading: TaskConfig(model: large, effort: .high, maxTokens: 16_000)
+        // 문제집 한 벌(문제 10~20개)의 판정과 피드백을 한 답에 쓴다. 문제 하나의 답은 500 token 안팎이다.
+        case .collectionGrading: TaskConfig(model: large, effort: .high, maxTokens: 32_000)
+        // 그래프 그림 하나의 SVG는 좌표와 마무리 전의 스타일까지 4k token 안팎이고, 문제 그림과 풀이용 그림, 풀이를 함께 쓴다.
+        case .problemArt: TaskConfig(model: large, effort: .medium, maxTokens: 24_000)
         case .chat, .reviewNoteDraft, .examSummaryDraft, .cardSuggestions, .extractGradingPolicy, .examPlan, .widget:
             TaskConfig(model: large, effort: .medium, maxTokens: 16_000)
         }

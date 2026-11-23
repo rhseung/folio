@@ -58,7 +58,8 @@ struct PlanSolveTests {
     @Test func mixedShufflesOnlyScopeProblems() throws {
         let f = fixture()
         let solve = try #require(study(f).solve(item(.mixed), in: f.exam, seed: 7))
-        #expect(solve.shuffled && solve.mode == .typing)
+        // 범위의 문제가 서술형이라 문제집 PDF로 손으로 푼다.
+        #expect(solve.shuffled && solve.mode == .handwriting)
         #expect(!solve.problems.contains(f.past.problems[1].id) && solve.problems.count == 5)
     }
 

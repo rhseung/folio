@@ -19,7 +19,7 @@ struct SolveSetup: View {
                     }
                 }
             }
-            FormRow(label: String(localized: .solveMode), detail: model.isMock ? String(localized: .solveModeMockDetail) : nil) {
+            FormRow(label: String(localized: .solveMode), detail: model.modeDetail) {
                 SegmentedControl(selection: $model.mode, options: model.modeOptions)
             }
             FormRow(label: String(localized: .solveFilter)) {
@@ -27,9 +27,13 @@ struct SolveSetup: View {
             }
             FormRow(label: String(localized: .solveUnit)) { Combobox(selection: $model.unit, options: model.unitOptions) }
             FormRow(label: String(localized: .solveSource)) { Select(selection: $model.source, options: model.sourceOptions) }
-            FormRow(label: String(localized: .solveCount)) { Select(selection: $model.count, options: model.countOptions) }
-            FormRow(label: String(localized: .solveOrder), last: true) {
-                Select(selection: $model.pick.order, options: model.orderOptions)
+            FormRow(label: String(localized: .solveCount), last: !model.asksOrder) {
+                Select(selection: $model.count, options: model.countOptions)
+            }
+            if model.asksOrder {
+                FormRow(label: String(localized: .solveOrder), last: true) {
+                    Select(selection: $model.pick.order, options: model.orderOptions)
+                }
             }
         } onConfirm: {
             model.start()

@@ -6,7 +6,6 @@ import Foundation
 struct SolveResume: Equatable {
     var queue: [UUID]
     var index: Int
-    var mode: SolveMode
     var order: SolvePick.Order
     var runId: UUID
 

@@ -521,6 +521,27 @@ struct MaterialNoteStudyTests {
         }
     }
 
+    @Test func problemCollect() throws {
+        try h.expectSame(["problem", "collect", "EC4207", "--set", "EC4207/Exercise 1"], setup: [Self.addSet]) { _ in
+            ProblemCollectionBuild(course: course, sets: [Self.set])
+        }
+    }
+
+    @Test func problemFigure() throws {
+        let svg = #"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 20"><rect class="ink" width="20" height="20"/></svg>"#
+        let url = FileManager.default.temporaryDirectory.appending(path: "folio-cli-\(UUID().uuidString).svg")
+        try svg.write(to: url, atomically: true, encoding: .utf8)
+        // 그림 파일 이름이 문제 ID라서 문제를 같은 ID로 만든다.
+        let one = uuid("A0000000-0000-4000-8000-0000000000F2")
+        let added: (URL) throws -> Void = { gist in
+            try h.direct(
+                ProblemSetAdd(id: Self.set, course: course, title: "Exercise 1", problems: [Problem(id: one, number: "1")]), gist: gist)
+        }
+        try h.expectSame(["problem", "figure", "EC4207/Exercise 1", "1", "--figure", url.path], prepare: added) { _ in
+            ProblemFigureWrite(course: course, set: Self.set, number: "1", figure: svg)
+        }
+    }
+
     static let attempt = uuid("A0000000-0000-4000-8000-0000000000F1")
 
     @Test func problemVerdict() throws {

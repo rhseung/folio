@@ -98,6 +98,8 @@ extension Actions {
         CardFlip.self,
         CardRemove.self,
         CardSave.self,
+        ProblemCollectionBuild.self,
+        ProblemFigureWrite.self,
         ProblemLinkUnit.self,
         ProblemRemove.self,
         ProblemSave.self,

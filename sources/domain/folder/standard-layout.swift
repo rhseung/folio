@@ -21,6 +21,7 @@ public enum StandardLayout {
     public static let draftsFolder = "drafts"
     public static let chatsFolder = "chats"
     public static let widgetsFolder = "widgets"
+    public static let problemFiguresFolder = "problem-figures"
     public static let logExtension = "jsonl"
 
     public static func courseFolderName(prefix: String, number: String, title: String) -> String? {
