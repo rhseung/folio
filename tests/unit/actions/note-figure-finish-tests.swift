@@ -205,6 +205,9 @@ struct NoteFigureFinishTests {
         let into = try NoteFigureFinish.finish(graph(#"<line x1="44" y1="40" x2="130" y2="40" class="s-ink"/>"#, vertexFirst: true))
             .problems
         #expect(into == [.looseEnd("line.s-ink @(44, 40)", "circle.paper.s-ink @(40, 40)", gap: "6.0")])
+        // `M`만 있는 조각과 빈 선은 방향이 없어 보지 않는다. 마무리가 실패하지 않아야 한다.
+        #expect(try NoteFigureFinish.finish(graph(#"<path d="M 126 40 M 50 40 L 130 40" class="s-ink" fill="none"/>"#)).problems.isEmpty)
+        #expect(try NoteFigureFinish.finish(graph(#"<polyline points="" class="s-ink" fill="none"/>"#)).problems.isEmpty)
     }
 
     @Test func nestedSourcesAreUnfoldedBeforeTheCheck() throws {

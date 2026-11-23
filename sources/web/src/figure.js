@@ -530,7 +530,7 @@ function outOfCells(shapes, labels, style) {
     const open = s.runs.every((r) => !r.closed);
     let cell;
     if (open) {
-      const ends = s.runs.flatMap((r) => [r.points[0], r.points[r.points.length - 1]]);
+      const ends = s.runs.filter((r) => r.points.length).flatMap((r) => [r.points[0], r.points[r.points.length - 1]]);
       const homes = new Set(ends.map((p) => home(p, s.el, 0)));
       if (homes.size !== 1) continue;
       cell = [...homes][0];
@@ -567,7 +567,8 @@ function looseEnds(shapes) {
   shapes.forEach((s, k) => {
     if (!["line", "polyline", "path"].includes(s.el.name) || !s.stroke || s.grid) return;
     for (const run of s.runs) {
-      if (run.closed) continue;
+      // 점이 하나인 run(`M`만 있는 조각)은 변의 방향을 알 수 없다.
+      if (run.closed || run.points.length < 2) continue;
       const pts = run.points, n = pts.length;
       for (const [end, from, arrow] of [[pts[n - 1], pts[n - 2], marked(s.el, "end")], [pts[0], pts[1], marked(s.el, "start")]]) {
         const reach = TOUCH + s.width / 2 + (arrow ? ARROW_REACH * s.width : 0);
