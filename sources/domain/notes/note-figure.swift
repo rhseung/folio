@@ -71,7 +71,7 @@ public enum NoteFigure {
     // 노트는 SVG를 이미지로 보인다. 이미지는 스크립트를 실행하지 않고 다른 것을 불러오지 않으므로, 그런 부분은
     // 아무 표시 없이 빠진다. 또 이미지는 페이지 색을 읽지 못하므로 색은 그림 스타일 표의 클래스로만 칠한다. 클래스의
     // 라이트·다크 값은 쓸 때 넣는다(NoteFigureFinish). 쓸 때 넣은 `<style>`과 `<defs>`는 검사하지 않는다.
-    public static func problems(_ svg: String) -> [Problem] {
+    public static func problems(_ svg: String, korean: Bool = false) -> [Problem] {
         let reader = SVGReader()
         let parser = XMLParser(data: Data(svg.utf8))
         parser.delegate = reader
@@ -103,7 +103,7 @@ public enum NoteFigure {
         colorProblems(declarations: reader.styles).forEach(add)
         for label in reader.labels {
             if visibleLength(label.text) > FigureStyle.labelLimit { add(.longText(label.text)) }
-            if hasHangul(label.text) { add(.hangul(label.text)) }
+            if !korean, hasHangul(label.text) { add(.hangul(label.text)) }
             if !label.classes.contains(FigureStyle.Font.mono), proseWords(label.text) >= FigureStyle.proseWords { add(.prose(label.text)) }
         }
         return found

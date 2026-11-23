@@ -65,6 +65,13 @@ public enum FigureStyle {
     // "back edge to ancestor")는 네 낱말 안에 든다. 한 글자 변수, 숫자가 든 이름(`t1`), 기호는 세지 않아서
     // 코드 줄(`t1 = y + z`)은 걸리지 않는다. 코드 클래스(`mono`)의 라벨은 세지 않는다.
     public static let proseWords = 5
+    // 그림의 라벨은 기호와 영어로 쓴다. 인문사회 과목(GIST 과목코드 HS)만 한국어를 받는다. 그 과목은 개념의 원어가
+    // 한국어이고 그림을 그릴 일이 드물어서, 과목 종류를 따로 두지 않고 과목코드로 가른다.
+    public static let koreanCodes: Set<String> = ["HS"]  // strings: data, 카탈로그의 과목코드 앞부분과 비교한다
+
+    public static func allowsKorean(_ course: Course, catalog: Catalog) -> Bool {
+        course.codes.contains { catalog.code($0).map { koreanCodes.contains($0.prefix) } ?? false }
+    }
 
     // 쓸 때 넣는 `<style>`과 `<defs>`의 id다. 고쳐 쓸 때 이 id로 찾아 걷어 내고 다시 넣는다. 그림 엔진(figure.js)도
     // 같은 id를 쓴다.

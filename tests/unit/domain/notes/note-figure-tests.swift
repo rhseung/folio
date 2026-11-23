@@ -74,6 +74,22 @@ struct NoteFigureTests {
         #expect(NoteFigure.proseWords("the shortest path from s to t") == 5)
         #expect(NoteFigure.proseWords("t1 = y + z") == 0)
         #expect(NoteFigure.proseWords("zig-zag u's edge") == 3)
+        #expect(
+            Set(NoteFigure.problems(svg, korean: true)) == [
+                .prose("the shortest path from s to t"), .prose("Sum of all the degrees is $2|E|$"),
+            ])
+    }
+
+    // 인문사회 과목(HS)의 그림만 한국어 라벨을 받는다. 과목코드가 여럿이면 하나만 HS여도 받는다.
+    @Test func onlyHumanitiesCoursesTakeKoreanLabels() {
+        let device = UUID()
+        let hs = CourseCode(device: device, at: .now, prefix: "HS"), ec = CourseCode(device: device, at: .now, prefix: "EC")
+        let catalog = Catalog(codes: [hs, ec])
+        func course(_ codes: [CourseCode]) -> Course { Course(device: device, at: .now, title: "", codes: codes.map(\.id)) }
+        #expect(FigureStyle.allowsKorean(course([hs]), catalog: catalog))
+        #expect(FigureStyle.allowsKorean(course([ec, hs]), catalog: catalog))
+        #expect(!FigureStyle.allowsKorean(course([ec]), catalog: catalog))
+        #expect(!FigureStyle.allowsKorean(course([]), catalog: catalog))
     }
 
     // 쓸 때 넣은 스타일에는 hex 색이 있다. 이미 마무리한 그림을 다시 검사해도 걸리지 않아야 한다.

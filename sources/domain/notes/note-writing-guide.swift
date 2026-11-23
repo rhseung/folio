@@ -55,7 +55,7 @@ public enum NoteWritingGuide {
             - 선 굵기(`stroke-width`): \#(strokes). 선에는 `fill="none"`.
             - 화살표는 촉을 그리지 않고 `marker-end="url(#m-ink)"`처럼 선과 같은 색의 `m-이름`을 쓴다. 촉은 선 굵기를 따라 커지고 점선이어도 실선이다.
             - 그림의 글은 라벨만 둔다(\#(FigureStyle.labelLimit)자까지): 정점과 집합 이름, 축, 짧은 수식, (a)(b). 설명, 범례 문장, 단계 설명, 증명은 노트 본문에 쓰고, 색의 뜻은 라벨 색으로 알린다.
-            - 그림에는 한국어를 쓰지 않는다. 라벨은 기호와 짧은 영어다. 두 글자 이상의 낱말이 \#(FigureStyle.proseWords)개 이상 든 라벨은 문장으로 보고 거절한다.
+            - 그림에는 한국어를 쓰지 않는다. 라벨은 기호와 짧은 영어다. 인문사회 과목(과목코드 \#(FigureStyle.koreanCodes.sorted().joined(separator: " ")))의 그림만 한국어를 받는다. 두 글자 이상의 낱말이 \#(FigureStyle.proseWords)개 이상 든 라벨은 문장으로 보고 거절한다.
             - 코드(`t1 = y + z`, `make_pkt(ACK)`)는 `class="mono"`로 쓴다. 쓸 때 mermaid 도식의 코드와 같은 고정폭 LaTeX 글자(`\texttt`)가 된다. `$\texttt{…}$`로 돌려 쓰지 않는다.
             - 수식, 화학식, 미지수는 `<text>` 안에 `$…$`로 쓴다(`$v_1$`, `$\ce{H2O}$`, 벡터는 `$\mathbf{F}$`). 쓸 때 LaTeX 글자 모양이 된다. 낱말은 그대로 두면 산세리프다. 수식이 든 라벨은 `<tspan>` 없이 `<text>` 하나로 쓴다.
             - 글자는 14px, `class="sm"` 12px, `class="lg"` 17px, `class="bd"` 굵게. 글꼴과 크기를 따로 적지 않는다. 색과 크기 클래스는 `<g>`에 달면 그 안의 글자가 물려받는다.

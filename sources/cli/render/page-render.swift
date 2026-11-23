@@ -46,8 +46,8 @@ enum PageRender {
         """
 
     // 쓸 때와 같이 마무리한 그림을 그린다.
-    static func figure(_ svg: String, accent: String, widths: [Int]) throws -> RenderResult {
-        let finished = try NoteFigureFinish.finish(svg)
+    static func figure(_ svg: String, accent: String, korean: Bool = false, widths: [Int]) throws -> RenderResult {
+        let finished = try NoteFigureFinish.finish(svg, korean: korean)
         let page = figurePage(finished.svg, accent: accent)
         let (images, _) = try shots(page, scripts: [], widths: widths, start: 240, settle: 0.1)
         return RenderResult(images: images, console: [], problems: finished.problems.map(\.message))

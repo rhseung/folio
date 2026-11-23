@@ -19,7 +19,7 @@ public struct NoteFigureWrite {
     public func run(_ ctx: ActionContext) throws {
         let store = try ctx.store(course)
         let path = NoteFigure.path(try NoteFigureAdd.fileName(name))
-        let finished = try NoteFigureAdd.finish(svg)
+        let finished = try NoteFigureAdd.finish(svg, korean: NoteFigureAdd.korean(ctx, course))
         try Self.match(store, path, expect)
         try ctx.io(Change(.changed, try ctx.relative(course, path))) { try store.writeText(path, text: finished) }
     }

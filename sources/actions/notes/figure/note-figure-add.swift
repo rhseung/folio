@@ -18,7 +18,7 @@ public struct NoteFigureAdd {
     public func run(_ ctx: ActionContext) throws {
         let store = try ctx.store(course)
         let path = NoteFigure.path(try Self.fileName(name))
-        let finished = try Self.finish(svg)
+        let finished = try Self.finish(svg, korean: Self.korean(ctx, course))
         guard !FileManager.default.fileExists(atPath: store.fileURL(path).path) else {
             throw ActionError.conflict(String(localized: .errorFigureTaken(path)))
         }
@@ -30,8 +30,12 @@ public struct NoteFigureAdd {
         return file
     }
 
-    static func finish(_ svg: String) throws -> String {
-        let finished = try NoteFigureFinish.finish(svg)
+    static func korean(_ ctx: ActionContext, _ course: Course.ID) throws -> Bool {
+        FigureStyle.allowsKorean(try ctx.file(course).course, catalog: try ctx.catalog())
+    }
+
+    static func finish(_ svg: String, korean: Bool) throws -> String {
+        let finished = try NoteFigureFinish.finish(svg, korean: korean)
         guard finished.problems.isEmpty else { throw ActionError.rule(finished.problems.map(\.message).joined(separator: "\n")) }
         return finished.svg
     }
