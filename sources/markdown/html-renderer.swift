@@ -244,7 +244,7 @@ public struct HTMLRenderer {
         if callouts.numbered(header.type) {
             if let explicit = header.explicitNumber {
                 label += " " + explicit
-                title = title.replacingOccurrences(of: #"^(?:[A-Za-z]+\s+)?\#(explicit)\s*"#, with: "", options: .regularExpression)
+                title = header.titleWithoutNumber
             } else {
                 counters[header.type, default: 0] += 1
                 label += " \(counters[header.type]!)"
