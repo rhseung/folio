@@ -113,7 +113,19 @@ struct CalloutTests {
 
             > [!theorem] 3-regular graph
             > K.
+
+            > [!theorem] 1.2: Hall theorem
+            > L.
+
+            > [!theorem] Theorem 2.3. Menger
+            > M.
+
+            > [!theorem] 4
+            > N.
             """)
+        #expect(out.contains("<span class=\"callout-label\">Theorem 1.2</span> <span class=\"callout-title\">Hall theorem</span>"))
+        #expect(out.contains("<span class=\"callout-label\">Theorem 2.3</span> <span class=\"callout-title\">Menger</span>"))
+        #expect(out.contains("<span class=\"callout-label\">Theorem 4</span></summary>"))
         #expect(out.contains("<span class=\"callout-label\">Theorem 1</span> <span class=\"callout-title\">2-connected graph의 특징</span>"))
         #expect(out.contains("<span class=\"callout-label\">Theorem 3.1.2</span></summary>"))
         #expect(out.contains("<span class=\"callout-label\">Theorem 2</span> <span class=\"callout-title\">3-regular graph</span>"))
