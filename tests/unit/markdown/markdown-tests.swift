@@ -102,6 +102,23 @@ struct CalloutTests {
         #expect(!out.contains("^def-matching</p>"))
     }
 
+    @Test func titleStartingWithNumberKeepsCounter() {
+        let out = html(
+            """
+            > [!theorem] 2-connected graph의 특징
+            > G.
+
+            > [!theorem] Theorem 3.1.2
+            > H.
+
+            > [!theorem] 3-regular graph
+            > K.
+            """)
+        #expect(out.contains("<span class=\"callout-label\">Theorem 1</span> <span class=\"callout-title\">2-connected graph의 특징</span>"))
+        #expect(out.contains("<span class=\"callout-label\">Theorem 3.1.2</span></summary>"))
+        #expect(out.contains("<span class=\"callout-label\">Theorem 2</span> <span class=\"callout-title\">3-regular graph</span>"))
+    }
+
     @Test func foldedAndAttachedProof() {
         let out = html(
             """
