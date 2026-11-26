@@ -2581,7 +2581,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lectures에 넣으면서 --session을 주면 그 회차의 주차를 이름 앞에 붙인다(06_). 이미 과목 안에 있는 파일은 복사하지 않고 연결만 한다. 파일을 하나라도 넣을 수 없으면 아무것도 복사하지 않는다.\n\n예시:\n  folio material import EC4207 ~/Downloads/Coloring.pdf --folder Lectures --session 10-06\n  folio material import EC4207 ~/Downloads/HW4.pdf --folder Assignments/HW04 --dry-run"
+            "value": "파일 이름은 바꾸지 않는다. --session을 주면 그 회차에 연결한다. 이미 과목 안에 있는 파일은 복사하지 않고 연결만 한다. 파일을 하나라도 넣을 수 없으면 아무것도 복사하지 않는다.\n\n예시:\n  folio material import EC4207 ~/Downloads/Coloring.pdf --folder Lectures --session 10-06\n  folio material import EC4207 ~/Downloads/HW4.pdf --folder Assignments/HW04 --dry-run"
           }
         }
       }

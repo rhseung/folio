@@ -176,7 +176,7 @@ final class LMSModel {
         if let flag { return flag.label }
         switch p.item {
         case .assignment: return attachmentSummary(p.attachments)
-        case .file(let f): return "\(CourseFolder.lectures.rawValue)/\(f.lectureName(f.title))"
+        case .file(let f): return "\(CourseFolder.lectures.rawValue)/\(f.title)"
         case .notice(let n): return n.author
         case .difference(let d):
             switch d.change {

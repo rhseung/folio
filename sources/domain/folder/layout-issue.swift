@@ -7,7 +7,7 @@ public struct LayoutIssue: Hashable, Sendable {
         case unknownCourseSubfolder
         case invalidAssignmentFolder
         case invalidExamFolder
-        case invalidLectureFileName
+        case lectureSubfolder
         case legacyFolder
     }
 

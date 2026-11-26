@@ -29,9 +29,8 @@ public struct MaterialImport {
                 linked.append((inside, item))
                 continue
             }
-            let name = MaterialIntake.name(url.lastPathComponent, in: item.folder, session: file.sessions.first { $0.id == item.session })
-            let planned = try ctx.relative(course, "\(item.folder)/\(name)")
-            if let path = try ctx.io(Change(.added, planned), { try store.importFile(url, into: item.folder, name: name) }) {
+            let planned = try ctx.relative(course, "\(item.folder)/\(url.lastPathComponent)")
+            if let path = try ctx.io(Change(.added, planned), { try store.importFile(url, into: item.folder) }) {
                 linked.append((path, item))
             }
         }

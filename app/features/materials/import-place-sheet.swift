@@ -119,16 +119,11 @@ private struct ImportRow: View {
     private var destinationHead: AttributedString {
         var out = AttributedString(placement.folder + "/")
         out.foregroundColor = Theme.Palette.textTertiary
-        if let prefix = placement.prefix {
-            var part = AttributedString(prefix)
-            part.foregroundColor = accent.ink
-            out += part
-        }
         return out
     }
 
     private var destinationName: AttributedString {
-        let name = String(placement.name.dropFirst(placement.prefix?.count ?? 0))
+        let name = placement.name
         let ext = (name as NSString).pathExtension
         var base = ext.isEmpty ? name : (name as NSString).deletingPathExtension
         var tail = AttributedString()

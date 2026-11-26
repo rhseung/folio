@@ -87,8 +87,6 @@ struct StandardLayoutTests {
 }
 
 @Test func intakeNamesKeepWeekOrderAndNeverReuseAName() {
-    #expect(MaterialIntake.lectureName("Matchings.pdf", week: 5) == "05_Matchings.pdf")
-    #expect(MaterialIntake.lectureName("05-2_Matchings.pdf", week: 6) == "05-2_Matchings.pdf")
     #expect(MaterialIntake.freeName("a.pdf", taken: []) == "a.pdf")
     #expect(MaterialIntake.freeName("a.pdf", taken: ["a.pdf", "a 2.pdf"]) == "a 3.pdf")
     #expect(MaterialIntake.freeName("code", taken: ["code"]) == "code 2")
