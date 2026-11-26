@@ -334,6 +334,7 @@ extension Settings: Document {
                 && SettingItem.studyFinalDays.range.contains(s.study.finalDays)
                 && SettingItem.studyMockMinutes.range.contains(s.study.mockMinutes)
                 && SettingItem.studyPlanDayItems.range.contains(s.study.planDayItems)
+                && SettingItem.studyPlanShownDays.range.contains(s.study.planShownDays)
         }
         Rule("Settings.assignmentLeadHours", String(localized: .ruleSettingsAssignmentLeadHours)) { s, _ in
             (s.notifications[.assignmentDue].leadHours ?? []).allSatisfy { SettingItem.assignmentLeadHours.range.contains($0) }

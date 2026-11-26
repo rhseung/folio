@@ -86,4 +86,37 @@ struct UnitsModelTests {
         model.loadNotes(try #require(try file(workspace).units.first))
         #expect(model.notes.isEmpty)
     }
+
+    @Test func thePlanShowsItsFirstDaysAndFoldsTheRest() throws {
+        let workspace = try fixtureWorkspace()
+        let model = UnitsModel(workspace: workspace, courseId: graphTheory)
+        let start = Date.now.addingTimeInterval(20 * 86_400)
+        let examId = try #require(workspace.run(ExamAdd(course: graphTheory, title: "기말고사", start: start))?.made)
+        for d in [0, 1, 2, 5, 9] {
+            workspace.run(ExamPlanAdd(course: graphTheory, exam: examId, title: "할 일 \(d)", day: workspace.today.adding(days: d)))
+        }
+        let exam = try #require(try file(workspace).exams.first { $0.id == examId })
+        let all = exam.plan.filter { !$0.isRemoved }.count
+        let shownDays = workspace.settings.study.planShownDays
+        let folded = model.planRows(exam)
+        #expect(folded.rows.allSatisfy { workspace.today.days(until: $0.item.day) < shownDays })
+        #expect(folded.rows.count + folded.folded == all && folded.folded > 0)
+        #expect(model.planToggleLabel(folded: folded.folded) == "\(folded.folded)개 더 보기")
+        model.planOpen = true
+        #expect(model.planRows(exam).rows.count == all && model.planToggleLabel(folded: folded.folded) == "접기")
+    }
+
+    @Test func otherUnitsAreGroupedUnderThePastExamThenUntaught() throws {
+        let workspace = try fixtureWorkspace()
+        let model = UnitsModel(workspace: workspace, courseId: graphTheory)
+        let units = try ["매칭", "연결도", "채색"].map { try #require(workspace.run(UnitAdd(course: graphTheory, title: $0))?.made) }
+        let day = { (d: Int) in Date.now.addingTimeInterval(Double(d) * 86_400) }
+        workspace.run(ExamAdd(course: graphTheory, title: "중간고사", start: day(-30), scope: [units[0]]))
+        workspace.run(ExamAdd(course: graphTheory, title: "기말고사", start: day(20), scope: [units[1]]))
+        let exam = try #require(model.nextExam)
+        let sections = model.otherSections(exam, rest: model.rows(in: exam).rest)
+        #expect(sections.map(\.title) == ["중간고사 범위", "아직 안 배운 단원"])
+        #expect(sections.map { $0.rows.map(\.unit.id) } == [[units[0]], [units[2]]])
+        #expect(model.otherSummary(sections) == "중간고사 범위 1 · 아직 안 배운 단원 1")
+    }
 }
