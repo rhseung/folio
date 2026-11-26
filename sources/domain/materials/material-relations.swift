@@ -30,10 +30,20 @@ extension CourseFile {
         }
     }
 
+    // `routes(of:to: .unit)`와 같은 답을 낸다. 단원마다 그 함수를 부르면 단원마다 단원 순서를 다시 만들고 모든 회차의 단원을
+    // 다시 계산한다. 자료 목록은 행마다 이것을 부르므로 자료 수 × 단원 수의 제곱 × 회차 수만큼 돌아, 자료 페이지를 여는 데
+    // 1~2초가 걸렸다. 그래서 단원 순서는 한 번만 만들고, 이 자료가 든 회차의 단원만 한 번씩 계산한다.
     public func units(of material: Material) -> [(unit: Unit, routes: [MaterialRoute])] {
-        UnitTree.outline(units).compactMap { row in
-            let routes = routes(of: material, to: .unit(row.unit.id))
-            return routes.isEmpty ? nil : (row.unit, routes)
+        let outline = UnitTree.outline(units).map(\.unit)
+        let held = Set(units.filter { $0.lecturePages.contains { $0.materialId == material.id } }.map(\.id))
+        let taught = sessions.sorted(by: Session.inOrder).filter { s in s.materials.contains { $0.materialId == material.id } }
+            .map { (id: $0.id, units: Set(unitIds(of: $0, outline: outline))) }
+        return outline.compactMap { unit -> (unit: Unit, routes: [MaterialRoute])? in
+            var routes: [MaterialRoute] = []
+            if material.unitIds.contains(unit.id) { routes.append(.direct) }
+            if held.contains(unit.id) { routes.append(.pages) }
+            for s in taught where s.units.contains(unit.id) { routes.append(.session(s.id)) }
+            return routes.isEmpty ? nil : (unit, routes)
         }
     }
 

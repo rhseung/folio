@@ -55,6 +55,24 @@ struct MaterialRelationsTests {
         #expect(units.map(\.routes) == [[.direct], [.session(file.sessions[0].id)]])
     }
 
+    @Test func aFilesUnitsAgreeWithEachUnitsRoutes() {
+        var file = course()
+        file.linkMaterial(file.materials[1].id, session: file.sessions[0].id)
+        file.setMaterial(file.materials[1].id, unit: chapter(file), linked: true)
+        file.setMaterial(file.materials[2].id, unit: section(file), linked: true)
+        file.split(file.materials[0].id, into: [LectureCut(unit: section(file), firstPage: 1, lastPage: 4)], device: device, now: now)
+        file.linkMaterial(file.materials[0].id, session: file.sessions[0].id)
+        for m in file.materials {
+            let expected = UnitTree.outline(file.units).compactMap { row -> (id: UUID, routes: [MaterialRoute])? in
+                let routes = file.routes(of: m, to: .unit(row.unit.id))
+                return routes.isEmpty ? nil : (row.unit.id, routes)
+            }
+            let units = file.units(of: m)
+            #expect(units.map(\.unit.id) == expected.map(\.id))
+            #expect(units.map(\.routes) == expected.map(\.routes))
+        }
+    }
+
     @Test func anExamGathersItsFolderAndItsLinks() {
         var file = course()
         let exam = file.exams[0].id
