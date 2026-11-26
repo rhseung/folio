@@ -51,8 +51,8 @@ struct MaterialFilesTests {
         let source = outside.appending(path: "slides.pdf")
         try Data("slides".utf8).write(to: source)
 
-        let first = try store.importFile(source, into: "Lectures", name: MaterialIntake.lectureName("slides.pdf", week: 7))
-        let second = try store.importFile(source, into: "Lectures", name: MaterialIntake.lectureName("slides.pdf", week: 7))
+        let first = try store.importFile(source, into: "Lectures", name: "07_slides.pdf")
+        let second = try store.importFile(source, into: "Lectures", name: "07_slides.pdf")
         #expect((first, second) == ("Lectures/07_slides.pdf", "Lectures/07_slides 2.pdf"))
         #expect(FileManager.default.fileExists(atPath: source.path))
         #expect(store.coursePath(of: store.fileURL(first)) == first)

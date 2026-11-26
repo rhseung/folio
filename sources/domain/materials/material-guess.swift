@@ -71,7 +71,7 @@ extension MaterialIntake {
 
         if let week {
             // 수업이 없는 주(오래된 슬라이드, 아직 만들지 않은 주)에는 회차를 정하지 않는다. 오늘 수업을 고르면 이름이 다른
-            // 주를 말하는데도 오늘 수업의 주차가 이름 앞에 붙기 때문이다.
+            // 주를 말하는 파일이 오늘 수업에 연결되기 때문이다.
             let ofWeek = held.filter { $0.week == week }
             return (latest(ofWeek) ?? ofWeek.first).map { ($0.id, .week(week)) } ?? (nil, nil)
         }

@@ -7272,17 +7272,6 @@
         }
       }
     },
-    "materials.import-week-prefix": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "회차의 주차로 앞에 %@를 붙입니다"
-          }
-        }
-      }
-    },
     "materials.inbox-detail": {
       "extractionState": "manual",
       "localizations": {

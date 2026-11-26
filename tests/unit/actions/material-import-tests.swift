@@ -36,7 +36,6 @@ struct MaterialImportTests {
     @Test func eachFileGoesToItsOwnFolderAndSession() throws {
         let session = UUID()
         try run(SessionAdd(id: session, course: Self.course, date: now))
-        let week = try #require(try file().sessions.first { $0.id == session }).week
         try run(
             MaterialImport(
                 course: Self.course,
@@ -45,7 +44,7 @@ struct MaterialImportTests {
                     ImportItem(file: try download("Diestel.pdf"), folder: "Textbooks"),
                     ImportItem(file: try download("05-2_König.pdf"), folder: "Lectures", session: session),
                 ]))
-        let lecture = String(format: "Lectures/%02d_Hall.pdf", week)
+        let lecture = "Lectures/Hall.pdf"
         #expect(exists(lecture) && exists("Textbooks/Diestel.pdf") && exists("Lectures/05-2_König.pdf"))
         let f = try file()
         let linked = Set(

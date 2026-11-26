@@ -54,7 +54,7 @@ public enum LayoutCheck {
             case nil:
                 issues.append(.init(.unknownCourseSubfolder, path))
             case .lectures:
-                for file in entry.children where !(file.isFile && StandardLayout.isLectureFileName(file.name)) {
+                for file in entry.children where !file.isFile {
                     issues.append(.init(.invalidLectureFileName, "\(path)/\(file.name)"))
                 }
             case .assignments:

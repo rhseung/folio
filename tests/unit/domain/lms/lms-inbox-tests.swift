@@ -152,14 +152,3 @@ struct LMSInboxTests {
         #expect(old.lms == LMSSettings())
     }
 }
-
-struct LMSFileNameTests {
-    @Test func lectureNameTakesTheWeek() {
-        let file = LMSFile(id: 1, classroom: 1, title: "Matchings", week: "5주차 [9월28일 - 10월4일]")
-        #expect(file.lectureName("Matchings.pdf") == "05_Matchings.pdf")
-        #expect(file.lectureName("05_Matchings.pdf") == "05_Matchings.pdf")
-        #expect(LMSFile(id: 1, classroom: 1, title: "x", week: "12주차").lectureName("a.pdf") == "12_a.pdf")
-        #expect(LMSFile(id: 1, classroom: 1, title: "x", week: "강의 개요").lectureName("a.pdf") == "a.pdf")
-        #expect(LMSFile(id: 1, classroom: 1, title: "x").lectureName("a.pdf") == "a.pdf")
-    }
-}

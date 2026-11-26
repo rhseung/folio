@@ -112,19 +112,17 @@ struct MaterialIntakeTests {
         #expect(at(5, 2) == .latest)
     }
 
-    @Test func planNumbersRepeatsAndMarksWhatItAdds() {
-        let s = Self.sessions[2]
+    @Test func planKeepsNamesAndNumbersRepeats() {
         let plan = MaterialIntake.plan(
             [
-                ("Matchings.pdf", "Lectures", s), ("Matchings.pdf", "Lectures", s), ("hw.pdf", "Assignments/HW01", s),
-                ("05-2_Hall.pdf", "Lectures", s),
+                ("Matchings.pdf", "Lectures"), ("Matchings.pdf", "Lectures"), ("hw.pdf", "Assignments/HW01"),
+                ("05-2_Hall.pdf", "Lectures"),
             ],
             taken: { $0 == "Assignments/HW01" ? ["hw.pdf"] : [] })
         #expect(
             plan.map(\.path) == [
-                "Lectures/05_Matchings.pdf", "Lectures/05_Matchings 2.pdf", "Assignments/HW01/hw 2.pdf", "Lectures/05-2_Hall.pdf",
+                "Lectures/Matchings.pdf", "Lectures/Matchings 2.pdf", "Assignments/HW01/hw 2.pdf", "Lectures/05-2_Hall.pdf",
             ])
-        #expect(plan.map(\.prefix) == ["05_", "05_", nil, nil])
         #expect(plan.map(\.suffix) == [nil, " 2", " 2", nil])
     }
 
@@ -157,16 +155,15 @@ struct MaterialIntakeTests {
     @Test func aPlanNeverOverwritesOrCollides() async {
         let item = zip(
             Gen.element(of: ["a.pdf", "a 2.pdf", "05_a.pdf", "code"]).map { $0! },
-            Gen.element(of: ["Lectures", "Study", "Assignments/HW01"]).map { $0! }, Gen.bool)
+            Gen.element(of: ["Lectures", "Study", "Assignments/HW01"]).map { $0 ?? "" })
         let held = Gen.element(of: ["a.pdf", "05_a.pdf", "a 2.pdf", "code 2"]).map { $0! }.array(of: 0...3)
         await propertyCheck(input: item.array(of: 0...8), held) { items, held in
-            let plan = MaterialIntake.plan(items.map { ($0.0, $0.1, $0.2 ? Self.sessions[2] : nil) }, taken: { _ in Set(held) })
+            let plan = MaterialIntake.plan(items.map { ($0.0, $0.1) }, taken: { _ in Set(held) })
             #expect(Set(plan.map(\.path)).count == plan.count)
             #expect(plan.allSatisfy { !held.contains($0.name) })
             for (p, i) in zip(plan, items) {
                 #expect(p.folder == i.1)
-                #expect((p.prefix != nil) == (i.1 == "Lectures" && i.2 && !StandardLayout.isLectureFileName(i.0)))
-                #expect(p.name == (p.prefix ?? "") + MaterialIntake.freeName(i.0, taken: []).insertingSuffix(p.suffix))
+                #expect(p.name == i.0.insertingSuffix(p.suffix))
             }
         }
     }

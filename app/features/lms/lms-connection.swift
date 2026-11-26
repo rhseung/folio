@@ -85,7 +85,7 @@ final class LMSConnection {
             viewerOnly.insert(file.id)
             return nil
         }
-        return try LMSDownloads.rename(got, to: file.lectureName(got.lastPathComponent))
+        return got
     }
 
     // 첨부를 하나씩 따로 폴더에 받아, 이름이 같은 두 첨부도 덮어쓰지 않는다.

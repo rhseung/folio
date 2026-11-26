@@ -18,8 +18,4 @@ public struct LMSFile: Codable, Hashable, Sendable, Identifiable {
     public var key: LMSKey { .init(kind: .file, id: id) }
     public var url: URL { LMS.url("/mod/ubfile/view.php?id=\(id)") }
 
-    public func lectureName(_ downloaded: String) -> String {
-        guard downloaded.first?.isNumber == false, let week, let number = Int(week.prefix { $0.isNumber }) else { return downloaded }
-        return String(format: "%02d_", number) + downloaded
-    }
 }

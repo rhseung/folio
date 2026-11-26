@@ -160,16 +160,12 @@ final class ImportPlaceModel {
     // 같은 이름의 두 파일이 한 이름을 함께 차지하지 않도록 모든 행을 함께 계획한다.
     var placements: [MaterialIntake.Placement] {
         MaterialIntake.plan(
-            rows.map { row in (row.url.lastPathComponent, row.folder, isLecture(row) ? session(row) : nil) },
+            rows.map { ($0.url.lastPathComponent, $0.folder) },
             taken: { self.held[$0] ?? [] })
     }
 
-    private func session(_ row: Row) -> Session? { row.session.flatMap { id in course.file.sessions.first { $0.id == id } } }
-
     func nameNote(_ p: MaterialIntake.Placement) -> String? {
-        if let suffix = p.suffix { return String(localized: .materialsImportNumbered(suffix.trimmingCharacters(in: .whitespaces))) }
-        if let prefix = p.prefix { return String(localized: .materialsImportWeekPrefix(prefix)) }
-        return nil
+        p.suffix.map { String(localized: .materialsImportNumbered($0.trimmingCharacters(in: .whitespaces))) }
     }
 
     // MARK: Changing rows

@@ -34,7 +34,6 @@ struct FixtureTests {
             .init(.fileInCourseFolder, "\(ec)/Midterm Guideline.pdf"),
             .init(.fileInCourseFolder, "\(ec)/Midterm Seating.pdf"),
             .init(.fileInCourseFolder, "\(ec)/Syllabus.pdf"),
-            .init(.invalidLectureFileName, "\(ec)/Lectures/Matchings.pdf"),
             .init(.invalidAssignmentFolder, "\(robot)/Assignments/robot"),
             .init(.unknownCourseSubfolder, "\(robot)/Books"),
             .init(.unknownCourseSubfolder, "\(robot)/Manuals"),

@@ -67,7 +67,7 @@ struct CoursePlanner {
         let base = folder.rawValue
         switch folder {
         case .lectures:
-            for item in node.children where !(item.isFile && StandardLayout.isLectureFileName(item.name)) {
+            for item in node.children where !item.isFile {
                 lectureItem(item, at: "\(base)/\(item.name)")
             }
         case .assignments:
@@ -129,8 +129,8 @@ struct CoursePlanner {
                 let path = "\(base)/\(item.name)"
                 let lab = Keywords.labNumber(of: item.name, labs: labs) ?? Keywords.assignmentNumber(in: item.name, kinds: kinds)?.number
                 if item.isFile, let week = lab.flatMap({ labWeeks[$0] }) {
-                    moves.append(
-                        .init(from: path, to: "\(CourseFolder.lectures.rawValue)/\(MaterialIntake.lectureName(item.name, week: week))"))
+                    let name = StandardLayout.isLectureFileName(item.name) ? item.name : String(format: "%02d_", week) + item.name
+                    moves.append(.init(from: path, to: "\(CourseFolder.lectures.rawValue)/\(name)"))
                 } else {
                     lectureItem(item, at: path)
                 }
