@@ -103,6 +103,66 @@ struct ExamScopeWindowTests {
         #expect(f.scope(of: f.exams[1]) == ids(f, [2, 3]) && !f.isEdited(scopeOf: f.exams[1]))
     }
 
+    // 같은 성적 항목에 이은 퀴즈들을 날짜(주 단위 오프셋)마다 더한다.
+    func addQuizzes(_ f: inout CourseFile, at days: [Double]) -> [Exam] {
+        let component = UUID()
+        let quizzes = days.enumerated().map { i, d in
+            var q = Exam(device: device, at: now, title: "Quiz\(i + 1)", start: now + d * day)
+            q.componentId = component
+            return q
+        }
+        f.exams += quizzes
+        return quizzes
+    }
+
+    @Test func aQuizRightBeforeTheFinalLeavesItsScopeAlone() {
+        var f = course()
+        f.linkMaterial(lecture(f), session: f.sessions[0].id, firstPage: 1, lastPage: 12)
+        f.linkMaterial(lecture(f), session: f.sessions[3].id, firstPage: 13, lastPage: 25)
+        f.linkMaterial(lecture(f), session: f.sessions[6].id, firstPage: 26, lastPage: 40)
+        // 둘째 퀴즈는 기말 이틀 전이다. 퀴즈가 기말 범위를 끊으면 기말에는 퀴즈 뒤의 수업만 남는다.
+        let quizzes = addQuizzes(&f, at: [36, 50])
+        #expect(f.previousExam(before: f.exams[1])?.id == f.exams[0].id)
+        #expect(f.computedScope(of: f.exams[1]) == ids(f, [2, 3]))
+        // 퀴즈끼리는 서로 끊는다. 둘째 퀴즈는 첫 퀴즈(36일) 뒤의 수업, 26~40쪽이다.
+        #expect(f.previousExam(before: quizzes[1])?.id == quizzes[0].id)
+        #expect(f.computedScope(of: quizzes[1]) == ids(f, [2, 3]))
+    }
+
+    @Test func aQuizAfterTheMidtermCountsFromTheMidterm() {
+        var f = course()
+        f.linkMaterial(lecture(f), session: f.sessions[0].id, firstPage: 1, lastPage: 12)
+        f.linkMaterial(lecture(f), session: f.sessions[3].id, firstPage: 13, lastPage: 25)
+        f.linkMaterial(lecture(f), session: f.sessions[4].id, firstPage: 26, lastPage: 30)
+        // 중간고사(24일)가 첫 퀴즈(8일)보다 뒤라서 둘째 퀴즈(36일)는 중간고사 뒤의 26~30쪽, 단원 3만 센다.
+        let quizzes = addQuizzes(&f, at: [8, 36])
+        #expect(f.previousExam(before: quizzes[1])?.id == f.exams[0].id)
+        #expect(f.computedScope(of: quizzes[1]) == ids(f, [2]))
+    }
+
+    @Test func anExamWithoutOthersOnItsComponentStillCutsTheWindow() {
+        var f = course()
+        f.linkMaterial(lecture(f), session: f.sessions[0].id, firstPage: 1, lastPage: 12)
+        f.linkMaterial(lecture(f), session: f.sessions[6].id, firstPage: 13, lastPage: 40)
+        // 성적 항목에 시험이 하나뿐이면 큰 시험이다. 퀴즈를 성적 항목에 잇지 않은 과목은 지금처럼 끊는다.
+        var lone = Exam(device: device, at: now, title: "Quiz", start: at(week: 6) + day)
+        lone.componentId = UUID()
+        f.exams.append(lone)
+        #expect(f.previousExam(before: f.exams[1])?.id == lone.id)
+    }
+
+    @Test func quizzesNeverChangeTheMidtermOrFinalScope() async {
+        await propertyCheck(input: Gen.int(in: 1...40), Gen.int(in: 1...40), Gen.int(in: 0...55).array(of: 2...5)) { a, b, days in
+            var f = course()
+            let (mid, end) = (min(a, b), max(a, b))
+            f.linkMaterial(lecture(f), session: f.sessions[1].id, firstPage: 1, lastPage: mid)
+            f.linkMaterial(lecture(f), session: f.sessions[5].id, firstPage: min(mid + 1, end), lastPage: end)
+            let before = f.exams.map { f.computedScope(of: $0) }
+            _ = addQuizzes(&f, at: days.map(Double.init))
+            #expect(f.exams.prefix(2).map { f.computedScope(of: $0) } == before)
+        }
+    }
+
     @Test func scopesOfConsecutiveExamsCoverEverythingTaught() async {
         await propertyCheck(input: Gen.int(in: 1...40), Gen.int(in: 1...40)) { a, b in
             var f = course()

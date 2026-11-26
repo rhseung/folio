@@ -1,14 +1,23 @@
 import Foundation
 
 extension CourseFile {
+    // 범위를 세기 시작하는 앞 시험이다. 성적 항목 하나에 이은 시험이 많을수록 작은 시험(Quiz1~5)으로 보고, 자기보다
+    // 작은 시험은 범위를 끊지 않는다. 그러지 않으면 기말 나흘 전의 퀴즈가 기말 범위를 그 나흘로 줄인다. 성적 항목이
+    // 없는 시험은 이은 시험이 하나인 큰 시험으로 센다.
     public func previousExam(before exam: Exam) -> Exam? {
         guard let start = exam.start else { return nil }
-        return exams.filter { e in e.id != exam.id && e.start.map { $0 < start } ?? false }.max {
+        let size = seriesSize(of: exam)
+        return exams.filter { e in e.id != exam.id && (e.start.map { $0 < start } ?? false) && seriesSize(of: e) <= size }.max {
             ($0.start ?? .distantPast) < ($1.start ?? .distantPast)
         }
     }
 
-    // 지난 시험 이후 배운 단원이다. 지난 시험 전에 시작해 그 뒤에도 이어 배운 단원도 넣는다. 날짜가 없는 시험은
+    func seriesSize(of exam: Exam) -> Int {
+        guard let component = exam.componentId else { return 1 }
+        return exams.filter { $0.componentId == component }.count
+    }
+
+    // 앞 시험(`previousExam`) 이후 배운 단원이다. 지난 시험 전에 시작해 그 뒤에도 이어 배운 단원도 넣는다. 날짜가 없는 시험은
     // 언제까지 배운 것인지 몰라 계산하지 않는다.
     public func computedScope(of exam: Exam) -> [UUID]? {
         computedScope(of: exam, outline: UnitTree.outline(units).map(\.unit))
