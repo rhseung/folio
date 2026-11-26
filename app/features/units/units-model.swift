@@ -49,9 +49,11 @@ final class UnitsModel {
 
     // "그 밖의 단원"의 소제목 하나다. 지난 시험마다, 시험에 없는 단원, 아직 안 배운 단원의 차례다.
     struct UnitSection: Identifiable {
+        // 지난 시험의 제목은 서로 달라야 하지 않으므로 소제목 문구가 아니라 묶음 종류로 가린다.
+        var kind: UnitGroup.Kind
         var title: String
         var rows: [Row]
-        var id: String { title }
+        var id: UnitGroup.Kind { kind }
     }
 
     let workspace: Workspace
@@ -145,7 +147,7 @@ final class UnitsModel {
             case .untested: title = String(localized: .unitsOtherUntested)
             case .untaught: title = String(localized: .unitsOtherUntaught)
             }
-            return UnitSection(title: title, rows: group.unitIds.compactMap { byId[$0] })
+            return UnitSection(kind: group.kind, title: title, rows: group.unitIds.compactMap { byId[$0] })
         }
     }
 

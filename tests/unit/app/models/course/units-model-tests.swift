@@ -119,4 +119,18 @@ struct UnitsModelTests {
         #expect(sections.map { $0.rows.map(\.unit.id) } == [[units[0]], [units[2]]])
         #expect(model.otherSummary(sections) == "중간고사 범위 1 · 아직 안 배운 단원 1")
     }
+
+    @Test func pastExamsWithTheSameTitleKeepTheirOwnSections() throws {
+        let workspace = try fixtureWorkspace()
+        let model = UnitsModel(workspace: workspace, courseId: graphTheory)
+        let units = try ["매칭", "연결도", "채색"].map { try #require(workspace.run(UnitAdd(course: graphTheory, title: $0))?.made) }
+        let day = { (d: Int) in Date.now.addingTimeInterval(Double(d) * 86_400) }
+        let first = try #require(workspace.run(ExamAdd(course: graphTheory, title: "퀴즈", start: day(-40), scope: [units[0]]))?.made)
+        let second = try #require(workspace.run(ExamAdd(course: graphTheory, title: "퀴즈", start: day(-30), scope: [units[1]]))?.made)
+        workspace.run(ExamAdd(course: graphTheory, title: "기말고사", start: day(20), scope: [units[2]]))
+        let exam = try #require(model.nextExam)
+        let sections = model.otherSections(exam, rest: model.rows(in: exam).rest)
+        #expect(sections.map(\.title) == ["퀴즈 범위", "퀴즈 범위"])
+        #expect(sections.map(\.id) == [.exam(second), .exam(first)])
+    }
 }
