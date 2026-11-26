@@ -51,9 +51,7 @@ struct UnitsView: View {
             if let exam, !exam.plan.isEmpty { planBlock(exam) }
             if let exam {
                 Block(String(localized: .unitsScope(exam.title)), note: "\(rows.scope.count)") { unitCard(rows.scope) }
-                if !rows.rest.isEmpty {
-                    Block(String(localized: .unitsOther), note: "\(rows.rest.count)") { unitCard(rows.rest) }
-                }
+                if !rows.rest.isEmpty { otherBlock(exam, rest: rows.rest) }
             } else if !rows.rest.isEmpty {
                 unitCard(rows.rest)
             }
@@ -102,7 +100,8 @@ struct UnitsView: View {
     }
 
     func planBlock(_ exam: Exam) -> some View {
-        let rows = model.planRows(exam)
+        let plan = model.planRows(exam)
+        let rows = plan.rows
         return Block(
             title: String(localized: .unitsPlan), note: model.planNote(exam)
         ) {
@@ -110,7 +109,7 @@ struct UnitsView: View {
         } content: {
             Card {
                 ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
-                    CardRow(last: i == rows.count - 1) {
+                    CardRow(last: i == rows.count - 1 && plan.folded == 0) {
                         Text(row.day)
                             .font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit()
                             .foregroundStyle(row.isToday ? Theme.Palette.text : Theme.Palette.textSecondary)
@@ -132,8 +131,51 @@ struct UnitsView: View {
                         PlanItemMenu(courseId: course.id, examId: exam.id, item: row.item.id, done: row.done) { model.togglePlan(row) }
                     }
                 }
+                if plan.folded > 0 {
+                    foldRow(model.planToggleLabel(folded: plan.folded), open: model.planOpen) { model.planOpen.toggle() }
+                }
             }
         }
+    }
+
+    func otherBlock(_ exam: Exam, rest: [UnitsModel.Row]) -> some View {
+        let sections = model.otherSections(exam, rest: rest)
+        return Block(title: String(localized: .unitsOther), note: "\(rest.count)") {
+            Button(model.otherOpen ? .commonCollapse : .commonExpand) { withAnimation(.snappy) { model.otherOpen.toggle() } }
+                .buttonStyle(.ghost)
+        } content: {
+            if model.otherOpen {
+                VStack(alignment: .leading, spacing: Theme.Space.l) {
+                    ForEach(sections) { section in
+                        VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                            Text(.unitsGroupCount(section.title, section.rows.count))
+                                .font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(Theme.Palette.textTertiary)
+                                .padding(.horizontal, Theme.Space.m)
+                            unitCard(section.rows)
+                        }
+                    }
+                }
+            } else {
+                Card { foldRow(model.otherSummary(sections), open: false) { model.otherOpen = true } }
+            }
+        }
+    }
+
+    func foldRow(_ label: String, open: Bool, toggle: @escaping () -> Void) -> some View {
+        Button {
+            withAnimation(.snappy) { toggle() }
+        } label: {
+            CardRow(last: true) {
+                Text(label).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(2)
+                Spacer(minLength: Theme.Space.s)
+                Image(systemName: "chevron.down")
+                    .font(Theme.Glyph.small).foregroundStyle(Theme.Palette.textTertiary)
+                    .rotationEffect(.degrees(open ? 180 : 0))
+            }
+            .contentShape(.rect)
+        }
+        .buttonStyle(.pointing(.plain))
+        .accessibilityValue(Text(open ? .designExpanded : .designCollapsed))
     }
 
     func unitCard(_ rows: [UnitsModel.Row]) -> some View {

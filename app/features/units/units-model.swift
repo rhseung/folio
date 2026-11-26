@@ -47,9 +47,20 @@ final class UnitsModel {
         var id: UUID { item.id }
     }
 
+    // "그 밖의 단원"의 소제목 하나다. 지난 시험마다, 시험에 없는 단원, 아직 안 배운 단원의 차례다.
+    struct UnitSection: Identifiable {
+        // 지난 시험의 제목은 서로 달라야 하지 않으므로 소제목 문구가 아니라 묶음 종류로 가린다.
+        var kind: UnitGroup.Kind
+        var title: String
+        var rows: [Row]
+        var id: UnitGroup.Kind { kind }
+    }
+
     let workspace: Workspace
     let courseId: UUID
     var newTitle = ""
+    var planOpen = false
+    var otherOpen = false
     var openUnit: UUID?
     var pending: PendingAction?
     var name = ""
@@ -124,6 +135,26 @@ final class UnitsModel {
         return (all.filter { scoped.contains($0.unit.id) }, all.filter { !scoped.contains($0.unit.id) })
     }
 
+    func otherSections(_ exam: Exam, rest: [Row]) -> [UnitSection] {
+        guard let file else { return [] }
+        let byId = Dictionary(rest.map { ($0.unit.id, $0) }, uniquingKeysWith: { a, _ in a })
+        return file.unitGroups(besides: exam, now: workspace.now).compactMap { group in
+            let title: String
+            switch group.kind {
+            case .exam(let id):
+                guard let past = file.exams.first(where: { $0.id == id }) else { return nil }
+                title = String(localized: .unitsScope(past.title))
+            case .untested: title = String(localized: .unitsOtherUntested)
+            case .untaught: title = String(localized: .unitsOtherUntaught)
+            }
+            return UnitSection(kind: group.kind, title: title, rows: group.unitIds.compactMap { byId[$0] })
+        }
+    }
+
+    func otherSummary(_ sections: [UnitSection]) -> String {
+        sections.map { String(localized: .unitsGroupCount($0.title, $0.rows.count)) }.joined(separator: " · ")
+    }
+
     private func row(row: (unit: FolioDomain.Unit, depth: Int), study: CourseStudy) -> Row {
         let p = study.progress(of: row.unit, notes: noteCounts[row.unit.id] ?? 0)
         var parts: [String] = []
@@ -144,16 +175,23 @@ final class UnitsModel {
 
     // MARK: Plan
 
-    func planRows(_ exam: Exam) -> [PlanRow] {
-        guard let study else { return [] }
-        let items = exam.plan.filter { !$0.isRemoved }.sorted { ($0.day, $0.title) < ($1.day, $1.title) }
-        return items.enumerated().map { i, item in
+    // 접혀 있으면 오늘부터 설정한 날 수의 항목만 낸다. `folded`는 접힌 항목 수다.
+    func planRows(_ exam: Exam) -> (rows: [PlanRow], folded: Int) {
+        guard let study else { return ([], 0) }
+        let window = exam.planWindow(today: today, days: workspace.settings.study.planShownDays)
+        let items = planOpen ? (window.shown + window.folded).sorted { ($0.day, $0.title) < ($1.day, $1.title) } : window.shown
+        let rows = items.enumerated().map { i, item in
             let first = i == 0 || items[i - 1].day != item.day
             return PlanRow(
                 item: item, day: first ? dayLabel(item.day) : "", isToday: item.day == today, isPast: item.day < today,
                 done: study.isDone(item, in: exam), title: study.file.title(of: item), detail: planDetail(item, in: exam, study: study),
                 solve: study.solve(item, in: exam, seed: seed))
         }
+        return (rows, window.folded.count)
+    }
+
+    func planToggleLabel(folded: Int) -> String {
+        planOpen ? String(localized: .commonCollapse) : String(localized: .unitsPlanMore(folded))
     }
 
     func planNote(_ exam: Exam) -> String {

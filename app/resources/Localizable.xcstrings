@@ -24288,6 +24288,50 @@
           }
         }
       }
+    },
+    "units.plan-more": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld개 더 보기"
+          }
+        }
+      }
+    },
+    "units.other-untested": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험에 없는 단원"
+          }
+        }
+      }
+    },
+    "units.other-untaught": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 안 배운 단원"
+          }
+        }
+      }
+    },
+    "units.group-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$lld"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
