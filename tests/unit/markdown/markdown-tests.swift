@@ -301,6 +301,36 @@ struct LinkTests {
         #expect(!out.contains("wikilink"))
     }
 
+    // 링크처럼 수식의 `|`도 칸을 나누지 않는다. 머리 행의 수식도 표를 깨지 않고, TeX의 `\|`는 norm으로 남는다.
+    @Test func mathInTableCellsStaysWhole() {
+        let id = "ED8DDEC6-86E0-4EF8-B163-9C3CF446C3C8"
+        let out = HTMLRenderer.render(
+            markdown: """
+                | $|S|$ | 뜻 |
+                |---|---|
+                | $|M|$ | 매칭의 크기 |
+                | $|N(S)| \\ge |S|$ | Hall 조건 |
+                | $\\lvert S \\rvert$ | 같은 뜻 |
+                | $\\|v\\|$ | norm |
+                | [[note:\(id)|정리]] | $o(G-S) \\le |S|$ |
+                """)
+        #expect(out.contains("<thead><tr><th class=\"word\"><span class=\"math\">|S|</span></th><th class=\"word\">뜻</th></tr></thead>"))
+        #expect(out.contains("<span class=\"math\">|M|</span></td><td>매칭의 크기</td></tr>"))
+        #expect(out.contains("<span class=\"math\">|N(S)| \\ge |S|</span></td><td>Hall 조건</td></tr>"))
+        #expect(out.contains("<span class=\"math\">\\lvert S \\rvert</span></td><td>같은 뜻</td></tr>"))
+        #expect(out.contains("<span class=\"math\">\\|v\\|</span></td><td class=\"word\">norm</td></tr>"))
+        #expect(
+            out.contains(
+                "<a class=\"wikilink\" href=\"folio://note/\(id)\">정리</a></td><td><span class=\"math\">o(G-S) \\le |S|</span></td></tr>"))
+    }
+
+    @Test func mathOutsideTablesKeepsItsBars() {
+        let out = HTMLRenderer.render(markdown: "$|x|$ 와 $\\|v\\|$\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n$|y|$")
+        #expect(out.contains("<p><span class=\"math\">|x|</span> 와 <span class=\"math\">\\|v\\|</span></p>"))
+        #expect(out.contains("<p><span class=\"math\">|y|</span></p>"))
+        #expect(MathProtection.protect("$|x|$") == "`\u{E000}|x|`")
+    }
+
     @Test func imageWidthFollowsObsidianSyntax() {
         #expect(
             HTMLRenderer.render(markdown: "![그래프|300](assets/g.png)") == "<p><img src=\"assets/g.png\" alt=\"그래프\" width=\"300\"></p>\n")
