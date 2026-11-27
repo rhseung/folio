@@ -16,6 +16,7 @@ public enum MathProtection {
         var lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)[...]
         var fence: String?
         var table = false
+        var tableDepth = 0
         while let line = lines.popFirst() {
             let n = lines.startIndex
             defer { while origin.count < out.count { origin.append(n) } }
@@ -47,11 +48,13 @@ public enum MathProtection {
                 continue
             }
             // 머리 행은 구분 행으로 알아본다. 파싱한 표로 고르면 머리 행의 수식 `|`가 칸 수를 늘려 표가 되지 않는다.
+            // GFM은 빈 줄 말고도 인용 깊이가 바뀌거나 다른 블록이 시작되는 줄에서 표를 끝낸다.
             let content = line.dropFirst(prefix.count)
-            if content.allSatisfy(\.isWhitespace) {
-                table = false
-            } else if !table, content.contains("|"), let next = lines.first, isDelimiterRow(next) {
+            let depth = prefix.count { $0 == ">" }
+            if content.allSatisfy(\.isWhitespace) || depth != tableDepth || startsBlock(content) { table = false }
+            if !table, content.contains("|"), let next = lines.first, isDelimiterRow(next) {
                 table = true
+                tableDepth = depth
             }
             out.append(protectInline(line, table: table))
         }
@@ -116,6 +119,10 @@ public enum MathProtection {
     static func isDelimiterRow(_ line: String) -> Bool {
         let row = line.drop { $0 == " " || $0 == ">" }.trimmingCharacters(in: .whitespaces)
         return row.contains("|") && row.wholeMatch(of: /\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?/) != nil
+    }
+
+    static func startsBlock(_ content: Substring) -> Bool {
+        content.prefixMatch(of: /#{1,6}(\s|$)|[-*+](\s|$)|\d{1,9}[.)](\s|$)|<|([-*_])\s*(\1\s*){2,}$/) != nil
     }
 
     static func closingDollar(in s: String) -> String? {

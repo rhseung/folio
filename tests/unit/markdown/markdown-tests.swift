@@ -331,6 +331,21 @@ struct LinkTests {
         #expect(MathProtection.protect("$|x|$") == "`\u{E000}|x|`")
     }
 
+    // 표는 빈 줄 없이도 인용, 제목, 목록이 시작되는 줄에서 끝난다. 그 줄의 수식은 표 밖의 수식이다.
+    @Test func aBlockRightAfterATableEndsIt() {
+        for (line, html) in [
+            ("> $|x|$", "<blockquote>\n<p><span class=\"math\">|x|</span></p>"),
+            ("# $|x|$", "<span class=\"math\">|x|</span></h1>"),
+            ("- $|x|$", "<li><span class=\"math\">|x|</span></li>"),
+        ] {
+            let out = HTMLRenderer.render(markdown: "| a | b |\n|---|---|\n| 1 | 2 |\n\(line)")
+            #expect(out.contains(html), "\(line): \(out)")
+        }
+        let quoted = HTMLRenderer.render(markdown: "> | a | b |\n> |---|---|\n> | $|M|$ | 2 |\n\n$|y|$")
+        #expect(quoted.contains("<span class=\"math\">|M|</span></td><td class=\"word\">2</td>"))
+        #expect(quoted.contains("<p><span class=\"math\">|y|</span></p>"))
+    }
+
     @Test func imageWidthFollowsObsidianSyntax() {
         #expect(
             HTMLRenderer.render(markdown: "![그래프|300](assets/g.png)") == "<p><img src=\"assets/g.png\" alt=\"그래프\" width=\"300\"></p>\n")
