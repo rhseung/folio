@@ -56,15 +56,18 @@ extension Session {
 }
 
 extension ExamPlanItem {
-    var unitTarget: UUID? {
-        get { target.kind == .unit ? target.id : nil }
-        set { if target.kind == .unit { target.id = newValue } }
+    var noteTarget: UUID? {
+        get { target.kind == .note ? target.id : nil }
+        set { if target.kind == .note { target.id = newValue } }
     }
 
-    var problemSetTarget: UUID? {
-        get { target.kind == .problems ? target.id : nil }
-        set { if target.kind == .problems { target.id = newValue } }
+    var unitTarget: UUID? {
+        get { target.kind == .makeNote ? target.id : nil }
+        set { if target.kind == .makeNote { target.id = newValue } }
     }
+
+    // 앱이 놓은 항목은 제목을 저장하지 않으므로 대상에서 만든 이름으로 부른다.
+    static func name(_ item: ExamPlanItem, in file: CourseFile) -> String { file.title(of: item) }
 }
 
 extension ProblemSet {
@@ -123,16 +126,21 @@ extension CourseFile: Document {
             Ref(\.componentId, to: GradeComponent.self, onDelete: .nullify)
             Refs(\.addedScopeUnitIds, to: Unit.self, as: String(localized: .modelLabelScopeUnit), onDelete: .nullify)
             Refs(\.removedScopeUnitIds, to: Unit.self, as: String(localized: .modelLabelScopeUnit), onDelete: .nullify)
+            Check("Exam.planPeriod", String(localized: .ruleExamPlanPeriod)) { e, _ in e.planPeriod?.isValid ?? true }
         }
-        Items(\.exams, \.plan, noun: ItemKind.examPlanItem.noun, name: \.title) {
+        Items(\.exams, \.plan, noun: ItemKind.examPlanItem.noun, name: ExamPlanItem.name) {
             Check("ExamPlanItem.title", String(localized: .ruleExamPlanItemTitleEmpty)) { i, _ in
                 i.target.kind != .custom || !i.title.trimmingCharacters(in: .whitespaces).isEmpty
             }
             Check("ExamPlanItem.target", String(localized: .ruleExamPlanItemTarget)) { i, _ in
-                i.target.kind != .unit && i.target.kind != .problems || i.target.id != nil
+                switch i.target.kind {
+                case .note: i.target.id != nil && i.target.stage != nil
+                case .makeNote: i.target.id != nil
+                case .mock, .custom: true
+                }
             }
+            Ref(\.noteTarget, to: NoteEntry.self, onDelete: .cascade)
             Ref(\.unitTarget, to: Unit.self, onDelete: .cascade)
-            Ref(\.problemSetTarget, to: ProblemSet.self, onDelete: .cascade)
         }
         Items(\.assignments, noun: ItemKind.assignment.noun, name: \.title) {
             NonEmpty(\.title, String(localized: .ruleAssignmentTitleEmpty))
@@ -331,9 +339,7 @@ extension Settings: Document {
         Rule("Settings.study", String(localized: .ruleSettingsStudy)) { s, _ in
             SettingItem.studyReadyPercent.range.contains(s.study.readyPercent)
                 && SettingItem.studyMinProblems.range.contains(s.study.minProblems)
-                && SettingItem.studyFinalDays.range.contains(s.study.finalDays)
                 && SettingItem.studyMockMinutes.range.contains(s.study.mockMinutes)
-                && SettingItem.studyPlanDayItems.range.contains(s.study.planDayItems)
                 && SettingItem.studyPlanShownDays.range.contains(s.study.planShownDays)
         }
         Rule("Settings.assignmentLeadHours", String(localized: .ruleSettingsAssignmentLeadHours)) { s, _ in

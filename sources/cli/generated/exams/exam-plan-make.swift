@@ -7,14 +7,18 @@ import Foundation
 
 extension GeneratedCommands {
     struct ExamPlanMake: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "make", abstract: "범위 단원의 준비 정도로 시험까지 공부 계획을 다시 짜기. 직접 고치거나 더한 항목은 그대로 둔다", discussion: """
-            앱은 공부일이 바뀐 뒤 처음 열 때와 범위, 시험 날짜, 계획에 쓰는 공부 설정이 바뀔 때 이것을 부른다. 못 한 지난 단원은 오늘로 옮기고, 마지막 날들은 섞어 풀기, 모의시험, 오답 다시 보기로 둔다.
+        static let configuration = CommandConfiguration(commandName: "make", abstract: "시험의 정리 노트를 공부 기간에 놓기. 기간을 주면 그 기간으로 바꾼다. 끝낸 항목과 직접 옮기거나 더하거나 뺀 항목은 그대로 둔다", discussion: """
+            정리 노트는 시험 범위의 단원에 이은 낱개 노트(topic)이고 이름 순서대로 놓인다. 노트마다 같은 날에 정독, 증명, 문제풀이를 두고, 증명은 정리류 블록(정리, 명제, 따름정리, 보조정리)이 있는 노트에만 둔다. 정리 노트가 없는 범위 단원은 첫날에 정리 노트 만들기로 놓인다. 기간을 빼면 저장한 기간이고, 처음이면 오늘부터 시험 전날이다. 시험 전날에 끝나는 기간은 시험 날짜가 바뀌면 새 시험 전날로 따라간다. --after mock이면 끝낼 날 다음 날부터 시험 전날까지 하루 한 벌씩 족보 묶음 수만큼 모의고사를 둔다. 앱은 계획이 없을 때와 기간, 정리 노트 목록, 시험 날짜가 바뀔 때 이것을 부른다. 공부일이 바뀌었다고 다시 놓지 않는다.
 
             예시:
-              folio exam plan make EC4207/중간고사 --dry-run
+              folio exam plan make EC4207/기말고사 --dry-run
+              folio exam plan make EC4207/기말고사 --start 2026-11-28 --end 2026-12-04 --after mock
             """)
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("<과목>/<시험>", valueName: "exam"), completion: Complete.ref(.exam)) var exam: String = ""
+        @Option(help: ArgumentHelp("공부를 시작하는 날. 2026-11-28", valueName: "date")) var start: LocalDate?
+        @Option(help: ArgumentHelp("끝낼 날. 시험 전날까지. 2026-12-04", valueName: "date")) var end: LocalDate?
+        @Option(help: "끝낼 날 뒤의 날에 둘 것. empty(비움), mock(모의고사)") var after: ExamPlanPeriod.After?
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -22,7 +26,10 @@ extension GeneratedCommands {
             let (c, examName) = try r.split(exam)
             let action = FolioActions.ExamPlanMake(
                 course: c.id,
-                exam: try r.id(.exam, examName, in: c)
+                exam: try r.id(.exam, examName, in: c),
+                start: start,
+                end: end,
+                after: after
             )
             try perform(spec: action, g, ctx: ctx)
         }

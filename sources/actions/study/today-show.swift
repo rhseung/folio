@@ -81,11 +81,18 @@ public struct TodayShow {
                 return left > 0 ? item(c.id, c.id, c.file.course.title, String(localized: .todayWrongLeft(left))) : nil
             },
             deadlines: summary.deadlines.map { item($0.courseId, $0.assignment.id, $0.assignment.title, at: $0.assignment.due) },
-            plan: ExamPlan.items(on: summary.studyDay, courses: files).map {
-                let done = study[$0.courseId]?.isDone($0.item, in: $0.exam) ?? false
-                return item(
-                    $0.courseId, $0.item.id, file[$0.courseId]?.title(of: $0.item) ?? $0.item.title,
-                    $0.exam.title + (done ? String(localized: .todayPlanDone) : ""))
+            // 어제 오답 줄은 `wrong`이 과목마다 세므로 여기서는 저장된 항목의 줄만 낸다.
+            plan: courses.flatMap { c -> [Item] in
+                guard let s = study[c.id] else { return [] }
+                return s.planBoard(s.plannedExams(now: now, calendar: calendar)).today.filter { $0.examId != nil }.map { row in
+                    let steps = row.steps.map { step in
+                        let name = step.stage?.label ?? ""
+                        if step.isDone { return String(localized: .todayPlanStepDone(name)).trimmingCharacters(in: .whitespaces) }
+                        return step.progress.isStarted ? "\(name) \(step.progress.done)/\(step.progress.total)" : name
+                    }
+                    let parts = [row.subject ?? ""] + (row.isLate ? [String(localized: .todayPlanLate)] : []) + steps
+                    return item(c.id, row.steps.first?.item ?? c.id, row.title, parts.filter { !$0.isEmpty }.joined(separator: " · "))
+                }
             },
             attendance: courses.compactMap { c in
                 c.file.capOneAway(at: now).map { w in

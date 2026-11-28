@@ -47,9 +47,6 @@ final class ExamsModel {
 
     var study: CourseStudy? { workspace.study(of: course.id) }
 
-    // 계획 항목은 공부 기록으로 저절로 체크된다. 규칙은 CourseStudy에 있다.
-    func isDone(_ item: ExamPlanItem, in exam: Exam) -> Bool { study?.isDone(item, in: exam) ?? false }
-
     func add() {
         let start = workspace.settings.schedule.examStart(after: workspace.now, calendar: workspace.calendar)
         editing = Exam(device: workspace.device, at: .now, title: "", start: start)
@@ -136,14 +133,15 @@ final class ExamsModel {
 
     func pastFacts(_ exam: Exam) -> String {
         let scoped = course.file.scope(of: exam).count
-        let checked = exam.plan.filter { isDone($0, in: exam) }.count
+        let plan = exam.plan.filter { !$0.isRemoved }
+        let checked = plan.filter { study?.isDone($0) ?? false }.count
         let files = fileCount(exam)
         let facts =
             (component(of: exam).map { [$0] } ?? [])
             + (scoped > 0 ? [String(localized: .examsScopeUnits(scoped))] : exam.scopeText.isEmpty ? [] : [exam.scopeText])
             + (exam.location.isEmpty ? [] : [exam.location])
             + (files > 0 ? [String(localized: .examsFileCount(files))] : [])
-            + (exam.plan.isEmpty ? [] : [String(localized: .examsPlanFacts(checked, exam.plan.count))])
+            + (plan.isEmpty ? [] : [String(localized: .examsPlanFacts(checked, plan.count))])
         return facts.joined(separator: " · ")
     }
 
@@ -159,60 +157,5 @@ final class ExamsModel {
         guard let id = workspace.run(ExamSummary(course: course.id, exam: exam.id))?.made else { return nil }
         notes[exam.id] = id
         return id
-    }
-
-    // MARK: Plan
-
-    func plan(_ exam: Exam) -> [ExamPlanItem] { exam.plan.sorted { ($0.day, $0.title) < ($1.day, $1.title) } }
-
-    func planLine(_ items: [ExamPlanItem], in exam: Exam) -> String {
-        items.isEmpty
-            ? String(localized: .examsPlanHint)
-            : String(localized: .examsPlanDone(items.filter { isDone($0, in: exam) }.count, items.count))
-    }
-
-    func dayLabel(_ items: [ExamPlanItem], at i: Int) -> String {
-        let day = items[i].day
-        guard i == 0 || items[i - 1].day != day else { return "" }
-        if day == today { return String(localized: .examsToday) }
-        return day.date(in: workspace.calendar)?.formatted(.dateTime.month().day().weekday()) ?? day.description
-    }
-
-    func itemTitle(_ item: ExamPlanItem) -> String { course.file.title(of: item) }
-
-    // 손으로 이름을 붙인 항목만 대상 단원을 옆에 적는다. 앱이 짠 항목은 이름이 곧 단원 이름이다.
-    func targetTitle(_ item: ExamPlanItem) -> String? {
-        guard item.target.kind == .unit, !item.title.isEmpty else { return nil }
-        return item.target.id.flatMap { id in course.file.units.first { $0.id == id }?.title }
-    }
-
-    func targets(_ exam: Exam) -> [SelectOption<UUID?>] {
-        let outline = UnitTree.outline(course.file.units)
-        let scope = Set(course.file.scope(of: exam))
-        let scoped = outline.filter { scope.contains($0.unit.id) }
-        return [SelectOption(id: UUID?.none, label: String(localized: .examsPlanNoTarget))]
-            + (scoped.isEmpty ? outline : scoped).map {
-                SelectOption(id: Optional($0.unit.id), label: $0.unit.title, depth: scoped.isEmpty ? $0.depth : 0)
-            }
-    }
-
-    var firstPlanDay: Date { today.date(in: workspace.calendar) ?? workspace.now }
-
-    func planItem(_ exam: Exam, title: String, day: Date, unit: UUID?) -> ExamPlanAdd {
-        ExamPlanAdd(
-            course: course.id, exam: exam.id, title: title.trimmingCharacters(in: .whitespaces),
-            day: LocalDate(day, in: workspace.calendar), unit: unit)
-    }
-
-    func canAdd(_ item: ExamPlanAdd) -> Bool { workspace.can(item) }
-
-    func add(_ item: ExamPlanAdd) -> Bool { workspace.run(item) != nil }
-
-    func toggle(_ item: ExamPlanItem, in exam: Exam) {
-        workspace.setPlanItem(item.id, done: !isDone(item, in: exam), course: course.id)
-    }
-
-    func removePlanItem(_ id: UUID, of exam: Exam) {
-        pending = workspace.ask(ExamPlanRemove(course: course.id, exam: exam.id, item: id))
     }
 }

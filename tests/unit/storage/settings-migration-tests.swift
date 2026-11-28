@@ -54,6 +54,18 @@ struct SettingsMigrationTests {
         #expect(try StoredDocument<Settings>.read(from: none).model.notifications == NotificationSettings())
     }
 
+    // 계획이 더 쓰지 않는 공부 설정은 읽지 않지만, 예전 판이 읽도록 파일에는 남긴다.
+    @Test func retiredPlanSettingsStayInTheFile() throws {
+        let url = try write(#"{"schemaVersion":2,"study":{"finalDays":2,"planDayItems":4,"mockMinutes":60}}"#)
+        var doc = try StoredDocument<Settings>.read(from: url)
+        #expect(doc.model.study.mockMinutes == 60)
+        doc.model.study.planShownDays = 5
+        try doc.write(to: url)
+        let saved = try raw(url)
+        #expect(saved["study"]?["finalDays"] == .number(2) && saved["study"]?["planDayItems"] == .number(4))
+        #expect(saved["study"]?["planShownDays"] == .number(5) && saved["study"]?["mockMinutes"] == .number(60))
+    }
+
     // 종류 객체 안의 모르는 필드도 저장할 때 남는다.
     @Test func unknownFieldsInsideAKindAreKept() throws {
         let url = try write(#"{"schemaVersion":2,"notifications":{"examMorning":{"on":true,"minute":480,"sound":"bell"}}}"#)

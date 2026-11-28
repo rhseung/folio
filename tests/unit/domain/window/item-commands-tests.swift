@@ -1,3 +1,4 @@
+import FolioCore
 import FolioDomain
 import Foundation
 import PropertyBased
@@ -54,7 +55,11 @@ struct ItemCommandsTests {
         ordered(ProblemMenuCommand.commands(hasPage: true))
         ordered(RequirementMenuCommand.commands)
         ordered(CodeMenuCommand.commands)
-        ordered(ExamPlanItem.commands(done: true))
+        let today = LocalDate(Date(timeIntervalSince1970: 1_793_000_000), in: Calendar(identifier: .gregorian))
+        let row = PlanRow(
+            id: "row", courseId: UUID(), examId: UUID(), kind: .mock, title: "모의고사", subject: nil, day: today.adding(days: 2),
+            lateFrom: nil, steps: [PlanRow.Step(item: UUID(), stage: nil, progress: PlanProgress(done: 0, total: 1))])
+        ordered(row.commands(today: today))
     }
 
     @Test func openLeadsOffTheItemsOwnScreen() {

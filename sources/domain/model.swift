@@ -35,12 +35,12 @@ public func Items<Doc: Sendable, E: Identifiable & Sendable>(
 
 public func Items<Doc: Sendable, P, E: Identifiable & Sendable>(
     _ parents: WritableKeyPath<Doc, [P]> & Sendable, _ items: WritableKeyPath<P, [E]> & Sendable, noun: String,
-    name: KeyPath<E, String> & Sendable, @MemberBuilder<Doc, E> _ members: () -> [Member<Doc, E>] = { [] }
+    name: @escaping @Sendable (E, Doc) -> String, @MemberBuilder<Doc, E> _ members: () -> [Member<Doc, E>] = { [] }
 ) -> AnyItems<Doc> where E.ID == UUID {
     collection(
         get: { $0[keyPath: parents].flatMap { $0[keyPath: items] } },
         modify: { doc, body in for i in doc[keyPath: parents].indices { body(&doc[keyPath: parents][i][keyPath: items]) } },
-        noun: noun, name: { e, _ in e[keyPath: name] }, members())
+        noun: noun, name: name, members())
 }
 
 public func One<Doc: Sendable, E: Identifiable & Sendable>(

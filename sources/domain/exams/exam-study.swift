@@ -11,14 +11,11 @@ public struct ExamStudy: Sendable, Equatable {
     public var fewProblems: [Unit]
     public var planDone: Int
     public var planTotal: Int
+    // 못 하고 지났거나 미룬 계획 항목 수다.
+    public var planLate: Int
 
-    // 시험 화면의 순조로움이다. 범위 단원의 준비와 계획 진행으로 본다.
-    public var onTrack: Bool {
-        guard !units.isEmpty else { return true }
-        let readyShare = Double(ready) / Double(units.count)
-        let planShare = planTotal == 0 ? readyShare : Double(planDone) / Double(planTotal)
-        return readyShare >= 0.5 || planShare >= 0.5
-    }
+    // 시험 화면의 순조로움이다. 계획은 날마다 다시 놓지 않으므로, 밀린 항목이 없으면 계획대로 가고 있는 것이다.
+    public var onTrack: Bool { planLate == 0 }
 }
 
 extension CourseStudy {
@@ -27,11 +24,13 @@ extension CourseStudy {
         let ids = Set(units.map(\.id))
         let scoped = allProblems.filter { !ids.isDisjoint(with: $0.problem.unitIds) }
         let readiness = units.map { readiness(of: $0.id) }
-        let items = exam.plan.filter { !$0.isRemoved && $0.day <= today }
+        let items = exam.plan.filter { !$0.isRemoved }
+        let due = items.filter { $0.day <= today }
         return ExamStudy(
             units: units, ready: readiness.filter { $0.state == .ready }.count, done: units.filter(\.isDone).count,
             problemsSolved: scoped.filter(\.solved).count, problemsTotal: scoped.count,
             fewProblems: zip(units, readiness).filter { $0.1.state == .fewProblems }.map(\.0),
-            planDone: items.filter { isDone($0, in: exam) }.count, planTotal: items.count)
+            planDone: due.filter(isDone).count, planTotal: due.count,
+            planLate: items.count { $0.lateFrom(today: today, done: isDone($0)) != nil })
     }
 }

@@ -35,9 +35,14 @@ struct RuleTests {
         ("Exam.addedScopeUnitIds", { $0.exams[0].addedScopeUnitIds = [UUID()] }),
         ("Session.removedUnitIds", { $0.sessions[0].removedUnitIds = [UUID()] }),
         ("ExamPlanItem.title", { $0.exams[0].plan[0].title = "" }),
-        ("ExamPlanItem.target", { $0.exams[0].plan[0].target = ExamPlanTarget(kind: .unit) }),
-        ("ExamPlanItem.problemSetTarget", { $0.exams[0].plan[0].target = ExamPlanTarget(kind: .problems, id: UUID()) }),
-        ("ExamPlanItem.unitTarget", { $0.exams[0].plan[0].target = .unit(UUID()) }),
+        ("ExamPlanItem.target", { $0.exams[0].plan[0].target = ExamPlanTarget(kind: .makeNote) }),
+        ("ExamPlanItem.target", { $0.exams[0].plan[0].target = ExamPlanTarget(kind: .note, id: UUID()) }),
+        ("ExamPlanItem.noteTarget", { $0.exams[0].plan[0].target = .note(UUID(), .read) }),
+        ("ExamPlanItem.unitTarget", { $0.exams[0].plan[0].target = .makeNote(UUID()) }),
+        (
+            "Exam.planPeriod",
+            { $0.exams[0].planPeriod = ExamPlanPeriod(start: ymd("2026-10-20"), end: ymd("2026-10-19")) }
+        ),
         ("Course.syllabusMaterialId", { $0.course.syllabusMaterialId = UUID() }),
         ("Assignment.title.empty", { $0.assignments[0].title = "" }),
         ("Assignment.componentId", { $0.assignments[0].componentId = UUID() }),

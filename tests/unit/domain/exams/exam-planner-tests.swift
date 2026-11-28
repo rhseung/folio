@@ -5,240 +5,207 @@ import PropertyBased
 import Testing
 
 struct ExamPlannerTests {
-    static let today = LocalDate(Date(timeIntervalSince1970: 1_793_750_400), in: Calendar(identifier: .gregorian))
+    static let today = day("2026-12-01")
     static let ids = (0..<16).map { _ in UUID() }
 
+    static func day(_ text: String) -> LocalDate {
+        guard let day = LocalDate(text) else { preconditionFailure(text) }
+        return day
+    }
+
+    static func notes(_ count: Int, proofs: Set<Int> = [], missing: [UUID] = []) -> ExamPlanNotes {
+        ExamPlanNotes(notes: (0..<count).map { ExamPlanNotes.Note(id: ids[$0], proof: proofs.contains($0)) }, missing: missing)
+    }
+
+    // 날은 오늘에서 센 날 수다. 시험은 따로 주지 않으면 끝낼 날의 다음 날이다.
     static func plan(
-        _ current: [ExamPlanItem] = [], units: [ExamPlanner.UnitInput], days: Int, finalDays: Int = 3, dayItems: Int = 2,
-        done: Set<UUID> = []
+        _ current: [ExamPlanItem] = [], notes: ExamPlanNotes, start: Int = 0, end: Int, exam: Int? = nil,
+        after: ExamPlanPeriod.After = .empty, mocks: Int = 0, done: Set<UUID> = []
     ) -> [ExamPlanItem] {
         ExamPlanner.plan(
-            current: current, units: units, today: today, examDay: today.adding(days: days), finalDays: finalDays, dayItems: dayItems,
-            isDone: { done.contains($0.id) })
+            current: current, notes: notes,
+            period: ExamPlanPeriod(start: today.adding(days: start), end: today.adding(days: end), after: after), mocks: mocks,
+            today: today, examDay: today.adding(days: exam ?? end + 1), isDone: { done.contains($0.id) })
     }
 
-    @Test func twelveUnitsThreeDaysBeforeTheExamBecomeTwoBundlesToday() {
-        // D-3에 마무리 날 셋을 바라면 이틀만 받는다(오답, 모의시험). 단원은 오늘 하루에 열둘이고, 하루 두 항목이라 여섯씩 묶는다.
-        let units = (0..<12).map { ExamPlanner.UnitInput(id: Self.ids[$0], weight: 1) }
-        let plan = Self.plan(units: units, days: 3)
-        let todays = plan.filter { $0.day == Self.today }
-        #expect(todays.map(\.target.units) == [Array(Self.ids[0..<6]), Array(Self.ids[6..<12])])
-        #expect(plan.filter { $0.target.kind != .unit }.map(\.target.kind) == [.mock, .wrong])
-        #expect(todays.first?.target.id == Self.ids[0])
+    static func offsets(_ plan: [ExamPlanItem]) -> [Int] { plan.map { today.days(until: $0.day) } }
+
+    @Test func threeNotesOverSixDaysTakeEveryOtherDay() {
+        // 엿새에 노트 셋이면 차례 i의 날은 i×6÷3이라 0, 2, 4번째 날이다. 첫 노트만 정리 블록이 있어 증명을 받는다.
+        let plan = Self.plan(notes: Self.notes(3, proofs: [0]), end: 5)
+        #expect(
+            plan.map(\.target) == [
+                .note(Self.ids[0], .read), .note(Self.ids[0], .proof), .note(Self.ids[0], .solve),
+                .note(Self.ids[1], .read), .note(Self.ids[1], .solve), .note(Self.ids[2], .read), .note(Self.ids[2], .solve),
+            ])
+        #expect(Self.offsets(plan) == [0, 0, 0, 2, 2, 4, 4])
+        #expect(plan.allSatisfy { !$0.isEdited && $0.postponedFrom == nil })
     }
 
-    @Test func aDayOverTheCapMergesOnlyThatDaysUnits() {
-        // 나흘에 단원 다섯이면 날은 0, 0, 1, 2, 3번째 날이다. 하루 한 항목이면 첫날의 두 단원만 묶인다.
-        let units = (0..<5).map { ExamPlanner.UnitInput(id: Self.ids[$0], weight: 1) }
-        let plan = Self.plan(units: units, days: 4, finalDays: 0, dayItems: 1)
-        #expect(plan.map(\.target.units) == [[Self.ids[0], Self.ids[1]], [Self.ids[2]], [Self.ids[3]], [Self.ids[4]]])
-        #expect(plan.map(\.day) == (0..<4).map { Self.today.adding(days: $0) })
-        #expect(plan[1].target == .unit(Self.ids[2]))
+    @Test func moreNotesThanDaysShareTheEarlyDays() {
+        // 나흘에 노트 다섯이면 i×4÷5라 0, 0, 1, 2, 3이다. 단계는 노트마다 둘이다.
+        let plan = Self.plan(notes: Self.notes(5), end: 3)
+        #expect(Self.offsets(plan.filter { $0.target.stage == .read }) == [0, 0, 1, 2, 3])
+        #expect(plan.count == 10)
     }
 
-    @Test func noDayHoldsMoreUnitItemsThanTheCap() async {
-        await propertyCheck(input: Gen.int(in: 1...16), Gen.int(in: 1...30), Gen.int(in: 0...4), Gen.int(in: 1...5)) {
-            count, days, finals, cap in
-            let units = (0..<count).map { ExamPlanner.UnitInput(id: Self.ids[$0], weight: Double($0 % 3) / 2) }
-            let plan = Self.plan(units: units, days: days, finalDays: finals, dayItems: cap)
-            let perDay = Dictionary(grouping: plan.filter { $0.target.kind == .unit }, by: \.day)
-            #expect(perDay.values.allSatisfy { $0.count <= cap })
-            for u in units { #expect(plan.contains { $0.target.units.contains(u.id) }) }
+    @Test func unitsWithoutANoteComeFirstOnTheFirstDay() {
+        let plan = Self.plan(notes: Self.notes(2, missing: [Self.ids[10], Self.ids[11]]), start: 2, end: 5)
+        #expect(plan.prefix(2).map(\.target) == [.makeNote(Self.ids[10]), .makeNote(Self.ids[11])])
+        // 기간이 모레 시작하므로 노트 만들기와 첫 노트가 모두 모레다.
+        #expect(Self.offsets(plan) == [2, 2, 2, 2, 4, 4])
+    }
+
+    @Test func aPeriodThatAlreadyStartedUsesItsRemainingDays() {
+        // 그저께 시작해 내일 끝나는 기간에는 오늘과 내일만 남았다. 노트 넷은 i×2÷4라 0, 0, 1, 1이다.
+        let plan = Self.plan(notes: Self.notes(4), start: -2, end: 1)
+        #expect(Self.offsets(plan.filter { $0.target.stage == .read }) == [0, 0, 1, 1])
+    }
+
+    @Test func aPeriodThatIsOverPutsEverythingOnItsLastDay() {
+        let plan = Self.plan(notes: Self.notes(2, missing: [Self.ids[10]]), start: -5, end: -1, exam: 3)
+        #expect(Self.offsets(plan) == [-1, -1, -1, -1, -1])
+    }
+
+    @Test func mockExamsFillTheDaysAfterThePeriodOneADay() {
+        // 끝낼 날이 모레이고 시험이 이레 뒤면 그 사이는 3, 4, 5, 6번째 날이다. 족보가 셋이면 사흘만 쓴다.
+        let three = Self.plan(notes: Self.notes(1), end: 2, exam: 7, after: .mock, mocks: 3)
+        #expect(Self.offsets(three.filter { $0.target == .mock }) == [3, 4, 5])
+        let many = Self.plan(notes: Self.notes(1), end: 2, exam: 7, after: .mock, mocks: 10)
+        #expect(Self.offsets(many.filter { $0.target == .mock }) == [3, 4, 5, 6])
+        #expect(!Self.plan(notes: Self.notes(1), end: 2, exam: 7, mocks: 3).contains { $0.target == .mock })
+    }
+
+    @Test func mockExamsStartTodayWhenThePeriodIsOver() {
+        let plan = Self.plan(notes: Self.notes(0), start: -4, end: -2, exam: 2, after: .mock, mocks: 5)
+        #expect(Self.offsets(plan) == [0, 1])
+    }
+
+    @Test func replanningKeepsFinishedAndEditedItemsAndTheirIds() {
+        let first = Self.plan(notes: Self.notes(3, proofs: [0]), end: 5)
+        let read = first[0]
+        var moved = first[4]
+        moved.day = Self.today.adding(days: 5)
+        moved.edited = true
+        var current = first
+        current[4] = moved
+        // 노트 하나가 늘어 다시 놓는다. 끝낸 정독과 옮긴 문제풀이는 그대로이고, 나머지는 노트 넷으로 다시 나뉜다.
+        let again = Self.plan(current, notes: Self.notes(4, proofs: [0]), end: 5, done: [read.id])
+        #expect(again.contains(read) && again.contains(moved))
+        #expect(again.count == first.count + 2)
+        // 첫 노트는 정독을 뺀 두 단계가 남았다. 노트 넷이 엿새에 0, 1, 3, 4번째 날을 받는다.
+        let reads = again.filter { $0.target.stage == .read && $0.id != read.id }
+        #expect(Self.offsets(reads) == [1, 3, 4])
+        #expect(Self.offsets(again.filter { $0.target.id == Self.ids[0] && $0.target.stage != .read }) == [0, 0])
+        // 다시 놓은 항목도 id를 지킨다.
+        #expect(Set(first.map(\.id)).isSubset(of: Set(again.map(\.id))))
+    }
+
+    @Test func replanningWithTheSameInputsChangesNothing() {
+        let first = Self.plan(notes: Self.notes(4, proofs: [1], missing: [Self.ids[9]]), end: 6, exam: 10, after: .mock, mocks: 2)
+        #expect(
+            Self.plan(first, notes: Self.notes(4, proofs: [1], missing: [Self.ids[9]]), end: 6, exam: 10, after: .mock, mocks: 2) == first)
+    }
+
+    @Test func removedItemsDoNotComeBack() throws {
+        var first = Self.plan(notes: Self.notes(2), end: 3, exam: 6, after: .mock, mocks: 1)
+        let solve = try #require(first.firstIndex { $0.target == .note(Self.ids[1], .solve) })
+        let mock = try #require(first.firstIndex { $0.target == .mock })
+        first[solve].removed = true
+        first[mock].removed = true
+        let again = Self.plan(first, notes: Self.notes(2), end: 3, exam: 6, after: .mock, mocks: 1)
+        #expect(
+            again.filter { !$0.isRemoved }.map(\.target) == [
+                .note(Self.ids[0], .read), .note(Self.ids[0], .solve), .note(Self.ids[1], .read),
+            ])
+    }
+
+    @Test func itemsOfNotesThatLeftTheListAreDroppedUnlessFinished() throws {
+        let first = Self.plan(notes: Self.notes(2, proofs: [0], missing: [Self.ids[9]]), end: 3)
+        var pinned = first
+        for i in pinned.indices { pinned[i].edited = true }
+        let finished = try #require(first.first { $0.target == .note(Self.ids[1], .read) })
+        // 둘째 노트가 목록에서 빠지고, 단원에 노트가 생기고, 첫 노트의 정리 블록이 없어졌다.
+        let again = Self.plan(pinned, notes: Self.notes(1), end: 3, done: [finished.id])
+        #expect(Set(again.map(\.target)) == [.note(Self.ids[0], .read), .note(Self.ids[0], .solve), .note(Self.ids[1], .read)])
+    }
+
+    @Test func writtenTasksAlwaysStay() {
+        let mine = ExamPlanItem(day: Self.today.adding(days: 9), target: .custom, title: "교재 3장")
+        #expect(Self.plan([mine], notes: Self.notes(1), end: 2).contains(mine))
+    }
+
+    static let flags = Gen.bool.array(of: 12)
+
+    @Test func everyStageOfEveryNoteIsPlacedOnceInsideThePeriodAndInOrder() async {
+        await propertyCheck(
+            input: Gen.int(in: 0...12), Gen.int(in: -5...10), Gen.int(in: 0...20), Gen.int(in: 0...3), Self.flags
+        ) { count, start, length, missing, proofs in
+            let hasProof = Set((0..<count).filter { proofs.indices.contains($0) && proofs[$0] })
+            let notes = Self.notes(count, proofs: hasProof, missing: Array(Self.ids[12..<(12 + missing)]))
+            let end = start + length
+            let plan = Self.plan(notes: notes, start: start, end: end)
+            let period = Self.today.adding(days: start)...Self.today.adding(days: end)
+            #expect(plan.allSatisfy { period.contains($0.day) })
+            // 남은 날이 있으면 지난 날에는 놓지 않는다.
+            if end >= 0 { #expect(plan.allSatisfy { $0.day >= Self.today }) }
+            var expected: [ExamPlanTarget] = notes.missing.map { .makeNote($0) }
+            for note in notes.notes { expected += PlanStage.stages(proof: note.proof).map { .note(note.id, $0) } }
+            #expect(plan.map(\.target) == expected)
+            // 배열이 날짜순이고 대상이 노트 순, 단계 순이므로 뒤 노트가 앞 노트보다 이른 날에 오지 않는다.
+            #expect(plan.map(\.day) == plan.map(\.day).sorted())
+            for note in notes.notes { #expect(Set(plan.filter { $0.target.id == note.id }.map(\.day)).count == 1) }
         }
     }
 
-    @Test func theLastDaysAreMixedMockAndWrongAndUnitsComeFirst() {
-        let units = [ExamPlanner.UnitInput(id: Self.ids[0], weight: 1), ExamPlanner.UnitInput(id: Self.ids[1], weight: 0.2)]
-        let plan = Self.plan(units: units, days: 10)
-        let finals = plan.filter { $0.target.kind != .unit }
-        #expect(finals.map(\.target.kind) == [.mixed, .mock, .wrong])
-        #expect(finals.map(\.day) == [7, 8, 9].map { Self.today.adding(days: $0) })
-        // 남은 이레를 두 단원이 나눈다. 약한 첫 단원만 두 번째 자리를 받는다.
-        let unitItems = plan.filter { $0.target.kind == .unit }
-        #expect(unitItems.map(\.target.id) == [Self.ids[0], Self.ids[1], Self.ids[0]])
-        #expect(unitItems.first?.day == Self.today)
-    }
-
-    @Test func fewerDaysThanTheFinalDaysLeaveTodayForUnits() {
-        let plan = Self.plan(units: [ExamPlanner.UnitInput(id: Self.ids[0], weight: 1)], days: 2)
-        #expect(plan.map(\.target.kind) == [.unit, .wrong])
-        #expect(plan.map(\.day) == [Self.today, Self.today.adding(days: 1)])
-    }
-
-    @Test func replanningOnTheSameDayKeepsWhatWasFinishedToday() {
-        let units = [ExamPlanner.UnitInput(id: Self.ids[0], weight: 1), ExamPlanner.UnitInput(id: Self.ids[1], weight: 1)]
-        let first = Self.plan(units: units, days: 6)
-        let todays = first.filter { $0.day == Self.today }
-        #expect(todays.count == 1)
-        let finished = Set(todays.map(\.id))
-
-        let again = Self.plan(first, units: units, days: 6, done: finished)
-        #expect(Set(again.map(\.id)).isSuperset(of: finished))
-        // 끝낸 항목이 오늘 자리를 그대로 차지해서 나머지 항목의 날도 처음 짠 것과 같다.
-        #expect(again.map(\.day) == first.map(\.day))
-        #expect(again.map(\.target) == first.map(\.target))
-    }
-
-    @Test func itemsFinishedOnEarlierDaysStayAndUnfinishedOnesCarry() {
-        let units = [ExamPlanner.UnitInput(id: Self.ids[0], weight: 1)]
-        let yesterday = Self.today.adding(days: -1)
-        let done = ExamPlanItem(day: yesterday, target: .unit(Self.ids[0]))
-        let missed = ExamPlanItem(day: yesterday, target: .unit(Self.ids[1]))
-        let plan = Self.plan(
-            [done, missed], units: units + [ExamPlanner.UnitInput(id: Self.ids[1], weight: 0.1)], days: 6, done: [done.id])
-        #expect(plan.contains { $0.id == done.id })
-        #expect(!plan.contains { $0.id == missed.id })
-        let carried = plan.first { $0.target == .unit(Self.ids[1]) && $0.day == Self.today }
-        #expect(carried?.isCarried == true)
-    }
-
-    // 줄이기(shrink)가 배열을 짧게 만들 수 있어서 읽을 때 범위를 확인한다.
-    static let weights = Gen.int(in: 0...20).array(of: 6)
-
-    @Test func everyUnitGetsADayInsideTheWindowAndWeakerUnitsGetNoFewer() async {
-        await propertyCheck(input: Gen.int(in: 1...6), Gen.int(in: 1...30), Gen.int(in: 0...4), Self.weights) { count, days, finals, w in
-            let units = (0..<count).map { ExamPlanner.UnitInput(id: Self.ids[$0], weight: Double(w.indices.contains($0) ? w[$0] : 0) / 10) }
-            let plan = Self.plan(units: units, days: days, finalDays: finals)
-            let end = Self.today.adding(days: days)
-            #expect(plan.allSatisfy { $0.day >= Self.today && $0.day < end })
-            for u in units { #expect(plan.contains { $0.target.units.contains(u.id) }) }
-            let seats = Dictionary(grouping: plan.flatMap(\.target.units), by: { $0 }).mapValues(\.count)
-            for a in units {
-                for b in units where a.weight > b.weight {
-                    #expect((seats[a.id] ?? 0) >= (seats[b.id] ?? 0))
-                }
+    @Test func aFittedPeriodEndsBeforeTheExamAndIsLaterOnlyWhenItFollowedTheOldExam() async {
+        await propertyCheck(input: Gen.int(in: -10...10), Gen.int(in: 0...15), Gen.int(in: -5...30), Gen.int(in: -5...30)) {
+            start, length, exam, old in
+            let period = ExamPlanPeriod(start: Self.today.adding(days: start), end: Self.today.adding(days: start + length), after: .mock)
+            let examDay = Self.today.adding(days: exam), oldDay = Self.today.adding(days: old)
+            let fitted = period.fitted(before: examDay, from: oldDay)
+            #expect(fitted.isValid && fitted.end < examDay && fitted.after == period.after)
+            // 끝낼 날이 늦어지는 것은 예전 시험 전날에 끝나던 기간뿐이고, 그때는 새 시험 전날이 된다.
+            if fitted.end > period.end {
+                #expect(period.end == oldDay.adding(days: -1) && fitted.end == examDay.adding(days: -1))
             }
+            // 시작일은 끝낼 날에 걸릴 때만 당겨진다.
+            #expect(fitted.start == min(period.start, fitted.end))
+            // 맞춘 기간은 같은 시험 날로 다시 맞춰도 그대로다.
+            #expect(fitted.fitted(before: examDay, from: examDay) == fitted)
         }
     }
 
-    @Test func editedItemsSurviveReplanning() async {
-        await propertyCheck(input: Gen.int(in: 1...6), Gen.int(in: 1...30), Gen.int(in: 0...29)) { count, days, at in
-            let units = (0..<count).map { ExamPlanner.UnitInput(id: Self.ids[$0], weight: 1) }
-            let mine = ExamPlanItem(day: Self.today.adding(days: at % days), target: .unit(Self.ids[0]), title: "내 복습", edited: true)
-            let first = Self.plan([mine], units: units, days: days)
-            let again = Self.plan(first, units: units, days: days)
-            #expect(again.contains(mine))
+    @Test func itemsTheUserMovedSurviveReplanning() async {
+        await propertyCheck(input: Gen.int(in: 1...8), Gen.int(in: 1...20), Gen.int(in: 0...40), Gen.int(in: -3...25)) {
+            count, length, pick, to in
+            let notes = Self.notes(count, proofs: [0])
+            var current = Self.plan(notes: notes, end: length)
+            let i = pick % current.count
+            current[i].day = Self.today.adding(days: to)
+            current[i].edited = true
+            let moved = current[i]
+            // 노트 목록이 달라져 다시 놓아도 옮긴 항목은 그 날에 있다.
+            let again = Self.plan(current, notes: Self.notes(count + 1, proofs: [0]), end: length)
+            #expect(again.contains(moved))
+            #expect(again.count { $0.target == moved.target } == 1)
         }
     }
-}
 
-struct PlanInputTests {
-    @Test func aParentInScopeWithItsChildrenIsLeftToTheChildren() {
-        let device = UUID(), at = Date(timeIntervalSince1970: 1_790_000_000)
-        let matching = FolioDomain.Unit(device: device, at: at, title: "매칭", order: 0)
-        let hall = FolioDomain.Unit(device: device, at: at, title: "Hall의 정리", order: 0, parentId: matching.id)
-        let paths = FolioDomain.Unit(device: device, at: at, title: "증가 경로", order: 1, parentId: matching.id)
-        let coloring = FolioDomain.Unit(device: device, at: at, title: "채색", order: 1)
-        var exam = Exam(device: device, at: at, title: "기말고사", start: at.addingTimeInterval(86_400 * 10))
-        exam.addedScopeUnitIds = [matching.id, hall.id, paths.id, coloring.id]
-        let file = CourseFile(
-            course: Course(device: device, at: at, title: "그래프 이론"), units: [matching, hall, paths, coloring], exams: [exam])
-        let study = CourseStudy(
-            file: file, cards: [], log: StudyLog(), settings: Settings(), calendar: Calendar(identifier: .gregorian), now: at)
-        #expect(study.planInputs(for: exam).map(\.id) == [hall.id, paths.id, coloring.id])
-        // 자식이 범위에 없으면 부모가 그대로 들어간다.
-        exam.addedScopeUnitIds = [matching.id, coloring.id]
-        #expect(study.planInputs(for: exam).map(\.id) == [matching.id, coloring.id])
-    }
-
-    @Test func aBundleIsCheckedWhenEveryUnitInItIsDone() {
-        let device = UUID(), at = Date(timeIntervalSince1970: 1_790_000_000)
-        var matching = FolioDomain.Unit(device: device, at: at, title: "매칭", order: 0)
-        let coloring = FolioDomain.Unit(device: device, at: at, title: "채색", order: 1)
-        matching.isDone = true
-        let exam = Exam(device: device, at: at, title: "기말고사")
-        let bundle = ExamPlanItem(day: LocalDate(at, in: Calendar(identifier: .gregorian)), target: .units([matching.id, coloring.id]))
-        func study(_ units: [FolioDomain.Unit]) -> CourseStudy {
-            let file = CourseFile(course: Course(device: device, at: at, title: "그래프 이론"), units: units, exams: [exam])
-            return CourseStudy(
-                file: file, cards: [], log: StudyLog(), settings: Settings(), calendar: Calendar(identifier: .gregorian), now: at)
+    @Test func postponingMovesOnlyTheItemsItIsGiven() async {
+        await propertyCheck(input: Gen.int(in: 1...8), Gen.int(in: 0...20), Gen.int(in: 0...40), Gen.int(in: -3...6)) {
+            count, length, pick, shift in
+            var exam = Exam(device: UUID(), at: Date(timeIntervalSince1970: 0), title: "기말고사")
+            exam.plan = Self.plan(notes: Self.notes(count, proofs: [0]), end: length)
+            let before = exam.plan
+            let picked = before[pick % before.count]
+            // 오늘이 계획을 놓은 날에서 며칠 지났든, 미룬 항목은 그날과 오늘 가운데 늦은 날의 다음 날로 간다.
+            let today = Self.today.adding(days: shift)
+            exam.postponePlan([picked.id], today: today)
+            for (old, new) in zip(before, exam.plan) where old.id != picked.id { #expect(old == new) }
+            let moved = exam.plan.first { $0.id == picked.id }
+            #expect(moved?.day == max(picked.day, today).adding(days: 1))
+            #expect(moved?.postponedFrom == picked.day && moved?.isEdited == true)
         }
-        #expect(!study([matching, coloring]).isDone(bundle, in: exam))
-        var done = coloring
-        done.isDone = true
-        #expect(study([matching, done]).isDone(bundle, in: exam))
-        #expect(study([matching, done]).file.title(of: bundle) == "매칭, 채색")
-    }
-
-    // 묶음 항목의 이름은 한 줄에 읽혀야 한다. 한 부모의 단원이면 부모 이름이고, 아니면 첫 단원과 나머지 개수다.
-    @Test func aBundleIsNamedByItsParentOrItsFirstUnit() {
-        let device = UUID(), at = Date(timeIntervalSince1970: 1_790_000_000)
-        let connectivity = FolioDomain.Unit(device: device, at: at, title: "연결도", order: 0)
-        let kids = ["Menger의 정리", "귀 분해", "2-연결 그래프"].enumerated().map { i, title in
-            FolioDomain.Unit(device: device, at: at, title: title, order: i, parentId: connectivity.id)
-        }
-        let coloring = FolioDomain.Unit(device: device, at: at, title: "채색", order: 1)
-        let matching = FolioDomain.Unit(device: device, at: at, title: "매칭", order: 2)
-        let file = CourseFile(
-            course: Course(device: device, at: at, title: "그래프 이론"), units: [connectivity] + kids + [coloring, matching])
-        let day = LocalDate(at, in: Calendar(identifier: .gregorian))
-        func title(_ units: [FolioDomain.Unit]) -> String {
-            file.title(of: ExamPlanItem(day: day, target: .units(units.map(\.id))))
-        }
-        #expect(title([kids[0]]) == "Menger의 정리")
-        #expect(title(kids) == "연결도")
-        #expect(title(Array(kids.prefix(2))) == "연결도 단원 2개")
-        #expect(title([coloring, matching]) == "채색, 매칭")
-        #expect(title([kids[0], coloring, matching]) == "Menger의 정리 외 2개")
-    }
-
-    // 남은 오답이 없어도 오지 않은 날의 오답 항목은 체크하지 않는다. 세는 것은 시험 범위의 오답과 카드뿐이다.
-    @Test func aFutureWrongItemIsNotCheckedEvenWithNothingLeft() throws {
-        let device = UUID(), at = Date(timeIntervalSince1970: 1_790_000_000)
-        let calendar = Calendar(identifier: .gregorian)
-        let inScope = FolioDomain.Unit(device: device, at: at, title: "매칭", order: 0)
-        let outside = FolioDomain.Unit(device: device, at: at, title: "채색", order: 1)
-        var exam = Exam(device: device, at: at, title: "기말고사", start: at.addingTimeInterval(86_400 * 10))
-        exam.addedScopeUnitIds = [inScope.id]
-        let set = ProblemSet(
-            device: device, at: at, title: "연습", source: .exercise, problems: [Problem(number: "1", unitIds: [outside.id])])
-        let file = CourseFile(
-            course: Course(device: device, at: at, title: "그래프 이론"), units: [inScope, outside], exams: [exam], problemSets: [set])
-        let wrong = ProblemSolveEvent(setId: set.id, problemId: set.problems[0].id, verdict: .wrong, basis: .solution)
-        let study = CourseStudy(
-            file: file, cards: [], log: StudyLog(solves: [(at, wrong)]), settings: Settings(), calendar: calendar, now: at)
-        #expect(study.wrongLeft(in: exam) == (problems: 0, cards: 0))
-        let today = ExamPlanItem(day: study.today, target: ExamPlanTarget(kind: .wrong))
-        let later = ExamPlanItem(day: study.today.adding(days: 3), target: ExamPlanTarget(kind: .wrong))
-        #expect(study.isDone(today, in: exam))
-        #expect(!study.isDone(later, in: exam))
-        // 범위 밖 단원의 오답은 범위를 넓히면 센다.
-        var wider = exam
-        wider.addedScopeUnitIds = [inScope.id, outside.id]
-        #expect(study.wrongLeft(in: wider).problems == 1)
-        #expect(!study.isDone(today, in: wider))
-    }
-
-    // 같은 공부일이라도 범위, 시험 날짜, 계획에 쓰는 공부 설정이 바뀌면 다시 짠다.
-    @Test func aChangedBasisAsksForANewPlanOnTheSameDay() {
-        let device = UUID(), at = Date(timeIntervalSince1970: 1_790_000_000)
-        let calendar = Calendar(identifier: .gregorian)
-        var settings = Settings()
-        let today = settings.studyDay(of: at, calendar: calendar)
-        let matching = FolioDomain.Unit(device: device, at: at, title: "매칭", order: 0)
-        let coloring = FolioDomain.Unit(device: device, at: at, title: "채색", order: 1)
-        var exam = Exam(device: device, at: at, title: "기말고사", start: at.addingTimeInterval(86_400 * 10))
-        exam.addedScopeUnitIds = [matching.id]
-        var file = CourseFile(course: Course(device: device, at: at, title: "그래프 이론"), units: [matching, coloring], exams: [exam])
-        #expect(file.needsPlan(exam, today: today, settings: settings, calendar: calendar))
-        exam.planDay = today
-        exam.planBasis = ExamPlanBasis(exam: exam, in: file, settings: settings, calendar: calendar)
-        file.exams = [exam]
-        #expect(!file.needsPlan(exam, today: today, settings: settings, calendar: calendar))
-        #expect(file.needsPlan(exam, today: today.adding(days: 1), settings: settings, calendar: calendar))
-
-        var scoped = file
-        scoped.setScope([matching.id, coloring.id], exam: exam.id)
-        #expect(scoped.needsPlan(scoped.exams[0], today: today, settings: settings, calendar: calendar))
-        var moved = exam
-        moved.start = at.addingTimeInterval(86_400 * 12)
-        #expect(file.needsPlan(moved, today: today, settings: settings, calendar: calendar))
-        settings.study.planDayItems = 3
-        #expect(file.needsPlan(exam, today: today, settings: settings, calendar: calendar))
-        // 지난 시험과 범위 없는 시험은 짜지 않는다.
-        settings = Settings()
-        #expect(!file.needsPlan(exam, today: today.adding(days: 11), settings: settings, calendar: calendar))
-        file.setScope([], exam: exam.id)
-        #expect(!file.needsPlan(file.exams[0], today: today.adding(days: 1), settings: settings, calendar: calendar))
     }
 }

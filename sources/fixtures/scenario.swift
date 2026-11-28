@@ -148,7 +148,7 @@ private struct Builder {
         if let slides = try ctx.file(course).materials.first(where: { $0.path == Self.matchingSlides }) {
             for page in 1...8 { try run(MaterialViewed(course: course, material: slides.id, page: page), at: at(11, 1, 13)) }
         }
-        try run(ExamPlanMake(course: course, exam: exam), at: at(11, 4, 8))
+        try plan(course, exam: exam, matching: matching)
 
         // 2024 중간고사는 Claude가 뽑아 둔 초안으로 남아 문제 페이지에 알림 카드가 뜬다. 뽑은 문제와 풀이는 문제지의 언어와 상관없이 영어다.
         if let sheet = try ctx.file(course).materials.first(where: { $0.path == Self.midtermSheet }) {
@@ -253,7 +253,7 @@ private struct Builder {
         try lectureSections(graph, matching: matching, classes: [s(graph, 10, 19), s(graph, 10, 21), s(graph, 11, 2)])
         _ = try unit(os, "프로세스 스케줄링", [s(os, 10, 19), s(os, 10, 21)], at: at(10, 21, 15))
         _ = try unit(os, "교착 상태", [s(os, 10, 26)], at: at(10, 26, 15))
-        let conditional = try unit(prob, "조건부 확률", [s(prob, 10, 26), s(prob, 10, 28)], at: at(10, 28, 16))
+        _ = try unit(prob, "조건부 확률", [s(prob, 10, 26), s(prob, 10, 28)], at: at(10, 28, 16))
         let makeup = try run(SessionAdd(course: robotics, date: at(10, 30, 19), end: at(10, 30, 20, 15), kind: .makeup), at: at(10, 28, 12))
         try run(SessionNote(course: robotics, session: makeup, kind: .review), at: at(10, 30, 21))
         try run(SessionSet(course: robotics, session: makeup, reviewUnfinished: .set(false)), at: at(10, 30, 21))
@@ -314,9 +314,37 @@ private struct Builder {
             try run(ExamAdd(course: graph, title: "Quiz 4", start: at(11, 25, 9), end: at(11, 25, 9, 30), location: "A101"), at: setup)
         }
         try run(
-            ExamPlanAdd(
-                course: prob, exam: quiz, title: "조건부 확률 연습문제 풀기", day: LocalDate(at(11, 4), in: Scenario.calendar), unit: conditional),
+            ExamPlanAdd(course: prob, exam: quiz, title: "조건부 확률 연습문제 풀기", day: LocalDate(at(11, 4), in: Scenario.calendar)),
             at: at(11, 1, 10))
+    }
+
+    // 기말 정리 노트 셋을 11/3부터 사흘에 놓고 그 뒤에 모의고사를 둔다. 첫 노트는 정독만 끝내서 오늘(11/4)에 밀린 단계가
+    // 보이고, 그래프 채색은 정리 노트가 없어 노트 만들기가 놓인다.
+    func plan(_ course: UUID, exam: UUID, matching: UUID) throws {
+        let made = at(11, 2, 20)
+        guard let hall = UUID(uuidString: "B0000000-0000-4000-8000-000000000002"),
+            let paths = UUID(uuidString: "B0000000-0000-4000-8000-000000000003")
+        else { return }
+        let basics = try run(
+            NoteAdd(
+                course: course, title: "기말 01 매칭의 기초", kind: .unit,
+                body: "# 매칭의 기초\n\n> [!definition] 매칭\n> 공통 끝점이 없는 간선의 집합이다.\n", units: [matching]), at: made)
+        try run(
+            NoteAdd(
+                course: course, title: "기말 02 홀의 정리", kind: .unit,
+                body:
+                    "# 홀의 정리\n\n> [!theorem] Hall\n> 이분 그래프에 $X$를 모두 덮는 매칭이 있을 필요충분조건은 모든 $S \\subseteq X$에 대해 $|N(S)| \\ge |S|$인 것이다.\n\n> [!proof]\n> $|X|$에 대한 귀납법으로 보인다.\n",
+                units: [hall]), at: made)
+        try run(
+            NoteAdd(
+                course: course, title: "기말 03 증가 경로", kind: .unit,
+                body: "# 증가 경로\n\n> [!theorem] Berge\n> 매칭이 최대일 필요충분조건은 증가 경로가 없는 것이다.\n", units: [paths]), at: made)
+
+        let start = LocalDate(at(11, 3), in: Scenario.calendar)
+        try run(ExamPlanMake(course: course, exam: exam, start: start, end: start.adding(days: 2), after: .mock), at: at(11, 3, 9))
+        let ctx = ActionContext(gist: gist, device: device, now: at(11, 3, 21), calendar: Scenario.calendar)
+        let read = try ctx.file(course).exams.first { $0.id == exam }?.plan.first { $0.target == .note(basics, .read) }
+        if let read { try run(ExamPlanCheck(course: course, items: [read.id]), at: at(11, 3, 21)) }
     }
 
     func recording(_ course: UUID, session: UUID, start: Date) throws {

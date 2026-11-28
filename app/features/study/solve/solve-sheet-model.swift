@@ -311,7 +311,7 @@ final class SolveSheetModel {
             rows[i].page = g.page
         }
         if ungraded.isEmpty {
-            if let planItem { workspace.setPlanItem(planItem, done: true, course: course) }
+            if let planItem { workspace.setPlanItems([planItem], done: true, course: course) }
         } else {
             gradeFailure = String(localized: .solveSheetUngraded(ungraded.count))
         }

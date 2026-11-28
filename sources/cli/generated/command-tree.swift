@@ -89,8 +89,10 @@ extension ExamCommand {
 extension ExamCommand.Plan {
     static let subcommandTypes: [any ParsableCommand.Type] = alphabetical([
         GeneratedCommands.ExamPlanAdd.self,
+        GeneratedCommands.ExamPlanAdvance.self,
         GeneratedCommands.ExamPlanMake.self,
         GeneratedCommands.ExamPlanMove.self,
+        GeneratedCommands.ExamPlanPostpone.self,
         GeneratedCommands.ExamPlanRemove.self,
     ])
 }

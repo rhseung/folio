@@ -1723,7 +1723,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "예시:\n  folio exam plan-check EC4207/중간고사 \"트리 단원 복습\""
+            "value": "항목을 여럿 주면 함께 표시한다. 정리 노트의 단계는 \"<노트> <단계>\"다.\n\n예시:\n  folio exam plan-check EC4207/기말고사 \"교재 3장 다시 읽기\"\n  folio exam plan-check EC4207/기말고사 \"교재 3장 다시 읽기\" --undo"
           }
         }
       }
@@ -1767,7 +1767,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "시험 공부 계획 항목 추가와 지우기"
+            "value": "시험 공부 계획: 기간에 놓기, 할 일 더하기, 미루기, 앞당기기, 옮기기, 빼기"
           }
         }
       }
@@ -6476,6 +6476,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "오답"
+          }
+        }
+      }
+    },
+    "exam.show.period": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "  공부 기간 %1$@ – %2$@"
+          }
+        }
+      }
+    },
+    "exam.show.period-mock": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "  공부 기간 %1$@ – %2$@ · 기간 뒤 모의고사"
+          }
+        }
+      }
+    },
+    "exam.show.plan-done": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "끝냄"
+          }
+        }
+      }
+    },
+    "exam.show.plan-late": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "밀림"
           }
         }
       }

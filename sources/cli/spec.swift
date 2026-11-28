@@ -44,7 +44,10 @@ extension Resolver {
         case .courseCode: let c = try code(ref); return (c.id, c.prefix)
         case .person: let p = try person(ref); return (p.id, p.name)
         case .category: let c = try category(ref); return (c.id, c.name)
-        case .examPlanItem: let i = try planItem(ref, exam: parent, in: scoped()); return (i.id, i.title)
+        case .examPlanItem:
+            let c = try scoped()
+            let i = try planItem(ref, exam: parent, in: c)
+            return (i.id, c.file.title(of: i))
         case .studyCard: let q = try card(ref, unit: parent, in: scoped()); return (q.id, q.front)
         case .problem: let p = try problem(ref, set: parent, in: scoped()); return (p.id, p.number)
         case .noteWidget: let w = try widget(ref, in: scoped()); return (w, w.uuidString)
@@ -62,10 +65,10 @@ extension Resolver {
             }
             return try planItem(ref, in: e, course: c)
         }
-        let items = c.file.exams.flatMap { e in e.plan.map { (e, $0) } }
+        let items = c.file.exams.flatMap { e in e.plan.filter { !$0.isRemoved }.map { (e, $0) } }
         return try pick(
-            ref, items, what: ItemKind.examPlanItem.noun, id: { $0.1.id }, names: { [$0.1.title] },
-            ref: { "\(c.code)/\($0.0.title) \($0.1.title)" }
+            ref, items, what: ItemKind.examPlanItem.noun, id: { $0.1.id }, names: { [c.file.title(of: $0.1)] },
+            ref: { "\(c.code)/\($0.0.title) \(c.file.title(of: $0.1))" }
         ).1
     }
 

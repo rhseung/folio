@@ -72,16 +72,6 @@ struct ExamsModelTests {
         exam.scopeText = "3장까지"
         #expect(model.scopeLine(exam, units: 0) == "3장까지")
         #expect(model.scopeLine(exam, units: 2) == "단원 2개 · 3장까지")
-        #expect(model.planLine([], in: exam) == "날짜별 할 일을 넣으면 그날 오늘 화면에도 나옵니다")
-    }
-
-    @Test func plannedItemsAreNamedFromTheirTarget() throws {
-        let (workspace, course) = try fixtureCourse()
-        let model = ExamsModel(workspace: workspace, course: course)
-        let day = try #require(LocalDate("2026-11-04"))
-        #expect(model.itemTitle(ExamPlanItem(day: day, target: ExamPlanTarget(kind: .mock))) == "모의시험")
-        #expect(model.targetTitle(ExamPlanItem(day: day, target: ExamPlanTarget(kind: .mixed))) == nil)
-        #expect(model.itemTitle(ExamPlanItem(day: day, target: ExamPlanTarget(kind: .custom), title: "교재 3장")) == "교재 3장")
     }
 }
 

@@ -244,8 +244,10 @@ extension CourseFile {
 }
 
 extension CourseFile {
+    // 노트가 없어지면 그 노트를 읽고 푸는 계획 항목도 함께 없어진다. 남기면 대상 없는 항목이 저장 규칙에 걸린다.
     public mutating func forgetNote(_ id: UUID) {
         for i in sessions.indices { unlinkNote(id, from: sessions[i].id) }
+        for e in exams.indices { exams[e].plan.removeAll { $0.target.kind == .note && $0.target.id == id } }
     }
 
     public mutating func unlinkNote(_ id: UUID, from session: UUID) {

@@ -87,25 +87,6 @@ struct UnitsModelTests {
         #expect(model.notes.isEmpty)
     }
 
-    @Test func thePlanShowsItsFirstDaysAndFoldsTheRest() throws {
-        let workspace = try fixtureWorkspace()
-        let model = UnitsModel(workspace: workspace, courseId: graphTheory)
-        let start = Date.now.addingTimeInterval(20 * 86_400)
-        let examId = try #require(workspace.run(ExamAdd(course: graphTheory, title: "기말고사", start: start))?.made)
-        for d in [0, 1, 2, 5, 9] {
-            workspace.run(ExamPlanAdd(course: graphTheory, exam: examId, title: "할 일 \(d)", day: workspace.today.adding(days: d)))
-        }
-        let exam = try #require(try file(workspace).exams.first { $0.id == examId })
-        let all = exam.plan.filter { !$0.isRemoved }.count
-        let shownDays = workspace.settings.study.planShownDays
-        let folded = model.planRows(exam)
-        #expect(folded.rows.allSatisfy { workspace.today.days(until: $0.item.day) < shownDays })
-        #expect(folded.rows.count + folded.folded == all && folded.folded > 0)
-        #expect(model.planToggleLabel(folded: folded.folded) == "\(folded.folded)개 더 보기")
-        model.planOpen = true
-        #expect(model.planRows(exam).rows.count == all && model.planToggleLabel(folded: folded.folded) == "접기")
-    }
-
     @Test func otherUnitsAreGroupedUnderThePastExamThenUntaught() throws {
         let workspace = try fixtureWorkspace()
         let model = UnitsModel(workspace: workspace, courseId: graphTheory)

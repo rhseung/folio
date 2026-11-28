@@ -101,7 +101,7 @@ struct ExamsView: View {
             }
             .contextMenu { actions(exam) }
             .fileDrop { model.drop($0, on: exam) }
-            ExamPlanCard(model: model, exam: exam)
+            PlanBlock(workspace: model.workspace, scope: .exam(course: model.course.id, exam: exam.id)).padding(.top, Theme.Space.s)
         }
     }
 

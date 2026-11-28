@@ -39,18 +39,19 @@ struct TodayModelTests {
         #expect(model.noteGroups(many, today: today).more == 0)
     }
 
-    // 오늘 계획 항목은 공부 기록으로 저절로 체크되고, 남은 공부에서 빠진다.
+    // 오늘 계획의 줄은 체크하면 남은 공부에서 빠진다. 못 하고 지난 줄도 오늘에 얹혀 남은 공부로 센다.
     @Test func todaysPlanCountsWhatIsLeft() throws {
         let workspace = try fixtureWorkspace()
         let model = TodayModel(workspace: workspace)
-        let unit = try #require(workspace.run(UnitAdd(course: graphTheory, title: "매칭"))?.made)
         let exam = try #require(workspace.run(ExamAdd(course: graphTheory, title: "중간고사"))?.made)
-        workspace.run(ExamPlanAdd(course: graphTheory, exam: exam, title: "매칭 정리", day: workspace.today, unit: unit))
+        let item = try #require(workspace.run(ExamPlanAdd(course: graphTheory, exam: exam, title: "매칭 정리", day: workspace.today))?.made)
+        workspace.run(ExamPlanAdd(course: graphTheory, exam: exam, title: "어제 못 한 일", day: workspace.today.adding(days: -1)))
+        workspace.run(ExamPlanAdd(course: graphTheory, exam: exam, title: "내일 할 일", day: workspace.today.adding(days: 1)))
         let before = model.study(model.summary(now: workspace.now))
-        #expect(before.plan.count == 1)
-        workspace.run(UnitDone(course: graphTheory, unit: unit, done: true))
+        #expect(before.plan.map(\.title) == ["매칭 정리", "어제 못 한 일"] && before.plan.map(\.isLate) == [false, true])
+        workspace.setPlanItems([item], done: true, course: graphTheory)
         let after = model.study(model.summary(now: workspace.now))
-        #expect(after.left == before.left - 1)
+        #expect(after.left == before.left - 1 && after.plan.count == 2)
     }
 
     @Test func deadlinesReadLikeTheAssignmentListOnOneLine() throws {

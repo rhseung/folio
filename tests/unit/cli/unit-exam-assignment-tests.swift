@@ -93,13 +93,13 @@ struct UnitExamAssignmentTests {
             ExamPlanAdd(id: Self.item, course: course, exam: Self.exam, title: "트리 복습", day: LocalDate("2026-10-27")!)
         }
         try h.expectSame(["exam", "plan", "rm", "EC4207/중간고사", "트리 복습", "--yes"], setup: [Self.addExam, Self.addItem]) { _ in
-            ExamPlanRemove(course: course, exam: Self.exam, item: Self.item)
+            ExamPlanRemove(course: course, exam: Self.exam, items: [Self.item])
         }
     }
 
     @Test func examPlanCheck() throws {
         try h.expectSame(["exam", "plan-check", "EC4207/중간고사", "트리 복습"], setup: [Self.addExam, Self.addItem]) { _ in
-            ExamPlanCheck(course: course, item: Self.item, done: true)
+            ExamPlanCheck(course: course, items: [Self.item], done: true)
         }
     }
 

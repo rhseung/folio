@@ -4,6 +4,8 @@ import SwiftUI
 struct DateChip: View {
     @Binding var selection: Date
     var showsTime = true
+    // 한 학기 안의 날짜를 나란히 둘 때는 해를 빼서 좁은 칸에서도 두 칩이 한 줄에 들어가게 한다.
+    var showsYear = true
     @State private var open = false
 
     var body: some View {
@@ -12,7 +14,9 @@ struct DateChip: View {
         } label: {
             Text(
                 selection.formatted(
-                    showsTime ? .dateTime.month().day().weekday().hour().minute() : .dateTime.year().month().day().weekday())
+                    showsTime
+                        ? .dateTime.month().day().weekday().hour().minute()
+                        : showsYear ? .dateTime.year().month().day().weekday() : .dateTime.month().day().weekday())
             )
             .monospacedDigit()
             .chip()

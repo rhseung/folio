@@ -584,8 +584,32 @@ struct MaterialNoteStudyTests {
             try h.direct(ExamPlanAdd(id: item, course: course, exam: Self.exam, title: "정리", day: ymd("2026-10-30")), gist: gist)
         }
         try h.expectSame(["exam", "plan", "move", "EC4207/Midterm", "정리", "--day", "2026-10-31"], prepare: planned) { _ in
-            ExamPlanMove(course: course, exam: Self.exam, item: item, day: ymd("2026-10-31"))
+            ExamPlanMove(course: course, exam: Self.exam, items: [item], day: ymd("2026-10-31"))
         }
+    }
+
+    // 시험은 지금(10/28)의 이레 뒤라 10/30의 항목을 하루 미루거나 오늘로 앞당길 수 있다.
+    @Test func examPlanPostponeAndAdvance() throws {
+        let item = uuid("A0000000-0000-4000-8000-0000000000F2")
+        let planned: (URL) throws -> Void = { gist in
+            try Self.examWithScope(gist, h)
+            try h.direct(ExamPlanAdd(id: item, course: course, exam: Self.exam, title: "정리", day: ymd("2026-10-30")), gist: gist)
+        }
+        try h.expectSame(["exam", "plan", "postpone", "EC4207/Midterm", "정리"], prepare: planned) { _ in
+            ExamPlanPostpone(course: course, exam: Self.exam, items: [item])
+        }
+        try h.expectSame(["exam", "plan", "advance", "EC4207/Midterm", "정리"], prepare: planned) { _ in
+            ExamPlanAdvance(course: course, exam: Self.exam, items: [item])
+        }
+    }
+
+    @Test func examPlanMakeWithAPeriod() throws {
+        try h.expectSame(
+            ["exam", "plan", "make", "EC4207/Midterm", "--start", "2026-10-29", "--end", "2026-11-02", "--after", "mock"],
+            prepare: { try Self.examWithScope($0, h) },
+            { _ in
+                ExamPlanMake(course: course, exam: Self.exam, start: ymd("2026-10-29"), end: ymd("2026-11-02"), after: .mock)
+            })
     }
 
     @Test func problemSetRemove() throws {

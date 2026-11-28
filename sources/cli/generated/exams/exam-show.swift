@@ -7,7 +7,7 @@ import Foundation
 
 extension GeneratedCommands {
     struct ExamShow: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "show", abstract: "시험 하나의 자세한 내용: 범위 단원, 공부 계획", discussion: """
+        static let configuration = CommandConfiguration(commandName: "show", abstract: "시험 하나의 자세한 내용: 범위 단원, 공부 기간, 날짜별 공부 계획과 끝낸 항목", discussion: """
             예시:
               folio exam show EC4207/중간고사
             """)

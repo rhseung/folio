@@ -14,17 +14,42 @@ extension Transcript: StoredModel {
 }
 
 extension CourseFile: StoredModel {
-    public static let schemaVersion = 9
+    public static let schemaVersion = 10
     public static let migrations: [Int: @Sendable (inout JSONValue) throws -> Void] = [
         1: dropSessionKind, 2: dropSessionIndex, 3: dropExamKind, 4: splitRolesByOrigin, 5: keepNoteLinksOnSessions, 6: spellOutRepeats,
-        7: identifyThenKeepOnlyEditedLinks, 8: identifyProblems,
+        7: identifyThenKeepOnlyEditedLinks, 8: identifyProblems, 9: keepOnlyWrittenPlanItems,
     ]
 
-    // main의 v7 마이그레이션(`keepOnlyEditedLinks`)은 지금 모델로 파일을 읽는다. 예전 계획 항목의 종류("quiz")는 지금
-    // 모델로 읽히지 않으므로 문제와 계획을 먼저 지금 모양으로 바꾼다. main에서 이미 v8이 된 파일은 v8 마이그레이션이
-    // 같은 일을 하므로 `identifyProblems`는 두 번 돌아도 같은 결과를 내야 한다.
+    // 계획의 단위가 단원에서 정리 노트로 바뀌었다. 앱이 놓은 예전 항목(단원, 문제 묶음, 섞어 풀기, 오답)은 새 규칙으로 다시 놓으므로
+    // 지우고, 사용자가 쓴 할 일만 대상 없는 항목으로 남긴다. 예전 기준도 지워 다음에 열 때 새로 놓게 한다.
+    static func keepOnlyWrittenPlanItems(_ raw: inout JSONValue) throws {
+        guard case .array(var exams)? = raw["exams"] else { return }
+        for e in exams.indices {
+            exams[e]["planBasis"] = nil
+            exams[e]["planDay"] = nil
+            guard case .array(let plan)? = exams[e]["plan"] else { continue }
+            exams[e]["plan"] = .array(
+                plan.compactMap { old in
+                    guard case .string(let title)? = old["title"], !title.trimmingCharacters(in: .whitespaces).isEmpty,
+                        old["removed"] != .bool(true)
+                    else { return nil }
+                    var item = old
+                    item["target"] = .object(["kind": .string("custom")])
+                    item["edited"] = .bool(true)
+                    item["carried"] = nil
+                    item["pages"] = nil
+                    return item
+                })
+        }
+        raw["exams"] = .array(exams)
+    }
+
+    // main의 v7 마이그레이션(`keepOnlyEditedLinks`)은 지금 모델로 파일을 읽는다. 예전 계획 항목의 종류("quiz", "unit")와
+    // 예전 기준은 지금 모델로 읽히지 않으므로 문제와 계획을 먼저 지금 모양으로 바꾼다. 뒤 버전의 마이그레이션이 같은 일을
+    // 다시 하므로 `identifyProblems`와 `keepOnlyWrittenPlanItems`는 두 번 돌아도 같은 결과를 내야 한다.
     static func identifyThenKeepOnlyEditedLinks(_ raw: inout JSONValue) throws {
         try identifyProblems(&raw)
+        try keepOnlyWrittenPlanItems(&raw)
         try keepOnlyEditedLinks(&raw)
     }
 
@@ -49,20 +74,19 @@ extension CourseFile: StoredModel {
             guard case .array(var plan)? = exams[e]["plan"] else { continue }
             for i in plan.indices {
                 let old = plan[i]["target"]
-                // 이미 바꾼 항목은 그대로 둔다. "unit"은 예전과 지금 이름이 같아 다시 바꿔도 같은 값이 된다.
-                if case .string(let name)? = old?["kind"], name != ExamPlanTarget.Kind.unit.rawValue,
-                    ExamPlanTarget.Kind(rawValue: name) != nil, plan[i]["edited"] == .bool(true)
-                {
+                // 이미 바꾼 항목은 그대로 둔다. "unit"은 예전과 그때 이름이 같아 다시 바꿔도 같은 값이 된다. 종류 이름은 v9의
+                // 것이라 지금 모델에서 읽지 않고 그대로 적는다.
+                if case .string(let name)? = old?["kind"], Self.v9PlanKinds.contains(name), plan[i]["edited"] == .bool(true) {
                     continue
                 }
                 let kind: String =
                     switch old?["kind"] {
-                    case .string("unit")?, .string("quiz")?: ExamPlanTarget.Kind.unit.rawValue
-                    case .string("problem_set")?: ExamPlanTarget.Kind.problems.rawValue
-                    default: ExamPlanTarget.Kind.custom.rawValue
+                    case .string("unit")?, .string("quiz")?: "unit"
+                    case .string("problem_set")?: "problems"
+                    default: "custom"
                     }
                 var target: [String: JSONValue] = ["kind": .string(kind)]
-                if kind != ExamPlanTarget.Kind.custom.rawValue, let id = old?["id"] { target["id"] = id }
+                if kind != "custom", let id = old?["id"] { target["id"] = id }
                 plan[i]["target"] = .object(target)
                 plan[i]["edited"] = .bool(true)
             }
@@ -70,6 +94,8 @@ extension CourseFile: StoredModel {
         }
         raw["exams"] = .array(exams)
     }
+
+    static let v9PlanKinds: Set<String> = ["problems", "mixed", "mock", "wrong", "custom"]
 
     static func problemID(_ set: UUID, _ index: Int) -> UUID {
         var bytes = set.uuid
