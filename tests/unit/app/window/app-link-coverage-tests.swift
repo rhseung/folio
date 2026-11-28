@@ -82,7 +82,9 @@ struct AppLinkCoverageTests {
                 case .settings: .settings
                 case .whatsNew: .whatsNew
                 case .lms: .lms
-                case .semester, .course, .session, .unit, .note, .material, .assignment, .exam, .card, .problemSet, .person, .recording: nil
+                case .semester, .course, .session, .unit, .note, .noteCards, .material, .assignment, .exam, .card, .problemSet, .person,
+                    .recording:
+                    nil
                 }
             if let place {
                 out.append(Sample(link: .place(kind), screen: place))
@@ -94,7 +96,7 @@ struct AppLinkCoverageTests {
                 case .course: course
                 case .session: fixture.session
                 case .unit: fixture.unit
-                case .note: fixture.note
+                case .note, .noteCards: fixture.note
                 case .material: fixture.material
                 case .assignment: fixture.assignment
                 case .exam: fixture.exam
@@ -185,6 +187,9 @@ struct AppLinkCoverageTests {
             guard let id = link.id else { return .failure(Unwritable("A place has no ID; it goes between brackets as its address")) }
             guard link.page == nil, link.settingsPage == nil else {
                 return .failure(Unwritable("A course's page has no <kind>:<ID> form; it goes between brackets as its address"))
+            }
+            guard WikiLink.objectKinds.contains(link.kind.rawValue) else {
+                return .failure(Unwritable("A note's cards are a view of the note, not an item; they go between brackets as their address"))
             }
             let fragment: String? =
                 switch link.anchor {

@@ -8,6 +8,8 @@ public struct AppLink: Hashable, Sendable {
         case lms
         case semester, course, session, unit, note, material, assignment, exam, card
         case problemSet = "problem-set"
+        // 정리 노트 하나의 카드다. ID는 노트의 것이다. 노트 옆 칸에 열어 읽으면서 넘긴다.
+        case noteCards = "note-cards"
         case person, recording
 
         public enum Home: Sendable {
@@ -25,7 +27,7 @@ public struct AppLink: Hashable, Sendable {
             case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .lms: .app
             case .semester: .transcript
             case .person: .catalog
-            case .course, .session, .unit, .note, .material, .assignment, .exam, .problemSet, .recording: .course
+            case .course, .session, .unit, .note, .noteCards, .material, .assignment, .exam, .problemSet, .recording: .course
             case .card: .study
             }
         }
@@ -47,7 +49,7 @@ public struct AppLink: Hashable, Sendable {
             case .note: [.block, .heading]
             case .recording: [.time]
             case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .lms, .semester, .person, .course, .session,
-                .unit, .assignment, .exam, .problemSet, .card:
+                .unit, .noteCards, .assignment, .exam, .problemSet, .card:
                 []
             }
         }
@@ -56,7 +58,7 @@ public struct AppLink: Hashable, Sendable {
             switch self {
             case .course, .settings: true
             case .today, .grades, .requirements, .people, .codes, .whatsNew, .lms, .semester, .person, .session, .unit, .note,
-                .material, .assignment, .exam, .problemSet, .card, .recording:
+                .noteCards, .material, .assignment, .exam, .problemSet, .card, .recording:
                 false
             }
         }
@@ -368,7 +370,7 @@ extension AppLink {
         case .assignment: holds = { $0.assignments.contains { $0.id == id } }
         case .exam: holds = { $0.exams.contains { $0.id == id } }
         case .problemSet: holds = { $0.problemSets.contains { $0.id == id } }
-        case .note: holds = { $0.notes.contains { $0.id == id } }
+        case .note, .noteCards: holds = { $0.notes.contains { $0.id == id } }
         case .recording: holds = { $0.recordings.contains { $0.id == id } }
         case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .lms, .semester, .person, .card: return nil
         }

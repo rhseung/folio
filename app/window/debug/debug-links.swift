@@ -25,6 +25,7 @@ import Foundation
             let session = file.sessions.first { $0.roughNoteId != nil && !$0.materials.isEmpty } ?? file.sessions.first
             return session.map { AppLink(.session, $0.id) }
         case .note: return file.notes.first.map { AppLink(.note, $0.id) }
+        case .noteCards: return file.notes.first { $0.kind == .unit }.map { AppLink(.noteCards, $0.id) }
         case .unit: return file.units.first.map { AppLink(.unit, $0.id) }
         case .exam: return file.exams.first.map { AppLink(.exam, $0.id) }
         case .assignment: return file.assignments.first.map { AppLink(.assignment, $0.id) }

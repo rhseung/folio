@@ -6,12 +6,14 @@ public enum LinkName: Equatable, Sendable {
     case item(String)
     // 녹음은 그 회차 날짜의 다시 듣기다. 회차가 없는 녹음은 날짜 없이 부른다.
     case replay(day: String?)
+    // 정리 노트 하나의 카드 칸이다. 노트와 나란히 열리므로 노트의 이름만 쓰면 두 칸이 같은 이름이 된다.
+    case noteCards(note: String)
     case page(AppLink.CoursePage)
 
     // 항목 자신의 이름이다. 과목 페이지는 항목이 아니라 과목 안의 자리라서, 탭은 과목 이름을 보인다.
     public var namesItem: Bool {
         switch self {
-        case .item, .replay: true
+        case .item, .replay, .noteCards: true
         case .page: false
         }
     }
@@ -26,7 +28,8 @@ public enum LinkName: Equatable, Sendable {
             case .course: file == nil ? nil : link.page.map(LinkName.page)
             case .session: file.flatMap { f in f.sessions.first { $0.id == id }.map { .item(f.title(of: $0, calendar: calendar)) } }
             case .unit: file?.units.first { $0.id == id }.map { .item($0.title) }
-            case .note: file?.notes.first { $0.id == id }.map { .item((Self.fileName($0.path) as NSString).deletingPathExtension) }
+            case .note: file?.notes.first { $0.id == id }.map { .item($0.title) }
+            case .noteCards: file?.notes.first { $0.id == id }.map { .noteCards(note: $0.title) }
             case .material: file?.materials.first { $0.id == id }.map { .item(Self.fileName($0.path)) }
             case .assignment: file?.assignments.first { $0.id == id }.map { .item($0.title) }
             case .exam: file?.exams.first { $0.id == id }.map { .item($0.title) }

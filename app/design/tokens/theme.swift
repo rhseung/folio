@@ -241,6 +241,8 @@ enum Theme {
         static let examMeter: CGFloat = 180
         static let solveCell: CGFloat = 44
         static let bigButton: CGFloat = 52
+        // 카드에 답하는 캡슐의 보이는 높이다. 누르는 자리는 `touchTarget`까지 넓힌다.
+        static let answerCapsule: CGFloat = 28
         static let flipCardMin: CGFloat = 280
         static let planDayCard: CGFloat = 280
         static let solveSetup: CGFloat = 520

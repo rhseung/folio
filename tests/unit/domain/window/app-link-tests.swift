@@ -15,6 +15,14 @@ struct AppLinkTests {
         #expect(AppLink(.problemSet, id).string.hasPrefix("folio://problem-set/"))
     }
 
+    // 정리 노트의 카드 칸은 노트의 ID로 가리킨다. 절은 주소에 싣지 않는다.
+    @Test func aNotesCardsAreAddressedByTheNote() {
+        let link = AppLink(.noteCards, id)
+        #expect(link.string == "folio://note-cards/6F9619FF-8B86-D011-B42D-00C04FC964FF")
+        #expect(AppLink(string: link.string) == link && link.kind.home == .course && !link.kind.isPlace)
+        #expect(AppLink(string: link.string + "#용어")?.anchor == nil)
+    }
+
     @Test func aSolveLinkKeepsWhatItSolves() {
         let problem = UUID(), plan = UUID(), run = UUID()
         let solve = AppLink.Solve(run: run, problems: [problem, id], plan: plan, mode: .mock, shuffled: true, minutes: 50)
@@ -198,6 +206,7 @@ struct AppLinkTests {
         a.notes.append(NoteEntry(id: note, device: device, at: now, path: "Notes/매칭.md", meta: NoteMeta(id: note)))
 
         #expect(AppLink(.note, note).course(in: [b, a]) == a.course.id)
+        #expect(AppLink(.noteCards, note).course(in: [b, a]) == a.course.id && AppLink(.noteCards, UUID()).course(in: [a, b]) == nil)
         #expect(AppLink(.exam, exam.id).course(in: [b, a]) == a.course.id)
         #expect(AppLink.course(b.course.id).course(in: [a, b]) == b.course.id)
         #expect(AppLink(.exam, UUID()).course(in: [a, b]) == nil)

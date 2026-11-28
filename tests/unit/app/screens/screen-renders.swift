@@ -146,6 +146,10 @@ struct ScreenRenders {
             if let unit = studied.file.units.first(where: \.isDone) ?? studied.file.units.first {
                 entries.append(("study-unit", Navigator.Entry(link: AppLink(.unit, unit.id), course: studied.id)))
             }
+            // 노트 옆 카드 칸은 카드를 이은 정리 노트로 그린다.
+            if let note = workspace.study(of: studied.id)?.allCards.compactMap(\.card.noteId).first {
+                entries.append(("study-note-cards", Navigator.Entry(link: AppLink(.noteCards, note), course: studied.id)))
+            }
             if let set = studied.file.problemSets.first(where: { !$0.problems.isEmpty }) {
                 let solve = SolveRequest(course: studied.id, set: set.id, problems: set.problems.prefix(3).map(\.id))
                 entries.append(("study-solve", Navigator.Entry(link: solve.link, course: studied.id)))

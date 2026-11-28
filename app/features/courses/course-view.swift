@@ -16,8 +16,10 @@ struct CourseView: View {
         if let course = model.course {
             let workspace = model.workspace
             Group {
-                // 풀기는 과목 열 없이 칸 전체를 쓴다. 문제와 답, 옆 칸의 문제지가 자리를 나눠야 하기 때문이다.
-                if model.section == .solve, let query = model.place.solve {
+                // 노트의 카드 칸과 풀기는 과목 열 없이 칸 전체를 쓴다. 옆 칸의 노트나 문제지와 자리를 나눠야 하기 때문이다.
+                if model.place.kind == .noteCards, let note = model.place.id {
+                    NoteCardsView(workspace: workspace, course: course, noteId: note).id(note)
+                } else if model.section == .solve, let query = model.place.solve {
                     SolveScreen(workspace: workspace, request: SolveRequest(course: course.id, query: query))
                         .id(query)
                 } else {

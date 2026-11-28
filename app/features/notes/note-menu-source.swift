@@ -37,7 +37,9 @@ struct NoteMenuSource: ItemMenuSource {
         let finder = false
         #endif
         let review = reviewed.flatMap { course?.file.review(of: $0) }
-        let all = NoteMenuCommand.commands(host: host, builtPDF: builtPDF != nil, builds: build != nil, review: review, finder: finder)
+        let all = NoteMenuCommand.commands(
+            host: host, builtPDF: builtPDF != nil, builds: build != nil, review: review, finder: finder,
+            cards: note.meta.kind == .unit && note.meta.id != nil)
         return note.meta.id == nil ? all.filter { $0 != .share } : all
     }
 
@@ -51,6 +53,15 @@ struct NoteMenuSource: ItemMenuSource {
             MenuRow(
                 command, .materialsOpenPdf, "doc.richtext",
                 .action { if let builtPDF { openLink(AppLink(.material, builtPDF), course: courseId) } })
+        case .cards:
+            // 노트를 연 화면이 아니면 노트를 먼저 열고, 그 옆 칸에 카드를 연다.
+            MenuRow(
+                command, .notesOpenCards, "rectangle.on.rectangle",
+                .action {
+                    guard let id = note.meta.id else { return }
+                    if host.opensItem { if let open { open() } else { openLink(AppLink(.note, id), course: courseId) } }
+                    openLink(AppLink(.noteCards, id), in: .beside, course: courseId)
+                })
         case .build:
             MenuRow(command, .textFileBuild, "hammer", disabled: !canBuild, .action { build?() })
         case .review(let review):

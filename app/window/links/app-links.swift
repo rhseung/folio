@@ -52,7 +52,8 @@ extension Workspace {
         case .lms: return [link.kind.place?.title, link.lmsPage.flatMap(lmsPageTitle)].compactMap { $0 }.joined(separator: " · ")
         case .semester: return transcript.semesters.first { $0.id == link.id }?.title ?? ""
         case .person: return item ?? String(localized: .rootNavPeople)
-        case .course, .session, .unit, .note, .material, .assignment, .exam, .problemSet, .card, .recording: return link.string
+        case .course, .session, .unit, .note, .noteCards, .material, .assignment, .exam, .problemSet, .card, .recording:
+            return link.string
         }
     }
 
@@ -84,6 +85,7 @@ extension LinkName {
         case .item(let name): name
         case .replay(let day?): String(localized: .recordingPageNamed(day))
         case .replay(nil): String(localized: .recordingPage)
+        case .noteCards(let note): String(localized: .noteCardsNamed(note))
         case .page(let page): page.title
         }
     }

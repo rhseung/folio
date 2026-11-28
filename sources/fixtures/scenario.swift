@@ -329,11 +329,30 @@ private struct Builder {
             NoteAdd(
                 course: course, title: "기말 01 매칭의 기초", kind: .unit,
                 body: "# 매칭의 기초\n\n> [!definition] 매칭\n> 공통 끝점이 없는 간선의 집합이다.\n", units: [matching]), at: made)
-        try run(
+        let theorem = try run(
             NoteAdd(
                 course: course, title: "기말 02 홀의 정리", kind: .unit,
-                body:
-                    "# 홀의 정리\n\n> [!theorem] Hall\n> 이분 그래프에 $X$를 모두 덮는 매칭이 있을 필요충분조건은 모든 $S \\subseteq X$에 대해 $|N(S)| \\ge |S|$인 것이다.\n\n> [!proof]\n> $|X|$에 대한 귀납법으로 보인다.\n",
+                body: """
+                    # 홀의 정리
+
+                    ## 용어
+
+                    - **이웃 집합** $N(S)$는 $S$의 꼭짓점과 이웃한 꼭짓점의 집합이다.
+                    - 매칭이 $X$의 모든 꼭짓점을 덮으면 $X$를 **포화**한다.
+
+                    ## 정리와 증명
+
+                    > [!theorem] Hall
+                    > 이분 그래프에 $X$를 모두 덮는 매칭이 있을 필요충분조건은 모든 $S \\subseteq X$에 대해 $|N(S)| \\ge |S|$인 것이다.
+
+                    > [!proof]
+                    > $|X|$에 대한 귀납법으로 보인다.
+
+                    ## 헷갈리는 것 비교
+
+                    - 극대 매칭은 더 넣을 간선이 없는 매칭이고, 최대 매칭은 크기가 가장 큰 매칭이다.
+
+                    """,
                 units: [hall]), at: made)
         try run(
             NoteAdd(
@@ -345,6 +364,34 @@ private struct Builder {
         let ctx = ActionContext(gist: gist, device: device, now: at(11, 3, 21), calendar: Scenario.calendar)
         let read = try ctx.file(course).exams.first { $0.id == exam }?.plan.first { $0.target == .note(basics, .read) }
         if let read { try run(ExamPlanCheck(course: course, items: [read.id]), at: at(11, 3, 21)) }
+        try noteCards(course, note: theorem, unit: hall)
+    }
+
+    // 홀의 정리 노트의 절에 이은 카드다. 공부 기간(11/3부터)에 여섯 장 가운데 석 장을 넘겨, 정독 칩이 넘긴 만큼 찬 모습과
+    // 노트 옆 카드 칸의 앞뒤 카드와 참거짓 카드를 보인다.
+    func noteCards(_ course: UUID, note: UUID, unit: UUID) throws {
+        func card(_ front: String, _ back: String, _ section: String, answer: Bool? = nil) -> StudyCard {
+            var card = StudyCard(
+                device: device, at: at(11, 2, 20), unitId: unit, kind: answer == nil ? .flip : .trueFalse, front: front, back: back,
+                answer: answer, source: .claude)
+            card.noteId = note
+            card.noteSection = section
+            return card
+        }
+        let cards = [
+            card("이웃 집합 $N(S)$", "$S$의 꼭짓점 가운데 하나와 이웃한 꼭짓점의 집합", "용어"),
+            card("$X$를 포화하는 매칭", "$X$의 모든 꼭짓점을 덮는 매칭", "용어"),
+            card("홀의 조건", "모든 $S \\subseteq X$에 대해 $|N(S)| \\ge |S|$", "정리와 증명"),
+            card(
+                "홀의 조건을 만족하는 이분 그래프에는 완전 매칭이 있다.", "$X$를 포화하는 매칭이 있을 뿐이다. 완전 매칭에는 $|X| = |Y|$도 필요하다.", "정리와 증명",
+                answer: false),
+            card("모든 $k$-정규 이분 그래프($k \\ge 1$)에는 완전 매칭이 있다.", "홀의 조건을 만족하고 양쪽의 크기가 같다.", "정리와 증명", answer: true),
+            card("극대 매칭은 최대 매칭이다.", "더 넣을 간선이 없어도 더 큰 매칭이 있을 수 있다.", "헷갈리는 것 비교", answer: false),
+        ]
+        try run(CardSave(course: course, cards: cards), at: at(11, 2, 20))
+        try run(CardFlip(course: course, unit: unit, card: cards[0].id), at: at(11, 3, 22))
+        try run(CardFlip(course: course, unit: unit, card: cards[1].id, known: false), at: at(11, 4, 9))
+        try run(CardFlip(course: course, unit: unit, card: cards[3].id, answer: true), at: at(11, 4, 9, 5))
     }
 
     func recording(_ course: UUID, session: UUID, start: Date) throws {

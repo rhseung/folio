@@ -36,8 +36,10 @@ extension KeyCombo {
 }
 
 extension View {
-    // 키는 화면에 적지 않고 등록표에서 읽는다.
-    func shortcut(_ id: ShortcutID) -> some View { keyboardShortcut(ShortcutTable.shortcut(id).key?.keyboardShortcut) }
+    // 키는 화면에 적지 않고 등록표에서 읽는다. 같은 단추가 여럿 보이는 화면은 지금 답할 것에만 키를 주고 나머지에는 nil을 준다.
+    func shortcut(_ id: ShortcutID?) -> some View {
+        keyboardShortcut(id.flatMap { ShortcutTable.shortcut($0).key?.keyboardShortcut })
+    }
 
     // 키가 여럿인 명령에서 `index`번째 키다. 보기 고르기처럼 키의 차례가 대상의 차례인 명령에 쓴다.
     func shortcut(_ id: ShortcutID, at index: Int) -> some View {

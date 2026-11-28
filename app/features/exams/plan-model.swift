@@ -155,14 +155,15 @@ final class PlanModel {
         workspace.study(of: course)?.plannedExams(now: workspace.now, calendar: workspace.calendar) ?? []
     }
 
-    // 줄이나 단계를 누르면 여는 곳이다. 모의고사와 어제 오답은 풀기를 열고, 직접 쓴 할 일은 열 곳이 없다.
+    // 줄이나 단계를 누르면 여는 곳이다. 정독은 노트를 열고 그 옆 칸에 노트의 카드를 연다. 모의고사와 어제 오답은 풀기를 열고,
+    // 직접 쓴 할 일은 열 곳이 없다.
     enum Destination {
-        case link(AppLink)
+        case link(AppLink, beside: AppLink? = nil)
         case solve(SolveRequest)
     }
 
     func destination(_ row: PlanRow, stage: PlanStage?) -> Destination? {
-        if let link = row.link(for: stage) { return .link(link) }
+        if let link = row.link(for: stage) { return .link(link, beside: row.companion(for: stage)) }
         guard let solve = study(row)?.solve(row, seed: seed) else { return nil }
         return .solve(SolveRequest(plan: solve, course: row.courseId, item: row.open.first))
     }
