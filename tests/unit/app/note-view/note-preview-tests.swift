@@ -17,11 +17,13 @@ import WebKit
     var math: MathSyntax
     var accent = CourseAccent.presets[0].accent
     var revision = 0
+    let dark: Bool
 
     init(
         _ text: String, baseURL: URL? = nil, editable: Bool = false, height: CGFloat = 600, embeds: NoteEmbedSource? = nil,
-        math: MathSyntax = .latex
+        math: MathSyntax = .latex, dark: Bool = false
     ) {
+        self.dark = dark
         page = NotePreviewPage.take()
         page.embeds = embeds
         window = NSWindow(
@@ -60,7 +62,7 @@ import WebKit
 
     func show(_ text: String) {
         self.text = text
-        page.show(text, baseURL: baseURL, math: math, accent: accent, dark: false, revision: revision)
+        page.show(text, baseURL: baseURL, math: math, accent: accent, dark: dark, revision: revision)
     }
 
     func close() {
@@ -284,6 +286,64 @@ struct NotePreviewTests {
         await rig.settle()
         for _ in 0..<40 where try await width() != 20 { try await Task.sleep(for: .milliseconds(50)) }
         #expect(try await width() == 20)
+    }
+
+    // 라이트에서는 빨강, 다크에서는 초록인 그림이다.
+    private func writeTwoToneFigure(in folder: URL, width: Int, at date: Date = Date()) throws {
+        let file = folder.appending(path: "assets/fig.svg")
+        try FileManager.default.createDirectory(at: folder.appending(path: "assets"), withIntermediateDirectories: true)
+        let svg =
+            "<svg xmlns='http://www.w3.org/2000/svg' width='\(width)' height='40'><style>rect{fill:#ff0000}"
+            + "@media (prefers-color-scheme: dark){rect{fill:#00ff00}}</style><rect width='\(width)' height='40'/></svg>"
+        try svg.write(to: file, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.modificationDate: date], ofItemAtPath: file.path)
+    }
+
+    // 첫 그림이 `width`가 될 때까지 기다린 뒤, 그 그림의 초록에서 빨강을 뺀 값을 준다.
+    private func greenOverRed(_ rig: PreviewRig, width: Double) async throws -> Double? {
+        for _ in 0..<40 where try await rig.number("return document.images[0].naturalWidth") != width {
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        return try await rig.number(
+            """
+            const canvas = document.createElement("canvas");
+            canvas.width = canvas.height = 1;
+            const context = canvas.getContext("2d");
+            context.drawImage(document.images[0], 0, 0, 1, 1);
+            const [red, green] = context.getImageData(0, 0, 1, 1).data;
+            return green - red;
+            """)
+    }
+
+    // WebKit은 SVG 그림의 다크 여부를 그림을 다 받은 순간에 한 번 정하고, 그때 그림이 레이아웃에 없으면 라이트로 둔다.
+    // 조판이 길면 그림이 레이아웃보다 먼저 도착하므로 수식이 많은 노트로 확인한다.
+    @Test func aPictureOnADarkPageTakesItsDarkColors() async throws {
+        let folder = FileManager.default.temporaryDirectory.appending(path: "preview-\(UUID().uuidString)")
+        try writeTwoToneFigure(in: folder, width: 40)
+        let math = (1...300).map { "$$\\int_0^{\($0)} x^2\\,dx = \\frac{\($0)^3}{3}$$" }.joined(separator: "\n\n")
+        let rig = PreviewRig("![](assets/fig.svg)\n\n\(math)", baseURL: folder, dark: true)
+        defer { rig.close() }
+        await rig.settle()
+        #expect(try #require(try await greenOverRed(rig, width: 40)) > 0)
+    }
+
+    // 다시 쓴 그림은 주소에 판을 붙여 새로 읽는다. 이미 그림을 그리던 img의 주소만 바꾸면 새 그림이 라이트로 남는다.
+    @Test func aRewrittenPictureOnADarkPageTakesItsDarkColors() async throws {
+        let folder = FileManager.default.temporaryDirectory.appending(path: "preview-\(UUID().uuidString)")
+        try writeTwoToneFigure(in: folder, width: 40, at: Date(timeIntervalSinceNow: -60))
+        let rig = PreviewRig("![](assets/fig.svg)\n\nBelow", baseURL: folder, dark: true)
+        defer { rig.close() }
+        await rig.settle()
+        #expect(try #require(try await greenOverRed(rig, width: 40)) > 0)
+
+        try writeTwoToneFigure(in: folder, width: 60)
+        rig.revision += 1
+        rig.show(rig.text)
+        await rig.settle()
+        #expect(try #require(try await greenOverRed(rig, width: 60)) > 0)
+        // 갈아 끼운 그림도 눌러서 크게 볼 수 있어야 한다.
+        _ = try await rig.js("document.images[0].click()")
+        #expect(try await rig.js("return !!document.querySelector('.figure-viewer')") as? Bool == true)
     }
 
     @Test func aPictureOpensLargeAndCloses() async throws {

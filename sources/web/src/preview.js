@@ -1,6 +1,6 @@
 const post = (message) => window.webkit?.messageHandlers?.folioPreview?.postMessage(message);
 
-export function preview({ typeset, redraw }) {
+export function preview({ typeset, redraw, layoutNow }) {
   let shown = [];
   let options = {};
   // 블록을 다시 만들어도 접힌 상태가 남도록, 콜아웃을 요소가 아니라 제목과 앞에 같은 제목이 몇 개 있는지로 찾는다.
@@ -141,7 +141,29 @@ export function preview({ typeset, redraw }) {
       if (!version) continue;
       el.dataset.file = raw;
       url.searchParams.set("v", version);
-      if (el.getAttribute("src") !== url.href) el.setAttribute("src", url.href);
+      if (el.getAttribute("src") === url.href) continue;
+      if (el.tagName === "IMG") swap(el, url.href);
+      else el.setAttribute("src", url.href);
+    }
+  };
+
+  // 그림을 그리고 있는 img의 주소만 바꾸면 WebKit은 새 그림을 다 받을 때까지 옛 그림을 그리게 둔다. 그러면 새 그림을 다
+  // 받은 순간에 그것을 그리는 요소가 없어서 다크 페이지에서 라이트 색으로 남는다(reader.js의 `layoutNow`). 그래서 새
+  // img로 갈아 끼운다. 새 그림이 올 때까지 옛 높이를 지켜서 아래 내용이 올라왔다가 다시 밀려나지 않게 한다.
+  const swap = (el, src) => {
+    const fresh = el.cloneNode();
+    fresh.setAttribute("src", src);
+    const height = el.getBoundingClientRect().height;
+    if (height > 0) {
+      fresh.style.minHeight = `${height}px`;
+      const release = () => { fresh.style.minHeight = ""; };
+      fresh.addEventListener("load", release, { once: true });
+      fresh.addEventListener("error", release, { once: true });
+    }
+    el.replaceWith(fresh);
+    for (const block of shown) {
+      const at = block.nodes.indexOf(el);
+      if (at >= 0) block.nodes[at] = fresh;
     }
   };
 
@@ -214,6 +236,7 @@ export function preview({ typeset, redraw }) {
       shown = [...shown.slice(0, head), ...middle, ...shown.slice(shown.length - tail)];
       if (editable) prepare(shown.flatMap((b) => b.nodes));
       stamp(next.versions);
+      layoutNow();
       if (cardFor && !cardFor.isConnected) hideCard();
       // 블록 위쪽을 고치면 블록의 HTML은 그대로여도 줄 번호는 바뀌므로, 모든 블록의 줄을 다시 적는다.
       shown.forEach((block, i) => {
