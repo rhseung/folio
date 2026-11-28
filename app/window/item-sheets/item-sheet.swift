@@ -7,7 +7,8 @@ enum ItemSheet: Identifiable {
     case exam(course: UUID, exam: UUID)
     case assignment(course: UUID, assignment: UUID)
     case card(course: UUID, draft: CardDraft)
-    case suggestCards(course: UUID, unit: UUID)
+    // `note`가 있으면 그 정리 노트가 재료이고 만든 카드를 그 노트에 잇는다.
+    case suggestCards(course: UUID, unit: UUID, note: UUID? = nil)
     // `scope`가 있으면 그 단원들(시험 범위)의 카드만 넘긴다.
     case flipCards(course: UUID, unit: UUID?, scope: [UUID]? = nil)
     // `count`가 있으면 그 개수를 먼저 고른다. 문제 부족 줄은 최소 문제 수까지 모자란 개수를 준다.
@@ -24,7 +25,8 @@ enum ItemSheet: Identifiable {
     var id: UUID {
         switch self {
         case .session(let request): request.id
-        case .exam(_, let id), .assignment(_, let id), .suggestCards(_, let id): id
+        case .exam(_, let id), .assignment(_, let id): id
+        case .suggestCards(_, let unit, let note): note ?? unit
         case .makeProblems(let course, let units, _): units.first ?? course
         case .flipCards(let course, let unit, _): unit ?? course
         case .problemSet(let course): course

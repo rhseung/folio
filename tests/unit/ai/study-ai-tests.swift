@@ -1,7 +1,8 @@
-import FolioAI
 import FolioDomain
 import Foundation
 import Testing
+
+@testable import FolioAI
 
 struct StudyAITests {
     let device = UUID(), now = Date()
@@ -15,19 +16,64 @@ struct StudyAITests {
             ContextItem(id: "course", title: "과목 요약", tier: .courseSummary, text: "과목: 그래프 이론"),
         ]
         let drafts = try await ClaudeClient(provider: fake).suggestCards(
-            unitTitle: "매칭", count: 2, existing: ["증가 경로"], context: context)
-        #expect(drafts.count == 2)
+            CardRequest(title: "매칭", material: .lecture, count: 2, existing: ["증가 경로"]), context: context)
+        #expect(drafts.count == 2 && drafts.allSatisfy { $0.kind == .flip })
 
         let request = try #require(await fake.requests.first)
         #expect(request.model == TaskConfig.large && request.output_config?.format?.schema == CardDrafts.schema)
         let user = request.messages[0].content.compactMap { if case .text(let t, _) = $0 { t } else { nil } }
         #expect(user.first?.contains("König") == true && user.last?.contains("2장") == true && user.last?.contains("증가 경로") == true)
+        #expect(user.last?.contains("렉처 쪽") == true && user.last?.contains("앞뒤 카드(flip)만") == true)
 
         let unit = UUID(), lecture = UUID()
-        let withFile = drafts[0].card(unitId: unit, materialId: lecture, device: device, at: now)
-        let without = drafts[0].card(unitId: unit, materialId: nil, device: device, at: now)
-        #expect(withFile.page == 3 && withFile.materialId == lecture && withFile.source == .claude)
-        #expect(without.page == nil)
+        let withFile = try #require(drafts[0].card(unitId: unit, materialId: lecture, device: device, at: now))
+        let without = try #require(drafts[0].card(unitId: unit, materialId: nil, device: device, at: now))
+        #expect(withFile.page == 3 && withFile.materialId == lecture && withFile.source == .claude && withFile.kind == .flip)
+        #expect(without.page == nil && without.noteId == nil)
+    }
+
+    // 재료가 정리 노트면 노트의 절을 주고, 받은 카드마다 그 노트와 절을 잇는다.
+    @Test func cardsFromASummaryNoteAreTiedToItsSections() async throws {
+        let reply = #"""
+            {"cards":[
+            {"kind":"flip","front":"막는 쌍","back":"짝이 아니면서 서로를 지금 짝보다 더 좋아하는 두 사람","answer":null,"section":"용어","page":null},
+            {"kind":"true_false","front":"Gale–Shapley의 결과는 제안받는 쪽에게 가장 좋다.","back":"제안하는 쪽에게 가장 좋다.","answer":false,"section":"정리와 증명","page":null},
+            {"kind":"true_false","front":"안정 매칭은 언제나 있다.","back":"Gale–Shapley가 만든다.","answer":true,"section":"없는 절","page":null},
+            {"kind":"true_false","front":"답이 빠진 문장","back":"이유","answer":null,"section":"용어","page":null},
+            {"kind":"flip","front":"뒤가 빈 카드","back":" ","answer":null,"section":null,"page":null}
+            ]}
+            """#
+        let fake = FakeProvider(responses: [FakeProvider.reply(reply)])
+        let sections = ["기말 04 안정 매칭", "용어", "정리와 증명"]
+        let request = CardRequest(
+            title: "기말 04 안정 매칭", material: .note, kinds: [.flip, .trueFalse], count: 5, existing: [], sections: sections)
+        let drafts = try await ClaudeClient(provider: fake).suggestCards(
+            request, context: [ContextItem(id: "note", title: "정리 노트 기말 04 안정 매칭", tier: .focus, text: "## 용어\n막는 쌍")])
+
+        let sent = try #require(await fake.requests.first)
+        let user = sent.messages[0].content.compactMap { if case .text(let t, _) = $0 { t } else { nil } }
+        let ask = try #require(user.last)
+        #expect(user.first?.contains("막는 쌍") == true)
+        #expect(ask.contains("용어, 정리의 내용, 공식, 헷갈리는 것 비교, 자주 하는 실수") && ask.contains("5장"))
+        #expect(ask.contains("앞뒤 카드(flip)와 참거짓 카드(true_false)를 섞어") && ask.contains("- 정리와 증명"))
+        let system = (sent.system ?? []).compactMap { if case .text(let t, _) = $0 { t } else { nil } }
+        #expect(system.contains(MathWriting.rule) && sent.output_config?.format?.schema == CardDrafts.schema)
+
+        let unit = UUID(), note = UUID()
+        let cards = drafts.compactMap { $0.card(unitId: unit, noteId: note, sections: sections, device: device, at: now) }
+        // 답이 없는 참거짓 카드와 빈 면이 있는 카드는 버린다. 노트에 없는 절은 잇지 않는다.
+        #expect(cards.map(\.front) == ["막는 쌍", "Gale–Shapley의 결과는 제안받는 쪽에게 가장 좋다.", "안정 매칭은 언제나 있다."])
+        #expect(cards.map(\.kind) == [.flip, .trueFalse, .trueFalse] && cards.map(\.answer) == [nil, false, true])
+        #expect(cards.map(\.noteSection) == ["용어", "정리와 증명", nil] && cards.allSatisfy { $0.noteId == note && $0.source == .claude })
+        #expect(CardFile(unitId: unit, cards: cards).violations.isEmpty)
+        // 노트에 잇지 않는 카드는 절도 가지지 않는다.
+        #expect(drafts[0].card(unitId: unit, sections: sections, device: device, at: now)?.noteSection == nil)
+    }
+
+    @Test func aCardRequestAsksOnlyForTheChosenKind() {
+        let only = ClaudeClient.ask(CardRequest(title: "매칭", material: .textbook, kinds: [.trueFalse], count: 8))
+        #expect(only.contains("교재 쪽") && only.contains("참거짓 카드(true_false)만") && only.contains("8장") && !only.contains("노트의 절"))
+        #expect(CardRequest(title: "매칭", kinds: [], count: 3).kinds == [.flip])
     }
 
     @Test func extractedProblemsLinkOnlyKnownUnits() async throws {
@@ -185,7 +231,7 @@ struct StudyAITests {
         let client = ClaudeClient(provider: fake)
         _ = try await client.gradeProblem(Problem(number: "1", text: "$\\kappa(G) = 4$이면 $G$는 2-연결인가?"), answer: "참")
         _ = try await client.extractProblems(sheet: .pdf(Data("%PDF".utf8)), solution: nil, units: [], source: .exercise)
-        _ = try await client.suggestCards(unitTitle: "연결도", count: 1, existing: [], context: [])
+        _ = try await client.suggestCards(CardRequest(title: "연결도", count: 1), context: [])
         _ = try await client.writeProblemSheet(units: [], examples: [], wrong: [], count: 1, context: [])
         let requests = await fake.requests
         #expect(requests.count == 4)
