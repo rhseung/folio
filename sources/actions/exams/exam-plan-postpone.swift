@@ -19,9 +19,10 @@ public struct ExamPlanPostpone {
         let today = try ctx.studyDay()
         let file = try ctx.file(course)
         let examDay = try ctx.examDay(of: file.exams[try index(exam, in: file.exams, .valueExam)])
+        let days = Exam.planDays(today: today, examDay: examDay)
         try ctx.edit(course) { f in
             try f.update(\.exams, exam) { e in
-                guard try e.planItems(items).allSatisfy({ Exam.postponedDay(of: $0, today: today) < examDay }) else {
+                guard try e.planItems(items).allSatisfy({ days.contains(Exam.postponedDay(of: $0, today: today)) }) else {
                     throw ActionError.rule(String(localized: .errorPlanPostponePastExam))
                 }
                 e.postponePlan(items, today: today)

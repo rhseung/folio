@@ -24,9 +24,14 @@ public struct ExamPlanPeriod: Codable, Sendable, Equatable, Hashable {
         return ExamPlanPeriod(start: min(today, end), end: end)
     }
 
-    // 시험 날짜가 앞당겨지면 저장한 기간이 시험 날을 넘는다. 끝낼 날을 시험 전날로 당기고 시작일이 그 뒤면 함께 당긴다.
-    public func fitted(before examDay: LocalDate) -> ExamPlanPeriod {
-        let last = min(end, examDay.adding(days: -1))
+    // 저장한 기간을 지금의 시험 날짜에 맞춘다. `old`는 이 기간을 저장할 때의 시험 날이다.
+    // 끝낼 날이 그때의 시험 전날이면 새 시험 전날로 따라간다. 처음 놓을 때 저장한 기본 기간은 사용자가 고른 기간과 구별되지 않아서,
+    // 따라가지 않으면 시험을 늦췄을 때 끝낼 날이 예전 전날에 남고 그 뒤가 빈 날이 된다.
+    // 그보다 일찍 끝내기로 한 기간은 그대로 두고, 시험 날을 넘은 끝낼 날만 시험 전날로 당긴다. 시작일이 끝낼 날보다 뒤면 함께 당긴다.
+    public func fitted(before examDay: LocalDate, from old: LocalDate? = nil) -> ExamPlanPeriod {
+        let eve = examDay.adding(days: -1)
+        let follows = old.map { end == $0.adding(days: -1) } ?? false
+        let last = follows ? eve : min(end, eve)
         return ExamPlanPeriod(start: min(start, last), end: last, after: after)
     }
 

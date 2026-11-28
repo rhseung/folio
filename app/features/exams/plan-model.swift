@@ -192,12 +192,11 @@ final class PlanModel {
         workspace.run(ExamPlanAdvance(course: row.courseId, exam: exam, items: row.open))
     }
 
-    // 날짜 고르기가 내놓는 날이다. 오늘부터 시험 전날까지에서 그 줄이 지금 있는 날을 뺀다.
+    // 날짜 고르기가 내놓는 날이다. 옮길 수 있는 날에서 그 줄이 지금 있는 날을 뺀다.
     func moveDays(_ row: PlanRow) -> [LocalDate] {
-        guard let start = exam(of: row)?.start else { return [] }
-        let examDay = workspace.settings.studyDay(of: start, calendar: workspace.calendar)
-        let count = min(max(today.days(until: examDay), 0), Self.moveDayLimit)
-        return (0..<count).map { today.adding(days: $0) }.filter { $0 != row.day }
+        guard let exam = exam(of: row), let study = study(row) else { return [] }
+        return study.planDays(of: exam, settings: workspace.settings, calendar: workspace.calendar).prefix(Self.moveDayLimit)
+            .filter { $0 != row.day }
     }
 
     // 메뉴가 화면보다 길어지지 않게 하는 수다. 더 먼 날은 기간을 고쳐서 옮긴다.

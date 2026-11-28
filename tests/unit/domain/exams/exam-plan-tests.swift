@@ -177,6 +177,62 @@ struct ExamPlanTests {
         #expect(study.place(undated, proofs: [], settings: Settings(), calendar: PlanCourse.calendar) == nil)
     }
 
+    @Test func aPeriodEndingOnTheExamEveFollowsTheExamWhenItIsPutOff() throws {
+        var course = PlanCourse()
+        try planned(&course, on: PlanCourse.at(12, 8), proofs: [])
+        #expect(course.exam.planPeriod == ExamPlanPeriod(start: PlanCourse.day(12, 8), end: PlanCourse.day(12, 13)))
+        func placed(_ course: PlanCourse) throws -> ExamPlan.Placement {
+            try #require(
+                course.study(now: PlanCourse.at(12, 8, 13)).place(
+                    course.exam, proofs: [], settings: Settings(), calendar: PlanCourse.calendar))
+        }
+        // 시험을 12/14에서 12/18로 늦추면 끝낼 날이 12/17로 따라간다. 열흘에 노트 둘이라 12/8과 12/13이다.
+        var later = course
+        later.exam.start = PlanCourse.at(12, 18, 9)
+        later.exam.end = nil
+        #expect(try placed(later).period == ExamPlanPeriod(start: PlanCourse.day(12, 8), end: PlanCourse.day(12, 17)))
+        #expect(try placed(later).plan.filter { $0.target.kind == .note }.map(\.day.day) == [8, 8, 13, 13])
+
+        // 시험 전날보다 일찍 끝내기로 한 기간은 시험을 늦춰도 그대로다.
+        var early = later
+        early.exam.planPeriod?.end = PlanCourse.day(12, 11)
+        #expect(try placed(early).period == ExamPlanPeriod(start: PlanCourse.day(12, 8), end: PlanCourse.day(12, 11)))
+    }
+
+    @Test func fittingAPeriodFollowsOnlyAnEndOnTheOldExamEve() {
+        let day = PlanCourse.day
+        let period = ExamPlanPeriod(start: day(12, 5), end: day(12, 9), after: .mock)
+        // 예전 시험이 12/10이면 끝낼 날이 그 전날이었으므로 늦춰도 앞당겨도 새 시험 전날이다.
+        #expect(period.fitted(before: day(12, 15), from: day(12, 10)).end == day(12, 14))
+        #expect(period.fitted(before: day(12, 8), from: day(12, 10)) == ExamPlanPeriod(start: day(12, 5), end: day(12, 7), after: .mock))
+        // 예전 시험이 12/12면 일찍 끝내기로 한 기간이라 그대로고, 시험 날을 넘을 때만 당긴다.
+        #expect(period.fitted(before: day(12, 15), from: day(12, 12)) == period)
+        #expect(period.fitted(before: day(12, 8), from: day(12, 12)).end == day(12, 7))
+        // 예전 시험 날을 모르면 당기기만 한다.
+        #expect(period.fitted(before: day(12, 15)) == period)
+        // 시작일이 새 끝낼 날보다 뒤면 함께 당긴다.
+        #expect(period.fitted(before: day(12, 4), from: day(12, 10)) == ExamPlanPeriod(start: day(12, 3), end: day(12, 3), after: .mock))
+    }
+
+    @Test func itemsCanSitFromTodayToTheDayBeforeTheExam() {
+        let day = PlanCourse.day
+        #expect(Exam.planDays(today: day(12, 11), examDay: day(12, 14)) == [day(12, 11), day(12, 12), day(12, 13)])
+        // 시험 날과 그 뒤에는 옮길 날이 없다.
+        #expect(Exam.planDays(today: day(12, 14), examDay: day(12, 14)).isEmpty)
+        #expect(Exam.planDays(today: day(12, 20), examDay: day(12, 14)).isEmpty)
+
+        // 새벽 3:59는 아직 12/11의 공부일이고 4:00부터 12/12다.
+        let course = PlanCourse()
+        func days(_ exam: Exam, at now: Date) -> [LocalDate] {
+            course.study(now: now).planDays(of: exam, settings: Settings(), calendar: PlanCourse.calendar)
+        }
+        #expect(days(course.exam, at: PlanCourse.at(12, 12, 3, 59)).first == day(12, 11))
+        #expect(days(course.exam, at: PlanCourse.at(12, 12, 4, 0)) == [day(12, 12), day(12, 13)])
+        var undated = course.exam
+        undated.start = nil
+        #expect(days(undated, at: PlanCourse.at(12, 12)).isEmpty)
+    }
+
     @Test func theDefaultPeriodStartsOnTheStudyDayNotTheCalendarDay() throws {
         let course = PlanCourse()
         // 새벽 3:59는 아직 12/7의 공부일이고 4:00부터 12/8이다.

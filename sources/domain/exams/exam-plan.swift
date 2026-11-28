@@ -20,6 +20,16 @@ public enum ExamPlan {
 }
 
 extension Exam {
+    // 저장한 기간을 지금의 시험 날짜에 맞춘 것이다. 기간을 정한 적이 없으면 오늘부터 시험 전날까지다.
+    public func fittedPeriod(today: LocalDate, examDay: LocalDate) -> ExamPlanPeriod {
+        planPeriod?.fitted(before: examDay, from: planBasis?.examDay) ?? .standard(today: today, examDay: examDay)
+    }
+
+    // 항목을 옮겨 둘 수 있는 날은 오늘부터 시험 전날까지다. 날짜 고르기, 옮기기, 미루기가 이 목록 하나를 쓴다.
+    public static func planDays(today: LocalDate, examDay: LocalDate) -> [LocalDate] {
+        (0..<max(today.days(until: examDay), 0)).map { today.adding(days: $0) }
+    }
+
     // 미루기는 그 항목만 다음 공부일로 옮긴다. 뒤 항목까지 밀면 시험 전에 끝나지 않으므로 다른 항목의 날은 바꾸지 않는다.
     // 못 하고 지난 항목은 오늘에 얹혀 있으므로 오늘의 다음 날로 간다.
     public static func postponedDay(of item: ExamPlanItem, today: LocalDate) -> LocalDate { max(item.day, today).adding(days: 1) }
@@ -75,11 +85,17 @@ extension CourseStudy {
     ) -> ExamPlan.Placement? {
         guard let start = exam.start else { return nil }
         let examDay = settings.studyDay(of: start, calendar: calendar)
-        let period = (period ?? exam.planPeriod ?? .standard(today: today, examDay: examDay)).fitted(before: examDay)
+        let period = (period ?? exam.fittedPeriod(today: today, examDay: examDay)).fitted(before: examDay)
         let notes = file.planNotes(of: exam, proofs: proofs)
         let plan = ExamPlanner.plan(
             current: exam.plan, notes: notes, period: period, mocks: mockSets, today: today, examDay: examDay, isDone: isDone)
         return ExamPlan.Placement(plan: plan, period: period, basis: ExamPlanBasis(period: period, notes: notes, examDay: examDay))
+    }
+
+    // 날짜가 없는 시험은 계획이 없어 옮길 날도 없다.
+    public func planDays(of exam: Exam, settings: Settings, calendar: Calendar) -> [LocalDate] {
+        guard let start = exam.start else { return [] }
+        return Exam.planDays(today: today, examDay: settings.studyDay(of: start, calendar: calendar))
     }
 
     // 시험 하나의 줄이다. 같은 노트의 같은 날 단계가 한 줄이고, 못 하고 지난 단계는 오늘 줄에 얹힌다.

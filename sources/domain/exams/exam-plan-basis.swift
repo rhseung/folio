@@ -22,6 +22,8 @@ extension CourseFile {
         let examDay = settings.studyDay(of: start, calendar: calendar)
         guard examDay > today else { return false }
         guard let basis = exam.planBasis, let period = exam.planPeriod else { return true }
-        return basis != ExamPlanBasis(period: period.fitted(before: examDay), notes: planNotes(of: exam, proofs: proofs), examDay: examDay)
+        return basis
+            != ExamPlanBasis(
+                period: period.fitted(before: examDay, from: basis.examDay), notes: planNotes(of: exam, proofs: proofs), examDay: examDay)
     }
 }

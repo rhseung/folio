@@ -1981,6 +1981,17 @@
         }
       }
     },
+    "error.plan-move-day": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘부터 시험 전날까지의 날로만 옮길 수 있습니다"
+          }
+        }
+      }
+    },
     "error.plan-advance-not-later": {
       "extractionState": "manual",
       "localizations": {

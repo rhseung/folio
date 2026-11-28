@@ -8,6 +8,8 @@ import Foundation
 extension GeneratedCommands {
     struct ExamPlanMove: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "move", abstract: "공부 계획 항목을 고른 날로 옮기기. 옮긴 항목은 다시 놓아도 그 날에 남는다", discussion: """
+            옮길 수 있는 날은 오늘부터 시험 전날까지다.
+
             예시:
               folio exam plan move EC4207/기말고사 \"교재 3장 다시 읽기\" --day 2026-12-05
             """)

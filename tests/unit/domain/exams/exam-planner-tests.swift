@@ -158,6 +158,24 @@ struct ExamPlannerTests {
         }
     }
 
+    @Test func aFittedPeriodEndsBeforeTheExamAndIsLaterOnlyWhenItFollowedTheOldExam() async {
+        await propertyCheck(input: Gen.int(in: -10...10), Gen.int(in: 0...15), Gen.int(in: -5...30), Gen.int(in: -5...30)) {
+            start, length, exam, old in
+            let period = ExamPlanPeriod(start: Self.today.adding(days: start), end: Self.today.adding(days: start + length), after: .mock)
+            let examDay = Self.today.adding(days: exam), oldDay = Self.today.adding(days: old)
+            let fitted = period.fitted(before: examDay, from: oldDay)
+            #expect(fitted.isValid && fitted.end < examDay && fitted.after == period.after)
+            // 끝낼 날이 늦어지는 것은 예전 시험 전날에 끝나던 기간뿐이고, 그때는 새 시험 전날이 된다.
+            if fitted.end > period.end {
+                #expect(period.end == oldDay.adding(days: -1) && fitted.end == examDay.adding(days: -1))
+            }
+            // 시작일은 끝낼 날에 걸릴 때만 당겨진다.
+            #expect(fitted.start == min(period.start, fitted.end))
+            // 맞춘 기간은 같은 시험 날로 다시 맞춰도 그대로다.
+            #expect(fitted.fitted(before: examDay, from: examDay) == fitted)
+        }
+    }
+
     @Test func itemsTheUserMovedSurviveReplanning() async {
         await propertyCheck(input: Gen.int(in: 1...8), Gen.int(in: 1...20), Gen.int(in: 0...40), Gen.int(in: -3...25)) {
             count, length, pick, to in

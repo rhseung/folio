@@ -21,8 +21,8 @@ struct ExamPlanActionTests {
     let matching = UUID(), coloring = UUID(), planar = UUID()
     let hall = UUID(), brooks = UUID()
 
-    static func at(_ month: Int, _ day: Int, _ hour: Int = 12) -> Date {
-        calendar.date(from: DateComponents(year: 2026, month: month, day: day, hour: hour)) ?? .distantPast
+    static func at(_ month: Int, _ day: Int, _ hour: Int = 12, _ minute: Int = 0) -> Date {
+        calendar.date(from: DateComponents(year: 2026, month: month, day: day, hour: hour, minute: minute)) ?? .distantPast
     }
 
     static func day(_ month: Int, _ day: Int) -> LocalDate {
@@ -130,6 +130,42 @@ struct ExamPlanActionTests {
         #expect(throws: ActionError.self) {
             try run(ExamPlanMake(course: Self.course, exam: exam, start: Self.day(12, 8)), at: Self.at(12, 1))
         }
+    }
+
+    @Test func puttingTheExamOffStretchesAPeriodThatEndedOnItsEve() throws {
+        try run(ExamPlanMake(course: Self.course, exam: exam), at: Self.at(12, 8))
+        try run(ExamSet(course: Self.course, exam: exam, start: .set(Self.at(12, 18, 9))), at: Self.at(12, 8, 13))
+        #expect(try needsPlan(on: Self.at(12, 8, 14)))
+        try run(ExamPlanMake(course: Self.course, exam: exam), at: Self.at(12, 8, 14))
+        // 손대지 않은 기간은 새 시험 전날까지 늘어난다. 열흘에 노트 둘이라 12/8과 12/13이다.
+        #expect(try planned().planPeriod == ExamPlanPeriod(start: Self.day(12, 8), end: Self.day(12, 17)))
+        #expect(try planned().plan.filter { $0.target.kind == .note }.map(\.day.day) == [8, 8, 8, 13, 13])
+        #expect(try !needsPlan(on: Self.at(12, 8, 14)))
+
+        // 일찍 끝내기로 한 기간은 시험을 더 늦춰도 그대로다.
+        try run(ExamPlanMake(course: Self.course, exam: exam, end: Self.day(12, 12)), at: Self.at(12, 8, 15))
+        try run(ExamSet(course: Self.course, exam: exam, start: .set(Self.at(12, 21, 9))), at: Self.at(12, 8, 16))
+        try run(ExamPlanMake(course: Self.course, exam: exam), at: Self.at(12, 8, 17))
+        #expect(try planned().planPeriod == ExamPlanPeriod(start: Self.day(12, 8), end: Self.day(12, 12)))
+    }
+
+    @Test func itemsMoveOnlyToDaysFromTodayToTheExamEve() throws {
+        try run(ExamPlanMake(course: Self.course, exam: exam), at: Self.at(12, 8))
+        let solve = try item(.note(hall, .solve))
+        func move(to day: LocalDate, at now: Date) throws {
+            try run(ExamPlanMove(course: Self.course, exam: exam, items: [solve.id], day: day), at: now)
+        }
+        try move(to: Self.day(12, 13), at: Self.at(12, 9))
+        #expect(try item(.note(hall, .solve)).day == Self.day(12, 13))
+        // 시험 날과 그 뒤, 지난 날로는 옮기지 못하고 항목은 제자리에 있다.
+        #expect(throws: ActionError.self) { try move(to: Self.day(12, 14), at: Self.at(12, 9)) }
+        #expect(throws: ActionError.self) { try move(to: Self.day(12, 20), at: Self.at(12, 9)) }
+        #expect(throws: ActionError.self) { try move(to: Self.day(12, 8), at: Self.at(12, 9)) }
+        #expect(try item(.note(hall, .solve)).day == Self.day(12, 13))
+        // 새벽 3:59는 아직 12/9의 공부일이라 12/9로 옮길 수 있고, 4:00부터는 12/9가 지난 날이다.
+        try move(to: Self.day(12, 9), at: Self.at(12, 10, 3, 59))
+        #expect(try item(.note(hall, .solve)).day == Self.day(12, 9))
+        #expect(throws: ActionError.self) { try move(to: Self.day(12, 9), at: Self.at(12, 10, 4, 0)) }
     }
 
     @Test func postponingAndAdvancingMoveOnlyTheGivenItems() throws {
