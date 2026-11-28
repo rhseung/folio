@@ -21,6 +21,7 @@ struct PlanCourse {
     var notes: [NoteEntry] = []
     var exam: Exam
     var sets: [ProblemSet] = []
+    var cards: [StudyCard] = []
 
     static func at(_ month: Int, _ day: Int, _ hour: Int = 12, _ minute: Int = 0) -> Date {
         calendar.date(from: DateComponents(year: 2026, month: month, day: day, hour: hour, minute: minute)) ?? .distantPast
@@ -60,7 +61,19 @@ struct PlanCourse {
     }
 
     func study(now: Date, log: StudyLog = StudyLog(), settings: Settings = Settings()) -> CourseStudy {
-        CourseStudy(file: file, cards: [], log: log, settings: settings, calendar: Self.calendar, now: now)
+        CourseStudy(file: file, cards: cards, log: log, settings: settings, calendar: Self.calendar, now: now)
+    }
+
+    // 노트에 이은 카드다. 단원은 그 노트의 첫 단원이다.
+    @discardableResult
+    mutating func card(_ front: String, note: UUID, section: String? = nil, answer: Bool? = nil) -> StudyCard {
+        let unit = notes.first { $0.id == note }?.unitIds.first ?? matching.id
+        var card = StudyCard(
+            device: device, at: made, unitId: unit, kind: answer == nil ? .flip : .trueFalse, front: front, back: "뒤", answer: answer)
+        card.noteId = note
+        card.noteSection = section
+        cards.append(card)
+        return card
     }
 
     func checks(_ ids: [UUID], at date: Date) -> StudyLog {
