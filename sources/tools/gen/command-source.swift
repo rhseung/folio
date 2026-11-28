@@ -205,7 +205,10 @@ enum CommandSource {
             if f.optional { return "@Argument(help: \(help(f))\(completion)) var \(f.name): \(t)?" }
             return "@Argument(help: \(help(f))\(completion)) var \(f.name): \(t)" + (f.defaultValue.map { " = \($0)" } ?? "")
         case .option:
-            if f.type == "Bool", !f.patch, !f.many { return "@Flag(\(name)help: \(help(f))) var \(f.name) = \(f.defaultValue ?? "false")" }
+            // 옵셔널 Bool은 주지 않은 것과 false가 다른 값이라 플래그가 아니라 true, false를 받는 옵션이다.
+            if f.type == "Bool", !f.patch, !f.many, !f.optional {
+                return "@Flag(\(name)help: \(help(f))) var \(f.name) = \(f.defaultValue ?? "false")"
+            }
             if f.patch, f.many { return "@Option(\(name)help: \(help(f))\(completion)) var \(f.name): [\(t)] = []" }
             if f.patch { return "@Option(\(name)help: \(help(f))\(completion)) var \(f.name): \(f.optional ? "Clearable<\(t)>" : t)?" }
             if f.many { return "@Option(\(name)help: \(help(f))\(completion)) var \(f.name): [\(t)] = []" }

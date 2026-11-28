@@ -34,7 +34,9 @@ struct PlanDayCard: View {
 
     func open(_ row: PlanRow) {
         switch model.destination(row, stage: nil) {
-        case .link(let link): openLink(link, course: row.courseId)
+        case .link(let link, let beside):
+            openLink(link, course: row.courseId)
+            if let beside { openLink(beside, in: .beside, course: row.courseId) }
         case .solve(let request): openLink.solve(request)
         case nil: break
         }

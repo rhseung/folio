@@ -21,7 +21,8 @@ struct AppLinkWikiTests {
     }
 
     @Test func everyKindWithAnIDIsAnObjectLink() {
-        let leftOut: Set<AppLink.Kind> = []
+        // 노트의 카드 칸은 항목이 아니라 노트 하나에 딸린 보기라서 `[[종류:ID]]`로 쓰지 않는다.
+        let leftOut: Set<AppLink.Kind> = [.noteCards]
         let withID = Set(AppLink.Kind.allCases.filter { !$0.isPlace })
         #expect(Set(WikiLink.objectKinds) == Set(withID.subtracting(leftOut).map(\.rawValue)))
         #expect(leftOut.isSubset(of: withID))

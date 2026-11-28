@@ -90,6 +90,12 @@ public struct PlanRow: Sendable, Equatable, Identifiable {
         }
     }
 
+    // 정독은 노트를 읽으며 그 노트의 카드를 넘기는 일이다. 정독 단계를 누르면 노트 옆 칸에 이 카드 칸을 함께 연다.
+    public func companion(for stage: PlanStage?) -> AppLink? {
+        if case .note(let note) = kind, stage == .read { return AppLink(.noteCards, note) }
+        return nil
+    }
+
     public func commands(today: LocalDate) -> [PlanItemMenuCommand] {
         guard examId != nil else { return [] }
         var commands: [PlanItemMenuCommand] = []

@@ -3916,6 +3916,17 @@
           }
         }
       }
+    },
+    "rule.card.answer": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드 '{name}'의 답이 형식과 맞지 않습니다. 참거짓 카드에는 답이 있어야 하고 앞뒤 카드에는 답이 없어야 합니다"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

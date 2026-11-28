@@ -19,9 +19,10 @@ struct LinkNameTests {
         let material = Material(device: device, at: now, path: "Lectures/05_Matchings.pdf", status: .classified)
         let recorded = Recording(device: device, at: now, sessionId: session.id, file: "Recordings/a.m4a")
         let loose = Recording(device: device, at: now, sessionId: nil, file: "Recordings/b.m4a")
+        let note = NoteEntry(id: UUID(), device: device, at: now, path: "Notes/기말 02 홀의 정리.md", meta: NoteMeta(kind: .unit))
         let file = CourseFile(
             course: Course(device: device, at: now, title: "그래프 이론"), materials: [material], units: [unit], sessions: [session],
-            exams: [exam], recordings: [recorded, loose])
+            exams: [exam], recordings: [recorded, loose], notes: [note])
         func name(_ link: AppLink) -> LinkName? { LinkName(link, in: file, people: [], calendar: calendar) }
 
         #expect(name(AppLink(.unit, unit.id)) == .item("매칭"))
@@ -31,6 +32,10 @@ struct LinkNameTests {
         #expect(name(AppLink(.recording, recorded.id)) == .replay(day: file.day(of: session, calendar: calendar)))
         #expect(name(AppLink(.recording, loose.id)) == .replay(day: nil))
         #expect(name(AppLink(.exam, UUID())) == nil)
+        // 노트와 그 카드 칸은 나란히 열리므로 이름이 달라야 한다.
+        #expect(name(AppLink(.note, note.id)) == .item("기말 02 홀의 정리"))
+        #expect(name(AppLink(.noteCards, note.id)) == .noteCards(note: "기말 02 홀의 정리") && name(AppLink(.noteCards, UUID())) == nil)
+        #expect(LinkName.noteCards(note: "a").namesItem)
     }
 
     @Test func coursePagesAreNotItems() {

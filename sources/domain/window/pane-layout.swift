@@ -335,7 +335,7 @@ extension CourseFile {
         case .note: return sessions.first { $0.roughNoteId == id || $0.reviewNoteId == id }?.id
         case .recording: return recordings.first { $0.id == id }?.sessionId
         case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .lms, .semester, .course, .session, .unit,
-            .material, .assignment, .exam, .card, .problemSet, .person:
+            .noteCards, .material, .assignment, .exam, .card, .problemSet, .person:
             return nil
         }
     }

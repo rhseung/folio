@@ -13,7 +13,9 @@ extension AppLink.Kind {
         case .codes: (String(localized: .rootNavCodes), "number")
         case .settings: (String(localized: .rootNavSettings), "gearshape")
         case .whatsNew: (String(localized: .whatsNewTitle), "sparkles")
-        case .semester, .course, .session, .unit, .note, .material, .assignment, .exam, .card, .problemSet, .person, .recording: nil
+        case .semester, .course, .session, .unit, .note, .noteCards, .material, .assignment, .exam, .card, .problemSet, .person,
+            .recording:
+            nil
         }
     }
 
@@ -26,7 +28,7 @@ extension AppLink.Kind {
         case .material: .materials
         case .assignment: .assignments
         case .exam: .exams
-        case .card: .cards
+        case .card, .noteCards: .cards
         case .problemSet: .problems
         case .course, .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .lms, .semester, .person: nil
         }
@@ -36,8 +38,8 @@ extension AppLink.Kind {
     var focusesRow: Bool {
         switch self {
         case .session, .assignment, .exam, .card, .problemSet: true
-        case .note, .material, .unit, .recording, .course, .today, .grades, .requirements, .people, .codes, .settings, .whatsNew,
-            .lms, .semester, .person:
+        case .note, .noteCards, .material, .unit, .recording, .course, .today, .grades, .requirements, .people, .codes, .settings,
+            .whatsNew, .lms, .semester, .person:
             false
         }
     }

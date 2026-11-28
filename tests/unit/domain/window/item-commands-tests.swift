@@ -121,6 +121,9 @@ struct ItemCommandsTests {
             })
         let tex = NoteMenuCommand.commands(host: .own, builtPDF: true, builds: true, review: nil, finder: true)
         #expect(tex == [.openPDF, .build, .edit, .move, .share, .showInFinder, .remove])
+        // 정리 노트는 옆 칸에 카드를 여는 행을 가진다.
+        let summary = NoteMenuCommand.commands(host: .elsewhere, builtPDF: false, builds: false, review: nil, finder: false, cards: true)
+        #expect(summary == [.open, .cards, .edit, .move, .share, .remove])
     }
 
     @Test func aMissingFileHasOnlyItsTwoWaysOut() {

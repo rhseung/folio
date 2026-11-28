@@ -36,6 +36,22 @@ struct MaterialNoteStudyTests {
         return try scratch("cards.json", String(decoding: try JSONEncoder.folio.encode([card]), as: UTF8.self))
     }
 
+    static let claim = UUID(uuid: (0xA0, 0, 0, 0, 0, 0, 0x40, 0, 0x80, 0, 0, 0, 0, 0, 0, 0xC2))
+
+    // 참거짓 카드와 절에 이은 앞뒤 카드다. 노트는 `--note`로 잇는다.
+    func noteCards() throws -> [StudyCard] {
+        var term = StudyCard(id: Self.card, device: h.device, at: h.now, unitId: Self.unit, front: "최대 매칭의 정의", back: "더 큰 매칭이 없는 매칭")
+        term.noteSection = "Definition"
+        let claim = StudyCard(
+            id: Self.claim, device: h.device, at: h.now, unitId: Self.unit, kind: .trueFalse, front: "극대 매칭은 최대 매칭이다",
+            back: "경로 $P_4$의 가운데 간선은 극대이지만 최대가 아니다.", answer: false)
+        return [term, claim]
+    }
+
+    func noteCardsFile() throws -> String {
+        try scratch("note-cards.json", String(bytes: try JSONEncoder.folio.encode(try noteCards()), encoding: .utf8) ?? "")
+    }
+
     // MARK: Materials
 
     @Test func trackRegistersFilesAndAssignmentFolders() throws {
@@ -497,6 +513,41 @@ struct MaterialNoteStudyTests {
         try h.expectSame(["card", "flip", "EC4207/매칭", "최대 매칭의 정의", "--unknown"], setup: [Self.addUnit, Self.addCards(try cardsFile())]) {
             _ in CardFlip(course: course, unit: Self.unit, card: Self.card, known: false)
         }
+    }
+
+    @Test func cardAddTiesCardsToANote() throws {
+        let file = try noteCardsFile()
+        let cards = try noteCards()
+        try h.expectSame(Self.addCards(file) + ["--note", "09-08"], setup: [Self.addUnit]) { _ in
+            CardSave(course: course, cards: cards, note: Self.noteID)
+        }
+        let gist = try Harness.fixtureCopy()
+        for line in [Self.addUnit, Self.addCards(file) + ["--note", "09-08"]] { #expect(h.cli(line, gist: gist).code == 0) }
+        let saved = try GISTStore(url: gist).courseStores().first { $0.url.lastPathComponent == "EC4207 그래프 이론" }?
+            .loadCards(unit: Self.unit).model.cards
+        #expect(saved?.map(\.noteId) == [Self.noteID, Self.noteID] && saved?.map(\.noteSection) == ["Definition", nil])
+        #expect(saved?.map(\.kind) == [.flip, .trueFalse] && saved?.last?.answer == false)
+
+        // 노트로 거른 목록은 형식, 답, 노트와 절을 보인다.
+        let listed = h.cli(["card", "list", "EC4207", "--note", "09-08"], gist: gist)
+        #expect(listed.code == 0, "\(listed.err)")
+        #expect(listed.out.contains("참거짓") && listed.out.contains("거짓 · ") && listed.out.contains("› Definition"))
+        let json = h.cli(["card", "list", "EC4207", "--note", "09-08", "--json"], gist: gist)
+        let decoded = try JSONDecoder.folio.decode([StudyCard].self, from: Data(json.out.utf8))
+        #expect(decoded.map(\.id) == [Self.card, Self.claim])
+        #expect(h.cli(["card", "list", "EC4207", "--note", "없는 노트"], gist: gist).code == Exit.notFound.rawValue)
+    }
+
+    @Test func cardFlipRecordsThePickedAnswer() throws {
+        let setup = [Self.addUnit, Self.addCards(try noteCardsFile())]
+        try h.expectSame(["card", "flip", "EC4207/매칭", "극대 매칭은 최대 매칭이다", "--answer", "true"], setup: setup) { _ in
+            CardFlip(course: course, unit: Self.unit, card: Self.claim, answer: true)
+        }
+        let gist = try Harness.fixtureCopy()
+        for line in setup { #expect(h.cli(line, gist: gist).code == 0) }
+        // 참거짓 카드는 고른 답이 있어야 하고, 앞뒤 카드는 답을 받지 않는다.
+        #expect(h.cli(["card", "flip", "EC4207/매칭", "극대 매칭은 최대 매칭이다"], gist: gist).code == Exit.usage.rawValue)
+        #expect(h.cli(["card", "flip", "EC4207/매칭", "최대 매칭의 정의", "--answer", "false"], gist: gist).code == Exit.usage.rawValue)
     }
 
     @Test func problemSetAdd() throws {

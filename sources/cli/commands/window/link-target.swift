@@ -42,7 +42,7 @@ struct LinkTarget: ParsableArguments {
             return done(AppLink(.person, p.id), title: p.name)
         case .card:
             return try card(r)
-        case .note:
+        case .note, .noteCards:
             return try item(r) { c, name in try note(r, name, in: c) }
         case .session, .unit, .exam, .assignment, .problemSet, .material, .recording:
             guard let item = ItemKind(link: kind) else { throw usage(.linkBadAnchor) }

@@ -11,10 +11,12 @@ extension GeneratedCommands {
             예시:
               folio card list EC4207
               folio card list EC4207 --unit 매칭
+              folio card list EC4207 --note \"매칭 정리\"
             """)
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref(.course)) var course: String = ""
         @Option(help: ArgumentHelp("이 단원만", valueName: "unit"), completion: Complete.ref(.unit)) var unit: String?
+        @Option(help: ArgumentHelp("이 노트에 이은 카드만", valueName: "note"), completion: Complete.ref(.note)) var note: String?
         @Flag(help: ArgumentHelp(String(localized: .commonHelpLines))) var lines = false
 
         func run() throws {
@@ -23,7 +25,8 @@ extension GeneratedCommands {
             let c = try r.course(course)
             let query = FolioActions.CardList(
                 course: c.id,
-                unit: try unit.map { try r.id(.unit, $0, in: c) }
+                unit: try unit.map { try r.id(.unit, $0, in: c) },
+                note: try note.map { try r.id(.note, $0, in: c) }
             )
             try show(query, g, lines: lines, ctx: ctx)
         }

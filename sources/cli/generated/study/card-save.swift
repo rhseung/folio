@@ -8,16 +8,18 @@ import Foundation
 extension GeneratedCommands {
     struct CardSave: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "add", abstract: "JSON 파일의 카드를 넣거나 같은 ID의 카드를 바꾸기", discussion: """
-            파일은 StudyCard 배열이다(unitId, front, back, source). 단원을 옮긴 카드는 --moved-from에 예전 단원을 준다.
+            파일은 StudyCard 배열이다(unitId, front, back, source). 참거짓 카드는 kind가 true_false이고 front가 문장, answer가 답(true, false), back이 답을 고른 뒤에 보이는 이유 한 줄이다. kind를 빼면 앞뒤 카드(flip)다. 정리 노트에 이으려면 noteId를 적거나 --note를 주고, noteSection에 그 노트의 절 제목을 적는다. 단원을 옮긴 카드는 --moved-from에 예전 단원을 준다.
 
             예시:
               folio card add EC4207 --file cards.json
+              folio card add EC4207 --file cards.json --note \"매칭 정리\"
               folio card add EC4207 --file - --moved-from 매칭 < card.json
             """)
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("", valueName: "course"), completion: Complete.ref(.course)) var course: String = ""
         @Option(name: .customLong("file"), help: ArgumentHelp("카드 JSON 파일. -이면 표준 입력", valueName: "file"), completion: .file(extensions: ["json"])) var cards: String
         @Option(help: ArgumentHelp("카드가 떠난 단원", valueName: "moved-from"), completion: Complete.ref(.unit)) var movedFrom: String?
+        @Option(help: ArgumentHelp("카드를 이을 정리 노트. 파일의 카드 가운데 noteId가 없는 카드를 이 노트에 잇는다", valueName: "note"), completion: Complete.ref(.note)) var note: String?
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -26,7 +28,8 @@ extension GeneratedCommands {
             let action = FolioActions.CardSave(
                 course: c.id,
                 cards: try readJSONFile([StudyCard].self, cards),
-                movedFrom: try movedFrom.map { try r.id(.unit, $0, in: c) }
+                movedFrom: try movedFrom.map { try r.id(.unit, $0, in: c) },
+                note: try note.map { try r.id(.note, $0, in: c) }
             )
             try perform(spec: action, g, ctx: ctx)
         }

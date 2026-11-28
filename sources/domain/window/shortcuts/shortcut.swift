@@ -4,7 +4,8 @@ public struct Shortcut: Hashable, Sendable {
     // 단축키가 듣는 자리다. 안쪽 자리에 있으면 바깥 자리의 키도 함께 듣는다. 노트 편집은 노트 화면 안이면서 글 칸 안이다.
     public enum Scope: String, CaseIterable, Hashable, Sendable {
         case app, text, note, noteEditing, texEditing, materialView
-        // 풀기 화면과 카드 넘기기 시트다. 글자 키를 수식 키 없이 쓰므로 글을 쓰는 칸이 열려 있지 않을 때만 듣는다.
+        // 풀기 화면, 카드 넘기기 시트, 노트 옆 카드 칸이다. 글자 키를 수식 키 없이 쓰므로 글을 쓰는 칸이 열려 있지 않을 때만 듣는다.
+        // 참거짓 카드의 참과 거짓은 문제의 참·거짓과 같은 명령(`solveTrue`, `solveFalse`)이다. 한 자리의 같은 키는 한 명령이어야 한다.
         case study
 
         public var within: Set<Scope> {

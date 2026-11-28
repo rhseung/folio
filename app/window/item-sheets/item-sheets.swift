@@ -58,9 +58,9 @@ struct ItemSheets: ViewModifier {
                     if let course = workspace.course(course) {
                         CardEditorSheet(workspace: workspace, course: course, draft: draft)
                     }
-                case .suggestCards(let course, let unit):
+                case .suggestCards(let course, let unit, let note):
                     if let course = workspace.course(course), let unit = course.file.units.first(where: { $0.id == unit }) {
-                        SuggestCardsSheet(workspace: workspace, course: course, unit: unit)
+                        SuggestCardsSheet(workspace: workspace, course: course, unit: unit, note: note)
                     }
                 case .flipCards(let course, let unit, let scope):
                     CardFlipSheet(workspace: workspace, course: course, unit: unit, scope: scope)

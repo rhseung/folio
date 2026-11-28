@@ -19,7 +19,7 @@ enum Screen: Hashable {
         case .whatsNew: self = .whatsNew
         case .lms: self = .lms
         case .semester: self = link.id.map(Screen.semester) ?? .missing
-        case .course, .session, .unit, .note, .material, .assignment, .exam, .card, .problemSet, .recording:
+        case .course, .session, .unit, .note, .noteCards, .material, .assignment, .exam, .card, .problemSet, .recording:
             self = entry.course.map(Screen.course) ?? .missing
         }
     }

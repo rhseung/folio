@@ -136,6 +136,13 @@ enum FormSnapshots {
                     AnyView(CardEditorSheet(workspace: workspace, course: course, draft: CardDraft(unitId: unit.id)))
                 ))
         }
+        // 노트의 절에 이은 참거짓 카드다. 형식, 답, 절 고르기가 함께 보인다.
+        let claim = workspace.currentCourses.lazy.compactMap { c in
+            workspace.study(of: c.id)?.allCards.first { $0.card.kind == .trueFalse && $0.card.noteId != nil }.map { (c, $0.card) }
+        }.first
+        if let (c, card) = claim {
+            forms.append(("card-true-false", AnyView(CardEditorSheet(workspace: workspace, course: c, draft: CardDraft(card)))))
+        }
         forms += lectureSections(workspace, places: importPlaces)
         forms += wrapUps(workspace)
         forms += sessionMenus(workspace)

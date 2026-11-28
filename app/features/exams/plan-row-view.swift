@@ -57,14 +57,16 @@ struct PlanRowView: View {
 
     func open(_ stage: PlanStage?) {
         switch model.destination(row, stage: stage) {
-        case .link(let link): openLink(link, course: row.courseId)
+        case .link(let link, let beside):
+            openLink(link, course: row.courseId)
+            if let beside { openLink(beside, in: .beside, course: row.courseId) }
         case .solve(let request): openLink.solve(request)
         case nil: break
         }
     }
 }
 
-// 끝낸 단계는 바탕 없이 조용하게 두고, 하는 중인 단계만 과목 색이다. 할 단계는 회색 칩이다.
+// 끝낸 단계는 바탕 없이 조용하게 두고, 하는 중인 단계만 과목 색이다. 하는 중인 칩은 한 만큼 왼쪽부터 짙게 찬다. 할 단계는 회색 칩이다.
 private struct PlanStepChip: View {
     let label: String
     let progress: PlanProgress
@@ -81,10 +83,18 @@ private struct PlanStepChip: View {
                 .lineLimit(1)
                 .fixedSize()
                 .chip(.small, fill: fill)
+                .background(alignment: .leading) { filled }
+                .clipShape(.capsule)
                 .contentShape(TouchTarget())
         }
         .buttonStyle(.pointing(.plain))
         .accessibilityValue(Text(.planStepProgressValue(progress.done, progress.total)))
+    }
+
+    @ViewBuilder var filled: some View {
+        if progress.isStarted, !progress.isDone {
+            GeometryReader { box in accent.read.frame(width: box.size.width * progress.fraction) }
+        }
     }
 
     var ink: Color {

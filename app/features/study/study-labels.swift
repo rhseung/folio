@@ -107,6 +107,23 @@ extension WrongStatus {
     }
 }
 
+extension CardKind {
+    var label: String {
+        switch self {
+        case .flip: String(localized: .cardsKindFlip)
+        case .trueFalse: String(localized: .cardsKindTrueFalse)
+        }
+    }
+}
+
+extension StudyCard {
+    // 목록에서 앞면 아래에 적는 줄이다. 참거짓 카드는 답을 이유 앞에 적는다.
+    var backLine: String {
+        guard kind == .trueFalse, let answer else { return back }
+        return [String(localized: answer ? .solveTrue : .solveFalse), back].joined(separator: " · ")
+    }
+}
+
 extension CardSource {
     var label: String {
         switch self {

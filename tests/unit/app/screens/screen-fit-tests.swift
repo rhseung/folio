@@ -38,6 +38,7 @@ struct ScreenFitTests {
             case .session: link = try first(.session, file.sessions.map(\.id))
             case .unit: link = try first(.unit, file.units.map(\.id))
             case .note: link = try first(.note, file.notes.map(\.id))
+            case .noteCards: link = try first(.noteCards, file.notes.map(\.id))
             case .material: link = try first(.material, file.materials.map(\.id))
             case .assignment: link = try first(.assignment, file.assignments.map(\.id))
             case .exam: link = try first(.exam, file.exams.map(\.id))

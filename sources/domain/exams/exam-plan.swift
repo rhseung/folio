@@ -62,10 +62,18 @@ extension Exam {
 }
 
 extension CourseStudy {
-    // 계획의 진행을 정하는 한 곳이다. 지금은 손으로 한 체크와 풀기를 끝내며 남긴 체크뿐이라, 체크한 항목은 전체를 끝낸 것이고
-    // 아니면 한 것이 없다.
+    // 계획의 진행을 정하는 한 곳이다. 정독은 그 노트에 이은 카드 가운데 시험의 공부 기간이 시작한 뒤에 넘긴 카드를 센다. 카드가
+    // 없는 노트의 정독과 그 밖의 항목은 체크뿐이라, 체크한 항목은 전체를 끝낸 것이고 아니면 한 것이 없다.
     public func progress(of item: ExamPlanItem) -> PlanProgress {
-        PlanProgress(done: manualChecks.contains(item.id) ? 1 : 0, total: 1)
+        let checked = manualChecks.contains(item.id)
+        guard item.target.kind == .note, item.target.stage == .read, let note = item.target.id else {
+            return PlanProgress(done: checked ? 1 : 0, total: 1)
+        }
+        let cards = cards(ofNote: note)
+        guard !cards.isEmpty else { return PlanProgress(done: checked ? 1 : 0, total: 1) }
+        if checked { return PlanProgress(done: cards.count, total: cards.count) }
+        let exam = file.exams.first { $0.plan.contains { $0.id == item.id } }
+        return PlanProgress(done: cards.count { $0.isRead(since: exam?.readStart) }, total: cards.count)
     }
 
     // 어제 오답의 진행이다. 다시 맞힌 수는 아직 세지 않아, 남은 오답이 전체이고 한 것은 없다.

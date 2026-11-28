@@ -331,7 +331,15 @@ extension Settings: StoredModel {
 }
 
 extension CardFile: StoredModel {
-    public static let schemaVersion = 1
+    public static let schemaVersion = 2
+    public static let migrations: [Int: @Sendable (inout JSONValue) throws -> Void] = [1: markFlipCards]
+
+    // 카드에 형식(앞뒤, 참·거짓)이 생겼다. v1의 카드는 모두 앞뒤 카드다. 형식 이름은 v2의 것이라 지금 모델에서 읽지 않고 그대로 적는다.
+    static func markFlipCards(_ raw: inout JSONValue) throws {
+        guard case .array(var cards)? = raw["cards"] else { return }
+        for i in cards.indices where cards[i]["kind"] == nil { cards[i]["kind"] = .string("flip") }
+        raw["cards"] = .array(cards)
+    }
 }
 
 public struct StoredDocument<Model: StoredModel> {

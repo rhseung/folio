@@ -278,7 +278,10 @@ final class UnitsModel {
     func cardLines(_ unit: FolioDomain.Unit) -> [CardLine] {
         guard let study else { return [] }
         return study.cards(of: unit.id).map {
-            CardLine(record: $0, detail: $0.card.source.label, chip: $0.status.cardChip, changed: changedCards.contains($0.card.id))
+            // 참거짓 카드는 형식을 출처 앞에 적는다. 앞뒤 카드가 기본이라 따로 적지 않는다.
+            let detail = ($0.card.kind == .trueFalse ? [$0.card.kind.label] : []) + [$0.card.source.label]
+            return CardLine(
+                record: $0, detail: detail.joined(separator: " · "), chip: $0.status.cardChip, changed: changedCards.contains($0.card.id))
         }
     }
 

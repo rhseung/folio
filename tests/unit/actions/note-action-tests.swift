@@ -42,6 +42,34 @@ struct NoteActionTests {
         #expect(answered.changes.map(\.touchesStudy) == [true])
     }
 
+    @Test func aTrueFalseCardIsKnownWhenThePickedAnswerIsRight() throws {
+        let note = UUID(), unit = UUID()
+        try run(UnitAdd(id: unit, course: Self.graphTheory, title: "매칭"))
+        try run(NoteAdd(id: note, course: Self.graphTheory, title: "기말 01 매칭", kind: .unit, units: [unit]))
+        let claim = StudyCard(
+            device: device, at: now, unitId: unit, kind: .trueFalse, front: "극대 매칭은 최대 매칭이다.", back: "$P_4$의 가운데 간선이 반례다.", answer: false)
+        let term = StudyCard(device: device, at: now, unitId: unit, front: "완전 매칭", back: "모든 꼭짓점을 덮는 매칭")
+        try run(CardSave(course: Self.graphTheory, cards: [claim, term], note: note))
+        #expect(try store().loadCards(unit: unit).model.cards.map(\.noteId) == [note, note])
+
+        try run(CardFlip(course: Self.graphTheory, unit: unit, card: claim.id, answer: true))
+        try run(CardFlip(course: Self.graphTheory, unit: unit, card: claim.id, answer: false))
+        try run(CardFlip(course: Self.graphTheory, unit: unit, card: term.id, known: false))
+        let flips = try store().log.readAll().studyLog.flips.sorted { $0.at < $1.at }.map(\.event)
+        #expect(flips.filter { $0.cardId == claim.id }.map(\.known).sorted { !$0 && $1 } == [false, true])
+        #expect(Set(flips.filter { $0.cardId == claim.id }.map(\.answer)) == [true, false])
+        #expect(flips.first { $0.cardId == term.id } == CardFlipEvent(cardId: term.id, known: false))
+
+        // 형식과 맞지 않는 넘기기와 없는 노트는 아무것도 쓰지 않고 멈춘다.
+        #expect(throws: ActionError.self) { try run(CardFlip(course: Self.graphTheory, unit: unit, card: claim.id)) }
+        #expect(throws: ActionError.self) { try run(CardFlip(course: Self.graphTheory, unit: unit, card: term.id, answer: true)) }
+        #expect(throws: ActionError.self) { try run(CardSave(course: Self.graphTheory, cards: [term], note: UUID())) }
+        var broken = claim
+        broken.answer = nil
+        #expect(throws: ActionError.self) { try run(CardSave(course: Self.graphTheory, cards: [broken])) }
+        #expect(try store().log.readAll().studyLog.flips.count == 3)
+    }
+
     @Test func aTexNoteIsAFileWithAnEntry() throws {
         let id = UUID()
         try run(NoteAdd(id: id, course: Self.graphTheory, title: "매칭 정리", kind: .unit, format: .tex))

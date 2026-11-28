@@ -64,15 +64,44 @@ struct PlanModelTests {
         let p = try planned()
         let model = PlanModel(workspace: p.workspace, scope: .course(graphTheory))
         let rows = model.board.today
-        guard case .link(let unit)? = model.destination(rows[0], stage: nil),
-            case .link(let note)? = model.destination(rows[1], stage: .read),
-            case .link(let problems)? = model.destination(rows[1], stage: .proof)
+        guard case .link(let unit, let besideUnit)? = model.destination(rows[0], stage: nil),
+            case .link(let name, let besideName)? = model.destination(rows[1], stage: nil),
+            case .link(let note, let cards)? = model.destination(rows[1], stage: .read),
+            case .link(let problems, let besideProblems)? = model.destination(rows[1], stage: .proof)
         else {
             Issue.record("no link")
             return
         }
-        #expect(unit == AppLink(.unit, p.coloring) && note == AppLink(.note, p.hall))
+        #expect(unit == AppLink(.unit, p.coloring) && note == AppLink(.note, p.hall) && name == note)
         #expect(problems == .course(graphTheory, page: .problems))
+        // 정독 칩만 노트 옆 칸에 그 노트의 카드를 연다. 줄의 이름은 노트만 연다.
+        #expect(cards == AppLink(.noteCards, p.hall) && besideUnit == nil && besideName == nil && besideProblems == nil)
+    }
+
+    // 정독 칩은 노트에 이은 카드 가운데 넘긴 만큼을 적고, 다 넘기면 끝난 칩이 된다.
+    @Test func theReadChipCountsTheNotesFlippedCards() throws {
+        let p = try planned()
+        let unit = try #require(p.workspace.course(graphTheory)?.file.notes.first { $0.id == p.hall }?.unitIds.first)
+        var cards = (0..<3).map { StudyCard(device: p.workspace.device, at: p.workspace.now, unitId: unit, front: "카드 \($0)", back: "뒤") }
+        cards.append(
+            StudyCard(
+                device: p.workspace.device, at: p.workspace.now, unitId: unit, kind: .trueFalse, front: "문장", back: "이유", answer: false))
+        p.workspace.run(CardSave(course: graphTheory, cards: cards, note: p.hall))
+        let model = PlanModel(workspace: p.workspace, scope: .course(graphTheory))
+        func read() throws -> (row: PlanRow, step: PlanRow.Step) {
+            let row = try #require(model.board.today.last)
+            return (row, try #require(row.steps.first { $0.stage == .read }))
+        }
+        #expect(try read().step.progress == PlanProgress(done: 0, total: 4))
+        #expect(model.chip(try read().step, in: try read().row) == "정독")
+
+        p.workspace.run(CardFlip(course: graphTheory, unit: unit, card: cards[0].id, known: false))
+        p.workspace.run(CardFlip(course: graphTheory, unit: unit, card: cards[3].id, answer: true))
+        #expect(try read().step.progress == PlanProgress(done: 2, total: 4))
+        #expect(model.chip(try read().step, in: try read().row) == "정독 2/4")
+
+        for card in cards[1...2] { p.workspace.run(CardFlip(course: graphTheory, unit: unit, card: card.id)) }
+        #expect(try read().step.isDone && model.chip(try read().step, in: try read().row) == "정독")
     }
 
     @Test func postponingAdvancingAndPickingADayMoveOnlyThatRow() throws {

@@ -358,6 +358,7 @@ extension CardFile: Document {
             NonEmpty(\.front, String(localized: .ruleCardFrontEmpty))
             NonEmpty(\.back, String(localized: .ruleCardBackEmpty))
             Check("Card.unit", String(localized: .ruleCardUnit)) { c, f in c.unitId == f.unitId }
+            Check("Card.answer", String(localized: .ruleCardAnswer)) { c, _ in (c.kind == .trueFalse) == (c.answer != nil) }
         }
     }
 }
