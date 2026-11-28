@@ -57,6 +57,16 @@ struct NoteCardsModelTests {
         #expect(draft.noteId == m.note && draft.noteSection == "정리와 증명" && draft.unitId == m.unit && draft.source == .manual)
     }
 
+    @Test func aSectionReadBeforeTheScreenOpensIsNotInFocus() throws {
+        let m = try made()
+        m.workspace.run(CardFlip(course: graphTheory, unit: m.unit, card: m.cards[1].id, known: true))
+        let model = NoteCardsModel(workspace: m.workspace, courseId: graphTheory, noteId: m.note)
+        let groups = model.groups
+        // 용어 절은 다 넘겼으므로 넘기지 않은 카드가 남은 첫 절이 "이 절"이다. 묶음의 진행과 같은 값으로 고른다.
+        #expect(model.focused(in: groups)?.section == "정리와 증명" && model.subtitle(groups) == "이 절 0/2 · 노트 1/4")
+        #expect(model.current(in: groups) == m.cards[0].id)
+    }
+
     @Test func aFlipCardIsRevealedThenMarkedAndATrueFalseCardIsPicked() throws {
         let m = try made()
         let model = NoteCardsModel(workspace: m.workspace, courseId: graphTheory, noteId: m.note)

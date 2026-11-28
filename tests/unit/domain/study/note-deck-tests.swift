@@ -34,7 +34,7 @@ struct NoteDeckTests {
 
         // 계획에 없는 노트는 넘긴 적이 있는 카드를 모두 센다.
         let free = course.study(now: PlanCourse.at(12, 8, 12), log: log)
-        #expect(free.readStart(ofNote: hall) == nil && free.noteDeck(hall, sections: ["용어"]).progress.done == 3)
+        #expect(free.readExam(ofNote: hall) == nil && free.noteDeck(hall, sections: ["용어"]).progress.done == 3)
 
         let placed = try #require(
             course.study(now: PlanCourse.at(12, 8)).place(course.exam, proofs: [], settings: Settings(), calendar: PlanCourse.calendar))
@@ -43,7 +43,7 @@ struct NoteDeckTests {
         let study = course.study(now: PlanCourse.at(12, 8, 12), log: log)
         let read = try #require(course.exam.plan.first { $0.target == .note(hall, .read) })
         let deck = study.noteDeck(hall, sections: ["용어"])
-        #expect(study.readStart(ofNote: hall) == PlanCourse.day(12, 8))
+        #expect(study.readExam(ofNote: hall)?.readStart == PlanCourse.day(12, 8))
         #expect(deck.groups.map(\.progress) == [PlanProgress(done: 1, total: 2), PlanProgress(done: 1, total: 1)])
         #expect(deck.progress == study.progress(of: read))
     }

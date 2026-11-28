@@ -72,8 +72,7 @@ final class NoteCardsModel {
     // 고르거나 답한 절이 없어진 뒤에도(절 제목을 고쳤다) 묶음 하나를 가리키도록 지금 묶음에서 찾는다.
     func focused(in groups: [Group]) -> Group? {
         if let focus, let group = groups.first(where: { $0.section == focus }) { return group }
-        let since = study?.readStart(ofNote: noteId)
-        return groups.first { $0.cards.contains { !$0.isRead(since: since) } } ?? groups.first
+        return groups.first { !$0.progress.isDone } ?? groups.first
     }
 
     // 키가 누르는 카드다. "이 절"에서 시작해 이번에 답하지 않은 카드를 차례로 본다.

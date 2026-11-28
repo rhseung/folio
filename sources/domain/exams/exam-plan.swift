@@ -72,8 +72,8 @@ extension CourseStudy {
         let cards = cards(ofNote: note)
         guard !cards.isEmpty else { return PlanProgress(done: checked ? 1 : 0, total: 1) }
         if checked { return PlanProgress(done: cards.count, total: cards.count) }
-        let since = file.exams.first { $0.plan.contains { $0.id == item.id } }?.planPeriod?.start
-        return PlanProgress(done: cards.count { $0.isRead(since: since) }, total: cards.count)
+        let exam = file.exams.first { $0.plan.contains { $0.id == item.id } }
+        return PlanProgress(done: cards.count { $0.isRead(since: exam?.readStart) }, total: cards.count)
     }
 
     // 어제 오답의 진행이다. 다시 맞힌 수는 아직 세지 않아, 남은 오답이 전체이고 한 것은 없다.

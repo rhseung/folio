@@ -125,6 +125,87 @@ struct ReadProgressTests {
         }
     }
 
+    struct TwoExams {
+        var course: PlanCourse
+        var hall: UUID
+        var midterm: ExamPlanItem
+        var final: ExamPlanItem
+        var cards: [StudyCard]
+    }
+
+    // 같은 노트의 정독이 두 시험의 계획에 있다. 중간고사 기간은 10/10부터이고, 기말고사 계획은 미리 놓아 기간이 12/1부터다.
+    func twoExams() throws -> TwoExams {
+        var course = PlanCourse()
+        let hall = course.noteId("기말 02 홀의 정리")
+        let cards = (0..<6).map { course.card("카드 \($0)", note: hall) }
+        var midterm = Exam(
+            device: course.device, at: course.made, title: "중간고사", start: PlanCourse.at(10, 20, 9), end: PlanCourse.at(10, 20, 11))
+        midterm.addedScopeUnitIds = course.exam.addedScopeUnitIds
+        let study = course.study(now: PlanCourse.at(10, 10))
+        func placed(_ exam: Exam, _ period: ExamPlanPeriod) throws -> Exam {
+            let placed = try #require(study.place(exam, period: period, proofs: [], settings: Settings(), calendar: PlanCourse.calendar))
+            var exam = exam
+            exam.plan = placed.plan
+            exam.planPeriod = placed.period
+            exam.planBasis = placed.basis
+            return exam
+        }
+        midterm = try placed(midterm, ExamPlanPeriod(start: PlanCourse.day(10, 10), end: PlanCourse.day(10, 19)))
+        course.exam = try placed(course.exam, ExamPlanPeriod(start: PlanCourse.day(12, 1), end: PlanCourse.day(12, 13)))
+        course.otherExams = [midterm]
+        return TwoExams(
+            course: course, hall: hall, midterm: try #require(midterm.plan.first { $0.target == .note(hall, .read) }),
+            final: try #require(course.exam.plan.first { $0.target == .note(hall, .read) }), cards: cards)
+    }
+
+    @Test func theDeckFollowsTheExamWhosePeriodHasStarted() throws {
+        let t = try twoExams()
+        let log = flips(t.cards.prefix(3).map { Flip(card: $0, at: PlanCourse.at(10, 15)) })
+        // 10/15에는 중간고사 기간만 시작했다. 칸은 중간고사의 정독과 같은 값이고 기말고사의 정독은 아직 세지 않는다.
+        let october = t.course.study(now: PlanCourse.at(10, 15, 13), log: log)
+        #expect(october.readExam(ofNote: t.hall)?.title == "중간고사")
+        #expect(october.progress(of: t.midterm) == PlanProgress(done: 3, total: 6))
+        #expect(october.noteDeck(t.hall, sections: []).progress == october.progress(of: t.midterm))
+        #expect(october.progress(of: t.final) == PlanProgress(done: 0, total: 6))
+
+        // 기말고사 기간이 시작하면 칸은 기말고사를 따른다. 중간고사의 정독은 그 시험의 기간으로 센 값 그대로다.
+        let december = t.course.study(now: PlanCourse.at(12, 2), log: log)
+        #expect(december.readExam(ofNote: t.hall)?.title == "기말고사")
+        #expect(december.noteDeck(t.hall, sections: []).progress == december.progress(of: t.final))
+        #expect(december.progress(of: t.final).done == 0 && december.progress(of: t.midterm).done == 3)
+    }
+
+    @Test func aReadingFinishedForOneExamStaysFinishedWhenALaterPeriodStarts() throws {
+        let t = try twoExams()
+        let log = flips(t.cards.map { Flip(card: $0, at: PlanCourse.at(10, 16)) })
+        let december = t.course.study(now: PlanCourse.at(12, 2), log: log)
+        #expect(december.isDone(t.midterm) && !december.isDone(t.final))
+    }
+
+    @Test func beforeAnyPeriodStartsTheDeckFollowsTheFirstToStart() throws {
+        let t = try twoExams()
+        // 10/9에는 어느 기간도 시작하지 않았다. 먼저 시작할 중간고사를 따르므로 그 전에 넘긴 카드는 칩에서도 칸에서도 세지 않는다.
+        let study = t.course.study(now: PlanCourse.at(10, 9, 11), log: flips([Flip(card: t.cards[0], at: PlanCourse.at(10, 9, 10))]))
+        #expect(study.readExam(ofNote: t.hall)?.title == "중간고사")
+        #expect(study.noteDeck(t.hall, sections: []).progress == study.progress(of: t.midterm))
+        #expect(study.progress(of: t.midterm).done == 0)
+    }
+
+    @Test func theDeckAlwaysCountsWhatItsExamsReadingCounts() async throws {
+        let t = try twoExams()
+        let first = PlanCourse.at(10, 1)
+        // 카드마다 10/1에서 며칠 뒤에 넘겼는지와, 며칠 뒤에 칸을 보는지다. 12/13까지다.
+        await propertyCheck(input: Gen.int(in: 0...73).array(of: 0...12), Gen.int(in: 0...5).array(of: 12), Gen.int(in: 0...73)) {
+            days, picks, seen in
+            let log = flips(
+                days.enumerated().map { i, d in Flip(card: t.cards[picks[i]], at: first.addingTimeInterval(Double(d) * 86400)) })
+            let study = t.course.study(now: first.addingTimeInterval(Double(seen) * 86400), log: log)
+            let final = study.readExam(ofNote: t.hall)?.id == t.course.exam.id
+            #expect(final == (study.today >= PlanCourse.day(12, 1)))
+            #expect(study.noteDeck(t.hall, sections: []).progress == study.progress(of: final ? t.final : t.midterm))
+        }
+    }
+
     @Test func aNoteWithoutCardsOnlyCountsItsCheck() async throws {
         let p = try planned(cards: 0)
         let read = p.read

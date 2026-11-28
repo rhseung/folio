@@ -20,6 +20,7 @@ struct PlanCourse {
     var coloring: FolioDomain.Unit
     var notes: [NoteEntry] = []
     var exam: Exam
+    var otherExams: [Exam] = []
     var sets: [ProblemSet] = []
     var cards: [StudyCard] = []
 
@@ -57,7 +58,7 @@ struct PlanCourse {
     }
 
     var file: CourseFile {
-        CourseFile(course: course, units: [matching, hall, paths, coloring], exams: [exam], problemSets: sets, notes: notes)
+        CourseFile(course: course, units: [matching, hall, paths, coloring], exams: [exam] + otherExams, problemSets: sets, notes: notes)
     }
 
     func study(now: Date, log: StudyLog = StudyLog(), settings: Settings = Settings()) -> CourseStudy {
