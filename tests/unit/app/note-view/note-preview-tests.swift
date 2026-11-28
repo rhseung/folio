@@ -299,20 +299,23 @@ struct NotePreviewTests {
         try FileManager.default.setAttributes([.modificationDate: date], ofItemAtPath: file.path)
     }
 
-    // 첫 그림이 `width`가 될 때까지 기다린 뒤, 그 그림의 초록에서 빨강을 뺀 값을 준다.
+    // 첫 그림이 `width`가 될 때까지 기다린 뒤, 화면에 그려진 그 그림 한가운데의 초록에서 빨강을 뺀 값을 준다. 캔버스에
+    // 그려서 읽지 않는다. CI의 가상 머신에서는 캔버스의 픽셀을 읽지 못한다(`getImageData`가 InvalidStateError를 낸다).
     private func greenOverRed(_ rig: PreviewRig, width: Double) async throws -> Double? {
         for _ in 0..<40 where try await rig.number("return document.images[0].naturalWidth") != width {
             try await Task.sleep(for: .milliseconds(50))
         }
-        return try await rig.number(
-            """
-            const canvas = document.createElement("canvas");
-            canvas.width = canvas.height = 1;
-            const context = canvas.getContext("2d");
-            context.drawImage(document.images[0], 0, 0, 1, 1);
-            const [red, green] = context.getImageData(0, 0, 1, 1).data;
-            return green - red;
-            """)
+        let center = try #require(
+            try await rig.js("const r = document.images[0].getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]")
+                as? [Double])
+        let config = WKSnapshotConfiguration()
+        config.rect = CGRect(x: center[0] - 2, y: center[1] - 2, width: 4, height: 4)
+        // 창이 화면에 보이지 않아 화면이 갱신되지 않으므로, 화면을 기다리지 않고 찍는다.
+        config.afterScreenUpdates = false
+        let image = try await rig.page.view.takeSnapshot(configuration: config)
+        let pixels = try #require(image.cgImage(forProposedRect: nil, context: nil, hints: nil))
+        let color = NSBitmapImageRep(cgImage: pixels).colorAt(x: pixels.width / 2, y: pixels.height / 2)?.usingColorSpace(.sRGB)
+        return color.map { Double($0.greenComponent - $0.redComponent) }
     }
 
     // WebKit은 SVG 그림의 다크 여부를 그림을 다 받은 순간에 한 번 정하고, 그때 그림이 레이아웃에 없으면 라이트로 둔다.
