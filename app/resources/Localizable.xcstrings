@@ -20698,7 +20698,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "그 뒤에는 0점. 비우면 감점이 만점을 다 깎을 때까지"
+            "value": "그 뒤에는 0점. 0이면 늦은 제출을 받지 않고, 비우면 감점이 만점을 다 깎을 때까지"
           }
         }
       }
@@ -20732,6 +20732,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "하루 %1$@%% 감점, %2$lld일까지"
+          }
+        }
+      }
+    },
+    "late-rule.not-accepted": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "늦은 제출 불가"
           }
         }
       }

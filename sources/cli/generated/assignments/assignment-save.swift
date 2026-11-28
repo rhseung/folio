@@ -24,7 +24,7 @@ extension GeneratedCommands {
         @Option(help: ArgumentHelp("마감 일시. none이면 지운다", valueName: "date")) var due: Clearable<DateArg>?
         @Option(help: "상태. todo, doing, submitted, graded, missed(못 냄)") var status: AssignmentStatus?
         @Option(name: .customLong("submitted-at"), help: ArgumentHelp("낸 시각. 상태가 submitted나 graded일 때만 둔다. none이면 지운다", valueName: "date")) var submittedAt: Clearable<DateArg>?
-        @Option(name: .customLong("late-rule"), help: ArgumentHelp("이 과제만 따로 쓰는 지각 규칙. none이면 과목의 규칙을 따른다. 하루당 감점 %:받는 날수. 10:3, 받는 기한이 없으면 10. none이면 지운다", valueName: "late-rule")) var lateRule: Clearable<String>?
+        @Option(name: .customLong("late-rule"), help: ArgumentHelp("이 과제만 따로 쓰는 지각 규칙. none이면 과목의 규칙을 따른다. 하루당 감점 %:받는 날수. 10:3, 받는 기한이 없으면 10, 늦은 제출을 받지 않으면 0:0. none이면 지운다", valueName: "late-rule")) var lateRule: Clearable<String>?
         @Option(help: "반복. weekly, daily, biweekly, monthly, 3d, 2w, 1m, weekly:mon,wed, 또는 빠른 추가의 말(매일, 격일, 3일마다, 격주, 매월, 매주 월수, 월,수마다, 평일마다). none이면 지운다") var repeats: Clearable<AssignmentRepeat>?
         @Option(name: .customLong("component"), help: ArgumentHelp("반영되는 성적 항목. 주면 묶음은 풀린다. none이면 지운다", valueName: "component"), completion: Complete.ref(.gradeComponent)) var componentId: Clearable<String>?
         @Option(name: .customLong("group"), help: "한꺼번에 점수를 매기는 성적 항목 묶음. 주면 성적 항목 하나는 풀린다. none이면 지운다") var componentGroup: Clearable<String>?

@@ -240,6 +240,30 @@ struct CourseGradesModelTests {
         #expect(model.attendance(file).detail == "결석 상한 규칙이 없습니다")
     }
 
+    @Test func aLateRuleThatRefusesLateWorkSaysSo() throws {
+        let workspace = try fixtureWorkspace()
+        let course = try #require(workspace.courses.first)
+        let model = CourseGradesModel(workspace: workspace, course: course.id)
+        var file = course.file
+        file.policy.lateRule = LateRule(percentPerDay: 10, days: 3)
+        #expect(model.lateRule(file) == "하루 10% 감점, 3일까지")
+        file.policy.lateRule = LateRule(percentPerDay: 0, days: 0)
+        #expect(model.lateRule(file) == "늦은 제출 불가")
+        file.policy.lateRule = LateRule(percentPerDay: 100)
+        #expect(model.lateRule(file) == "늦은 제출 불가")
+    }
+
+    // 받는 기간을 0으로 두면 감점 칸을 비워도 늦은 제출을 받지 않는 규칙이다. 감점 없이 다른 날수만 쓰면 여전히 틀렸다.
+    @Test func zeroAcceptedDaysAloneRefusesLateWork() {
+        var draft = LateRuleDraft(nil)
+        draft.days = "0"
+        #expect(!draft.invalid)
+        #expect(draft.rule == LateRule(percentPerDay: 0, days: 0))
+        draft.days = "3"
+        #expect(draft.invalid)
+        #expect(LateRuleDraft(LateRule(percentPerDay: 0, days: 0)).rule?.acceptsLate == false)
+    }
+
     @Test func wordingOfNeedsAndGaps() {
         #expect(CourseGradesModel.needText(120) == "만점으로도 부족")
         #expect(CourseGradesModel.needText(-3) == "이미 확보")

@@ -20,7 +20,7 @@ public struct PolicySet {
     /// 지각 제출 규칙의 원문
     var latePolicy: Patch<String?>
     /// 과제의 지각 제출 규칙. 과제마다 따로 정하지 않으면 이 규칙을 쓴다
-    @CLIName("late-rule") @Parsed("late-rule", "하루당 감점 %:받는 날수. 10:3, 받는 기한이 없으면 10") var lateRule: Patch<LateRule?>
+    @CLIName("late-rule") @Parsed("late-rule", "하루당 감점 %:받는 날수. 10:3, 받는 기한이 없으면 10, 늦은 제출을 받지 않으면 0:0") var lateRule: Patch<LateRule?>
     /// 지각 몇 번이 결석 한 번인지
     var latesPerAbsence: Patch<Int?>
     /// 상대평가에서 A를 받는 비율. 0.5

@@ -21,7 +21,7 @@ extension GeneratedCommands {
         @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref(.course)) var course: String = ""
         @Option(help: "최소 출석 비율. 0.75. none이면 지운다") var minAttendanceRatio: Clearable<Double>?
         @Option(help: "지각 제출 규칙의 원문. none이면 지운다") var latePolicy: Clearable<String>?
-        @Option(name: .customLong("late-rule"), help: ArgumentHelp("과제의 지각 제출 규칙. 과제마다 따로 정하지 않으면 이 규칙을 쓴다. 하루당 감점 %:받는 날수. 10:3, 받는 기한이 없으면 10. none이면 지운다", valueName: "late-rule")) var lateRule: Clearable<String>?
+        @Option(name: .customLong("late-rule"), help: ArgumentHelp("과제의 지각 제출 규칙. 과제마다 따로 정하지 않으면 이 규칙을 쓴다. 하루당 감점 %:받는 날수. 10:3, 받는 기한이 없으면 10, 늦은 제출을 받지 않으면 0:0. none이면 지운다", valueName: "late-rule")) var lateRule: Clearable<String>?
         @Option(help: "지각 몇 번이 결석 한 번인지. none이면 지운다") var latesPerAbsence: Clearable<Int>?
         @Option(help: "상대평가에서 A를 받는 비율. 0.5. none이면 지운다") var topGradeRatio: Clearable<Double>?
         @Option(name: .customLong("cap"), help: ArgumentHelp("결석 횟수마다 받을 수 있는 최대 성적. 주면 목록 전체를 바꾼다. 결석 횟수:최대 성적. 6:B0. 여러 번 줄 수 있다. none이면 비운다", valueName: "cap")) var attendanceCap: [String] = []

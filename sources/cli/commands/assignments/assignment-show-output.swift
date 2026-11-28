@@ -19,7 +19,7 @@ extension AssignmentShow: QueryOutput {
             let ceiling = late.ceiling.map { String(localized: .assignmentShowCeiling(Int(($0 * 100).rounded()))) } ?? ""
             FolioCLI.say(String(localized: .assignmentShowLate(late.days, ceiling)).styled(.red))
         }
-        if let rule = f.lateRule(of: a) { FolioCLI.say(String(localized: .assignmentShowLateRule(rule.cliText))) }
+        if let rule = f.lateRule(of: a) { FolioCLI.say(String(localized: .assignmentShowLateRule(rule.summary))) }
         if let repeats = a.repeats { FolioCLI.say(String(localized: .assignmentShowRepeats(repeats.label))) }
         if !a.memo.isEmpty { FolioCLI.say(String(localized: .assignmentShowMemo(a.memo))) }
         let scores = f.scores.filter { $0.assignmentId == a.id }
