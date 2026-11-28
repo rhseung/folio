@@ -2024,6 +2024,28 @@
           }
         }
       }
+    },
+    "error.card.answer-on-flip": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앞뒤 카드에는 고르는 답이 없습니다. --answer를 빼고 모르면 --unknown을 줍니다"
+          }
+        }
+      }
+    },
+    "error.card.answer-missing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "참거짓 카드는 고른 답을 --answer true나 --answer false로 줍니다"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

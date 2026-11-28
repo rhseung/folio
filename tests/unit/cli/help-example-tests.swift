@@ -74,7 +74,10 @@ struct HelpExampleTests {
         for line in Self.world { #expect(h.cli(line, gist: gist).code == 0, "\(line): \(h.cli(line + ["--dry-run"], gist: gist).err)") }
         let matching = try #require(try h.file(GISTStore(url: gist)).units.first { $0.title == "매칭" })
         let card = StudyCard(device: h.device, at: h.now, unitId: matching.id, front: "최대 매칭의 정의", back: "크기가 가장 큰 매칭")
-        try h.direct(CardSave(course: Harness.graphTheory, cards: [card], movedFrom: nil), gist: gist)
+        let claim = StudyCard(
+            device: h.device, at: h.now, unitId: matching.id, kind: .trueFalse, front: "모든 정규 이분 그래프에는 완전 매칭이 있다",
+            back: "홀의 조건을 만족한다.", answer: true)
+        try h.direct(CardSave(course: Harness.graphTheory, cards: [card, claim], movedFrom: nil), gist: gist)
 
         let ctx = ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now)
         let file = try ctx.file(Harness.graphTheory)

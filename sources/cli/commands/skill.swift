@@ -62,6 +62,11 @@ enum Skill {
         # 둔다. 사용자가 앱의 문제 페이지에서 검토하고 받는다. 그림은 문제의 figures에 쪽과 칸(왼쪽 위 기준 0–1 비율)으로 적고,
         # 소문제들이 함께 딸린 지문과 그 그림은 --groups <지문 JSON>으로 준다. 글은 LaTeX 본문 원문(\textbf, enumerate, $…$)이고 그림을
         # 글로 풀어 쓰지 않는다
+        # 개념 카드는 앞뒤(flip)와 참거짓(true_false) 둘이고 `folio card add <과목> --file <카드 JSON>`으로 넣는다. --note로 정리 노트에
+        # 잇고 카드마다 noteSection에 그 노트의 절 제목을 적는다. 참거짓 카드는 front가 문장, answer가 답, back이 이유 한 줄이다
+        folio card list EC4207 --note "매칭 정리" --dry-run
+        # 넘긴 결과를 남긴다. 참거짓 카드는 고른 답을 주면 카드의 답과 견주어 앎이나 모름으로 기록한다
+        folio card flip EC4207/매칭 "모든 정규 이분 그래프에는 완전 매칭이 있다" --answer true --dry-run
         # 어느 단원이 준비됐고 어떤 오답이 남았는지는 공부 상태로 본다. 판정을 고칠 때는 --json의 attempts에서 ID를 찾는다
         folio study show EC4207 --dry-run
         # 시험 공부 계획은 시험 범위의 정리 노트(topic)를 공부 기간에 이름 순서로 놓는다. 항목은 "<노트> <단계>"(정독, 증명, 문제풀이)이고

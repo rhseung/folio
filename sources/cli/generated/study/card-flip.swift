@@ -7,15 +7,19 @@ import Foundation
 
 extension GeneratedCommands {
     struct CardFlip: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "flip", abstract: "카드를 넘겨 보고 알았는지 기록. 모르면 --unknown", discussion: """
+        static let configuration = CommandConfiguration(commandName: "flip", abstract: "카드를 넘겨 보고 알았는지 기록. 모르면 --unknown, 참거짓 카드는 --answer", discussion: """
+            참거짓 카드는 고른 답을 --answer true나 --answer false로 준다. 카드의 답과 같으면 앎, 다르면 모름으로 기록한다.
+
             예시:
               folio card flip EC4207/매칭 \"최대 매칭의 정의\"
               folio card flip EC4207/매칭 \"최대 매칭의 정의\" --unknown
+              folio card flip EC4207/매칭 \"모든 정규 이분 그래프에는 완전 매칭이 있다\" --answer true
             """)
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("<과목>/<단원>", valueName: "unit"), completion: Complete.ref(.unit)) var unit: String
         @Argument(help: ArgumentHelp("카드 ID 또는 앞면 글", valueName: "card"), completion: Complete.ref(.studyCard)) var card: String = ""
         @Flag(name: .customLong("unknown"), help: "몰랐음") var unknown = false
+        @Option(help: "참거짓 카드에서 고른 답. true 또는 false") var answer: Bool?
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -25,7 +29,8 @@ extension GeneratedCommands {
                 course: c.id,
                 unit: try r.id(.unit, unitName, in: c),
                 card: try r.id(.studyCard, card, in: c, parent: try r.id(.unit, unitName, in: c)),
-                known: !unknown
+                known: !unknown,
+                answer: answer
             )
             try perform(spec: action, g, ctx: ctx)
         }
