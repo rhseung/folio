@@ -14,6 +14,9 @@ public struct LateRule: Codable, Sendable, Equatable {
 
     public var isValid: Bool { (0...100).contains(percentPerDay) && (days ?? 0) >= 0 }
 
+    // 늦게 낸 과제에 점수를 줄 수 있는지다. `0:0`만이 아니라 하루에 100%를 깎는 규칙도 하루만 늦어도 0점이므로 받지 않는 규칙이다.
+    public var acceptsLate: Bool { ceiling(lateDays: 1) > 0 }
+
     // 받을 수 있는 최대 점수를 만점에 대한 비율(0...1)로 돌려준다.
     public func ceiling(lateDays: Int) -> Double {
         guard lateDays > 0 else { return 1 }

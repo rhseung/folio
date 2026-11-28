@@ -6156,7 +6156,18 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "지각 규칙은 '하루당 감점 %%:받는 날수'(10:3)나 '하루당 감점 %%'(10)로 씁니다: %@"
+            "value": "지각 규칙은 '하루당 감점 %%:받는 날수'(10:3)나 '하루당 감점 %%'(10)로 씁니다. 늦은 제출을 받지 않으면 0:0입니다: %@"
+          }
+        }
+      }
+    },
+    "late-rule.not-accepted": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "늦은 제출 불가 (%@)"
           }
         }
       }

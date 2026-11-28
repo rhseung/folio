@@ -171,6 +171,8 @@ extension LateRule: CLIText {
     }
 
     var cliText: String { percentPerDay.formatted() + (days.map { ":\($0)" } ?? "") }
+
+    var summary: String { acceptsLate ? cliText : String(localized: .lateRuleNotAccepted(cliText)) }
 }
 
 extension StudentProgram: CLIText {

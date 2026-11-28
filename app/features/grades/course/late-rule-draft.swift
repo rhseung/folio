@@ -11,12 +11,14 @@ struct LateRuleDraft: Equatable {
         days = rule?.days.map(String.init) ?? ""
     }
 
+    // 받는 기간이 0이면 감점은 쓰이지 않으므로, 감점 칸을 비워도 늦은 제출을 받지 않는 규칙(0:0)이다.
     var rule: LateRule? {
-        Double(percent).map { LateRule(percentPerDay: $0, days: Int(days)) }
+        if percent.isEmpty, Int(days) == 0 { return LateRule(percentPerDay: 0, days: 0) }
+        return Double(percent).map { LateRule(percentPerDay: $0, days: Int(days)) }
     }
 
     var invalid: Bool {
-        if percent.isEmpty { return !days.isEmpty }
+        if percent.isEmpty { return !days.isEmpty && Int(days) != 0 }
         return !(rule?.isValid ?? false) || (!days.isEmpty && Int(days) == nil)
     }
 }

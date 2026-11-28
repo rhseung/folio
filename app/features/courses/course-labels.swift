@@ -43,6 +43,7 @@ extension Lateness {
 
 extension LateRule {
     var label: String {
+        guard acceptsLate else { return String(localized: .lateRuleNotAccepted) }
         let percent = percentPerDay.formatted(.number.grouping(.never))
         return days.map { String(localized: .lateRuleSummaryDays(percent, $0)) } ?? String(localized: .lateRuleSummary(percent))
     }

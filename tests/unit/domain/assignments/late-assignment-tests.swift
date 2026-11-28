@@ -64,6 +64,16 @@ struct LateAssignmentTests {
         let rule = LateRule(percentPerDay: 0, days: 0)
         #expect(rule.ceiling(lateDays: 0) == 1)
         #expect(rule.ceiling(lateDays: 1) == 0)
+        #expect(!rule.acceptsLate)
+    }
+
+    @Test func aRuleAcceptsLateWorkOnlyIfADayLateStillScores() {
+        #expect(LateRule(percentPerDay: 10, days: 3).acceptsLate)
+        #expect(LateRule(percentPerDay: 10).acceptsLate)
+        #expect(LateRule(percentPerDay: 0).acceptsLate)
+        #expect(!LateRule(percentPerDay: 10, days: 0).acceptsLate)
+        #expect(!LateRule(percentPerDay: 100).acceptsLate)
+        #expect(!LateRule(percentPerDay: 100, days: 5).acceptsLate)
     }
 
     @Test func theNextDropIsTheNextWholeDayAfterTheDeadline() {
@@ -90,6 +100,12 @@ struct LateAssignmentTests {
     @Test func handingInLaterNeverEarnsMore() async {
         await propertyCheck(input: Self.rule, Self.lateDays, Self.lateDays) { rule, a, b in
             #expect(rule.ceiling(lateDays: max(a, b)) <= rule.ceiling(lateDays: min(a, b)))
+        }
+    }
+
+    @Test func aRuleThatRefusesLateWorkGivesZeroOnEveryLateDay() async {
+        await propertyCheck(input: Self.rule, Gen.int(in: 1...30)) { rule, days in
+            if !rule.acceptsLate { #expect(rule.ceiling(lateDays: days) == 0) }
         }
     }
 

@@ -39,7 +39,7 @@ public struct AssignmentSave {
     /// 낸 시각. 상태가 submitted나 graded일 때만 둔다
     @CLIName("submitted-at") var submittedAt: Patch<Date?>
     /// 이 과제만 따로 쓰는 지각 규칙. none이면 과목의 규칙을 따른다
-    @CLIName("late-rule") @Parsed("late-rule", "하루당 감점 %:받는 날수. 10:3, 받는 기한이 없으면 10") var lateRule: Patch<LateRule?>
+    @CLIName("late-rule") @Parsed("late-rule", "하루당 감점 %:받는 날수. 10:3, 받는 기한이 없으면 10, 늦은 제출을 받지 않으면 0:0") var lateRule: Patch<LateRule?>
     /// 반복. weekly, daily, biweekly, monthly, 3d, 2w, 1m, weekly:mon,wed, 또는 빠른 추가의 말(매일, 격일, 3일마다, 격주, 매월, 매주 월수, 월,수마다, 평일마다)
     var repeats: Patch<AssignmentRepeat?>
     /// 반영되는 성적 항목. 주면 묶음은 풀린다
