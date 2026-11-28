@@ -46,10 +46,11 @@ struct CardsView: View {
                                     CardRow(last: i == group.cards.count - 1) {
                                         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                                             StudyText(text: r.card.front).lineLimit(2)
-                                            StudyText(text: r.card.back).lineLimit(1)
+                                            StudyText(text: r.card.backLine).lineLimit(1)
                                                 .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                                         }
                                         Spacer(minLength: Theme.Space.m)
+                                        if r.card.kind == .trueFalse { Badge(r.card.kind.label) }
                                         if model.changed.contains(r.card.id) {
                                             Badge(String(localized: .cardsSourceChanged), tone: .warning)
                                         }

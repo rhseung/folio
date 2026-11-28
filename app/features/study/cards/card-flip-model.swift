@@ -12,6 +12,8 @@ final class CardFlipModel {
     private(set) var deck: [StudyCard]
     var index = 0
     var flipped = false
+    // 참거짓 카드에서 고른 답이다. 고르면 답과 이유를 보이고 다음 카드로 넘어가기를 기다린다.
+    private(set) var picked: Bool?
     private(set) var known: [UUID] = []
     private(set) var unknown: [UUID] = []
 
@@ -36,11 +38,30 @@ final class CardFlipModel {
     func flip() { flipped.toggle() }
 
     func mark(known isKnown: Bool) {
-        guard let card = current else { return }
+        guard let card = current, card.kind == .flip else { return }
         workspace.run(CardFlip(course: courseId, unit: card.unitId, card: card.id, known: isKnown))
         if isKnown { known.append(card.id) } else { unknown.append(card.id) }
+        next()
+    }
+
+    // 참거짓 카드는 뒤집지 않고 답을 고른다. 맞히면 앎, 틀리면 모름으로 센다.
+    func pick(_ answer: Bool) {
+        guard let card = current, card.kind == .trueFalse, picked == nil else { return }
+        workspace.run(CardFlip(course: courseId, unit: card.unitId, card: card.id, answer: answer))
+        if card.knows(picking: answer) { known.append(card.id) } else { unknown.append(card.id) }
+        picked = answer
+    }
+
+    func next() {
         index += 1
         flipped = false
+        picked = nil
+    }
+
+    var verdict: (text: String, tone: Tone)? {
+        guard let card = current, let picked, let answer = card.answer else { return nil }
+        let verdict: Verdict = card.knows(picking: picked) ? .correct : .wrong
+        return (String(localized: .noteCardsVerdict(verdict.label, String(localized: answer ? .solveTrue : .solveFalse))), verdict.tone)
     }
 
     func againUnknown() {
@@ -50,5 +71,6 @@ final class CardFlipModel {
         unknown = []
         index = 0
         flipped = false
+        picked = nil
     }
 }

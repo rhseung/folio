@@ -25,6 +25,19 @@ struct CardEditorSheet: View {
             onDelete: remove
         ) {
             Card {
+                FormRow(label: String(localized: .cardsKind)) {
+                    SegmentedControl(selection: $model.draft.kind, options: model.kindOptions, size: .small)
+                }
+                if model.draft.kind == .trueFalse {
+                    FormRow(label: String(localized: .cardsAnswer)) {
+                        SegmentedControl(selection: $model.draft.answer, options: model.answerOptions, size: .small)
+                    }
+                }
+                if !model.sections.isEmpty {
+                    FormRow(label: String(localized: .cardsNoteSection)) {
+                        Select(selection: $model.section, options: model.sectionOptions)
+                    }
+                }
                 FormRow(label: String(localized: .cardsUnit), last: !model.sourceChanged) {
                     Combobox(selection: $model.draft.unitId, options: model.unitOptions)
                 }
@@ -37,8 +50,8 @@ struct CardEditorSheet: View {
                     }
                 }
             }
-            TextArea(label: String(localized: .cardsFront), text: $model.draft.front)
-            TextArea(label: String(localized: .cardsBack), text: $model.draft.back)
+            TextArea(label: model.frontLabel, text: $model.draft.front)
+            TextArea(label: model.backLabel, text: $model.draft.back)
         } onConfirm: {
             guard model.confirm() else { return }
             saved()

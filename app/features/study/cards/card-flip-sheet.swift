@@ -20,8 +20,14 @@ struct CardFlipSheet: View {
                 Button(.commonClose) { dismiss() }.keyboardShortcut(.cancelAction)
             }
             if let card = model.current {
-                face(card)
-                answers
+                switch card.kind {
+                case .flip:
+                    face(card)
+                    answers
+                case .trueFalse:
+                    claim(card)
+                    choices
+                }
             } else if model.isDone {
                 done
             } else {
@@ -65,6 +71,36 @@ struct CardFlipSheet: View {
         }
         .disabled(!model.flipped)
         .opacity(model.flipped ? 1 : Theme.Opacity.disabled)
+    }
+
+    // 참거짓 카드는 뒤집을 면이 없다. 문장을 보이고, 답을 고르면 같은 자리에 답과 이유를 보인다.
+    func claim(_ card: StudyCard) -> some View {
+        VStack(spacing: Theme.Space.m) {
+            Caption(card.kind.label)
+            StudyText(text: card.front).font(Theme.Typeface.figureMedium).multilineTextAlignment(.center)
+            if let verdict = model.verdict {
+                Text(verdict.text).font(Theme.Typeface.bodyStrong).foregroundStyle(verdict.tone.foreground).lineLimit(1)
+                StudyText(text: card.back).multilineTextAlignment(.center)
+            }
+        }
+        .padding(Theme.Space.xl)
+        .frame(maxWidth: .infinity, minHeight: Theme.Size.flipCardMin)
+        .background(Theme.Palette.card, in: .rect(cornerRadius: Theme.Radius.card))
+    }
+
+    @ViewBuilder var choices: some View {
+        if model.picked == nil {
+            HStack(spacing: Theme.Space.m) {
+                big(String(localized: .solveTrue), tone: .plain, key: .solveTrue) { model.pick(true) }
+                big(String(localized: .solveFalse), tone: .plain, key: .solveFalse) { model.pick(false) }
+            }
+        } else {
+            HStack {
+                Spacer()
+                Button(.cardsFlipNext) { model.next() }.buttonStyle(.prominent).keyboardShortcut(.defaultAction)
+            }
+            .controlSize(.large)
+        }
     }
 
     func big(_ title: String, tone: Tone, key: ShortcutID, action: @escaping () -> Void) -> some View {

@@ -13,18 +13,37 @@ final class CardEditorModel {
     private(set) var sourceChanged = false
     // 원본 노트의 지금 블록이다. 블록을 지웠으면 nil이고 원본에 맞출 수 없다.
     private var source: (block: NoteBlockCard, text: String)?
+    // 카드를 이은 노트의 절이다. 노트에 잇지 않은 카드에는 없다.
+    private(set) var sections: [NoteOutline.Entry] = []
 
     init(workspace: Workspace, course: LoadedCourse, draft: CardDraft) {
         self.workspace = workspace
         self.course = course
         self.draft = draft
         if let id = draft.original?.id { sourceChanged = workspace.changedCardSources(in: course.id).contains(id) }
-        if sourceChanged, let noteId = draft.noteId, let blockId = draft.noteBlockId,
-            let note = (try? course.store.notes())?.first(where: { $0.meta.id == noteId }), let text = try? course.store.read(note),
-            let block = NoteBlockCard.find(blockId, in: text), let raw = NoteBlockCard.source(of: blockId, in: text)
+        guard let noteId = draft.noteId, let note = course.store.note(id: noteId, in: course.file), let text = try? course.store.read(note)
+        else { return }
+        if note.format == .markdown { sections = NoteOutline(text).entries }
+        if sourceChanged, let blockId = draft.noteBlockId, let block = NoteBlockCard.find(blockId, in: text),
+            let raw = NoteBlockCard.source(of: blockId, in: text)
         {
             source = (block, raw)
         }
+    }
+
+    var kindOptions: [(CardKind, String)] { CardKind.allCases.map { ($0, $0.label) } }
+    var answerOptions: [(Bool, String)] { [(true, String(localized: .solveTrue)), (false, String(localized: .solveFalse))] }
+    var frontLabel: String { String(localized: draft.kind == .trueFalse ? .cardsStatement : .cardsFront) }
+    var backLabel: String { String(localized: draft.kind == .trueFalse ? .cardsReason : .cardsBack) }
+
+    // 카드가 가리키던 절이 노트에서 없어졌으면 노트 전체에 이은 것으로 보인다.
+    var sectionOptions: [(String?, String)] {
+        [(nil, String(localized: .noteCardsWholeNote))] + sections.map { (Optional($0.anchor), $0.title) }
+    }
+
+    var section: String? {
+        get { draft.noteSection.flatMap { anchor in sections.contains { $0.anchor == anchor } ? anchor : nil } }
+        set { draft.noteSection = newValue }
     }
 
     var canRefresh: Bool { source != nil }

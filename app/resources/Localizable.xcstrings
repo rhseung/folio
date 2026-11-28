@@ -21380,7 +21380,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이 단원의 노트와 과목 요약을 Claude에 보냅니다"
+            "value": "고른 재료와 과목 요약을 Claude에 보냅니다"
           }
         }
       }
@@ -24439,6 +24439,380 @@
           "stringUnit": {
             "state": "translated",
             "value": "%2$lld 중 %1$lld"
+          }
+        }
+      }
+    },
+    "note-cards.named": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 카드"
+          }
+        }
+      }
+    },
+    "note-cards.progress": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 절 %1$lld/%2$lld · 노트 %3$lld/%4$lld"
+          }
+        }
+      }
+    },
+    "note-cards.progress-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트 %1$lld/%2$lld"
+          }
+        }
+      }
+    },
+    "note-cards.group-progress": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld/%2$lld"
+          }
+        }
+      }
+    },
+    "note-cards.whole-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트 전체"
+          }
+        }
+      }
+    },
+    "note-cards.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 노트의 카드가 없어요"
+          }
+        }
+      }
+    },
+    "note-cards.empty-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드 만들기나 카드 추가로 채워요"
+          }
+        }
+      }
+    },
+    "note-cards.missing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트를 찾을 수 없어요"
+          }
+        }
+      }
+    },
+    "note-cards.make": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드 만들기"
+          }
+        }
+      }
+    },
+    "note-cards.flip": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "뒤집기"
+          }
+        }
+      }
+    },
+    "note-cards.open-section": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트에서 보기"
+          }
+        }
+      }
+    },
+    "note-cards.verdict": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · 답은 %2$@"
+          }
+        }
+      }
+    },
+    "notes.open-cards": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드 열기"
+          }
+        }
+      }
+    },
+    "cards.kind": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "형식"
+          }
+        }
+      }
+    },
+    "cards.kind.flip": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앞뒤"
+          }
+        }
+      }
+    },
+    "cards.kind.true-false": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "참거짓"
+          }
+        }
+      }
+    },
+    "cards.statement": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문장"
+          }
+        }
+      }
+    },
+    "cards.answer": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "답"
+          }
+        }
+      }
+    },
+    "cards.reason": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이유"
+          }
+        }
+      }
+    },
+    "cards.note-section": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트의 절"
+          }
+        }
+      }
+    },
+    "cards.flip-next": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음"
+          }
+        }
+      }
+    },
+    "cards.suggest.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드 만들기"
+          }
+        }
+      }
+    },
+    "cards.suggest.material": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "재료"
+          }
+        }
+      }
+    },
+    "cards.suggest.material-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정리 노트"
+          }
+        }
+      }
+    },
+    "cards.suggest.material-notes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원의 노트"
+          }
+        }
+      }
+    },
+    "cards.suggest.material-lecture": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "렉처 쪽"
+          }
+        }
+      }
+    },
+    "cards.suggest.material-textbook": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "교재"
+          }
+        }
+      }
+    },
+    "cards.suggest.pages": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$lld–%3$lld쪽"
+          }
+        }
+      }
+    },
+    "cards.suggest.more-files": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 외 %2$lld곳"
+          }
+        }
+      }
+    },
+    "cards.suggest.no-pages": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원에 나눈 쪽 없음"
+          }
+        }
+      }
+    },
+    "cards.suggest.no-notes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원에 이은 노트 없음"
+          }
+        }
+      }
+    },
+    "cards.suggest.notes-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트 %lld개"
+          }
+        }
+      }
+    },
+    "cards.suggest.format": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "형식과 개수"
+          }
+        }
+      }
+    },
+    "cards.suggest.kinds-both": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "둘 다"
           }
         }
       }
