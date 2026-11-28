@@ -123,6 +123,19 @@ struct RuleTests {
         #expect(CardFile(unitId: unit, cards: [card]).violations.count == 1)
     }
 
+    @Test func onlyTrueFalseCardsCarryAnAnswer() {
+        let unit = UUID()
+        var card = StudyCard(
+            device: Self.device, at: Self.now, unitId: unit, kind: .trueFalse, front: "트리에는 사이클이 없다.", back: "정의다.", answer: true)
+        #expect(CardFile(unitId: unit, cards: [card]).violations.isEmpty)
+        card.answer = nil
+        #expect(CardFile(unitId: unit, cards: [card]).violations.map(\.rule.name) == ["Card.answer"])
+        card.kind = .flip
+        #expect(CardFile(unitId: unit, cards: [card]).violations.isEmpty)
+        card.answer = false
+        #expect(CardFile(unitId: unit, cards: [card]).violations.map(\.rule.name) == ["Card.answer"])
+    }
+
     @Test func removingAComponentTakesItsScoresAndFreesItsExams() throws {
         var f = Self.course
         f.exams[0].componentId = Self.component.id
