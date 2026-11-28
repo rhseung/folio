@@ -97,7 +97,8 @@ struct ProblemIDMigrationTests {
         try JSONFormat.encoder.encode(raw).write(to: url)
         let doc = try StoredDocument<CourseFile>.read(from: url)
         #expect(doc.model.problemSets[0].problems.count == 2)
-        #expect(doc.model.exams[0].plan.map(\.target.kind) == [.unit, .custom, .problems])
-        #expect(doc.model.exams[0].plan.allSatisfy { $0.isEdited })
+        // 예전 계획 항목은 모두 사용자가 쓴 것이라 대상 없는 할 일로 남는다.
+        #expect(doc.model.exams[0].plan.map(\.title) == ["매칭 복습", "족보", "연습 1"])
+        #expect(doc.model.exams[0].plan.allSatisfy { $0.isEdited && $0.target == .custom })
     }
 }

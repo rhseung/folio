@@ -7,15 +7,15 @@ import Foundation
 
 extension GeneratedCommands {
     struct ExamPlanRemove: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "rm", abstract: "공부 계획 항목 지우기. 앱이 짠 항목은 다시 짜도 돌아오지 않게 빼 둔다", discussion: """
+        static let configuration = CommandConfiguration(commandName: "rm", abstract: "공부 계획에서 항목 빼기. 앱이 놓은 항목은 다시 놓아도 돌아오지 않게 빼 둔다", discussion: """
             실행하기 전에 확인을 받는다.
 
             예시:
-              folio exam plan rm EC4207/중간고사 \"트리 단원 복습\" --dry-run
+              folio exam plan rm EC4207/기말고사 \"교재 3장 다시 읽기\" --dry-run
             """)
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("<과목>/<시험>", valueName: "exam"), completion: Complete.ref(.exam)) var exam: String
-        @Argument(help: ArgumentHelp("항목 제목이나 UUID", valueName: "item"), completion: Complete.ref(.examPlanItem)) var item: String = ""
+        @Argument(help: ArgumentHelp("항목 이름이나 UUID. 정리 노트의 단계는 \"<노트> <단계>\"다. 여러 번 줄 수 있다", valueName: "items"), completion: Complete.ref(.examPlanItem)) var items: [String]
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -24,7 +24,7 @@ extension GeneratedCommands {
             let action = FolioActions.ExamPlanRemove(
                 course: c.id,
                 exam: try r.id(.exam, examName, in: c),
-                item: try r.id(.examPlanItem, item, in: c, parent: try r.id(.exam, examName, in: c))
+                items: try items.map { try r.id(.examPlanItem, $0, in: c, parent: try r.id(.exam, examName, in: c)) }
             )
             try perform(spec: action, g, ctx: ctx)
         }

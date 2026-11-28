@@ -57,7 +57,7 @@ struct SettingItemTests {
     @Test func valuesOutsideTheScreenRangesAreRefused() {
         #expect(SettingItem.studyReadyPercent.problem(.number(80)) == nil)
         #expect(SettingItem.studyReadyPercent.problem(.number(40)) != nil)
-        #expect(SettingItem.studyFinalDays.problem(.number(4)) != nil)
+        #expect(SettingItem.studyPlanShownDays.problem(.number(15)) != nil)
         #expect(SettingItem.studyMinProblems.problem(.number(2.5)) != nil)
         #expect(SettingItem.classMinutes.problem(.null) != nil)
         #expect(SettingItem.newNoteMath.problem(.string("latex")) == nil)

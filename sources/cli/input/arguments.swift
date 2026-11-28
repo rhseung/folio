@@ -23,6 +23,7 @@ extension SolveMode: ExpressibleByArgument {}
 extension GradeBasis: ExpressibleByArgument {}
 extension WrongReason: ExpressibleByArgument {}
 extension Verdict: ExpressibleByArgument {}
+extension ExamPlanPeriod.After: ExpressibleByArgument {}
 
 extension Session.Kind: ExpressibleByArgument {
     public init?(argument: String) { self.init(word: argument) }

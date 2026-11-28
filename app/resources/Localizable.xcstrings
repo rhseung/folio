@@ -4731,39 +4731,6 @@
         }
       }
     },
-    "exams.plan": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "시험 계획"
-          }
-        }
-      }
-    },
-    "exams.plan-check": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "완료"
-          }
-        }
-      }
-    },
-    "exams.plan-done": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld/%2$lld 완료"
-          }
-        }
-      }
-    },
     "exams.plan-facts": {
       "extractionState": "manual",
       "localizations": {
@@ -4771,61 +4738,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "계획 %1$lld/%2$lld"
-          }
-        }
-      }
-    },
-    "exams.plan-hint": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "날짜별 할 일을 넣으면 그날 오늘 화면에도 나옵니다"
-          }
-        }
-      }
-    },
-    "exams.plan-no-target": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "대상 없음"
-          }
-        }
-      }
-    },
-    "exams.plan-prompt": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "할 일"
-          }
-        }
-      }
-    },
-    "exams.plan-remove": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "항목 삭제"
-          }
-        }
-      }
-    },
-    "exams.plan-undo": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "완료 취소"
           }
         }
       }
@@ -4947,17 +4859,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "시험"
-          }
-        }
-      }
-    },
-    "exams.today": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오늘"
           }
         }
       }
@@ -21946,61 +21847,6 @@
         }
       }
     },
-    "units.plan-days": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@까지 %2$lld일"
-          }
-        }
-      }
-    },
-    "units.plan-today": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오늘 다시 짬"
-          }
-        }
-      }
-    },
-    "units.plan-concept-pages": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "다시 볼 쪽 %lld"
-          }
-        }
-      }
-    },
-    "units.plan-wrong": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오답 %1$lld · 모른 카드 %2$lld"
-          }
-        }
-      }
-    },
-    "units.plan-carried": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "어제에서 옮김"
-          }
-        }
-      }
-    },
     "units.add": {
       "extractionState": "manual",
       "localizations": {
@@ -22030,28 +21876,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "그 밖의 단원"
-          }
-        }
-      }
-    },
-    "units.plan": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "계획"
-          }
-        }
-      }
-    },
-    "units.plan-edit": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "고치기"
           }
         }
       }
@@ -23596,39 +23420,6 @@
         }
       }
     },
-    "plan-solve.problems": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "풀기"
-          }
-        }
-      }
-    },
-    "plan-solve.mock": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "모의시험"
-          }
-        }
-      }
-    },
-    "plan-solve.cards": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "카드 넘기기"
-          }
-        }
-      }
-    },
     "cards.source-changed": {
       "extractionState": "manual",
       "localizations": {
@@ -23933,17 +23724,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ 외 %2$lld단원"
-          }
-        }
-      }
-    },
-    "units.plan-nothing-left": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "할 것 없음"
           }
         }
       }
@@ -24300,17 +24080,6 @@
         }
       }
     },
-    "units.plan-more": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld개 더 보기"
-          }
-        }
-      }
-    },
     "units.other-untested": {
       "extractionState": "manual",
       "localizations": {
@@ -24340,6 +24109,336 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ %2$lld"
+          }
+        }
+      }
+    },
+    "plan.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "계획"
+          }
+        }
+      }
+    },
+    "plan.today": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘"
+          }
+        }
+      }
+    },
+    "plan.next": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음"
+          }
+        }
+      }
+    },
+    "plan.more": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "더 보기"
+          }
+        }
+      }
+    },
+    "plan.note.notes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트 %lld"
+          }
+        }
+      }
+    },
+    "plan.note.wrong": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오답 %lld"
+          }
+        }
+      }
+    },
+    "plan.note.late": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "밀림 %lld"
+          }
+        }
+      }
+    },
+    "plan.note.mocks": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모의고사 %lld"
+          }
+        }
+      }
+    },
+    "plan.note.left-notes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "남은 노트 %lld"
+          }
+        }
+      }
+    },
+    "plan.note.from-day": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@부터"
+          }
+        }
+      }
+    },
+    "plan.late": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "밀림"
+          }
+        }
+      }
+    },
+    "plan.from": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에서"
+          }
+        }
+      }
+    },
+    "plan.unit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 단원"
+          }
+        }
+      }
+    },
+    "plan.no-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트 없음"
+          }
+        }
+      }
+    },
+    "plan.step.mock": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "풀기"
+          }
+        }
+      }
+    },
+    "plan.step.make-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트 만들기"
+          }
+        }
+      }
+    },
+    "plan.dots": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단계 %2$lld개 중 %1$lld개 끝냄"
+          }
+        }
+      }
+    },
+    "plan.menu.advance": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘로 앞당기기"
+          }
+        }
+      }
+    },
+    "plan.menu.postpone-tomorrow": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내일로 미루기"
+          }
+        }
+      }
+    },
+    "plan.menu.postpone-next": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음 날로 미루기"
+          }
+        }
+      }
+    },
+    "plan.menu.pick-day": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "날짜 고르기"
+          }
+        }
+      }
+    },
+    "plan.menu.remove": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "계획에서 빼기…"
+          }
+        }
+      }
+    },
+    "plan.period.exam": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "plan.after.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비움"
+          }
+        }
+      }
+    },
+    "plan.after.mock": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모의고사"
+          }
+        }
+      }
+    },
+    "plan.after.help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "끝낼 날 다음 날부터 시험 전날까지 비워 두거나 하루 한 벌씩 모의고사를 둡니다"
+          }
+        }
+      }
+    },
+    "plan.add-task": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "할 일 추가"
+          }
+        }
+      }
+    },
+    "plan.add-prompt": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "예: 교재 3장 다시 읽기"
+          }
+        }
+      }
+    },
+    "plan.step.progress": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$lld/%3$lld"
+          }
+        }
+      }
+    },
+    "plan.step.progress-value": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$lld 중 %1$lld"
           }
         }
       }

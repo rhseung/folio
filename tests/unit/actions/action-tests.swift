@@ -128,13 +128,12 @@ struct ActionTests {
         let unit = UUID(), exam = UUID()
         try run(UnitAdd(id: unit, course: Self.graphTheory, title: "매칭"))
         try run(ExamAdd(id: exam, course: Self.graphTheory, title: "기말고사"))
-        let made = ExamPlanItem(day: ymd("2026-12-01"), target: .unit(unit))
-        let own = ExamPlanItem(day: ymd("2026-12-01"), target: .init(kind: .custom), title: "필기 정리")
+        let made = ExamPlanItem(day: ymd("2026-12-01"), target: .makeNote(unit))
+        let own = ExamPlanItem(day: ymd("2026-12-01"), target: .custom, title: "필기 정리")
         try ActionContext(gist: gist, device: device).edit(Self.graphTheory) { f in
             try f.update(\.exams, exam) { $0.plan = [made, own] }
         }
-        try run(ExamPlanRemove(course: Self.graphTheory, exam: exam, item: made.id))
-        try run(ExamPlanRemove(course: Self.graphTheory, exam: exam, item: own.id))
+        try run(ExamPlanRemove(course: Self.graphTheory, exam: exam, items: [made.id, own.id]))
         let plan = try #require(try file().exams.first { $0.id == exam }?.plan)
         #expect(plan.map(\.id) == [made.id] && plan.first?.removed == true)
     }

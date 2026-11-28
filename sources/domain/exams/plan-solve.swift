@@ -1,27 +1,23 @@
 import FolioCore
 import Foundation
 
-// 계획 항목에서 바로 여는 풀기다(#576, #577, #578). 항목마다 어떤 문제를 어떤 방식으로 푸는지는 여기서만 정한다.
+// 계획의 줄에서 바로 여는 풀기다. 줄마다 어떤 문제를 어떤 방식으로 푸는지는 여기서만 정한다.
 public struct PlanSolve: Sendable, Equatable {
     public var problems: [UUID]
     public var mode: SolveMode
     public var shuffled: Bool
     public var minutes: Int?
-    // 오답 항목에 남은 오답 문제는 없고 모른 카드만 있으면 카드를 넘긴다. 넘기는 덱은 시험 범위 단원의 카드다.
-    public var cardScope: [UUID]?
-    public var cards: Bool { cardScope != nil }
 
-    public init(problems: [UUID], mode: SolveMode = .typing, shuffled: Bool = false, minutes: Int? = nil, cardScope: [UUID]? = nil) {
+    public init(problems: [UUID], mode: SolveMode = .typing, shuffled: Bool = false, minutes: Int? = nil) {
         self.problems = problems
         self.mode = mode
         self.shuffled = shuffled
         self.minutes = minutes
-        self.cardScope = cardScope
     }
 }
 
 extension CourseStudy {
-    // 시험 정보에 시작과 끝이 있으면 그 시간이 모의시험의 제한 시간이고, 없으면 설정의 기본값이다.
+    // 시험 정보에 시작과 끝이 있으면 그 시간이 모의고사의 제한 시간이고, 없으면 설정의 기본값이다.
     public func mockMinutes(for exam: Exam?) -> Int {
         if let start = exam?.start, let end = exam?.end, end > start { return max(1, Int((end.timeIntervalSince(start) / 60).rounded())) }
         return max(1, settings.mockMinutes)
@@ -32,33 +28,19 @@ extension CourseStudy {
         return allProblems.filter { !scope.isDisjoint(with: $0.problem.unitIds) }
     }
 
-    // 단원 항목과 사용자가 쓴 할 일은 풀기가 아니므로 nil이다. 풀 문제가 없어도 nil이다.
-    public func solve(_ item: ExamPlanItem, in exam: Exam, seed: UInt64) -> PlanSolve? {
-        switch item.target.kind {
-        case .unit, .custom:
-            return nil
-        case .problems:
-            let records = item.target.problemIds.map { $0.compactMap { problems[$0] } } ?? item.target.id.map(problems(inSet:)) ?? []
-            return records.isEmpty
-                ? nil : PlanSolve(problems: records.map(\.problem.id), mode: .fitting(nil, formats: records.map(\.problem.format)))
-        case .mixed:
-            var rng = SeededGenerator(seed: seed)
-            let records = scopeProblems(of: exam).shuffled(using: &rng)
-            return records.isEmpty
-                ? nil
-                : PlanSolve(
-                    problems: records.map(\.problem.id), mode: .fitting(nil, formats: records.map(\.problem.format)), shuffled: true)
+    // 모의고사 줄과 어제 오답 줄만 풀기를 연다. 풀 문제가 없으면 nil이다.
+    public func solve(_ row: PlanRow, seed: UInt64) -> PlanSolve? {
+        switch row.kind {
+        case .wrong:
+            let wrong = allProblems.filter(\.status.needsWork)
+            return wrong.isEmpty
+                ? nil : PlanSolve(problems: wrong.map(\.problem.id), mode: .fitting(nil, formats: wrong.map(\.problem.format)))
         case .mock:
+            guard let exam = file.exams.first(where: { $0.id == row.examId }) else { return nil }
             let ids = mockProblems(for: exam, seed: seed)
             return ids.isEmpty ? nil : PlanSolve(problems: ids, mode: .mock, shuffled: true, minutes: mockMinutes(for: exam))
-        case .wrong:
-            let wrong = scopeProblems(of: exam).filter(\.status.needsWork)
-            if !wrong.isEmpty {
-                return PlanSolve(problems: wrong.map(\.problem.id), mode: .fitting(nil, formats: wrong.map(\.problem.format)))
-            }
-            let scope = file.scope(of: exam)
-            return allCards.contains { $0.status.needsWork && scope.contains($0.card.unitId) }
-                ? PlanSolve(problems: [], cardScope: scope) : nil
+        case .makeNote, .note, .custom:
+            return nil
         }
     }
 

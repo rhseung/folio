@@ -35,18 +35,6 @@ final class UnitsModel {
         var missing: Int
     }
 
-    struct PlanRow: Identifiable {
-        var item: ExamPlanItem
-        var day: String
-        var isToday: Bool
-        var isPast: Bool
-        var done: Bool
-        var title: String
-        var detail: String
-        var solve: PlanSolve?
-        var id: UUID { item.id }
-    }
-
     // "그 밖의 단원"의 소제목 하나다. 지난 시험마다, 시험에 없는 단원, 아직 안 배운 단원의 차례다.
     struct UnitSection: Identifiable {
         // 지난 시험의 제목은 서로 달라야 하지 않으므로 소제목 문구가 아니라 묶음 종류로 가린다.
@@ -59,13 +47,10 @@ final class UnitsModel {
     let workspace: Workspace
     let courseId: UUID
     var newTitle = ""
-    var planOpen = false
     var otherOpen = false
     var openUnit: UUID?
     var pending: PendingAction?
     var name = ""
-    // 섞어 풀기와 모의시험의 순서를 정하는 씨앗이다. 다시 그려도 같은 순서로 연다.
-    private let seed = UInt64.random(in: 1...UInt64.max)
     private(set) var notes: [NoteFile] = []
     private(set) var noteCounts: [UUID: Int] = [:]
     private(set) var changedCards: Set<UUID> = []
@@ -171,70 +156,6 @@ final class UnitsModel {
 
     func toggleDone(_ unit: FolioDomain.Unit) {
         workspace.run(UnitDone(course: courseId, unit: unit.id, done: !unit.isDone))
-    }
-
-    // MARK: Plan
-
-    // 접혀 있으면 오늘부터 설정한 날 수의 항목만 낸다. `folded`는 접힌 항목 수다.
-    func planRows(_ exam: Exam) -> (rows: [PlanRow], folded: Int) {
-        guard let study else { return ([], 0) }
-        let window = exam.planWindow(today: today, days: workspace.settings.study.planShownDays)
-        let items = planOpen ? (window.shown + window.folded).sorted { ($0.day, $0.title) < ($1.day, $1.title) } : window.shown
-        let rows = items.enumerated().map { i, item in
-            let first = i == 0 || items[i - 1].day != item.day
-            return PlanRow(
-                item: item, day: first ? dayLabel(item.day) : "", isToday: item.day == today, isPast: item.day < today,
-                done: study.isDone(item, in: exam), title: study.file.title(of: item), detail: planDetail(item, in: exam, study: study),
-                solve: study.solve(item, in: exam, seed: seed))
-        }
-        return (rows, window.folded.count)
-    }
-
-    func planToggleLabel(folded: Int) -> String {
-        planOpen ? String(localized: .commonCollapse) : String(localized: .unitsPlanMore(folded))
-    }
-
-    func planNote(_ exam: Exam) -> String {
-        guard let start = exam.start else { return "" }
-        let days = String(localized: .unitsPlanDays(exam.title, max(workspace.days(to: start), 0)))
-        return exam.planDay == today ? days + " · " + String(localized: .unitsPlanToday) : days
-    }
-
-    private func dayLabel(_ day: LocalDate) -> String {
-        if day == today { return String(localized: .commonToday) }
-        return day.date(in: workspace.calendar)?.formatted(.dateTime.month(.defaultDigits).day().weekday()) ?? day.description
-    }
-
-    private func planDetail(_ item: ExamPlanItem, in exam: Exam, study: CourseStudy) -> String {
-        let carried = item.isCarried ? [String(localized: .unitsPlanCarried)] : []
-        return (carried + planParts(item, in: exam, study: study)).joined(separator: " · ")
-    }
-
-    private func planParts(_ item: ExamPlanItem, in exam: Exam, study: CourseStudy) -> [String] {
-        switch item.target.kind {
-        case .unit:
-            let units = item.target.units.compactMap { id in study.file.units.first { $0.id == id } }
-            guard !units.isEmpty else { return [] }
-            let progress = units.map { study.progress(of: $0, notes: noteCounts[$0.id] ?? 0) }
-            let (solved, total) = (progress.map(\.problemsSolved).reduce(0, +), progress.map(\.problemsTotal).reduce(0, +))
-            var parts = [String(localized: .unitsLineProblems(solved, total))]
-            if let pages = item.pages, !pages.isEmpty { parts.append(String(localized: .unitsPlanConceptPages(pages.count))) }
-            return parts
-        case .problems:
-            let records =
-                item.target.problemIds.map { $0.compactMap { study.problems[$0] } } ?? item.target.id.map(study.problems(inSet:)) ?? []
-            return [String(localized: .unitsLineProblems(records.filter(\.solved).count, records.count))]
-        case .wrong:
-            let left = study.wrongLeft(in: exam)
-            if left.problems == 0 && left.cards == 0 { return [String(localized: .unitsPlanNothingLeft)] }
-            return [String(localized: .unitsPlanWrong(left.problems, left.cards))]
-        case .mixed, .mock, .custom:
-            return []
-        }
-    }
-
-    func togglePlan(_ row: PlanRow) {
-        workspace.setPlanItem(row.item.id, done: !row.done, course: courseId)
     }
 
     var canAdd: Bool { workspace.can(UnitAdd(course: courseId, title: newTitle)) }

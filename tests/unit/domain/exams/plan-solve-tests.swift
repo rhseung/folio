@@ -31,60 +31,52 @@ struct PlanSolveTests {
         return Fixture(file: file, exam: exam, past: past, exercise: exercise, scoped: scoped)
     }
 
-    func study(_ f: Fixture, log: StudyLog = StudyLog(), cards: [StudyCard] = []) -> CourseStudy {
-        CourseStudy(file: f.file, cards: cards, log: log, settings: Settings(), calendar: Calendar(identifier: .gregorian), now: at)
+    func study(_ f: Fixture, log: StudyLog = StudyLog()) -> CourseStudy {
+        CourseStudy(file: f.file, cards: [], log: log, settings: Settings(), calendar: Calendar(identifier: .gregorian), now: at)
     }
 
-    func item(_ kind: ExamPlanTarget.Kind) -> ExamPlanItem {
-        ExamPlanItem(day: ymd("2026-11-20"), target: ExamPlanTarget(kind: kind))
+    func row(_ kind: PlanRow.Kind, _ f: Fixture) -> PlanRow {
+        PlanRow(
+            id: "row", courseId: f.file.course.id, examId: f.exam.id, kind: kind, title: "", subject: nil,
+            day: LocalDate(at, in: Calendar(identifier: .gregorian)), lateFrom: nil, steps: [])
     }
 
     @Test func aMockIsOnePastExamSetWithTheExamsTime() throws {
         let f = fixture(end: at.addingTimeInterval(75 * 60))
-        let solve = try #require(study(f).solve(item(.mock), in: f.exam, seed: 1))
+        let solve = try #require(study(f).solve(row(.mock, f), seed: 1))
         #expect(solve.mode == .mock && solve.minutes == 75)
         #expect(solve.problems == f.past.problems.map(\.id))
+        #expect(study(f).mockSets == 1)
     }
 
     @Test func withoutAPastExamTheMockMixesScopeProblemsAndUsesTheSetting() throws {
         let f = fixture(pastExam: false)
         let s = study(f)
-        let solve = try #require(s.solve(item(.mock), in: f.exam, seed: 1))
+        let solve = try #require(s.solve(row(.mock, f), seed: 1))
         #expect(solve.minutes == Settings().study.mockMinutes)
         let scope = Set(s.scopeProblems(of: f.exam).map(\.problem.id))
         #expect(Set(solve.problems) == scope && solve.problems.count == 5)
+        #expect(s.mockSets == 0)
     }
 
-    @Test func mixedShufflesOnlyScopeProblems() throws {
+    @Test func yesterdaysWrongAnswersOpenEveryWrongProblemOfTheCourse() throws {
         let f = fixture()
-        let solve = try #require(study(f).solve(item(.mixed), in: f.exam, seed: 7))
-        // 범위의 문제가 서술형이라 문제집 PDF로 손으로 푼다.
-        #expect(solve.shuffled && solve.mode == .handwriting)
-        #expect(!solve.problems.contains(f.past.problems[1].id) && solve.problems.count == 5)
+        // 범위 밖 단원의 오답도 과목의 오답이다.
+        let solves = [
+            (at, ProblemSolveEvent(setId: f.exercise.id, problemId: f.exercise.problems[0].id, verdict: .wrong, basis: .key)),
+            (at, ProblemSolveEvent(setId: f.past.id, problemId: f.past.problems[1].id, verdict: .partial, basis: .solution)),
+        ]
+        let s = study(f, log: StudyLog(solves: solves))
+        let wrong = try #require(s.wrongRow)
+        #expect(wrong.kind == .wrong(PlanProgress(done: 0, total: 2)) && !wrong.isDone)
+        #expect(s.solve(wrong, seed: 1)?.problems == [f.past.problems[1].id, f.exercise.problems[0].id])
+        #expect(study(f).wrongRow == nil)
     }
 
-    @Test func wrongOpensWrongProblemsThenCards() throws {
+    @Test func notesAndWrittenTasksAreNotSolves() {
         let f = fixture()
-        let solves = [(at, ProblemSolveEvent(setId: f.exercise.id, problemId: f.exercise.problems[0].id, verdict: .wrong, basis: .key))]
-        let wrong = try #require(study(f, log: StudyLog(solves: solves)).solve(item(.wrong), in: f.exam, seed: 1))
-        #expect(wrong.problems == [f.exercise.problems[0].id] && !wrong.cards)
-
-        let card = StudyCard(device: device, at: at, unitId: f.scoped.id, front: "매칭", back: "공통 끝점이 없는 변의 집합")
-        let flips = [(at, CardFlipEvent(cardId: card.id, known: false))]
-        let cards = try #require(study(f, log: StudyLog(flips: flips), cards: [card]).solve(item(.wrong), in: f.exam, seed: 1))
-        #expect(cards.problems.isEmpty && cards.cardScope == [f.scoped.id])
-        #expect(study(f).solve(item(.wrong), in: f.exam, seed: 1) == nil)
+        #expect(study(f).solve(row(.note(UUID()), f), seed: 1) == nil)
+        #expect(study(f).solve(row(.makeNote(unit: f.scoped.id), f), seed: 1) == nil)
+        #expect(study(f).solve(row(.custom, f), seed: 1) == nil)
     }
-
-    @Test func unitsAndCustomItemsAreNotSolves() {
-        let f = fixture()
-        let unit = ExamPlanItem(day: ymd("2026-11-20"), target: .unit(f.scoped.id))
-        #expect(study(f).solve(unit, in: f.exam, seed: 1) == nil)
-        #expect(study(f).solve(item(.custom), in: f.exam, seed: 1) == nil)
-    }
-}
-
-private func ymd(_ text: String) -> LocalDate {
-    guard let day = LocalDate(text) else { preconditionFailure(text) }
-    return day
 }

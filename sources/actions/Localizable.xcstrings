@@ -1750,17 +1750,6 @@
         }
       }
     },
-    "today.plan-done": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": " · 완료"
-          }
-        }
-      }
-    },
     "today.attendance-warning": {
       "extractionState": "manual",
       "localizations": {
@@ -1877,7 +1866,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "시험 일시가 없어 계획을 짤 수 없습니다. 먼저 folio exam set으로 시작 일시를 넣으세요"
+            "value": "시험 일시가 없어 계획을 놓을 수 없습니다. 먼저 folio exam set으로 시작 일시를 넣으세요"
           }
         }
       }
@@ -1955,6 +1944,72 @@
           "stringUnit": {
             "state": "translated",
             "value": "고른 문제가 없어서 문제집을 만들지 않았습니다"
+          }
+        }
+      }
+    },
+    "error.plan-period-order": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "공부 기간의 시작일이 끝낼 날보다 늦습니다"
+          }
+        }
+      }
+    },
+    "error.plan-period-past-exam": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "끝낼 날은 시험 전날까지입니다"
+          }
+        }
+      }
+    },
+    "error.plan-postpone-past-exam": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험 전날 뒤로는 미룰 수 없습니다"
+          }
+        }
+      }
+    },
+    "error.plan-advance-not-later": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘보다 뒤에 있는 항목만 앞당길 수 있습니다"
+          }
+        }
+      }
+    },
+    "today.plan-late": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "밀림"
+          }
+        }
+      }
+    },
+    "today.plan-step-done": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@(끝냄)"
           }
         }
       }

@@ -7,17 +7,15 @@ import Foundation
 
 extension GeneratedCommands {
     struct ExamPlanAdd: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "add", abstract: "공부 계획에 날짜별 할 일 추가", discussion: """
+        static let configuration = CommandConfiguration(commandName: "add", abstract: "공부 계획에 직접 쓴 할 일을 날짜에 추가", discussion: """
             예시:
-              folio exam plan add EC4207/중간고사 --day 2026-10-18 \"트리 단원 복습\"
+              folio exam plan add EC4207/기말고사 --day 2026-12-05 \"족보 한 번 더 풀기\"
             """)
         @OptionGroup var g: GlobalOptions
         @Option(name: .customLong("id"), help: .hidden) var id: UUID?
         @Argument(help: ArgumentHelp("<과목>/<시험>", valueName: "exam"), completion: Complete.ref(.exam)) var exam: String
         @Argument(help: "할 일") var title: String
-        @Option(help: ArgumentHelp("날짜. 2026-10-18", valueName: "date")) var day: LocalDate
-        @Option(help: ArgumentHelp("이 단원을 공부하는 일", valueName: "unit"), completion: Complete.ref(.unit)) var unit: String?
-        @Option(help: ArgumentHelp("이 문제 묶음을 푸는 일", valueName: "set"), completion: Complete.ref(.problemSet)) var set: String?
+        @Option(help: ArgumentHelp("날짜. 2026-12-03", valueName: "date")) var day: LocalDate
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -28,9 +26,7 @@ extension GeneratedCommands {
                 course: c.id,
                 exam: try r.id(.exam, examName, in: c),
                 title: title,
-                day: day,
-                unit: try unit.map { try r.id(.unit, $0, in: c) },
-                set: try set.map { try r.id(.problemSet, $0, in: c) }
+                day: day
             )
             try perform(spec: action, g, ctx: ctx)
         }

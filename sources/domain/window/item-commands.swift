@@ -10,10 +10,6 @@ extension CourseFile {
     }
 }
 
-extension ExamPlanItem {
-    public static func commands(done: Bool) -> [PlanItemMenuCommand] { [.done(done), .remove] }
-}
-
 extension CourseFile {
     public func commands(for assignment: Assignment, host: MenuHost, revealable: Bool) -> [AssignmentMenuCommand] {
         var commands: [AssignmentMenuCommand] = host.opensItem ? [.open] : []

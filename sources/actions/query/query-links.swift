@@ -42,4 +42,18 @@ extension QueryLinks where Item == Exam {
     public init(_ exam: Exam, in file: CourseFile) {
         self.init(item: exam, links: [("scopeUnitIds", file.scope(of: exam))])  // strings: data, 예전 JSON 키
     }
+
+    // 계획 항목의 완료는 과목 문서가 아니라 기기별 로그에 있어서 시험 하나를 읽을 때 함께 싣는다.
+    public init(_ exam: Exam, in study: CourseStudy) {
+        self.init(
+            item: exam,
+            links: [
+                ("scopeUnitIds", study.file.scope(of: exam)),  // strings: data, 예전 JSON 키
+                (Self.planDoneKey, exam.plan.filter(study.isDone).map(\.id)),
+            ])
+    }
+
+    public static var planDoneKey: String { "planDoneIds" }  // strings: data, JSON 키
+
+    public var planDone: Set<UUID> { Set(links.first { $0.key == Self.planDoneKey }?.ids ?? []) }
 }

@@ -7,7 +7,7 @@ import Foundation
 
 extension GeneratedCommands {
     struct ProblemSetRemove: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "rm", abstract: "문제 묶음 지우기. 앱이 짠 이 묶음의 계획 항목은 지워지고 직접 쓴 항목은 대상 없이 남는다. 문제 파일과 풀이 기록은 남는다", discussion: """
+        static let configuration = CommandConfiguration(commandName: "rm", abstract: "문제 묶음 지우기. 문제 파일과 풀이 기록은 남는다", discussion: """
             실행하기 전에 확인을 받는다.
 
             예시:

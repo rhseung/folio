@@ -48,7 +48,7 @@ struct UnitsView: View {
             PageHeader(title: String(localized: .unitsTitle), subtitle: model.subtitle(file)) { EmptyView() }
             if let exam, let card = model.examCard(exam) { examCard(card) }
             if !unlinked.isEmpty { unlinkedCard(unlinked) }
-            if let exam, !exam.plan.isEmpty { planBlock(exam) }
+            PlanBlock(workspace: model.workspace, scope: .course(course.id))
             if let exam {
                 Block(String(localized: .unitsScope(exam.title)), note: "\(rows.scope.count)") { unitCard(rows.scope) }
                 if !rows.rest.isEmpty { otherBlock(exam, rest: rows.rest) }
@@ -94,45 +94,6 @@ struct UnitsView: View {
                         sheets.present(.makeProblems(course: course.id, units: few.units, count: few.missing))
                     }
                     .buttonStyle(.secondary)
-                }
-            }
-        }
-    }
-
-    func planBlock(_ exam: Exam) -> some View {
-        let plan = model.planRows(exam)
-        let rows = plan.rows
-        return Block(
-            title: String(localized: .unitsPlan), note: model.planNote(exam)
-        ) {
-            Button(.unitsPlanEdit) { openLink(.course(course.id, page: .exams), course: course.id) }.buttonStyle(.ghost)
-        } content: {
-            Card {
-                ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
-                    CardRow(last: i == rows.count - 1 && plan.folded == 0) {
-                        Text(row.day)
-                            .font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit()
-                            .foregroundStyle(row.isToday ? Theme.Palette.text : Theme.Palette.textSecondary)
-                            .frame(width: Theme.Size.pagesColumn, alignment: .leading)
-                        Checkbox(isOn: row.done) { model.togglePlan(row) }
-                            .help(Text(row.done ? .examsPlanUndo : .examsPlanCheck))
-                        VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                            StudyText(text: row.title, look: .title).lineLimit(1).strikethrough(row.done, color: Theme.Palette.textTertiary)
-                                .foregroundStyle(row.done ? Theme.Palette.textTertiary : Theme.Palette.text)
-                            if !row.detail.isEmpty {
-                                Text(row.detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
-                            }
-                        }
-                        Spacer(minLength: 0)
-                        if let solve = row.solve, !row.done { PlanSolveButton(course: course.id, item: row.item.id, solve: solve) }
-                    }
-                    .contentShape(.rect)
-                    .contextMenu {
-                        PlanItemMenu(courseId: course.id, examId: exam.id, item: row.item.id, done: row.done) { model.togglePlan(row) }
-                    }
-                }
-                if plan.folded > 0 {
-                    foldRow(model.planToggleLabel(folded: plan.folded), open: model.planOpen) { model.planOpen.toggle() }
                 }
             }
         }

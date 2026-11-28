@@ -2,12 +2,6 @@ import FolioCore
 import Foundation
 
 public enum ExamPlan {
-    public struct DayItem: Sendable, Equatable {
-        public var courseId: UUID
-        public var exam: Exam
-        public var item: ExamPlanItem
-    }
-
     // 이벤트는 여러 기기의 로그에서 순서 없이 들어온다.
     public static func done(_ events: [(at: Date, event: PlanCheckEvent)]) -> Set<UUID> {
         var latest: [UUID: (at: Date, done: Bool)] = [:]
@@ -17,117 +11,177 @@ public enum ExamPlan {
         return Set(latest.filter(\.value.done).keys)
     }
 
-    public static func items(on day: LocalDate, courses: [CourseFile]) -> [DayItem] {
-        courses.flatMap { file in
-            file.exams.flatMap { exam in
-                exam.plan.filter { $0.day == day && !$0.isRemoved }.map { DayItem(courseId: file.course.id, exam: exam, item: $0) }
-            }
+    // 계획을 놓은 결과다. 액션이 시험에 그대로 쓴다.
+    public struct Placement: Sendable, Equatable {
+        public var plan: [ExamPlanItem]
+        public var period: ExamPlanPeriod
+        public var basis: ExamPlanBasis
+    }
+}
+
+extension Exam {
+    // 미루기는 그 항목만 다음 공부일로 옮긴다. 뒤 항목까지 밀면 시험 전에 끝나지 않으므로 다른 항목의 날은 바꾸지 않는다.
+    // 못 하고 지난 항목은 오늘에 얹혀 있으므로 오늘의 다음 날로 간다.
+    public static func postponedDay(of item: ExamPlanItem, today: LocalDate) -> LocalDate { max(item.day, today).adding(days: 1) }
+
+    public mutating func postponePlan(_ items: [UUID], today: LocalDate) {
+        for i in plan.indices where items.contains(plan[i].id) {
+            plan[i].postponedFrom = plan[i].postponedFrom ?? plan[i].day
+            plan[i].day = Self.postponedDay(of: plan[i], today: today)
+            plan[i].edited = true
         }
-        .sorted { ($0.exam.start ?? .distantFuture) < ($1.exam.start ?? .distantFuture) }
+    }
+
+    // 앞당기기는 뒤 날의 항목을 오늘로 가져온다. 미뤘던 항목이 원래 날이나 그 앞으로 돌아오면 밀린 것이 아니다.
+    public mutating func advancePlan(_ items: [UUID], today: LocalDate) {
+        for i in plan.indices where items.contains(plan[i].id) && plan[i].day > today {
+            plan[i].day = today
+            plan[i].edited = true
+            if let from = plan[i].postponedFrom, today <= from { plan[i].postponedFrom = nil }
+        }
+    }
+
+    // 날짜를 직접 고른 항목은 그 날이 제날이다.
+    public mutating func movePlan(_ items: [UUID], to day: LocalDate) {
+        for i in plan.indices where items.contains(plan[i].id) {
+            plan[i].day = day
+            plan[i].edited = true
+            plan[i].postponedFrom = nil
+        }
     }
 }
 
 extension CourseStudy {
-    // 항목은 저절로 체크된다. 손으로 체크한 것도 체크다. 섞어 풀기와 모의시험은 그 풀기를 끝낼 때 체크 기록을 남긴다.
-    public func isDone(_ item: ExamPlanItem, in exam: Exam) -> Bool {
-        if manualChecks.contains(item.id) { return true }
-        switch item.target.kind {
-        case .unit:
-            // 묶음 항목은 안의 단원이 모두 다 함이어야 체크된다.
-            let units = item.target.units.compactMap { id in file.units.first { $0.id == id } }
-            return !units.isEmpty && units.allSatisfy(\.isDone)
-        case .problems:
-            let records =
-                item.target.problemIds.map { ids in ids.compactMap { problems[$0] } }
-                ?? item.target.id.map { problems(inSet: $0) } ?? []
-            return !records.isEmpty && records.allSatisfy(\.solved)
-        case .wrong:
-            // 남은 오답이 없다는 것은 그날까지 바뀔 수 있는 상태라, 오지 않은 날의 항목은 저절로 체크하지 않는다.
-            guard item.day <= today else { return false }
-            let left = wrongLeft(in: exam)
-            return left.problems == 0 && left.cards == 0
-        case .mixed, .mock, .custom:
-            return false
-        }
+    // 계획의 진행을 정하는 한 곳이다. 지금은 손으로 한 체크와 풀기를 끝내며 남긴 체크뿐이라, 체크한 항목은 전체를 끝낸 것이고
+    // 아니면 한 것이 없다.
+    public func progress(of item: ExamPlanItem) -> PlanProgress {
+        PlanProgress(done: manualChecks.contains(item.id) ? 1 : 0, total: 1)
     }
 
-    // 시험 범위에 남은 오답 문제와 모르는 카드 수다. 오답 항목의 체크와 화면의 세부 줄이 같은 수를 쓴다.
-    public func wrongLeft(in exam: Exam) -> (problems: Int, cards: Int) {
-        let scope = Set(file.scope(of: exam))
-        return (
-            allProblems.filter { $0.status.needsWork && !scope.isDisjoint(with: $0.problem.unitIds) }.count,
-            allCards.filter { $0.status.needsWork && scope.contains($0.card.unitId) }.count
-        )
-    }
+    // 어제 오답의 진행이다. 다시 맞힌 수는 아직 세지 않아, 남은 오답이 전체이고 한 것은 없다.
+    public var wrongProgress: PlanProgress { PlanProgress(done: 0, total: wrongLeft) }
 
-    // 부모와 자식이 함께 범위에 있으면 자식만 넣는다. 부모 단원을 공부하는 일은 자식 단원을 공부하는 일이라, 둘을 따로 넣으면 같은 내용이
-    // 계획에 두 번 나온다. 범위는 그대로 둔다.
-    public func planInputs(for exam: Exam) -> [ExamPlanner.UnitInput] {
-        UnitTree.deepest(file.scopeUnits(of: exam), in: file.units).map { u in
-            let r = readiness(of: u.id)
-            return ExamPlanner.UnitInput(id: u.id, weight: r.planWeight, pages: r.conceptPages)
-        }
-    }
+    public func isDone(_ item: ExamPlanItem) -> Bool { progress(of: item).isDone }
 
-    public func replan(_ exam: Exam, calendar: Calendar, settings: Settings) -> [ExamPlanItem]? {
+    // 과목에 남은 오답 문제 수다.
+    public var wrongLeft: Int { allProblems.count { $0.status.needsWork } }
+
+    // 모의고사는 족보 한 벌이므로 족보 묶음 수까지만 놓는다.
+    public var mockSets: Int { file.problemSets.count { $0.source == .pastExam && !$0.problems.isEmpty } }
+
+    // 기간을 주지 않으면 시험에 저장한 기간이고, 그것도 없으면 오늘부터 시험 전날까지다. 날짜가 없는 시험은 놓지 않는다.
+    public func place(
+        _ exam: Exam, period: ExamPlanPeriod? = nil, proofs: Set<UUID>, settings: Settings, calendar: Calendar
+    ) -> ExamPlan.Placement? {
         guard let start = exam.start else { return nil }
         let examDay = settings.studyDay(of: start, calendar: calendar)
-        return ExamPlanner.plan(
-            current: exam.plan, units: planInputs(for: exam), today: today, examDay: examDay, finalDays: self.settings.finalDays,
-            dayItems: self.settings.planDayItems, isDone: { isDone($0, in: exam) })
+        let period = (period ?? exam.planPeriod ?? .standard(today: today, examDay: examDay)).fitted(before: examDay)
+        let notes = file.planNotes(of: exam, proofs: proofs)
+        let plan = ExamPlanner.plan(
+            current: exam.plan, notes: notes, period: period, mocks: mockSets, today: today, examDay: examDay, isDone: isDone)
+        return ExamPlan.Placement(plan: plan, period: period, basis: ExamPlanBasis(period: period, notes: notes, examDay: examDay))
+    }
+
+    // 시험 하나의 줄이다. 같은 노트의 같은 날 단계가 한 줄이고, 못 하고 지난 단계는 오늘 줄에 얹힌다.
+    public func planRows(of exam: Exam) -> [PlanRow] {
+        struct Key: Hashable {
+            var target: UUID
+            var day: LocalDate
+        }
+        let order = Dictionary(file.examNotes(of: exam).enumerated().map { ($1.id, $0) }, uniquingKeysWith: { a, _ in a })
+        var rows: [Key: PlanRow] = [:]
+        var keys: [Key] = []
+        for item in exam.plan where !item.isRemoved {
+            let progress = progress(of: item)
+            let done = progress.isDone
+            let day = item.shownDay(today: today, done: done)
+            // 노트의 단계는 노트로 묶고, 그 밖의 항목은 항목마다 한 줄이다.
+            let key = Key(target: item.target.kind == .note ? item.target.id ?? item.id : item.id, day: day)
+            let step = PlanRow.Step(item: item.id, stage: item.target.stage, progress: progress)
+            let late = item.lateFrom(today: today, done: done)
+            if var row = rows[key] {
+                row.steps.append(step)
+                row.lateFrom = [row.lateFrom, late].compactMap { $0 }.min()
+                rows[key] = row
+                continue
+            }
+            let kind: PlanRow.Kind =
+                switch item.target.kind {
+                case .note: .note(item.target.id ?? item.id)
+                case .makeNote: .makeNote(unit: item.target.id ?? item.id)
+                case .mock: .mock
+                case .custom: .custom
+                }
+            let unit = item.target.kind == .makeNote ? item.target.id.flatMap { id in file.units.first { $0.id == id } } : nil
+            rows[key] = PlanRow(
+                id: "\(exam.id)-\(key.target)-\(day)", courseId: file.course.id, examId: exam.id, kind: kind, title: rowTitle(of: item),
+                subject: unit?.title, day: day, lateFrom: late, steps: [step])
+            keys.append(key)
+        }
+        func position(_ row: PlanRow) -> Int { if case .note(let id) = row.kind { order[id] ?? Int.max } else { 0 } }
+        return keys.compactMap { rows[$0] }.map { row in
+            var row = row
+            row.steps.sort { ($0.stage ?? .read) < ($1.stage ?? .read) }
+            return row
+        }
+        .enumerated().sorted { a, b in
+            (a.element.day, a.element.kind.rank, position(a.element), a.offset) < (
+                b.element.day, b.element.kind.rank, position(b.element), b.offset
+            )
+        }
+        .map(\.element)
+    }
+
+    private func rowTitle(of item: ExamPlanItem) -> String {
+        switch item.target.kind {
+        case .note: item.target.id.flatMap { id in file.notes.first { $0.id == id } }?.title ?? String(localized: .examPlanTitleNote)
+        case .makeNote: String(localized: .examPlanTitleMakeNote)
+        case .mock, .custom: file.title(of: item)
+        }
+    }
+
+    // 남은 오답이 있으면 오늘의 맨 앞 줄이다. 틀린 문제는 다음 공부일의 맨 앞에 해설 없이 다시 푼다.
+    public var wrongRow: PlanRow? {
+        let progress = wrongProgress
+        guard progress.left > 0 else { return nil }
+        return PlanRow(
+            id: "wrong-\(file.course.id)", courseId: file.course.id, examId: nil, kind: .wrong(progress),
+            title: String(localized: .examPlanTitleWrong), subject: nil, day: today, lateFrom: nil, steps: [])
+    }
+
+    // 지난 시험의 못 한 항목은 계획에서 뺀다. 시험이 끝나면 밀린 것이 아니라 끝난 것이다.
+    public func plannedExams(now: Date, calendar: Calendar) -> [Exam] {
+        file.exams.filter { !$0.plan.isEmpty && !$0.isOver(now: now, today: today, calendar: calendar) }
+            .sorted { ($0.start ?? .distantFuture) < ($1.start ?? .distantFuture) }
+    }
+
+    // 시험이 여럿이면 가까운 시험의 줄이 앞에 오고, 오늘의 줄은 종류로 다시 줄 세운다.
+    public func planBoard(_ exams: [Exam]) -> PlanBoard {
+        let rows = exams.flatMap(planRows(of:))
+        let days = Set(rows.map(\.day).filter { $0 > today }).sorted()
+        return PlanBoard.merged([
+            PlanBoard(
+                today: (wrongRow.map { [$0] } ?? []) + rows.filter { $0.day == today },
+                next: days.map { day in PlanBoard.Day(day: day, rows: rows.filter { $0.day == day }) })
+        ])
     }
 }
 
 extension CourseFile {
-    // 단원이나 문제 묶음을 지우면 그것을 가리키는 계획 항목도 지워진다(`course-rules.swift`의 `.cascade`). 사용자가 쓴
-    // 항목은 할 일의 글을 잃지 않도록 지우기 전에 대상 없는 항목으로 바꿔 남긴다.
-    public mutating func keepWrittenPlanItems(pointingTo target: UUID) {
-        for e in exams.indices {
-            for i in exams[e].plan.indices {
-                let item = exams[e].plan[i]
-                guard item.isEdited, !item.isRemoved, item.target.id == target,
-                    item.target.kind == .unit || item.target.kind == .problems
-                else { continue }
-                exams[e].plan[i].title = title(of: item)
-                exams[e].plan[i].target = ExamPlanTarget(kind: .custom)
-            }
-        }
-    }
-
-    // 앱이 짠 항목은 제목을 저장하지 않고 대상에서 이름을 만든다. 단원 이름을 바꾸면 계획에도 바로 보이게 하기 위해서다.
+    // 앱이 놓은 항목은 제목을 저장하지 않고 대상에서 이름을 만든다. 노트 이름을 바꾸면 계획에도 바로 보인다.
     public func title(of item: ExamPlanItem) -> String {
         if !item.title.isEmpty { return item.title }
         switch item.target.kind {
-        case .unit:
-            return unitsTitle(item.target.units)
-        case .problems:
-            let set = item.target.id.flatMap { id in problemSets.first { $0.id == id } }
-            let count = item.target.problemIds?.count
-            switch (set, count) {
-            case (let s?, let n?): return String(localized: .examPlanTitleSomeProblems(s.title, n))
-            case (let s?, nil): return s.title
-            default: return String(localized: .examPlanTitleProblems)
+        case .note:
+            let name = item.target.id.flatMap { id in notes.first { $0.id == id } }?.title ?? String(localized: .examPlanTitleNote)
+            return item.target.stage.map { String(localized: .examPlanTitleStage(name, $0.label)) } ?? name
+        case .makeNote:
+            guard let unit = item.target.id.flatMap({ id in units.first { $0.id == id } }) else {
+                return String(localized: .examPlanTitleMakeNote)
             }
-        case .mixed: return String(localized: .examPlanTitleMixed)
+            return String(localized: .examPlanTitleMakeNoteFor(unit.title))
         case .mock: return String(localized: .examPlanTitleMock)
-        case .wrong: return String(localized: .examPlanTitleWrong)
         case .custom: return item.title
         }
-    }
-
-    // 묶음 항목은 단원 이름을 모두 이으면 무엇을 하는 날인지 읽히지 않는다. 한 부모의 단원이면 부모 이름으로, 아니면 첫 단원과 나머지
-    // 개수로 부른다. 둘까지는 이어도 짧으므로 잇는다.
-    func unitsTitle(_ ids: [UUID]) -> String {
-        let bundled = ids.compactMap { id in units.first { $0.id == id } }
-        guard let first = bundled.first else { return String(localized: .examPlanTitleUnit) }
-        if bundled.count == 1 { return first.title }
-        let parents = Set(bundled.map { UnitTree.parent(of: $0, in: units) })
-        if parents.count == 1, let parentId = parents.first ?? nil, let parent = units.first(where: { $0.id == parentId }) {
-            let siblings = units.filter { UnitTree.parent(of: $0, in: units) == parentId }
-            if Set(siblings.map(\.id)) == Set(bundled.map(\.id)) { return parent.title }
-            return String(localized: .examPlanTitleUnitsIn(parent.title, bundled.count))
-        }
-        if bundled.count == 2 { return bundled.map(\.title).joined(separator: ", ") }
-        return String(localized: .examPlanTitleUnitsMore(first.title, bundled.count - 1))
     }
 }

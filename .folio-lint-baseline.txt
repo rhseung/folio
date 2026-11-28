@@ -19,7 +19,6 @@ app-direction	app/platform/notes/note-preview-page.swift	NoteEmbedSource from fe
 app-direction	app/platform/notes/note-preview.swift	NoteEmbedSource from features/notes
 design-control	app/features/claude/chat-composer.swift	TextField(
 design-control	app/features/courses/course-icon-panel.swift	TextField(
-design-control	app/features/exams/exam-plan-card.swift	TextField(
 design-control	app/features/search/search-palette.swift	TextField(
 design-control	app/features/settings/callout-list.swift	TextField(
 design-control	app/features/settings/heading-rows.swift	TextField(
@@ -78,7 +77,6 @@ view-workspace-call	app/features/settings/settings-view.swift	workspace.open(
 view-workspace-call	app/features/study/today/day-ribbon-card.swift	workspace.accent(
 view-workspace-call	app/features/study/today/day-ribbon-card.swift	workspace.accent(
 view-workspace-call	app/features/study/today/day-ribbon-card.swift	workspace.accent(
-view-workspace-call	app/features/study/today/exam-plan-today-block.swift	workspace.accent(
 view-workspace-call	app/features/study/today/study-time-block.swift	workspace.accent(
 view-workspace-call	app/features/study/today/study-time-block.swift	workspace.accent(
 view-workspace-call	app/features/study/today/study-time-block.swift	workspace.accent(

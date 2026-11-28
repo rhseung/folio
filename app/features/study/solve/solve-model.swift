@@ -349,7 +349,7 @@ final class SolveModel {
     }
 
     private func finish() {
-        if let item = request.planItem { workspace.setPlanItem(item, done: true, course: request.course) }
+        if let item = request.planItem { workspace.setPlanItems([item], done: true, course: request.course) }
         SolveResume.clear(for: request.course)
         phase = .done
     }

@@ -3521,17 +3521,6 @@
         }
       }
     },
-    "setting-item.study.final-days": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "시험 직전 마무리 날"
-          }
-        }
-      }
-    },
     "setting-item.study.mock-minutes": {
       "extractionState": "manual",
       "localizations": {
@@ -3653,57 +3642,13 @@
         }
       }
     },
-    "exam-plan.title.unit": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "단원 공부"
-          }
-        }
-      }
-    },
-    "exam-plan.title.some-problems": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ 중 %2$lld문제"
-          }
-        }
-      }
-    },
-    "exam-plan.title.problems": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "문제 풀기"
-          }
-        }
-      }
-    },
-    "exam-plan.title.mixed": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "범위 섞어 풀기"
-          }
-        }
-      }
-    },
     "exam-plan.title.mock": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "모의시험"
+            "value": "모의고사"
           }
         }
       }
@@ -3714,7 +3659,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "오답과 모른 카드 다시 보기"
+            "value": "어제 오답"
           }
         }
       }
@@ -3840,17 +3785,6 @@
         }
       }
     },
-    "setting-item.study.plan-day-items": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "하루 계획 항목"
-          }
-        }
-      }
-    },
     "setting-unit.items": {
       "extractionState": "manual",
       "localizations": {
@@ -3884,35 +3818,101 @@
         }
       }
     },
-    "exam-plan.title.units-in": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ 단원 %2$lld개"
-          }
-        }
-      }
-    },
-    "exam-plan.title.units-more": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ 외 %2$lld개"
-          }
-        }
-      }
-    },
     "setting-item.study.plan-shown-days": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "단원 페이지의 계획 날 수"
+            "value": "계획에 펼쳐 둘 다음 날 수"
+          }
+        }
+      }
+    },
+    "exam-plan.title.note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정리 노트"
+          }
+        }
+      }
+    },
+    "exam-plan.title.stage": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "exam-plan.title.make-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정리 노트 만들기"
+          }
+        }
+      }
+    },
+    "exam-plan.title.make-note-for": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 정리 노트 만들기"
+          }
+        }
+      }
+    },
+    "plan-stage.read": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정독"
+          }
+        }
+      }
+    },
+    "plan-stage.proof": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "증명"
+          }
+        }
+      }
+    },
+    "plan-stage.solve": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제풀이"
+          }
+        }
+      }
+    },
+    "rule.exam.plan-period": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "공부 기간의 시작일이 끝낼 날보다 늦습니다"
           }
         }
       }

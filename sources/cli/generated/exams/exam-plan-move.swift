@@ -7,14 +7,14 @@ import Foundation
 
 extension GeneratedCommands {
     struct ExamPlanMove: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "move", abstract: "공부 계획 항목을 다른 날로 옮기기. 옮긴 항목은 다시 짜도 그 날에 남는다", discussion: """
+        static let configuration = CommandConfiguration(commandName: "move", abstract: "공부 계획 항목을 고른 날로 옮기기. 옮긴 항목은 다시 놓아도 그 날에 남는다", discussion: """
             예시:
-              folio exam plan move EC4207/중간고사 \"트리 단원 복습\" --day 2026-10-19
+              folio exam plan move EC4207/기말고사 \"교재 3장 다시 읽기\" --day 2026-12-05
             """)
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("<과목>/<시험>", valueName: "exam"), completion: Complete.ref(.exam)) var exam: String
-        @Argument(help: ArgumentHelp("항목 제목이나 UUID", valueName: "item"), completion: Complete.ref(.examPlanItem)) var item: String = ""
-        @Option(help: ArgumentHelp("새 날짜. 2026-10-19", valueName: "date")) var day: LocalDate
+        @Argument(help: ArgumentHelp("항목 이름이나 UUID. 정리 노트의 단계는 \"<노트> <단계>\"다. 여러 번 줄 수 있다", valueName: "items"), completion: Complete.ref(.examPlanItem)) var items: [String]
+        @Option(help: ArgumentHelp("새 날짜. 2026-12-03", valueName: "date")) var day: LocalDate
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -23,7 +23,7 @@ extension GeneratedCommands {
             let action = FolioActions.ExamPlanMove(
                 course: c.id,
                 exam: try r.id(.exam, examName, in: c),
-                item: try r.id(.examPlanItem, item, in: c, parent: try r.id(.exam, examName, in: c)),
+                items: try items.map { try r.id(.examPlanItem, $0, in: c, parent: try r.id(.exam, examName, in: c)) },
                 day: day
             )
             try perform(spec: action, g, ctx: ctx)

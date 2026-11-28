@@ -62,8 +62,11 @@ folio problem solve "EC4207/Exercise 1" 3a wrong --reason concept --dry-run
 # 글로 풀어 쓰지 않는다
 # 어느 단원이 준비됐고 어떤 오답이 남았는지는 공부 상태로 본다. 판정을 고칠 때는 --json의 attempts에서 ID를 찾는다
 folio study show EC4207 --dry-run
-# 시험 공부 계획은 앱이 짠다. 사용자가 옮긴 항목은 다시 짜도 그대로 둔다
-folio exam plan make EC4207/중간고사 --dry-run
+# 시험 공부 계획은 시험 범위의 정리 노트(topic)를 공부 기간에 이름 순서로 놓는다. 항목은 "<노트> <단계>"(정독, 증명, 문제풀이)이고
+# exam show로 본다. 기간을 바꾸면 다시 놓이고, 끝낸 항목과 사용자가 옮긴 항목은 그대로다
+folio exam plan make EC4207/기말고사 --start 2026-11-28 --end 2026-12-04 --dry-run
+# 미루기는 그 항목만 다음 날로 옮기고, 앞당기기는 오늘로 가져온다. 끝낸 항목은 plan-check로 표시한다
+folio exam plan postpone EC4207/기말고사 "교재 3장 다시 읽기" --dry-run
 ```
 
 노트를 쓰거나 그림(SVG), 위젯을 넣기 전에 `folio note format`으로 노트 형식(수식, 콜아웃, 링크, 도식, 그림, 위젯, 그려 보기)을 읽는다. 그림은 LaTeX 교과서의 그림처럼 그린다. 그림에는 라벨만 두고 설명은 노트 본문에 쓰며, 수식은 `$…$`로, 색은 그림 스타일의 클래스(`ink`, `p-blue` …)로만 칠한다. 그림과 위젯의 화살표 촉은 직접 그리지 않고 `marker-end="url(#m-ink)"`처럼 선과 같은 색의 스타일 촉을 쓴다. 위젯 HTML에는 `<title>`로 이름을 붙인다.

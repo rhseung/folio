@@ -7,8 +7,6 @@ import Foundation
 
 extension Workspace {
     var today: LocalDate { settings.studyDay(of: now, calendar: calendar) }
-    // 분마다 움직이는 시계로 센 공부일이다. 하루 경계를 넘을 때 계획을 다시 짜는 곳만 읽는다.
-    var liveToday: LocalDate { settings.studyDay(of: liveNow, calendar: calendar) }
 
     func isStudyToday(_ date: Date) -> Bool { settings.studyDay(of: date, calendar: calendar) == today }
 
@@ -59,20 +57,36 @@ extension Workspace {
         return study
     }
 
-    // 공부일이 바뀌거나 계획의 기준(범위, 시험 날짜, 공부 설정)이 바뀌면 다가오는 시험의 계획을 지금 준비로 다시 짠다(#578).
-    // 같은 공부일에 같은 기준으로 짠 시험은 건너뛰므로 여러 번 불러도 한 번만 쓴다.
+    // 계획이 아직 없거나 기준(기간, 기간 뒤, 정리 노트 목록, 시험 날짜)이 바뀐 시험의 계획을 다시 놓는다. 공부일이 바뀌었다고
+    // 다시 놓지 않는다. 기준이 그대로인 시험은 건너뛰므로 여러 번 불러도 한 번만 쓴다.
     func replanExams() {
         let today = self.today
         for course in currentCourses {
-            for exam in course.file.exams where course.file.needsPlan(exam, today: today, settings: settings, calendar: calendar) {
+            let file = course.file
+            let exams = file.exams.filter { $0.start != nil && !file.scope(of: $0).isEmpty }
+            guard !exams.isEmpty else { continue }
+            var seen = Set<UUID>()
+            let notes = exams.flatMap { file.examNotes(of: $0) }.filter { seen.insert($0.id).inserted }
+            let proofs = ExamPlanProofs.read(notes, store: course.store, settings: settings)
+            for exam in exams where file.needsPlan(exam, proofs: proofs, today: today, settings: settings, calendar: calendar) {
                 _ = try? runThrowing(ExamPlanMake(course: course.id, exam: exam.id))
             }
         }
     }
 
-    // 다시 짜야 하는지 볼 값이다. 앱이 이 값을 지켜보다 바뀌면 `replanExams`를 부른다.
-    var planBases: [ExamPlanBasis] {
-        currentCourses.flatMap { c in c.file.exams.map { ExamPlanBasis(exam: $0, in: c.file, settings: settings, calendar: calendar) } }
+    // 노트 파일을 읽지 않고 알 수 있는 계획의 기준이다. 앱이 이 값과 `notesRevision`을 지켜보다 바뀌면 `replanExams`를 부른다.
+    // 정리류 블록이 생겼는지는 노트 파일에 있어서 `replanExams`가 읽는다.
+    struct PlanKey: Equatable {
+        var exam: UUID
+        var start: Date?
+        var period: ExamPlanPeriod?
+        var notes: ExamPlanNotes
+    }
+
+    var planKeys: [PlanKey] {
+        currentCourses.flatMap { c in
+            c.file.exams.map { PlanKey(exam: $0.id, start: $0.start, period: $0.planPeriod, notes: c.file.planNotes(of: $0, proofs: [])) }
+        }
     }
 
     func notes(for unit: FolioDomain.Unit, in courseId: UUID) -> [NoteFile] {

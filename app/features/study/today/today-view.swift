@@ -203,7 +203,7 @@ struct TodayView: View {
                     systemImage: CourseMark.defaultIcon, title: String(localized: .todayStudyingEmpty),
                     detail: String(localized: .todayStudyingEmptyDetail))
             } else {
-                ExamPlanTodayBlock(workspace: model.workspace)
+                PlanBlock(workspace: model.workspace, scope: .today)
                 if !study.notes.isEmpty { notesList(study.notes, today: today) }
             }
         }

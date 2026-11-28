@@ -35,6 +35,8 @@ struct HelpExampleTests {
         ["note", "add", "EC4207", "시험 메모"],
         ["note", "add", "EC4207", "10-26(월) 정리", "--kind", "review", "--session", "10-26"],
         ["exam", "plan", "add", "EC4207/중간고사", "--day", "2026-10-18", "트리 단원 복습"],
+        ["exam", "add", "EC4207", "기말고사", "--start", "2026-12-14 09:00"],
+        ["exam", "plan", "add", "EC4207/기말고사", "--day", "2026-12-03", "교재 3장 다시 읽기"],
         ["unit", "add", "EC4321", "기구학"],
     ]
 

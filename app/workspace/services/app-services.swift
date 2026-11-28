@@ -24,6 +24,11 @@ private struct AppServices: ViewModifier {
         var connected: Bool
     }
 
+    struct ExamPlanInputs: Equatable {
+        var keys: [Workspace.PlanKey]
+        var notes: Int
+    }
+
     var inputs: PlanInputs {
         PlanInputs(
             settings: workspace.settings.notifications, edits: workspace.courses.map(\.file.course.updatedAt),
@@ -53,12 +58,14 @@ private struct AppServices: ViewModifier {
             // 시계는 분마다, 그리고 앱이 앞으로 오거나 Mac이 깨어날 때 움직인다. 그때마다 확인 주기가 지났는지 본다. 잠든 동안
             // 기다리던 `Task.sleep`은 깨어난 뒤 바로 끝나지 않는다.
             .onChange(of: workspace.liveNow, initial: true) { syncLMSIfDue() }
-            .onChange(of: workspace.gist == nil ? nil : workspace.liveToday, initial: true) { _, day in
-                if day != nil { workspace.replanExams() }
+            // 기간, 정리 노트 목록, 시험 날짜를 바꾸거나 노트를 저장하면 계획을 다시 놓을지 본다. 앱 밖(CLI)에서 바꾼 것도 폴더를
+            // 다시 읽을 때 여기 걸린다. 공부일이 바뀌는 것은 계기가 아니다.
+            .onChange(
+                of: workspace.gist == nil ? nil : ExamPlanInputs(keys: workspace.planKeys, notes: workspace.notesRevision), initial: true
+            ) {
+                _, inputs in
+                if inputs != nil { workspace.replanExams() }
             }
-            // 범위, 시험 날짜, 공부 설정을 바꾸면 다음 공부일을 기다리지 않고 다시 짠다. 앱 밖(CLI)에서 바꾼 것도 폴더를 다시
-            // 읽을 때 여기 걸린다.
-            .onChange(of: workspace.gist == nil ? [] : workspace.planBases) { workspace.replanExams() }
             .onChange(of: LMSInputs(gist: workspace.gist?.url, connected: workspace.lms.isConnected)) {
                 lmsTried = nil
                 syncLMSIfDue()

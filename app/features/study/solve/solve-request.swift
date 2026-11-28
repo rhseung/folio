@@ -19,7 +19,7 @@ struct SolveRequest: Identifiable, Equatable {
 }
 
 extension SolveRequest {
-    init(plan: PlanSolve, course: UUID, item: UUID) {
+    init(plan: PlanSolve, course: UUID, item: UUID?) {
         self.init(
             course: course, problems: plan.problems, planItem: item, mode: plan.mode, shuffled: plan.shuffled, minutes: plan.minutes)
     }

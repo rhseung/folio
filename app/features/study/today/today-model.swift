@@ -12,9 +12,9 @@ final class TodayModel {
 
     init(workspace: Workspace) { self.workspace = workspace }
 
-    // 오늘의 공부는 시험 계획의 오늘 항목과 복습 노트가 없는 수업이다(#575).
+    // 오늘의 공부는 시험 계획의 오늘 줄과 복습 노트가 없는 수업이다.
     struct Study {
-        var plan: [ExamPlan.DayItem]
+        var plan: [PlanRow]
         var notes: [TodaySummary.SessionItem]
         var left: Int
         var isEmpty: Bool { plan.isEmpty && notes.isEmpty }
@@ -51,9 +51,8 @@ final class TodayModel {
     }
 
     func study(_ summary: TodaySummary) -> Study {
-        let plan = ExamPlan.items(on: summary.studyDay, courses: current.map(\.file))
-        let open = plan.filter { entry in !(workspace.study(of: entry.courseId)?.isDone(entry.item, in: entry.exam) ?? false) }
-        return Study(plan: plan, notes: summary.missingReviewNotes, left: open.count + summary.missingReviewNotes.count)
+        let board = workspace.planBoard(current)
+        return Study(plan: board.today, notes: summary.missingReviewNotes, left: board.left + summary.missingReviewNotes.count)
     }
 
     // 자정 뒤 하루 경계 전에는 내일의 제안이 오늘의 것이 아니다.

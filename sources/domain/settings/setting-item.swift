@@ -269,12 +269,8 @@ extension SettingItem {
         "study.readyPercent", .number(50...100), 80, place: .row(.study), name: .settingItemStudyReadyPercent, unit: .percent, step: 5)
     public static let studyMinProblems = SettingItem(
         "study.minProblems", .number(1...20), 3, place: .row(.study), name: .settingItemStudyMinProblems, unit: .problems)
-    public static let studyFinalDays = SettingItem(
-        "study.finalDays", .number(0...3), 3, place: .row(.study), name: .settingItemStudyFinalDays, unit: .days)
     public static let studyMockMinutes = SettingItem(
         "study.mockMinutes", .number(10...300), 90, place: .row(.study), name: .settingItemStudyMockMinutes, unit: .minutes, step: 10)
-    public static let studyPlanDayItems = SettingItem(
-        "study.planDayItems", .number(1...5), 2, place: .row(.study), name: .settingItemStudyPlanDayItems, unit: .items)
     public static let studyPlanShownDays = SettingItem(
         "study.planShownDays", .number(1...14), 3, place: .row(.study), name: .settingItemStudyPlanShownDays, unit: .days)
     public static let studyAutoExtract = SettingItem(
@@ -381,8 +377,7 @@ extension SettingItem {
         todayExamDays, assignmentUrgentDays, assignmentSoonDays, examUrgentDays, examSoonDays, examNearDays,
         dueMinute, examStartMinute, examMinutes,
         gradesUnlockMinutes, staffMailDomain, studentMailDomain,
-        studyReadyPercent, studyMinProblems, studyFinalDays, studyMockMinutes, studyPlanDayItems, studyPlanShownDays, studyAutoExtract,
-        studyCoverName,
+        studyReadyPercent, studyMinProblems, studyMockMinutes, studyPlanShownDays, studyAutoExtract, studyCoverName,
         assignmentDue, assignmentLeadHours, assignmentOverdue, assignmentOverdueMinute, examDayBefore, examDayBeforeMinute, examMorning,
         examMorningMinute, attendance,
         backupEnabled, backupDailyDays, backupFolder,

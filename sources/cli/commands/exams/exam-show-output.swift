@@ -25,9 +25,24 @@ extension ExamShow: QueryOutput {
         } else if e.start == nil {
             FolioCLI.say(String(localized: .examShowScopeNoDate))
         }
-        if !e.plan.isEmpty {
+        if let period = e.planPeriod, let start = period.start.date(in: r.ctx.calendar), let end = period.end.date(in: r.ctx.calendar) {
+            let days = (CourseFile.day(start, calendar: r.ctx.calendar), CourseFile.day(end, calendar: r.ctx.calendar))
+            FolioCLI.say(String(localized: period.after == .mock ? .examShowPeriodMock(days.0, days.1) : .examShowPeriod(days.0, days.1)))
+        }
+        let items = e.plan.filter { !$0.isRemoved }
+        if !items.isEmpty {
+            let today = r.settings.studyDay(of: r.ctx.now, calendar: r.ctx.calendar)
+            let done = linked.planDone
             FolioCLI.say(String(localized: .examShowPlan))
-            for item in e.plan.sorted(by: { $0.day < $1.day }) { FolioCLI.say("    \(item.day)  \(item.title)") }
+            for item in items.sorted(by: { $0.day < $1.day }) {
+                let finished = done.contains(item.id)
+                let mark =
+                    finished
+                    ? String(localized: .examShowPlanDone)
+                    : item.lateFrom(today: today, done: false) == nil ? "" : String(localized: .examShowPlanLate)
+                let line = "    \(item.day)  \(f.title(of: item))" + (mark.isEmpty ? "" : "  \(mark)")
+                FolioCLI.say(finished ? line.styled(.dim) : line)
+            }
         }
     }
 }

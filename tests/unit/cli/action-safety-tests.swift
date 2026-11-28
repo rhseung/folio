@@ -149,7 +149,7 @@ struct ActionSafetyTests {
     @Test func planCheckNeedsTheItem() throws {
         let gist = try Harness.fixtureCopy()
         settled([["exam", "add", "EC4207", "중간"]], gist: gist)
-        let input = #"{"course":"EC4207","item":"\#(UUID())","done":true}"#
+        let input = #"{"course":"EC4207","items":["\#(UUID())"],"done":true}"#
         #expect(h.cli(["run", "exam", "plan-check", "--input", input], gist: gist).code == Exit.notFound.rawValue)
     }
 }
