@@ -48,13 +48,20 @@ addEventListener("resize", markAll);
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", watch);
 else watch();
 
+// WebKit은 SVG 그림(`<img>`) 안의 `prefers-color-scheme`을 그림을 다 받은 순간에 한 번 정하고, 그 값을 그때 그 그림을
+// 그리고 있는 요소에게 묻는다. HTML을 넣고 레이아웃을 하기 전에는 그리는 요소가 없어서, 그 사이에 그림이 도착하면 다크
+// 페이지에서도 테마를 바꿀 때까지 라이트 색으로 남는다. 받은 데이터는 실행 중인 스크립트가 끝난 뒤에 처리되므로, 그림을
+// 넣은 스크립트가 끝나기 전에 레이아웃을 해 둔다. 조판이 길수록 그림이 먼저 도착한다.
+const layoutNow = () => void document.body.offsetHeight;
+
 window.folioReader = {
   update(html) {
     document.body.innerHTML = html;
     typeset(document.body);
     watch();
+    layoutNow();
   },
 };
 
-window.folioPreview = preview({ typeset, redraw: () => renderDiagrams(document.body) });
+window.folioPreview = preview({ typeset, redraw: () => renderDiagrams(document.body), layoutNow });
 window.folioFigures = figures({ closed: () => window.webkit?.messageHandlers?.folioPreview?.postMessage({ type: "figureClosed" }) });
